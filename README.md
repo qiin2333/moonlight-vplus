@@ -1,5 +1,21 @@
 # Moonlight Android
 
+## 带键盘的魔改版
+新增特性：
+
+1.可以增加键盘按键、鼠标按键
+
+2.可以同时拥有多套布局，并且能在串流时快速切换
+
+3.可以禁用鼠标
+
+4.可以在串流时快速切换鼠标的控制模式
+
+5.修改了官方的编辑按键的方式
+
+详情转至moonlight贴吧！记得点个star哦，谢谢啦！
+
+
 [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/232a8tadrrn8jv0k/branch/master?svg=true)](https://ci.appveyor.com/project/cgutman/moonlight-android/branch/master)
 [![Translation Status](https://hosted.weblate.org/widgets/moonlight/-/moonlight-android/svg-badge.svg)](https://hosted.weblate.org/projects/moonlight/moonlight-android/)
 
