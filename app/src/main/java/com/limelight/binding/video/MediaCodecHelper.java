@@ -14,6 +14,7 @@ import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.pm.ConfigurationInfo;
+import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
 import android.media.MediaCodecInfo.CodecCapabilities;
@@ -42,6 +43,7 @@ public class MediaCodecHelper {
     private static final List<String> kirinDecoderPrefixes;
     private static final List<String> exynosDecoderPrefixes;
     private static final List<String> amlogicDecoderPrefixes;
+    private static final List<String> knownVendorLowLatencyOptions;
 
     public static final boolean SHOULD_BYPASS_SOFTWARE_BLOCK =
             Build.HARDWARE.equals("ranchu") || Build.HARDWARE.equals("cheets") || Build.BRAND.equals("Android-x86");
@@ -175,6 +177,9 @@ public class MediaCodecHelper {
         // vendor.low-latency.enable. We will still use HEVC if decoderCanMeetPerformancePointWithHevcAndNotAvc()
         // determines it's the only way to meet the performance requirements.
         //
+        // With the Android 12 update, Sabrina now uses HEVC (with RFI) based upon FEATURE_LowLatency
+        // support, which provides equivalent latency to H.264 now.
+        //
         // FIXME: Should we do this for all Amlogic S905X SoCs?
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && !Build.DEVICE.equalsIgnoreCase("sabrina")) {
             whitelistedHevcDecoders.add("omx.amlogic");
@@ -207,6 +212,15 @@ public class MediaCodecHelper {
         useFourSlicesPrefixes.add("c2.android");
 
         // Old Qualcomm decoders are detected at runtime
+    }
+
+    static {
+        knownVendorLowLatencyOptions = new LinkedList<>();
+
+        knownVendorLowLatencyOptions.add("vendor.qti-ext-dec-low-latency.enable");
+        knownVendorLowLatencyOptions.add("vendor.hisi-ext-low-latency-video-dec.video-scene-for-low-latency-req");
+        knownVendorLowLatencyOptions.add("vendor.rtc-ext-dec-low-latency.enable");
+        knownVendorLowLatencyOptions.add("vendor.low-latency.enable");
     }
 
     static {
@@ -300,12 +314,33 @@ public class MediaCodecHelper {
         // We still have to check Build.MANUFACTURER to catch Amazon Fire tablets.
         if (context.getPackageManager().hasSystemFeature("amazon.hardware.fire_tv") ||
                 Build.MANUFACTURER.equalsIgnoreCase("Amazon")) {
+            // HEVC and RFI have been confirmed working on Fire TV 2, Fire TV Stick 2, Fire TV 4K Max,
+            // Fire HD 8 2020, and Fire HD 8 2022 models.
+            //
+            // This is probably a good enough sample to conclude that all MediaTek Fire OS devices
+            // are likely to be okay.
             whitelistedHevcDecoders.add("omx.mtk");
+            refFrameInvalidationHevcPrefixes.add("omx.mtk");
+            refFrameInvalidationHevcPrefixes.add("c2.mtk");
 
             // This requires setting vdec-lowlatency on the Fire TV 3, otherwise the decoder
             // never produces any output frames. See comment above for details on why we only
             // do this for Fire TV devices.
             whitelistedHevcDecoders.add("omx.amlogic");
+
+            // Fire TV 3 seems to produce random artifacts on HEVC streams after packet loss.
+            // Enabling RFI turns these artifacts into full decoder output hangs, so let's not enable
+            // that for Fire OS 6 Amlogic devices. We will leave HEVC enabled because that's the only
+            // way these devices can hit 4K. Hopefully this is just a problem with the BSP used in
+            // the Fire OS 6 Amlogic devices, so we will leave this enabled for Fire OS 7+.
+            //
+            // Apart from a few TV models, the main Amlogic-based Fire TV devices are the Fire TV
+            // Cubes and Fire TV 3. This check will exclude the Fire TV 3 and Fire TV Cube 1, but
+            // allow the newer Fire TV Cubes to use HEVC RFI.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                refFrameInvalidationHevcPrefixes.add("omx.amlogic");
+                refFrameInvalidationHevcPrefixes.add("c2.amlogic");
+            }
         }
 
         ActivityManager activityManager =
@@ -319,9 +354,11 @@ public class MediaCodecHelper {
 
             // Tegra K1 and later can do reference frame invalidation properly
             if (configInfo.reqGlEsVersion >= 0x30000) {
-                LimeLog.info("Added omx.nvidia to reference frame invalidation support list");
+                LimeLog.info("Added omx.nvidia/c2.nvidia to reference frame invalidation support list");
                 refFrameInvalidationAvcPrefixes.add("omx.nvidia");
                 refFrameInvalidationHevcPrefixes.add("omx.nvidia");
+                refFrameInvalidationAvcPrefixes.add("c2.nvidia"); // Unconfirmed
+                refFrameInvalidationHevcPrefixes.add("c2.nvidia"); // Unconfirmed
 
                 LimeLog.info("Added omx.qcom/c2.qti to reference frame invalidation support list");
                 refFrameInvalidationAvcPrefixes.add("omx.qcom");
@@ -361,8 +398,9 @@ public class MediaCodecHelper {
                 // decoder hangs on the newer GE8100, GE8300, and GE8320 GPUs, so we limit it to the
                 // Series6XT GPUs where we know it works.
                 if (glRenderer.contains("GX6")) {
-                    LimeLog.info("Added omx.mtk to RFI list for HEVC");
+                    LimeLog.info("Added omx.mtk/c2.mtk to RFI list for HEVC");
                     refFrameInvalidationHevcPrefixes.add("omx.mtk");
+                    refFrameInvalidationHevcPrefixes.add("c2.mtk");
                 }
             }
         }
@@ -400,6 +438,35 @@ public class MediaCodecHelper {
             }
         }
 
+        return false;
+    }
+
+    private static boolean decoderSupportsKnownVendorLowLatencyOption(String decoderName) {
+        // It's only possible to probe vendor parameters on Android 12 and above.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            MediaCodec testCodec = null;
+            try {
+                // Unfortunately we have to create an actual codec instance to get supported options.
+                testCodec = MediaCodec.createByCodecName(decoderName);
+
+                // See if any of the vendor parameters match ones we know about
+                for (String supportedOption : testCodec.getSupportedVendorParameters()) {
+                    for (String knownLowLatencyOption : knownVendorLowLatencyOptions) {
+                        if (supportedOption.equalsIgnoreCase(knownLowLatencyOption)) {
+                            LimeLog.info(decoderName + " supports known low latency option: " + supportedOption);
+                            return true;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Tolerate buggy codecs
+                e.printStackTrace();
+            } finally {
+                if (testCodec != null) {
+                    testCodec.release();
+                }
+            }
+        }
         return false;
     }
 
@@ -463,6 +530,8 @@ public class MediaCodecHelper {
         // https://cs.android.com/android/_/android/platform/frameworks/av/+/01c10f8cdcd58d1e7025f426a72e6e75ba5d7fc2
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // Try vendor-specific low latency options
+            //
+            // NOTE: Update knownVendorLowLatencyOptions if you modify this code!
             if (isDecoderInList(qualcommDecoderPrefixes, decoderInfo.getName())) {
                 // Examples of Qualcomm's vendor extensions for Snapdragon 845:
                 // https://cs.android.com/android/platform/superproject/+/master:hardware/qcom/sdm845/media/mm-video-v4l2/vidc/vdec/src/omx_vdec_extensions.hpp
@@ -598,11 +667,24 @@ public class MediaCodecHelper {
         return isDecoderInList(refFrameInvalidationAvcPrefixes, decoderName);
     }
 
-    public static boolean decoderSupportsRefFrameInvalidationHevc(String decoderName) {
-        return isDecoderInList(refFrameInvalidationHevcPrefixes, decoderName);
+    public static boolean decoderSupportsRefFrameInvalidationHevc(MediaCodecInfo decoderInfo) {
+        // HEVC decoders seem to universally support RFI, but it can have huge latency penalties
+        // for some decoders due to the number of references frames being > 1. Old Amlogic
+        // decoders are known to have this problem.
+        //
+        // If the decoder supports FEATURE_LowLatency or any vendor low latency option,
+        // we will use that as an indication that it can handle HEVC RFI without excessively
+        // buffering frames.
+        if (decoderSupportsAndroidRLowLatency(decoderInfo, "video/hevc") ||
+                decoderSupportsKnownVendorLowLatencyOption(decoderInfo.getName())) {
+            LimeLog.info("Enabling HEVC RFI based on low latency option support");
+            return true;
+        }
+
+        return isDecoderInList(refFrameInvalidationHevcPrefixes, decoderInfo.getName());
     }
 
-    public static boolean decoderIsWhitelistedForHevc(String decoderName) {
+    public static boolean decoderIsWhitelistedForHevc(MediaCodecInfo decoderInfo) {
         // Google didn't have official support for HEVC (or more importantly, a CTS test) until
         // Lollipop. I've seen some MediaTek devices on 4.4 crash when attempting to use HEVC,
         // so I'm restricting HEVC usage to Lollipop and higher.
@@ -616,11 +698,36 @@ public class MediaCodecHelper {
         // OMX.qcom.video.decoder.hevcswvdec
         // OMX.SEC.hevc.sw.dec
         //
-        if (decoderName.contains("sw")) {
+        if (decoderInfo.getName().contains("sw")) {
+            LimeLog.info("Disallowing HEVC on software decoder: " + decoderInfo.getName());
+            return false;
+        }
+        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && (!decoderInfo.isHardwareAccelerated() || decoderInfo.isSoftwareOnly())) {
+            LimeLog.info("Disallowing HEVC on software decoder: " + decoderInfo.getName());
             return false;
         }
 
-        return isDecoderInList(whitelistedHevcDecoders, decoderName);
+        // If this device is media performance class 12 or higher, we will assume any hardware
+        // HEVC decoder present is fast and modern enough for streaming.
+        //
+        // [5.3/H-1-1] MUST NOT drop more than 2 frames in 10 seconds (i.e less than 0.333 percent frame drop) for a 1080p 60 fps video session under load.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            LimeLog.info("Media performance class: " + Build.VERSION.MEDIA_PERFORMANCE_CLASS);
+            if (Build.VERSION.MEDIA_PERFORMANCE_CLASS >= Build.VERSION_CODES.S) {
+                LimeLog.info("Allowing HEVC based on media performance class");
+                return true;
+            }
+        }
+
+        // If the decoder supports FEATURE_LowLatency, we will assume it is fast and modern enough
+        // to be preferable for streaming over H.264 decoders.
+        if (decoderSupportsAndroidRLowLatency(decoderInfo, "video/hevc")) {
+            LimeLog.info("Allowing HEVC based on FEATURE_LowLatency support");
+            return true;
+        }
+
+        // Otherwise, we use our list of known working HEVC decoders
+        return isDecoderInList(whitelistedHevcDecoders, decoderInfo.getName());
     }
     
     @SuppressWarnings("deprecation")
@@ -824,8 +931,7 @@ public class MediaCodecHelper {
     
     public static String readCpuinfo() throws Exception {
         StringBuilder cpuInfo = new StringBuilder();
-        BufferedReader br = new BufferedReader(new FileReader(new File("/proc/cpuinfo")));
-        try {
+        try (final BufferedReader br = new BufferedReader(new FileReader(new File("/proc/cpuinfo")))) {
             for (;;) {
                 int ch = br.read();
                 if (ch == -1)
@@ -834,8 +940,6 @@ public class MediaCodecHelper {
             }
 
             return cpuInfo.toString();
-        } finally {
-            br.close();
         }
     }
     

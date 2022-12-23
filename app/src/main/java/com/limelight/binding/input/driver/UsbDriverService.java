@@ -20,6 +20,7 @@ import com.limelight.LimeLog;
 import com.limelight.R;
 import com.limelight.preferences.PreferenceConfiguration;
 
+import java.io.File;
 import java.util.ArrayList;
 
 public class UsbDriverService extends Service implements UsbDriverListener {
@@ -183,6 +184,9 @@ public class UsbDriverService extends Service implements UsbDriverListener {
             else if (Xbox360Controller.canClaimDevice(device)) {
                 controller = new Xbox360Controller(device, connection, nextDeviceId++, this);
             }
+            else if (Xbox360WirelessDongle.canClaimDevice(device)) {
+                controller = new Xbox360WirelessDongle(device, connection, nextDeviceId++, this);
+            }
             else {
                 // Unreachable
                 return;
@@ -248,9 +252,32 @@ public class UsbDriverService extends Service implements UsbDriverListener {
         }
     }
 
+    public static boolean kernelSupportsXbox360W() {
+        // Check if this kernel is 4.2+ to see if the xpad driver sets Xbox 360 wireless LEDs
+        // https://github.com/torvalds/linux/commit/75b7f05d2798ee3a1cc5bbdd54acd0e318a80396
+        String kernelVersion = System.getProperty("os.version");
+        if (kernelVersion != null) {
+            if (kernelVersion.startsWith("2.") || kernelVersion.startsWith("3.") ||
+                    kernelVersion.startsWith("4.0.") || kernelVersion.startsWith("4.1.")) {
+                // Even if LED devices are present, the driver won't set the initial LED state.
+                return false;
+            }
+        }
+
+        // We know we have a kernel that should set Xbox 360 wireless LEDs, but we still don't
+        // know if CONFIG_JOYSTICK_XPAD_LEDS was enabled during the kernel build. Unfortunately
+        // it's not possible to detect this reliably due to Android's app sandboxing. Reading
+        // /proc/config.gz and enumerating /sys/class/leds are both blocked by SELinux on any
+        // relatively modern device. We will assume that CONFIG_JOYSTICK_XPAD_LEDS=y on these
+        // kernels and users can override by using the settings option to claim all devices.
+        return true;
+    }
+
     public static boolean shouldClaimDevice(UsbDevice device, boolean claimAllAvailable) {
         return ((!kernelSupportsXboxOne() || !isRecognizedInputDevice(device) || claimAllAvailable) && XboxOneController.canClaimDevice(device)) ||
-                ((!isRecognizedInputDevice(device) || claimAllAvailable) && Xbox360Controller.canClaimDevice(device));
+                ((!isRecognizedInputDevice(device) || claimAllAvailable) && Xbox360Controller.canClaimDevice(device)) ||
+                // We must not call isRecognizedInputDevice() because wireless controllers don't share the same product ID as the dongle
+                ((!kernelSupportsXbox360W() || claimAllAvailable) && Xbox360WirelessDongle.canClaimDevice(device));
     }
 
     private void start() {

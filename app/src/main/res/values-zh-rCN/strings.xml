@@ -222,8 +222,8 @@
     <string name="audioconf_stereo">立体声</string>
     <string name="audioconf_51surround">5.1环绕声</string>
     <string name="audioconf_71surround">7.1环绕声</string>
-    <string name="videoformat_hevcauto">自动</string>
-    <string name="videoformat_hevcalways">强制使用HEVC（不稳定）</string>
+    <string name="videoformat_hevcauto">自动（推荐）</string>
+    <string name="videoformat_hevcalways">首选 HEVC</string>
     <string name="videoformat_hevcnever">不使用HEVC</string>
     <string name="title_frame_pacing">视频帧速调节</string>
     <string name="resolution_360p">360p</string>
@@ -257,4 +257,7 @@
     <string name="summary_checkbox_enable_audiofx">串流时允许音效工作，可能会导致音频延迟增加</string>
     <string name="title_checkbox_reduce_refresh_rate">允许降低刷新率</string>
     <string name="summary_checkbox_reduce_refresh_rate">较低的屏幕刷新率可以在增加一些视频延迟的情况下省电</string>
+    <string name="frame_conversion_error">主机 PC 报告了致命的视频编码错误。
+\n
+\n尝试禁用 HDR 模式、更改流分辨率或更改主机 PC 的显示分辨率。</string>
 </resources>

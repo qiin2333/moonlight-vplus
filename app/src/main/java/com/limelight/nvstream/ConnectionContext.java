@@ -1,11 +1,14 @@
 package com.limelight.nvstream;
 
+import com.limelight.nvstream.http.ComputerDetails;
+
 import java.security.cert.X509Certificate;
 
 import javax.crypto.SecretKey;
 
 public class ConnectionContext {
-    public String serverAddress;
+    public ComputerDetails.AddressTuple serverAddress;
+    public int httpsPort;
     public X509Certificate serverCert;
     public StreamConfiguration streamConfig;
     public NvConnectionListener connListener;
@@ -21,6 +24,9 @@ public class ConnectionContext {
     
     public int negotiatedWidth, negotiatedHeight;
     public boolean negotiatedHdr;
+
+    public int negotiatedRemoteStreaming;
+    public int negotiatedPacketSize;
 
     public int videoCapabilities;
 }

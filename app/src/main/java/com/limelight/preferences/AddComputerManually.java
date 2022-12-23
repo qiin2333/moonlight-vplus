@@ -6,6 +6,8 @@ import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -96,8 +98,31 @@ public class AddComputerManually extends Activity {
         }
     }
 
-    private void doAddPc(String host) throws InterruptedException {
+    private URI parseRawUserInputToUri(String rawUserInput) {
+        try {
+            // Try adding a scheme and parsing the remaining input.
+            // This handles input like 127.0.0.1:47989, [::1], [::1]:47989, and 127.0.0.1.
+            URI uri = new URI("moonlight://" + rawUserInput);
+            if (uri.getHost() != null && !uri.getHost().isEmpty()) {
+                return uri;
+            }
+        } catch (URISyntaxException ignored) {}
+
+        try {
+            // Attempt to escape the input as an IPv6 literal.
+            // This handles input like ::1.
+            URI uri = new URI("moonlight://[" + rawUserInput + "]");
+            if (uri.getHost() != null && !uri.getHost().isEmpty()) {
+                return uri;
+            }
+        } catch (URISyntaxException ignored) {}
+
+        return null;
+    }
+
+    private void doAddPc(String rawUserInput) throws InterruptedException {
         boolean wrongSiteLocal = false;
+        boolean invalidInput = false;
         boolean success;
         int portTestResult;
 
@@ -106,8 +131,28 @@ public class AddComputerManually extends Activity {
 
         try {
             ComputerDetails details = new ComputerDetails();
-            details.manualAddress = host;
-            success = managerBinder.addComputerBlocking(details);
+
+            // Check if we parsed a host address successfully
+            URI uri = parseRawUserInputToUri(rawUserInput);
+            if (uri != null && uri.getHost() != null && !uri.getHost().isEmpty()) {
+                String host = uri.getHost();
+                int port = uri.getPort();
+
+                // If a port was not specified, use the default
+                if (port == -1) {
+                    port = NvHTTP.DEFAULT_HTTP_PORT;
+                }
+
+                details.manualAddress = new ComputerDetails.AddressTuple(host, port);
+                success = managerBinder.addComputerBlocking(details);
+                if (!success){
+                    wrongSiteLocal = isWrongSubnetSiteLocalAddress(host);
+                }
+            } else {
+                // Invalid user input
+                success = false;
+                invalidInput = true;
+            }
         } catch (InterruptedException e) {
             // Propagate the InterruptedException to the caller for proper handling
             dialog.dismiss();
@@ -117,13 +162,11 @@ public class AddComputerManually extends Activity {
             // https://github.com/square/okhttp/blob/okhttp_27/okhttp/src/main/java/com/squareup/okhttp/HttpUrl.java#L705
             e.printStackTrace();
             success = false;
+            invalidInput = true;
         }
 
         // Keep the SpinnerDialog open while testing connectivity
-        if (!success){
-            wrongSiteLocal = isWrongSubnetSiteLocalAddress(host);
-        }
-        if (!success && !wrongSiteLocal) {
+        if (!success && !wrongSiteLocal && !invalidInput) {
             // Run the test before dismissing the spinner because it can take a few seconds.
             portTestResult = MoonBridge.testClientConnectivity(ServerHelper.CONNECTION_TEST_SERVER, 443,
                     MoonBridge.ML_PORT_FLAG_TCP_47984 | MoonBridge.ML_PORT_FLAG_TCP_47989);
@@ -134,7 +177,10 @@ public class AddComputerManually extends Activity {
 
         dialog.dismiss();
 
-        if (wrongSiteLocal) {
+        if (invalidInput) {
+            Dialog.displayDialog(this, getResources().getString(R.string.conn_error_title), getResources().getString(R.string.addpc_unknown_host), false);
+        }
+        else if (wrongSiteLocal) {
             Dialog.displayDialog(this, getResources().getString(R.string.conn_error_title), getResources().getString(R.string.addpc_wrong_sitelocal), false);
         }
         else if (!success) {
