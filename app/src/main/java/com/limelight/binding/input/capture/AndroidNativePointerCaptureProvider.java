@@ -15,8 +15,8 @@ import android.view.View;
 // is unavailable on this system (ex: DeX, ChromeOS)
 @TargetApi(Build.VERSION_CODES.O)
 public class AndroidNativePointerCaptureProvider extends AndroidPointerIconCaptureProvider implements InputManager.InputDeviceListener {
-    private InputManager inputManager;
-    private View targetView;
+    private final InputManager inputManager;
+    private final View targetView;
 
     public AndroidNativePointerCaptureProvider(Activity activity, View targetView) {
         super(activity, targetView);
@@ -44,7 +44,10 @@ public class AndroidNativePointerCaptureProvider extends AndroidPointerIconCaptu
             // with SOURCE_TOUCHSCREEN, SOURCE_KEYBOARD, and SOURCE_MOUSE.
             // Upon enabling pointer capture, that device will switch to
             // SOURCE_KEYBOARD and SOURCE_TOUCHPAD.
-            if (device.supportsSource(InputDevice.SOURCE_TOUCHSCREEN)) {
+            // Only skip on non ChromeOS devices cause the ChromeOS pointer else
+            // gets disabled removing relative mouse capabilities
+            // on Chromebooks with touchscreens
+            if (device.supportsSource(InputDevice.SOURCE_TOUCHSCREEN) && !targetView.getContext().getPackageManager().hasSystemFeature("org.chromium.arc.device_management")) {
                 continue;
             }
 
@@ -59,8 +62,19 @@ public class AndroidNativePointerCaptureProvider extends AndroidPointerIconCaptu
     }
 
     @Override
-    public void enableCapture() {
-        super.enableCapture();
+    public void showCursor() {
+        super.showCursor();
+
+        // It is important to unregister the listener *before* releasing pointer capture,
+        // because releasing pointer capture can cause an onInputDeviceChanged() callback
+        // for devices with a touchpad (like a DS4 controller).
+        inputManager.unregisterInputDeviceListener(this);
+        targetView.releasePointerCapture();
+    }
+
+    @Override
+    public void hideCursor() {
+        super.hideCursor();
 
         // Listen for device events to enable/disable capture
         inputManager.registerInputDeviceListener(this, null);
@@ -72,15 +86,11 @@ public class AndroidNativePointerCaptureProvider extends AndroidPointerIconCaptu
     }
 
     @Override
-    public void disableCapture() {
-        super.disableCapture();
-        inputManager.unregisterInputDeviceListener(this);
-        targetView.releasePointerCapture();
-    }
-
-    @Override
     public void onWindowFocusChanged(boolean focusActive) {
-        if (!focusActive || !isCapturing) {
+        // NB: We have to check cursor visibility here because Android pointer capture
+        // doesn't support capturing the cursor while it's visible. Enabling pointer
+        // capture implicitly hides the cursor.
+        if (!focusActive || !isCapturing || isCursorVisible) {
             return;
         }
 

@@ -9,6 +9,7 @@ import javax.crypto.SecretKey;
 public class ConnectionContext {
     public ComputerDetails.AddressTuple serverAddress;
     public int httpsPort;
+    public boolean isNvidiaServerSoftware;
     public X509Certificate serverCert;
     public StreamConfiguration streamConfig;
     public NvConnectionListener connListener;
@@ -18,6 +19,7 @@ public class ConnectionContext {
     // This is the version quad from the appversion tag of /serverinfo
     public String serverAppVersion;
     public String serverGfeVersion;
+    public int serverCodecModeSupport;
 
     // This is the sessionUrl0 tag from /resume and /launch
     public String rtspSessionUrl;

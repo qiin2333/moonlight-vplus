@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -33,7 +32,7 @@ import com.limelight.LimeLog;
 import com.limelight.nvstream.av.audio.AudioRenderer;
 import com.limelight.nvstream.av.video.VideoDecoderRenderer;
 import com.limelight.nvstream.http.ComputerDetails;
-import com.limelight.nvstream.http.GfeHttpResponseException;
+import com.limelight.nvstream.http.HostHttpResponseException;
 import com.limelight.nvstream.http.LimelightCryptoProvider;
 import com.limelight.nvstream.http.NvApp;
 import com.limelight.nvstream.http.NvHTTP;
@@ -48,21 +47,13 @@ public class NvConnection {
     private ConnectionContext context;
     private static Semaphore connectionAllowed = new Semaphore(1);
     private final boolean isMonkey;
-    private final boolean batchMouseInput;
     private final Context appContext;
 
-    private static final int MOUSE_BATCH_PERIOD_MS = 5;
-    private Timer mouseInputTimer;
-    private final Object mouseInputLock = new Object();
-    private short relMouseX, relMouseY, relMouseWidth, relMouseHeight;
-    private short absMouseX, absMouseY, absMouseWidth, absMouseHeight;
-
-    public NvConnection(Context appContext, ComputerDetails.AddressTuple host, int httpsPort, String uniqueId, StreamConfiguration config, LimelightCryptoProvider cryptoProvider, X509Certificate serverCert, boolean batchMouseInput)
+    public NvConnection(Context appContext, ComputerDetails.AddressTuple host, int httpsPort, String uniqueId, StreamConfiguration config, LimelightCryptoProvider cryptoProvider, X509Certificate serverCert)
     {
         this.appContext = appContext;
         this.cryptoProvider = cryptoProvider;
         this.uniqueId = uniqueId;
-        this.batchMouseInput = batchMouseInput;
 
         this.context = new ConnectionContext();
         this.context.serverAddress = host;
@@ -96,11 +87,6 @@ public class NvConnection {
     }
 
     public void stop() {
-        // Stop sending additional input
-        if (mouseInputTimer != null) {
-            mouseInputTimer.cancel();
-        }
-
         // Interrupt any pending connection. This is thread-safe.
         MoonBridge.interruptConnection();
 
@@ -113,24 +99,6 @@ public class NvConnection {
 
         // Now a pending connection can be processed
         connectionAllowed.release();
-    }
-
-    private void flushMousePosition() {
-        synchronized (mouseInputLock) {
-            if (relMouseX != 0 || relMouseY != 0) {
-                if (relMouseWidth != 0 || relMouseHeight != 0) {
-                    MoonBridge.sendMouseMoveAsMousePosition(relMouseX, relMouseY, relMouseWidth, relMouseHeight);
-                }
-                else {
-                    MoonBridge.sendMouseMove(relMouseX, relMouseY);
-                }
-                relMouseX = relMouseY = relMouseWidth = relMouseHeight = 0;
-            }
-            if (absMouseX != 0 || absMouseY != 0 || absMouseWidth != 0 || absMouseHeight != 0) {
-                MoonBridge.sendMousePosition(absMouseX, absMouseY, absMouseWidth, absMouseHeight);
-                absMouseX = absMouseY = absMouseWidth = absMouseHeight = 0;
-            }
-        }
     }
 
     private InetAddress resolveServerAddress() throws IOException {
@@ -263,6 +231,9 @@ public class NvConnection {
             return false;
         }
 
+        ComputerDetails details = h.getComputerDetails(serverInfo);
+        context.isNvidiaServerSoftware = details.nvidiaServer;
+
         // May be missing for older servers
         context.serverGfeVersion = h.getGfeVersion(serverInfo);
                 
@@ -271,9 +242,11 @@ public class NvConnection {
             return false;
         }
 
-        context.negotiatedHdr = context.streamConfig.getEnableHdr();
-        if ((h.getServerCodecModeSupport(serverInfo) & 0x200) == 0 && context.negotiatedHdr) {
-            context.connListener.displayTransientMessage("Your GPU does not support streaming HDR. The stream will be SDR.");
+        context.serverCodecModeSupport = (int)h.getServerCodecModeSupport(serverInfo);
+
+        context.negotiatedHdr = (context.streamConfig.getSupportedVideoFormats() & MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0;
+        if ((context.serverCodecModeSupport & 0x20200) == 0 && context.negotiatedHdr) {
+            context.connListener.displayTransientMessage("Your PC GPU does not support streaming HDR. The stream will be SDR.");
             context.negotiatedHdr = false;
         }
         
@@ -283,13 +256,13 @@ public class NvConnection {
         
         // Check for a supported stream resolution
         if ((context.streamConfig.getWidth() > 4096 || context.streamConfig.getHeight() > 4096) &&
-                (h.getServerCodecModeSupport(serverInfo) & 0x200) == 0) {
+                (h.getServerCodecModeSupport(serverInfo) & 0x200) == 0 && context.isNvidiaServerSoftware) {
             context.connListener.displayMessage("Your host PC does not support streaming at resolutions above 4K.");
             return false;
         }
         else if ((context.streamConfig.getWidth() > 4096 || context.streamConfig.getHeight() > 4096) &&
-                !context.streamConfig.getHevcSupported()) {
-            context.connListener.displayMessage("Your streaming device must support HEVC to stream at resolutions above 4K.");
+                (context.streamConfig.getSupportedVideoFormats() & ~MoonBridge.VIDEO_FORMAT_MASK_H264) == 0) {
+            context.connListener.displayMessage("Your streaming device must support HEVC or AV1 to stream at resolutions above 4K.");
             return false;
         }
         else if (context.streamConfig.getHeight() >= 2160 && !h.supports4K(serverInfo)) {
@@ -338,14 +311,14 @@ public class NvConnection {
         if (h.getCurrentGame(serverInfo) != 0) {
             try {
                 if (h.getCurrentGame(serverInfo) == app.getAppId()) {
-                    if (!h.resumeApp(context)) {
+                    if (!h.launchApp(context, "resume", app.getAppId(), context.negotiatedHdr)) {
                         context.connListener.displayMessage("Failed to resume existing session");
                         return false;
                     }
                 } else {
                     return quitAndLaunch(h, context);
                 }
-            } catch (GfeHttpResponseException e) {
+            } catch (HostHttpResponseException e) {
                 if (e.getErrorCode() == 470) {
                     // This is the error you get when you try to resume a session that's not yours.
                     // Because this is fairly common, we'll display a more detailed message.
@@ -378,7 +351,7 @@ public class NvConnection {
                 context.connListener.displayMessage("Failed to quit previous session! You must quit it manually");
                 return false;
             } 
-        } catch (GfeHttpResponseException e) {
+        } catch (HostHttpResponseException e) {
             if (e.getErrorCode() == 599) {
                 context.connListener.displayMessage("This session wasn't started by this device," +
                         " so it cannot be quit. End streaming on the original " +
@@ -396,7 +369,7 @@ public class NvConnection {
     private boolean launchNotRunningApp(NvHTTP h, ConnectionContext context)
             throws IOException, XmlPullParserException {
         // Launch the app since it's not running
-        if (!h.launchApp(context, context.streamConfig.getApp().getAppId(), context.negotiatedHdr)) {
+        if (!h.launchApp(context, "launch", context.streamConfig.getApp().getAppId(), context.negotiatedHdr)) {
             context.connListener.displayMessage("Failed to launch application");
             return false;
         }
@@ -423,7 +396,7 @@ public class NvConnection {
                         return;
                     }
                     context.connListener.stageComplete(appName);
-                } catch (GfeHttpResponseException e) {
+                } catch (HostHttpResponseException e) {
                     e.printStackTrace();
                     context.connListener.displayMessage(e.getMessage());
                     context.connListener.stageFailed(appName, 0, e.getErrorCode());
@@ -454,13 +427,14 @@ public class NvConnection {
                     MoonBridge.setupBridge(videoDecoderRenderer, audioRenderer, connectionListener);
                     int ret = MoonBridge.startConnection(context.serverAddress.address,
                             context.serverAppVersion, context.serverGfeVersion, context.rtspSessionUrl,
+                            context.serverCodecModeSupport,
                             context.negotiatedWidth, context.negotiatedHeight,
                             context.streamConfig.getRefreshRate(), context.streamConfig.getBitrate(),
                             context.negotiatedPacketSize, context.negotiatedRemoteStreaming,
                             context.streamConfig.getAudioConfiguration().toInt(),
-                            context.streamConfig.getHevcSupported(),
-                            context.negotiatedHdr,
+                            context.streamConfig.getSupportedVideoFormats(),
                             context.streamConfig.getHevcBitratePercentageMultiplier(),
+                            context.streamConfig.getAv1BitratePercentageMultiplier(),
                             context.streamConfig.getClientRefreshRateX100(),
                             context.streamConfig.getEncryptionFlags(),
                             context.riKey.getEncoded(), ib.array(),
@@ -474,20 +448,6 @@ public class NvConnection {
                         connectionAllowed.release();
                         return;
                     }
-
-                    if (batchMouseInput) {
-                        // High polling rate mice can cause GeForce Experience's input queue to get backed up,
-                        // causing massive input latency. We counter this by limiting our mouse events to 200 Hz
-                        // which appears to avoid triggering the issue on all known configurations.
-                        mouseInputTimer = new Timer("MouseInput", true);
-                        mouseInputTimer.schedule(new TimerTask() {
-                            @Override
-                            public void run() {
-                                // Flush the mouse position every 5 ms
-                                flushMousePosition();
-                            }
-                        }, MOUSE_BATCH_PERIOD_MS, MOUSE_BATCH_PERIOD_MS);
-                    }
                 }
             }
         }).start();
@@ -496,65 +456,27 @@ public class NvConnection {
     public void sendMouseMove(final short deltaX, final short deltaY)
     {
         if (!isMonkey) {
-            synchronized (mouseInputLock) {
-                relMouseX += deltaX;
-                relMouseY += deltaY;
-
-                // Reset these to ensure we don't send this as a position update
-                relMouseWidth = 0;
-                relMouseHeight = 0;
-            }
-
-            if (!batchMouseInput) {
-                flushMousePosition();
-            }
+            MoonBridge.sendMouseMove(deltaX, deltaY);
         }
     }
 
     public void sendMousePosition(short x, short y, short referenceWidth, short referenceHeight)
     {
         if (!isMonkey) {
-            synchronized (mouseInputLock) {
-                absMouseX = x;
-                absMouseY = y;
-                absMouseWidth = referenceWidth;
-                absMouseHeight = referenceHeight;
-            }
-
-            if (!batchMouseInput) {
-                flushMousePosition();
-            }
+            MoonBridge.sendMousePosition(x, y, referenceWidth, referenceHeight);
         }
     }
 
     public void sendMouseMoveAsMousePosition(short deltaX, short deltaY, short referenceWidth, short referenceHeight)
     {
         if (!isMonkey) {
-            synchronized (mouseInputLock) {
-                // Only accumulate the delta if the reference size is the same
-                if (relMouseWidth == referenceWidth && relMouseHeight == referenceHeight) {
-                    relMouseX += deltaX;
-                    relMouseY += deltaY;
-                }
-                else {
-                    relMouseX = deltaX;
-                    relMouseY = deltaY;
-                }
-
-                relMouseWidth = referenceWidth;
-                relMouseHeight = referenceHeight;
-            }
-
-            if (!batchMouseInput) {
-                flushMousePosition();
-            }
+            MoonBridge.sendMouseMoveAsMousePosition(deltaX, deltaY, referenceWidth, referenceHeight);
         }
     }
 
     public void sendMouseButtonDown(final byte mouseButton)
     {
         if (!isMonkey) {
-            flushMousePosition();
             MoonBridge.sendMouseButton(MouseButtonPacket.PRESS_EVENT, mouseButton);
         }
     }
@@ -562,13 +484,12 @@ public class NvConnection {
     public void sendMouseButtonUp(final byte mouseButton)
     {
         if (!isMonkey) {
-            flushMousePosition();
             MoonBridge.sendMouseButton(MouseButtonPacket.RELEASE_EVENT, mouseButton);
         }
     }
     
     public void sendControllerInput(final short controllerNumber,
-            final short activeGamepadMask, final short buttonFlags,
+            final short activeGamepadMask, final int buttonFlags,
             final byte leftTrigger, final byte rightTrigger,
             final short leftStickX, final short leftStickY,
             final short rightStickX, final short rightStickY)
@@ -578,36 +499,87 @@ public class NvConnection {
                     leftTrigger, rightTrigger, leftStickX, leftStickY, rightStickX, rightStickY);
         }
     }
-    
-    public void sendControllerInput(final short buttonFlags,
-            final byte leftTrigger, final byte rightTrigger,
-            final short leftStickX, final short leftStickY,
-            final short rightStickX, final short rightStickY)
-    {
+
+    public void sendKeyboardInput(final short keyMap, final byte keyDirection, final byte modifier, final byte flags) {
         if (!isMonkey) {
-            MoonBridge.sendControllerInput(buttonFlags, leftTrigger, rightTrigger, leftStickX,
-                    leftStickY, rightStickX, rightStickY);
-        }
-    }
-    
-    public void sendKeyboardInput(final short keyMap, final byte keyDirection, final byte modifier) {
-        if (!isMonkey) {
-            MoonBridge.sendKeyboardInput(keyMap, keyDirection, modifier);
+            MoonBridge.sendKeyboardInput(keyMap, keyDirection, modifier, flags);
         }
     }
     
     public void sendMouseScroll(final byte scrollClicks) {
         if (!isMonkey) {
-            flushMousePosition();
-            MoonBridge.sendMouseScroll(scrollClicks);
+            MoonBridge.sendMouseHighResScroll((short)(scrollClicks * 120)); // WHEEL_DELTA
+        }
+    }
+
+    public void sendMouseHScroll(final byte scrollClicks) {
+        if (!isMonkey) {
+            MoonBridge.sendMouseHighResHScroll((short)(scrollClicks * 120)); // WHEEL_DELTA
         }
     }
 
     public void sendMouseHighResScroll(final short scrollAmount) {
         if (!isMonkey) {
-            flushMousePosition();
             MoonBridge.sendMouseHighResScroll(scrollAmount);
         }
+    }
+
+    public void sendMouseHighResHScroll(final short scrollAmount) {
+        if (!isMonkey) {
+            MoonBridge.sendMouseHighResHScroll(scrollAmount);
+        }
+    }
+
+    public int sendTouchEvent(byte eventType, int pointerId, float x, float y, float pressureOrDistance,
+                              float contactAreaMajor, float contactAreaMinor, short rotation) {
+        if (!isMonkey) {
+            return MoonBridge.sendTouchEvent(eventType, pointerId, x, y, pressureOrDistance,
+                    contactAreaMajor, contactAreaMinor, rotation);
+        }
+        else {
+            return MoonBridge.LI_ERR_UNSUPPORTED;
+        }
+    }
+
+    public int sendPenEvent(byte eventType, byte toolType, byte penButtons, float x, float y,
+                            float pressureOrDistance, float contactAreaMajor, float contactAreaMinor,
+                            short rotation, byte tilt) {
+        if (!isMonkey) {
+            return MoonBridge.sendPenEvent(eventType, toolType, penButtons, x, y, pressureOrDistance,
+                    contactAreaMajor, contactAreaMinor, rotation, tilt);
+        }
+        else {
+            return MoonBridge.LI_ERR_UNSUPPORTED;
+        }
+    }
+
+    public int sendControllerArrivalEvent(byte controllerNumber, short activeGamepadMask, byte type,
+                                          int supportedButtonFlags, short capabilities) {
+        return MoonBridge.sendControllerArrivalEvent(controllerNumber, activeGamepadMask, type, supportedButtonFlags, capabilities);
+    }
+
+    public int sendControllerTouchEvent(byte controllerNumber, byte eventType, int pointerId,
+                                        float x, float y, float pressure) {
+        if (!isMonkey) {
+            return MoonBridge.sendControllerTouchEvent(controllerNumber, eventType, pointerId, x, y, pressure);
+        }
+        else {
+            return MoonBridge.LI_ERR_UNSUPPORTED;
+        }
+    }
+
+    public int sendControllerMotionEvent(byte controllerNumber, byte motionType,
+                                         float x, float y, float z) {
+        if (!isMonkey) {
+            return MoonBridge.sendControllerMotionEvent(controllerNumber, motionType, x, y, z);
+        }
+        else {
+            return MoonBridge.LI_ERR_UNSUPPORTED;
+        }
+    }
+
+    public void sendControllerBatteryEvent(byte controllerNumber, byte batteryState, byte batteryPercentage) {
+        MoonBridge.sendControllerBatteryEvent(controllerNumber, batteryState, batteryPercentage);
     }
 
     public void sendUtf8Text(final String text) {

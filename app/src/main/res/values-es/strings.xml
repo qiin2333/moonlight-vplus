@@ -16,7 +16,7 @@
     <string name="pair_fail">Fallo al emparejar</string>
     <!-- WOL messages -->
     <string name="wol_pc_online">Ordenador encendido</string>
-    <string name="wol_no_mac">Imposible iniciar PC porque GFE no ha enviado una dirección MAC</string>
+    <string name="wol_no_mac">No se puede activar el PC porque no hay ninguna dirección MAC almacenada</string>
     <string name="wol_waking_pc">Iniciando PC…</string>
     <string name="wol_waking_msg">Puede tomar algunos segundos iniciar tu PC.
 	    Si no se inicia asegúrate que está configurado correctamente para Wake-On-LAN.
@@ -47,10 +47,10 @@
     <string name="conn_terminated_title">Conexión finalizada</string>
     <string name="conn_terminated_msg">La conexión ha finalizando</string>
     <!-- General strings -->
-    <string name="ip_hint">Dirección IP del PC con GeForce</string>
-    <string name="searching_pc">Buscando por PCs con GameStream ejecutándose...
+    <string name="ip_hint">Dirección IP del host del ordenador</string>
+    <string name="searching_pc">Buscando el hostal del PC en tu red local...
 \n
-\nVerifica que GameStream esté activado en las opciones de SHIELD dentro de GeForce Experience.</string>
+\n Asegúrate de que Sunshine se está ejecutando en el PC anfitrión o de que GameStream está activado en los ajustes de GeForce Experience SHIELD.</string>
     <string name="yes">Si</string>
     <string name="no">No</string>
     <string name="lost_connection">Conexión perdida</string>
@@ -83,7 +83,7 @@
     <string name="title_checkbox_stretch_video">Ajustar vídeo a pantalla completa</string>
     <string name="title_checkbox_disable_warnings">Desactivar mensajes de advertencia</string>
     <string name="summary_checkbox_disable_warnings">Desactivar mensajes de advertencia en pantalla durante la transmisión</string>
-    <string name="category_audio_settings">Configuración de audio</string>
+    <string name="category_audio_settings">Ajustes del audio</string>
     <string name="title_checkbox_multi_controller">Soporte para múltiples mandos</string>
     <string name="summary_checkbox_multi_controller">Si no está marcado, todos los mandos aparecen como uno solo</string>
     <string name="title_seekbar_deadzone">Ajustar zona muerta del stick analógico</string>
@@ -106,12 +106,11 @@
     <string name="title_checkbox_host_audio">Reproducir audio en PC</string>
     <string name="summary_checkbox_host_audio">Reproducir audio en el ordenador y en este dispositivo</string>
     <string name="category_advanced_settings">Configuración avanzada</string>
-    <string name="title_video_format">Cambiar configuración HEVC</string>
-    <string name="summary_video_format">HEVC reduce el ancho de banda de vídeo, pero requiere un dispositivo reciente</string>
+    <string name="title_video_format">Cambiar la configuración del códec</string>
+    <string name="summary_video_format">Los códecs más recientes pueden reducir los requisitos del ancho de banda del vídeo si tu dispositivo los admite. Las selecciones de los códecs pueden ignorarse si no son compatibles con el software del host o la GPU.</string>
     <!-- Array strings -->
-    <string name="videoformat_hevcauto">Automático (Recomendado)</string>
+    <string name="videoformat_auto">Automático (Recomendado)</string>
     <string name="videoformat_hevcalways">Preferir HEVC</string>
-    <string name="videoformat_hevcnever">Nunca usar HEVC</string>
     <string name="nettest_title_done">Prueba de Red Completada</string>
     <string name="scut_not_paired">PC no emparejado</string>
     <string name="scut_invalid_uuid">El PC proporcionado no es válido</string>
@@ -122,9 +121,9 @@
     <string name="pcview_menu_test_network">Probar Conexión de Red</string>
     <string name="pcview_menu_details">Ver Detalles</string>
     <string name="nettest_title_waiting">Probando Conexión de Red</string>
-    <string name="nettest_text_waiting">Moonlight esta probando tu conexión de red para determinar si NVIDIA GameStream esta bloqueado.
+    <string name="nettest_text_waiting">Moonlight está probando tu conexión a la red para determinar si algún puerto necesario está bloqueado.
 \n
-\nEsto puede tomar algunos segundos …</string>
+\nEsto puede tardar unos segundos…</string>
     <string name="nettest_text_inconclusive">La prueba de red no pudo ejecutarse debido a que no se pudo alcanzar ningún servidor de prueba de conexión de Moonlight. Revisa tu conexión a internet o prueba nuevamente mas tarde.</string>
     <string name="nettest_text_failure">La actual conexión de red de tu dispositivo parece estar bloqueando Moonlight. La Transmisión mediante Internet puede no funcionar mientras estes conectado a esta red.
 \n
@@ -177,16 +176,14 @@
     <string name="audioconf_stereo">Estéreo</string>
     <string name="check_ports_msg">Revisa la configuración de tu firewall, así como, las reglas de redireccionamiento para él(los) puerto(s):</string>
     <string name="error_usb_prohibited">El acceso a USB está restringido en tu dispositivo por el administrador. Revisar tus ajustes en MDM o Knox.</string>
-    <string name="message_decoding_error">Moonlight se ha cerrado debido a una incompatibilidad con el decodificador de vídeo de este dispositivo. Asegúrate de que GeForce Experience está actualizado a la última versión en tu PC. Intenta ajustar la configuración de streaming si los bloqueos continúan.</string>
+    <string name="message_decoding_error">Moonlight se ha bloqueado debido a una incompatibilidad con el descodificador de vídeo de este dispositivo. Intenta ajustar la configuración de streaming si los bloqueos continúan.</string>
     <string name="message_decoding_reset">La decodificación de video de tu equipo sigue fallando con las opciones elegidas. Las opciones de la transmisión han sido revertidas a las predeterminadas.</string>
     <string name="video_decoder_init_failed">El descodificador de video no pudo ser iniciado. Tu dispositivo puede no soportar la resolución elegida o la tasa de cuadros por segundo.</string>
     <string name="no_frame_received_error">La conexión de internet no está teniendo un buen desempeño. Reduce la tasa de bits de video o prueba en una conexión de mayor velocidad.</string>
     <string name="unable_to_pin_shortcut">Tu lanzador predeterminado no permite la creación de accesos directos anclados.</string>
-    <string name="early_termination_error">Algo ha salido mal en el PC anfitrión cuando se inicio la transmisión.
+    <string name="early_termination_error">Algo ha fallado en tu ordenador al iniciar la transmisión.
 \n
-\nVerifica que no tengas ningún contenido protegido por DRM abierto en el equipo. También prueba reiniciando el equipo anfitrión.
-\n
-\nSi el problema persiste, intenta reinstalar los controladores de la tarjeta de video (GPU) además de GeForce Experience.</string>
+\nAsegúrate de que no tienes ningún contenido protegido por DRM abierto en tu ordenador. También puedes probar a reiniciar el ordenador.</string>
     <string name="title_details">Detalles</string>
     <string name="poor_connection_msg">Conexión pobre al PC</string>
     <string name="applist_menu_details">Ver Detalles</string>
@@ -195,13 +192,13 @@
     <string name="applist_menu_hide_app">Esconder Aplicación</string>
     <string name="applist_connect_msg">Conectando al Equipo…</string>
     <string name="summary_checkbox_mouse_nav_buttons">Activar esta opción puede desconfigurar la función de clic derecho en algunos dispositivos inestables</string>
-    <string name="text_native_res_dialog">Modos de resolución nativa no son oficialmente soportados por GeForce Experience, así que no se no se aplicarán por su cuenta en la pantalla del equipo anfitrión. Vas a necesitar ajustarlos manualmente en el juego.
+    <string name="text_native_res_dialog">Es posible que la resolución nativa y/o los FPS no sean compatibles con el servidor de streaming. Es probable que tengas que configurar manualmente un modo de visualización personalizado para el PC host.
 \n
-\nSi eliges crear una resolución personalizada en el Panel de Control de Nvidia para ajustarse a la resolución de tu dispositivo, por favor considera haber leído y entendido la advertencia de NVIDIA respectivo a cualquier daño posible a tu monitor, inestabilidad del equipo, y otros problemas potencialmente posibles.
+\nSi decides crear una resolución personalizada en el Panel de control de NVIDIA para que coincida con la configuración de tu pantalla, asegúrate de haber leído y comprendido la advertencia de NVIDIA sobre posibles daños en el monitor, inestabilidad del PC y otros problemas potenciales.
 \n
-\nNo somos responsables de cualquier problema por haber creador una resolución personalizada en tu PC.
+\nNo nos hacemos responsables de ningún problema derivado de la creación de una resolución personalizada en tu PC.
 \n
-\nFinalmente, tu dispositivo o tu Pc anfitrión, podrían no soportar la transmisión a resolución nativa. Si no funciona en tu equipo, puede que solo no tengas suerte de momento.</string>
+\nEs posible que tu monitor no admita la configuración de pantalla necesaria. Si es así, puede intentar configurar un monitor virtual. Por último, si tu dispositivo o PC anfitrión no soporta streaming a una resolución o frecuencia de refresco específica, lamentablemente no tienes suerte.</string>
     <string name="resolution_prefix_native">Nativo</string>
     <string name="summary_audio_config_list">Activar sonido envolvente de 5.1 o 7.1 canales para sistemas de teatro en casa</string>
     <string name="title_checkbox_vibrate_fallback">Emular la vibración del mando con vibración del equipo</string>
@@ -244,7 +241,7 @@
     <string name="title_disable_frame_drop">Nunca disminuir cuadros</string>
     <string name="summary_disable_frame_drop">Puede reducir micro-tartamudeos (Stuttering) en algunos dispositivos , pero puede incrementar latencia</string>
     <string name="title_enable_hdr">Activar HDR (Alto Rango Dinámico / Experimental)</string>
-    <string name="summary_enable_hdr">Transmitir HDR (Alto Rango Dinámico) cuando el juego, el PC y la Tarjeta de Video (GPU) lo soporten. HDR requiere de una Tarjeta de Video de la serie GTX 1000 o superior.</string>
+    <string name="summary_enable_hdr">Transmite en HDR cuando el juego y la GPU del PC lo admitan. HDR requiere una GPU compatible con la codificación HEVC Main 10.</string>
     <string name="summary_enable_perf_overlay">Mostrar en tiempo real la información del desempeño de la transmisión mientras está activa la misma</string>
     <string name="title_enable_post_stream_toast">Mostrar mensajes sobre latencia mientras se transmite</string>
     <string name="category_help">Ayuda</string>
@@ -263,6 +260,22 @@
     <string name="resolution_prefix_native_landscape">(Panorama)</string>
     <string name="summary_checkbox_reduce_refresh_rate">Tasa de refresco menores pueden ahorrar energía a cambio de una mayor latencia de video</string>
     <string name="title_checkbox_reduce_refresh_rate">Permitir reducción de la tasa de refresco</string>
-    <string name="title_full_range">Usar rango (0-255) de color completo</string>
-    <string name="summary_full_range">Esto puede causar problemas de video o bloqueos si la pantalla de tu dispositivo no puede manejar contenido de rango completo.</string>
+    <string name="title_full_range">Forzar video de rango completo (Experimental)</string>
+    <string name="summary_full_range">Esto provocará la pérdida de detalles en las áreas claras y oscuras si su dispositivo no muestra correctamente el contenido de video de rango completo.</string>
+    <string name="pair_pairing_help">Si el hostal del ordenador ejecuta Sunshine, navegue a la interfaz de usuario web de Sunshine para ingresar el PIN.</string>
+    <string name="pcview_menu_eol">Fin de servicio de NVIDIA GameStream</string>
+    <string name="fps_suffix_fps">FPS</string>
+    <string name="title_native_fps_dialog">Advertencia sobre FPS nativos</string>
+    <string name="category_gamepad_settings">Ajustes del Gamepad</string>
+    <string name="title_checkbox_gamepad_motion_sensors">Permitir el uso de los sensores de movimiento del gamepad</string>
+    <string name="videoformat_av1always">Preferir AV1 (Experimental)</string>
+    <string name="videoformat_h264always">Prefiero H.264</string>
+    <string name="perf_overlay_hostprocessinglatency">Latencia de procesamiento del host mín/máx/promedio: %1$.1f/%2$.1f/%3$.1f ms</string>
+    <string name="summary_checkbox_gamepad_touchpad_as_mouse">Fuerza la entrada del touchpad del gamepad para controlar el ratón del host, incluso cuando se emula un gamepad con touchpad.</string>
+    <string name="title_checkbox_gamepad_touchpad_as_mouse">Controla siempre el ratón con el touchpad</string>
+    <string name="summary_checkbox_gamepad_motion_sensors">Permite a los hosts compatibles solicitar datos de los sensores de movimiento al emular un gamepad con los sensores de movimiento. La desactivación puede reducir ligeramente el consumo de energía y el uso de la red si los sensores de movimiento no se utilizan en el juego.</string>
+    <string name="toast_controller_type_changed">El tipo del Gamepad puede cambiar debido a la emulación del sensor de movimiento</string>
+    <string name="summary_checkbox_gamepad_motion_fallback">Utiliza los sensores de movimiento integrados de tu dispositivo si el gamepad conectado o tu versión de Android no admiten los sensores del gamepad.
+\nNota: Activar esta opción puede hacer que tu gamepad aparezca como un mando de PlayStation en el host.</string>
+    <string name="title_checkbox_gamepad_motion_fallback">Emular el sensor de movimiento del gamepad</string>
 </resources>

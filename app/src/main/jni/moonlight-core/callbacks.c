@@ -33,6 +33,9 @@ static jmethodID BridgeClConnectionTerminatedMethod;
 static jmethodID BridgeClRumbleMethod;
 static jmethodID BridgeClConnectionStatusUpdateMethod;
 static jmethodID BridgeClSetHdrModeMethod;
+static jmethodID BridgeClRumbleTriggersMethod;
+static jmethodID BridgeClSetMotionEventStateMethod;
+static jmethodID BridgeClSetControllerLEDMethod;
 static jbyteArray DecodedFrameBuffer;
 static jshortArray DecodedAudioBuffer;
 
@@ -80,7 +83,7 @@ Java_com_limelight_nvstream_jni_MoonBridge_init(JNIEnv *env, jclass clazz) {
     BridgeDrStartMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeDrStart", "()V");
     BridgeDrStopMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeDrStop", "()V");
     BridgeDrCleanupMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeDrCleanup", "()V");
-    BridgeDrSubmitDecodeUnitMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeDrSubmitDecodeUnit", "([BIIIIJJ)I");
+    BridgeDrSubmitDecodeUnitMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeDrSubmitDecodeUnit", "([BIIIICJJ)I");
     BridgeArInitMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeArInit", "(III)I");
     BridgeArStartMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeArStart", "()V");
     BridgeArStopMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeArStop", "()V");
@@ -93,7 +96,10 @@ Java_com_limelight_nvstream_jni_MoonBridge_init(JNIEnv *env, jclass clazz) {
     BridgeClConnectionTerminatedMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClConnectionTerminated", "(I)V");
     BridgeClRumbleMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClRumble", "(SSS)V");
     BridgeClConnectionStatusUpdateMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClConnectionStatusUpdate", "(I)V");
-    BridgeClSetHdrModeMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClSetHdrMode", "(Z)V");
+    BridgeClSetHdrModeMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClSetHdrMode", "(Z[B)V");
+    BridgeClRumbleTriggersMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClRumbleTriggers", "(SSS)V");
+    BridgeClSetMotionEventStateMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClSetMotionEventState", "(SBS)V");
+    BridgeClSetControllerLEDMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClSetControllerLED", "(SBBB)V");
 }
 
 int BridgeDrSetup(int videoFormat, int width, int height, int redrawRate, void* context, int drFlags) {
@@ -159,7 +165,7 @@ int BridgeDrSubmitDecodeUnit(PDECODE_UNIT decodeUnit) {
 
             ret = (*env)->CallStaticIntMethod(env, GlobalBridgeClass, BridgeDrSubmitDecodeUnitMethod,
                                               DecodedFrameBuffer, currentEntry->length, currentEntry->bufferType,
-                                              decodeUnit->frameNumber, decodeUnit->frameType,
+                                              decodeUnit->frameNumber, decodeUnit->frameType, (jchar)decodeUnit->frameHostProcessingLatency,
                                               (jlong)decodeUnit->receiveTimeMs, (jlong)decodeUnit->enqueueTimeMs);
             if ((*env)->ExceptionCheck(env)) {
                 // We will crash here
@@ -180,7 +186,7 @@ int BridgeDrSubmitDecodeUnit(PDECODE_UNIT decodeUnit) {
 
     ret = (*env)->CallStaticIntMethod(env, GlobalBridgeClass, BridgeDrSubmitDecodeUnitMethod,
                                        DecodedFrameBuffer, offset, BUFFER_TYPE_PICDATA,
-                                       decodeUnit->frameNumber, decodeUnit->frameType,
+                                       decodeUnit->frameNumber, decodeUnit->frameType, (jchar)decodeUnit->frameHostProcessingLatency,
                                        (jlong)decodeUnit->receiveTimeMs, (jlong)decodeUnit->enqueueTimeMs);
     if ((*env)->ExceptionCheck(env)) {
         // We will crash here
@@ -331,7 +337,50 @@ void BridgeClConnectionStatusUpdate(int connectionStatus) {
 void BridgeClSetHdrMode(bool enabled) {
     JNIEnv* env = GetThreadEnv();
 
-    (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeClSetHdrModeMethod, enabled);
+    jbyteArray hdrMetadataByteArray = NULL;
+    SS_HDR_METADATA hdrMetadata;
+
+    // Check if HDR metadata was provided
+    if (enabled && LiGetHdrMetadata(&hdrMetadata)) {
+        hdrMetadataByteArray = (*env)->NewByteArray(env, sizeof(SS_HDR_METADATA));
+        (*env)->SetByteArrayRegion(env, hdrMetadataByteArray, 0, sizeof(SS_HDR_METADATA), (jbyte*)&hdrMetadata);
+    }
+
+    (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeClSetHdrModeMethod, enabled, hdrMetadataByteArray);
+    if ((*env)->ExceptionCheck(env)) {
+        // We will crash here
+        (*JVM)->DetachCurrentThread(JVM);
+    }
+}
+
+void BridgeClRumbleTriggers(unsigned short controllerNumber, unsigned short leftTrigger, unsigned short rightTrigger) {
+    JNIEnv* env = GetThreadEnv();
+
+    // The seemingly redundant short casts are required in order to convert the unsigned short to a signed short.
+    // If we leave it as an unsigned short, CheckJNI will fail when the value exceeds 32767. The cast itself is
+    // fine because the Java code treats the value as unsigned even though it's stored in a signed type.
+    (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeClRumbleTriggersMethod, controllerNumber, (short)leftTrigger, (short)rightTrigger);
+    if ((*env)->ExceptionCheck(env)) {
+        // We will crash here
+        (*JVM)->DetachCurrentThread(JVM);
+    }
+}
+
+void BridgeClSetMotionEventState(uint16_t controllerNumber, uint8_t motionType, uint16_t reportRateHz) {
+    JNIEnv* env = GetThreadEnv();
+
+    (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeClSetMotionEventStateMethod, controllerNumber, motionType, reportRateHz);
+    if ((*env)->ExceptionCheck(env)) {
+        // We will crash here
+        (*JVM)->DetachCurrentThread(JVM);
+    }
+}
+
+void BridgeClSetControllerLED(uint16_t controllerNumber, uint8_t r, uint8_t g, uint8_t b) {
+    JNIEnv* env = GetThreadEnv();
+
+    // These jbyte casts are necessary to satisfy CheckJNI
+    (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeClSetControllerLEDMethod, controllerNumber, (jbyte)r, (jbyte)g, (jbyte)b);
     if ((*env)->ExceptionCheck(env)) {
         // We will crash here
         (*JVM)->DetachCurrentThread(JVM);
@@ -372,17 +421,20 @@ static CONNECTION_LISTENER_CALLBACKS BridgeConnListenerCallbacks = {
         .rumble = BridgeClRumble,
         .connectionStatusUpdate = BridgeClConnectionStatusUpdate,
         .setHdrMode = BridgeClSetHdrMode,
+        .rumbleTriggers = BridgeClRumbleTriggers,
+        .setMotionEventState = BridgeClSetMotionEventState,
+        .setControllerLED = BridgeClSetControllerLED,
 };
 
 JNIEXPORT jint JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass clazz,
                                                            jstring address, jstring appVersion, jstring gfeVersion,
-                                                           jstring rtspSessionUrl,
+                                                           jstring rtspSessionUrl, jint serverCodecModeSupport,
                                                            jint width, jint height, jint fps,
                                                            jint bitrate, jint packetSize, jint streamingRemotely,
-                                                           jint audioConfiguration, jboolean supportsHevc,
-                                                           jboolean enableHdr,
+                                                           jint audioConfiguration, jint supportedVideoFormats,
                                                            jint hevcBitratePercentageMultiplier,
+                                                           jint av1BitratePercentageMultiplier,
                                                            jint clientRefreshRateX100,
                                                            jint encryptionFlags,
                                                            jbyteArray riAesKey, jbyteArray riAesIv,
@@ -393,6 +445,7 @@ Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass c
             .serverInfoAppVersion = (*env)->GetStringUTFChars(env, appVersion, 0),
             .serverInfoGfeVersion = gfeVersion ? (*env)->GetStringUTFChars(env, gfeVersion, 0) : NULL,
             .rtspSessionUrl = rtspSessionUrl ? (*env)->GetStringUTFChars(env, rtspSessionUrl, 0) : NULL,
+            .serverCodecModeSupport = serverCodecModeSupport,
     };
     STREAM_CONFIGURATION streamConfig = {
             .width = width,
@@ -402,9 +455,9 @@ Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass c
             .packetSize = packetSize,
             .streamingRemotely = streamingRemotely,
             .audioConfiguration = audioConfiguration,
-            .supportsHevc = supportsHevc,
-            .enableHdr = enableHdr,
+            .supportedVideoFormats = supportedVideoFormats,
             .hevcBitratePercentageMultiplier = hevcBitratePercentageMultiplier,
+            .av1BitratePercentageMultiplier = av1BitratePercentageMultiplier,
             .clientRefreshRateX100 = clientRefreshRateX100,
             .encryptionFlags = encryptionFlags,
             .colorSpace = colorSpace,
