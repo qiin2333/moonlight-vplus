@@ -11,7 +11,8 @@
 
 ![1705636181536](https://github.com/WACrown/moonlight-android/assets/48990489/129d40c9-a5bd-421d-8246-70c9855898bc)
 ![1705636181541](https://github.com/WACrown/moonlight-android/assets/48990489/be9b8bf2-aa6c-4cfc-9e48-835e621d29f5)
-![1705636181546](https://github.com/WACrown/moonlight-android/assets/48990489/c265c1a5-e4cd-4019-be1d-ea54b0277ef8)
+![1705638832932](https://github.com/WACrown/moonlight-android/assets/48990489/6bf12160-f7ac-449b-b42f-2d5e76d864dd)
+
 
 
 [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/232a8tadrrn8jv0k/branch/master?svg=true)](https://ci.appveyor.com/project/cgutman/moonlight-android/branch/master)
