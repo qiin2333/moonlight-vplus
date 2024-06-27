@@ -123,7 +123,7 @@
                 android:layout_gravity="center"
                 android:orientation="horizontal"
                 android:paddingBottom="32dp"
-                android:paddingRight="16dp">
+                android:layout_marginStart="4dp">
 
                 <Button
                     android:id="@+id/btnWin"

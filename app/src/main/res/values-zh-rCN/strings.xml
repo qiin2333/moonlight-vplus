@@ -100,6 +100,7 @@
     <!-- In Game menu -->
     <string name="game_menu_toggle_keyboard">屏幕键盘</string>
     <string name="game_menu_toggle_performance_overlay">性能监控图层</string>
+    <string name="game_menu_switch_ime">切换输入法（获取更多操作）</string>
     <string name="game_menu_toggle_mouse_on">手柄模拟鼠标-打开</string>
     <string name="game_menu_toggle_mouse_off">手柄模拟鼠标-关闭</string>
     <string name="game_menu_disconnect">结束串流</string>
@@ -171,16 +172,16 @@
     <string name="title_checkbox_mouse_nav_buttons"> 启用前进后退鼠标键 </string>
     <string name="summary_checkbox_mouse_nav_buttons"> 在一些支持不佳的设备上启用此项可能会使其右键失效 </string>
 
-    <string name="category_enhanced_touch_settings">增强型多点触控</string>
+    <string name="category_enhanced_touch_settings">多点触控设置</string>
     <string name="title_checkbox_enable_enhanced_touch">打开增强型触控</string>
-    <string name="summary_checkbox_enable_enhanced_touch">\t</string>
+    <string name="summary_checkbox_enable_enhanced_touch">关闭后可恢复经典模拟鼠标操作模式</string>
     <string name="title_checkbox_enhanced_touch_on_which_side">反转增强型触控区</string>
     <string name="summary_checkbox_enhanced_touch_on_which_side">反转增强型触控区 (增强区默认在右边)</string>
-    <string name="title_enhanced_touch_zone_divider">增强型触控分区位置</string>
+    <string name="title_enhanced_touch_zone_divider">触点灵敏度分区调控</string>
     <string name="summary_enhanced_touch_zone_divider">增强型触控与原生触控的分区位置，小于50%代表在屏幕左边的某个位置分区，大于50%代表分割线在右边</string>
     <string name="dialog_title_enhanced_touch_zone_divider">增强型触控与原生触控的分区位置，小于50%代表在屏幕左边的某个位置分区，大于50%代表分割线在右边</string>
     <string name="suffix_enhanced_touch_zone_divider">%</string>
-    <string name="title_pointer_velocity_factor">触点移速比例</string>
+    <string name="title_pointer_velocity_factor">触点灵敏度</string>
     <string name="summary_pointer_velocity_factor">设置增强型触控区内的触点移速比例。100% = 禁用，小于100%为缩小，大于100%为放大</string>
     <string name="dialog_title_pointer_velocity_factor">增强型触控区内的触点移速比例</string>
     <string name="suffix_pointer_velocity_factor">%</string>

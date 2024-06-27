@@ -1,6 +1,5 @@
 package com.limelight;
 
-
 import com.limelight.binding.PlatformBinding;
 import com.limelight.binding.audio.AndroidAudioRenderer;
 import com.limelight.binding.input.ControllerHandler;
@@ -63,7 +62,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Rational;
-import android.util.Log;
 import android.view.Display;
 import android.view.InputDevice;
 import android.view.KeyCharacterMap;
@@ -77,16 +75,12 @@ import android.view.View.OnSystemUiVisibilityChangeListener;
 import android.view.View.OnTouchListener;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodInfo;
 import android.widget.FrameLayout;
 import android.view.inputmethod.InputMethodManager;
-import android.view.View.OnClickListener;
-import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.ArrayAdapter;
-
-import androidx.interpolator.view.animation.LinearOutSlowInInterpolator;
 
 import java.io.ByteArrayInputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -103,6 +97,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 
 
 public class Game extends Activity implements SurfaceHolder.Callback,
@@ -2101,7 +2096,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 // cancelled touches from Android gestures and 3 finger taps to activate
                 // the software keyboard.
                 // 调整一下native touch passthrough的代码顺序
-                if (!prefConfig.touchscreenTrackpad && trySendTouchEvent(view, event)) {
+                if (!prefConfig.touchscreenTrackpad && prefConfig.enableEnhancedTouch && trySendTouchEvent(view, event)) {
                     // If this host supports touch events and absolute touch is enabled,
                     // send it directly as a touch event.
                     return true;
@@ -2906,6 +2901,16 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             requestedPerformanceOverlayVisibility = View.VISIBLE;
         }
         performanceOverlayView.setVisibility(requestedPerformanceOverlayVisibility);
+    }
+
+    public void imeSwitch() {
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        List<InputMethodInfo> mInputMethodProperties = imm.getInputMethodList();
+        Optional<InputMethodInfo> hackersInput = mInputMethodProperties.stream().filter(m -> m.getId().startsWith("org.pocketworkstation.pckeyboard")).findFirst();
+        imm.showInputMethodPicker();
+        if (!hackersInput.isPresent()) {
+            Toast.makeText(Game.this, "杂鱼～❤ 还不快装黑客键盘（hacker's keyboard", Toast.LENGTH_LONG).show();
+        }
     }
 
     private static byte getModifier(short key) {
