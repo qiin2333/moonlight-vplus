@@ -200,7 +200,7 @@
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
     <string name="text_native_res_dialog">La résolution native et/ou le FPS peuvent ne pas être pris en charge par le serveur de streaming. Vous devrez probablement configurer manuellement un mode d\'affichage personnalisé correspondant pour le PC hôte.
 \n
-\nSi vous choisissez de créer une résolution personnalisée dans le panneau de configuration NVIDIA pour correspondre aux paramètres de votre écran, assurez-vous d\'avoir lu et compris l\'avertissement de NVIDIA concernant les dommages possibles au moniteur, l\'instabilité du PC et d\'autres problèmes potentiels.
+\nSi vous choisissez de créer une résolution personnalisée dans le panneau de configurationItem NVIDIA pour correspondre aux paramètres de votre écran, assurez-vous d\'avoir lu et compris l\'avertissement de NVIDIA concernant les dommages possibles au moniteur, l\'instabilité du PC et d\'autres problèmes potentiels.
 \n
 \nNous ne sommes pas responsables des problèmes résultant de la création d\'une résolution personnalisée sur votre PC.
 \n
@@ -237,7 +237,7 @@
     <string name="resolution_1080p">1080p</string>
     <string name="resolution_4k">4K</string>
     <string name="category_help">Aide</string>
-    <string name="title_setup_guide">Guide de configuration</string>
+    <string name="title_setup_guide">Guide de configurationItem</string>
     <string name="title_troubleshooting">Guide de dépannage</string>
     <string name="title_privacy_policy">Politique de confidentialité</string>
     <string name="summary_privacy_policy">Voir la politique de confidentialité de Moonlight</string>

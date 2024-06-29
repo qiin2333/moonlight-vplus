@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="advance_setting_background">#303030</color>
+    <color name="configuration_line">#535353</color>
+    <color name="advance_setting_button_background">#404040</color>
+    <color name="window_box_background">#202020</color>
+    <color name="window_background">#C0303030</color>
+</resources>

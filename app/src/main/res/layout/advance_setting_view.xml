@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <include layout="@layout/layer_1_reserve"/>
+    <include layout="@layout/layer_2_element"/>
+    <include layout="@layout/layer_3_float"/>
+    <include layout="@layout/layer_4_edit"/>
+    <include layout="@layout/layer_5_setting"/>
+    <include layout="@layout/layer_6_config"/>
+    <include layout="@layout/layer_menu"/>
+    <include layout="@layout/layer_window"/>
+
+</FrameLayout>

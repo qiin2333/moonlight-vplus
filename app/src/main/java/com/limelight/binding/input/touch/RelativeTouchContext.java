@@ -19,7 +19,8 @@ public class RelativeTouchContext implements TouchContext {
     private boolean confirmedDrag;
     private boolean confirmedScroll;
     private double distanceMoved;
-    private double xFactor, yFactor;
+    private double xFactor = 0.6;
+    private double yFactor = 0.6;
     private int pointerCount;
     private int maxPointerCountInGesture;
 
@@ -148,9 +149,6 @@ public class RelativeTouchContext implements TouchContext {
     @Override
     public boolean touchDownEvent(int eventX, int eventY, long eventTime, boolean isNewFinger)
     {
-        // Get the view dimensions to scale inputs on this touch
-        xFactor = referenceWidth / (double)targetView.getWidth();
-        yFactor = referenceHeight / (double)targetView.getHeight();
 
         originalTouchX = lastTouchX = eventX;
         originalTouchY = lastTouchY = eventY;
@@ -327,5 +325,10 @@ public class RelativeTouchContext implements TouchContext {
         if (pointerCount > maxPointerCountInGesture) {
             maxPointerCountInGesture = pointerCount;
         }
+    }
+
+    public void adjustMsense(double sense){
+        xFactor = sense;
+        yFactor = sense;
     }
 }

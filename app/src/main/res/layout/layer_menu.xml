@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/layer_menu"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <Button
+        android:id="@+id/button_open_menu"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_marginLeft="5dp"
+        android:layout_marginTop="5dp"
+        android:background="@drawable/ic_menu"
+        android:alpha="0.25"
+        android:visibility="visible"/>
+
+    <Button
+        android:id="@+id/button_close_menu"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_marginLeft="5dp"
+        android:layout_marginTop="5dp"
+        android:background="@drawable/ic_home"
+        android:alpha="0.5"
+        android:visibility="gone"/>
+
+    <Button
+        android:id="@+id/button_config_mode"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_marginLeft="5dp"
+        android:layout_marginTop="45dp"
+        android:background="@drawable/ic_config"
+        android:alpha="0.5"
+        android:visibility="gone"/>
+
+    <Button
+        android:id="@+id/button_setting_mode"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_marginLeft="5dp"
+        android:layout_marginTop="85dp"
+        android:background="@drawable/ic_switch"
+        android:alpha="0.5"
+        android:visibility="gone"/>
+
+    <Button
+        android:id="@+id/button_edit_mode"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_marginLeft="5dp"
+        android:layout_marginTop="125dp"
+        android:background="@drawable/ic_edit"
+        android:alpha="0.5"
+        android:visibility="gone"/>
+
+
+</FrameLayout>

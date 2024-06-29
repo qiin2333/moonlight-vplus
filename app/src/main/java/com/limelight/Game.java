@@ -5,6 +5,7 @@ import com.limelight.binding.audio.AndroidAudioRenderer;
 import com.limelight.binding.input.ControllerHandler;
 import com.limelight.binding.input.GameInputDevice;
 import com.limelight.binding.input.KeyboardTranslator;
+import com.limelight.binding.input.advance_setting.ControllerManager;
 import com.limelight.binding.input.capture.InputCaptureManager;
 import com.limelight.binding.input.capture.InputCaptureProvider;
 import com.limelight.binding.input.touch.AbsoluteTouchContext;
@@ -127,6 +128,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private ControllerHandler controllerHandler;
     private KeyboardTranslator keyboardTranslator;
     private VirtualController virtualController;
+
+    private ControllerManager controllerManager;
 
     private PreferenceConfiguration prefConfig;
     private SharedPreferences tombstonePrefs;
@@ -568,6 +571,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             virtualController.show();
         }
 
+        if (prefConfig.onscreenKeyboard) {
+            // create virtual onscreen keyboard
+            controllerManager = new ControllerManager((FrameLayout)streamView.getParent(),this);
+            controllerManager.refreshLayout();
+        }
+
         if (prefConfig.usbDriver) {
             // Start the USB driver
             bindService(new Intent(this, UsbDriverService.class),
@@ -639,6 +648,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         if (virtualController != null) {
             // Refresh layout of OSC for possible new screen size
             virtualController.refreshLayout();
+        }
+        if (controllerManager != null) {
+            // Refresh layout of OSC for possible new screen size
+            System.out.println("wangguan test game");
+            controllerManager.refreshLayout();
         }
 
         // Hide on-screen overlays in PiP mode
@@ -2951,5 +2965,17 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 conn.sendKeyboardInput(key, KeyboardPacket.KEY_UP, modifier[0], (byte) 0);
             }
         }), 25);
+    }
+    
+    public void adjustMsenseRelative(int sense){
+        for (TouchContext aTouchContext : touchContextMap) {
+            if (aTouchContext instanceof RelativeTouchContext){
+                ((RelativeTouchContext) aTouchContext).adjustMsense(sense * 0.01);
+            }
+        }
+    }
+
+    public ControllerHandler getControllerHandler() {
+        return controllerHandler;
     }
 }

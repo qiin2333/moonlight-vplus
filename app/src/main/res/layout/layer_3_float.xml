@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/layer_float"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <LinearLayout
+        android:id="@+id/float_keyboard_box"
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:visibility="gone">
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="37dp">
+            <Button
+                android:id="@+id/float_keyboard_display_button"
+                android:layout_width="50dp"
+                android:layout_height="match_parent"
+                android:text="↑"
+                android:alpha="1" />
+            <SeekBar
+                android:id="@+id/float_keyboard_seekbar"
+                android:alpha="1"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:progress="10"
+                android:min="1"
+                android:max="10"
+                android:visibility="gone"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/float_keyboard"
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:alpha="1"
+            android:visibility="gone">
+            <include layout="@layout/layout_keyboard"/>
+        </LinearLayout>
+    </LinearLayout>
+
+</FrameLayout>

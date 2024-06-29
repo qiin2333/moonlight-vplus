@@ -267,6 +267,20 @@
             android:positiveButtonText="@string/yes"
             android:negativeButtonText="@string/no"
             />
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="checkbox_show_onscreen_keyboard"
+            android:summary="串流的过程中可以设置屏幕键盘和其他功能"
+            android:title="高级设置" />
+        <ListPreference
+            android:key="export_advance_config"
+            android:title="导出配置文件"
+            android:summary="导出自定义按钮的和串流内设置的配置文件" />
+        <Preference
+            android:key="import_advance_config"
+            android:title="导入配置文件"
+            android:summary="导入自定义按钮的和串流内设置的配置文件" />
+
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_host_settings">
         <CheckBoxPreference
