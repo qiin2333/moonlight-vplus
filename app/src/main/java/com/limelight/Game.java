@@ -2809,8 +2809,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             }
             if (s.contains(getResources().getString(R.string.perf_overlay_decoder).substring(0, 5))) {
                 decoderInfo = s.toLowerCase().replaceFirst(".*\\.(avc|hevc|av1).*", "$1").toUpperCase();
-                decoderInfo += " with HDR ";
-                decoderInfo += prefConfig.enableHdr? "On" : "Off";
+                decoderInfo += prefConfig.enableHdr? " HDR" : "";
             }
             if (s.contains(getResources().getString(R.string.perf_overlay_renderingfps).substring(0, 5))) {
                 renderFpsInfo = s;
@@ -2827,7 +2826,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                         + " M/s   " + s.replaceFirst("\\D*(\\d+) ms \\(\\D*(\\d+) ms\\)", "$1 ± $2 ms");
             }
             if (s.contains(getResources().getString(R.string.perf_overlay_dectime).substring(0, 7))) {
-                decodeLatencyInfo = s;
+                float decodeTime = Float.parseFloat(s.replaceFirst(".*\\s(\\d+\\.\\d+)\\sms", "$1"));
+                decodeLatencyInfo = (decodeTime < 12 ? "\uD83C\uDFAE " : "\uD83E\uDD75 ") + decodeTime + " ms";
             }
             if (s.contains(getResources().getString(R.string.perf_overlay_hostprocessinglatency).substring(0, 6))) {
                 hostLatencyInfo = s;
@@ -2837,7 +2837,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         String finalResInfo = resInfo;
         String finalDecoderInfo = decoderInfo;
         String finalRenderFpsInfo = renderFpsInfo.replaceFirst(".*\\s(\\d+\\.\\d+)\\sFPS", "$1 fps");
-        String finalDecodeLatencyInfo = decodeLatencyInfo.replaceFirst(".*\\s(\\d+\\.\\d+\\sms)", "\uD83C\uDFAE $1");
+        String finalDecodeLatencyInfo = decodeLatencyInfo;
         String finalNetworkLatencyInfo = networkLatencyInfo;
         String finalHostLatencyInfo = hostLatencyInfo.replaceFirst("^.*?:", "\uD83D\uDDA5\uFE0F ");
         runOnUiThread(new Runnable() {
