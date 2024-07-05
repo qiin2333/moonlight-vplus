@@ -2,8 +2,8 @@ apply plugin: 'com.android.application'
 
 android {
     ndkVersion "25.2.9519653"
-
     compileSdk 34
+
 
     namespace 'com.limelight'
 
@@ -12,7 +12,7 @@ android {
         targetSdk 34
 
         versionName "12.1"
-        versionCode = 314
+        versionCode = 315
 
         // Generate native debug symbols to allow Google Play to symbolicate our native crashes
         ndk.debugSymbolLevel = 'FULL'
@@ -144,8 +144,6 @@ dependencies {
     implementation 'com.github.cgutman:ShieldControllerExtensions:1.0.1'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.github.ZeyuKeithFu:KeyboardHeaderLayout:v1.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    implementation 'com.google.code.gson:gson:2.9.1'
-
-
+    implementation 'androidx.constraintlayout:constraintlayout:2.2.0-alpha09'
+    implementation 'com.google.code.gson:gson:2.11.0'
 }

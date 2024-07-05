@@ -10,7 +10,8 @@
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
+        android:maxSdkVersion="32"
+        tools:ignore="ScopedStorage" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
     <uses-permission android:name="com.android.providers.tv.permission.READ_EPG_DATA"/>
@@ -56,18 +57,19 @@
         android:isGame="true"
         android:banner="@drawable/atv_banner"
         android:appCategory="game"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/ic_gura"
         android:installLocation="auto"
         android:gwpAsanMode="always"
         android:localeConfig="@xml/locales_config"
         android:enableOnBackInvokedCallback="false"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme"
+        tools:targetApi="tiramisu">
 
         <provider
             android:name=".PosterContentProvider"
             android:authorities="poster.${applicationId}"
             android:enabled="true"
-            android:exported="true">
+            android:exported="false">
         </provider>
 
         <!-- Samsung multi-window support -->
