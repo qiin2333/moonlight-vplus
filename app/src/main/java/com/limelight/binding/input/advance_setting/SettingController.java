@@ -1,8 +1,6 @@
 package com.limelight.binding.input.advance_setting;
 
-import android.app.Activity;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.text.InputType;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -16,7 +14,6 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.limelight.Game;
 import com.limelight.R;
 
 import java.util.Map;
@@ -24,8 +21,10 @@ import java.util.Map;
 public class SettingController {
 
     private static final String KEYBOARD_SETTING = "keyboard_setting";
-    private static final String MSENSE = "msense";
+    private static final String MOUSE_SENSE = "mouse_sense";
     private static final String ELEMENT_OPACITY = "element_opacity";
+    private static final String MOUSE_ENABLE = "mouse_enable";
+    private static final String MOUSE_MODE = "mouse_mode";
 
     private SettingPreference settingPreference;
     private ControllerManager controllerManager;
@@ -35,6 +34,9 @@ public class SettingController {
     private Switch floatKeyboardSwitch;
     private TextView msenseTextView;
     private SeekBar elementOpacitySeekbar;
+    private Switch mouseEnableSwitch;
+    private Switch mouseModeSwitch;
+
 
     private Context context;
 
@@ -46,10 +48,14 @@ public class SettingController {
         floatKeyboardSwitch = settingLayout.findViewById(R.id.float_keyboard_enable_switch);
         msenseTextView = settingLayout.findViewById(R.id.msense_textview);
         elementOpacitySeekbar = settingLayout.findViewById(R.id.element_opacity_seekbar);
+        mouseEnableSwitch = settingLayout.findViewById(R.id.mouse_enable_switch);
+        mouseModeSwitch = settingLayout.findViewById(R.id.trackpad_enable_switch);
 
         initFloatKeyboard();
-        initMsense();
+        initMouseSense();
         initElementOpacity();
+        initMouseEnable();
+        initMouseMode();
     }
 
     private void initFloatKeyboard(){
@@ -135,7 +141,7 @@ public class SettingController {
 
     }
 
-    private void initMsense(){
+    private void initMouseSense(){
         int min = 1;
         int max = 500;
         WindowsController.EditTextWindowListener inputMsenseListener = new WindowsController.EditTextWindowListener() {
@@ -152,8 +158,8 @@ public class SettingController {
                 }
                 String sense = String.valueOf(value);
                 msenseTextView.setText(sense);
-                doSetting(MSENSE, sense);
-                settingPreference.saveSetting(MSENSE, sense);
+                doSetting(MOUSE_SENSE, sense);
+                settingPreference.saveSetting(MOUSE_SENSE, sense);
 
                 return true;
             }
@@ -190,6 +196,26 @@ public class SettingController {
         });
     }
 
+    private void initMouseEnable(){
+        mouseEnableSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                doSetting(MOUSE_ENABLE,String.valueOf(isChecked));
+                settingPreference.saveSetting(MOUSE_ENABLE, String.valueOf(isChecked));
+            }
+        });
+    }
+
+    private void initMouseMode(){
+        mouseModeSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                doSetting(MOUSE_MODE,String.valueOf(isChecked));
+                settingPreference.saveSetting(MOUSE_MODE, String.valueOf(isChecked));
+            }
+        });
+    }
+
 
     public void loadSettingConfig(String configId){
         settingPreference = new SettingPreference(configId,context);
@@ -207,11 +233,17 @@ public class SettingController {
             case KEYBOARD_SETTING:
                 floatKeyboardSwitch.setChecked(Boolean.valueOf(settingValue));
                 break;
-            case MSENSE:
+            case MOUSE_SENSE:
                 msenseTextView.setText(settingValue);
                 break;
             case ELEMENT_OPACITY:
                 elementOpacitySeekbar.setProgress(Integer.parseInt(settingValue));
+                break;
+            case MOUSE_ENABLE:
+                mouseEnableSwitch.setChecked(Boolean.valueOf(settingValue));
+                break;
+            case MOUSE_MODE:
+                mouseModeSwitch.setChecked(Boolean.valueOf(settingValue));
                 break;
         }
     }
@@ -227,14 +259,23 @@ public class SettingController {
                 }
                 break;
             }
-            case MSENSE:{
-                ((Game)context).adjustMsenseRelative(Integer.parseInt(settingValue));
+            case MOUSE_SENSE:{
+                controllerManager.getTouchController().adjustTouchSense(Integer.parseInt(settingValue));
                 break;
             }
             case ELEMENT_OPACITY:
                 controllerManager.getElementController().setOpacity(Integer.parseInt(settingValue) * 10);
                 break;
-
+            case MOUSE_ENABLE:
+                controllerManager.getTouchController().enableTouch(Boolean.valueOf(settingValue));
+                break;
+            case MOUSE_MODE:
+                boolean touchMode = Boolean.valueOf(settingValue);
+                controllerManager.getTouchController().setTouchMode(touchMode);
+                if (touchMode){
+                    doSetting(MOUSE_SENSE,msenseTextView.getText().toString());
+                }
+                break;
         }
     }
 

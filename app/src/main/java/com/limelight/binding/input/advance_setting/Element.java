@@ -11,9 +11,6 @@ import android.widget.FrameLayout;
 public abstract class Element extends View {
     private int normalColor = 0xF0888888;
     protected int pressedColor = 0xF00000FF;
-    private final Paint paint = new Paint();
-
-    private String elementId;
     private ElementBean elementBean;
     protected final ElementController elementController;
 
@@ -22,8 +19,9 @@ public abstract class Element extends View {
     public Element(ElementController elementController, ElementBean elementBean, Context context){
         super(context);
         this.elementController = elementController;
-        this.elementId = elementBean.getName();
         this.elementBean = elementBean;
+        this.normalColor = elementBean.getNormalColor();
+        this.pressedColor = elementBean.getPressedColor();
         setOpacity(elementBean.getOpacity());
     }
 
@@ -32,7 +30,11 @@ public abstract class Element extends View {
     }
 
     public String getElementId() {
-        return elementId;
+        return elementBean.getId();
+    }
+
+    public String getElementName(){
+        return elementBean.getName();
     }
     boolean inRange(float x, float y) {
         return (this.getX() < x && this.getX() + this.getWidth() > x) &&
@@ -165,5 +167,14 @@ public abstract class Element extends View {
 
     protected final int getCorrectWidth() {
         return getWidth() > getHeight() ? getHeight() : getWidth();
+    }
+
+    @Override
+    public String toString() {
+        return "Name:" + elementBean.getName() + "," +
+                "X:" + getCentralX() + "," +
+                "Y:" + getCentralY() + "," +
+                "W:" + getParamWidth() + "," +
+                "H:" + getParamHeight();
     }
 }

@@ -159,7 +159,7 @@ public class StreamSettings extends Activity {
             }
         }
 
-        public static final int CONFIG_MAJOR_VERSION = 1;
+        public static final int CONFIG_MAJOR_VERSION = 2;
         public static final int CONFIG_MINOR_VERSION = 0;
         public static final int CONFIG_PATCH_VERSION = 0;
         private int nativeResolutionStartIndex = Integer.MAX_VALUE;
@@ -726,25 +726,28 @@ public class StreamSettings extends Activity {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                 Context context = getContext();
                 ConfigListPreference configListPreference = new ConfigListPreference(context);
-                List<String> names = configListPreference.getSortedConfigurationNames();
-                CharSequence[] nameEntries = names.toArray(new CharSequence[0]);
-                CharSequence[] nameEntryValues = nameEntries;
+                Map<String, String> configs = configListPreference.getSortedConfigurationMap();
+                CharSequence[] nameEntries = configs.values().toArray(new String[0]);
+                CharSequence[] nameEntryValues = configs.keySet().toArray(new String[0]);
                 exportPreference.setEntries(nameEntries);
                 exportPreference.setEntryValues(nameEntryValues);
 
-
-                findPreference(PreferenceConfiguration.EXPORT_CONFIG_STRING).setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+                exportPreference.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
                     @Override
                     public boolean onPreferenceChange(Preference preference, Object newValue) {
-                        String configName = (String) newValue;
-                        String configId = configListPreference.getConfigId(configName);
+
+
+                        String configId = (String) newValue;
                         SettingPreference settingPreference = new SettingPreference(configId,context);
                         ElementPreference elementPreference = new ElementPreference(configId,context);
 
                         Map<String, String> settingPreferenceMap = settingPreference.exportPreference();
                         Map<String, String> elementPreferenceMap = elementPreference.exportPreference();
+                        ListPreference listPreference = (ListPreference) preference;
+                        int index = listPreference.findIndexOfValue(newValue.toString());
+                        String newName = (String) listPreference.getEntries()[index];
 
-                        ConfigObject configObject = new ConfigObject(configName,
+                        ConfigObject configObject = new ConfigObject(newName,
                                 CONFIG_MAJOR_VERSION,
                                 CONFIG_MINOR_VERSION,
                                 CONFIG_PATCH_VERSION,
@@ -759,7 +762,7 @@ public class StreamSettings extends Activity {
                         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
                         intent.addCategory(Intent.CATEGORY_OPENABLE);
                         intent.setType("*/*");
-                        intent.putExtra(Intent.EXTRA_TITLE, configName + ".mdat");
+                        intent.putExtra(Intent.EXTRA_TITLE, newName + ".mdat");
                         startActivityForResult(intent, 1);
 
                         return false;
@@ -772,6 +775,7 @@ public class StreamSettings extends Activity {
         @Override
         public void onActivityResult(int requestCode, int resultCode, Intent data) {
             super.onActivityResult(requestCode, resultCode, data);
+            //导出配置文件
             if (requestCode == 1 && resultCode == Activity.RESULT_OK) {
                 Uri uri = data.getData();
 
@@ -789,6 +793,7 @@ public class StreamSettings extends Activity {
                 }
 
             }
+            //导入配置文件
             if (requestCode == 2 && resultCode == Activity.RESULT_OK) {
                 Uri importUri = data.getData();
 
@@ -830,9 +835,8 @@ public class StreamSettings extends Activity {
                             configObject.configName = configObject.configName + "-1";
                             configObject.configName = recursionRenameConfig(configListPreference,configObject.configName);
                         }
-
-                        configListPreference.addConfiguration(configObject.configName);
-                        String configId = configListPreference.getConfigId(configObject.configName);
+                        String configId = String.valueOf(System.currentTimeMillis());
+                        configListPreference.addConfiguration(configId,configObject.configName);
 
                         SettingPreference settingPreference = new SettingPreference(configId,getContext());
                         ElementPreference elementPreference = new ElementPreference(configId,getContext());
@@ -841,6 +845,13 @@ public class StreamSettings extends Activity {
                         elementPreference.importPreference(configObject.elementMap);
                         Toast.makeText(getContext(),"导入配置文件成功",Toast.LENGTH_SHORT).show();
 
+                        //更新导出配置文件列表
+                        ListPreference exportPreference = (ListPreference) findPreference(PreferenceConfiguration.EXPORT_CONFIG_STRING);
+                        Map<String, String> configs = configListPreference.getSortedConfigurationMap();
+                        CharSequence[] nameEntries = configs.values().toArray(new String[0]);
+                        CharSequence[] nameEntryValues = configs.keySet().toArray(new String[0]);
+                        exportPreference.setEntries(nameEntries);
+                        exportPreference.setEntryValues(nameEntryValues);
                     } catch (IOException e) {
                     }
                 }
@@ -857,5 +868,6 @@ public class StreamSettings extends Activity {
             }
 
         }
+
     }
 }

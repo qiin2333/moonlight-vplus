@@ -9,6 +9,8 @@ import android.widget.Toast;
 
 import com.limelight.R;
 
+import java.util.Map;
+
 public class ConfigController {
 
 
@@ -40,20 +42,26 @@ public class ConfigController {
     }
 
     private void loadConfigs(){
-        String currentConfigName = configListPreference.getCurrentConfigName();
+        String currentConfigId = configListPreference.getCurrentConfigId();
 
-        for (String name : configListPreference.getSortedConfigurationNames()){
-            ConfigItem item = addConfigItem(name);
-            if (name.equals(currentConfigName)){
-                currentSelectItem = item;
-                currentSelectItem.selected();
+        for (Map.Entry<String,String> entry: configListPreference.getSortedConfigurationMap().entrySet()){
+            String configId = entry.getKey();
+            ConfigItem item = addDispalyConfigItem(configId,entry.getValue());
+            if (configId.equals(currentConfigId)){
+                selectItem(item);
             }
         }
 
     }
 
-    private ConfigItem addConfigItem(String layoutName){
-        ConfigItem configItem = new ConfigItem(this,layoutName,context);
+    private void addConfig(String configName){
+        String configId = String.valueOf(System.currentTimeMillis());
+        configListPreference.addConfiguration(configId,configName);
+        addDispalyConfigItem(configId,configName);
+    }
+
+    private ConfigItem addDispalyConfigItem(String layoutId, String layoutName){
+        ConfigItem configItem = new ConfigItem(this,layoutName,layoutId,context);
 
         configItemContainer.addView(configItem.getView(), (configItemContainer.getChildCount() - 1));
         return configItem;
@@ -62,17 +70,19 @@ public class ConfigController {
 
 
     public void loadCurrentConfig(){
-        String configId = configListPreference.getConfigId(currentSelectItem.getText());
+        String configId = configListPreference.getCurrentConfigId();
         controllerManager.getElementController().loadElementConfig(configId);
         controllerManager.getSettingController().loadSettingConfig(configId);
     }
 
 
     public void selectItem(ConfigItem configItem){
-        currentSelectItem.unselected();
+        if (currentSelectItem != null){
+            currentSelectItem.unselected();
+        }
         currentSelectItem = configItem;
         currentSelectItem.selected();
-        configListPreference.setCurrentConfigName(configItem.getText());
+        configListPreference.setCurrentConfigId(configItem.getId());
         loadCurrentConfig();
 
     }
@@ -85,12 +95,11 @@ public class ConfigController {
                     Toast.makeText(context,"配置名字已存在",Toast.LENGTH_SHORT).show();
                     return false;
                 }
-                if (!text.matches("^[a-zA-Z0-9]{1,10}$")){
-                    Toast.makeText(context,"名称只能由1-10个数字、小写字母组成",Toast.LENGTH_SHORT).show();
+                if (!text.matches("^[\\u4e00-\\u9fa5a-zA-Z0-9]{1,15}$")){
+                    Toast.makeText(context,"名称不能有符号，且长度为1-15个字符",Toast.LENGTH_SHORT).show();
                     return false;
                 }
-                configListPreference.addConfiguration(text);
-                addConfigItem(text);
+                addConfig(text);
                 return true;
             }
 
@@ -108,26 +117,21 @@ public class ConfigController {
         WindowsController.EditTextWindowListener renameListener = new WindowsController.EditTextWindowListener() {
             @Override
             public boolean onConfirmClick(String text) {
-                String preName = configItem.getText();
                 String nowName = text;
                 //如果名字没有改变，点击确认键也可以返回，如果没有这个判断，点击确认键会显示名称已存在
-                if (preName.equals(nowName)){
+                if (configItem.getName().equals(nowName)){
                     return true;
                 }
                 if (configListPreference.isContainedName(nowName)){
                     Toast.makeText(context,"配置名字已存在",Toast.LENGTH_SHORT).show();
                     return false;
                 }
-                if (!nowName.matches("^[a-zA-Z0-9]{1,10}$")){
-                    Toast.makeText(context,"名称只能由1-10个数字、小写字母组成",Toast.LENGTH_SHORT).show();
+                if (!nowName.matches("^[\\u4e00-\\u9fa5a-zA-Z0-9]{1,15}$")){
+                    Toast.makeText(context,"名称不能有符号，且长度为1-15个字符",Toast.LENGTH_SHORT).show();
                     return false;
                 }
-                //如果编辑的这个配置先前的名字和当前选择的配置的名字一样，则说明在修改选中的配置，需要修改存储中目前的配置名称
-                if (preName.equals(currentSelectItem.getText())){
-                    configListPreference.setCurrentConfigName(nowName);
-                }
-                configListPreference.renameConfiguration(preName,nowName);
-                configItem.setText(nowName);
+                configListPreference.renameConfiguration(configItem.getId(),nowName);
+                configItem.setName(nowName);
                 return true;
             }
 
@@ -137,20 +141,20 @@ public class ConfigController {
             }
 
         };
-        controllerManager.getWindowsController().openEditTextWindow(renameListener,configItem.getText(),"","",InputType.TYPE_CLASS_TEXT);
+        controllerManager.getWindowsController().openEditTextWindow(renameListener,configItem.getName(),"","",InputType.TYPE_CLASS_TEXT);
     }
 
     public void jumpDeleteWindow(ConfigItem configItem){
         WindowsController.TextWindowListener deleteListener = new WindowsController.TextWindowListener() {
             @Override
             public boolean onConfirmCLick() {
-                String configName = configItem.getText();
+                String configId = configItem.getId();
                 //1.先把element的preference删除
-                new ElementPreference(configListPreference.getConfigId(configName), context).delete();
+                new ElementPreference(configId, context).delete();
                 //2.再把setting的preference删除
-                new SettingPreference(configListPreference.getConfigId(configName),context).delete();
+                new SettingPreference(configId,context).delete();
                 //3.删除配置列表中的名字
-                configListPreference.deleteConfig(configName);
+                configListPreference.deleteConfig(configId);
                 configItemContainer.removeView(configItem.getView());
 
                 return true;
@@ -163,7 +167,7 @@ public class ConfigController {
 
         };
 
-        controllerManager.getWindowsController().openTextWindow(deleteListener, "是否删除:" + configItem.getText());
+        controllerManager.getWindowsController().openTextWindow(deleteListener, "是否删除:" + configItem.getName());
     }
 
     public void open(){

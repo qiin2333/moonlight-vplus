@@ -56,7 +56,7 @@ public class ElementController {
         this.game = (Game) context;
         this.controllerManager = controllerManager;
         this.controllerHandler = game.getControllerHandler();
-        layout.findViewById(R.id.element_touch_view).setOnTouchListener(game);
+
 
         handler = new Handler(Looper.getMainLooper());
     }
@@ -67,15 +67,6 @@ public class ElementController {
 
 
 
-
-    public boolean isContainedElement(String name){
-        for (Element element : elements) {
-            if (element.getElementId().equals(name)){
-                return true;
-            }
-        }
-        return false;
-    }
 
     public void loadElementConfig(String configId){
         removeElementsFromScreen();

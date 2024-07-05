@@ -25,7 +25,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="50dp"
                     android:textSize="25sp"
-                    android:text="布局选择"
+                    android:text="配置选择"
                     android:gravity="center"/>
                 <View
                     android:layout_width="match_parent"

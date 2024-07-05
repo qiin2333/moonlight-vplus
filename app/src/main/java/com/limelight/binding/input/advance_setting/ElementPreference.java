@@ -38,7 +38,7 @@ public class ElementPreference {
     }
 
     public int addElement(ElementBean element){
-        String elementName = element.getName();
+        String elementName = element.getId();
         String elementString = JSONToString(element);
         editor.putString(elementName, elementString);
         editor.apply();
@@ -63,6 +63,7 @@ public class ElementPreference {
             ElementBean elementBean = stringToJSON(entry.getValue());
             // 转换完成后放到List<ElementBean>中
             list.add(elementBean);
+            System.out.println(elementBean.toString());
         }
 
         //对element根据创建时间进行排序
@@ -79,6 +80,7 @@ public class ElementPreference {
     private ElementBean stringToJSON(String element){
         //这个elementBean的原因是因为Gson会报错，无法转换Map，但是新建一个elementBean就可以了，可能是创建之后，这个对象并没有被回收，于是就被gson使用了
         new ElementBean(
+                null,
             null,
             "BUTTON",
             new HashMap<>(),

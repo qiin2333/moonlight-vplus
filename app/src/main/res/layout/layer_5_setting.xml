@@ -32,6 +32,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="40"/>
             </LinearLayout>
+
             <LinearLayout
                 android:orientation="horizontal"
                 android:layout_width="match_parent"
@@ -44,7 +45,49 @@
                     android:layout_height="match_parent"
                     android:gravity="center_vertical"
                     android:layout_weight="100"
-                    android:text="鼠标灵敏度"/>
+                    android:text="开启触摸"/>
+                <Switch
+                    android:id="@+id/mouse_enable_switch"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="40"
+                    android:checked="true"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:layout_weight="100"
+                    android:text="触控板模式"/>
+                <Switch
+                    android:id="@+id/trackpad_enable_switch"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="40"
+                    android:checked="true"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:layout_weight="100"
+                    android:text="触控板灵敏度"/>
                 <TextView
                     android:id="@+id/msense_textview"
                     android:layout_width="0dp"

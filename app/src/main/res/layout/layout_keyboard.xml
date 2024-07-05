@@ -600,7 +600,7 @@
             android:layout_weight="100"
             android:gravity="center"
             android:background="@drawable/square_border"
-            android:tag="k171"
+            android:tag="k117"
             android:text="Win"/>
         <TextView
             android:layout_width="0dp"

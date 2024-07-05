@@ -12,12 +12,14 @@
             android:orientation="horizontal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
+
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="40dp"
                 android:layout_weight="1"
                 android:gravity="center"
-                android:text="值1:"/>
+                android:text="值:" />
+
             <TextView
                 android:id="@+id/switch_card_value"
                 android:layout_width="40dp"

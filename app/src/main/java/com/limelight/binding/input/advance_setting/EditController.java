@@ -87,7 +87,7 @@ public class EditController {
 
                 };
 
-                controllerManager.getWindowsController().openTextWindow(deleteListener, "是否删除:" + editElement.getElementId());
+                controllerManager.getWindowsController().openTextWindow(deleteListener, "是否删除:" + editElement.getElementName());
             }
         });
         layout.findViewById(R.id.add_element_button).setOnClickListener(new View.OnClickListener() {
@@ -178,15 +178,23 @@ public class EditController {
                         break;
 
                     case MotionEvent.ACTION_MOVE:
+                        float moveX = event.getX() - lastX;
+                        float moveY = event.getY() - lastY;
+                        // 计算移动距离,小距离不算做移动，跳过
+                        float distance = (float) Math.sqrt(moveX * moveX + moveY * moveY);
+                        if (distance < 2){
+                            break;
+                        }
+                        if (twoToOne){
+                            lastX = (int) event.getX();
+                            lastY = (int) event.getY();
+                            twoToOne = false;
+                            break;
+                        }
                         isSelect = false;
                         isHideAction = false;
                         // 单指移动时移动按钮
                         if (pointerCount == 1 && editElement != null) {
-                            if (twoToOne){
-                                lastX = (int) event.getX();
-                                lastY = (int) event.getY();
-                                twoToOne = false;
-                            }
                             int x = (int) event.getX();
                             int y = (int) event.getY();
                             int dx = x - lastX;
@@ -232,7 +240,6 @@ public class EditController {
 
                     case MotionEvent.ACTION_UP:
                         if (isSelect){
-
                             Element element = controllerManager.getElementController().selectElement(lastX,lastY);
                             if (element == null){
                                 return true;
@@ -312,17 +319,16 @@ public class EditController {
             public void onClick(View v) {
                 String name = elementName.getText().toString();
 
-                if (controllerManager.getElementController().isContainedElement(name)){
-                    Toast.makeText(context,"按键名字已存在",Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                if (!name.matches("^[a-zA-Z0-9]{1,10}$")){
+
+                if (!name.matches("^.{1,10}$")){
                     Toast.makeText(context,"名称只能由1-10个数字、小写字母组成",Toast.LENGTH_SHORT).show();
                     return;
                 }
                 int elementCentralX = Integer.parseInt(elementXInput.getText().toString());
                 int elementCentralY = Integer.parseInt(elementYInput.getText().toString());
+                Long birthTime = System.currentTimeMillis();
                 ElementBean elementBean = new ElementBean(
+                        String.valueOf(birthTime),
                         name,
                         elementType.getSelectedItem().toString(),
                         elementCard.getTypeAttributes(),
@@ -334,7 +340,7 @@ public class EditController {
                         0xF0888888,
                         0xF00000FF,
                         0,
-                        System.currentTimeMillis(),
+                        birthTime,
                         null
                 );
 

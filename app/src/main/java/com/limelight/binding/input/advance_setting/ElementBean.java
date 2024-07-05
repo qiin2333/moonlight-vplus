@@ -14,6 +14,10 @@ public class ElementBean {
     public static final String TYPE_G_STICK = "GSTICK";
     public static final String TYPE_G_ISTICK = "GISTICK";
 
+    /**
+     * id:element+timestamp
+     */
+    private String id;
     private String name;
     /*
     * type:
@@ -39,7 +43,8 @@ public class ElementBean {
     private long createTime;
     private Map<String,String> otherAttributes;
 
-    public ElementBean(String name, String type, Map<String, String> typeAttributes, int positionX, int positionY, int width, int height, int opacity, int normalColor, int pressedColor,int layer, long createTime, Map<String, String> otherAttributes) {
+    public ElementBean(String id, String name, String type, Map<String, String> typeAttributes, int positionX, int positionY, int width, int height, int opacity, int normalColor, int pressedColor,int layer, long createTime, Map<String, String> otherAttributes) {
+        this.id = id;
         this.name = name;
         this.type = type;
         this.typeAttributes = typeAttributes;
@@ -53,6 +58,14 @@ public class ElementBean {
         this.layer = layer;
         this.otherAttributes = otherAttributes;
         this.createTime = createTime;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getName() {
@@ -162,7 +175,8 @@ public class ElementBean {
     @Override
     public String toString() {
         return "ElementBean{" +
-                "name='" + name + '\'' +
+                "id='" + id + '\'' +
+                ",name='" + name + '\'' +
                 ", type=" + type +
                 ", typeAttributes='" + typeAttributes + '\'' +
                 ", positionX=" + positionX +
