@@ -82,8 +82,8 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix ".debug"
-            resValue "string", "app_label", "Moonlight (Debug)"
-            resValue "string", "app_label_root", "Moonlight (Root Debug)"
+            resValue "string", "app_label", "月光-威力加强版"
+            resValue "string", "app_label_root", "月光-威力加强版"
 
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
@@ -146,4 +146,5 @@ dependencies {
     implementation 'com.github.cgutman:ShieldControllerExtensions:1.0.1'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.github.ZeyuKeithFu:KeyboardHeaderLayout:v1.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
 }

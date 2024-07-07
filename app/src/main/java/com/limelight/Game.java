@@ -1,6 +1,5 @@
 package com.limelight;
 
-
 import com.limelight.binding.PlatformBinding;
 import com.limelight.binding.audio.AndroidAudioRenderer;
 import com.limelight.binding.input.ControllerHandler;
@@ -76,16 +75,12 @@ import android.view.View.OnSystemUiVisibilityChangeListener;
 import android.view.View.OnTouchListener;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodInfo;
 import android.widget.FrameLayout;
 import android.view.inputmethod.InputMethodManager;
-import android.view.View.OnClickListener;
-import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.ArrayAdapter;
-
-import androidx.interpolator.view.animation.LinearOutSlowInInterpolator;
 
 import java.io.ByteArrayInputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -98,6 +93,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.Optional;
 
 
 public class Game extends Activity implements SurfaceHolder.Callback,
@@ -2748,8 +2744,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             }
             if (s.contains(getResources().getString(R.string.perf_overlay_decoder).substring(0, 5))) {
                 decoderInfo = s.toLowerCase().replaceFirst(".*\\.(avc|hevc|av1).*", "$1").toUpperCase();
-                decoderInfo += " with HDR ";
-                decoderInfo += prefConfig.enableHdr? "On" : "Off";
+                decoderInfo += prefConfig.enableHdr? " HDR" : "";
             }
             if (s.contains(getResources().getString(R.string.perf_overlay_renderingfps).substring(0, 5))) {
                 renderFpsInfo = s;
@@ -2766,7 +2761,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                         + " M/s   " + s.replaceFirst("\\D*(\\d+) ms \\(\\D*(\\d+) ms\\)", "$1 ± $2 ms");
             }
             if (s.contains(getResources().getString(R.string.perf_overlay_dectime).substring(0, 7))) {
-                decodeLatencyInfo = s;
+                float decodeTime = Float.parseFloat(s.replaceFirst(".*\\s(\\d+\\.\\d+)\\sms", "$1"));
+                decodeLatencyInfo = (decodeTime < 12 ? "\uD83C\uDFAE " : "\uD83E\uDD75 ") + decodeTime + " ms";
             }
             if (s.contains(getResources().getString(R.string.perf_overlay_hostprocessinglatency).substring(0, 6))) {
                 hostLatencyInfo = s;
@@ -2776,7 +2772,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         String finalResInfo = resInfo;
         String finalDecoderInfo = decoderInfo;
         String finalRenderFpsInfo = renderFpsInfo.replaceFirst(".*\\s(\\d+\\.\\d+)\\sFPS", "$1 fps");
-        String finalDecodeLatencyInfo = decodeLatencyInfo.replaceFirst(".*\\s(\\d+\\.\\d+\\sms)", "\uD83C\uDFAE $1");
+        String finalDecodeLatencyInfo = decodeLatencyInfo;
         String finalNetworkLatencyInfo = networkLatencyInfo;
         String finalHostLatencyInfo = hostLatencyInfo.replaceFirst("^.*?:", "\uD83D\uDDA5\uFE0F ");
         runOnUiThread(new Runnable() {
@@ -2854,6 +2850,21 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             requestedPerformanceOverlayVisibility = View.VISIBLE;
         }
         performanceOverlayView.setVisibility(requestedPerformanceOverlayVisibility);
+    }
+
+    public void imeSwitch() {
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        List<InputMethodInfo> mInputMethodProperties = imm.getInputMethodList();
+        Optional<InputMethodInfo> hackersInput = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            hackersInput = mInputMethodProperties.stream().filter(m -> m.getId().startsWith("org.pocketworkstation.pckeyboard")).findFirst();
+        }
+        imm.showInputMethodPicker();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            if (!hackersInput.isPresent()) {
+                Toast.makeText(Game.this, "杂鱼～❤ 还不快装黑客键盘（hacker's keyboard", Toast.LENGTH_LONG).show();
+            }
+        }
     }
 
     private static byte getModifier(short key) {

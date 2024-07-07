@@ -100,6 +100,7 @@
     <!-- In Game menu -->
     <string name="game_menu_toggle_keyboard">屏幕键盘</string>
     <string name="game_menu_toggle_performance_overlay">性能监控图层</string>
+    <string name="game_menu_switch_ime">切换输入法（获取更多操作）</string>
     <string name="game_menu_toggle_mouse_on">手柄模拟鼠标-打开</string>
     <string name="game_menu_toggle_mouse_off">手柄模拟鼠标-关闭</string>
     <string name="game_menu_disconnect">结束串流</string>
