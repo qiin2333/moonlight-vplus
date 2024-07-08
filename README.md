@@ -1,20 +1,7 @@
 # Moonlight Android
-新增特性：
-
-1.可以增加键盘按键
-
-2.增加内置电脑键盘
-
-3.可以同时拥有多套布局，并且能在串流时快速切换
-
-4.修改了官方的编辑按键的方式
-
-5.编辑模式下，双指敲击，隐藏ui
-![1](https://github.com/WACrown/moonlight-android/assets/48990489/35ea2020-992f-44a6-995c-690b1172df13)
-![2](https://github.com/WACrown/moonlight-android/assets/48990489/9f579f40-3adb-4b1f-8dc8-23f98ef1e611)
-![3](https://github.com/WACrown/moonlight-android/assets/48990489/d9d8460d-24e7-4a4f-99bd-28e75fa7a2e2)
-![4](https://github.com/WACrown/moonlight-android/assets/48990489/fe076fa1-3e45-4810-8b6a-7c0455069d69)
-
+开发分支在dev-master
+这里以后就不放release了,最新版本bilbil同步更新,并且有操作演示，bilbil简介中有下载方式
+作者bilbil：https://space.bilibili.com/393593468
 
 
 
