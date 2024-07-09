@@ -98,13 +98,13 @@
     <string name="applist_quit_confirmation">您确定要退出当前游戏？所有未保存的数据将丢失。</string>
     <string name="applist_details_id">App ID：</string>
     <!-- In Game menu -->
-    <string name="game_menu_toggle_keyboard">屏幕键盘</string>
-    <string name="game_menu_toggle_performance_overlay">性能监控图层</string>
-    <string name="game_menu_switch_ime">切换输入法（获取更多操作）</string>
-    <string name="game_menu_toggle_mouse_on">手柄模拟鼠标-打开</string>
-    <string name="game_menu_toggle_mouse_off">手柄模拟鼠标-关闭</string>
-    <string name="game_menu_disconnect">结束串流</string>
-    <string name="game_menu_cancel">取消</string>
+    <string name="game_menu_toggle_keyboard"> 屏幕键盘 </string>
+    <string name="game_menu_toggle_performance_overlay"> 性能监控图层 </string>
+    <string name="game_menu_toggle_host_keyboard"> 主机键盘 </string>
+    <string name="game_menu_toggle_mouse_on"> 手柄模拟鼠标-打开 </string>
+    <string name="game_menu_toggle_mouse_off"> 手柄模拟鼠标-关闭 </string>
+    <string name="game_menu_disconnect"> 结束串流 </string>
+    <string name="game_menu_cancel"> 取消 </string>
     <string name="game_menu_send_keys">发送特殊按键</string>
     <string name="game_menu_send_keys_esc">发送 ESC</string>
     <string name="game_menu_send_keys_f11">发送 F11 (全屏状态切换)</string>

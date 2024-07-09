@@ -2944,15 +2944,15 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         performanceOverlayView.setVisibility(requestedPerformanceOverlayVisibility);
     }
 
-    public void imeSwitch() {
-        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        List<InputMethodInfo> mInputMethodProperties = imm.getInputMethodList();
-        Optional<InputMethodInfo> hackersInput = mInputMethodProperties.stream().filter(m -> m.getId().startsWith("org.pocketworkstation.pckeyboard")).findFirst();
-        imm.showInputMethodPicker();
-        if (!hackersInput.isPresent()) {
-            Toast.makeText(Game.this, "杂鱼～❤ 还不快装黑客键盘（hacker's keyboard", Toast.LENGTH_LONG).show();
-        }
-    }
+    // public void imeSwitch() {
+    //     InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+    //     List<InputMethodInfo> mInputMethodProperties = imm.getInputMethodList();
+    //     Optional<InputMethodInfo> hackersInput = mInputMethodProperties.stream().filter(m -> m.getId().startsWith("org.pocketworkstation.pckeyboard")).findFirst();
+    //     imm.showInputMethodPicker();
+    //     if (!hackersInput.isPresent()) {
+    //         Toast.makeText(Game.this, "杂鱼～❤ 还不快装黑客键盘（hacker's keyboard", Toast.LENGTH_LONG).show();
+    //     }
+    // }
 
     private static byte getModifier(short key) {
         switch (key) {

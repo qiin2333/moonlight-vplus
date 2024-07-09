@@ -173,6 +173,8 @@ public class GameMenu {
 
         options.add(new MenuOption(getString(R.string.game_menu_toggle_keyboard), true,
                 () -> game.toggleKeyboard()));
+        options.add(new MenuOption(getString(R.string.game_menu_toggle_host_keyboard), true,
+                () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_LCONTROL, KeyboardTranslator.VK_O})));
 
         if (device != null) {
             options.addAll(device.getGameMenuOptions());
@@ -180,7 +182,6 @@ public class GameMenu {
 
         options.add(new MenuOption(getString(R.string.game_menu_toggle_performance_overlay), () -> game.togglePerformanceOverlay()));
         options.add(new MenuOption(getString(R.string.game_menu_send_keys), () -> showSpecialKeysMenu()));
-        options.add(new MenuOption(getString(R.string.game_menu_switch_ime), () -> game.imeSwitch()));
         options.add(new MenuOption(getString(R.string.game_menu_disconnect), () -> game.disconnect()));
         options.add(new MenuOption(getString(R.string.game_menu_cancel), null));
 
