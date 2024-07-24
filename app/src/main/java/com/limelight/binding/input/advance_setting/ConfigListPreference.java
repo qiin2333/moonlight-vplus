@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 
 /*
@@ -76,7 +77,7 @@ public class ConfigListPreference {
         Map<String, String> configurationMap = (Map<String, String>) preference.getAll();
         Map<Long, String> idNameMap = new HashMap<>();
         for (Map.Entry<String, String> entry: configurationMap.entrySet()){
-            idNameMap.put(Long.parseLong(entry.getKey()),entry.getValue());
+            idNameMap.put(Long.parseLong(Objects.equals(entry.getKey(), "default") ? "0" : entry.getKey()),entry.getValue());
         }
         TreeMap<Long, String> sortedMap = new TreeMap<>(idNameMap);
         TreeMap<String, String> stringKeyMap = new TreeMap<>();

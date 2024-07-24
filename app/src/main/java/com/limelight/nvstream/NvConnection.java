@@ -19,8 +19,6 @@ import java.nio.ByteBuffer;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.Semaphore;
 
 import javax.crypto.KeyGenerator;
@@ -587,5 +585,24 @@ public class NvConnection {
 
     public static String findExternalAddressForMdns(String stunHostname, int stunPort) {
         return MoonBridge.findExternalAddressIP4(stunHostname, stunPort);
+    }
+
+    public void sendSuperCmd(String cmdId) throws IOException, XmlPullParserException {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                NvHTTP h = null;
+                try {
+                    h = new NvHTTP(context.serverAddress, context.httpsPort, uniqueId, context.serverCert, cryptoProvider);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                try {
+                    h.sendSuperCmd(cmdId);
+                } catch (IOException | XmlPullParserException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }).start();
     }
 }

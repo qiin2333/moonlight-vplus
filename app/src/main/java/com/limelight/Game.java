@@ -83,6 +83,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONException;
+
 import java.io.ByteArrayInputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -93,12 +95,10 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Arrays;
-// import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.Optional;
 
 
 public class Game extends Activity implements SurfaceHolder.Callback,
@@ -203,6 +203,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     public static final String EXTRA_PC_NAME = "PcName";
     public static final String EXTRA_APP_HDR = "HDR";
     public static final String EXTRA_SERVER_CERT = "ServerCert";
+    public static final String EXTRA_APP_CMD = "CmdList";
 
 
     @Override
@@ -355,8 +356,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         String uniqueId = Game.this.getIntent().getStringExtra(EXTRA_UNIQUEID);
         boolean appSupportsHdr = Game.this.getIntent().getBooleanExtra(EXTRA_APP_HDR, false);
         byte[] derCertData = Game.this.getIntent().getByteArrayExtra(EXTRA_SERVER_CERT);
+        String cmdList = Game.this.getIntent().getStringExtra(EXTRA_APP_CMD);
 
         app = new NvApp(appName != null ? appName : "app", appId, appSupportsHdr);
+        if (cmdList != null) {
+            app.setCmdList(cmdList);
+        }
         X509Certificate serverCert = null;
         try {
             if (derCertData != null) {
@@ -2902,7 +2907,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public void showGameMenu(GameInputDevice device) {
-        new GameMenu(this, conn, device);
+        new GameMenu(this, app, conn, device);
     }
 
     @Override
@@ -2993,15 +2998,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             }
         }), 25);
     }
-    
-    public void adjustMsenseRelative(int sense){
-        for (TouchContext aTouchContext : touchContextMap) {
-            if (aTouchContext instanceof RelativeTouchContext){
-                ((RelativeTouchContext) aTouchContext).adjustMsense(sense * 0.01);
-            }
-        }
-    }
-
 
     public ControllerHandler getControllerHandler() {
         return controllerHandler;

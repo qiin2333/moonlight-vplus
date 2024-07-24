@@ -24,6 +24,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.LinkedList;
 import java.util.ListIterator;
+import java.util.Objects;
 import java.util.Stack;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -650,6 +651,12 @@ public class NvHTTP {
                     app.setAppId(xpp.getText());
                 } else if (currentTag.peek().equals("IsHdrSupported")) {
                     app.setHdrSupported(xpp.getText().equals("1"));
+                } else if (currentTag.peek().equals("SuperCmds")) {
+                    String cmdListStr = xpp.getText();
+                    LimeLog.info(cmdListStr + " appcmds");
+                    if (!Objects.equals(cmdListStr, "null")) {
+                        app.setCmdList(xpp.getText());
+                    }
                 }
                 break;
             }
@@ -810,5 +817,10 @@ public class NvHTTP {
     public boolean pcSleep() throws IOException, XmlPullParserException {
         String xmlStr = openHttpConnectionToString(httpClientLongConnectNoReadTimeout, getHttpsUrl(true), "pcsleep");
         return !getXmlString(xmlStr, "pcsleep", true).equals("0");
+    }
+
+    public boolean sendSuperCmd(String cmdId) throws IOException, XmlPullParserException {
+        String xmlStr = openHttpConnectionToString(httpClientLongConnectNoReadTimeout, getHttpsUrl(true), "supercmd", "cmdId=" + cmdId);
+        return !getXmlString(xmlStr, "supercmd", true).equals("0");
     }
 }
