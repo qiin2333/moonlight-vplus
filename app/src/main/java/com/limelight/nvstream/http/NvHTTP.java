@@ -24,6 +24,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.LinkedList;
 import java.util.ListIterator;
+import java.util.Objects;
 import java.util.Stack;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -403,16 +404,7 @@ public class NvHTTP {
         try {
             SSLContext sc = SSLContext.getInstance("TLS");
             sc.init(new KeyManager[] { keyManager }, new TrustManager[] { trustManager }, new SecureRandom());
-
-            // TLS 1.2 is not enabled by default prior to Android 5.0, so we'll need a custom
-            // SSLSocketFactory in order to connect to GFE 3.20.4 which requires TLSv1.2 or later.
-            // We don't just always use TLSv12SocketFactory because explicitly specifying TLS versions
-            // prevents later TLS versions from being negotiated even if client and server otherwise
-            // support them.
-            return client.newBuilder().sslSocketFactory(
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP ?
-                            sc.getSocketFactory() : new TLSv12SocketFactory(sc),
-                    trustManager).build();
+            return client.newBuilder().sslSocketFactory(sc.getSocketFactory(), trustManager).build();
         } catch (NoSuchAlgorithmException | KeyManagementException e) {
             throw new RuntimeException(e);
         }
@@ -659,6 +651,12 @@ public class NvHTTP {
                     app.setAppId(xpp.getText());
                 } else if (currentTag.peek().equals("IsHdrSupported")) {
                     app.setHdrSupported(xpp.getText().equals("1"));
+                } else if (currentTag.peek().equals("SuperCmds")) {
+                    String cmdListStr = xpp.getText();
+                    LimeLog.info(cmdListStr + " appcmds");
+                    if (!Objects.equals(cmdListStr, "null")) {
+                        app.setCmdList(xpp.getText());
+                    }
                 }
                 break;
             }
@@ -821,61 +819,8 @@ public class NvHTTP {
         return !getXmlString(xmlStr, "pcsleep", true).equals("0");
     }
 
-    // Based on example code from https://blog.dev-area.net/2015/08/13/android-4-1-enable-tls-1-1-and-tls-1-2/
-    private static class TLSv12SocketFactory extends SSLSocketFactory {
-        private SSLSocketFactory internalSSLSocketFactory;
-
-        public TLSv12SocketFactory(SSLContext context) {
-            internalSSLSocketFactory = context.getSocketFactory();
-        }
-
-        @Override
-        public String[] getDefaultCipherSuites() {
-            return internalSSLSocketFactory.getDefaultCipherSuites();
-        }
-
-        @Override
-        public String[] getSupportedCipherSuites() {
-            return internalSSLSocketFactory.getSupportedCipherSuites();
-        }
-
-        @Override
-        public Socket createSocket() throws IOException {
-            return enableTLSv12OnSocket(internalSSLSocketFactory.createSocket());
-        }
-
-        @Override
-        public Socket createSocket(Socket s, String host, int port, boolean autoClose) throws IOException {
-            return enableTLSv12OnSocket(internalSSLSocketFactory.createSocket(s, host, port, autoClose));
-        }
-
-        @Override
-        public Socket createSocket(String host, int port) throws IOException {
-            return enableTLSv12OnSocket(internalSSLSocketFactory.createSocket(host, port));
-        }
-
-        @Override
-        public Socket createSocket(String host, int port, InetAddress localHost, int localPort) throws IOException {
-            return enableTLSv12OnSocket(internalSSLSocketFactory.createSocket(host, port, localHost, localPort));
-        }
-
-        @Override
-        public Socket createSocket(InetAddress host, int port) throws IOException {
-            return enableTLSv12OnSocket(internalSSLSocketFactory.createSocket(host, port));
-        }
-
-        @Override
-        public Socket createSocket(InetAddress address, int port, InetAddress localAddress, int localPort) throws IOException {
-            return enableTLSv12OnSocket(internalSSLSocketFactory.createSocket(address, port, localAddress, localPort));
-        }
-
-        private Socket enableTLSv12OnSocket(Socket socket) {
-            if (socket instanceof SSLSocket) {
-                // TLS 1.2 is not enabled by default prior to Android 5.0. We must enable it
-                // explicitly to ensure we can communicate with GFE 3.20.4 which blocks TLS 1.0.
-                ((SSLSocket)socket).setEnabledProtocols(new String[] {"TLSv1.2"});
-            }
-            return socket;
-        }
+    public boolean sendSuperCmd(String cmdId) throws IOException, XmlPullParserException {
+        String xmlStr = openHttpConnectionToString(httpClientLongConnectNoReadTimeout, getHttpsUrl(true), "supercmd", "cmdId=" + cmdId);
+        return !getXmlString(xmlStr, "supercmd", true).equals("0");
     }
 }

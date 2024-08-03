@@ -4,11 +4,21 @@ import android.app.AlertDialog;
 import android.os.Handler;
 import android.widget.ArrayAdapter;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.limelight.binding.input.GameInputDevice;
 import com.limelight.binding.input.KeyboardTranslator;
 import com.limelight.nvstream.NvConnection;
+import com.limelight.nvstream.http.NvApp;
 import com.limelight.nvstream.input.KeyboardPacket;
+import com.limelight.utils.ServerHelper;
 
+import org.json.JSONArray;
+import org.xmlpull.v1.XmlPullParserException;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,11 +49,13 @@ public class GameMenu {
     }
 
     private final Game game;
+    private final NvApp app;
     private final NvConnection conn;
     private final GameInputDevice device;
 
-    public GameMenu(Game game, NvConnection conn, GameInputDevice device) {
+    public GameMenu(Game game, NvApp app, NvConnection conn, GameInputDevice device) {
         this.game = game;
+        this.app = app;
         this.conn = conn;
         this.device = device;
 
@@ -178,10 +190,25 @@ public class GameMenu {
             options.addAll(device.getGameMenuOptions());
         }
 
+        JsonArray cmdList = app.getCmdList();
+        if (cmdList != null) {
+            for (int i = 0; i < ((JsonArray) cmdList).size(); i++) {
+                JsonObject cmd = cmdList.get(i).getAsJsonObject();
+                options.add(new MenuOption(cmd.get("name").getAsString(), () ->
+                {
+                    try {
+                        conn.sendSuperCmd(cmd.get("id").getAsString());
+                    } catch (IOException | XmlPullParserException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+                ));
+            }
+        }
+
         options.add(new MenuOption(getString(R.string.game_menu_toggle_performance_overlay), () -> game.togglePerformanceOverlay()));
         options.add(new MenuOption(getString(R.string.game_menu_send_keys), () -> showSpecialKeysMenu()));
-        options.add(new MenuOption(getString(R.string.game_menu_switch_ime), () -> game.imeSwitch()));
-        options.add(new MenuOption(getString(R.string.game_menu_disconnect), () -> game.disconnect()));
+        options.add(new MenuOption(getString(R.string.game_menu_disconnect), true, () -> game.disconnect()));
         options.add(new MenuOption(getString(R.string.game_menu_cancel), null));
 
         showMenuDialog("Game Menu", options.toArray(new MenuOption[options.size()]));

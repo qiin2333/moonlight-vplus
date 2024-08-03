@@ -82,6 +82,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONException;
+
 import java.io.ByteArrayInputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -92,8 +94,10 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Locale;
-import java.util.Optional;
+import java.util.Objects;
 
 
 public class Game extends Activity implements SurfaceHolder.Callback,
@@ -192,6 +196,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     public static final String EXTRA_PC_NAME = "PcName";
     public static final String EXTRA_APP_HDR = "HDR";
     public static final String EXTRA_SERVER_CERT = "ServerCert";
+    public static final String EXTRA_APP_CMD = "CmdList";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -334,8 +339,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         String uniqueId = Game.this.getIntent().getStringExtra(EXTRA_UNIQUEID);
         boolean appSupportsHdr = Game.this.getIntent().getBooleanExtra(EXTRA_APP_HDR, false);
         byte[] derCertData = Game.this.getIntent().getByteArrayExtra(EXTRA_SERVER_CERT);
+        String cmdList = Game.this.getIntent().getStringExtra(EXTRA_APP_CMD);
 
         app = new NvApp(appName != null ? appName : "app", appId, appSupportsHdr);
+        if (cmdList != null) {
+            app.setCmdList(cmdList);
+        }
         X509Certificate serverCert = null;
         try {
             if (derCertData != null) {
@@ -2810,7 +2819,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public void showGameMenu(GameInputDevice device) {
-        new GameMenu(this, conn, device);
+        new GameMenu(this, app, conn, device);
     }
 
     @Override
@@ -2850,21 +2859,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             requestedPerformanceOverlayVisibility = View.VISIBLE;
         }
         performanceOverlayView.setVisibility(requestedPerformanceOverlayVisibility);
-    }
-
-    public void imeSwitch() {
-        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        List<InputMethodInfo> mInputMethodProperties = imm.getInputMethodList();
-        Optional<InputMethodInfo> hackersInput = null;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            hackersInput = mInputMethodProperties.stream().filter(m -> m.getId().startsWith("org.pocketworkstation.pckeyboard")).findFirst();
-        }
-        imm.showInputMethodPicker();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            if (!hackersInput.isPresent()) {
-                Toast.makeText(Game.this, "杂鱼～❤ 还不快装黑客键盘（hacker's keyboard", Toast.LENGTH_LONG).show();
-            }
-        }
     }
 
     private static byte getModifier(short key) {
