@@ -83,12 +83,13 @@ public class GameMenu {
     }
 
     private void sendKeys(short[] keys) {
-        final byte[] modifier = {(byte) 0};
+        final byte[] modifier = { (byte) 0 };
 
         for (short key : keys) {
             conn.sendKeyboardInput(key, KeyboardPacket.KEY_DOWN, modifier[0], (byte) 0);
 
-            // Apply the modifier of the pressed key, e.g. CTRL first issues a CTRL event (without
+            // Apply the modifier of the pressed key, e.g. CTRL first issues a CTRL event
+            // (without
             // modifier) and then sends the following keys with the CTRL modifier applied
             modifier[0] |= getModifier(key);
         }
@@ -136,8 +137,7 @@ public class GameMenu {
         AlertDialog.Builder builder = new AlertDialog.Builder(game);
         builder.setTitle(title);
 
-        final ArrayAdapter<String> actions =
-                new ArrayAdapter<String>(game, android.R.layout.simple_list_item_1);
+        final ArrayAdapter<String> actions = new ArrayAdapter<String>(game, android.R.layout.simple_list_item_1);
 
         for (MenuOption option : options) {
             actions.add(option.label);
@@ -159,23 +159,23 @@ public class GameMenu {
     }
 
     private void showSpecialKeysMenu() {
-        showMenuDialog(getString(R.string.game_menu_send_keys), new MenuOption[]{
+        showMenuDialog(getString(R.string.game_menu_send_keys), new MenuOption[] {
                 new MenuOption(getString(R.string.game_menu_send_keys_esc),
-                        () -> sendKeys(new short[]{KeyboardTranslator.VK_ESCAPE})),
+                        () -> sendKeys(new short[] { KeyboardTranslator.VK_ESCAPE })),
                 new MenuOption(getString(R.string.game_menu_send_keys_f11),
-                        () -> sendKeys(new short[]{KeyboardTranslator.VK_F11})),
+                        () -> sendKeys(new short[] { KeyboardTranslator.VK_F11 })),
                 new MenuOption(getString(R.string.game_menu_send_keys_ctrl_v),
-                        () -> sendKeys(new short[]{KeyboardTranslator.VK_LCONTROL, KeyboardTranslator.VK_V})),
+                        () -> sendKeys(new short[] { KeyboardTranslator.VK_LCONTROL, KeyboardTranslator.VK_V })),
                 new MenuOption(getString(R.string.game_menu_send_keys_win),
-                        () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN})),
+                        () -> sendKeys(new short[] { KeyboardTranslator.VK_LWIN })),
                 new MenuOption(getString(R.string.game_menu_send_keys_win_d),
-                        () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_D})),
+                        () -> sendKeys(new short[] { KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_D })),
                 new MenuOption(getString(R.string.game_menu_send_keys_win_g),
-                        () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_G})),
+                        () -> sendKeys(new short[] { KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_G })),
                 new MenuOption(getString(R.string.game_menu_send_keys_alt_home),
-                        () -> sendKeys(new short[]{KeyboardTranslator.VK_MENU, KeyboardTranslator.VK_HOME})),
+                        () -> sendKeys(new short[] { KeyboardTranslator.VK_MENU, KeyboardTranslator.VK_HOME })),
                 new MenuOption(getString(R.string.game_menu_send_keys_shift_tab),
-                        () -> sendKeys(new short[]{KeyboardTranslator.VK_LSHIFT, KeyboardTranslator.VK_TAB})),
+                        () -> sendKeys(new short[] { KeyboardTranslator.VK_LSHIFT, KeyboardTranslator.VK_TAB })),
                 new MenuOption(getString(R.string.game_menu_cancel), null),
         });
     }
@@ -186,7 +186,8 @@ public class GameMenu {
         options.add(new MenuOption(getString(R.string.game_menu_toggle_keyboard), true,
                 () -> game.toggleKeyboard()));
         options.add(new MenuOption(getString(R.string.game_menu_toggle_host_keyboard), true,
-                () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_LCONTROL, KeyboardTranslator.VK_O})));
+                () -> sendKeys(new short[] { KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_LCONTROL,
+                        KeyboardTranslator.VK_O })));
 
         if (device != null) {
             options.addAll(device.getGameMenuOptions());
@@ -194,23 +195,32 @@ public class GameMenu {
 
         JsonArray cmdList = app.getCmdList();
         if (cmdList != null) {
+            options.add(new MenuOption("\uD83D\uDC47 炒鸡指令 ----------------", null));
             for (int i = 0; i < ((JsonArray) cmdList).size(); i++) {
                 JsonObject cmd = cmdList.get(i).getAsJsonObject();
-                options.add(new MenuOption(cmd.get("name").getAsString(), () ->
-                {
+                options.add(new MenuOption(cmd.get("name").getAsString(), () -> {
                     try {
                         conn.sendSuperCmd(cmd.get("id").getAsString());
                     } catch (IOException | XmlPullParserException e) {
                         throw new RuntimeException(e);
                     }
-                }
-                ));
+                }));
             }
+            options.add(new MenuOption("☝\uFE0F ----------------------", null));
         }
 
-        options.add(new MenuOption(getString(R.string.game_menu_toggle_performance_overlay), () -> game.togglePerformanceOverlay()));
+        options.add(new MenuOption(getString(R.string.game_menu_toggle_performance_overlay),
+                () -> game.togglePerformanceOverlay()));
         options.add(new MenuOption(getString(R.string.game_menu_send_keys), () -> showSpecialKeysMenu()));
         options.add(new MenuOption(getString(R.string.game_menu_disconnect), true, () -> game.disconnect()));
+        options.add(new MenuOption("断开并退出串流", true, () -> {
+            try {
+                game.disconnect();
+                conn.doStopAndQuit();
+            } catch (IOException | XmlPullParserException e) {
+                throw new RuntimeException(e);
+            }
+        }));
         options.add(new MenuOption(getString(R.string.game_menu_cancel), null));
 
         showMenuDialog("Game Menu", options.toArray(new MenuOption[options.size()]));

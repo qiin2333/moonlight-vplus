@@ -587,6 +587,26 @@ public class NvConnection {
         return MoonBridge.findExternalAddressIP4(stunHostname, stunPort);
     }
 
+    public void doStopAndQuit() throws IOException, XmlPullParserException {
+        this.stop();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                NvHTTP h = null;
+                try {
+                    h = new NvHTTP(context.serverAddress, context.httpsPort, uniqueId, context.serverCert, cryptoProvider);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                try {
+                    h.quitApp();
+                } catch (IOException | XmlPullParserException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }).start();
+    }
+
     public void sendSuperCmd(String cmdId) throws IOException, XmlPullParserException {
         new Thread(new Runnable() {
             @Override
