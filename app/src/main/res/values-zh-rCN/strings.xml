@@ -81,7 +81,6 @@
     <string name="perf_overlay_dectime">平均解码时间： %1$.2f ms</string>
     <!-- AppList activity -->
     <string name="applist_connect_msg"> 正在连接电脑…… </string>
-    <string name="applist_menu_start_with_vdd"> 使用虚拟显示器串流 </string>
     <string name="applist_menu_resume"> 恢复串流 </string>
     <string name="applist_menu_quit"> 退出串流 </string>
     <string name="applist_menu_quit_and_start"> 退出当前游戏并开始这个游戏 </string>
@@ -127,6 +126,8 @@
     <string name="category_basic_settings"> 基本设置 </string>
     <string name="title_resolution_list"> 视频分辨率 </string>
     <string name="summary_resolution_list">高分辨率提升图像清晰度。低分辨率提升在低端设备和较慢网络中的串流体验。</string>
+    <string name="title_custom_resolutions"> 自定义分辨率 </string>
+    <string name="summary_custom_resolutions">杂鱼～那么多分辨率都不能满足你了啊！</string>
     <string name="title_fps_list"> 视频帧数 </string>
     <string name="summary_fps_list">高帧数提升视频流流畅度。低帧数提升在低端设备中的串流体验。</string>
     <string name="title_seekbar_bitrate"> 视频码率 </string>

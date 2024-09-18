@@ -48,6 +48,10 @@
             android:summary="@string/summary_seekbar_scale"
             android:text="%"
             android:title="@string/title_seekbar_scale" />
+        <com.limelight.preferences.CustomResolutionsPreference
+                android:key="custom_resolutions"
+                android:summary="@string/summary_custom_resolutions"
+                android:title="@string/title_custom_resolutions" />
         <CheckBoxPreference
             android:key="checkbox_stretch_video"
             android:title="@string/title_checkbox_stretch_video"
