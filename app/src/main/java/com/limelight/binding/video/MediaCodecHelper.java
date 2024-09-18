@@ -50,6 +50,7 @@ public class MediaCodecHelper {
 
     private static boolean isLowEndSnapdragon = false;
     private static boolean isAdreno620 = false;
+    private static boolean isSnapdragonGSeries = false;
     private static boolean initialized = false;
 
     static {
@@ -285,6 +286,19 @@ public class MediaCodecHelper {
         return modelNumber.charAt(1) == '0';
     }
 
+    private static boolean isSnapdragonGSeries(String glRenderer) {
+        glRenderer = glRenderer.toLowerCase().trim();
+        if (!glRenderer.contains("adreno")) {
+            return false;
+        }
+
+        // Snapdragon G Series For Gaming includes G1-A11, G2-A21, G3-A31
+        Pattern modelNumberPattern = Pattern.compile("(.*)(a[0-9]{2})(.*)");
+
+        Matcher matcher = modelNumberPattern.matcher(glRenderer);
+        return matcher.matches();
+    }
+
     private static int getAdrenoRendererModelNumber(String glRenderer) {
         String modelNumber = getAdrenoVersionString(glRenderer);
         if (modelNumber == null) {
@@ -350,6 +364,7 @@ public class MediaCodecHelper {
             LimeLog.info("OpenGL ES version: "+configInfo.reqGlEsVersion);
 
             isLowEndSnapdragon = isLowEndSnapdragonRenderer(glRenderer);
+            isSnapdragonGSeries = isSnapdragonGSeries(glRenderer);
             isAdreno620 = getAdrenoRendererModelNumber(glRenderer) == 620;
 
             // Tegra K1 and later can do reference frame invalidation properly
@@ -488,7 +503,7 @@ public class MediaCodecHelper {
         // NB: Even on Android 10, this optimization still provides significant
         // performance gains on Pixel 2.
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
-                isDecoderInList(qualcommDecoderPrefixes, decoderName) &&
+                (isDecoderInList(qualcommDecoderPrefixes, decoderName) || isSnapdragonGSeries) &&
                 !isAdreno620;
     }
 

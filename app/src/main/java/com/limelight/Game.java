@@ -203,8 +203,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     public static final String EXTRA_PC_NAME = "PcName";
     public static final String EXTRA_APP_HDR = "HDR";
     public static final String EXTRA_SERVER_CERT = "ServerCert";
+    public static final String EXTRA_PC_USEVDD = "usevdd";
     public static final String EXTRA_APP_CMD = "CmdList";
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -355,6 +355,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         int appId = Game.this.getIntent().getIntExtra(EXTRA_APP_ID, StreamConfiguration.INVALID_APP_ID);
         String uniqueId = Game.this.getIntent().getStringExtra(EXTRA_UNIQUEID);
         boolean appSupportsHdr = Game.this.getIntent().getBooleanExtra(EXTRA_APP_HDR, false);
+        boolean pcUseVdd = Game.this.getIntent().getBooleanExtra(EXTRA_PC_USEVDD, false);
         byte[] derCertData = Game.this.getIntent().getByteArrayExtra(EXTRA_SERVER_CERT);
         String cmdList = Game.this.getIntent().getStringExtra(EXTRA_APP_CMD);
 
@@ -545,6 +546,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 .setColorSpace(decoderRenderer.getPreferredColorSpace())
                 .setColorRange(decoderRenderer.getPreferredColorRange())
                 .setPersistGamepadsAfterDisconnect(!prefConfig.multiController)
+                .setUseVdd(pcUseVdd)
                 .build();
 
         // Initialize the connection

@@ -76,6 +76,7 @@ public class ComputerDetails {
     public int runningGameId;
     public String rawAppList;
     public boolean nvidiaServer;
+    public boolean useVdd;
 
     public ComputerDetails() {
         // Use defaults
@@ -145,6 +146,7 @@ public class ComputerDetails {
         this.pairState = details.pairState;
         this.runningGameId = details.runningGameId;
         this.nvidiaServer = details.nvidiaServer;
+        this.useVdd = details.useVdd;
         this.rawAppList = details.rawAppList;
     }
 

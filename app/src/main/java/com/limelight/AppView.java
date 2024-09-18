@@ -66,6 +66,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
     private final static int START_OR_RESUME_ID = 1;
     private final static int QUIT_ID = 2;
+    private final static int START_WITH_VDD = 3;
     private final static int START_WITH_QUIT = 4;
     private final static int VIEW_DETAILS_ID = 5;
     private final static int CREATE_SHORTCUT_ID = 6;
@@ -409,6 +410,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
         // Only show the hide checkbox if this is not the currently running app or it's already hidden
         if (lastRunningAppId != selectedApp.app.getAppId() || selectedApp.isHidden) {
+            menu.add(Menu.NONE, START_WITH_VDD, 1, getResources().getString(R.string.applist_menu_start_with_vdd));
             MenuItem hideAppItem = menu.add(Menu.NONE, HIDE_APP_ID, 3, getResources().getString(R.string.applist_menu_hide_app));
             hideAppItem.setCheckable(true);
             hideAppItem.setChecked(selectedApp.isHidden);
@@ -452,6 +454,11 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
             case START_OR_RESUME_ID:
                 // Resume is the same as start for us
+                ServerHelper.doStart(AppView.this, app.app, computer, managerBinder);
+                return true;
+
+            case START_WITH_VDD:
+                computer.useVdd = true;
                 ServerHelper.doStart(AppView.this, app.app, computer, managerBinder);
                 return true;
 

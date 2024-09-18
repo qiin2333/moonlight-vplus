@@ -29,6 +29,7 @@ public class StreamConfiguration {
     private int colorRange;
     private int colorSpace;
     private boolean persistGamepadsAfterDisconnect;
+    private boolean useVdd;
 
     public static class Builder {
         private StreamConfiguration config = new StreamConfiguration();
@@ -134,6 +135,11 @@ public class StreamConfiguration {
             return this;
         }
 
+        public StreamConfiguration.Builder setUseVdd(boolean value) {
+            config.useVdd = value;
+            return this;
+        }
+
         public StreamConfiguration build() {
             return config;
         }
@@ -155,6 +161,7 @@ public class StreamConfiguration {
         this.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO;
         this.supportedVideoFormats = MoonBridge.VIDEO_FORMAT_H264;
         this.attachedGamepadMask = 0;
+        this.useVdd = false;
     }
     public int getWidth() {
         return width;
@@ -239,4 +246,6 @@ public class StreamConfiguration {
     public int getColorSpace() {
         return colorSpace;
     }
+
+    public boolean getUseVdd() { return useVdd; }
 }
