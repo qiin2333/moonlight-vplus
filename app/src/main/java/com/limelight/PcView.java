@@ -4,6 +4,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.UnknownHostException;
 
+import com.bumptech.glide.request.RequestOptions;
 import com.limelight.binding.PlatformBinding;
 import com.limelight.binding.crypto.AndroidCryptoProvider;
 import com.limelight.computers.ComputerManagerListener;
@@ -28,6 +29,10 @@ import com.limelight.utils.ServerHelper;
 import com.limelight.utils.ShortcutHelper;
 import com.limelight.utils.UiHelper;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.target.CustomTarget;
+import com.bumptech.glide.request.transition.Transition;
+
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.Service;
@@ -35,6 +40,9 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.opengl.GLSurfaceView;
 import android.os.Build;
 import android.os.Bundle;
@@ -50,14 +58,20 @@ import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 import android.widget.AdapterView.AdapterContextMenuInfo;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.xmlpull.v1.XmlPullParserException;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
+
+import jp.wasabeef.glide.transformations.BlurTransformation;
 
 public class PcView extends Activity implements AdapterFragmentCallbacks {
     private RelativeLayout noPcFoundLayout;
@@ -130,6 +144,23 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             setShouldDockBigOverlays(false);
         }
+
+        String imageUrl = "https://raw.gitmirror.com/qiin2333/qiin.github.io/assets/img/moonlight-bg2.webp";
+        Glide.with(PcView.this).asBitmap()
+            .load(imageUrl).onlyRetrieveFromCache(true)
+            .apply(RequestOptions.bitmapTransform(new BlurTransformation(15, 3)))
+            .into(new CustomTarget<Bitmap>() {
+                @Override
+                public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
+                    BitmapDrawable drawable = new BitmapDrawable(getResources(), resource);
+                    drawable.setAlpha(128);
+                    ImageView imageView = findViewById(R.id.pcBackgroundImage);
+                    imageView.setImageDrawable(drawable);
+                }
+
+                @Override
+                public void onLoadCleared(@Nullable Drawable placeholder) {}
+            });
 
         // Set default preferences if we've never been run
         PreferenceManager.setDefaultValues(this, R.xml.preferences, false);

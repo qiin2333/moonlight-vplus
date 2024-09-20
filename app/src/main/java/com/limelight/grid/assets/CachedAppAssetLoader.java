@@ -1,5 +1,7 @@
 package com.limelight.grid.assets;
 
+import android.app.Activity;
+import android.content.ContextWrapper;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
@@ -10,7 +12,10 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.content.Context;
 
+import com.limelight.AppView;
+import com.limelight.LimeLog;
 import com.limelight.R;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.nvstream.http.NvApp;
@@ -18,6 +23,7 @@ import com.limelight.nvstream.http.NvApp;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ref.WeakReference;
+import java.util.Objects;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -30,6 +36,8 @@ public class CachedAppAssetLoader {
     private static final int MAX_PENDING_CACHE_LOADS = 100;
     private static final int MAX_PENDING_NETWORK_LOADS = 40;
     private static final int MAX_PENDING_DISK_LOADS = 40;
+
+    private final Context context;
 
     private final ThreadPoolExecutor cacheExecutor = new ThreadPoolExecutor(
             MAX_CONCURRENT_CACHE_LOADS, MAX_CONCURRENT_CACHE_LOADS,
@@ -57,9 +65,10 @@ public class CachedAppAssetLoader {
     private final Bitmap placeholderBitmap;
     private final Bitmap noAppImageBitmap;
 
-    public CachedAppAssetLoader(ComputerDetails computer, double scalingDivider,
+    public CachedAppAssetLoader(Context context, ComputerDetails computer, double scalingDivider,
                                 NetworkAssetLoader networkLoader, MemoryAssetLoader memoryLoader,
                                 DiskAssetLoader diskLoader, Bitmap noAppImageBitmap) {
+        this.context = context;
         this.computer = computer;
         this.scalingDivider = scalingDivider;
         this.networkLoader = networkLoader;
@@ -331,8 +340,8 @@ public class CachedAppAssetLoader {
                 (bitmap.originalWidth == 628 && bitmap.originalHeight == 888); // GFE 3.0
     }
 
-    public boolean populateImageView(NvApp app, ImageView imgView, TextView textView) {
-        LoaderTuple tuple = new LoaderTuple(computer, app);
+    public boolean populateImageView(AppView.AppObject obj, ImageView imgView, TextView textView) {
+        LoaderTuple tuple = new LoaderTuple(computer, obj.app);
 
         // If there's already a task in progress for this view,
         // cancel it. If the task is already loading the same image,
@@ -342,15 +351,13 @@ public class CachedAppAssetLoader {
         }
 
         // Always set the name text so we have it if needed later
-        textView.setText(app.getAppName());
-
+        textView.setText(obj.app.getAppName());
         // First, try the memory cache in the current context
         ScaledBitmap bmp = memoryLoader.loadBitmapFromCache(tuple);
         if (bmp != null) {
             // Show the bitmap immediately
             imgView.setVisibility(View.VISIBLE);
             imgView.setImageBitmap(bmp.bitmap);
-
             // Show the text if it's a placeholder bitmap
             textView.setVisibility(isBitmapPlaceholder(bmp) ? View.VISIBLE : View.GONE);
             return true;

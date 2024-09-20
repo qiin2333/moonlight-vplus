@@ -2,7 +2,15 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/advance_setting_background"
     tools:context=".AppView" >
+
+    <ImageView
+        android:id="@+id/appBackgroundImage"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:alpha="0.33" />
 
     <FrameLayout
         android:id="@+id/appFragmentContainer"
@@ -23,7 +31,7 @@
         android:layout_centerHorizontal="true"
         android:layout_alignParentTop="true"
         android:gravity="center"
-        android:paddingTop="5dp"
+        android:paddingTop="@dimen/activity_safearea_top"
         android:paddingBottom="5dp"
         android:preferKeepClear="true"
         android:textSize="28sp"/>

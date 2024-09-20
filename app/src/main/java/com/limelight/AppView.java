@@ -5,6 +5,7 @@ import java.io.StringReader;
 import java.util.HashSet;
 import java.util.List;
 
+import com.bumptech.glide.Glide;
 import com.limelight.computers.ComputerManagerListener;
 import com.limelight.computers.ComputerManagerService;
 import com.limelight.grid.AppGridAdapter;
@@ -29,6 +30,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.database.DataSetObserver;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Build;
@@ -292,6 +294,10 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
         UiHelper.setLocale(this);
 
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+
         setContentView(R.layout.activity_app_view);
 
         // Allow floating expanded PiP overlays while browsing apps
@@ -314,6 +320,8 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         TextView label = findViewById(R.id.appListText);
         setTitle(computerName);
         label.setText(computerName);
+
+        loadDefaultImage();
 
         // Bind to the computer manager service
         bindService(new Intent(this, ComputerManagerService.class), serviceConnection,
@@ -341,7 +349,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
             lastRawApplist = CacheHelper.readInputStreamToString(CacheHelper.openCacheFileForInput(getCacheDir(), "applist", uuidString));
             List<NvApp> applist = NvHTTP.getAppListByReader(new StringReader(lastRawApplist));
             updateUiWithAppList(applist);
-            LimeLog.info("Loaded applist from cache");
+            LimeLog.info("Loaded applist from cache xxxx");
         } catch (IOException | XmlPullParserException e) {
             if (lastRawApplist != null) {
                 LimeLog.warning("Saved applist corrupted: "+lastRawApplist);
@@ -517,6 +525,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
             @Override
             public void run() {
                 boolean updated = false;
+                boolean hasRunningApp = false;
 
                     // Look through our current app list to tag the running app
                 for (int i = 0; i < appGridAdapter.getCount(); i++) {
@@ -530,6 +539,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                     }
                     else if (existingApp.app.getAppId() == details.runningGameId) {
                         // This app wasn't running but now is
+                        hasRunningApp = true;
                         existingApp.isRunning = true;
                         updated = true;
                     }
@@ -542,6 +552,10 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                         // This app wasn't running and still isn't
                     }
                 }
+
+                LimeLog.info("updateUiWithServerinfo xxxxxxx" + hasRunningApp);
+
+                if (!hasRunningApp) loadDefaultImage();
 
                 if (updated) {
                     appGridAdapter.notifyDataSetChanged();
@@ -622,6 +636,15 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                 }
             }
         });
+    }
+
+    private void loadDefaultImage() {
+        LimeLog.info("load app bg moonlight-bg3.webp");
+        Glide.with(AppView.this)
+                .load("https://raw.gitmirror.com/qiin2333/qiin.github.io/assets/img/moonlight-bg3.webp")
+//                .onlyRetrieveFromCache(true)
+                // .apply(RequestOptions.bitmapTransform(new BlurTransformation(15, 3)))
+                .into((ImageView) findViewById(R.id.appBackgroundImage));
     }
 
     @Override

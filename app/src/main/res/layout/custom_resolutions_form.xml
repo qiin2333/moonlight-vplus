@@ -4,7 +4,7 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:paddingHorizontal="8dp"
-    android:paddingVertical="10dp">
+    android:paddingVertical="@dimen/activity_safearea_top">
 
     <EditText
         android:id="@+id/custom_resolution_field"

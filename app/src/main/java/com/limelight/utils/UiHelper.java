@@ -145,10 +145,10 @@ public class UiHelper {
                 public WindowInsets onApplyWindowInsets(View view, WindowInsets windowInsets) {
                     // Use the tappable insets so we can draw under the status bar in gesture mode
                     Insets tappableInsets = windowInsets.getTappableElementInsets();
-                    view.setPadding(tappableInsets.left,
-                            tappableInsets.top,
-                            tappableInsets.right,
-                            0);
+                    // view.setPadding(tappableInsets.left,
+                    //         tappableInsets.top,
+                    //         tappableInsets.right,
+                    //         0);
 
                     // Show a translucent navigation bar if we can't tap there
                     if (tappableInsets.bottom != 0) {

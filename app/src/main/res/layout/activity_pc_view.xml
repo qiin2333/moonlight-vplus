@@ -3,7 +3,14 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/advance_setting_background"
     tools:context=".PcView" >
+
+    <ImageView
+        android:id="@+id/pcBackgroundImage"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop" />
 
     <RelativeLayout
         android:id="@+id/pcFragmentContainer"
@@ -53,6 +60,7 @@
         android:layout_height="65dp"
         android:cropToPadding="false"
         android:scaleType="fitXY"
+        android:layout_marginTop="@dimen/activity_safearea_top"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true"
@@ -66,6 +74,7 @@
         android:layout_height="65dp"
         android:cropToPadding="false"
         android:scaleType="fitXY"
+        android:layout_marginTop="@dimen/activity_safearea_top"
         android:layout_alignParentTop="true"
         android:layout_toRightOf="@+id/settingsButton"
         android:layout_toEndOf="@+id/settingsButton"
@@ -79,6 +88,7 @@
         android:layout_height="65dp"
         android:cropToPadding="false"
         android:scaleType="fitXY"
+        android:layout_marginTop="@dimen/activity_safearea_top"
         android:layout_alignParentTop="true"
         android:layout_alignParentEnd="true"
         android:layout_alignParentRight="true"

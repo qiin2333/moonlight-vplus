@@ -1,6 +1,8 @@
 package com.limelight.grid;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.graphics.BitmapFactory;
 import android.view.View;
 import android.widget.ImageView;
@@ -44,7 +46,6 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
         this.computer = computer;
         this.uniqueId = uniqueId;
         this.showHiddenApps = showHiddenApps;
-
         updateLayoutWithPreferences(context, prefs);
     }
 
@@ -105,7 +106,7 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
             cancelQueuedOperations();
         }
 
-        this.loader = new CachedAppAssetLoader(computer, scalingDivisor,
+        this.loader = new CachedAppAssetLoader(context, computer, scalingDivisor,
                 new NetworkAssetLoader(context, uniqueId),
                 new MemoryAssetLoader(),
                 new DiskAssetLoader(context),
@@ -163,12 +164,15 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
     @Override
     public void populateView(View parentView, ImageView imgView, ProgressBar prgView, TextView txtView, ImageView overlayView, AppView.AppObject obj) {
         // Let the cached asset loader handle it
-        loader.populateImageView(obj.app, imgView, txtView);
+        loader.populateImageView(obj, imgView, txtView);
 
         if (obj.isRunning) {
             // Show the play button overlay
             overlayView.setImageResource(R.drawable.ic_play);
             overlayView.setVisibility(View.VISIBLE);
+
+            ImageView appBackgroundImage = getActivity(context).findViewById(R.id.appBackgroundImage);
+            loader.populateImageView(obj, appBackgroundImage, txtView);
         }
         else {
             overlayView.setVisibility(View.GONE);
@@ -180,5 +184,13 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
         else {
             parentView.setAlpha(1.0f);
         }
+    }
+    public static Activity getActivity(Context context) {
+        if (context instanceof Activity) {
+            return (Activity) context;
+        } else if (context instanceof ContextWrapper) {
+            return getActivity(((ContextWrapper) context).getBaseContext());
+        }
+        return null;
     }
 }
