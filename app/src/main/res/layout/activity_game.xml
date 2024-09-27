@@ -28,7 +28,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
-        android:background="#9A171616"
+        android:background="#80161616"
         android:gravity="start"
         android:orientation="horizontal"
         android:paddingLeft="6dp"
@@ -69,7 +69,8 @@
             android:layout_marginEnd="10dp"
             android:textColor="#BCEDD385"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            android:textSize="10sp" />
+            android:textSize="10sp"
+            android:hint="网络延迟   |" />
 
         <TextView
             android:id="@+id/perfDecodeLatency"
@@ -78,6 +79,7 @@
             android:layout_marginEnd="10dp"
             android:textColor="#E1D597E3"
             android:textSize="10sp"
+            android:hint="解码时间   |"
             android:textAppearance="?android:attr/textAppearanceSmall" />
 
         <TextView
@@ -87,6 +89,7 @@
             android:layout_marginEnd="10dp"
             android:textColor="#009688"
             android:textSize="10sp"
+            android:hint="编码时间"
             android:textAppearance="?android:attr/textAppearanceSmall" />
 
     </LinearLayout>

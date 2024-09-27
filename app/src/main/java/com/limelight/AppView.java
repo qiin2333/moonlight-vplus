@@ -639,12 +639,12 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
     }
 
     private void loadDefaultImage() {
-        LimeLog.info("load app bg moonlight-bg3.webp");
-        Glide.with(AppView.this)
-                .load("https://raw.gitmirror.com/qiin2333/qiin.github.io/assets/img/moonlight-bg3.webp")
-//                .onlyRetrieveFromCache(true)
-                // .apply(RequestOptions.bitmapTransform(new BlurTransformation(15, 3)))
-                .into((ImageView) findViewById(R.id.appBackgroundImage));
+//         LimeLog.info("load app bg moonlight-bg3.webp");
+//         Glide.with(AppView.this)
+//                 .load("https://raw.gitmirror.com/qiin2333/qiin.github.io/assets/img/moonlight-bg2.webp")
+// //                .onlyRetrieveFromCache(true)
+//                 // .apply(RequestOptions.bitmapTransform(new BlurTransformation(15, 3)))
+//                 .into((ImageView) findViewById(R.id.appBackgroundImage));
     }
 
     @Override

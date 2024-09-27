@@ -195,7 +195,6 @@ public class GameMenu {
 
         JsonArray cmdList = app.getCmdList();
         if (cmdList != null) {
-            options.add(new MenuOption("\uD83D\uDC47 炒鸡指令 ----------------", null));
             for (int i = 0; i < ((JsonArray) cmdList).size(); i++) {
                 JsonObject cmd = cmdList.get(i).getAsJsonObject();
                 options.add(new MenuOption(cmd.get("name").getAsString(), () -> {
@@ -206,7 +205,6 @@ public class GameMenu {
                     }
                 }));
             }
-            options.add(new MenuOption("☝\uFE0F ----------------------", null));
         }
 
         options.add(new MenuOption(getString(R.string.game_menu_toggle_performance_overlay),

@@ -439,6 +439,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             }
         }
 
+        // Check if the user has enabled performance stats overlay
+        if (prefConfig.enablePerfOverlay) {
+            requestedPerformanceOverlayVisibility = View.VISIBLE;
+            performanceOverlayView.setVisibility(View.VISIBLE);
+        }
+
         decoderRenderer = new MediaCodecDecoderRenderer(
                 this,
                 prefConfig,
@@ -2883,7 +2889,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 networkLatencyView.setText(finalNetworkLatencyInfo);
                 decodeLatencyView.setText(finalDecodeLatencyInfo);
                 hostLatencyView.setText(finalHostLatencyInfo);
-                // performanceOverlayView.setText(text);
             }
         });
     }

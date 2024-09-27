@@ -148,5 +148,6 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.11.0'
     implementation 'com.github.bumptech.glide:glide:4.16.0'
     implementation 'jp.wasabeef:glide-transformations:4.3.0'
+    implementation 'androidx.cardview:cardview:1.0.0'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0'
 }

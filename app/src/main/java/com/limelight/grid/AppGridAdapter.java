@@ -163,6 +163,7 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
 
     @Override
     public void populateView(View parentView, ImageView imgView, ProgressBar prgView, TextView txtView, ImageView overlayView, AppView.AppObject obj) {
+        ImageView appBackgroundImage = getActivity(context).findViewById(R.id.appBackgroundImage);
         // Let the cached asset loader handle it
         loader.populateImageView(obj, imgView, txtView);
 
@@ -170,11 +171,12 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
             // Show the play button overlay
             overlayView.setImageResource(R.drawable.ic_play);
             overlayView.setVisibility(View.VISIBLE);
-
-            ImageView appBackgroundImage = getActivity(context).findViewById(R.id.appBackgroundImage);
             loader.populateImageView(obj, appBackgroundImage, txtView);
         }
         else {
+            if (obj.app.getAppName().equalsIgnoreCase("desktop") && appBackgroundImage.getDrawable() == null) {
+                loader.populateImageView(obj, appBackgroundImage, txtView);
+            }
             overlayView.setVisibility(View.GONE);
         }
 
