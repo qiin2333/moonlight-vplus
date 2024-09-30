@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="150dp"
     android:layout_height="200dp"
     android:padding="10dp">
@@ -16,7 +16,7 @@
     </ImageView>
     <ImageView
         android:id="@+id/grid_overlay"
-        android:layout_centerHorizontal="true"
+        android:layout_gravity="center_horizontal"
         android:layout_marginTop="10dp"
         android:layout_width="50dp"
         android:layout_height="50dp">
@@ -31,4 +31,4 @@
         android:textSize="18sp">
     </TextView>
     </androidx.cardview.widget.CardView>
-</RelativeLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

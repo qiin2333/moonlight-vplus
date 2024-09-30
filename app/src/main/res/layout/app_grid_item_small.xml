@@ -16,7 +16,7 @@
         </ImageView>
         <ImageView
             android:id="@+id/grid_overlay"
-            android:layout_centerHorizontal="true"
+            android:layout_gravity="center_horizontal"
             android:layout_marginTop="10dp"
             android:layout_width="33dp"
             android:layout_height="33dp">

@@ -70,10 +70,12 @@
 
     <ImageButton
         android:id="@+id/helpButton"
-        android:layout_width="62dp"
-        android:layout_height="58dp"
+        android:layout_width="70dp"
+        android:layout_height="65dp"
         android:cropToPadding="false"
         android:scaleType="fitCenter"
+        android:scaleX="0.8"
+        android:scaleY="0.8"
         android:layout_marginTop="@dimen/activity_safearea_top"
         android:layout_alignParentTop="true"
         android:layout_toRightOf="@+id/settingsButton"

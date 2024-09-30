@@ -63,10 +63,12 @@
 
     <ImageButton
         android:id="@+id/helpButton"
-        android:layout_width="62dp"
-        android:layout_height="58dp"
+        android:layout_width="70dp"
+        android:layout_height="65dp"
         android:cropToPadding="false"
         android:scaleType="fitCenter"
+        android:scaleX="0.8"
+        android:scaleY="0.8"
         android:nextFocusForward="@id/manuallyAddPc"
         android:layout_alignParentStart="true"
         android:layout_alignParentLeft="true"
