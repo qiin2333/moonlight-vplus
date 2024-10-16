@@ -378,34 +378,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             return;
         }
 
-        // custom hotkeys
-        findViewById(R.id.btnWin).setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                sendKeys(new short[]{KeyboardTranslator.VK_LWIN});
-            }
-        });
-
-        findViewById(R.id.btnEsc).setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                sendKeys(new short[]{KeyboardTranslator.VK_ESCAPE});
-            }
-        });
-
-        findViewById(R.id.btnHDR).setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_MENU, KeyboardTranslator.VK_B});
-            }
-        });
-
-        findViewById(R.id.btnSleep).setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                sendKeys(new short[]{KeyboardTranslator.VK_LWIN, 88});
-                new Handler().postDelayed((() -> {
-                    sendKeys(new short[]{85, 83});
-                }), 200);
-            }
-        });
-
         // Initialize the MediaCodec helper before creating the decoder
         GlPreferences glPrefs = GlPreferences.readPreferences(this);
         MediaCodecHelper.initialize(this, glPrefs.glRenderer);
@@ -2833,7 +2805,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         TextView hostLatencyView = findViewById(R.id.perfHostLatency);
 
         String[] indexes = text.split("\n");
-        List<String> items = new ArrayList<String>();
+        List<String> items;
         items = Arrays.asList(indexes);
 
         String resInfo = null;

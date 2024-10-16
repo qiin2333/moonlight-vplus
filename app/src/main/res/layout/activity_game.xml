@@ -70,7 +70,7 @@
             android:textColor="#BCEDD385"
             android:textAppearance="?android:attr/textAppearanceSmall"
             android:textSize="10sp"
-            android:hint="网络延迟   |" />
+            android:hint="网络延迟    |" />
 
         <TextView
             android:id="@+id/perfDecodeLatency"
@@ -79,7 +79,7 @@
             android:layout_marginEnd="10dp"
             android:textColor="#E1D597E3"
             android:textSize="10sp"
-            android:hint="解码时间   |"
+            android:hint="解码时间    |"
             android:textAppearance="?android:attr/textAppearanceSmall" />
 
         <TextView
@@ -107,62 +107,5 @@
         android:background="#80000000"
         android:preferKeepClear="true"
         android:visibility="gone" />
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:layout_width="395dp"
-        android:layout_height="match_parent"
-        tools:context=".ImeActivity">
-
-        <com.keith.library.KeyboardHeaderLayout
-            android:id="@+id/keyboard_header"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:visibility="visible"
-            app:layout_constraintBottom_toBottomOf="parent">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_gravity="center"
-                android:orientation="horizontal"
-                android:paddingBottom="32dp"
-                android:layout_marginStart="4dp">
-
-                <Button
-                    android:id="@+id/btnWin"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:drawableStart="@drawable/ic_btn_win"
-                    android:drawablePadding="4dp"
-                    android:text="WIN" />
-
-                <Button
-                    android:id="@+id/btnEsc"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:drawableStart="@drawable/ic_btn_esc"
-                    android:drawablePadding="4dp"
-                    android:text="ESC" />
-
-                <Button
-                    android:id="@+id/btnHDR"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:drawableStart="@drawable/ic_btn_hdr"
-                    android:drawablePadding="4dp"
-                    android:text="HDR" />
-
-                <Button
-                    android:id="@+id/btnSleep"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:drawableStart="@drawable/ic_btn_sleep"
-                    android:drawablePadding="4dp"
-                    android:text="一键睡眠" />
-
-            </LinearLayout>
-
-        </com.keith.library.KeyboardHeaderLayout>
-    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </merge>

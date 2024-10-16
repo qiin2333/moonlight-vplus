@@ -4,6 +4,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.UnknownHostException;
 
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.request.RequestOptions;
 import com.limelight.binding.PlatformBinding;
 import com.limelight.binding.crypto.AndroidCryptoProvider;
@@ -146,22 +147,10 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
             setShouldDockBigOverlays(false);
         }
 
-        String imageUrl = "https://raw.gitmirror.com/qiin2333/qiin.github.io/assets/img/moonlight-bg2.webp";
-        Glide.with(PcView.this).asBitmap()
-            .load(imageUrl).onlyRetrieveFromCache(true)
-            .apply(RequestOptions.bitmapTransform(new BlurTransformation(15, 3)))
-            .into(new CustomTarget<Bitmap>() {
-                @Override
-                public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
-                    BitmapDrawable drawable = new BitmapDrawable(getResources(), resource);
-                    drawable.setAlpha(128);
-                    ImageView imageView = findViewById(R.id.pcBackgroundImage);
-                    imageView.setImageDrawable(drawable);
-                }
-
-                @Override
-                public void onLoadCleared(@Nullable Drawable placeholder) {}
-            });
+        Glide.with(this)
+            .load("https://pic.re/image?compress=true").skipMemoryCache(true).diskCacheStrategy(DiskCacheStrategy.NONE)
+            .apply(RequestOptions.bitmapTransform(new BlurTransformation(5, 3)))
+            .into((ImageView) findViewById(R.id.pcBackgroundImage));
 
         // Set default preferences if we've never been run
         PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
