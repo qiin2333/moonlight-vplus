@@ -321,7 +321,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         setTitle(computerName);
         label.setText(computerName);
 
-        loadDefaultImage();
+        // loadDefaultImage();
 
         // Bind to the computer manager service
         bindService(new Intent(this, ComputerManagerService.class), serviceConnection,
@@ -555,7 +555,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
                 LimeLog.info("updateUiWithServerinfo xxxxxxx" + hasRunningApp);
 
-                if (!hasRunningApp) loadDefaultImage();
+                // if (!hasRunningApp) loadDefaultImage();
 
                 if (updated) {
                     appGridAdapter.notifyDataSetChanged();
@@ -639,12 +639,12 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
     }
 
     private void loadDefaultImage() {
-//         LimeLog.info("load app bg moonlight-bg3.webp");
-//         Glide.with(AppView.this)
-//                 .load("https://raw.gitmirror.com/qiin2333/qiin.github.io/assets/img/moonlight-bg2.webp")
-// //                .onlyRetrieveFromCache(true)
-//                 // .apply(RequestOptions.bitmapTransform(new BlurTransformation(15, 3)))
-//                 .into((ImageView) findViewById(R.id.appBackgroundImage));
+//        LimeLog.info("load app bg moonlight-bg3.webp");
+//        Glide.with(AppView.this)
+//            .load("https://raw.gitmirror.com/qiin2333/qiin.github.io/assets/img/moonlight-bg2.webp")
+//            .onlyRetrieveFromCache(true)
+//            .apply(RequestOptions.bitmapTransform(new BlurTransformation(15, 3)))
+//            .into((ImageView) findViewById(R.id.appBackgroundImage));
     }
 
     @Override

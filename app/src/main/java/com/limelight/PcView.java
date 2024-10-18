@@ -31,8 +31,6 @@ import com.limelight.utils.ShortcutHelper;
 import com.limelight.utils.UiHelper;
 
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.request.target.CustomTarget;
-import com.bumptech.glide.request.transition.Transition;
 
 import android.app.Activity;
 import android.app.ActivityManager;
@@ -41,9 +39,7 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.res.Configuration;
-import android.graphics.Bitmap;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
+import android.graphics.Color;
 import android.net.Uri;
 import android.opengl.GLSurfaceView;
 import android.os.Build;
@@ -66,7 +62,6 @@ import android.widget.Toast;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -74,6 +69,7 @@ import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
 import jp.wasabeef.glide.transformations.BlurTransformation;
+import jp.wasabeef.glide.transformations.ColorFilterTransformation;
 
 public class PcView extends Activity implements AdapterFragmentCallbacks {
     private RelativeLayout noPcFoundLayout;
@@ -148,8 +144,9 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         }
 
         Glide.with(this)
-            .load("https://pic.re/image?compress=true").skipMemoryCache(true).diskCacheStrategy(DiskCacheStrategy.NONE)
-            .apply(RequestOptions.bitmapTransform(new BlurTransformation(5, 3)))
+            .load(getBackgroundImageUrl()).skipMemoryCache(true).diskCacheStrategy(DiskCacheStrategy.NONE)
+            .apply(RequestOptions.bitmapTransform(new BlurTransformation(2, 3)))
+            .transform(new ColorFilterTransformation(Color.argb(120, 0, 0, 0)))
             .into((ImageView) findViewById(R.id.pcBackgroundImage));
 
         // Set default preferences if we've never been run
@@ -180,7 +177,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
             @Override
             public void onClick(View v) {
 //                HelpLauncher.launchSetupGuide(PcView.this);
-                joinQQGroup("JfhuyTDZFsHrOXaWEEX6YGH9FHh3xGzR");
+                joinQQGroup("LlbLDIF_YolaM4HZyLx0xAXXo04ZmoBM");
             }
         });
 
@@ -203,6 +200,11 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
             noPcFoundLayout.setVisibility(View.INVISIBLE);
         }
         pcGridAdapter.notifyDataSetChanged();
+    }
+
+    private @NonNull String getBackgroundImageUrl() {
+        int deviceRotation = this.getWindowManager().getDefaultDisplay().getRotation();
+        return deviceRotation == Configuration.ORIENTATION_PORTRAIT ? "https://img-api.pipw.top" : "https://img-api.pipw.top/?phone=true";
     }
 
     @Override

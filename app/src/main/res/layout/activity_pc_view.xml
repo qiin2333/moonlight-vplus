@@ -10,7 +10,6 @@
         android:id="@+id/pcBackgroundImage"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:alpha="0.5"
         android:scaleType="centerCrop" />
 
     <RelativeLayout

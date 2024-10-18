@@ -16,8 +16,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 public class DiskAssetLoader {
-    // 5 MB
-    private static final long MAX_ASSET_SIZE = 5 * 1024 * 1024;
+    // 20 MB
+    private static final long MAX_ASSET_SIZE = 20 * 1024 * 1024;
 
     // Standard box art is 300x400
     private static final int STANDARD_ASSET_WIDTH = 300;

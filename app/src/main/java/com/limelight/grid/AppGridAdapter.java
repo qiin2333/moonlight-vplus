@@ -137,7 +137,7 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
 
         // Always add the app to the all apps list
         allApps.add(app);
-        sortList(allApps);
+//        sortList(allApps);
 
         // Add the app to the adapter data if it's not hidden
         if (showHiddenApps || !app.isHidden) {
@@ -146,7 +146,7 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
 
             // Add the app to our sorted list
             itemList.add(app);
-            sortList(itemList);
+//            sortList(itemList);
         }
     }
 
