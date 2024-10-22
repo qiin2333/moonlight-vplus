@@ -271,20 +271,25 @@
             android:positiveButtonText="@string/yes"
             android:negativeButtonText="@string/no"
             />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="增强版设置">
         <CheckBoxPreference
             android:defaultValue="false"
             android:key="checkbox_show_onscreen_keyboard"
-            android:summary="串流的过程中可以设置屏幕键盘和其他功能"
-            android:title="高级设置" />
+            android:summary="串流中自定义按键和一些设置，并将这些保存到自定义可快速切换的配置中"
+            android:title="王冠的超级功能" />
         <ListPreference
-            android:key="export_advance_config"
+            android:key="export_super_config"
             android:title="导出配置文件"
             android:summary="导出自定义按钮的和串流内设置的配置文件" />
         <Preference
-            android:key="import_advance_config"
+            android:key="import_super_config"
             android:title="导入配置文件"
             android:summary="导入自定义按钮的和串流内设置的配置文件" />
-
+        <Preference
+            android:key="about_author"
+            android:title="这是 V+ X 皇家 炒鸡合体版本"
+            android:summary="王冠的B站:西瓜hub。还不速速来粉， github: https://github.com/WACrown/moonlight-android" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_host_settings">
         <CheckBoxPreference

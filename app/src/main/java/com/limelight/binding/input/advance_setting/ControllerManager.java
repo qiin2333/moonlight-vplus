@@ -2,91 +2,101 @@ package com.limelight.binding.input.advance_setting;
 
 import android.content.Context;
 import android.view.LayoutInflater;
-import android.view.View;
 import android.widget.FrameLayout;
 
 import com.limelight.Game;
 import com.limelight.R;
+import com.limelight.binding.input.advance_setting.config.PageConfigController;
+import com.limelight.binding.input.advance_setting.element.ElementController;
+import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper;
+import com.limelight.binding.input.advance_setting.superpage.SuperPagesController;
 
 public class ControllerManager {
 
     private FrameLayout advanceSettingView;
     private FrameLayout fatherLayout;
-    private MenuController menuController;
-    private ConfigController configController;
-    private EditController editController;
-    private SettingController settingController;
-    private ElementController elementController;
+    private PageConfigController pageConfigController;
     private TouchController touchController;
-    private WindowsController windowsController;
+    private SuperPagesController superPagesController;
+    private PageDeviceController pageDeviceController;
+    private SuperConfigDatabaseHelper superConfigDatabaseHelper;
+    private ElementController elementController;
+    private PageSuperMenuController pageSuperMenuController;
+    private KeyboardUIController keyboardUIController;
     private Context context;
 
     public ControllerManager(FrameLayout layout, Context context){
-        advanceSettingView = (FrameLayout) LayoutInflater.from(context).inflate(R.layout.advance_setting_view,null);
+        advanceSettingView = layout.findViewById(R.id.advance_setting_view);
         this.fatherLayout = layout;
-
-        //window controller
-        FrameLayout layerWindows = advanceSettingView.findViewById(R.id.layer_windows);
-        windowsController = new WindowsController(this,layerWindows,context);
-
-        FrameLayout layerElement = advanceSettingView.findViewById(R.id.layer_element);
-        elementController = new ElementController(this,layerElement,context);
-
-        View touchView = layerElement.findViewById(R.id.element_touch_view);
-        touchController = new TouchController((Game) context,this,touchView);
-
-        //Edit controller
-        FrameLayout layerEdit = advanceSettingView.findViewById(R.id.layer_edit);
-        editController = new EditController(this,layerEdit,context);
-
-        //setting controller
-        FrameLayout layerFloat = advanceSettingView.findViewById(R.id.layer_float);
-        FrameLayout layerSetting = advanceSettingView.findViewById(R.id.layer_setting);
-        settingController = new SettingController(this,layerSetting,layerFloat,context);
-
-        //configController
-        FrameLayout layerConfig = advanceSettingView.findViewById(R.id.layer_config);
-        configController = new ConfigController(this,layerConfig,context);
-
-        //menuController 创建并注册
-        FrameLayout layerMenu = advanceSettingView.findViewById(R.id.layer_menu);
-        menuController = new MenuController(this,layerMenu);
-
-
-        //configController.loadCurrentConfig();
+        this.context = context;
     }
 
-    public MenuController getMenuController() {
-        return menuController;
+
+    public PageConfigController getPageConfigController() {
+        if (pageConfigController == null){
+            pageConfigController = new PageConfigController(this,context);
+        }
+        return pageConfigController;
     }
 
-    public ConfigController getConfigController() {
-        return configController;
-    }
-
-    public EditController getEditController() {
-        return editController;
-    }
-
-    public SettingController getSettingController() {
-        return settingController;
-    }
-
-    public ElementController getElementController() {
-        return elementController;
-    }
-
-    public WindowsController getWindowsController() {
-        return windowsController;
-    }
 
     public TouchController getTouchController() {
+        if (touchController == null){
+            FrameLayout layerElement = advanceSettingView.findViewById(R.id.layer_2_element);
+            touchController = new TouchController((Game) context,this,layerElement.findViewById(R.id.element_touch_view));
+        }
         return touchController;
     }
 
-    public void refreshLayout(){
-        fatherLayout.removeView(advanceSettingView);
-        fatherLayout.addView(advanceSettingView);
+
+    public SuperPagesController getSuperPagesController() {
+        if (superPagesController == null){
+            FrameLayout superPagesBox = advanceSettingView.findViewById(R.id.super_pages_box);
+            superPagesController = new SuperPagesController(superPagesBox,context);
+        }
+        return superPagesController;
     }
+
+    public PageDeviceController getPageDeviceController() {
+        if (pageDeviceController == null){
+            pageDeviceController = new PageDeviceController(context,this);
+        }
+        return pageDeviceController;
+    }
+
+    public SuperConfigDatabaseHelper getSuperConfigDatabaseHelper() {
+        if (superConfigDatabaseHelper == null){
+            superConfigDatabaseHelper = new SuperConfigDatabaseHelper(context);
+        }
+        return superConfigDatabaseHelper;
+    }
+
+    public ElementController getElementController() {
+        if (elementController == null){
+            FrameLayout layerElement = advanceSettingView.findViewById(R.id.layer_2_element);
+            elementController = new ElementController(this,layerElement,context);
+        }
+        return elementController;
+    }
+
+    public PageSuperMenuController getPageSuperMenuController() {
+        if (pageSuperMenuController == null){
+            pageSuperMenuController = new PageSuperMenuController(context,this);
+        }
+        return pageSuperMenuController;
+    }
+
+    public KeyboardUIController getKeyboardUIController(){
+        if (keyboardUIController == null){
+            FrameLayout layoutKeyboard = advanceSettingView.findViewById(R.id.layer_6_keyboard);
+            keyboardUIController = new KeyboardUIController(layoutKeyboard,this,context);
+        }
+        return keyboardUIController;
+    }
+
+    public void refreshLayout(){
+        getPageConfigController().initConfig();
+    }
+
 
 }

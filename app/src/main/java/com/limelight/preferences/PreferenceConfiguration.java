@@ -85,8 +85,9 @@ public class PreferenceConfiguration {
 
     //wg
     private static final String ONSCREEN_CONTROLLER_PREF_STRING = "checkbox_show_onscreen_controls";
-    static final String IMPORT_CONFIG_STRING = "import_advance_config";
-    static final String EXPORT_CONFIG_STRING = "export_advance_config";
+    static final String IMPORT_CONFIG_STRING = "import_super_config";
+    static final String EXPORT_CONFIG_STRING = "export_super_config";
+    static final String ABOUT_AUTHOR = "about_author";
 
     static final String DEFAULT_RESOLUTION = "1280x720";
     static final String DEFAULT_FPS = "60";
@@ -165,8 +166,9 @@ public class PreferenceConfiguration {
     public boolean onlyL3R3;
     public boolean enableHdr;
     public boolean enablePip;
-    public boolean enableLatencyToast;
     public boolean enablePerfOverlay;
+    public boolean enableSimplifyPerfOverlay;
+    public boolean enableLatencyToast;
     public boolean bindAllUsb;
     public boolean mouseEmulation;
     public AnalogStickForScrolling analogStickForScrolling;
@@ -649,6 +651,7 @@ public class PreferenceConfiguration {
         config.gamepadTouchpadAsMouse = prefs.getBoolean(GAMEPAD_TOUCHPAD_AS_MOUSE_PREF_STRING, DEFAULT_GAMEPAD_TOUCHPAD_AS_MOUSE);
         config.gamepadMotionSensors = prefs.getBoolean(GAMEPAD_MOTION_SENSORS_PREF_STRING, DEFAULT_GAMEPAD_MOTION_SENSORS);
         config.gamepadMotionSensorsFallbackToDevice = prefs.getBoolean(GAMEPAD_MOTION_FALLBACK_PREF_STRING, DEFAULT_GAMEPAD_MOTION_FALLBACK);
+        config.enableSimplifyPerfOverlay = false;
 
         return config;
     }

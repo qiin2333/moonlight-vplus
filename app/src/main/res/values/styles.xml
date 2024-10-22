@@ -38,5 +38,11 @@
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
     </style>
+    <style name="KeyboardKeyStyle">
+        <item name="android:background">@drawable/square_border</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">#B3FFFFFF</item> <!-- 字体颜色 -->
+        <item name="android:gravity">center</item>
+    </style>
 
 </resources>

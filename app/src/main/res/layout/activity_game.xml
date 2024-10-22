@@ -22,6 +22,15 @@
         android:defaultFocusHighlightEnabled="false">
         <requestFocus />
     </com.limelight.ui.StreamView>
+    <FrameLayout
+        android:id="@+id/advance_setting_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+        <include layout="@layout/layer_1_reserve"/>
+        <include layout="@layout/layer_2_element"/>
+        <include layout="@layout/layer_6_keyboard"/>
+        <include layout="@layout/super_pages_box"/>
+    </FrameLayout>
 
     <LinearLayout
         android:id="@+id/performanceOverlay"
@@ -107,5 +116,6 @@
         android:background="#80000000"
         android:preferKeepClear="true"
         android:visibility="gone" />
+
 
 </merge>

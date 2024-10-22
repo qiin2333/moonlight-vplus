@@ -19,6 +19,7 @@ import com.limelight.binding.video.CrashListener;
 import com.limelight.binding.video.MediaCodecDecoderRenderer;
 import com.limelight.binding.video.MediaCodecHelper;
 import com.limelight.binding.video.PerfOverlayListener;
+import com.limelight.binding.video.PerformanceInfo;
 import com.limelight.nvstream.NvConnection;
 import com.limelight.nvstream.NvConnectionListener;
 import com.limelight.nvstream.StreamConfiguration;
@@ -56,6 +57,7 @@ import android.graphics.Rect;
 import android.hardware.input.InputManager;
 import android.media.AudioManager;
 import android.net.ConnectivityManager;
+import android.net.TrafficStats;
 import android.net.wifi.WifiManager;
 import android.net.TrafficStats;
 import android.os.Build;
@@ -100,7 +102,6 @@ import java.util.Map;
 import java.util.Locale;
 import java.util.Objects;
 
-
 public class Game extends Activity implements SurfaceHolder.Callback,
         OnGenericMotionListener, OnTouchListener, NvConnectionListener, EvdevListener,
         OnSystemUiVisibilityChangeListener, GameGestures, StreamView.InputCallbacks,
@@ -117,8 +118,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private final TouchContext[] relativeTouchContextMap = new TouchContext[TOUCH_CONTEXT_LENGTH];
     private long multiFingerDownTime = 0;
 
-    private static final int REFERENCE_HORIZ_RES = 1280;
-    private static final int REFERENCE_VERT_RES = 720;
+    public static final int REFERENCE_HORIZ_RES = 1280;
+    public static final int REFERENCE_VERT_RES = 720;
 
     private static final int STYLUS_DOWN_DEAD_ZONE_DELAY = 100;
     private static final int STYLUS_DOWN_DEAD_ZONE_RADIUS = 20;
@@ -132,7 +133,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private KeyboardTranslator keyboardTranslator;
     private VirtualController virtualController;
 
+    public interface PerformanceInfoDisplay{
+        void display(Map<String,String> performanceAttrs);
+    }
     private ControllerManager controllerManager;
+    private List<PerformanceInfoDisplay> performanceInfoDisplays = new ArrayList<>();
+
 
     private PreferenceConfiguration prefConfig;
     private SharedPreferences tombstonePrefs;
@@ -162,6 +168,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private long lastAbsTouchDownTime = 0;
     private float lastAbsTouchUpX, lastAbsTouchUpY;
     private float lastAbsTouchDownX, lastAbsTouchDownY;
+    private long previousTimeMillis = 0;
+    private long previousRxBytes = 0;
 
     private boolean isHidingOverlays;
     private TextView notificationOverlayView;
@@ -543,7 +551,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         for (int i = 0; i < TOUCH_CONTEXT_LENGTH; i++) {
             absoluteTouchContextMap[i] = new AbsoluteTouchContext(conn, i, streamView);
             relativeTouchContextMap[i] = new RelativeTouchContext(conn, i,
-                    REFERENCE_HORIZ_RES, REFERENCE_VERT_RES,
                     streamView, prefConfig);
         }
         if (!prefConfig.touchscreenTrackpad) {
@@ -642,7 +649,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
         if (controllerManager != null) {
             // Refresh layout of OSC for possible new screen size
-            System.out.println("wangguan test game");
             controllerManager.refreshLayout();
         }
 
@@ -1539,6 +1545,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         return touchContextMap;
     }
 
+    public TouchContext[] getRelativeTouchContextMap(){
+        return  relativeTouchContextMap;
+    }
+
     /**
      * false : RelativeTouchContext
      * true : AbsoluteTouchContext
@@ -2171,12 +2181,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 // TODO: Re-enable native touch when have a better solution for handling
                 // cancelled touches from Android gestures and 3 finger taps to activate
                 // the software keyboard.
-                /*
                 if (!prefConfig.touchscreenTrackpad && trySendTouchEvent(view, event)) {
                     // If this host supports touch events and absolute touch is enabled,
                     // send it directly as a touch event.
                     return true;
-                }*/
+                }
 
                 TouchContext context = getTouchContext(actionIndex);
                 if (context == null) {
@@ -2795,7 +2804,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
     }
 
-    @Override
+     @Override
     public void onPerfUpdate(final String text) {
         TextView perfResView = findViewById(R.id.perfRes);
         TextView perfDecoderView = findViewById(R.id.perfDecoder);
@@ -2871,6 +2880,47 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     @Override
+    public void onPerfUpdateWG(final PerformanceInfo performanceInfo) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                long currentRxBytes = TrafficStats.getTotalRxBytes();
+                long timeMillis = System.currentTimeMillis();
+                long timeMillisInterval = timeMillis - previousTimeMillis;
+                if (timeMillisInterval < 3000){
+                    long rxBytesPerDifference = (currentRxBytes - previousRxBytes) / 1024;
+                    double speedKBps = rxBytesPerDifference / ((double)timeMillisInterval / 1000);
+                    if (speedKBps < 1024) {
+                        performanceInfo.bandWidth = String.format("%.0f KB/s", speedKBps);
+                    } else {
+                        double speedMBps = speedKBps / 1024;
+                        performanceInfo.bandWidth = String.format("%.2f MB/s", speedMBps);
+                    }
+                }
+                previousTimeMillis = timeMillis;
+                previousRxBytes = currentRxBytes;
+
+
+                if (controllerManager != null && !performanceInfoDisplays.isEmpty()){
+                    Map<String, String> perfAttrs = new HashMap<>();
+                    perfAttrs.put("decoder", performanceInfo.decoder);
+                    perfAttrs.put("resolution", performanceInfo.initialWidth + "x" + performanceInfo.initialHeight);
+                    perfAttrs.put("fps", String.format("%.0f",performanceInfo.totalFps));
+                    perfAttrs.put("lost_frame", String.format("%.1f",performanceInfo.lostFrameRate));
+                    perfAttrs.put("net_latency", String.format("%d",(int)(performanceInfo.rttInfo >> 32)));
+                    perfAttrs.put("host_latency", String.format("%.1f", performanceInfo.aveHostProcessingLatency));
+                    perfAttrs.put("decode_time", String.format("%.1f",performanceInfo.decodeTimeMs));
+                    perfAttrs.put("band_width", performanceInfo.bandWidth);
+                    for (PerformanceInfoDisplay performanceInfoDisplay : performanceInfoDisplays){
+                        performanceInfoDisplay.display(perfAttrs);
+                    }
+                }
+
+            }
+        });
+    }
+
+    @Override
     public void onUsbPermissionPromptStarting() {
         // Disable PiP auto-enter while the USB permission prompt is on-screen. This prevents
         // us from entering PiP while the user is interacting with the OS permission dialog.
@@ -2886,7 +2936,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public void showGameMenu(GameInputDevice device) {
-        new GameMenu(this, app, conn, device);
+        if (controllerManager != null){
+            controllerManager.getPageSuperMenuController().open();
+        } else {
+            new GameMenu(this, app, conn, device);
+        }
+
     }
 
     @Override
@@ -2980,5 +3035,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     public ControllerHandler getControllerHandler() {
         return controllerHandler;
+    }
+
+    public PreferenceConfiguration getPrefConfig() {
+        return prefConfig;
+    }
+
+    public void addPerformanceInfoDisplay(PerformanceInfoDisplay performanceInfoDisplay){
+        performanceInfoDisplays.add(performanceInfoDisplay);
     }
 }

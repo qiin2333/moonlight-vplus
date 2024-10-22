@@ -4,6 +4,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 
+import com.limelight.Game;
 import com.limelight.nvstream.NvConnection;
 import com.limelight.nvstream.input.MouseButtonPacket;
 import com.limelight.preferences.PreferenceConfiguration;
@@ -21,13 +22,12 @@ public class RelativeTouchContext implements TouchContext {
     private double distanceMoved;
     private double xFactor = 0.6;
     private double yFactor = 0.6;
+    private double sense = 1;
     private int pointerCount;
     private int maxPointerCountInGesture;
 
     private final NvConnection conn;
     private final int actionIndex;
-    private final int referenceWidth;
-    private final int referenceHeight;
     private final View targetView;
     private final PreferenceConfiguration prefConfig;
     private final Handler handler;
@@ -93,13 +93,10 @@ public class RelativeTouchContext implements TouchContext {
     private static final int SCROLL_SPEED_FACTOR = 5;
 
     public RelativeTouchContext(NvConnection conn, int actionIndex,
-                                int referenceWidth, int referenceHeight,
                                 View view, PreferenceConfiguration prefConfig)
     {
         this.conn = conn;
         this.actionIndex = actionIndex;
-        this.referenceWidth = referenceWidth;
-        this.referenceHeight = referenceHeight;
         this.targetView = view;
         this.prefConfig = prefConfig;
         this.handler = new Handler(Looper.getMainLooper());
@@ -149,6 +146,9 @@ public class RelativeTouchContext implements TouchContext {
     @Override
     public boolean touchDownEvent(int eventX, int eventY, long eventTime, boolean isNewFinger)
     {
+        // Get the view dimensions to scale inputs on this touch
+        xFactor = Game.REFERENCE_HORIZ_RES / (double)targetView.getWidth() * sense;
+        yFactor = Game.REFERENCE_VERT_RES / (double)targetView.getHeight() * sense;
 
         originalTouchX = lastTouchX = eventX;
         originalTouchY = lastTouchY = eventY;
@@ -328,7 +328,6 @@ public class RelativeTouchContext implements TouchContext {
     }
 
     public void adjustMsense(double sense){
-        xFactor = sense;
-        yFactor = sense;
+        this.sense = sense;
     }
 }

@@ -30,17 +30,15 @@ import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.widget.Toast;
 
-import com.google.gson.Gson;
+import com.limelight.Game;
 import com.limelight.LimeLog;
 import com.limelight.PcView;
 import com.limelight.R;
-import com.limelight.binding.input.advance_setting.ConfigListPreference;
-import com.limelight.binding.input.advance_setting.ElementPreference;
-import com.limelight.binding.input.advance_setting.SettingPreference;
+import com.limelight.binding.input.advance_setting.config.PageConfigController;
+import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper;
 import com.limelight.binding.video.MediaCodecHelper;
 import com.limelight.utils.AspectRatioConverter;
 import com.limelight.utils.Dialog;
-import com.limelight.utils.MathUtils;
 import com.limelight.utils.UiHelper;
 
 import java.io.BufferedReader;
@@ -140,28 +138,6 @@ public class StreamSettings extends Activity {
 
     public static class SettingsFragment extends PreferenceFragment {
 
-        public class ConfigObject {
-            private String configName;
-            private String configId;
-            private int majorVersion;
-            private int minorVersion;
-            private int patchVersion;
-            private Map<String, String> settingMap;
-            private Map<String, String> elementMap;
-
-            public ConfigObject(String configName, int majorVersion, int minorVersion, int patchVersion, Map<String, String> settingMap, Map<String, String> elementMap) {
-                this.configName = configName;
-                this.majorVersion = majorVersion;
-                this.minorVersion = minorVersion;
-                this.patchVersion = patchVersion;
-                this.settingMap = settingMap;
-                this.elementMap = elementMap;
-            }
-        }
-
-        public static final int CONFIG_MAJOR_VERSION = 2;
-        public static final int CONFIG_MINOR_VERSION = 0;
-        public static final int CONFIG_PATCH_VERSION = 0;
         private int nativeResolutionStartIndex = Integer.MAX_VALUE;
         private boolean nativeFramerateShown = false;
 
@@ -776,47 +752,29 @@ public class StreamSettings extends Activity {
 
             ListPreference exportPreference = (ListPreference) findPreference(PreferenceConfiguration.EXPORT_CONFIG_STRING);
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                Context context = getContext();
-                ConfigListPreference configListPreference = new ConfigListPreference(context);
-                Map<String, String> configs = configListPreference.getSortedConfigurationMap();
-                CharSequence[] nameEntries = configs.values().toArray(new String[0]);
-                CharSequence[] nameEntryValues = configs.keySet().toArray(new String[0]);
+                SuperConfigDatabaseHelper superConfigDatabaseHelper = new SuperConfigDatabaseHelper(getContext());
+                List<Long> configIdList = superConfigDatabaseHelper.queryAllConfigIds();
+                Map<String, String> configMap = new HashMap<>();
+                for (Long configId : configIdList){
+                    String configName = (String) superConfigDatabaseHelper.queryConfigAttribute(configId, PageConfigController.COLUMN_STRING_CONFIG_NAME);
+                    String configIdString = String.valueOf(configId);
+                    configMap.put(configIdString,configName);
+                }
+                CharSequence[] nameEntries = configMap.values().toArray(new String[0]);
+                CharSequence[] nameEntryValues = configMap.keySet().toArray(new String[0]);
                 exportPreference.setEntries(nameEntries);
                 exportPreference.setEntryValues(nameEntryValues);
 
                 exportPreference.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
                     @Override
                     public boolean onPreferenceChange(Preference preference, Object newValue) {
-
-
-                        String configId = (String) newValue;
-                        SettingPreference settingPreference = new SettingPreference(configId,context);
-                        ElementPreference elementPreference = new ElementPreference(configId,context);
-
-                        Map<String, String> settingPreferenceMap = settingPreference.exportPreference();
-                        Map<String, String> elementPreferenceMap = elementPreference.exportPreference();
-                        ListPreference listPreference = (ListPreference) preference;
-                        int index = listPreference.findIndexOfValue(newValue.toString());
-                        String newName = (String) listPreference.getEntries()[index];
-
-                        ConfigObject configObject = new ConfigObject(newName,
-                                CONFIG_MAJOR_VERSION,
-                                CONFIG_MINOR_VERSION,
-                                CONFIG_PATCH_VERSION,
-                                settingPreferenceMap,
-                                elementPreferenceMap);
-
-                        Gson gson = new Gson();
-                        String configObjectString = gson.toJson(configObject);
-                        String md5 = MathUtils.computeMD5(configObjectString);
-                        exportConfigString = "###" + configObjectString + "###" + md5 + "###";
-
+                        exportConfigString = superConfigDatabaseHelper.exportConfig(Long.parseLong((String) newValue));
+                        String fileName = configMap.get(newValue);
                         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
                         intent.addCategory(Intent.CATEGORY_OPENABLE);
                         intent.setType("*/*");
-                        intent.putExtra(Intent.EXTRA_TITLE, newName + ".mdat");
+                        intent.putExtra(Intent.EXTRA_TITLE, fileName + ".mdat");
                         startActivityForResult(intent, 1);
-
                         return false;
                     }
                 });
@@ -824,6 +782,15 @@ public class StreamSettings extends Activity {
             }
 
             addCustomResolutionsEntries();
+            findPreference(PreferenceConfiguration.ABOUT_AUTHOR).setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+                @Override
+                public boolean onPreferenceClick(Preference preference) {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.author_web)));
+                    startActivity(intent);
+                    return true;
+                }
+            });
+
         }
 
         @Override
@@ -842,8 +809,9 @@ public class StreamSettings extends Activity {
                             outputStream.close();
                             Toast.makeText(getContext(),"导出配置文件成功",Toast.LENGTH_SHORT).show();
                         }
-                        } catch (IOException e) {
-                        }
+                    } catch (IOException e) {
+                        Toast.makeText(getContext(),"导出配置文件失败",Toast.LENGTH_SHORT).show();
+                    }
                 }
 
             }
@@ -860,67 +828,39 @@ public class StreamSettings extends Activity {
                             stringBuilder.append(line).append("\n");
                         }
                         String fileContent = stringBuilder.toString();
-                        String[] strings = fileContent.toString().split("###");
-                        if (strings.length != 4){
-                            Toast.makeText(getContext(),"读取配置文件失败",Toast.LENGTH_SHORT).show();
-                            return;
+                        SuperConfigDatabaseHelper superConfigDatabaseHelper = new SuperConfigDatabaseHelper(getContext());
+                        int errorCode = superConfigDatabaseHelper.importConfig(fileContent);
+                        switch (errorCode){
+                            case 0:
+                                Toast.makeText(getContext(),"导入配置文件成功",Toast.LENGTH_SHORT).show();
+                                //更新导出配置文件列表
+                                ListPreference exportPreference = (ListPreference) findPreference(PreferenceConfiguration.EXPORT_CONFIG_STRING);
+                                List<Long> configIdList = superConfigDatabaseHelper.queryAllConfigIds();
+                                Map<String, String> configMap = new HashMap<>();
+                                for (Long configId : configIdList){
+                                    String configName = (String) superConfigDatabaseHelper.queryConfigAttribute(configId, PageConfigController.COLUMN_STRING_CONFIG_NAME);
+                                    String configIdString = String.valueOf(configId);
+                                    configMap.put(configIdString,configName);
+                                }
+                                CharSequence[] nameEntries = configMap.values().toArray(new String[0]);
+                                CharSequence[] nameEntryValues = configMap.keySet().toArray(new String[0]);
+                                exportPreference.setEntries(nameEntries);
+                                exportPreference.setEntryValues(nameEntryValues);
+                                break;
+                            case -1:
+                            case -2:
+                                Toast.makeText(getContext(),"读取配置文件失败",Toast.LENGTH_SHORT).show();
+                                break;
+                            case -3:
+                                Toast.makeText(getContext(),"配置文件版本不匹配",Toast.LENGTH_SHORT).show();
+                                break;
                         }
 
-                        if (!strings[2].equals(MathUtils.computeMD5(strings[1]))){
-                            Toast.makeText(getContext(),"读取配置文件失败",Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-
-                        Gson gson = new Gson();
-                        ConfigObject configObject = null;
-                        try {
-                            configObject = gson.fromJson(strings[1],ConfigObject.class);
-                        } catch (Exception e) {
-                            Toast.makeText(getContext(),"读取配置文件失败",Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-
-                        if (configObject.majorVersion != CONFIG_MAJOR_VERSION){
-                            Toast.makeText(getContext(),"配置文件版本不匹配",Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-                        ConfigListPreference configListPreference = new ConfigListPreference(getContext());
-                        if (configListPreference.isContainedName(configObject.configName)){
-                            configObject.configName = configObject.configName + "-1";
-                            configObject.configName = recursionRenameConfig(configListPreference,configObject.configName);
-                        }
-                        String configId = String.valueOf(System.currentTimeMillis());
-                        configListPreference.addConfiguration(configId,configObject.configName);
-
-                        SettingPreference settingPreference = new SettingPreference(configId,getContext());
-                        ElementPreference elementPreference = new ElementPreference(configId,getContext());
-
-                        settingPreference.importPreference(configObject.settingMap);
-                        elementPreference.importPreference(configObject.elementMap);
-                        Toast.makeText(getContext(),"导入配置文件成功",Toast.LENGTH_SHORT).show();
-
-                        //更新导出配置文件列表
-                        ListPreference exportPreference = (ListPreference) findPreference(PreferenceConfiguration.EXPORT_CONFIG_STRING);
-                        Map<String, String> configs = configListPreference.getSortedConfigurationMap();
-                        CharSequence[] nameEntries = configs.values().toArray(new String[0]);
-                        CharSequence[] nameEntryValues = configs.keySet().toArray(new String[0]);
-                        exportPreference.setEntries(nameEntries);
-                        exportPreference.setEntryValues(nameEntryValues);
                     } catch (IOException e) {
+                        Toast.makeText(getContext(),"读取配置文件失败",Toast.LENGTH_SHORT).show();
                     }
                 }
             }
-        }
-
-        private String recursionRenameConfig(ConfigListPreference configListPreference, String name){
-            if (configListPreference.isContainedName(name)){
-                String[] parts = name.split("-");
-                int i = Integer.parseInt(parts[1]) + 1;
-                return recursionRenameConfig(configListPreference,parts[0] + "-" + i);
-            } else {
-                return name;
-            }
-
         }
 
     }
