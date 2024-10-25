@@ -25,8 +25,7 @@ And some additional features like flat region to eliminate long press jitter:<br
 
 [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/232a8tadrrn8jv0k/branch/master?svg=true)](https://ci.appveyor.com/project/cgutman/moonlight-android/branch/master)
 [![Translation Status](https://hosted.weblate.org/widgets/moonlight/-/moonlight-android/svg-badge.svg)](https://hosted.weblate.org/projects/moonlight/moonlight-android/)
-[![follow us](http://pub.idqqimg.com/wpa/images/group.png)](https://qm.qq.com/cgi-bin/qm/qr?k=NTCPcYeTZWcqM_VFRtAxRaJFHYUC2UWp&noverify=0)
-
+[![follow us](http://pub.idqqimg.com/wpa/images/group.png)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=wOMgrbiTMY9MNUy3nW48ISytNvvUR_vU&authKey=wdzVqkJZ%2BqQAatwgb8gnVD4sTouR8ZnOQeSZEc28UIynHs9XzbAjMqiKAWEVn7Yj&noverify=0&group_code=904820296)
 
 [Moonlight for Android](https://moonlight-stream.org) is an open source client for NVIDIA GameStream and [Sunshine](https://github.com/LizardByte/Sunshine).
 
