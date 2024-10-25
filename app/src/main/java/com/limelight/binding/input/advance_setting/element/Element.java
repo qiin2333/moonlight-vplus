@@ -13,6 +13,8 @@ import android.widget.FrameLayout;
 
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
 
+import java.util.Map;
+
 public abstract class Element extends View {
 
 
@@ -43,6 +45,7 @@ public abstract class Element extends View {
     public static final int ELEMENT_TYPE_DIGITAL_COMMON_BUTTON = 0;
     public static final int ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON = 1;
     public static final int ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON = 2;
+    public static final int ELEMENT_TYPE_GROUP_BUTTON = 3;
     public static final int ELEMENT_TYPE_DIGITAL_PAD = 20;
     public static final int ELEMENT_TYPE_ANALOG_STICK = 30;
     public static final int ELEMENT_TYPE_DIGITAL_STICK = 31;
@@ -70,6 +73,7 @@ public abstract class Element extends View {
     protected final Long elementId;
     protected final Long configId;
     protected final int elementType;
+    protected final int layer;
     protected final ElementController elementController;
     private Context context;
     private final Paint paint = new Paint();
@@ -88,12 +92,13 @@ public abstract class Element extends View {
     protected int editColor = 0xf0dc143c;
 
 
-    public Element(Long elementId, Long configId, int elementType, ElementController elementController,Context context) {
+    public Element(Map<String,Object> attributesMap, ElementController elementController, Context context) {
         super(context);
         this.context = context;
-        this.elementId = elementId;
-        this.configId = configId;
-        this.elementType = elementType;
+        this.elementId = (Long) attributesMap.get(Element.COLUMN_LONG_ELEMENT_ID);
+        this.configId = (Long)attributesMap.get(Element.COLUMN_LONG_CONFIG_ID);
+        this.elementType = ((Long) attributesMap.get(Element.COLUMN_INT_ELEMENT_TYPE)).intValue();
+        this.layer = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_LAYER)).intValue();
         this.elementController = elementController;
 
     }

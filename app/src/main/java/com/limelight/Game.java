@@ -3037,10 +3037,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         return controllerHandler;
     }
 
-    public PreferenceConfiguration getPrefConfig() {
-        return prefConfig;
-    }
-
     public void addPerformanceInfoDisplay(PerformanceInfoDisplay performanceInfoDisplay){
         performanceInfoDisplays.add(performanceInfoDisplay);
     }

@@ -1445,6 +1445,24 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             float maxHostProcessingLatency = (float)lastTwo.minHostProcessingLatency / 10;
             float aveHostProcessingLatency = (float)lastTwo.totalHostProcessingLatency / 10 / lastTwo.framesWithHostProcessingLatency;
 
+            StringBuilder sb = new StringBuilder();
+            sb.append(context.getString(R.string.perf_overlay_streamdetails, initialWidth + "x" + initialHeight, fps.totalFps)).append('\n');
+            sb.append(context.getString(R.string.perf_overlay_decoder, decoder)).append('\n');
+            sb.append(context.getString(R.string.perf_overlay_incomingfps, fps.receivedFps)).append('\n');
+            sb.append(context.getString(R.string.perf_overlay_renderingfps, fps.renderedFps)).append('\n');
+            sb.append(context.getString(R.string.perf_overlay_netdrops,
+                    (float) lastTwo.framesLost / lastTwo.totalFrames * 100)).append('\n');
+            sb.append(context.getString(R.string.perf_overlay_netlatency,
+                    (int) (rttInfo >> 32), (int) rttInfo)).append('\n');
+            if (lastTwo.framesWithHostProcessingLatency > 0) {
+                sb.append(context.getString(R.string.perf_overlay_hostprocessinglatency,
+                        (float) lastTwo.minHostProcessingLatency / 10,
+                        (float) lastTwo.maxHostProcessingLatency / 10,
+                        (float) lastTwo.totalHostProcessingLatency / 10 / lastTwo.framesWithHostProcessingLatency)).append('\n');
+            }
+            sb.append(context.getString(R.string.perf_overlay_dectime, decodeTimeMs));
+            perfListener.onPerfUpdate(sb.toString());
+
             PerformanceInfo performanceInfo = new PerformanceInfo();
             performanceInfo.context = context;
             performanceInfo.initialWidth = initialWidth;

@@ -213,7 +213,7 @@ public class InvisibleDigitalStick extends Element {
     public InvisibleDigitalStick(Map<String,Object> attributesMap,
                                  ElementController controller,
                                  PageDeviceController pageDeviceController, Context context) {
-        super((Long) attributesMap.get(Element.COLUMN_LONG_ELEMENT_ID),(Long)attributesMap.get(Element.COLUMN_LONG_CONFIG_ID),((Long) attributesMap.get(Element.COLUMN_INT_ELEMENT_TYPE)).intValue(),controller,context);
+        super(attributesMap,controller,context);
         // reset stick position
         circleCenterX = getWidth() / 2;
         circleCenterY = getHeight() / 2;
@@ -651,7 +651,6 @@ public class InvisibleDigitalStick extends Element {
             @Override
             public void onClick(View v) {
                 ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_LONG_ELEMENT_ID,System.currentTimeMillis());
                 contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_INVISIBLE_DIGITAL_STICK);
                 contentValues.put(COLUMN_STRING_ELEMENT_UP_VALUE,upValue);
                 contentValues.put(COLUMN_STRING_ELEMENT_DOWN_VALUE,downValue);
@@ -669,7 +668,7 @@ public class InvisibleDigitalStick extends Element {
                 contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
                 contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
                 contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
-                elementController.copyElement(contentValues);
+                elementController.addElement(contentValues);
             }
         });
 
@@ -879,7 +878,6 @@ public class InvisibleDigitalStick extends Element {
 
     public static ContentValues getInitialInfo(){
         ContentValues contentValues = new ContentValues();
-        contentValues.put(COLUMN_LONG_ELEMENT_ID,System.currentTimeMillis());
         contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_INVISIBLE_DIGITAL_STICK);
         contentValues.put(COLUMN_STRING_ELEMENT_UP_VALUE,"k51");
         contentValues.put(COLUMN_STRING_ELEMENT_DOWN_VALUE,"k47");

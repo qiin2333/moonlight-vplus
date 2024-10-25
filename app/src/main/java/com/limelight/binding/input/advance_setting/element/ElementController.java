@@ -99,134 +99,81 @@ public class ElementController {
         pageEdit.findViewById(R.id.page_edit_add_digital_common_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Long configId = controllerManager.getPageConfigController().getCurrentConfigId();
-                // save a new element to sqlite
                 ContentValues contentValues = DigitalCommonButton.getInitialInfo();
-                //ContentValues contentValues = new ContentValues();
-                contentValues.put(Element.COLUMN_LONG_CONFIG_ID,configId);
-                controllerManager.getSuperConfigDatabaseHelper().insertElement(contentValues);
-                // add the element to screen
-                loadAllElement(configId);
+                addElement(contentValues);
             }
         });
         pageEdit.findViewById(R.id.page_edit_add_digital_switch_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Long configId = controllerManager.getPageConfigController().getCurrentConfigId();
-                // save a new element to sqlite
                 ContentValues contentValues = DigitalSwitchButton.getInitialInfo();
-                //ContentValues contentValues = new ContentValues();
-                contentValues.put(Element.COLUMN_LONG_CONFIG_ID,configId);
-                controllerManager.getSuperConfigDatabaseHelper().insertElement(contentValues);
-                // add the element to screen
-                loadAllElement(configId);
+                addElement(contentValues);
             }
         });
         pageEdit.findViewById(R.id.page_edit_add_digital_movable_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Long configId = controllerManager.getPageConfigController().getCurrentConfigId();
-                // save a new element to sqlite
                 ContentValues contentValues = DigitalMovableButton.getInitialInfo();
-                //ContentValues contentValues = new ContentValues();
-                contentValues.put(Element.COLUMN_LONG_CONFIG_ID,configId);
-                controllerManager.getSuperConfigDatabaseHelper().insertElement(contentValues);
-                // add the element to screen
-                loadAllElement(configId);
+                addElement(contentValues);
             }
         });
         pageEdit.findViewById(R.id.page_edit_add_pad).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Long configId = controllerManager.getPageConfigController().getCurrentConfigId();
-                // save a new element to sqlite
                 ContentValues contentValues = DigitalPad.getInitialInfo();
-                //ContentValues contentValues = new ContentValues();
-                contentValues.put(Element.COLUMN_LONG_CONFIG_ID,configId);
-                controllerManager.getSuperConfigDatabaseHelper().insertElement(contentValues);
-                // add the element to screen
-                loadAllElement(configId);
+                addElement(contentValues);
             }
         });
         pageEdit.findViewById(R.id.page_edit_add_analog_stick).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Long configId = controllerManager.getPageConfigController().getCurrentConfigId();
-                // save a new element to sqlite
                 ContentValues contentValues = AnalogStick.getInitialInfo();
-                //ContentValues contentValues = new ContentValues();
-                contentValues.put(Element.COLUMN_LONG_CONFIG_ID,configId);
-                controllerManager.getSuperConfigDatabaseHelper().insertElement(contentValues);
-                // add the element to screen
-                loadAllElement(configId);
+                addElement(contentValues);
             }
         });
         pageEdit.findViewById(R.id.page_edit_add_digital_stick).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Long configId = controllerManager.getPageConfigController().getCurrentConfigId();
-                // save a new element to sqlite
                 ContentValues contentValues = DigitalStick.getInitialInfo();
-                //ContentValues contentValues = new ContentValues();
-                contentValues.put(Element.COLUMN_LONG_CONFIG_ID,configId);
-                controllerManager.getSuperConfigDatabaseHelper().insertElement(contentValues);
-                // add the element to screen
-                loadAllElement(configId);
+                addElement(contentValues);
             }
         });
         pageEdit.findViewById(R.id.page_edit_add_invisible_analog_stick).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Long configId = controllerManager.getPageConfigController().getCurrentConfigId();
-                // save a new element to sqlite
                 ContentValues contentValues = InvisibleAnalogStick.getInitialInfo();
-                //ContentValues contentValues = new ContentValues();
-                contentValues.put(Element.COLUMN_LONG_CONFIG_ID,configId);
-                controllerManager.getSuperConfigDatabaseHelper().insertElement(contentValues);
-                // add the element to screen
-                loadAllElement(configId);
+                addElement(contentValues);
             }
         });
         pageEdit.findViewById(R.id.page_edit_add_invisible_digital_stick).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Long configId = controllerManager.getPageConfigController().getCurrentConfigId();
-                // save a new element to sqlite
                 ContentValues contentValues = InvisibleDigitalStick.getInitialInfo();
-                //ContentValues contentValues = new ContentValues();
-                contentValues.put(Element.COLUMN_LONG_CONFIG_ID,configId);
-                controllerManager.getSuperConfigDatabaseHelper().insertElement(contentValues);
-                // add the element to screen
-                loadAllElement(configId);
+                addElement(contentValues);
             }
         });
         pageEdit.findViewById(R.id.page_edit_add_simplify_performance).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Long configId = controllerManager.getPageConfigController().getCurrentConfigId();
-
                 DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
-                // save a new element to sqlite
                 ContentValues contentValues = SimplifyPerformance.getInitialInfo();
                 contentValues.put(Element.COLUMN_INT_ELEMENT_CENTRAL_X,displayMetrics.widthPixels / 2);
                 contentValues.put(Element.COLUMN_INT_ELEMENT_CENTRAL_Y,30);
-                contentValues.put(Element.COLUMN_LONG_CONFIG_ID,configId);
-                controllerManager.getSuperConfigDatabaseHelper().insertElement(contentValues);
-                // add the element to screen
-                loadAllElement(configId);
+                addElement(contentValues);
             }
         });
         pageEdit.findViewById(R.id.page_edit_add_digital_combine_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Long configId = controllerManager.getPageConfigController().getCurrentConfigId();
-                // save a new element to sqlite
                 ContentValues contentValues = DigitalCombineButton.getInitialInfo();
-                //ContentValues contentValues = new ContentValues();
-                contentValues.put(Element.COLUMN_LONG_CONFIG_ID,configId);
-                controllerManager.getSuperConfigDatabaseHelper().insertElement(contentValues);
-                // add the element to screen
-                loadAllElement(configId);
+                addElement(contentValues);
+            }
+        });
+        pageEdit.findViewById(R.id.page_edit_add_group_button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ContentValues contentValues = GroupButton.getInitialInfo();
+                addElement(contentValues);
             }
         });
     }
@@ -241,99 +188,146 @@ public class ElementController {
     }
 
     public void loadAllElement(Long configId){
-        removeAllElementsFromScreen();
+        removeAllElementsOnScreen();
         elementIds = controllerManager.getSuperConfigDatabaseHelper().queryAllElementIds(configId);
+        List<Long> groupButtonElementIdList = new ArrayList<>();
         for (Long elementId : elementIds){
-            Map<String, Object> attributesMap =  controllerManager.getSuperConfigDatabaseHelper().queryAllElementAttributes(elementId);
-            int type = ((Long) attributesMap.get(Element.COLUMN_INT_ELEMENT_TYPE)).intValue();
-            Element element = null;
-            switch (type){
-                case Element.ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
-                    element = new DigitalCommonButton(attributesMap,
-                            this,
-                            pageDeviceController,
-                            context);
-                    break;
-                case Element.ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
-                    element = new DigitalSwitchButton(attributesMap,
-                            this,
-                            pageDeviceController,
-                            context);
-                    break;
-                case Element.ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
-                    element = new DigitalMovableButton(attributesMap,
-                            this,
-                            controllerManager.getTouchController(),
-                            pageDeviceController,
-                            context);
-                    break;
-                case Element.ELEMENT_TYPE_DIGITAL_PAD:
-                    element = new DigitalPad(attributesMap,
-                            this,
-                            pageDeviceController,
-                            context);
-                    break;
-                case Element.ELEMENT_TYPE_ANALOG_STICK:
-                    element = new AnalogStick(attributesMap,
-                            this,
-                            pageDeviceController,
-                            context);
-                    break;
-                case Element.ELEMENT_TYPE_DIGITAL_STICK:
-                    element = new DigitalStick(attributesMap,
-                            this,
-                            pageDeviceController,
-                            context);
-                    break;
-                case Element.ELEMENT_TYPE_INVISIBLE_ANALOG_STICK:
-                    element = new InvisibleAnalogStick(attributesMap,
-                            this,
-                            pageDeviceController,
-                            context);
-                    break;
-                case Element.ELEMENT_TYPE_INVISIBLE_DIGITAL_STICK:
-                    element = new InvisibleDigitalStick(attributesMap,
-                            this,
-                            pageDeviceController,
-                            context);
-                    break;
-                case Element.ELEMENT_TYPE_SIMPLIFY_PERFORMANCE:
-                    element = new SimplifyPerformance(attributesMap,
-                            this,
-                            context);
-                    break;
-                case Element.ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
-                    element = new DigitalCombineButton(attributesMap,
-                            this,
-                            pageDeviceController,
-                            context);
-                    break;
+            long elementType = (long) controllerManager.getSuperConfigDatabaseHelper().queryElementAttribute(elementId,Element.COLUMN_INT_ELEMENT_TYPE);
+            if (elementType == Element.ELEMENT_TYPE_GROUP_BUTTON){
+                groupButtonElementIdList.add(elementId);
+            } else {
+                loadElement(elementId);
             }
-            elements.add(element);
-            int elementWidth = ((Long) attributesMap.get(Element.COLUMN_INT_ELEMENT_WIDTH)).intValue();
-            int elementHeight = ((Long) attributesMap.get(Element.COLUMN_INT_ELEMENT_HEIGHT)).intValue();
-            int elementCentralX = ((Long) attributesMap.get( Element.COLUMN_INT_ELEMENT_CENTRAL_X)).intValue();
-            int elementCentralY = ((Long) attributesMap.get( Element.COLUMN_INT_ELEMENT_CENTRAL_Y)).intValue();
-            FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(elementWidth, elementHeight);
-            layoutParams.leftMargin = elementCentralX - elementWidth / 2;
-            layoutParams.topMargin = elementCentralY - elementHeight / 2;
-            elementsLayout.addView(element,layoutParams);
+
         }
+        for (Long elementId : groupButtonElementIdList){
+            loadElement(elementId);
+        }
+    }
+
+    protected Long addElement(ContentValues contentValues){
+        Long configId = controllerManager.getPageConfigController().getCurrentConfigId();
+        Long elementId = System.currentTimeMillis();
+        contentValues.put(Element.COLUMN_LONG_CONFIG_ID,configId);
+        contentValues.put(Element.COLUMN_LONG_ELEMENT_ID,elementId);
+        controllerManager.getSuperConfigDatabaseHelper().insertElement(contentValues);
+
+        loadElement(elementId);
+        return elementId;
     }
 
     protected void deleteElement(Element element){
         controllerManager.getSuperConfigDatabaseHelper().deleteElement(element.elementId);
-        Long configId = controllerManager.getPageConfigController().getCurrentConfigId();
-        loadAllElement(configId);
+        if (elements.contains(element)){
+            elementsLayout.removeView(element);
+            elements.remove(element);
+        }
     }
 
-    protected void copyElement(ContentValues contentValues){
-        Long configId = controllerManager.getPageConfigController().getCurrentConfigId();
-        contentValues.put(Element.COLUMN_LONG_CONFIG_ID,configId);
-        controllerManager.getSuperConfigDatabaseHelper().insertElement(contentValues);
-        // add the element to screen
-        loadAllElement(configId);
+    private void removeAllElementsOnScreen() {
+        for (Element element : elements) {
+            elementsLayout.removeView(element);
+        }
+        elements.clear();
     }
+
+    private void loadElement(Long elementId){
+        Map<String, Object> attributesMap =  controllerManager.getSuperConfigDatabaseHelper().queryAllElementAttributes(elementId);
+        int type = ((Long) attributesMap.get(Element.COLUMN_INT_ELEMENT_TYPE)).intValue();
+        Element element = null;
+        switch (type){
+            case Element.ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
+                element = new DigitalCommonButton(attributesMap,
+                        this,
+                        pageDeviceController,
+                        context);
+                break;
+            case Element.ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
+                element = new DigitalSwitchButton(attributesMap,
+                        this,
+                        pageDeviceController,
+                        context);
+                break;
+            case Element.ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
+                element = new DigitalMovableButton(attributesMap,
+                        this,
+                        controllerManager.getTouchController(),
+                        pageDeviceController,
+                        context);
+                break;
+            case Element.ELEMENT_TYPE_GROUP_BUTTON:
+                element = new GroupButton(attributesMap,
+                        this,
+                        pageDeviceController,
+                        context);
+                break;
+            case Element.ELEMENT_TYPE_DIGITAL_PAD:
+                element = new DigitalPad(attributesMap,
+                        this,
+                        pageDeviceController,
+                        context);
+                break;
+            case Element.ELEMENT_TYPE_ANALOG_STICK:
+                element = new AnalogStick(attributesMap,
+                        this,
+                        pageDeviceController,
+                        context);
+                break;
+            case Element.ELEMENT_TYPE_DIGITAL_STICK:
+                element = new DigitalStick(attributesMap,
+                        this,
+                        pageDeviceController,
+                        context);
+                break;
+            case Element.ELEMENT_TYPE_INVISIBLE_ANALOG_STICK:
+                element = new InvisibleAnalogStick(attributesMap,
+                        this,
+                        pageDeviceController,
+                        context);
+                break;
+            case Element.ELEMENT_TYPE_INVISIBLE_DIGITAL_STICK:
+                element = new InvisibleDigitalStick(attributesMap,
+                        this,
+                        pageDeviceController,
+                        context);
+                break;
+            case Element.ELEMENT_TYPE_SIMPLIFY_PERFORMANCE:
+                element = new SimplifyPerformance(attributesMap,
+                        this,
+                        context);
+                break;
+            case Element.ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
+                element = new DigitalCombineButton(attributesMap,
+                        this,
+                        pageDeviceController,
+                        context);
+                break;
+        }
+        int elementWidth = ((Long) attributesMap.get(Element.COLUMN_INT_ELEMENT_WIDTH)).intValue();
+        int elementHeight = ((Long) attributesMap.get(Element.COLUMN_INT_ELEMENT_HEIGHT)).intValue();
+        int elementCentralX = ((Long) attributesMap.get( Element.COLUMN_INT_ELEMENT_CENTRAL_X)).intValue();
+        int elementCentralY = ((Long) attributesMap.get( Element.COLUMN_INT_ELEMENT_CENTRAL_Y)).intValue();
+        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(elementWidth, elementHeight);
+        layoutParams.leftMargin = elementCentralX - elementWidth / 2;
+        layoutParams.topMargin = elementCentralY - elementHeight / 2;
+
+        for (int i = 0;i <= elements.size();i ++){
+            if (i == elements.size()){
+                elements.add(i,element);
+                elementsLayout.addView(element,i + 1,layoutParams);
+                break;
+            }
+            Element elementExist = elements.get(i);
+            if (elementExist.elementId  + ((long) elementExist.layer << 48 ) > element.elementId + ((long) element.layer << 48 )){
+                elements.add(i,element);
+                elementsLayout.addView(element,i + 1,layoutParams);
+                break;
+            }
+        }
+    }
+
+
+
 
 
     public void toggleInfoPage(SuperPageLayout elementSettingPage){
@@ -370,12 +364,6 @@ public class ElementController {
     //其他辅助方法----------------------------------
     public List<Element> getElements() {
         return elements;
-    }
-    public void removeAllElementsFromScreen() {
-        for (Element element : elements) {
-            elementsLayout.removeView(element);
-        }
-        elements.clear();
     }
 
 

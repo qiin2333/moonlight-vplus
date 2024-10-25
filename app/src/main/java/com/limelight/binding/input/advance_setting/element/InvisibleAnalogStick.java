@@ -204,7 +204,7 @@ public class InvisibleAnalogStick extends Element {
     public InvisibleAnalogStick(Map<String,Object> attributesMap,
                                 ElementController controller,
                                 PageDeviceController pageDeviceController, Context context) {
-        super((Long) attributesMap.get(Element.COLUMN_LONG_ELEMENT_ID),(Long)attributesMap.get(Element.COLUMN_LONG_CONFIG_ID),((Long) attributesMap.get(Element.COLUMN_INT_ELEMENT_TYPE)).intValue(),controller,context);
+        super(attributesMap,controller,context);
         // reset stick position
         circleCenterX = getWidth() / 2;
         circleCenterY = getHeight() / 2;
@@ -535,7 +535,6 @@ public class InvisibleAnalogStick extends Element {
             @Override
             public void onClick(View v) {
                 ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_LONG_ELEMENT_ID,System.currentTimeMillis());
                 contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_INVISIBLE_ANALOG_STICK);
                 contentValues.put(COLUMN_STRING_ELEMENT_VALUE, value);
                 contentValues.put(COLUMN_STRING_ELEMENT_MIDDLE_VALUE, middleValue);
@@ -550,7 +549,7 @@ public class InvisibleAnalogStick extends Element {
                 contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
                 contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
                 contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
-                elementController.copyElement(contentValues);
+                elementController.addElement(contentValues);
             }
         });
 
@@ -760,7 +759,6 @@ public class InvisibleAnalogStick extends Element {
 
     public static ContentValues getInitialInfo(){
         ContentValues contentValues = new ContentValues();
-        contentValues.put(COLUMN_LONG_ELEMENT_ID,System.currentTimeMillis());
         contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_INVISIBLE_ANALOG_STICK);
         contentValues.put(COLUMN_STRING_ELEMENT_VALUE,"LS");
         contentValues.put(COLUMN_STRING_ELEMENT_MIDDLE_VALUE,"g64");

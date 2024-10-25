@@ -292,7 +292,6 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         if (cursor != null) {
             while (cursor.moveToNext()) {
                 int columnIndex = cursor.getColumnIndexOrThrow(elementAttribute);
-                System.out.println("file type = " + cursor.getType(columnIndex));
                 switch (cursor.getType(columnIndex)) {
                     case Cursor.FIELD_TYPE_INTEGER:
                         o = cursor.getLong(columnIndex);

@@ -62,7 +62,7 @@ public class SimplifyPerformance extends Element {
     public SimplifyPerformance(Map<String,Object> attributesMap,
                                ElementController controller,
                                Context context) {
-        super((Long) attributesMap.get(Element.COLUMN_LONG_ELEMENT_ID),(Long)attributesMap.get(Element.COLUMN_LONG_CONFIG_ID),((Long) attributesMap.get(Element.COLUMN_INT_ELEMENT_TYPE)).intValue(),controller,context);
+        super(attributesMap,controller,context);
         this.superConfigDatabaseHelper = controller.getSuperConfigDatabaseHelper();
         this.simplifyPerformance = this;
 
@@ -307,7 +307,6 @@ public class SimplifyPerformance extends Element {
             @Override
             public void onClick(View v) {
                 ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_LONG_ELEMENT_ID,System.currentTimeMillis());
                 contentValues.put(COLUMN_INT_ELEMENT_TYPE, ELEMENT_TYPE_SIMPLIFY_PERFORMANCE);
                 contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_PRE_PARSE_TEXT, preParseText);
                 contentValues.put(COLUMN_INT_ELEMENT_WIDTH,getParamWidth());
@@ -319,7 +318,7 @@ public class SimplifyPerformance extends Element {
                 contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_SIZE,textSize);
                 contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_COLOR,textColor);
                 contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
-                elementController.copyElement(contentValues);
+                elementController.addElement(contentValues);
             }
         });
 
@@ -358,7 +357,6 @@ public class SimplifyPerformance extends Element {
 
     public static ContentValues getInitialInfo(){
         ContentValues contentValues = new ContentValues();
-        contentValues.put(COLUMN_LONG_ELEMENT_ID,System.currentTimeMillis());
         contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_SIMPLIFY_PERFORMANCE);
         contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_PRE_PARSE_TEXT,SIMPLIFY_PERFORMANCE_TEXT_DEFAULT);
         contentValues.put(COLUMN_INT_ELEMENT_WIDTH, 100);
