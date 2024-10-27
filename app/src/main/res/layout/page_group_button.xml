@@ -35,9 +35,22 @@
                 android:layout_height="40dp"
                 android:layout_marginVertical="5dp">
                 <CheckBox
+                    android:id="@+id/page_group_button_child_attribute_follow"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:text="子按键属性跟随"
+                    android:textColor="#B3FFFFFF"/>
+            </LinearLayout>
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginVertical="5dp">
+                <CheckBox
+                    android:id="@+id/page_group_button_child_visible"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:text="显示子按键"
                     android:textColor="#B3FFFFFF"/>
             </LinearLayout>
             <LinearLayout

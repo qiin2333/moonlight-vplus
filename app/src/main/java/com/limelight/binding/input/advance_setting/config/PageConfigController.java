@@ -10,6 +10,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -300,18 +301,21 @@ public class PageConfigController {
         controllerManager.getTouchController().adjustTouchSense(mouseSense);
         mouseSenseSeekBar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
                 ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_TOUCH_SENSE,lastProgress);
+                contentValues.put(COLUMN_INT_TOUCH_SENSE,seekBar.getProgress());
                 //保存到数据库中
                 controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId,contentValues);
                 //做实际的设置
-                controllerManager.getTouchController().adjustTouchSense(lastProgress);
+                controllerManager.getTouchController().adjustTouchSense(seekBar.getProgress());
             }
         });
     }

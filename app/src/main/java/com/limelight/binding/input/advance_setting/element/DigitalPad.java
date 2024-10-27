@@ -13,6 +13,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.limelight.R;
@@ -48,7 +49,6 @@ public class DigitalPad extends Element {
     private String downValue;
     private String leftValue;
     private String rightValue;
-    private int layer;
     private int thick;
     private int normalColor;
     private int pressedColor;
@@ -92,7 +92,6 @@ public class DigitalPad extends Element {
         paintEdit.setStrokeWidth(4);
         paintEdit.setPathEffect(new DashPathEffect(new float[]{10, 20}, 0));
 
-        layer = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_LAYER)).intValue();
         thick = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_THICK)).intValue();
         normalColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_NORMAL_COLOR)).intValue();
         pressedColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_PRESSED_COLOR)).intValue();
@@ -111,36 +110,16 @@ public class DigitalPad extends Element {
             public void onDirectionChange(int direction) {
                 int directionChange = lastDirection ^ direction;
                 if ((directionChange & DIGITAL_PAD_DIRECTION_LEFT) != 0 ){
-                    if ((direction & DIGITAL_PAD_DIRECTION_LEFT) != 0) {
-                        leftValueSenderHandler.sendEvent(true);
-                    }
-                    else {
-                        leftValueSenderHandler.sendEvent(false);
-                    }
+                    leftValueSenderHandler.sendEvent((direction & DIGITAL_PAD_DIRECTION_LEFT) != 0);
                 }
                 if ((directionChange & DIGITAL_PAD_DIRECTION_RIGHT) != 0 ){
-                    if ((direction & DIGITAL_PAD_DIRECTION_RIGHT) != 0) {
-                        rightValueSenderHandler.sendEvent(true);
-                    }
-                    else {
-                        rightValueSenderHandler.sendEvent(false);
-                    }
+                    rightValueSenderHandler.sendEvent((direction & DIGITAL_PAD_DIRECTION_RIGHT) != 0);
                 }
                 if ((directionChange & DIGITAL_PAD_DIRECTION_UP) != 0 ){
-                    if ((direction & DIGITAL_PAD_DIRECTION_UP) != 0) {
-                        upValueSenderHandler.sendEvent(true);
-                    }
-                    else {
-                        upValueSenderHandler.sendEvent(false);
-                    }
+                    upValueSenderHandler.sendEvent((direction & DIGITAL_PAD_DIRECTION_UP) != 0);
                 }
                 if ((directionChange & DIGITAL_PAD_DIRECTION_DOWN) != 0 ){
-                    if ((direction & DIGITAL_PAD_DIRECTION_DOWN) != 0) {
-                        downValueSenderHandler.sendEvent(true);
-                    }
-                    else {
-                        downValueSenderHandler.sendEvent(false);
-                    }
+                    downValueSenderHandler.sendEvent((direction & DIGITAL_PAD_DIRECTION_DOWN) != 0);
                 }
                 lastDirection = direction;
             }
@@ -369,15 +348,10 @@ public class DigitalPad extends Element {
                 PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
                     @Override
                     public void OnKeyClick(TextView key) {
-                        upValue = key.getTag().toString();
                         // page页设置值文本
                         ((TextView) v).setText(key.getText());
-                        // 保存值
-                        ContentValues contentValues = new ContentValues();
-                        contentValues.put(COLUMN_STRING_ELEMENT_UP_VALUE, upValue);
-                        superConfigDatabaseHelper.updateElement(elementId,contentValues);
-                        // 设置onClickListener
-                        upValueSenderHandler = elementController.getSendEventHandler(upValue);
+                        setElementUpValue(key.getTag().toString());
+                        save();
                     }
                 };
                 pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
@@ -391,15 +365,10 @@ public class DigitalPad extends Element {
                 PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
                     @Override
                     public void OnKeyClick(TextView key) {
-                        downValue = key.getTag().toString();
+                        setElementDownValue(key.getTag().toString());
                         // page页设置值文本
                         ((TextView) v).setText(key.getText());
-                        // 保存值
-                        ContentValues contentValues = new ContentValues();
-                        contentValues.put(COLUMN_STRING_ELEMENT_DOWN_VALUE, downValue);
-                        superConfigDatabaseHelper.updateElement(elementId,contentValues);
-                        // 设置onClickListener
-                        downValueSenderHandler = elementController.getSendEventHandler(downValue);
+                        save();
                     }
                 };
                 pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
@@ -413,15 +382,10 @@ public class DigitalPad extends Element {
                 PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
                     @Override
                     public void OnKeyClick(TextView key) {
-                        leftValue = key.getTag().toString();
+                        setElementLeftValue(key.getTag().toString());
                         // page页设置值文本
                         ((TextView) v).setText(key.getText());
-                        // 保存值
-                        ContentValues contentValues = new ContentValues();
-                        contentValues.put(COLUMN_STRING_ELEMENT_LEFT_VALUE, leftValue);
-                        superConfigDatabaseHelper.updateElement(elementId,contentValues);
-                        // 设置onClickListener
-                        leftValueSenderHandler = elementController.getSendEventHandler(leftValue);
+                        save();
                     }
                 };
                 pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
@@ -435,15 +399,10 @@ public class DigitalPad extends Element {
                 PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
                     @Override
                     public void OnKeyClick(TextView key) {
-                        rightValue = key.getTag().toString();
+                        setElementRightValue(key.getTag().toString());
                         // page页设置值文本
                         ((TextView) v).setText(key.getText());
-                        // 保存值
-                        ContentValues contentValues = new ContentValues();
-                        contentValues.put(COLUMN_STRING_ELEMENT_RIGHT_VALUE, rightValue);
-                        superConfigDatabaseHelper.updateElement(elementId,contentValues);
-                        // 设置onClickListener
-                        rightValueSenderHandler = elementController.getSendEventHandler(rightValue);
+                        save();
                     }
                 };
                 pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
@@ -452,69 +411,77 @@ public class DigitalPad extends Element {
 
         centralXNumberSeekbar.setProgressMin(centralXMin);
         centralXNumberSeekbar.setProgressMax(centralXMax);
-        centralXNumberSeekbar.setValueWithNoCallBack(getParamCentralX());
+        centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
         centralXNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                setParamCentralX(progress);
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementCentralX(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,getParamCentralX());
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
         centralYNumberSeekbar.setProgressMin(centralYMin);
         centralYNumberSeekbar.setProgressMax(centralYMax);
-        centralYNumberSeekbar.setValueWithNoCallBack(getParamCentralY());
+        centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
         centralYNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                setParamCentralY(progress);
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementCentralY(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y,getParamCentralY());
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
 
 
         widthNumberSeekbar.setProgressMax(widthMax);
         widthNumberSeekbar.setProgressMin(widthMin);
-        widthNumberSeekbar.setValueWithNoCallBack(getParamWidth());
+        widthNumberSeekbar.setValueWithNoCallBack(getElementWidth());
         widthNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                setParamWidth(progress);
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementWidth(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_WIDTH,getParamWidth());
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
 
         heightNumberSeekbar.setProgressMax(heightMax);
         heightNumberSeekbar.setProgressMin(heightMin);
-        heightNumberSeekbar.setValueWithNoCallBack(getParamHeight());
+        heightNumberSeekbar.setValueWithNoCallBack(getElementHeight());
         heightNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                setParamHeight(progress);
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementHeight(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_HEIGHT,getParamHeight());
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
 
@@ -523,16 +490,17 @@ public class DigitalPad extends Element {
         thickNumberSeekbar.setValueWithNoCallBack(thick);
         thickNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                thick = progress;
-                digitalPad.invalidate();
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementThick(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
 
@@ -543,11 +511,8 @@ public class DigitalPad extends Element {
             @Override
             public void textChanged(String text) {
                 if (text.matches("^[A-F0-9]{8}$")){
-                    normalColor = (int) Long.parseLong(text, 16);
-                    digitalPad.invalidate();
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
-                    superConfigDatabaseHelper.updateElement(elementId,contentValues);
+                    setElementNormalColor((int) Long.parseLong(text, 16));
+                    save();
                 }
             }
         });
@@ -559,11 +524,8 @@ public class DigitalPad extends Element {
             @Override
             public void textChanged(String text) {
                 if (text.matches("^[A-F0-9]{8}$")){
-                    pressedColor = (int) Long.parseLong(text, 16);
-                    digitalPad.invalidate();
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
-                    superConfigDatabaseHelper.updateElement(elementId,contentValues);
+                    setElementPressedColor((int) Long.parseLong(text, 16));
+                    save();
                 }
             }
         });
@@ -575,11 +537,8 @@ public class DigitalPad extends Element {
             @Override
             public void textChanged(String text) {
                 if (text.matches("^[A-F0-9]{8}$")){
-                    backgroundColor = (int) Long.parseLong(text, 16);
-                    digitalPad.invalidate();
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
-                    superConfigDatabaseHelper.updateElement(elementId,contentValues);
+                    setElementBackgroundColor((int) Long.parseLong(text, 16));
+                    save();
                 }
             }
         });
@@ -593,11 +552,11 @@ public class DigitalPad extends Element {
                 contentValues.put(COLUMN_STRING_ELEMENT_DOWN_VALUE, downValue);
                 contentValues.put(COLUMN_STRING_ELEMENT_LEFT_VALUE, leftValue);
                 contentValues.put(COLUMN_STRING_ELEMENT_RIGHT_VALUE, rightValue);
-                contentValues.put(COLUMN_INT_ELEMENT_WIDTH,getParamWidth());
-                contentValues.put(COLUMN_INT_ELEMENT_HEIGHT,getParamHeight());
+                contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
+                contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
                 contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,Math.max(Math.min(getParamCentralX() + getParamWidth(),centralXMax),centralXMin));
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y,getParamCentralY());
+                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,Math.max(Math.min(getElementCentralX() + getElementWidth(),centralXMax),centralXMin));
+                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
                 contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
                 contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
                 contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
@@ -618,21 +577,72 @@ public class DigitalPad extends Element {
     }
 
     @Override
-    public void updateDataBase() {
+    public void save() {
         ContentValues contentValues = new ContentValues();
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,getParamCentralX());
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y,getParamCentralY());
+        contentValues.put(COLUMN_STRING_ELEMENT_UP_VALUE, upValue);
+        contentValues.put(COLUMN_STRING_ELEMENT_DOWN_VALUE, downValue);
+        contentValues.put(COLUMN_STRING_ELEMENT_LEFT_VALUE, leftValue);
+        contentValues.put(COLUMN_STRING_ELEMENT_RIGHT_VALUE, rightValue);
+        contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
+        contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
+        contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,getElementCentralX());
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
+        contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
+        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
         superConfigDatabaseHelper.updateElement(elementId,contentValues);
 
     }
 
     @Override
-    protected void updatePageInfo() {
+    protected void updatePage() {
         if (digitalPadPage != null){
-            centralXNumberSeekbar.setValueWithNoCallBack(getParamCentralX());
-            centralYNumberSeekbar.setValueWithNoCallBack(getParamCentralY());
+            centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
+            centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
         }
 
+    }
+
+    public void setElementUpValue(String upValue) {
+        this.upValue = upValue;
+        upValueSenderHandler = elementController.getSendEventHandler(upValue);
+    }
+
+    public void setElementDownValue(String downValue) {
+        this.downValue = downValue;
+        downValueSenderHandler = elementController.getSendEventHandler(downValue);
+    }
+
+    public void setElementLeftValue(String leftValue) {
+        this.leftValue = leftValue;
+        leftValueSenderHandler = elementController.getSendEventHandler(leftValue);
+    }
+
+    public void setElementRightValue(String rightValue) {
+        this.rightValue = rightValue;
+        rightValueSenderHandler = elementController.getSendEventHandler(rightValue);
+    }
+
+    protected void setElementThick(int thick) {
+        this.thick = thick;
+        invalidate();
+    }
+
+    protected void setElementNormalColor(int normalColor) {
+        this.normalColor = normalColor;
+        invalidate();
+    }
+
+    protected void setElementPressedColor(int pressedColor) {
+        this.pressedColor = pressedColor;
+        invalidate();
+    }
+
+    protected void setElementBackgroundColor(int backgroundColor) {
+        this.backgroundColor = backgroundColor;
+        invalidate();
     }
 
     public static ContentValues getInitialInfo(){

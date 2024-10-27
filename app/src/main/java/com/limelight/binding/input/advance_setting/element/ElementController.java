@@ -205,15 +205,14 @@ public class ElementController {
         }
     }
 
-    protected Long addElement(ContentValues contentValues){
+    protected Element addElement(ContentValues contentValues){
         Long configId = controllerManager.getPageConfigController().getCurrentConfigId();
         Long elementId = System.currentTimeMillis();
         contentValues.put(Element.COLUMN_LONG_CONFIG_ID,configId);
         contentValues.put(Element.COLUMN_LONG_ELEMENT_ID,elementId);
         controllerManager.getSuperConfigDatabaseHelper().insertElement(contentValues);
 
-        loadElement(elementId);
-        return elementId;
+        return loadElement(elementId);
     }
 
     protected void deleteElement(Element element){
@@ -231,7 +230,7 @@ public class ElementController {
         elements.clear();
     }
 
-    private void loadElement(Long elementId){
+    private Element loadElement(Long elementId){
         Map<String, Object> attributesMap =  controllerManager.getSuperConfigDatabaseHelper().queryAllElementAttributes(elementId);
         int type = ((Long) attributesMap.get(Element.COLUMN_INT_ELEMENT_TYPE)).intValue();
         Element element = null;
@@ -324,6 +323,7 @@ public class ElementController {
                 break;
             }
         }
+        return element;
     }
 
 

@@ -21,8 +21,9 @@ public class NumberSeekbar extends LinearLayout {
     private OnNumberSeekbarChangeListener onNumberSeekbarChangeListener;
 
     public interface OnNumberSeekbarChangeListener{
-        void onProgressChanged(int progress);
-        void onProgressRelease(int lastProgress);
+        void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser);
+        void onStartTrackingTouch(SeekBar seekBar);
+        void onStopTrackingTouch(SeekBar seekBar);
     }
 
 
@@ -81,20 +82,23 @@ public class NumberSeekbar extends LinearLayout {
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 numberSeekbarNumber.setText(String.valueOf(progress));
                 if (onNumberSeekbarChangeListener != null){
-                    onNumberSeekbarChangeListener.onProgressChanged(progress);
+                    onNumberSeekbarChangeListener.onProgressChanged(seekBar, progress, fromUser);
                 }
 
             }
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-                // Do nothing
+                if (onNumberSeekbarChangeListener != null){
+                    onNumberSeekbarChangeListener.onStartTrackingTouch(seekBar);
+                }
+
             }
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 if (onNumberSeekbarChangeListener != null){
-                    onNumberSeekbarChangeListener.onProgressRelease(numberSeekbarSeekbar.getProgress());
+                    onNumberSeekbarChangeListener.onStopTrackingTouch(seekBar);
                 }
             }
         });
@@ -104,9 +108,10 @@ public class NumberSeekbar extends LinearLayout {
             public void onClick(View v) {
                 int progress = numberSeekbarSeekbar.getProgress();
                 if (progress > numberSeekbarSeekbar.getMin()) {
-                    numberSeekbarSeekbar.setProgress(progress - 1);
                     if (onNumberSeekbarChangeListener != null){
-                        onNumberSeekbarChangeListener.onProgressRelease(numberSeekbarSeekbar.getProgress());
+                        onNumberSeekbarChangeListener.onStartTrackingTouch(numberSeekbarSeekbar);
+                        numberSeekbarSeekbar.setProgress(progress - 1);
+                        onNumberSeekbarChangeListener.onStopTrackingTouch(numberSeekbarSeekbar);
                     }
 
                 }
@@ -120,7 +125,7 @@ public class NumberSeekbar extends LinearLayout {
                 if (progress < numberSeekbarSeekbar.getMax()) {
                     numberSeekbarSeekbar.setProgress(progress + 1);
                     if (onNumberSeekbarChangeListener != null){
-                        onNumberSeekbarChangeListener.onProgressRelease(numberSeekbarSeekbar.getProgress());
+                        onNumberSeekbarChangeListener.onStopTrackingTouch(numberSeekbarSeekbar);
                     }
                 }
             }

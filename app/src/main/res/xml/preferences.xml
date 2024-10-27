@@ -296,7 +296,7 @@
             android:summary="导入自定义按钮的和串流内设置的配置文件" />
         <Preference
             android:key="about_author"
-            android:title="这是 V+ X 皇家 炒鸡合体版本"
+            android:title="这是 V+ X 皇家版本"
             android:summary="王冠的B站:西瓜hub，请关注TA， github: https://github.com/WACrown/moonlight-android" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_host_settings">

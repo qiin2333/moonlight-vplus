@@ -12,8 +12,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.limelight.R;
@@ -23,11 +22,11 @@ import com.limelight.binding.input.advance_setting.superpage.ElementEditText;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 public class InvisibleDigitalStick extends Element {
+
+    private static final String COLUMN_INT_ELEMENT_DEAD_ZONE_RADIUS = COLUMN_INT_ELEMENT_SENSE;
 
     /**
      * outer radius size in percent of the ui element
@@ -149,8 +148,7 @@ public class InvisibleDigitalStick extends Element {
     private String leftValue;
     private String rightValue;
     private int radius;
-    private int sense; //dead zone radius
-    private int layer;
+    private int deadZoneRadius; //dead zone radius
     private int thick;
     private int normalColor;
     private int pressedColor;
@@ -243,8 +241,7 @@ public class InvisibleDigitalStick extends Element {
         paintEdit.setPathEffect(new DashPathEffect(new float[]{10, 20}, 0));
 
         radius = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_RADIUS)).intValue();
-        sense = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_SENSE)).intValue();
-        layer = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_LAYER)).intValue();
+        deadZoneRadius = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_DEAD_ZONE_RADIUS)).intValue();
         thick = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_THICK)).intValue();
         normalColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_NORMAL_COLOR)).intValue();
         pressedColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_PRESSED_COLOR)).intValue();
@@ -263,31 +260,31 @@ public class InvisibleDigitalStick extends Element {
         listener = new InvisibleDigitalStickListener() {
             @Override
             public void onMovement(float x, float y) {
-                if (x < - sense*0.01 && !leftIsPressed) {
+                if (x < -deadZoneRadius *0.01 && !leftIsPressed) {
                     leftValueSendHandler.sendEvent(true);
                     leftIsPressed = true;
-                } else if (x > -sense*0.01 && leftIsPressed) {
+                } else if (x > -deadZoneRadius *0.01 && leftIsPressed) {
                     leftValueSendHandler.sendEvent(false);
                     leftIsPressed = false;
                 }
-                if (x > sense*0.01 && !rightIsPressed) {
+                if (x > deadZoneRadius *0.01 && !rightIsPressed) {
                     rightValueSendHandler.sendEvent(true);
                     rightIsPressed = true;
-                } else if (x < sense*0.01 && rightIsPressed) {
+                } else if (x < deadZoneRadius *0.01 && rightIsPressed) {
                     rightValueSendHandler.sendEvent(false);
                     rightIsPressed = false;
                 }
-                if (y < -sense*0.01 && !downIsPressed) {
+                if (y < -deadZoneRadius *0.01 && !downIsPressed) {
                     downValueSendHandler.sendEvent(true);
                     downIsPressed = true;
-                } else if (y > -sense*0.01 && downIsPressed) {
+                } else if (y > -deadZoneRadius *0.01 && downIsPressed) {
                     downValueSendHandler.sendEvent(false);
                     downIsPressed = false;
                 }
-                if (y > sense*0.01 && !upIsPressed) {
+                if (y > deadZoneRadius *0.01 && !upIsPressed) {
                     upValueSendHandler.sendEvent(true);
                     upIsPressed = true;
-                } else if (y < sense*0.01 && upIsPressed) {
+                } else if (y < deadZoneRadius *0.01 && upIsPressed) {
                     upValueSendHandler.sendEvent(false);
                     upIsPressed = false;
                 }
@@ -310,7 +307,7 @@ public class InvisibleDigitalStick extends Element {
         };
 
         radius_complete = getPercent(radius, 100) - 2 * thick;
-        radius_dead_zone = getPercent(radius, sense);
+        radius_dead_zone = getPercent(radius, deadZoneRadius);
         radius_analog_stick = getPercent(radius, 20);
     }
 
@@ -353,9 +350,9 @@ public class InvisibleDigitalStick extends Element {
         TextView rightValueTextView = invisibleDigitalStickPage.findViewById(R.id.page_invisible_digital_stick_right_value);
         NumberSeekbar senseNumberSeekbar = invisibleDigitalStickPage.findViewById(R.id.page_invisible_digital_stick_sense);
         NumberSeekbar thickNumberSeekbar = invisibleDigitalStickPage.findViewById(R.id.page_invisible_digital_stick_thick);
-        ElementEditText normalColorElementEditText = invisibleDigitalStickPage.findViewById(R.id.page_invisible_digital_stick_normal_color);
-        ElementEditText pressedColorElementEditText = invisibleDigitalStickPage.findViewById(R.id.page_invisible_digital_stick_pressed_color);
-        ElementEditText backgroundColorElementEditText = invisibleDigitalStickPage.findViewById(R.id.page_invisible_digital_stick_background_color);
+        ElementEditText normalColorEditText = invisibleDigitalStickPage.findViewById(R.id.page_invisible_digital_stick_normal_color);
+        ElementEditText pressedColorEditText = invisibleDigitalStickPage.findViewById(R.id.page_invisible_digital_stick_pressed_color);
+        ElementEditText backgroundColorEditText = invisibleDigitalStickPage.findViewById(R.id.page_invisible_digital_stick_background_color);
         Button copyButton = invisibleDigitalStickPage.findViewById(R.id.page_invisible_digital_stick_copy);
         Button deleteButton = invisibleDigitalStickPage.findViewById(R.id.page_invisible_digital_stick_delete);
 
@@ -367,15 +364,10 @@ public class InvisibleDigitalStick extends Element {
                 PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
                     @Override
                     public void OnKeyClick(TextView key) {
-                        middleValue = key.getTag().toString();
                         // page页设置值文本
                         ((TextView) v).setText(key.getText());
-                        // 保存值
-                        ContentValues contentValues = new ContentValues();
-                        contentValues.put(COLUMN_STRING_ELEMENT_MIDDLE_VALUE,middleValue);
-                        superConfigDatabaseHelper.updateElement(elementId,contentValues);
-                        // 设置onClickListener
-                        middleValueSendHandler = elementController.getSendEventHandler(middleValue);
+                        setElementMiddleValue(key.getTag().toString());
+                        save();
                     }
                 };
                 pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
@@ -388,15 +380,10 @@ public class InvisibleDigitalStick extends Element {
                 PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
                     @Override
                     public void OnKeyClick(TextView key) {
-                        upValue = key.getTag().toString();
                         // page页设置值文本
                         ((TextView) v).setText(key.getText());
-                        // 保存值
-                        ContentValues contentValues = new ContentValues();
-                        contentValues.put(COLUMN_STRING_ELEMENT_UP_VALUE,upValue);
-                        superConfigDatabaseHelper.updateElement(elementId,contentValues);
-                        // 设置onClickListener
-                        upValueSendHandler = elementController.getSendEventHandler(upValue);
+                        setElementUpValue(key.getTag().toString());
+                        save();
                     }
                 };
                 pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
@@ -409,15 +396,10 @@ public class InvisibleDigitalStick extends Element {
                 PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
                     @Override
                     public void OnKeyClick(TextView key) {
-                        downValue = key.getTag().toString();
                         // page页设置值文本
                         ((TextView) v).setText(key.getText());
-                        // 保存值
-                        ContentValues contentValues = new ContentValues();
-                        contentValues.put(COLUMN_STRING_ELEMENT_DOWN_VALUE,downValue);
-                        superConfigDatabaseHelper.updateElement(elementId,contentValues);
-                        // 设置onClickListener
-                        downValueSendHandler = elementController.getSendEventHandler(downValue);
+                        setElementDownValue(key.getTag().toString());
+                        save();
                     }
                 };
                 pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
@@ -430,15 +412,10 @@ public class InvisibleDigitalStick extends Element {
                 PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
                     @Override
                     public void OnKeyClick(TextView key) {
-                        leftValue = key.getTag().toString();
+                        setElementLeftValue(key.getTag().toString());
                         // page页设置值文本
                         ((TextView) v).setText(key.getText());
-                        // 保存值
-                        ContentValues contentValues = new ContentValues();
-                        contentValues.put(COLUMN_STRING_ELEMENT_LEFT_VALUE,leftValue);
-                        superConfigDatabaseHelper.updateElement(elementId,contentValues);
-                        // 设置onClickListener
-                        leftValueSendHandler = elementController.getSendEventHandler(leftValue);
+                        save();
                     }
                 };
                 pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
@@ -451,15 +428,10 @@ public class InvisibleDigitalStick extends Element {
                 PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
                     @Override
                     public void OnKeyClick(TextView key) {
-                        rightValue = key.getTag().toString();
+                        setElementRightValue(key.getTag().toString());
                         // page页设置值文本
                         ((TextView) v).setText(key.getText());
-                        // 保存值
-                        ContentValues contentValues = new ContentValues();
-                        contentValues.put(COLUMN_STRING_ELEMENT_RIGHT_VALUE,rightValue);
-                        superConfigDatabaseHelper.updateElement(elementId,contentValues);
-                        // 设置onClickListener
-                        rightValueSendHandler = elementController.getSendEventHandler(rightValue);
+                        save();
                     }
                 };
                 pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
@@ -468,91 +440,99 @@ public class InvisibleDigitalStick extends Element {
 
         centralXNumberSeekbar.setProgressMin(centralXMin);
         centralXNumberSeekbar.setProgressMax(centralXMax);
-        centralXNumberSeekbar.setValueWithNoCallBack(getParamCentralX());
+        centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
         centralXNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                setParamCentralX(progress);
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementCentralX(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,getParamCentralX());
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
 
         centralYNumberSeekbar.setProgressMin(centralYMin);
         centralYNumberSeekbar.setProgressMax(centralYMax);
-        centralYNumberSeekbar.setValueWithNoCallBack(getParamCentralY());
+        centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
         centralYNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                setParamCentralY(progress);
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementCentralY(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y,getParamCentralY());
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
 
 
         widthNumberSeekbar.setProgressMax(widthMax);
         widthNumberSeekbar.setProgressMin(widthMin);
-        widthNumberSeekbar.setValueWithNoCallBack(getParamWidth());
+        widthNumberSeekbar.setValueWithNoCallBack(getElementWidth());
         widthNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                setParamWidth(progress);
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementWidth(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                radiusNumberSeekbar.setProgressMax(Math.min(getParamWidth(),getParamHeight()) / 2);
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_WIDTH,getParamWidth());
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
+                save();
 
             }
         });
 
         heightNumberSeekbar.setProgressMax(heightMax);
         heightNumberSeekbar.setProgressMin(heightMin);
-        heightNumberSeekbar.setValueWithNoCallBack(getParamHeight());
+        heightNumberSeekbar.setValueWithNoCallBack(getElementHeight());
         heightNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                setParamHeight(progress);
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementHeight(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                radiusNumberSeekbar.setProgressMax(Math.min(getParamWidth(),getParamHeight()) / 2);
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_HEIGHT,getParamHeight());
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
+                save();
             }
         });
 
 
-        senseNumberSeekbar.setValueWithNoCallBack(sense);
+        senseNumberSeekbar.setValueWithNoCallBack(deadZoneRadius);
         senseNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                sense = progress;
-                radius_dead_zone = getPercent(radius, sense);
-                invisibleDigitalStick.invalidate();
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementDeadZoneRadius(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_SENSE,sense);
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
 
@@ -560,24 +540,22 @@ public class InvisibleDigitalStick extends Element {
 
 
 
-        radiusNumberSeekbar.setProgressMax(Math.min(getParamWidth(),getParamHeight()) / 2);
+        radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
         radiusNumberSeekbar.setProgressMin(10);
         radiusNumberSeekbar.setValueWithNoCallBack(radius);
         radiusNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                radius = progress;
-                radius_complete = getPercent(radius, 100) - 2 * thick;
-                radius_dead_zone = getPercent(radius, sense);
-                radius_analog_stick = getPercent(radius, 20);
-                invisibleDigitalStick.invalidate();
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementRadius(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
 
@@ -585,63 +563,55 @@ public class InvisibleDigitalStick extends Element {
         thickNumberSeekbar.setValueWithNoCallBack(thick);
         thickNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                thick = progress;
-                invisibleDigitalStick.invalidate();
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementThick(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
 
 
-        normalColorElementEditText.setTextWithNoTextChangedCallBack(String.format("%08X",normalColor));
-        normalColorElementEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new HexInputFilter()});
-        normalColorElementEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
+        normalColorEditText.setTextWithNoTextChangedCallBack(String.format("%08X",normalColor));
+        normalColorEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new HexInputFilter()});
+        normalColorEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
             @Override
             public void textChanged(String text) {
                 if (text.matches("^[A-F0-9]{8}$")){
-                    normalColor = (int) Long.parseLong(text, 16);
-                    invisibleDigitalStick.invalidate();
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
-                    superConfigDatabaseHelper.updateElement(elementId,contentValues);
+                    setElementNormalColor((int) Long.parseLong(text, 16));
+                    save();
                 }
             }
         });
 
 
-        pressedColorElementEditText.setTextWithNoTextChangedCallBack(String.format("%08X",pressedColor));
-        pressedColorElementEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new HexInputFilter()});
-        pressedColorElementEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
+        pressedColorEditText.setTextWithNoTextChangedCallBack(String.format("%08X",pressedColor));
+        pressedColorEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new HexInputFilter()});
+        pressedColorEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
             @Override
             public void textChanged(String text) {
                 if (text.matches("^[A-F0-9]{8}$")){
-                    pressedColor = (int) Long.parseLong(text, 16);
-                    invisibleDigitalStick.invalidate();
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
-                    superConfigDatabaseHelper.updateElement(elementId,contentValues);
+                    setElementPressedColor((int) Long.parseLong(text, 16));
+                    save();
                 }
             }
         });
 
 
-        backgroundColorElementEditText.setTextWithNoTextChangedCallBack(String.format("%08X",backgroundColor));
-        backgroundColorElementEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new HexInputFilter()});
-        backgroundColorElementEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
+        backgroundColorEditText.setTextWithNoTextChangedCallBack(String.format("%08X",backgroundColor));
+        backgroundColorEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new HexInputFilter()});
+        backgroundColorEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
             @Override
             public void textChanged(String text) {
                 if (text.matches("^[A-F0-9]{8}$")){
-                    backgroundColor = (int) Long.parseLong(text, 16);
-                    invisibleDigitalStick.invalidate();
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
-                    superConfigDatabaseHelper.updateElement(elementId,contentValues);
+                    setElementBackgroundColor((int) Long.parseLong(text, 16));
+                    save();
                 }
             }
         });
@@ -657,12 +627,12 @@ public class InvisibleDigitalStick extends Element {
                 contentValues.put(COLUMN_STRING_ELEMENT_LEFT_VALUE,leftValue);
                 contentValues.put(COLUMN_STRING_ELEMENT_RIGHT_VALUE,rightValue);
                 contentValues.put(COLUMN_STRING_ELEMENT_MIDDLE_VALUE,middleValue);
-                contentValues.put(COLUMN_INT_ELEMENT_SENSE,sense);
-                contentValues.put(COLUMN_INT_ELEMENT_WIDTH,getParamWidth());
-                contentValues.put(COLUMN_INT_ELEMENT_HEIGHT,getParamHeight());
+                contentValues.put(COLUMN_INT_ELEMENT_DEAD_ZONE_RADIUS, deadZoneRadius);
+                contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
+                contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
                 contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,Math.max(Math.min(getParamCentralX() + getParamWidth(),centralXMax),centralXMin));
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y,getParamCentralY());
+                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,Math.max(Math.min(getElementCentralX() + getElementWidth(),centralXMax),centralXMin));
+                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
                 contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
                 contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
                 contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
@@ -686,19 +656,32 @@ public class InvisibleDigitalStick extends Element {
     }
 
     @Override
-    public void updateDataBase() {
+    public void save() {
         ContentValues contentValues = new ContentValues();
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,getParamCentralX());
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y,getParamCentralY());
+        contentValues.put(COLUMN_STRING_ELEMENT_UP_VALUE,upValue);
+        contentValues.put(COLUMN_STRING_ELEMENT_DOWN_VALUE,downValue);
+        contentValues.put(COLUMN_STRING_ELEMENT_LEFT_VALUE,leftValue);
+        contentValues.put(COLUMN_STRING_ELEMENT_RIGHT_VALUE,rightValue);
+        contentValues.put(COLUMN_STRING_ELEMENT_MIDDLE_VALUE,middleValue);
+        contentValues.put(COLUMN_INT_ELEMENT_DEAD_ZONE_RADIUS, deadZoneRadius);
+        contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
+        contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,getElementCentralX());
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
+        contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
+        contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
+        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
         superConfigDatabaseHelper.updateElement(elementId,contentValues);
 
     }
 
     @Override
-    protected void updatePageInfo() {
+    protected void updatePage() {
         if (invisibleDigitalStickPage != null){
-            centralXNumberSeekbar.setValueWithNoCallBack(getParamCentralX());
-            centralYNumberSeekbar.setValueWithNoCallBack(getParamCentralY());
+            centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
+            centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
         }
 
     }
@@ -876,6 +859,65 @@ public class InvisibleDigitalStick extends Element {
         return true;
     }
 
+    public void setElementMiddleValue(String middleValue) {
+        this.middleValue = middleValue;
+        middleValueSendHandler = elementController.getSendEventHandler(middleValue);
+    }
+
+    public void setElementUpValue(String upValue) {
+        this.upValue = upValue;
+        upValueSendHandler = elementController.getSendEventHandler(upValue);
+    }
+
+    public void setElementDownValue(String downValue) {
+        this.downValue = downValue;
+        downValueSendHandler = elementController.getSendEventHandler(downValue);
+    }
+
+    public void setElementLeftValue(String leftValue) {
+        this.leftValue = leftValue;
+        leftValueSendHandler = elementController.getSendEventHandler(leftValue);
+    }
+
+    public void setElementRightValue(String rightValue) {
+        this.rightValue = rightValue;
+        rightValueSendHandler = elementController.getSendEventHandler(rightValue);
+    }
+
+    public void setElementRadius(int radius) {
+        this.radius = radius;
+        radius_complete = getPercent(radius, 100) - 2 * thick;
+        radius_dead_zone = getPercent(radius, deadZoneRadius);
+        radius_analog_stick = getPercent(radius, 20);
+        invalidate();
+    }
+
+    public void setElementDeadZoneRadius(int deadZoneRadius) {
+        this.deadZoneRadius = deadZoneRadius;
+        radius_dead_zone = getPercent(radius, deadZoneRadius);
+        invalidate();
+    }
+
+    public void setElementThick(int thick) {
+        this.thick = thick;
+        invalidate();
+    }
+
+    public void setElementNormalColor(int normalColor) {
+        this.normalColor = normalColor;
+        invalidate();
+    }
+
+    public void setElementPressedColor(int pressedColor) {
+        this.pressedColor = pressedColor;
+        invalidate();
+    }
+
+    public void setElementBackgroundColor(int backgroundColor) {
+        this.backgroundColor = backgroundColor;
+        invalidate();
+    }
+
     public static ContentValues getInitialInfo(){
         ContentValues contentValues = new ContentValues();
         contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_INVISIBLE_DIGITAL_STICK);
@@ -884,7 +926,7 @@ public class InvisibleDigitalStick extends Element {
         contentValues.put(COLUMN_STRING_ELEMENT_LEFT_VALUE,"k29");
         contentValues.put(COLUMN_STRING_ELEMENT_RIGHT_VALUE,"k32");
         contentValues.put(COLUMN_STRING_ELEMENT_MIDDLE_VALUE,"k59");
-        contentValues.put(COLUMN_INT_ELEMENT_SENSE,30);
+        contentValues.put(COLUMN_INT_ELEMENT_DEAD_ZONE_RADIUS,30);
         contentValues.put(COLUMN_INT_ELEMENT_WIDTH,400);
         contentValues.put(COLUMN_INT_ELEMENT_HEIGHT,400);
         contentValues.put(COLUMN_INT_ELEMENT_LAYER,45);

@@ -12,13 +12,11 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.limelight.R;
 import com.limelight.binding.input.advance_setting.PageDeviceController;
-import com.limelight.binding.input.advance_setting.TouchController;
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper;
 import com.limelight.binding.input.advance_setting.superpage.ElementEditText;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
@@ -61,7 +59,6 @@ public class DigitalSwitchButton extends Element {
     private String text;
     private String value;
     private int radius;
-    private int layer;
     private int thick;
     private int normalColor;
     private int pressedColor;
@@ -72,8 +69,6 @@ public class DigitalSwitchButton extends Element {
     private NumberSeekbar centralYNumberSeekbar;
 
 
-    private float lastX;
-    private float lastY;
     private long timerLongClickTimeout = 3000;
     private final Runnable longClickRunnable = new Runnable() {
         @Override
@@ -117,7 +112,6 @@ public class DigitalSwitchButton extends Element {
 
         text = (String) attributesMap.get(COLUMN_STRING_ELEMENT_TEXT);
         radius = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_RADIUS)).intValue();
-        layer = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_LAYER)).intValue();
         thick = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_THICK)).intValue();
         normalColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_NORMAL_COLOR)).intValue();
         pressedColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_PRESSED_COLOR)).intValue();
@@ -146,7 +140,7 @@ public class DigitalSwitchButton extends Element {
     protected void onElementDraw(Canvas canvas) {
 
         // 文字
-        paintText.setTextSize(getPercent(getParamWidth(), 25));
+        paintText.setTextSize(getPercent(getElementWidth(), 25));
         paintText.setColor(isPressed() ? pressedColor : normalColor);
         // 边框
         paintBorder.setStrokeWidth(thick);
@@ -155,14 +149,14 @@ public class DigitalSwitchButton extends Element {
         paintBackground.setColor(backgroundColor);
         // 绘画范围
         rect.left = rect.top = (float) thick / 2;
-        rect.right = getParamWidth() - rect.left;
+        rect.right = getElementWidth() - rect.left;
         rect.bottom = getHeight() - rect.top;
         // 绘制背景
         canvas.drawRoundRect(rect, radius, radius, paintBackground);
         // 绘制边框
         canvas.drawRoundRect(rect, radius, radius, paintBorder);
         // 绘制文字
-        canvas.drawText(text, getPercent(getParamWidth(), 50), getPercent(getParamHeight(), 63), paintText);
+        canvas.drawText(text, getPercent(getElementWidth(), 50), getPercent(getElementHeight(), 63), paintText);
         if (elementController.getMode() == ElementController.Mode.Edit){
             // 绘画范围
             rect.left = rect.top = 2;
@@ -205,8 +199,6 @@ public class DigitalSwitchButton extends Element {
 
         switch (action) {
             case MotionEvent.ACTION_DOWN: {
-                lastX = event.getX();
-                lastY = event.getY();
                 if (isPressed()){
                     setPressed(false);
                     onReleaseCallback();
@@ -231,19 +223,28 @@ public class DigitalSwitchButton extends Element {
     }
 
     @Override
-    public void updateDataBase() {
+    public void save() {
         ContentValues contentValues = new ContentValues();
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,getParamCentralX());
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y,getParamCentralY());
+        contentValues.put(COLUMN_STRING_ELEMENT_TEXT, text);
+        contentValues.put(COLUMN_STRING_ELEMENT_VALUE, value);
+        contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
+        contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,getElementCentralX());
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
+        contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
+        contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
+        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
         superConfigDatabaseHelper.updateElement(elementId,contentValues);
 
     }
 
     @Override
-    protected void updatePageInfo() {
+    protected void updatePage() {
         if (digitalSwitchButtonPage != null){
-            centralXNumberSeekbar.setValueWithNoCallBack(getParamCentralX());
-            centralYNumberSeekbar.setValueWithNoCallBack(getParamCentralY());
+            centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
+            centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
         }
 
     }
@@ -273,11 +274,8 @@ public class DigitalSwitchButton extends Element {
         textElementEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
             @Override
             public void textChanged(String text) {
-                digitalSwitchButton.text = text;
-                digitalSwitchButton.invalidate();
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_STRING_ELEMENT_TEXT,text);
-                superConfigDatabaseHelper.updateElement(digitalSwitchButton.elementId,contentValues);
+                setElementText(text);
+                save();
             }
         });
 
@@ -291,111 +289,114 @@ public class DigitalSwitchButton extends Element {
                 PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
                     @Override
                     public void OnKeyClick(TextView key) {
-                        value = key.getTag().toString();
                         CharSequence text = key.getText();
                         // page页设置值文本
                         ((TextView) v).setText(text);
                         // element text 设置文本
                         textElementEditText.setText(text);
-                        // 保存值
-                        ContentValues contentValues = new ContentValues();
-                        contentValues.put(COLUMN_STRING_ELEMENT_VALUE, value);
-                        superConfigDatabaseHelper.updateElement(elementId,contentValues);
-                        // 设置onClickListener
-                        valueSendHandler = elementController.getSendEventHandler(value);
+                        setElementValue(key.getTag().toString());
+                        save();
                     }
                 };
                 pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
             }
         });
+
         centralXNumberSeekbar.setProgressMin(centralXMin);
         centralXNumberSeekbar.setProgressMax(centralXMax);
-        centralXNumberSeekbar.setValueWithNoCallBack(getParamCentralX());
+        centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
         centralXNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                setParamCentralX(progress);
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementCentralX(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,getParamCentralX());
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
         centralYNumberSeekbar.setProgressMin(centralYMin);
         centralYNumberSeekbar.setProgressMax(centralYMax);
-        centralYNumberSeekbar.setValueWithNoCallBack(getParamCentralY());
+        centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
         centralYNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                setParamCentralY(progress);
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementCentralY(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y,getParamCentralY());
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
 
 
         widthNumberSeekbar.setProgressMax(widthMax);
         widthNumberSeekbar.setProgressMin(widthMin);
-        widthNumberSeekbar.setValueWithNoCallBack(getParamWidth());
+        widthNumberSeekbar.setValueWithNoCallBack(getElementWidth());
         widthNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                setParamWidth(progress);
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementWidth(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                radiusNumberSeekbar.setProgressMax(Math.min(getParamWidth(),getParamHeight()) / 2);
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_WIDTH,getParamWidth());
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
+                save();
             }
         });
 
         heightNumberSeekbar.setProgressMax(heightMax);
         heightNumberSeekbar.setProgressMin(heightMin);
-        heightNumberSeekbar.setValueWithNoCallBack(getParamHeight());
+        heightNumberSeekbar.setValueWithNoCallBack(getElementHeight());
         heightNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                setParamHeight(progress);
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementHeight(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                radiusNumberSeekbar.setProgressMax(Math.min(getParamWidth(),getParamHeight()) / 2);
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_HEIGHT,getParamHeight());
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
+                save();
             }
         });
 
 
 
-
-
-        radiusNumberSeekbar.setProgressMax(Math.min(getParamWidth(),getParamHeight()) / 2);
+        radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
         radiusNumberSeekbar.setValueWithNoCallBack(radius);
         radiusNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                radius = progress;
-                digitalSwitchButton.invalidate();
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementRadius(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
 
@@ -403,63 +404,55 @@ public class DigitalSwitchButton extends Element {
         thickNumberSeekbar.setValueWithNoCallBack(thick);
         thickNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                thick = progress;
-                digitalSwitchButton.invalidate();
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementThick(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
 
 
         normalColorElementEditText.setTextWithNoTextChangedCallBack(String.format("%08X",normalColor));
-        normalColorElementEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new HexInputFilter()});
+        normalColorElementEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new Element.HexInputFilter()});
         normalColorElementEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
             @Override
             public void textChanged(String text) {
                 if (text.matches("^[A-F0-9]{8}$")){
-                    normalColor = (int) Long.parseLong(text, 16);
-                    digitalSwitchButton.invalidate();
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
-                    superConfigDatabaseHelper.updateElement(elementId,contentValues);
+                    setElementNormalColor((int) Long.parseLong(text, 16));
+                    save();
                 }
             }
         });
 
 
         pressedColorElementEditText.setTextWithNoTextChangedCallBack(String.format("%08X",pressedColor));
-        pressedColorElementEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new HexInputFilter()});
+        pressedColorElementEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new Element.HexInputFilter()});
         pressedColorElementEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
             @Override
             public void textChanged(String text) {
                 if (text.matches("^[A-F0-9]{8}$")){
-                    pressedColor = (int) Long.parseLong(text, 16);
-                    digitalSwitchButton.invalidate();
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
-                    superConfigDatabaseHelper.updateElement(elementId,contentValues);
+                    setElementPressedColor((int) Long.parseLong(text, 16));
+                    save();
                 }
             }
         });
 
 
         backgroundColorElementEditText.setTextWithNoTextChangedCallBack(String.format("%08X",backgroundColor));
-        backgroundColorElementEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new HexInputFilter()});
+        backgroundColorElementEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new Element.HexInputFilter()});
         backgroundColorElementEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
             @Override
             public void textChanged(String text) {
                 if (text.matches("^[A-F0-9]{8}$")){
-                    backgroundColor = (int) Long.parseLong(text, 16);
-                    digitalSwitchButton.invalidate();
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
-                    superConfigDatabaseHelper.updateElement(elementId,contentValues);
+                    setElementBackgroundColor((int) Long.parseLong(text, 16));
+                    save();
                 }
             }
         });
@@ -471,11 +464,11 @@ public class DigitalSwitchButton extends Element {
                 contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON);
                 contentValues.put(COLUMN_STRING_ELEMENT_TEXT, text);
                 contentValues.put(COLUMN_STRING_ELEMENT_VALUE, value);
-                contentValues.put(COLUMN_INT_ELEMENT_WIDTH,getParamWidth());
-                contentValues.put(COLUMN_INT_ELEMENT_HEIGHT,getParamHeight());
+                contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
+                contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
                 contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,Math.max(Math.min(getParamCentralX() + getParamWidth(),centralXMax),centralXMin));
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y,getParamCentralY());
+                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,Math.max(Math.min(getElementCentralX() + getElementWidth(),centralXMax),centralXMin));
+                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
                 contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
                 contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
                 contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
@@ -496,6 +489,41 @@ public class DigitalSwitchButton extends Element {
 
 
         return digitalSwitchButtonPage;
+    }
+
+    protected void setElementText(String text) {
+        this.text = text;
+        invalidate();
+    }
+
+    protected void setElementValue(String value) {
+        this.value = value;
+        valueSendHandler = elementController.getSendEventHandler(value);
+    }
+
+    protected void setElementRadius(int radius) {
+        this.radius = radius;
+        invalidate();
+    }
+
+    protected void setElementThick(int thick) {
+        this.thick = thick;
+        invalidate();
+    }
+
+    protected void setElementNormalColor(int normalColor) {
+        this.normalColor = normalColor;
+        invalidate();
+    }
+
+    protected void setElementPressedColor(int pressedColor) {
+        this.pressedColor = pressedColor;
+        invalidate();
+    }
+
+    protected void setElementBackgroundColor(int backgroundColor) {
+        this.backgroundColor = backgroundColor;
+        invalidate();
     }
 
     public static ContentValues getInitialInfo(){

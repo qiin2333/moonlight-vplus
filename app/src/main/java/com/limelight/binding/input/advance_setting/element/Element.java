@@ -2,7 +2,6 @@ package com.limelight.binding.input.advance_setting.element;
 
 import android.content.Context;
 import android.graphics.Canvas;
-import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.text.InputFilter;
@@ -45,14 +44,15 @@ public abstract class Element extends View {
     public static final int ELEMENT_TYPE_DIGITAL_COMMON_BUTTON = 0;
     public static final int ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON = 1;
     public static final int ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON = 2;
-    public static final int ELEMENT_TYPE_GROUP_BUTTON = 3;
+    public static final int ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON = 3;
+    public static final int ELEMENT_TYPE_GROUP_BUTTON = 4;
     public static final int ELEMENT_TYPE_DIGITAL_PAD = 20;
     public static final int ELEMENT_TYPE_ANALOG_STICK = 30;
     public static final int ELEMENT_TYPE_DIGITAL_STICK = 31;
     public static final int ELEMENT_TYPE_INVISIBLE_ANALOG_STICK = 32;
     public static final int ELEMENT_TYPE_INVISIBLE_DIGITAL_STICK = 33;
     public static final int ELEMENT_TYPE_SIMPLIFY_PERFORMANCE = 50;
-    public static final int ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON = 51;
+
 
 
 
@@ -103,26 +103,36 @@ public abstract class Element extends View {
 
     }
 
-    protected int getCentralX(){
-        return (int) getX() + getWidth() / 2;
-    }
-
-    protected int getCentralY(){
-        return (int) getY() + getHeight() / 2;
-    }
-
-    protected int getParamCentralX(){
+    protected int getElementCentralX(){
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
         return layoutParams.leftMargin + layoutParams.width / 2;
     }
 
-    protected int getParamCentralY(){
+    protected int getElementCentralY(){
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
         return layoutParams.topMargin + layoutParams.height / 2;
     }
 
+    protected int getElementWidth(){
+        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
+        return layoutParams.width;
+    }
 
-    protected void setParamCentralX(int centralX){
+    protected int getElementHeight(){
+        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
+        return layoutParams.height;
+    }
+
+    protected void setElementCentralX(int centralX){
+        innerSetElementCentralX(centralX);
+    }
+
+    protected void setElementCentralY(int centralY){
+        innerSetElementCentralY(centralY);
+    }
+
+    //inner 方法防止setWidth、Height方法会调用子类重写的setElementCentralX、Y
+    private void innerSetElementCentralX(int centralX){
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
         if (centralX > centralXMax){
             layoutParams.leftMargin = centralXMax - layoutParams.width/2;
@@ -133,11 +143,9 @@ public abstract class Element extends View {
         }
         //保存中心点坐标
         requestLayout();
-
-
     }
 
-    protected void setParamCentralY(int centralY){
+    private void innerSetElementCentralY(int centralY){
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
         if (centralY > centralYMax){
             layoutParams.topMargin = centralYMax - layoutParams.height/2;
@@ -149,8 +157,8 @@ public abstract class Element extends View {
         requestLayout();
     }
 
-    protected void setParamWidth(int width){
-        int centralPosX = getParamCentralX();
+    protected void setElementWidth(int width){
+        int centralPosX = getElementCentralX();
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
         if (width > widthMax){
             layoutParams.width = widthMax;
@@ -159,11 +167,11 @@ public abstract class Element extends View {
         } else {
             layoutParams.width = width;
         }
-        setParamCentralX(centralPosX);
+        innerSetElementCentralX(centralPosX);
     }
 
-    protected void setParamHeight(int height){
-        int centralPosY = getParamCentralY();
+    protected void setElementHeight(int height){
+        int centralPosY = getElementCentralY();
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
         if (height > heightMax){
             layoutParams.height = heightMax;
@@ -172,18 +180,9 @@ public abstract class Element extends View {
         } else {
             layoutParams.height = height;
         }
-        setParamCentralY(centralPosY);
+        innerSetElementCentralY(centralPosY);
     }
 
-    protected int getParamWidth(){
-        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
-        return layoutParams.width;
-    }
-
-    protected int getParamHeight(){
-        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
-        return layoutParams.height;
-    }
 
 
 
@@ -226,9 +225,9 @@ public abstract class Element extends View {
                     return true;
                 }
                 isClick = false;
-                setParamCentralX(getCentralX() + (int) deltaX);
-                setParamCentralY(getCentralY() + (int) deltaY);
-                updatePageInfo();
+                setElementCentralX((int) getX() + getWidth() / 2 + (int) deltaX);
+                setElementCentralY((int) getY() + getHeight() / 2 + (int) deltaY);
+                updatePage();
                 return true;
             }
             case MotionEvent.ACTION_CANCEL:
@@ -238,7 +237,7 @@ public abstract class Element extends View {
                 if (isClick){
                     elementController.toggleInfoPage(getInfoPage());
                 } else {
-                    updateDataBase();
+                    save();
                 }
                 return true;
             }
@@ -249,13 +248,13 @@ public abstract class Element extends View {
     }
     abstract protected SuperPageLayout getInfoPage();
 
-    abstract protected void updatePageInfo();
+    abstract protected void updatePage();
 
-    abstract protected void updateDataBase();
+    abstract protected void save();
+
     abstract protected void onElementDraw(Canvas canvas);
 
     abstract public boolean onElementTouchEvent(MotionEvent event);
-
 
     protected final float getPercent(float value, float percent) {
         return value / 100 * percent;

@@ -14,10 +14,10 @@ import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.SeekBar;
 
 import com.limelight.Game;
 import com.limelight.R;
-import com.limelight.binding.input.advance_setting.PageDeviceController;
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper;
 import com.limelight.binding.input.advance_setting.superpage.ElementEditText;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
@@ -118,10 +118,10 @@ public class SimplifyPerformance extends Element {
         int textHeight = (int) (fontMetrics.bottom - fontMetrics.top);
         int width = textWidth;
         int height = textHeight + verticalPadding + verticalPadding;
-        setParamWidth(width);
-        setParamHeight(height);
+        setElementWidth(width);
+        setElementHeight(height);
         if (radiusNumberSeekbar != null){
-            radiusNumberSeekbar.setProgressMax(Math.min(getParamWidth(),getParamHeight()) / 2);
+            radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
         }
 
 
@@ -136,8 +136,8 @@ public class SimplifyPerformance extends Element {
         paintBackground.setColor(backgroundColor);
         // 绘画范围
         rect.left = rect.top = 0;
-        rect.right = getParamWidth();
-        rect.bottom = getParamHeight();
+        rect.right = getElementWidth();
+        rect.bottom = getElementHeight();
         // 绘制背景
         canvas.drawRoundRect(rect, radius, radius, paintBackground);
         // 绘制文字
@@ -146,8 +146,8 @@ public class SimplifyPerformance extends Element {
         if (elementController.getMode() == ElementController.Mode.Edit){
             // 绘画范围
             rect.left = rect.top = 2;
-            rect.right = getParamWidth() - 2;
-            rect.bottom = getParamHeight() - 2;
+            rect.right = getElementWidth() - 2;
+            rect.bottom = getElementHeight() - 2;
             // 边框
             paintEdit.setColor(editColor);
             canvas.drawRect(rect,paintEdit);
@@ -177,51 +177,56 @@ public class SimplifyPerformance extends Element {
 
         centralXNumberSeekbar.setProgressMin(centralXMin);
         centralXNumberSeekbar.setProgressMax(centralXMax);
-        centralXNumberSeekbar.setValueWithNoCallBack(getParamCentralX());
+        centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
         centralXNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                setParamCentralX(progress);
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementCentralX(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,getParamCentralX());
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
         centralYNumberSeekbar.setProgressMin(centralYMin);
         centralYNumberSeekbar.setProgressMax(centralYMax);
-        centralYNumberSeekbar.setValueWithNoCallBack(getParamCentralY());
+        centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
         centralYNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                setParamCentralY(progress);
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementCentralY(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y,getParamCentralY());
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
 
-        radiusNumberSeekbar.setProgressMax(Math.min(getParamWidth(),getParamHeight()) / 2);
+        radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
         radiusNumberSeekbar.setValueWithNoCallBack(radius);
         radiusNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                radius = progress;
-                invalidate();
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementRadius(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
 
@@ -229,31 +234,16 @@ public class SimplifyPerformance extends Element {
         textEnsureButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String newText = textEditText.getText().toString();
-                if (newText.equals("")){
-                    preParseText = "   ";
-                } else {
-                    preParseText = newText;
-                }
-                simplifyPerformance.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-                    @Override
-                    public void onGlobalLayout() {
-                        radiusNumberSeekbar.setProgressMax(centralXNumberSeekbar.getHeight() / 2);
-                        simplifyPerformance.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                    }
-                });
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_PRE_PARSE_TEXT, preParseText);
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+                setElementPreParseText(textEditText.getText().toString());
+                save();
             }
         });
 
         textResetButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_PRE_PARSE_TEXT, preParseText);
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+                setElementPreParseText(SIMPLIFY_PERFORMANCE_TEXT_DEFAULT);
+                save();
             }
         });
 
@@ -262,16 +252,17 @@ public class SimplifyPerformance extends Element {
         textSizeNumberSeekbar.setValueWithNoCallBack(textSize);
         textSizeNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                textSize = progress;
-                changeSize();
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementTextSize(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_SIZE, lastProgress);
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
 
@@ -281,10 +272,8 @@ public class SimplifyPerformance extends Element {
             @Override
             public void textChanged(String text) {
                 if (text.matches("^[A-F0-9]{8}$")){
-                    textColor = (int) Long.parseLong(text, 16);
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_COLOR, textColor);
-                    superConfigDatabaseHelper.updateElement(elementId,contentValues);
+                    setElementTextColor((int) Long.parseLong(text, 16));
+                    save();
                 }
             }
         });
@@ -295,10 +284,8 @@ public class SimplifyPerformance extends Element {
             @Override
             public void textChanged(String text) {
                 if (text.matches("^[A-F0-9]{8}$")){
-                    backgroundColor = (int) Long.parseLong(text, 16);
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, backgroundColor);
-                    superConfigDatabaseHelper.updateElement(elementId,contentValues);
+                    setElementBackgroundColor((int) Long.parseLong(text, 16));
+                    save();
                 }
             }
         });
@@ -309,11 +296,11 @@ public class SimplifyPerformance extends Element {
                 ContentValues contentValues = new ContentValues();
                 contentValues.put(COLUMN_INT_ELEMENT_TYPE, ELEMENT_TYPE_SIMPLIFY_PERFORMANCE);
                 contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_PRE_PARSE_TEXT, preParseText);
-                contentValues.put(COLUMN_INT_ELEMENT_WIDTH,getParamWidth());
-                contentValues.put(COLUMN_INT_ELEMENT_HEIGHT,getParamHeight());
+                contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
+                contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
                 contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,Math.max(Math.min(getParamCentralX() + getParamWidth(),centralXMax),centralXMin));
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y,getParamCentralY());
+                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,Math.max(Math.min(getElementCentralX() + getElementWidth(),centralXMax),centralXMin));
+                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
                 contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
                 contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_SIZE,textSize);
                 contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_COLOR,textColor);
@@ -334,22 +321,70 @@ public class SimplifyPerformance extends Element {
     }
 
     @Override
-    public void updateDataBase() {
+    public void save() {
         ContentValues contentValues = new ContentValues();
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,getParamCentralX());
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y,getParamCentralY());
+        contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_PRE_PARSE_TEXT, preParseText);
+        contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
+        contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
+        contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,getElementCentralX());
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
+        contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
+        contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_SIZE,textSize);
+        contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_COLOR,textColor);
+        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
         superConfigDatabaseHelper.updateElement(elementId,contentValues);
 
     }
 
     @Override
-    protected void updatePageInfo() {
+    protected void updatePage() {
         if (simplifyPerformancePage != null){
-            centralXNumberSeekbar.setValueWithNoCallBack(getParamCentralX());
-            centralYNumberSeekbar.setValueWithNoCallBack(getParamCentralY());
+            centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
+            centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
         }
 
     }
+
+    public void setElementPreParseText(String preParseText) {
+        if (preParseText.equals("")){
+            this.preParseText = "   ";
+        } else {
+            this.preParseText = preParseText;
+        }
+        simplifyPerformance.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                radiusNumberSeekbar.setProgressMax(centralXNumberSeekbar.getHeight() / 2);
+                simplifyPerformance.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+            }
+        });
+    }
+
+    public void setElementRadius(int radius) {
+        this.radius = radius;
+        invalidate();
+    }
+
+    public void setElementVerticalPadding(int verticalPadding) {
+        this.verticalPadding = verticalPadding;
+    }
+
+    public void setElementTextColor(int textColor) {
+        this.textColor = textColor;
+        invalidate();
+    }
+
+    public void setElementTextSize(int textSize) {
+        this.textSize = textSize;
+        changeSize();
+    }
+
+    public void setElementBackgroundColor(int backgroundColor) {
+        this.backgroundColor = backgroundColor;
+        invalidate();
+    }
+
     @Override
     public boolean onElementTouchEvent(MotionEvent event) {
         return true;

@@ -12,6 +12,9 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.SeekBar;
 import android.widget.Toast;
 
 import com.limelight.R;
@@ -29,6 +32,8 @@ import java.util.Map;
  * This is a digital button on screen element. It is used to get click and double click user input.
  */
 public class GroupButton extends Element {
+
+    private static final String COLUMN_INT_CHILD_VISIBILITY = COLUMN_INT_ELEMENT_SENSE;
 
     /**
      * Listener interface to update registered observers.
@@ -51,35 +56,36 @@ public class GroupButton extends Element {
         void onRelease();
     }
 
-    private interface ToastShower {
-        void show();
-    }
-
     private SuperConfigDatabaseHelper superConfigDatabaseHelper;
     private PageDeviceController pageDeviceController;
     private GroupButton groupButton;
     private List<Element> childElementList = new ArrayList<>();
     private ElementController elementController;
-    private ToastShower toastShower;
+    private Context context;
 
     private GroupButtonListener listener;
-    private boolean childVisible = true;
     private String text;
     private String value;
     private int radius;
-    private int layer;
     private int thick;
+    private int childVisibility;
     private int normalColor;
     private int pressedColor;
     private int backgroundColor;
+
+    private float lastX;
+    private float lastY;
+    private boolean isClick = true;
+    private boolean childAttributeFollow = true;
+    private int initialCentralXMax;
+    private int initialCentralXMin;
+    private int initialCentralYMax;
+    private int initialCentralYMin;
 
     private SuperPageLayout groupButtonPage;
     private NumberSeekbar centralXNumberSeekbar;
     private NumberSeekbar centralYNumberSeekbar;
 
-
-    private float lastX;
-    private float lastY;
     private long timerLongClickTimeout = 3000;
     private final Runnable longClickRunnable = new Runnable() {
         @Override
@@ -103,19 +109,18 @@ public class GroupButton extends Element {
         this.pageDeviceController = pageDeviceController;
         this.groupButton = this;
         this.elementController = controller;
-        toastShower = new ToastShower() {
-            @Override
-            public void show() {
-                Toast.makeText(context,"按键添加成功,处于隐藏状态",Toast.LENGTH_SHORT).show();
-            }
-        };
+        this.context = context;
 
 
         DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
-        super.centralXMax  = displayMetrics.widthPixels;
-        super.centralXMin  = 0;
-        super.centralYMax  = displayMetrics.heightPixels;
-        super.centralYMin  = 0;
+        initialCentralXMax = displayMetrics.widthPixels;
+        initialCentralXMin = 0;
+        initialCentralYMax = displayMetrics.heightPixels;
+        initialCentralYMin = 0;
+        super.centralXMax  = initialCentralXMax;
+        super.centralXMin  = initialCentralXMin;
+        super.centralYMax  = initialCentralYMax;
+        super.centralYMin  = initialCentralYMin;
         super.widthMax  = displayMetrics.widthPixels / 2;
         super.widthMin  = 50;
         super.heightMax  = displayMetrics.heightPixels / 2;
@@ -131,8 +136,8 @@ public class GroupButton extends Element {
 
         text = (String) attributesMap.get(COLUMN_STRING_ELEMENT_TEXT);
         radius = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_RADIUS)).intValue();
-        layer = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_LAYER)).intValue();
         thick = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_THICK)).intValue();
+        childVisibility = ((Long) attributesMap.get(COLUMN_INT_CHILD_VISIBILITY)).intValue();
         normalColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_NORMAL_COLOR)).intValue();
         pressedColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_PRESSED_COLOR)).intValue();
         backgroundColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_BACKGROUND_COLOR)).intValue();
@@ -150,18 +155,16 @@ public class GroupButton extends Element {
                 }
             }
         }
-
         value = newValue.toString();
         ContentValues contentValues = new ContentValues();
         contentValues.put(COLUMN_STRING_ELEMENT_VALUE,value);
         superConfigDatabaseHelper.updateElement(elementId,contentValues);
-        displayChild(false);
-        System.out.println("value = " + value);
+        setElementChildVisibility(childVisibility);
 
         listener = new GroupButtonListener() {
             @Override
             public void onClick() {
-                displayChild(!childVisible);
+
             }
 
             @Override
@@ -171,30 +174,21 @@ public class GroupButton extends Element {
 
             @Override
             public void onRelease() {
-
+                if (childVisibility == VISIBLE){
+                    setElementChildVisibility(INVISIBLE);
+                } else {
+                    setElementChildVisibility(VISIBLE);
+                }
+                save();
             }
         };
-    }
-
-    private void displayChild(boolean display){
-        if (!display){
-            childVisible = false;
-            for (Element element : childElementList){
-                element.setVisibility(INVISIBLE);
-            }
-        } else {
-            childVisible = true;
-            for (Element element : childElementList){
-                element.setVisibility(VISIBLE);
-            }
-        }
     }
 
     @Override
     protected void onElementDraw(Canvas canvas) {
 
         // 文字
-        paintText.setTextSize(getPercent(getParamWidth(), 25));
+        paintText.setTextSize(getPercent(getElementWidth(), 25));
         paintText.setColor(isPressed() ? pressedColor : normalColor);
         // 边框
         paintBorder.setStrokeWidth(thick);
@@ -203,14 +197,14 @@ public class GroupButton extends Element {
         paintBackground.setColor(backgroundColor);
         // 绘画范围
         rect.left = rect.top = (float) thick / 2;
-        rect.right = getParamWidth() - rect.left;
+        rect.right = getElementWidth() - rect.left;
         rect.bottom = getHeight() - rect.top;
         // 绘制背景
         canvas.drawRoundRect(rect, radius, radius, paintBackground);
         // 绘制边框
         canvas.drawRoundRect(rect, radius, radius, paintBorder);
         // 绘制文字
-        canvas.drawText(text, getPercent(getParamWidth(), 50), getPercent(getParamHeight(), 63), paintText);
+        canvas.drawText(text, getPercent(getElementWidth(), 50), getPercent(getElementHeight(), 63), paintText);
 
         if (elementController.getMode() == ElementController.Mode.Edit){
             // 绘画范围
@@ -248,27 +242,94 @@ public class GroupButton extends Element {
     }
 
     @Override
-    public boolean onElementTouchEvent(MotionEvent event) {
-        // get masked (not specific to a pointer) action
-        int action = event.getActionMasked();
+    public boolean onTouchEvent(MotionEvent event) {
 
-        switch (action) {
+
+        if (event.getActionIndex() != 0) {
+            return true;
+        }
+
+        switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN: {
+                // 重新划定groupElement的边界
+                int leftMargin = centralXMax;
+                int bottomMargin = centralYMax;
+                int rightMargin = centralXMax;
+                int topMargin = centralYMax;
+                for (Element element : childElementList){
+                    int elementCentralX = element.getElementCentralX();
+                    int elementCentralY = element.getElementCentralY();
+                    leftMargin = Math.min(elementCentralX - element.centralXMin, leftMargin);
+                    rightMargin = Math.min(element.centralXMax - elementCentralX, rightMargin);
+                    topMargin = Math.min(elementCentralY - element.centralYMin, topMargin);
+                    bottomMargin = Math.min(element.centralYMax - elementCentralY, bottomMargin);
+                }
+                int elementCentralX = getElementCentralX();
+                int elementCentralY = getElementCentralY();
+                leftMargin = Math.min(elementCentralX - initialCentralXMin, leftMargin);
+                rightMargin = Math.min(initialCentralXMax - elementCentralX, rightMargin);
+                topMargin = Math.min(elementCentralY - initialCentralYMin, topMargin);
+                bottomMargin = Math.min(initialCentralYMax - elementCentralY, bottomMargin);
+
+                centralXMin = elementCentralX - leftMargin;
+                centralXMax = elementCentralX + rightMargin;
+                centralYMin = elementCentralY - topMargin;
+                centralYMax = elementCentralY + bottomMargin;
+                if (centralXNumberSeekbar != null){
+                    centralXNumberSeekbar.setProgressMin(centralXMin);
+                    centralXNumberSeekbar.setProgressMax(centralXMax);
+                    centralYNumberSeekbar.setProgressMin(centralYMin);
+                    centralYNumberSeekbar.setProgressMax(centralYMax);
+                }
+
+
+
                 lastX = event.getX();
                 lastY = event.getY();
-                setPressed(true);
-                onClickCallback();
+                isClick = true;
+                if (elementController.getMode() == ElementController.Mode.Edit){
+                    editColor = 0xff00f91a;
+                } else if (elementController.getMode() == ElementController.Mode.Normal){
+                    setPressed(true);
+                    onClickCallback();
+                }
                 invalidate();
                 return true;
             }
             case MotionEvent.ACTION_MOVE: {
+                float x = event.getX();
+                float y = event.getY();
+                float deltaX = x - lastX;
+                float deltaY = y - lastY;
+                //小位移算作点击
+                if (Math.abs(deltaX) + Math.abs(deltaY) < 0.2){
+                    return true;
+                }
+                isClick = false;
+                setElementCentralX((int) getX() + getWidth() / 2 + (int) deltaX);
+                setElementCentralY((int) getY() + getHeight() / 2 + (int) deltaY);
+                updatePage();
                 return true;
             }
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP: {
-                setPressed(false);
-                onReleaseCallback();
+                if (elementController.getMode() == ElementController.Mode.Edit){
+                    editColor = 0xffdc143c;
+                    if (isClick){
+                        elementController.toggleInfoPage(getInfoPage());
+                    } else {
+                        save();
+                    }
+                } else if (elementController.getMode() == ElementController.Mode.Normal){
+                    setPressed(false);
+                    if (isClick){
+                        onReleaseCallback();
+                    } else {
+                        save();
+                    }
+                }
                 invalidate();
+
                 return true;
             }
             default: {
@@ -278,19 +339,34 @@ public class GroupButton extends Element {
     }
 
     @Override
-    public void updateDataBase() {
+    public boolean onElementTouchEvent(MotionEvent event) {
+        return true;
+    }
+
+    @Override
+    public void save() {
         ContentValues contentValues = new ContentValues();
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,getParamCentralX());
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y,getParamCentralY());
+        contentValues.put(COLUMN_STRING_ELEMENT_TEXT, text);
+        contentValues.put(COLUMN_STRING_ELEMENT_VALUE, value);
+        contentValues.put(COLUMN_INT_CHILD_VISIBILITY, childVisibility);
+        contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
+        contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,getElementCentralX());
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
+        contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
+        contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
+        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
         superConfigDatabaseHelper.updateElement(elementId,contentValues);
 
     }
 
     @Override
-    protected void updatePageInfo() {
+    protected void updatePage() {
         if (groupButtonPage != null){
-            centralXNumberSeekbar.setValueWithNoCallBack(getParamCentralX());
-            centralYNumberSeekbar.setValueWithNoCallBack(getParamCentralY());
+            centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
+            centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
         }
 
     }
@@ -307,6 +383,8 @@ public class GroupButton extends Element {
         NumberSeekbar widthNumberSeekbar = groupButtonPage.findViewById(R.id.page_group_button_width);
         NumberSeekbar heightNumberSeekbar = groupButtonPage.findViewById(R.id.page_group_button_height);
         NumberSeekbar radiusNumberSeekbar = groupButtonPage.findViewById(R.id.page_group_button_radius);
+        CheckBox childAttributeFollowCheckBox = groupButtonPage.findViewById(R.id.page_group_button_child_attribute_follow);
+        CheckBox childVisibleCheckBox = groupButtonPage.findViewById(R.id.page_group_button_child_visible);
         ElementEditText textElementEditText = groupButtonPage.findViewById(R.id.page_group_button_text);
         NumberSeekbar thickNumberSeekbar = groupButtonPage.findViewById(R.id.page_group_button_thick);
         ElementEditText normalColorElementEditText = groupButtonPage.findViewById(R.id.page_group_button_normal_color);
@@ -318,101 +396,159 @@ public class GroupButton extends Element {
         textElementEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
             @Override
             public void textChanged(String text) {
-                groupButton.text = text;
-                groupButton.invalidate();
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_STRING_ELEMENT_TEXT,text);
-                superConfigDatabaseHelper.updateElement(groupButton.elementId,contentValues);
+                setElementText(text);
+                save();
+            }
+        });
+
+        childAttributeFollowCheckBox.setChecked(childAttributeFollow);
+        childAttributeFollowCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                childAttributeFollow = isChecked;
+                setElementWidth(getElementWidth());
+                setElementHeight(getElementHeight());
+                setElementRadius(radius);
+                setElementThick(thick);
+                setElementNormalColor(normalColor);
+                setElementPressedColor(pressedColor);
+                setElementBackgroundColor(backgroundColor);
+            }
+        });
+
+        childVisibleCheckBox.setChecked(childVisibility == VISIBLE);
+        childVisibleCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                setElementChildVisibility(isChecked ? VISIBLE : INVISIBLE);
+                save();
             }
         });
 
 
         centralXNumberSeekbar.setProgressMin(centralXMin);
         centralXNumberSeekbar.setProgressMax(centralXMax);
-        centralXNumberSeekbar.setValueWithNoCallBack(getParamCentralX());
+        centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
         centralXNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                setParamCentralX(progress);
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementCentralX(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,getParamCentralX());
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                int leftMargin = centralXMax;
+                int rightMargin = centralXMax;
+                for (Element element : childElementList){
+                    int elementCentralX = element.getElementCentralX();
+                    leftMargin = Math.min(elementCentralX - element.centralXMin, leftMargin);
+                    rightMargin = Math.min(element.centralXMax - elementCentralX, rightMargin);
+                }
+                int elementCentralX = getElementCentralX();
+                leftMargin = Math.min(elementCentralX - centralXMin, leftMargin);
+                rightMargin = Math.min(centralXMax - elementCentralX, rightMargin);
+
+                centralXMin = elementCentralX - leftMargin;
+                centralXMax = elementCentralX + rightMargin;
+                centralXNumberSeekbar.setProgressMin(centralXMin);
+                centralXNumberSeekbar.setProgressMax(centralXMax);
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
         centralYNumberSeekbar.setProgressMin(centralYMin);
         centralYNumberSeekbar.setProgressMax(centralYMax);
-        centralYNumberSeekbar.setValueWithNoCallBack(getParamCentralY());
+        centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
         centralYNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                setParamCentralY(progress);
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementCentralY(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y,getParamCentralY());
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                int bottomMargin = centralYMax;
+                int topMargin = centralYMax;
+                for (Element element : childElementList){
+                    int elementCentralY = element.getElementCentralY();
+                    topMargin = Math.min(elementCentralY - element.centralYMin, topMargin);
+                    bottomMargin = Math.min(element.centralYMax - elementCentralY, bottomMargin);
+                }
+                int elementCentralY = getElementCentralY();
+                topMargin = Math.min(elementCentralY - centralYMin, topMargin);
+                bottomMargin = Math.min(centralYMax - elementCentralY, bottomMargin);
+
+                centralYMin = elementCentralY - topMargin;
+                centralYMax = elementCentralY + bottomMargin;
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
 
 
         widthNumberSeekbar.setProgressMax(widthMax);
         widthNumberSeekbar.setProgressMin(widthMin);
-        widthNumberSeekbar.setValueWithNoCallBack(getParamWidth());
+        widthNumberSeekbar.setValueWithNoCallBack(getElementWidth());
         widthNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                setParamWidth(progress);
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementWidth(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                radiusNumberSeekbar.setProgressMax(Math.min(getParamWidth(),getParamHeight()) / 2);
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_WIDTH,getParamWidth());
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
+                save();
             }
         });
 
         heightNumberSeekbar.setProgressMax(heightMax);
         heightNumberSeekbar.setProgressMin(heightMin);
-        heightNumberSeekbar.setValueWithNoCallBack(getParamHeight());
+        heightNumberSeekbar.setValueWithNoCallBack(getElementHeight());
         heightNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                setParamHeight(progress);
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementHeight(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                radiusNumberSeekbar.setProgressMax(Math.min(getParamWidth(),getParamHeight()) / 2);
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_HEIGHT,getParamHeight());
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
+                save();
             }
         });
 
 
 
-        radiusNumberSeekbar.setProgressMax(Math.min(getParamWidth(),getParamHeight()) / 2);
+        radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
         radiusNumberSeekbar.setValueWithNoCallBack(radius);
         radiusNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                radius = progress;
-                groupButton.invalidate();
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementRadius(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+               save();
             }
         });
 
@@ -420,16 +556,17 @@ public class GroupButton extends Element {
         thickNumberSeekbar.setValueWithNoCallBack(thick);
         thickNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(int progress) {
-                thick = progress;
-                groupButton.invalidate();
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementThick(progress);
             }
 
             @Override
-            public void onProgressRelease(int lastProgress) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
-                superConfigDatabaseHelper.updateElement(elementId,contentValues);
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
 
@@ -440,11 +577,8 @@ public class GroupButton extends Element {
             @Override
             public void textChanged(String text) {
                 if (text.matches("^[A-F0-9]{8}$")){
-                    normalColor = (int) Long.parseLong(text, 16);
-                    groupButton.invalidate();
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
-                    superConfigDatabaseHelper.updateElement(elementId,contentValues);
+                    setElementNormalColor((int) Long.parseLong(text, 16));
+                    save();
                 }
             }
         });
@@ -456,11 +590,8 @@ public class GroupButton extends Element {
             @Override
             public void textChanged(String text) {
                 if (text.matches("^[A-F0-9]{8}$")){
-                    pressedColor = (int) Long.parseLong(text, 16);
-                    groupButton.invalidate();
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
-                    superConfigDatabaseHelper.updateElement(elementId,contentValues);
+                    setElementPressedColor((int) Long.parseLong(text, 16));
+                    save();
                 }
             }
         });
@@ -472,11 +603,8 @@ public class GroupButton extends Element {
             @Override
             public void textChanged(String text) {
                 if (text.matches("^[A-F0-9]{8}$")){
-                    backgroundColor = (int) Long.parseLong(text, 16);
-                    groupButton.invalidate();
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
-                    superConfigDatabaseHelper.updateElement(elementId,contentValues);
+                    setElementBackgroundColor((int) Long.parseLong(text, 16));
+                    save();
                 }
             }
         });
@@ -484,27 +612,73 @@ public class GroupButton extends Element {
         groupButtonPage.findViewById(R.id.page_group_button_add_digital_common_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Long elementId = elementController.addElement(DigitalCommonButton.getInitialInfo());
-                value = value + "," + elementId.toString();
-                List<Element> allElements = elementController.getElements();
-                for (Element element : allElements){
-                    if (element.elementId.equals(elementId)){
-                        childElementList.add(element);
-                        if (!childVisible){
-                            element.setVisibility(INVISIBLE);
-                        }
-                    }
-                }
-
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_STRING_ELEMENT_VALUE,value);
-                superConfigDatabaseHelper.updateElement(groupButton.elementId,contentValues);
-                if (!childVisible){
-                    toastShower.show();
-                }
+                Element newElement = elementController.addElement(DigitalCommonButton.getInitialInfo());
+                addChildElement(newElement);
             }
         });
-
+        groupButtonPage.findViewById(R.id.page_group_button_add_digital_movable_button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Element newElement = elementController.addElement(DigitalMovableButton.getInitialInfo());
+                addChildElement(newElement);
+            }
+        });
+        groupButtonPage.findViewById(R.id.page_group_button_add_digital_combine_button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Element newElement = elementController.addElement(DigitalCombineButton.getInitialInfo());
+                addChildElement(newElement);
+            }
+        });
+        groupButtonPage.findViewById(R.id.page_group_button_add_pad).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Element newElement = elementController.addElement(DigitalPad.getInitialInfo());
+                addChildElement(newElement);
+            }
+        });
+        groupButtonPage.findViewById(R.id.page_group_button_add_digital_switch_button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Element newElement = elementController.addElement(DigitalSwitchButton.getInitialInfo());
+                addChildElement(newElement);
+            }
+        });
+        groupButtonPage.findViewById(R.id.page_group_button_add_digital_stick).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Element newElement = elementController.addElement(DigitalStick.getInitialInfo());
+                addChildElement(newElement);
+            }
+        });
+        groupButtonPage.findViewById(R.id.page_group_button_add_analog_stick).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Element newElement = elementController.addElement(AnalogStick.getInitialInfo());
+                addChildElement(newElement);
+            }
+        });
+        groupButtonPage.findViewById(R.id.page_group_button_add_invisible_digital_stick).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Element newElement = elementController.addElement(InvisibleDigitalStick.getInitialInfo());
+                addChildElement(newElement);
+            }
+        });
+        groupButtonPage.findViewById(R.id.page_group_button_add_invisible_analog_stick).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Element newElement = elementController.addElement(InvisibleAnalogStick.getInitialInfo());
+                addChildElement(newElement);
+            }
+        });
+        groupButtonPage.findViewById(R.id.page_group_button_add_simplify_performance).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Element newElement = elementController.addElement(SimplifyPerformance.getInitialInfo());
+                addChildElement(newElement);
+            }
+        });
 
         deleteButton.setOnClickListener(new OnClickListener() {
             @Override
@@ -519,11 +693,304 @@ public class GroupButton extends Element {
         return groupButtonPage;
     }
 
+    private void addChildElement(Element newElement){
+        value = value + "," + newElement.elementId.toString();
+        childElementList.add(newElement);
+        if (childVisibility == INVISIBLE){
+            newElement.setVisibility(INVISIBLE);
+            Toast.makeText(context,"按键添加成功,处于隐藏状态",Toast.LENGTH_SHORT).show();
+        }
+        setElementWidth(getElementWidth());
+        setElementHeight(getElementHeight());
+        setElementRadius(radius);
+        setElementThick(thick);
+        setElementNormalColor(normalColor);
+        setElementPressedColor(pressedColor);
+        setElementBackgroundColor(backgroundColor);
+        save();
+    }
+
+    protected void setElementText(String text) {
+        this.text = text;
+        invalidate();
+    }
+
+    @Override
+    protected void setElementCentralX(int centralX) {
+        if (childAttributeFollow){
+            int previousX = getElementCentralX();
+            super.setElementCentralX(centralX);
+            int deltaX = getElementCentralX() - previousX;
+            for (Element element : childElementList){
+                element.setElementCentralX(element.getElementCentralX() + deltaX);
+                element.save();
+            }
+        } else {
+            super.setElementCentralX(centralX);
+        }
+
+    }
+
+    @Override
+    protected void setElementCentralY(int centralY) {
+        if (childAttributeFollow){
+            int previousY = getElementCentralY();
+            super.setElementCentralY(centralY);
+            int deltaY = getElementCentralY() - previousY;
+            for (Element element : childElementList){
+                element.setElementCentralY(element.getElementCentralY() + deltaY);
+                element.save();
+            }
+        } else {
+            super.setElementCentralY(centralY);
+        }
+
+    }
+
+    @Override
+    protected void setElementWidth(int width) {
+        super.setElementWidth(width);
+        if (childAttributeFollow){
+            for (Element element : childElementList){
+                switch (element.elementType){
+                    case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
+                    case ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
+                    case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
+                    case ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
+                        element.setElementWidth(width);
+                        element.save();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
+    }
+
+    @Override
+    protected void setElementHeight(int height) {
+        super.setElementHeight(height);
+        if (childAttributeFollow){
+            for (Element element : childElementList){
+                switch (element.elementType){
+                    case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
+                    case ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
+                    case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
+                    case ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
+                        element.setElementHeight(height);
+                        element.save();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
+    protected void setElementChildVisibility(int childVisibility){
+        this.childVisibility = childVisibility;
+        for (Element element : childElementList){
+            element.setVisibility(childVisibility);
+        }
+    }
+
+    protected void setElementRadius(int radius) {
+        this.radius = radius;
+        invalidate();
+        if (childAttributeFollow){
+            for (Element element : childElementList){
+                switch (element.elementType){
+                    case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
+                        ((DigitalCommonButton)element).setElementRadius(radius);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
+                        ((DigitalSwitchButton)element).setElementRadius(radius);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
+                        ((DigitalCombineButton)element).setElementRadius(radius);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
+                        ((DigitalMovableButton)element).setElementRadius(radius);
+                        break;
+                    default:
+                        break;
+                }
+                element.save();
+            }
+        }
+    }
+
+    protected void setElementThick(int thick) {
+        this.thick = thick;
+        invalidate();
+        if (childAttributeFollow){
+            for (Element element : childElementList){
+                switch (element.elementType){
+                    case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
+                        ((DigitalCommonButton)element).setElementThick(thick);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
+                        ((DigitalSwitchButton)element).setElementThick(thick);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
+                        ((DigitalCombineButton)element).setElementThick(thick);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
+                        ((DigitalMovableButton)element).setElementThick(thick);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_PAD:
+                        ((DigitalPad)element).setElementThick(thick);
+                        break;
+                    case ELEMENT_TYPE_ANALOG_STICK:
+                        ((AnalogStick)element).setElementThick(thick);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_STICK:
+                        ((DigitalStick)element).setElementThick(thick);
+                        break;
+                    case ELEMENT_TYPE_INVISIBLE_ANALOG_STICK:
+                        ((InvisibleAnalogStick)element).setElementThick(thick);
+                        break;
+                    case ELEMENT_TYPE_INVISIBLE_DIGITAL_STICK:
+                        ((InvisibleDigitalStick)element).setElementThick(thick);
+                        break;
+                    default:
+                        break;
+                }
+                element.save();
+            }
+        }
+    }
+
+    protected void setElementNormalColor(int normalColor) {
+        this.normalColor = normalColor;
+        invalidate();
+        if (childAttributeFollow){
+            for (Element element : childElementList){
+                switch (element.elementType){
+                    case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
+                        ((DigitalCommonButton)element).setElementNormalColor(normalColor);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
+                        ((DigitalSwitchButton)element).setElementNormalColor(normalColor);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
+                        ((DigitalCombineButton)element).setElementNormalColor(normalColor);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
+                        ((DigitalMovableButton)element).setElementNormalColor(normalColor);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_PAD:
+                        ((DigitalPad)element).setElementNormalColor(normalColor);
+                        break;
+                    case ELEMENT_TYPE_ANALOG_STICK:
+                        ((AnalogStick)element).setElementNormalColor(normalColor);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_STICK:
+                        ((DigitalStick)element).setElementNormalColor(normalColor);
+                        break;
+                    case ELEMENT_TYPE_INVISIBLE_ANALOG_STICK:
+                        ((InvisibleAnalogStick)element).setElementNormalColor(normalColor);
+                        break;
+                    case ELEMENT_TYPE_INVISIBLE_DIGITAL_STICK:
+                        ((InvisibleDigitalStick)element).setElementNormalColor(normalColor);
+                        break;
+                    default:
+                        break;
+                }
+                element.save();
+            }
+        }
+    }
+
+    protected void setElementPressedColor(int pressedColor) {
+        this.pressedColor = pressedColor;
+        invalidate();
+        if (childAttributeFollow){
+            for (Element element : childElementList){
+                switch (element.elementType){
+                    case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
+                        ((DigitalCommonButton)element).setElementPressedColor(pressedColor);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
+                        ((DigitalSwitchButton)element).setElementPressedColor(pressedColor);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
+                        ((DigitalCombineButton)element).setElementPressedColor(pressedColor);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
+                        ((DigitalMovableButton)element).setElementPressedColor(pressedColor);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_PAD:
+                        ((DigitalPad)element).setElementPressedColor(pressedColor);
+                        break;
+                    case ELEMENT_TYPE_ANALOG_STICK:
+                        ((AnalogStick)element).setElementPressedColor(pressedColor);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_STICK:
+                        ((DigitalStick)element).setElementPressedColor(pressedColor);
+                        break;
+                    case ELEMENT_TYPE_INVISIBLE_ANALOG_STICK:
+                        ((InvisibleAnalogStick)element).setElementPressedColor(pressedColor);
+                        break;
+                    case ELEMENT_TYPE_INVISIBLE_DIGITAL_STICK:
+                        ((InvisibleDigitalStick)element).setElementPressedColor(pressedColor);
+                        break;
+                    default:
+                        break;
+                }
+                element.save();
+            }
+        }
+    }
+
+    protected void setElementBackgroundColor(int backgroundColor) {
+        this.backgroundColor = backgroundColor;
+        invalidate();
+        if (childAttributeFollow){
+            for (Element element : childElementList){
+                switch (element.elementType){
+                    case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
+                        ((DigitalCommonButton)element).setElementBackgroundColor(backgroundColor);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
+                        ((DigitalSwitchButton)element).setElementBackgroundColor(backgroundColor);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
+                        ((DigitalCombineButton)element).setElementBackgroundColor(backgroundColor);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
+                        ((DigitalMovableButton)element).setElementBackgroundColor(backgroundColor);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_PAD:
+                        ((DigitalPad)element).setElementBackgroundColor(backgroundColor);
+                        break;
+                    case ELEMENT_TYPE_ANALOG_STICK:
+                        ((AnalogStick)element).setElementBackgroundColor(backgroundColor);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_STICK:
+                        ((DigitalStick)element).setElementBackgroundColor(backgroundColor);
+                        break;
+                    case ELEMENT_TYPE_INVISIBLE_ANALOG_STICK:
+                        ((InvisibleAnalogStick)element).setElementBackgroundColor(backgroundColor);
+                        break;
+                    case ELEMENT_TYPE_INVISIBLE_DIGITAL_STICK:
+                        ((InvisibleDigitalStick)element).setElementBackgroundColor(backgroundColor);
+                        break;
+                    default:
+                        break;
+                }
+                element.save();
+            }
+        }
+    }
+
     public static ContentValues getInitialInfo(){
         ContentValues contentValues = new ContentValues();
         contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_GROUP_BUTTON);
         contentValues.put(COLUMN_STRING_ELEMENT_TEXT,"GROUP");
         contentValues.put(COLUMN_STRING_ELEMENT_VALUE,"-1");
+        contentValues.put(COLUMN_INT_CHILD_VISIBILITY, VISIBLE);
         contentValues.put(COLUMN_INT_ELEMENT_WIDTH,100);
         contentValues.put(COLUMN_INT_ELEMENT_HEIGHT,100);
         contentValues.put(COLUMN_INT_ELEMENT_LAYER,50);
