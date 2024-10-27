@@ -90,7 +90,7 @@ public class PreferenceConfiguration {
     static final String EXPORT_CONFIG_STRING = "export_super_config";
     static final String ABOUT_AUTHOR = "about_author";
 
-    static final String DEFAULT_RESOLUTION = "1280x720";
+    static final String DEFAULT_RESOLUTION = "1920x1080";
     static final String DEFAULT_FPS = "60";
     private static final boolean DEFAULT_STRETCH = false;
     private static final boolean DEFAULT_SOPS = true;
