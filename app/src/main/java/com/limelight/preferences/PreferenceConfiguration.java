@@ -88,7 +88,7 @@ public class PreferenceConfiguration {
     static final String IMPORT_CONFIG_STRING = "import_advance_config";
     static final String EXPORT_CONFIG_STRING = "export_advance_config";
 
-    static final String DEFAULT_RESOLUTION = "1280x720";
+    static final String DEFAULT_RESOLUTION = "1920x1080";
     static final String DEFAULT_FPS = "60";
     private static final boolean DEFAULT_STRETCH = false;
     private static final boolean DEFAULT_SOPS = true;
