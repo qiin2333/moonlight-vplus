@@ -14,6 +14,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.SeekBar;
 import android.widget.Toast;
 
@@ -405,6 +406,7 @@ public class GroupButton extends Element {
         ElementEditText normalColorElementEditText = groupButtonPage.findViewById(R.id.page_group_button_normal_color);
         ElementEditText pressedColorElementEditText = groupButtonPage.findViewById(R.id.page_group_button_pressed_color);
         ElementEditText backgroundColorElementEditText = groupButtonPage.findViewById(R.id.page_group_button_background_color);
+        EditText deleteEditText = groupButtonPage.findViewById(R.id.page_group_button_delete_edittext);
         Button deleteButton = groupButtonPage.findViewById(R.id.page_group_button_delete);
 
         textElementEditText.setTextWithNoTextChangedCallBack(text);
@@ -724,8 +726,19 @@ public class GroupButton extends Element {
         deleteButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                elementController.toggleInfoPage(groupButtonPage);
-                elementController.deleteElement(groupButton);
+                if (deleteEditText.getText().toString().equals("DELETE")){
+                    List<Element> allElement = elementController.getElements();
+                    for (Element element : childElementList){
+                        if (!allElement.contains(element)){
+                            continue;
+                        }
+                        elementController.deleteElement(element);
+                    }
+                    elementController.toggleInfoPage(groupButtonPage);
+                    elementController.deleteElement(groupButton);
+                    Toast.makeText(context,"删除成功",Toast.LENGTH_SHORT).show();
+                }
+
             }
         });
 
