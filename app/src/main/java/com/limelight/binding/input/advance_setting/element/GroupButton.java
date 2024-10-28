@@ -77,10 +77,10 @@ public class GroupButton extends Element {
     private float lastY;
     private boolean isClick = true;
     private boolean childAttributeFollow = true;
-    private int initialCentralXMax;
-    private int initialCentralXMin;
-    private int initialCentralYMax;
-    private int initialCentralYMin;
+    private final int initialCentralXMax;
+    private final int initialCentralXMin;
+    private final int initialCentralYMax;
+    private final int initialCentralYMin;
 
     private SuperPageLayout groupButtonPage;
     private NumberSeekbar centralXNumberSeekbar;
@@ -259,38 +259,42 @@ public class GroupButton extends Element {
 
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN: {
-                // 重新划定groupElement的边界
-                int leftMargin = centralXMax;
-                int bottomMargin = centralYMax;
-                int rightMargin = centralXMax;
-                int topMargin = centralYMax;
-                for (Element element : childElementList){
-                    int elementCentralX = element.getElementCentralX();
-                    int elementCentralY = element.getElementCentralY();
-                    leftMargin = Math.min(elementCentralX - element.centralXMin, leftMargin);
-                    rightMargin = Math.min(element.centralXMax - elementCentralX, rightMargin);
-                    topMargin = Math.min(elementCentralY - element.centralYMin, topMargin);
-                    bottomMargin = Math.min(element.centralYMax - elementCentralY, bottomMargin);
+                if (childAttributeFollow){
+                    // 重新划定groupElement的边界
+                    int leftMargin = centralXMax;
+                    int bottomMargin = centralYMax;
+                    int rightMargin = centralXMax;
+                    int topMargin = centralYMax;
+                    List<Element> allElement = elementController.getElements();
+                    for (Element element : childElementList){
+                        if (!allElement.contains(element)){
+                            continue;
+                        }
+                        int elementCentralX = element.getElementCentralX();
+                        int elementCentralY = element.getElementCentralY();
+                        leftMargin = Math.min(elementCentralX - element.centralXMin, leftMargin);
+                        rightMargin = Math.min(element.centralXMax - elementCentralX, rightMargin);
+                        topMargin = Math.min(elementCentralY - element.centralYMin, topMargin);
+                        bottomMargin = Math.min(element.centralYMax - elementCentralY, bottomMargin);
+                    }
+                    int elementCentralX = getElementCentralX();
+                    int elementCentralY = getElementCentralY();
+                    leftMargin = Math.min(elementCentralX - initialCentralXMin, leftMargin);
+                    rightMargin = Math.min(initialCentralXMax - elementCentralX, rightMargin);
+                    topMargin = Math.min(elementCentralY - initialCentralYMin, topMargin);
+                    bottomMargin = Math.min(initialCentralYMax - elementCentralY, bottomMargin);
+
+                    centralXMin = elementCentralX - leftMargin;
+                    centralXMax = elementCentralX + rightMargin;
+                    centralYMin = elementCentralY - topMargin;
+                    centralYMax = elementCentralY + bottomMargin;
+                    if (centralXNumberSeekbar != null){
+                        centralXNumberSeekbar.setProgressMin(centralXMin);
+                        centralXNumberSeekbar.setProgressMax(centralXMax);
+                        centralYNumberSeekbar.setProgressMin(centralYMin);
+                        centralYNumberSeekbar.setProgressMax(centralYMax);
+                    }
                 }
-                int elementCentralX = getElementCentralX();
-                int elementCentralY = getElementCentralY();
-                leftMargin = Math.min(elementCentralX - initialCentralXMin, leftMargin);
-                rightMargin = Math.min(initialCentralXMax - elementCentralX, rightMargin);
-                topMargin = Math.min(elementCentralY - initialCentralYMin, topMargin);
-                bottomMargin = Math.min(initialCentralYMax - elementCentralY, bottomMargin);
-
-                centralXMin = elementCentralX - leftMargin;
-                centralXMax = elementCentralX + rightMargin;
-                centralYMin = elementCentralY - topMargin;
-                centralYMax = elementCentralY + bottomMargin;
-                if (centralXNumberSeekbar != null){
-                    centralXNumberSeekbar.setProgressMin(centralXMin);
-                    centralXNumberSeekbar.setProgressMax(centralXMax);
-                    centralYNumberSeekbar.setProgressMin(centralYMin);
-                    centralYNumberSeekbar.setProgressMax(centralYMax);
-                }
-
-
 
                 lastX = event.getX();
                 lastY = event.getY();
@@ -417,13 +421,13 @@ public class GroupButton extends Element {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 childAttributeFollow = isChecked;
-                setElementWidth(getElementWidth());
-                setElementHeight(getElementHeight());
-                setElementRadius(radius);
-                setElementThick(thick);
-                setElementNormalColor(normalColor);
-                setElementPressedColor(pressedColor);
-                setElementBackgroundColor(backgroundColor);
+                if (!childAttributeFollow){
+                    centralXMax = initialCentralXMax;
+                    centralXMin = initialCentralXMin;
+                    centralYMax = initialCentralYMax;
+                    centralYMin = initialCentralYMin;
+                }
+
             }
         });
 
@@ -451,21 +455,28 @@ public class GroupButton extends Element {
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-                int leftMargin = centralXMax;
-                int rightMargin = centralXMax;
-                for (Element element : childElementList){
-                    int elementCentralX = element.getElementCentralX();
-                    leftMargin = Math.min(elementCentralX - element.centralXMin, leftMargin);
-                    rightMargin = Math.min(element.centralXMax - elementCentralX, rightMargin);
-                }
-                int elementCentralX = getElementCentralX();
-                leftMargin = Math.min(elementCentralX - centralXMin, leftMargin);
-                rightMargin = Math.min(centralXMax - elementCentralX, rightMargin);
+                if (childAttributeFollow){
+                    int leftMargin = centralXMax;
+                    int rightMargin = centralXMax;
+                    List<Element> allElement = elementController.getElements();
+                    for (Element element : childElementList){
+                        if (!allElement.contains(element)){
+                            continue;
+                        }
+                        int elementCentralX = element.getElementCentralX();
+                        leftMargin = Math.min(elementCentralX - element.centralXMin, leftMargin);
+                        rightMargin = Math.min(element.centralXMax - elementCentralX, rightMargin);
+                    }
+                    int elementCentralX = getElementCentralX();
+                    leftMargin = Math.min(elementCentralX - centralXMin, leftMargin);
+                    rightMargin = Math.min(centralXMax - elementCentralX, rightMargin);
 
-                centralXMin = elementCentralX - leftMargin;
-                centralXMax = elementCentralX + rightMargin;
-                centralXNumberSeekbar.setProgressMin(centralXMin);
-                centralXNumberSeekbar.setProgressMax(centralXMax);
+                    centralXMin = elementCentralX - leftMargin;
+                    centralXMax = elementCentralX + rightMargin;
+                    centralXNumberSeekbar.setProgressMin(centralXMin);
+                    centralXNumberSeekbar.setProgressMax(centralXMax);
+                }
+
             }
 
             @Override
@@ -487,19 +498,26 @@ public class GroupButton extends Element {
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-                int bottomMargin = centralYMax;
-                int topMargin = centralYMax;
-                for (Element element : childElementList){
-                    int elementCentralY = element.getElementCentralY();
-                    topMargin = Math.min(elementCentralY - element.centralYMin, topMargin);
-                    bottomMargin = Math.min(element.centralYMax - elementCentralY, bottomMargin);
-                }
-                int elementCentralY = getElementCentralY();
-                topMargin = Math.min(elementCentralY - centralYMin, topMargin);
-                bottomMargin = Math.min(centralYMax - elementCentralY, bottomMargin);
+                if (childAttributeFollow){
+                    int bottomMargin = centralYMax;
+                    int topMargin = centralYMax;
+                    List<Element> allElement = elementController.getElements();
+                    for (Element element : childElementList){
+                        if (!allElement.contains(element)){
+                            continue;
+                        }
+                        int elementCentralY = element.getElementCentralY();
+                        topMargin = Math.min(elementCentralY - element.centralYMin, topMargin);
+                        bottomMargin = Math.min(element.centralYMax - elementCentralY, bottomMargin);
+                    }
+                    int elementCentralY = getElementCentralY();
+                    topMargin = Math.min(elementCentralY - centralYMin, topMargin);
+                    bottomMargin = Math.min(centralYMax - elementCentralY, bottomMargin);
 
-                centralYMin = elementCentralY - topMargin;
-                centralYMax = elementCentralY + bottomMargin;
+                    centralYMin = elementCentralY - topMargin;
+                    centralYMax = elementCentralY + bottomMargin;
+                }
+
             }
 
             @Override
