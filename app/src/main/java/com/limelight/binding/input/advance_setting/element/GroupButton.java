@@ -86,6 +86,8 @@ public class GroupButton extends Element {
     private NumberSeekbar centralXNumberSeekbar;
     private NumberSeekbar centralYNumberSeekbar;
 
+    private boolean layoutComplete = true;
+
     private long timerLongClickTimeout = 3000;
     private final Runnable longClickRunnable = new Runnable() {
         @Override
@@ -182,6 +184,12 @@ public class GroupButton extends Element {
                 save();
             }
         };
+    }
+
+    @Override
+    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+        layoutComplete = true;
+        super.onLayout(changed, left, top, right, bottom);
     }
 
     @Override
@@ -306,8 +314,11 @@ public class GroupButton extends Element {
                     return true;
                 }
                 isClick = false;
-                setElementCentralX((int) getX() + getWidth() / 2 + (int) deltaX);
-                setElementCentralY((int) getY() + getHeight() / 2 + (int) deltaY);
+                if (layoutComplete){
+                    layoutComplete = false;
+                    setElementCentralX((int) getX() + getWidth() / 2 + (int) deltaX);
+                    setElementCentralY((int) getY() + getHeight() / 2 + (int) deltaY);
+                }
                 updatePage();
                 return true;
             }
@@ -432,7 +443,10 @@ public class GroupButton extends Element {
         centralXNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                setElementCentralX(progress);
+                if (layoutComplete) {
+                    layoutComplete = false;
+                    setElementCentralX(progress);
+                }
             }
 
             @Override
@@ -465,7 +479,10 @@ public class GroupButton extends Element {
         centralYNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                setElementCentralY(progress);
+                if (layoutComplete){
+                    layoutComplete = false;
+                    setElementCentralY(progress);
+                }
             }
 
             @Override
@@ -498,7 +515,10 @@ public class GroupButton extends Element {
         widthNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                setElementWidth(progress);
+                if (layoutComplete) {
+                    layoutComplete = false;
+                    setElementWidth(progress);
+                }
             }
 
             @Override
@@ -518,7 +538,10 @@ public class GroupButton extends Element {
         heightNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                setElementHeight(progress);
+                if (layoutComplete) {
+                    layoutComplete = false;
+                    setElementHeight(progress);
+                }
             }
 
             @Override
