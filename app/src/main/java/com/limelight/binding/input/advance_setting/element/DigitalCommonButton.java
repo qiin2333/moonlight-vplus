@@ -21,6 +21,8 @@ import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
 import com.limelight.binding.input.advance_setting.PageDeviceController;
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
+import com.limelight.binding.input.virtual_controller.DigitalButton;
+import com.limelight.binding.input.virtual_controller.VirtualControllerElement;
 
 import java.util.Map;
 
@@ -67,6 +69,8 @@ public class DigitalCommonButton extends Element {
     private SuperPageLayout digitalButtonPage;
     private NumberSeekbar centralXNumberSeekbar;
     private NumberSeekbar centralYNumberSeekbar;
+
+    private DigitalCommonButton movingButton;
 
 
     private long timerLongClickTimeout = 3000;
@@ -136,6 +140,58 @@ public class DigitalCommonButton extends Element {
         };
     }
 
+    boolean inRange(float x, float y) {
+        return (this.getX() < x && this.getX() + this.getWidth() > x) &&
+                (this.getY() < y && this.getY() + this.getHeight() > y);
+    }
+
+    public boolean checkMovement(float x, float y, DigitalCommonButton movingButton) {
+
+        // save current pressed state
+        boolean wasPressed = isPressed();
+
+        // check if the movement directly happened on the button
+        if ((this.movingButton == null || movingButton == this.movingButton)
+                && this.inRange(x, y)) {
+            // set button pressed state depending on moving button pressed state
+            if (this.isPressed() != movingButton.isPressed()) {
+                this.setPressed(movingButton.isPressed());
+            }
+        }
+        // check if the movement is outside of the range and the movement button
+        // is the saved moving button
+        else if (movingButton == this.movingButton) {
+            this.setPressed(false);
+        }
+
+        // check if a change occurred
+        if (wasPressed != isPressed()) {
+            if (isPressed()) {
+                // is pressed set moving button and emit click event
+                this.movingButton = movingButton;
+                onClickCallback();
+            } else {
+                // no longer pressed reset moving button and emit release event
+                this.movingButton = null;
+                onReleaseCallback();
+            }
+
+            invalidate();
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private void checkMovementForAllButtons(float x, float y) {
+        for (Element element : elementController.getElements()) {
+            if (element != this && element instanceof DigitalCommonButton) {
+                ((DigitalCommonButton) element).checkMovement(x, y, this);
+            }
+        }
+    }
+
     @Override
     protected void onElementDraw(Canvas canvas) {
 
@@ -196,22 +252,29 @@ public class DigitalCommonButton extends Element {
     @Override
     public boolean onElementTouchEvent(MotionEvent event) {
         // get masked (not specific to a pointer) action
+        float x = getX() + event.getX();
+        float y = getY() + event.getY();
         int action = event.getActionMasked();
 
         switch (action) {
             case MotionEvent.ACTION_DOWN: {
+                movingButton = null;
                 setPressed(true);
                 onClickCallback();
                 invalidate();
                 return true;
             }
             case MotionEvent.ACTION_MOVE: {
+                checkMovementForAllButtons(x, y);
                 return true;
             }
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP: {
                 setPressed(false);
                 onReleaseCallback();
+
+                checkMovementForAllButtons(x, y);
+
                 invalidate();
                 return true;
             }
