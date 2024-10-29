@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
     private class ExportFile{
@@ -130,7 +132,8 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
 
 
     private static final String DATABASE_NAME = "super_config.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_OLD_VERSION_1 = 1;
+    private static final int DATABASE_VERSION = 2;
     private SQLiteDatabase writableDataBase;
     private SQLiteDatabase readableDataBase;
 
@@ -621,7 +624,17 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         if (!md5.equals(MathUtils.computeMD5(version + settingString + elementsString))){
             return -2;
         }
-        if (version != DATABASE_VERSION){
+        if (version == DATABASE_OLD_VERSION_1){
+            // 正则表达式
+            String regex = "(\"element_type\":)\\s*51";
+            Pattern pattern = Pattern.compile(regex);
+            Matcher matcher = pattern.matcher(elementsString);
+            // 检查是否有匹配项
+            if (matcher.find()) {
+                // 替换51为3
+                elementsString = matcher.replaceAll("$13");// 输出: {"element_type":3, "other_key":123}
+            }
+        }else if (version != DATABASE_VERSION){
             return -3;
         }
         ContentValues settingValues = gson.fromJson(settingString, ContentValues.class);
