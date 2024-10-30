@@ -180,7 +180,7 @@ public class InvisibleDigitalStick extends Element {
     private static double getAngle(float way_x, float way_y) {
         // prevent divisions by zero for corner cases
         if (way_x == 0) {
-            return way_y < 0 ? Math.PI : 0;
+            return way_y < 0 ? 0 : Math.PI;
         } else if (way_y == 0) {
             if (way_x > 0) {
                 return Math.PI * 3 / 2;
