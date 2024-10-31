@@ -36,6 +36,9 @@ public class GroupButton extends Element {
 
     private static final String COLUMN_INT_CHILD_VISIBILITY = COLUMN_INT_ELEMENT_SENSE;
 
+    private static final int CHILD_VISIBLE = VISIBLE;
+    private static final int CHILD_INVISIBLE = INVISIBLE;
+
     /**
      * Listener interface to update registered observers.
      */
@@ -177,10 +180,10 @@ public class GroupButton extends Element {
 
             @Override
             public void onRelease() {
-                if (childVisibility == VISIBLE){
-                    setElementChildVisibility(INVISIBLE);
+                if (childVisibility == CHILD_VISIBLE){
+                    setElementChildVisibility(CHILD_INVISIBLE);
                 } else {
-                    setElementChildVisibility(VISIBLE);
+                    setElementChildVisibility(CHILD_VISIBLE);
                 }
                 save();
             }
@@ -433,11 +436,11 @@ public class GroupButton extends Element {
             }
         });
 
-        childVisibleCheckBox.setChecked(childVisibility == VISIBLE);
+        childVisibleCheckBox.setChecked(childVisibility == CHILD_VISIBLE);
         childVisibleCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                setElementChildVisibility(isChecked ? VISIBLE : INVISIBLE);
+                setElementChildVisibility(isChecked ? CHILD_VISIBLE : CHILD_INVISIBLE);
                 save();
             }
         });
@@ -750,8 +753,8 @@ public class GroupButton extends Element {
     private void addChildElement(Element newElement){
         value = value + "," + newElement.elementId.toString();
         childElementList.add(newElement);
-        if (childVisibility == INVISIBLE){
-            newElement.setVisibility(INVISIBLE);
+        if (childVisibility == CHILD_INVISIBLE){
+            newElement.setVisibility(childVisibility);
             Toast.makeText(context,"按键添加成功,处于隐藏状态",Toast.LENGTH_SHORT).show();
         }
         setElementWidth(getElementWidth());
