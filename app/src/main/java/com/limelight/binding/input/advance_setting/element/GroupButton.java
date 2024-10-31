@@ -337,6 +337,11 @@ public class GroupButton extends Element {
                     if (isClick){
                         elementController.toggleInfoPage(getInfoPage());
                     } else {
+                        if (childAttributeFollow){
+                            for (Element element : childElementList){
+                                element.save();
+                            }
+                        }
                         save();
                     }
                 } else if (elementController.getMode() == ElementController.Mode.Normal){
@@ -344,6 +349,11 @@ public class GroupButton extends Element {
                     if (isClick){
                         onReleaseCallback();
                     } else {
+                        if (childAttributeFollow){
+                            for (Element element : childElementList){
+                                element.save();
+                            }
+                        }
                         save();
                     }
                 }
@@ -486,6 +496,11 @@ public class GroupButton extends Element {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
+                if (childAttributeFollow){
+                    for (Element element : childElementList){
+                        element.save();
+                    }
+                }
                 save();
             }
         });
@@ -527,6 +542,11 @@ public class GroupButton extends Element {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
+                if (childAttributeFollow){
+                    for (Element element : childElementList){
+                        element.save();
+                    }
+                }
                 save();
             }
         });
@@ -551,6 +571,11 @@ public class GroupButton extends Element {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
+                if (childAttributeFollow){
+                    for (Element element : childElementList){
+                        element.save();
+                    }
+                }
                 save();
             }
         });
@@ -574,6 +599,11 @@ public class GroupButton extends Element {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
+                if (childAttributeFollow){
+                    for (Element element : childElementList){
+                        element.save();
+                    }
+                }
                 save();
             }
         });
@@ -594,6 +624,11 @@ public class GroupButton extends Element {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
+                if (childAttributeFollow){
+                    for (Element element : childElementList){
+                        element.save();
+                    }
+                }
                save();
             }
         });
@@ -612,6 +647,11 @@ public class GroupButton extends Element {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
+                if (childAttributeFollow){
+                    for (Element element : childElementList){
+                        element.save();
+                    }
+                }
                 save();
             }
         });
@@ -624,6 +664,11 @@ public class GroupButton extends Element {
             public void textChanged(String text) {
                 if (text.matches("^[A-F0-9]{8}$")){
                     setElementNormalColor((int) Long.parseLong(text, 16));
+                    if (childAttributeFollow){
+                        for (Element element : childElementList){
+                            element.save();
+                        }
+                    }
                     save();
                 }
             }
@@ -637,6 +682,11 @@ public class GroupButton extends Element {
             public void textChanged(String text) {
                 if (text.matches("^[A-F0-9]{8}$")){
                     setElementPressedColor((int) Long.parseLong(text, 16));
+                    if (childAttributeFollow){
+                        for (Element element : childElementList){
+                            element.save();
+                        }
+                    }
                     save();
                 }
             }
@@ -650,6 +700,11 @@ public class GroupButton extends Element {
             public void textChanged(String text) {
                 if (text.matches("^[A-F0-9]{8}$")){
                     setElementBackgroundColor((int) Long.parseLong(text, 16));
+                    if (childAttributeFollow){
+                        for (Element element : childElementList){
+                            element.save();
+                        }
+                    }
                     save();
                 }
             }
@@ -780,7 +835,6 @@ public class GroupButton extends Element {
             int deltaX = getElementCentralX() - previousX;
             for (Element element : childElementList){
                 element.setElementCentralX(element.getElementCentralX() + deltaX);
-                element.save();
             }
         } else {
             super.setElementCentralX(centralX);
@@ -796,7 +850,6 @@ public class GroupButton extends Element {
             int deltaY = getElementCentralY() - previousY;
             for (Element element : childElementList){
                 element.setElementCentralY(element.getElementCentralY() + deltaY);
-                element.save();
             }
         } else {
             super.setElementCentralY(centralY);
@@ -815,7 +868,6 @@ public class GroupButton extends Element {
                     case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
                     case ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
                         element.setElementWidth(width);
-                        element.save();
                         break;
                     default:
                         break;
@@ -836,7 +888,6 @@ public class GroupButton extends Element {
                     case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
                     case ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
                         element.setElementHeight(height);
-                        element.save();
                         break;
                     default:
                         break;
@@ -873,7 +924,6 @@ public class GroupButton extends Element {
                     default:
                         break;
                 }
-                element.save();
             }
         }
     }
@@ -914,7 +964,6 @@ public class GroupButton extends Element {
                     default:
                         break;
                 }
-                element.save();
             }
         }
     }
@@ -955,7 +1004,6 @@ public class GroupButton extends Element {
                     default:
                         break;
                 }
-                element.save();
             }
         }
     }
@@ -996,7 +1044,6 @@ public class GroupButton extends Element {
                     default:
                         break;
                 }
-                element.save();
             }
         }
     }
@@ -1037,7 +1084,6 @@ public class GroupButton extends Element {
                     default:
                         break;
                 }
-                element.save();
             }
         }
     }
