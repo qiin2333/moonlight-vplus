@@ -317,6 +317,12 @@ public class ElementController {
                         pageDeviceController,
                         context);
                 break;
+            default:
+                element = new DigitalCommonButton(attributesMap,
+                        this,
+                        pageDeviceController,
+                        context);
+                break;
         }
         int elementWidth = ((Long) attributesMap.get(Element.COLUMN_INT_ELEMENT_WIDTH)).intValue();
         int elementHeight = ((Long) attributesMap.get(Element.COLUMN_INT_ELEMENT_HEIGHT)).intValue();
@@ -326,6 +332,7 @@ public class ElementController {
         layoutParams.leftMargin = elementCentralX - elementWidth / 2;
         layoutParams.topMargin = elementCentralY - elementHeight / 2;
 
+        //对element的层级进行排序
         for (int i = 0;i <= elements.size();i ++){
             if (i == elements.size()){
                 elements.add(i,element);
@@ -339,6 +346,11 @@ public class ElementController {
                 break;
             }
         }
+
+        //限制element的位置范围
+        element.setElementHeight(element.getElementHeight());
+        element.setElementWidth(element.getElementWidth());
+
         return element;
     }
 

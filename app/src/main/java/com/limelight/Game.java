@@ -605,7 +605,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             int desiredOrientation = Configuration.ORIENTATION_UNDEFINED;
 
             // OSC doesn't properly support portrait displays, so don't use it in portrait mode by default
-            if (prefConfig.onscreenController) {
+            if (prefConfig.onscreenController || prefConfig.onscreenKeyboard) {
                 desiredOrientation = Configuration.ORIENTATION_LANDSCAPE;
             }
 
