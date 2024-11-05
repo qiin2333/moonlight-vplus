@@ -302,6 +302,7 @@ public class DigitalCombineButton extends Element {
         TextView value4TextView = digitalCombineButtonPage.findViewById(R.id.page_digital_combine_button_value_4);
         TextView value5TextView = digitalCombineButtonPage.findViewById(R.id.page_digital_combine_button_value_5);
         NumberSeekbar thickNumberSeekbar = digitalCombineButtonPage.findViewById(R.id.page_digital_combine_button_thick);
+        NumberSeekbar layerNumberSeekbar = digitalCombineButtonPage.findViewById(R.id.page_digital_combine_button_layer);
         ElementEditText normalColorElementEditText = digitalCombineButtonPage.findViewById(R.id.page_digital_combine_button_normal_color);
         ElementEditText pressedColorElementEditText = digitalCombineButtonPage.findViewById(R.id.page_digital_combine_button_pressed_color);
         ElementEditText backgroundColorElementEditText = digitalCombineButtonPage.findViewById(R.id.page_digital_combine_button_background_color);
@@ -522,6 +523,23 @@ public class DigitalCombineButton extends Element {
             }
         });
 
+
+        layerNumberSeekbar.setValueWithNoCallBack(layer);
+        layerNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                setElementLayer(seekBar.getProgress());
+                save();
+            }
+        });
 
         normalColorElementEditText.setTextWithNoTextChangedCallBack(String.format("%08X",normalColor));
         normalColorElementEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new HexInputFilter()});

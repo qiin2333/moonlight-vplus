@@ -15,6 +15,7 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.SeekBar;
 import android.widget.Toast;
 
@@ -384,6 +385,7 @@ public class GroupButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
         contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
         contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
+        contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
@@ -416,6 +418,7 @@ public class GroupButton extends Element {
         CheckBox childVisibleCheckBox = groupButtonPage.findViewById(R.id.page_group_button_child_visible);
         ElementEditText textElementEditText = groupButtonPage.findViewById(R.id.page_group_button_text);
         NumberSeekbar thickNumberSeekbar = groupButtonPage.findViewById(R.id.page_group_button_thick);
+        NumberSeekbar layerNumberSeekbar = groupButtonPage.findViewById(R.id.page_group_button_layer);
         ElementEditText normalColorElementEditText = groupButtonPage.findViewById(R.id.page_group_button_normal_color);
         ElementEditText pressedColorElementEditText = groupButtonPage.findViewById(R.id.page_group_button_pressed_color);
         ElementEditText backgroundColorElementEditText = groupButtonPage.findViewById(R.id.page_group_button_background_color);
@@ -647,6 +650,29 @@ public class GroupButton extends Element {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
+                if (childAttributeFollow){
+                    for (Element element : childElementList){
+                        element.save();
+                    }
+                }
+                save();
+            }
+        });
+
+        layerNumberSeekbar.setValueWithNoCallBack(layer);
+        layerNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                setElementLayer(seekBar.getProgress());
                 if (childAttributeFollow){
                     for (Element element : childElementList){
                         element.save();
@@ -966,6 +992,16 @@ public class GroupButton extends Element {
                 }
             }
         }
+    }
+
+    @Override
+    protected void setElementLayer(int layer) {
+        if (childAttributeFollow){
+            for (Element element : childElementList){
+                element.setElementLayer(layer);
+            }
+        }
+        super.setElementLayer(layer);
     }
 
     protected void setElementNormalColor(int normalColor) {

@@ -247,6 +247,7 @@ public class DigitalMovableButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
         contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
         contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
+        contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
@@ -279,6 +280,7 @@ public class DigitalMovableButton extends Element {
         TextView valueTextView = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_value);
         NumberSeekbar senseNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_sense);
         NumberSeekbar thickNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_thick);
+        NumberSeekbar layerNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_layer);
         ElementEditText normalColorElementEditText = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_normal_color);
         ElementEditText pressedColorElementEditText = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_pressed_color);
         ElementEditText backgroundColorElementEditText = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_background_color);
@@ -453,6 +455,23 @@ public class DigitalMovableButton extends Element {
             }
         });
 
+
+        layerNumberSeekbar.setValueWithNoCallBack(layer);
+        layerNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                setElementLayer(seekBar.getProgress());
+                save();
+            }
+        });
 
         normalColorElementEditText.setTextWithNoTextChangedCallBack(String.format("%08X",normalColor));
         normalColorElementEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new HexInputFilter()});

@@ -440,6 +440,7 @@ public class AnalogStick extends Element {
         RadioGroup modeRadioGroup = analogStickPage.findViewById(R.id.page_analog_stick_value);
         NumberSeekbar deadZoneRadiusNumberSeekbar = analogStickPage.findViewById(R.id.page_analog_stick_sense);
         NumberSeekbar thickNumberSeekbar = analogStickPage.findViewById(R.id.page_analog_stick_thick);
+        NumberSeekbar layerNumberSeekbar = analogStickPage.findViewById(R.id.page_analog_stick_layer);
         ElementEditText normalColorEditText = analogStickPage.findViewById(R.id.page_analog_stick_normal_color);
         ElementEditText pressedColorEditText = analogStickPage.findViewById(R.id.page_analog_stick_pressed_color);
         ElementEditText backgroundColorEditText = analogStickPage.findViewById(R.id.page_analog_stick_background_color);
@@ -566,6 +567,23 @@ public class AnalogStick extends Element {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
+            }
+        });
+
+        layerNumberSeekbar.setValueWithNoCallBack(layer);
+        layerNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                setElementLayer(seekBar.getProgress());
                 save();
             }
         });

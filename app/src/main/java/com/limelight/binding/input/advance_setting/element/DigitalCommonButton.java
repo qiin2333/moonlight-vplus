@@ -295,6 +295,7 @@ public class DigitalCommonButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
         contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
         contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
+        contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
@@ -323,6 +324,7 @@ public class DigitalCommonButton extends Element {
         NumberSeekbar widthNumberSeekbar = digitalButtonPage.findViewById(R.id.page_digital_common_button_width);
         NumberSeekbar heightNumberSeekbar = digitalButtonPage.findViewById(R.id.page_digital_common_button_height);
         NumberSeekbar radiusNumberSeekbar = digitalButtonPage.findViewById(R.id.page_digital_common_button_radius);
+        NumberSeekbar layerNumberSeekbar = digitalButtonPage.findViewById(R.id.page_digital_common_button_layer);
         ElementEditText textElementEditText = digitalButtonPage.findViewById(R.id.page_digital_common_button_text);
         TextView valueTextView = digitalButtonPage.findViewById(R.id.page_digital_common_button_value);
         NumberSeekbar thickNumberSeekbar = digitalButtonPage.findViewById(R.id.page_digital_common_button_thick);
@@ -441,7 +443,23 @@ public class DigitalCommonButton extends Element {
                 save();
             }
         });
+        layerNumberSeekbar.setValueWithNoCallBack(layer);
+        layerNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
 
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                setElementLayer(seekBar.getProgress());
+                save();
+            }
+        });
 
 
         radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);

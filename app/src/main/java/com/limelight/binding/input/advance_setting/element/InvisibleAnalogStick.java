@@ -308,6 +308,7 @@ public class InvisibleAnalogStick extends Element {
         TextView middleValueTextView = invisibleAnalogStickPage.findViewById(R.id.page_invisible_analog_stick_middle_value);
         NumberSeekbar senseNumberSeekbar = invisibleAnalogStickPage.findViewById(R.id.page_invisible_analog_stick_sense);
         NumberSeekbar thickNumberSeekbar = invisibleAnalogStickPage.findViewById(R.id.page_invisible_analog_stick_thick);
+        NumberSeekbar layerNumberSeekbar = invisibleAnalogStickPage.findViewById(R.id.page_invisible_analog_stick_layer);
         ElementEditText normalColorEditText = invisibleAnalogStickPage.findViewById(R.id.page_invisible_analog_stick_normal_color);
         ElementEditText pressedColorEditText = invisibleAnalogStickPage.findViewById(R.id.page_invisible_analog_stick_pressed_color);
         ElementEditText backgroundColorEditText = invisibleAnalogStickPage.findViewById(R.id.page_invisible_analog_stick_background_color);
@@ -481,7 +482,23 @@ public class InvisibleAnalogStick extends Element {
             }
         });
 
+        layerNumberSeekbar.setValueWithNoCallBack(layer);
+        layerNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
 
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                setElementLayer(seekBar.getProgress());
+                save();
+            }
+        });
 
         normalColorEditText.setTextWithNoTextChangedCallBack(String.format("%08X",normalColor));
         normalColorEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new HexInputFilter()});

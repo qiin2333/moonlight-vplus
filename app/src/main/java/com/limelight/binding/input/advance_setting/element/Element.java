@@ -73,7 +73,7 @@ public abstract class Element extends View {
     protected final Long elementId;
     protected final Long configId;
     protected final int elementType;
-    protected final int layer;
+    protected int layer;
     protected final ElementController elementController;
     private Context context;
     private final Paint paint = new Paint();
@@ -181,6 +181,11 @@ public abstract class Element extends View {
             layoutParams.height = height;
         }
         innerSetElementCentralY(centralPosY);
+    }
+
+    protected void setElementLayer(int layer) {
+        this.layer = layer;
+        elementController.adjustLayer(this);
     }
 
 

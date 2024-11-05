@@ -170,6 +170,7 @@ public class SimplifyPerformance extends Element {
         Button textEnsureButton = simplifyPerformancePage.findViewById(R.id.page_simplify_performance_text_ensure);
         Button textResetButton = simplifyPerformancePage.findViewById(R.id.page_simplify_performance_text_reset);
         NumberSeekbar textSizeNumberSeekbar = simplifyPerformancePage.findViewById(R.id.page_simplify_performance_text_size);
+        NumberSeekbar layerNumberSeekbar = simplifyPerformancePage.findViewById(R.id.page_simplify_performance_layer);
         ElementEditText textColorElementEditText = simplifyPerformancePage.findViewById(R.id.page_simplify_performance_text_color);
         ElementEditText backgroundColorElementEditText = simplifyPerformancePage.findViewById(R.id.page_simplify_performance_background_color);
         Button copyButton = simplifyPerformancePage.findViewById(R.id.page_simplify_performance_copy);
@@ -262,6 +263,24 @@ public class SimplifyPerformance extends Element {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
+            }
+        });
+
+        layerNumberSeekbar.setValueWithNoCallBack(layer);
+        layerNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                setElementLayer(seekBar.getProgress());
                 save();
             }
         });

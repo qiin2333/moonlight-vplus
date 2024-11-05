@@ -198,6 +198,14 @@
                 app:max="10"
                 app:min="0"
                 android:progress="3"/>
+            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                android:id="@+id/page_digital_combine_button_layer"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginVertical="5dp"
+                app:text="层级"
+                app:max="140"
+                app:min="40" />
             <LinearLayout
                 android:orientation="horizontal"
                 android:layout_width="match_parent"

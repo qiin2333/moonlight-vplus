@@ -354,6 +354,39 @@ public class ElementController {
         return element;
     }
 
+    protected void adjustLayer(Element element){
+
+        int elementWidth = element.getElementWidth();
+        int elementHeight = element.getElementHeight();
+        int elementCentralX = element.getElementCentralX();
+        int elementCentralY = element.getElementCentralY();
+
+
+        elementsLayout.removeView(element);
+        elements.remove(element);
+
+        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(elementWidth, elementHeight);
+        layoutParams.leftMargin = elementCentralX - elementWidth / 2;
+        layoutParams.topMargin = elementCentralY - elementHeight / 2;
+        //对element的层级进行排序
+        for (int i = 0;i <= elements.size();i ++){
+            if (i == elements.size()){
+                elements.add(i,element);
+                elementsLayout.addView(element,i + 1,layoutParams);
+                break;
+            }
+            Element elementExist = elements.get(i);
+            if (elementExist.elementId  + ((long) elementExist.layer << 48 ) > element.elementId + ((long) element.layer << 48 )){
+                elements.add(i,element);
+                elementsLayout.addView(element,i + 1,layoutParams);
+                break;
+            }
+        }
+
+
+
+    }
+
 
 
 

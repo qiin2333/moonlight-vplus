@@ -350,6 +350,7 @@ public class InvisibleDigitalStick extends Element {
         TextView rightValueTextView = invisibleDigitalStickPage.findViewById(R.id.page_invisible_digital_stick_right_value);
         NumberSeekbar senseNumberSeekbar = invisibleDigitalStickPage.findViewById(R.id.page_invisible_digital_stick_sense);
         NumberSeekbar thickNumberSeekbar = invisibleDigitalStickPage.findViewById(R.id.page_invisible_digital_stick_thick);
+        NumberSeekbar layerNumberSeekbar = invisibleDigitalStickPage.findViewById(R.id.page_invisible_digital_stick_layer);
         ElementEditText normalColorEditText = invisibleDigitalStickPage.findViewById(R.id.page_invisible_digital_stick_normal_color);
         ElementEditText pressedColorEditText = invisibleDigitalStickPage.findViewById(R.id.page_invisible_digital_stick_pressed_color);
         ElementEditText backgroundColorEditText = invisibleDigitalStickPage.findViewById(R.id.page_invisible_digital_stick_background_color);
@@ -578,6 +579,24 @@ public class InvisibleDigitalStick extends Element {
         });
 
 
+        layerNumberSeekbar.setValueWithNoCallBack(layer);
+        layerNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                setElementLayer(seekBar.getProgress());
+                save();
+            }
+        });
+
         normalColorEditText.setTextWithNoTextChangedCallBack(String.format("%08X",normalColor));
         normalColorEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new HexInputFilter()});
         normalColorEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
@@ -670,6 +689,7 @@ public class InvisibleDigitalStick extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
         contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
         contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
+        contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);

@@ -334,6 +334,7 @@ public class DigitalPad extends Element {
         TextView leftValueTextView = digitalPadPage.findViewById(R.id.page_digital_pad_left_value);
         TextView rightValueTextView = digitalPadPage.findViewById(R.id.page_digital_pad_right_value);
         NumberSeekbar thickNumberSeekbar = digitalPadPage.findViewById(R.id.page_digital_pad_thick);
+        NumberSeekbar layerNumberSeekbar = digitalPadPage.findViewById(R.id.page_digital_pad_layer);
         ElementEditText normalColorElementEditText = digitalPadPage.findViewById(R.id.page_digital_pad_normal_color);
         ElementEditText pressedColorElementEditText = digitalPadPage.findViewById(R.id.page_digital_pad_pressed_color);
         ElementEditText backgroundColorElementEditText = digitalPadPage.findViewById(R.id.page_digital_pad_background_color);
@@ -500,6 +501,24 @@ public class DigitalPad extends Element {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
+            }
+        });
+
+        layerNumberSeekbar.setValueWithNoCallBack(layer);
+        layerNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                setElementLayer(seekBar.getProgress());
                 save();
             }
         });

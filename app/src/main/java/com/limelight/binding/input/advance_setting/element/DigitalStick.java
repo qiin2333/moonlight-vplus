@@ -484,6 +484,7 @@ public class DigitalStick extends Element {
         TextView rightValueTextView = digitalStickPage.findViewById(R.id.page_digital_stick_right_value);
         NumberSeekbar deadZoneRadiusNumberSeekbar = digitalStickPage.findViewById(R.id.page_digital_stick_sense);
         NumberSeekbar thickNumberSeekbar = digitalStickPage.findViewById(R.id.page_digital_stick_thick);
+        NumberSeekbar layerNumberSeekbar = digitalStickPage.findViewById(R.id.page_digital_stick_layer);
         ElementEditText normalColorEditText = digitalStickPage.findViewById(R.id.page_digital_stick_normal_color);
         ElementEditText pressedColorEditText = digitalStickPage.findViewById(R.id.page_digital_stick_pressed_color);
         ElementEditText backgroundColorEditText = digitalStickPage.findViewById(R.id.page_digital_stick_background_color);
@@ -666,6 +667,25 @@ public class DigitalStick extends Element {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
+            }
+        });
+
+
+        layerNumberSeekbar.setValueWithNoCallBack(layer);
+        layerNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                setElementLayer(seekBar.getProgress());
                 save();
             }
         });
