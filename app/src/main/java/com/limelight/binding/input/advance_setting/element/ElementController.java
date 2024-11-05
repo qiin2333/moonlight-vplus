@@ -84,6 +84,7 @@ public class ElementController {
     private Mode mode = Mode.Normal;
     private SuperPageLayout pageEdit;
     private SuperPageLayout lastElementSettingPage;
+    private long currentConfigId;
 
 
 
@@ -199,16 +200,14 @@ public class ElementController {
         return handler;
     }
 
-    protected SuperConfigDatabaseHelper getSuperConfigDatabaseHelper() {
-        return controllerManager.getSuperConfigDatabaseHelper();
-    }
 
     public void loadAllElement(Long configId){
+        currentConfigId = configId;
         removeAllElementsOnScreen();
         elementIds = controllerManager.getSuperConfigDatabaseHelper().queryAllElementIds(configId);
         List<Long> groupButtonElementIdList = new ArrayList<>();
         for (Long elementId : elementIds){
-            long elementType = (long) controllerManager.getSuperConfigDatabaseHelper().queryElementAttribute(elementId,Element.COLUMN_INT_ELEMENT_TYPE);
+            long elementType = (long) controllerManager.getSuperConfigDatabaseHelper().queryElementAttribute(currentConfigId,elementId,Element.COLUMN_INT_ELEMENT_TYPE);
             if (elementType == Element.ELEMENT_TYPE_GROUP_BUTTON){
                 groupButtonElementIdList.add(elementId);
             } else {
@@ -231,8 +230,12 @@ public class ElementController {
         return loadElement(elementId);
     }
 
+    protected void updateElement(long elementId,ContentValues contentValues){
+        controllerManager.getSuperConfigDatabaseHelper().updateElement(currentConfigId,elementId,contentValues);
+    }
+
     protected void deleteElement(Element element){
-        controllerManager.getSuperConfigDatabaseHelper().deleteElement(element.elementId);
+        controllerManager.getSuperConfigDatabaseHelper().deleteElement(currentConfigId,element.elementId);
         if (elements.contains(element)){
             elementsLayout.removeView(element);
             elements.remove(element);
@@ -247,7 +250,7 @@ public class ElementController {
     }
 
     private Element loadElement(Long elementId){
-        Map<String, Object> attributesMap =  controllerManager.getSuperConfigDatabaseHelper().queryAllElementAttributes(elementId);
+        Map<String, Object> attributesMap =  controllerManager.getSuperConfigDatabaseHelper().queryAllElementAttributes(currentConfigId,elementId);
         int type = ((Long) attributesMap.get(Element.COLUMN_INT_ELEMENT_TYPE)).intValue();
         Element element = null;
         switch (type){

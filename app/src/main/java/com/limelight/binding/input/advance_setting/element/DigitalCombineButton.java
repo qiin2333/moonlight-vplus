@@ -102,7 +102,6 @@ public class DigitalCombineButton extends Element {
                                 ElementController controller,
                                 PageDeviceController pageDeviceController, Context context) {
         super(attributesMap,controller,context);
-        this.superConfigDatabaseHelper = controller.getSuperConfigDatabaseHelper();
         this.pageDeviceController = pageDeviceController;
         this.digitalCombineButton = this;
 
@@ -270,7 +269,7 @@ public class DigitalCombineButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
-        superConfigDatabaseHelper.updateElement(elementId,contentValues);
+        elementController.updateElement(elementId,contentValues);
 
     }
 

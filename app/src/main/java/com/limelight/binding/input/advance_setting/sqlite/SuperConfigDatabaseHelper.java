@@ -209,23 +209,23 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         writableDataBase.insert("element",null,values);
     }
 
-    public void deleteElement(long elementId){
+    public void deleteElement(long configId,long elementId){
 
         // 定义 WHERE 子句
-        String selection = "element_id = ?";
+        String selection = "config_id = ? AND element_id = ?";
         // 定义 WHERE 子句中的参数
-        String[] selectionArgs = { String.valueOf(elementId) };
+        String[] selectionArgs = { String.valueOf(configId), String.valueOf(elementId) };
 
         // 执行删除操作
         writableDataBase.delete("element", selection, selectionArgs);
     }
 
-    public void updateElement(long elementId,ContentValues values){
+    public void updateElement(long configId,long elementId,ContentValues values){
 
-        // SQL WHERE 子句
-        String selection = "element_id = ?";
-        // selectionArgs 数组提供了 WHERE 子句中占位符 ? 的实际值
-        String[] selectionArgs = { String.valueOf(elementId) };
+        // 定义 WHERE 子句
+        String selection = "config_id = ? AND element_id = ?";
+        // 定义 WHERE 子句中的参数
+        String[] selectionArgs = { String.valueOf(configId), String.valueOf(elementId) };
 
         writableDataBase.update(
                 "element",   // 要更新的表
@@ -270,15 +270,15 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         System.out.println("elementIds = " + elementIds);
         return elementIds;
     }
-    public Object queryElementAttribute(long elementId,String elementAttribute){
+    public Object queryElementAttribute(long configId,long elementId,String elementAttribute){
 
         // 定义要查询的列
         String[] projection = { elementAttribute };
 
         // 定义 WHERE 子句
-        String selection = "element_id = ?";
+        String selection = "config_id = ? AND element_id = ?";
         // 定义 WHERE 子句中的参数
-        String[] selectionArgs = { String.valueOf(elementId) };
+        String[] selectionArgs = { String.valueOf(configId), String.valueOf(elementId) };
 
         // 执行查询
         Cursor cursor = readableDataBase.query(
@@ -319,12 +319,12 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         return o;
     }
 
-    public Map<String, Object> queryAllElementAttributes(long elementId){
+    public Map<String, Object> queryAllElementAttributes(long configId,long elementId){
         Map<String, Object> resultMap = new HashMap<>();
         // 定义 WHERE 子句
-        String selection = "element_id = ?";
+        String selection = "config_id = ? AND element_id = ?";
         // 定义 WHERE 子句中的参数
-        String[] selectionArgs = { String.valueOf(elementId) };
+        String[] selectionArgs = { String.valueOf(configId), String.valueOf(elementId) };
 
         // 执行查询
         Cursor cursor = readableDataBase.query(

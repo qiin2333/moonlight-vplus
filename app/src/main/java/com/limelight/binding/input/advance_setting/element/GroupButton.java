@@ -112,7 +112,6 @@ public class GroupButton extends Element {
                        ElementController controller,
                        PageDeviceController pageDeviceController, Context context) {
         super(attributesMap,controller,context);
-        this.superConfigDatabaseHelper = controller.getSuperConfigDatabaseHelper();
         this.pageDeviceController = pageDeviceController;
         this.groupButton = this;
         this.elementController = controller;
@@ -165,7 +164,7 @@ public class GroupButton extends Element {
         value = newValue.toString();
         ContentValues contentValues = new ContentValues();
         contentValues.put(COLUMN_STRING_ELEMENT_VALUE,value);
-        superConfigDatabaseHelper.updateElement(elementId,contentValues);
+        elementController.updateElement(elementId,contentValues);
         setElementChildVisibility(childVisibility);
 
         listener = new GroupButtonListener() {
@@ -389,7 +388,7 @@ public class GroupButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
-        superConfigDatabaseHelper.updateElement(elementId,contentValues);
+        elementController.updateElement(elementId,contentValues);
 
     }
 

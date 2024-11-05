@@ -213,7 +213,6 @@ public class DigitalStick extends Element {
         position_stick_x = getWidth() / 2;
         position_stick_y = getHeight() / 2;
 
-        this.superConfigDatabaseHelper = controller.getSuperConfigDatabaseHelper();
         this.pageDeviceController = pageDeviceController;
         this.digitalStick = this;
 
@@ -787,7 +786,7 @@ public class DigitalStick extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
-        superConfigDatabaseHelper.updateElement(elementId,contentValues);
+        elementController.updateElement(elementId,contentValues);
 
     }
 

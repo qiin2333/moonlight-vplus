@@ -219,7 +219,6 @@ public class InvisibleDigitalStick extends Element {
         position_stick_y = circleCenterY;
 
 
-        this.superConfigDatabaseHelper = controller.getSuperConfigDatabaseHelper();
         this.pageDeviceController = pageDeviceController;
         this.invisibleDigitalStick = this;
 
@@ -693,7 +692,7 @@ public class InvisibleDigitalStick extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
-        superConfigDatabaseHelper.updateElement(elementId,contentValues);
+        elementController.updateElement(elementId,contentValues);
 
     }
 

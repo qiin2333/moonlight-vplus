@@ -63,7 +63,6 @@ public class SimplifyPerformance extends Element {
                                ElementController controller,
                                Context context) {
         super(attributesMap,controller,context);
-        this.superConfigDatabaseHelper = controller.getSuperConfigDatabaseHelper();
         this.simplifyPerformance = this;
 
         displayMetrics = context.getResources().getDisplayMetrics();
@@ -352,7 +351,7 @@ public class SimplifyPerformance extends Element {
         contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_SIZE,textSize);
         contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_COLOR,textColor);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
-        superConfigDatabaseHelper.updateElement(elementId,contentValues);
+        elementController.updateElement(elementId,contentValues);
 
     }
 
