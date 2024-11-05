@@ -80,7 +80,6 @@ public class GroupButton extends Element {
 
     private float lastX;
     private float lastY;
-    private boolean isClick = true;
     private boolean childAttributeFollow = true;
     private final int initialCentralXMax;
     private final int initialCentralXMin;
@@ -91,9 +90,10 @@ public class GroupButton extends Element {
     private NumberSeekbar centralXNumberSeekbar;
     private NumberSeekbar centralYNumberSeekbar;
 
+    private boolean movable = false;
     private boolean layoutComplete = true;
 
-    private long timerLongClickTimeout = 3000;
+    private long timerLongClickTimeout = 800;
     private final Runnable longClickRunnable = new Runnable() {
         @Override
         public void run() {
@@ -176,6 +176,7 @@ public class GroupButton extends Element {
             @Override
             public void onLongClick() {
 
+
             }
 
             @Override
@@ -241,7 +242,15 @@ public class GroupButton extends Element {
 
     private void onLongClickCallback() {
         // notify listeners
+        System.out.println("onLongClickCallback");
         listener.onLongClick();
+        movable = true;
+        if (childAttributeFollow){
+            for (Element element : childElementList){
+                element.setAlpha(0.5f);
+            }
+        }
+        invalidate();
     }
 
     private void onReleaseCallback() {
@@ -261,107 +270,184 @@ public class GroupButton extends Element {
             return true;
         }
 
-        switch (event.getActionMasked()) {
-            case MotionEvent.ACTION_DOWN: {
-                if (childAttributeFollow){
-                    // 重新划定groupElement的边界
-                    int leftMargin = centralXMax;
-                    int bottomMargin = centralYMax;
-                    int rightMargin = centralXMax;
-                    int topMargin = centralYMax;
-                    List<Element> allElement = elementController.getElements();
-                    for (Element element : childElementList){
-                        if (!allElement.contains(element)){
-                            continue;
+        if (elementController.getMode() == ElementController.Mode.Edit){
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN: {
+                    if (childAttributeFollow){
+                        // 重新划定groupElement的边界
+                        int leftMargin = centralXMax;
+                        int bottomMargin = centralYMax;
+                        int rightMargin = centralXMax;
+                        int topMargin = centralYMax;
+                        List<Element> allElement = elementController.getElements();
+                        for (Element element : childElementList){
+                            if (!allElement.contains(element)){
+                                continue;
+                            }
+                            int elementCentralX = element.getElementCentralX();
+                            int elementCentralY = element.getElementCentralY();
+                            leftMargin = Math.min(elementCentralX - element.centralXMin, leftMargin);
+                            rightMargin = Math.min(element.centralXMax - elementCentralX, rightMargin);
+                            topMargin = Math.min(elementCentralY - element.centralYMin, topMargin);
+                            bottomMargin = Math.min(element.centralYMax - elementCentralY, bottomMargin);
                         }
-                        int elementCentralX = element.getElementCentralX();
-                        int elementCentralY = element.getElementCentralY();
-                        leftMargin = Math.min(elementCentralX - element.centralXMin, leftMargin);
-                        rightMargin = Math.min(element.centralXMax - elementCentralX, rightMargin);
-                        topMargin = Math.min(elementCentralY - element.centralYMin, topMargin);
-                        bottomMargin = Math.min(element.centralYMax - elementCentralY, bottomMargin);
-                    }
-                    int elementCentralX = getElementCentralX();
-                    int elementCentralY = getElementCentralY();
-                    leftMargin = Math.min(elementCentralX - initialCentralXMin, leftMargin);
-                    rightMargin = Math.min(initialCentralXMax - elementCentralX, rightMargin);
-                    topMargin = Math.min(elementCentralY - initialCentralYMin, topMargin);
-                    bottomMargin = Math.min(initialCentralYMax - elementCentralY, bottomMargin);
+                        int elementCentralX = getElementCentralX();
+                        int elementCentralY = getElementCentralY();
+                        leftMargin = Math.min(elementCentralX - initialCentralXMin, leftMargin);
+                        rightMargin = Math.min(initialCentralXMax - elementCentralX, rightMargin);
+                        topMargin = Math.min(elementCentralY - initialCentralYMin, topMargin);
+                        bottomMargin = Math.min(initialCentralYMax - elementCentralY, bottomMargin);
 
-                    centralXMin = elementCentralX - leftMargin;
-                    centralXMax = elementCentralX + rightMargin;
-                    centralYMin = elementCentralY - topMargin;
-                    centralYMax = elementCentralY + bottomMargin;
-                    if (centralXNumberSeekbar != null){
-                        centralXNumberSeekbar.setProgressMin(centralXMin);
-                        centralXNumberSeekbar.setProgressMax(centralXMax);
-                        centralYNumberSeekbar.setProgressMin(centralYMin);
-                        centralYNumberSeekbar.setProgressMax(centralYMax);
+                        centralXMin = elementCentralX - leftMargin;
+                        centralXMax = elementCentralX + rightMargin;
+                        centralYMin = elementCentralY - topMargin;
+                        centralYMax = elementCentralY + bottomMargin;
+                        if (centralXNumberSeekbar != null){
+                            centralXNumberSeekbar.setProgressMin(centralXMin);
+                            centralXNumberSeekbar.setProgressMax(centralXMax);
+                            centralYNumberSeekbar.setProgressMin(centralYMin);
+                            centralYNumberSeekbar.setProgressMax(centralYMax);
+                        }
                     }
-                }
 
-                lastX = event.getX();
-                lastY = event.getY();
-                isClick = true;
-                if (elementController.getMode() == ElementController.Mode.Edit){
+                    lastX = event.getX();
+                    lastY = event.getY();
                     editColor = 0xff00f91a;
-                } else if (elementController.getMode() == ElementController.Mode.Normal){
-                    setPressed(true);
-                    onClickCallback();
-                }
-                invalidate();
-                return true;
-            }
-            case MotionEvent.ACTION_MOVE: {
-                float x = event.getX();
-                float y = event.getY();
-                float deltaX = x - lastX;
-                float deltaY = y - lastY;
-                //小位移算作点击
-                if (Math.abs(deltaX) + Math.abs(deltaY) < 0.2){
+                    invalidate();
                     return true;
                 }
-                isClick = false;
-                if (layoutComplete){
-                    layoutComplete = false;
-                    setElementCentralX((int) getX() + getWidth() / 2 + (int) deltaX);
-                    setElementCentralY((int) getY() + getHeight() / 2 + (int) deltaY);
+                case MotionEvent.ACTION_MOVE: {
+                    float x = event.getX();
+                    float y = event.getY();
+                    float deltaX = x - lastX;
+                    float deltaY = y - lastY;
+                    //小位移算作点击
+                    if (Math.abs(deltaX) + Math.abs(deltaY) < 0.2){
+                        return true;
+                    }
+                    if (layoutComplete){
+                        layoutComplete = false;
+                        setElementCentralX((int) getX() + getWidth() / 2 + (int) deltaX);
+                        setElementCentralY((int) getY() + getHeight() / 2 + (int) deltaY);
+                    }
+                    updatePage();
+                    movable = true;
+                    return true;
                 }
-                updatePage();
-                return true;
-            }
-            case MotionEvent.ACTION_CANCEL:
-            case MotionEvent.ACTION_UP: {
-                if (elementController.getMode() == ElementController.Mode.Edit){
-                    editColor = 0xffdc143c;
-                    if (isClick){
+                case MotionEvent.ACTION_CANCEL:
+                case MotionEvent.ACTION_UP: {
+                    if (movable){
+                        if (childAttributeFollow){
+                            for (Element element : childElementList){
+                                element.save();
+                            }
+                        }
+                        save();
+                        movable = false;
+                    } else {
                         elementController.toggleInfoPage(getInfoPage());
-                    } else {
-                        if (childAttributeFollow){
-                            for (Element element : childElementList){
-                                element.save();
-                            }
-                        }
-                        save();
                     }
-                } else if (elementController.getMode() == ElementController.Mode.Normal){
-                    setPressed(false);
-                    if (isClick){
-                        onReleaseCallback();
-                    } else {
-                        if (childAttributeFollow){
-                            for (Element element : childElementList){
-                                element.save();
-                            }
-                        }
-                        save();
-                    }
-                }
-                invalidate();
 
-                return true;
+                    editColor = 0xffdc143c;
+                    invalidate();
+
+                    return true;
+                }
+                default: {
+                }
             }
-            default: {
+        } else {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN: {
+                    if (childAttributeFollow){
+                        // 重新划定groupElement的边界
+                        int leftMargin = centralXMax;
+                        int bottomMargin = centralYMax;
+                        int rightMargin = centralXMax;
+                        int topMargin = centralYMax;
+                        List<Element> allElement = elementController.getElements();
+                        for (Element element : childElementList){
+                            if (!allElement.contains(element)){
+                                continue;
+                            }
+                            int elementCentralX = element.getElementCentralX();
+                            int elementCentralY = element.getElementCentralY();
+                            leftMargin = Math.min(elementCentralX - element.centralXMin, leftMargin);
+                            rightMargin = Math.min(element.centralXMax - elementCentralX, rightMargin);
+                            topMargin = Math.min(elementCentralY - element.centralYMin, topMargin);
+                            bottomMargin = Math.min(element.centralYMax - elementCentralY, bottomMargin);
+                        }
+                        int elementCentralX = getElementCentralX();
+                        int elementCentralY = getElementCentralY();
+                        leftMargin = Math.min(elementCentralX - initialCentralXMin, leftMargin);
+                        rightMargin = Math.min(initialCentralXMax - elementCentralX, rightMargin);
+                        topMargin = Math.min(elementCentralY - initialCentralYMin, topMargin);
+                        bottomMargin = Math.min(initialCentralYMax - elementCentralY, bottomMargin);
+
+                        centralXMin = elementCentralX - leftMargin;
+                        centralXMax = elementCentralX + rightMargin;
+                        centralYMin = elementCentralY - topMargin;
+                        centralYMax = elementCentralY + bottomMargin;
+                        if (centralXNumberSeekbar != null){
+                            centralXNumberSeekbar.setProgressMin(centralXMin);
+                            centralXNumberSeekbar.setProgressMax(centralXMax);
+                            centralYNumberSeekbar.setProgressMin(centralYMin);
+                            centralYNumberSeekbar.setProgressMax(centralYMax);
+                        }
+                    }
+
+                    lastX = event.getX();
+                    lastY = event.getY();
+
+                    setPressed(true);
+                    onClickCallback();
+
+                    invalidate();
+                    return true;
+                }
+                case MotionEvent.ACTION_MOVE: {
+                    if (movable) {
+                        float x = event.getX();
+                        float y = event.getY();
+                        float deltaX = x - lastX;
+                        float deltaY = y - lastY;
+                        //小位移算作点击
+                        if (Math.abs(deltaX) + Math.abs(deltaY) < 0.2){
+                            return true;
+                        }
+                        if (layoutComplete){
+                            layoutComplete = false;
+                            setElementCentralX((int) getX() + getWidth() / 2 + (int) deltaX);
+                            setElementCentralY((int) getY() + getHeight() / 2 + (int) deltaY);
+                        }
+                        updatePage();
+                        return true;
+                    }
+                    return true;
+                }
+                case MotionEvent.ACTION_CANCEL:
+                case MotionEvent.ACTION_UP: {
+                    setPressed(false);
+                    if (movable){
+                        if (childAttributeFollow){
+                            for (Element element : childElementList){
+                                element.setAlpha(1);
+                                element.save();
+                            }
+                        }
+                        movable = false;
+                        invalidate();
+                        save();
+
+                    } else {
+                        onReleaseCallback();
+                    }
+                    invalidate();
+
+                    return true;
+                }
+                default: {
+                }
             }
         }
         return true;
