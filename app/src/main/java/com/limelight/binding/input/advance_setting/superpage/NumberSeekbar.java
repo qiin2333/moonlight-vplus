@@ -67,9 +67,12 @@ public class NumberSeekbar extends LinearLayout {
             try {
                 int maxValue = a.getInt(R.styleable.NumberSeekbar_max, 100);
                 int minValue = a.getInt(R.styleable.NumberSeekbar_min, 0);
+                int progressValue = a.getInt(R.styleable.NumberSeekbar_progress, 0);
                 numberSeekbarSeekbar.setMax(maxValue);
                 numberSeekbarSeekbar.setMin(minValue);
-                numberSeekbarSeekbar.setProgress(minValue);
+                numberSeekbarSeekbar.setProgress(progressValue);
+                numberSeekbarNumber.setText(String.valueOf(progressValue));
+
 
                 String title = a.getString(R.styleable.NumberSeekbar_text);
                 numberSeekbarTitle.setText(title);

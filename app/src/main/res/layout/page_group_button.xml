@@ -81,7 +81,7 @@
                 app:text="X"
                 app:max="100"
                 app:min="0"
-                android:progress="100" />
+                app:progress="100" />
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                 android:id="@+id/page_group_button_central_y"
                 android:layout_width="match_parent"
@@ -90,7 +90,7 @@
                 app:text="Y"
                 app:max="100"
                 app:min="0"
-                android:progress="100" />
+                app:progress="100" />
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                 android:id="@+id/page_group_button_width"
                 android:layout_width="match_parent"
@@ -99,7 +99,7 @@
                 app:text="宽"
                 app:max="100"
                 app:min="0"
-                android:progress="100" />
+                app:progress="100" />
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                 android:id="@+id/page_group_button_height"
                 android:layout_width="match_parent"
@@ -108,7 +108,7 @@
                 app:text="高"
                 app:max="100"
                 app:min="0"
-                android:progress="100" />
+                app:progress="100" />
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                 android:id="@+id/page_group_button_radius"
                 android:layout_width="match_parent"
@@ -117,7 +117,7 @@
                 app:text="边框圆角"
                 app:max="100"
                 app:min="0"
-                android:progress="0"/>
+                app:progress="0"/>
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                 android:id="@+id/page_group_button_thick"
                 android:layout_width="match_parent"
@@ -126,7 +126,7 @@
                 app:text="边框厚度"
                 app:max="10"
                 app:min="0"
-                android:progress="3"/>
+                app:progress="3"/>
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                 android:id="@+id/page_group_button_layer"
                 android:layout_width="match_parent"

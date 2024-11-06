@@ -2,6 +2,7 @@
 <com.limelight.binding.input.advance_setting.superpage.SuperPageLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="250dp"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:tag="250">
     <ScrollView
         android:layout_width="match_parent"
@@ -16,7 +17,7 @@
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="10dp">
             <LinearLayout
-                android:orientation="horizontal"
+                android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="40dp"
                 android:layout_marginVertical="5dp">
@@ -38,6 +39,15 @@
                         android:background="@drawable/right_arrow"/>
                 </LinearLayout>
             </LinearLayout>
+            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                android:id="@+id/page_edit_edit_grid_width"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginVertical="5dp"
+                app:text="网格宽度"
+                app:max="100"
+                app:min="1"
+                app:progress="1" />
             <LinearLayout
                 android:orientation="horizontal"
                 android:layout_width="match_parent"

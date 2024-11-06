@@ -302,6 +302,11 @@ public class GroupButton extends Element {
                         centralXMax = elementCentralX + rightMargin;
                         centralYMin = elementCentralY - topMargin;
                         centralYMax = elementCentralY + bottomMargin;
+                        // 编辑模式下，因为有网格的存在，这个最大值如果不是网格的倍数，会导致子按键移动到最边缘时位置发生改变
+                        centralXMin = elementController.editGridHandle(centralXMin);
+                        centralXMax = elementController.editGridHandle(centralXMax);
+                        centralYMin = elementController.editGridHandle(centralYMin);
+                        centralYMax = elementController.editGridHandle(centralYMax);
                         if (centralXNumberSeekbar != null){
                             centralXNumberSeekbar.setProgressMin(centralXMin);
                             centralXNumberSeekbar.setProgressMax(centralXMax);
@@ -576,6 +581,8 @@ public class GroupButton extends Element {
 
                     centralXMin = elementCentralX - leftMargin;
                     centralXMax = elementCentralX + rightMargin;
+                    centralXMin = elementController.editGridHandle(centralXMin);
+                    centralXMax = elementController.editGridHandle(centralXMax);
                     centralXNumberSeekbar.setProgressMin(centralXMin);
                     centralXNumberSeekbar.setProgressMax(centralXMax);
                 }
@@ -624,6 +631,10 @@ public class GroupButton extends Element {
 
                     centralYMin = elementCentralY - topMargin;
                     centralYMax = elementCentralY + bottomMargin;
+                    centralXMin = elementController.editGridHandle(centralXMin);
+                    centralXMax = elementController.editGridHandle(centralXMax);
+                    centralYNumberSeekbar.setProgressMax(centralYMin);
+                    centralYNumberSeekbar.setProgressMax(centralXMax);
                 }
 
             }

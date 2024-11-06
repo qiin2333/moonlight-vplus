@@ -124,10 +124,23 @@ public abstract class Element extends View {
     }
 
     protected void setElementCentralX(int centralX){
+        centralX = elementController.editGridHandle(centralX);
+        if (centralX > centralXMax){
+            centralX = elementController.editGridHandle(centralXMax);
+        }
+        if (elementType == ELEMENT_TYPE_GROUP_BUTTON){
+            System.out.println("centralX = " + centralX);
+        }
         innerSetElementCentralX(centralX);
     }
 
     protected void setElementCentralY(int centralY){
+
+        centralY = elementController.editGridHandle(centralY);
+        if (centralY > centralYMax){
+            centralY = elementController.editGridHandle(centralYMax);
+        }
+
         innerSetElementCentralY(centralY);
     }
 
@@ -140,6 +153,9 @@ public abstract class Element extends View {
             layoutParams.leftMargin = centralXMin - layoutParams.width/2;
         } else {
             layoutParams.leftMargin = centralX - layoutParams.width/2;
+        }
+        if (elementType == ELEMENT_TYPE_GROUP_BUTTON){
+            System.out.println("layoutParams.leftMargin = " + layoutParams.leftMargin);
         }
         //保存中心点坐标
         requestLayout();

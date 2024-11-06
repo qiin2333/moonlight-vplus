@@ -98,7 +98,7 @@
                 app:text="X"
                 app:max="100"
                 app:min="0"
-                android:progress="100" />
+                app:progress="100" />
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                 android:id="@+id/page_digital_pad_central_y"
                 android:layout_width="match_parent"
@@ -107,7 +107,7 @@
                 app:text="Y"
                 app:max="100"
                 app:min="0"
-                android:progress="100" />
+                app:progress="100" />
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                 android:id="@+id/page_digital_pad_width"
                 android:layout_width="match_parent"
@@ -116,7 +116,7 @@
                 app:text="宽"
                 app:max="100"
                 app:min="0"
-                android:progress="100" />
+                app:progress="100" />
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                 android:id="@+id/page_digital_pad_height"
                 android:layout_width="match_parent"
@@ -125,7 +125,7 @@
                 app:text="高"
                 app:max="100"
                 app:min="0"
-                android:progress="100" />
+                app:progress="100" />
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                 android:id="@+id/page_digital_pad_thick"
                 android:layout_width="match_parent"
@@ -134,7 +134,7 @@
                 app:text="边框厚度"
                 app:max="10"
                 app:min="0"
-                android:progress="3"/>
+                app:progress="3"/>
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                 android:id="@+id/page_digital_pad_layer"
                 android:layout_width="match_parent"

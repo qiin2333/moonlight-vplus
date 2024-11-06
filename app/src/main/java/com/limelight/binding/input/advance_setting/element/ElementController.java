@@ -7,7 +7,9 @@ import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.SeekBar;
 
 import com.limelight.Game;
 import com.limelight.R;
@@ -15,6 +17,7 @@ import com.limelight.binding.input.ControllerHandler;
 import com.limelight.binding.input.advance_setting.ControllerManager;
 import com.limelight.binding.input.advance_setting.PageDeviceController;
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper;
+import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
 
 import java.util.ArrayList;
@@ -38,6 +41,7 @@ public class ElementController {
     public static final String SPECIAL_KEY_MOUSE_SCROLL_UP = "SU";
     // 滚轮下滚
     public static final String SPECIAL_KEY_MOUSE_SCROLL_DOWN = "SD";
+
 
 
 
@@ -84,6 +88,9 @@ public class ElementController {
     private Mode mode = Mode.Normal;
     private SuperPageLayout pageEdit;
     private SuperPageLayout lastElementSettingPage;
+    private final int bottomViewAmount;
+    private EditGridView editGridView;
+    private int editGridWidth = 1;
     private long currentConfigId;
 
 
@@ -97,7 +104,8 @@ public class ElementController {
         this.pageDeviceController = controllerManager.getPageDeviceController();
         this.handler = new Handler(Looper.getMainLooper());
         this.pageEdit = (SuperPageLayout) LayoutInflater.from(context).inflate(R.layout.page_edit,null);
-
+        this.editGridView = new EditGridView(context);
+        this.bottomViewAmount = elementsLayout.getChildCount();
         initEditPage();
     }
 
@@ -105,14 +113,27 @@ public class ElementController {
         pageEdit.findViewById(R.id.page_edit_exit_edit_mode).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                controllerManager.getPageSuperMenuController().exitElementEditMode();
-                controllerManager.getTouchController().enableTouch(true);
-                mode = Mode.Normal;
-                for (Element element : elements){
-                    element.invalidate();
-                }
+                exitEditMode();
             }
         });
+        ((NumberSeekbar)pageEdit.findViewById(R.id.page_edit_edit_grid_width)).setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                editGridWidth = progress;
+                editGridView.setEditGridWidth(editGridWidth);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+
         pageEdit.findViewById(R.id.page_edit_add_digital_common_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -339,13 +360,13 @@ public class ElementController {
         for (int i = 0;i <= elements.size();i ++){
             if (i == elements.size()){
                 elements.add(i,element);
-                elementsLayout.addView(element,i + 1,layoutParams);
+                elementsLayout.addView(element,i + bottomViewAmount,layoutParams);
                 break;
             }
             Element elementExist = elements.get(i);
             if (elementExist.elementId  + ((long) elementExist.layer << 48 ) > element.elementId + ((long) element.layer << 48 )){
                 elements.add(i,element);
-                elementsLayout.addView(element,i + 1,layoutParams);
+                elementsLayout.addView(element,i + bottomViewAmount,layoutParams);
                 break;
             }
         }
@@ -375,13 +396,13 @@ public class ElementController {
         for (int i = 0;i <= elements.size();i ++){
             if (i == elements.size()){
                 elements.add(i,element);
-                elementsLayout.addView(element,i + 1,layoutParams);
+                elementsLayout.addView(element,i + bottomViewAmount,layoutParams);
                 break;
             }
             Element elementExist = elements.get(i);
             if (elementExist.elementId  + ((long) elementExist.layer << 48 ) > element.elementId + ((long) element.layer << 48 )){
                 elements.add(i,element);
-                elementsLayout.addView(element,i + 1,layoutParams);
+                elementsLayout.addView(element,i + bottomViewAmount,layoutParams);
                 break;
             }
         }
@@ -390,8 +411,9 @@ public class ElementController {
 
     }
 
-
-
+    protected int editGridHandle(int position){
+        return position - position%editGridWidth;
+    }
 
 
     public void toggleInfoPage(SuperPageLayout elementSettingPage){
@@ -412,13 +434,26 @@ public class ElementController {
     }
 
     public void entryEditMode(){
-
         controllerManager.getTouchController().enableTouch(false);
         mode = Mode.Edit;
+        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        layoutParams.leftMargin = 0;
+        layoutParams.topMargin = 0;
+        elementsLayout.addView(editGridView,bottomViewAmount,layoutParams);
         for (Element element : elements){
             element.invalidate();
         }
 
+    }
+
+    public void exitEditMode(){
+        controllerManager.getPageSuperMenuController().exitElementEditMode();
+        controllerManager.getTouchController().enableTouch(true);
+        mode = Mode.Normal;
+        elementsLayout.removeView(editGridView);
+        for (Element element : elements){
+            element.invalidate();
+        }
     }
 
     public Mode getMode() {

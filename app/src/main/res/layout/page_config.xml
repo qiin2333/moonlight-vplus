@@ -39,7 +39,7 @@
                     android:layout_height="25dp"
                     android:max="10"
                     android:min="1"
-                    android:progress="10"/>
+                    app:progress="10"/>
             </LinearLayout>
             <LinearLayout
                 android:orientation="horizontal"
@@ -84,7 +84,7 @@
                 app:text="触控板灵敏度"
                 app:max="500"
                 app:min="1"
-                android:progress="100" />
+                app:progress="100" />
             <LinearLayout
                 android:orientation="horizontal"
                 android:layout_width="match_parent"
