@@ -92,6 +92,8 @@ public class GroupButton extends Element {
 
     private boolean movable = false;
     private boolean layoutComplete = true;
+    private boolean resizeXBorder = true;
+    private boolean resizeYBorder = true;
 
     private long timerLongClickTimeout = 800;
     private final Runnable longClickRunnable = new Runnable() {
@@ -273,48 +275,8 @@ public class GroupButton extends Element {
         if (elementController.getMode() == ElementController.Mode.Edit){
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN: {
-                    if (childAttributeFollow){
-                        // 重新划定groupElement的边界
-                        int leftMargin = centralXMax;
-                        int bottomMargin = centralYMax;
-                        int rightMargin = centralXMax;
-                        int topMargin = centralYMax;
-                        List<Element> allElement = elementController.getElements();
-                        for (Element element : childElementList){
-                            if (!allElement.contains(element)){
-                                continue;
-                            }
-                            int elementCentralX = element.getElementCentralX();
-                            int elementCentralY = element.getElementCentralY();
-                            leftMargin = Math.min(elementCentralX - element.centralXMin, leftMargin);
-                            rightMargin = Math.min(element.centralXMax - elementCentralX, rightMargin);
-                            topMargin = Math.min(elementCentralY - element.centralYMin, topMargin);
-                            bottomMargin = Math.min(element.centralYMax - elementCentralY, bottomMargin);
-                        }
-                        int elementCentralX = getElementCentralX();
-                        int elementCentralY = getElementCentralY();
-                        leftMargin = Math.min(elementCentralX - initialCentralXMin, leftMargin);
-                        rightMargin = Math.min(initialCentralXMax - elementCentralX, rightMargin);
-                        topMargin = Math.min(elementCentralY - initialCentralYMin, topMargin);
-                        bottomMargin = Math.min(initialCentralYMax - elementCentralY, bottomMargin);
-
-                        centralXMin = elementCentralX - leftMargin;
-                        centralXMax = elementCentralX + rightMargin;
-                        centralYMin = elementCentralY - topMargin;
-                        centralYMax = elementCentralY + bottomMargin;
-                        // 编辑模式下，因为有网格的存在，这个最大值如果不是网格的倍数，会导致子按键移动到最边缘时位置发生改变
-                        centralXMin = elementController.editGridHandle(centralXMin);
-                        centralXMax = elementController.editGridHandle(centralXMax);
-                        centralYMin = elementController.editGridHandle(centralYMin);
-                        centralYMax = elementController.editGridHandle(centralYMax);
-                        if (centralXNumberSeekbar != null){
-                            centralXNumberSeekbar.setProgressMin(centralXMin);
-                            centralXNumberSeekbar.setProgressMax(centralXMax);
-                            centralYNumberSeekbar.setProgressMin(centralYMin);
-                            centralYNumberSeekbar.setProgressMax(centralYMax);
-                        }
-                    }
-
+                    resizeXBorder = true;
+                    resizeYBorder = true;
                     lastX = event.getX();
                     lastY = event.getY();
                     editColor = 0xff00f91a;
@@ -364,43 +326,8 @@ public class GroupButton extends Element {
         } else {
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN: {
-                    if (childAttributeFollow){
-                        // 重新划定groupElement的边界
-                        int leftMargin = centralXMax;
-                        int bottomMargin = centralYMax;
-                        int rightMargin = centralXMax;
-                        int topMargin = centralYMax;
-                        List<Element> allElement = elementController.getElements();
-                        for (Element element : childElementList){
-                            if (!allElement.contains(element)){
-                                continue;
-                            }
-                            int elementCentralX = element.getElementCentralX();
-                            int elementCentralY = element.getElementCentralY();
-                            leftMargin = Math.min(elementCentralX - element.centralXMin, leftMargin);
-                            rightMargin = Math.min(element.centralXMax - elementCentralX, rightMargin);
-                            topMargin = Math.min(elementCentralY - element.centralYMin, topMargin);
-                            bottomMargin = Math.min(element.centralYMax - elementCentralY, bottomMargin);
-                        }
-                        int elementCentralX = getElementCentralX();
-                        int elementCentralY = getElementCentralY();
-                        leftMargin = Math.min(elementCentralX - initialCentralXMin, leftMargin);
-                        rightMargin = Math.min(initialCentralXMax - elementCentralX, rightMargin);
-                        topMargin = Math.min(elementCentralY - initialCentralYMin, topMargin);
-                        bottomMargin = Math.min(initialCentralYMax - elementCentralY, bottomMargin);
-
-                        centralXMin = elementCentralX - leftMargin;
-                        centralXMax = elementCentralX + rightMargin;
-                        centralYMin = elementCentralY - topMargin;
-                        centralYMax = elementCentralY + bottomMargin;
-                        if (centralXNumberSeekbar != null){
-                            centralXNumberSeekbar.setProgressMin(centralXMin);
-                            centralXNumberSeekbar.setProgressMax(centralXMax);
-                            centralYNumberSeekbar.setProgressMin(centralYMin);
-                            centralYNumberSeekbar.setProgressMax(centralYMax);
-                        }
-                    }
-
+                    resizeXBorder = true;
+                    resizeYBorder = true;
                     lastX = event.getX();
                     lastY = event.getY();
 
@@ -563,30 +490,7 @@ public class GroupButton extends Element {
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-                if (childAttributeFollow){
-                    int leftMargin = centralXMax;
-                    int rightMargin = centralXMax;
-                    List<Element> allElement = elementController.getElements();
-                    for (Element element : childElementList){
-                        if (!allElement.contains(element)){
-                            continue;
-                        }
-                        int elementCentralX = element.getElementCentralX();
-                        leftMargin = Math.min(elementCentralX - element.centralXMin, leftMargin);
-                        rightMargin = Math.min(element.centralXMax - elementCentralX, rightMargin);
-                    }
-                    int elementCentralX = getElementCentralX();
-                    leftMargin = Math.min(elementCentralX - centralXMin, leftMargin);
-                    rightMargin = Math.min(centralXMax - elementCentralX, rightMargin);
-
-                    centralXMin = elementCentralX - leftMargin;
-                    centralXMax = elementCentralX + rightMargin;
-                    centralXMin = elementController.editGridHandle(centralXMin);
-                    centralXMax = elementController.editGridHandle(centralXMax);
-                    centralXNumberSeekbar.setProgressMin(centralXMin);
-                    centralXNumberSeekbar.setProgressMax(centralXMax);
-                }
-
+                resizeXBorder = true;
             }
 
             @Override
@@ -613,30 +517,7 @@ public class GroupButton extends Element {
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-                if (childAttributeFollow){
-                    int bottomMargin = centralYMax;
-                    int topMargin = centralYMax;
-                    List<Element> allElement = elementController.getElements();
-                    for (Element element : childElementList){
-                        if (!allElement.contains(element)){
-                            continue;
-                        }
-                        int elementCentralY = element.getElementCentralY();
-                        topMargin = Math.min(elementCentralY - element.centralYMin, topMargin);
-                        bottomMargin = Math.min(element.centralYMax - elementCentralY, bottomMargin);
-                    }
-                    int elementCentralY = getElementCentralY();
-                    topMargin = Math.min(elementCentralY - centralYMin, topMargin);
-                    bottomMargin = Math.min(centralYMax - elementCentralY, bottomMargin);
-
-                    centralYMin = elementCentralY - topMargin;
-                    centralYMax = elementCentralY + bottomMargin;
-                    centralXMin = elementController.editGridHandle(centralXMin);
-                    centralXMax = elementController.editGridHandle(centralXMax);
-                    centralYNumberSeekbar.setProgressMax(centralYMin);
-                    centralYNumberSeekbar.setProgressMax(centralXMax);
-                }
-
+                resizeYBorder = true;
             }
 
             @Override
@@ -958,6 +839,30 @@ public class GroupButton extends Element {
             for (Element element : childElementList){
                 element.setElementCentralX(element.getElementCentralX() + deltaX);
             }
+            if (resizeXBorder){
+                int leftMargin = centralXMax;
+                int rightMargin = centralXMax;
+                List<Element> allElement = elementController.getElements();
+                for (Element element : childElementList){
+                    if (!allElement.contains(element)){
+                        continue;
+                    }
+                    int elementCentralX = element.getElementCentralX();
+                    leftMargin = Math.min(elementCentralX - element.centralXMin, leftMargin);
+                    rightMargin = Math.min(element.centralXMax - elementCentralX, rightMargin);
+                }
+                int elementCentralX = getElementCentralX();
+                leftMargin = Math.min(elementCentralX - centralXMin, leftMargin);
+                rightMargin = Math.min(centralXMax - elementCentralX, rightMargin);
+
+                centralXMin = elementCentralX - leftMargin;
+                centralXMax = elementCentralX + rightMargin;
+                if (centralXNumberSeekbar != null){
+                    centralXNumberSeekbar.setProgressMin(centralXMin);
+                    centralXNumberSeekbar.setProgressMax(centralXMax);
+                }
+                resizeXBorder = false;
+            }
         } else {
             super.setElementCentralX(centralX);
         }
@@ -972,6 +877,30 @@ public class GroupButton extends Element {
             int deltaY = getElementCentralY() - previousY;
             for (Element element : childElementList){
                 element.setElementCentralY(element.getElementCentralY() + deltaY);
+            }
+            if (resizeYBorder){
+                int bottomMargin = centralYMax;
+                int topMargin = centralYMax;
+                List<Element> allElement = elementController.getElements();
+                for (Element element : childElementList){
+                    if (!allElement.contains(element)){
+                        continue;
+                    }
+                    int elementCentralY = element.getElementCentralY();
+                    topMargin = Math.min(elementCentralY - element.centralYMin, topMargin);
+                    bottomMargin = Math.min(element.centralYMax - elementCentralY, bottomMargin);
+                }
+                int elementCentralY = getElementCentralY();
+                topMargin = Math.min(elementCentralY - centralYMin, topMargin);
+                bottomMargin = Math.min(centralYMax - elementCentralY, bottomMargin);
+
+                centralYMin = elementCentralY - topMargin;
+                centralYMax = elementCentralY + bottomMargin;
+                if (centralYNumberSeekbar != null){
+                    centralYNumberSeekbar.setProgressMin(centralYMin);
+                    centralYNumberSeekbar.setProgressMax(centralYMax);
+                }
+                resizeYBorder = false;
             }
         } else {
             super.setElementCentralY(centralY);

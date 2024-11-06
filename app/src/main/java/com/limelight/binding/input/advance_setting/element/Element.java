@@ -128,9 +128,6 @@ public abstract class Element extends View {
         if (centralX > centralXMax){
             centralX = elementController.editGridHandle(centralXMax);
         }
-        if (elementType == ELEMENT_TYPE_GROUP_BUTTON){
-            System.out.println("centralX = " + centralX);
-        }
         innerSetElementCentralX(centralX);
     }
 
@@ -153,9 +150,6 @@ public abstract class Element extends View {
             layoutParams.leftMargin = centralXMin - layoutParams.width/2;
         } else {
             layoutParams.leftMargin = centralX - layoutParams.width/2;
-        }
-        if (elementType == ELEMENT_TYPE_GROUP_BUTTON){
-            System.out.println("layoutParams.leftMargin = " + layoutParams.leftMargin);
         }
         //保存中心点坐标
         requestLayout();
