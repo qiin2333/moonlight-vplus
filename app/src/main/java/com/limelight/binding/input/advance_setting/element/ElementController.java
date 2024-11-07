@@ -10,13 +10,14 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.SeekBar;
+import android.widget.Toast;
 
 import com.limelight.Game;
 import com.limelight.R;
 import com.limelight.binding.input.ControllerHandler;
 import com.limelight.binding.input.advance_setting.ControllerManager;
 import com.limelight.binding.input.advance_setting.PageDeviceController;
-import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper;
+import com.limelight.binding.input.advance_setting.config.PageConfigController;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
 
@@ -28,19 +29,23 @@ import java.util.Map;
 public class ElementController {
 
     // 空按键
-    public static final String SPECIAL_KEY_NULL = "null";
+    private static final String SPECIAL_KEY_NULL = "null";
     // 手柄左摇杆
-    public static final String SPECIAL_KEY_GAMEPAD_LEFT_STICK = "LS";
+    private static final String SPECIAL_KEY_GAMEPAD_LEFT_STICK = "LS";
     // 手柄右摇杆
-    public static final String SPECIAL_KEY_GAMEPAD_RIGHT_STICK = "RS";
+    private static final String SPECIAL_KEY_GAMEPAD_RIGHT_STICK = "RS";
     // 手柄左触发器
-    public static final String SPECIAL_KEY_GAMEPAD_LEFT_TRIGGER = "lt";
+    private static final String SPECIAL_KEY_GAMEPAD_LEFT_TRIGGER = "lt";
     // 手柄右触发器
-    public static final String SPECIAL_KEY_GAMEPAD_RIGHT_TRIGGER = "rt";
+    private static final String SPECIAL_KEY_GAMEPAD_RIGHT_TRIGGER = "rt";
     // 滚轮上滚
-    public static final String SPECIAL_KEY_MOUSE_SCROLL_UP = "SU";
+    private static final String SPECIAL_KEY_MOUSE_SCROLL_UP = "SU";
     // 滚轮下滚
-    public static final String SPECIAL_KEY_MOUSE_SCROLL_DOWN = "SD";
+    private static final String SPECIAL_KEY_MOUSE_SCROLL_DOWN = "SD";
+    private static final String SPECIAL_KEY_MOUSE_MODE_SWITCH = "MMS";
+    private static final String SPECIAL_KEY_MOUSE_ENABLE_SWITCH = "MES";
+    private static final String SPECIAL_KEY_PC_KEYBOARD_SWITCH = "PKS";
+    private static final String SPECIAL_KEY_ANDROID_KEYBOARD_SWITCH = "AKS";
 
 
 
@@ -72,6 +77,7 @@ public class ElementController {
     private final Context context;
     private final Game game;
     private final Handler handler;
+    private Toast currentToast;
 
     private final ControllerManager controllerManager;
     private final ControllerHandler controllerHandler;
@@ -92,6 +98,14 @@ public class ElementController {
     private EditGridView editGridView;
     private int editGridWidth = 1;
     private long currentConfigId;
+
+    public void showToast(String message) {
+        if (currentToast != null) {
+            currentToast.cancel();
+        }
+        currentToast = Toast.makeText(context, message, Toast.LENGTH_SHORT);
+        currentToast.show();
+    }
 
 
 
@@ -609,6 +623,85 @@ public class ElementController {
             return new SendEventHandler() {
                 @Override
                 public void sendEvent(boolean down) {
+                }
+
+                @Override
+                public void sendEvent(int analog1, int analog2) {
+
+                }
+            };
+        } else if (key.equals(SPECIAL_KEY_MOUSE_MODE_SWITCH)){
+            return new SendEventHandler() {
+                @Override
+                public void sendEvent(boolean down) {
+                    if (down){
+                        boolean mouseMode = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, PageConfigController.COLUMN_BOOLEAN_TOUCH_MODE));
+                        ContentValues contentValues = new ContentValues();
+                        contentValues.put(PageConfigController.COLUMN_BOOLEAN_TOUCH_MODE,String.valueOf(!mouseMode));
+                        //保存到数据库中
+                        controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId,contentValues);
+                        //做实际的设置
+                        controllerManager.getTouchController().setTouchMode(!mouseMode);
+                        if (mouseMode){
+                            showToast("多点触控模式");
+                        } else {
+                            showToast("触控板模式");
+                        }
+                    }
+
+                }
+
+                @Override
+                public void sendEvent(int analog1, int analog2) {
+
+                }
+            };
+        } else if (key.equals(SPECIAL_KEY_PC_KEYBOARD_SWITCH)){
+            return new SendEventHandler() {
+                @Override
+                public void sendEvent(boolean down) {
+                    if (down){
+                        controllerManager.getKeyboardUIController().toggle();
+                    }
+                }
+
+                @Override
+                public void sendEvent(int analog1, int analog2) {
+
+                }
+            };
+        } else if (key.equals(SPECIAL_KEY_ANDROID_KEYBOARD_SWITCH)){
+            return new SendEventHandler() {
+                @Override
+                public void sendEvent(boolean down) {
+                    if (down){
+                        game.toggleKeyboard();
+                    }
+                }
+
+                @Override
+                public void sendEvent(int analog1, int analog2) {
+
+                }
+            };
+        } else if (key.equals(SPECIAL_KEY_MOUSE_ENABLE_SWITCH)){
+            return new SendEventHandler() {
+                @Override
+                public void sendEvent(boolean down) {
+                    if (down){
+                        boolean mouseEnable = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, PageConfigController.COLUMN_BOOLEAN_TOUCH_ENABLE));
+                        ContentValues contentValues = new ContentValues();
+                        contentValues.put(PageConfigController.COLUMN_BOOLEAN_TOUCH_ENABLE,String.valueOf(!mouseEnable));
+                        //保存到数据库中
+                        controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId,contentValues);
+                        //做实际的设置
+                        controllerManager.getTouchController().enableTouch(!mouseEnable);
+                        if (!mouseEnable){
+                            showToast("开启触控");
+                        } else {
+                            showToast("关闭触控");
+                        }
+                    }
                 }
 
                 @Override

@@ -50,14 +50,6 @@ public class PageSuperMenuController {
             }
         });
 
-        superMenuPage.findViewById(R.id.page_super_menu_keyboard).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                controllerManager.getKeyboardUIController().toggle();
-                controllerManager.getSuperPagesController().close();
-            }
-        });
-
     }
 
     public void exitElementEditMode(){
