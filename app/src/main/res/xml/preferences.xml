@@ -288,12 +288,16 @@
             android:title="王冠的超级功能" />
         <ListPreference
             android:key="export_super_config"
-            android:title="导出配置文件"
+            android:title="导出配置"
             android:summary="导出自定义按钮的和串流内设置的配置文件" />
         <Preference
             android:key="import_super_config"
-            android:title="导入配置文件"
+            android:title="导入配置"
             android:summary="导入自定义按钮的和串流内设置的配置文件" />
+        <ListPreference
+            android:key="merge_super_config"
+            android:title="合并配置"
+            android:summary="将新的配置的按键合并到现有配置中" />
         <Preference
             android:key="about_author"
             android:title="这是 V+ X 皇家版本"

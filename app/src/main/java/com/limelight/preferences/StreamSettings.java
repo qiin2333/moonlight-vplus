@@ -782,6 +782,35 @@ public class StreamSettings extends Activity {
             }
 
             addCustomResolutionsEntries();
+            ListPreference mergePreference = (ListPreference) findPreference(PreferenceConfiguration.MERGE_CONFIG_STRING);
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                SuperConfigDatabaseHelper superConfigDatabaseHelper = new SuperConfigDatabaseHelper(getContext());
+                List<Long> configIdList = superConfigDatabaseHelper.queryAllConfigIds();
+                Map<String, String> configMap = new HashMap<>();
+                for (Long configId : configIdList){
+                    String configName = (String) superConfigDatabaseHelper.queryConfigAttribute(configId, PageConfigController.COLUMN_STRING_CONFIG_NAME);
+                    String configIdString = String.valueOf(configId);
+                    configMap.put(configIdString,configName);
+                }
+                CharSequence[] nameEntries = configMap.values().toArray(new String[0]);
+                CharSequence[] nameEntryValues = configMap.keySet().toArray(new String[0]);
+                mergePreference.setEntries(nameEntries);
+                mergePreference.setEntryValues(nameEntryValues);
+
+                mergePreference.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+                    @Override
+                    public boolean onPreferenceChange(Preference preference, Object newValue) {
+                        exportConfigString = (String) newValue;
+                        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                        intent.addCategory(Intent.CATEGORY_OPENABLE);
+                        intent.setType("*/*");
+                        startActivityForResult(intent, 3);
+                        return false;
+                    }
+                });
+
+            }
+
             findPreference(PreferenceConfiguration.ABOUT_AUTHOR).setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
                 @Override
                 public boolean onPreferenceClick(Preference preference) {
@@ -861,6 +890,40 @@ public class StreamSettings extends Activity {
                     }
                 }
             }
+
+            if (requestCode == 3 && resultCode == Activity.RESULT_OK) {
+                Uri importUri = data.getData();
+
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                    try (InputStream inputStream = getContext().getContentResolver().openInputStream(importUri);
+                         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+                        StringBuilder stringBuilder = new StringBuilder();
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            stringBuilder.append(line).append("\n");
+                        }
+                        String fileContent = stringBuilder.toString();
+                        SuperConfigDatabaseHelper superConfigDatabaseHelper = new SuperConfigDatabaseHelper(getContext());
+                        int errorCode = superConfigDatabaseHelper.mergeConfig(fileContent,Long.parseLong(exportConfigString));
+                        switch (errorCode){
+                            case 0:
+                                Toast.makeText(getContext(),"合并配置文件成功",Toast.LENGTH_SHORT).show();
+                                break;
+                            case -1:
+                            case -2:
+                                Toast.makeText(getContext(),"读取配置文件失败",Toast.LENGTH_SHORT).show();
+                                break;
+                            case -3:
+                                Toast.makeText(getContext(),"配置文件版本不匹配",Toast.LENGTH_SHORT).show();
+                                break;
+                        }
+
+                    } catch (IOException e) {
+                        Toast.makeText(getContext(),"读取配置文件失败",Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }
+
         }
 
     }

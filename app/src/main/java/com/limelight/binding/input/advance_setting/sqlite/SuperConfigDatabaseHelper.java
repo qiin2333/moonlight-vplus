@@ -16,7 +16,6 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
-import com.google.gson.reflect.TypeToken;
 import com.limelight.binding.input.advance_setting.config.PageConfigController;
 import com.limelight.binding.input.advance_setting.element.Element;
 import com.limelight.utils.MathUtils;
@@ -640,15 +639,143 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         ContentValues settingValues = gson.fromJson(settingString, ContentValues.class);
         ContentValues[] elements = gson.fromJson(elementsString, ContentValues[].class);
 
+        // 将组按键及其子按键存储在MAP中
+        Map<ContentValues,List<ContentValues>> groupButtonMaps = new HashMap<>();
+        for (ContentValues groupButtonElement : elements){
+            if ((long)groupButtonElement.get(Element.COLUMN_INT_ELEMENT_TYPE) == Element.ELEMENT_TYPE_GROUP_BUTTON){
+                List<ContentValues> childElements = new ArrayList<>();
+
+                String[] childElementStringIds = ((String) groupButtonElement.get(Element.COLUMN_STRING_ELEMENT_VALUE)).split(",");
+                // 按键组的值，子按键们的ID
+                for (String childElementStringId : childElementStringIds){
+                    long childElementId = Long.parseLong(childElementStringId);
+                    for (ContentValues element : elements){
+                        if ((long)element.get(Element.COLUMN_LONG_ELEMENT_ID) == childElementId){
+                            childElements.add(element);
+                            break;
+                        }
+                    }
+                }
+                groupButtonMaps.put(groupButtonElement,childElements);
+
+            }
+        }
+
+
         Long newConfigId = System.currentTimeMillis();
         settingValues.put(PageConfigController.COLUMN_LONG_CONFIG_ID,newConfigId);
         insertConfig(settingValues);
+
+        // 更新所有按键的ID
+        long elementId = System.currentTimeMillis();
         for (ContentValues contentValues : elements){
+            contentValues.put(Element.COLUMN_LONG_ELEMENT_ID,elementId ++);
             contentValues.put(Element.COLUMN_LONG_CONFIG_ID,newConfigId);
             insertElement(contentValues);
         }
+
+        // 更新组按键的值
+        for (Map.Entry<ContentValues, List<ContentValues>> groupButtonMap : groupButtonMaps.entrySet()) {
+            String newValue = "-1";
+            for (ContentValues childElement : groupButtonMap.getValue()){
+                newValue = newValue + "," + childElement.get(Element.COLUMN_LONG_ELEMENT_ID);
+            }
+            ContentValues groupButton = groupButtonMap.getKey();
+            groupButton.put(Element.COLUMN_STRING_ELEMENT_VALUE,newValue);
+            updateElement(  (Long) groupButton.get(Element.COLUMN_LONG_CONFIG_ID),
+                    (Long) groupButton.get(Element.COLUMN_LONG_ELEMENT_ID),
+                    groupButton);
+        }
+
         return 0;
     }
+
+    public int mergeConfig(String configString,Long existConfigId){
+        GsonBuilder gsonBuilder = new GsonBuilder();
+        gsonBuilder.registerTypeAdapter(ContentValues.class, new ContentValuesSerializer());
+        Gson gson = gsonBuilder.create();
+        ExportFile exportFile;
+        int version;
+        String settingString;
+        String elementsString;
+        String md5;
+        try {
+            exportFile = gson.fromJson(configString, ExportFile.class);
+            version = exportFile.getVersion();
+            settingString = exportFile.getSettings();
+            elementsString = exportFile.getElements();
+            md5 = exportFile.getMd5();
+        } catch (Exception e){
+            return -1;
+        }
+
+
+
+        if (!md5.equals(MathUtils.computeMD5(version + settingString + elementsString))){
+            return -2;
+        }
+        if (version == DATABASE_OLD_VERSION_1){
+            // 正则表达式
+            String regex = "(\"element_type\":)\\s*51";
+            Pattern pattern = Pattern.compile(regex);
+            Matcher matcher = pattern.matcher(elementsString);
+            // 检查是否有匹配项
+            if (matcher.find()) {
+                // 替换51为3
+                elementsString = matcher.replaceAll("$13");// 输出: {"element_type":3, "other_key":123}
+            }
+        }else if (version != DATABASE_VERSION){
+            return -3;
+        }
+
+        ContentValues[] elements = gson.fromJson(elementsString, ContentValues[].class);
+
+        // 将组按键及其子按键存储在MAP中
+        Map<ContentValues,List<ContentValues>> groupButtonMaps = new HashMap<>();
+        for (ContentValues groupButtonElement : elements){
+            if ((long)groupButtonElement.get(Element.COLUMN_INT_ELEMENT_TYPE) == Element.ELEMENT_TYPE_GROUP_BUTTON){
+                List<ContentValues> childElements = new ArrayList<>();
+
+                String[] childElementStringIds = ((String) groupButtonElement.get(Element.COLUMN_STRING_ELEMENT_VALUE)).split(",");
+                // 按键组的值，子按键们的ID
+                for (String childElementStringId : childElementStringIds){
+                    long childElementId = Long.parseLong(childElementStringId);
+                    for (ContentValues element : elements){
+                        if ((long)element.get(Element.COLUMN_LONG_ELEMENT_ID) == childElementId){
+                            childElements.add(element);
+                            break;
+                        }
+                    }
+                }
+                groupButtonMaps.put(groupButtonElement,childElements);
+
+            }
+        }
+
+        // 更新所有按键的ID
+        long elementId = System.currentTimeMillis();
+        for (ContentValues contentValues : elements){
+            contentValues.put(Element.COLUMN_LONG_ELEMENT_ID,elementId ++);
+            contentValues.put(Element.COLUMN_LONG_CONFIG_ID,existConfigId);
+            insertElement(contentValues);
+        }
+
+        // 更新组按键的值
+        for (Map.Entry<ContentValues, List<ContentValues>> groupButtonMap : groupButtonMaps.entrySet()) {
+            String newValue = "-1";
+            for (ContentValues childElement : groupButtonMap.getValue()){
+                newValue = newValue + "," + childElement.get(Element.COLUMN_LONG_ELEMENT_ID);
+            }
+            ContentValues groupButton = groupButtonMap.getKey();
+            groupButton.put(Element.COLUMN_STRING_ELEMENT_VALUE,newValue);
+            updateElement(  (Long) groupButton.get(Element.COLUMN_LONG_CONFIG_ID),
+                            (Long) groupButton.get(Element.COLUMN_LONG_ELEMENT_ID),
+                            groupButton);
+        }
+
+        return 0;
+    }
+
 
 }
 

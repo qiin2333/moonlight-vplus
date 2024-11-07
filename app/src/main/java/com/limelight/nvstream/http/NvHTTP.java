@@ -1,7 +1,7 @@
 package com.limelight.nvstream.http;
 
-import android.os.Build;
-
+import android.content.Context;
+import android.provider.Settings;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -62,8 +62,10 @@ import okhttp3.ResponseBody;
 
 
 public class NvHTTP {
+    private Context context;
     private String uniqueId;
     private PairingManager pm;
+    private String clientName;
 
     private static final int DEFAULT_HTTPS_PORT = 47984;
     public static final int DEFAULT_HTTP_PORT = 47989;
@@ -204,6 +206,8 @@ public class NvHTTP {
         // Use the same UID for all Moonlight clients so we can quit games
         // started by other Moonlight clients.
         this.uniqueId = "0123456789ABCDEF";
+
+        this.clientName = Settings.Global.getString(context.getApplicationContext().getContentResolver(), "device_name");
 
         this.serverCert = serverCert;
 
@@ -415,6 +419,7 @@ public class NvHTTP {
                 .addPathSegment(path)
                 .query(query)
                 .addQueryParameter("uniqueid", uniqueId)
+                .addQueryParameter("clientname", clientName)
                 .addQueryParameter("uuid", UUID.randomUUID().toString())
                 .build();
     }
