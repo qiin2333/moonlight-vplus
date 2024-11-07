@@ -169,7 +169,11 @@ public class DigitalCombineButton extends Element {
     protected void onElementDraw(Canvas canvas) {
 
         // 文字
-        paintText.setTextSize(getPercent(getElementWidth(), 25));
+        int elementWidth = getElementWidth();
+        int elementHeight = getElementHeight();
+        float textSize = getPercent(elementWidth, 25);
+        textSize = Math.min(textSize,getPercent(elementHeight,80));
+        paintText.setTextSize(textSize);
         paintText.setColor(isPressed() ? pressedColor : normalColor);
         // 边框
         paintBorder.setStrokeWidth(thick);
@@ -185,7 +189,7 @@ public class DigitalCombineButton extends Element {
         // 绘制边框
         canvas.drawRoundRect(rect, radius, radius, paintBorder);
         // 绘制文字
-        canvas.drawText(text, getPercent(getElementWidth(), 50), getPercent(getElementHeight(), 63), paintText);
+        canvas.drawText(text, getPercent(elementWidth, 50), getPercent(elementHeight, 63), paintText);
 
         if (elementController.getMode() == ElementController.Mode.Edit){
             // 绘画范围
