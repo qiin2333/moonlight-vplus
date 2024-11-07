@@ -35,18 +35,6 @@
                 android:layout_height="40dp"
                 android:layout_marginVertical="5dp">
                 <CheckBox
-                    android:id="@+id/page_group_button_child_attribute_follow"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:text="子按键属性跟随"
-                    android:textColor="#B3FFFFFF"/>
-            </LinearLayout>
-            <LinearLayout
-                android:orientation="horizontal"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
-                <CheckBox
                     android:id="@+id/page_group_button_child_visible"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
@@ -73,6 +61,18 @@
                     android:background="@drawable/enabled_square"
                     android:textSize="15dp" />
             </LinearLayout>
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginVertical="5dp">
+                <CheckBox
+                    android:id="@+id/page_group_button_child_position_attribute_follow"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:text="位置属性跟随"
+                    android:textColor="#B3FFFFFF"/>
+            </LinearLayout>
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                 android:id="@+id/page_group_button_central_x"
                 android:layout_width="match_parent"
@@ -91,6 +91,18 @@
                 app:max="100"
                 app:min="0"
                 app:progress="100" />
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginVertical="5dp">
+                <CheckBox
+                    android:id="@+id/page_group_button_child_other_attribute_follow"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:text="其他属性跟随"
+                    android:textColor="#B3FFFFFF"/>
+            </LinearLayout>
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                 android:id="@+id/page_group_button_width"
                 android:layout_width="match_parent"

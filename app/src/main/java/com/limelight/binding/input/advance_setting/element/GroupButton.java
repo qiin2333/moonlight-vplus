@@ -15,7 +15,6 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.SeekBar;
 import android.widget.Toast;
 
@@ -80,7 +79,8 @@ public class GroupButton extends Element {
 
     private float lastX;
     private float lastY;
-    private boolean childAttributeFollow = true;
+    private boolean childPositionAttributeFollow = true;
+    private boolean childOtherAttributeFollow = false;
     private final int initialCentralXMax;
     private final int initialCentralXMin;
     private final int initialCentralYMax;
@@ -251,7 +251,7 @@ public class GroupButton extends Element {
         System.out.println("onLongClickCallback");
         listener.onLongClick();
         movable = true;
-        if (childAttributeFollow){
+        if (childPositionAttributeFollow){
             for (Element element : childElementList){
                 element.setAlpha(0.5f);
             }
@@ -308,7 +308,7 @@ public class GroupButton extends Element {
                 case MotionEvent.ACTION_CANCEL:
                 case MotionEvent.ACTION_UP: {
                     if (movable){
-                        if (childAttributeFollow){
+                        if (childPositionAttributeFollow){
                             for (Element element : childElementList){
                                 element.save();
                             }
@@ -365,7 +365,7 @@ public class GroupButton extends Element {
                 case MotionEvent.ACTION_UP: {
                     setPressed(false);
                     if (movable){
-                        if (childAttributeFollow){
+                        if (childPositionAttributeFollow){
                             for (Element element : childElementList){
                                 element.setAlpha(1);
                                 element.save();
@@ -435,7 +435,8 @@ public class GroupButton extends Element {
         NumberSeekbar widthNumberSeekbar = groupButtonPage.findViewById(R.id.page_group_button_width);
         NumberSeekbar heightNumberSeekbar = groupButtonPage.findViewById(R.id.page_group_button_height);
         NumberSeekbar radiusNumberSeekbar = groupButtonPage.findViewById(R.id.page_group_button_radius);
-        CheckBox childAttributeFollowCheckBox = groupButtonPage.findViewById(R.id.page_group_button_child_attribute_follow);
+        CheckBox childPositonAttributeFollowCheckBox = groupButtonPage.findViewById(R.id.page_group_button_child_position_attribute_follow);
+        CheckBox childOtherAttributeFollowCheckBox = groupButtonPage.findViewById(R.id.page_group_button_child_other_attribute_follow);
         CheckBox childVisibleCheckBox = groupButtonPage.findViewById(R.id.page_group_button_child_visible);
         ElementEditText textElementEditText = groupButtonPage.findViewById(R.id.page_group_button_text);
         NumberSeekbar thickNumberSeekbar = groupButtonPage.findViewById(R.id.page_group_button_thick);
@@ -455,18 +456,25 @@ public class GroupButton extends Element {
             }
         });
 
-        childAttributeFollowCheckBox.setChecked(childAttributeFollow);
-        childAttributeFollowCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        childPositonAttributeFollowCheckBox.setChecked(childPositionAttributeFollow);
+        childPositonAttributeFollowCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                childAttributeFollow = isChecked;
-                if (!childAttributeFollow){
+                childPositionAttributeFollow = isChecked;
+                if (!childPositionAttributeFollow){
                     centralXMax = initialCentralXMax;
                     centralXMin = initialCentralXMin;
                     centralYMax = initialCentralYMax;
                     centralYMin = initialCentralYMin;
                 }
 
+            }
+        });
+        childOtherAttributeFollowCheckBox.setChecked(childOtherAttributeFollow);
+        childOtherAttributeFollowCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                childOtherAttributeFollow = isChecked;
             }
         });
 
@@ -499,7 +507,7 @@ public class GroupButton extends Element {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                if (childAttributeFollow){
+                if (childPositionAttributeFollow){
                     for (Element element : childElementList){
                         element.save();
                     }
@@ -526,7 +534,7 @@ public class GroupButton extends Element {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                if (childAttributeFollow){
+                if (childPositionAttributeFollow){
                     for (Element element : childElementList){
                         element.save();
                     }
@@ -555,7 +563,7 @@ public class GroupButton extends Element {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
-                if (childAttributeFollow){
+                if (childOtherAttributeFollow){
                     for (Element element : childElementList){
                         element.save();
                     }
@@ -583,7 +591,7 @@ public class GroupButton extends Element {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
-                if (childAttributeFollow){
+                if (childOtherAttributeFollow){
                     for (Element element : childElementList){
                         element.save();
                     }
@@ -608,7 +616,7 @@ public class GroupButton extends Element {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                if (childAttributeFollow){
+                if (childOtherAttributeFollow){
                     for (Element element : childElementList){
                         element.save();
                     }
@@ -631,7 +639,7 @@ public class GroupButton extends Element {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                if (childAttributeFollow){
+                if (childOtherAttributeFollow){
                     for (Element element : childElementList){
                         element.save();
                     }
@@ -654,7 +662,7 @@ public class GroupButton extends Element {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 setElementLayer(seekBar.getProgress());
-                if (childAttributeFollow){
+                if (childOtherAttributeFollow){
                     for (Element element : childElementList){
                         element.save();
                     }
@@ -671,7 +679,7 @@ public class GroupButton extends Element {
             public void textChanged(String text) {
                 if (text.matches("^[A-F0-9]{8}$")){
                     setElementNormalColor((int) Long.parseLong(text, 16));
-                    if (childAttributeFollow){
+                    if (childOtherAttributeFollow){
                         for (Element element : childElementList){
                             element.save();
                         }
@@ -689,7 +697,7 @@ public class GroupButton extends Element {
             public void textChanged(String text) {
                 if (text.matches("^[A-F0-9]{8}$")){
                     setElementPressedColor((int) Long.parseLong(text, 16));
-                    if (childAttributeFollow){
+                    if (childOtherAttributeFollow){
                         for (Element element : childElementList){
                             element.save();
                         }
@@ -707,7 +715,7 @@ public class GroupButton extends Element {
             public void textChanged(String text) {
                 if (text.matches("^[A-F0-9]{8}$")){
                     setElementBackgroundColor((int) Long.parseLong(text, 16));
-                    if (childAttributeFollow){
+                    if (childOtherAttributeFollow){
                         for (Element element : childElementList){
                             element.save();
                         }
@@ -836,7 +844,7 @@ public class GroupButton extends Element {
 
     @Override
     protected void setElementCentralX(int centralX) {
-        if (childAttributeFollow){
+        if (childPositionAttributeFollow){
             int previousX = getElementCentralX();
             super.setElementCentralX(centralX);
             int deltaX = getElementCentralX() - previousX;
@@ -875,7 +883,7 @@ public class GroupButton extends Element {
 
     @Override
     protected void setElementCentralY(int centralY) {
-        if (childAttributeFollow){
+        if (childPositionAttributeFollow){
             int previousY = getElementCentralY();
             super.setElementCentralY(centralY);
             int deltaY = getElementCentralY() - previousY;
@@ -915,7 +923,7 @@ public class GroupButton extends Element {
     @Override
     protected void setElementWidth(int width) {
         super.setElementWidth(width);
-        if (childAttributeFollow){
+        if (childOtherAttributeFollow){
             for (Element element : childElementList){
                 switch (element.elementType){
                     case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
@@ -935,7 +943,7 @@ public class GroupButton extends Element {
     @Override
     protected void setElementHeight(int height) {
         super.setElementHeight(height);
-        if (childAttributeFollow){
+        if (childOtherAttributeFollow){
             for (Element element : childElementList){
                 switch (element.elementType){
                     case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
@@ -961,7 +969,7 @@ public class GroupButton extends Element {
     protected void setElementRadius(int radius) {
         this.radius = radius;
         invalidate();
-        if (childAttributeFollow){
+        if (childOtherAttributeFollow){
             for (Element element : childElementList){
                 switch (element.elementType){
                     case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
@@ -986,7 +994,7 @@ public class GroupButton extends Element {
     protected void setElementThick(int thick) {
         this.thick = thick;
         invalidate();
-        if (childAttributeFollow){
+        if (childOtherAttributeFollow){
             for (Element element : childElementList){
                 switch (element.elementType){
                     case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
@@ -1025,7 +1033,7 @@ public class GroupButton extends Element {
 
     @Override
     protected void setElementLayer(int layer) {
-        if (childAttributeFollow){
+        if (childOtherAttributeFollow){
             for (Element element : childElementList){
                 element.setElementLayer(layer);
             }
@@ -1036,7 +1044,7 @@ public class GroupButton extends Element {
     protected void setElementNormalColor(int normalColor) {
         this.normalColor = normalColor;
         invalidate();
-        if (childAttributeFollow){
+        if (childOtherAttributeFollow){
             for (Element element : childElementList){
                 switch (element.elementType){
                     case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
@@ -1076,7 +1084,7 @@ public class GroupButton extends Element {
     protected void setElementPressedColor(int pressedColor) {
         this.pressedColor = pressedColor;
         invalidate();
-        if (childAttributeFollow){
+        if (childOtherAttributeFollow){
             for (Element element : childElementList){
                 switch (element.elementType){
                     case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
@@ -1116,7 +1124,7 @@ public class GroupButton extends Element {
     protected void setElementBackgroundColor(int backgroundColor) {
         this.backgroundColor = backgroundColor;
         invalidate();
-        if (childAttributeFollow){
+        if (childOtherAttributeFollow){
             for (Element element : childElementList){
                 switch (element.elementType){
                     case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
