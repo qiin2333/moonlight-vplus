@@ -184,6 +184,9 @@ public class DigitalCommonButton extends Element {
     }
 
     private void checkMovementForAllButtons(float x, float y) {
+        if (inRange(x,y)){
+            return;
+        }
         for (Element element : elementController.getElements()) {
             if (element != this && element instanceof DigitalCommonButton && element.getVisibility() == VISIBLE) {
                 ((DigitalCommonButton) element).checkMovement(x, y, this);
