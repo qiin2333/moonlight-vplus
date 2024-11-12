@@ -1,7 +1,7 @@
 package com.limelight.nvstream.http;
 
-import android.os.Build;
-
+import android.content.Context;
+import android.provider.Settings;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -62,8 +62,10 @@ import okhttp3.ResponseBody;
 
 
 public class NvHTTP {
+    private Context context;
     private String uniqueId;
     private PairingManager pm;
+    private String clientName;
 
     private static final int DEFAULT_HTTPS_PORT = 47984;
     public static final int DEFAULT_HTTP_PORT = 47989;
@@ -204,6 +206,8 @@ public class NvHTTP {
         // Use the same UID for all Moonlight clients so we can quit games
         // started by other Moonlight clients.
         this.uniqueId = "0123456789ABCDEF";
+
+        this.clientName = Settings.Global.getString(context.getApplicationContext().getContentResolver(), "device_name");
 
         this.serverCert = serverCert;
 
@@ -415,6 +419,7 @@ public class NvHTTP {
                 .addPathSegment(path)
                 .query(query)
                 .addQueryParameter("uniqueid", uniqueId)
+                .addQueryParameter("clientname", clientName)
                 .addQueryParameter("uuid", UUID.randomUUID().toString())
                 .build();
     }
@@ -587,6 +592,12 @@ public class NvHTTP {
         }
     }
 
+    /**
+     * Get an app by ID
+     * @param appId The ID of the app
+     * @see #getAppByName(String) for alternative.
+     * @return app details, or null if no app with that ID exists
+     */
     public NvApp getAppById(int appId) throws IOException, XmlPullParserException {
         LinkedList<NvApp> appList = getAppList();
         for (NvApp appFromList : appList) {
@@ -596,11 +607,16 @@ public class NvHTTP {
         }
         return null;
     }
-    
-    /* NOTE: Only use this function if you know what you're doing.
-     * It's totally valid to have two apps named the same thing,
-     * or even nothing at all! Look apps up by ID if at all possible
-     * using the above function */
+
+    /**
+     * Get an app by name
+     * NOTE: It is perfectly valid for multiple apps to have the same name,
+     * this function will only return the first one it finds.
+     * Consider using getAppById instead.
+     * @param appName The name of the app
+     * @see #getAppById(int) for alternative.
+     * @return app details, or null if no app with that name exists
+     */
     public NvApp getAppByName(String appName) throws IOException, XmlPullParserException {
         LinkedList<NvApp> appList = getAppList();
         for (NvApp appFromList : appList) {
