@@ -129,7 +129,7 @@ public class ServerHelper {
                 String message;
                 try {
                     httpConn = new NvHTTP(ServerHelper.getCurrentAddressFromComputer(computer), computer.httpsPort,
-                            managerBinder.getUniqueId(), computer.serverCert, PlatformBinding.getCryptoProvider(parent));
+                            managerBinder.getUniqueId(), "", computer.serverCert, PlatformBinding.getCryptoProvider(parent));
                     if (httpConn.pcSleep()) {
                         message = parent.getResources().getString(R.string.pcview_menu_sleep_success);
                     } else {
@@ -174,7 +174,7 @@ public class ServerHelper {
                 String message;
                 try {
                     httpConn = new NvHTTP(ServerHelper.getCurrentAddressFromComputer(computer), computer.httpsPort,
-                            managerBinder.getUniqueId(), computer.serverCert, PlatformBinding.getCryptoProvider(parent));
+                            managerBinder.getUniqueId(), "", computer.serverCert, PlatformBinding.getCryptoProvider(parent));
                     if (httpConn.quitApp()) {
                         message = parent.getResources().getString(R.string.applist_quit_success) + " " + app.getAppName();
                     } else {

@@ -1,6 +1,5 @@
 package com.limelight.nvstream.http;
 
-import android.content.Context;
 import android.provider.Settings;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -62,7 +61,6 @@ import okhttp3.ResponseBody;
 
 
 public class NvHTTP {
-    private Context context;
     private String uniqueId;
     private PairingManager pm;
     private String clientName;
@@ -202,12 +200,12 @@ public class NvHTTP {
         return new HttpUrl.Builder().scheme("https").host(baseUrlHttp.host()).port(httpsPort).build();
     }
     
-    public NvHTTP(ComputerDetails.AddressTuple address, int httpsPort, String uniqueId, X509Certificate serverCert, LimelightCryptoProvider cryptoProvider) throws IOException {
+    public NvHTTP(ComputerDetails.AddressTuple address, int httpsPort, String uniqueId, String clientName, X509Certificate serverCert, LimelightCryptoProvider cryptoProvider) throws IOException {
         // Use the same UID for all Moonlight clients so we can quit games
         // started by other Moonlight clients.
         this.uniqueId = "0123456789ABCDEF";
 
-        this.clientName = Settings.Global.getString(context.getApplicationContext().getContentResolver(), "device_name");
+        if (!clientName.isEmpty()) this.clientName = clientName;
 
         this.serverCert = serverCert;
 

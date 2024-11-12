@@ -46,6 +46,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
+import android.provider.Settings;
 import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -133,6 +134,8 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
     private final static int GAMESTREAM_EOL_ID = 11;
     private final static int SLEEP_ID = 12;
 
+    public String clientName;
+
     private void initializeViews() {
         setContentView(R.layout.activity_pc_view);
 
@@ -142,6 +145,8 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             setShouldDockBigOverlays(false);
         }
+
+        clientName = Settings.Global.getString(this.getContentResolver(), "device_name");
 
         Glide.with(this)
             .load(getBackgroundImageUrl()).skipMemoryCache(true).diskCacheStrategy(DiskCacheStrategy.NONE)
@@ -440,7 +445,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                     stopComputerUpdates(true);
 
                     httpConn = new NvHTTP(ServerHelper.getCurrentAddressFromComputer(computer),
-                            computer.httpsPort, managerBinder.getUniqueId(), computer.serverCert,
+                            computer.httpsPort, managerBinder.getUniqueId(), clientName, computer.serverCert,
                             PlatformBinding.getCryptoProvider(PcView.this));
                     if (httpConn.getPairState() == PairState.PAIRED) {
                         // Don't display any toast, but open the app list
@@ -574,7 +579,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                 String message;
                 try {
                     httpConn = new NvHTTP(ServerHelper.getCurrentAddressFromComputer(computer),
-                            computer.httpsPort, managerBinder.getUniqueId(), computer.serverCert,
+                            computer.httpsPort, managerBinder.getUniqueId(), clientName, computer.serverCert,
                             PlatformBinding.getCryptoProvider(PcView.this));
                     if (httpConn.getPairState() == PairingManager.PairState.PAIRED) {
                         httpConn.unpair();

@@ -549,7 +549,7 @@ public class ComputerManagerService extends Service {
             boolean portMatchesActiveAddress = details.state == ComputerDetails.State.ONLINE &&
                     details.activeAddress != null && address.port == details.activeAddress.port;
 
-            NvHTTP http = new NvHTTP(address, portMatchesActiveAddress ? details.httpsPort : 0, idManager.getUniqueId(), details.serverCert,
+            NvHTTP http = new NvHTTP(address, portMatchesActiveAddress ? details.httpsPort : 0, idManager.getUniqueId(), "", details.serverCert,
                     PlatformBinding.getCryptoProvider(ComputerManagerService.this));
 
             // If this PC is currently online at this address, extend the timeouts to allow more time for the PC to respond.
@@ -867,7 +867,7 @@ public class ComputerManagerService extends Service {
                         PollingTuple tuple = getPollingTuple(computer);
 
                         try {
-                            NvHTTP http = new NvHTTP(ServerHelper.getCurrentAddressFromComputer(computer), computer.httpsPort, idManager.getUniqueId(),
+                            NvHTTP http = new NvHTTP(ServerHelper.getCurrentAddressFromComputer(computer), computer.httpsPort, idManager.getUniqueId(), "",
                                     computer.serverCert, PlatformBinding.getCryptoProvider(ComputerManagerService.this));
 
                             String appList;
