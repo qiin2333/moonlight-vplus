@@ -10,6 +10,7 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.net.RouteInfo;
 import android.os.Build;
+import android.provider.Settings;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -42,6 +43,7 @@ public class NvConnection {
     // Context parameters
     private LimelightCryptoProvider cryptoProvider;
     private String uniqueId;
+    private String clientName;
     private ConnectionContext context;
     private static Semaphore connectionAllowed = new Semaphore(1);
     private final boolean isMonkey;
@@ -52,6 +54,7 @@ public class NvConnection {
         this.appContext = appContext;
         this.cryptoProvider = cryptoProvider;
         this.uniqueId = uniqueId;
+        this.clientName = Settings.Global.getString(appContext.getContentResolver(), "device_name");
 
         this.context = new ConnectionContext();
         this.context.serverAddress = host;
@@ -219,7 +222,7 @@ public class NvConnection {
     
     private boolean startApp() throws XmlPullParserException, IOException
     {
-        NvHTTP h = new NvHTTP(context.serverAddress, context.httpsPort, uniqueId, context.serverCert, cryptoProvider);
+        NvHTTP h = new NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider);
 
         String serverInfo = h.getServerInfo(true);
         
@@ -594,7 +597,7 @@ public class NvConnection {
             public void run() {
                 NvHTTP h = null;
                 try {
-                    h = new NvHTTP(context.serverAddress, context.httpsPort, uniqueId, context.serverCert, cryptoProvider);
+                    h = new NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -613,7 +616,7 @@ public class NvConnection {
             public void run() {
                 NvHTTP h = null;
                 try {
-                    h = new NvHTTP(context.serverAddress, context.httpsPort, uniqueId, context.serverCert, cryptoProvider);
+                    h = new NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
