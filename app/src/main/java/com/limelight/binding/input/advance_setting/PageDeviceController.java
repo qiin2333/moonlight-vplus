@@ -37,7 +37,7 @@ public class PageDeviceController {
             @Override
             public void onClick(View v) {
                 deviceCallBack.OnKeyClick((TextView) v);
-                controllerManager.getSuperPagesController().close();
+                close();
             }
         };
         setListenersForDevice(devicePage,onClickListener);
@@ -45,7 +45,7 @@ public class PageDeviceController {
         devicePage.findViewById(R.id.device_cancel).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                controllerManager.getSuperPagesController().close();
+                close();
             }
         });
 
@@ -57,7 +57,7 @@ public class PageDeviceController {
         keyboardDrawing.setVisibility(keyboardVisible);
         mouseDrawing.setVisibility(mouseVisible);
         gamepadDrawing.setVisibility(gamepadVisible);
-        controllerManager.getSuperPagesController().open(devicePage);
+        controllerManager.getSuperPagesController().openNewPage(devicePage);
     }
 
     private void setListenersForDevice(ViewGroup viewGroup, View.OnClickListener listener) {
@@ -73,5 +73,9 @@ public class PageDeviceController {
 
     public String getKeyNameByValue(String value){
         return ((TextView)devicePage.findViewWithTag(value)).getText().toString();
+    }
+
+    public void close(){
+        controllerManager.getSuperPagesController().openNewPage(devicePage.getLastPage());
     }
 }

@@ -276,73 +276,78 @@ public class GroupButton extends Element {
             return true;
         }
 
-        if (elementController.getMode() == ElementController.Mode.Edit){
-            switch (event.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN: {
-                    resizeXBorder = true;
-                    resizeYBorder = true;
-                    lastX = event.getX();
-                    lastY = event.getY();
-                    editColor = 0xff00f91a;
-                    invalidate();
-                    return true;
-                }
-                case MotionEvent.ACTION_MOVE: {
-                    float x = event.getX();
-                    float y = event.getY();
-                    float deltaX = x - lastX;
-                    float deltaY = y - lastY;
-                    //小位移算作点击
-                    if (Math.abs(deltaX) + Math.abs(deltaY) < 0.2){
+        switch (elementController.getMode()){
+            case Normal:
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN: {
+                        resizeXBorder = true;
+                        resizeYBorder = true;
+                        lastX = event.getX();
+                        lastY = event.getY();
+
+                        setPressed(true);
+                        onClickCallback();
+
+                        invalidate();
                         return true;
                     }
-                    if (layoutComplete){
-                        layoutComplete = false;
-                        setElementCentralX((int) getX() + getWidth() / 2 + (int) deltaX);
-                        setElementCentralY((int) getY() + getHeight() / 2 + (int) deltaY);
-                    }
-                    updatePage();
-                    movable = true;
-                    return true;
-                }
-                case MotionEvent.ACTION_CANCEL:
-                case MotionEvent.ACTION_UP: {
-                    if (movable){
-                        if (childPositionAttributeFollow){
-                            for (Element element : childElementList){
-                                element.save();
+                    case MotionEvent.ACTION_MOVE: {
+                        if (movable) {
+                            float x = event.getX();
+                            float y = event.getY();
+                            float deltaX = x - lastX;
+                            float deltaY = y - lastY;
+                            //小位移算作点击
+                            if (Math.abs(deltaX) + Math.abs(deltaY) < 0.2){
+                                return true;
                             }
+                            if (layoutComplete){
+                                layoutComplete = false;
+                                setElementCentralX((int) getX() + getWidth() / 2 + (int) deltaX);
+                                setElementCentralY((int) getY() + getHeight() / 2 + (int) deltaY);
+                            }
+                            updatePage();
+                            return true;
                         }
-                        save();
-                        movable = false;
-                    } else {
-                        elementController.toggleInfoPage(getInfoPage());
+                        return true;
                     }
+                    case MotionEvent.ACTION_CANCEL:
+                    case MotionEvent.ACTION_UP: {
+                        setPressed(false);
+                        if (movable){
+                            if (childPositionAttributeFollow){
+                                for (Element element : childElementList){
+                                    element.setAlpha(1);
+                                    element.save();
+                                }
+                            }
+                            movable = false;
+                            invalidate();
+                            save();
 
-                    editColor = 0xffdc143c;
-                    invalidate();
+                        } else {
+                            onReleaseCallback();
+                        }
+                        invalidate();
 
-                    return true;
+                        return true;
+                    }
+                    default: {
+                    }
                 }
-                default: {
-                }
-            }
-        } else {
-            switch (event.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN: {
-                    resizeXBorder = true;
-                    resizeYBorder = true;
-                    lastX = event.getX();
-                    lastY = event.getY();
-
-                    setPressed(true);
-                    onClickCallback();
-
-                    invalidate();
-                    return true;
-                }
-                case MotionEvent.ACTION_MOVE: {
-                    if (movable) {
+                return true;
+            case Edit:
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN: {
+                        resizeXBorder = true;
+                        resizeYBorder = true;
+                        lastX = event.getX();
+                        lastY = event.getY();
+                        editColor = 0xff00f91a;
+                        invalidate();
+                        return true;
+                    }
+                    case MotionEvent.ACTION_MOVE: {
                         float x = event.getX();
                         float y = event.getY();
                         float deltaX = x - lastX;
@@ -357,34 +362,34 @@ public class GroupButton extends Element {
                             setElementCentralY((int) getY() + getHeight() / 2 + (int) deltaY);
                         }
                         updatePage();
+                        movable = true;
                         return true;
                     }
-                    return true;
-                }
-                case MotionEvent.ACTION_CANCEL:
-                case MotionEvent.ACTION_UP: {
-                    setPressed(false);
-                    if (movable){
-                        if (childPositionAttributeFollow){
-                            for (Element element : childElementList){
-                                element.setAlpha(1);
-                                element.save();
+                    case MotionEvent.ACTION_CANCEL:
+                    case MotionEvent.ACTION_UP: {
+                        if (movable){
+                            if (childPositionAttributeFollow){
+                                for (Element element : childElementList){
+                                    element.save();
+                                }
                             }
+                            save();
+                            movable = false;
+                        } else {
+                            elementController.toggleInfoPage(getInfoPage());
                         }
-                        movable = false;
+
+                        editColor = 0xffdc143c;
                         invalidate();
-                        save();
 
-                    } else {
-                        onReleaseCallback();
+                        return true;
                     }
-                    invalidate();
-
-                    return true;
+                    default: {
+                    }
                 }
-                default: {
-                }
-            }
+                return true;
+            case Select:
+                return true;
         }
         return true;
     }

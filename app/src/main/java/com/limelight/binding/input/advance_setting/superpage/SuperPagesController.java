@@ -2,14 +2,12 @@ package com.limelight.binding.input.advance_setting.superpage;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
-import android.animation.ObjectAnimator;
 import android.content.Context;
+import android.view.LayoutInflater;
 import android.view.ViewGroup;
-import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.FrameLayout;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.limelight.R;
 
 public class SuperPagesController {
 
@@ -18,16 +16,17 @@ public class SuperPagesController {
         Left
     }
 
-    private List<SuperPageLayout> pages = new ArrayList<>();
     private BoxPosition boxPosition = BoxPosition.Right;
     private SuperPageLayout.DoubleFingerSwipeListener rightListener;
     private SuperPageLayout.DoubleFingerSwipeListener leftListener;
+    private SuperPageLayout pageNull;
+    private SuperPageLayout pageNow;
 
     private FrameLayout superPagesBox;
     private Context context;
 
-    private SuperPageLayout playingAnimatorPage1;
-    private SuperPageLayout playingAnimatorPage2;
+    private SuperPageLayout openingPage;
+    private SuperPageLayout closingPage;
 
     public SuperPagesController(FrameLayout superPagesBox, Context context) {
         this.superPagesBox = superPagesBox;
@@ -35,7 +34,6 @@ public class SuperPagesController {
         rightListener = new SuperPageLayout.DoubleFingerSwipeListener() {
             @Override
             public void onRightSwipe() {
-                close();
             }
 
             @Override
@@ -51,132 +49,98 @@ public class SuperPagesController {
 
             @Override
             public void onLeftSwipe() {
-                close();
             }
         };
-
+        pageNull = (SuperPageLayout) LayoutInflater.from(context).inflate(R.layout.page_null,null);
+        pageNow = pageNull;
     }
 
-    public boolean setPosition(BoxPosition position){
+    public SuperPageLayout getPageNull(){
+        return pageNull;
+    }
 
-        if (!pages.isEmpty()){
-            if (playingAnimatorPage1 != null){
-                playingAnimatorPage1.endAnimator();
+    public SuperPageLayout getPageNow(){return pageNow;}
+
+
+    public void setPosition(BoxPosition position){
+
+        if (openingPage != null){
+            openingPage.endAnimator();
+        }
+        if (closingPage != null){
+            closingPage.endAnimator();
+        }
+
+        float previousPosition = getVisiblePosition(pageNow);
+        boxPosition = position;
+        float nextPosition = getVisiblePosition(pageNow);
+        openingPage = pageNow;
+        pageNow.startAnimator(previousPosition,nextPosition,new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                // 动画结束后将视图设置到最终位置
+                pageNow.setX(nextPosition);
+                SuperPageLayout.DoubleFingerSwipeListener doubleFingerSwipeListener = boxPosition == BoxPosition.Right ? rightListener : leftListener;
+                pageNow.setDoubleFingerSwipeListener(doubleFingerSwipeListener);
+                openingPage = null;
             }
-            if (playingAnimatorPage2 != null){
-                playingAnimatorPage2.endAnimator();
+        });
+    }
+
+
+
+    public void openNewPage(SuperPageLayout pageNew){
+        if (pageNew == pageNow) return;
+
+        if (closingPage != null){
+            closingPage.endAnimator();
+        }
+        if (openingPage != null){
+            openingPage.endAnimator();
+        }
+
+        closingPage = pageNow;
+        float closingPagePreviousPosition = getVisiblePosition(closingPage);
+        float closingPageNextPosition = getHidePosition(closingPage);
+        closingPage.startAnimator(closingPagePreviousPosition, closingPageNextPosition,new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                // 动画结束后将视图设置到最终位置
+                closingPage.setX(closingPageNextPosition);
+                superPagesBox.removeView(closingPage);
+
+                closingPage = null;
             }
+        });
 
-            SuperPageLayout page = pages.get(pages.size() - 1);
-            float previousPosition = getVisiblePosition(page);
-            boxPosition = position;
-            float nextPosition = getVisiblePosition(page);
-            playingAnimatorPage1 = page;
-            page.startAnimator(previousPosition,nextPosition,new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    // 动画结束后将视图设置到最终位置
-                    page.setX(nextPosition);
-                    SuperPageLayout.DoubleFingerSwipeListener doubleFingerSwipeListener = boxPosition == BoxPosition.Right ? rightListener : leftListener;
-                    for (SuperPageLayout page : pages){
-                        page.setDoubleFingerSwipeListener(doubleFingerSwipeListener);
-                    }
-                    playingAnimatorPage1 = null;
-                }
-            });
-        } else {
-            boxPosition = position;
-        }
-        return true;
-    }
-
-    public SuperPageLayout getLastPage(){
-        return pages.isEmpty() ? null : pages.get(pages.size() - 1);
-    }
-
-
-    public boolean open(SuperPageLayout page){
-        if (playingAnimatorPage1 != null){
-            playingAnimatorPage1.endAnimator();
-        }
-        if (playingAnimatorPage2 != null){
-            playingAnimatorPage2.endAnimator();
-        }
-        pages.add(page);
-        if (pages.size() - 2 >= 0){
-            SuperPageLayout pagePrevious = pages.get(pages.size() - 2);
-            float pagePreviousPreviousPosition = getVisiblePosition(pagePrevious);
-            float pagePreviousNextPosition = getHidePosition(pagePrevious);
-            playingAnimatorPage2 = pagePrevious;
-            pagePrevious.startAnimator(pagePreviousPreviousPosition,pagePreviousNextPosition,new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    // 动画结束后将视图设置到最终位置
-                    pagePrevious.setX(pagePreviousNextPosition);
-                    playingAnimatorPage2 = null;
-                }
-            });
-        }
-        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(dpToPx(Integer.parseInt(page.getTag().toString())), ViewGroup.LayoutParams.MATCH_PARENT);
+        openingPage = pageNew;
+        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(dpToPx(Integer.parseInt(openingPage.getTag().toString())), ViewGroup.LayoutParams.MATCH_PARENT);
         layoutParams.topMargin = dpToPx(20);
         layoutParams.bottomMargin = dpToPx(20);
-        superPagesBox.addView(page,layoutParams);
-        page.setDoubleFingerSwipeListener(boxPosition == BoxPosition.Right ? rightListener : leftListener);
-        float previousPosition = getHidePosition(page);
-        float nextPosition = getVisiblePosition(page);
-        page.setX(previousPosition);
-        playingAnimatorPage1 = page;
-        page.startAnimator(previousPosition,nextPosition,new AnimatorListenerAdapter() {
+        superPagesBox.addView(openingPage,layoutParams);
+        openingPage.setDoubleFingerSwipeListener(boxPosition == BoxPosition.Right ? rightListener : leftListener);
+        float previousPosition = getHidePosition(openingPage);
+        float nextPosition = getVisiblePosition(openingPage);
+        openingPage.setX(previousPosition);
+
+        openingPage.startAnimator(previousPosition,nextPosition,new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator animation) {
                 // 动画结束后将视图设置到最终位置
-                page.setX(nextPosition);
-                playingAnimatorPage1 = null;
+                openingPage.setX(nextPosition);
+                openingPage = null;
             }
         });
-        return true;
+
+
+
+        pageNew.setLastPage(pageNow);
+        pageNow = pageNew;
     }
 
-    public boolean close(){
-        if (playingAnimatorPage1 != null){
-            playingAnimatorPage1.endAnimator();
-        }
-        if (playingAnimatorPage2 != null){
-            playingAnimatorPage2.endAnimator();
-        }
-        SuperPageLayout page = pages.get(pages.size() - 1);
-        pages.remove(page);
-        if (pages.size() - 1 >= 0){
-            SuperPageLayout pagePrevious = pages.get(pages.size() - 1);
-            float pagePreviousPreviousPosition = getHidePosition(pagePrevious);
-            float pagePreviousNextPosition = getVisiblePosition(pagePrevious);
-            playingAnimatorPage2 = pagePrevious;
-            pagePrevious.startAnimator(pagePreviousPreviousPosition, pagePreviousNextPosition,new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    // 动画结束后将视图设置到最终位置
-                    pagePrevious.setX(pagePreviousNextPosition);
-                    playingAnimatorPage2 = null;
-                }
-            });
-        }
-
-        float previousPosition = getVisiblePosition(page);
-        float nextPosition = getHidePosition(page);
-        playingAnimatorPage1 = page;
-        page.startAnimator(previousPosition, nextPosition,new AnimatorListenerAdapter() {
-            @Override
-            public void onAnimationEnd(Animator animation) {
-                // 动画结束后将视图设置到最终位置
-                page.setX(nextPosition);
-                superPagesBox.removeView(page);
-                page.close();
-                playingAnimatorPage1 = null;
-            }
-        });
-        return true;
+    public void returnOperation(){
+        pageNow.pageReturn();
     }
-
 
 
     private int getHidePosition(SuperPageLayout page){

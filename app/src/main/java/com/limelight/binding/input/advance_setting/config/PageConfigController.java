@@ -1,4 +1,4 @@
-package com.limelight.binding.input.advance_setting.config;
+    package com.limelight.binding.input.advance_setting.config;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -16,11 +16,9 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.limelight.Game;
 import com.limelight.R;
 import com.limelight.binding.input.advance_setting.ControllerManager;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
-import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
 
 import java.util.ArrayList;
@@ -44,7 +42,6 @@ public class PageConfigController {
 
     private List<Long> configIds = new ArrayList<>();
     private List<String> configNames = new ArrayList<>();
-    private SuperPageLayout openPage;
 
 
 
@@ -53,7 +50,6 @@ public class PageConfigController {
         this.pageConfig = (SuperPageLayout) LayoutInflater.from(context).inflate(R.layout.page_config,null);
         this.controllerManager = controllerManager;
         configSelectSpinner = pageConfig.findViewById(R.id.config_select_spinner);
-        openPage = pageConfig;
 
         //新增布局按钮
         pageConfig.findViewById(R.id.add_config_button).setOnClickListener(new View.OnClickListener() {
@@ -80,7 +76,7 @@ public class PageConfigController {
                         contentValues.put(COLUMN_INT_TOUCH_SENSE,100);
                         //保存到数据库中
                         controllerManager.getSuperConfigDatabaseHelper().insertConfig(contentValues);
-                        controllerManager.getSuperPagesController().close();
+                        returnPrePage(pageWindow.getLastPage());
                         loadAllConfigToSpinner();
                         loadCurrentConfig();
                     }
@@ -89,10 +85,10 @@ public class PageConfigController {
                 pageWindow.findViewById(R.id.window_cancel).setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        controllerManager.getSuperPagesController().close();
+                        returnPrePage(pageWindow.getLastPage());
                     }
                 });
-                controllerManager.getSuperPagesController().open(pageWindow);
+                controllerManager.getSuperPagesController().openNewPage(pageWindow);
             }
         });
         //重命名布局按钮
@@ -109,7 +105,7 @@ public class PageConfigController {
                     @Override
                     public void onClick(View v) {
                         if (currentConfigId.equals(0L)){
-                            controllerManager.getSuperPagesController().close();
+                            returnPrePage(pageWindow.getLastPage());
                             return;
                         }
                         String configNewName = editText.getText().toString();
@@ -121,7 +117,7 @@ public class PageConfigController {
                         contentValues.put(COLUMN_STRING_CONFIG_NAME,configNewName);
                         //保存到数据库中
                         controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId,contentValues);
-                        controllerManager.getSuperPagesController().close();
+                        returnPrePage(pageWindow.getLastPage());
                         loadAllConfigToSpinner();
                         loadCurrentConfig();
                     }
@@ -130,10 +126,10 @@ public class PageConfigController {
                 pageWindow.findViewById(R.id.window_cancel).setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        controllerManager.getSuperPagesController().close();
+                        returnPrePage(pageWindow.getLastPage());
                     }
                 });
-                controllerManager.getSuperPagesController().open(pageWindow);
+                controllerManager.getSuperPagesController().openNewPage(pageWindow);
             }
         });
         //删除布局按钮
@@ -150,7 +146,7 @@ public class PageConfigController {
                     @Override
                     public void onClick(View v) {
                         if (currentConfigId.equals(0L)){
-                            controllerManager.getSuperPagesController().close();
+                            returnPrePage(pageWindow.getLastPage());
                             return;
                         }
                         controllerManager.getSuperConfigDatabaseHelper().deleteConfig(currentConfigId);
@@ -159,17 +155,17 @@ public class PageConfigController {
                         editor.apply();
                         loadAllConfigToSpinner();
                         loadCurrentConfig();
-                        controllerManager.getSuperPagesController().close();
+                        returnPrePage(pageWindow.getLastPage());
                     }
                 });
                 //窗口取消按钮
                 pageWindow.findViewById(R.id.window_cancel).setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        controllerManager.getSuperPagesController().close();
+                        returnPrePage(pageWindow.getLastPage());
                     }
                 });
-                controllerManager.getSuperPagesController().open(pageWindow);
+                controllerManager.getSuperPagesController().openNewPage(pageWindow);
             }
         });
 
@@ -324,7 +320,18 @@ public class PageConfigController {
     }
 
     public void open(){
-        controllerManager.getSuperPagesController().open(openPage);
+        controllerManager.getSuperPagesController().openNewPage(pageConfig);
+        pageConfig.setPageReturnListener(new SuperPageLayout.ReturnListener() {
+            @Override
+            public void returnCallBack() {
+                controllerManager.getSuperPagesController().openNewPage(controllerManager.getSuperPagesController().getPageNull());
+            }
+        });
+
+    }
+
+    public void returnPrePage(SuperPageLayout prePage){
+        controllerManager.getSuperPagesController().openNewPage(prePage);
     }
 
 }

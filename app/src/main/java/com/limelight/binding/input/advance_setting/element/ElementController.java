@@ -20,6 +20,7 @@ import com.limelight.binding.input.advance_setting.PageDeviceController;
 import com.limelight.binding.input.advance_setting.config.PageConfigController;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
+import com.limelight.binding.input.advance_setting.superpage.SuperPagesController;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -60,7 +61,8 @@ public class ElementController {
 
     public enum Mode{
         Normal,
-        Edit
+        Edit,
+        Select
     }
 
     public static class GamepadInputContext {
@@ -127,7 +129,8 @@ public class ElementController {
         pageEdit.findViewById(R.id.page_edit_exit_edit_mode).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                exitEditMode();
+                changeMode(Mode.Normal);
+                controllerManager.getPageSuperMenuController().open();
             }
         });
         ((NumberSeekbar)pageEdit.findViewById(R.id.page_edit_edit_grid_width)).setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
@@ -431,42 +434,62 @@ public class ElementController {
 
 
     public void toggleInfoPage(SuperPageLayout elementSettingPage){
-        if (controllerManager.getSuperPagesController().getLastPage() == lastElementSettingPage && lastElementSettingPage != null){
-            controllerManager.getSuperPagesController().close();
-            if (elementSettingPage != lastElementSettingPage){
-                controllerManager.getSuperPagesController().open(elementSettingPage);
-                lastElementSettingPage = elementSettingPage;
-            }
+        if (elementSettingPage == controllerManager.getSuperPagesController().getPageNow()){
+            controllerManager.getSuperPagesController().openNewPage(
+                    controllerManager.getSuperPagesController().getPageNull());
         } else {
-            controllerManager.getSuperPagesController().open(elementSettingPage);
-            lastElementSettingPage = elementSettingPage;
+            controllerManager.getSuperPagesController().openNewPage(elementSettingPage);
+            elementSettingPage.setPageReturnListener(new SuperPageLayout.ReturnListener() {
+                @Override
+                public void returnCallBack() {
+                    controllerManager.getSuperPagesController().openNewPage(controllerManager.getSuperPagesController().getPageNull());
+                }
+            });
         }
     }
 
-    public SuperPageLayout getPageEdit() {
-        return pageEdit;
+
+    public void open(){
+        SuperPagesController superPagesController = controllerManager.getSuperPagesController();
+        superPagesController.openNewPage(pageEdit);
+        SuperPageLayout pageNull = superPagesController.getPageNull();
+        pageNull.setPageReturnListener(new SuperPageLayout.ReturnListener() {
+            @Override
+            public void returnCallBack() {
+                superPagesController.openNewPage(pageEdit);
+            }
+        });
+        pageEdit.setPageReturnListener(new SuperPageLayout.ReturnListener() {
+            @Override
+            public void returnCallBack() {
+                superPagesController.openNewPage(pageNull);
+            }
+        });
     }
 
-    public void entryEditMode(){
-        controllerManager.getTouchController().enableTouch(false);
-        mode = Mode.Edit;
-        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-        layoutParams.leftMargin = 0;
-        layoutParams.topMargin = 0;
-        elementsLayout.addView(editGridView,bottomViewAmount,layoutParams);
-        for (Element element : elements){
-            element.invalidate();
-        }
-
-    }
-
-    public void exitEditMode(){
-        controllerManager.getPageSuperMenuController().exitElementEditMode();
-        controllerManager.getTouchController().enableTouch(true);
-        mode = Mode.Normal;
-        elementsLayout.removeView(editGridView);
-        for (Element element : elements){
-            element.invalidate();
+    public void changeMode(Mode mode){
+        switch (mode){
+            case Normal:
+                controllerManager.getTouchController().enableTouch(true);
+                this.mode = Mode.Normal;
+                elementsLayout.removeView(editGridView);
+                for (Element element : elements){
+                    element.invalidate();
+                }
+                break;
+            case Edit:
+                controllerManager.getTouchController().enableTouch(false);
+                this.mode = Mode.Edit;
+                FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+                layoutParams.leftMargin = 0;
+                layoutParams.topMargin = 0;
+                elementsLayout.addView(editGridView,bottomViewAmount,layoutParams);
+                for (Element element : elements){
+                    element.invalidate();
+                }
+                break;
+            case Select:
+                break;
         }
     }
 

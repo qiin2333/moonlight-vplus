@@ -19,8 +19,8 @@ public class SuperPageLayout extends FrameLayout {
         void onLeftSwipe();
     }
 
-    public interface PageCloseListener {
-        void close();
+    public interface ReturnListener {
+        void returnCallBack();
     }
 
     private static final int SWIPE_THRESHOLD = 70;
@@ -28,9 +28,10 @@ public class SuperPageLayout extends FrameLayout {
     private boolean isTwoFingerSwipe = false;
     private boolean isSwipeActionDone = false;
     private DoubleFingerSwipeListener doubleFingerSwipeListener;
-    private PageCloseListener pageCloseListener;
+    private ReturnListener returnListener;
     private boolean disableTouch = false;
     private ObjectAnimator animator;
+    private SuperPageLayout lastPage;
 
 
     public SuperPageLayout(Context context) {
@@ -120,15 +121,15 @@ public class SuperPageLayout extends FrameLayout {
         this.doubleFingerSwipeListener = doubleFingerSwipeListener;
     }
 
-    protected void close(){
-        if (pageCloseListener != null){
-            pageCloseListener.close();
+    protected void pageReturn(){
+        if (returnListener != null){
+            returnListener.returnCallBack();
         }
 
     }
 
-    public void setPageCloseListener(PageCloseListener pageCloseListener){
-        this.pageCloseListener = pageCloseListener;
+    public void setPageReturnListener(ReturnListener returnListener){
+        this.returnListener = returnListener;
     }
 
     public void startAnimator(float startX, float endX, AnimatorListenerAdapter animatorListenerAdapter){
@@ -151,5 +152,13 @@ public class SuperPageLayout extends FrameLayout {
             animator.end();
         }
         animator = null;
+    }
+
+    public void setLastPage(SuperPageLayout lastPage){
+        this.lastPage = lastPage;
+    }
+
+    public SuperPageLayout getLastPage() {
+        return lastPage;
     }
 }

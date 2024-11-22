@@ -217,47 +217,56 @@ public abstract class Element extends View {
         if (event.getActionIndex() != 0) {
             return true;
         }
+        switch (elementController.getMode()){
+            case Normal:
+                return onElementTouchEvent(event);
 
-        if (elementController.getMode() == ElementController.Mode.Normal){
-            return onElementTouchEvent(event);
-        }
-        switch (event.getActionMasked()) {
-            case MotionEvent.ACTION_DOWN: {
-                lastX = event.getX();
-                lastY = event.getY();
-                isClick = true;
-                editColor = 0xff00f91a;
-                invalidate();
-                return true;
-            }
-            case MotionEvent.ACTION_MOVE: {
-                float x = event.getX();
-                float y = event.getY();
-                float deltaX = x - lastX;
-                float deltaY = y - lastY;
-                 //小位移算作点击
-                if (Math.abs(deltaX) + Math.abs(deltaY) < 0.2){
-                    return true;
+
+            case Edit:
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN: {
+                        lastX = event.getX();
+                        lastY = event.getY();
+                        isClick = true;
+                        editColor = 0xff00f91a;
+                        invalidate();
+                        return true;
+                    }
+                    case MotionEvent.ACTION_MOVE: {
+                        float x = event.getX();
+                        float y = event.getY();
+                        float deltaX = x - lastX;
+                        float deltaY = y - lastY;
+                        //小位移算作点击
+                        if (Math.abs(deltaX) + Math.abs(deltaY) < 0.2){
+                            return true;
+                        }
+                        isClick = false;
+                        setElementCentralX((int) getX() + getWidth() / 2 + (int) deltaX);
+                        setElementCentralY((int) getY() + getHeight() / 2 + (int) deltaY);
+                        updatePage();
+                        return true;
+                    }
+                    case MotionEvent.ACTION_CANCEL:
+                    case MotionEvent.ACTION_UP: {
+                        editColor = 0xffdc143c;
+                        invalidate();
+                        if (isClick){
+                            elementController.toggleInfoPage(getInfoPage());
+                        } else {
+                            save();
+                        }
+                        return true;
+                    }
+                    default: {
+                    }
                 }
-                isClick = false;
-                setElementCentralX((int) getX() + getWidth() / 2 + (int) deltaX);
-                setElementCentralY((int) getY() + getHeight() / 2 + (int) deltaY);
-                updatePage();
                 return true;
-            }
-            case MotionEvent.ACTION_CANCEL:
-            case MotionEvent.ACTION_UP: {
-                editColor = 0xffdc143c;
-                invalidate();
-                if (isClick){
-                    elementController.toggleInfoPage(getInfoPage());
-                } else {
-                    save();
-                }
+
+
+            case Select:
                 return true;
-            }
-            default: {
-            }
+
         }
         return true;
     }

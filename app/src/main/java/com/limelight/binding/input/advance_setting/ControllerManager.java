@@ -29,6 +29,7 @@ public class ControllerManager {
         advanceSettingView = layout.findViewById(R.id.advance_setting_view);
         this.fatherLayout = layout;
         this.context = context;
+        pageSuperMenuController = new PageSuperMenuController(context,this);
     }
 
 
@@ -80,9 +81,6 @@ public class ControllerManager {
     }
 
     public PageSuperMenuController getPageSuperMenuController() {
-        if (pageSuperMenuController == null){
-            pageSuperMenuController = new PageSuperMenuController(context,this);
-        }
         return pageSuperMenuController;
     }
 
