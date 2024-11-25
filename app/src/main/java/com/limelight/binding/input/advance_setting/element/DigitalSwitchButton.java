@@ -160,7 +160,8 @@ public class DigitalSwitchButton extends Element {
         canvas.drawRoundRect(rect, radius, radius, paintBorder);
         // 绘制文字
         canvas.drawText(text, getPercent(elementWidth, 50), getPercent(elementHeight, 63), paintText);
-        if (elementController.getMode() == ElementController.Mode.Edit){
+        ElementController.Mode mode = elementController.getMode();
+        if (mode == ElementController.Mode.Edit || mode == ElementController.Mode.Select){
             // 绘画范围
             rect.left = rect.top = 2;
             rect.right = getWidth() - 2;

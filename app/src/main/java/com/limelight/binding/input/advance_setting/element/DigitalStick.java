@@ -361,7 +361,8 @@ public class DigitalStick extends Element {
             }
         }
 
-        if (elementController.getMode() == ElementController.Mode.Edit){
+        ElementController.Mode mode = elementController.getMode();
+        if (mode == ElementController.Mode.Edit || mode == ElementController.Mode.Select){
             // 绘画范围
             rect.left = rect.top = 2;
             rect.right = getWidth() - 2;

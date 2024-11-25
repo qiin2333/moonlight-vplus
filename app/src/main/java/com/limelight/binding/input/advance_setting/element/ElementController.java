@@ -315,6 +315,7 @@ public class ElementController {
                 element = new GroupButton(attributesMap,
                         this,
                         pageDeviceController,
+                        controllerManager.getSuperPagesController(),
                         context);
                 break;
             case Element.ELEMENT_TYPE_DIGITAL_PAD:
@@ -451,8 +452,8 @@ public class ElementController {
 
     public void open(){
         SuperPagesController superPagesController = controllerManager.getSuperPagesController();
-        superPagesController.openNewPage(pageEdit);
         SuperPageLayout pageNull = superPagesController.getPageNull();
+        superPagesController.openNewPage(pageNull);
         pageNull.setPageReturnListener(new SuperPageLayout.ReturnListener() {
             @Override
             public void returnCallBack() {
@@ -485,10 +486,17 @@ public class ElementController {
                 layoutParams.topMargin = 0;
                 elementsLayout.addView(editGridView,bottomViewAmount,layoutParams);
                 for (Element element : elements){
+                    element.setEditColor(Element.EDIT_COLOR_EDIT);
                     element.invalidate();
                 }
                 break;
             case Select:
+                elementsLayout.removeView(editGridView);
+                this.mode = Mode.Select;
+                for (Element element : elements){
+                    element.setEditColor(Element.EDIT_COLOR_SELECT);
+                    element.invalidate();
+                }
                 break;
         }
     }

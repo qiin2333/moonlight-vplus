@@ -24,6 +24,7 @@ import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
 import com.limelight.binding.input.advance_setting.PageDeviceController;
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
+import com.limelight.binding.input.advance_setting.superpage.SuperPagesController;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -66,6 +67,7 @@ public class GroupButton extends Element {
     private List<Element> childElementList = new ArrayList<>();
     private ElementController elementController;
     private Context context;
+    private SuperPagesController superPagesController;
 
     private GroupButtonListener listener;
     private String text;
@@ -89,6 +91,7 @@ public class GroupButton extends Element {
     private SuperPageLayout groupButtonPage;
     private NumberSeekbar centralXNumberSeekbar;
     private NumberSeekbar centralYNumberSeekbar;
+    private boolean selectMode = false;
 
     private boolean movable = false;
     private boolean layoutComplete = true;
@@ -112,12 +115,15 @@ public class GroupButton extends Element {
 
     public GroupButton(Map<String,Object> attributesMap,
                        ElementController controller,
-                       PageDeviceController pageDeviceController, Context context) {
+                       PageDeviceController pageDeviceController,
+                       SuperPagesController superPagesController,
+                       Context context) {
         super(attributesMap,controller,context);
         this.pageDeviceController = pageDeviceController;
         this.groupButton = this;
         this.elementController = controller;
         this.context = context;
+        this.superPagesController = superPagesController;
 
 
         DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
@@ -234,6 +240,15 @@ public class GroupButton extends Element {
             paintEdit.setColor(editColor);
             canvas.drawRect(rect,paintEdit);
 
+        } else if (elementController.getMode() == ElementController.Mode.Select && selectMode){
+            // 选中的group button做标记
+            // 绘画范围
+            rect.left = rect.top = 2;
+            rect.right = getWidth() - 2;
+            rect.bottom = getHeight() - 2;
+            // 边框
+            paintEdit.setColor(0xff00f91a);
+            canvas.drawRect(rect,paintEdit);
         }
     }
 
@@ -730,74 +745,50 @@ public class GroupButton extends Element {
             }
         });
 
-        groupButtonPage.findViewById(R.id.page_group_button_add_digital_common_button).setOnClickListener(new View.OnClickListener() {
+        groupButtonPage.findViewById(R.id.page_group_button_select_child_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Element newElement = elementController.addElement(DigitalCommonButton.getInitialInfo());
-                addChildElement(newElement);
-            }
-        });
-        groupButtonPage.findViewById(R.id.page_group_button_add_digital_movable_button).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Element newElement = elementController.addElement(DigitalMovableButton.getInitialInfo());
-                addChildElement(newElement);
-            }
-        });
-        groupButtonPage.findViewById(R.id.page_group_button_add_digital_combine_button).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Element newElement = elementController.addElement(DigitalCombineButton.getInitialInfo());
-                addChildElement(newElement);
-            }
-        });
-        groupButtonPage.findViewById(R.id.page_group_button_add_pad).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Element newElement = elementController.addElement(DigitalPad.getInitialInfo());
-                addChildElement(newElement);
-            }
-        });
-        groupButtonPage.findViewById(R.id.page_group_button_add_digital_switch_button).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Element newElement = elementController.addElement(DigitalSwitchButton.getInitialInfo());
-                addChildElement(newElement);
-            }
-        });
-        groupButtonPage.findViewById(R.id.page_group_button_add_digital_stick).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Element newElement = elementController.addElement(DigitalStick.getInitialInfo());
-                addChildElement(newElement);
-            }
-        });
-        groupButtonPage.findViewById(R.id.page_group_button_add_analog_stick).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Element newElement = elementController.addElement(AnalogStick.getInitialInfo());
-                addChildElement(newElement);
-            }
-        });
-        groupButtonPage.findViewById(R.id.page_group_button_add_invisible_digital_stick).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Element newElement = elementController.addElement(InvisibleDigitalStick.getInitialInfo());
-                addChildElement(newElement);
-            }
-        });
-        groupButtonPage.findViewById(R.id.page_group_button_add_invisible_analog_stick).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Element newElement = elementController.addElement(InvisibleAnalogStick.getInitialInfo());
-                addChildElement(newElement);
-            }
-        });
-        groupButtonPage.findViewById(R.id.page_group_button_add_simplify_performance).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Element newElement = elementController.addElement(SimplifyPerformance.getInitialInfo());
-                addChildElement(newElement);
+                // 改为选择模式
+                elementController.changeMode(ElementController.Mode.Select);
+                selectMode = true;
+                // 设置按钮选择的回调函数
+                ElementSelectedCallBack elementSelectedCallBack = new ElementSelectedCallBack() {
+                    @Override
+                    public void elementSelected(Element element) {
+                        if (childElementList.contains(element)){
+                            deleteChildElement(element);
+                            element.setEditColor(EDIT_COLOR_SELECT);
+                            element.invalidate();
+                        } else {
+                            addChildElement(element);
+                            element.setEditColor(EDIT_COLOR_SELECTED);
+                            element.invalidate();
+                        }
+                    }
+                };
+                for (Element element : childElementList){
+                    element.setEditColor(EDIT_COLOR_SELECTED);
+                }
+                // 将子按键的编辑颜色设置为选中颜色
+                for (Element element : elementController.getElements()){
+                    element.setElementSelectedCallBack(elementSelectedCallBack);
+                }
+                // 打开空白页
+                SuperPageLayout pageNull = superPagesController.getPageNull();
+                superPagesController.openNewPage(pageNull);
+                // 设置空白页返回的动作
+                pageNull.setPageReturnListener(new SuperPageLayout.ReturnListener() {
+                    @Override
+                    public void returnCallBack() {
+                        SuperPageLayout lastPage = pageNull.getLastPage();
+                        // 用这个方法将pageNull的返回设置为editPage
+                        elementController.open();
+                        superPagesController.openNewPage(lastPage);
+                        elementController.changeMode(ElementController.Mode.Edit);
+                        selectMode = false;
+                        save();
+                    }
+                });
             }
         });
 
@@ -826,21 +817,23 @@ public class GroupButton extends Element {
     }
 
     private void addChildElement(Element newElement){
-        value = value + "," + newElement.elementId.toString();
         childElementList.add(newElement);
-        if (childVisibility == CHILD_INVISIBLE){
-            newElement.setVisibility(childVisibility);
-            Toast.makeText(context,"按键添加成功,处于隐藏状态",Toast.LENGTH_SHORT).show();
+        value = "-1";
+        for (Element element : childElementList){
+            value = value + "," + element.elementId.toString();
         }
-        setElementWidth(getElementWidth());
-        setElementHeight(getElementHeight());
-        setElementRadius(radius);
-        setElementThick(thick);
-        setElementNormalColor(normalColor);
-        setElementPressedColor(pressedColor);
-        setElementBackgroundColor(backgroundColor);
-        save();
     }
+
+    private void deleteChildElement(Element deleteElement){
+        if (childElementList.remove(deleteElement)){
+            value = "-1";
+            for (Element element : childElementList){
+                value = value + "," + element.elementId.toString();
+            }
+        }
+
+    }
+
 
     protected void setElementText(String text) {
         this.text = text;
@@ -1186,4 +1179,5 @@ public class GroupButton extends Element {
 
 
     }
+
 }

@@ -142,7 +142,8 @@ public class SimplifyPerformance extends Element {
         // 绘制文字
         canvas.drawText(afterParseText,0,verticalPadding + textSize ,paintText);
 
-        if (elementController.getMode() == ElementController.Mode.Edit){
+        ElementController.Mode mode = elementController.getMode();
+        if (mode == ElementController.Mode.Edit || mode == ElementController.Mode.Select){
             // 绘画范围
             rect.left = rect.top = 2;
             rect.right = getElementWidth() - 2;
