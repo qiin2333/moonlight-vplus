@@ -253,6 +253,7 @@ public class InvisibleAnalogStick extends Element {
 
             @Override
             public void onClick() {
+                elementController.buttonVibrator();
             }
 
             @Override

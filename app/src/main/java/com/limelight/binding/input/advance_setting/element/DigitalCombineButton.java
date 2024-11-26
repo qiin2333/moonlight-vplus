@@ -233,6 +233,7 @@ public class DigitalCombineButton extends Element {
 
         switch (action) {
             case MotionEvent.ACTION_DOWN: {
+                elementController.buttonVibrator();
                 setPressed(true);
                 onClickCallback();
                 invalidate();

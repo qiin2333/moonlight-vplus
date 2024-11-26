@@ -265,6 +265,7 @@ public class GroupButton extends Element {
         // notify listeners
         System.out.println("onLongClickCallback");
         listener.onLongClick();
+        elementController.buttonVibrator();
         movable = true;
         if (childPositionAttributeFollow){
             for (Element element : childElementList){
@@ -295,6 +296,7 @@ public class GroupButton extends Element {
             case Normal:
                 switch (event.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN: {
+                        elementController.buttonVibrator();
                         resizeXBorder = true;
                         resizeYBorder = true;
                         lastX = event.getX();

@@ -291,7 +291,7 @@ public class InvisibleDigitalStick extends Element {
 
             @Override
             public void onClick() {
-
+                elementController.buttonVibrator();
             }
 
             @Override

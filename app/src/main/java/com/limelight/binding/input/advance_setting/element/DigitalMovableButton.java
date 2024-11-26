@@ -211,6 +211,7 @@ public class DigitalMovableButton extends Element {
 
         switch (action) {
             case MotionEvent.ACTION_DOWN: {
+                elementController.buttonVibrator();
                 lastX = event.getX();
                 lastY = event.getY();
                 setPressed(true);

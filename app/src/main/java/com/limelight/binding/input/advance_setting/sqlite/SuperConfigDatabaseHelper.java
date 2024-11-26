@@ -5,6 +5,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.os.Vibrator;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -132,7 +133,8 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "super_config.db";
     private static final int DATABASE_OLD_VERSION_1 = 1;
-    private static final int DATABASE_VERSION = 2;
+    private static final int DATABASE_OLD_VERSION_2 = 2;
+    private static final int DATABASE_VERSION = 3;
     private SQLiteDatabase writableDataBase;
     private SQLiteDatabase readableDataBase;
 
@@ -187,7 +189,9 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
                 "config_name TEXT," +
                 "touch_enable TEXT," +
                 "touch_mode TEXT," +
-                "touch_sense INTEGER" +
+                "touch_sense INTEGER," +
+                "game_vibrator TEXT," +
+                "button_vibrator TEXT" +
                 ")";
 
         db.execSQL(createConfigTable);
@@ -202,6 +206,11 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         // 升级数据库时执行的操作
+        System.out.println("SuperConfigDatabaseHelper.onUpgrade");
+        if (oldVersion == 2){
+            db.execSQL("ALTER TABLE config ADD COLUMN game_vibrator TEXT DEFAULT 'false';");
+            db.execSQL("ALTER TABLE config ADD COLUMN button_vibrator TEXT DEFAULT 'false';");
+        }
     }
 
     public void insertElement(ContentValues values){
@@ -432,7 +441,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         return configIds;
     }
 
-    public Object queryConfigAttribute(long configId,String configAttribute){
+    public Object queryConfigAttribute(long configId,String configAttribute,Object defaultValue){
 
         // 定义要查询的列
         String[] projection = { configAttribute };
@@ -477,7 +486,9 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
             }
             cursor.close();
         }
-        
+        if (o == null){
+            return defaultValue;
+        }
         return o;
     }
 
@@ -633,7 +644,9 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
                 // 替换51为3
                 elementsString = matcher.replaceAll("$13");// 输出: {"element_type":3, "other_key":123}
             }
-        }else if (version != DATABASE_VERSION){
+        } else if (version == DATABASE_OLD_VERSION_2){
+
+        } else if (version != DATABASE_VERSION){
             return -3;
         }
         ContentValues settingValues = gson.fromJson(settingString, ContentValues.class);
@@ -714,6 +727,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         if (!md5.equals(MathUtils.computeMD5(version + settingString + elementsString))){
             return -2;
         }
+
         if (version == DATABASE_OLD_VERSION_1){
             // 正则表达式
             String regex = "(\"element_type\":)\\s*51";
@@ -724,7 +738,9 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
                 // 替换51为3
                 elementsString = matcher.replaceAll("$13");// 输出: {"element_type":3, "other_key":123}
             }
-        }else if (version != DATABASE_VERSION){
+        } else if (version == DATABASE_OLD_VERSION_2){
+
+        } else if (version != DATABASE_VERSION){
             return -3;
         }
 

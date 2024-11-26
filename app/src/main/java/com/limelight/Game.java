@@ -2624,7 +2624,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     @Override
     public void rumble(short controllerNumber, short lowFreqMotor, short highFreqMotor) {
         LimeLog.info(String.format((Locale)null, "Rumble on gamepad %d: %04x %04x", controllerNumber, lowFreqMotor, highFreqMotor));
-
+        if (controllerManager != null){
+            controllerManager.getElementController().gameVibrator(lowFreqMotor,highFreqMotor);
+        }
         controllerHandler.handleRumble(controllerNumber, lowFreqMotor, highFreqMotor);
     }
 

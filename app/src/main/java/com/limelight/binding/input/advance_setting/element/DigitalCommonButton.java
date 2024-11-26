@@ -266,6 +266,7 @@ public class DigitalCommonButton extends Element {
         switch (action) {
             case MotionEvent.ACTION_DOWN: {
                 movingButton = null;
+                elementController.buttonVibrator();
                 setPressed(true);
                 onClickCallback();
                 invalidate();

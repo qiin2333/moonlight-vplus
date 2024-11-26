@@ -2,8 +2,13 @@ package com.limelight.binding.input.advance_setting.element;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.media.AudioAttributes;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.VibrationAttributes;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -80,6 +85,7 @@ public class ElementController {
     private final Game game;
     private final Handler handler;
     private Toast currentToast;
+    private Vibrator deviceVibrator;
 
     private final ControllerManager controllerManager;
     private final ControllerHandler controllerHandler;
@@ -100,6 +106,9 @@ public class ElementController {
     private EditGridView editGridView;
     private int editGridWidth = 1;
     private long currentConfigId;
+    private boolean gameVibrator = false;
+    private boolean buttonVibrator = false;
+
 
     public void showToast(String message) {
         if (currentToast != null) {
@@ -122,6 +131,7 @@ public class ElementController {
         this.pageEdit = (SuperPageLayout) LayoutInflater.from(context).inflate(R.layout.page_edit,null);
         this.editGridView = new EditGridView(context);
         this.bottomViewAmount = elementsLayout.getChildCount();
+        this.deviceVibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
         initEditPage();
     }
 
@@ -666,7 +676,7 @@ public class ElementController {
                 @Override
                 public void sendEvent(boolean down) {
                     if (down){
-                        boolean mouseMode = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, PageConfigController.COLUMN_BOOLEAN_TOUCH_MODE));
+                        boolean mouseMode = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, PageConfigController.COLUMN_BOOLEAN_TOUCH_MODE,String.valueOf(true)));
                         ContentValues contentValues = new ContentValues();
                         contentValues.put(PageConfigController.COLUMN_BOOLEAN_TOUCH_MODE,String.valueOf(!mouseMode));
                         //保存到数据库中
@@ -720,7 +730,7 @@ public class ElementController {
                 @Override
                 public void sendEvent(boolean down) {
                     if (down){
-                        boolean mouseEnable = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, PageConfigController.COLUMN_BOOLEAN_TOUCH_ENABLE));
+                        boolean mouseEnable = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, PageConfigController.COLUMN_BOOLEAN_TOUCH_ENABLE, String.valueOf(true)));
                         ContentValues contentValues = new ContentValues();
                         contentValues.put(PageConfigController.COLUMN_BOOLEAN_TOUCH_ENABLE,String.valueOf(!mouseEnable));
                         //保存到数据库中
@@ -824,5 +834,86 @@ public class ElementController {
         handler.postDelayed(runnable, 75);
 
 
+    }
+
+    public void setButtonVibrator(boolean buttonVibrator) {
+        this.buttonVibrator = buttonVibrator;
+    }
+
+    public void setGameVibrator(boolean gameVibrator) {
+        this.gameVibrator = gameVibrator;
+    }
+
+    public void buttonVibrator(){
+        if (buttonVibrator){
+            rumbleSingleVibrator((short) 1000, (short) 1000,50);
+        }
+    }
+
+    public void gameVibrator(short lowFreqMotor, short highFreqMotor){
+        if (gameVibrator){
+            rumbleSingleVibrator(lowFreqMotor,highFreqMotor,60000);
+        }
+    }
+
+
+    private void rumbleSingleVibrator(short lowFreqMotor, short highFreqMotor, int vibratorTime) {
+        // Since we can only use a single amplitude value, compute the desired amplitude
+        // by taking 80% of the big motor and 33% of the small motor, then capping to 255.
+        // NB: This value is now 0-255 as required by VibrationEffect.
+        short lowFreqMotorMSB = (short)((lowFreqMotor >> 8) & 0xFF);
+        short highFreqMotorMSB = (short)((highFreqMotor >> 8) & 0xFF);
+        int simulatedAmplitude = Math.min(255, (int)((lowFreqMotorMSB * 0.80) + (highFreqMotorMSB * 0.33)));
+
+        if (simulatedAmplitude == 0) {
+            // This case is easy - just cancel the current effect and get out.
+            // NB: We cannot simply check lowFreqMotor == highFreqMotor == 0
+            // because our simulatedAmplitude could be 0 even though our inputs
+            // are not (ex: lowFreqMotor == 0 && highFreqMotor == 1).
+            deviceVibrator.cancel();
+            return;
+        }
+
+        // Attempt to use amplitude-based control if we're on Oreo and the device
+        // supports amplitude-based vibration control.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (deviceVibrator.hasAmplitudeControl()) {
+                VibrationEffect effect = VibrationEffect.createOneShot(vibratorTime, simulatedAmplitude);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    VibrationAttributes vibrationAttributes = new VibrationAttributes.Builder()
+                            .setUsage(VibrationAttributes.USAGE_MEDIA)
+                            .build();
+                    deviceVibrator.vibrate(effect, vibrationAttributes);
+                }
+                else {
+                    AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_GAME)
+                            .build();
+                    deviceVibrator.vibrate(effect, audioAttributes);
+                }
+                return;
+            }
+        }
+
+        // If we reach this point, we don't have amplitude controls available, so
+        // we must emulate it by PWMing the vibration. Ick.
+        long pwmPeriod = 20;
+        long onTime = (long)((simulatedAmplitude / 255.0) * pwmPeriod);
+        long offTime = pwmPeriod - onTime;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            VibrationAttributes vibrationAttributes = new VibrationAttributes.Builder()
+                    .setUsage(VibrationAttributes.USAGE_MEDIA)
+                    .build();
+            deviceVibrator.vibrate(VibrationEffect.createWaveform(new long[]{0, onTime, offTime}, 0), vibrationAttributes);
+        }
+        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_GAME)
+                    .build();
+            deviceVibrator.vibrate(new long[]{0, onTime, offTime}, 0, audioAttributes);
+        }
+        else {
+            deviceVibrator.vibrate(new long[]{0, onTime, offTime}, 0);
+        }
     }
 }

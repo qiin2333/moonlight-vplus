@@ -280,6 +280,7 @@ public class DigitalPad extends Element {
         // get masked (not specific to a pointer) action
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
+                elementController.buttonVibrator();
             case MotionEvent.ACTION_MOVE: {
                 direction = 0;
 

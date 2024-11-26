@@ -32,6 +32,8 @@ public class PageConfigController {
     public static final String COLUMN_BOOLEAN_TOUCH_ENABLE = "touch_enable";
     public static final String COLUMN_BOOLEAN_TOUCH_MODE = "touch_mode";
     private static final String COLUMN_INT_TOUCH_SENSE = "touch_sense";
+    public static final String COLUMN_BOOLEAN_GAME_VIBRATOR = "game_vibrator";
+    public static final String COLUMN_BOOLEAN_BUTTON_VIBRATOR = "button_vibrator";
     public static final String COLUMN_LONG_CONFIG_ID = "config_id";
 
     private SuperPageLayout pageConfig;
@@ -183,16 +185,13 @@ public class PageConfigController {
             ContentValues contentValues = new ContentValues();
             contentValues.put(COLUMN_LONG_CONFIG_ID,0L);
             contentValues.put(COLUMN_STRING_CONFIG_NAME,"default");
-            contentValues.put(COLUMN_BOOLEAN_TOUCH_ENABLE,String.valueOf(true));
-            contentValues.put(COLUMN_BOOLEAN_TOUCH_MODE,String.valueOf(true));
-            contentValues.put(COLUMN_INT_TOUCH_SENSE,100);
             //保存到数据库中
             controllerManager.getSuperConfigDatabaseHelper().insertConfig(contentValues);
             configIds = controllerManager.getSuperConfigDatabaseHelper().queryAllConfigIds();
         }
         configNames.clear();
         for (Long configId : configIds){
-            String name = (String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(configId,COLUMN_STRING_CONFIG_NAME);
+            String name = (String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(configId,COLUMN_STRING_CONFIG_NAME,"default");
             configNames.add(name);
         }
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
@@ -237,6 +236,8 @@ public class PageConfigController {
         loadMouseEnable();
         loadMouseMode();
         loadMouseSense();
+        loadGameVibrator();
+        loadButtonVibrator();
         controllerManager.getElementController().loadAllElement(currentConfigId);
         if (currentConfigId == 0L){
             pageConfig.findViewById(R.id.rename_config_button).setVisibility(View.GONE);
@@ -250,7 +251,7 @@ public class PageConfigController {
     private void loadMouseEnable(){
         //mouse enable
         Switch mouseEnableSwitch = pageConfig.findViewById(R.id.mouse_enable_switch);
-        boolean mouseEnable = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, COLUMN_BOOLEAN_TOUCH_ENABLE));
+        boolean mouseEnable = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, COLUMN_BOOLEAN_TOUCH_ENABLE, String.valueOf(true)));
         //设置switch
         mouseEnableSwitch.setOnCheckedChangeListener(null);
         mouseEnableSwitch.setChecked(mouseEnable);
@@ -273,7 +274,7 @@ public class PageConfigController {
     private void loadMouseMode(){
         //mouse mode
         Switch mouseModeSwitch = pageConfig.findViewById(R.id.trackpad_enable_switch);
-        Boolean mouseMode = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, COLUMN_BOOLEAN_TOUCH_MODE));
+        boolean mouseMode = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, COLUMN_BOOLEAN_TOUCH_MODE, String.valueOf(true)));
         mouseModeSwitch.setOnCheckedChangeListener(null);
         mouseModeSwitch.setChecked(mouseMode);
         controllerManager.getTouchController().setTouchMode(mouseMode);
@@ -292,7 +293,7 @@ public class PageConfigController {
 
     private void loadMouseSense(){
         NumberSeekbar mouseSenseSeekBar = pageConfig.findViewById(R.id.mouse_sense_number_seekbar);
-        int mouseSense = ((Long) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, COLUMN_INT_TOUCH_SENSE)).intValue();
+        int mouseSense = ((Long) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, COLUMN_INT_TOUCH_SENSE, 100L)).intValue();
         mouseSenseSeekBar.setValueWithNoCallBack(mouseSense);
         controllerManager.getTouchController().adjustTouchSense(mouseSense);
         mouseSenseSeekBar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
@@ -315,6 +316,48 @@ public class PageConfigController {
             }
         });
     }
+
+
+    private void loadGameVibrator(){
+        //mouse mode
+        Switch gameVibratorSwitch = pageConfig.findViewById(R.id.game_vibrator_enable_switch);
+        boolean gameVibrator = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, COLUMN_BOOLEAN_GAME_VIBRATOR, String.valueOf(false)));
+        gameVibratorSwitch.setOnCheckedChangeListener(null);
+        gameVibratorSwitch.setChecked(gameVibrator);
+        controllerManager.getElementController().setGameVibrator(gameVibrator);
+        gameVibratorSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                ContentValues contentValues = new ContentValues();
+                contentValues.put(COLUMN_BOOLEAN_GAME_VIBRATOR,String.valueOf(isChecked));
+                //保存到数据库中
+                controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId,contentValues);
+                //做实际的设置
+                controllerManager.getElementController().setGameVibrator(isChecked);
+            }
+        });
+    }
+
+    private void loadButtonVibrator(){
+        //mouse mode
+        Switch buttonVibratorSwitch = pageConfig.findViewById(R.id.button_vibrator_enable_switch);
+        boolean buttonVibrator = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, COLUMN_BOOLEAN_BUTTON_VIBRATOR, String.valueOf(false)));
+        buttonVibratorSwitch.setOnCheckedChangeListener(null);
+        buttonVibratorSwitch.setChecked(buttonVibrator);
+        controllerManager.getElementController().setButtonVibrator(buttonVibrator);
+        buttonVibratorSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                ContentValues contentValues = new ContentValues();
+                contentValues.put(COLUMN_BOOLEAN_BUTTON_VIBRATOR,String.valueOf(isChecked));
+                //保存到数据库中
+                controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId,contentValues);
+                //做实际的设置
+                controllerManager.getElementController().setButtonVibrator(isChecked);
+            }
+        });
+    }
+
     public Long getCurrentConfigId(){
         return currentConfigId;
     }

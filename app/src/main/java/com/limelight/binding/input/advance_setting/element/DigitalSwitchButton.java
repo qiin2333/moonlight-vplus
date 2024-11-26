@@ -203,6 +203,7 @@ public class DigitalSwitchButton extends Element {
 
         switch (action) {
             case MotionEvent.ACTION_DOWN: {
+                elementController.buttonVibrator();
                 if (isPressed()){
                     setPressed(false);
                     onReleaseCallback();
