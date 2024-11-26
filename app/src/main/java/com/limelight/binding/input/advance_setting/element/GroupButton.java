@@ -18,6 +18,7 @@ import android.widget.EditText;
 import android.widget.SeekBar;
 import android.widget.Toast;
 
+import com.limelight.Game;
 import com.limelight.R;
 import com.limelight.binding.input.advance_setting.superpage.ElementEditText;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
@@ -126,7 +127,8 @@ public class GroupButton extends Element {
         this.superPagesController = superPagesController;
 
 
-        DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        ((Game)context).getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
         initialCentralXMax = displayMetrics.widthPixels;
         initialCentralXMin = 0;
         initialCentralYMax = displayMetrics.heightPixels;

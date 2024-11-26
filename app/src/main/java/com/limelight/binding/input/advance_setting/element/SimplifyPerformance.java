@@ -37,7 +37,7 @@ public class SimplifyPerformance extends Element {
     private SuperConfigDatabaseHelper superConfigDatabaseHelper;
     private SimplifyPerformance simplifyPerformance;
     private Pattern pattern = Pattern.compile("##(.*?)##");
-    private DisplayMetrics displayMetrics;
+    private DisplayMetrics displayMetrics = new DisplayMetrics();;
 
     private String afterParseText = "null";
 
@@ -64,8 +64,7 @@ public class SimplifyPerformance extends Element {
                                Context context) {
         super(attributesMap,controller,context);
         this.simplifyPerformance = this;
-
-        displayMetrics = context.getResources().getDisplayMetrics();
+        ((Game)context).getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
         super.centralXMax  = displayMetrics.widthPixels;
         super.centralXMin  = 0;
         super.centralYMax  = displayMetrics.heightPixels;

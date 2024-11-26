@@ -16,6 +16,7 @@ import android.widget.Button;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import com.limelight.Game;
 import com.limelight.R;
 import com.limelight.binding.input.advance_setting.PageDeviceController;
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper;
@@ -74,7 +75,8 @@ public class DigitalPad extends Element {
         this.pageDeviceController = pageDeviceController;
         this.digitalPad = this;
 
-        DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        ((Game)context).getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
         super.centralXMax  = displayMetrics.widthPixels;
         super.centralXMin  = 0;
         super.centralYMax  = displayMetrics.heightPixels;
