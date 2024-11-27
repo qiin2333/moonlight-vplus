@@ -1,10 +1,15 @@
 package com.limelight;
 
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.net.UnknownHostException;
+import java.util.concurrent.ExecutionException;
 
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.bumptech.glide.request.FutureTarget;
 import com.bumptech.glide.request.RequestOptions;
 import com.limelight.binding.PlatformBinding;
 import com.limelight.binding.crypto.AndroidCryptoProvider;
@@ -36,23 +41,26 @@ import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.Service;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.net.Uri;
 import android.opengl.GLSurfaceView;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
+import android.util.LruCache;
 import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ContextMenu.ContextMenuInfo;
-import android.view.View.OnClickListener;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
@@ -135,6 +143,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
     private final static int SLEEP_ID = 12;
 
     public String clientName;
+    private LruCache<String, Bitmap> bitmapLruCache;
 
     private void initializeViews() {
         setContentView(R.layout.activity_pc_view);
@@ -148,11 +157,41 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
 
         clientName = Settings.Global.getString(this.getContentResolver(), "device_name");
 
-        Glide.with(this)
-            .load(getBackgroundImageUrl()).skipMemoryCache(true).diskCacheStrategy(DiskCacheStrategy.NONE)
-            .apply(RequestOptions.bitmapTransform(new BlurTransformation(2, 3)))
-            .transform(new ColorFilterTransformation(Color.argb(120, 0, 0, 0)))
-            .into((ImageView) findViewById(R.id.pcBackgroundImage));
+        ImageView imageView = findViewById(R.id.pcBackgroundImage);
+        String imageUrl = getBackgroundImageUrl();
+
+        // set background image
+        new Thread(() -> {
+            try {
+                final Bitmap bitmap = Glide.with(PcView.this)
+                        .asBitmap()
+                        .load(imageUrl)
+                        .skipMemoryCache(true).diskCacheStrategy(DiskCacheStrategy.NONE)
+                        .submit()
+                        .get();
+                if (bitmap != null) {
+                    bitmapLruCache.put(imageUrl, bitmap);
+                    runOnUiThread(() -> Glide.with(PcView.this)
+                            .load(bitmap)
+                            .apply(RequestOptions.bitmapTransform(new BlurTransformation(2, 3)))
+                            .transform(new ColorFilterTransformation(Color.argb(120, 0, 0, 0)))
+                            .into(imageView));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+        }).start();
+
+        // 设置长按监听
+        imageView.setOnLongClickListener(v -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                if (!Environment.isExternalStorageManager()) {
+                    saveImage();
+                }
+            }
+            return true;
+        });
 
         // Set default preferences if we've never been run
         PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
@@ -165,25 +204,14 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         ImageButton addComputerButton = findViewById(R.id.manuallyAddPc);
         ImageButton helpButton = findViewById(R.id.helpButton);
 
-        settingsButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(PcView.this, StreamSettings.class));
-            }
+        settingsButton.setOnClickListener(v -> startActivity(new Intent(PcView.this, StreamSettings.class)));
+        addComputerButton.setOnClickListener(v -> {
+            Intent i = new Intent(PcView.this, AddComputerManually.class);
+            startActivity(i);
         });
-        addComputerButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent i = new Intent(PcView.this, AddComputerManually.class);
-                startActivity(i);
-            }
-        });
-        helpButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        helpButton.setOnClickListener(v -> {
 //                HelpLauncher.launchSetupGuide(PcView.this);
-                joinQQGroup("LlbLDIF_YolaM4HZyLx0xAXXo04ZmoBM");
-            }
+            joinQQGroup("LlbLDIF_YolaM4HZyLx0xAXXo04ZmoBM");
         });
 
         // Amazon review didn't like the help button because the wiki was not entirely
@@ -212,6 +240,70 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         return deviceRotation == Configuration.ORIENTATION_PORTRAIT ? "https://img-api.pipw.top" : "https://img-api.pipw.top/?phone=true";
     }
 
+    private void saveImage() {
+        Bitmap bitmap = bitmapLruCache.get(getBackgroundImageUrl());
+        if (bitmap == null) return;
+
+        // 图片保存路径，这里保存到外部存储的Pictures目录下，可根据需求调整
+        String root = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).toString();
+        File myDir = new File(root + "/setu");
+        myDir.mkdirs();
+
+        // 文件名设置
+        String fileName = "pipw-" + System.currentTimeMillis() + ".png";
+        File file = new File(myDir, fileName);
+
+        try {
+            FileOutputStream outputStream = new FileOutputStream(file);
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream);
+            outputStream.flush();
+            outputStream.close();
+            refreshSystemPic(PcView.this, file);
+            Toast.makeText(this, "涩图成功保存到了系统目录(Picture/setu)", Toast.LENGTH_SHORT).show();
+        } catch (IOException e) {
+            e.printStackTrace();
+            Toast.makeText(this, "涩图下载失败", Toast.LENGTH_SHORT).show();
+        }
+        bitmapLruCache.evictAll();
+    }
+
+    private boolean copyFile(File source, File dest) {
+        FileInputStream fis = null;
+        FileOutputStream fos = null;
+        try {
+            fis = new FileInputStream(source);
+            fos = new FileOutputStream(dest);
+            byte[] buffer = new byte[1024];
+            int len;
+            while ((len = fis.read(buffer)) > 0) {
+                fos.write(buffer, 0, len);
+            }
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            try {
+                if (fis != null) {
+                    fis.close();
+                }
+                if (fos != null) {
+                    fos.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    // 刷新图库的方法
+    private void refreshSystemPic(Context context, File file) {
+        Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+        Uri contentUri = Uri.fromFile(file);
+        intent.setData(contentUri);
+        context.sendBroadcast(intent);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -219,6 +311,17 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         // Assume we're in the foreground when created to avoid a race
         // between binding to CMS and onResume()
         inForeground = true;
+
+        // Create cache for images
+        int maxMemory = (int) (Runtime.getRuntime().maxMemory() / 1024);
+        int cacheSize = maxMemory / 8;
+        bitmapLruCache = new LruCache<>(cacheSize) {
+            @Override
+            protected int sizeOf(String key, Bitmap value) {
+                // 计算每个Bitmap占用的内存大小（以KB为单位）
+                return value.getByteCount() / 1024;
+            }
+        };
 
         // Create a GLSurfaceView to fetch GLRenderer unless we have
         // a cached result already.
@@ -235,12 +338,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
 
                     LimeLog.info("Fetched GL Renderer: " + glPrefs.glRenderer);
 
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            completeOnCreate();
-                        }
-                    });
+                    runOnUiThread(() -> completeOnCreate());
                 }
 
                 @Override
@@ -284,12 +382,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                 @Override
                 public void notifyComputerUpdated(final ComputerDetails details) {
                     if (!freezeUpdates) {
-                        PcView.this.runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                updateComputer(details);
-                            }
-                        });
+                        PcView.this.runOnUiThread(() -> updateComputer(details));
 
                         // Add a launcher shortcut for this PC (off the main thread to prevent ANRs)
                         if (details.pairState == PairState.PAIRED) {
@@ -434,97 +527,87 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         }
 
         Toast.makeText(PcView.this, getResources().getString(R.string.pairing), Toast.LENGTH_SHORT).show();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                NvHTTP httpConn;
-                String message;
-                boolean success = false;
-                try {
-                    // Stop updates and wait while pairing
-                    stopComputerUpdates(true);
+        new Thread(() -> {
+            NvHTTP httpConn;
+            String message;
+            boolean success = false;
+            try {
+                // Stop updates and wait while pairing
+                stopComputerUpdates(true);
 
-                    httpConn = new NvHTTP(ServerHelper.getCurrentAddressFromComputer(computer),
-                            computer.httpsPort, managerBinder.getUniqueId(), clientName, computer.serverCert,
-                            PlatformBinding.getCryptoProvider(PcView.this));
-                    if (httpConn.getPairState() == PairState.PAIRED) {
-                        // Don't display any toast, but open the app list
+                httpConn = new NvHTTP(ServerHelper.getCurrentAddressFromComputer(computer),
+                        computer.httpsPort, managerBinder.getUniqueId(), clientName, computer.serverCert,
+                        PlatformBinding.getCryptoProvider(PcView.this));
+                if (httpConn.getPairState() == PairState.PAIRED) {
+                    // Don't display any toast, but open the app list
+                    message = null;
+                    success = true;
+                } else {
+                    final String pinStr = PairingManager.generatePinString();
+
+                    // Spin the dialog off in a thread because it blocks
+                    Dialog.displayDialog(PcView.this, getResources().getString(R.string.pair_pairing_title),
+                            getResources().getString(R.string.pair_pairing_msg) + " " + pinStr + "\n\n" +
+                                    getResources().getString(R.string.pair_pairing_help), false);
+
+                    PairingManager pm = httpConn.getPairingManager();
+
+                    PairState pairState = pm.pair(httpConn.getServerInfo(true), pinStr);
+                    if (pairState == PairState.PIN_WRONG) {
+                        message = getResources().getString(R.string.pair_incorrect_pin);
+                    } else if (pairState == PairState.FAILED) {
+                        if (computer.runningGameId != 0) {
+                            message = getResources().getString(R.string.pair_pc_ingame);
+                        } else {
+                            message = getResources().getString(R.string.pair_fail);
+                        }
+                    } else if (pairState == PairState.ALREADY_IN_PROGRESS) {
+                        message = getResources().getString(R.string.pair_already_in_progress);
+                    } else if (pairState == PairState.PAIRED) {
+                        // Just navigate to the app view without displaying a toast
                         message = null;
                         success = true;
+
+                        // Pin this certificate for later HTTPS use
+                        managerBinder.getComputer(computer.uuid).serverCert = pm.getPairedCert();
+
+                        // Invalidate reachability information after pairing to force
+                        // a refresh before reading pair state again
+                        managerBinder.invalidateStateForComputer(computer.uuid);
+                    } else {
+                        // Should be no other values
+                        message = null;
                     }
-                    else {
-                        final String pinStr = PairingManager.generatePinString();
-
-                        // Spin the dialog off in a thread because it blocks
-                        Dialog.displayDialog(PcView.this, getResources().getString(R.string.pair_pairing_title),
-                                getResources().getString(R.string.pair_pairing_msg)+" "+pinStr+"\n\n"+
-                                getResources().getString(R.string.pair_pairing_help), false);
-
-                        PairingManager pm = httpConn.getPairingManager();
-
-                        PairState pairState = pm.pair(httpConn.getServerInfo(true), pinStr);
-                        if (pairState == PairState.PIN_WRONG) {
-                            message = getResources().getString(R.string.pair_incorrect_pin);
-                        }
-                        else if (pairState == PairState.FAILED) {
-                            if (computer.runningGameId != 0) {
-                                message = getResources().getString(R.string.pair_pc_ingame);
-                            }
-                            else {
-                                message = getResources().getString(R.string.pair_fail);
-                            }
-                        }
-                        else if (pairState == PairState.ALREADY_IN_PROGRESS) {
-                            message = getResources().getString(R.string.pair_already_in_progress);
-                        }
-                        else if (pairState == PairState.PAIRED) {
-                            // Just navigate to the app view without displaying a toast
-                            message = null;
-                            success = true;
-
-                            // Pin this certificate for later HTTPS use
-                            managerBinder.getComputer(computer.uuid).serverCert = pm.getPairedCert();
-
-                            // Invalidate reachability information after pairing to force
-                            // a refresh before reading pair state again
-                            managerBinder.invalidateStateForComputer(computer.uuid);
-                        }
-                        else {
-                            // Should be no other values
-                            message = null;
-                        }
-                    }
-                } catch (UnknownHostException e) {
-                    message = getResources().getString(R.string.error_unknown_host);
-                } catch (FileNotFoundException e) {
-                    message = getResources().getString(R.string.error_404);
-                } catch (XmlPullParserException | IOException e) {
-                    e.printStackTrace();
-                    message = e.getMessage();
                 }
-
-                Dialog.closeDialogs();
-
-                final String toastMessage = message;
-                final boolean toastSuccess = success;
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (toastMessage != null) {
-                            Toast.makeText(PcView.this, toastMessage, Toast.LENGTH_LONG).show();
-                        }
-
-                        if (toastSuccess) {
-                            // Open the app list after a successful pairing attempt
-                            doAppList(computer, true, false);
-                        }
-                        else {
-                            // Start polling again if we're still in the foreground
-                            startComputerUpdates();
-                        }
-                    }
-                });
+            } catch (UnknownHostException e) {
+                message = getResources().getString(R.string.error_unknown_host);
+            } catch (FileNotFoundException e) {
+                message = getResources().getString(R.string.error_404);
+            } catch (XmlPullParserException | IOException e) {
+                e.printStackTrace();
+                message = e.getMessage();
             }
+
+            Dialog.closeDialogs();
+
+            final String toastMessage = message;
+            final boolean toastSuccess = success;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (toastMessage != null) {
+                        Toast.makeText(PcView.this, toastMessage, Toast.LENGTH_LONG).show();
+                    }
+
+                    if (toastSuccess) {
+                        // Open the app list after a successful pairing attempt
+                        doAppList(computer, true, false);
+                    } else {
+                        // Start polling again if we're still in the foreground
+                        startComputerUpdates();
+                    }
+                }
+            });
         }).start();
     }
 
@@ -581,9 +664,9 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                     httpConn = new NvHTTP(ServerHelper.getCurrentAddressFromComputer(computer),
                             computer.httpsPort, managerBinder.getUniqueId(), clientName, computer.serverCert,
                             PlatformBinding.getCryptoProvider(PcView.this));
-                    if (httpConn.getPairState() == PairingManager.PairState.PAIRED) {
+                    if (httpConn.getPairState() == PairState.PAIRED) {
                         httpConn.unpair();
-                        if (httpConn.getPairState() == PairingManager.PairState.NOT_PAIRED) {
+                        if (httpConn.getPairState() == PairState.NOT_PAIRED) {
                             message = getResources().getString(R.string.unpair_success);
                         }
                         else {
