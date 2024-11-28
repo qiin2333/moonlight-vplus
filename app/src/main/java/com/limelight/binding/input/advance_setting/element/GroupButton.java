@@ -128,7 +128,7 @@ public class GroupButton extends Element {
 
 
         DisplayMetrics displayMetrics = new DisplayMetrics();
-        ((Game)context).getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        ((Game)context).getWindowManager().getDefaultDisplay().getRealMetrics(displayMetrics);
         initialCentralXMax = displayMetrics.widthPixels;
         initialCentralXMin = 0;
         initialCentralYMax = displayMetrics.heightPixels;

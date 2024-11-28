@@ -97,7 +97,7 @@ public class DigitalCommonButton extends Element {
         this.digitalCommonButton = this;
 
         DisplayMetrics displayMetrics = new DisplayMetrics();
-        ((Game)context).getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        ((Game)context).getWindowManager().getDefaultDisplay().getRealMetrics(displayMetrics);
         super.centralXMax  = displayMetrics.widthPixels;
         super.centralXMin  = 0;
         super.centralYMax  = displayMetrics.heightPixels;
