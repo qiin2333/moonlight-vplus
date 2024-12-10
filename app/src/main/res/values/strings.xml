@@ -317,6 +317,8 @@
     <string name="summary_troubleshooting">View tips for diagnosing and fixing common streaming issues</string>
     <string name="title_privacy_policy">Privacy policy</string>
     <string name="summary_privacy_policy">View Moonlight\'s privacy policy</string>
+    <string name="title_about_mode">About</string>
+    <string name="summary_about_mode">Check for updates</string>
 
     <!-- Toasts -->
     <string name="toast_controller_type_changed">Gamepad type may be changed due to motion sensor emulation</string>
@@ -333,6 +335,8 @@
     <string name="fps_60">60 FPS</string>
     <string name="fps_90">90 FPS</string>
     <string name="fps_120">120 FPS</string>
+    <string name="fps_144">144 FPS</string>
+    <string name="fps_165">165 FPS</string>
 
     <string name="audioconf_stereo">Stereo</string>
     <string name="audioconf_51surround">5.1 Surround Sound</string>

@@ -20,7 +20,6 @@ import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 import android.preference.PreferenceScreen;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.util.Range;
 import android.view.Display;
 import android.view.DisplayCutout;
@@ -48,7 +47,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.lang.reflect.Method;
 import java.util.*;
 
 public class StreamSettings extends Activity {
@@ -617,25 +615,33 @@ public class StreamSettings extends Activity {
 
             if (!PreferenceConfiguration.readPreferences(this.getActivity()).unlockFps) {
                 // We give some extra room in case the FPS is rounded down
+                if (maxSupportedFps < 162) {
+                    removeValue(PreferenceConfiguration.FPS_PREF_STRING, "165", () -> {
+                        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
+                        setValue(PreferenceConfiguration.FPS_PREF_STRING, "144");
+                        resetBitrateToDefault(prefs, null, null);
+                    });
+                }
+                if (maxSupportedFps < 141) {
+                    removeValue(PreferenceConfiguration.FPS_PREF_STRING, "144", () -> {
+                        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
+                        setValue(PreferenceConfiguration.FPS_PREF_STRING, "120");
+                        resetBitrateToDefault(prefs, null, null);
+                    });
+                }
                 if (maxSupportedFps < 118) {
-                    removeValue(PreferenceConfiguration.FPS_PREF_STRING, "120", new Runnable() {
-                        @Override
-                        public void run() {
-                            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
-                            setValue(PreferenceConfiguration.FPS_PREF_STRING, "90");
-                            resetBitrateToDefault(prefs, null, null);
-                        }
+                    removeValue(PreferenceConfiguration.FPS_PREF_STRING, "120", () -> {
+                        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
+                        setValue(PreferenceConfiguration.FPS_PREF_STRING, "90");
+                        resetBitrateToDefault(prefs, null, null);
                     });
                 }
                 if (maxSupportedFps < 88) {
                     // 1080p is unsupported
-                    removeValue(PreferenceConfiguration.FPS_PREF_STRING, "90", new Runnable() {
-                        @Override
-                        public void run() {
-                            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
-                            setValue(PreferenceConfiguration.FPS_PREF_STRING, "60");
-                            resetBitrateToDefault(prefs, null, null);
-                        }
+                    removeValue(PreferenceConfiguration.FPS_PREF_STRING, "90", () -> {
+                        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
+                        setValue(PreferenceConfiguration.FPS_PREF_STRING, "60");
+                        resetBitrateToDefault(prefs, null, null);
                     });
                 }
                 // Never remove 30 FPS or 60 FPS
@@ -739,37 +745,31 @@ public class StreamSettings extends Activity {
                     return true;
                 }
             });
-            findPreference(PreferenceConfiguration.FPS_PREF_STRING).setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
-                @Override
-                public boolean onPreferenceChange(Preference preference, Object newValue) {
-                    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
-                    String valueStr = (String) newValue;
+            findPreference(PreferenceConfiguration.FPS_PREF_STRING).setOnPreferenceChangeListener((preference, newValue) -> {
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
+                String valueStr = (String) newValue;
 
-                    // If this is native frame rate, show the warning dialog
-                    CharSequence[] values = ((ListPreference)preference).getEntryValues();
-                    if (nativeFramerateShown && values[values.length - 1].toString().equals(newValue.toString())) {
-                        Dialog.displayDialog(getActivity(),
-                                getResources().getString(R.string.title_native_fps_dialog),
-                                getResources().getString(R.string.text_native_res_dialog),
-                                false);
-                    }
-
-                    // Write the new bitrate value
-                    resetBitrateToDefault(prefs, null, valueStr);
-
-                    // Allow the original preference change to take place
-                    return true;
+                // If this is native frame rate, show the warning dialog
+                CharSequence[] values = ((ListPreference)preference).getEntryValues();
+                if (nativeFramerateShown && values[values.length - 1].toString().equals(newValue.toString())) {
+                    Dialog.displayDialog(getActivity(),
+                            getResources().getString(R.string.title_native_fps_dialog),
+                            getResources().getString(R.string.text_native_res_dialog),
+                            false);
                 }
+
+                // Write the new bitrate value
+                resetBitrateToDefault(prefs, null, valueStr);
+
+                // Allow the original preference change to take place
+                return true;
             });
-            findPreference(PreferenceConfiguration.IMPORT_CONFIG_STRING).setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
-                @Override
-                public boolean onPreferenceClick(Preference preference) {
-                    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                    intent.addCategory(Intent.CATEGORY_OPENABLE);
-                    intent.setType("*/*");
-                    startActivityForResult(intent, 2);
-                    return false;
-                }
+            findPreference(PreferenceConfiguration.IMPORT_CONFIG_STRING).setOnPreferenceClickListener(preference -> {
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("*/*");
+                startActivityForResult(intent, 2);
+                return false;
             });
 
 

@@ -258,4 +258,14 @@ public class UiHelper {
                 .setNegativeButton(parent.getResources().getString(R.string.no), dialogClickListener)
                 .show();
     }
+
+    public static boolean isColorOS() {
+        String manufacturer = android.os.Build.MANUFACTURER;
+        String model = android.os.Build.MODEL;
+        String brand = android.os.Build.BRAND;
+
+        // 通常OPPO手机的制造商、品牌或型号中会包含OPPO或ColorOS等关键字
+        return manufacturer.toLowerCase().contains("oppo") || model.toLowerCase().contains("oppo") || brand.toLowerCase().contains("oppo") ||
+                manufacturer.toLowerCase().contains("coloros") || model.toLowerCase().contains("coloros") || brand.toLowerCase().contains("coloros");
+    }
 }
