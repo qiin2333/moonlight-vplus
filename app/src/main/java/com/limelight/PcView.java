@@ -6,14 +6,11 @@ import java.io.IOException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.net.UnknownHostException;
-import java.util.concurrent.ExecutionException;
 
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
-import com.bumptech.glide.request.FutureTarget;
 import com.bumptech.glide.request.RequestOptions;
 import com.limelight.binding.PlatformBinding;
 import com.limelight.binding.crypto.AndroidCryptoProvider;
-import com.limelight.computers.ComputerManagerListener;
 import com.limelight.computers.ComputerManagerService;
 import com.limelight.grid.PcGridAdapter;
 import com.limelight.grid.assets.DiskAssetLoader;
@@ -62,8 +59,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.widget.AbsListView;
-import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
@@ -378,16 +373,13 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         // and our activity is in the foreground.
         if (managerBinder != null && !runningPolling && inForeground) {
             freezeUpdates = false;
-            managerBinder.startPolling(new ComputerManagerListener() {
-                @Override
-                public void notifyComputerUpdated(final ComputerDetails details) {
-                    if (!freezeUpdates) {
-                        PcView.this.runOnUiThread(() -> updateComputer(details));
+            managerBinder.startPolling(details -> {
+                if (!freezeUpdates) {
+                    PcView.this.runOnUiThread(() -> updateComputer(details));
 
-                        // Add a launcher shortcut for this PC (off the main thread to prevent ANRs)
-                        if (details.pairState == PairState.PAIRED) {
-                            shortcutHelper.createAppViewShortcutForOnlineHost(details);
-                        }
+                    // Add a launcher shortcut for this PC (off the main thread to prevent ANRs)
+                    if (details.pairState == PairState.PAIRED) {
+                        shortcutHelper.createAppViewShortcutForOnlineHost(details);
                     }
                 }
             });
@@ -592,20 +584,17 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
 
             final String toastMessage = message;
             final boolean toastSuccess = success;
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (toastMessage != null) {
-                        Toast.makeText(PcView.this, toastMessage, Toast.LENGTH_LONG).show();
-                    }
+            runOnUiThread(() -> {
+                if (toastMessage != null) {
+                    Toast.makeText(PcView.this, toastMessage, Toast.LENGTH_LONG).show();
+                }
 
-                    if (toastSuccess) {
-                        // Open the app list after a successful pairing attempt
-                        doAppList(computer, true, false);
-                    } else {
-                        // Start polling again if we're still in the foreground
-                        startComputerUpdates();
-                    }
+                if (toastSuccess) {
+                    // Open the app list after a successful pairing attempt
+                    doAppList(computer, true, false);
+                } else {
+                    // Start polling again if we're still in the foreground
+                    startComputerUpdates();
                 }
             });
         }).start();
@@ -622,25 +611,17 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
             return;
         }
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                String message;
-                try {
-                    WakeOnLanSender.sendWolPacket(computer);
-                    message = getResources().getString(R.string.wol_waking_msg);
-                } catch (IOException e) {
-                    message = getResources().getString(R.string.wol_fail);
-                }
-
-                final String toastMessage = message;
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(PcView.this, toastMessage, Toast.LENGTH_LONG).show();
-                    }
-                });
+        new Thread(() -> {
+            String message;
+            try {
+                WakeOnLanSender.sendWolPacket(computer);
+                message = getResources().getString(R.string.wol_waking_msg);
+            } catch (IOException e) {
+                message = getResources().getString(R.string.wol_fail);
             }
+
+            final String toastMessage = message;
+            runOnUiThread(() -> Toast.makeText(PcView.this, toastMessage, Toast.LENGTH_LONG).show());
         }).start();
     }
 
@@ -655,44 +636,36 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         }
 
         Toast.makeText(PcView.this, getResources().getString(R.string.unpairing), Toast.LENGTH_SHORT).show();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                NvHTTP httpConn;
-                String message;
-                try {
-                    httpConn = new NvHTTP(ServerHelper.getCurrentAddressFromComputer(computer),
-                            computer.httpsPort, managerBinder.getUniqueId(), clientName, computer.serverCert,
-                            PlatformBinding.getCryptoProvider(PcView.this));
-                    if (httpConn.getPairState() == PairState.PAIRED) {
-                        httpConn.unpair();
-                        if (httpConn.getPairState() == PairState.NOT_PAIRED) {
-                            message = getResources().getString(R.string.unpair_success);
-                        }
-                        else {
-                            message = getResources().getString(R.string.unpair_fail);
-                        }
+        new Thread(() -> {
+            NvHTTP httpConn;
+            String message;
+            try {
+                httpConn = new NvHTTP(ServerHelper.getCurrentAddressFromComputer(computer),
+                        computer.httpsPort, managerBinder.getUniqueId(), clientName, computer.serverCert,
+                        PlatformBinding.getCryptoProvider(PcView.this));
+                if (httpConn.getPairState() == PairState.PAIRED) {
+                    httpConn.unpair();
+                    if (httpConn.getPairState() == PairState.NOT_PAIRED) {
+                        message = getResources().getString(R.string.unpair_success);
                     }
                     else {
-                        message = getResources().getString(R.string.unpair_error);
+                        message = getResources().getString(R.string.unpair_fail);
                     }
-                } catch (UnknownHostException e) {
-                    message = getResources().getString(R.string.error_unknown_host);
-                } catch (FileNotFoundException e) {
-                    message = getResources().getString(R.string.error_404);
-                } catch (XmlPullParserException | IOException e) {
-                    message = e.getMessage();
-                    e.printStackTrace();
                 }
-
-                final String toastMessage = message;
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(PcView.this, toastMessage, Toast.LENGTH_LONG).show();
-                    }
-                });
+                else {
+                    message = getResources().getString(R.string.unpair_error);
+                }
+            } catch (UnknownHostException e) {
+                message = getResources().getString(R.string.error_unknown_host);
+            } catch (FileNotFoundException e) {
+                message = getResources().getString(R.string.error_404);
+            } catch (XmlPullParserException | IOException e) {
+                message = e.getMessage();
+                e.printStackTrace();
             }
+
+            final String toastMessage = message;
+            runOnUiThread(() -> Toast.makeText(PcView.this, toastMessage, Toast.LENGTH_LONG).show());
         }).start();
     }
 
@@ -736,15 +709,12 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                     LimeLog.info("Ignoring delete PC request from monkey");
                     return true;
                 }
-                UiHelper.displayDeletePcConfirmationDialog(this, computer.details, new Runnable() {
-                    @Override
-                    public void run() {
-                        if (managerBinder == null) {
-                            Toast.makeText(PcView.this, getResources().getString(R.string.error_manager_not_running), Toast.LENGTH_LONG).show();
-                            return;
-                        }
-                        removeComputer(computer.details);
+                UiHelper.displayDeletePcConfirmationDialog(this, computer.details, () -> {
+                    if (managerBinder == null) {
+                        Toast.makeText(PcView.this, getResources().getString(R.string.error_manager_not_running), Toast.LENGTH_LONG).show();
+                        return;
                     }
+                    removeComputer(computer.details);
                 }, null);
                 return true;
 
@@ -768,13 +738,8 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                 }
 
                 // Display a confirmation dialog first
-                UiHelper.displayQuitConfirmationDialog(this, new Runnable() {
-                    @Override
-                    public void run() {
-                       ServerHelper.doQuit(PcView.this, computer.details,
-                               new NvApp("app", 0, false), managerBinder, null);
-                    }
-                }, null);
+                UiHelper.displayQuitConfirmationDialog(this, () -> ServerHelper.doQuit(PcView.this, computer.details,
+                        new NvApp("app", 0, false), managerBinder, null), null);
                 return true;
             
             case SLEEP_ID:
@@ -872,21 +837,17 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
     @Override
     public void receiveAbsListView(AbsListView listView) {
         listView.setAdapter(pcGridAdapter);
-        listView.setOnItemClickListener(new OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> arg0, View arg1, int pos,
-                                    long id) {
-                ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(pos);
-                if (computer.details.state == ComputerDetails.State.UNKNOWN ||
-                    computer.details.state == ComputerDetails.State.OFFLINE) {
-                    // Open the context menu if a PC is offline or refreshing
-                    openContextMenu(arg1);
-                } else if (computer.details.pairState != PairState.PAIRED) {
-                    // Pair an unpaired machine by default
-                    doPair(computer.details);
-                } else {
-                    doAppList(computer.details, false, false);
-                }
+        listView.setOnItemClickListener((arg0, arg1, pos, id) -> {
+            ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(pos);
+            if (computer.details.state == ComputerDetails.State.UNKNOWN ||
+                computer.details.state == ComputerDetails.State.OFFLINE) {
+                // Open the context menu if a PC is offline or refreshing
+                openContextMenu(arg1);
+            } else if (computer.details.pairState != PairState.PAIRED) {
+                // Pair an unpaired machine by default
+                doPair(computer.details);
+            } else {
+                doAppList(computer.details, false, false);
             }
         });
         UiHelper.applyStatusBarPadding(listView);
