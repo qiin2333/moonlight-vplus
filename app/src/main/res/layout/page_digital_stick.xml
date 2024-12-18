@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.limelight.binding.input.advance_setting.superpage.SuperPageLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="250dp"
+    android:layout_height="match_parent"
+    android:tag="250">
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="5dp"
+        android:paddingTop="3dp"
+        android:layout_gravity="center_vertical"
+        android:background="@drawable/super_content_box_background">
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="10dp">
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginVertical="5dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:text="类型 : 按键摇杆"/>
+            </LinearLayout>
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:layout_marginBottom="20dp">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="30dp"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="5dp"
+                    android:text="摇杆键值" />
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/page_digital_stick_up_value"
+                        android:layout_width="60dp"
+                        android:layout_height="40dp"
+                        android:gravity="center"
+                        android:text="UP"
+                        android:layout_gravity="center_horizontal"
+                        android:background="@drawable/enabled_square" />
+                    <LinearLayout
+                        android:orientation="horizontal"
+                        android:layout_width="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_height="40dp"
+                        android:layout_marginVertical="5dp">
+                        <TextView
+                            android:id="@+id/page_digital_stick_left_value"
+                            android:layout_width="60dp"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:text="LEFT"
+                            android:layout_gravity="center_horizontal"
+                            android:background="@drawable/enabled_square" />
+                        <TextView
+                            android:id="@+id/page_digital_stick_right_value"
+                            android:layout_width="60dp"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:text="RIGHT"
+                            android:layout_marginLeft="70dp"
+                            android:layout_gravity="center_horizontal"
+                            android:background="@drawable/enabled_square" />
+                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/page_digital_stick_down_value"
+                        android:layout_width="60dp"
+                        android:layout_height="40dp"
+                        android:gravity="center"
+                        android:text="DOWN"
+                        android:layout_gravity="center_horizontal"
+                        android:background="@drawable/enabled_square" />
+                </LinearLayout>
+
+            </LinearLayout>
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginVertical="5dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:text="摇杆中键" />
+                <TextView
+                    android:id="@+id/page_digital_stick_middle_value"
+                    android:layout_width="100dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="LSB"
+                    android:background="@drawable/enabled_square" />
+            </LinearLayout>
+            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                android:id="@+id/page_digital_stick_central_x"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginVertical="5dp"
+                app:text="X"
+                app:max="100"
+                app:min="0"
+                app:progress="100" />
+            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                android:id="@+id/page_digital_stick_central_y"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginVertical="5dp"
+                app:text="Y"
+                app:max="100"
+                app:min="0"
+                app:progress="100" />
+            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                android:id="@+id/page_digital_stick_sense"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginVertical="5dp"
+                app:text="摇杆死区百分比"
+                app:max="100"
+                app:min="0"
+                app:progress="30" />
+            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                android:id="@+id/page_digital_stick_radius"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginVertical="5dp"
+                app:text="摇杆半径"
+                app:max="100"
+                app:min="0"
+                app:progress="0"/>
+            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                android:id="@+id/page_digital_stick_thick"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginVertical="5dp"
+                app:text="边框厚度"
+                app:max="10"
+                app:min="0"
+                app:progress="3"/>
+            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                android:id="@+id/page_digital_stick_layer"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginVertical="5dp"
+                app:text="层级"
+                app:max="140"
+                app:min="40" />
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginVertical="5dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:text="边框颜色" />
+                <com.limelight.binding.input.advance_setting.superpage.ElementEditText
+                    android:id="@+id/page_digital_stick_normal_color"
+                    android:layout_width="100dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="A"
+                    android:textSize="15dp"
+                    android:background="@drawable/enabled_square" />
+            </LinearLayout>
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginVertical="5dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:text="边框按下颜色" />
+                <com.limelight.binding.input.advance_setting.superpage.ElementEditText
+                    android:id="@+id/page_digital_stick_pressed_color"
+                    android:layout_width="100dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="A"
+                    android:textSize="15dp"
+                    android:background="@drawable/enabled_square"/>
+            </LinearLayout>
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginVertical="5dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:text="背景颜色" />
+                <com.limelight.binding.input.advance_setting.superpage.ElementEditText
+                    android:id="@+id/page_digital_stick_background_color"
+                    android:layout_width="100dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="A"
+                    android:textSize="15dp"
+                    android:background="@drawable/enabled_square" />
+            </LinearLayout>
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginVertical="5dp">
+                <Button
+                    android:id="@+id/page_digital_stick_copy"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="复制"/>
+                <Button
+                    android:id="@+id/page_digital_stick_delete"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="删除"/>
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+
+
+
+
+</com.limelight.binding.input.advance_setting.superpage.SuperPageLayout>

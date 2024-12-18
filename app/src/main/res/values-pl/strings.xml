@@ -116,7 +116,6 @@
     <string name="title_enable_hdr">Włącz HDR (eksperymentalnie)</string>
     <string name="summary_enable_hdr">Przesyłaj strumieniowo HDR, gdy gra i procesor graficzny komputera obsługują tę funkcję. HDR wymaga GPU z obsługą kodowania HEVC Main 10.</string>
     <string name="title_full_range">Wymuś pełny zakres wideo (eksperymentalne)</string>
-    <string name="summary_enable_perf_overlay">Wyświetlanie informacji o wydajności strumienia w czasie rzeczywistym podczas strumieniowania</string>
     <string name="title_enable_post_stream_toast">Wyświetlanie komunikatu o opóźnieniu po przesyłaniu strumieniowym</string>
     <string name="summary_full_range">Spowoduje to utratę szczegółów w jasnych i ciemnych obszarach, jeśli urządzenie nie wyświetla prawidłowo treści wideo w pełnym zakresie.</string>
     <string name="summary_enable_post_stream_toast">Wyświetlanie komunikatu informującego o opóźnieniu po zakończeniu strumienia</string>
@@ -202,7 +201,6 @@
     <string name="dialog_text_reset_osc">Czy na pewno chcesz usunąć zapisany układ kontrolek ekranowych?</string>
     <string name="summary_checkbox_enable_pip">Umożliwia wyświetlanie strumienia (ale nie sterowanie nim) podczas pracy wielozadaniowej</string>
     <string name="title_checkbox_small_icon_mode">Używaj małe ramki</string>
-    <string name="title_enable_perf_overlay">Wyświetlanie statystyk wydajności podczas przesyłania strumieniowego</string>
     <string name="summary_troubleshooting">Zobacz wskazówki dotyczące diagnozowania i naprawiania typowych problemów z transmisją strumieniową</string>
     <string name="audioconf_51surround">5.1 Surround Sound</string>
     <string name="audioconf_71surround">7.1 Surround Sound</string>

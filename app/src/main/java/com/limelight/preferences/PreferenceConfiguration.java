@@ -29,7 +29,14 @@ public class PreferenceConfiguration {
     static final String RESOLUTION_PREF_STRING = "list_resolution";
     static final String FPS_PREF_STRING = "list_fps";
     static final String BITRATE_PREF_STRING = "seekbar_bitrate_kbps";
+    static final String HOST_SCALE_PREF_STRING = "seekbar_resolutions_scale";
     private static final String BITRATE_PREF_OLD_STRING = "seekbar_bitrate";
+    static final String LONG_PRESS_FLAT_REGION_PIXELS_PREF_STRING = "seekbar_flat_region_pixels";
+    static final String SYNC_TOUCH_EVENT_WITH_DISPLAY_PREF_STRING = "checkbox_sync_touch_event_with_display";
+    static final String ENABLE_KEYBOARD_TOGGLE_IN_NATIVE_TOUCH  = "checkbox_enable_keyboard_toggle_in_native_touch";
+    static final String NATIVE_TOUCH_FINGERS_TO_TOGGLE_KEYBOARD_PREF_STRING = "seekbar_keyboard_toggle_fingers_native_touch";
+
+
     private static final String STRETCH_PREF_STRING = "checkbox_stretch_video";
     private static final String SOPS_PREF_STRING = "checkbox_enable_sops";
     private static final String DISABLE_TOASTS_PREF_STRING = "checkbox_disable_warnings";
@@ -42,7 +49,7 @@ public class PreferenceConfiguration {
     static final String AUDIO_CONFIG_PREF_STRING = "list_audio_config";
     private static final String USB_DRIVER_PREF_SRING = "checkbox_usb_driver";
     private static final String VIDEO_FORMAT_PREF_STRING = "video_format";
-    private static final String ONSCREEN_CONTROLLER_PREF_STRING = "checkbox_show_onscreen_controls";
+    private static final String ONSCREEN_KEYBOARD_PREF_STRING = "checkbox_show_onscreen_keyboard";
     private static final String ONLY_L3_R3_PREF_STRING = "checkbox_only_show_L3R3";
     private static final String SHOW_GUIDE_BUTTON_PREF_STRING = "checkbox_show_guide_button";
     private static final String LEGACY_DISABLE_FRAME_DROP_PREF_STRING = "checkbox_disable_frame_drop";
@@ -62,6 +69,14 @@ public class PreferenceConfiguration {
     private static final String LATENCY_TOAST_PREF_STRING = "checkbox_enable_post_stream_toast";
     private static final String FRAME_PACING_PREF_STRING = "frame_pacing";
     private static final String ABSOLUTE_MOUSE_MODE_PREF_STRING = "checkbox_absolute_mouse_mode";
+
+    private static final String ENABLE_ENHANCED_TOUCH_PREF_STRING = "checkbox_enable_enhanced_touch";
+    private static final String ENHANCED_TOUCH_ON_RIGHT_PREF_STRING = "checkbox_enhanced_touch_on_which_side";
+    private static final String ENHANCED_TOUCH_ZONE_DIVIDER_PREF_STRING = "enhanced_touch_zone_divider";
+    private static final String POINTER_VELOCITY_FACTOR_PREF_STRING = "pointer_velocity_factor";
+    // private static final String POINTER_FIXED_X_VELOCITY_PREF_STRING = "fixed_x_velocity";
+
+
     private static final String ENABLE_AUDIO_FX_PREF_STRING = "checkbox_enable_audiofx";
     private static final String REDUCE_REFRESH_RATE_PREF_STRING = "checkbox_reduce_refresh_rate";
     private static final String FULL_RANGE_PREF_STRING = "checkbox_full_range";
@@ -69,7 +84,14 @@ public class PreferenceConfiguration {
     private static final String GAMEPAD_MOTION_SENSORS_PREF_STRING = "checkbox_gamepad_motion_sensors";
     private static final String GAMEPAD_MOTION_FALLBACK_PREF_STRING = "checkbox_gamepad_motion_fallback";
 
-    static final String DEFAULT_RESOLUTION = "1280x720";
+    //wg
+    private static final String ONSCREEN_CONTROLLER_PREF_STRING = "checkbox_show_onscreen_controls";
+    static final String IMPORT_CONFIG_STRING = "import_super_config";
+    static final String EXPORT_CONFIG_STRING = "export_super_config";
+    static final String MERGE_CONFIG_STRING = "merge_super_config";
+    static final String ABOUT_AUTHOR = "about_author";
+
+    static final String DEFAULT_RESOLUTION = "1920x1080";
     static final String DEFAULT_FPS = "60";
     private static final boolean DEFAULT_STRETCH = false;
     private static final boolean DEFAULT_SOPS = true;
@@ -83,6 +105,7 @@ public class PreferenceConfiguration {
     private static final String DEFAULT_VIDEO_FORMAT = "auto";
 
     private static final boolean ONSCREEN_CONTROLLER_DEFAULT = false;
+    private static final boolean ONSCREEN_KEYBOARD_DEFAULT = false;
     private static final boolean ONLY_L3_R3_DEFAULT = false;
     private static final boolean SHOW_GUIDE_BUTTON_DEFAULT = true;
     private static final boolean DEFAULT_ENABLE_HDR = false;
@@ -122,8 +145,19 @@ public class PreferenceConfiguration {
     public static final String RES_4K = "3840x2160";
     public static final String RES_NATIVE = "Native";
 
-    public int width, height, fps;
+    public int width, height, fps, resolutionScale;
     public int bitrate;
+    public int longPressflatRegionPixels; //Assigned to NativeTouchContext.INTIAL_ZONE_PIXELS
+    public boolean syncTouchEventWithDisplay; // if true, view.requestUnbufferedDispatch(event) will be disabled
+    public boolean enableEnhancedTouch; //Assigned to NativeTouchContext.ENABLE_ENHANCED_TOUCH
+    public boolean enhancedTouchOnWhichSide; //Assigned to NativeTouchContext.ENHANCED_TOUCH_ON_RIGHT
+    public int enhanceTouchZoneDivider; //Assigned to NativeTouchContext.ENHANCED_TOUCH_ZONE_DIVIDER
+    public float pointerVelocityFactor; //Assigned to NativeTouchContext.POINTER_VELOCITY_FACTOR
+    // public float pointerFixedXVelocity; //Assigned to NativeTouchContext.POINTER_FIXED_X_VELOCITY
+    public int nativeTouchFingersToToggleKeyboard; // Number of fingers to tap to toggle local on-screen keyboard in native touch mode.
+
+
+
     public FormatOption videoFormat;
     public int deadzonePercentage;
     public int oscOpacity;
@@ -131,11 +165,13 @@ public class PreferenceConfiguration {
     public String language;
     public boolean smallIconMode, multiController, usbDriver, flipFaceButtons;
     public boolean onscreenController;
+    public boolean onscreenKeyboard;
     public boolean onlyL3R3;
     public boolean showGuideButton;
     public boolean enableHdr;
     public boolean enablePip;
     public boolean enablePerfOverlay;
+    public boolean enableSimplifyPerfOverlay;
     public boolean enableLatencyToast;
     public boolean bindAllUsb;
     public boolean mouseEmulation;
@@ -420,6 +456,7 @@ public class PreferenceConfiguration {
         prefs.edit()
                 .remove(BITRATE_PREF_STRING)
                 .remove(BITRATE_PREF_OLD_STRING)
+                .remove(HOST_SCALE_PREF_STRING)
                 .remove(LEGACY_RES_FPS_PREF_STRING)
                 .remove(RESOLUTION_PREF_STRING)
                 .remove(FPS_PREF_STRING)
@@ -548,6 +585,23 @@ public class PreferenceConfiguration {
             config.bitrate = getDefaultBitrate(context);
         }
 
+        config.resolutionScale = prefs.getInt(HOST_SCALE_PREF_STRING, 100);
+        config.longPressflatRegionPixels = prefs.getInt(LONG_PRESS_FLAT_REGION_PIXELS_PREF_STRING, 0);  // define a flat region to suppress coordinates jitter. This is a simulation of iOS behavior since it only send 1 touch event during long press, which feels better in some cases.
+        config.syncTouchEventWithDisplay = prefs.getBoolean(SYNC_TOUCH_EVENT_WITH_DISPLAY_PREF_STRING, false); // set true to disable "requestUnbufferedDispatch", feels better in some cases.
+        if(prefs.getBoolean(ENABLE_KEYBOARD_TOGGLE_IN_NATIVE_TOUCH, true)) {
+            config.nativeTouchFingersToToggleKeyboard = prefs.getInt(NATIVE_TOUCH_FINGERS_TO_TOGGLE_KEYBOARD_PREF_STRING, 3); // least fingers of tap to toggle local keyboard, configurable from 3 to 10 in menu.
+        }
+        else{
+            config.nativeTouchFingersToToggleKeyboard = -1; // completely disable keyboard toggle in multi-point touch
+        }
+
+        // Enhance touch settings
+        config.enableEnhancedTouch = prefs.getBoolean(ENABLE_ENHANCED_TOUCH_PREF_STRING, false);
+        config.enhancedTouchOnWhichSide = prefs.getBoolean(ENHANCED_TOUCH_ON_RIGHT_PREF_STRING, true);  // by default, enhanced touch zone is on the right side.
+        config.enhanceTouchZoneDivider = prefs.getInt(ENHANCED_TOUCH_ZONE_DIVIDER_PREF_STRING,50);  // decides where to divide native touch zone & enhance touch zone by a vertical line.
+        config.pointerVelocityFactor = prefs.getInt(POINTER_VELOCITY_FACTOR_PREF_STRING,100);  // set pointer velocity faster or slower within enhance touch zone, useful in some games for tweaking view rotation sensitivity.
+        // config.pointerFixedXVelocity = prefs.getInt(POINTER_FIXED_X_VELOCITY_PREF_STRING,0);
+
         String audioConfig = prefs.getString(AUDIO_CONFIG_PREF_STRING, DEFAULT_AUDIO_CONFIG);
         if (audioConfig.equals("71")) {
             config.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_71_SURROUND;
@@ -579,6 +633,7 @@ public class PreferenceConfiguration {
         config.multiController = prefs.getBoolean(MULTI_CONTROLLER_PREF_STRING, DEFAULT_MULTI_CONTROLLER);
         config.usbDriver = prefs.getBoolean(USB_DRIVER_PREF_SRING, DEFAULT_USB_DRIVER);
         config.onscreenController = prefs.getBoolean(ONSCREEN_CONTROLLER_PREF_STRING, ONSCREEN_CONTROLLER_DEFAULT);
+        config.onscreenKeyboard = prefs.getBoolean(ONSCREEN_KEYBOARD_PREF_STRING, ONSCREEN_KEYBOARD_DEFAULT);
         config.onlyL3R3 = prefs.getBoolean(ONLY_L3_R3_PREF_STRING, ONLY_L3_R3_DEFAULT);
         config.showGuideButton = prefs.getBoolean(SHOW_GUIDE_BUTTON_PREF_STRING, SHOW_GUIDE_BUTTON_DEFAULT);
         config.enableHdr = prefs.getBoolean(ENABLE_HDR_PREF_STRING, DEFAULT_ENABLE_HDR) && !isShieldAtvFirmwareWithBrokenHdr();
@@ -601,6 +656,7 @@ public class PreferenceConfiguration {
         config.gamepadTouchpadAsMouse = prefs.getBoolean(GAMEPAD_TOUCHPAD_AS_MOUSE_PREF_STRING, DEFAULT_GAMEPAD_TOUCHPAD_AS_MOUSE);
         config.gamepadMotionSensors = prefs.getBoolean(GAMEPAD_MOTION_SENSORS_PREF_STRING, DEFAULT_GAMEPAD_MOTION_SENSORS);
         config.gamepadMotionSensorsFallbackToDevice = prefs.getBoolean(GAMEPAD_MOTION_FALLBACK_PREF_STRING, DEFAULT_GAMEPAD_MOTION_FALLBACK);
+        config.enableSimplifyPerfOverlay = false;
 
         return config;
     }

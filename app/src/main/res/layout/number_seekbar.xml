@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <FrameLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="30dp"
+        android:layout_marginBottom="5dp">
+        <TextView
+            android:id="@+id/number_seekbar_title"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:text="鼠标透传灵敏度"/>
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="wrap_content"
+            android:layout_gravity="end"
+            android:layout_height="30dp">
+            <View
+                android:id="@+id/number_seekbar_minus"
+                android:layout_width="40dp"
+                android:layout_height="30dp"
+                android:layout_marginEnd="5dp"
+                android:scaleX="0.5"
+                android:scaleY="0.67"
+                android:layout_gravity="center_vertical"
+                android:background="@drawable/minus"/>
+            <TextView
+                android:id="@+id/number_seekbar_number"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:text="100"/>
+            <View
+                android:id="@+id/number_seekbar_add"
+                android:layout_width="40dp"
+                android:layout_height="30dp"
+                android:layout_marginStart="5dp"
+                android:scaleX="0.5"
+                android:scaleY="0.67"
+                android:layout_gravity="center_vertical"
+                android:background="@drawable/add"/>
+        </LinearLayout>
+
+
+    </FrameLayout>
+    <SeekBar
+        android:id="@+id/number_seekbar_seekbar"
+        android:layout_width="match_parent"
+        android:layout_height="25dp"
+        android:max="500"
+        android:min="1"
+        android:progress="100"/>
+
+</LinearLayout>

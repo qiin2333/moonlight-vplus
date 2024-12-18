@@ -16,6 +16,7 @@ public class StreamConfiguration {
     private int launchRefreshRate;
     private int clientRefreshRateX100;
     private int bitrate;
+    private int hostResolutionScaleX100;
     private boolean sops;
     private boolean enableAdaptiveResolution;
     private boolean playLocalAudio;
@@ -28,6 +29,7 @@ public class StreamConfiguration {
     private int colorRange;
     private int colorSpace;
     private boolean persistGamepadsAfterDisconnect;
+    private boolean useVdd;
 
     public static class Builder {
         private StreamConfiguration config = new StreamConfiguration();
@@ -60,6 +62,11 @@ public class StreamConfiguration {
         
         public StreamConfiguration.Builder setBitrate(int bitrate) {
             config.bitrate = bitrate;
+            return this;
+        }
+
+        public StreamConfiguration.Builder setResolutionScale(int scale) {
+            config.hostResolutionScaleX100 = scale;
             return this;
         }
         
@@ -128,6 +135,11 @@ public class StreamConfiguration {
             return this;
         }
 
+        public StreamConfiguration.Builder setUseVdd(boolean value) {
+            config.useVdd = value;
+            return this;
+        }
+
         public StreamConfiguration build() {
             return config;
         }
@@ -141,6 +153,7 @@ public class StreamConfiguration {
         this.refreshRate = 60;
         this.launchRefreshRate = 60;
         this.bitrate = 10000;
+        this.hostResolutionScaleX100 = 100;
         this.maxPacketSize = 1024;
         this.remote = STREAM_CFG_AUTO;
         this.sops = true;
@@ -148,14 +161,26 @@ public class StreamConfiguration {
         this.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO;
         this.supportedVideoFormats = MoonBridge.VIDEO_FORMAT_H264;
         this.attachedGamepadMask = 0;
+        this.useVdd = false;
     }
-    
     public int getWidth() {
         return width;
     }
     
     public int getHeight() {
         return height;
+    }
+
+    public int getReqWidth() {
+        return width * hostResolutionScaleX100 / 100;
+    }
+    
+    public int getReqHeight() {
+        return height * hostResolutionScaleX100 / 100;
+    }
+
+    public int getResolutionScale() {
+        return hostResolutionScaleX100;
     }
     
     public int getRefreshRate() {
@@ -221,4 +246,6 @@ public class StreamConfiguration {
     public int getColorSpace() {
         return colorSpace;
     }
+
+    public boolean getUseVdd() { return useVdd; }
 }

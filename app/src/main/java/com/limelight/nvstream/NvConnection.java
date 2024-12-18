@@ -10,6 +10,7 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.net.RouteInfo;
 import android.os.Build;
+import android.provider.Settings;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -19,8 +20,6 @@ import java.nio.ByteBuffer;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.Semaphore;
 
 import javax.crypto.KeyGenerator;
@@ -44,6 +43,7 @@ public class NvConnection {
     // Context parameters
     private LimelightCryptoProvider cryptoProvider;
     private String uniqueId;
+    private String clientName;
     private ConnectionContext context;
     private static Semaphore connectionAllowed = new Semaphore(1);
     private final boolean isMonkey;
@@ -54,6 +54,7 @@ public class NvConnection {
         this.appContext = appContext;
         this.cryptoProvider = cryptoProvider;
         this.uniqueId = uniqueId;
+        this.clientName = Settings.Global.getString(appContext.getContentResolver(), "device_name");
 
         this.context = new ConnectionContext();
         this.context.serverAddress = host;
@@ -221,7 +222,7 @@ public class NvConnection {
     
     private boolean startApp() throws XmlPullParserException, IOException
     {
-        NvHTTP h = new NvHTTP(context.serverAddress, context.httpsPort, uniqueId, context.serverCert, cryptoProvider);
+        NvHTTP h = new NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider);
 
         String serverInfo = h.getServerInfo(true);
         
@@ -255,17 +256,17 @@ public class NvConnection {
         //
         
         // Check for a supported stream resolution
-        if ((context.streamConfig.getWidth() > 4096 || context.streamConfig.getHeight() > 4096) &&
+        if ((context.streamConfig.getReqWidth() > 4096 || context.streamConfig.getReqHeight() > 4096) &&
                 (h.getServerCodecModeSupport(serverInfo) & 0x200) == 0 && context.isNvidiaServerSoftware) {
             context.connListener.displayMessage("Your host PC does not support streaming at resolutions above 4K.");
             return false;
         }
-        else if ((context.streamConfig.getWidth() > 4096 || context.streamConfig.getHeight() > 4096) &&
+        else if ((context.streamConfig.getReqWidth() > 4096 || context.streamConfig.getReqHeight() > 4096) &&
                 (context.streamConfig.getSupportedVideoFormats() & ~MoonBridge.VIDEO_FORMAT_MASK_H264) == 0) {
             context.connListener.displayMessage("Your streaming device must support HEVC or AV1 to stream at resolutions above 4K.");
             return false;
         }
-        else if (context.streamConfig.getHeight() >= 2160 && !h.supports4K(serverInfo)) {
+        else if (context.streamConfig.getReqHeight() >= 2160 && !h.supports4K(serverInfo)) {
             // Client wants 4K but the server can't do it
             context.connListener.displayTransientMessage("You must update GeForce Experience to stream in 4K. The stream will be 1080p.");
             
@@ -381,70 +382,68 @@ public class NvConnection {
 
     public void start(final AudioRenderer audioRenderer, final VideoDecoderRenderer videoDecoderRenderer, final NvConnectionListener connectionListener)
     {
-        new Thread(new Runnable() {
-            public void run() {
-                context.connListener = connectionListener;
-                context.videoCapabilities = videoDecoderRenderer.getCapabilities();
+        new Thread(() -> {
+            context.connListener = connectionListener;
+            context.videoCapabilities = videoDecoderRenderer.getCapabilities();
 
-                String appName = context.streamConfig.getApp().getAppName();
+            String appName = context.streamConfig.getApp().getAppName();
 
-                context.connListener.stageStarting(appName);
+            context.connListener.stageStarting(appName);
 
-                try {
-                    if (!startApp()) {
-                        context.connListener.stageFailed(appName, 0, 0);
-                        return;
-                    }
-                    context.connListener.stageComplete(appName);
-                } catch (HostHttpResponseException e) {
-                    e.printStackTrace();
-                    context.connListener.displayMessage(e.getMessage());
-                    context.connListener.stageFailed(appName, 0, e.getErrorCode());
-                    return;
-                } catch (XmlPullParserException | IOException e) {
-                    e.printStackTrace();
-                    context.connListener.displayMessage(e.getMessage());
-                    context.connListener.stageFailed(appName, MoonBridge.ML_PORT_FLAG_TCP_47984 | MoonBridge.ML_PORT_FLAG_TCP_47989, 0);
-                    return;
-                }
-
-                ByteBuffer ib = ByteBuffer.allocate(16);
-                ib.putInt(context.riKeyId);
-
-                // Acquire the connection semaphore to ensure we only have one
-                // connection going at once.
-                try {
-                    connectionAllowed.acquire();
-                } catch (InterruptedException e) {
-                    context.connListener.displayMessage(e.getMessage());
+            try {
+                if (!startApp()) {
                     context.connListener.stageFailed(appName, 0, 0);
                     return;
                 }
+                context.connListener.stageComplete(appName);
+            } catch (HostHttpResponseException e) {
+                e.printStackTrace();
+                context.connListener.displayMessage(e.getMessage());
+                context.connListener.stageFailed(appName, 0, e.getErrorCode());
+                return;
+            } catch (XmlPullParserException | IOException e) {
+                e.printStackTrace();
+                context.connListener.displayMessage(e.getMessage());
+                context.connListener.stageFailed(appName, MoonBridge.ML_PORT_FLAG_TCP_47984 | MoonBridge.ML_PORT_FLAG_TCP_47989, 0);
+                return;
+            }
 
-                // Moonlight-core is not thread-safe with respect to connection start and stop, so
-                // we must not invoke that functionality in parallel.
-                synchronized (MoonBridge.class) {
-                    MoonBridge.setupBridge(videoDecoderRenderer, audioRenderer, connectionListener);
-                    int ret = MoonBridge.startConnection(context.serverAddress.address,
-                            context.serverAppVersion, context.serverGfeVersion, context.rtspSessionUrl,
-                            context.serverCodecModeSupport,
-                            context.negotiatedWidth, context.negotiatedHeight,
-                            context.streamConfig.getRefreshRate(), context.streamConfig.getBitrate(),
-                            context.negotiatedPacketSize, context.negotiatedRemoteStreaming,
-                            context.streamConfig.getAudioConfiguration().toInt(),
-                            context.streamConfig.getSupportedVideoFormats(),
-                            context.streamConfig.getClientRefreshRateX100(),
-                            context.riKey.getEncoded(), ib.array(),
-                            context.videoCapabilities,
-                            context.streamConfig.getColorSpace(),
-                            context.streamConfig.getColorRange());
-                    if (ret != 0) {
-                        // LiStartConnection() failed, so the caller is not expected
-                        // to stop the connection themselves. We need to release their
-                        // semaphore count for them.
-                        connectionAllowed.release();
-                        return;
-                    }
+            ByteBuffer ib = ByteBuffer.allocate(16);
+            ib.putInt(context.riKeyId);
+
+            // Acquire the connection semaphore to ensure we only have one
+            // connection going at once.
+            try {
+                connectionAllowed.acquire();
+            } catch (InterruptedException e) {
+                context.connListener.displayMessage(e.getMessage());
+                context.connListener.stageFailed(appName, 0, 0);
+                return;
+            }
+
+            // Moonlight-core is not thread-safe with respect to connection start and stop, so
+            // we must not invoke that functionality in parallel.
+            synchronized (MoonBridge.class) {
+                MoonBridge.setupBridge(videoDecoderRenderer, audioRenderer, connectionListener);
+                int ret = MoonBridge.startConnection(context.serverAddress.address,
+                        context.serverAppVersion, context.serverGfeVersion, context.rtspSessionUrl,
+                        context.serverCodecModeSupport,
+                        context.negotiatedWidth, context.negotiatedHeight,
+                        context.streamConfig.getRefreshRate(), context.streamConfig.getBitrate(),
+                        context.negotiatedPacketSize, context.negotiatedRemoteStreaming,
+                        context.streamConfig.getAudioConfiguration().toInt(),
+                        context.streamConfig.getSupportedVideoFormats(),
+                        context.streamConfig.getClientRefreshRateX100(),
+                        context.riKey.getEncoded(), ib.array(),
+                        context.videoCapabilities,
+                        context.streamConfig.getColorSpace(),
+                        context.streamConfig.getColorRange());
+                if (ret != 0) {
+                    // LiStartConnection() failed, so the caller is not expected
+                    // to stop the connection themselves. We need to release their
+                    // semaphore count for them.
+                    connectionAllowed.release();
+                    return;
                 }
             }
         }).start();
@@ -587,5 +586,38 @@ public class NvConnection {
 
     public static String findExternalAddressForMdns(String stunHostname, int stunPort) {
         return MoonBridge.findExternalAddressIP4(stunHostname, stunPort);
+    }
+
+    public void doStopAndQuit() throws IOException, XmlPullParserException {
+        this.stop();
+        new Thread(() -> {
+            NvHTTP h;
+            try {
+                h = new NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            try {
+                h.quitApp();
+            } catch (IOException | XmlPullParserException e) {
+                throw new RuntimeException(e);
+            }
+        }).start();
+    }
+
+    public void sendSuperCmd(String cmdId) throws IOException, XmlPullParserException {
+        new Thread(() -> {
+            NvHTTP h;
+            try {
+                h = new NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            try {
+                h.sendSuperCmd(cmdId);
+            } catch (IOException | XmlPullParserException e) {
+                throw new RuntimeException(e);
+            }
+        }).start();
     }
 }

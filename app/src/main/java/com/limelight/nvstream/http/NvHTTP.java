@@ -1,7 +1,6 @@
 package com.limelight.nvstream.http;
 
-import android.os.Build;
-
+import android.provider.Settings;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,6 +23,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.LinkedList;
 import java.util.ListIterator;
+import java.util.Objects;
 import java.util.Stack;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -63,6 +63,7 @@ import okhttp3.ResponseBody;
 public class NvHTTP {
     private String uniqueId;
     private PairingManager pm;
+    private String clientName;
 
     private static final int DEFAULT_HTTPS_PORT = 47984;
     public static final int DEFAULT_HTTP_PORT = 47989;
@@ -199,10 +200,12 @@ public class NvHTTP {
         return new HttpUrl.Builder().scheme("https").host(baseUrlHttp.host()).port(httpsPort).build();
     }
     
-    public NvHTTP(ComputerDetails.AddressTuple address, int httpsPort, String uniqueId, X509Certificate serverCert, LimelightCryptoProvider cryptoProvider) throws IOException {
+    public NvHTTP(ComputerDetails.AddressTuple address, int httpsPort, String uniqueId, String clientName, X509Certificate serverCert, LimelightCryptoProvider cryptoProvider) throws IOException {
         // Use the same UID for all Moonlight clients so we can quit games
         // started by other Moonlight clients.
         this.uniqueId = "0123456789ABCDEF";
+
+        if (!clientName.isEmpty()) this.clientName = clientName;
 
         this.serverCert = serverCert;
 
@@ -414,6 +417,7 @@ public class NvHTTP {
                 .addPathSegment(path)
                 .query(query)
                 .addQueryParameter("uniqueid", uniqueId)
+                .addQueryParameter("clientname", clientName)
                 .addQueryParameter("uuid", UUID.randomUUID().toString())
                 .build();
     }
@@ -661,6 +665,12 @@ public class NvHTTP {
                     app.setAppId(xpp.getText());
                 } else if (currentTag.peek().equals("IsHdrSupported")) {
                     app.setHdrSupported(xpp.getText().equals("1"));
+                } else if (currentTag.peek().equals("SuperCmds")) {
+                    String cmdListStr = xpp.getText();
+                    LimeLog.info(cmdListStr + " appcmds");
+                    if (!Objects.equals(cmdListStr, "null")) {
+                        app.setCmdList(xpp.getText());
+                    }
                 }
                 break;
             }
@@ -778,8 +788,9 @@ public class NvHTTP {
 
         String xmlStr = openHttpConnectionToString(httpClientLongConnectNoReadTimeout, getHttpsUrl(true), verb,
             "appid=" + appId +
-            "&mode=" + context.negotiatedWidth + "x" + context.negotiatedHeight + "x" + fps +
+            "&mode=" + context.streamConfig.getReqWidth() + "x" + context.streamConfig.getReqHeight() + "x" + fps +
             "&additionalStates=1&sops=" + (enableSops ? 1 : 0) +
+            "&resolutionScale=" + context.streamConfig.getResolutionScale() +
             "&rikey="+bytesToHex(context.riKey.getEncoded()) +
             "&rikeyid="+context.riKeyId +
             (!enableHdr ? "" : "&hdrMode=1&clientHdrCapVersion=0&clientHdrCapSupportedFlagsInUint32=0&clientHdrCapMetaDataId=NV_STATIC_METADATA_TYPE_1&clientHdrCapDisplayData=0x0x0x0x0x0x0x0x0x0x0") +
@@ -787,7 +798,7 @@ public class NvHTTP {
             "&surroundAudioInfo=" + context.streamConfig.getAudioConfiguration().getSurroundAudioInfo() +
             "&remoteControllersBitmap=" + context.streamConfig.getAttachedGamepadMask() +
             "&gcmap=" + context.streamConfig.getAttachedGamepadMask() +
-            "&gcpersist="+(context.streamConfig.getPersistGamepadsAfterDisconnect() ? 1 : 0) +
+            "&gcpersist=" + (context.streamConfig.getPersistGamepadsAfterDisconnect() ? 1 : 0) + "&useVdd="+(context.streamConfig.getUseVdd() ? 1 : 0) +
             MoonBridge.getLaunchUrlQueryParameters());
         if ((verb.equals("launch") && !getXmlString(xmlStr, "gamesession", true).equals("0") ||
                 (verb.equals("resume") && !getXmlString(xmlStr, "resume", true).equals("0")))) {
@@ -815,5 +826,15 @@ public class NvHTTP {
         }
 
         return true;
+    }
+
+    public boolean pcSleep() throws IOException, XmlPullParserException {
+        String xmlStr = openHttpConnectionToString(httpClientLongConnectNoReadTimeout, getHttpsUrl(true), "pcsleep");
+        return !getXmlString(xmlStr, "pcsleep", true).equals("0");
+    }
+
+    public boolean sendSuperCmd(String cmdId) throws IOException, XmlPullParserException {
+        String xmlStr = openHttpConnectionToString(httpClientLongConnectNoReadTimeout, getHttpsUrl(true), "supercmd", "cmdId=" + cmdId);
+        return !getXmlString(xmlStr, "supercmd", true).equals("0");
     }
 }

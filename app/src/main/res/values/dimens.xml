@@ -6,4 +6,7 @@
     <dimen name="tv_channel_logo_width">80dp</dimen>
     <dimen name="tv_channel_logo_height">80dp</dimen>
 
+    <dimen name="activity_safearea_top">46dp</dimen>
+    <dimen name="keyboard_top_view_seek_bar_min_width">60dp</dimen>
+
 </resources>

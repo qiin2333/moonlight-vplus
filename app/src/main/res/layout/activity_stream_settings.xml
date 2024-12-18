@@ -2,6 +2,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:layout_marginTop="@dimen/activity_safearea_top"
     android:id="@+id/stream_settings"
     tools:context=".preferences.StreamSettings">
 

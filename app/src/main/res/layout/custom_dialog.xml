@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnWin"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawableStart="@drawable/ic_btn_win"
+            android:drawablePadding="4dp"
+            android:text="WIN" />
+
+        <Button
+            android:id="@+id/btnEsc"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawableStart="@drawable/ic_btn_esc"
+            android:drawablePadding="4dp"
+            android:text="ESC" />
+
+        <Button
+            android:id="@+id/btnHDR"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawableStart="@drawable/ic_btn_hdr"
+            android:drawablePadding="4dp"
+            android:text="HDR" />
+
+        <Button
+            android:id="@+id/btnSleep"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawableStart="@drawable/ic_btn_sleep"
+            android:drawablePadding="4dp"
+            android:text="睡眠" />
+    </LinearLayout>
+
+    <ListView
+        android:id="@+id/gameMenuList"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+</LinearLayout>

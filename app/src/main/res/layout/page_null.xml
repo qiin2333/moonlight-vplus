@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.limelight.binding.input.advance_setting.superpage.SuperPageLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="match_parent"
+    android:tag="0">
+
+</com.limelight.binding.input.advance_setting.superpage.SuperPageLayout>

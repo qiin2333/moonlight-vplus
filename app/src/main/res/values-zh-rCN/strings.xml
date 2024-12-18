@@ -16,6 +16,8 @@
     <string name="pcview_menu_send_wol"> 发送 Wake-On-LAN 请求 </string>
     <string name="pcview_menu_delete_pc"> 删除电脑 </string>
     <string name="pcview_menu_details"> 查看详情 </string>
+    <string name="pcview_menu_sleep_success"> 连接主机已睡眠 </string>
+    <string name="pcview_menu_sleep_fail"> 连接主机睡眠失败 </string>
     <!-- Pair messages -->
     <string name="pairing"> 配对中…… </string>
     <string name="pair_pc_offline"> 电脑离线中 </string>
@@ -79,6 +81,7 @@
     <string name="perf_overlay_dectime">平均解码时间： %1$.2f ms</string>
     <!-- AppList activity -->
     <string name="applist_connect_msg"> 正在连接电脑…… </string>
+    <string name="applist_menu_start_with_vdd"> 使用虚拟显示器开始串流 </string>
     <string name="applist_menu_resume"> 恢复串流 </string>
     <string name="applist_menu_quit"> 退出串流 </string>
     <string name="applist_menu_quit_and_start"> 退出当前游戏并开始这个游戏 </string>
@@ -95,6 +98,23 @@
     <string name="applist_quit_fail"> 退出串流失败 </string>
     <string name="applist_quit_confirmation">您确定要退出当前游戏？所有未保存的数据将丢失。</string>
     <string name="applist_details_id">App ID：</string>
+    <!-- In Game menu -->
+    <string name="game_menu_toggle_keyboard"> 屏幕键盘 </string>
+    <string name="game_menu_toggle_performance_overlay"> 性能监控图层 </string>
+    <string name="game_menu_toggle_host_keyboard"> 主机键盘 </string>
+    <string name="game_menu_toggle_mouse_on"> 手柄模拟鼠标-打开 </string>
+    <string name="game_menu_toggle_mouse_off"> 手柄模拟鼠标-关闭 </string>
+    <string name="game_menu_disconnect"> 断开连接 </string>
+    <string name="game_menu_cancel"> 取消 </string>
+    <string name="game_menu_send_keys">发送特殊按键</string>
+    <string name="game_menu_send_keys_esc">发送 ESC</string>
+    <string name="game_menu_send_keys_f11">发送 F11 (全屏状态切换)</string>
+    <string name="game_menu_send_keys_ctrl_v">发送 CTRL + V (粘贴剪贴板)</string>
+    <string name="game_menu_send_keys_win">发送 WIN (win开始菜单)</string>
+    <string name="game_menu_send_keys_win_d">发送 WIN + D (切到桌面)</string>
+    <string name="game_menu_send_keys_win_g">发送 WIN + G (打开 Xbox Game Bar)</string>
+    <string name="game_menu_send_keys_shift_tab">发送 SHIFT + TAB (打开 Steam 图层)</string>
+    <string name="game_menu_send_keys_alt_home">发送 ALT + HOME (小飞机/RTSS 主机性能监控开关)</string>
     <!-- Add computer manually activity -->
     <string name="title_add_pc"> 手动添加电脑 </string>
     <string name="msg_add_pc"> 正在连接电脑…… </string>
@@ -107,6 +127,8 @@
     <string name="category_basic_settings"> 基本设置 </string>
     <string name="title_resolution_list"> 视频分辨率 </string>
     <string name="summary_resolution_list">高分辨率提升图像清晰度。低分辨率提升在低端设备和较慢网络中的串流体验。</string>
+    <string name="title_custom_resolutions"> 自定义分辨率 </string>
+    <string name="summary_custom_resolutions">杂鱼～那么多分辨率都不能满足你了啊！</string>
     <string name="title_fps_list"> 视频帧数 </string>
     <string name="summary_fps_list">高帧数提升视频流流畅度。低帧数提升在低端设备中的串流体验。</string>
     <string name="title_seekbar_bitrate"> 视频码率 </string>
@@ -123,7 +145,21 @@
     <string name="summary_audio_config_list"> 为家庭影院系统启用5.1或7.1环绕声 </string>
     <string name="category_input_settings">输入设置</string>
     <string name="title_checkbox_touchscreen_trackpad">将触控屏作为触控板使用</string>
-    <string name="summary_checkbox_touchscreen_trackpad">如果启用，则将触控屏作为触控板使用。 如果禁止，则触控屏直接控制鼠标光标。</string>
+    <string name="summary_checkbox_touchscreen_trackpad">如果启用，则将触控屏作为触控板使用。如果禁用，则启用多点触控模式</string>
+
+    <string name="title_seekbar_long_press_flat_region">多点触控长按抖动消除区域</string>
+    <string name="summary_seekbar_long_press_flat_region">全屏生效。像素值越高，抖动消除区域越大。抖动消除区域内，应用只发送触点的初始坐标</string>
+    <string name="suffix_seekbar_flat_region_pixels">像素</string>
+
+    <string name="title_checkbox_sync_touch_event_with_display">触控事件与显示刷新同步</string>
+    <string name="summary_checkbox_sync_touch_event_with_display">打开后触控事件上报率与显示刷新率同步，比如显示为60Hz，那么触控与之同步。不一定有用，习惯哪个用哪个。Moonlight原版相当于禁用该项。</string>
+
+    <string name="title_checkbox_enable_keyboard_toggle_in_native_touch">多点触控模式下打开本地键盘切换</string>
+    <string name="summary_checkbox_enable_keyboard_toggle_in_native_touch">\t</string>
+    <string name="title_seekbar_keyboard_toggle_fingers_native_touch">轻敲手指数量</string>
+    <string name="summary_seekbar_keyboard_toggle_fingers_native_touch">轻敲切换本地键盘的最少手指数量。\n仅在多点触控模式生效，触摸板模式3指即可切换本地键盘(不受此配置影响)。</string>
+    <string name="suffix_seekbar_keyboard_toggle_fingers_native_touch"> </string>
+
     <string name="title_checkbox_multi_controller"> 自动检测手柄 </string>
     <string name="summary_checkbox_multi_controller"> 禁用此项所有手柄将视为一个手柄 </string>
     <string name="title_checkbox_vibrate_fallback"> 用设备震动模拟游戏震动效果 </string>
@@ -138,6 +174,25 @@
     <string name="summary_checkbox_mouse_emulation"> 长按开始键将手柄切换为鼠标模式 </string>
     <string name="title_checkbox_mouse_nav_buttons"> 启用前进后退鼠标键 </string>
     <string name="summary_checkbox_mouse_nav_buttons"> 在一些支持不佳的设备上启用此项可能会使其右键失效 </string>
+
+    <string name="category_enhanced_touch_settings">多点触控设置</string>
+    <string name="title_checkbox_enable_enhanced_touch">打开增强型触控</string>
+    <string name="summary_checkbox_enable_enhanced_touch">关闭后可恢复经典模拟鼠标操作模式</string>
+    <string name="title_checkbox_enhanced_touch_on_which_side">反转增强型触控区</string>
+    <string name="summary_checkbox_enhanced_touch_on_which_side">反转增强型触控区 (增强区默认在右边)</string>
+    <string name="title_enhanced_touch_zone_divider">触点灵敏度分区调控</string>
+    <string name="summary_enhanced_touch_zone_divider">增强型触控与原生触控的分区位置，小于50%代表在屏幕左边的某个位置分区，大于50%代表分割线在右边</string>
+    <string name="dialog_title_enhanced_touch_zone_divider">增强型触控与原生触控的分区位置，小于50%代表在屏幕左边的某个位置分区，大于50%代表分割线在右边</string>
+    <string name="suffix_enhanced_touch_zone_divider">%</string>
+    <string name="title_pointer_velocity_factor">触点灵敏度</string>
+    <string name="summary_pointer_velocity_factor">设置增强型触控区内的触点移速比例。100% = 禁用，小于100%为缩小，大于100%为放大</string>
+    <string name="dialog_title_pointer_velocity_factor">增强型触控区内的触点移速比例</string>
+    <string name="suffix_pointer_velocity_factor">%</string>
+    <string name="title_fixed_x_velocity">设置增强型触控区内触点的水平方向固定移速</string>
+    <string name="summary_fixed_x_velocity">设置增强型触控区内触点的水平方向固定移速. 0像素 = 禁用，大于0将禁用水平方向的移速比例，改为固定移速</string>
+    <string name="dialog_title_fixed_x_velocity">触点水平方向固定移速</string>
+    <string name="suffix_fixed_x_velocity">像素</string>
+
     <string name="title_checkbox_flip_face_buttons"> 反转技能键 </string>
     <string name="summary_checkbox_flip_face_buttons"> 为手柄和虚拟手柄调转A/B和X/Y技能键 </string>
     <string name="category_on_screen_controls_settings"> 屏幕控制按钮设置 </string>
@@ -167,10 +222,10 @@
     <string name="summary_disable_frame_drop"> 可能会减少在一些设备上的卡顿，但会增加延迟 </string>
     <string name="title_video_format">更改编解码器设置</string>
     <string name="summary_video_format">如果您的设备支持较新的编解码器，则可以降低视频带宽要求。如果主机软件或显卡不支持编解码器选择，则可能会忽略编解码器选择。</string>
-    <string name="title_enable_hdr">启用 HDR (实验性)</string>
-    <string name="summary_enable_hdr">当游戏和显卡支持时以HDR模式串流。 HDR需要显卡支持 HEVC Main 10 编码。</string>
-    <string name="title_enable_perf_overlay"> 启用性能信息 </string>
-    <string name="summary_enable_perf_overlay"> 在串流中显示实时性能信息 </string>
+    <string name="title_enable_hdr">启用 HDR </string>
+    <string name="summary_enable_hdr">当游戏和显卡支持时以HDR模式串流，HDR需要显卡支持 HEVC/AV1 Main 10 编码。⚠注意：串流返回菜单中的HDR开关是切换windows的HDR。</string>
+    <string name="title_enable_perf_overlay">性能监控图层</string>
+    <string name="summary_enable_perf_overlay">显示实时的串流监控数据，盯帧必备！</string>
     <string name="title_enable_post_stream_toast">串流完毕显示延迟信息</string>
     <string name="summary_enable_post_stream_toast">串流结束后显示延迟信息</string>
     <string name="title_osc_opacity">更改屏幕按钮透明度</string>
@@ -238,6 +293,8 @@
     <string name="summary_setup_guide">查看有关如何设置游戏电脑以进行流传输的说明</string>
     <string name="title_privacy_policy">隐私政策</string>
     <string name="summary_privacy_policy">查看 Moonlight 隐私政策</string>
+    <string name="title_about_mode">关于 月光威力加强版</string>
+    <string name="summary_about_mode">APP检查更新</string>
     <string name="category_help">帮助</string>
     <string name="title_setup_guide">安装向导</string>
     <string name="title_troubleshooting">解决方案向导</string>
