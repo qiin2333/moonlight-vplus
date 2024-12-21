@@ -201,6 +201,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
     };
 
+    private TextView perfResView;
+    private TextView perfDecoderView;
+    private TextView perfRenderFpsView;
+    private TextView networkLatencyView;
+    private TextView decodeLatencyView;
+    private TextView hostLatencyView;
+
     public static final String EXTRA_HOST = "Host";
     public static final String EXTRA_PORT = "Port";
     public static final String EXTRA_HTTPS_PORT = "HttpsPort";
@@ -318,6 +325,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         notificationOverlayView = findViewById(R.id.notificationOverlay);
 
         performanceOverlayView = findViewById(R.id.performanceOverlay);
+
+        perfResView = findViewById(R.id.perfRes);
+        perfDecoderView = findViewById(R.id.perfDecoder);
+        perfRenderFpsView = findViewById(R.id.perfRenderFps);
+        networkLatencyView = findViewById(R.id.perfNetworkLatency);
+        decodeLatencyView = findViewById(R.id.perfDecodeLatency);
+        hostLatencyView = findViewById(R.id.perfHostLatency);
 
         inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(this, this);
 
@@ -2806,73 +2820,42 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
     }
 
-     @Override
-    public void onPerfUpdate(final String text) {
-        TextView perfResView = findViewById(R.id.perfRes);
-        TextView perfDecoderView = findViewById(R.id.perfDecoder);
-        TextView perfRenderFpsView = findViewById(R.id.perfRenderFps);
-        TextView networkLatencyView = findViewById(R.id.perfNetworkLatency);
-        TextView decodeLatencyView = findViewById(R.id.perfDecodeLatency);
-        TextView hostLatencyView = findViewById(R.id.perfHostLatency);
+    @SuppressLint("DefaultLocale")
+    @Override
+    public void onPerfUpdateV(final PerformanceInfo performanceInfo) {
+        runOnUiThread(() -> {
+            long currentRxBytes = TrafficStats.getTotalRxBytes();
+            long timeMillis = System.currentTimeMillis();
+            long timeMillisInterval = timeMillis - previousTimeMillis;
 
-        String[] indexes = text.split("\n");
-        List<String> items;
-        items = Arrays.asList(indexes);
+            long rxBytesPerDifference = (currentRxBytes - previousRxBytes) / 1024;
+            double speedKBps = rxBytesPerDifference / ((double) timeMillisInterval / 1000);
+            if (speedKBps < 1024) {
+                performanceInfo.bandWidth = String.format("%.0f K/s", speedKBps);
+            } else {
+                double speedMBps = speedKBps / 1024;
+                performanceInfo.bandWidth = String.format("%.2f M/s", speedMBps);
+            }
+            previousTimeMillis = timeMillis;
+            previousRxBytes = currentRxBytes;
 
-        String resInfo = null;
-        String decoderInfo = null;
-        String renderFpsInfo = null;
-        String networkLatencyInfo = null;
-        String decodeLatencyInfo = null;
-        String hostLatencyInfo = "\uD83C\uDF53 qiin";
+            String resInfo = String.format("🎬 %dx%d@%.0f", performanceInfo.initialWidth, performanceInfo.initialHeight, performanceInfo.totalFps);
+            String decoderInfo = performanceInfo.decoder.replaceFirst(".*\\.(avc|hevc|av1).*", "$1").toUpperCase();
+            decoderInfo += prefConfig.enableHdr ? " HDR" : "";
+            String renderFpsInfo = String.format("Rx %.0f / Rd %.0f FPS", performanceInfo.receivedFps, performanceInfo.renderedFps);
+            String networkLatencyInfo = "📶 " + performanceInfo.bandWidth + String.format("   %d ± %d ms", (int) (performanceInfo.rttInfo >> 32), (int) performanceInfo.rttInfo);
+            String decodeLatencyInfo = String.format(performanceInfo.decodeTimeMs < 15 ? "🎮 %.2f ms" : "🥵 %.2f ms", performanceInfo.decodeTimeMs);
+            String hostLatencyInfo = "🧋 Ver.V+";
+            if (performanceInfo.framesWithHostProcessingLatency > 0) {
+                hostLatencyInfo = String.format("🖥 %.1f ms", performanceInfo.aveHostProcessingLatency);
+            }
 
-        for(String s: items){
-            if (s.contains(getResources().getString(R.string.perf_overlay_streamdetails).substring(0, 5))) {
-                resInfo = s.replaceFirst("\\D*[：｜:] (.*) (\\d+.\\d+) FPS", "\uD83C\uDFAC $1@$2");
-            }
-            if (s.contains(getResources().getString(R.string.perf_overlay_decoder).substring(0, 5))) {
-                decoderInfo = s.toLowerCase().replaceFirst(".*\\.(avc|hevc|av1).*", "$1").toUpperCase();
-                decoderInfo += prefConfig.enableHdr? " HDR" : "";
-            }
-            if (s.contains(getResources().getString(R.string.perf_overlay_renderingfps).substring(0, 5))) {
-                renderFpsInfo = s;
-            }
-            if (s.contains(getResources().getString(R.string.perf_overlay_netlatency).substring(0, 7))) {
-                long usedTotalRxBytes = TrafficStats.getTotalRxBytes();
-                long now = System.currentTimeMillis();
-                long timestampDiffMS = now - lastTimestampMS;
-                Number speed = (usedTotalRxBytes - lastTotalRxBytes) / 1024.0 / 1024.0 / timestampDiffMS * 1000;
-                lastTotalRxBytes = usedTotalRxBytes;
-                lastTimestampMS = now;
-                networkLatencyInfo = "\uD83D\uDCF6 "
-                        + new DecimalFormat("##0.00").format(speed)
-                        + " M/s   " + s.replaceFirst("\\D*(\\d+) ms \\(\\D*(\\d+) ms\\)", "$1 ± $2 ms");
-            }
-            if (s.contains(getResources().getString(R.string.perf_overlay_dectime).substring(0, 7))) {
-                float decodeTime = Float.parseFloat(s.replaceFirst(".*\\s(\\d+\\.\\d+)\\sms", "$1"));
-                decodeLatencyInfo = (decodeTime < 12 ? "\uD83C\uDFAE " : "\uD83E\uDD75 ") + decodeTime + " ms";
-            }
-            if (s.contains(getResources().getString(R.string.perf_overlay_hostprocessinglatency).substring(0, 6))) {
-                hostLatencyInfo = s;
-            }
-        }
-
-        String finalResInfo = resInfo;
-        String finalDecoderInfo = decoderInfo;
-        String finalRenderFpsInfo = renderFpsInfo.replaceFirst(".*\\s(\\d+\\.\\d+)\\sFPS", "$1 fps");
-        String finalDecodeLatencyInfo = decodeLatencyInfo;
-        String finalNetworkLatencyInfo = networkLatencyInfo;
-        String finalHostLatencyInfo = hostLatencyInfo.replaceFirst("^.*?:", "\uD83D\uDDA5\uFE0F ");
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                perfResView.setText(finalResInfo);
-                perfDecoderView.setText(finalDecoderInfo);
-                perfRenderFpsView.setText(finalRenderFpsInfo);
-                networkLatencyView.setText(finalNetworkLatencyInfo);
-                decodeLatencyView.setText(finalDecodeLatencyInfo);
-                hostLatencyView.setText(finalHostLatencyInfo);
-            }
+            perfResView.setText(resInfo);
+            perfDecoderView.setText(decoderInfo);
+            perfRenderFpsView.setText(renderFpsInfo);
+            networkLatencyView.setText(networkLatencyInfo);
+            decodeLatencyView.setText(decodeLatencyInfo);
+            hostLatencyView.setText(hostLatencyInfo);
         });
     }
 
@@ -2883,42 +2866,38 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public void onPerfUpdateWG(final PerformanceInfo performanceInfo) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                long currentRxBytes = TrafficStats.getTotalRxBytes();
-                long timeMillis = System.currentTimeMillis();
-                long timeMillisInterval = timeMillis - previousTimeMillis;
-                if (timeMillisInterval < 3000){
-                    long rxBytesPerDifference = (currentRxBytes - previousRxBytes) / 1024;
-                    double speedKBps = rxBytesPerDifference / ((double)timeMillisInterval / 1000);
-                    if (speedKBps < 1024) {
-                        performanceInfo.bandWidth = String.format("%.0f KB/s", speedKBps);
-                    } else {
-                        double speedMBps = speedKBps / 1024;
-                        performanceInfo.bandWidth = String.format("%.2f MB/s", speedMBps);
-                    }
+        runOnUiThread(() -> {
+            long currentRxBytes = TrafficStats.getTotalRxBytes();
+            long timeMillis = System.currentTimeMillis();
+            long timeMillisInterval = timeMillis - previousTimeMillis;
+            if (timeMillisInterval < 3000) {
+                long rxBytesPerDifference = (currentRxBytes - previousRxBytes) / 1024;
+                double speedKBps = rxBytesPerDifference / ((double) timeMillisInterval / 1000);
+                if (speedKBps < 1024) {
+                    performanceInfo.bandWidth = String.format("%.0f KB/s", speedKBps);
+                } else {
+                    double speedMBps = speedKBps / 1024;
+                    performanceInfo.bandWidth = String.format("%.2f MB/s", speedMBps);
                 }
-                previousTimeMillis = timeMillis;
-                previousRxBytes = currentRxBytes;
-
-
-                if (controllerManager != null && !performanceInfoDisplays.isEmpty()){
-                    Map<String, String> perfAttrs = new HashMap<>();
-                    perfAttrs.put("decoder", performanceInfo.decoder);
-                    perfAttrs.put("resolution", performanceInfo.initialWidth + "x" + performanceInfo.initialHeight);
-                    perfAttrs.put("fps", String.format("%.0f",performanceInfo.totalFps));
-                    perfAttrs.put("lost_frame", String.format("%.1f",performanceInfo.lostFrameRate));
-                    perfAttrs.put("net_latency", String.format("%d",(int)(performanceInfo.rttInfo >> 32)));
-                    perfAttrs.put("host_latency", String.format("%.1f", performanceInfo.aveHostProcessingLatency));
-                    perfAttrs.put("decode_time", String.format("%.1f",performanceInfo.decodeTimeMs));
-                    perfAttrs.put("band_width", performanceInfo.bandWidth);
-                    for (PerformanceInfoDisplay performanceInfoDisplay : performanceInfoDisplays){
-                        performanceInfoDisplay.display(perfAttrs);
-                    }
-                }
-
             }
+            previousTimeMillis = timeMillis;
+            previousRxBytes = currentRxBytes;
+
+            if (controllerManager != null && !performanceInfoDisplays.isEmpty()) {
+                Map<String, String> perfAttrs = new HashMap<>();
+                perfAttrs.put("decoder", performanceInfo.decoder);
+                perfAttrs.put("resolution", performanceInfo.initialWidth + "x" + performanceInfo.initialHeight);
+                perfAttrs.put("fps", String.format("%.0f", performanceInfo.totalFps));
+                perfAttrs.put("lost_frame", String.format("%.1f", performanceInfo.lostFrameRate));
+                perfAttrs.put("net_latency", String.format("%d", (int) (performanceInfo.rttInfo >> 32)));
+                perfAttrs.put("host_latency", String.format("%.1f", performanceInfo.aveHostProcessingLatency));
+                perfAttrs.put("decode_time", String.format("%.1f", performanceInfo.decodeTimeMs));
+                perfAttrs.put("band_width", performanceInfo.bandWidth);
+                for (PerformanceInfoDisplay performanceInfoDisplay : performanceInfoDisplays) {
+                    performanceInfoDisplay.display(perfAttrs);
+                }
+            }
+
         });
     }
 

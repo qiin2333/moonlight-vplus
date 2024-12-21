@@ -69,7 +69,8 @@
             android:layout_marginEnd="10dp"
             android:textColor="#0DDAF4"
             android:textSize="10sp"
-            android:textAppearance="?android:attr/textAppearanceSmall" />
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:hint="接收/渲染帧率   |" />
 
         <TextView
             android:id="@+id/perfNetworkLatency"
