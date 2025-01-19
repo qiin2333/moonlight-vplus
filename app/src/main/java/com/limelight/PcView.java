@@ -231,8 +231,20 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
     }
 
     private @NonNull String getBackgroundImageUrl() {
-        int deviceRotation = this.getWindowManager().getDefaultDisplay().getRotation();
-        return deviceRotation == Configuration.ORIENTATION_PORTRAIT ? "https://img-api.pipw.top" : "https://img-api.pipw.top/?phone=true";
+        // 获取用户自定义的图片API地址
+        String customUrl = PreferenceManager.getDefaultSharedPreferences(this)
+            .getString("background_image_url", null);
+            
+        // 如果没有自定义地址，使用默认地址
+        if (customUrl == null || customUrl.isEmpty()) {
+            int deviceRotation = this.getWindowManager().getDefaultDisplay().getRotation();
+            return deviceRotation == Configuration.ORIENTATION_PORTRAIT ? 
+                "https://img-api.pipw.top" : 
+                "https://img-api.pipw.top/?phone=true";
+        }
+        
+        // 使用自定义地址
+        return customUrl;
     }
 
     private void saveImage() {

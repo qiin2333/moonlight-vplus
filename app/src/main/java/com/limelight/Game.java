@@ -2820,36 +2820,61 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
     }
 
+    // SuppressLint("DefaultLocale") is used to avoid warnings about using the default locale
+    // in String.format calls. This is acceptable here because the formatting is not locale-sensitive.
     @SuppressLint("DefaultLocale")
+    /**
+     * 计算并格式化网络带宽
+     * @param currentRxBytes 当前接收字节数
+     * @param previousRxBytes 上次接收字节数
+     * @param timeInterval 时间间隔（毫秒）
+     * @return 格式化后的带宽字符串
+     */
+    private String calculateBandwidth(long currentRxBytes, long previousRxBytes, long timeInterval) {
+        if (timeInterval <= 0) {
+            return "0 K/s";
+        }
+        
+        long rxBytesPerDifference = (currentRxBytes - previousRxBytes) / 1024;
+        double speedKBps = rxBytesPerDifference / ((double) timeInterval / 1000);
+        
+        if (speedKBps < 1024) {
+            return String.format("%.0f K/s", speedKBps);
+        }
+        return String.format("%.2f M/s", speedKBps / 1024);
+    }
+
     @Override
     public void onPerfUpdateV(final PerformanceInfo performanceInfo) {
-            long currentRxBytes = TrafficStats.getTotalRxBytes();
-            long timeMillis = System.currentTimeMillis();
-            long timeMillisInterval = timeMillis - previousTimeMillis;
+        long currentRxBytes = TrafficStats.getTotalRxBytes();
+        long timeMillis = System.currentTimeMillis();
+        long timeMillisInterval = timeMillis - previousTimeMillis;
 
-            long rxBytesPerDifference = (currentRxBytes - previousRxBytes) / 1024;
-            double speedKBps = rxBytesPerDifference / ((double) timeMillisInterval / 1000);
-            if (speedKBps < 1024) {
-                performanceInfo.bandWidth = String.format("%.0f K/s", speedKBps);
-            } else {
-                double speedMBps = speedKBps / 1024;
-                performanceInfo.bandWidth = String.format("%.2f M/s", speedMBps);
-            }
-            previousTimeMillis = timeMillis;
-            previousRxBytes = currentRxBytes;
+        // 计算并更新带宽信息
+        performanceInfo.bandWidth = calculateBandwidth(currentRxBytes, previousRxBytes, timeMillisInterval);
+        previousTimeMillis = timeMillis;
+        previousRxBytes = currentRxBytes;
 
-            String resInfo = String.format("🎬 %dx%d@%.0f", performanceInfo.initialWidth, performanceInfo.initialHeight, performanceInfo.totalFps);
-            String decoderInfo = performanceInfo.decoder.replaceFirst(".*\\.(avc|hevc|av1).*", "$1").toUpperCase();
-            decoderInfo += prefConfig.enableHdr ? " HDR" : "";
-            String renderFpsInfo = String.format("Rx %.0f / Rd %.0f FPS", performanceInfo.receivedFps, performanceInfo.renderedFps);
-            String networkLatencyInfo = "📶 " + performanceInfo.bandWidth + String.format("   %d ± %d ms", (int) (performanceInfo.rttInfo >> 32), (int) performanceInfo.rttInfo);
-            String decodeLatencyInfo = String.format(performanceInfo.decodeTimeMs < 15 ? "🎮 %.2f ms" : "🥵 %.2f ms", performanceInfo.decodeTimeMs);
-            String hostLatencyInfo;
-            if (performanceInfo.framesWithHostProcessingLatency > 0) {
-                hostLatencyInfo = String.format("🖥 %.1f ms", performanceInfo.aveHostProcessingLatency);
-            } else {
-                hostLatencyInfo = "🧋 Ver.V+";
-            }
+        // 准备性能信息显示
+        String resInfo = String.format("🎬 %dx%d@%.0f", 
+            performanceInfo.initialWidth, performanceInfo.initialHeight, performanceInfo.totalFps);
+            
+        String decoderInfo = performanceInfo.decoder.replaceFirst(".*\\.(avc|hevc|av1).*", "$1").toUpperCase();
+        decoderInfo += prefConfig.enableHdr ? " HDR" : "";
+        
+        String renderFpsInfo = String.format("Rx %.0f / Rd %.0f FPS", 
+            performanceInfo.receivedFps, performanceInfo.renderedFps);
+            
+        String networkLatencyInfo = String.format("📶 %s   %d ± %d ms", 
+            performanceInfo.bandWidth, 
+            (int) (performanceInfo.rttInfo >> 32), 
+            (int) performanceInfo.rttInfo);
+            
+        String decodeLatencyInfo = String.format(performanceInfo.decodeTimeMs < 15 ? 
+            "🎮 %.2f ms" : "🥵 %.2f ms", performanceInfo.decodeTimeMs);
+            
+        String hostLatencyInfo = performanceInfo.framesWithHostProcessingLatency > 0 ?
+            String.format("🖥 %.1f ms", performanceInfo.aveHostProcessingLatency) : "🧋 Ver.V+";
 
         String finalDecoderInfo = decoderInfo;
         runOnUiThread(() -> {

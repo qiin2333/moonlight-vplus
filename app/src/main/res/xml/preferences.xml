@@ -333,6 +333,13 @@
             android:key="checkbox_small_icon_mode"
             android:title="@string/title_checkbox_small_icon_mode"
             android:summary="@string/summary_checkbox_small_icon_mode" />
+        <EditTextPreference
+            android:key="background_image_url"
+            android:title="背景图片API"
+            android:summary="输入自定义背景图片的API"
+            android:dialogTitle="背景图片API"
+            android:dialogMessage="请输入完整的图片API"
+            android:defaultValue="https://example.com/api/image" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_advanced_settings"
         android:key="category_advanced_settings">
