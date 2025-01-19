@@ -30,8 +30,10 @@ import java.util.Objects;
  */
 public class GameMenu {
 
-    private static final long TEST_GAME_FOCUS_DELAY = 10;
-    private static final long KEY_UP_DELAY = 25;
+    private static final long TEST_GAME_FOCUS_DELAY = 10L;
+    private static final long KEY_UP_DELAY = 25L;
+    private static final float DIALOG_ALPHA = 0.7f;
+    private static final String GAME_MENU_TITLE = "Game Menu";
 
     public static class MenuOption {
         private final String label;
@@ -67,19 +69,40 @@ public class GameMenu {
         return game.getResources().getString(id);
     }
 
-    private static byte getModifier(short key) {
-        switch (key) {
-            case KeyboardTranslator.VK_LSHIFT:
-                return KeyboardPacket.MODIFIER_SHIFT;
-            case KeyboardTranslator.VK_LCONTROL:
-                return KeyboardPacket.MODIFIER_CTRL;
-            case KeyboardTranslator.VK_LWIN:
-                return KeyboardPacket.MODIFIER_META;
-            case KeyboardTranslator.VK_MENU:
-                return KeyboardPacket.MODIFIER_ALT;
+    private enum KeyModifier {
+        SHIFT((short) KeyboardTranslator.VK_LSHIFT, KeyboardPacket.MODIFIER_SHIFT),
+        CTRL((short) KeyboardTranslator.VK_LCONTROL, KeyboardPacket.MODIFIER_CTRL),
+        META((short) KeyboardTranslator.VK_LWIN, KeyboardPacket.MODIFIER_META),
+        ALT((short) KeyboardTranslator.VK_MENU, KeyboardPacket.MODIFIER_ALT);
 
-            default:
-                return 0;
+        final short keyCode;
+        final byte modifier;
+
+        KeyModifier(short keyCode, byte modifier) {
+            this.keyCode = keyCode;
+            this.modifier = modifier;
+        }
+
+        public static byte getModifier(short key) {
+            for (KeyModifier km : values()) {
+                if (km.keyCode == key) {
+                    return km.modifier;
+                }
+            }
+            return 0;
+        }
+    }
+
+    private static byte getModifier(short key) {
+        return KeyModifier.getModifier(key);
+    }
+
+    private void disconnectAndQuit() {
+        try {
+            game.disconnect();
+            conn.doStopAndQuit();
+        } catch (IOException | XmlPullParserException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -152,6 +175,7 @@ public class GameMenu {
                 sendKeys(new short[]{85, 83});
             }), 200);
         });
+        customView.findViewById(R.id.btnQuit).setOnClickListener((v) -> disconnectAndQuit());
 
         final ArrayAdapter<String> actions = new ArrayAdapter<>(game, android.R.layout.simple_list_item_1);
 
@@ -174,10 +198,10 @@ public class GameMenu {
             dialog.dismiss();
         });
 
-        // 设置AlertDialog的背景透明度
+        // Set dialog background transparency
         if (dialog.getWindow() != null) {
             WindowManager.LayoutParams layoutParams = dialog.getWindow().getAttributes();
-            layoutParams.alpha = 0.7f; // 设置透明度，0.0f - 1.0f，0表示完全透明，1表示不透明
+            layoutParams.alpha = DIALOG_ALPHA;
             dialog.getWindow().setAttributes(layoutParams);
         }
         dialog.show();
@@ -236,16 +260,9 @@ public class GameMenu {
                 game::togglePerformanceOverlay));
         options.add(new MenuOption(getString(R.string.game_menu_send_keys), this::showSpecialKeysMenu));
         options.add(new MenuOption(getString(R.string.game_menu_disconnect), true, game::disconnect));
-        options.add(new MenuOption("断开并退出串流", true, () -> {
-            try {
-                game.disconnect();
-                conn.doStopAndQuit();
-            } catch (IOException | XmlPullParserException e) {
-                throw new RuntimeException(e);
-            }
-        }));
+        options.add(new MenuOption("断开并退出串流", true, this::disconnectAndQuit));
         options.add(new MenuOption(getString(R.string.game_menu_cancel), null));
 
-        showMenuDialog("Game Menu", options.toArray(new MenuOption[0]));
+        showMenuDialog(GAME_MENU_TITLE, options.toArray(new MenuOption[0]));
     }
 }

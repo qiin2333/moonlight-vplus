@@ -44,6 +44,15 @@
             android:drawableStart="@drawable/ic_btn_sleep"
             android:drawablePadding="4dp"
             android:text="睡眠" />
+
+        <Button
+            android:id="@+id/btnQuit"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawableStart="@drawable/ic_btn_quit"
+            android:drawablePadding="4dp"
+            android:text="退出串流" />
     </LinearLayout>
 
     <ListView

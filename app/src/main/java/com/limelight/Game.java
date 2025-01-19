@@ -1048,28 +1048,28 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @SuppressLint("InlinedApi")
     private final Runnable hideSystemUi = new Runnable() {
-            @Override
-            public void run() {
-                // TODO: Do we want to use WindowInsetsController here on R+ instead of
-                // SYSTEM_UI_FLAG_IMMERSIVE_STICKY? They seem to do the same thing as of S...
+        @Override
+        public void run() {
+            // TODO: Do we want to use WindowInsetsController here on R+ instead of
+            // SYSTEM_UI_FLAG_IMMERSIVE_STICKY? They seem to do the same thing as of S...
 
-                // In multi-window mode on N+, we need to drop our layout flags or we'll
-                // be drawing underneath the system UI.
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInMultiWindowMode()) {
-                    Game.this.getWindow().getDecorView().setSystemUiVisibility(
-                            View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
-                }
-                else {
-                    // Use immersive mode
-                    Game.this.getWindow().getDecorView().setSystemUiVisibility(
-                            View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-                            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-                            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-                            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-                            View.SYSTEM_UI_FLAG_FULLSCREEN |
-                            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
-                }
+            // In multi-window mode on N+, we need to drop our layout flags or we'll
+            // be drawing underneath the system UI.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInMultiWindowMode()) {
+                Game.this.getWindow().getDecorView().setSystemUiVisibility(
+                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
             }
+            else {
+                // Use immersive mode
+                Game.this.getWindow().getDecorView().setSystemUiVisibility(
+                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+                        View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+                        View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                        View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                        View.SYSTEM_UI_FLAG_FULLSCREEN |
+                        View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+            }
+        }
     };
 
     private void hideSystemUi(int delay) {
@@ -2823,7 +2823,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     @SuppressLint("DefaultLocale")
     @Override
     public void onPerfUpdateV(final PerformanceInfo performanceInfo) {
-        runOnUiThread(() -> {
             long currentRxBytes = TrafficStats.getTotalRxBytes();
             long timeMillis = System.currentTimeMillis();
             long timeMillisInterval = timeMillis - previousTimeMillis;
@@ -2845,13 +2844,17 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             String renderFpsInfo = String.format("Rx %.0f / Rd %.0f FPS", performanceInfo.receivedFps, performanceInfo.renderedFps);
             String networkLatencyInfo = "📶 " + performanceInfo.bandWidth + String.format("   %d ± %d ms", (int) (performanceInfo.rttInfo >> 32), (int) performanceInfo.rttInfo);
             String decodeLatencyInfo = String.format(performanceInfo.decodeTimeMs < 15 ? "🎮 %.2f ms" : "🥵 %.2f ms", performanceInfo.decodeTimeMs);
-            String hostLatencyInfo = "🧋 Ver.V+";
+            String hostLatencyInfo;
             if (performanceInfo.framesWithHostProcessingLatency > 0) {
                 hostLatencyInfo = String.format("🖥 %.1f ms", performanceInfo.aveHostProcessingLatency);
+            } else {
+                hostLatencyInfo = "🧋 Ver.V+";
             }
 
+        String finalDecoderInfo = decoderInfo;
+        runOnUiThread(() -> {
             perfResView.setText(resInfo);
-            perfDecoderView.setText(decoderInfo);
+            perfDecoderView.setText(finalDecoderInfo);
             perfRenderFpsView.setText(renderFpsInfo);
             networkLatencyView.setText(networkLatencyInfo);
             decodeLatencyView.setText(decodeLatencyInfo);
