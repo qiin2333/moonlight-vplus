@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="scene_color_1">#D3B8A2</color>    <!-- 米灰粉 -->
+    <color name="scene_color_2">#A6B8A9</color>    <!-- 灰豆绿 -->
+    <color name="scene_color_3">#8A9EA2</color>    <!-- 雾霾蓝 -->
+    <color name="scene_color_4">#B7A9B2</color>    <!-- 灰紫粉 -->
+    <color name="scene_color_5">#C4B7C1</color>    <!-- 浅藕荷 -->
+
+    <!-- 可选补充色 -->
+    <color name="scene_color_6">#D1C0A8</color>    <!-- 浅驼色 -->
+    <color name="scene_color_7">#9E9E9E</color>    <!-- 高级灰 -->
+</resources>

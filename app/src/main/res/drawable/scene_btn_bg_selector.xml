@@ -1,0 +1,21 @@
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <layer-list>
+            <!-- 右对齐的三角形按压背景 -->
+            <item android:gravity="end|center_vertical" android:right="4dp">
+                <vector android:width="42dp" android:height="42dp" android:viewportWidth="42" android:viewportHeight="42">
+                    <path
+                        android:fillColor="#80FFFFFF"
+                        android:strokeColor="#80FFFFFF"
+                        android:strokeWidth="1"
+                        android:pathData="M 42,0 L 21,21 L 42,42 Z"/>
+                </vector>
+            </item>
+        </layer-list>
+    </item>
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@android:color/transparent"/>
+        </shape>
+    </item>
+</selector> 

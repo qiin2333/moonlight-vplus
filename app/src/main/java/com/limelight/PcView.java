@@ -34,6 +34,7 @@ import com.limelight.utils.UiHelper;
 
 import com.bumptech.glide.Glide;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.Service;
@@ -67,6 +68,8 @@ import android.widget.AdapterView.AdapterContextMenuInfo;
 
 import androidx.annotation.NonNull;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.xmlpull.v1.XmlPullParserException;
 
 import javax.microedition.khronos.egl.EGLConfig;
@@ -74,6 +77,9 @@ import javax.microedition.khronos.opengles.GL10;
 
 import jp.wasabeef.glide.transformations.BlurTransformation;
 import jp.wasabeef.glide.transformations.ColorFilterTransformation;
+
+import android.app.AlertDialog;
+import android.content.SharedPreferences;
 
 public class PcView extends Activity implements AdapterFragmentCallbacks {
     private RelativeLayout noPcFoundLayout;
@@ -140,6 +146,10 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
     public String clientName;
     private LruCache<String, Bitmap> bitmapLruCache;
 
+    // 添加场景配置相关常量
+    private static final String SCENE_PREF_NAME = "SceneConfigs";
+    private static final String SCENE_KEY_PREFIX = "scene_";
+
     private void initializeViews() {
         setContentView(R.layout.activity_pc_view);
 
@@ -188,8 +198,9 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
             return true;
         });
 
-        // Set default preferences if we've never been run
-        PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
+        if (getWindow().getDecorView().getRootView() != null) {
+            initSceneButtons();
+        }
 
         // Set the correct layout for the PC grid
         pcGridAdapter.updateLayoutWithPreferences(this, PreferenceConfiguration.readPreferences(this));
@@ -361,6 +372,112 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         else {
             LimeLog.info("Cached GL Renderer: " + glPrefs.glRenderer);
             completeOnCreate();
+        }
+    }
+
+    private void initSceneButtons() {
+        try {
+            int[] sceneButtonIds = {
+                R.id.scene1Btn, R.id.scene2Btn, 
+                R.id.scene3Btn, R.id.scene4Btn, R.id.scene5Btn
+            };
+
+            for (int i = 0; i < sceneButtonIds.length; i++) {
+                final int sceneNumber = i + 1;
+                ImageButton btn = findViewById(sceneButtonIds[i]);
+                
+                if (btn == null) {
+                    LimeLog.warning("Scene button "+ sceneNumber +" (ID: "+getResources().getResourceName(sceneButtonIds[i])+") not found!");
+                    continue;
+                }
+
+                btn.setOnClickListener(v -> applySceneConfiguration(sceneNumber));
+                btn.setOnLongClickListener(v -> {
+                    showSaveConfirmationDialog(sceneNumber);
+                    return true;
+                });
+            }
+        } catch (Exception e) {
+            LimeLog.warning("Scene init failed: "+ e);
+            e.printStackTrace();
+        }
+    }
+
+    @SuppressLint("DefaultLocale")
+    private void applySceneConfiguration(int sceneNumber) {
+        try {
+            SharedPreferences prefs = getSharedPreferences(SCENE_PREF_NAME, MODE_PRIVATE);
+            String configJson = prefs.getString(SCENE_KEY_PREFIX + sceneNumber, null);
+            
+            if (configJson != null) {
+                JSONObject config = new JSONObject(configJson);
+                // 解析配置参数
+                int width = config.optInt("width", 1920);
+                int height = config.optInt("height", 1080);
+                int fps = config.optInt("fps", 60);
+                int bitrate = config.optInt("bitrate", 10000);
+                String videoFormat = config.optString("videoFormat", "auto");
+                boolean enableHdr = config.optBoolean("enableHdr", false);
+                boolean enablePerfOverlay = config.optBoolean("enablePerfOverlay", false);
+                
+                // 使用副本配置进行操作
+                PreferenceConfiguration configPrefs = PreferenceConfiguration.readPreferences(this).copy();
+                configPrefs.width = width;
+                configPrefs.height = height;
+                configPrefs.fps = fps;
+                configPrefs.bitrate = bitrate;
+                configPrefs.videoFormat = PreferenceConfiguration.FormatOption.valueOf(videoFormat);
+                configPrefs.enableHdr = enableHdr;
+                configPrefs.enablePerfOverlay = enablePerfOverlay;
+                
+                // 保存并检查结果
+                if (!configPrefs.writePreferences(this)) {
+                    Toast.makeText(this, "配置保存失败", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                
+                pcGridAdapter.updateLayoutWithPreferences(this, configPrefs);
+                
+                Toast.makeText(this, String.format("已应用场景%d配置：%dx%d@%dFPS %.2fMbps %s HDR %s",
+                    sceneNumber, width, height, fps, bitrate / 1000.0, videoFormat, enableHdr ? "On" : "Off"), Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "场景"+sceneNumber+"未配置", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            runOnUiThread(() -> Toast.makeText(PcView.this, "配置应用失败", Toast.LENGTH_SHORT).show());
+        }
+    }
+
+    private void showSaveConfirmationDialog(int sceneNumber) {
+        new AlertDialog.Builder(this)
+            .setTitle("保存到场景" + sceneNumber)
+            .setMessage("是否覆盖当前配置？")
+            .setPositiveButton("保存", (dialog, which) -> saveCurrentConfiguration(sceneNumber))
+            .setNegativeButton("取消", null)
+            .show();
+    }
+
+    private void saveCurrentConfiguration(int sceneNumber) {
+        try {
+            PreferenceConfiguration configPrefs = PreferenceConfiguration.readPreferences(this);
+            JSONObject config = new JSONObject();
+            config.put("width", configPrefs.width);
+            config.put("height", configPrefs.height);
+            config.put("fps", configPrefs.fps);
+            config.put("bitrate", configPrefs.bitrate);
+            config.put("videoFormat", configPrefs.videoFormat.toString());
+            config.put("enableHdr", configPrefs.enableHdr);
+            config.put("enablePerfOverlay", configPrefs.enablePerfOverlay);
+            
+            // 保存到SharedPreferences
+            getSharedPreferences(SCENE_PREF_NAME, MODE_PRIVATE)
+                .edit()
+                .putString(SCENE_KEY_PREFIX + sceneNumber, config.toString())
+                .apply();
+            
+            Toast.makeText(this, "场景" + sceneNumber + "保存成功", Toast.LENGTH_SHORT).show();
+        } catch (JSONException e) {
+            Toast.makeText(this, "配置保存失败", Toast.LENGTH_SHORT).show();
         }
     }
 
