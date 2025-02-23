@@ -1,0 +1,12 @@
+<!-- 左指向的等边三角形矢量图 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="32dp"
+    android:height="32dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M 12,12 L 24,0 L 24,24 Z"
+        android:strokeWidth="0.5"/>
+</vector> 
