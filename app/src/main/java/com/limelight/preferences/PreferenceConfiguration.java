@@ -11,6 +11,10 @@ import android.view.WindowManager;
 
 import com.limelight.nvstream.jni.MoonBridge;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 public class PreferenceConfiguration {
     public enum FormatOption {
         AUTO,
@@ -37,6 +41,7 @@ public class PreferenceConfiguration {
     static final String SYNC_TOUCH_EVENT_WITH_DISPLAY_PREF_STRING = "checkbox_sync_touch_event_with_display";
     static final String ENABLE_KEYBOARD_TOGGLE_IN_NATIVE_TOUCH  = "checkbox_enable_keyboard_toggle_in_native_touch";
     static final String NATIVE_TOUCH_FINGERS_TO_TOGGLE_KEYBOARD_PREF_STRING = "seekbar_keyboard_toggle_fingers_native_touch";
+
 
 
     private static final String STRETCH_PREF_STRING = "checkbox_stretch_video";
@@ -151,6 +156,10 @@ public class PreferenceConfiguration {
     private static final String VIDEO_FORMAT_HEVC = "forceh265";
     private static final String VIDEO_FORMAT_H264 = "neverh265";
 
+    private static final String[] RESOLUTIONS = {
+        "640x360", "854x480", "1280x720", "1920x1080", "2560x1440", "3840x2160", "Native"
+    };
+
     public int width, height, fps, resolutionScale;
     public int bitrate;
     public int longPressflatRegionPixels; //Assigned to NativeTouchContext.INTIAL_ZONE_PIXELS
@@ -199,27 +208,9 @@ public class PreferenceConfiguration {
     public boolean gamepadMotionSensorsFallbackToDevice;
 
     public static boolean isNativeResolution(int width, int height) {
-        // It's not a native resolution if it matches an existing resolution option
-        if (width == 640 && height == 360) {
-            return false;
-        }
-        else if (width == 854 && height == 480) {
-            return false;
-        }
-        else if (width == 1280 && height == 720) {
-            return false;
-        }
-        else if (width == 1920 && height == 1080) {
-            return false;
-        }
-        else if (width == 2560 && height == 1440) {
-            return false;
-        }
-        else if (width == 3840 && height == 2160) {
-            return false;
-        }
-
-        return true;
+        // 使用集合检查是否为原生分辨率
+        Set<String> resolutionSet = new HashSet<>(Arrays.asList(RESOLUTIONS));
+        return !resolutionSet.contains(width + "x" + height);
     }
 
     // If we have a screen that has semi-square dimensions, we may want to change our behavior
@@ -268,7 +259,7 @@ public class PreferenceConfiguration {
         }
         else {
             // Should be unreachable
-            return RES_720P;
+            return RES_1080P;
         }
     }
 
@@ -281,21 +272,14 @@ public class PreferenceConfiguration {
     }
 
     private static String getResolutionString(int width, int height) {
-        switch (height) {
-            case 360:
-                return RES_360P;
-            case 480:
-                return RES_480P;
-            default:
-            case 720:
-                return RES_720P;
-            case 1080:
-                return RES_1080P;
-            case 1440:
-                return RES_1440P;
-            case 2160:
-                return RES_4K;
+        // 使用数组简化分辨率获取
+        for (String res : RESOLUTIONS) {
+            String[] dimensions = res.split("x");
+            if (height == Integer.parseInt(dimensions[1])) {
+                return res;
+            }
         }
+        return RES_1080P; // 默认返回1080P
     }
 
     public static int getDefaultBitrate(String resString, String fpsString) {
