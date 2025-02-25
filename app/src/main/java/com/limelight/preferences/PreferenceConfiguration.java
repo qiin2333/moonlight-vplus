@@ -6,8 +6,14 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.preference.PreferenceManager;
 import android.view.Display;
+import android.graphics.Point;
+import android.view.WindowManager;
 
 import com.limelight.nvstream.jni.MoonBridge;
+
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 public class PreferenceConfiguration {
     public enum FormatOption {
@@ -35,6 +41,7 @@ public class PreferenceConfiguration {
     static final String SYNC_TOUCH_EVENT_WITH_DISPLAY_PREF_STRING = "checkbox_sync_touch_event_with_display";
     static final String ENABLE_KEYBOARD_TOGGLE_IN_NATIVE_TOUCH  = "checkbox_enable_keyboard_toggle_in_native_touch";
     static final String NATIVE_TOUCH_FINGERS_TO_TOGGLE_KEYBOARD_PREF_STRING = "seekbar_keyboard_toggle_fingers_native_touch";
+
 
 
     private static final String STRETCH_PREF_STRING = "checkbox_stretch_video";
@@ -102,7 +109,6 @@ public class PreferenceConfiguration {
     public static final String DEFAULT_LANGUAGE = "default";
     private static final boolean DEFAULT_MULTI_CONTROLLER = true;
     private static final boolean DEFAULT_USB_DRIVER = true;
-    private static final String DEFAULT_VIDEO_FORMAT = "auto";
 
     private static final boolean ONSCREEN_CONTROLLER_DEFAULT = false;
     private static final boolean ONSCREEN_KEYBOARD_DEFAULT = false;
@@ -144,6 +150,15 @@ public class PreferenceConfiguration {
     public static final String RES_1440P = "2560x1440";
     public static final String RES_4K = "3840x2160";
     public static final String RES_NATIVE = "Native";
+
+    private static final String VIDEO_FORMAT_AUTO = "auto";
+    private static final String VIDEO_FORMAT_AV1 = "forceav1";
+    private static final String VIDEO_FORMAT_HEVC = "forceh265";
+    private static final String VIDEO_FORMAT_H264 = "neverh265";
+
+    private static final String[] RESOLUTIONS = {
+        "640x360", "854x480", "1280x720", "1920x1080", "2560x1440", "3840x2160", "Native"
+    };
 
     public int width, height, fps, resolutionScale;
     public int bitrate;
@@ -193,27 +208,9 @@ public class PreferenceConfiguration {
     public boolean gamepadMotionSensorsFallbackToDevice;
 
     public static boolean isNativeResolution(int width, int height) {
-        // It's not a native resolution if it matches an existing resolution option
-        if (width == 640 && height == 360) {
-            return false;
-        }
-        else if (width == 854 && height == 480) {
-            return false;
-        }
-        else if (width == 1280 && height == 720) {
-            return false;
-        }
-        else if (width == 1920 && height == 1080) {
-            return false;
-        }
-        else if (width == 2560 && height == 1440) {
-            return false;
-        }
-        else if (width == 3840 && height == 2160) {
-            return false;
-        }
-
-        return true;
+        // 使用集合检查是否为原生分辨率
+        Set<String> resolutionSet = new HashSet<>(Arrays.asList(RESOLUTIONS));
+        return !resolutionSet.contains(width + "x" + height);
     }
 
     // If we have a screen that has semi-square dimensions, we may want to change our behavior
@@ -262,7 +259,7 @@ public class PreferenceConfiguration {
         }
         else {
             // Should be unreachable
-            return RES_720P;
+            return RES_1080P;
         }
     }
 
@@ -275,21 +272,14 @@ public class PreferenceConfiguration {
     }
 
     private static String getResolutionString(int width, int height) {
-        switch (height) {
-            case 360:
-                return RES_360P;
-            case 480:
-                return RES_480P;
-            default:
-            case 720:
-                return RES_720P;
-            case 1080:
-                return RES_1080P;
-            case 1440:
-                return RES_1440P;
-            case 2160:
-                return RES_4K;
+        // 使用数组简化分辨率获取
+        for (String res : RESOLUTIONS) {
+            String[] dimensions = res.split("x");
+            if (height == Integer.parseInt(dimensions[1])) {
+                return res;
+            }
         }
+        return RES_1080P; // 默认返回1080P
     }
 
     public static int getDefaultBitrate(String resString, String fpsString) {
@@ -384,23 +374,31 @@ public class PreferenceConfiguration {
 
     private static FormatOption getVideoFormatValue(Context context) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-
-        String str = prefs.getString(VIDEO_FORMAT_PREF_STRING, DEFAULT_VIDEO_FORMAT);
-        if (str.equals("auto")) {
-            return FormatOption.AUTO;
-        }
-        else if (str.equals("forceav1")) {
+        String str = prefs.getString(VIDEO_FORMAT_PREF_STRING, VIDEO_FORMAT_AUTO);
+        if (str.equals(VIDEO_FORMAT_AV1)) {
             return FormatOption.FORCE_AV1;
-        }
-        else if (str.equals("forceh265")) {
+        } else if (str.equals(VIDEO_FORMAT_HEVC)) {
             return FormatOption.FORCE_HEVC;
-        }
-        else if (str.equals("neverh265")) {
+        } else if (str.equals(VIDEO_FORMAT_H264)) {
             return FormatOption.FORCE_H264;
         }
         else {
-            // Should never get here
             return FormatOption.AUTO;
+        }
+    }
+
+    private static String getVideoFormatPreferenceString(FormatOption format) {
+        switch (format) {
+            case AUTO:
+                return VIDEO_FORMAT_AUTO;
+            case FORCE_AV1:
+                return VIDEO_FORMAT_AV1;
+            case FORCE_HEVC:
+                return VIDEO_FORMAT_HEVC;
+            case FORCE_H264:
+                return VIDEO_FORMAT_H264;
+            default:
+                return VIDEO_FORMAT_AUTO;
         }
     }
 
@@ -494,74 +492,37 @@ public class PreferenceConfiguration {
             }
         }
 
-        String str = prefs.getString(LEGACY_RES_FPS_PREF_STRING, null);
-        if (str != null) {
-            if (str.equals("360p30")) {
-                config.width = 640;
-                config.height = 360;
-                config.fps = 30;
-            }
-            else if (str.equals("360p60")) {
-                config.width = 640;
-                config.height = 360;
-                config.fps = 60;
-            }
-            else if (str.equals("720p30")) {
-                config.width = 1280;
-                config.height = 720;
-                config.fps = 30;
-            }
-            else if (str.equals("720p60")) {
-                config.width = 1280;
-                config.height = 720;
-                config.fps = 60;
-            }
-            else if (str.equals("1080p30")) {
-                config.width = 1920;
-                config.height = 1080;
-                config.fps = 30;
-            }
-            else if (str.equals("1080p60")) {
-                config.width = 1920;
-                config.height = 1080;
-                config.fps = 60;
-            }
-            else if (str.equals("4K30")) {
-                config.width = 3840;
-                config.height = 2160;
-                config.fps = 30;
-            }
-            else if (str.equals("4K60")) {
-                config.width = 3840;
-                config.height = 2160;
-                config.fps = 60;
-            }
-            else {
-                // Should never get here
-                config.width = 1280;
-                config.height = 720;
-                config.fps = 60;
-            }
+        String resStr = prefs.getString(RESOLUTION_PREF_STRING, PreferenceConfiguration.DEFAULT_RESOLUTION);
 
-            prefs.edit()
-                    .remove(LEGACY_RES_FPS_PREF_STRING)
-                    .putString(RESOLUTION_PREF_STRING, getResolutionString(config.width, config.height))
-                    .putString(FPS_PREF_STRING, ""+config.fps)
-                    .apply();
-        }
-        else {
-            // Use the new preference location
-            String resStr = prefs.getString(RESOLUTION_PREF_STRING, PreferenceConfiguration.DEFAULT_RESOLUTION);
-
-            // Convert legacy resolution strings to the new style
-            if (!resStr.contains("x")) {
-                resStr = PreferenceConfiguration.convertFromLegacyResolutionString(resStr);
-                prefs.edit().putString(RESOLUTION_PREF_STRING, resStr).apply();
+        // 添加Native分辨率支持
+        if (resStr.equals(RES_NATIVE)) {
+            // 获取设备原生分辨率
+            Display display = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
+            Point size = new Point();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                display.getRealSize(size);  // 需要API 17+
+            } else {
+                display.getSize(size);      // 兼容旧版本
             }
-
+            config.width = size.x;
+            config.height = size.y;
+        } else {
+            // 原有解析逻辑
             config.width = PreferenceConfiguration.getWidthFromResolutionString(resStr);
             config.height = PreferenceConfiguration.getHeightFromResolutionString(resStr);
-            config.fps = Integer.parseInt(prefs.getString(FPS_PREF_STRING, PreferenceConfiguration.DEFAULT_FPS));
+        }
+
+        // 处理新旧数据类型兼容
+        Object fpsValue = prefs.getAll().get(FPS_PREF_STRING);
+        if (fpsValue instanceof String) {
+            config.fps = Integer.parseInt((String) fpsValue);
+        } else if (fpsValue instanceof Integer) {
+            // 迁移旧整型值为字符串
+            config.fps = (Integer) fpsValue;
+            prefs.edit().putString(FPS_PREF_STRING, String.valueOf(config.fps)).apply();
+        } else {
+            // 默认值处理
+            config.fps = Integer.parseInt(prefs.getString(FPS_PREF_STRING, DEFAULT_FPS));
         }
 
         if (!prefs.contains(SMALL_ICONS_PREF_STRING)) {
@@ -659,5 +620,39 @@ public class PreferenceConfiguration {
         config.enableSimplifyPerfOverlay = false;
 
         return config;
+    }
+
+    public boolean writePreferences(Context context) {
+        if (context == null) {
+            return false;
+        }
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        try {
+            prefs.edit()
+                    .putString(RESOLUTION_PREF_STRING, width + "x" + height)
+                    .putString(FPS_PREF_STRING, String.valueOf(fps))
+                    .putInt(BITRATE_PREF_STRING, bitrate)
+                    .putString(VIDEO_FORMAT_PREF_STRING, getVideoFormatPreferenceString(videoFormat))
+                    .putBoolean(ENABLE_HDR_PREF_STRING, enableHdr)
+                    .putBoolean(ENABLE_PERF_OVERLAY_STRING, enablePerfOverlay)
+                    .apply();
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public PreferenceConfiguration copy() {
+        PreferenceConfiguration copy = new PreferenceConfiguration();
+        copy.width = this.width;
+        copy.height = this.height;
+        copy.fps = this.fps;
+        copy.bitrate = this.bitrate;
+        copy.videoFormat = this.videoFormat;
+        copy.enableHdr = this.enableHdr;
+        copy.enablePerfOverlay = this.enablePerfOverlay;
+        return copy;
     }
 }

@@ -336,10 +336,10 @@
         <EditTextPreference
             android:key="background_image_url"
             android:title="背景图片API"
-            android:summary="输入自定义背景图片的API"
+            android:summary="输入自定义背景图片的API，也可以是单张图片地址哦，留空就是看随机涩图"
             android:dialogTitle="背景图片API"
             android:dialogMessage="请输入完整的图片API"
-            android:defaultValue="https://example.com/api/image" />
+            android:defaultValue="" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_advanced_settings"
         android:key="category_advanced_settings">
@@ -399,7 +399,7 @@
         <com.limelight.preferences.WebLauncherPreference
             android:title="@string/title_about_mode"
             android:summary="@string/summary_about_mode"
-            url="https://github.moeyy.xyz/https://github.com/qiin2333/moonlight-android/releases/tag/shortcut"/>
+            url="https://github.com/qiin2333/moonlight-android/releases/tag/shortcut"/>
         <com.limelight.preferences.WebLauncherPreference
             android:title="@string/title_privacy_policy"
             android:summary="@string/summary_privacy_policy"

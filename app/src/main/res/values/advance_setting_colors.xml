@@ -5,4 +5,8 @@
     <color name="advance_setting_button_background">#404040</color>
     <color name="window_box_background">#202020</color>
     <color name="window_background">#C0303030</color>
+
+    <color name="control_highlight_color">#2196F3</color>
+    <color name="scene_btn_stroke">#2196F3</color>
+    <color name="btn_pressed_color">#4D2196F3</color>
 </resources>

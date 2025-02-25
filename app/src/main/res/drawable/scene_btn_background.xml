@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 按下状态 -->
+    <item android:state_pressed="true">
+        <shape>
+            <corners android:radius="8dp" />
+            <solid android:color="#66000000" /> <!-- 半透明黑色背景 -->
+            <stroke 
+                android:width="1dp"
+                android:color="@color/scene_btn_stroke" /> <!-- 边框颜色 -->
+        </shape>
+    </item>
+    <!-- 默认状态 -->
+    <item>
+        <shape>
+            <corners android:radius="8dp" />
+            <solid android:color="#33000000" /> <!-- 更透明的黑色背景 -->
+            <stroke 
+                android:width="1dp"
+                android:color="@android:color/white" /> <!-- 白色边框 -->
+        </shape>
+    </item>
+</selector> 

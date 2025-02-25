@@ -88,4 +88,70 @@
         android:src="@drawable/ic_add"
         style="?android:attr/borderlessButtonStyle"/>
 
+    <!-- 场景预设按钮组 -->
+    <LinearLayout
+        android:id="@+id/scenePresetContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginBottom="24dp"
+        android:orientation="vertical">
+
+        <!-- 场景1 -->
+        <ImageButton
+            android:id="@+id/scene1Btn"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:contentDescription="场景1"
+            android:background="@drawable/btn_pressed_bg"
+            android:src="@drawable/ic_triangle_left"
+            android:tint="@color/scene_color_1"
+            style="?android:attr/borderlessButtonStyle"/>
+
+        <!-- 场景2 -->
+        <ImageButton
+            android:id="@+id/scene2Btn"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:contentDescription="场景2"
+            android:background="@drawable/btn_pressed_bg"
+            android:src="@drawable/ic_triangle_left"
+            android:tint="@color/scene_color_2"
+            style="?android:attr/borderlessButtonStyle"/>
+
+        <!-- 场景3 -->
+        <ImageButton
+            android:id="@+id/scene3Btn"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:contentDescription="场景3"
+            android:background="@drawable/btn_pressed_bg"
+            android:src="@drawable/ic_triangle_left"
+            android:tint="@color/scene_color_3"
+            style="?android:attr/borderlessButtonStyle"/>
+
+        <!-- 场景4 -->
+        <ImageButton
+            android:id="@+id/scene4Btn"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:contentDescription="场景4"
+            android:background="@drawable/btn_pressed_bg"
+            android:src="@drawable/ic_triangle_left"
+            android:tint="@color/scene_color_4"
+            style="?android:attr/borderlessButtonStyle"/>
+
+        <!-- 场景5 -->
+        <ImageButton
+            android:id="@+id/scene5Btn"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:contentDescription="场景5"
+            android:background="@drawable/btn_pressed_bg"
+            android:src="@drawable/ic_triangle_left"
+            android:tint="@color/scene_color_5"
+            style="?android:attr/borderlessButtonStyle"/>
+    </LinearLayout>
+
 </RelativeLayout>
