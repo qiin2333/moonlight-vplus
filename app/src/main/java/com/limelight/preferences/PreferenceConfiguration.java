@@ -160,6 +160,32 @@ public class PreferenceConfiguration {
         "640x360", "854x480", "1280x720", "1920x1080", "2560x1440", "3840x2160", "Native"
     };
 
+    private static final String REVERSE_RESOLUTION_PREF_STRING = "checkbox_reverse_resolution";
+    private static final boolean DEFAULT_REVERSE_RESOLUTION = false;
+
+    // 画面位置常量
+    private static final String SCREEN_POSITION_PREF_STRING = "list_screen_position";
+    private static final String SCREEN_OFFSET_X_PREF_STRING = "seekbar_screen_offset_x";
+    private static final String SCREEN_OFFSET_Y_PREF_STRING = "seekbar_screen_offset_y";
+
+    // 默认值
+    private static final String DEFAULT_SCREEN_POSITION = "center"; // 居中
+    private static final int DEFAULT_SCREEN_OFFSET_X = 0;
+    private static final int DEFAULT_SCREEN_OFFSET_Y = 0;
+
+    // 位置枚举
+    public enum ScreenPosition {
+        TOP_LEFT,
+        TOP_CENTER,
+        TOP_RIGHT,
+        CENTER_LEFT,
+        CENTER,
+        CENTER_RIGHT,
+        BOTTOM_LEFT,
+        BOTTOM_CENTER,
+        BOTTOM_RIGHT
+    }
+
     public int width, height, fps, resolutionScale;
     public int bitrate;
     public int longPressflatRegionPixels; //Assigned to NativeTouchContext.INTIAL_ZONE_PIXELS
@@ -206,6 +232,11 @@ public class PreferenceConfiguration {
     public boolean gamepadMotionSensors;
     public boolean gamepadTouchpadAsMouse;
     public boolean gamepadMotionSensorsFallbackToDevice;
+    public boolean reverseResolution;
+
+    public ScreenPosition screenPosition;
+    public int screenOffsetX;
+    public int screenOffsetY;
 
     public static boolean isNativeResolution(int width, int height) {
         // 使用集合检查是否为原生分辨率
@@ -619,6 +650,51 @@ public class PreferenceConfiguration {
         config.gamepadMotionSensorsFallbackToDevice = prefs.getBoolean(GAMEPAD_MOTION_FALLBACK_PREF_STRING, DEFAULT_GAMEPAD_MOTION_FALLBACK);
         config.enableSimplifyPerfOverlay = false;
 
+        config.reverseResolution = prefs.getBoolean(REVERSE_RESOLUTION_PREF_STRING, DEFAULT_REVERSE_RESOLUTION);
+
+        // 如果启用了分辨率反转，则交换宽度和高度
+        if (config.reverseResolution) {
+            int temp = config.width;
+            config.width = config.height;
+            config.height = temp;
+        }
+
+        // 读取画面位置设置
+        String posString = prefs.getString(SCREEN_POSITION_PREF_STRING, DEFAULT_SCREEN_POSITION);
+        switch (posString) {
+            case "top_left":
+                config.screenPosition = ScreenPosition.TOP_LEFT;
+                break;
+            case "top_center":
+                config.screenPosition = ScreenPosition.TOP_CENTER;
+                break;
+            case "top_right":
+                config.screenPosition = ScreenPosition.TOP_RIGHT;
+                break;
+            case "center_left":
+                config.screenPosition = ScreenPosition.CENTER_LEFT;
+                break;
+            case "center_right":
+                config.screenPosition = ScreenPosition.CENTER_RIGHT;
+                break;
+            case "bottom_left":
+                config.screenPosition = ScreenPosition.BOTTOM_LEFT;
+                break;
+            case "bottom_center":
+                config.screenPosition = ScreenPosition.BOTTOM_CENTER;
+                break;
+            case "bottom_right":
+                config.screenPosition = ScreenPosition.BOTTOM_RIGHT;
+                break;
+            default:
+                config.screenPosition = ScreenPosition.CENTER;
+                break;
+        }
+        
+        // 读取偏移百分比
+        config.screenOffsetX = prefs.getInt(SCREEN_OFFSET_X_PREF_STRING, DEFAULT_SCREEN_OFFSET_X);
+        config.screenOffsetY = prefs.getInt(SCREEN_OFFSET_Y_PREF_STRING, DEFAULT_SCREEN_OFFSET_Y);
+
         return config;
     }
 
@@ -629,6 +705,38 @@ public class PreferenceConfiguration {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         try {
+            // 转换枚举为字符串
+            String positionString;
+            switch (screenPosition) {
+                case TOP_LEFT:
+                    positionString = "top_left";
+                    break;
+                case TOP_CENTER:
+                    positionString = "top_center";
+                    break;
+                case TOP_RIGHT:
+                    positionString = "top_right";
+                    break;
+                case CENTER_LEFT:
+                    positionString = "center_left";
+                    break;
+                case CENTER_RIGHT:
+                    positionString = "center_right";
+                    break;
+                case BOTTOM_LEFT:
+                    positionString = "bottom_left";
+                    break;
+                case BOTTOM_CENTER:
+                    positionString = "bottom_center";
+                    break;
+                case BOTTOM_RIGHT:
+                    positionString = "bottom_right";
+                    break;
+                default:
+                    positionString = "center";
+                    break;
+            }
+            
             prefs.edit()
                     .putString(RESOLUTION_PREF_STRING, width + "x" + height)
                     .putString(FPS_PREF_STRING, String.valueOf(fps))
@@ -636,6 +744,10 @@ public class PreferenceConfiguration {
                     .putString(VIDEO_FORMAT_PREF_STRING, getVideoFormatPreferenceString(videoFormat))
                     .putBoolean(ENABLE_HDR_PREF_STRING, enableHdr)
                     .putBoolean(ENABLE_PERF_OVERLAY_STRING, enablePerfOverlay)
+                    .putBoolean(REVERSE_RESOLUTION_PREF_STRING, reverseResolution)
+                    .putString(SCREEN_POSITION_PREF_STRING, positionString)
+                    .putInt(SCREEN_OFFSET_X_PREF_STRING, screenOffsetX)
+                    .putInt(SCREEN_OFFSET_Y_PREF_STRING, screenOffsetY)
                     .apply();
             return true;
         } catch (Exception e) {
@@ -653,6 +765,10 @@ public class PreferenceConfiguration {
         copy.videoFormat = this.videoFormat;
         copy.enableHdr = this.enableHdr;
         copy.enablePerfOverlay = this.enablePerfOverlay;
+        copy.reverseResolution = this.reverseResolution;
+        copy.screenPosition = this.screenPosition;
+        copy.screenOffsetX = this.screenOffsetX;
+        copy.screenOffsetY = this.screenOffsetY;
         return copy;
     }
 }

@@ -162,4 +162,42 @@
         <item>right</item>
         <item>left</item>
     </string-array>
+
+    <!-- 画面位置选项 -->
+    <string-array name="screen_position_names">
+        <item>左上</item>
+        <item>顶部居中</item>
+        <item>右上</item>
+        <item>左侧居中</item>
+        <item>居中</item>
+        <item>右侧居中</item>
+        <item>左下</item>
+        <item>底部居中</item>
+        <item>右下</item>
+    </string-array>
+
+    <string-array name="screen_position_values">
+        <item>top_left</item>
+        <item>top_center</item>
+        <item>top_right</item>
+        <item>center_left</item>
+        <item>center</item>
+        <item>center_right</item>
+        <item>bottom_left</item>
+        <item>bottom_center</item>
+        <item>bottom_right</item>
+    </string-array>
+
+    <!-- 画面位置图标数组 -->
+    <array name="screen_position_icons">
+        <item>@drawable/ic_position_top_left</item>
+        <item>@drawable/ic_position_top_center</item>
+        <item>@drawable/ic_position_top_right</item>
+        <item>@drawable/ic_position_center_left</item>
+        <item>@drawable/ic_position_center</item>
+        <item>@drawable/ic_position_center_right</item>
+        <item>@drawable/ic_position_bottom_left</item>
+        <item>@drawable/ic_position_bottom_center</item>
+        <item>@drawable/ic_position_bottom_right</item>
+    </array>
 </resources>

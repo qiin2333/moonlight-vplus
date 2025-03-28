@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:seekbar="http://schemas.moonlight-stream.com/apk/res/seekbar">
+    xmlns:seekbar="http://schemas.moonlight-stream.com/apk/res/seekbar"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:divider="@drawable/preference_divider"
+    android:layout="@layout/preference_category_material">
 
     <PreferenceCategory android:title="@string/category_basic_settings"
-        android:key="category_basic_settings">
+        android:key="category_basic_settings"
+        android:layout="@layout/preference_category_material">
         <ListPreference
             android:key="list_resolution"
             android:title="@string/title_resolution_list"
@@ -56,6 +60,38 @@
             android:key="checkbox_stretch_video"
             android:title="@string/title_checkbox_stretch_video"
             android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_reverse_resolution"
+            android:title="反转分辨率"
+            android:summary="交换宽度和高度值，用于特殊显示需求"
+            android:defaultValue="false" />
+    </PreferenceCategory>
+    <PreferenceCategory
+        android:title="画面位置设置"
+        android:icon="@drawable/ic_screen_position">
+        <com.limelight.preferences.IconListPreference
+            android:key="list_screen_position"
+            android:title="画面位置"
+            android:summary="选择非全屏分辨率时画面的位置"
+            android:entries="@array/screen_position_names"
+            android:entryValues="@array/screen_position_values"
+            android:defaultValue="center"
+            app:entryIcons="@array/screen_position_icons" />
+        
+        <SeekBarPreference
+            android:key="seekbar_screen_offset_x"
+            android:title="水平偏移"
+            android:summary="画面水平方向的偏移量"
+            android:defaultValue="0"
+            android:max="100" />
+        
+        <SeekBarPreference
+            android:key="seekbar_screen_offset_y"
+            android:title="垂直偏移"
+            android:summary="画面垂直方向的偏移量"
+            android:defaultValue="0"
+            android:max="100" />
+        
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_audio_settings">
         <ListPreference
@@ -280,7 +316,9 @@
             android:negativeButtonText="@string/no"
             />
     </PreferenceCategory>
-    <PreferenceCategory android:title="增强版设置">
+    <PreferenceCategory 
+        android:title="增强版设置"
+        android:icon="@drawable/ic_enhance">
         <CheckBoxPreference
             android:defaultValue="false"
             android:key="checkbox_show_onscreen_keyboard"
@@ -400,6 +438,9 @@
             android:title="@string/title_about_mode"
             android:summary="@string/summary_about_mode"
             url="https://github.com/qiin2333/moonlight-android/releases/tag/shortcut"/>
+        <com.limelight.preferences.WebLauncherPreference
+            android:title="Moonlight V+ PC版下载"
+            url="https://github.com/qiin2333/moonlight-qt"/>
         <com.limelight.preferences.WebLauncherPreference
             android:title="@string/title_privacy_policy"
             android:summary="@string/summary_privacy_policy"

@@ -76,6 +76,7 @@ import android.view.View;
 import android.view.View.OnGenericMotionListener;
 import android.view.View.OnSystemUiVisibilityChangeListener;
 import android.view.View.OnTouchListener;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodInfo;
@@ -84,6 +85,8 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.view.Gravity;
+import android.util.DisplayMetrics;
 
 import org.json.JSONException;
 
@@ -609,44 +612,54 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // The connection will be started when the surface gets created
         streamView.getHolder().addCallback(this);
+
+        // 允许内容延伸到刘海区域
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            getWindow().getAttributes().layoutInDisplayCutoutMode = 
+            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+        }
+
+        // Set up display position
+        setupDisplayPosition();
     }
 
     private void setPreferredOrientationForCurrentDisplay() {
         Display display = getWindowManager().getDefaultDisplay();
 
-        // For semi-square displays, we use more complex logic to determine which orientation to use (if any)
-        if (PreferenceConfiguration.isSquarishScreen(display)) {
-            int desiredOrientation = Configuration.ORIENTATION_UNDEFINED;
-
-            // OSC doesn't properly support portrait displays, so don't use it in portrait mode by default
+        // 首先确定基于分辨率的所需方向
+        int desiredOrientation = Configuration.ORIENTATION_UNDEFINED;
+        
+        // 根据配置的宽高比确定横屏或竖屏
+        if (prefConfig.width > prefConfig.height) {
+            desiredOrientation = Configuration.ORIENTATION_LANDSCAPE;
+        } else if (prefConfig.height > prefConfig.width) {
+            desiredOrientation = Configuration.ORIENTATION_PORTRAIT;
+        } else {
+            // 宽高相等的情况
+            // 如果使用屏幕控制器，默认使用横屏
             if (prefConfig.onscreenController || prefConfig.onscreenKeyboard) {
                 desiredOrientation = Configuration.ORIENTATION_LANDSCAPE;
             }
-
-            // For native resolution, we will lock the orientation to the one that matches the specified resolution
-            if (PreferenceConfiguration.isNativeResolution(prefConfig.width, prefConfig.height)) {
-                if (prefConfig.width > prefConfig.height) {
-                    desiredOrientation = Configuration.ORIENTATION_LANDSCAPE;
-                }
-                else {
-                    desiredOrientation = Configuration.ORIENTATION_PORTRAIT;
-                }
-            }
-
+        }
+        
+        // 对于接近正方形的屏幕，应用更复杂的逻辑
+        if (PreferenceConfiguration.isSquarishScreen(display)) {
             if (desiredOrientation == Configuration.ORIENTATION_LANDSCAPE) {
                 setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
-            }
-            else if (desiredOrientation == Configuration.ORIENTATION_PORTRAIT) {
+            } else if (desiredOrientation == Configuration.ORIENTATION_PORTRAIT) {
                 setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT);
-            }
-            else {
-                // If we don't have a reason to lock to portrait or landscape, allow any orientation
+            } else {
+                // 没有明确的理由锁定为横屏或竖屏时，允许任意方向
                 setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
             }
-        }
-        else {
-            // For regular displays, we always request landscape
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
+        } else {
+            // 对于非方形屏幕，按照分辨率决定方向
+            if (desiredOrientation == Configuration.ORIENTATION_PORTRAIT) {
+                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT);
+            } else {
+                // 默认或横屏情况
+                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
+            }
         }
     }
 
@@ -703,6 +716,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 UiHelper.notifyStreamExitingPiP(this);
             }
         }
+
+        // Re-apply display position
+        setupDisplayPosition();
     }
 
     @TargetApi(Build.VERSION_CODES.O)
@@ -1429,8 +1445,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 return false;
             }
 
-            // We'll send it as a raw key event if we have a key mapping, otherwise we'll send it
-            // as UTF-8 text (if it's a printable character).
+            // We'll send it as a raw key event if we have a key mapping, otherwise we'll send it as UTF-8 text (if it's a printable character).
             short translated = keyboardTranslator.translate(event.getKeyCode(), event.getDeviceId());
             if (translated == 0) {
                 // Make sure it has a valid Unicode representation and it's not a dead character
@@ -3048,5 +3063,89 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     public void addPerformanceInfoDisplay(PerformanceInfoDisplay performanceInfoDisplay){
         performanceInfoDisplays.add(performanceInfoDisplay);
+    }
+
+    private void setupDisplayPosition() {
+        // 获取当前偏好设置
+        PreferenceConfiguration config = PreferenceConfiguration.readPreferences(this);
+        
+        // 获取视图容器
+        ViewGroup.LayoutParams layoutParams = streamView.getLayoutParams();
+        if (layoutParams instanceof FrameLayout.LayoutParams) {
+            FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) layoutParams;
+            
+            // 根据屏幕位置设置重力属性
+            switch (config.screenPosition) {
+                case TOP_LEFT:
+                    params.gravity = Gravity.TOP | Gravity.LEFT;
+                    break;
+                case TOP_CENTER:
+                    params.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+                    break;
+                case TOP_RIGHT:
+                    params.gravity = Gravity.TOP | Gravity.RIGHT;
+                    break;
+                case CENTER_LEFT:
+                    params.gravity = Gravity.CENTER_VERTICAL | Gravity.LEFT;
+                    break;
+                case CENTER:
+                    params.gravity = Gravity.CENTER;
+                    break;
+                case CENTER_RIGHT:
+                    params.gravity = Gravity.CENTER_VERTICAL | Gravity.RIGHT;
+                    break;
+                case BOTTOM_LEFT:
+                    params.gravity = Gravity.BOTTOM | Gravity.LEFT;
+                    break;
+                case BOTTOM_CENTER:
+                    params.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+                    break;
+                case BOTTOM_RIGHT:
+                    params.gravity = Gravity.BOTTOM | Gravity.RIGHT;
+                    break;
+            }
+            
+            // 计算偏移量的像素值
+            DisplayMetrics metrics = new DisplayMetrics();
+            getWindowManager().getDefaultDisplay().getMetrics(metrics);
+            
+            int streamWidth = prefConfig.width;
+            int streamHeight = prefConfig.height;
+            
+            // 将0-100的偏移百分比转换为实际像素值
+            int xOffset = (streamWidth * config.screenOffsetX) / 100;
+            int yOffset = (streamHeight * config.screenOffsetY) / 100;
+            
+            // 应用偏移量
+            if (params.gravity == Gravity.TOP || 
+                params.gravity == (Gravity.TOP | Gravity.CENTER_HORIZONTAL) || 
+                params.gravity == (Gravity.TOP | Gravity.RIGHT)) {
+                params.topMargin = yOffset;
+            } else if (params.gravity == Gravity.BOTTOM || 
+                      params.gravity == (Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL) || 
+                      params.gravity == (Gravity.BOTTOM | Gravity.LEFT)) {
+                params.bottomMargin = yOffset;
+            }
+            
+            if (params.gravity == Gravity.LEFT || 
+                params.gravity == (Gravity.CENTER_VERTICAL | Gravity.LEFT) || 
+                params.gravity == (Gravity.BOTTOM | Gravity.LEFT)) {
+                params.leftMargin = xOffset;
+            } else if (params.gravity == Gravity.RIGHT || 
+                      params.gravity == (Gravity.CENTER_VERTICAL | Gravity.RIGHT) || 
+                      params.gravity == (Gravity.TOP | Gravity.RIGHT)) {
+                params.rightMargin = xOffset;
+            }
+            
+            // 应用更新后的布局参数
+            streamView.setLayoutParams(params);
+        }
+    }
+
+    // 更新刷新显示位置方法
+    public void refreshDisplayPosition() {
+        if (surfaceCreated) {
+            setupDisplayPosition();
+        }
     }
 }

@@ -27,7 +27,12 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
+import android.view.WindowManager;
 import android.widget.Toast;
+import android.graphics.Color;
+import android.widget.ImageView;
+
+import androidx.annotation.NonNull;
 
 import com.limelight.Game;
 import com.limelight.LimeLog;
@@ -46,6 +51,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.*;
+
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
+import jp.wasabeef.glide.transformations.BlurTransformation;
+import jp.wasabeef.glide.transformations.ColorFilterTransformation;
 
 public class StreamSettings extends Activity {
 
@@ -69,15 +79,28 @@ public class StreamSettings extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // 应用带阴影的主题
+        getTheme().applyStyle(R.style.PreferenceThemeWithShadow, true);
+        
         super.onCreate(savedInstanceState);
 
         previousPrefs = PreferenceConfiguration.readPreferences(this);
 
         UiHelper.setLocale(this);
 
+        // 设置自定义布局
         setContentView(R.layout.activity_stream_settings);
+        
+        // 确保状态栏透明
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            getWindow().setStatusBarColor(Color.TRANSPARENT);
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+        }
 
         UiHelper.notifyNewRootView(this);
+
+        // 加载背景图片
+        loadBackgroundImage();
     }
 
     @Override
@@ -334,6 +357,16 @@ public class StreamSettings extends Activity {
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
             View view = super.onCreateView(inflater, container, savedInstanceState);
+            if (view != null) {
+                // 确保列表背景透明
+                view.setBackgroundColor(Color.TRANSPARENT);
+                
+                // 增加顶部安全距离
+                int topPadding = view.getPaddingTop();
+                int additionalPadding = (int) (32 * getResources().getDisplayMetrics().density);
+                view.setPadding(view.getPaddingLeft(), topPadding + additionalPadding, 
+                                view.getPaddingRight(), view.getPaddingBottom());
+            }
             UiHelper.applyStatusBarPadding(view);
             return view;
         }
@@ -341,7 +374,10 @@ public class StreamSettings extends Activity {
         @Override
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
-
+            
+            // 添加阴影主题
+            getActivity().getTheme().applyStyle(R.style.PreferenceThemeWithShadow, true);
+            
             addPreferencesFromResource(R.xml.preferences);
             PreferenceScreen screen = getPreferenceScreen();
 
@@ -926,5 +962,13 @@ public class StreamSettings extends Activity {
 
         }
 
+    }
+
+    private void loadBackgroundImage() {
+        ImageView imageView = findViewById(R.id.settingsBackgroundImage);
+
+        Glide.with(this)
+            .load("https://raw.gitmirror.com/qiin2333/qiin.github.io/assets/img/moonlight-bg2.webp")
+            .into(imageView);
     }
 }

@@ -6,4 +6,8 @@
         <attr name="text" format="string" />
         <attr name="progress" format="integer" />
     </declare-styleable>
+    <!-- 自定义IconListPreference属性 -->
+    <declare-styleable name="IconListPreference">
+        <attr name="entryIcons" format="reference" />
+    </declare-styleable>
 </resources>
