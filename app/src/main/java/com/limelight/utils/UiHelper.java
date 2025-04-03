@@ -260,12 +260,21 @@ public class UiHelper {
     }
 
     public static boolean isColorOS() {
-        String manufacturer = android.os.Build.MANUFACTURER;
-        String model = android.os.Build.MODEL;
-        String brand = android.os.Build.BRAND;
+        String manufacturer = android.os.Build.MANUFACTURER.toLowerCase();
+        String model = android.os.Build.MODEL.toLowerCase();
+        String brand = android.os.Build.BRAND.toLowerCase();
 
-        // 通常OPPO手机的制造商、品牌或型号中会包含OPPO或ColorOS等关键字
-        return manufacturer.toLowerCase().contains("oppo") || model.toLowerCase().contains("oppo") || brand.toLowerCase().contains("oppo") ||
-                manufacturer.toLowerCase().contains("coloros") || model.toLowerCase().contains("coloros") || brand.toLowerCase().contains("coloros");
+        // 检查是否为OPPO、OnePlus或Realme设备（均使用ColorOS）
+        String[] colorOSBrands = {"oppo", "oneplus", "realme"};
+        
+        for (String colorOSBrand : colorOSBrands) {
+            if (manufacturer.contains(colorOSBrand) || 
+                model.contains(colorOSBrand) || 
+                brand.contains(colorOSBrand)) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 }
