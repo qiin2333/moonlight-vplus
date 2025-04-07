@@ -38,6 +38,7 @@ import com.limelight.utils.ServerHelper;
 import com.limelight.utils.ShortcutHelper;
 import com.limelight.utils.SpinnerDialog;
 import com.limelight.utils.UiHelper;
+import com.limelight.utils.NetHelper;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
@@ -1881,7 +1882,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
         if (event.getActionMasked() == MotionEvent.ACTION_MOVE) {
             // Move events may impact all active pointers
-            if(prefConfig.enableEnhancedTouch) {
+            if (prefConfig.enableEnhancedTouch) {
                 for (int i = 0; i < event.getPointerCount(); i++) {
                     Objects.requireNonNull(nativeTouchPointerMap.get(event.getPointerId(i))).updatePointerCoords(event, i); // update pointer coords in the map.
                     if (!sendTouchEventForPointer(view, event, eventType, i)) {
@@ -1889,7 +1890,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     }
                 }
             }
-            else{
+            else {
                 for (int i = 0; i < event.getPointerCount(); i++) {
                     if (!sendTouchEventForPointer(view, event, eventType, i)) {
                         return false;
@@ -1916,11 +1917,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     break;
                 case MotionEvent.ACTION_UP: // all fingers up
                     // toggle keyboard when all fingers lift up, just like how it works in trackpad mode.
-                    if(event.getEventTime() - multiFingerDownTime < MULTI_FINGER_TAP_THRESHOLD) {
+                    if (event.getEventTime() - multiFingerDownTime < MULTI_FINGER_TAP_THRESHOLD) {
                         toggleKeyboard();
                     }
                 case MotionEvent.ACTION_POINTER_UP:
-                    if(prefConfig.enableEnhancedTouch) {
+                    if (prefConfig.enableEnhancedTouch) {
                         nativeTouchPointerMap.remove(event.getPointerId(event.getActionIndex()));
                     }
                     break;
@@ -1945,7 +1946,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     // Returns true if the event was consumed
     // NB: View is only present if called from a view callback
-    private boolean handleMotionEvent(View view, MotionEvent event) {  //handleMotionEvent, mark mark
+    private boolean handleMotionEvent(View view, MotionEvent event) {
         // Pass through mouse/touch/joystick input if we're not grabbing
 
         if (!grabbedInput) {
@@ -2210,11 +2211,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 // TODO: Re-enable native touch when have a better solution for handling
                 // cancelled touches from Android gestures and 3 finger taps to activate
                 // the software keyboard.
-                if (!prefConfig.touchscreenTrackpad && trySendTouchEvent(view, event)) {
-                    // If this host supports touch events and absolute touch is enabled,
-                    // send it directly as a touch event.
-                    return true;
-                }
+                // if (!prefConfig.touchscreenTrackpad && trySendTouchEvent(view, event)) {
+                //     // If this host supports touch events and absolute touch is enabled,
+                //     // send it directly as a touch event.
+                //     return true;
+                // }
 
                 TouchContext context = getTouchContext(actionIndex);
                 if (context == null) {
@@ -2835,30 +2836,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
     }
 
-    // SuppressLint("DefaultLocale") is used to avoid warnings about using the default locale
-    // in String.format calls. This is acceptable here because the formatting is not locale-sensitive.
-    @SuppressLint("DefaultLocale")
-    /**
-     * 计算并格式化网络带宽
-     * @param currentRxBytes 当前接收字节数
-     * @param previousRxBytes 上次接收字节数
-     * @param timeInterval 时间间隔（毫秒）
-     * @return 格式化后的带宽字符串
-     */
-    private String calculateBandwidth(long currentRxBytes, long previousRxBytes, long timeInterval) {
-        if (timeInterval <= 0) {
-            return "0 K/s";
-        }
-        
-        long rxBytesPerDifference = (currentRxBytes - previousRxBytes) / 1024;
-        double speedKBps = rxBytesPerDifference / ((double) timeInterval / 1000);
-        
-        if (speedKBps < 1024) {
-            return String.format("%.0f K/s", speedKBps);
-        }
-        return String.format("%.2f M/s", speedKBps / 1024);
-    }
-
     @Override
     public void onPerfUpdateV(final PerformanceInfo performanceInfo) {
         long currentRxBytes = TrafficStats.getTotalRxBytes();
@@ -2866,7 +2843,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         long timeMillisInterval = timeMillis - previousTimeMillis;
 
         // 计算并更新带宽信息
-        performanceInfo.bandWidth = calculateBandwidth(currentRxBytes, previousRxBytes, timeMillisInterval);
+        performanceInfo.bandWidth = NetHelper.calculateBandwidth(currentRxBytes, previousRxBytes, timeMillisInterval);
         previousTimeMillis = timeMillis;
         previousRxBytes = currentRxBytes;
 
@@ -2914,14 +2891,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             long timeMillis = System.currentTimeMillis();
             long timeMillisInterval = timeMillis - previousTimeMillis;
             if (timeMillisInterval < 3000) {
-                long rxBytesPerDifference = (currentRxBytes - previousRxBytes) / 1024;
-                double speedKBps = rxBytesPerDifference / ((double) timeMillisInterval / 1000);
-                if (speedKBps < 1024) {
-                    performanceInfo.bandWidth = String.format("%.0f KB/s", speedKBps);
-                } else {
-                    double speedMBps = speedKBps / 1024;
-                    performanceInfo.bandWidth = String.format("%.2f MB/s", speedMBps);
-                }
+                performanceInfo.bandWidth = NetHelper.calculateBandwidth(currentRxBytes, previousRxBytes, timeMillisInterval);
             }
             previousTimeMillis = timeMillis;
             previousRxBytes = currentRxBytes;
