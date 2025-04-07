@@ -39,7 +39,7 @@ public class PreferenceConfiguration {
     private static final String BITRATE_PREF_OLD_STRING = "seekbar_bitrate";
     static final String LONG_PRESS_FLAT_REGION_PIXELS_PREF_STRING = "seekbar_flat_region_pixels";
     static final String SYNC_TOUCH_EVENT_WITH_DISPLAY_PREF_STRING = "checkbox_sync_touch_event_with_display";
-    static final String ENABLE_KEYBOARD_TOGGLE_IN_NATIVE_TOUCH  = "checkbox_enable_keyboard_toggle_in_native_touch";
+    static final String ENABLE_KEYBOARD_TOGGLE_IN_NATIVE_TOUCH = "checkbox_enable_keyboard_toggle_in_native_touch";
     static final String NATIVE_TOUCH_FINGERS_TO_TOGGLE_KEYBOARD_PREF_STRING = "seekbar_keyboard_toggle_fingers_native_touch";
 
 
