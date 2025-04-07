@@ -9,4 +9,5 @@
     android:focusable="true"
     android:focusableInTouchMode="true"
     android:clipToPadding="false"
-    android:gravity="center"/>
+    android:gravity="center"
+    android:elevation="4dp"/>

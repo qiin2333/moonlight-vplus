@@ -1,4 +1,5 @@
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -21,20 +22,87 @@
         android:defaultFocusHighlightEnabled="false">
         <requestFocus />
     </com.limelight.ui.StreamView>
+    <FrameLayout
+        android:id="@+id/advance_setting_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+        <include layout="@layout/layer_1_reserve"/>
+        <include layout="@layout/layer_2_element"/>
+        <include layout="@layout/layer_6_keyboard"/>
+        <include layout="@layout/super_pages_box"/>
+    </FrameLayout>
 
-    <TextView
+    <LinearLayout
         android:id="@+id/performanceOverlay"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="10dp"
-        android:layout_marginStart="10dp"
-        android:layout_marginTop="10dp"
-        android:layout_gravity="left"
-        android:textAppearance="?android:attr/textAppearanceSmall"
-        android:gravity="left"
-        android:background="#80000000"
+        android:layout_gravity="center_horizontal"
+        android:background="#80161616"
+        android:gravity="start"
+        android:orientation="horizontal"
+        android:paddingLeft="6dp"
+        android:paddingBottom="2dp"
         android:preferKeepClear="true"
-        android:visibility="gone" />
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/perfRes"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="10dp"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:textSize="10sp" />
+
+
+        <TextView
+            android:id="@+id/perfDecoder"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="10dp"
+            android:textSize="10sp"
+            android:textAppearance="?android:attr/textAppearanceSmall" />
+
+        <TextView
+            android:id="@+id/perfRenderFps"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="10dp"
+            android:textColor="#0DDAF4"
+            android:textSize="10sp"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:hint="接收/渲染帧率   |" />
+
+        <TextView
+            android:id="@+id/perfNetworkLatency"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="10dp"
+            android:textColor="#BCEDD385"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:textSize="10sp"
+            android:hint="网络延迟    |" />
+
+        <TextView
+            android:id="@+id/perfDecodeLatency"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="10dp"
+            android:textColor="#E1D597E3"
+            android:textSize="10sp"
+            android:hint="解码时间    |"
+            android:textAppearance="?android:attr/textAppearanceSmall" />
+
+        <TextView
+            android:id="@+id/perfHostLatency"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="10dp"
+            android:textColor="#009688"
+            android:textSize="10sp"
+            android:hint="编码时间"
+            android:textAppearance="?android:attr/textAppearanceSmall" />
+
+    </LinearLayout>
 
     <TextView
         android:id="@+id/notificationOverlay"
@@ -49,5 +117,6 @@
         android:background="#80000000"
         android:preferKeepClear="true"
         android:visibility="gone" />
+
 
 </merge>

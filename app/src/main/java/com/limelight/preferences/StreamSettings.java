@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.media.MediaCodecInfo;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.app.Activity;
@@ -26,18 +27,40 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
+import android.view.WindowManager;
+import android.widget.Toast;
+import android.graphics.Color;
+import android.widget.ImageView;
 
+import androidx.annotation.NonNull;
+
+import com.limelight.Game;
 import com.limelight.LimeLog;
 import com.limelight.PcView;
 import com.limelight.R;
+import com.limelight.binding.input.advance_setting.config.PageConfigController;
+import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper;
 import com.limelight.binding.video.MediaCodecHelper;
+import com.limelight.utils.AspectRatioConverter;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.UiHelper;
 
-import java.lang.reflect.Method;
-import java.util.Arrays;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.util.*;
+
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
+import jp.wasabeef.glide.transformations.BlurTransformation;
+import jp.wasabeef.glide.transformations.ColorFilterTransformation;
 
 public class StreamSettings extends Activity {
+
+
+
     private PreferenceConfiguration previousPrefs;
     private int previousDisplayPixelCount;
 
@@ -56,15 +79,28 @@ public class StreamSettings extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // 应用带阴影的主题
+        getTheme().applyStyle(R.style.PreferenceThemeWithShadow, true);
+        
         super.onCreate(savedInstanceState);
 
         previousPrefs = PreferenceConfiguration.readPreferences(this);
 
         UiHelper.setLocale(this);
 
+        // 设置自定义布局
         setContentView(R.layout.activity_stream_settings);
+        
+        // 确保状态栏透明
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            getWindow().setStatusBarColor(Color.TRANSPARENT);
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+        }
 
         UiHelper.notifyNewRootView(this);
+
+        // 加载背景图片
+        loadBackgroundImage();
     }
 
     @Override
@@ -122,8 +158,11 @@ public class StreamSettings extends Activity {
     }
 
     public static class SettingsFragment extends PreferenceFragment {
+
         private int nativeResolutionStartIndex = Integer.MAX_VALUE;
         private boolean nativeFramerateShown = false;
+
+        private String exportConfigString = null;
 
         private void setValue(String preferenceKey, String value) {
             ListPreference pref = (ListPreference) findPreference(preferenceKey);
@@ -187,6 +226,58 @@ public class StreamSettings extends Activity {
                 addNativeResolutionEntry(nativeHeight, nativeWidth, insetsRemoved, true);
             }
             addNativeResolutionEntry(nativeWidth, nativeHeight, insetsRemoved, false);
+        }
+        private void addCustomResolutionsEntries() {
+            SharedPreferences storage = this.getActivity().getSharedPreferences(CustomResolutionsConsts.CUSTOM_RESOLUTIONS_FILE, Context.MODE_PRIVATE);
+            Set<String> stored = storage.getStringSet(CustomResolutionsConsts.CUSTOM_RESOLUTIONS_KEY, null);
+            ListPreference pref = (ListPreference) findPreference(PreferenceConfiguration.RESOLUTION_PREF_STRING);
+
+            List<CharSequence> preferencesList = Arrays.asList(pref.getEntryValues());
+
+            if(stored == null) {
+                return;
+            };
+
+            Comparator<String> lengthComparator = new Comparator<String>() {
+                @Override
+                public int compare(String s1, String s2) {
+                    String[] s1Size = s1.split("x");
+                    String[] s2Size = s2.split("x");
+
+                    int w1 = Integer.parseInt(s1Size[0]);
+                    int w2 = Integer.parseInt(s2Size[0]);
+
+                    int h1 = Integer.parseInt(s1Size[1]);
+                    int h2 = Integer.parseInt(s2Size[1]);
+
+                    if(w1 == w2) {
+                        return Integer.compare(h1, h2);
+                    }
+                    return Integer.compare(w1, w2);
+                }
+            };
+
+            ArrayList<String> list = new ArrayList<>(stored);
+            Collections.sort(list, lengthComparator);
+
+            for (String storedResolution : list) {
+                if(preferencesList.contains(storedResolution)){
+                    continue;
+                }
+                String[] resolution = storedResolution.split("x");
+                int width = Integer.parseInt(resolution[0]);
+                int height = Integer.parseInt(resolution[1]);
+                String aspectRatio = AspectRatioConverter.getAspectRatio(width,height);
+                String displayText = "Custom ";
+
+                if(aspectRatio != null){
+                    displayText+=aspectRatio+" ";
+                }
+
+                displayText+="("+storedResolution+")";
+
+                appendPreferenceEntry(pref, displayText, storedResolution);
+            }
         }
 
         private void addNativeFrameRateEntry(float framerate) {
@@ -266,6 +357,16 @@ public class StreamSettings extends Activity {
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
             View view = super.onCreateView(inflater, container, savedInstanceState);
+            if (view != null) {
+                // 确保列表背景透明
+                view.setBackgroundColor(Color.TRANSPARENT);
+                
+                // 增加顶部安全距离
+                int topPadding = view.getPaddingTop();
+                int additionalPadding = (int) (32 * getResources().getDisplayMetrics().density);
+                view.setPadding(view.getPaddingLeft(), topPadding + additionalPadding, 
+                                view.getPaddingRight(), view.getPaddingBottom());
+            }
             UiHelper.applyStatusBarPadding(view);
             return view;
         }
@@ -273,7 +374,10 @@ public class StreamSettings extends Activity {
         @Override
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
-
+            
+            // 添加阴影主题
+            getActivity().getTheme().applyStyle(R.style.PreferenceThemeWithShadow, true);
+            
             addPreferencesFromResource(R.xml.preferences);
             PreferenceScreen screen = getPreferenceScreen();
 
@@ -523,25 +627,33 @@ public class StreamSettings extends Activity {
 
             if (!PreferenceConfiguration.readPreferences(this.getActivity()).unlockFps) {
                 // We give some extra room in case the FPS is rounded down
+                if (maxSupportedFps < 162) {
+                    removeValue(PreferenceConfiguration.FPS_PREF_STRING, "165", () -> {
+                        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
+                        setValue(PreferenceConfiguration.FPS_PREF_STRING, "144");
+                        resetBitrateToDefault(prefs, null, null);
+                    });
+                }
+                if (maxSupportedFps < 141) {
+                    removeValue(PreferenceConfiguration.FPS_PREF_STRING, "144", () -> {
+                        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
+                        setValue(PreferenceConfiguration.FPS_PREF_STRING, "120");
+                        resetBitrateToDefault(prefs, null, null);
+                    });
+                }
                 if (maxSupportedFps < 118) {
-                    removeValue(PreferenceConfiguration.FPS_PREF_STRING, "120", new Runnable() {
-                        @Override
-                        public void run() {
-                            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
-                            setValue(PreferenceConfiguration.FPS_PREF_STRING, "90");
-                            resetBitrateToDefault(prefs, null, null);
-                        }
+                    removeValue(PreferenceConfiguration.FPS_PREF_STRING, "120", () -> {
+                        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
+                        setValue(PreferenceConfiguration.FPS_PREF_STRING, "90");
+                        resetBitrateToDefault(prefs, null, null);
                     });
                 }
                 if (maxSupportedFps < 88) {
                     // 1080p is unsupported
-                    removeValue(PreferenceConfiguration.FPS_PREF_STRING, "90", new Runnable() {
-                        @Override
-                        public void run() {
-                            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
-                            setValue(PreferenceConfiguration.FPS_PREF_STRING, "60");
-                            resetBitrateToDefault(prefs, null, null);
-                        }
+                    removeValue(PreferenceConfiguration.FPS_PREF_STRING, "90", () -> {
+                        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
+                        setValue(PreferenceConfiguration.FPS_PREF_STRING, "60");
+                        resetBitrateToDefault(prefs, null, null);
                     });
                 }
                 // Never remove 30 FPS or 60 FPS
@@ -645,28 +757,218 @@ public class StreamSettings extends Activity {
                     return true;
                 }
             });
-            findPreference(PreferenceConfiguration.FPS_PREF_STRING).setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
-                @Override
-                public boolean onPreferenceChange(Preference preference, Object newValue) {
-                    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
-                    String valueStr = (String) newValue;
+            findPreference(PreferenceConfiguration.FPS_PREF_STRING).setOnPreferenceChangeListener((preference, newValue) -> {
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
+                String valueStr = (String) newValue;
 
-                    // If this is native frame rate, show the warning dialog
-                    CharSequence[] values = ((ListPreference)preference).getEntryValues();
-                    if (nativeFramerateShown && values[values.length - 1].toString().equals(newValue.toString())) {
-                        Dialog.displayDialog(getActivity(),
-                                getResources().getString(R.string.title_native_fps_dialog),
-                                getResources().getString(R.string.text_native_res_dialog),
-                                false);
+                // If this is native frame rate, show the warning dialog
+                CharSequence[] values = ((ListPreference)preference).getEntryValues();
+                if (nativeFramerateShown && values[values.length - 1].toString().equals(newValue.toString())) {
+                    Dialog.displayDialog(getActivity(),
+                            getResources().getString(R.string.title_native_fps_dialog),
+                            getResources().getString(R.string.text_native_res_dialog),
+                            false);
+                }
+
+                // Write the new bitrate value
+                resetBitrateToDefault(prefs, null, valueStr);
+
+                // Allow the original preference change to take place
+                return true;
+            });
+            findPreference(PreferenceConfiguration.IMPORT_CONFIG_STRING).setOnPreferenceClickListener(preference -> {
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("*/*");
+                startActivityForResult(intent, 2);
+                return false;
+            });
+
+
+
+            ListPreference exportPreference = (ListPreference) findPreference(PreferenceConfiguration.EXPORT_CONFIG_STRING);
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                SuperConfigDatabaseHelper superConfigDatabaseHelper = new SuperConfigDatabaseHelper(getContext());
+                List<Long> configIdList = superConfigDatabaseHelper.queryAllConfigIds();
+                Map<String, String> configMap = new HashMap<>();
+                for (Long configId : configIdList){
+                    String configName = (String) superConfigDatabaseHelper.queryConfigAttribute(configId, PageConfigController.COLUMN_STRING_CONFIG_NAME,"default");
+                    String configIdString = String.valueOf(configId);
+                    configMap.put(configIdString,configName);
+                }
+                CharSequence[] nameEntries = configMap.values().toArray(new String[0]);
+                CharSequence[] nameEntryValues = configMap.keySet().toArray(new String[0]);
+                exportPreference.setEntries(nameEntries);
+                exportPreference.setEntryValues(nameEntryValues);
+
+                exportPreference.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+                    @Override
+                    public boolean onPreferenceChange(Preference preference, Object newValue) {
+                        exportConfigString = superConfigDatabaseHelper.exportConfig(Long.parseLong((String) newValue));
+                        String fileName = configMap.get(newValue);
+                        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                        intent.addCategory(Intent.CATEGORY_OPENABLE);
+                        intent.setType("*/*");
+                        intent.putExtra(Intent.EXTRA_TITLE, fileName + ".mdat");
+                        startActivityForResult(intent, 1);
+                        return false;
                     }
+                });
 
-                    // Write the new bitrate value
-                    resetBitrateToDefault(prefs, null, valueStr);
+            }
 
-                    // Allow the original preference change to take place
+            addCustomResolutionsEntries();
+            ListPreference mergePreference = (ListPreference) findPreference(PreferenceConfiguration.MERGE_CONFIG_STRING);
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                SuperConfigDatabaseHelper superConfigDatabaseHelper = new SuperConfigDatabaseHelper(getContext());
+                List<Long> configIdList = superConfigDatabaseHelper.queryAllConfigIds();
+                Map<String, String> configMap = new HashMap<>();
+                for (Long configId : configIdList){
+                    String configName = (String) superConfigDatabaseHelper.queryConfigAttribute(configId, PageConfigController.COLUMN_STRING_CONFIG_NAME,"default");
+                    String configIdString = String.valueOf(configId);
+                    configMap.put(configIdString,configName);
+                }
+                CharSequence[] nameEntries = configMap.values().toArray(new String[0]);
+                CharSequence[] nameEntryValues = configMap.keySet().toArray(new String[0]);
+                mergePreference.setEntries(nameEntries);
+                mergePreference.setEntryValues(nameEntryValues);
+
+                mergePreference.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+                    @Override
+                    public boolean onPreferenceChange(Preference preference, Object newValue) {
+                        exportConfigString = (String) newValue;
+                        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                        intent.addCategory(Intent.CATEGORY_OPENABLE);
+                        intent.setType("*/*");
+                        startActivityForResult(intent, 3);
+                        return false;
+                    }
+                });
+
+            }
+
+            findPreference(PreferenceConfiguration.ABOUT_AUTHOR).setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+                @Override
+                public boolean onPreferenceClick(Preference preference) {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.author_web)));
+                    startActivity(intent);
                     return true;
                 }
             });
+
         }
+
+        @Override
+        public void onActivityResult(int requestCode, int resultCode, Intent data) {
+            super.onActivityResult(requestCode, resultCode, data);
+            //导出配置文件
+            if (requestCode == 1 && resultCode == Activity.RESULT_OK) {
+                Uri uri = data.getData();
+
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                    try {
+                        // 将字符串写入文件
+                        OutputStream outputStream = getContext().getContentResolver().openOutputStream(uri);
+                        if (outputStream != null) {
+                            outputStream.write(exportConfigString.getBytes());
+                            outputStream.close();
+                            Toast.makeText(getContext(),"导出配置文件成功",Toast.LENGTH_SHORT).show();
+                        }
+                    } catch (IOException e) {
+                        Toast.makeText(getContext(),"导出配置文件失败",Toast.LENGTH_SHORT).show();
+                    }
+                }
+
+            }
+            //导入配置文件
+            if (requestCode == 2 && resultCode == Activity.RESULT_OK) {
+                Uri importUri = data.getData();
+
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                    try (InputStream inputStream = getContext().getContentResolver().openInputStream(importUri);
+                         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+                        StringBuilder stringBuilder = new StringBuilder();
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            stringBuilder.append(line).append("\n");
+                        }
+                        String fileContent = stringBuilder.toString();
+                        SuperConfigDatabaseHelper superConfigDatabaseHelper = new SuperConfigDatabaseHelper(getContext());
+                        int errorCode = superConfigDatabaseHelper.importConfig(fileContent);
+                        switch (errorCode){
+                            case 0:
+                                Toast.makeText(getContext(),"导入配置文件成功",Toast.LENGTH_SHORT).show();
+                                //更新导出配置文件列表
+                                ListPreference exportPreference = (ListPreference) findPreference(PreferenceConfiguration.EXPORT_CONFIG_STRING);
+                                List<Long> configIdList = superConfigDatabaseHelper.queryAllConfigIds();
+                                Map<String, String> configMap = new HashMap<>();
+                                for (Long configId : configIdList){
+                                    String configName = (String) superConfigDatabaseHelper.queryConfigAttribute(configId, PageConfigController.COLUMN_STRING_CONFIG_NAME,"default");
+                                    String configIdString = String.valueOf(configId);
+                                    configMap.put(configIdString,configName);
+                                }
+                                CharSequence[] nameEntries = configMap.values().toArray(new String[0]);
+                                CharSequence[] nameEntryValues = configMap.keySet().toArray(new String[0]);
+                                exportPreference.setEntries(nameEntries);
+                                exportPreference.setEntryValues(nameEntryValues);
+                                break;
+                            case -1:
+                            case -2:
+                                Toast.makeText(getContext(),"读取配置文件失败",Toast.LENGTH_SHORT).show();
+                                break;
+                            case -3:
+                                Toast.makeText(getContext(),"配置文件版本不匹配",Toast.LENGTH_SHORT).show();
+                                break;
+                        }
+
+                    } catch (IOException e) {
+                        Toast.makeText(getContext(),"读取配置文件失败",Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }
+
+            if (requestCode == 3 && resultCode == Activity.RESULT_OK) {
+                Uri importUri = data.getData();
+
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                    try (InputStream inputStream = getContext().getContentResolver().openInputStream(importUri);
+                         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+                        StringBuilder stringBuilder = new StringBuilder();
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            stringBuilder.append(line).append("\n");
+                        }
+                        String fileContent = stringBuilder.toString();
+                        SuperConfigDatabaseHelper superConfigDatabaseHelper = new SuperConfigDatabaseHelper(getContext());
+                        int errorCode = superConfigDatabaseHelper.mergeConfig(fileContent,Long.parseLong(exportConfigString));
+                        switch (errorCode){
+                            case 0:
+                                Toast.makeText(getContext(),"合并配置文件成功",Toast.LENGTH_SHORT).show();
+                                break;
+                            case -1:
+                            case -2:
+                                Toast.makeText(getContext(),"读取配置文件失败",Toast.LENGTH_SHORT).show();
+                                break;
+                            case -3:
+                                Toast.makeText(getContext(),"配置文件版本不匹配",Toast.LENGTH_SHORT).show();
+                                break;
+                        }
+
+                    } catch (IOException e) {
+                        Toast.makeText(getContext(),"读取配置文件失败",Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }
+
+        }
+
+    }
+
+    private void loadBackgroundImage() {
+        ImageView imageView = findViewById(R.id.settingsBackgroundImage);
+
+        Glide.with(this)
+            .load("https://raw.gitmirror.com/qiin2333/qiin.github.io/assets/img/moonlight-bg2.webp")
+            .into(imageView);
     }
 }

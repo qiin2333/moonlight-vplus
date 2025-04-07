@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="author_web">https://space.bilibili.com/393593468</string>
+
     <!-- Shortcut strings -->
     <string name="scut_deleted_pc">PC deleted</string>
     <string name="scut_not_paired">PC not paired</string>
@@ -23,6 +25,8 @@
     <string name="pcview_menu_test_network">Test Network Connection</string>
     <string name="pcview_menu_details">View Details</string>
     <string name="pcview_menu_eol">NVIDIA GameStream End-of-Service</string>
+    <string name="pcview_menu_sleep_success">Host sleep success</string>
+    <string name="pcview_menu_sleep_fail">Host sleep failed</string>
 
     <!-- Network test strings -->
     <string name="nettest_title_waiting">Testing Network Connection</string>
@@ -116,6 +120,7 @@
 
     <!-- AppList activity -->
     <string name="applist_connect_msg">Connecting to PC…</string>
+    <string name="applist_menu_start_with_vdd"> Start With Virtual Display </string>
     <string name="applist_menu_resume">Resume Session</string>
     <string name="applist_menu_quit">Quit Session</string>
     <string name="applist_menu_quit_and_start">Quit Current Game and Start</string>
@@ -134,6 +139,25 @@
     <string name="applist_quit_confirmation">Are you sure you want to quit the running app? All unsaved data will be lost.</string>
     <string name="applist_details_id">App ID:</string>
 
+    <!-- In Game menu -->
+    <string name="game_menu_toggle_keyboard">Toggle On-screen Keyboard</string>
+    <string name="game_menu_toggle_performance_overlay">Toggle Performance Overlay</string>
+    <string name="game_menu_toggle_host_keyboard">Toggle Host Keyboard</string>
+    <string name="game_menu_toggle_all_keyboard">Toggle PC Keyboard</string>
+    <string name="game_menu_toggle_mouse_on">Enable Controller Mouse Emulation</string>
+    <string name="game_menu_toggle_mouse_off">Disable Controller Mouse Emulation</string>
+    <string name="game_menu_disconnect">Disconnect</string>
+    <string name="game_menu_cancel">Cancel</string>
+    <string name="game_menu_send_keys">Send special Key(s)</string>
+    <string name="game_menu_send_keys_esc">Send ESC (Menu)</string>
+    <string name="game_menu_send_keys_f11">Send F11 (Toggle Full Screen)</string>
+    <string name="game_menu_send_keys_ctrl_v">Send CTRL + V (Paste Clipboard)</string>
+    <string name="game_menu_send_keys_win">Send WIN (Toggle Windows Start Menu)</string>
+    <string name="game_menu_send_keys_win_d">Send WIN + D (Switch to Desktop)</string>
+    <string name="game_menu_send_keys_win_g">Send WIN + G (Open Xbox Game Bar)</string>
+    <string name="game_menu_send_keys_shift_tab">Send SHIFT + TAB (Open Steam Overlay)</string>
+    <string name="game_menu_send_keys_alt_home">Send ALT + HOME (Toggle RTSS)</string>
+
     <!-- Add computer manually activity -->
     <string name="title_add_pc">Add PC Manually</string>
     <string name="msg_add_pc">Connecting to the PC…</string>
@@ -148,12 +172,14 @@
     <string name="title_resolution_list">Video resolution</string>
     <string name="summary_resolution_list">Increase to improve image clarity. Decrease for better performance on lower end devices and slower networks.</string>
     <string name="title_native_res_dialog">Native Resolution Warning</string>
-    <string name="text_native_res_dialog">Native resolution and/or FPS may not be supported by the streaming server. You will probably need to configure a matching custom display mode for the host PC manually.\n\nIf you choose to create a custom resolution in NVIDIA Control Panel to match your screen settings, please ensure you have read and understood NVIDIA\'s warning regarding possible monitor damage, PC instability, and other potential problems.\n\nWe are not responsible for any problems resulting from creating a custom resolution on your PC.\n\nIt may be that your monitor does not support a necessary display configuration. If so, you may try to set up a virtual monitor. Finally, if your device or host PC does not support streaming at a specific resolution or refresh rate, you\'re out of luck unfortunately.</string>
+    <string name="text_native_res_dialog">Native resolution and/or FPS may not be supported by the streaming server. You will probably need to configure a matching custom display mode for the host PC manually.\n\nIf you choose to create a custom resolution in NVIDIA Control Panel to match your screen settings, please ensure you have read and understood NVIDIA\'s warning regarding possible monitor damage, PC instability, and other potential problems.\n\nWe are not responsible for any problems resulting from creating a custom resolution on your PC.\n\nIt may be that your monitor does not support a necessary display configurationItem. If so, you may try to set up a virtual monitor. Finally, if your device or host PC does not support streaming at a specific resolution or refresh rate, you\'re out of luck unfortunately.</string>
     <string name="title_fps_list">Video frame rate</string>
     <string name="summary_fps_list">Increase for a smoother video stream. Decrease for better performance on lower end devices.</string>
     <string name="title_seekbar_bitrate">Video bitrate</string>
     <string name="summary_seekbar_bitrate">Increase for better image quality. Decrease to improve performance on slower connections.</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
+    <string name="title_seekbar_scale">主机分辨率缩放比例</string>
+    <string name="summary_seekbar_scale">请求到主机端的分辨率相当于客户端设定的基础分辨率 * 缩放比例,此时主机端的游戏渲染材质精度将会发生变化(超分辨率串流),降低此比例也可用来减轻主机端GPU压力。 ⚠注意：应用此选项之前需检查主机端是否支持缩放后的分辨率。</string>
     <string name="title_checkbox_stretch_video">Stretch video to full-screen</string>
     <string name="resolution_prefix_native">Native</string>
     <string name="resolution_prefix_native_fullscreen">Native Full-Screen</string>
@@ -161,9 +187,11 @@
     <string name="resolution_prefix_native_portrait">(Portrait)</string>
     <string name="fps_suffix_fps">FPS</string>
     <string name="title_native_fps_dialog">Native FPS Warning</string>
+    <string name="title_custom_resolutions">Custom resolutions</string>
+    <string name="summary_custom_resolutions">Create your own custom resolutions</string>
 
     <string name="category_audio_settings">Audio Settings</string>
-    <string name="title_audio_config_list">Surround sound configuration</string>
+    <string name="title_audio_config_list">Surround sound configurationItem</string>
     <string name="summary_audio_config_list">Enable 5.1 or 7.1 surround sound for home-theater systems</string>
     <string name="title_checkbox_enable_audiofx">Enable system equalizer support</string>
     <string name="summary_checkbox_enable_audiofx">Allows audio effects to function while streaming, but may increase audio latency</string>
@@ -196,11 +224,43 @@
 
     <string name="category_input_settings">Input Settings</string>
     <string name="title_checkbox_touchscreen_trackpad">Use the touchscreen as a trackpad</string>
-    <string name="summary_checkbox_touchscreen_trackpad">If enabled, the touchscreen acts like a trackpad. If disabled, the touchscreen directly controls the mouse cursor.</string>
+    <string name="summary_checkbox_touchscreen_trackpad">If enabled, the touchscreen acts like a trackpad. If disabled, multi-point touch will be enabled.</string>
+
+    <string name="title_checkbox_sync_touch_event_with_display">Synchronize touch event with display refresh </string>
+    <string name="summary_checkbox_sync_touch_event_with_display">If enabled, touch event will be synchronized with display refresh rate, like 60Hz.</string>
+
+    <string name="title_seekbar_long_press_flat_region">Flat region for long press jitter elimination in multi-point touch mode</string>
+    <string name="summary_seekbar_long_press_flat_region">Works for the whole screen. Increase for larger long-press flat region, within which the app sends initial contact coordinates to server.</string>
+    <string name="suffix_seekbar_flat_region_pixels">pixels</string>
+
+    <string name="title_checkbox_enable_keyboard_toggle_in_native_touch">Enable keyboard toggle in multi-point touch mode </string>
+    <string name="summary_checkbox_enable_keyboard_toggle_in_native_touch">\t</string>
+    <string name="title_seekbar_keyboard_toggle_fingers_native_touch">Fingers to tap</string>
+    <string name="summary_seekbar_keyboard_toggle_fingers_native_touch">Least number of fingers to tap to toggle local on-screen keyboard in multi-point touch mode. \nIn trackpad mode, you always only need to tap 3 or more fingers to toggle local keyboard.</string>
+    <string name="suffix_seekbar_keyboard_toggle_fingers_native_touch"> </string>
+
     <string name="title_checkbox_absolute_mouse_mode">Remote desktop mouse mode</string>
     <string name="summary_checkbox_absolute_mouse_mode">This can make mouse acceleration behave more naturally for remote desktop usage, but it is incompatible with many games.</string>
     <string name="title_checkbox_mouse_nav_buttons">Enable back and forward mouse buttons</string>
     <string name="summary_checkbox_mouse_nav_buttons">Enabling this option may break right clicking on some buggy devices</string>
+
+    <string name="category_enhanced_touch_settings">Enhanced Multi-Point Touch</string>
+    <string name="title_checkbox_enable_enhanced_touch">Enable enhanced touch</string>
+    <string name="summary_checkbox_enable_enhanced_touch">\t</string>
+    <string name="title_checkbox_enhanced_touch_on_which_side">Reverse enhanced touch zone</string>
+    <string name="summary_checkbox_enhanced_touch_on_which_side">Reverse enhanced touch zone to the left (default: on the right side of screen)</string>
+    <string name="title_enhanced_touch_zone_divider">Enhanced touch zone divider</string>
+    <string name="summary_enhanced_touch_zone_divider">Defines where to divide native-touch and enhanced-touch zones, less than 50% means divide from a point on the left, more than 50% means right</string>
+    <string name="dialog_title_enhanced_touch_zone_divider">Less than 50% means divide from a point on the left, more than 50% means right</string>
+    <string name="suffix_enhanced_touch_zone_divider">%</string>
+    <string name="title_pointer_velocity_factor">Pointer velocity factor</string>
+    <string name="summary_pointer_velocity_factor">Set pointer velocity factor for enhanced touch zone. Set 100% to disable</string>
+    <string name="dialog_title_pointer_velocity_factor">Set pointer velocity factor for enhanced touch zone. Set 100% to disable</string>
+    <string name="suffix_pointer_velocity_factor">%</string>
+    <string name="title_fixed_x_velocity">Set fixed X (horizontal) velocity</string>
+    <string name="summary_fixed_x_velocity">Set fixed X (horizontal) velocity. Set 0 to disable fixed x velocity mode. Larger than 0 means disable horizontal velocity factor to use fixed velocity instead.</string>
+    <string name="dialog_title_fixed_x_velocity">Set fixed X (horizontal) velocity in pixels. Set 0 to disable fixed x velocity.</string>
+    <string name="suffix_fixed_x_velocity">pixels</string>
 
     <string name="category_on_screen_controls_settings">On-screen Controls Settings</string>
     <string name="title_checkbox_show_onscreen_controls">Show on-screen controls</string>
@@ -262,6 +322,8 @@
     <string name="summary_troubleshooting">View tips for diagnosing and fixing common streaming issues</string>
     <string name="title_privacy_policy">Privacy policy</string>
     <string name="summary_privacy_policy">View Moonlight\'s privacy policy</string>
+    <string name="title_about_mode">About</string>
+    <string name="summary_about_mode">Check for updates</string>
 
     <!-- Toasts -->
     <string name="toast_controller_type_changed">Gamepad type may be changed due to motion sensor emulation</string>
@@ -278,6 +340,8 @@
     <string name="fps_60">60 FPS</string>
     <string name="fps_90">90 FPS</string>
     <string name="fps_120">120 FPS</string>
+    <string name="fps_144">144 FPS</string>
+    <string name="fps_165">165 FPS</string>
 
     <string name="audioconf_stereo">Stereo</string>
     <string name="audioconf_51surround">5.1 Surround Sound</string>

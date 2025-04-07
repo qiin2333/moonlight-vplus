@@ -1,0 +1,19 @@
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 按压状态 -->
+    <item android:state_pressed="true">
+        <layer-list>
+            <!-- 描边层（先绘制） -->
+            <item>
+                <vector android:width="36dp" android:height="36dp" android:viewportWidth="24" android:viewportHeight="24">
+                    <path 
+                        android:fillColor="#00000000"
+                        android:strokeColor="#FFFFFF"
+                        android:strokeWidth="2"
+                        android:pathData="M12,12 L24,0 L24,24 Z"/>
+                </vector>
+            </item>
+            <!-- 原有按钮内容（后绘制） -->
+            <item android:drawable="@drawable/ic_triangle_left"/>
+        </layer-list>
+    </item>
+</selector> 

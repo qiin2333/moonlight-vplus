@@ -6,8 +6,14 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.preference.PreferenceManager;
 import android.view.Display;
+import android.graphics.Point;
+import android.view.WindowManager;
 
 import com.limelight.nvstream.jni.MoonBridge;
+
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 public class PreferenceConfiguration {
     public enum FormatOption {
@@ -29,7 +35,15 @@ public class PreferenceConfiguration {
     static final String RESOLUTION_PREF_STRING = "list_resolution";
     static final String FPS_PREF_STRING = "list_fps";
     static final String BITRATE_PREF_STRING = "seekbar_bitrate_kbps";
+    static final String HOST_SCALE_PREF_STRING = "seekbar_resolutions_scale";
     private static final String BITRATE_PREF_OLD_STRING = "seekbar_bitrate";
+    static final String LONG_PRESS_FLAT_REGION_PIXELS_PREF_STRING = "seekbar_flat_region_pixels";
+    static final String SYNC_TOUCH_EVENT_WITH_DISPLAY_PREF_STRING = "checkbox_sync_touch_event_with_display";
+    static final String ENABLE_KEYBOARD_TOGGLE_IN_NATIVE_TOUCH  = "checkbox_enable_keyboard_toggle_in_native_touch";
+    static final String NATIVE_TOUCH_FINGERS_TO_TOGGLE_KEYBOARD_PREF_STRING = "seekbar_keyboard_toggle_fingers_native_touch";
+
+
+
     private static final String STRETCH_PREF_STRING = "checkbox_stretch_video";
     private static final String SOPS_PREF_STRING = "checkbox_enable_sops";
     private static final String DISABLE_TOASTS_PREF_STRING = "checkbox_disable_warnings";
@@ -42,7 +56,7 @@ public class PreferenceConfiguration {
     static final String AUDIO_CONFIG_PREF_STRING = "list_audio_config";
     private static final String USB_DRIVER_PREF_SRING = "checkbox_usb_driver";
     private static final String VIDEO_FORMAT_PREF_STRING = "video_format";
-    private static final String ONSCREEN_CONTROLLER_PREF_STRING = "checkbox_show_onscreen_controls";
+    private static final String ONSCREEN_KEYBOARD_PREF_STRING = "checkbox_show_onscreen_keyboard";
     private static final String ONLY_L3_R3_PREF_STRING = "checkbox_only_show_L3R3";
     private static final String SHOW_GUIDE_BUTTON_PREF_STRING = "checkbox_show_guide_button";
     private static final String LEGACY_DISABLE_FRAME_DROP_PREF_STRING = "checkbox_disable_frame_drop";
@@ -62,6 +76,14 @@ public class PreferenceConfiguration {
     private static final String LATENCY_TOAST_PREF_STRING = "checkbox_enable_post_stream_toast";
     private static final String FRAME_PACING_PREF_STRING = "frame_pacing";
     private static final String ABSOLUTE_MOUSE_MODE_PREF_STRING = "checkbox_absolute_mouse_mode";
+
+    private static final String ENABLE_ENHANCED_TOUCH_PREF_STRING = "checkbox_enable_enhanced_touch";
+    private static final String ENHANCED_TOUCH_ON_RIGHT_PREF_STRING = "checkbox_enhanced_touch_on_which_side";
+    private static final String ENHANCED_TOUCH_ZONE_DIVIDER_PREF_STRING = "enhanced_touch_zone_divider";
+    private static final String POINTER_VELOCITY_FACTOR_PREF_STRING = "pointer_velocity_factor";
+    // private static final String POINTER_FIXED_X_VELOCITY_PREF_STRING = "fixed_x_velocity";
+
+
     private static final String ENABLE_AUDIO_FX_PREF_STRING = "checkbox_enable_audiofx";
     private static final String REDUCE_REFRESH_RATE_PREF_STRING = "checkbox_reduce_refresh_rate";
     private static final String FULL_RANGE_PREF_STRING = "checkbox_full_range";
@@ -69,7 +91,14 @@ public class PreferenceConfiguration {
     private static final String GAMEPAD_MOTION_SENSORS_PREF_STRING = "checkbox_gamepad_motion_sensors";
     private static final String GAMEPAD_MOTION_FALLBACK_PREF_STRING = "checkbox_gamepad_motion_fallback";
 
-    static final String DEFAULT_RESOLUTION = "1280x720";
+    //wg
+    private static final String ONSCREEN_CONTROLLER_PREF_STRING = "checkbox_show_onscreen_controls";
+    static final String IMPORT_CONFIG_STRING = "import_super_config";
+    static final String EXPORT_CONFIG_STRING = "export_super_config";
+    static final String MERGE_CONFIG_STRING = "merge_super_config";
+    static final String ABOUT_AUTHOR = "about_author";
+
+    static final String DEFAULT_RESOLUTION = "1920x1080";
     static final String DEFAULT_FPS = "60";
     private static final boolean DEFAULT_STRETCH = false;
     private static final boolean DEFAULT_SOPS = true;
@@ -80,9 +109,9 @@ public class PreferenceConfiguration {
     public static final String DEFAULT_LANGUAGE = "default";
     private static final boolean DEFAULT_MULTI_CONTROLLER = true;
     private static final boolean DEFAULT_USB_DRIVER = true;
-    private static final String DEFAULT_VIDEO_FORMAT = "auto";
 
     private static final boolean ONSCREEN_CONTROLLER_DEFAULT = false;
+    private static final boolean ONSCREEN_KEYBOARD_DEFAULT = false;
     private static final boolean ONLY_L3_R3_DEFAULT = false;
     private static final boolean SHOW_GUIDE_BUTTON_DEFAULT = true;
     private static final boolean DEFAULT_ENABLE_HDR = false;
@@ -122,8 +151,54 @@ public class PreferenceConfiguration {
     public static final String RES_4K = "3840x2160";
     public static final String RES_NATIVE = "Native";
 
-    public int width, height, fps;
+    private static final String VIDEO_FORMAT_AUTO = "auto";
+    private static final String VIDEO_FORMAT_AV1 = "forceav1";
+    private static final String VIDEO_FORMAT_HEVC = "forceh265";
+    private static final String VIDEO_FORMAT_H264 = "neverh265";
+
+    private static final String[] RESOLUTIONS = {
+        "640x360", "854x480", "1280x720", "1920x1080", "2560x1440", "3840x2160", "Native"
+    };
+
+    private static final String REVERSE_RESOLUTION_PREF_STRING = "checkbox_reverse_resolution";
+    private static final boolean DEFAULT_REVERSE_RESOLUTION = false;
+
+    // 画面位置常量
+    private static final String SCREEN_POSITION_PREF_STRING = "list_screen_position";
+    private static final String SCREEN_OFFSET_X_PREF_STRING = "seekbar_screen_offset_x";
+    private static final String SCREEN_OFFSET_Y_PREF_STRING = "seekbar_screen_offset_y";
+
+    // 默认值
+    private static final String DEFAULT_SCREEN_POSITION = "center"; // 居中
+    private static final int DEFAULT_SCREEN_OFFSET_X = 0;
+    private static final int DEFAULT_SCREEN_OFFSET_Y = 0;
+
+    // 位置枚举
+    public enum ScreenPosition {
+        TOP_LEFT,
+        TOP_CENTER,
+        TOP_RIGHT,
+        CENTER_LEFT,
+        CENTER,
+        CENTER_RIGHT,
+        BOTTOM_LEFT,
+        BOTTOM_CENTER,
+        BOTTOM_RIGHT
+    }
+
+    public int width, height, fps, resolutionScale;
     public int bitrate;
+    public int longPressflatRegionPixels; //Assigned to NativeTouchContext.INTIAL_ZONE_PIXELS
+    public boolean syncTouchEventWithDisplay; // if true, view.requestUnbufferedDispatch(event) will be disabled
+    public boolean enableEnhancedTouch; //Assigned to NativeTouchContext.ENABLE_ENHANCED_TOUCH
+    public boolean enhancedTouchOnWhichSide; //Assigned to NativeTouchContext.ENHANCED_TOUCH_ON_RIGHT
+    public int enhanceTouchZoneDivider; //Assigned to NativeTouchContext.ENHANCED_TOUCH_ZONE_DIVIDER
+    public float pointerVelocityFactor; //Assigned to NativeTouchContext.POINTER_VELOCITY_FACTOR
+    // public float pointerFixedXVelocity; //Assigned to NativeTouchContext.POINTER_FIXED_X_VELOCITY
+    public int nativeTouchFingersToToggleKeyboard; // Number of fingers to tap to toggle local on-screen keyboard in native touch mode.
+
+
+
     public FormatOption videoFormat;
     public int deadzonePercentage;
     public int oscOpacity;
@@ -131,11 +206,13 @@ public class PreferenceConfiguration {
     public String language;
     public boolean smallIconMode, multiController, usbDriver, flipFaceButtons;
     public boolean onscreenController;
+    public boolean onscreenKeyboard;
     public boolean onlyL3R3;
     public boolean showGuideButton;
     public boolean enableHdr;
     public boolean enablePip;
     public boolean enablePerfOverlay;
+    public boolean enableSimplifyPerfOverlay;
     public boolean enableLatencyToast;
     public boolean bindAllUsb;
     public boolean mouseEmulation;
@@ -155,29 +232,16 @@ public class PreferenceConfiguration {
     public boolean gamepadMotionSensors;
     public boolean gamepadTouchpadAsMouse;
     public boolean gamepadMotionSensorsFallbackToDevice;
+    public boolean reverseResolution;
+
+    public ScreenPosition screenPosition;
+    public int screenOffsetX;
+    public int screenOffsetY;
 
     public static boolean isNativeResolution(int width, int height) {
-        // It's not a native resolution if it matches an existing resolution option
-        if (width == 640 && height == 360) {
-            return false;
-        }
-        else if (width == 854 && height == 480) {
-            return false;
-        }
-        else if (width == 1280 && height == 720) {
-            return false;
-        }
-        else if (width == 1920 && height == 1080) {
-            return false;
-        }
-        else if (width == 2560 && height == 1440) {
-            return false;
-        }
-        else if (width == 3840 && height == 2160) {
-            return false;
-        }
-
-        return true;
+        // 使用集合检查是否为原生分辨率
+        Set<String> resolutionSet = new HashSet<>(Arrays.asList(RESOLUTIONS));
+        return !resolutionSet.contains(width + "x" + height);
     }
 
     // If we have a screen that has semi-square dimensions, we may want to change our behavior
@@ -226,7 +290,7 @@ public class PreferenceConfiguration {
         }
         else {
             // Should be unreachable
-            return RES_720P;
+            return RES_1080P;
         }
     }
 
@@ -239,21 +303,14 @@ public class PreferenceConfiguration {
     }
 
     private static String getResolutionString(int width, int height) {
-        switch (height) {
-            case 360:
-                return RES_360P;
-            case 480:
-                return RES_480P;
-            default:
-            case 720:
-                return RES_720P;
-            case 1080:
-                return RES_1080P;
-            case 1440:
-                return RES_1440P;
-            case 2160:
-                return RES_4K;
+        // 使用数组简化分辨率获取
+        for (String res : RESOLUTIONS) {
+            String[] dimensions = res.split("x");
+            if (height == Integer.parseInt(dimensions[1])) {
+                return res;
+            }
         }
+        return RES_1080P; // 默认返回1080P
     }
 
     public static int getDefaultBitrate(String resString, String fpsString) {
@@ -348,23 +405,31 @@ public class PreferenceConfiguration {
 
     private static FormatOption getVideoFormatValue(Context context) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-
-        String str = prefs.getString(VIDEO_FORMAT_PREF_STRING, DEFAULT_VIDEO_FORMAT);
-        if (str.equals("auto")) {
-            return FormatOption.AUTO;
-        }
-        else if (str.equals("forceav1")) {
+        String str = prefs.getString(VIDEO_FORMAT_PREF_STRING, VIDEO_FORMAT_AUTO);
+        if (str.equals(VIDEO_FORMAT_AV1)) {
             return FormatOption.FORCE_AV1;
-        }
-        else if (str.equals("forceh265")) {
+        } else if (str.equals(VIDEO_FORMAT_HEVC)) {
             return FormatOption.FORCE_HEVC;
-        }
-        else if (str.equals("neverh265")) {
+        } else if (str.equals(VIDEO_FORMAT_H264)) {
             return FormatOption.FORCE_H264;
         }
         else {
-            // Should never get here
             return FormatOption.AUTO;
+        }
+    }
+
+    private static String getVideoFormatPreferenceString(FormatOption format) {
+        switch (format) {
+            case AUTO:
+                return VIDEO_FORMAT_AUTO;
+            case FORCE_AV1:
+                return VIDEO_FORMAT_AV1;
+            case FORCE_HEVC:
+                return VIDEO_FORMAT_HEVC;
+            case FORCE_H264:
+                return VIDEO_FORMAT_H264;
+            default:
+                return VIDEO_FORMAT_AUTO;
         }
     }
 
@@ -420,6 +485,7 @@ public class PreferenceConfiguration {
         prefs.edit()
                 .remove(BITRATE_PREF_STRING)
                 .remove(BITRATE_PREF_OLD_STRING)
+                .remove(HOST_SCALE_PREF_STRING)
                 .remove(LEGACY_RES_FPS_PREF_STRING)
                 .remove(RESOLUTION_PREF_STRING)
                 .remove(FPS_PREF_STRING)
@@ -457,74 +523,37 @@ public class PreferenceConfiguration {
             }
         }
 
-        String str = prefs.getString(LEGACY_RES_FPS_PREF_STRING, null);
-        if (str != null) {
-            if (str.equals("360p30")) {
-                config.width = 640;
-                config.height = 360;
-                config.fps = 30;
-            }
-            else if (str.equals("360p60")) {
-                config.width = 640;
-                config.height = 360;
-                config.fps = 60;
-            }
-            else if (str.equals("720p30")) {
-                config.width = 1280;
-                config.height = 720;
-                config.fps = 30;
-            }
-            else if (str.equals("720p60")) {
-                config.width = 1280;
-                config.height = 720;
-                config.fps = 60;
-            }
-            else if (str.equals("1080p30")) {
-                config.width = 1920;
-                config.height = 1080;
-                config.fps = 30;
-            }
-            else if (str.equals("1080p60")) {
-                config.width = 1920;
-                config.height = 1080;
-                config.fps = 60;
-            }
-            else if (str.equals("4K30")) {
-                config.width = 3840;
-                config.height = 2160;
-                config.fps = 30;
-            }
-            else if (str.equals("4K60")) {
-                config.width = 3840;
-                config.height = 2160;
-                config.fps = 60;
-            }
-            else {
-                // Should never get here
-                config.width = 1280;
-                config.height = 720;
-                config.fps = 60;
-            }
+        String resStr = prefs.getString(RESOLUTION_PREF_STRING, PreferenceConfiguration.DEFAULT_RESOLUTION);
 
-            prefs.edit()
-                    .remove(LEGACY_RES_FPS_PREF_STRING)
-                    .putString(RESOLUTION_PREF_STRING, getResolutionString(config.width, config.height))
-                    .putString(FPS_PREF_STRING, ""+config.fps)
-                    .apply();
-        }
-        else {
-            // Use the new preference location
-            String resStr = prefs.getString(RESOLUTION_PREF_STRING, PreferenceConfiguration.DEFAULT_RESOLUTION);
-
-            // Convert legacy resolution strings to the new style
-            if (!resStr.contains("x")) {
-                resStr = PreferenceConfiguration.convertFromLegacyResolutionString(resStr);
-                prefs.edit().putString(RESOLUTION_PREF_STRING, resStr).apply();
+        // 添加Native分辨率支持
+        if (resStr.equals(RES_NATIVE)) {
+            // 获取设备原生分辨率
+            Display display = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
+            Point size = new Point();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                display.getRealSize(size);  // 需要API 17+
+            } else {
+                display.getSize(size);      // 兼容旧版本
             }
-
+            config.width = size.x;
+            config.height = size.y;
+        } else {
+            // 原有解析逻辑
             config.width = PreferenceConfiguration.getWidthFromResolutionString(resStr);
             config.height = PreferenceConfiguration.getHeightFromResolutionString(resStr);
-            config.fps = Integer.parseInt(prefs.getString(FPS_PREF_STRING, PreferenceConfiguration.DEFAULT_FPS));
+        }
+
+        // 处理新旧数据类型兼容
+        Object fpsValue = prefs.getAll().get(FPS_PREF_STRING);
+        if (fpsValue instanceof String) {
+            config.fps = Integer.parseInt((String) fpsValue);
+        } else if (fpsValue instanceof Integer) {
+            // 迁移旧整型值为字符串
+            config.fps = (Integer) fpsValue;
+            prefs.edit().putString(FPS_PREF_STRING, String.valueOf(config.fps)).apply();
+        } else {
+            // 默认值处理
+            config.fps = Integer.parseInt(prefs.getString(FPS_PREF_STRING, DEFAULT_FPS));
         }
 
         if (!prefs.contains(SMALL_ICONS_PREF_STRING)) {
@@ -547,6 +576,23 @@ public class PreferenceConfiguration {
         if (config.bitrate == 0) {
             config.bitrate = getDefaultBitrate(context);
         }
+
+        config.resolutionScale = prefs.getInt(HOST_SCALE_PREF_STRING, 100);
+        config.longPressflatRegionPixels = prefs.getInt(LONG_PRESS_FLAT_REGION_PIXELS_PREF_STRING, 0);  // define a flat region to suppress coordinates jitter. This is a simulation of iOS behavior since it only send 1 touch event during long press, which feels better in some cases.
+        config.syncTouchEventWithDisplay = prefs.getBoolean(SYNC_TOUCH_EVENT_WITH_DISPLAY_PREF_STRING, false); // set true to disable "requestUnbufferedDispatch", feels better in some cases.
+        if(prefs.getBoolean(ENABLE_KEYBOARD_TOGGLE_IN_NATIVE_TOUCH, true)) {
+            config.nativeTouchFingersToToggleKeyboard = prefs.getInt(NATIVE_TOUCH_FINGERS_TO_TOGGLE_KEYBOARD_PREF_STRING, 3); // least fingers of tap to toggle local keyboard, configurable from 3 to 10 in menu.
+        }
+        else{
+            config.nativeTouchFingersToToggleKeyboard = -1; // completely disable keyboard toggle in multi-point touch
+        }
+
+        // Enhance touch settings
+        config.enableEnhancedTouch = prefs.getBoolean(ENABLE_ENHANCED_TOUCH_PREF_STRING, false);
+        config.enhancedTouchOnWhichSide = prefs.getBoolean(ENHANCED_TOUCH_ON_RIGHT_PREF_STRING, true);  // by default, enhanced touch zone is on the right side.
+        config.enhanceTouchZoneDivider = prefs.getInt(ENHANCED_TOUCH_ZONE_DIVIDER_PREF_STRING,50);  // decides where to divide native touch zone & enhance touch zone by a vertical line.
+        config.pointerVelocityFactor = prefs.getInt(POINTER_VELOCITY_FACTOR_PREF_STRING,100);  // set pointer velocity faster or slower within enhance touch zone, useful in some games for tweaking view rotation sensitivity.
+        // config.pointerFixedXVelocity = prefs.getInt(POINTER_FIXED_X_VELOCITY_PREF_STRING,0);
 
         String audioConfig = prefs.getString(AUDIO_CONFIG_PREF_STRING, DEFAULT_AUDIO_CONFIG);
         if (audioConfig.equals("71")) {
@@ -579,6 +625,7 @@ public class PreferenceConfiguration {
         config.multiController = prefs.getBoolean(MULTI_CONTROLLER_PREF_STRING, DEFAULT_MULTI_CONTROLLER);
         config.usbDriver = prefs.getBoolean(USB_DRIVER_PREF_SRING, DEFAULT_USB_DRIVER);
         config.onscreenController = prefs.getBoolean(ONSCREEN_CONTROLLER_PREF_STRING, ONSCREEN_CONTROLLER_DEFAULT);
+        config.onscreenKeyboard = prefs.getBoolean(ONSCREEN_KEYBOARD_PREF_STRING, ONSCREEN_KEYBOARD_DEFAULT);
         config.onlyL3R3 = prefs.getBoolean(ONLY_L3_R3_PREF_STRING, ONLY_L3_R3_DEFAULT);
         config.showGuideButton = prefs.getBoolean(SHOW_GUIDE_BUTTON_PREF_STRING, SHOW_GUIDE_BUTTON_DEFAULT);
         config.enableHdr = prefs.getBoolean(ENABLE_HDR_PREF_STRING, DEFAULT_ENABLE_HDR) && !isShieldAtvFirmwareWithBrokenHdr();
@@ -601,7 +648,127 @@ public class PreferenceConfiguration {
         config.gamepadTouchpadAsMouse = prefs.getBoolean(GAMEPAD_TOUCHPAD_AS_MOUSE_PREF_STRING, DEFAULT_GAMEPAD_TOUCHPAD_AS_MOUSE);
         config.gamepadMotionSensors = prefs.getBoolean(GAMEPAD_MOTION_SENSORS_PREF_STRING, DEFAULT_GAMEPAD_MOTION_SENSORS);
         config.gamepadMotionSensorsFallbackToDevice = prefs.getBoolean(GAMEPAD_MOTION_FALLBACK_PREF_STRING, DEFAULT_GAMEPAD_MOTION_FALLBACK);
+        config.enableSimplifyPerfOverlay = false;
+
+        config.reverseResolution = prefs.getBoolean(REVERSE_RESOLUTION_PREF_STRING, DEFAULT_REVERSE_RESOLUTION);
+
+        // 如果启用了分辨率反转，则交换宽度和高度
+        if (config.reverseResolution) {
+            int temp = config.width;
+            config.width = config.height;
+            config.height = temp;
+        }
+
+        // 读取画面位置设置
+        String posString = prefs.getString(SCREEN_POSITION_PREF_STRING, DEFAULT_SCREEN_POSITION);
+        switch (posString) {
+            case "top_left":
+                config.screenPosition = ScreenPosition.TOP_LEFT;
+                break;
+            case "top_center":
+                config.screenPosition = ScreenPosition.TOP_CENTER;
+                break;
+            case "top_right":
+                config.screenPosition = ScreenPosition.TOP_RIGHT;
+                break;
+            case "center_left":
+                config.screenPosition = ScreenPosition.CENTER_LEFT;
+                break;
+            case "center_right":
+                config.screenPosition = ScreenPosition.CENTER_RIGHT;
+                break;
+            case "bottom_left":
+                config.screenPosition = ScreenPosition.BOTTOM_LEFT;
+                break;
+            case "bottom_center":
+                config.screenPosition = ScreenPosition.BOTTOM_CENTER;
+                break;
+            case "bottom_right":
+                config.screenPosition = ScreenPosition.BOTTOM_RIGHT;
+                break;
+            default:
+                config.screenPosition = ScreenPosition.CENTER;
+                break;
+        }
+        
+        // 读取偏移百分比
+        config.screenOffsetX = prefs.getInt(SCREEN_OFFSET_X_PREF_STRING, DEFAULT_SCREEN_OFFSET_X);
+        config.screenOffsetY = prefs.getInt(SCREEN_OFFSET_Y_PREF_STRING, DEFAULT_SCREEN_OFFSET_Y);
 
         return config;
+    }
+
+    public boolean writePreferences(Context context) {
+        if (context == null) {
+            return false;
+        }
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        try {
+            // 转换枚举为字符串
+            String positionString;
+            switch (screenPosition) {
+                case TOP_LEFT:
+                    positionString = "top_left";
+                    break;
+                case TOP_CENTER:
+                    positionString = "top_center";
+                    break;
+                case TOP_RIGHT:
+                    positionString = "top_right";
+                    break;
+                case CENTER_LEFT:
+                    positionString = "center_left";
+                    break;
+                case CENTER_RIGHT:
+                    positionString = "center_right";
+                    break;
+                case BOTTOM_LEFT:
+                    positionString = "bottom_left";
+                    break;
+                case BOTTOM_CENTER:
+                    positionString = "bottom_center";
+                    break;
+                case BOTTOM_RIGHT:
+                    positionString = "bottom_right";
+                    break;
+                default:
+                    positionString = "center";
+                    break;
+            }
+            
+            prefs.edit()
+                    .putString(RESOLUTION_PREF_STRING, width + "x" + height)
+                    .putString(FPS_PREF_STRING, String.valueOf(fps))
+                    .putInt(BITRATE_PREF_STRING, bitrate)
+                    .putString(VIDEO_FORMAT_PREF_STRING, getVideoFormatPreferenceString(videoFormat))
+                    .putBoolean(ENABLE_HDR_PREF_STRING, enableHdr)
+                    .putBoolean(ENABLE_PERF_OVERLAY_STRING, enablePerfOverlay)
+                    .putBoolean(REVERSE_RESOLUTION_PREF_STRING, reverseResolution)
+                    .putString(SCREEN_POSITION_PREF_STRING, positionString)
+                    .putInt(SCREEN_OFFSET_X_PREF_STRING, screenOffsetX)
+                    .putInt(SCREEN_OFFSET_Y_PREF_STRING, screenOffsetY)
+                    .apply();
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public PreferenceConfiguration copy() {
+        PreferenceConfiguration copy = new PreferenceConfiguration();
+        copy.width = this.width;
+        copy.height = this.height;
+        copy.fps = this.fps;
+        copy.bitrate = this.bitrate;
+        copy.videoFormat = this.videoFormat;
+        copy.enableHdr = this.enableHdr;
+        copy.enablePerfOverlay = this.enablePerfOverlay;
+        copy.reverseResolution = this.reverseResolution;
+        copy.screenPosition = this.screenPosition;
+        copy.screenOffsetX = this.screenOffsetX;
+        copy.screenOffsetY = this.screenOffsetY;
+        return copy;
     }
 }

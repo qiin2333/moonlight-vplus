@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.limelight.binding.input.advance_setting.superpage.SuperPageLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="250dp"
+    android:layout_height="match_parent"
+    android:tag="250">
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="5dp"
+        android:paddingTop="3dp"
+        android:layout_gravity="center_vertical"
+        android:background="@drawable/super_content_box_background">
+        <LinearLayout
+            android:id="@+id/page_super_menu_list"
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="10dp">
+            <LinearLayout
+                android:id="@+id/page_super_menu_config_page"
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginVertical="5dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:text="配置设置" />
+                <View
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_margin="5dp"
+                    android:background="@drawable/right_arrow"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/page_super_menu_edit_mode"
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginVertical="5dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:text="编辑模式" />
+                <View
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_margin="5dp"
+                    android:background="@drawable/right_arrow"/>
+            </LinearLayout>
+            <LinearLayout
+                android:id="@+id/page_super_menu_disconnect"
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginVertical="5dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:text="退出串流" />
+                <View
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_margin="5dp"
+                    android:background="@drawable/right_arrow"/>
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+</com.limelight.binding.input.advance_setting.superpage.SuperPageLayout>

@@ -1,12 +1,18 @@
 package com.limelight.nvstream.http;
 
+import androidx.annotation.NonNull;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.limelight.LimeLog;
+
 
 public class NvApp {
     private String appName = "";
     private int appId;
     private boolean initialized;
     private boolean hdrSupported;
+    private JsonArray cmdList;
     
     public NvApp() {}
     
@@ -59,12 +65,22 @@ public class NvApp {
         return this.initialized;
     }
 
+    public void setCmdList(String cmdList) {
+        this.cmdList = new Gson().fromJson(cmdList, JsonArray.class);
+    }
+
+    public JsonArray getCmdList() {
+        return this.cmdList;
+    }
+
+    @NonNull
     @Override
     public String toString() {
         StringBuilder str = new StringBuilder();
         str.append("Name: ").append(appName).append("\n");
         str.append("HDR Supported: ").append(hdrSupported ? "Yes" : "Unknown").append("\n");
         str.append("ID: ").append(appId).append("\n");
+        if (cmdList!= null) str.append("Super CMDs: ").append(cmdList.toString()).append("\n");
         return str.toString();
     }
 }

@@ -5,6 +5,7 @@ import java.io.StringReader;
 import java.util.HashSet;
 import java.util.List;
 
+import com.bumptech.glide.Glide;
 import com.limelight.computers.ComputerManagerListener;
 import com.limelight.computers.ComputerManagerService;
 import com.limelight.grid.AppGridAdapter;
@@ -29,6 +30,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.database.DataSetObserver;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Build;
@@ -66,6 +68,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
     private final static int START_OR_RESUME_ID = 1;
     private final static int QUIT_ID = 2;
+    private final static int START_WITH_VDD = 3;
     private final static int START_WITH_QUIT = 4;
     private final static int VIEW_DETAILS_ID = 5;
     private final static int CREATE_SHORTCUT_ID = 6;
@@ -291,6 +294,10 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
         UiHelper.setLocale(this);
 
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+
         setContentView(R.layout.activity_app_view);
 
         // Allow floating expanded PiP overlays while browsing apps
@@ -313,6 +320,8 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         TextView label = findViewById(R.id.appListText);
         setTitle(computerName);
         label.setText(computerName);
+
+        // loadDefaultImage();
 
         // Bind to the computer manager service
         bindService(new Intent(this, ComputerManagerService.class), serviceConnection,
@@ -340,7 +349,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
             lastRawApplist = CacheHelper.readInputStreamToString(CacheHelper.openCacheFileForInput(getCacheDir(), "applist", uuidString));
             List<NvApp> applist = NvHTTP.getAppListByReader(new StringReader(lastRawApplist));
             updateUiWithAppList(applist);
-            LimeLog.info("Loaded applist from cache");
+            LimeLog.info("Loaded applist from cache xxxx");
         } catch (IOException | XmlPullParserException e) {
             if (lastRawApplist != null) {
                 LimeLog.warning("Saved applist corrupted: "+lastRawApplist);
@@ -409,6 +418,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
         // Only show the hide checkbox if this is not the currently running app or it's already hidden
         if (lastRunningAppId != selectedApp.app.getAppId() || selectedApp.isHidden) {
+            menu.add(Menu.NONE, START_WITH_VDD, 1, getResources().getString(R.string.applist_menu_start_with_vdd));
             MenuItem hideAppItem = menu.add(Menu.NONE, HIDE_APP_ID, 3, getResources().getString(R.string.applist_menu_hide_app));
             hideAppItem.setCheckable(true);
             hideAppItem.setChecked(selectedApp.isHidden);
@@ -452,6 +462,11 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
             case START_OR_RESUME_ID:
                 // Resume is the same as start for us
+                ServerHelper.doStart(AppView.this, app.app, computer, managerBinder);
+                return true;
+
+            case START_WITH_VDD:
+                computer.useVdd = true;
                 ServerHelper.doStart(AppView.this, app.app, computer, managerBinder);
                 return true;
 
@@ -510,6 +525,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
             @Override
             public void run() {
                 boolean updated = false;
+                boolean hasRunningApp = false;
 
                     // Look through our current app list to tag the running app
                 for (int i = 0; i < appGridAdapter.getCount(); i++) {
@@ -523,6 +539,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                     }
                     else if (existingApp.app.getAppId() == details.runningGameId) {
                         // This app wasn't running but now is
+                        hasRunningApp = true;
                         existingApp.isRunning = true;
                         updated = true;
                     }
@@ -535,6 +552,10 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                         // This app wasn't running and still isn't
                     }
                 }
+
+                LimeLog.info("updateUiWithServerinfo xxxxxxx" + hasRunningApp);
+
+                // if (!hasRunningApp) loadDefaultImage();
 
                 if (updated) {
                     appGridAdapter.notifyDataSetChanged();
@@ -615,6 +636,15 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                 }
             }
         });
+    }
+
+    private void loadDefaultImage() {
+//        LimeLog.info("load app bg moonlight-bg3.webp");
+//        Glide.with(AppView.this)
+//            .load("https://raw.gitmirror.com/qiin2333/qiin.github.io/assets/img/moonlight-bg2.webp")
+//            .onlyRetrieveFromCache(true)
+//            .apply(RequestOptions.bitmapTransform(new BlurTransformation(15, 3)))
+//            .into((ImageView) findViewById(R.id.appBackgroundImage));
     }
 
     @Override

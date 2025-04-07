@@ -1,17 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="wrap_content"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="20dp">
+    android:background="@drawable/pc_item_selector">
+    <TextView
+        android:id="@+id/grid_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="8dp"
+        android:layout_marginRight="24dp"
+        android:gravity="left"
+        android:textSize="18sp"
+        tools:ignore="RtlHardcoded">
+    </TextView>
     <RelativeLayout
         android:id="@+id/grid_image_layout"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
+        android:layout_height="150dp">
         <ImageView
             android:id="@+id/grid_image"
-            android:layout_centerHorizontal="true"
-            android:layout_width="125dp"
-            android:layout_height="125dp">
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentBottom="true"
+            android:layout_width="100dp"
+            android:layout_height="100dp">
         </ImageView>
         <ImageView
             android:id="@+id/grid_overlay"
@@ -29,14 +41,4 @@
             android:indeterminate="true">
         </ProgressBar>
     </RelativeLayout>
-    <TextView
-        android:id="@+id/grid_text"
-        android:layout_width="125dp"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/grid_image_layout"
-        android:layout_marginTop="10dp"
-        android:layout_centerHorizontal="true"
-        android:gravity="center"
-        android:textSize="18sp" >
-    </TextView>
 </RelativeLayout>

@@ -21,6 +21,7 @@ public class SeekBarPreference extends DialogPreference
 {
     private static final String ANDROID_SCHEMA_URL = "http://schemas.android.com/apk/res/android";
     private static final String SEEKBAR_SCHEMA_URL = "http://schemas.moonlight-stream.com/apk/res/seekbar";
+    private static final String TAG = "SeekBarPreference";
 
     private SeekBar seekBar;
     private TextView valueText;
@@ -35,6 +36,10 @@ public class SeekBarPreference extends DialogPreference
     private final int keyStepSize;
     private final int divisor;
     private int currentValue;
+    
+    // 对数变换参数
+    private static final double LOG_BASE = 10.0;
+    private boolean isLogarithmic = false;
 
     public SeekBarPreference(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -65,6 +70,42 @@ public class SeekBarPreference extends DialogPreference
         stepSize = attrs.getAttributeIntValue(SEEKBAR_SCHEMA_URL, "step", 1);
         divisor = attrs.getAttributeIntValue(SEEKBAR_SCHEMA_URL, "divisor", 1);
         keyStepSize = attrs.getAttributeIntValue(SEEKBAR_SCHEMA_URL, "keyStep", 0);
+        
+        // 检查是否为码率设置
+        String key = attrs.getAttributeValue(ANDROID_SCHEMA_URL, "key");
+        if (key != null && key.equals(PreferenceConfiguration.BITRATE_PREF_STRING)) {
+            isLogarithmic = true;
+        }
+    }
+    
+    // 将线性滑块值转换为对数刻度值
+    private int linearToLog(int linearValue) {
+        if (linearValue <= minValue) return minValue;
+        
+        // 计算对数比例尺
+        double minLog = Math.log10(minValue);
+        double maxLog = Math.log10(maxValue);
+        double normalizedValue = (linearValue - minValue) / (double)(maxValue - minValue);
+        double logValue = Math.pow(LOG_BASE, minLog + normalizedValue * (maxLog - minLog));
+        
+        // 确保结果在范围内并按步长取整
+        int result = (int) Math.round(logValue);
+        result = Math.max(minValue, Math.min(maxValue, result));
+        return ((result + (stepSize - 1))/stepSize)*stepSize;
+    }
+    
+    // 将对数刻度值转换回线性滑块值
+    private int logToLinear(int logValue) {
+        if (logValue <= minValue) return minValue;
+        
+        // 计算线性比例尺
+        double minLog = Math.log10(minValue);
+        double maxLog = Math.log10(maxValue);
+        double normalizedValue = (Math.log10(logValue) - minLog) / (maxLog - minLog);
+        double linearValue = minValue + normalizedValue * (maxValue - minValue);
+        
+        // 确保结果在范围内
+        return (int) Math.round(linearValue);
     }
 
     @Override
@@ -106,14 +147,20 @@ public class SeekBarPreference extends DialogPreference
                     seekBar.setProgress(roundedValue);
                     return;
                 }
+                
+                // 如果是码率设置，应用对数变换
+                int displayValue = value;
+                if (isLogarithmic) {
+                    displayValue = linearToLog(value);
+                }
 
                 String t;
                 if (divisor != 1) {
-                    float floatValue = roundedValue / (float)divisor;
+                    float floatValue = displayValue / (float)divisor;
                     t = String.format((Locale)null, "%.1f", floatValue);
                 }
                 else {
-                    t = String.valueOf(value);
+                    t = String.valueOf(displayValue);
                 }
                 valueText.setText(suffix == null ? t : t.concat(suffix.length() > 1 ? " "+suffix : suffix));
             }
@@ -135,7 +182,13 @@ public class SeekBarPreference extends DialogPreference
         if (keyStepSize != 0) {
             seekBar.setKeyProgressIncrement(keyStepSize);
         }
-        seekBar.setProgress(currentValue);
+        
+        // 如果是码率设置，将对数值转换为线性值显示
+        if (isLogarithmic && currentValue > 0) {
+            seekBar.setProgress(logToLinear(currentValue));
+        } else {
+            seekBar.setProgress(currentValue);
+        }
 
         return layout;
     }
@@ -147,7 +200,13 @@ public class SeekBarPreference extends DialogPreference
         if (keyStepSize != 0) {
             seekBar.setKeyProgressIncrement(keyStepSize);
         }
-        seekBar.setProgress(currentValue);
+        
+        // 如果是码率设置，将对数值转换为线性值显示
+        if (isLogarithmic && currentValue > 0) {
+            seekBar.setProgress(logToLinear(currentValue));
+        } else {
+            seekBar.setProgress(currentValue);
+        }
     }
 
     @Override
@@ -165,9 +224,14 @@ public class SeekBarPreference extends DialogPreference
     public void setProgress(int progress) {
         this.currentValue = progress;
         if (seekBar != null) {
-            seekBar.setProgress(progress);
+            if (isLogarithmic && progress > 0) {
+                seekBar.setProgress(logToLinear(progress));
+            } else {
+                seekBar.setProgress(progress);
+            }
         }
     }
+    
     public int getProgress() {
         return currentValue;
     }
@@ -181,9 +245,16 @@ public class SeekBarPreference extends DialogPreference
             @Override
             public void onClick(View view) {
                 if (shouldPersist()) {
-                    currentValue = seekBar.getProgress();
-                    persistInt(seekBar.getProgress());
-                    callChangeListener(seekBar.getProgress());
+                    int valueToSave = seekBar.getProgress();
+                    
+                    // 如果是码率设置，保存对数变换后的值
+                    if (isLogarithmic) {
+                        valueToSave = linearToLog(valueToSave);
+                    }
+                    
+                    currentValue = valueToSave;
+                    persistInt(valueToSave);
+                    callChangeListener(valueToSave);
                 }
 
                 getDialog().dismiss();

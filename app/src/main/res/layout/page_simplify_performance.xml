@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.limelight.binding.input.advance_setting.superpage.SuperPageLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="250dp"
+    android:layout_height="match_parent"
+    android:tag="250">
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="5dp"
+        android:paddingTop="3dp"
+        android:layout_gravity="center_vertical"
+        android:background="@drawable/super_content_box_background">
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="10dp">
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginVertical="5dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:text="类型 : 串流信息"/>
+            </LinearLayout>
+            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                android:id="@+id/page_simplify_performance_central_x"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginVertical="5dp"
+                app:text="X"
+                app:max="100"
+                app:min="0"
+                app:progress="100" />
+            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                android:id="@+id/page_simplify_performance_central_y"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginVertical="5dp"
+                app:text="Y"
+                app:max="100"
+                app:min="0"
+                app:progress="100" />
+            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                android:id="@+id/page_simplify_performance_text_size"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginVertical="5dp"
+                app:text="字体大小"
+                app:max="100"
+                app:min="0"
+                app:progress="100" />
+            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                android:id="@+id/page_simplify_performance_radius"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginVertical="5dp"
+                app:text="圆角"
+                app:max="100"
+                app:min="0"
+                app:progress="100" />
+            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                android:id="@+id/page_simplify_performance_layer"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginVertical="5dp"
+                app:text="层级"
+                app:max="140"
+                app:min="40" />
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginVertical="5dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:text="文字颜色" />
+                <com.limelight.binding.input.advance_setting.superpage.ElementEditText
+                    android:id="@+id/page_simplify_performance_text_color"
+                    android:layout_width="100dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="A"
+                    android:textSize="15dp"
+                    android:background="@drawable/enabled_square" />
+            </LinearLayout>
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginVertical="5dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:text="背景颜色" />
+                <com.limelight.binding.input.advance_setting.superpage.ElementEditText
+                    android:id="@+id/page_simplify_performance_background_color"
+                    android:layout_width="100dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="A"
+                    android:textSize="15dp"
+                    android:background="@drawable/enabled_square"/>
+            </LinearLayout>
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginVertical="5dp">
+                <FrameLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="30dp"
+                    android:layout_marginBottom="5dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:gravity="center_vertical"
+                        android:text="显示文本"/>
+                </FrameLayout>
+                <EditText
+                    android:id="@+id/page_simplify_performance_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:singleLine="true"/>
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp">
+                    <Button
+                        android:id="@+id/page_simplify_performance_text_reset"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:text="重置"/>
+                    <Button
+                        android:id="@+id/page_simplify_performance_text_ensure"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:text="确认"/>
+                </LinearLayout>
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginVertical="5dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="解码器:      ##decoder## \n分辨率:      ##resolution## \n丢帧率:      ##lost_frame##\n主机延时:  ##host_latency##\n网络延时:  ##net_latency##\n解码时间:  ##decode_time##\n带宽:         ##band_width## \n帧率:         ##fps## \n" />
+                </LinearLayout>
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginVertical="5dp">
+                    <Button
+                        android:id="@+id/page_simplify_performance_copy"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:text="复制"/>
+                    <Button
+                        android:id="@+id/page_simplify_performance_delete"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:text="删除"/>
+                </LinearLayout>
+
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+
+
+
+
+</com.limelight.binding.input.advance_setting.superpage.SuperPageLayout>

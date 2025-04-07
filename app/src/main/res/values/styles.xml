@@ -20,6 +20,11 @@
         <!-- All customizations that are NOT specific to a particular API-level can go here. -->
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@color/advance_setting_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowTranslucentNavigation">true</item>
     </style>
 
     <style name="StreamBaseTheme" parent="AppBaseTheme">
@@ -32,6 +37,46 @@
         <!-- All customizations that are NOT specific to a particular API-level can go here. -->
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
+    </style>
+    <style name="KeyboardKeyStyle">
+        <item name="android:background">@drawable/square_border</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">#B3FFFFFF</item> <!-- 字体颜色 -->
+        <item name="android:gravity">center</item>
+    </style>
+
+    <style name="PreferenceThemeWithShadow" parent="AppTheme">
+        <item name="android:textViewStyle">@style/PreferenceTextWithShadow</item>
+        <item name="android:titleTextAppearance">@style/PreferenceTitleWithShadow</item>
+        <item name="android:subtitleTextAppearance">@style/PreferenceSummaryWithShadow</item>
+    </style>
+
+    <style name="PreferenceTextWithShadow">
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:shadowColor">#88000000</item>
+        <item name="android:shadowDx">1</item>
+        <item name="android:shadowDy">1</item>
+        <item name="android:shadowRadius">3</item>
+        <item name="android:letterSpacing">0.03</item>
+    </style>
+
+    <style name="PreferenceTitleWithShadow" parent="PreferenceTextWithShadow">
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">#FFECF0</item> <!-- 柔和的粉白色 -->
+    </style>
+
+    <style name="PreferenceSummaryWithShadow" parent="PreferenceTextWithShadow">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">#E1F5FE</item> <!-- 柔和的浅蓝色 -->
+    </style>
+
+    <style name="PreferenceCategoryWithShadow" parent="PreferenceTextWithShadow">
+        <item name="android:textSize">20sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">#FFD0F4</item> <!-- 柔和的粉色 -->
+        <item name="android:shadowColor">#AA000000</item> <!-- 更强的阴影 -->
+        <item name="android:shadowRadius">5</item> <!-- 更大的阴影半径 -->
     </style>
 
 </resources>

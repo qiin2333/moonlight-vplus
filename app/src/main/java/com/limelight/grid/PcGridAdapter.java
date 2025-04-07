@@ -1,6 +1,10 @@
 package com.limelight.grid;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.style.RelativeSizeSpan;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -48,6 +52,7 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
         return itemList.remove(computer);
     }
 
+    @SuppressLint("SetTextI18n")
     @Override
     public void populateView(View parentView, ImageView imgView, ProgressBar prgView, TextView txtView, ImageView overlayView, PcView.ComputerObject obj) {
         imgView.setImageResource(R.drawable.ic_computer);
@@ -65,18 +70,25 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
             prgView.setVisibility(View.INVISIBLE);
         }
 
+        SpannableString spannableString = new SpannableString(obj.details.name);
+//        spannableString.setSpan(new RelativeSizeSpan(1.2f), 0, 2, Spannable.SPAN_INCLUSIVE_INCLUSIVE);
+//        spannableString.setSpan(new AlignmentSpan.Standard(Gravity.TOP), 0, spannableString.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
         txtView.setText(obj.details.name);
+
         if (obj.details.state == ComputerDetails.State.ONLINE) {
             txtView.setAlpha(1.0f);
         }
         else {
-            txtView.setAlpha(0.4f);
+            txtView.setAlpha(0.3f);
         }
 
         if (obj.details.state == ComputerDetails.State.OFFLINE) {
             overlayView.setImageResource(R.drawable.ic_pc_offline);
-            overlayView.setAlpha(0.4f);
+            overlayView.setAlpha(0.3f);
             overlayView.setVisibility(View.VISIBLE);
+            overlayView.setPadding(0, 0, 10, 12);
+            overlayView.setScaleX(1.4f);
+            overlayView.setScaleY(1.4f);
         }
         // We must check if the status is exactly online and unpaired
         // to avoid colliding with the loading spinner when status is unknown

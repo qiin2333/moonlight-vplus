@@ -1,16 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:seekbar="http://schemas.moonlight-stream.com/apk/res/seekbar">
+    xmlns:seekbar="http://schemas.moonlight-stream.com/apk/res/seekbar"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:divider="@drawable/preference_divider"
+    android:layout="@layout/preference_category_material">
 
     <PreferenceCategory android:title="@string/category_basic_settings"
-        android:key="category_basic_settings">
+        android:key="category_basic_settings"
+        android:layout="@layout/preference_category_material">
         <ListPreference
             android:key="list_resolution"
             android:title="@string/title_resolution_list"
             android:summary="@string/summary_resolution_list"
             android:entries="@array/resolution_names"
             android:entryValues="@array/resolution_values"
-            android:defaultValue="1280x720" />
+            android:defaultValue="1920x1080" />
         <ListPreference
             android:key="list_fps"
             android:title="@string/title_fps_list"
@@ -22,7 +26,7 @@
             android:key="seekbar_bitrate_kbps"
             android:dialogMessage="@string/summary_seekbar_bitrate"
             seekbar:min="500"
-            android:max="150000"
+            android:max="800000"
             seekbar:step="500"
             seekbar:keyStep="1000"
             seekbar:divisor="1000"
@@ -36,10 +40,58 @@
             android:entryValues="@array/video_frame_pacing_values"
             android:summary="@string/summary_frame_pacing"
             android:defaultValue="latency" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_resolutions_scale"
+            android:dialogMessage="@string/summary_seekbar_scale"
+            seekbar:min="50"
+            android:max="400"
+            android:defaultValue="100"
+            seekbar:step="10"
+            seekbar:keyStep="50"
+            seekbar:divisor="1"
+            android:summary="@string/summary_seekbar_scale"
+            android:text="%"
+            android:title="@string/title_seekbar_scale" />
+        <com.limelight.preferences.CustomResolutionsPreference
+                android:key="custom_resolutions"
+                android:summary="@string/summary_custom_resolutions"
+                android:title="@string/title_custom_resolutions" />
         <CheckBoxPreference
             android:key="checkbox_stretch_video"
             android:title="@string/title_checkbox_stretch_video"
             android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_reverse_resolution"
+            android:title="反转分辨率"
+            android:summary="交换宽度和高度值，用于特殊显示需求"
+            android:defaultValue="false" />
+    </PreferenceCategory>
+    <PreferenceCategory
+        android:title="画面位置设置"
+        android:icon="@drawable/ic_screen_position">
+        <com.limelight.preferences.IconListPreference
+            android:key="list_screen_position"
+            android:title="画面位置"
+            android:summary="选择非全屏分辨率时画面的位置"
+            android:entries="@array/screen_position_names"
+            android:entryValues="@array/screen_position_values"
+            android:defaultValue="center"
+            app:entryIcons="@array/screen_position_icons" />
+        
+        <SeekBarPreference
+            android:key="seekbar_screen_offset_x"
+            android:title="水平偏移"
+            android:summary="画面水平方向的偏移量"
+            android:defaultValue="0"
+            android:max="100" />
+        
+        <SeekBarPreference
+            android:key="seekbar_screen_offset_y"
+            android:title="垂直偏移"
+            android:summary="画面垂直方向的偏移量"
+            android:defaultValue="0"
+            android:max="100" />
+        
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_audio_settings">
         <ListPreference
@@ -133,7 +185,30 @@
             android:key="checkbox_touchscreen_trackpad"
             android:title="@string/title_checkbox_touchscreen_trackpad"
             android:summary="@string/summary_checkbox_touchscreen_trackpad"
+            android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_sync_touch_event_with_display"
+            android:title="@string/title_checkbox_sync_touch_event_with_display"
+            android:summary="@string/summary_checkbox_sync_touch_event_with_display"
+            android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_enable_keyboard_toggle_in_native_touch"
+            android:title="@string/title_checkbox_enable_keyboard_toggle_in_native_touch"
+            android:summary="@string/summary_checkbox_enable_keyboard_toggle_in_native_touch"
             android:defaultValue="true" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_keyboard_toggle_fingers_native_touch"
+            android:dependency="checkbox_enable_keyboard_toggle_in_native_touch"
+            android:dialogMessage="@string/summary_seekbar_keyboard_toggle_fingers_native_touch"
+            seekbar:min="3"
+            android:max="10"
+            seekbar:step="1"
+            seekbar:keyStep="1"
+            seekbar:divisor="1"
+            android:defaultValue = "3"
+            android:summary="@string/summary_seekbar_keyboard_toggle_fingers_native_touch"
+            android:text="@string/suffix_seekbar_keyboard_toggle_fingers_native_touch"
+            android:title="@string/title_seekbar_keyboard_toggle_fingers_native_touch" />
         <CheckBoxPreference
             android:key="checkbox_mouse_nav_buttons"
             android:title="@string/title_checkbox_mouse_nav_buttons"
@@ -144,6 +219,55 @@
             android:title="@string/title_checkbox_absolute_mouse_mode"
             android:summary="@string/summary_checkbox_absolute_mouse_mode"
             android:defaultValue="false" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="@string/category_enhanced_touch_settings"
+        android:key="category_enhanced_touch">
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="checkbox_enable_enhanced_touch"
+            android:summary="@string/summary_checkbox_enable_enhanced_touch"
+            android:title="@string/title_checkbox_enable_enhanced_touch" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_flat_region_pixels"
+            android:dependency="checkbox_enable_enhanced_touch"
+            android:dialogMessage="@string/summary_seekbar_long_press_flat_region"
+            seekbar:min="0"
+            android:max="250"
+            seekbar:step="1"
+            seekbar:keyStep="1"
+            seekbar:divisor="1"
+            android:defaultValue = "0"
+            android:summary="@string/summary_seekbar_long_press_flat_region"
+            android:text="@string/suffix_seekbar_flat_region_pixels"
+            android:title="@string/title_seekbar_long_press_flat_region" />
+        <CheckBoxPreference
+            android:key="checkbox_enhanced_touch_on_which_side"
+            android:dependency="checkbox_enable_enhanced_touch"
+            android:title="@string/title_checkbox_enhanced_touch_on_which_side"
+            android:summary="@string/summary_checkbox_enhanced_touch_on_which_side"
+            android:defaultValue="false" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="enhanced_touch_zone_divider"
+            android:dependency="checkbox_enable_enhanced_touch"
+            android:dialogMessage="@string/dialog_title_enhanced_touch_zone_divider"
+            seekbar:min="0"
+            seekbar:step="1"
+            android:max="100"
+            android:defaultValue="50"
+            android:summary="@string/summary_enhanced_touch_zone_divider"
+            android:text="@string/suffix_enhanced_touch_zone_divider"
+            android:title="@string/title_enhanced_touch_zone_divider" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="pointer_velocity_factor"
+            android:dependency="checkbox_enable_enhanced_touch"
+            android:dialogMessage="@string/dialog_title_pointer_velocity_factor"
+            seekbar:min="0"
+            seekbar:step="1"
+            android:max="500"
+            android:defaultValue="100"
+            android:summary="@string/summary_pointer_velocity_factor"
+            android:text="@string/suffix_pointer_velocity_factor"
+            android:title="@string/title_pointer_velocity_factor" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_on_screen_controls_settings"
         android:key="category_onscreen_controls">
@@ -191,7 +315,31 @@
             android:positiveButtonText="@string/yes"
             android:negativeButtonText="@string/no"
             />
-
+    </PreferenceCategory>
+    <PreferenceCategory 
+        android:title="增强版设置"
+        android:icon="@drawable/ic_enhance">
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="checkbox_show_onscreen_keyboard"
+            android:summary="串流中自定义按键和一些设置，并将这些保存到自定义可快速切换的配置中"
+            android:title="王冠的超级功能" />
+        <ListPreference
+            android:key="export_super_config"
+            android:title="导出配置"
+            android:summary="导出自定义按钮的和串流内设置的配置文件" />
+        <Preference
+            android:key="import_super_config"
+            android:title="导入配置"
+            android:summary="导入自定义按钮的和串流内设置的配置文件" />
+        <ListPreference
+            android:key="merge_super_config"
+            android:title="合并配置"
+            android:summary="将新的配置的按键合并到现有配置中" />
+        <Preference
+            android:key="about_author"
+            android:title="这是 V+ X 皇家版本"
+            android:summary="王冠的B站:西瓜hub，请关注TA， github: https://github.com/WACrown/moonlight-android" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_host_settings">
         <CheckBoxPreference
@@ -223,6 +371,13 @@
             android:key="checkbox_small_icon_mode"
             android:title="@string/title_checkbox_small_icon_mode"
             android:summary="@string/summary_checkbox_small_icon_mode" />
+        <EditTextPreference
+            android:key="background_image_url"
+            android:title="背景图片API"
+            android:summary="输入自定义背景图片的API，也可以是单张图片地址哦，留空就是看随机涩图"
+            android:dialogTitle="背景图片API"
+            android:dialogMessage="请输入完整的图片API"
+            android:defaultValue="" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_advanced_settings"
         android:key="category_advanced_settings">
@@ -269,19 +424,26 @@
             android:summary="@string/summary_enable_post_stream_toast"
             android:defaultValue="false"/>
     </PreferenceCategory>
-    <!--PreferenceCategory android:title="@string/category_help"
+    <PreferenceCategory android:title="@string/category_help"
         android:key="category_help">
-        <com.limelight.preferences.WebLauncherPreference
+        <!-- <com.limelight.preferences.WebLauncherPreference
             android:title="@string/title_setup_guide"
             android:summary="@string/summary_setup_guide"
             url="https://github.com/moonlight-stream/moonlight-docs/wiki/Setup-Guide"/>
         <com.limelight.preferences.WebLauncherPreference
             android:title="@string/title_troubleshooting"
             android:summary="@string/summary_troubleshooting"
-            url="https://github.com/moonlight-stream/moonlight-docs/wiki/Troubleshooting"/>
+            url="https://github.com/moonlight-stream/moonlight-docs/wiki/Troubleshooting"/> -->
+        <com.limelight.preferences.WebLauncherPreference
+            android:title="@string/title_about_mode"
+            android:summary="@string/summary_about_mode"
+            url="https://github.com/qiin2333/moonlight-android/releases/tag/shortcut"/>
+        <com.limelight.preferences.WebLauncherPreference
+            android:title="Moonlight V+ PC版下载"
+            url="https://github.com/qiin2333/moonlight-qt"/>
         <com.limelight.preferences.WebLauncherPreference
             android:title="@string/title_privacy_policy"
             android:summary="@string/summary_privacy_policy"
             url="https://moonlight-stream.org/privacy.html"/>
-    </PreferenceCategory-->
+    </PreferenceCategory>
 </PreferenceScreen>

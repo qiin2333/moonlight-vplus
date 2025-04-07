@@ -9,6 +9,33 @@
         <item>@string/resolution_4k</item>
     </string-array>
 
+    <string name="type_button">BUTTON</string>
+    <string name="type_switch">SWITCH</string>
+    <string name="type_movable_button">MBUTTON</string>
+    <string name="type_pad">PAD</string>
+    <string name="type_keyboard_pad">KPAD</string>
+    <string name="type_gamepad_pad">GPAD</string>
+    <string name="type_keyboard_stick">KSTICK</string>
+    <string name="type_gamepad_stick">GSTICK</string>
+    <string name="type_keyboard_invisible_stick">KISTICK</string>
+    <string name="type_gamepad_invisible_stick">GISTICK</string>
+
+    <string-array name="element_type_arrays">
+        <item>@string/type_button</item>
+        <item>@string/type_switch</item>
+        <item>@string/type_pad</item>
+        <item>@string/type_keyboard_stick</item>
+        <item>@string/type_gamepad_stick</item>
+    </string-array>
+    <string-array name="element_shape">
+        <item>CIRCLE</item>
+        <item>SQUARE</item>
+    </string-array>
+    <string-array name="gamepad_stick">
+        <item>LS</item>
+        <item>RS</item>
+    </string-array>
+
     <!-- Keep this in sync with PreferenceConfiguration.isNativeResolution()! -->
     <string-array name="resolution_values" translatable="false">
         <item>640x360</item>
@@ -24,12 +51,16 @@
         <item>@string/fps_60</item>
         <item>@string/fps_90</item>
         <item>@string/fps_120</item>
+        <item>@string/fps_144</item>
+        <item>@string/fps_165</item>
     </string-array>
     <string-array name="fps_values" translatable="false">
         <item>30</item>
         <item>60</item>
         <item>90</item>
         <item>120</item>
+        <item>144</item>
+        <item>165</item>
     </string-array>
 
     <string-array name="audio_config_names">
@@ -131,4 +162,42 @@
         <item>right</item>
         <item>left</item>
     </string-array>
+
+    <!-- 画面位置选项 -->
+    <string-array name="screen_position_names">
+        <item>左上</item>
+        <item>顶部居中</item>
+        <item>右上</item>
+        <item>左侧居中</item>
+        <item>居中</item>
+        <item>右侧居中</item>
+        <item>左下</item>
+        <item>底部居中</item>
+        <item>右下</item>
+    </string-array>
+
+    <string-array name="screen_position_values">
+        <item>top_left</item>
+        <item>top_center</item>
+        <item>top_right</item>
+        <item>center_left</item>
+        <item>center</item>
+        <item>center_right</item>
+        <item>bottom_left</item>
+        <item>bottom_center</item>
+        <item>bottom_right</item>
+    </string-array>
+
+    <!-- 画面位置图标数组 -->
+    <array name="screen_position_icons">
+        <item>@drawable/ic_position_top_left</item>
+        <item>@drawable/ic_position_top_center</item>
+        <item>@drawable/ic_position_top_right</item>
+        <item>@drawable/ic_position_center_left</item>
+        <item>@drawable/ic_position_center</item>
+        <item>@drawable/ic_position_center_right</item>
+        <item>@drawable/ic_position_bottom_left</item>
+        <item>@drawable/ic_position_bottom_center</item>
+        <item>@drawable/ic_position_bottom_right</item>
+    </array>
 </resources>

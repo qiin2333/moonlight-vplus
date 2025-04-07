@@ -5,4 +5,21 @@
     android:id="@+id/stream_settings"
     tools:context=".preferences.StreamSettings">
 
+    <ImageView
+        android:id="@+id/settingsBackgroundImage"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"/>
+    
+    <View
+        android:layout_width="match_parent" 
+        android:layout_height="match_parent"
+        android:background="#B3333333" />
+    
+    <FrameLayout
+        android:id="@+id/preference_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/transparent"/>
+        
 </RelativeLayout>

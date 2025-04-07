@@ -145,10 +145,10 @@ public class UiHelper {
                 public WindowInsets onApplyWindowInsets(View view, WindowInsets windowInsets) {
                     // Use the tappable insets so we can draw under the status bar in gesture mode
                     Insets tappableInsets = windowInsets.getTappableElementInsets();
-                    view.setPadding(tappableInsets.left,
-                            tappableInsets.top,
-                            tappableInsets.right,
-                            0);
+                    // view.setPadding(tappableInsets.left,
+                    //         tappableInsets.top,
+                    //         tappableInsets.right,
+                    //         0);
 
                     // Show a translucent navigation bar if we can't tap there
                     if (tappableInsets.bottom != 0) {
@@ -257,5 +257,24 @@ public class UiHelper {
                 .setPositiveButton(parent.getResources().getString(R.string.yes), dialogClickListener)
                 .setNegativeButton(parent.getResources().getString(R.string.no), dialogClickListener)
                 .show();
+    }
+
+    public static boolean isColorOS() {
+        String manufacturer = android.os.Build.MANUFACTURER.toLowerCase();
+        String model = android.os.Build.MODEL.toLowerCase();
+        String brand = android.os.Build.BRAND.toLowerCase();
+
+        // 检查是否为OPPO、OnePlus或Realme设备（均使用ColorOS）
+        String[] colorOSBrands = {"oppo", "oneplus", "realme"};
+        
+        for (String colorOSBrand : colorOSBrands) {
+            if (manufacturer.contains(colorOSBrand) || 
+                model.contains(colorOSBrand) || 
+                brand.contains(colorOSBrand)) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 }

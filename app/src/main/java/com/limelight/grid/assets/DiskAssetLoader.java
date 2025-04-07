@@ -16,8 +16,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 public class DiskAssetLoader {
-    // 5 MB
-    private static final long MAX_ASSET_SIZE = 5 * 1024 * 1024;
+    // 20 MB
+    private static final long MAX_ASSET_SIZE = 20 * 1024 * 1024;
 
     // Standard box art is 300x400
     private static final int STANDARD_ASSET_WIDTH = 300;
@@ -91,8 +91,8 @@ public class DiskAssetLoader {
             // Load the image scaled to the appropriate size
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inSampleSize = calculateInSampleSize(decodeOnlyOptions,
-                    STANDARD_ASSET_WIDTH / sampleSize,
-                    STANDARD_ASSET_HEIGHT / sampleSize);
+                    decodeOnlyOptions.outWidth / sampleSize,
+                    decodeOnlyOptions.outHeight / sampleSize);
             if (isLowRamDevice) {
                 options.inPreferredConfig = Bitmap.Config.RGB_565;
                 options.inDither = true;
@@ -117,7 +117,7 @@ public class DiskAssetLoader {
                         scaledBitmap.originalWidth = imageInfo.getSize().getWidth();
                         scaledBitmap.originalHeight = imageInfo.getSize().getHeight();
 
-                        imageDecoder.setTargetSize(STANDARD_ASSET_WIDTH, STANDARD_ASSET_HEIGHT);
+                        // imageDecoder.setTargetSize(STANDARD_ASSET_WIDTH, STANDARD_ASSET_HEIGHT);
                         if (isLowRamDevice) {
                             imageDecoder.setMemorySizePolicy(ImageDecoder.MEMORY_POLICY_LOW_RAM);
                         }
