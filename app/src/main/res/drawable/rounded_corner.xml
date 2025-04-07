@@ -2,4 +2,5 @@
     android:shape="rectangle">
     <solid android:color="#99EDE7F6"/> <!-- 背景颜色 -->
     <corners android:radius="4dp"/> <!-- 圆角半径 -->
+    <stroke android:width="2dp" android:color="#00000000"/> <!-- 默认无边框 -->
 </shape>
