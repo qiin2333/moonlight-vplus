@@ -68,6 +68,23 @@
                     android:text="A"
                     android:background="@drawable/enabled_square" />
             </LinearLayout>
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginVertical="5dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:layout_weight="1"
+                    android:text="从屏幕中心传输触摸事件\n否则传输鼠标移动事件"/>
+                <Switch
+                    android:id="@+id/page_digital_movable_button_enable_touch"
+                    android:layout_width="50dp"
+                    android:layout_height="match_parent"
+                    android:checked="true"/>
+            </LinearLayout>
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                 android:id="@+id/page_digital_movable_button_central_x"
                 android:layout_width="match_parent"

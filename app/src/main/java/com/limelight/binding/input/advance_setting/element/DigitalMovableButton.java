@@ -8,11 +8,14 @@ import android.graphics.Paint;
 import android.graphics.RectF;
 import android.text.InputFilter;
 import android.util.DisplayMetrics;
+import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.SeekBar;
+import android.widget.Switch;
 import android.widget.TextView;
 
 import com.limelight.Game;
@@ -23,6 +26,7 @@ import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHel
 import com.limelight.binding.input.advance_setting.superpage.ElementEditText;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
+import com.limelight.ui.StreamView;
 
 import java.util.Map;
 
@@ -59,8 +63,10 @@ public class DigitalMovableButton extends Element {
 
     private DigitalMovableButtonListener listener;
     private ElementController.SendEventHandler valueSendHandler;
+    private final Game game;
     private String text;
     private String value;
+    private int enableTouch = 0;
     private int radius;
     private int sense;
     private int thick;
@@ -75,6 +81,12 @@ public class DigitalMovableButton extends Element {
 
     private float lastX;
     private float lastY;
+
+    private boolean isFirstTouch = true;
+    private float FirstTouchX = 0;
+    private float FirstTouchY = 0;
+
+
     private long timerLongClickTimeout = 3000;
     private final Runnable longClickRunnable = new Runnable() {
         @Override
@@ -98,6 +110,8 @@ public class DigitalMovableButton extends Element {
         this.touchController = touchController;
         this.pageDeviceController = pageDeviceController;
         this.digitalMovableButton = this;
+
+        this.game = (Game) context;
 
         DisplayMetrics displayMetrics = new DisplayMetrics();
         ((Game)context).getWindowManager().getDefaultDisplay().getRealMetrics(displayMetrics);
@@ -126,6 +140,7 @@ public class DigitalMovableButton extends Element {
         pressedColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_PRESSED_COLOR)).intValue();
         backgroundColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_BACKGROUND_COLOR)).intValue();
         value = (String) attributesMap.get(COLUMN_STRING_ELEMENT_VALUE);
+        enableTouch = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_MODE)).intValue();
         valueSendHandler = controller.getSendEventHandler(value);
         listener = new DigitalMovableButtonListener() {
             @Override
@@ -210,7 +225,43 @@ public class DigitalMovableButton extends Element {
     public boolean onElementTouchEvent(MotionEvent event) {
         // get masked (not specific to a pointer) action
         int action = event.getActionMasked();
-
+        if (isFirstTouch) {
+            isFirstTouch = false;
+            FirstTouchX = event.getX();
+            FirstTouchY = event.getY();
+        }
+        float touchXTemp = (float) (game.getStreamView().getWidth() / 2 +(event.getX()-FirstTouchX)*sense*0.01);
+        float touchYTemp = (float) (game.getStreamView().getHeight() / 2+(event.getY()-FirstTouchY)*sense*0.01);
+        MotionEvent EventTemp = MotionEvent.obtain(
+                event.getDownTime(),    // 按下时间
+                event.getEventTime(),   // 事件时间
+                action,      // 动作类型
+                touchXTemp,      // X坐标
+                touchYTemp,      // Y坐标
+                event.getPressure(),    // 压力值
+                event.getSize(),        // 触摸大小
+                event.getMetaState(),   // 元状态
+                event.getXPrecision(),  // X精度
+                event.getYPrecision(),  // Y精度
+                event.getDeviceId(),    // 设备ID
+                event.getEdgeFlags()    // 边缘标志
+        );
+        if(touchXTemp<0||touchXTemp>game.getStreamView().getWidth()||touchYTemp<0||touchYTemp>game.getStreamView().getHeight()){
+            FirstTouchX = event.getX();
+            FirstTouchY = event.getY();
+            EventTemp.setAction(MotionEvent.ACTION_CANCEL);
+        }
+        if(enableTouch!=1){
+            FirstTouchX = event.getX();
+            FirstTouchY = event.getY();
+            EventTemp.setAction(MotionEvent.ACTION_CANCEL);
+        }
+        try {
+            game.getHandleMotionEvent(game.getStreamView(),EventTemp);
+        }
+        catch (NullPointerException e){
+            System.out.println("NullPointerException");
+        }
         switch (action) {
             case MotionEvent.ACTION_DOWN: {
                 elementController.buttonVibrator();
@@ -224,7 +275,9 @@ public class DigitalMovableButton extends Element {
             case MotionEvent.ACTION_MOVE: {
                 float deltaX = event.getX() - lastX;
                 float deltaY = event.getY() - lastY;
-                touchController.mouseMove(deltaX,deltaY,0.01*sense);
+                if(enableTouch!=1) {
+                    touchController.mouseMove(deltaX, deltaY, 0.01 * sense);
+                }
                 lastX = event.getX();
                 lastY = event.getY();
                 return true;
@@ -232,6 +285,9 @@ public class DigitalMovableButton extends Element {
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP: {
                 setPressed(false);
+                FirstTouchX = 0;
+                FirstTouchY = 0;
+                isFirstTouch = true;
                 onReleaseCallback();
                 invalidate();
                 return true;
@@ -247,6 +303,7 @@ public class DigitalMovableButton extends Element {
         ContentValues contentValues = new ContentValues();
         contentValues.put(COLUMN_STRING_ELEMENT_TEXT, text);
         contentValues.put(COLUMN_STRING_ELEMENT_VALUE, value);
+        contentValues.put(COLUMN_INT_ELEMENT_MODE,enableTouch);
         contentValues.put(COLUMN_INT_ELEMENT_SENSE,sense);
         contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
         contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
@@ -285,6 +342,7 @@ public class DigitalMovableButton extends Element {
         NumberSeekbar radiusNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_radius);
         ElementEditText textElementEditText = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_text);
         TextView valueTextView = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_value);
+        Switch enableTouchSwitch = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_enable_touch);
         NumberSeekbar senseNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_sense);
         NumberSeekbar thickNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_thick);
         NumberSeekbar layerNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_layer);
@@ -325,6 +383,18 @@ public class DigitalMovableButton extends Element {
                 pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
             }
         });
+
+        enableTouchSwitch.setChecked(enableTouch==1);
+        enableTouchSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                enableTouch = isChecked ? 1 : 0;
+                save();
+            }
+        });
+
+
+
         centralXNumberSeekbar.setProgressMin(centralXMin);
         centralXNumberSeekbar.setProgressMax(centralXMax);
         centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
@@ -525,6 +595,7 @@ public class DigitalMovableButton extends Element {
                 contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON);
                 contentValues.put(COLUMN_STRING_ELEMENT_TEXT, text);
                 contentValues.put(COLUMN_STRING_ELEMENT_VALUE, value);
+                contentValues.put(COLUMN_INT_ELEMENT_MODE,enableTouch);
                 contentValues.put(COLUMN_INT_ELEMENT_SENSE,sense);
                 contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
                 contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
@@ -584,7 +655,6 @@ public class DigitalMovableButton extends Element {
 
     protected void setElementPressedColor(int pressedColor) {
         this.pressedColor = pressedColor;
-        invalidate();
     }
 
     protected void setElementBackgroundColor(int backgroundColor) {
@@ -597,6 +667,7 @@ public class DigitalMovableButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON);
         contentValues.put(COLUMN_STRING_ELEMENT_TEXT,"A");
         contentValues.put(COLUMN_STRING_ELEMENT_VALUE,"k29");
+        contentValues.put(COLUMN_INT_ELEMENT_MODE,0);
         contentValues.put(COLUMN_INT_ELEMENT_SENSE,100);
         contentValues.put(COLUMN_INT_ELEMENT_WIDTH,100);
         contentValues.put(COLUMN_INT_ELEMENT_HEIGHT,100);
@@ -609,7 +680,5 @@ public class DigitalMovableButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,0xF00000FF);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,0x00FFFFFF);
         return contentValues;
-
-
     }
 }

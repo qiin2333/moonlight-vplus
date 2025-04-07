@@ -185,6 +185,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+
         }).start();
 
         // 设置长按监听
