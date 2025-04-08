@@ -3118,4 +3118,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             setupDisplayPosition();
         }
     }
+
+    public StreamView getStreamView() {
+        return streamView;
+    }
+
+    public boolean getHandleMotionEvent(StreamView streamView,MotionEvent event) {
+        return handleMotionEvent(streamView,event);
+    }
 }

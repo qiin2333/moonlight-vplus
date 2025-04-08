@@ -135,6 +135,11 @@ public class AnalogStick extends Element {
     private float position_stick_x = 0;
     private float position_stick_y = 0;
 
+    private boolean isFirstTouch = true;
+    private float FirstTouchX = 0;
+    private float FirstTouchY = 0;
+
+
     private SuperConfigDatabaseHelper superConfigDatabaseHelper;
     private PageDeviceController pageDeviceController;
     private AnalogStick analogStick;
@@ -367,9 +372,19 @@ public class AnalogStick extends Element {
         // save last click state
         AnalogStick.CLICK_STATE lastClickState = click_state;
 
+        if (isFirstTouch) {
+            isFirstTouch = false;
+            FirstTouchX = event.getX();
+            FirstTouchY = event.getY();
+        }
+
+
         // get absolute way for each axis
-        relative_x = -(radius - event.getX());
-        relative_y = -(radius - event.getY());
+        relative_x = event.getX()-FirstTouchX;
+        relative_y = event.getY()-FirstTouchY;
+
+//        relative_x = -(radius - event.getX());
+//        relative_y = -(radius - event.getY());
 
         // get radius and angel of movement from center
         movement_radius = getMovementRadius(relative_x, relative_y);
@@ -409,6 +424,9 @@ public class AnalogStick extends Element {
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP: {
                 setPressed(false);
+                FirstTouchX = 0;
+                FirstTouchY = 0;
+                isFirstTouch = true;
                 break;
             }
         }
