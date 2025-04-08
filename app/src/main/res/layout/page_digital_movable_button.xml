@@ -85,6 +85,11 @@
                     android:layout_height="match_parent"
                     android:checked="true"/>
             </LinearLayout>
+            <Switch
+                android:id="@+id/page_digital_movable_button_move_mode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="相对移动模式" />
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                 android:id="@+id/page_digital_movable_button_central_x"
                 android:layout_width="match_parent"
