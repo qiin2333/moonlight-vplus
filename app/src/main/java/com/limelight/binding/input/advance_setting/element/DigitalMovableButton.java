@@ -1,6 +1,5 @@
 package com.limelight.binding.input.advance_setting.element;
 
-import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.content.Context;
 import android.graphics.Canvas;
@@ -66,7 +65,6 @@ public class DigitalMovableButton extends Element {
     private String text;
     private String value;
     private int enableTouch = 0;
-    private int moveMode = 0; // 0: 绝对位置模式, 1: 相对移动模式
     private int radius;
     private int sense;
     private int thick;
@@ -333,7 +331,6 @@ public class DigitalMovableButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
-        contentValues.put("move_mode", moveMode);
         elementController.updateElement(elementId,contentValues);
     }
 
@@ -358,8 +355,7 @@ public class DigitalMovableButton extends Element {
         NumberSeekbar radiusNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_radius);
         ElementEditText textElementEditText = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_text);
         TextView valueTextView = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_value);
-        @SuppressLint("UseSwitchCompatOrMaterialCode") Switch enableTouchSwitch = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_enable_touch);
-        @SuppressLint("UseSwitchCompatOrMaterialCode") Switch moveModeSwitch = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_move_mode);
+        Switch enableTouchSwitch = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_enable_touch);
         NumberSeekbar senseNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_sense);
         NumberSeekbar thickNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_thick);
         NumberSeekbar layerNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_layer);
@@ -407,14 +403,7 @@ public class DigitalMovableButton extends Element {
             }
         });
 
-        moveModeSwitch.setChecked(moveMode==1);
-        moveModeSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                moveMode = isChecked ? 1 : 0;
-                save();
-            }
-        });
+
 
         centralXNumberSeekbar.setProgressMin(centralXMin);
         centralXNumberSeekbar.setProgressMax(centralXMax);
@@ -687,7 +676,6 @@ public class DigitalMovableButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,0xF0888888);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,0xF00000FF);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,0x00FFFFFF);
-        contentValues.put("move_mode", 0); // 默认为绝对位置模式
         return contentValues;
     }
 }
