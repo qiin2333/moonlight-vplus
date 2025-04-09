@@ -1,6 +1,5 @@
 package com.limelight.binding.input.advance_setting.element;
 
-import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.content.Context;
 import android.graphics.Canvas;
@@ -9,7 +8,6 @@ import android.graphics.Paint;
 import android.graphics.RectF;
 import android.text.InputFilter;
 import android.util.DisplayMetrics;
-import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -27,7 +25,6 @@ import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHel
 import com.limelight.binding.input.advance_setting.superpage.ElementEditText;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
-import com.limelight.ui.StreamView;
 
 import java.util.Map;
 
@@ -68,7 +65,6 @@ public class DigitalMovableButton extends Element {
     private String text;
     private String value;
     private int enableTouch = 0;
-    private int moveMode = 0; // 0: 绝对位置模式, 1: 相对移动模式
     private int radius;
     private int sense;
     private int thick;
@@ -143,17 +139,9 @@ public class DigitalMovableButton extends Element {
             backgroundColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_BACKGROUND_COLOR)).intValue();
             value = (String) attributesMap.get(COLUMN_STRING_ELEMENT_VALUE);
             enableTouch = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_MODE)).intValue();
-            
-            // 尝试读取移动模式设置，如果不存在则使用默认值0（绝对位置模式）
-            Object moveModeObj = attributesMap.get("move_mode");
-            if (moveModeObj != null) {
-                moveMode = ((Long) moveModeObj).intValue();
-            } else {
-                moveMode = 0;
-            }
         } catch (Exception e) {
             // 处理旧版布局兼容性问题，设置默认值
-            if (text == null) text = "按钮";
+            if (text == null) text = "A";
             if (radius == 0) radius = 0;
             if (sense == 0) sense = 100;
             if (thick == 0) thick = 5;
@@ -162,7 +150,6 @@ public class DigitalMovableButton extends Element {
             if (backgroundColor == 0) backgroundColor = 0x00FFFFFF;
             if (value == null) value = "k29";
             if (enableTouch == 0) enableTouch = 0;
-            moveMode = 0; // 默认为绝对位置模式
             System.out.println("加载按键时发生错误，已应用默认值: " + e.getMessage());
         }
         
@@ -250,53 +237,46 @@ public class DigitalMovableButton extends Element {
     public boolean onElementTouchEvent(MotionEvent event) {
         // get masked (not specific to a pointer) action
         int action = event.getActionMasked();
-        if (isFirstTouch) {
-            isFirstTouch = false;
+        if(enableTouch==1) {
+            if (isFirstTouch) {
+                isFirstTouch = false;
+                FirstTouchX = event.getX();
+                FirstTouchY = event.getY();
+            }
+            float touchXTemp, touchYTemp;
+
+            touchXTemp = (float) (game.getStreamView().getWidth() / 2 + (event.getX() - FirstTouchX) * sense * 0.01);
+            touchYTemp = (float) (game.getStreamView().getHeight() / 2 + (event.getY() - FirstTouchY) * sense * 0.01);
+
+            MotionEvent EventTemp = MotionEvent.obtain(
+                    event.getDownTime(),    // 按下时间
+                    event.getEventTime(),   // 事件时间
+                    action,      // 动作类型
+                    touchXTemp,      // X坐标
+                    touchYTemp,      // Y坐标
+                    event.getPressure(),    // 压力值
+                    event.getSize(),        // 触摸大小
+                    event.getMetaState(),   // 元状态
+                    event.getXPrecision(),  // X精度
+                    event.getYPrecision(),  // Y精度
+                    event.getDeviceId(),    // 设备ID
+                    event.getEdgeFlags()    // 边缘标志
+            );
+
+            if (touchXTemp < 0 || touchXTemp > game.getStreamView().getWidth() || touchYTemp < 0 || touchYTemp > game.getStreamView().getHeight()) {
+                FirstTouchX = event.getX();
+                FirstTouchY = event.getY();
+                EventTemp.setAction(MotionEvent.ACTION_CANCEL);
+            }
+            try {
+                game.getHandleMotionEvent(game.getStreamView(), EventTemp);
+            } catch (NullPointerException e) {
+                System.out.println("NullPointerException");
+            }
+        }
+        else {
             FirstTouchX = event.getX();
             FirstTouchY = event.getY();
-        }
-        
-        // 根据moveMode决定使用哪种移动模式
-        float touchXTemp, touchYTemp;
-        if (moveMode == 1) { // 相对移动模式
-            float deltaX = event.getX() - FirstTouchX;
-            float deltaY = event.getY() - FirstTouchY;
-            touchXTemp = (float) (game.getStreamView().getWidth() / 2 + deltaX * sense * 0.01);
-            touchYTemp = (float) (game.getStreamView().getHeight() / 2 + deltaY * sense * 0.01);
-        } else { // 绝对位置模式（原有逻辑）
-            touchXTemp = (float) (game.getStreamView().getWidth() / 2 +(event.getX()-FirstTouchX)*sense*0.01);
-            touchYTemp = (float) (game.getStreamView().getHeight() / 2+(event.getY()-FirstTouchY)*sense*0.01);
-        }
-        
-        MotionEvent EventTemp = MotionEvent.obtain(
-                event.getDownTime(),    // 按下时间
-                event.getEventTime(),   // 事件时间
-                action,      // 动作类型
-                touchXTemp,      // X坐标
-                touchYTemp,      // Y坐标
-                event.getPressure(),    // 压力值
-                event.getSize(),        // 触摸大小
-                event.getMetaState(),   // 元状态
-                event.getXPrecision(),  // X精度
-                event.getYPrecision(),  // Y精度
-                event.getDeviceId(),    // 设备ID
-                event.getEdgeFlags()    // 边缘标志
-        );
-        if(touchXTemp<0||touchXTemp>game.getStreamView().getWidth()||touchYTemp<0||touchYTemp>game.getStreamView().getHeight()){
-            FirstTouchX = event.getX();
-            FirstTouchY = event.getY();
-            EventTemp.setAction(MotionEvent.ACTION_CANCEL);
-        }
-        if(enableTouch!=1){
-            FirstTouchX = event.getX();
-            FirstTouchY = event.getY();
-            EventTemp.setAction(MotionEvent.ACTION_CANCEL);
-        }
-        try {
-            game.getHandleMotionEvent(game.getStreamView(),EventTemp);
-        }
-        catch (NullPointerException e){
-            System.out.println("NullPointerException");
         }
         switch (action) {
             case MotionEvent.ACTION_DOWN: {
@@ -351,7 +331,6 @@ public class DigitalMovableButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
-        contentValues.put("move_mode", moveMode);
         elementController.updateElement(elementId,contentValues);
     }
 
@@ -376,8 +355,7 @@ public class DigitalMovableButton extends Element {
         NumberSeekbar radiusNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_radius);
         ElementEditText textElementEditText = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_text);
         TextView valueTextView = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_value);
-        @SuppressLint("UseSwitchCompatOrMaterialCode") Switch enableTouchSwitch = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_enable_touch);
-        @SuppressLint("UseSwitchCompatOrMaterialCode") Switch moveModeSwitch = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_move_mode);
+        Switch enableTouchSwitch = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_enable_touch);
         NumberSeekbar senseNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_sense);
         NumberSeekbar thickNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_thick);
         NumberSeekbar layerNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_layer);
@@ -425,14 +403,7 @@ public class DigitalMovableButton extends Element {
             }
         });
 
-        moveModeSwitch.setChecked(moveMode==1);
-        moveModeSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                moveMode = isChecked ? 1 : 0;
-                save();
-            }
-        });
+
 
         centralXNumberSeekbar.setProgressMin(centralXMin);
         centralXNumberSeekbar.setProgressMax(centralXMax);
@@ -705,7 +676,6 @@ public class DigitalMovableButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,0xF0888888);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,0xF00000FF);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,0x00FFFFFF);
-        contentValues.put("move_mode", 0); // 默认为绝对位置模式
         return contentValues;
     }
 }
