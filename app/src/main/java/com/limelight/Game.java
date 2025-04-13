@@ -144,7 +144,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private List<PerformanceInfoDisplay> performanceInfoDisplays = new ArrayList<>();
 
 
-    private PreferenceConfiguration prefConfig;
+    PreferenceConfiguration prefConfig;
     private SharedPreferences tombstonePrefs;
 
     private NvConnection conn;
