@@ -175,6 +175,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private long previousTimeMillis = 0;
     private long previousRxBytes = 0;
 
+    // ESC键双击相关变量
+    private static final long ESC_DOUBLE_PRESS_INTERVAL = 500; // 500毫秒内按第二次ESC才有效
+    private long lastEscPressTime = 0;
+    private boolean hasShownEscHint = false;
+
     private boolean isHidingOverlays;
     private TextView notificationOverlayView;
     private int requestedNotificationOverlayVisibility = View.GONE;
@@ -1482,6 +1487,25 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public boolean handleKeyUp(KeyEvent event) {
+        if (isPhysicalKeyboardConnected()) {
+            // ESC键双击逻辑
+            if (event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE) {
+                long currentTime = System.currentTimeMillis();
+                
+                if (currentTime - lastEscPressTime <= ESC_DOUBLE_PRESS_INTERVAL && hasShownEscHint) {
+                    // 第二次按ESC，弹出游戏菜单
+                    onBackPressed();
+                    lastEscPressTime = 0;
+                    hasShownEscHint = false;
+                    return true; // 消费事件，不发送给主机
+                } else {
+                    // 第一次按ESC，显示提示但透传给主机
+                    Toast.makeText(this, "再次按 ESC 键打开游戏菜单", Toast.LENGTH_SHORT).show();
+                    lastEscPressTime = currentTime;
+                    hasShownEscHint = true;
+                }
+            }
+        }
         // Pass-through virtual navigation keys
         if ((event.getFlags() & KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0) {
             return false;
@@ -2968,6 +2992,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         showGameMenu(null);
     }
 
+    private boolean isPhysicalKeyboardConnected() {
+        return getResources().getConfiguration().keyboard == Configuration.KEYBOARD_QWERTY;
+    }
+
     public void togglePerformanceOverlay() {
         if (requestedPerformanceOverlayVisibility == View.VISIBLE) {
             requestedPerformanceOverlayVisibility = View.GONE;
@@ -2976,16 +3004,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
         performanceOverlayView.setVisibility(requestedPerformanceOverlayVisibility);
     }
-
-    // public void imeSwitch() {
-    //     InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-    //     List<InputMethodInfo> mInputMethodProperties = imm.getInputMethodList();
-    //     Optional<InputMethodInfo> hackersInput = mInputMethodProperties.stream().filter(m -> m.getId().startsWith("org.pocketworkstation.pckeyboard")).findFirst();
-    //     imm.showInputMethodPicker();
-    //     if (!hackersInput.isPresent()) {
-    //         Toast.makeText(Game.this, "杂鱼～❤ 还不快装黑客键盘（hacker's keyboard", Toast.LENGTH_LONG).show();
-    //     }
-    // }
 
     private static byte getModifier(short key) {
         switch (key) {
