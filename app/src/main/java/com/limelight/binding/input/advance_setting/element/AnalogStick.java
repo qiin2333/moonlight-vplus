@@ -12,9 +12,11 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.SeekBar;
+import android.widget.Switch;
 import android.widget.TextView;
 
 import com.limelight.Game;
@@ -54,6 +56,7 @@ public class AnalogStick extends Element {
      */
     public final static long timeoutDeadzone = 150;
 
+    private int moveMode = 0; // 0: 绝对位置模式, 1: 相对移动模式
     /**
      * Listener interface to update registered observers.
      */
@@ -134,6 +137,11 @@ public class AnalogStick extends Element {
 
     private float position_stick_x = 0;
     private float position_stick_y = 0;
+
+    private boolean isFirstTouch = true;
+    private float FirstTouchX = 0;
+    private float FirstTouchY = 0;
+
 
     private SuperConfigDatabaseHelper superConfigDatabaseHelper;
     private PageDeviceController pageDeviceController;
@@ -227,21 +235,35 @@ public class AnalogStick extends Element {
         paintEdit.setStyle(Paint.Style.STROKE);
         paintEdit.setStrokeWidth(4);
         paintEdit.setPathEffect(new DashPathEffect(new float[]{10, 20}, 0));
-
-        radius = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_RADIUS)).intValue();
-        deadZoneRadius = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_DEAD_ZONE_RADIUS)).intValue();
-        thick = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_THICK)).intValue();
-        normalColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_NORMAL_COLOR)).intValue();
-        pressedColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_PRESSED_COLOR)).intValue();
-        backgroundColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_BACKGROUND_COLOR)).intValue();
-        middleValue = (String) attributesMap.get(COLUMN_STRING_ELEMENT_MIDDLE_VALUE);
-        value = (String) attributesMap.get(COLUMN_STRING_ELEMENT_VALUE);
+        try {
+            radius = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_RADIUS)).intValue();
+            deadZoneRadius = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_DEAD_ZONE_RADIUS)).intValue();
+            thick = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_THICK)).intValue();
+            normalColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_NORMAL_COLOR)).intValue();
+            pressedColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_PRESSED_COLOR)).intValue();
+            backgroundColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_BACKGROUND_COLOR)).intValue();
+            middleValue = (String) attributesMap.get(COLUMN_STRING_ELEMENT_MIDDLE_VALUE);
+            value = (String) attributesMap.get(COLUMN_STRING_ELEMENT_VALUE);
+            moveMode = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_MODE)).intValue();
+        }
+        catch (Exception e) {
+            if(radius==0)radius = 100;
+            if(deadZoneRadius==0)deadZoneRadius = 30;
+            if(thick==0)thick = 5;
+            if(normalColor==0)normalColor = 0xF0888888;
+            if(pressedColor==0)pressedColor = 0xF00000FF;
+            if(backgroundColor==0)backgroundColor = 0x00FFFFFF;
+            if(middleValue==null)middleValue = "g64";
+            if(value==null)value = "LS";
+            if (moveMode == 0) moveMode = 0;
+            System.out.println("加载按摇杆时发生错误，已应用默认值: " + e.getMessage());
+        }
         middleValueSendHandler = controller.getSendEventHandler(middleValue);
-        valueSendHandler = controller.getSendEventHandler(value);
-
         radius_complete = getPercent(radius, 100) - 2 * thick;
         radius_dead_zone = getPercent(radius, deadZoneRadius);
         radius_analog_stick = getPercent(radius, 20);
+
+        valueSendHandler = controller.getSendEventHandler(value);
 
         listener = new AnalogStickListener() {
             @Override
@@ -367,9 +389,24 @@ public class AnalogStick extends Element {
         // save last click state
         AnalogStick.CLICK_STATE lastClickState = click_state;
 
+        if (isFirstTouch) {
+            isFirstTouch = false;
+            FirstTouchX = event.getX();
+            FirstTouchY = event.getY();
+        }
+
+
         // get absolute way for each axis
-        relative_x = -(radius - event.getX());
-        relative_y = -(radius - event.getY());
+        if (moveMode==1)
+        {
+            relative_x = event.getX()-FirstTouchX;
+            relative_y = event.getY()-FirstTouchY;
+        }
+        else
+        {
+            relative_x = -(radius - event.getX());
+            relative_y = -(radius - event.getY());
+        }
 
         // get radius and angel of movement from center
         movement_radius = getMovementRadius(relative_x, relative_y);
@@ -409,6 +446,9 @@ public class AnalogStick extends Element {
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP: {
                 setPressed(false);
+                FirstTouchX = 0;
+                FirstTouchY = 0;
+                isFirstTouch = true;
                 break;
             }
         }
@@ -441,6 +481,7 @@ public class AnalogStick extends Element {
         NumberSeekbar radiusNumberSeekbar = analogStickPage.findViewById(R.id.page_analog_stick_radius);
         TextView middleValueTextView = analogStickPage.findViewById(R.id.page_analog_stick_middle_value);
         RadioGroup modeRadioGroup = analogStickPage.findViewById(R.id.page_analog_stick_value);
+        Switch moveModeSwitch = analogStickPage.findViewById(R.id.page_analog_stick_move_mode);
         NumberSeekbar deadZoneRadiusNumberSeekbar = analogStickPage.findViewById(R.id.page_analog_stick_sense);
         NumberSeekbar thickNumberSeekbar = analogStickPage.findViewById(R.id.page_analog_stick_thick);
         NumberSeekbar layerNumberSeekbar = analogStickPage.findViewById(R.id.page_analog_stick_layer);
@@ -474,6 +515,14 @@ public class AnalogStick extends Element {
                     }
                 };
                 pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
+            }
+        });
+        moveModeSwitch.setChecked(moveMode==1);
+        moveModeSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                moveMode = isChecked ? 1 : 0;
+                save();
             }
         });
 
@@ -649,6 +698,7 @@ public class AnalogStick extends Element {
                 contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
                 contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
                 contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
+                contentValues.put(COLUMN_INT_ELEMENT_MODE, moveMode);
                 elementController.addElement(contentValues);
             }
         });
@@ -682,6 +732,7 @@ public class AnalogStick extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
+        contentValues.put(COLUMN_INT_ELEMENT_MODE, moveMode);
         elementController.updateElement(elementId,contentValues);
 
     }
@@ -757,6 +808,7 @@ public class AnalogStick extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,0xF0888888);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,0xF00000FF);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,0x00FFFFFF);
+        contentValues.put(COLUMN_INT_ELEMENT_MODE,0);
         return contentValues;
 
 
