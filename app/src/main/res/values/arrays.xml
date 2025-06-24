@@ -200,4 +200,56 @@
         <item>@drawable/ic_position_bottom_center</item>
         <item>@drawable/ic_position_bottom_right</item>
     </array>
+
+    <!-- 性能覆盖层方向选项 -->
+    <string-array name="perf_overlay_orientation_names">
+        <item>水平显示</item>
+        <item>垂直显示</item>
+    </string-array>
+    <string-array name="perf_overlay_orientation_values" translatable="false">
+        <item>horizontal</item>
+        <item>vertical</item>
+    </string-array>
+    
+    <!-- 性能覆盖层位置选项 - 水平方向 -->
+    <string-array name="perf_overlay_position_horizontal_names">
+        <item>顶部</item>
+        <item>底部</item>
+    </string-array>
+    <string-array name="perf_overlay_position_horizontal_values" translatable="false">
+        <item>top</item>
+        <item>bottom</item>
+    </string-array>
+    
+    <!-- 性能覆盖层位置选项 - 垂直方向 -->
+    <string-array name="perf_overlay_position_vertical_names">
+        <item>左上角</item>
+        <item>右上角</item>
+        <item>左下角</item>
+        <item>右下角</item>
+    </string-array>
+    <string-array name="perf_overlay_position_vertical_values" translatable="false">
+        <item>top_left</item>
+        <item>top_right</item>
+        <item>bottom_left</item>
+        <item>bottom_right</item>
+    </string-array>
+    
+    <!-- 性能覆盖层显示项目选项 -->
+    <string-array name="perf_overlay_display_items_names">
+        <item>🎬 目标分辨率与帧率</item>
+        <item>codec 解码器信息</item>
+        <item>Rx/Rd 传输帧率与渲染帧率</item>
+        <item>🌐 网络延迟</item>
+        <item>⏱️/🥵 解码延迟(15ms以下为正常)</item>
+        <item>🖥 主机延迟</item>
+    </string-array>
+    <string-array name="perf_overlay_display_items_values" translatable="false">
+        <item>resolution</item>
+        <item>decoder</item>
+        <item>render_fps</item>
+        <item>network_latency</item>
+        <item>decode_latency</item>
+        <item>host_latency</item>
+    </string-array>
 </resources>

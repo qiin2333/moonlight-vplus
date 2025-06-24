@@ -418,6 +418,30 @@
             android:title="@string/title_enable_perf_overlay"
             android:summary="@string/summary_enable_perf_overlay"
             android:defaultValue="false"/>
+                 <com.limelight.preferences.PerfOverlayOrientationPreference
+            android:key="list_perf_overlay_orientation"
+            android:title="@string/title_perf_overlay_orientation"
+            android:summary="@string/summary_perf_overlay_orientation"
+            android:entries="@array/perf_overlay_orientation_names"
+            android:entryValues="@array/perf_overlay_orientation_values"
+            android:defaultValue="horizontal"
+            android:dependency="checkbox_enable_perf_overlay"/>
+        <com.limelight.preferences.DynamicPerfOverlayPositionPreference
+            android:key="list_perf_overlay_position"
+            android:title="@string/title_perf_overlay_position"
+            android:summary="@string/summary_perf_overlay_position"
+            android:defaultValue="top"
+            android:dependency="checkbox_enable_perf_overlay"/>
+        <!-- <com.limelight.preferences.ResetPerfOverlayPositionPreference
+            android:key="reset_perf_overlay_position"
+            android:title="@string/title_reset_perf_overlay_position"
+            android:summary="@string/summary_reset_perf_overlay_position"
+            android:dependency="checkbox_enable_perf_overlay"/> -->
+        <com.limelight.preferences.PerfOverlayDisplayItemsPreference
+            android:key="perf_overlay_display_items"
+            android:title="@string/title_perf_overlay_display_items"
+            android:summary="@string/summary_perf_overlay_display_items"
+            android:dependency="checkbox_enable_perf_overlay"/>
         <CheckBoxPreference
             android:key="checkbox_enable_post_stream_toast"
             android:title="@string/title_enable_post_stream_toast"

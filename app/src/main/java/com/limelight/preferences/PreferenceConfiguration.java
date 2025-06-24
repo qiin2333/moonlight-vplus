@@ -29,6 +29,22 @@ public class PreferenceConfiguration {
         LEFT
     }
 
+    public enum PerfOverlayOrientation {
+        HORIZONTAL,
+        VERTICAL
+    }
+
+    public enum PerfOverlayPosition {
+        // 水平方向选项
+        TOP,
+        BOTTOM,
+        // 垂直方向选项（四个角）
+        TOP_LEFT,
+        TOP_RIGHT,
+        BOTTOM_LEFT,
+        BOTTOM_RIGHT
+    }
+
     private static final String LEGACY_RES_FPS_PREF_STRING = "list_resolution_fps";
     private static final String LEGACY_ENABLE_51_SURROUND_PREF_STRING = "checkbox_51_surround";
 
@@ -63,6 +79,8 @@ public class PreferenceConfiguration {
     private static final String ENABLE_HDR_PREF_STRING = "checkbox_enable_hdr";
     private static final String ENABLE_PIP_PREF_STRING = "checkbox_enable_pip";
     private static final String ENABLE_PERF_OVERLAY_STRING = "checkbox_enable_perf_overlay";
+    private static final String PERF_OVERLAY_ORIENTATION_STRING = "list_perf_overlay_orientation";
+    private static final String PERF_OVERLAY_POSITION_STRING = "list_perf_overlay_position";
     private static final String BIND_ALL_USB_STRING = "checkbox_usb_bind_all";
     private static final String MOUSE_EMULATION_STRING = "checkbox_mouse_emulation";
     private static final String ANALOG_SCROLLING_PREF_STRING = "analog_scrolling";
@@ -117,6 +135,8 @@ public class PreferenceConfiguration {
     private static final boolean DEFAULT_ENABLE_HDR = false;
     private static final boolean DEFAULT_ENABLE_PIP = false;
     private static final boolean DEFAULT_ENABLE_PERF_OVERLAY = false;
+    private static final String DEFAULT_PERF_OVERLAY_ORIENTATION = "horizontal";
+    private static final String DEFAULT_PERF_OVERLAY_POSITION = "top";
     private static final boolean DEFAULT_BIND_ALL_USB = false;
     private static final boolean DEFAULT_MOUSE_EMULATION = true;
     private static final String DEFAULT_ANALOG_STICK_FOR_SCROLLING = "right";
@@ -212,6 +232,8 @@ public class PreferenceConfiguration {
     public boolean enableHdr;
     public boolean enablePip;
     public boolean enablePerfOverlay;
+    public PerfOverlayOrientation perfOverlayOrientation;
+    public PerfOverlayPosition perfOverlayPosition;
     public boolean enableSimplifyPerfOverlay;
     public boolean enableLatencyToast;
     public boolean bindAllUsb;
@@ -631,6 +653,37 @@ public class PreferenceConfiguration {
         config.enableHdr = prefs.getBoolean(ENABLE_HDR_PREF_STRING, DEFAULT_ENABLE_HDR) && !isShieldAtvFirmwareWithBrokenHdr();
         config.enablePip = prefs.getBoolean(ENABLE_PIP_PREF_STRING, DEFAULT_ENABLE_PIP);
         config.enablePerfOverlay = prefs.getBoolean(ENABLE_PERF_OVERLAY_STRING, DEFAULT_ENABLE_PERF_OVERLAY);
+        
+        // 读取性能覆盖层方向和位置设置
+        String perfOverlayOrientation = prefs.getString(PERF_OVERLAY_ORIENTATION_STRING, DEFAULT_PERF_OVERLAY_ORIENTATION);
+        if ("vertical".equals(perfOverlayOrientation)) {
+            config.perfOverlayOrientation = PerfOverlayOrientation.VERTICAL;
+        } else {
+            config.perfOverlayOrientation = PerfOverlayOrientation.HORIZONTAL;
+        }
+        
+        String perfOverlayPosition = prefs.getString(PERF_OVERLAY_POSITION_STRING, DEFAULT_PERF_OVERLAY_POSITION);
+        switch (perfOverlayPosition) {
+            case "bottom":
+                config.perfOverlayPosition = PerfOverlayPosition.BOTTOM;
+                break;
+            case "top_left":
+                config.perfOverlayPosition = PerfOverlayPosition.TOP_LEFT;
+                break;
+            case "top_right":
+                config.perfOverlayPosition = PerfOverlayPosition.TOP_RIGHT;
+                break;
+            case "bottom_left":
+                config.perfOverlayPosition = PerfOverlayPosition.BOTTOM_LEFT;
+                break;
+            case "bottom_right":
+                config.perfOverlayPosition = PerfOverlayPosition.BOTTOM_RIGHT;
+                break;
+            default:
+                config.perfOverlayPosition = PerfOverlayPosition.TOP;
+                break;
+        }
+        
         config.bindAllUsb = prefs.getBoolean(BIND_ALL_USB_STRING, DEFAULT_BIND_ALL_USB);
         config.mouseEmulation = prefs.getBoolean(MOUSE_EMULATION_STRING, DEFAULT_MOUSE_EMULATION);
         config.mouseNavButtons = prefs.getBoolean(MOUSE_NAV_BUTTONS_STRING, DEFAULT_MOUSE_NAV_BUTTONS);
@@ -765,6 +818,8 @@ public class PreferenceConfiguration {
         copy.videoFormat = this.videoFormat;
         copy.enableHdr = this.enableHdr;
         copy.enablePerfOverlay = this.enablePerfOverlay;
+        copy.perfOverlayOrientation = this.perfOverlayOrientation;
+        copy.perfOverlayPosition = this.perfOverlayPosition;
         copy.reverseResolution = this.reverseResolution;
         copy.screenPosition = this.screenPosition;
         copy.screenOffsetX = this.screenOffsetX;
