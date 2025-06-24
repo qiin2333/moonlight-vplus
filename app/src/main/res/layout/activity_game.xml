@@ -40,9 +40,13 @@
         android:background="#80161616"
         android:gravity="start"
         android:orientation="horizontal"
+        android:paddingTop="2dp"
         android:paddingLeft="6dp"
-        android:paddingBottom="2dp"
+        android:paddingBottom="3dp"
+        android:paddingRight="6dp"
         android:preferKeepClear="true"
+        android:clickable="true"
+        android:focusable="true"
         android:visibility="gone">
 
         <TextView
@@ -52,7 +56,6 @@
             android:layout_marginEnd="10dp"
             android:textAppearance="?android:attr/textAppearanceSmall"
             android:textSize="10sp" />
-
 
         <TextView
             android:id="@+id/perfDecoder"
