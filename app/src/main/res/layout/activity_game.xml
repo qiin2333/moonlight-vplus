@@ -74,6 +74,16 @@
             android:textSize="10sp"
             android:textAppearance="?android:attr/textAppearanceSmall"
             android:hint="接收/渲染帧率   |" />
+            
+        <TextView
+            android:id="@+id/perfPacketLoss"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="10dp"
+            android:textColor="#7D9D7D"
+            android:textSize="10sp"
+            android:hint="丢帧率    |"
+            android:textAppearance="?android:attr/textAppearanceSmall" />
 
         <TextView
             android:id="@+id/perfNetworkLatency"

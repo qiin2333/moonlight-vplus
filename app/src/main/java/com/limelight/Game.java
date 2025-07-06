@@ -230,6 +230,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private TextView networkLatencyView;
     private TextView decodeLatencyView;
     private TextView hostLatencyView;
+    private TextView packetLossView;
 
     public static final String EXTRA_HOST = "Host";
     public static final String EXTRA_PORT = "Port";
@@ -355,6 +356,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         networkLatencyView = findViewById(R.id.perfNetworkLatency);
         decodeLatencyView = findViewById(R.id.perfDecodeLatency);
         hostLatencyView = findViewById(R.id.perfHostLatency);
+        packetLossView = findViewById(R.id.perfPacketLoss);
 
         inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(this, this);
 
@@ -2667,6 +2669,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             // This may be null if launched from the "Resume Session" PC context menu item
             shortcutHelper.reportGameLaunched(computer, app);
         }
+
+        // 检查是否启用了HDR并主动设置初始状态
+        // 这解决了首次连接时setHdrMode没有被调用的问题
+        boolean appSupportsHdr = Game.this.getIntent().getBooleanExtra(EXTRA_APP_HDR, false);
+        if (appSupportsHdr && prefConfig.enableHdr) {
+            setHdrMode(true, null);
+        }
     }
 
     @Override
@@ -2711,6 +2720,46 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     public void setHdrMode(boolean enabled, byte[] hdrMetadata) {
         LimeLog.info("Display HDR mode: " + (enabled ? "enabled" : "disabled"));
         decoderRenderer.setHdrMode(enabled, hdrMetadata);
+
+        // 通知系统HDR内容状态，特别是对ColorOS系统
+        if (UiHelper.isColorOS()) {
+            notifySystemHdrStatus(enabled);
+        }
+    }
+
+    private void notifySystemHdrStatus(boolean hdrEnabled) {
+        runOnUiThread(() -> {
+            try {
+                // 通过Window设置色彩模式
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    if (hdrEnabled) {
+                        getWindow().setColorMode(ActivityInfo.COLOR_MODE_HDR);
+                    } else {
+                        getWindow().setColorMode(ActivityInfo.COLOR_MODE_DEFAULT);
+                    }
+                }
+
+                // 通过WindowManager.LayoutParams设置亮度
+                WindowManager.LayoutParams params = getWindow().getAttributes();
+                if (hdrEnabled) {
+                    // 强制高亮度模式
+                    params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL;
+                    // 设置窗口标志以支持HDR
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+                    }
+                } else {
+                    params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
+                }
+                getWindow().setAttributes(params);
+
+                LimeLog.info("ColorOS HDR notification: Window color mode and brightness updated for HDR " +
+                        (hdrEnabled ? "enabled" : "disabled"));
+
+            } catch (Exception e) {
+                LimeLog.warning("Failed to notify ColorOS system HDR status: " + e.getMessage());
+            }
+        });
     }
 
     @Override
@@ -2896,8 +2945,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         
         String renderFpsInfo = String.format("Rx %.0f / Rd %.0f FPS", 
             performanceInfo.receivedFps, performanceInfo.renderedFps);
-            
-        String networkLatencyInfo = String.format("🌐 %s   %d ± %d ms", 
+
+        String packetLossInfo = String.format("📶 %.2f%%", performanceInfo.lostFrameRate);
+
+        String networkLatencyInfo = String.format("%s   %d ± %d ms", 
             performanceInfo.bandWidth, 
             (int) (performanceInfo.rttInfo >> 32), 
             (int) performanceInfo.rttInfo);
@@ -2920,8 +2971,16 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             if (perfRenderFpsView != null && perfRenderFpsView.getVisibility() == View.VISIBLE) {
                 perfRenderFpsView.setText(renderFpsInfo);
             }
+            if (packetLossView != null && packetLossView.getVisibility() == View.VISIBLE) {
+                packetLossView.setText(packetLossInfo);
+                // 根据丢包率设置颜色：小于5%为绿色，否则为红色
+                packetLossView.setTextColor(performanceInfo.lostFrameRate < 5.0f ? 0xFF7D9D7D : 0xFFB57D7D);
+            }
             if (networkLatencyView != null && networkLatencyView.getVisibility() == View.VISIBLE) {
-                networkLatencyView.setText(networkLatencyInfo);
+                // 当丢包率不显示时，在网络延迟前添加信号图标
+                boolean showPacketLoss = packetLossView != null && packetLossView.getVisibility() == View.VISIBLE;
+                String displayText = showPacketLoss ? networkLatencyInfo : "🌐 " + networkLatencyInfo;
+                networkLatencyView.setText(displayText);
             }
             if (decodeLatencyView != null && decodeLatencyView.getVisibility() == View.VISIBLE) {
                 decodeLatencyView.setText(decodeLatencyInfo);
@@ -3288,6 +3347,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             hostLatencyView.setVisibility(PerfOverlayDisplayItemsPreference.isItemEnabled(this, "host_latency") ? 
                 View.VISIBLE : View.GONE);
         }
+        if (packetLossView != null) {
+            packetLossView.setVisibility(PerfOverlayDisplayItemsPreference.isItemEnabled(this, "packet_loss") ?
+                    View.VISIBLE : View.GONE);
+        }
     }
     
     private void configureTextAlignment() {
@@ -3304,7 +3367,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // 批量设置所有性能信息文本的对齐方式和阴影效果
         TextView[] perfViews = {
             perfResView, perfDecoderView, perfRenderFpsView,
-            networkLatencyView, decodeLatencyView, hostLatencyView
+                networkLatencyView, decodeLatencyView, hostLatencyView, packetLossView
         };
         
         for (TextView textView : perfViews) {
