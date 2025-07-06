@@ -240,7 +240,8 @@
         <item>🎬 目标分辨率与帧率</item>
         <item>codec 解码器信息</item>
         <item>Rx/Rd 传输帧率与渲染帧率</item>
-        <item>🌐 网络延迟</item>
+        <item>📶 丢帧率</item>
+        <item>🌐 带宽与网络延迟</item>
         <item>⏱️/🥵 解码延迟(15ms以下为正常)</item>
         <item>🖥 主机延迟</item>
     </string-array>
@@ -248,6 +249,7 @@
         <item>resolution</item>
         <item>decoder</item>
         <item>render_fps</item>
+        <item>packet_loss</item>
         <item>network_latency</item>
         <item>decode_latency</item>
         <item>host_latency</item>
