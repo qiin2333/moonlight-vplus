@@ -667,7 +667,6 @@ public class NvHTTP {
                     app.setHdrSupported(xpp.getText().equals("1"));
                 } else if (currentTag.peek().equals("SuperCmds")) {
                     String cmdListStr = xpp.getText();
-                    LimeLog.info(cmdListStr + " appcmds");
                     if (!Objects.equals(cmdListStr, "null")) {
                         app.setCmdList(xpp.getText());
                     }

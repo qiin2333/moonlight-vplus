@@ -44,3 +44,4 @@ app/.externalNativeBuild/
 .cxx/
 app/src/main/jni/moonlight-core/Build.txt
 app/src/main/jni/moonlight-core/build-openssl.sh
+.vscode/
