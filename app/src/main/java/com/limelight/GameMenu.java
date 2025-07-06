@@ -8,6 +8,7 @@ import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -157,6 +158,11 @@ public class GameMenu {
         }
     }
 
+    private void toggleEnhancedTouch() {
+        game.prefConfig.enableEnhancedTouch = !game.prefConfig.enableEnhancedTouch;
+        Toast.makeText(game, "Enhanced touch is: " + (game.prefConfig.enableEnhancedTouch ? "ON" : "OFF"), Toast.LENGTH_SHORT).show();
+    }
+
     private void showMenuDialog(String title, MenuOption[] options) {
         AlertDialog.Builder builder = new AlertDialog.Builder(game);
         builder.setTitle(title);
@@ -237,6 +243,8 @@ public class GameMenu {
         options.add(new MenuOption(getString(R.string.game_menu_toggle_host_keyboard), true,
                 () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_LCONTROL,
                         KeyboardTranslator.VK_O})));
+        options.add(new MenuOption(game.prefConfig.enableEnhancedTouch ? "切换到经典鼠标模式" : "切换到增强式多点触控",
+                true, this::toggleEnhancedTouch));
 
         if (device != null) {
             options.addAll(device.getGameMenuOptions());

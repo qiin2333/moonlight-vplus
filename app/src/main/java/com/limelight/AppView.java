@@ -553,8 +553,6 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                     }
                 }
 
-                LimeLog.info("updateUiWithServerinfo xxxxxxx" + hasRunningApp);
-
                 // if (!hasRunningApp) loadDefaultImage();
 
                 if (updated) {

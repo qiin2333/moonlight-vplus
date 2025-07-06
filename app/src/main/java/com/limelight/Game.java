@@ -30,6 +30,7 @@ import com.limelight.nvstream.input.KeyboardPacket;
 import com.limelight.nvstream.input.MouseButtonPacket;
 import com.limelight.nvstream.jni.MoonBridge;
 import com.limelight.preferences.GlPreferences;
+import com.limelight.preferences.PerfOverlayDisplayItemsPreference;
 import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.ui.GameGestures;
 import com.limelight.ui.StreamView;
@@ -38,6 +39,7 @@ import com.limelight.utils.ServerHelper;
 import com.limelight.utils.ShortcutHelper;
 import com.limelight.utils.SpinnerDialog;
 import com.limelight.utils.UiHelper;
+import com.limelight.utils.NetHelper;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
@@ -143,7 +145,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private List<PerformanceInfoDisplay> performanceInfoDisplays = new ArrayList<>();
 
 
-    private PreferenceConfiguration prefConfig;
+    PreferenceConfiguration prefConfig;
     private SharedPreferences tombstonePrefs;
 
     private NvConnection conn;
@@ -174,11 +176,29 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private long previousTimeMillis = 0;
     private long previousRxBytes = 0;
 
+    // ESC键双击相关变量
+    private static final long ESC_DOUBLE_PRESS_INTERVAL = 500; // 500毫秒内按第二次ESC才有效
+    private long lastEscPressTime = 0;
+    private boolean hasShownEscHint = false;
+
     private boolean isHidingOverlays;
     private TextView notificationOverlayView;
     private int requestedNotificationOverlayVisibility = View.GONE;
     private LinearLayout performanceOverlayView;
     private int requestedPerformanceOverlayVisibility = View.GONE;
+
+    // 性能覆盖层拖动相关
+    private boolean isDraggingPerfOverlay = false;
+    private float perfOverlayStartX, perfOverlayStartY;
+    private float perfOverlayDeltaX, perfOverlayDeltaY;
+    private static final int SNAP_THRESHOLD = 100; // 吸附阈值（像素）
+    
+    // 8个吸附位置的枚举
+    private enum SnapPosition {
+        TOP_LEFT, TOP_CENTER, TOP_RIGHT,
+        CENTER_LEFT, CENTER_RIGHT,
+        BOTTOM_LEFT, BOTTOM_CENTER, BOTTOM_RIGHT
+    }
 
     private MediaCodecDecoderRenderer decoderRenderer;
     private boolean reportedCrash;
@@ -210,6 +230,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private TextView networkLatencyView;
     private TextView decodeLatencyView;
     private TextView hostLatencyView;
+    private TextView packetLossView;
 
     public static final String EXTRA_HOST = "Host";
     public static final String EXTRA_PORT = "Port";
@@ -335,6 +356,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         networkLatencyView = findViewById(R.id.perfNetworkLatency);
         decodeLatencyView = findViewById(R.id.perfDecodeLatency);
         hostLatencyView = findViewById(R.id.perfHostLatency);
+        packetLossView = findViewById(R.id.perfPacketLoss);
 
         inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(this, this);
 
@@ -440,6 +462,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         if (prefConfig.enablePerfOverlay) {
             requestedPerformanceOverlayVisibility = View.VISIBLE;
             performanceOverlayView.setVisibility(View.VISIBLE);
+            // 配置性能覆盖层的方向和位置
+            configurePerformanceOverlay();
         }
 
         decoderRenderer = new MediaCodecDecoderRenderer(
@@ -1481,6 +1505,25 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public boolean handleKeyUp(KeyEvent event) {
+        if (isPhysicalKeyboardConnected()) {
+            // ESC键双击逻辑
+            if (event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE) {
+                long currentTime = System.currentTimeMillis();
+                
+                if (currentTime - lastEscPressTime <= ESC_DOUBLE_PRESS_INTERVAL && hasShownEscHint) {
+                    // 第二次按ESC，弹出游戏菜单
+                    onBackPressed();
+                    lastEscPressTime = 0;
+                    hasShownEscHint = false;
+                    return true; // 消费事件，不发送给主机
+                } else {
+                    // 第一次按ESC，显示提示但透传给主机
+                    Toast.makeText(this, "再次按 ESC 键打开串流菜单", Toast.LENGTH_SHORT).show();
+                    lastEscPressTime = currentTime;
+                    hasShownEscHint = true;
+                }
+            }
+        }
         // Pass-through virtual navigation keys
         if ((event.getFlags() & KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0) {
             return false;
@@ -1881,7 +1924,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
         if (event.getActionMasked() == MotionEvent.ACTION_MOVE) {
             // Move events may impact all active pointers
-            if(prefConfig.enableEnhancedTouch) {
+            if (prefConfig.enableEnhancedTouch) {
                 for (int i = 0; i < event.getPointerCount(); i++) {
                     Objects.requireNonNull(nativeTouchPointerMap.get(event.getPointerId(i))).updatePointerCoords(event, i); // update pointer coords in the map.
                     if (!sendTouchEventForPointer(view, event, eventType, i)) {
@@ -1889,7 +1932,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     }
                 }
             }
-            else{
+            else {
                 for (int i = 0; i < event.getPointerCount(); i++) {
                     if (!sendTouchEventForPointer(view, event, eventType, i)) {
                         return false;
@@ -1916,11 +1959,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     break;
                 case MotionEvent.ACTION_UP: // all fingers up
                     // toggle keyboard when all fingers lift up, just like how it works in trackpad mode.
-                    if(event.getEventTime() - multiFingerDownTime < MULTI_FINGER_TAP_THRESHOLD) {
+                    if (event.getEventTime() - multiFingerDownTime < MULTI_FINGER_TAP_THRESHOLD) {
                         toggleKeyboard();
                     }
                 case MotionEvent.ACTION_POINTER_UP:
-                    if(prefConfig.enableEnhancedTouch) {
+                    if (prefConfig.enableEnhancedTouch) {
                         nativeTouchPointerMap.remove(event.getPointerId(event.getActionIndex()));
                     }
                     break;
@@ -1945,7 +1988,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     // Returns true if the event was consumed
     // NB: View is only present if called from a view callback
-    private boolean handleMotionEvent(View view, MotionEvent event) {  //handleMotionEvent, mark mark
+    private boolean handleMotionEvent(View view, MotionEvent event) {
         // Pass through mouse/touch/joystick input if we're not grabbing
 
         if (!grabbedInput) {
@@ -2210,11 +2253,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 // TODO: Re-enable native touch when have a better solution for handling
                 // cancelled touches from Android gestures and 3 finger taps to activate
                 // the software keyboard.
-                if (!prefConfig.touchscreenTrackpad && trySendTouchEvent(view, event)) {
-                    // If this host supports touch events and absolute touch is enabled,
-                    // send it directly as a touch event.
-                    return true;
-                }
+                // if (!prefConfig.touchscreenTrackpad && trySendTouchEvent(view, event)) {
+                //     // If this host supports touch events and absolute touch is enabled,
+                //     // send it directly as a touch event.
+                //     return true;
+                // }
 
                 TouchContext context = getTouchContext(actionIndex);
                 if (context == null) {
@@ -2626,6 +2669,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             // This may be null if launched from the "Resume Session" PC context menu item
             shortcutHelper.reportGameLaunched(computer, app);
         }
+
+        // 检查是否启用了HDR并主动设置初始状态
+        // 这解决了首次连接时setHdrMode没有被调用的问题
+        boolean appSupportsHdr = Game.this.getIntent().getBooleanExtra(EXTRA_APP_HDR, false);
+        if (appSupportsHdr && prefConfig.enableHdr) {
+            setHdrMode(true, null);
+        }
     }
 
     @Override
@@ -2670,6 +2720,46 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     public void setHdrMode(boolean enabled, byte[] hdrMetadata) {
         LimeLog.info("Display HDR mode: " + (enabled ? "enabled" : "disabled"));
         decoderRenderer.setHdrMode(enabled, hdrMetadata);
+
+        // 通知系统HDR内容状态，特别是对ColorOS系统
+        if (UiHelper.isColorOS()) {
+            notifySystemHdrStatus(enabled);
+        }
+    }
+
+    private void notifySystemHdrStatus(boolean hdrEnabled) {
+        runOnUiThread(() -> {
+            try {
+                // 通过Window设置色彩模式
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    if (hdrEnabled) {
+                        getWindow().setColorMode(ActivityInfo.COLOR_MODE_HDR);
+                    } else {
+                        getWindow().setColorMode(ActivityInfo.COLOR_MODE_DEFAULT);
+                    }
+                }
+
+                // 通过WindowManager.LayoutParams设置亮度
+                WindowManager.LayoutParams params = getWindow().getAttributes();
+                if (hdrEnabled) {
+                    // 强制高亮度模式
+                    params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL;
+                    // 设置窗口标志以支持HDR
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+                    }
+                } else {
+                    params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
+                }
+                getWindow().setAttributes(params);
+
+                LimeLog.info("ColorOS HDR notification: Window color mode and brightness updated for HDR " +
+                        (hdrEnabled ? "enabled" : "disabled"));
+
+            } catch (Exception e) {
+                LimeLog.warning("Failed to notify ColorOS system HDR status: " + e.getMessage());
+            }
+        });
     }
 
     @Override
@@ -2835,30 +2925,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
     }
 
-    // SuppressLint("DefaultLocale") is used to avoid warnings about using the default locale
-    // in String.format calls. This is acceptable here because the formatting is not locale-sensitive.
-    @SuppressLint("DefaultLocale")
-    /**
-     * 计算并格式化网络带宽
-     * @param currentRxBytes 当前接收字节数
-     * @param previousRxBytes 上次接收字节数
-     * @param timeInterval 时间间隔（毫秒）
-     * @return 格式化后的带宽字符串
-     */
-    private String calculateBandwidth(long currentRxBytes, long previousRxBytes, long timeInterval) {
-        if (timeInterval <= 0) {
-            return "0 K/s";
-        }
-        
-        long rxBytesPerDifference = (currentRxBytes - previousRxBytes) / 1024;
-        double speedKBps = rxBytesPerDifference / ((double) timeInterval / 1000);
-        
-        if (speedKBps < 1024) {
-            return String.format("%.0f K/s", speedKBps);
-        }
-        return String.format("%.2f M/s", speedKBps / 1024);
-    }
-
     @Override
     public void onPerfUpdateV(final PerformanceInfo performanceInfo) {
         long currentRxBytes = TrafficStats.getTotalRxBytes();
@@ -2866,7 +2932,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         long timeMillisInterval = timeMillis - previousTimeMillis;
 
         // 计算并更新带宽信息
-        performanceInfo.bandWidth = calculateBandwidth(currentRxBytes, previousRxBytes, timeMillisInterval);
+        performanceInfo.bandWidth = NetHelper.calculateBandwidth(currentRxBytes, previousRxBytes, timeMillisInterval);
         previousTimeMillis = timeMillis;
         previousRxBytes = currentRxBytes;
 
@@ -2879,26 +2945,49 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         
         String renderFpsInfo = String.format("Rx %.0f / Rd %.0f FPS", 
             performanceInfo.receivedFps, performanceInfo.renderedFps);
-            
-        String networkLatencyInfo = String.format("📶 %s   %d ± %d ms", 
+
+        String packetLossInfo = String.format("📶 %.2f%%", performanceInfo.lostFrameRate);
+
+        String networkLatencyInfo = String.format("%s   %d ± %d ms", 
             performanceInfo.bandWidth, 
             (int) (performanceInfo.rttInfo >> 32), 
             (int) performanceInfo.rttInfo);
             
         String decodeLatencyInfo = String.format(performanceInfo.decodeTimeMs < 15 ? 
-            "🎮 %.2f ms" : "🥵 %.2f ms", performanceInfo.decodeTimeMs);
+            "⏱️ %.2f ms" : "🥵 %.2f ms", performanceInfo.decodeTimeMs);
             
         String hostLatencyInfo = performanceInfo.framesWithHostProcessingLatency > 0 ?
             String.format("🖥 %.1f ms", performanceInfo.aveHostProcessingLatency) : "🧋 Ver.V+";
 
         String finalDecoderInfo = decoderInfo;
         runOnUiThread(() -> {
-            perfResView.setText(resInfo);
-            perfDecoderView.setText(finalDecoderInfo);
-            perfRenderFpsView.setText(renderFpsInfo);
-            networkLatencyView.setText(networkLatencyInfo);
-            decodeLatencyView.setText(decodeLatencyInfo);
-            hostLatencyView.setText(hostLatencyInfo);
+            // 只更新可见的性能指标
+            if (perfResView != null && perfResView.getVisibility() == View.VISIBLE) {
+                perfResView.setText(resInfo);
+            }
+            if (perfDecoderView != null && perfDecoderView.getVisibility() == View.VISIBLE) {
+                perfDecoderView.setText(finalDecoderInfo);
+            }
+            if (perfRenderFpsView != null && perfRenderFpsView.getVisibility() == View.VISIBLE) {
+                perfRenderFpsView.setText(renderFpsInfo);
+            }
+            if (packetLossView != null && packetLossView.getVisibility() == View.VISIBLE) {
+                packetLossView.setText(packetLossInfo);
+                // 根据丢包率设置颜色：小于5%为绿色，否则为红色
+                packetLossView.setTextColor(performanceInfo.lostFrameRate < 5.0f ? 0xFF7D9D7D : 0xFFB57D7D);
+            }
+            if (networkLatencyView != null && networkLatencyView.getVisibility() == View.VISIBLE) {
+                // 当丢包率不显示时，在网络延迟前添加信号图标
+                boolean showPacketLoss = packetLossView != null && packetLossView.getVisibility() == View.VISIBLE;
+                String displayText = showPacketLoss ? networkLatencyInfo : "🌐 " + networkLatencyInfo;
+                networkLatencyView.setText(displayText);
+            }
+            if (decodeLatencyView != null && decodeLatencyView.getVisibility() == View.VISIBLE) {
+                decodeLatencyView.setText(decodeLatencyInfo);
+            }
+            if (hostLatencyView != null && hostLatencyView.getVisibility() == View.VISIBLE) {
+                hostLatencyView.setText(hostLatencyInfo);
+            }
         });
     }
 
@@ -2914,14 +3003,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             long timeMillis = System.currentTimeMillis();
             long timeMillisInterval = timeMillis - previousTimeMillis;
             if (timeMillisInterval < 3000) {
-                long rxBytesPerDifference = (currentRxBytes - previousRxBytes) / 1024;
-                double speedKBps = rxBytesPerDifference / ((double) timeMillisInterval / 1000);
-                if (speedKBps < 1024) {
-                    performanceInfo.bandWidth = String.format("%.0f KB/s", speedKBps);
-                } else {
-                    double speedMBps = speedKBps / 1024;
-                    performanceInfo.bandWidth = String.format("%.2f MB/s", speedMBps);
-                }
+                performanceInfo.bandWidth = NetHelper.calculateBandwidth(currentRxBytes, previousRxBytes, timeMillisInterval);
             }
             previousTimeMillis = timeMillis;
             previousRxBytes = currentRxBytes;
@@ -2998,24 +3080,30 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         showGameMenu(null);
     }
 
+    private boolean isPhysicalKeyboardConnected() {
+        return getResources().getConfiguration().keyboard == Configuration.KEYBOARD_QWERTY;
+    }
+
     public void togglePerformanceOverlay() {
         if (requestedPerformanceOverlayVisibility == View.VISIBLE) {
             requestedPerformanceOverlayVisibility = View.GONE;
         } else {
             requestedPerformanceOverlayVisibility = View.VISIBLE;
+            // 重新配置性能覆盖层的方向、位置和显示项
+            configurePerformanceOverlay();
         }
         performanceOverlayView.setVisibility(requestedPerformanceOverlayVisibility);
     }
-
-    // public void imeSwitch() {
-    //     InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-    //     List<InputMethodInfo> mInputMethodProperties = imm.getInputMethodList();
-    //     Optional<InputMethodInfo> hackersInput = mInputMethodProperties.stream().filter(m -> m.getId().startsWith("org.pocketworkstation.pckeyboard")).findFirst();
-    //     imm.showInputMethodPicker();
-    //     if (!hackersInput.isPresent()) {
-    //         Toast.makeText(Game.this, "杂鱼～❤ 还不快装黑客键盘（hacker's keyboard", Toast.LENGTH_LONG).show();
-    //     }
-    // }
+    
+    /**
+     * 刷新性能覆盖层显示项配置（用户更改配置后调用）
+     */
+    public void refreshPerformanceOverlayConfig() {
+        if (performanceOverlayView != null && requestedPerformanceOverlayVisibility == View.VISIBLE) {
+            configureDisplayItems();
+            configureTextAlignment();
+        }
+    }
 
     private static byte getModifier(short key) {
         switch (key) {
@@ -3147,5 +3235,424 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         if (surfaceCreated) {
             setupDisplayPosition();
         }
+    }
+
+    public StreamView getStreamView() {
+        return streamView;
+    }
+
+    public boolean getHandleMotionEvent(StreamView streamView,MotionEvent event) {
+        return handleMotionEvent(streamView,event);
+    }
+    
+    private void configurePerformanceOverlay() {
+        if (performanceOverlayView == null) {
+            return;
+        }
+        
+        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) performanceOverlayView.getLayoutParams();
+        
+        // 设置方向
+        if (prefConfig.perfOverlayOrientation == PreferenceConfiguration.PerfOverlayOrientation.VERTICAL) {
+            performanceOverlayView.setOrientation(LinearLayout.VERTICAL);
+            performanceOverlayView.setBackgroundColor(getResources().getColor(R.color.overlay_background_vertical));
+        } else {
+            performanceOverlayView.setOrientation(LinearLayout.HORIZONTAL);
+            performanceOverlayView.setBackgroundColor(getResources().getColor(R.color.overlay_background_horizontal));
+        }
+        
+        // 根据用户配置显示/隐藏特定的性能指标
+        configureDisplayItems();
+        
+        // 从SharedPreferences读取保存的位置
+        SharedPreferences prefs = getSharedPreferences("performance_overlay", MODE_PRIVATE);
+        boolean hasCustomPosition = prefs.getBoolean("has_custom_position", false);
+        
+        if (hasCustomPosition) {
+            // 使用自定义位置
+            layoutParams.gravity = Gravity.NO_GRAVITY;
+            layoutParams.leftMargin = prefs.getInt("left_margin", 0);
+            layoutParams.topMargin = prefs.getInt("top_margin", 0);
+            layoutParams.rightMargin = 0;
+            layoutParams.bottomMargin = 0;
+        } else {
+            // 使用预设位置
+            switch (prefConfig.perfOverlayPosition) {
+                case TOP:
+                    layoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.TOP;
+                    break;
+                case BOTTOM:
+                    layoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
+                    break;
+                case TOP_LEFT:
+                    layoutParams.gravity = Gravity.LEFT | Gravity.TOP;
+                    break;
+                case TOP_RIGHT:
+                    layoutParams.gravity = Gravity.RIGHT | Gravity.TOP;
+                    break;
+                case BOTTOM_LEFT:
+                    layoutParams.gravity = Gravity.LEFT | Gravity.BOTTOM;
+                    break;
+                case BOTTOM_RIGHT:
+                    layoutParams.gravity = Gravity.RIGHT | Gravity.BOTTOM;
+                    break;
+                default:
+                    layoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.TOP;
+                    break;
+            }
+            // 清除自定义边距
+            layoutParams.leftMargin = 0;
+            layoutParams.topMargin = 0;
+            layoutParams.rightMargin = 0;
+            layoutParams.bottomMargin = 0;
+        }
+        
+        performanceOverlayView.setLayoutParams(layoutParams);
+        
+        // 根据位置和方向调整文字对齐（延迟执行确保View已测量）
+        performanceOverlayView.post(new Runnable() {
+            @Override
+            public void run() {
+                configureTextAlignment();
+            }
+        });
+        
+        // 设置拖动监听器
+        setupPerformanceOverlayDragging();
+    }
+    
+    private void configureDisplayItems() {
+        // 根据用户配置显示/隐藏特定的性能指标
+        if (perfResView != null) {
+            perfResView.setVisibility(PerfOverlayDisplayItemsPreference.isItemEnabled(this, "resolution") ? 
+                View.VISIBLE : View.GONE);
+        }
+        if (perfDecoderView != null) {
+            perfDecoderView.setVisibility(PerfOverlayDisplayItemsPreference.isItemEnabled(this, "decoder") ? 
+                View.VISIBLE : View.GONE);
+        }
+        if (perfRenderFpsView != null) {
+            perfRenderFpsView.setVisibility(PerfOverlayDisplayItemsPreference.isItemEnabled(this, "render_fps") ? 
+                View.VISIBLE : View.GONE);
+        }
+        if (networkLatencyView != null) {
+            networkLatencyView.setVisibility(PerfOverlayDisplayItemsPreference.isItemEnabled(this, "network_latency") ? 
+                View.VISIBLE : View.GONE);
+        }
+        if (decodeLatencyView != null) {
+            decodeLatencyView.setVisibility(PerfOverlayDisplayItemsPreference.isItemEnabled(this, "decode_latency") ? 
+                View.VISIBLE : View.GONE);
+        }
+        if (hostLatencyView != null) {
+            hostLatencyView.setVisibility(PerfOverlayDisplayItemsPreference.isItemEnabled(this, "host_latency") ? 
+                View.VISIBLE : View.GONE);
+        }
+        if (packetLossView != null) {
+            packetLossView.setVisibility(PerfOverlayDisplayItemsPreference.isItemEnabled(this, "packet_loss") ?
+                    View.VISIBLE : View.GONE);
+        }
+    }
+    
+    private void configureTextAlignment() {
+        if (performanceOverlayView == null) {
+            return;
+        }
+        
+        boolean isVertical = prefConfig.perfOverlayOrientation == PreferenceConfiguration.PerfOverlayOrientation.VERTICAL;
+        boolean isRightSide = determineRightSidePosition(isVertical);
+        
+        // 只在垂直布局且位置在右侧时，将文字设置为右对齐
+        int gravity = (isVertical && isRightSide) ? android.view.Gravity.END : android.view.Gravity.START;
+        
+        // 批量设置所有性能信息文本的对齐方式和阴影效果
+        TextView[] perfViews = {
+            perfResView, perfDecoderView, perfRenderFpsView,
+                networkLatencyView, decodeLatencyView, hostLatencyView, packetLossView
+        };
+        
+        for (TextView textView : perfViews) {
+            if (textView != null && textView.getVisibility() == View.VISIBLE) {
+                configureTextViewStyle(textView, gravity, isVertical);
+            }
+        }
+    }
+    
+    /**
+     * 判断性能覆盖层是否位于右侧
+     */
+    private boolean determineRightSidePosition(boolean isVertical) {
+        SharedPreferences prefs = getSharedPreferences("performance_overlay", MODE_PRIVATE);
+        boolean hasCustomPosition = prefs.getBoolean("has_custom_position", false);
+        
+        if (hasCustomPosition) {
+            // 自定义位置：检查是否接近右侧
+            int[] viewDimensions = getViewDimensions(performanceOverlayView);
+            int viewWidth = viewDimensions[0];
+            int leftMargin = prefs.getInt("left_margin", 0);
+            
+            // 如果距离右边缘小于屏幕宽度的1/3，认为是右侧
+            return (leftMargin + viewWidth) > (streamView.getWidth() * 2 / 3);
+        } else {
+            // 预设位置：检查是否为右侧位置
+            return prefConfig.perfOverlayPosition == PreferenceConfiguration.PerfOverlayPosition.TOP_RIGHT ||
+                   prefConfig.perfOverlayPosition == PreferenceConfiguration.PerfOverlayPosition.BOTTOM_RIGHT;
+        }
+    }
+    
+    /**
+     * 配置单个TextView的样式（对齐方式和阴影效果）
+     */
+    private void configureTextViewStyle(TextView textView, int gravity, boolean isVertical) {
+        // 设置文字对齐方式
+        textView.setGravity(gravity);
+        
+        // 根据布局方向设置阴影效果
+        if (isVertical) {
+            // 竖屏时添加字体阴影，提高可读性
+            textView.setShadowLayer(2.0f, 1.0f, 1.0f, 0x80000000);
+        } else {
+            // 横屏时移除阴影
+            textView.setShadowLayer(0, 0, 0, 0);
+        }
+    }
+    
+    @SuppressLint("ClickableViewAccessibility")
+    private void setupPerformanceOverlayDragging() {
+        if (performanceOverlayView == null) {
+            return;
+        }
+        
+        performanceOverlayView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        isDraggingPerfOverlay = true;
+                        perfOverlayStartX = event.getRawX();
+                        perfOverlayStartY = event.getRawY();
+                        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) v.getLayoutParams();
+                        
+                        // 如果使用预设位置（gravity不为NO_GRAVITY），需要转换为实际坐标
+                        if (layoutParams.gravity != Gravity.NO_GRAVITY) {
+                            int[] viewLocation = new int[2];
+                            int[] parentLocation = new int[2];
+                            v.getLocationInWindow(viewLocation);
+                            ((View)v.getParent()).getLocationInWindow(parentLocation);
+                            
+                            // 将预设位置转换为相对于父容器的leftMargin和topMargin
+                            layoutParams.leftMargin = viewLocation[0] - parentLocation[0];
+                            layoutParams.topMargin = viewLocation[1] - parentLocation[1];
+                            layoutParams.gravity = Gravity.NO_GRAVITY;
+                            v.setLayoutParams(layoutParams);
+                        }
+                        
+                        perfOverlayDeltaX = perfOverlayStartX - layoutParams.leftMargin;
+                        perfOverlayDeltaY = perfOverlayStartY - layoutParams.topMargin;
+                        
+                        // 添加视觉反馈：降低透明度表示正在拖动
+                        v.setAlpha(0.7f);
+                        v.setScaleX(1.05f);
+                        v.setScaleY(1.05f);
+                        return true;
+                        
+                    case MotionEvent.ACTION_MOVE:
+                        if (isDraggingPerfOverlay) {
+                            // 获取父容器和View的尺寸
+                            int[] parentDimensions = getParentDimensions(v);
+                            int[] viewDimensions = getViewDimensions(v);
+                            int parentWidth = parentDimensions[0];
+                            int parentHeight = parentDimensions[1];
+                            int viewWidth = viewDimensions[0];
+                            int viewHeight = viewDimensions[1];
+                            
+                            layoutParams = (FrameLayout.LayoutParams) v.getLayoutParams();
+                            int newLeftMargin = (int) (event.getRawX() - perfOverlayDeltaX);
+                            int newTopMargin = (int) (event.getRawY() - perfOverlayDeltaY);
+                            
+                            // 边界检查，防止移出屏幕
+                            newLeftMargin = Math.max(0, Math.min(newLeftMargin, parentWidth - viewWidth));
+                            newTopMargin = Math.max(0, Math.min(newTopMargin, parentHeight - viewHeight));
+                            
+                            layoutParams.leftMargin = newLeftMargin;
+                            layoutParams.topMargin = newTopMargin;
+                            layoutParams.gravity = Gravity.NO_GRAVITY;
+                            v.setLayoutParams(layoutParams);
+                            
+                            // 拖动过程中实时更新文字对齐
+                            configureTextAlignment();
+                            return true;
+                        }
+                        break;
+                        
+                    case MotionEvent.ACTION_UP:
+                        if (isDraggingPerfOverlay) {
+                            isDraggingPerfOverlay = false;
+                            
+                            // 恢复视觉效果
+                            v.setAlpha(1.0f);
+                            v.setScaleX(1.0f);
+                            v.setScaleY(1.0f);
+                            
+                            snapToNearestPosition(v);
+                            
+                            return true;
+                        }
+                        break;
+                }
+                return false;
+            }
+        });
+    }
+    
+    private void snapToNearestPosition(View view) {
+        // 获取父容器和View的尺寸
+        int[] parentDimensions = getParentDimensions(view);
+        int[] viewDimensions = getViewDimensions(view);
+        int screenWidth = parentDimensions[0];
+        int screenHeight = parentDimensions[1];
+        int viewWidth = viewDimensions[0];
+        int viewHeight = viewDimensions[1];
+        
+        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) view.getLayoutParams();
+        int currentX = layoutParams.leftMargin + viewWidth / 2;
+        int currentY = layoutParams.topMargin + viewHeight / 2;
+        
+        // 计算到各个吸附位置的距离
+        SnapPosition nearestPosition = SnapPosition.TOP_CENTER;
+        double minDistance = Double.MAX_VALUE;
+        
+        // 定义8个吸附位置
+        int[][] snapPositions = {
+            {viewWidth / 2, viewHeight / 2}, // TOP_LEFT
+            {screenWidth / 2, viewHeight / 2}, // TOP_CENTER  
+            {screenWidth - viewWidth / 2, viewHeight / 2}, // TOP_RIGHT
+            {viewWidth / 2, screenHeight / 2}, // CENTER_LEFT
+            {screenWidth - viewWidth / 2, screenHeight / 2}, // CENTER_RIGHT
+            {viewWidth / 2, screenHeight - viewHeight / 2}, // BOTTOM_LEFT
+            {screenWidth / 2, screenHeight - viewHeight / 2}, // BOTTOM_CENTER
+            {screenWidth - viewWidth / 2, screenHeight - viewHeight / 2} // BOTTOM_RIGHT
+        };
+        
+        SnapPosition[] positions = SnapPosition.values();
+        
+        // 找到最近的吸附位置
+        for (int i = 0; i < snapPositions.length; i++) {
+            double distance = Math.sqrt(
+                Math.pow(currentX - snapPositions[i][0], 2) + 
+                Math.pow(currentY - snapPositions[i][1], 2)
+            );
+            
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearestPosition = positions[i];
+            }
+        }
+        
+        // 吸过来
+        animateToSnapPosition(view, nearestPosition, screenWidth, screenHeight);
+    }
+    
+    private void animateToSnapPosition(View view, SnapPosition position, int screenWidth, int screenHeight) {
+        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) view.getLayoutParams();
+        int[] viewDimensions = getViewDimensions(view);
+        int viewWidth = viewDimensions[0];
+        int viewHeight = viewDimensions[1];
+        
+        int targetX, targetY;
+        
+        switch (position) {
+            case TOP_LEFT:
+                targetX = 0;
+                targetY = 0;
+                break;
+            case TOP_CENTER:
+                targetX = (screenWidth - viewWidth) / 2;
+                targetY = 0;
+                break;
+            case TOP_RIGHT:
+                targetX = screenWidth - viewWidth;
+                targetY = 0;
+                break;
+            case CENTER_LEFT:
+                targetX = 0;
+                targetY = (screenHeight - viewHeight) / 2;
+                break;
+            case CENTER_RIGHT:
+                targetX = screenWidth - viewWidth;
+                targetY = (screenHeight - viewHeight) / 2;
+                break;
+            case BOTTOM_LEFT:
+                targetX = 0;
+                targetY = screenHeight - viewHeight;
+                break;
+            case BOTTOM_CENTER:
+                targetX = (screenWidth - viewWidth) / 2;
+                targetY = screenHeight - viewHeight;
+                break;
+            case BOTTOM_RIGHT:
+                targetX = screenWidth - viewWidth;
+                targetY = screenHeight - viewHeight;
+                break;
+            default:
+                targetX = (screenWidth - viewWidth) / 2;
+                targetY = 0;
+                break;
+        }
+        
+        // 使用动画平滑移动到目标位置
+        view.animate()
+            .translationX(targetX - layoutParams.leftMargin)
+            .translationY(targetY - layoutParams.topMargin)
+            .setDuration(200)
+            .withEndAction(() -> {
+                // 动画结束后更新实际的布局参数
+                layoutParams.leftMargin = targetX;
+                layoutParams.topMargin = targetY;
+                view.setTranslationX(0);
+                view.setTranslationY(0);
+                view.setLayoutParams(layoutParams);
+                
+                // 保存位置到SharedPreferences
+                savePerformanceOverlayPosition(targetX, targetY);
+                
+                // 重新配置文字对齐
+                configureTextAlignment();
+            })
+            .start();
+    }
+    
+    private void savePerformanceOverlayPosition(int x, int y) {
+        SharedPreferences prefs = getSharedPreferences("performance_overlay", MODE_PRIVATE);
+        prefs.edit()
+            .putBoolean("has_custom_position", true)
+            .putInt("left_margin", x)
+            .putInt("top_margin", y)
+            .apply();
+    }
+    
+    /**
+     * 获取View的实际尺寸，如果未测量则使用估计值
+     */
+    private int[] getViewDimensions(View view) {
+        int width = view.getWidth();
+        int height = view.getHeight();
+        
+        // 如果View尺寸为0（还未测量），使用估计值
+        if (width == 0) {
+            width = 300; // 估计宽度
+        }
+        if (height == 0) {
+            height = 50; // 估计高度
+        }
+        
+        return new int[]{width, height};
+    }
+    
+    /**
+     * 获取父容器的尺寸
+     */
+    private int[] getParentDimensions(View view) {
+        View parent = (View) view.getParent();
+        return new int[]{parent.getWidth(), parent.getHeight()};
     }
 }
