@@ -360,6 +360,11 @@
             android:title="@string/title_checkbox_enable_pip"
             android:summary="@string/summary_checkbox_enable_pip"
             android:defaultValue="false" />
+        <com.limelight.preferences.ExternalDisplayPreference
+            android:key="use_external_display"
+            android:title="使用外接显示器"
+            android:summary="如果连接了外接显示器，则在外接显示器上显示串流画面"
+            android:defaultValue="false" />
         <com.limelight.preferences.LanguagePreference
             android:key="list_languages"
             android:title="@string/title_language_list"

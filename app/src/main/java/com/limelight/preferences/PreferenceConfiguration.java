@@ -259,6 +259,8 @@ public class PreferenceConfiguration {
     public ScreenPosition screenPosition;
     public int screenOffsetX;
     public int screenOffsetY;
+    
+    public boolean useExternalDisplay;
 
     public static boolean isNativeResolution(int width, int height) {
         // 使用集合检查是否为原生分辨率
@@ -747,6 +749,8 @@ public class PreferenceConfiguration {
         // 读取偏移百分比
         config.screenOffsetX = prefs.getInt(SCREEN_OFFSET_X_PREF_STRING, DEFAULT_SCREEN_OFFSET_X);
         config.screenOffsetY = prefs.getInt(SCREEN_OFFSET_Y_PREF_STRING, DEFAULT_SCREEN_OFFSET_Y);
+        
+        config.useExternalDisplay = prefs.getBoolean("use_external_display", false);
 
         return config;
     }
@@ -799,8 +803,9 @@ public class PreferenceConfiguration {
                     .putBoolean(ENABLE_PERF_OVERLAY_STRING, enablePerfOverlay)
                     .putBoolean(REVERSE_RESOLUTION_PREF_STRING, reverseResolution)
                     .putString(SCREEN_POSITION_PREF_STRING, positionString)
-                    .putInt(SCREEN_OFFSET_X_PREF_STRING, screenOffsetX)
-                    .putInt(SCREEN_OFFSET_Y_PREF_STRING, screenOffsetY)
+                                    .putInt(SCREEN_OFFSET_X_PREF_STRING, screenOffsetX)
+                .putInt(SCREEN_OFFSET_Y_PREF_STRING, screenOffsetY)
+                .putBoolean("use_external_display", useExternalDisplay)
                     .apply();
             return true;
         } catch (Exception e) {
@@ -824,6 +829,7 @@ public class PreferenceConfiguration {
         copy.screenPosition = this.screenPosition;
         copy.screenOffsetX = this.screenOffsetX;
         copy.screenOffsetY = this.screenOffsetY;
+        copy.useExternalDisplay = this.useExternalDisplay;
         return copy;
     }
 }
