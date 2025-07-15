@@ -8,9 +8,12 @@ import android.app.LocaleManager;
 import android.app.UiModeManager;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.Insets;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.os.LocaleList;
 import android.view.View;
@@ -18,6 +21,7 @@ import android.view.WindowInsets;
 import android.view.WindowManager;
 
 import com.limelight.Game;
+import com.limelight.LimeLog;
 import com.limelight.R;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.preferences.PreferenceConfiguration;
@@ -257,6 +261,36 @@ public class UiHelper {
                 .setPositiveButton(parent.getResources().getString(R.string.yes), dialogClickListener)
                 .setNegativeButton(parent.getResources().getString(R.string.no), dialogClickListener)
                 .show();
+    }
+
+    public static int getBatteryLevel(Context context) {
+        int level = 0;
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                // 使用BatteryManager获取更精确的电量信息
+                BatteryManager batteryManager = (BatteryManager) context.getSystemService(Context.BATTERY_SERVICE);
+                level = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+            } else {
+                // 兼容旧版本设备的实现
+                Intent batteryIntent = context.registerReceiver(null,
+                        new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+                if (batteryIntent != null) {
+                    level = (batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) * 100) /
+                            batteryIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+                }
+            }
+
+            // 处理异常值
+            if (level < 0 || level > 100) {
+                LimeLog.warning("Invalid battery level: " + level);
+                return 0;
+            }
+        } catch (Exception e) {
+            LimeLog.warning("Error getting battery level: " + e.getMessage());
+            return 0;
+        }
+
+        return level;
     }
 
     public static boolean isColorOS() {
