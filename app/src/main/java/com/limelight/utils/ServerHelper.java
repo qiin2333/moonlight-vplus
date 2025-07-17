@@ -1,5 +1,7 @@
 package com.limelight.utils;
 
+import static android.content.Context.MODE_PRIVATE;
+
 import android.app.Activity;
 import android.content.Intent;
 import android.widget.Toast;
@@ -64,6 +66,7 @@ public class ServerHelper {
         intent.putExtra(Game.EXTRA_UNIQUEID, managerBinder.getUniqueId());
         intent.putExtra(Game.EXTRA_PC_UUID, computer.uuid);
         intent.putExtra(Game.EXTRA_PC_NAME, computer.name);
+        intent.putExtra(Game.EXTRA_PAIR_NAME, computer.getPairName(parent));
         intent.putExtra(Game.EXTRA_PC_USEVDD, computer.useVdd);
         if (app.getCmdList() != null) {
             intent.putExtra(Game.EXTRA_APP_CMD, app.getCmdList().toString());

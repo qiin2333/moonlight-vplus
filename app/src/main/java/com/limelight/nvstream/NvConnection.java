@@ -49,12 +49,12 @@ public class NvConnection {
     private final boolean isMonkey;
     private final Context appContext;
 
-    public NvConnection(Context appContext, ComputerDetails.AddressTuple host, int httpsPort, String uniqueId, StreamConfiguration config, LimelightCryptoProvider cryptoProvider, X509Certificate serverCert)
+    public NvConnection(Context appContext, ComputerDetails.AddressTuple host, int httpsPort, String uniqueId, String pairName, StreamConfiguration config, LimelightCryptoProvider cryptoProvider, X509Certificate serverCert)
     {
         this.appContext = appContext;
         this.cryptoProvider = cryptoProvider;
         this.uniqueId = uniqueId;
-        this.clientName = Settings.Global.getString(appContext.getContentResolver(), "device_name");
+        this.clientName = !pairName.isEmpty() ? pairName : Settings.Global.getString(appContext.getContentResolver(), "device_name");
 
         this.context = new ConnectionContext();
         this.context.serverAddress = host;

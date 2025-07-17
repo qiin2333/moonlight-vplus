@@ -1,5 +1,8 @@
 package com.limelight.nvstream.http;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+
 import java.security.cert.X509Certificate;
 import java.util.Objects;
 
@@ -148,6 +151,11 @@ public class ComputerDetails {
         this.nvidiaServer = details.nvidiaServer;
         this.useVdd = details.useVdd;
         this.rawAppList = details.rawAppList;
+    }
+
+    public String getPairName(Context context) {
+        SharedPreferences sharedPreferences = context.getSharedPreferences("pair_name_map", context.MODE_PRIVATE);
+        return sharedPreferences.getString(uuid, "");
     }
 
     @Override

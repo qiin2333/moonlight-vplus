@@ -67,6 +67,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Rational;
+import android.util.TypedValue;
 import android.view.Display;
 import android.view.InputDevice;
 import android.view.KeyCharacterMap;
@@ -89,6 +90,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.view.Gravity;
 import android.util.DisplayMetrics;
+import android.hardware.display.DisplayManager;
+import android.view.Display;
+import android.app.Presentation;
 
 import org.json.JSONException;
 
@@ -240,10 +244,16 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     public static final String EXTRA_UNIQUEID = "UniqueId";
     public static final String EXTRA_PC_UUID = "UUID";
     public static final String EXTRA_PC_NAME = "PcName";
+    public static final String EXTRA_PAIR_NAME = "PairName";
     public static final String EXTRA_APP_HDR = "HDR";
     public static final String EXTRA_SERVER_CERT = "ServerCert";
     public static final String EXTRA_PC_USEVDD = "usevdd";
     public static final String EXTRA_APP_CMD = "CmdList";
+
+    private DisplayManager displayManager;
+    private Display externalDisplay;
+    private boolean useExternalDisplay = false;
+    private DisplayManager.DisplayListener displayListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -401,6 +411,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         int httpsPort = Game.this.getIntent().getIntExtra(EXTRA_HTTPS_PORT, 0); // 0 is treated as unknown
         int appId = Game.this.getIntent().getIntExtra(EXTRA_APP_ID, StreamConfiguration.INVALID_APP_ID);
         String uniqueId = Game.this.getIntent().getStringExtra(EXTRA_UNIQUEID);
+        String pairName = Game.this.getIntent().getStringExtra(EXTRA_PAIR_NAME);
         boolean appSupportsHdr = Game.this.getIntent().getBooleanExtra(EXTRA_APP_HDR, false);
         boolean pcUseVdd = Game.this.getIntent().getBooleanExtra(EXTRA_PC_USEVDD, false);
         byte[] derCertData = Game.this.getIntent().getByteArrayExtra(EXTRA_SERVER_CERT);
@@ -434,7 +445,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         if (prefConfig.enableHdr) {
             // Start our HDR checklist
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                Display display = getWindowManager().getDefaultDisplay();
+                Display display = getTargetDisplay();
                 Display.HdrCapabilities hdrCaps = display.getHdrCapabilities();
 
                 // We must now ensure our display is compatible with HDR10
@@ -579,7 +590,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // Initialize the connection
         conn = new NvConnection(getApplicationContext(),
                 new ComputerDetails.AddressTuple(host, port),
-                httpsPort, uniqueId, config,
+                httpsPort, uniqueId, pairName, config,
                 PlatformBinding.getCryptoProvider(this), serverCert);
         controllerHandler = new ControllerHandler(this, conn, this, prefConfig);
         keyboardTranslator = new KeyboardTranslator();
@@ -645,10 +656,30 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // Set up display position
         setupDisplayPosition();
+
+        // 初始化显示管理器
+        displayManager = (DisplayManager) getSystemService(Context.DISPLAY_SERVICE);
+
+        // 设置显示器监听器
+        setupDisplayListener();
+
+        // 检查是否有外接显示器
+        checkForExternalDisplay();
+
+        // 如果有外接显示器，启动外接显示器演示，并降低内建屏幕亮度到30%
+        if (useExternalDisplay) {
+            Window window = getWindow();
+            if (window != null) {
+                WindowManager.LayoutParams layoutParams = window.getAttributes();
+                layoutParams.screenBrightness = 0.3f;
+                window.setAttributes(layoutParams);
+            }
+            startExternalDisplayPresentation();
+        }
     }
 
     private void setPreferredOrientationForCurrentDisplay() {
-        Display display = getWindowManager().getDefaultDisplay();
+        Display display = getTargetDisplay();
 
         // 首先确定基于分辨率的所需方向
         int desiredOrientation = Configuration.ORIENTATION_UNDEFINED;
@@ -898,7 +929,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     private float prepareDisplayForRendering() {
-        Display display = getWindowManager().getDefaultDisplay();
+        Display display = getTargetDisplay();
         WindowManager.LayoutParams windowLayoutParams = getWindow().getAttributes();
         float displayRefreshRate;
 
@@ -1168,6 +1199,18 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // Destroy the capture provider
         inputCaptureProvider.destroy();
+
+        // 清理外接显示器演示
+        if (externalPresentation != null) {
+            externalPresentation.dismiss();
+            externalPresentation = null;
+        }
+
+        // 取消注册显示器监听器
+        if (displayListener != null && displayManager != null) {
+            displayManager.unregisterDisplayListener(displayListener);
+            displayListener = null;
+        }
     }
 
     @Override
@@ -3654,5 +3697,241 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private int[] getParentDimensions(View view) {
         View parent = (View) view.getParent();
         return new int[]{parent.getWidth(), parent.getHeight()};
+    }
+
+    /**
+     * 设置显示器监听器
+     */
+    private void setupDisplayListener() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            displayListener = new DisplayManager.DisplayListener() {
+                @Override
+                public void onDisplayAdded(int displayId) {
+                    LimeLog.info("Display added: " + displayId);
+                    if (prefConfig.useExternalDisplay && displayId != Display.DEFAULT_DISPLAY) {
+                        // 外接显示器已连接
+                        checkForExternalDisplay();
+                        if (useExternalDisplay) {
+                            startExternalDisplayPresentation();
+                        }
+                    }
+                }
+
+                @Override
+                public void onDisplayRemoved(int displayId) {
+                    LimeLog.info("Display removed: " + displayId);
+                    if (externalDisplay != null && displayId == externalDisplay.getDisplayId()) {
+                        // 外接显示器已断开
+                        if (externalPresentation != null) {
+                            externalPresentation.dismiss();
+                            externalPresentation = null;
+                        }
+                        externalDisplay = null;
+                        useExternalDisplay = false;
+
+                        // 显示主屏幕内容
+                        findViewById(R.id.surfaceView).setVisibility(View.VISIBLE);
+                        Toast.makeText(Game.this, "外接显示器已断开，切换到主屏幕", Toast.LENGTH_SHORT).show();
+                    }
+                }
+
+                @Override
+                public void onDisplayChanged(int displayId) {
+                    LimeLog.info("Display changed: " + displayId);
+                }
+            };
+
+            displayManager.registerDisplayListener(displayListener, null);
+        }
+    }
+
+    /**
+     * 检查并配置外接显示器
+     */
+    private void checkForExternalDisplay() {
+        // 如果用户没有启用外接显示器选项，直接返回
+        if (!prefConfig.useExternalDisplay) {
+            LimeLog.info("External display disabled by user preference");
+            return;
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            Display[] displays = displayManager.getDisplays();
+
+            // 查找外接显示器（不是主显示器）
+            for (Display display : displays) {
+                if (display.getDisplayId() != Display.DEFAULT_DISPLAY) {
+                    externalDisplay = display;
+                    useExternalDisplay = true;
+                    LimeLog.info("Found external display: " + display.getName() +
+                            " (ID: " + display.getDisplayId() + ")");
+                    break;
+                }
+            }
+
+            if (!useExternalDisplay) {
+                LimeLog.info("No external display found, using default display");
+            }
+        }
+    }
+
+    /**
+     * 获取要使用的显示器
+     */
+    private Display getTargetDisplay() {
+        if (useExternalDisplay && externalDisplay != null) {
+            return externalDisplay;
+        }
+        return getWindowManager().getDefaultDisplay();
+    }
+
+    /**
+     * 检查是否有外接显示器连接
+     */
+    public static boolean hasExternalDisplay(Context context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            DisplayManager displayManager = (DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
+            if (displayManager != null) {
+                Display[] displays = displayManager.getDisplays();
+                for (Display display : displays) {
+                    if (display.getDisplayId() != Display.DEFAULT_DISPLAY) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 将Activity移动到外接显示器
+     */
+    private void moveToExternalDisplay() {
+        if (useExternalDisplay && externalDisplay != null &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+
+            // 创建WindowManager.LayoutParams for external display
+            WindowManager.LayoutParams params = getWindow().getAttributes();
+            params.preferredDisplayModeId = externalDisplay.getMode().getModeId();
+            getWindow().setAttributes(params);
+
+            // 或者使用Presentation来在外接显示器上显示
+            // 这需要重新设计Activity结构
+        }
+    }
+
+    /**
+     * 外接显示器演示类
+     */
+    private class ExternalDisplayPresentation extends Presentation {
+
+        public ExternalDisplayPresentation(Context outerContext, Display display) {
+            super(outerContext, display);
+        }
+
+        @Override
+        protected void onCreate(Bundle savedInstanceState) {
+            super.onCreate(savedInstanceState);
+
+            // 设置全屏
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+            getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+                            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+                            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+
+            // 强制横屏
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+
+            // 设置内容视图
+            setContentView(R.layout.activity_game);
+
+            // 初始化StreamView
+            StreamView externalStreamView = findViewById(R.id.surfaceView);
+            if (externalStreamView != null) {
+                // 替换主Activity的StreamView
+                streamView = externalStreamView;
+                streamView.setOnGenericMotionListener(Game.this);
+                streamView.setOnKeyListener(Game.this);
+                streamView.setInputCallbacks(Game.this);
+
+                // 设置触摸监听
+                View backgroundTouchView = findViewById(R.id.backgroundTouchView);
+                if (backgroundTouchView != null) {
+                    backgroundTouchView.setOnTouchListener(Game.this);
+                }
+                
+                // 初始化通知覆盖层
+                notificationOverlayView = findViewById(R.id.notificationOverlay);
+
+                // 设置Surface回调
+                streamView.getHolder().addCallback(Game.this);
+            }
+        }
+
+        @Override
+        public void onDisplayRemoved() {
+            super.onDisplayRemoved();
+            // 外接显示器被移除时，关闭串流
+            Game.this.finish();
+        }
+    }
+
+    private ExternalDisplayPresentation externalPresentation;
+
+    /**
+     * 启动外接显示器演示
+     */
+    @SuppressLint({"ResourceAsColor", "SetTextI18n"})
+    private void startExternalDisplayPresentation() {
+        if (!(useExternalDisplay && externalDisplay != null && externalPresentation == null)) {
+            return;
+        }
+
+        externalPresentation = new ExternalDisplayPresentation(this, externalDisplay);
+        externalPresentation.show();
+
+        // 隐藏主Activity的内容
+        View surfaceView = findViewById(R.id.surfaceView);
+        if (surfaceView != null) {
+            surfaceView.setVisibility(View.GONE);
+        }
+
+        if (prefConfig.enablePerfOverlay) {
+            // 创建电量显示TextView
+            final TextView batteryTextView = new TextView(this);
+            batteryTextView.setGravity(Gravity.CENTER);
+            batteryTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 48);
+            batteryTextView.setTextColor(getResources().getColor(R.color.scene_color_1));
+
+            // 设置布局参数（居中显示）
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+            );
+            params.gravity = Gravity.CENTER;
+            batteryTextView.setLayoutParams(params);
+
+            // 添加到内建屏幕（主Activity）视图的中间
+            FrameLayout rootView = findViewById(android.R.id.content);
+            if (rootView != null) {
+                rootView.addView(batteryTextView);
+            }
+
+            // 创建定时更新任务
+            final Handler handler = new Handler();
+            final Runnable updateBatteryTask = new Runnable() {
+                @Override
+                public void run() {
+                    batteryTextView.setText(String.format("🔋 %d%%", UiHelper.getBatteryLevel(Game.this)));
+                    handler.postDelayed(this, 60000); // 每分钟更新一次
+                }
+            };
+
+            // 立即执行首次更新并启动定时器
+            updateBatteryTask.run();
+        }
+
+        Toast.makeText(this, "串流已切换到外接显示器, 若某些外接设备不能正常横屏显示，请翻滚主机。", Toast.LENGTH_LONG).show();
     }
 }
