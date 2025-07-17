@@ -18,6 +18,7 @@ import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.nvstream.http.NvApp;
 import com.limelight.nvstream.http.NvHTTP;
 import com.limelight.nvstream.http.PairingManager;
+import com.limelight.nvstream.http.PairingManager.PairResult;
 import com.limelight.nvstream.http.PairingManager.PairState;
 import com.limelight.nvstream.wol.WakeOnLanSender;
 import com.limelight.preferences.AddComputerManually;
@@ -672,7 +673,10 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
 
                     PairingManager pm = httpConn.getPairingManager();
 
-                    PairState pairState = pm.pair(httpConn.getServerInfo(true), pinStr);
+                    PairResult pairResult = pm.pair(httpConn.getServerInfo(true), pinStr);
+                    PairState pairState = pairResult.state;
+                    String pairName = pairResult.pairName;
+
                     if (pairState == PairState.PIN_WRONG) {
                         message = getResources().getString(R.string.pair_incorrect_pin);
                     } else if (pairState == PairState.FAILED) {
@@ -691,6 +695,11 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                         // Pin this certificate for later HTTPS use
                         managerBinder.getComputer(computer.uuid).serverCert = pm.getPairedCert();
 
+                        // 保存配对名，不使用puterDatabaseManager，使用SharedPreferences保存uuid与pairName的映射关系
+                        SharedPreferences sharedPreferences = getSharedPreferences("pair_name_map", MODE_PRIVATE);
+                        sharedPreferences.edit().putString(computer.uuid, pairName).apply();
+
+                        // managerBinder.getComputer(computer.uuid).pairName = pairName;
                         // Invalidate reachability information after pairing to force
                         // a refresh before reading pair state again
                         managerBinder.invalidateStateForComputer(computer.uuid);
