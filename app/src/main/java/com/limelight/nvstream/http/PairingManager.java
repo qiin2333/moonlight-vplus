@@ -182,115 +182,134 @@ public class PairingManager {
         return serverCert;
     }
     
-    public PairState pair(String serverInfo, String pin) throws IOException, XmlPullParserException {
+    /**
+     * 配对处理
+     * @param serverInfo 服务端信息
+     * @param pin 配对PIN码
+     * @return PairResult 包含配对状态和pairname
+     * @throws IOException
+     * @throws XmlPullParserException
+     */
+    public PairResult pair(String serverInfo, String pin) throws IOException, XmlPullParserException {
         PairingHashAlgorithm hashAlgo;
 
         int serverMajorVersion = http.getServerMajorVersion(serverInfo);
-        LimeLog.info("Pairing with server generation: "+serverMajorVersion);
+        LimeLog.info("Pairing with server generation: " + serverMajorVersion);
         if (serverMajorVersion >= 7) {
             // Gen 7+ uses SHA-256 hashing
             hashAlgo = new Sha256PairingHash();
-        }
-        else {
+        } else {
             // Prior to Gen 7, SHA-1 is used
             hashAlgo = new Sha1PairingHash();
         }
-        
-        // Generate a salt for hashing the PIN
+
+        // 生成用于PIN哈希的salt
         byte[] salt = generateRandomBytes(16);
 
-        // Combine the salt and pin, then create an AES key from them
+        // 合并salt和pin，然后用它们生成AES密钥
         byte[] aesKey = generateAesKey(hashAlgo, saltPin(salt, pin));
-        
-        // Send the salt and get the server cert. This doesn't have a read timeout
-        // because the user must enter the PIN before the server responds
-        String getCert = http.executePairingCommand("phrase=getservercert&salt="+
-                bytesToHex(salt)+"&clientcert="+bytesToHex(pemCertBytes),
+
+        // 发送salt并获取服务端证书。此处没有读取超时，因为用户必须输入PIN后服务端才会响应
+        String getCert = http.executePairingCommand("phrase=getservercert&salt=" +
+                bytesToHex(salt) + "&clientcert=" + bytesToHex(pemCertBytes),
                 false);
         if (!NvHTTP.getXmlString(getCert, "paired", true).equals("1")) {
-            return PairState.FAILED;
+            return new PairResult(PairState.FAILED, null);
         }
 
-        // Save this cert for retrieval later
+        // 获取配对名（pairname），兼容服务端未返回pairname的情况
+        String pairName = NvHTTP.getXmlString(getCert, "pairname", false);
+
+        // 保存证书以便后续检索
         serverCert = extractPlainCert(getCert);
         if (serverCert == null) {
-            // Attempting to pair while another device is pairing will cause GFE
-            // to give an empty cert in the response.
+            // 如果有其他设备正在配对，GFE会返回空证书
             http.unpair();
-            return PairState.ALREADY_IN_PROGRESS;
+            return new PairResult(PairState.ALREADY_IN_PROGRESS, pairName);
         }
 
-        // Require this cert for TLS to this host
+        // 要求此证书用于与此主机的TLS通信
         http.setServerCert(serverCert);
-        
-        // Generate a random challenge and encrypt it with our AES key
+
+        // 生成随机挑战并用AES密钥加密
         byte[] randomChallenge = generateRandomBytes(16);
         byte[] encryptedChallenge = encryptAes(randomChallenge, aesKey);
-        
-        // Send the encrypted challenge to the server
-        String challengeResp = http.executePairingCommand("clientchallenge="+bytesToHex(encryptedChallenge), true);
+
+        // 发送加密挑战到服务端
+        String challengeResp = http.executePairingCommand("clientchallenge=" + bytesToHex(encryptedChallenge), true);
         if (!NvHTTP.getXmlString(challengeResp, "paired", true).equals("1")) {
             http.unpair();
-            return PairState.FAILED;
+            return new PairResult(PairState.FAILED, pairName);
         }
-        
-        // Decode the server's response and subsequent challenge
+
+        // 解码服务端响应和后续挑战
         byte[] encServerChallengeResponse = hexToBytes(NvHTTP.getXmlString(challengeResp, "challengeresponse", true));
         byte[] decServerChallengeResponse = decryptAes(encServerChallengeResponse, aesKey);
-        
+
         byte[] serverResponse = Arrays.copyOfRange(decServerChallengeResponse, 0, hashAlgo.getHashLength());
         byte[] serverChallenge = Arrays.copyOfRange(decServerChallengeResponse, hashAlgo.getHashLength(), hashAlgo.getHashLength() + 16);
-        
-        // Using another 16 bytes secret, compute a challenge response hash using the secret, our cert sig, and the challenge
+
+        // 用另一个16字节的secret，结合secret、证书签名和challenge计算挑战响应哈希
         byte[] clientSecret = generateRandomBytes(16);
         byte[] challengeRespHash = hashAlgo.hashData(concatBytes(concatBytes(serverChallenge, cert.getSignature()), clientSecret));
         byte[] challengeRespEncrypted = encryptAes(challengeRespHash, aesKey);
-        String secretResp = http.executePairingCommand("serverchallengeresp="+bytesToHex(challengeRespEncrypted), true);
+        String secretResp = http.executePairingCommand("serverchallengeresp=" + bytesToHex(challengeRespEncrypted), true);
         if (!NvHTTP.getXmlString(secretResp, "paired", true).equals("1")) {
             http.unpair();
-            return PairState.FAILED;
+            return new PairResult(PairState.FAILED, pairName);
         }
-        
-        // Get the server's signed secret
+
+        // 获取服务端签名的secret
         byte[] serverSecretResp = hexToBytes(NvHTTP.getXmlString(secretResp, "pairingsecret", true));
         byte[] serverSecret = Arrays.copyOfRange(serverSecretResp, 0, 16);
         byte[] serverSignature = Arrays.copyOfRange(serverSecretResp, 16, serverSecretResp.length);
 
-        // Ensure the authenticity of the data
+        // 校验数据真实性
         if (!verifySignature(serverSecret, serverSignature, serverCert)) {
-            // Cancel the pairing process
+            // 取消配对流程
             http.unpair();
-            
-            // Looks like a MITM
-            return PairState.FAILED;
+            // 可能是中间人攻击
+            return new PairResult(PairState.FAILED, pairName);
         }
-        
-        // Ensure the server challenge matched what we expected (aka the PIN was correct)
+
+        // 校验服务端challenge是否与预期一致（即PIN是否正确）
         byte[] serverChallengeRespHash = hashAlgo.hashData(concatBytes(concatBytes(randomChallenge, serverCert.getSignature()), serverSecret));
         if (!Arrays.equals(serverChallengeRespHash, serverResponse)) {
-            // Cancel the pairing process
+            // 取消配对流程
             http.unpair();
-            
-            // Probably got the wrong PIN
-            return PairState.PIN_WRONG;
+            // 可能PIN错误
+            return new PairResult(PairState.PIN_WRONG, pairName);
         }
-        
-        // Send the server our signed secret
+
+        // 发送客户端签名的secret给服务端
         byte[] clientPairingSecret = concatBytes(clientSecret, signData(clientSecret, pk));
-        String clientSecretResp = http.executePairingCommand("clientpairingsecret="+bytesToHex(clientPairingSecret), true);
+        String clientSecretResp = http.executePairingCommand("clientpairingsecret=" + bytesToHex(clientPairingSecret), true);
         if (!NvHTTP.getXmlString(clientSecretResp, "paired", true).equals("1")) {
             http.unpair();
-            return PairState.FAILED;
+            return new PairResult(PairState.FAILED, pairName);
         }
-        
-        // Do the initial challenge (seems necessary for us to show as paired)
+
+        // 执行初始挑战（似乎有必要让我们显示为已配对）
         String pairChallenge = http.executePairingChallenge();
         if (!NvHTTP.getXmlString(pairChallenge, "paired", true).equals("1")) {
             http.unpair();
-            return PairState.FAILED;
+            return new PairResult(PairState.FAILED, pairName);
         }
 
-        return PairState.PAIRED;
+        return new PairResult(PairState.PAIRED, pairName);
+    }
+
+    /**
+     * 配对结果类，包含配对状态和pairname
+     */
+    public static class PairResult {
+        public final PairState state;
+        public final String pairName;
+
+        public PairResult(PairState state, String pairName) {
+            this.state = state;
+            this.pairName = pairName != null && !pairName.equals("unknown") ? pairName : "";
+        }
     }
     
     private interface PairingHashAlgorithm {
