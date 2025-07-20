@@ -137,4 +137,7 @@
     <string name="nettest_title_done">ネットワークテスト終了</string>
     <string name="pcview_menu_details">詳細を表示</string>
     <string name="nettest_title_waiting">ネットワーク接続テスト中</string>
+    <string name="title_enable_post_stream_toast">ストリーミング後にレイテンシーメッセージを表示</string>
+    <string name="summary_enable_post_stream_toast">ストリーム終了後にレイテンシー情報メッセージを表示</string>
+    <string name="mic_stats_continuity">音声連続性: %.1f%% (キャプチャ:%d エンコード:%d 送信:%d ドロップ:%d)</string>
 </resources>

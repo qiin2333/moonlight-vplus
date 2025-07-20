@@ -158,7 +158,7 @@
     <string name="summary_checkbox_enable_keyboard_toggle_in_native_touch">\t</string>
     <string name="title_seekbar_keyboard_toggle_fingers_native_touch">轻敲手指数量</string>
     <string name="summary_seekbar_keyboard_toggle_fingers_native_touch">轻敲切换本地键盘的最少手指数量。\n仅在多点触控模式生效，触摸板模式3指即可切换本地键盘(不受此配置影响)。</string>
-    <string name="suffix_seekbar_keyboard_toggle_fingers_native_touch"> </string>
+    <string name="suffix_seekbar_keyboard_toggle_fingers_native_touch"></string>
 
     <string name="title_checkbox_multi_controller"> 自动检测手柄 </string>
     <string name="summary_checkbox_multi_controller"> 禁用此项所有手柄将视为一个手柄 </string>
@@ -213,8 +213,8 @@
     <string name="title_checkbox_small_icon_mode"> 使用小图标 </string>
     <string name="summary_checkbox_small_icon_mode"> 使用小图标以在屏幕上显示更多项目 </string>
     <string name="category_host_settings"> 主机设置 </string>
-    <string name="title_checkbox_enable_sops"> 优化游戏设置 </string>
-    <string name="summary_checkbox_enable_sops"> 允许GFE为最佳串流效果自动更改游戏设置 </string>
+    <string name="title_checkbox_enable_sops"> 自动优化主机设置 </string>
+    <string name="summary_checkbox_enable_sops"> 允许主机自动更改为与客户端最佳匹配的显示设置 </string>
     <string name="title_checkbox_host_audio"> 在电脑上播放声音 </string>
     <string name="summary_checkbox_host_audio"> 在电脑和本设备同时输出声音 </string>
     <string name="category_advanced_settings"> 高级设置 </string>
@@ -228,6 +228,7 @@
     <string name="summary_enable_perf_overlay">显示实时的串流监控数据，盯帧必备！</string>
     <string name="title_enable_post_stream_toast">串流完毕显示延迟信息</string>
     <string name="summary_enable_post_stream_toast">串流结束后显示延迟信息</string>
+    <string name="mic_stats_continuity">音频连续性: %.1f%% (捕获:%d 编码:%d 发送:%d 丢弃:%d)</string>
     <string name="title_osc_opacity">更改屏幕按钮透明度</string>
     <string name="dialog_title_osc_opacity">透明度</string>
     <string name="suffix_osc_opacity">%</string>
@@ -309,6 +310,11 @@
     <string name="resolution_prefix_native_portrait">（纵向）</string>
     <string name="title_checkbox_enable_audiofx">启用对系统均衡器的支持</string>
     <string name="summary_checkbox_enable_audiofx">串流时允许音效工作，可能会导致音频延迟增加</string>
+    <string name="title_checkbox_enable_mic">麦克风重定向 (实验性)</string>
+    <string name="summary_checkbox_enable_mic">将设备麦克风串流到主机，需Sunshine版本在20250720以上的杂鱼主机。</string>
+    <string name="title_seekbar_mic_bitrate">麦克风传输音质</string>
+    <string name="summary_seekbar_mic_bitrate">调整麦克风重定向的音频质量。更高的比特率提供更好的音频质量，但会使用更多带宽。</string>
+    <string name="suffix_seekbar_mic_bitrate_kbps">kbps</string>
     <string name="title_checkbox_reduce_refresh_rate">允许降低刷新率</string>
     <string name="summary_checkbox_reduce_refresh_rate">较低的屏幕刷新率可以在增加一些视频延迟的情况下省电</string>
     <string name="frame_conversion_error">主机 PC 报告了致命的视频编码错误。
@@ -341,4 +347,9 @@
     <string name="summary_analog_scrolling">在鼠标模式下选择用哪个摇杆控制鼠标移动</string>
     <string name="summary_seekbar_vibrate_fallback_strength">增强或减弱设备的震动强度</string>
     <string name="analogscroll_none">默认 (两个摇杆都控制鼠标)</string>
+
+    <string name="mic_button">麦克风</string>
+    <string name="mic_enabled">麦克风已启用</string>
+    <string name="mic_disabled">麦克风已禁用</string>
+    <string name="mic_permission_required">需要麦克风权限</string>
 </resources>

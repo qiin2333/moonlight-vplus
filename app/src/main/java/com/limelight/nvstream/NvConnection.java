@@ -48,10 +48,12 @@ public class NvConnection {
     private static Semaphore connectionAllowed = new Semaphore(1);
     private final boolean isMonkey;
     private final Context appContext;
+    private ComputerDetails.AddressTuple host;
 
     public NvConnection(Context appContext, ComputerDetails.AddressTuple host, int httpsPort, String uniqueId, String pairName, StreamConfiguration config, LimelightCryptoProvider cryptoProvider, X509Certificate serverCert)
     {
         this.appContext = appContext;
+        this.host = host;
         this.cryptoProvider = cryptoProvider;
         this.uniqueId = uniqueId;
         this.clientName = !pairName.isEmpty() ? pairName : Settings.Global.getString(appContext.getContentResolver(), "device_name");
@@ -437,7 +439,8 @@ public class NvConnection {
                         context.riKey.getEncoded(), ib.array(),
                         context.videoCapabilities,
                         context.streamConfig.getColorSpace(),
-                        context.streamConfig.getColorRange());
+                        context.streamConfig.getColorRange(),
+                        context.streamConfig.getEnableMic());
                 if (ret != 0) {
                     // LiStartConnection() failed, so the caller is not expected
                     // to stop the connection themselves. We need to release their
@@ -619,5 +622,13 @@ public class NvConnection {
                 throw new RuntimeException(e);
             }
         }).start();
+    }
+
+    /**
+     * 获取主机地址
+     * @return 主机地址字符串
+     */
+    public String getHost() {
+        return host.address;
     }
 }

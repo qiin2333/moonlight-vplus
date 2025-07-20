@@ -602,7 +602,6 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         if (computer.details.state == ComputerDetails.State.OFFLINE ||
             computer.details.state == ComputerDetails.State.UNKNOWN) {
             menu.add(Menu.NONE, WOL_ID, 1, getResources().getString(R.string.pcview_menu_send_wol));
-            menu.add(Menu.NONE, GAMESTREAM_EOL_ID, 2, getResources().getString(R.string.pcview_menu_eol));
         }
         else if (computer.details.pairState != PairState.PAIRED) {
             menu.add(Menu.NONE, PAIR_ID, 1, getResources().getString(R.string.pcview_menu_pair_pc));

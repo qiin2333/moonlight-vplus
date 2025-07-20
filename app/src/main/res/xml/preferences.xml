@@ -106,6 +106,24 @@
             android:title="@string/title_checkbox_enable_audiofx"
             android:summary="@string/summary_checkbox_enable_audiofx"
             android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_enable_mic"
+            android:title="@string/title_checkbox_enable_mic"
+            android:summary="@string/summary_checkbox_enable_mic"
+            android:defaultValue="false" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_mic_bitrate_kbps"
+            android:dependency="checkbox_enable_mic"
+            android:dialogMessage="@string/summary_seekbar_mic_bitrate"
+            seekbar:min="32"
+            android:max="256"
+            seekbar:step="8"
+            seekbar:keyStep="16"
+            seekbar:divisor="1"
+            android:defaultValue="96"
+            android:summary="@string/summary_seekbar_mic_bitrate"
+            android:text="@string/suffix_seekbar_mic_bitrate_kbps"
+            android:title="@string/title_seekbar_mic_bitrate" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_gamepad_settings"
         android:key="category_gamepad_settings">
