@@ -17,6 +17,7 @@ import com.limelight.nvstream.NvConnection;
  * 负责管理麦克风的权限、状态和UI更新
  */
 public class MicrophoneManager {
+    private static final String TAG = "MicrophoneManager";
     
     private final Context context;
     private final NvConnection connection;
@@ -65,25 +66,28 @@ public class MicrophoneManager {
             LimeLog.info("麦克风流已存在");
             return true;
         }
+
+        if (!hasMicrophonePermission()) {
+            showMessage(context.getString(R.string.mic_permission_required));
+            return false;
+        }
         
         try {
-            // 更新比特率配置
             MicrophoneConfig.updateBitrateFromConfig(context);
-            
             microphoneStream = new MicrophoneStream(connection);
+
             if (!microphoneStream.start()) {
-                LimeLog.warning("无法启动麦克风流");
+                showMessage("无法启动麦克风流");
                 return false;
-            } else {
-                LimeLog.info("麦克风流启动成功");
             }
+
+            LimeLog.info("麦克风流启动成功");
             
-            // 检查麦克风是否真的可用
             if (!microphoneStream.isMicrophoneAvailable()) {
-                LimeLog.warning("主机不支持麦克风功能");
+                showMessage("主机不支持麦克风功能");
             }
-            
-            // 初始化后默认暂停麦克风，等待用户主动开启
+
+            // 初始化后默认暂停麦克风
             if (microphoneStream.isRunning()) {
                 microphoneStream.pause();
                 LimeLog.info("麦克风流已初始化，默认状态为关闭");
@@ -91,7 +95,8 @@ public class MicrophoneManager {
             
             return true;
         } catch (Exception e) {
-            LimeLog.severe("初始化麦克风流失败: " + e.getMessage());
+            LimeLog.warning("初始化麦克风流失败: " + e.getMessage());
+            showMessage("初始化麦克风流失败: " + e.getMessage());
             return false;
         }
     }
@@ -100,10 +105,7 @@ public class MicrophoneManager {
      * 切换麦克风状态
      */
     public void toggleMicrophone() {
-        // 首先检查权限
-        if (!checkMicrophonePermission()) {
-            return;
-        }
+        if (!checkMicrophonePermission()) return;
         
         if (microphoneStream != null) {
             if (microphoneStream.isRunning()) {
@@ -111,22 +113,17 @@ public class MicrophoneManager {
             } else {
                 resumeMicrophone();
             }
-        } else {
-            // 如果麦克风流不存在，尝试创建并启动
-            if (connection != null) {
-                if (initializeMicrophoneStream()) {
-                    // 默认不自动开启麦克风，需要用户再次点击
-                    updateMicrophoneButtonState();
-                    showMessage(context.getString(R.string.mic_disabled));
-                } else {
-                    showPermissionError();
-                }
+        } else if (connection != null) {
+            if (initializeMicrophoneStream()) {
+                updateMicrophoneButtonState();
+                showMessage(context.getString(R.string.mic_disabled));
             } else {
-                showPermissionError();
+                showMessage("麦克风状态切换: 初始化失败");
             }
+        } else {
+            showMessage("麦克风状态切换: 连接不存在");
         }
         
-        // 更新按钮状态
         updateMicrophoneButtonState();
     }
     
@@ -137,9 +134,7 @@ public class MicrophoneManager {
         if (microphoneStream != null && microphoneStream.isRunning()) {
             microphoneStream.pause();
             showMessage(context.getString(R.string.mic_disabled));
-            if (stateListener != null) {
-                stateListener.onMicrophoneStateChanged(false);
-            }
+            notifyStateChange(false);
         }
     }
     
@@ -147,31 +142,35 @@ public class MicrophoneManager {
      * 恢复麦克风
      */
     public void resumeMicrophone() {
+        if (!checkMicrophonePermission()) return;
+        
         if (microphoneStream != null && !microphoneStream.isRunning()) {
-            // 尝试恢复麦克风，如果失败则重新初始化
             if (microphoneStream.resume()) {
                 showMessage(context.getString(R.string.mic_enabled));
-                if (stateListener != null) {
-                    stateListener.onMicrophoneStateChanged(true);
-                }
+                notifyStateChange(true);
             } else {
-                // 如果恢复失败，尝试重新启动整个麦克风流
-                LimeLog.warning("麦克风恢复失败，尝试重新初始化");
-                microphoneStream.stop();
-                
-                // 更新比特率配置
-                MicrophoneConfig.updateBitrateFromConfig(context);
-                
-                microphoneStream = new MicrophoneStream(connection);
-                if (microphoneStream.start()) {
-                    showMessage(context.getString(R.string.mic_enabled));
-                    if (stateListener != null) {
-                        stateListener.onMicrophoneStateChanged(true);
-                    }
-                } else {
-                    showPermissionError();
-                }
+                restartMicrophoneStream();
             }
+        }
+    }
+
+    private void restartMicrophoneStream() {
+        LimeLog.warning("麦克风恢复失败，尝试重新初始化");
+        microphoneStream.stop();
+        MicrophoneConfig.updateBitrateFromConfig(context);
+
+        microphoneStream = new MicrophoneStream(connection);
+        if (microphoneStream.start()) {
+            showMessage(context.getString(R.string.mic_enabled));
+            notifyStateChange(true);
+        } else {
+            showMessage("麦克风恢复失败: 重新初始化失败");
+        }
+    }
+
+    private void notifyStateChange(boolean isActive) {
+        if (stateListener != null) {
+            stateListener.onMicrophoneStateChanged(isActive);
         }
     }
     
@@ -190,25 +189,12 @@ public class MicrophoneManager {
     }
     
     /**
-     * 检查麦克风是否真正可用（包括权限和设备状态）
+     * 检查麦克风是否真正可用
      */
     public boolean isMicrophoneTrulyAvailable() {
-        // 检查权限
-        if (!hasMicrophonePermission()) {
-            return false;
-        }
-        
-        // 检查麦克风流是否可用
-        if (microphoneStream == null) {
-            return false;
-        }
-        
-        // 检查主机是否请求麦克风
-        if (!microphoneStream.isMicrophoneAvailable()) {
-            return false;
-        }
-        
-        return true;
+        return hasMicrophonePermission() &&
+                microphoneStream != null &&
+                microphoneStream.isMicrophoneAvailable();
     }
     
     /**
@@ -226,8 +212,8 @@ public class MicrophoneManager {
      * 检查是否有麦克风权限
      */
     public boolean hasMicrophonePermission() {
-        return ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) 
-                == PackageManager.PERMISSION_GRANTED;
+        return ContextCompat.checkSelfPermission(context,
+                android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
     }
     
     /**
@@ -248,20 +234,18 @@ public class MicrophoneManager {
      * 处理权限请求结果
      */
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        if (requestCode == MicrophoneConfig.PERMISSION_REQUEST_MICROPHONE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // 权限被授予，延迟一下再切换麦克风，确保系统权限状态已更新
+        if (requestCode == MicrophoneConfig.PERMISSION_REQUEST_MICROPHONE &&
+                grantResults.length > 0) {
+
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 new android.os.Handler().postDelayed(() -> {
-                    // 再次检查权限状态
                     if (hasMicrophonePermission()) {
-                        // 权限确实已授予，现在可以安全地切换麦克风
                         toggleMicrophone();
                     } else {
                         showPermissionError();
                     }
-                }, MicrophoneConfig.PERMISSION_DELAY_MS); // 延迟时间
+                }, MicrophoneConfig.PERMISSION_DELAY_MS);
             } else {
-                // 权限被拒绝
                 showPermissionError();
             }
         }
@@ -272,19 +256,15 @@ public class MicrophoneManager {
      */
     private void setupMicrophoneButton() {
         if (micButton == null) return;
-        
-        // 只有在启用了麦克风重定向时才显示按钮
+
+        micButton.setVisibility(enableMic ? android.view.View.VISIBLE : android.view.View.GONE);
         if (enableMic) {
-            micButton.setVisibility(android.view.View.VISIBLE);
             updateMicrophoneButtonState();
-            
             micButton.setOnClickListener(v -> {
                 if (checkMicrophonePermission()) {
                     toggleMicrophone();
                 }
             });
-        } else {
-            micButton.setVisibility(android.view.View.GONE);
         }
     }
     
@@ -293,22 +273,12 @@ public class MicrophoneManager {
      */
     public void updateMicrophoneButtonState() {
         if (micButton == null) return;
-        
-        // 检查麦克风是否真正可用
-        boolean micAvailable = isMicrophoneTrulyAvailable();
-        
-        if (isMicrophoneActive()) {
-            micButton.setSelected(true);
-            micButton.setImageResource(R.drawable.ic_btn_mic);
-            micButton.setContentDescription(context.getString(R.string.mic_enabled));
-        } else {
-            micButton.setSelected(false);
-            micButton.setImageResource(R.drawable.ic_btn_mic_disabled);
-            micButton.setContentDescription(context.getString(R.string.mic_disabled));
-        }
-        
-        // 默认启用按钮，让用户可以点击开启麦克风
-        // 只有在完全没有权限或主机不支持时才禁用
+
+        boolean isActive = isMicrophoneActive();
+        micButton.setSelected(isActive);
+        micButton.setImageResource(isActive ? R.drawable.ic_btn_mic : R.drawable.ic_btn_mic_disabled);
+        micButton.setContentDescription(context.getString(
+                isActive ? R.string.mic_enabled : R.string.mic_disabled));
         micButton.setEnabled(true);
     }
     
@@ -322,31 +292,32 @@ public class MicrophoneManager {
         }
     }
     
-    /**
-     * 显示权限错误消息
-     */
     private void showPermissionError() {
         showMessage(context.getString(R.string.mic_permission_required));
     }
     
-    /**
-     * 显示消息
-     */
     private void showMessage(String message) {
-        Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+        if (context instanceof android.app.Activity) {
+            ((android.app.Activity) context).runOnUiThread(() -> {
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+            });
+        } else {
+            // 如果不是 Activity，使用 Handler 确保在主线程中执行
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+            });
+        }
     }
     
     /**
-     * 测试麦克风状态（用于调试）
+     * 测试麦克风状态
      */
     public void testMicrophoneStatus() {
-        boolean hasPermission = hasMicrophonePermission();
-        boolean micStreamExists = microphoneStream != null;
-        boolean micAvailable = micStreamExists && microphoneStream.isMicrophoneAvailable();
-        boolean micActive = isMicrophoneActive();
-        
-        String status = String.format("权限: %s, 流存在: %s, 可用: %s, 激活: %s", 
-                hasPermission, micStreamExists, micAvailable, micActive);
+        String status = String.format("权限: %s, 流存在: %s, 可用: %s, 激活: %s",
+                hasMicrophonePermission(),
+                microphoneStream != null,
+                isMicrophoneAvailable(),
+                isMicrophoneActive());
         
         LimeLog.info("麦克风状态: " + status);
         Toast.makeText(context, status, Toast.LENGTH_LONG).show();
@@ -358,7 +329,6 @@ public class MicrophoneManager {
     public void setEnableMic(boolean enable) {
         this.enableMic = enable;
         
-        // 如果启用麦克风，更新比特率配置
         if (enable) {
             MicrophoneConfig.updateBitrateFromConfig(context);
         }

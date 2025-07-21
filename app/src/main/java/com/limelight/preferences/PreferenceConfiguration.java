@@ -164,7 +164,7 @@ public class PreferenceConfiguration {
 
     // 麦克风设置默认值
     private static final boolean DEFAULT_ENABLE_MIC = false;
-    private static final int DEFAULT_MIC_BITRATE = 128; // 默认128 kbps
+    private static final int DEFAULT_MIC_BITRATE = 96; // 默认128 kbps
 
     public static final int FRAME_PACING_MIN_LATENCY = 0;
     public static final int FRAME_PACING_BALANCED = 1;

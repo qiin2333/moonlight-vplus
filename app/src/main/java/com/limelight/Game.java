@@ -2785,14 +2785,14 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // 初始化麦克风流
         if (prefConfig.enableMic) {
-            if (!microphoneManager.initializeMicrophoneStream()) {
-                LimeLog.warning("Failed to start microphone stream");
-            } else {
-                LimeLog.info("Microphone stream initialized successfully");
-            }
-
-            // 更新麦克风按钮状态
             runOnUiThread(() -> {
+                if (!microphoneManager.initializeMicrophoneStream()) {
+                    LimeLog.warning("Failed to start microphone stream");
+                } else {
+                    LimeLog.info("Microphone stream initialized successfully");
+                }
+
+                // 更新麦克风按钮状态
                 if (micButton != null) {
                     microphoneManager.setMicrophoneButton(micButton);
                     // 确保麦克风默认状态为关闭

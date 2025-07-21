@@ -33,6 +33,15 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
     public MicrophoneStream(NvConnection conn) {
         this.conn = conn;
         this.packetQueue = new LinkedBlockingQueue<>(MicrophoneConfig.MAX_QUEUE_SIZE);
+        
+        String hostAddress = conn.getHost();
+        try {
+            this.host = InetAddress.getByName(hostAddress);
+            LimeLog.info("初始化麦克风流 - 主机地址: " + hostAddress);
+        } catch (Exception e) {
+            LimeLog.severe("初始化麦克风流 - 主机地址解析失败: " + e.getMessage());
+            this.host = null;
+        }
     }
     
     public boolean start() {
@@ -146,7 +155,6 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
         packetQueue.clear();
         
         // 不停止发送线程，因为我们将来可能需要重新启动麦克风
-        LimeLog.info("麦克风捕获已暂停");
     }
     
     private boolean startMicrophoneCapture() {
@@ -166,7 +174,6 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
             
             // 创建发送socket
             socket = new DatagramSocket();
-            host = InetAddress.getByName(conn.getHost());
             
             // 创建编码器
             encoder = new OpusEncoder(MicrophoneConfig.SAMPLE_RATE, MicrophoneConfig.CHANNELS, MicrophoneConfig.getOpusBitrate());
