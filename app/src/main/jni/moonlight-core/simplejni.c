@@ -10,6 +10,10 @@
 #include "controller_type.h"
 #include "controller_list.h"
 
+// 外部变量声明
+extern uint16_t MicPortNumber;
+extern STREAM_CONFIGURATION StreamConfig;
+
 JNIEXPORT void JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_sendMouseMove(JNIEnv *env, jclass clazz, jshort deltaX, jshort deltaY) {
     LiSendMouseMoveEvent(deltaX, deltaY);
@@ -259,3 +263,20 @@ Java_com_limelight_nvstream_jni_MoonBridge_guessControllerHasShareButton(JNIEnv 
     // Xbox Elite and DualSense Edge controllers have paddles
     return SDL_IsJoystickXboxSeriesX(vendorId, productId);
 }
+
+JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_getHostFeatureFlags(JNIEnv *env, jclass clazz) {
+    return LiGetHostFeatureFlags();
+}
+
+JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_getMicPortNumber(JNIEnv *env, jclass clazz) {
+    return MicPortNumber;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_isMicrophoneRequested(JNIEnv *env, jclass clazz) {
+    // 如果麦克风端口号已经协商好并且StreamConfig.enableMic为true，说明主机需要麦克风
+    // 这表示主机已经通过RTSP协商请求了麦克风流
+    return (MicPortNumber != 0 && StreamConfig.enableMic) ? JNI_TRUE : JNI_FALSE;
+} 

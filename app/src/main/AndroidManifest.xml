@@ -51,6 +51,8 @@
         android:name="android.hardware.type.pc"
         android:required="false"/>
 
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <application
         android:allowBackup="true"
         android:fullBackupContent="@xml/backup_rules"

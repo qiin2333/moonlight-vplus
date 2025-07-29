@@ -29,6 +29,7 @@ public class StreamConfiguration {
     private int colorRange;
     private int colorSpace;
     private boolean persistGamepadsAfterDisconnect;
+    private boolean enableMic;
     private boolean useVdd;
 
     public static class Builder {
@@ -140,6 +141,11 @@ public class StreamConfiguration {
             return this;
         }
 
+        public StreamConfiguration.Builder setEnableMic(boolean enable) {
+            config.enableMic = enable;
+            return this;
+        }
+
         public StreamConfiguration build() {
             return config;
         }
@@ -161,6 +167,7 @@ public class StreamConfiguration {
         this.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO;
         this.supportedVideoFormats = MoonBridge.VIDEO_FORMAT_H264;
         this.attachedGamepadMask = 0;
+        this.enableMic = false;
         this.useVdd = false;
     }
     public int getWidth() {
@@ -245,6 +252,10 @@ public class StreamConfiguration {
 
     public int getColorSpace() {
         return colorSpace;
+    }
+
+    public boolean getEnableMic() {
+        return enableMic;
     }
 
     public boolean getUseVdd() { return useVdd; }

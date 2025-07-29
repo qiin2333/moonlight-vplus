@@ -131,5 +131,23 @@
         android:preferKeepClear="true"
         android:visibility="gone" />
 
+    <!-- 麦克风按钮 -->
+    <ImageButton
+        android:id="@+id/micButton"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_gravity="center|right"
+        android:layout_marginTop="20dp"
+        android:layout_marginRight="20dp"
+        android:layout_marginEnd="20dp"
+        android:background="#00000000"
+        android:src="@drawable/ic_btn_mic"
+        android:contentDescription="@string/mic_button"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true"
+        android:scaleType="centerInside"
+        android:padding="8dp" />
+
 
 </merge>

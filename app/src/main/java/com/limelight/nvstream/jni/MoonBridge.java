@@ -346,7 +346,7 @@ public class MoonBridge {
                                               int clientRefreshRateX100,
                                               byte[] riAesKey, byte[] riAesIv,
                                               int videoCapabilities,
-                                              int colorSpace, int colorRange);
+                                              int colorSpace, int colorRange, boolean enableMic);
 
     public static native void stopConnection();
 
@@ -417,4 +417,13 @@ public class MoonBridge {
     public static native boolean guessControllerHasShareButton(int vendorId, int productId);
 
     public static native void init();
+
+    // This function returns any extended feature flags supported by the host.
+    public static native int getHostFeatureFlags();
+    
+    // 获取麦克风端口号
+    public static native int getMicPortNumber();
+    
+    // 检查主机是否请求麦克风输入
+    public static native boolean isMicrophoneRequested();
 }

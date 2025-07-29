@@ -194,7 +194,14 @@
     <string name="title_audio_config_list">Surround sound configurationItem</string>
     <string name="summary_audio_config_list">Enable 5.1 or 7.1 surround sound for home-theater systems</string>
     <string name="title_checkbox_enable_audiofx">Enable system equalizer support</string>
-    <string name="summary_checkbox_enable_audiofx">Allows audio effects to function while streaming, but may increase audio latency</string>
+    <string name="summary_checkbox_enable_audiofx">Allow audio effects to work during streaming, may increase audio latency</string>
+    <string name="title_checkbox_enable_mic">Enable microphone redirection</string>
+    <string name="summary_checkbox_enable_mic">Redirect device microphone to the host computer for voice chat and communication</string>
+    <string name="title_seekbar_mic_bitrate">Microphone bitrate</string>
+    <string name="summary_seekbar_mic_bitrate">Adjust the audio quality of microphone redirection. Higher bitrates provide better audio quality but use more bandwidth.</string>
+    <string name="suffix_seekbar_mic_bitrate_kbps">kbps</string>
+    <string name="title_checkbox_reduce_refresh_rate">Allow refresh rate reduction</string>
+    <string name="summary_checkbox_reduce_refresh_rate">Lower display refresh rates can save power at the expense of some additional video latency</string>
 
     <string name="category_gamepad_settings">Gamepad Settings</string>
     <string name="title_checkbox_multi_controller">Automatic gamepad presence detection</string>
@@ -298,8 +305,6 @@
     <string name="category_advanced_settings">Advanced Settings</string>
     <string name="title_unlock_fps">Unlock all possible frame rates</string>
     <string name="summary_unlock_fps">Streaming at 90 or 120 FPS may reduce latency on high-end devices but can cause lag or instability on devices that can\'t support it</string>
-    <string name="title_checkbox_reduce_refresh_rate">Allow refresh rate reduction</string>
-    <string name="summary_checkbox_reduce_refresh_rate">Lower display refresh rates can save power at the expense of some additional video latency</string>
     <string name="title_checkbox_disable_warnings">Disable warning messages</string>
     <string name="summary_checkbox_disable_warnings">Disable on-screen connection warning messages while streaming</string>
     <string name="title_disable_frame_drop">Never drop frames</string>
@@ -322,6 +327,7 @@
     <string name="summary_perf_overlay_display_items">选择要在性能覆盖层中显示的信息项目</string>
     <string name="title_enable_post_stream_toast">Show latency message after streaming</string>
     <string name="summary_enable_post_stream_toast">Display a latency information message after the stream ends</string>
+    <string name="mic_stats_continuity">Audio continuity: %.1f%% (Captured:%d Encoded:%d Sent:%d Dropped:%d)</string>
 
     <string name="category_help">Help</string>
     <string name="title_setup_guide">Setup guide</string>
@@ -372,4 +378,9 @@
     <string name="analogscroll_none">None (both sticks move the mouse)</string>
     <string name="analogscroll_right">Right analog stick</string>
     <string name="analogscroll_left">Left analog stick</string>
+
+    <string name="mic_button">Microphone</string>
+    <string name="mic_enabled">Microphone enabled</string>
+    <string name="mic_disabled">Microphone disabled</string>
+    <string name="mic_permission_required">Microphone permission required</string>
 </resources>
