@@ -237,6 +237,11 @@
             android:title="@string/title_checkbox_absolute_mouse_mode"
             android:summary="@string/summary_checkbox_absolute_mouse_mode"
             android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_enable_esc_menu"
+            android:title="@string/title_checkbox_enable_esc_menu"
+            android:summary="@string/summary_checkbox_enable_esc_menu"
+            android:defaultValue="true" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_enhanced_touch_settings"
         android:key="category_enhanced_touch">

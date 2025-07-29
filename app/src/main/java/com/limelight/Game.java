@@ -83,6 +83,7 @@ import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.animation.AnimationUtils;
 import android.widget.FrameLayout;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ImageButton;
@@ -93,6 +94,7 @@ import android.view.Gravity;
 import android.util.DisplayMetrics;
 import android.hardware.display.DisplayManager;
 import android.app.Presentation;
+import android.view.animation.Animation;
 
 import java.io.ByteArrayInputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -186,6 +188,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private int requestedNotificationOverlayVisibility = View.GONE;
     private LinearLayout performanceOverlayView;
     private int requestedPerformanceOverlayVisibility = View.GONE;
+    private boolean hasShownPerfOverlay = false; // 跟踪性能覆盖层是否已经显示过
 
     // 性能覆盖层拖动相关
     private boolean isDraggingPerfOverlay = false;
@@ -470,7 +473,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // Check if the user has enabled performance stats overlay
         if (prefConfig.enablePerfOverlay) {
             requestedPerformanceOverlayVisibility = View.VISIBLE;
-            performanceOverlayView.setVisibility(View.VISIBLE);
+            // 初始状态下设置为不可见，等待性能数据更新时再显示
+            performanceOverlayView.setVisibility(View.GONE);
+            performanceOverlayView.setAlpha(0.0f);
             // 配置性能覆盖层的方向和位置
             configurePerformanceOverlay();
         }
@@ -496,7 +501,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 this);
 
         // Don't stream HDR if the decoder can't support it
-        if (willStreamHdr && !decoderRenderer.isHevcMain10Hdr10Supported() && !decoderRenderer.isAv1Main10Supported()) {
+        if (willStreamHdr && !decoderRenderer.isHevcMain10Supported() && !decoderRenderer.isAv1Main10Supported()) {
             willStreamHdr = false;
             Toast.makeText(this, "Decoder does not support HDR10 profile", Toast.LENGTH_LONG).show();
         }
@@ -515,7 +520,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         int supportedVideoFormats = MoonBridge.VIDEO_FORMAT_H264;
         if (decoderRenderer.isHevcSupported()) {
             supportedVideoFormats |= MoonBridge.VIDEO_FORMAT_H265;
-            if (willStreamHdr && decoderRenderer.isHevcMain10Hdr10Supported()) {
+            if (willStreamHdr && decoderRenderer.isHevcMain10Supported()) {
                 supportedVideoFormats |= MoonBridge.VIDEO_FORMAT_H265_MAIN10;
             }
         }
@@ -857,13 +862,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             else {
                 LimeLog.warning("SemWindowManager.getInstance() returned null");
             }
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (NoSuchMethodException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
+        } catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException |
+                 IllegalAccessException e) {
             e.printStackTrace();
         }
     }
@@ -1501,7 +1501,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public boolean handleKeyDown(KeyEvent event) {
-        // Pass-through navigation keys
+        // Pass-through virtual navigation keys
         if ((event.getFlags() & KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0) {
             return false;
         }
@@ -1546,7 +1546,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 return false;
             }
 
-            // We'll send it as a raw key event if we have a key mapping, otherwise we'll send it as UTF-8 text (if it's a printable character).
+            // We'll send it as a raw key event if we have a key mapping, otherwise we'll send it
+            // as UTF-8 text (if it's a printable character).
             short translated = keyboardTranslator.translate(event.getKeyCode(), event.getDeviceId());
             if (translated == 0) {
                 // Make sure it has a valid Unicode representation and it's not a dead character
@@ -1584,7 +1585,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     public boolean handleKeyUp(KeyEvent event) {
         if (isPhysicalKeyboardConnected()) {
             // ESC键双击逻辑
-            if (event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE) {
+            if (event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE && prefConfig.enableEscMenu) {
                 long currentTime = System.currentTimeMillis();
                 
                 if (currentTime - lastEscPressTime <= ESC_DOUBLE_PRESS_INTERVAL && hasShownEscHint) {
@@ -1703,6 +1704,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
      * true : AbsoluteTouchContext
      */
     public void setTouchMode(boolean enableRelativeTouch){
+
         for (int i = 0; i < touchContextMap.length; i++) {
             if (enableRelativeTouch) {
                 prefConfig.touchscreenTrackpad = true;
@@ -1959,6 +1961,14 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     handledStylusEvent = true;
                 }
 
+                // 为触控笔事件添加增强触控支持
+                if (prefConfig.enableEnhancedTouch) {
+                    NativeTouchContext.Pointer pointer = nativeTouchPointerMap.get(event.getPointerId(i));
+                    if (pointer != null) {
+                        pointer.updatePointerCoords(event, i); // 更新指针坐标
+                    }
+                }
+
                 if (!sendPenEventForPointer(view, event, eventType, toolType, i)) {
                     // Pen events aren't supported by the host
                     return false;
@@ -1979,6 +1989,34 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 // Not a stylus event
                 return false;
             }
+
+            // 为触控笔事件添加增强触控支持
+            if (prefConfig.enableEnhancedTouch) {
+                int actionIndex = event.getActionIndex();
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_POINTER_DOWN:
+                    case MotionEvent.ACTION_DOWN:
+                    case MotionEvent.ACTION_HOVER_ENTER:
+                        // 创建新的Pointer实例
+                        NativeTouchContext.Pointer pointer = new NativeTouchContext.Pointer(event);
+                        nativeTouchPointerMap.put(pointer.getPointerId(), pointer);
+                        break;
+                    case MotionEvent.ACTION_POINTER_UP:
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_HOVER_EXIT:
+                        // 移除Pointer实例
+                        nativeTouchPointerMap.remove(event.getPointerId(actionIndex));
+                        break;
+                    case MotionEvent.ACTION_HOVER_MOVE:
+                        // 更新悬空指针的坐标
+                        NativeTouchContext.Pointer hoverPointer = nativeTouchPointerMap.get(event.getPointerId(actionIndex));
+                        if (hoverPointer != null) {
+                            hoverPointer.updatePointerCoords(event, actionIndex);
+                        }
+                        break;
+                }
+            }
+
             return sendPenEventForPointer(view, event, eventType, toolType, event.getActionIndex());
         }
     }
@@ -1998,6 +2036,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         if (eventType < 0) {
             return false;
         }
+
         if (event.getActionMasked() == MotionEvent.ACTION_MOVE) {
             // Move events may impact all active pointers
             int pointerCount = event.getPointerCount();
@@ -2021,9 +2060,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             return true;
         } else if (event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
             // Cancel impacts all active pointers
-            if (prefConfig.enableEnhancedTouch) {
-                nativeTouchPointerMap.clear(); // 清除所有指针记录
-            }
             return conn.sendTouchEvent(MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, 0,
                     0, 0, 0, 0, 0,
                     MoonBridge.LI_ROT_UNKNOWN) != MoonBridge.LI_ERR_UNSUPPORTED;
@@ -2042,9 +2078,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     // toggle keyboard when all fingers lift up, just like how it works in trackpad mode.
                     if (event.getEventTime() - multiFingerDownTime < MULTI_FINGER_TAP_THRESHOLD) {
                         toggleKeyboard();
-                    }
-                    if (prefConfig.enableEnhancedTouch) {
-                        nativeTouchPointerMap.clear(); // 清除所有指针记录
                     }
                     break;
                 case MotionEvent.ACTION_POINTER_UP:
@@ -2075,7 +2108,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     // NB: View is only present if called from a view callback
     private boolean handleMotionEvent(View view, MotionEvent event) {
         // Pass through mouse/touch/joystick input if we're not grabbing
-
         if (!grabbedInput) {
             return false;
         }
@@ -2334,15 +2366,14 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     return true;
                 }
 
-
                 // TODO: Re-enable native touch when have a better solution for handling
                 // cancelled touches from Android gestures and 3 finger taps to activate
                 // the software keyboard.
-                // if (!prefConfig.touchscreenTrackpad && trySendTouchEvent(view, event)) {
-                //     // If this host supports touch events and absolute touch is enabled,
-                //     // send it directly as a touch event.
-                //     return true;
-                // }
+                /*if (!prefConfig.touchscreenTrackpad && trySendTouchEvent(view, event)) {
+                    // If this host supports touch events and absolute touch is enabled,
+                    // send it directly as a touch event.
+                    return true;
+                }*/
 
                 TouchContext context = getTouchContext(actionIndex);
                 if (context == null) {
@@ -3085,6 +3116,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         String finalDecoderInfo = decoderInfo;
         runOnUiThread(() -> {
+            // 如果是第一次收到性能数据且性能覆盖层已启用，则等待1秒显示覆盖层
+            if (!hasShownPerfOverlay && requestedPerformanceOverlayVisibility == View.VISIBLE) {
+                performanceOverlayView.setVisibility(View.VISIBLE);
+                performanceOverlayView.setAlpha(1.0f);
+            }
+
             // 只更新可见的性能指标
             if (perfResView != null && perfResView.getVisibility() == View.VISIBLE) {
                 perfResView.setText(resInfo);
@@ -3210,13 +3247,30 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     public void togglePerformanceOverlay() {
         if (requestedPerformanceOverlayVisibility == View.VISIBLE) {
+            // 隐藏性能覆盖层 - 使用淡出动画
             requestedPerformanceOverlayVisibility = View.GONE;
+            hasShownPerfOverlay = false; // 重置显示状态
+            Animation fadeOutAnimation = AnimationUtils.loadAnimation(this, R.anim.perf_overlay_fadeout);
+            performanceOverlayView.startAnimation(fadeOutAnimation);
+            fadeOutAnimation.setAnimationListener(new Animation.AnimationListener() {
+                @Override
+                public void onAnimationStart(Animation animation) {}
+
+                @Override
+                public void onAnimationEnd(Animation animation) {
+                    performanceOverlayView.setVisibility(View.GONE);
+                    performanceOverlayView.setAlpha(0.0f);
+                }
+
+                @Override
+                public void onAnimationRepeat(Animation animation) {}
+            });
         } else {
             requestedPerformanceOverlayVisibility = View.VISIBLE;
-            // 重新配置性能覆盖层的方向、位置和显示项
-            configurePerformanceOverlay();
+            hasShownPerfOverlay = true; // 标记为已显示，避免重复动画
+            performanceOverlayView.setVisibility(View.VISIBLE);
+            performanceOverlayView.setAlpha(1.0f);
         }
-        performanceOverlayView.setVisibility(requestedPerformanceOverlayVisibility);
     }
     
     /**

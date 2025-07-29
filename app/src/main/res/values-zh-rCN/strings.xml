@@ -306,12 +306,14 @@
     <string name="summary_seekbar_deadzone">注意：有些游戏可以执行一个比Moonlight摇杆配置的更大的盲区。</string>
     <string name="title_checkbox_absolute_mouse_mode">适合远程桌面的鼠标模式</string>
     <string name="summary_checkbox_absolute_mouse_mode">这可以使得鼠标加速在远程桌面使用中表现得更自然，但它与许多游戏不兼容。</string>
+    <string name="title_checkbox_enable_esc_menu">允许ESC键打开返回菜单</string>
+    <string name="summary_checkbox_enable_esc_menu">启用后，双击ESC键可以打开串流返回菜单，单次按ESC键会透传给主机</string>
     <string name="resolution_prefix_native_landscape">（横向）</string>
     <string name="resolution_prefix_native_portrait">（纵向）</string>
     <string name="title_checkbox_enable_audiofx">启用对系统均衡器的支持</string>
     <string name="summary_checkbox_enable_audiofx">串流时允许音效工作，可能会导致音频延迟增加</string>
     <string name="title_checkbox_enable_mic">麦克风重定向 (实验性)</string>
-    <string name="summary_checkbox_enable_mic">将设备麦克风串流到主机，需Sunshine版本在20250720以上的杂鱼主机。</string>
+    <string name="summary_checkbox_enable_mic">将设备麦克风串流到主机，需Sunshine基地版本在20250720以上的主机。</string>
     <string name="title_seekbar_mic_bitrate">麦克风传输音质</string>
     <string name="summary_seekbar_mic_bitrate">调整麦克风重定向的音频质量。更高的比特率提供更好的音频质量，但会使用更多带宽。</string>
     <string name="suffix_seekbar_mic_bitrate_kbps">kbps</string>

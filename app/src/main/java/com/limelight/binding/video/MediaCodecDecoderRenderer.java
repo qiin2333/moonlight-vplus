@@ -392,14 +392,29 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         return avcDecoder != null;
     }
 
+    public boolean isHevcMain10Supported() {
+        if (hevcDecoder == null) {
+            return false;
+        }
+
+        for (MediaCodecInfo.CodecProfileLevel profileLevel : hevcDecoder.getCapabilitiesForType("video/hevc").profileLevels) {
+            if (profileLevel.profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10) {
+                LimeLog.info("HEVC decoder "+hevcDecoder.getName()+" supports HEVC Main10");
+                return true;
+            }
+        }
+        return false;
+    }
+
     public boolean isHevcMain10Hdr10Supported() {
         if (hevcDecoder == null) {
             return false;
         }
 
         for (MediaCodecInfo.CodecProfileLevel profileLevel : hevcDecoder.getCapabilitiesForType("video/hevc").profileLevels) {
-            if (profileLevel.profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10) {
-                LimeLog.info("HEVC decoder "+hevcDecoder.getName()+" supports HEVC Main10 HDR10");
+            if (profileLevel.profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10 ||
+                profileLevel.profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10Plus) {
+                LimeLog.info("HEVC 解码器 " + hevcDecoder.getName() + " 支持 HEVC Main10 HDR10/HDR10+");
                 return true;
             }
         }
