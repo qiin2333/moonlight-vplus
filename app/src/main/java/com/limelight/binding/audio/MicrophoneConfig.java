@@ -11,15 +11,12 @@ public class MicrophoneConfig {
     // 音频参数
     public static final int SAMPLE_RATE = 48000; // 采样率
     public static final int CHANNELS = 1; // 声道数（单声道）
-    private static int opusBitrate = 96000; // Opus编码比特率 (默认96 kbps)
+    private static int opusBitrate = 64; // Opus编码比特率 (默认64 kbps)
     
     // 网络参数
     public static final int DEFAULT_MIC_PORT = 47996; // 默认麦克风端口
-    public static final int MAX_QUEUE_SIZE = 60; // 最大队列大小 (从30增加到60)
+    public static final int MAX_QUEUE_SIZE = 5;
     public static final int HOST_REQUEST_CHECK_INTERVAL_MS = 500; // 检查主机请求状态的间隔
-    
-    // 缓冲区参数
-    public static final int BUFFER_SIZE_FACTOR = 10; // 缓冲区大小因子 (从5增加到10)
     
     // 权限请求码
     public static final int PERMISSION_REQUEST_MICROPHONE = 1001;

@@ -629,6 +629,6 @@ public class NvConnection {
      * @return 主机地址字符串
      */
     public String getHost() {
-        return host.address;
+        return context.serverAddress.address;
     }
 }

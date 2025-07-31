@@ -185,7 +185,7 @@ public class MicrophoneCapture {
         
         if (captureThread != null) {
             try {
-                captureThread.join(500);
+                captureThread.join(300);
             } catch (InterruptedException e) {
                 // 忽略
             }

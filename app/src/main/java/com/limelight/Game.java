@@ -2646,6 +2646,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 // Stop processing controller input
                 controllerHandler.stop();
 
+                microphoneManager.stopMicrophoneStream();
+
                 // Ungrab input
                 setInputGrabState(false);
 
@@ -3271,36 +3273,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             performanceOverlayView.setVisibility(View.VISIBLE);
             performanceOverlayView.setAlpha(1.0f);
         }
-    }
-    
-    /**
-     * 切换麦克风状态
-     */
-    public void toggleMicrophone() {
-        if (microphoneManager != null) {
-            microphoneManager.toggleMicrophone();
-        }
-    }
-
-    /**
-     * 获取麦克风当前状态
-     */
-    public boolean isMicrophoneActive() {
-        return microphoneManager != null && microphoneManager.isMicrophoneActive();
-    }
-
-    /**
-     * 检查麦克风是否可用
-     */
-    public boolean isMicrophoneAvailable() {
-        return microphoneManager != null && microphoneManager.isMicrophoneAvailable();
-    }
-
-    /**
-     * 获取麦克风管理器
-     */
-    public MicrophoneManager getMicrophoneManager() {
-        return microphoneManager;
     }
 
     /**

@@ -120,7 +120,7 @@
             seekbar:step="8"
             seekbar:keyStep="16"
             seekbar:divisor="1"
-            android:defaultValue="96"
+            android:defaultValue="64"
             android:summary="@string/summary_seekbar_mic_bitrate"
             android:text="@string/suffix_seekbar_mic_bitrate_kbps"
             android:title="@string/title_seekbar_mic_bitrate" />

@@ -52,7 +52,7 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
             // 如果还没有初始化，先初始化
             if (!running.get()) {
                 // 启动请求检查线程
-                startHostRequestCheck();
+                // startHostRequestCheck();
                 
                 // 如果主机已经请求麦克风，立即启动麦克风捕获
                 if (MoonBridge.isMicrophoneRequested()) {
@@ -127,6 +127,8 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
             LimeLog.info("麦克风请求检查线程已结束");
         }, "MicRequestChecker");
         
+        // 设置中等优先级
+        checkHostRequestThread.setPriority(Thread.NORM_PRIORITY);
         checkHostRequestThread.start();
     }
     
@@ -190,6 +192,7 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
             if (senderThread == null || !senderThread.isAlive()) {
                 running.set(true);
                 senderThread = new Thread(this::senderThreadProc, "MicSender");
+                senderThread.setPriority(Thread.MAX_PRIORITY);
                 senderThread.start();
             }
             
@@ -213,10 +216,6 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
             checkHostRequestThread = null;
         }
         
-        if (!running.get()) {
-            return;
-        }
-        
         running.set(false);
         micActive.set(false);
         hostRequested.set(false);
@@ -228,10 +227,8 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
         
         if (senderThread != null) {
             try {
-                senderThread.join(500);
-            } catch (InterruptedException e) {
-                // 忽略
-            }
+                senderThread.join(300); // 等待最多300ms
+            } catch (InterruptedException e) {}
             senderThread = null;
         }
         
@@ -305,6 +302,18 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
         packetQueue.clear();
     }
     
+    private InetAddress getCurrentHost() {
+        try {
+            String hostAddress = conn.getHost();
+            if (hostAddress != null && !hostAddress.isEmpty()) {
+                return InetAddress.getByName(hostAddress);
+            }
+        } catch (Exception e) {
+            LimeLog.warning("动态获取主机地址失败: " + e.getMessage());
+        }
+        return host;
+    }
+
     @Override
     public void onMicrophoneData(byte[] data, int offset, int length) {
         if (!running.get() || !micActive.get() || encoder == null) {
@@ -318,21 +327,20 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
                 // 记录编码成功
                 AudioDiagnostics.recordFrameEncoded();
                 
-                // 检查队列大小，如果队列太满，丢弃一些旧数据
-                if (packetQueue.size() >= MicrophoneConfig.MAX_QUEUE_SIZE * 0.8) {
-                    // 丢弃最旧的数据包，为新数据腾出空间
+                int queueSize = packetQueue.size();
+                
+                if (queueSize >= MicrophoneConfig.MAX_QUEUE_SIZE) {
+                    // 队列已满，丢弃最旧的数据包
                     packetQueue.poll();
                     AudioDiagnostics.recordFrameDropped();
-                    LimeLog.warning("音频队列接近满，丢弃旧数据包");
+                    LimeLog.warning("音频队列已满，丢弃最旧数据包");
                 }
                 
                 // 将编码数据加入队列
                 if (!packetQueue.offer(encoded)) {
-                    // 队列已满，丢弃最旧的数据包
-                    packetQueue.poll();
-                    packetQueue.offer(encoded);
+                    // 如果仍然无法加入队列，丢弃当前数据包
                     AudioDiagnostics.recordFrameDropped();
-                    LimeLog.warning("音频队列已满，丢弃最旧数据包");
+                    LimeLog.warning("无法将编码数据加入队列，丢弃当前数据包");
                 }
             }
         } catch (Exception e) {
@@ -344,17 +352,39 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
     private void senderThreadProc() {
         long lastSendTime = 0;
         long sendCount = 0;
+        long totalLatency = 0;
+        long maxLatency = 0;
+        long lastStatsTime = System.currentTimeMillis();
         
         while (running.get()) {
             try {
+                // 检查连接状态和麦克风状态
                 if (!hostRequested.get() || !micActive.get()) {
                     Thread.sleep(MicrophoneConfig.SENDER_THREAD_SLEEP_MS);
                     continue;
                 }
+                
+                // 额外检查：如果连接已断开，立即停止发送
+                if (conn == null || !isConnectionActive()) {
+                    LimeLog.info("检测到连接断开，停止麦克风发送");
+                    break;
+                }
 
-                // 控制发送频率，确保每20ms发送一帧
                 long currentTime = System.currentTimeMillis();
-                if (currentTime - lastSendTime < MicrophoneConfig.FRAME_INTERVAL_MS) {
+                
+                // 动态调整发送频率，基于队列大小
+                int queueSize = packetQueue.size();
+                long targetInterval = MicrophoneConfig.FRAME_INTERVAL_MS;
+                
+                // 如果队列过大，加快发送频率
+                if (queueSize > MicrophoneConfig.MAX_QUEUE_SIZE * 0.7) {
+                    targetInterval = Math.max(5, MicrophoneConfig.FRAME_INTERVAL_MS / 2);
+                } else if (queueSize < MicrophoneConfig.MAX_QUEUE_SIZE * 0.3) {
+                    // 如果队列较小，可以稍微放慢
+                    targetInterval = MicrophoneConfig.FRAME_INTERVAL_MS;
+                }
+                
+                if (currentTime - lastSendTime < targetInterval) {
                     Thread.sleep(1);
                     continue;
                 }
@@ -365,6 +395,19 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
                     Thread.sleep(1);
                     continue;
                 }
+
+                // 动态获取当前主机地址
+                InetAddress currentHost = getCurrentHost();
+                if (currentHost == null) {
+                    LimeLog.warning("无法获取主机地址，跳过数据包发送");
+                    Thread.sleep(1);
+                    continue;
+                }
+
+                // 计算发送延迟
+                long sendLatency = currentTime - lastSendTime;
+                totalLatency += sendLatency;
+                maxLatency = Math.max(maxLatency, sendLatency);
 
                 // 构建正确的麦克风数据包头部（12字节）
                 ByteBuffer packetBuf = ByteBuffer.allocate(encoded.length + 12);
@@ -386,7 +429,7 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
 
                 DatagramPacket packet = new DatagramPacket(
                         packetBuf.array(), packetBuf.capacity(),
-                        host, micPort);
+                        currentHost, micPort);
                 socket.send(packet);
                 
                 lastSendTime = currentTime;
@@ -395,9 +438,19 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
                 // 记录发送成功
                 AudioDiagnostics.recordFrameSent();
                 
-                // 每100个包记录一次统计信息
+                // 每100个包记录一次详细统计信息
                 if (sendCount % 100 == 0) {
-                    LimeLog.info("麦克风发送统计: " + sendCount + " 包, 队列大小: " + packetQueue.size());
+                    long currentStatsTime = System.currentTimeMillis();
+                    long statsInterval = currentStatsTime - lastStatsTime;
+                    double avgLatency = sendCount > 0 ? (double) totalLatency / sendCount : 0;
+                    
+                    LimeLog.info(String.format("麦克风发送统计: 包数=%d, 队列大小=%d, 平均延迟=%.1fms, 最大延迟=%dms, 统计间隔=%dms", 
+                        sendCount, queueSize, avgLatency, maxLatency, statsInterval));
+                    
+                    // 重置统计
+                    lastStatsTime = currentStatsTime;
+                    totalLatency = 0;
+                    maxLatency = 0;
                 }
                 
             } catch (InterruptedException e) {
@@ -405,6 +458,13 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
             } catch (IOException e) {
                 AudioDiagnostics.recordSendingError();
                 LimeLog.warning("发送麦克风数据错误: " + e.getMessage());
+                
+                // 如果是网络错误，检查连接状态
+                if (isNetworkError(e)) {
+                    LimeLog.warning("检测到网络错误，停止麦克风发送");
+                    break;
+                }
+                
                 try {
                     Thread.sleep(MicrophoneConfig.SENDER_ERROR_RETRY_MS);
                 } catch (InterruptedException ex) {
@@ -412,5 +472,34 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
                 }
             }
         }
+        
+        LimeLog.info("麦克风发送线程已结束");
+    }
+    
+    /**
+     * 检查连接是否仍然活跃
+     */
+    private boolean isConnectionActive() {
+        try {
+            // 尝试获取主机地址，如果失败说明连接已断开
+            String hostAddress = conn.getHost();
+            return hostAddress != null && !hostAddress.isEmpty();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    
+    /**
+     * 检查是否为网络错误
+     */
+    private boolean isNetworkError(IOException e) {
+        String message = e.getMessage();
+        return message != null && (
+            message.contains("Network is unreachable") ||
+            message.contains("No route to host") ||
+            message.contains("Connection refused") ||
+            message.contains("Connection reset") ||
+            message.contains("Broken pipe")
+        );
     }
 }
