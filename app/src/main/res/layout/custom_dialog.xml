@@ -1,63 +1,173 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical">
+    android:layout_margin="16dp"
+    android:fadeScrollbars="false"
+    android:scrollbars="vertical">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:weightSum="2">
 
-        <Button
-            android:id="@+id/btnWin"
-            style="?android:attr/buttonBarButtonStyle"
-            android:layout_width="wrap_content"
+        <!-- 快捷按钮区域 -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:drawableStart="@drawable/ic_btn_win"
-            android:drawablePadding="4dp"
-            android:text="WIN" />
+            android:layout_marginBottom="8dp"
+            android:gravity="center"
+            android:orientation="horizontal">
 
-        <Button
-            android:id="@+id/btnEsc"
-            style="?android:attr/buttonBarButtonStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:drawableStart="@drawable/ic_btn_esc"
-            android:drawablePadding="4dp"
-            android:text="ESC" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="2dp"
+                android:weightSum="6">
 
-        <Button
-            android:id="@+id/btnHDR"
-            style="?android:attr/buttonBarButtonStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:drawableStart="@drawable/ic_btn_hdr"
-            android:drawablePadding="4dp"
-            android:text="HDR" />
+                <Button
+                    android:id="@+id/btnWin"
+                    style="@style/GameMenuButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="2dp"
+                    android:layout_weight="1"
+                    android:drawableStart="@drawable/ic_btn_win"
+                    android:text="WIN" />
 
-        <Button
-            android:id="@+id/btnSleep"
-            style="?android:attr/buttonBarButtonStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:drawableStart="@drawable/ic_btn_sleep"
-            android:drawablePadding="4dp"
-            android:text="睡眠" />
+                <Button
+                    android:id="@+id/btnEsc"
+                    style="@style/GameMenuButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    android:layout_marginEnd="2dp"
+                    android:layout_weight="1"
+                    android:drawableStart="@drawable/ic_btn_esc"
+                    android:text="ESC" />
 
-        <Button
-            android:id="@+id/btnQuit"
-            style="?android:attr/buttonBarButtonStyle"
-            android:layout_width="wrap_content"
+                <Button
+                    android:id="@+id/btnHDR"
+                    style="@style/GameMenuButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    android:layout_marginEnd="2dp"
+                    android:layout_weight="1"
+                    android:drawableStart="@drawable/ic_btn_hdr"
+                    android:text="HDR" />
+
+                <Button
+                    android:id="@+id/btnMic"
+                    style="@style/GameMenuButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    android:layout_marginEnd="2dp"
+                    android:layout_weight="1"
+                    android:drawableStart="@drawable/ic_mic_gm"
+                    android:text="Mic" />
+
+                <Button
+                    android:id="@+id/btnSleep"
+                    style="@style/GameMenuButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    android:layout_marginEnd="2dp"
+                    android:layout_weight="1"
+                    android:drawableStart="@drawable/ic_btn_sleep"
+                    android:text="睡眠" />
+
+                <Button
+                    android:id="@+id/btnQuit"
+                    style="@style/GameMenuButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    android:layout_weight="1"
+                    android:drawableStart="@drawable/ic_btn_quit"
+                    android:text="退出" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- 菜单列表区域 -->
+        <LinearLayout
+            android:id="@+id/menuListContainer"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:drawableStart="@drawable/ic_btn_quit"
-            android:drawablePadding="4dp"
-            android:text="退出串流" />
+            android:layout_marginTop="4dp"
+            android:minHeight="220dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <!-- 普通菜单 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <ListView
+                    android:id="@+id/gameMenuList"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:divider="@null"
+                    android:dividerHeight="1dp"
+                    android:fadeScrollbars="false"
+                    android:scrollbars="vertical" />
+
+            </LinearLayout>
+
+            <!-- 超级菜单 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <ListView
+                    android:id="@+id/superMenuList"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:divider="@null"
+                    android:dividerHeight="1dp"
+                    android:fadeScrollbars="false"
+                    android:scrollbars="vertical" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- App名字显示区域 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/appNameTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Moonlight"
+                android:textColor="@color/theme_pink_primary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:padding="2dp" />
+
+        </LinearLayout>
+
     </LinearLayout>
 
-    <ListView
-        android:id="@+id/gameMenuList"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
-</LinearLayout>
+</ScrollView>

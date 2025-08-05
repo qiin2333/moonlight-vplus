@@ -16,6 +16,7 @@ import com.limelight.nvstream.http.PairingManager;
 import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.ui.AdapterFragment;
 import com.limelight.ui.AdapterFragmentCallbacks;
+import com.limelight.utils.BackgroundImageManager;
 import com.limelight.utils.CacheHelper;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.ServerHelper;
@@ -65,6 +66,8 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
     private boolean inForeground;
     private boolean showHiddenApps;
     private HashSet<Integer> hiddenAppIds = new HashSet<>();
+    private ImageView appBackgroundImage;
+    private BackgroundImageManager backgroundImageManager;
 
     private final static int START_OR_RESUME_ID = 1;
     private final static int QUIT_ID = 2;
@@ -300,6 +303,10 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
         setContentView(R.layout.activity_app_view);
 
+        // Initialize background image view
+        appBackgroundImage = findViewById(R.id.appBackgroundImage);
+        backgroundImageManager = new BackgroundImageManager(this, appBackgroundImage);
+
         // Allow floating expanded PiP overlays while browsing apps
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             setShouldDockBigOverlays(false);
@@ -320,8 +327,6 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         TextView label = findViewById(R.id.appListText);
         setTitle(computerName);
         label.setText(computerName);
-
-        // loadDefaultImage();
 
         // Bind to the computer manager service
         bindService(new Intent(this, ComputerManagerService.class), serviceConnection,
@@ -634,15 +639,6 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                 }
             }
         });
-    }
-
-    private void loadDefaultImage() {
-//        LimeLog.info("load app bg moonlight-bg3.webp");
-//        Glide.with(AppView.this)
-//            .load("https://raw.gitmirror.com/qiin2333/qiin.github.io/assets/img/moonlight-bg2.webp")
-//            .onlyRetrieveFromCache(true)
-//            .apply(RequestOptions.bitmapTransform(new BlurTransformation(15, 3)))
-//            .into((ImageView) findViewById(R.id.appBackgroundImage));
     }
 
     @Override

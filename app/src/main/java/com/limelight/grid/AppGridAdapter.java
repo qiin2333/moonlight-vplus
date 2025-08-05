@@ -171,11 +171,13 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
             // Show the play button overlay
             overlayView.setImageResource(R.drawable.ic_play);
             overlayView.setVisibility(View.VISIBLE);
-            loader.populateImageView(obj, appBackgroundImage, txtView);
+            // 使用更平滑的背景图片加载
+            loader.populateImageView(obj, appBackgroundImage, txtView, true);
         }
         else {
             if (obj.app.getAppName().equalsIgnoreCase("desktop") && appBackgroundImage.getDrawable() == null) {
-                loader.populateImageView(obj, appBackgroundImage, txtView);
+                // 使用更平滑的背景图片加载
+                loader.populateImageView(obj, appBackgroundImage, txtView, true);
             }
             overlayView.setVisibility(View.GONE);
         }

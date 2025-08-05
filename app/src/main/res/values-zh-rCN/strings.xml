@@ -105,6 +105,7 @@
     <string name="game_menu_toggle_mouse_on"> 手柄模拟鼠标-打开 </string>
     <string name="game_menu_toggle_mouse_off"> 手柄模拟鼠标-关闭 </string>
     <string name="game_menu_disconnect"> 断开连接 </string>
+    <string name="game_menu_disconnect_and_quit"> 断开并退出串流 </string>
     <string name="game_menu_cancel"> 取消 </string>
     <string name="game_menu_send_keys">发送特殊按键</string>
     <string name="game_menu_send_keys_esc">发送 ESC</string>

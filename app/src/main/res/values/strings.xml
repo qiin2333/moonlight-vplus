@@ -147,6 +147,7 @@
     <string name="game_menu_toggle_mouse_on">Enable Controller Mouse Emulation</string>
     <string name="game_menu_toggle_mouse_off">Disable Controller Mouse Emulation</string>
     <string name="game_menu_disconnect">Disconnect</string>
+    <string name="game_menu_disconnect_and_quit">Disconnect and Quit</string>
     <string name="game_menu_cancel">Cancel</string>
     <string name="game_menu_send_keys">Send special Key(s)</string>
     <string name="game_menu_send_keys_esc">Send ESC (Menu)</string>

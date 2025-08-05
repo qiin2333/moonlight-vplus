@@ -63,7 +63,7 @@
     <style name="PreferenceTitleWithShadow" parent="PreferenceTextWithShadow">
         <item name="android:textSize">18sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">#FFECF0</item> <!-- 柔和的粉白色 -->
+        <item name="android:textColor">@color/theme_pink_light</item> <!-- 柔和的粉白色 -->
     </style>
 
     <style name="PreferenceSummaryWithShadow" parent="PreferenceTextWithShadow">
@@ -74,9 +74,53 @@
     <style name="PreferenceCategoryWithShadow" parent="PreferenceTextWithShadow">
         <item name="android:textSize">20sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">#FFD0F4</item> <!-- 柔和的粉色 -->
+        <item name="android:textColor">@color/theme_pink_primary</item> <!-- 主题粉色 -->
         <item name="android:shadowColor">#AA000000</item> <!-- 更强的阴影 -->
         <item name="android:shadowRadius">5</item> <!-- 更大的阴影半径 -->
+    </style>
+
+    <!-- GameMenu 对话框样式 -->
+    <style name="GameMenuDialogStyle" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/game_menu_dialog_bg</item>
+        <item name="android:windowMinWidthMajor">576dp</item>
+        <item name="android:windowMinWidthMinor">90%</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowAnimationStyle">@style/GameMenuDialogAnimation</item>
+        <item name="android:windowSoftInputMode">adjustResize</item>
+    </style>
+
+    <!-- GameMenu 按钮样式 -->
+    <style name="GameMenuButtonStyle" parent="android:Widget.Button">
+        <item name="android:background">@drawable/game_menu_button_bg</item>
+        <item name="android:textColor">#333333</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:paddingLeft">6dp</item>
+        <item name="android:paddingRight">6dp</item>
+        <item name="android:minHeight">36dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:elevation">0dp</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:drawablePadding">4dp</item>
+        <item name="android:foreground">?android:attr/selectableItemBackground</item>
+    </style>
+
+    <!-- GameMenu 列表项样式 -->
+    <style name="GameMenuListItemStyle" parent="android:Widget.ListView">
+        <item name="android:background">@drawable/game_menu_list_item_bg</item>
+        <item name="android:textColor">#333333</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:padding">16dp</item>
+        <item name="android:minHeight">56dp</item>
+        <item name="android:gravity">center_vertical</item>
+    </style>
+
+    <!-- GameMenu 对话框动画 -->
+    <style name="GameMenuDialogAnimation">
+        <item name="android:windowEnterAnimation">@anim/game_menu_dialog_enter</item>
+        <item name="android:windowExitAnimation">@anim/game_menu_dialog_exit</item>
     </style>
 
 </resources>

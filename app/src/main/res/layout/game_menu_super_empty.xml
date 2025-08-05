@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="32dp">
+
+    <ImageView
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:src="@drawable/ic_cmd_cute"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/game_menu_button_bg"
+        android:padding="8dp"
+        android:elevation="4dp"
+        />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="还没有炒鸡指令哦"
+        android:textSize="18sp"
+        android:textColor="@color/theme_pink_primary"
+        android:gravity="center"
+        android:textStyle="bold"
+        android:layout_marginBottom="6dp"
+        android:drawablePadding="6dp"
+        />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="快去用 Sunshine 基地版 为应用添加超级指令吧~ (๑•̀ㅂ•́)و✧"
+        android:textSize="14sp"
+        android:textColor="@color/theme_pink_primary"
+        android:gravity="center"
+        android:layout_marginTop="2dp"
+        />
+
+</LinearLayout>

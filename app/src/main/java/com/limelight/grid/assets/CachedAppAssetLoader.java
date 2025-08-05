@@ -155,13 +155,19 @@ public class CachedAppAssetLoader {
         private final WeakReference<ImageView> imageViewRef;
         private final WeakReference<TextView> textViewRef;
         private final boolean diskOnly;
+        private final boolean isBackground;
 
         private LoaderTuple tuple;
 
         public LoaderTask(ImageView imageView, TextView textView, boolean diskOnly) {
+            this(imageView, textView, diskOnly, false);
+        }
+
+        public LoaderTask(ImageView imageView, TextView textView, boolean diskOnly, boolean isBackground) {
             this.imageViewRef = new WeakReference<>(imageView);
             this.textViewRef = new WeakReference<>(textView);
             this.diskOnly = diskOnly;
+            this.isBackground = isBackground;
         }
 
         @Override
@@ -206,10 +212,12 @@ public class CachedAppAssetLoader {
             if (getLoaderTask(imageView) == this) {
                 // Set off another loader task on the network executor. This time our AsyncDrawable
                 // will use the app image placeholder bitmap, rather than an empty bitmap.
-                LoaderTask task = new LoaderTask(imageView, textView, false);
+                LoaderTask task = new LoaderTask(imageView, textView, false, isBackground);
                 AsyncDrawable asyncDrawable = new AsyncDrawable(imageView.getResources(), noAppImageBitmap, task);
                 imageView.setImageDrawable(asyncDrawable);
-                imageView.startAnimation(AnimationUtils.loadAnimation(imageView.getContext(), R.anim.boxart_fadein));
+                // Use different animation for background images
+                int animationRes = isBackground ? R.anim.background_fadein : R.anim.boxart_fadein;
+                imageView.startAnimation(AnimationUtils.loadAnimation(imageView.getContext(), animationRes));
                 imageView.setVisibility(View.VISIBLE);
                 textView.setVisibility(View.VISIBLE);
                 task.executeOnExecutor(networkExecutor, tuple);
@@ -233,7 +241,8 @@ public class CachedAppAssetLoader {
 
                     if (imageView.getVisibility() == View.VISIBLE) {
                         // Fade out the placeholder first
-                        Animation fadeOutAnimation = AnimationUtils.loadAnimation(imageView.getContext(), R.anim.boxart_fadeout);
+                        int fadeOutAnimRes = isBackground ? R.anim.background_fadeout : R.anim.boxart_fadeout;
+                        Animation fadeOutAnimation = AnimationUtils.loadAnimation(imageView.getContext(), fadeOutAnimRes);
                         fadeOutAnimation.setAnimationListener(new Animation.AnimationListener() {
                             @Override
                             public void onAnimationStart(Animation animation) {}
@@ -242,7 +251,8 @@ public class CachedAppAssetLoader {
                             public void onAnimationEnd(Animation animation) {
                                 // Fade in the new box art
                                 imageView.setImageBitmap(bitmap.bitmap);
-                                imageView.startAnimation(AnimationUtils.loadAnimation(imageView.getContext(), R.anim.boxart_fadein));
+                                int fadeInAnimRes = isBackground ? R.anim.background_fadein : R.anim.boxart_fadein;
+                                imageView.startAnimation(AnimationUtils.loadAnimation(imageView.getContext(), fadeInAnimRes));
                             }
 
                             @Override
@@ -253,7 +263,8 @@ public class CachedAppAssetLoader {
                     else {
                         // View is invisible already, so just fade in the new art
                         imageView.setImageBitmap(bitmap.bitmap);
-                        imageView.startAnimation(AnimationUtils.loadAnimation(imageView.getContext(), R.anim.boxart_fadein));
+                        int fadeInAnimRes = isBackground ? R.anim.background_fadein : R.anim.boxart_fadein;
+                        imageView.startAnimation(AnimationUtils.loadAnimation(imageView.getContext(), fadeInAnimRes));
                         imageView.setVisibility(View.VISIBLE);
                     }
                 }
@@ -341,6 +352,10 @@ public class CachedAppAssetLoader {
     }
 
     public boolean populateImageView(AppView.AppObject obj, ImageView imgView, TextView textView) {
+        return populateImageView(obj, imgView, textView, false);
+    }
+
+    public boolean populateImageView(AppView.AppObject obj, ImageView imgView, TextView textView, boolean isBackground) {
         LoaderTuple tuple = new LoaderTuple(computer, obj.app);
 
         // If there's already a task in progress for this view,
@@ -365,7 +380,7 @@ public class CachedAppAssetLoader {
 
         // If it's not in memory, create an async task to load it. This task will be attached
         // via AsyncDrawable to this view.
-        final LoaderTask task = new LoaderTask(imgView, textView, true);
+        final LoaderTask task = new LoaderTask(imgView, textView, true, isBackground);
         final AsyncDrawable asyncDrawable = new AsyncDrawable(imgView.getResources(), placeholderBitmap, task);
         textView.setVisibility(View.INVISIBLE);
         imgView.setVisibility(View.INVISIBLE);
