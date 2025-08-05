@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!-- 主体改为淡粉色，描边淡紫色 -->
+    <path
+        android:fillColor="#FFD1DC"
+        android:strokeColor="#C3A1E5"
+        android:strokeWidth="4"
+        android:strokeLineJoin="round"
+        android:pathData="M 6 18 L 42 18 Q 44 18 44 20 L 44 40 Q 44 42 42 42 L 6 42 Q 4 42 4 40 L 4 20 Q 4 18 6 18 Z" />
+    <!-- 按键改为浅紫色和浅蓝色交替 -->
+    <path
+        android:fillColor="#C3A1E5"
+        android:pathData="M 14 22 C 15.1045694997 22 16 22.8954305003 16 24 C 16 25.1045694997 15.1045694997 26 14 26 C 12.8954305003 26 12 25.1045694997 12 24 C 12 22.8954305003 12.8954305003 22 14 22 Z" />
+    <path
+        android:fillColor="#AEE2FF"
+        android:pathData="M 16 28 C 17.1045694997 28 18 28.8954305003 18 30 C 18 31.1045694997 17.1045694997 32 16 32 C 14.8954305003 32 14 31.1045694997 14 30 C 14 28.8954305003 14.8954305003 28 16 28 Z" />
+    <path
+        android:fillColor="#C3A1E5"
+        android:pathData="M 10 28 C 11.1045694997 28 12 28.8954305003 12 30 C 12 31.1045694997 11.1045694997 32 10 32 C 8.89543050034 32 8 31.1045694997 8 30 C 8 28.8954305003 8.89543050034 28 10 28 Z" />
+    <path
+        android:fillColor="#AEE2FF"
+        android:pathData="M 20 22 C 21.1045694997 22 22 22.8954305003 22 24 C 22 25.1045694997 21.1045694997 26 20 26 C 18.8954305003 26 18 25.1045694997 18 24 C 18 22.8954305003 18.8954305003 22 20 22 Z" />
+    <path
+        android:fillColor="#C3A1E5"
+        android:pathData="M 22 28 C 23.1045694997 28 24 28.8954305003 24 30 C 24 31.1045694997 23.1045694997 32 22 32 C 20.8954305003 32 20 31.1045694997 20 30 C 20 28.8954305003 20.8954305003 28 22 28 Z" />
+    <path
+        android:fillColor="#AEE2FF"
+        android:pathData="M 26 22 C 27.1045694997 22 28 22.8954305003 28 24 C 28 25.1045694997 27.1045694997 26 26 26 C 24.8954305003 26 24 25.1045694997 24 24 C 24 22.8954305003 24.8954305003 22 26 22 Z" />
+    <path
+        android:fillColor="#C3A1E5"
+        android:pathData="M 28 28 C 29.1045694997 28 30 28.8954305003 30 30 C 30 31.1045694997 29.1045694997 32 28 32 C 26.8954305003 32 26 31.1045694997 26 30 C 26 28.8954305003 26.8954305003 28 28 28 Z" />
+    <path
+        android:fillColor="#AEE2FF"
+        android:pathData="M 32 22 C 33.1045694997 22 34 22.8954305003 34 24 C 34 25.1045694997 33.1045694997 26 32 26 C 30.8954305003 26 30 25.1045694997 30 24 C 30 22.8954305003 30.8954305003 22 32 22 Z" />
+    <path
+        android:fillColor="#C3A1E5"
+        android:pathData="M 34 28 C 35.1045694997 28 36 28.8954305003 36 30 C 36 31.1045694997 35.1045694997 32 34 32 C 32.8954305003 32 32 31.1045694997 32 30 C 32 28.8954305003 32.8954305003 28 34 28 Z" />
+    <path
+        android:fillColor="#AEE2FF"
+        android:pathData="M 38 22 C 39.1045694997 22 40 22.8954305003 40 24 C 40 25.1045694997 39.1045694997 26 38 26 C 36.8954305003 26 36 25.1045694997 36 24 C 36 22.8954305003 36.8954305003 22 38 22 Z" />
+    <!-- 底部线条改为淡紫色 -->
+    <path
+        android:fillColor="#FFD1DC"
+        android:strokeColor="#C3A1E5"
+        android:strokeWidth="4"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round"
+        android:pathData="M17 36H31" />
+    <!-- 顶部线条改为淡紫色 -->
+    <path
+        android:fillColor="#FFD1DC"
+        android:strokeColor="#C3A1E5"
+        android:strokeWidth="4"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round"
+        android:pathData="M33 18V13.125C33 12.5727 33.4477 12.125 34 12.125H39C39.5523 12.125 40 11.6773 40 11.125V6" />
+</vector>

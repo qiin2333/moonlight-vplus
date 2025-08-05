@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+
+    <!-- 麦克风主体，按viewport缩放 -->
+    <path
+        android:strokeColor="#CCCCCC"
+        android:strokeWidth="64"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M512,128
+            Q656,128 656,272
+            L656,576
+            Q656,720 512,720
+            Q368,720 368,576
+            L368,272
+            Q368,128 512,128
+            Z" />
+    <!-- 麦克风底部弧线，按viewport缩放 -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#CCCCCC"
+        android:strokeWidth="64"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round"
+        android:pathData="M256,576
+            Q256,800 512,800
+            Q768,800 768,576" />
+    <!-- 麦克风底部竖线，按viewport缩放 -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#CCCCCC"
+        android:strokeWidth="64"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round"
+        android:pathData="M512,800 L512,912" />
+    
+    <!-- 禁用斜线 -->
+    <path
+        android:strokeColor="#FF6B6B"
+        android:strokeWidth="32"
+        android:strokeLineCap="round"
+        android:pathData="M200,200 L824,824" />
+</vector>

@@ -3,6 +3,6 @@
     <alpha
         android:fromAlpha="0.0"
         android:toAlpha="1.0"
-        android:interpolator="@android:anim/decelerate_interpolator"
-        android:duration="300"/>
-</set>
+        android:interpolator="@android:interpolator/fast_out_slow_in"
+        android:duration="800"/>
+</set> 

@@ -1,13 +1,17 @@
 package com.limelight;
 
 import android.app.AlertDialog;
+import android.content.Context;
 import android.os.Handler;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.gson.JsonArray;
@@ -21,55 +25,104 @@ import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
- * Provide options for ongoing Game Stream.
+ * 提供游戏流媒体进行中的选项菜单
  * <p>
- * Shown on back action in game activity.
+ * 在游戏活动中按返回键时显示
  */
 public class GameMenu {
 
+    // 常量定义
     private static final long TEST_GAME_FOCUS_DELAY = 10L;
     private static final long KEY_UP_DELAY = 25L;
+    private static final long SLEEP_DELAY = 200L;
     private static final float DIALOG_ALPHA = 0.7f;
-    private static final String GAME_MENU_TITLE = "Game Menu";
+    private static final float DIALOG_DIM_AMOUNT = 0.3f;
+    private static final String GAME_MENU_TITLE = "🍥🍬 V+ GAME MENU";
 
+    // 图标映射缓存
+    private static final Map<String, Integer> ICON_MAP = new HashMap<>();
+
+    static {
+        ICON_MAP.put("game_menu_toggle_keyboard", R.drawable.ic_keyboard_cute);
+        ICON_MAP.put("game_menu_toggle_performance_overlay", R.drawable.ic_performance_cute);
+        ICON_MAP.put("game_menu_disconnect", R.drawable.ic_disconnect_cute);
+        ICON_MAP.put("game_menu_send_keys", R.drawable.ic_send_keys_cute);
+        ICON_MAP.put("game_menu_toggle_host_keyboard", R.drawable.ic_host_keyboard);
+        ICON_MAP.put("game_menu_disconnect_and_quit", R.drawable.ic_btn_quit);
+        ICON_MAP.put("game_menu_cancel", R.drawable.ic_cancel_cute);
+        ICON_MAP.put("mouse_mode", R.drawable.ic_mouse_cute);
+    }
+
+    /**
+     * 菜单选项类
+     */
     public static class MenuOption {
         private final String label;
         private final boolean withGameFocus;
         private final Runnable runnable;
+        private final String iconKey; // 用于图标映射的键
+        private final boolean showIcon; // 是否显示图标
 
         public MenuOption(String label, boolean withGameFocus, Runnable runnable) {
-            this.label = label;
-            this.withGameFocus = withGameFocus;
-            this.runnable = runnable;
+            this(label, withGameFocus, runnable, null, true);
         }
 
         public MenuOption(String label, Runnable runnable) {
-            this(label, false, runnable);
+            this(label, false, runnable, null, true);
         }
+
+        public MenuOption(String label, boolean withGameFocus, Runnable runnable, String iconKey) {
+            this(label, withGameFocus, runnable, iconKey, true);
+        }
+
+        public MenuOption(String label, boolean withGameFocus, Runnable runnable, String iconKey, boolean showIcon) {
+            this.label = label;
+            this.withGameFocus = withGameFocus;
+            this.runnable = runnable;
+            this.iconKey = iconKey;
+            this.showIcon = showIcon;
+        }
+
+        public String getLabel() { return label; }
+        public boolean isWithGameFocus() { return withGameFocus; }
+        public Runnable getRunnable() { return runnable; }
+        public String getIconKey() { return iconKey; }
+        public boolean isShowIcon() { return showIcon; }
     }
 
+    // 实例变量
     private final Game game;
     private final NvApp app;
     private final NvConnection conn;
     private final GameInputDevice device;
+    private final Handler handler;
 
     public GameMenu(Game game, NvApp app, NvConnection conn, GameInputDevice device) {
         this.game = game;
         this.app = app;
         this.conn = conn;
         this.device = device;
+        this.handler = new Handler();
 
         showMenu();
     }
 
+    /**
+     * 获取字符串资源
+     */
     private String getString(int id) {
         return game.getResources().getString(id);
     }
 
+    /**
+     * 键盘修饰符枚举
+     */
     private enum KeyModifier {
         SHIFT((short) KeyboardTranslator.VK_LSHIFT, KeyboardPacket.MODIFIER_SHIFT),
         CTRL((short) KeyboardTranslator.VK_LCONTROL, KeyboardPacket.MODIFIER_CTRL),
@@ -94,183 +147,559 @@ public class GameMenu {
         }
     }
 
+    /**
+     * 获取键盘修饰符
+     */
     private static byte getModifier(short key) {
         return KeyModifier.getModifier(key);
     }
 
+    /**
+     * 断开连接并退出
+     */
     private void disconnectAndQuit() {
         try {
             game.disconnect();
             conn.doStopAndQuit();
         } catch (IOException | XmlPullParserException e) {
-            throw new RuntimeException(e);
+            Toast.makeText(game, "断开连接时发生错误: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
+    /**
+     * 发送键盘按键序列
+     */
     private void sendKeys(short[] keys) {
+        if (keys == null || keys.length == 0) {
+            return;
+        }
+
         final byte[] modifier = { (byte) 0 };
 
+        // 按下所有按键
         for (short key : keys) {
             conn.sendKeyboardInput(key, KeyboardPacket.KEY_DOWN, modifier[0], (byte) 0);
-
-            // Apply the modifier of the pressed key, e.g. CTRL first issues a CTRL event
-            // (without
-            // modifier) and then sends the following keys with the CTRL modifier applied
             modifier[0] |= getModifier(key);
         }
 
-        new Handler().postDelayed((() -> {
-
+        // 延迟后释放按键
+        handler.postDelayed(() -> {
             for (int pos = keys.length - 1; pos >= 0; pos--) {
                 short key = keys[pos];
-
-                // Remove the keys modifier before releasing the key
                 modifier[0] &= ~getModifier(key);
-
                 conn.sendKeyboardInput(key, KeyboardPacket.KEY_UP, modifier[0], (byte) 0);
             }
-        }), KEY_UP_DELAY);
+        }, KEY_UP_DELAY);
     }
 
+    /**
+     * 在游戏获得焦点时运行任务
+     */
     private void runWithGameFocus(Runnable runnable) {
-        // Ensure that the Game activity is still active (not finished)
         if (game.isFinishing()) {
             return;
         }
-        // Check if the game window has focus again, if not try again after delay
+
         if (!game.hasWindowFocus()) {
-            new Handler().postDelayed(() -> runWithGameFocus(runnable), TEST_GAME_FOCUS_DELAY);
+            handler.postDelayed(() -> runWithGameFocus(runnable), TEST_GAME_FOCUS_DELAY);
             return;
         }
-        // Game Activity has focus, run runnable
+
         runnable.run();
     }
 
+    /**
+     * 执行菜单选项
+     */
     private void run(MenuOption option) {
-        if (option.runnable == null) {
+        if (option == null || option.getRunnable() == null) {
             return;
         }
 
-        if (option.withGameFocus) {
-            runWithGameFocus(option.runnable);
+        if (option.isWithGameFocus()) {
+            runWithGameFocus(option.getRunnable());
         } else {
-            option.runnable.run();
+            option.getRunnable().run();
         }
     }
 
+    /**
+     * 切换增强触摸模式
+     */
     private void toggleEnhancedTouch() {
         game.prefConfig.enableEnhancedTouch = !game.prefConfig.enableEnhancedTouch;
-        Toast.makeText(game, "Enhanced touch is: " + (game.prefConfig.enableEnhancedTouch ? "ON" : "OFF"), Toast.LENGTH_SHORT).show();
+        String message = game.prefConfig.enableEnhancedTouch ? "增强式多点触控已开启" : "经典鼠标模式已开启";
+        Toast.makeText(game, message, Toast.LENGTH_SHORT).show();
     }
 
-    private void showMenuDialog(String title, MenuOption[] options) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(game);
+    /**
+     * 切换麦克风开关
+     */
+    private void toggleMicrophone() {
+        // 切换GameView中麦克风按钮的显示/隐藏状态
+        game.toggleMicrophoneButton();
+    }
+
+    /**
+     * 显示菜单对话框
+     */
+    private void showMenuDialog(String title, MenuOption[] normalOptions, MenuOption[] superOptions) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(game, R.style.GameMenuDialogStyle);
+
         builder.setTitle(title);
 
-        LayoutInflater inflater = game.getLayoutInflater();
-        View customView = inflater.inflate(R.layout.custom_dialog, null);
-        builder.setView(customView);
+        // 创建自定义视图
+        View customView = createCustomView(builder);
         AlertDialog dialog = builder.create();
 
-        customView.findViewById(R.id.btnEsc).setOnClickListener((v) -> sendKeys(new short[]{KeyboardTranslator.VK_ESCAPE}));
-        customView.findViewById(R.id.btnWin).setOnClickListener((v) -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN}));
-        customView.findViewById(R.id.btnHDR).setOnClickListener((v) -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_MENU, KeyboardTranslator.VK_B}));
-        customView.findViewById(R.id.btnSleep).setOnClickListener((v) -> {
-            sendKeys(new short[]{KeyboardTranslator.VK_LWIN, 88});
-            new Handler().postDelayed((() -> {
-                sendKeys(new short[]{85, 83});
-            }), 200);
-        });
-        customView.findViewById(R.id.btnQuit).setOnClickListener((v) -> disconnectAndQuit());
+        // 动态设置菜单列表区域高度
+        setupMenuListHeight(customView);
+        
+        // 设置App名字显示
+        setupAppNameDisplay(customView);
 
-        final ArrayAdapter<String> actions = new ArrayAdapter<>(game, android.R.layout.simple_list_item_1);
+        // 设置快捷按钮
+        setupQuickButtons(customView, dialog);
 
-        for (MenuOption option : options) {
-            actions.add(option.label);
-        }
+        // 设置普通菜单
+        setupNormalMenu(customView, normalOptions, dialog);
 
-        ListView listView = customView.findViewById(R.id.gameMenuList);
-        listView.setAdapter(actions);
-        listView.setOnItemClickListener((AdapterView<?> parent, View view, int pos, long id) -> {
-            String label = actions.getItem(pos);
-            for (MenuOption option : options) {
-                if (label != null && !label.equals(option.label)) {
-                    continue;
-                }
+        // 设置超级菜单
+        setupSuperMenu(customView, superOptions, dialog);
 
-                run(option);
-                break;
-            }
-            dialog.dismiss();
-        });
+        // 设置对话框属性
+        setupDialogProperties(dialog);
 
-        // Set dialog background transparency
-        if (dialog.getWindow() != null) {
-            WindowManager.LayoutParams layoutParams = dialog.getWindow().getAttributes();
-            layoutParams.alpha = DIALOG_ALPHA;
-            dialog.getWindow().setAttributes(layoutParams);
-        }
         dialog.show();
     }
 
-    private void showSpecialKeysMenu() {
-        showMenuDialog(getString(R.string.game_menu_send_keys), new MenuOption[]{
-//                new MenuOption(getString(R.string.game_menu_send_keys_esc),
-//                        () -> sendKeys(new short[]{KeyboardTranslator.VK_ESCAPE})),
-                new MenuOption(getString(R.string.game_menu_send_keys_f11),
-                        () -> sendKeys(new short[]{KeyboardTranslator.VK_F11})),
-                new MenuOption(getString(R.string.game_menu_send_keys_ctrl_v),
-                        () -> sendKeys(new short[]{KeyboardTranslator.VK_LCONTROL, KeyboardTranslator.VK_V})),
-//                new MenuOption(getString(R.string.game_menu_send_keys_win),
-//                        () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN})),
-                new MenuOption(getString(R.string.game_menu_send_keys_win_d),
-                        () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_D})),
-                new MenuOption(getString(R.string.game_menu_send_keys_win_g),
-                        () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_G})),
-                new MenuOption(getString(R.string.game_menu_send_keys_alt_home),
-                        () -> sendKeys(new short[]{KeyboardTranslator.VK_MENU, KeyboardTranslator.VK_HOME})),
-                new MenuOption(getString(R.string.game_menu_send_keys_shift_tab),
-                        () -> sendKeys(new short[]{KeyboardTranslator.VK_LSHIFT, KeyboardTranslator.VK_TAB})),
-                new MenuOption(getString(R.string.game_menu_cancel), null),
+    /**
+     * 创建自定义视图
+     */
+    private View createCustomView(AlertDialog.Builder builder) {
+        LayoutInflater inflater = game.getLayoutInflater();
+        View customView = inflater.inflate(R.layout.custom_dialog, null);
+        builder.setView(customView);
+        return customView;
+    }
+
+    /**
+     * 动态设置菜单列表区域高度
+     * 最大高度就是内容实际高度，不做屏幕高度约束
+     */
+    private void setupMenuListHeight(View customView) {
+        customView.post(() -> {
+            View menuListContainer = customView.findViewById(R.id.menuListContainer);
+            if (menuListContainer == null) return;
+
+            float density = game.getResources().getDisplayMetrics().density;
+            int minHeight = (int) (220 * density);
+
+            int contentHeight = 0;
+            try {
+                contentHeight = calculateContentHeight(menuListContainer);
+            } catch (Exception ignored) {}
+
+            int finalHeight = Math.max(minHeight, contentHeight);
+            ViewGroup.LayoutParams lp = menuListContainer.getLayoutParams();
+            if (lp != null) {
+                lp.height = finalHeight > 0 ? finalHeight : minHeight;
+                menuListContainer.setLayoutParams(lp);
+            }
         });
     }
 
-    private void showMenu() {
-        List<MenuOption> options = new ArrayList<>();
+    /**
+     * 计算内容实际高度
+     * 使用性能优化的方式计算
+     */
+    private int calculateContentHeight(View container) {
+        try {
+            // 获取ListView
+            ListView normalListView = container.findViewById(R.id.gameMenuList);
+            ListView superListView = container.findViewById(R.id.superMenuList);
+            
+            int totalHeight = 0;
+            
+            // 计算普通菜单高度
+            if (normalListView != null && normalListView.getAdapter() != null) {
+                int normalItemCount = normalListView.getAdapter().getCount();
+                if (normalItemCount > 0) {
+                    // 获取单个item的高度
+                    View itemView = normalListView.getAdapter().getView(0, null, normalListView);
+                    itemView.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                                   View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+                    int itemHeight = itemView.getMeasuredHeight();
+                    
+                    // 计算总高度（最多显示8个item）
+                    int maxItems = Math.min(normalItemCount, 8);
+                    totalHeight = Math.max(totalHeight, itemHeight * maxItems);
+                }
+            }
+            
+            // 计算超级菜单高度
+            if (superListView != null && superListView.getAdapter() != null) {
+                int superItemCount = superListView.getAdapter().getCount();
+                if (superItemCount > 0) {
+                    // 获取单个item的高度
+                    View itemView = superListView.getAdapter().getView(0, null, superListView);
+                    itemView.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                                   View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+                    int itemHeight = itemView.getMeasuredHeight();
+                    
+                    // 计算总高度（最多显示8个item）
+                    int maxItems = Math.min(superItemCount, 8);
+                    totalHeight = Math.max(totalHeight, itemHeight * maxItems);
+                }
+            }
+            
+            // 添加一些padding和margin
+            totalHeight += (int) (32 * game.getResources().getDisplayMetrics().density);
+            
+            return totalHeight;
+            
+        } catch (Exception e) {
+            // 如果计算失败，返回默认高度
+            return (int) (220 * game.getResources().getDisplayMetrics().density);
+        }
+    }
 
-        options.add(new MenuOption(getString(R.string.game_menu_toggle_keyboard), true,
-                game::toggleKeyboard));
-        options.add(new MenuOption(getString(R.string.game_menu_toggle_host_keyboard), true,
-                () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_LCONTROL,
-                        KeyboardTranslator.VK_O})));
-        options.add(new MenuOption(game.prefConfig.enableEnhancedTouch ? "切换到经典鼠标模式" : "切换到增强式多点触控",
-                true, this::toggleEnhancedTouch));
+    /**
+     * 设置当前串流应用信息 (名字、HDR支持)
+     */
+    private void setupAppNameDisplay(View customView) {
+        try {
+            // 获取当前串流应用的名字
+            String appName = app.getAppName();
+            // 获取当前串流应用的HDR支持状态
+            boolean hdrSupported = app.isHdrSupported();
+            
+            // 找到App名字显示的TextView
+            TextView appNameTextView = customView.findViewById(R.id.appNameTextView);
+            appNameTextView.setText(appName + " (" + (hdrSupported ? "HDR: Supported" : "HDR: Unknown") + ")");
+        } catch (Exception e) {
+            // 如果获取失败，使用默认名字
+            TextView appNameTextView = customView.findViewById(R.id.appNameTextView);
+            if (appNameTextView != null) {
+                appNameTextView.setText("Moonlight V+");
+            }
+        }
+    }
 
-        if (device != null) {
-            options.addAll(device.getGameMenuOptions());
+    /**
+     * 设置快捷按钮
+     */
+    private void setupQuickButtons(View customView, AlertDialog dialog) {
+        // 创建动画
+        android.view.animation.Animation scaleDown = android.view.animation.AnimationUtils.loadAnimation(game, R.anim.button_scale_animation);
+        android.view.animation.Animation scaleUp = android.view.animation.AnimationUtils.loadAnimation(game, R.anim.button_scale_restore);
+        
+        // 设置按钮点击动画
+        setupButtonWithAnimation(customView.findViewById(R.id.btnEsc), scaleDown, scaleUp, v ->
+                sendKeys(new short[]{KeyboardTranslator.VK_ESCAPE}));
+
+        setupButtonWithAnimation(customView.findViewById(R.id.btnWin), scaleDown, scaleUp, v ->
+                sendKeys(new short[]{KeyboardTranslator.VK_LWIN}));
+
+        setupButtonWithAnimation(customView.findViewById(R.id.btnHDR), scaleDown, scaleUp, v ->
+                sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_MENU, KeyboardTranslator.VK_B}));
+
+        // 设置麦克风按钮，根据设置决定是否启用
+        View micButton = customView.findViewById(R.id.btnMic);
+        if (game.prefConfig != null && game.prefConfig.enableMic) {
+            // 麦克风重定向已开启，启用按钮
+            setupButtonWithAnimation(micButton, scaleDown, scaleUp, v -> toggleMicrophone());
+        } else {
+            // 麦克风重定向未开启，禁用按钮
+            micButton.setEnabled(false);
+            micButton.setAlpha(0.5f);
+            // 设置禁用图标
+            if (micButton instanceof android.widget.Button) {
+                android.widget.Button button = (android.widget.Button) micButton;
+                button.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_mic_gm_disabled, 0, 0, 0);
+            }
+            micButton.setOnClickListener(v -> {
+                // 显示提示信息
+                Toast.makeText(game, "请在设置中开启麦克风重定向", Toast.LENGTH_SHORT).show();
+            });
         }
 
+        setupButtonWithAnimation(customView.findViewById(R.id.btnSleep), scaleDown, scaleUp, v -> {
+            sendKeys(new short[]{KeyboardTranslator.VK_LWIN, 88});
+            handler.postDelayed(() -> sendKeys(new short[]{85, 83}), SLEEP_DELAY);
+        });
+
+        setupButtonWithAnimation(customView.findViewById(R.id.btnQuit), scaleDown, scaleUp, v -> disconnectAndQuit());
+    }
+
+    /**
+     * 为按钮设置动画效果
+     */
+    private void setupButtonWithAnimation(View button, android.view.animation.Animation scaleDown, 
+                                       android.view.animation.Animation scaleUp, View.OnClickListener listener) {
+        // 设置按钮样式
+        if (button instanceof android.widget.Button) {
+            android.widget.Button btn = (android.widget.Button) button;
+            btn.setTextAppearance(game, R.style.GameMenuButtonStyle);
+        }
+        
+        button.setOnTouchListener((v, event) -> {
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    v.startAnimation(scaleDown);
+                    // 添加按下状态的视觉反馈
+                    v.setAlpha(0.8f);
+                    break;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    v.startAnimation(scaleUp);
+                    // 恢复透明度
+                    v.setAlpha(1.0f);
+                    if (event.getAction() == MotionEvent.ACTION_UP) {
+                        // 添加点击反馈
+                        v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
+                        listener.onClick(v);
+                    }
+                    break;
+            }
+            return true;
+        });
+    }
+
+    /**
+     * 设置普通菜单
+     */
+    private void setupNormalMenu(View customView, MenuOption[] normalOptions, AlertDialog dialog) {
+        GameMenuAdapter normalAdapter = new GameMenuAdapter(game, normalOptions);
+        ListView normalListView = customView.findViewById(R.id.gameMenuList);
+        normalListView.setAdapter(normalAdapter);
+        normalListView.setOnItemClickListener((parent, view, pos, id) -> {
+            MenuOption option = normalAdapter.getItem(pos);
+            if (option != null) {
+                run(option);
+            }
+            dialog.dismiss();
+        });
+    }
+
+    /**
+     * 设置超级菜单
+     */
+    private void setupSuperMenu(View customView, MenuOption[] superOptions, AlertDialog dialog) {
+        ListView superListView = customView.findViewById(R.id.superMenuList);
+
+        if (superOptions.length > 0) {
+            SuperMenuAdapter superAdapter = new SuperMenuAdapter(game, superOptions);
+            superListView.setAdapter(superAdapter);
+            superListView.setOnItemClickListener((parent, view, pos, id) -> {
+                MenuOption option = superAdapter.getItem(pos);
+                if (option != null) {
+                    run(option);
+                }
+                dialog.dismiss();
+            });
+        } else {
+            setupEmptySuperMenu(superListView);
+        }
+    }
+
+    /**
+     * 设置空的超级菜单
+     */
+    private void setupEmptySuperMenu(ListView superListView) {
+        View emptyView = LayoutInflater.from(game).inflate(R.layout.game_menu_super_empty, superListView, false);
+        ViewGroup parent = (ViewGroup) superListView.getParent();
+        parent.addView(emptyView);
+        superListView.setEmptyView(emptyView);
+        SuperMenuAdapter emptyAdapter = new SuperMenuAdapter(game, new MenuOption[0]);
+        superListView.setAdapter(emptyAdapter);
+    }
+
+    /**
+     * 设置对话框属性
+     */
+    private void setupDialogProperties(AlertDialog dialog) {
+        if (dialog.getWindow() != null) {
+            WindowManager.LayoutParams layoutParams = dialog.getWindow().getAttributes();
+            layoutParams.alpha = DIALOG_ALPHA;
+            layoutParams.dimAmount = DIALOG_DIM_AMOUNT;
+            layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
+            
+            dialog.getWindow().setAttributes(layoutParams);
+            dialog.getWindow().setBackgroundDrawableResource(R.drawable.game_menu_dialog_bg);
+        }
+    }
+
+    /**
+     * 显示特殊按键菜单
+     */
+    private void showSpecialKeysMenu() {
+        MenuOption[] specialOptions = {
+            new MenuOption(getString(R.string.game_menu_send_keys_f11), false,
+                () -> sendKeys(new short[]{KeyboardTranslator.VK_F11}), null, false),
+            new MenuOption(getString(R.string.game_menu_send_keys_ctrl_v), false,
+                () -> sendKeys(new short[]{KeyboardTranslator.VK_LCONTROL, KeyboardTranslator.VK_V}), null, false),
+            new MenuOption(getString(R.string.game_menu_send_keys_win_d), false,
+                () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_D}), null, false),
+            new MenuOption(getString(R.string.game_menu_send_keys_win_g), false,
+                () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_G}), null, false),
+            new MenuOption(getString(R.string.game_menu_send_keys_alt_home), false,
+                () -> sendKeys(new short[]{KeyboardTranslator.VK_MENU, KeyboardTranslator.VK_HOME}), null, false),
+            new MenuOption(getString(R.string.game_menu_send_keys_shift_tab), false,
+                () -> sendKeys(new short[]{KeyboardTranslator.VK_LSHIFT, KeyboardTranslator.VK_TAB}), null, false),
+            new MenuOption(getString(R.string.game_menu_cancel), false, null, null, false)
+        };
+
+        showMenuDialog(getString(R.string.game_menu_send_keys), specialOptions, new MenuOption[0]);
+    }
+
+    /**
+     * 显示主菜单
+     */
+    private void showMenu() {
+        List<MenuOption> normalOptions = new ArrayList<>();
+        List<MenuOption> superOptions = new ArrayList<>();
+
+        // 构建普通菜单项
+        buildNormalMenuOptions(normalOptions);
+
+        // 构建超级菜单项
+        buildSuperMenuOptions(superOptions);
+
+        showMenuDialog(GAME_MENU_TITLE,
+                normalOptions.toArray(new MenuOption[0]),
+                superOptions.toArray(new MenuOption[0]));
+    }
+
+    /**
+     * 构建普通菜单选项
+     */
+    private void buildNormalMenuOptions(List<MenuOption> normalOptions) {
+        normalOptions.add(new MenuOption(getString(R.string.game_menu_toggle_keyboard), true,
+                game::toggleKeyboard, "game_menu_toggle_keyboard", true));
+
+        normalOptions.add(new MenuOption(getString(R.string.game_menu_toggle_host_keyboard), true,
+                () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_LCONTROL, KeyboardTranslator.VK_O}),
+                "game_menu_toggle_host_keyboard", true));
+
+        normalOptions.add(new MenuOption(
+                game.prefConfig.enableEnhancedTouch ? "切换到经典鼠标模式" : "切换到增强式多点触控",
+                true, this::toggleEnhancedTouch, "mouse_mode", true));
+
+        if (device != null) {
+            normalOptions.addAll(device.getGameMenuOptions());
+        }
+
+        normalOptions.add(new MenuOption(getString(R.string.game_menu_toggle_performance_overlay),
+                false, game::togglePerformanceOverlay, "game_menu_toggle_performance_overlay", true));
+
+        normalOptions.add(new MenuOption(getString(R.string.game_menu_send_keys),
+                false, this::showSpecialKeysMenu, "game_menu_send_keys", true));
+
+        normalOptions.add(new MenuOption(getString(R.string.game_menu_disconnect), true,
+                game::disconnect, "game_menu_disconnect", true));
+
+        normalOptions.add(new MenuOption(getString(R.string.game_menu_disconnect_and_quit), true,
+                this::disconnectAndQuit, "game_menu_disconnect_and_quit", true));
+
+        // normalOptions.add(new MenuOption(getString(R.string.game_menu_cancel), false, null, null, true));
+    }
+
+    /**
+     * 构建超级菜单选项
+     */
+    private void buildSuperMenuOptions(List<MenuOption> superOptions) {
         JsonArray cmdList = app.getCmdList();
         if (cmdList != null) {
             for (int i = 0; i < cmdList.size(); i++) {
                 JsonObject cmd = cmdList.get(i).getAsJsonObject();
-                options.add(new MenuOption(cmd.get("name").getAsString(), true, () -> {
+                superOptions.add(new MenuOption(cmd.get("name").getAsString(), true, () -> {
                     try {
                         conn.sendSuperCmd(cmd.get("id").getAsString());
                     } catch (IOException | XmlPullParserException e) {
-                        throw new RuntimeException(e);
+                        Toast.makeText(game, "发送超级命令时发生错误: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     }
-                }));
+                }, null, false)); // 超级指令菜单不显示图标
             }
         }
+    }
 
-        options.add(new MenuOption(getString(R.string.game_menu_toggle_performance_overlay),
-                game::togglePerformanceOverlay));
-        options.add(new MenuOption(getString(R.string.game_menu_send_keys), this::showSpecialKeysMenu));
-        options.add(new MenuOption(getString(R.string.game_menu_disconnect), true, game::disconnect));
-        options.add(new MenuOption("断开并退出串流", true, this::disconnectAndQuit));
-        options.add(new MenuOption(getString(R.string.game_menu_cancel), null));
+    /**
+     * 获取菜单项图标
+     */
+    private static int getIconForMenuOption(String iconKey) {
+        return ICON_MAP.getOrDefault(iconKey, R.drawable.ic_menu_item_default);
+    }
 
-        showMenuDialog(GAME_MENU_TITLE, options.toArray(new MenuOption[0]));
+    /**
+     * 自定义适配器用于显示美化的菜单项
+     */
+    private static class GameMenuAdapter extends ArrayAdapter<MenuOption> {
+        private final Context context;
+
+        public GameMenuAdapter(Context context, MenuOption[] options) {
+            super(context, 0, options);
+            this.context = context;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            if (convertView == null) {
+                convertView = LayoutInflater.from(context).inflate(R.layout.game_menu_list_item, parent, false);
+            }
+
+            MenuOption option = getItem(position);
+            if (option != null) {
+                TextView textView = convertView.findViewById(R.id.menu_item_text);
+                ImageView iconView = convertView.findViewById(R.id.menu_item_icon);
+
+                textView.setText(option.getLabel());
+                
+                if (option.isShowIcon()) {
+                    iconView.setImageResource(getIconForMenuOption(option.getIconKey()));
+                    iconView.setVisibility(View.VISIBLE);
+                } else {
+                    iconView.setVisibility(View.GONE);
+                }
+            }
+
+            return convertView;
+        }
+    }
+
+    /**
+     * 超级菜单适配器
+     */
+    private static class SuperMenuAdapter extends ArrayAdapter<MenuOption> {
+        private final Context context;
+
+        public SuperMenuAdapter(Context context, MenuOption[] options) {
+            super(context, 0, options);
+            this.context = context;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            if (convertView == null) {
+                convertView = LayoutInflater.from(context).inflate(R.layout.game_menu_list_item, parent, false);
+            }
+
+            MenuOption option = getItem(position);
+            if (option != null) {
+                TextView textView = convertView.findViewById(R.id.menu_item_text);
+                ImageView iconView = convertView.findViewById(R.id.menu_item_icon);
+
+                textView.setText(option.getLabel());
+                
+                if (option.isShowIcon()) {
+                    iconView.setImageResource(R.drawable.ic_cmd_cute);
+                    iconView.setVisibility(View.VISIBLE);
+                } else {
+                    iconView.setVisibility(View.GONE);
+                }
+            }
+
+            return convertView;
+        }
     }
 }

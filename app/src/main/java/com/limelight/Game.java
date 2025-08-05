@@ -3276,6 +3276,21 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     /**
+     * 切换麦克风按钮的显示/隐藏状态
+     */
+    public void toggleMicrophoneButton() {
+        if (micButton != null) {
+            if (micButton.getVisibility() == View.VISIBLE) {
+                micButton.setVisibility(View.GONE);
+                Toast.makeText(this, "麦克风按钮已隐藏", Toast.LENGTH_SHORT).show();
+            } else {
+                micButton.setVisibility(View.VISIBLE);
+                Toast.makeText(this, "麦克风按钮已显示", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    /**
      * 刷新性能覆盖层显示项配置（用户更改配置后调用）
      */
     public void refreshPerformanceOverlayConfig() {
@@ -3585,6 +3600,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private void configureTextViewStyle(TextView textView, int gravity, boolean isVertical) {
         // 设置文字对齐方式
         textView.setGravity(gravity);
+        
         
         // 根据布局方向设置阴影效果
         if (isVertical) {
