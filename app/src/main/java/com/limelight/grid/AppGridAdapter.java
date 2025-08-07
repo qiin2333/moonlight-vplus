@@ -16,8 +16,10 @@ import com.limelight.grid.assets.CachedAppAssetLoader;
 import com.limelight.grid.assets.DiskAssetLoader;
 import com.limelight.grid.assets.MemoryAssetLoader;
 import com.limelight.grid.assets.NetworkAssetLoader;
+import com.limelight.grid.assets.ScaledBitmap;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.preferences.PreferenceConfiguration;
+import com.limelight.utils.AppIconCache;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -121,7 +123,7 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
         loader.cancelBackgroundLoads();
         loader.freeCacheMemory();
     }
-
+    
     private static void sortList(List<AppView.AppObject> list) {
         Collections.sort(list, new Comparator<AppView.AppObject>() {
             @Override
@@ -164,8 +166,24 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
     @Override
     public void populateView(View parentView, ImageView imgView, ProgressBar prgView, TextView txtView, ImageView overlayView, AppView.AppObject obj) {
         ImageView appBackgroundImage = getActivity(context).findViewById(R.id.appBackgroundImage);
-        // Let the cached asset loader handle it
-        loader.populateImageView(obj, imgView, txtView);
+        
+        // Let the cached asset loader handle it with callback
+        loader.populateImageView(obj, imgView, txtView, false, () -> {
+            try {
+                // 图片加载完成后，尝试从内存缓存获取bitmap并存储到全局缓存
+                CachedAppAssetLoader.LoaderTuple tuple = new CachedAppAssetLoader.LoaderTuple(computer, obj.app);
+                ScaledBitmap scaledBitmap = loader.getBitmapFromCache(tuple);
+                if (scaledBitmap != null && scaledBitmap.bitmap != null) {
+                    AppIconCache.getInstance().putIcon(computer, obj.app, scaledBitmap.bitmap);
+                    // 添加调试信息
+                    System.out.println("成功缓存app icon: " + obj.app.getAppName());
+                } else {
+                    System.out.println("无法获取app icon进行缓存: " + obj.app.getAppName());
+                }
+            } catch (Exception e) {
+                System.out.println("缓存app icon时发生异常: " + obj.app.getAppName() + " - " + e.getMessage());
+            }
+        });
 
         if (obj.isRunning) {
             // Show the play button overlay

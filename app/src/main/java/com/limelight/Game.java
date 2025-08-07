@@ -39,7 +39,7 @@ import com.limelight.ui.StreamView;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.ServerHelper;
 import com.limelight.utils.ShortcutHelper;
-import com.limelight.utils.SpinnerDialog;
+import com.limelight.utils.FullscreenProgressOverlay;
 import com.limelight.utils.UiHelper;
 import com.limelight.utils.NetHelper;
 import com.limelight.utils.AnalyticsManager;
@@ -121,7 +121,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private final TouchContext[] absoluteTouchContextMap = new TouchContext[TOUCH_CONTEXT_LENGTH];
     private final TouchContext[] relativeTouchContextMap = new TouchContext[TOUCH_CONTEXT_LENGTH];
     private long multiFingerDownTime = 0;
-
+    
     public static final int REFERENCE_HORIZ_RES = 1280;
     public static final int REFERENCE_VERT_RES = 720;
 
@@ -152,7 +152,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private SharedPreferences tombstonePrefs;
 
     private NvConnection conn;
-    private SpinnerDialog spinner;
+    private FullscreenProgressOverlay progressOverlay;
     private boolean displayedFailureDialog = false;
     private boolean connecting = false;
     private boolean connected = false;
@@ -289,11 +289,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // Hack: allows use keyboard by dpad or controller
         getWindow().getDecorView().findViewById(android.R.id.content).setFocusable(true);
-
-        // Start the spinner
-        spinner = SpinnerDialog.displayDialog(this, getResources().getString(R.string.conn_establishing_title),
-                getResources().getString(R.string.conn_establishing_msg), true);
-
+        
         // Read the stream preferences
         prefConfig = PreferenceConfiguration.readPreferences(this);
         tombstonePrefs = Game.this.getSharedPreferences("DecoderTombstone", 0);
@@ -428,6 +424,19 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         if (cmdList != null) {
             app.setCmdList(cmdList);
         }
+
+        // Start the progress overlay
+        progressOverlay = new FullscreenProgressOverlay(this, app);
+        
+        // 设置computer信息
+        ComputerDetails computer = new ComputerDetails();
+        computer.name = pcName;
+        computer.uuid = getIntent().getStringExtra(EXTRA_PC_UUID);
+        progressOverlay.setComputer(computer);
+        
+        progressOverlay.show(getResources().getString(R.string.conn_establishing_title),
+                getResources().getString(R.string.conn_establishing_msg));
+
         X509Certificate serverCert = null;
         try {
             if (derCertData != null) {
@@ -644,9 +653,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
 
         if (!decoderRenderer.isAvcSupported()) {
-            if (spinner != null) {
-                spinner.dismiss();
-                spinner = null;
+            if (progressOverlay != null) {
+                progressOverlay.dismiss();
+                progressOverlay = null;
             }
 
             // If we can't find an AVC decoder, we can't proceed
@@ -1268,7 +1277,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     protected void onStop() {
         super.onStop();
 
-        SpinnerDialog.closeDialogs(this);
+        if (progressOverlay != null) {
+            progressOverlay.dismiss();
+            progressOverlay = null;
+        }
         Dialog.closeDialogs();
 
         if (virtualController != null) {
@@ -2563,8 +2575,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (spinner != null) {
-                    spinner.setMessage(getResources().getString(R.string.conn_starting) + " " + stage);
+                if (progressOverlay != null) {
+                    progressOverlay.setMessage(getResources().getString(R.string.conn_starting) + " " + stage);
                 }
             }
         });
@@ -2611,9 +2623,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (spinner != null) {
-                    spinner.dismiss();
-                    spinner = null;
+                if (progressOverlay != null) {
+                    progressOverlay.dismiss();
+                    progressOverlay = null;
                 }
 
                 if (!displayedFailureDialog) {
@@ -2762,9 +2774,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (spinner != null) {
-                    spinner.dismiss();
-                    spinner = null;
+                if (progressOverlay != null) {
+                    progressOverlay.dismiss();
+                    progressOverlay = null;
                 }
 
                 connected = true;
