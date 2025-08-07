@@ -9,7 +9,7 @@
     <color name="control_highlight_color">#2196F3</color>
     <color name="scene_btn_stroke">#2196F3</color>
     <color name="btn_pressed_color">#4D2196F3</color>
-    
+
     <!-- GameMenu 颜色 -->
     <color name="game_menu_card_background">#FFF8F8</color>
     <color name="game_menu_text_primary">#333333</color>
@@ -18,11 +18,13 @@
     <color name="game_menu_button_border">#FFE0E0E0</color>
     <color name="game_menu_button_border_pressed">@color/theme_pink_primary</color>
     <color name="game_menu_list_item_pressed">#FFF0F8FF</color>
+    <color name="game_menu_list_item_focused">#F8F8F8</color>
     <color name="game_menu_list_item_border">#FFE0E0E0</color>
     <color name="game_menu_list_item_border_pressed">@color/theme_pink_primary</color>
     <color name="game_menu_dialog_background">#FFF8F8</color>
     <color name="game_menu_dialog_border">#FFE0E0E0</color>
-    
+    <color name="game_menu_list_item_normal">#FFFFFF</color>
+
     <!-- 超级菜单颜色 -->
     <color name="game_menu_super_card_background">#00000000</color>
     <color name="game_menu_super_text_primary">@color/theme_pink_primary</color>
@@ -33,7 +35,7 @@
     <color name="game_menu_super_list_item_focused">#FFF0F8FF</color>
     <color name="game_menu_super_list_item_border">#FFE0E0E0</color>
     <color name="game_menu_super_list_item_border_pressed">@color/theme_pink_primary</color>
-    
+
     <!-- 主题粉色 -->
     <color name="theme_pink_primary">#FF6B9D</color>
     <color name="theme_pink_secondary">#FF8FA3</color>

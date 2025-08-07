@@ -228,7 +228,7 @@ public class UiHelper {
             }
         };
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(parent);
+        AlertDialog.Builder builder = new AlertDialog.Builder(parent, R.style.AppDialogStyle);
         builder.setMessage(parent.getResources().getString(R.string.applist_quit_confirmation))
                 .setPositiveButton(parent.getResources().getString(R.string.yes), dialogClickListener)
                 .setNegativeButton(parent.getResources().getString(R.string.no), dialogClickListener)
@@ -255,7 +255,7 @@ public class UiHelper {
             }
         };
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(parent);
+        AlertDialog.Builder builder = new AlertDialog.Builder(parent, R.style.AppDialogStyle);
         builder.setMessage(parent.getResources().getString(R.string.delete_pc_msg))
                 .setTitle(computer.name)
                 .setPositiveButton(parent.getResources().getString(R.string.yes), dialogClickListener)

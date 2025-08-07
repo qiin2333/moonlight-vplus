@@ -8,6 +8,8 @@ import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnCancelListener;
 
+import com.limelight.R;
+
 public class SpinnerDialog implements Runnable,OnCancelListener {
     private final String title;
     private final String message;
@@ -75,7 +77,7 @@ public class SpinnerDialog implements Runnable,OnCancelListener {
 
         if (progress == null)
         {
-            progress = new ProgressDialog(activity);
+            progress = new ProgressDialog(activity, R.style.AppProgressDialogStyle);
 
             progress.setTitle(title);
             progress.setMessage(message);
@@ -96,6 +98,14 @@ public class SpinnerDialog implements Runnable,OnCancelListener {
             synchronized (rundownDialogs) {
                 rundownDialogs.add(this);
                 progress.show();
+            }
+            
+            // 设置对话框透明度
+            if (progress.getWindow() != null) {
+                android.view.WindowManager.LayoutParams layoutParams = progress.getWindow().getAttributes();
+                layoutParams.alpha = 0.8f;
+                // layoutParams.dimAmount = 0.3f;
+                progress.getWindow().setAttributes(layoutParams);
             }
         }
         else

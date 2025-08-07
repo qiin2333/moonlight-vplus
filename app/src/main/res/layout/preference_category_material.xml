@@ -12,9 +12,6 @@
         android:layout_marginTop="16dp"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="8dp"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:textColor="?android:attr/colorAccent"
-        android:textSize="14sp"
-        android:textStyle="bold" />
+        android:textAppearance="@style/PreferenceCategoryWithShadow" />
 
 </LinearLayout> 

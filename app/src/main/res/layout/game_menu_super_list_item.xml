@@ -6,7 +6,10 @@
     android:padding="8dp"
     android:gravity="center_vertical"
     android:layout_margin="1dp"
-    android:background="@drawable/game_menu_list_item_bg">
+    android:background="@drawable/game_menu_list_item_bg"
+    android:focusable="true"
+    android:clickable="true"
+    android:focusableInTouchMode="true">
 
     <ImageView
         android:id="@+id/menu_item_icon"
@@ -21,7 +24,7 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:textSize="14sp"
-        android:textColor="#333333" />
+        android:textColor="@color/game_menu_text_primary" />
 
     <ImageView
         android:layout_width="14dp"

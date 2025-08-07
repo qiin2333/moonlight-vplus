@@ -2,19 +2,25 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
-            <solid android:color="#F0F0F0" />
+            <solid android:color="@color/game_menu_list_item_pressed" />
             <corners android:radius="6dp" />
         </shape>
     </item>
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="#F8F8F8" />
+            <solid android:color="@color/game_menu_list_item_focused" />
+            <corners android:radius="6dp" />
+        </shape>
+    </item>
+    <item android:state_selected="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/game_menu_list_item_focused" />
             <corners android:radius="6dp" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#FFFFFF" />
+            <solid android:color="@color/game_menu_list_item_normal" />
             <corners android:radius="6dp" />
         </shape>
     </item>

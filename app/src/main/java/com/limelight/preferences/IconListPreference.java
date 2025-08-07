@@ -56,6 +56,8 @@ public class IconListPreference extends ListPreference {
             return;
         }
 
+
+
         ArrayAdapter<CharSequence> adapter = new ArrayAdapter<CharSequence>(
                 getContext(), R.layout.icon_list_item, R.id.text, getEntries()) {
             @Override

@@ -240,25 +240,28 @@ public class SeekBarPreference extends DialogPreference
     public void showDialog(Bundle state) {
         super.showDialog(state);
 
-        Button positiveButton = ((AlertDialog) getDialog()).getButton(AlertDialog.BUTTON_POSITIVE);
-        positiveButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (shouldPersist()) {
-                    int valueToSave = seekBar.getProgress();
-                    
-                    // 如果是码率设置，保存对数变换后的值
-                    if (isLogarithmic) {
-                        valueToSave = linearToLog(valueToSave);
+        AlertDialog dialog = (AlertDialog) getDialog();
+        if (dialog != null) {
+            Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            positiveButton.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    if (shouldPersist()) {
+                        int valueToSave = seekBar.getProgress();
+                        
+                        // 如果是码率设置，保存对数变换后的值
+                        if (isLogarithmic) {
+                            valueToSave = linearToLog(valueToSave);
+                        }
+                        
+                        currentValue = valueToSave;
+                        persistInt(valueToSave);
+                        callChangeListener(valueToSave);
                     }
-                    
-                    currentValue = valueToSave;
-                    persistInt(valueToSave);
-                    callChangeListener(valueToSave);
-                }
 
-                getDialog().dismiss();
-            }
-        });
+                    getDialog().dismiss();
+                }
+            });
+        }
     }
 }

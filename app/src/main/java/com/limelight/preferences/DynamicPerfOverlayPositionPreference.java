@@ -90,4 +90,6 @@ public class DynamicPerfOverlayPositionPreference extends ListPreference {
         SharedPreferences prefs = getContext().getSharedPreferences("performance_overlay", Context.MODE_PRIVATE);
         prefs.edit().clear().apply();
     }
+    
+
 } 

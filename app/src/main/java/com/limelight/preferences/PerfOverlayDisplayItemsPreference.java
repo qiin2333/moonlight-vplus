@@ -91,4 +91,6 @@ public class PerfOverlayDisplayItemsPreference extends MultiSelectListPreference
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         prefs.edit().putStringSet("perf_overlay_display_items", items).apply();
     }
+    
+
 } 

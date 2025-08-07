@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:textColor="@color/theme_pink_primary"
+    android:textSize="14sp"
+    android:padding="12dp"
+    android:background="@drawable/game_menu_list_item_bg"
+    android:gravity="center_vertical" /> 
