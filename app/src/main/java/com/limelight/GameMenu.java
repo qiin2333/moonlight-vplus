@@ -1,7 +1,9 @@
 package com.limelight;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.os.Build;
 import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -28,11 +30,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * 提供游戏流媒体进行中的选项菜单
- * <p>
  * 在游戏活动中按返回键时显示
  */
 public class GameMenu {
@@ -57,6 +57,7 @@ public class GameMenu {
         ICON_MAP.put("game_menu_disconnect_and_quit", R.drawable.ic_btn_quit);
         ICON_MAP.put("game_menu_cancel", R.drawable.ic_cancel_cute);
         ICON_MAP.put("mouse_mode", R.drawable.ic_mouse_cute);
+        ICON_MAP.put("game_menu_mouse_emulation", R.drawable.ic_mouse_emulation_cute);
     }
 
     /**
@@ -435,14 +436,21 @@ public class GameMenu {
     /**
      * 为按钮设置动画效果
      */
-    private void setupButtonWithAnimation(View button, android.view.animation.Animation scaleDown, 
-                                       android.view.animation.Animation scaleUp, View.OnClickListener listener) {
+    @SuppressLint("ClickableViewAccessibility")
+    private void setupButtonWithAnimation(View button, android.view.animation.Animation scaleDown,
+                                          android.view.animation.Animation scaleUp, View.OnClickListener listener) {
         // 设置按钮样式
         if (button instanceof android.widget.Button) {
             android.widget.Button btn = (android.widget.Button) button;
             btn.setTextAppearance(game, R.style.GameMenuButtonStyle);
         }
-        
+
+        // 设置按钮支持焦点
+        button.setFocusable(true);
+        button.setClickable(true);
+        button.setFocusableInTouchMode(true);
+
+        // 设置触摸事件
         button.setOnTouchListener((v, event) -> {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
@@ -464,6 +472,49 @@ public class GameMenu {
             }
             return true;
         });
+
+        // 设置键盘事件支持（手柄和遥控器）
+        setupButtonKeyListener(button, scaleDown, scaleUp, listener);
+    }
+
+    /**
+     * 通用按钮键盘事件处理方法
+     */
+    private void setupButtonKeyListener(View button, android.view.animation.Animation scaleDown,
+                                        android.view.animation.Animation scaleUp, View.OnClickListener listener) {
+        button.setOnKeyListener((v, keyCode, event) -> {
+            if (event.getAction() == android.view.KeyEvent.ACTION_DOWN) {
+                if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER ||
+                        keyCode == android.view.KeyEvent.KEYCODE_ENTER) {
+                    // 添加点击反馈
+                    v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
+                    // 播放动画
+                    v.startAnimation(scaleDown);
+                    v.postDelayed(() -> {
+                        v.startAnimation(scaleUp);
+                        listener.onClick(v);
+                    }, 100);
+                    return true;
+                }
+            }
+            return false;
+        });
+    }
+
+    /**
+     * 通用菜单设置方法
+     */
+    private void setupMenu(ListView listView, ArrayAdapter<MenuOption> adapter, AlertDialog dialog) {
+        // 设置ListView支持手柄和遥控导航
+        listView.setItemsCanFocus(true);
+
+        listView.setOnItemClickListener((parent, view, pos, id) -> {
+            MenuOption option = adapter.getItem(pos);
+            if (option != null) {
+                run(option);
+            }
+            dialog.dismiss();
+        });
     }
 
     /**
@@ -473,13 +524,7 @@ public class GameMenu {
         GameMenuAdapter normalAdapter = new GameMenuAdapter(game, normalOptions);
         ListView normalListView = customView.findViewById(R.id.gameMenuList);
         normalListView.setAdapter(normalAdapter);
-        normalListView.setOnItemClickListener((parent, view, pos, id) -> {
-            MenuOption option = normalAdapter.getItem(pos);
-            if (option != null) {
-                run(option);
-            }
-            dialog.dismiss();
-        });
+        setupMenu(normalListView, normalAdapter, dialog);
     }
 
     /**
@@ -491,13 +536,7 @@ public class GameMenu {
         if (superOptions.length > 0) {
             SuperMenuAdapter superAdapter = new SuperMenuAdapter(game, superOptions);
             superListView.setAdapter(superAdapter);
-            superListView.setOnItemClickListener((parent, view, pos, id) -> {
-                MenuOption option = superAdapter.getItem(pos);
-                if (option != null) {
-                    run(option);
-                }
-                dialog.dismiss();
-            });
+            setupMenu(superListView, superAdapter, dialog);
         } else {
             setupEmptySuperMenu(superListView);
         }
@@ -628,7 +667,10 @@ public class GameMenu {
      * 获取菜单项图标
      */
     private static int getIconForMenuOption(String iconKey) {
-        return ICON_MAP.getOrDefault(iconKey, R.drawable.ic_menu_item_default);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            return ICON_MAP.getOrDefault(iconKey, R.drawable.ic_menu_item_default);
+        }
+        return -1;
     }
 
     /**

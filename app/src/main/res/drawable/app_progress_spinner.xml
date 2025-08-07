@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    
+    <path
+        android:fillColor="@color/theme_pink_primary"
+        android:pathData="M24,4C12.95,4 4,12.95 4,24s8.95,20 20,20s20,-8.95 20,-20S35.05,4 24,4zM24,40c-8.84,0 -16,-7.16 -16,-16s7.16,-16 16,-16s16,7.16 16,16S32.84,40 24,40z"/>
+    
+    <path
+        android:fillColor="@color/theme_pink_primary"
+        android:pathData="M24,8c-8.84,0 -16,7.16 -16,16s7.16,16 16,16s16,-7.16 16,-16S32.84,8 24,8zM24,36c-6.63,0 -12,-5.37 -12,-12s5.37,-12 12,-12s12,5.37 12,12S30.63,36 24,36z"/>
+    
+    <path
+        android:fillColor="@color/theme_pink_primary"
+        android:pathData="M24,12c-6.63,0 -12,5.37 -12,12s5.37,12 12,12s12,-5.37 12,-12S30.63,12 24,12zM24,32c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8s8,3.58 8,8S28.42,32 24,32z"/>
+    
+    <path
+        android:fillColor="@color/theme_pink_primary"
+        android:pathData="M24,16c-4.42,0 -8,3.58 -8,8s3.58,8 8,8s8,-3.58 8,-8S28.42,16 24,16zM24,28c-2.21,0 -4,-1.79 -4,-4s1.79,-4 4,-4s4,1.79 4,4S26.21,28 24,28z"/>
+</vector> 

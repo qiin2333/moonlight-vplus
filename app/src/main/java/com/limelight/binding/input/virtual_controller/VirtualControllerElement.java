@@ -14,6 +14,8 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.FrameLayout;
 
+import com.limelight.R;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -172,7 +174,7 @@ public abstract class VirtualControllerElement extends View {
     }
 
     protected void showConfigurationDialog() {
-        AlertDialog.Builder alertBuilder = new AlertDialog.Builder(getContext());
+        AlertDialog.Builder alertBuilder = new AlertDialog.Builder(getContext(), R.style.AppDialogStyle);
 
         alertBuilder.setTitle("Configuration");
 

@@ -97,6 +97,11 @@
     <string name="conn_terminated_msg">The connection was terminated.</string>
     <string name="error_code_prefix">Error code:</string>
 
+    <!-- Copy strings -->
+    <string name="copy_content">Copy Content</string>
+    <string name="copy_success">Content copied to clipboard</string>
+    <string name="copy_details">Copy Details</string>
+
     <!-- General strings -->
     <string name="ip_hint">IP address of host PC</string>
     <string name="searching_pc">Searching for host PCs on your local network…\n\n
@@ -169,7 +174,7 @@
     <string name="addpc_wrong_sitelocal">That address doesn\'t look right. You must use your router\'s public IP address for streaming over the Internet.</string>
 
     <!-- Preferences -->
-    <string name="category_basic_settings">Basic Settings</string>
+    <string name="category_basic_settings">⚙️ Basic Settings</string>
     <string name="title_resolution_list">Video resolution</string>
     <string name="summary_resolution_list">Increase to improve image clarity. Decrease for better performance on lower end devices and slower networks.</string>
     <string name="title_native_res_dialog">Native Resolution Warning</string>
@@ -179,8 +184,8 @@
     <string name="title_seekbar_bitrate">Video bitrate</string>
     <string name="summary_seekbar_bitrate">Increase for better image quality. Decrease to improve performance on slower connections.</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
-    <string name="title_seekbar_scale">主机分辨率缩放比例</string>
-    <string name="summary_seekbar_scale">请求到主机端的分辨率相当于客户端设定的基础分辨率 * 缩放比例,此时主机端的游戏渲染材质精度将会发生变化(超分辨率串流),降低此比例也可用来减轻主机端GPU压力。 ⚠注意：应用此选项之前需检查主机端是否支持缩放后的分辨率。</string>
+    <string name="title_seekbar_scale">Host Resolution Scale</string>
+    <string name="summary_seekbar_scale">The resolution requested to the host is equivalent to the client\'s base resolution * scale factor. This will change the game rendering material precision on the host side (super-resolution streaming). Reducing this ratio can also be used to reduce GPU pressure on the host side. ⚠Note: Check if the host supports the scaled resolution before applying this option.</string>
     <string name="title_checkbox_stretch_video">Stretch video to full-screen</string>
     <string name="resolution_prefix_native">Native</string>
     <string name="resolution_prefix_native_fullscreen">Native Full-Screen</string>
@@ -191,7 +196,7 @@
     <string name="title_custom_resolutions">Custom resolutions</string>
     <string name="summary_custom_resolutions">Create your own custom resolutions</string>
 
-    <string name="category_audio_settings">Audio Settings</string>
+    <string name="category_audio_settings">🔊 Audio Settings</string>
     <string name="title_audio_config_list">Surround sound configurationItem</string>
     <string name="summary_audio_config_list">Enable 5.1 or 7.1 surround sound for home-theater systems</string>
     <string name="title_checkbox_enable_audiofx">Enable system equalizer support</string>
@@ -204,7 +209,7 @@
     <string name="title_checkbox_reduce_refresh_rate">Allow refresh rate reduction</string>
     <string name="summary_checkbox_reduce_refresh_rate">Lower display refresh rates can save power at the expense of some additional video latency</string>
 
-    <string name="category_gamepad_settings">Gamepad Settings</string>
+    <string name="category_gamepad_settings">🎮 Gamepad Settings</string>
     <string name="title_checkbox_multi_controller">Automatic gamepad presence detection</string>
     <string name="summary_checkbox_multi_controller">Unchecking this option forces a gamepad to always be present</string>
     <string name="title_checkbox_vibrate_fallback">Emulate rumble support with vibration</string>
@@ -230,7 +235,7 @@
     <string name="title_checkbox_gamepad_motion_fallback">Emulate gamepad motion sensor support</string>
     <string name="summary_checkbox_gamepad_motion_fallback">Uses your device\'s built-in motion sensors if gamepad sensors are not supported by your connected gamepad or your Android version.\nNote: Enabling this option may cause your gamepad to appear as a PlayStation controller on the host.</string>
 
-    <string name="category_input_settings">Input Settings</string>
+    <string name="category_input_settings">⌨️ Input Settings</string>
     <string name="title_checkbox_touchscreen_trackpad">Use the touchscreen as a trackpad</string>
     <string name="summary_checkbox_touchscreen_trackpad">If enabled, the touchscreen acts like a trackpad. If disabled, multi-point touch will be enabled.</string>
 
@@ -254,7 +259,7 @@
     <string name="title_checkbox_mouse_nav_buttons">Enable back and forward mouse buttons</string>
     <string name="summary_checkbox_mouse_nav_buttons">Enabling this option may break right clicking on some buggy devices</string>
 
-    <string name="category_enhanced_touch_settings">Enhanced Multi-Point Touch</string>
+    <string name="category_enhanced_touch_settings">👆 Enhanced Multi-Point Touch</string>
     <string name="title_checkbox_enable_enhanced_touch">Enable enhanced touch</string>
     <string name="summary_checkbox_enable_enhanced_touch">\t</string>
     <string name="title_checkbox_enhanced_touch_on_which_side">Reverse enhanced touch zone</string>
@@ -272,7 +277,7 @@
     <string name="dialog_title_fixed_x_velocity">Set fixed X (horizontal) velocity in pixels. Set 0 to disable fixed x velocity.</string>
     <string name="suffix_fixed_x_velocity">pixels</string>
 
-    <string name="category_on_screen_controls_settings">On-screen Controls Settings</string>
+    <string name="category_on_screen_controls_settings">📱 On-screen Controls Settings</string>
     <string name="title_checkbox_show_onscreen_controls">Show on-screen controls</string>
     <string name="summary_checkbox_show_onscreen_controls">Show virtual controller overlay on touchscreen</string>
     <string name="title_checkbox_vibrate_osc">Enable vibration</string>
@@ -291,7 +296,7 @@
     <string name="dialog_title_osc_opacity">Change opacity</string>
     <string name="suffix_osc_opacity">%</string>
 
-    <string name="category_ui_settings">UI Settings</string>
+    <string name="category_ui_settings">🎨 UI Settings</string>
     <string name="title_checkbox_enable_pip">Enable Picture-in-Picture observer mode</string>
     <string name="summary_checkbox_enable_pip">Allows the stream to be viewed (but not controlled) while multitasking</string>
     <string name="title_language_list">Language</string>
@@ -299,13 +304,13 @@
     <string name="title_checkbox_small_icon_mode">Use small box art</string>
     <string name="summary_checkbox_small_icon_mode">Smaller box art in the app grid allows more apps to be visible on screen</string>
 
-    <string name="category_host_settings">Host Settings</string>
+    <string name="category_host_settings">🖥️ Host Settings</string>
     <string name="title_checkbox_enable_sops">Optimize game settings</string>
     <string name="summary_checkbox_enable_sops">Allow GFE to modify game settings for optimal streaming</string>
     <string name="title_checkbox_host_audio">Play audio on PC</string>
     <string name="summary_checkbox_host_audio">Play audio from the computer and this device</string>
 
-    <string name="category_advanced_settings">Advanced Settings</string>
+    <string name="category_advanced_settings">🔧 Advanced Settings</string>
     <string name="title_unlock_fps">Unlock all possible frame rates</string>
     <string name="summary_unlock_fps">Streaming at 90 or 120 FPS may reduce latency on high-end devices but can cause lag or instability on devices that can\'t support it</string>
     <string name="title_checkbox_disable_warnings">Disable warning messages</string>
@@ -320,14 +325,14 @@
     <string name="summary_full_range">This will cause loss of detail in light and dark areas if your device doesn\'t properly display full range video content.</string>
     <string name="title_enable_perf_overlay">Show performance stats while streaming</string>
     <string name="summary_enable_perf_overlay">Display real-time stream performance information while streaming</string>
-    <string name="title_perf_overlay_orientation">性能统计显示方向</string>
-    <string name="summary_perf_overlay_orientation">选择性能统计信息的显示方向</string>
-    <string name="title_perf_overlay_position">性能统计显示位置</string>
-    <string name="summary_perf_overlay_position">水平时选择顶部/底部，垂直时选择四个角位置</string>
-    <string name="title_reset_perf_overlay_position">重置性能统计位置</string>
-    <string name="summary_reset_perf_overlay_position">将性能统计重置到预设位置</string>
-    <string name="title_perf_overlay_display_items">性能统计显示项目</string>
-    <string name="summary_perf_overlay_display_items">选择要在性能覆盖层中显示的信息项目</string>
+    <string name="title_perf_overlay_orientation">Performance Overlay Orientation</string>
+    <string name="summary_perf_overlay_orientation">Choose the display orientation for performance statistics</string>
+    <string name="title_perf_overlay_position">Performance Overlay Position</string>
+    <string name="summary_perf_overlay_position">Choose top/bottom for horizontal orientation, or four corner positions for vertical orientation</string>
+    <string name="title_reset_perf_overlay_position">Reset Performance Overlay Position</string>
+    <string name="summary_reset_perf_overlay_position">Reset performance overlay to preset position</string>
+    <string name="title_perf_overlay_display_items">Performance Overlay Display Items</string>
+    <string name="summary_perf_overlay_display_items">Select information items to display in the performance overlay</string>
     <string name="title_enable_post_stream_toast">Show latency message after streaming</string>
     <string name="summary_enable_post_stream_toast">Display a latency information message after the stream ends</string>
     <string name="mic_stats_continuity">Audio continuity: %.1f%% (Captured:%d Encoded:%d Sent:%d Dropped:%d)</string>
@@ -386,4 +391,56 @@
     <string name="mic_enabled">Microphone enabled</string>
     <string name="mic_disabled">Microphone disabled</string>
     <string name="mic_permission_required">Microphone permission required</string>
+    
+    <!-- Screen position settings -->
+    <string name="category_screen_position_settings">Screen Position Settings</string>
+    <string name="title_screen_position">Screen Position</string>
+    <string name="summary_screen_position">Choose the position of the screen when using non-fullscreen resolution</string>
+    <string name="title_screen_offset_x">Horizontal Offset</string>
+    <string name="summary_screen_offset_x">Horizontal offset of the screen</string>
+    <string name="title_screen_offset_y">Vertical Offset</string>
+    <string name="summary_screen_offset_y">Vertical offset of the screen</string>
+    
+    <!-- Crown feature area -->
+    <string name="category_crown_features">Crown Feature Area</string>
+    <string name="title_crown_super_features">Crown Super Features</string>
+    <string name="summary_crown_super_features">Custom buttons and settings during streaming, saved to custom configurations for quick switching</string>
+    <string name="title_export_super_config">Export Configuration</string>
+    <string name="summary_export_super_config">Export custom button and streaming settings configuration file</string>
+    <string name="title_import_super_config">Import Configuration</string>
+    <string name="summary_import_super_config">Import custom button and streaming settings configuration file</string>
+    <string name="title_merge_super_config">Merge Configuration</string>
+    <string name="summary_merge_super_config">Merge new configuration buttons into existing configuration</string>
+    <string name="title_about_author">This is V+ X Royal Edition</string>
+    <string name="summary_about_author">Crown\'s Bilibili: XiguaHub, please follow them. GitHub: https://github.com/WACrown/moonlight-android</string>
+    
+    <!-- External display -->
+    <string name="title_use_external_display">Use External Display</string>
+    <string name="summary_use_external_display">If an external display is connected, display the stream on the external display</string>
+    
+    <!-- Background image API -->
+    <string name="title_background_image_api">Background Image API</string>
+    <string name="summary_background_image_api">Enter a custom background image API, or a single image URL. Leave empty to view random images</string>
+    <string name="dialog_title_background_image_api">Background Image API</string>
+    <string name="dialog_message_background_image_api">Please enter the complete image API</string>
+    
+    <!-- Reverse resolution -->
+    <string name="title_checkbox_reverse_resolution">Reverse Resolution</string>
+    <string name="summary_checkbox_reverse_resolution">Swap width and height values for special display requirements</string>
+    
+    <!-- Moonlight V+ PC download -->
+    <string name="title_moonlight_vplus_pc_download">Moonlight V+ PC Download</string>
+
+    <!-- Tip strings -->
+    <string name="tip_esc_exit">💡 Tip: Use the "Exit" button to quickly and completely exit the stream, restoring your screen to its pre-stream state~</string>
+    <string name="tip_double_tap_mouse">💡 Tip: Long press the top blank area on the host list page to download the current wallpaper~</string>
+    <string name="tip_long_press_controller">💡 Tip: Long press an app to choose virtual display streaming, super convenient!</string>
+    <string name="tip_volume_keys">💡 Tip: Using 5GHz WiFi provides a better experience, lightning fast speeds~</string>
+    <string name="tip_stable_network">💡 Tip: Using a wired connection gives you the lowest latency and highest stability, rock solid!</string>
+    <string name="tip_5ghz_wifi">💡 Tip: Using "Balanced" frame rate mode gives you the best balance of frame rate and latency, perfect!</string>
+    <string name="tip_close_apps">💡 Tip: Enabling HDR provides better color and contrast performance. In Sunshine base version, binding the corresponding HDR profile can more precisely sync with the client screen, gorgeous colors~</string>
+    <string name="tip_wired_connection">💡 Tip: Make sure your network is stable when connecting for a smoother gaming experience~</string>
+    <string name="tip_resolution_balance">💡 Tip: Closing other apps can improve performance, making streaming smoother~</string>
+    <string name="tip_hdr_colors">💡 Tip: Adjusting resolution can balance quality and performance, find the perfect settings~</string>
+
 </resources>

@@ -196,7 +196,7 @@ public class PageConfigController {
         }
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 context,
-                android.R.layout.simple_spinner_item,
+                R.layout.app_spinner_item,
                 configNames
         );
         configSelectSpinner.setAdapter(adapter);

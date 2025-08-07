@@ -32,6 +32,7 @@ import com.limelight.utils.HelpLauncher;
 import com.limelight.utils.ServerHelper;
 import com.limelight.utils.ShortcutHelper;
 import com.limelight.utils.UiHelper;
+import com.limelight.utils.AnalyticsManager;
 
 import com.bumptech.glide.Glide;
 
@@ -146,6 +147,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
 
     public String clientName;
     private LruCache<String, Bitmap> bitmapLruCache;
+    private AnalyticsManager analyticsManager;
 
     // 添加场景配置相关常量
     private static final String SCENE_PREF_NAME = "SceneConfigs";
@@ -449,7 +451,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
     }
 
     private void showSaveConfirmationDialog(int sceneNumber) {
-        new AlertDialog.Builder(this)
+        new AlertDialog.Builder(this, R.style.AppDialogStyle)
             .setTitle("保存到场景" + sceneNumber)
             .setMessage("是否覆盖当前配置？")
             .setPositiveButton("保存", (dialog, which) -> saveCurrentConfiguration(sceneNumber))
@@ -487,6 +489,10 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         shortcutHelper = new ShortcutHelper(this);
 
         UiHelper.setLocale(this);
+
+        // 初始化统计分析管理器
+        analyticsManager = AnalyticsManager.getInstance(this);
+        analyticsManager.logAppLaunch();
 
         // Bind to the computer manager service
         bindService(new Intent(PcView.this, ComputerManagerService.class), serviceConnection,
@@ -541,6 +547,11 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         if (managerBinder != null) {
             unbindService(serviceConnection);
         }
+        
+        // 清理统计分析资源
+        if (analyticsManager != null) {
+            analyticsManager.cleanup();
+        }
     }
 
     @Override
@@ -552,6 +563,11 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
 
         inForeground = true;
         startComputerUpdates();
+        
+        // 开始记录使用时长
+        if (analyticsManager != null) {
+            analyticsManager.startUsageTracking();
+        }
     }
 
     @Override
@@ -560,6 +576,11 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
 
         inForeground = false;
         stopComputerUpdates(false);
+        
+        // 停止记录使用时长
+        if (analyticsManager != null) {
+            analyticsManager.stopUsageTracking();
+        }
     }
 
     @Override
@@ -888,7 +909,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                 return true;
             
             case VIEW_DETAILS_ID:
-                Dialog.displayDialog(PcView.this, getResources().getString(R.string.title_details), computer.details.toString(), false);
+                Dialog.displayDetailsDialog(PcView.this, getResources().getString(R.string.title_details), computer.details.toString(), false);
                 return true;
 
             case TEST_NETWORK_ID:

@@ -62,17 +62,18 @@
             android:defaultValue="false" />
         <CheckBoxPreference
             android:key="checkbox_reverse_resolution"
-            android:title="反转分辨率"
-            android:summary="交换宽度和高度值，用于特殊显示需求"
+            android:title="@string/title_checkbox_reverse_resolution"
+            android:summary="@string/summary_checkbox_reverse_resolution"
             android:defaultValue="false" />
     </PreferenceCategory>
     <PreferenceCategory
-        android:title="画面位置设置"
-        android:icon="@drawable/ic_screen_position">
+        android:title="@string/category_screen_position_settings"
+        android:icon="@drawable/ic_screen_position"
+        android:layout="@layout/preference_category_material">
         <com.limelight.preferences.IconListPreference
             android:key="list_screen_position"
-            android:title="画面位置"
-            android:summary="选择非全屏分辨率时画面的位置"
+            android:title="@string/title_screen_position"
+            android:summary="@string/summary_screen_position"
             android:entries="@array/screen_position_names"
             android:entryValues="@array/screen_position_values"
             android:defaultValue="center"
@@ -80,20 +81,21 @@
         
         <SeekBarPreference
             android:key="seekbar_screen_offset_x"
-            android:title="水平偏移"
-            android:summary="画面水平方向的偏移量"
+            android:title="@string/title_screen_offset_x"
+            android:summary="@string/summary_screen_offset_x"
             android:defaultValue="0"
             android:max="100" />
         
         <SeekBarPreference
             android:key="seekbar_screen_offset_y"
-            android:title="垂直偏移"
-            android:summary="画面垂直方向的偏移量"
+            android:title="@string/title_screen_offset_y"
+            android:summary="@string/summary_screen_offset_y"
             android:defaultValue="0"
             android:max="100" />
         
     </PreferenceCategory>
-    <PreferenceCategory android:title="@string/category_audio_settings">
+    <PreferenceCategory android:title="@string/category_audio_settings"
+        android:layout="@layout/preference_category_material">
         <ListPreference
             android:key="list_audio_config"
             android:title="@string/title_audio_config_list"
@@ -126,7 +128,8 @@
             android:title="@string/title_seekbar_mic_bitrate" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_gamepad_settings"
-        android:key="category_gamepad_settings">
+        android:key="category_gamepad_settings"
+        android:layout="@layout/preference_category_material">
         <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_deadzone"
             android:defaultValue="7"
@@ -198,7 +201,8 @@
             android:defaultValue="false" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_input_settings"
-        android:key="category_input_settings">
+        android:key="category_input_settings"
+        android:layout="@layout/preference_category_material">
         <CheckBoxPreference
             android:key="checkbox_touchscreen_trackpad"
             android:title="@string/title_checkbox_touchscreen_trackpad"
@@ -244,7 +248,8 @@
             android:defaultValue="true" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_enhanced_touch_settings"
-        android:key="category_enhanced_touch">
+        android:key="category_enhanced_touch"
+        android:layout="@layout/preference_category_material">
         <CheckBoxPreference
             android:defaultValue="true"
             android:key="checkbox_enable_enhanced_touch"
@@ -293,7 +298,8 @@
             android:title="@string/title_pointer_velocity_factor" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_on_screen_controls_settings"
-        android:key="category_onscreen_controls">
+        android:key="category_onscreen_controls"
+        android:layout="@layout/preference_category_material">
         <CheckBoxPreference
             android:defaultValue="false"
             android:key="checkbox_show_onscreen_controls"
@@ -340,31 +346,33 @@
             />
     </PreferenceCategory>
     <PreferenceCategory 
-        android:title="增强版设置"
-        android:icon="@drawable/ic_enhance">
+        android:title="@string/category_crown_features"
+        android:icon="@drawable/ic_enhance"
+        android:layout="@layout/preference_category_material">
         <CheckBoxPreference
             android:defaultValue="false"
             android:key="checkbox_show_onscreen_keyboard"
-            android:summary="串流中自定义按键和一些设置，并将这些保存到自定义可快速切换的配置中"
-            android:title="王冠的超级功能" />
+            android:summary="@string/summary_crown_super_features"
+            android:title="@string/title_crown_super_features" />
         <ListPreference
             android:key="export_super_config"
-            android:title="导出配置"
-            android:summary="导出自定义按钮的和串流内设置的配置文件" />
+            android:title="@string/title_export_super_config"
+            android:summary="@string/summary_export_super_config" />
         <Preference
             android:key="import_super_config"
-            android:title="导入配置"
-            android:summary="导入自定义按钮的和串流内设置的配置文件" />
+            android:title="@string/title_import_super_config"
+            android:summary="@string/summary_import_super_config" />
         <ListPreference
             android:key="merge_super_config"
-            android:title="合并配置"
-            android:summary="将新的配置的按键合并到现有配置中" />
+            android:title="@string/title_merge_super_config"
+            android:summary="@string/summary_merge_super_config" />
         <Preference
             android:key="about_author"
-            android:title="这是 V+ X 皇家版本"
-            android:summary="王冠的B站:西瓜hub，请关注TA， github: https://github.com/WACrown/moonlight-android" />
+            android:title="@string/title_about_author"
+            android:summary="@string/summary_about_author" />
     </PreferenceCategory>
-    <PreferenceCategory android:title="@string/category_host_settings">
+    <PreferenceCategory android:title="@string/category_host_settings"
+        android:layout="@layout/preference_category_material">
         <CheckBoxPreference
             android:key="checkbox_enable_sops"
             android:title="@string/title_checkbox_enable_sops"
@@ -377,7 +385,8 @@
             android:defaultValue="false" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_ui_settings"
-        android:key="category_ui_settings">
+        android:key="category_ui_settings"
+        android:layout="@layout/preference_category_material">
         <CheckBoxPreference
             android:key="checkbox_enable_pip"
             android:title="@string/title_checkbox_enable_pip"
@@ -385,8 +394,8 @@
             android:defaultValue="false" />
         <com.limelight.preferences.ExternalDisplayPreference
             android:key="use_external_display"
-            android:title="使用外接显示器"
-            android:summary="如果连接了外接显示器，则在外接显示器上显示串流画面"
+            android:title="@string/title_use_external_display"
+            android:summary="@string/summary_use_external_display"
             android:defaultValue="false" />
         <com.limelight.preferences.LanguagePreference
             android:key="list_languages"
@@ -401,14 +410,15 @@
             android:summary="@string/summary_checkbox_small_icon_mode" />
         <EditTextPreference
             android:key="background_image_url"
-            android:title="背景图片API"
-            android:summary="输入自定义背景图片的API，也可以是单张图片地址哦，留空就是看随机涩图"
-            android:dialogTitle="背景图片API"
-            android:dialogMessage="请输入完整的图片API"
+            android:title="@string/title_background_image_api"
+            android:summary="@string/summary_background_image_api"
+            android:dialogTitle="@string/dialog_title_background_image_api"
+            android:dialogMessage="@string/dialog_message_background_image_api"
             android:defaultValue="" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_advanced_settings"
-        android:key="category_advanced_settings">
+        android:key="category_advanced_settings"
+        android:layout="@layout/preference_category_material">
         <CheckBoxPreference
             android:key="checkbox_unlock_fps"
             android:title="@string/title_unlock_fps"
@@ -477,7 +487,8 @@
             android:defaultValue="false"/>
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_help"
-        android:key="category_help">
+        android:key="category_help"
+        android:layout="@layout/preference_category_material">
         <!-- <com.limelight.preferences.WebLauncherPreference
             android:title="@string/title_setup_guide"
             android:summary="@string/summary_setup_guide"
@@ -491,7 +502,7 @@
             android:summary="@string/summary_about_mode"
             url="https://github.com/qiin2333/moonlight-android/releases/tag/shortcut"/>
         <com.limelight.preferences.WebLauncherPreference
-            android:title="Moonlight V+ PC版下载"
+            android:title="@string/title_moonlight_vplus_pc_download"
             url="https://github.com/qiin2333/moonlight-qt"/>
         <com.limelight.preferences.WebLauncherPreference
             android:title="@string/title_privacy_policy"

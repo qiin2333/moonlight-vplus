@@ -49,6 +49,9 @@
         <item name="android:textViewStyle">@style/PreferenceTextWithShadow</item>
         <item name="android:titleTextAppearance">@style/PreferenceTitleWithShadow</item>
         <item name="android:subtitleTextAppearance">@style/PreferenceSummaryWithShadow</item>
+        <item name="android:colorAccent">@color/theme_pink_secondary</item>
+        <item name="android:textColorPrimary">@color/theme_pink_secondary</item>
+        <item name="android:listDivider">@color/theme_pink_secondary</item>
     </style>
 
     <style name="PreferenceTextWithShadow">
@@ -63,18 +66,18 @@
     <style name="PreferenceTitleWithShadow" parent="PreferenceTextWithShadow">
         <item name="android:textSize">18sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">@color/theme_pink_light</item> <!-- 柔和的粉白色 -->
+        <item name="android:textColor">@android:color/white</item>
     </style>
 
     <style name="PreferenceSummaryWithShadow" parent="PreferenceTextWithShadow">
         <item name="android:textSize">14sp</item>
-        <item name="android:textColor">#E1F5FE</item> <!-- 柔和的浅蓝色 -->
+        <item name="android:textColor">@color/theme_pink_light</item> <!-- 柔和的浅蓝色 -->
     </style>
 
     <style name="PreferenceCategoryWithShadow" parent="PreferenceTextWithShadow">
         <item name="android:textSize">20sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">@color/theme_pink_primary</item> <!-- 主题粉色 -->
+        <item name="android:textColor">@color/theme_pink_secondary</item> 
         <item name="android:shadowColor">#AA000000</item> <!-- 更强的阴影 -->
         <item name="android:shadowRadius">5</item> <!-- 更大的阴影半径 -->
     </style>
@@ -92,7 +95,7 @@
     <!-- GameMenu 按钮样式 -->
     <style name="GameMenuButtonStyle" parent="android:Widget.Button">
         <item name="android:background">@drawable/game_menu_button_bg</item>
-        <item name="android:textColor">#333333</item>
+        <item name="android:textColor">@color/game_menu_text_primary</item>
         <item name="android:textSize">14sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:paddingLeft">6dp</item>
@@ -110,7 +113,7 @@
     <!-- GameMenu 列表项样式 -->
     <style name="GameMenuListItemStyle" parent="android:Widget.ListView">
         <item name="android:background">@drawable/game_menu_list_item_bg</item>
-        <item name="android:textColor">#333333</item>
+        <item name="android:textColor">@color/game_menu_text_primary</item>
         <item name="android:textSize">14sp</item>
         <item name="android:padding">16dp</item>
         <item name="android:minHeight">56dp</item>
@@ -121,6 +124,111 @@
     <style name="GameMenuDialogAnimation">
         <item name="android:windowEnterAnimation">@anim/game_menu_dialog_enter</item>
         <item name="android:windowExitAnimation">@anim/game_menu_dialog_exit</item>
+    </style>
+
+    <!-- 通用弹窗样式 -->
+    <style name="AppDialogStyle" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/game_menu_dialog_bg</item>
+        <item name="android:windowMinWidthMajor">80%</item>
+        <item name="android:windowMinWidthMinor">90%</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowAnimationStyle">@style/AppDialogAnimation</item>
+        <item name="android:windowSoftInputMode">adjustResize</item>
+        <item name="android:textColorPrimary">@color/theme_pink_primary</item>
+        <item name="android:textColorSecondary">@color/game_menu_text_secondary</item>
+        <item name="android:colorAccent">@color/theme_pink_primary</item>
+        <item name="android:listDivider">@color/theme_pink_primary</item>
+    </style>
+
+    <!-- 通用弹窗动画 -->
+    <style name="AppDialogAnimation">
+        <item name="android:windowEnterAnimation">@anim/game_menu_dialog_enter</item>
+        <item name="android:windowExitAnimation">@anim/game_menu_dialog_exit</item>
+    </style>
+
+    <!-- 通用按钮样式 -->
+    <style name="AppDialogButtonStyle" parent="android:Widget.Button">
+        <item name="android:background">@drawable/game_menu_button_bg</item>
+        <item name="android:textColor">@color/theme_pink_primary</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:paddingLeft">12dp</item>
+        <item name="android:paddingRight">12dp</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">8dp</item>
+        <item name="android:minHeight">40dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:elevation">0dp</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+
+    <!-- 进度对话框样式 -->
+    <style name="AppProgressDialogStyle" parent="Theme.AppCompat.Light.Dialog">
+        <item name="android:windowBackground">@drawable/game_menu_dialog_bg</item>
+        <item name="android:windowMinWidthMajor">50%</item>
+        <item name="android:windowMinWidthMinor">80%</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowAnimationStyle">@style/AppDialogAnimation</item>
+        <item name="android:textColorPrimary">@color/theme_pink_primary</item>
+        <item name="android:colorAccent">@color/theme_pink_primary</item>
+        <item name="android:progressTint">@color/theme_pink_primary</item>
+        <item name="android:indeterminateTint">@color/theme_pink_primary</item>
+        <item name="android:indeterminateDrawable">@drawable/app_progress_indeterminate</item>
+    </style>
+
+    <!-- Spinner样式 -->
+    <style name="AppSpinnerStyle" parent="android:Widget.Spinner">
+        <item name="android:background">@drawable/game_menu_button_bg</item>
+        <item name="android:textColor">@color/theme_pink_primary</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:padding">8dp</item>
+        <item name="android:popupBackground">@drawable/game_menu_dialog_bg</item>
+    </style>
+
+    <!-- Spinner下拉项样式 -->
+    <style name="AppSpinnerDropDownStyle" parent="android:Widget.DropDownItem">
+        <item name="android:textColor">@color/theme_pink_primary</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:background">@drawable/game_menu_list_item_bg</item>
+    </style>
+
+    <!-- Switch样式 -->
+    <style name="AppSwitchStyle" parent="android:Widget.CompoundButton">
+        <item name="android:thumbTint">@color/theme_pink_primary</item>
+        <item name="android:trackTint">@color/theme_pink_secondary</item>
+        <item name="android:textColor">@color/theme_pink_primary</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- Button样式 -->
+    <style name="AppButtonStyle" parent="android:Widget.Button">
+        <item name="android:background">@drawable/game_menu_button_bg</item>
+        <item name="android:textColor">@color/theme_pink_primary</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:padding">8dp</item>
+        <item name="android:minHeight">40dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:elevation">0dp</item>
+    </style>
+
+    <!-- Preference弹窗样式 -->
+    <style name="PreferenceDialogStyle" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/game_menu_dialog_bg</item>
+        <item name="android:windowMinWidthMajor">80%</item>
+        <item name="android:windowMinWidthMinor">90%</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowAnimationStyle">@style/AppDialogAnimation</item>
+        <item name="android:textColorPrimary">@color/theme_pink_primary</item>
+        <item name="android:textColorSecondary">@color/game_menu_text_secondary</item>
+        <item name="android:colorAccent">@color/theme_pink_primary</item>
+        <item name="android:listDivider">@color/theme_pink_primary</item>
+        <item name="android:buttonBarPositiveButtonStyle">@style/AppButtonStyle</item>
+        <item name="android:buttonBarNegativeButtonStyle">@style/AppButtonStyle</item>
     </style>
 
 </resources>
