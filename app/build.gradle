@@ -1,5 +1,9 @@
 apply plugin: 'com.android.application'
-apply plugin: 'com.google.gms.google-services'
+
+// 只在release版本中应用Google Services插件
+if (project.hasProperty('enableAnalytics') || gradle.startParameter.taskNames.any { it.contains('Release') }) {
+    apply plugin: 'com.google.gms.google-services'
+}
 
 android {
     ndkVersion "27.0.12077973"

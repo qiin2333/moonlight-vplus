@@ -104,6 +104,14 @@ public class DiskAssetLoader {
             bmp = BitmapFactory.decodeFile(file.getAbsolutePath(), options);
             if (bmp != null) {
                 LimeLog.info("Tuple "+tuple+" decoded from disk cache with sample size: "+options.inSampleSize);
+                
+                // 检查并压缩过大的Bitmap
+                Bitmap compressedBmp = compressLargeBitmap(bmp);
+                if (compressedBmp != bmp) {
+                    bmp.recycle(); // 回收原始Bitmap
+                    bmp = compressedBmp;
+                }
+                
                 return new ScaledBitmap(decodeOnlyOptions.outWidth, decodeOnlyOptions.outHeight, bmp);
             }
         }
@@ -123,6 +131,16 @@ public class DiskAssetLoader {
                         }
                     }
                 });
+                
+                // 检查并压缩过大的Bitmap
+                if (scaledBitmap.bitmap != null) {
+                    Bitmap compressedBmp = compressLargeBitmap(scaledBitmap.bitmap);
+                    if (compressedBmp != scaledBitmap.bitmap) {
+                        scaledBitmap.bitmap.recycle(); // 回收原始Bitmap
+                        scaledBitmap.bitmap = compressedBmp;
+                    }
+                }
+                
                 return scaledBitmap;
             } catch (IOException e) {
                 e.printStackTrace();
@@ -131,6 +149,44 @@ public class DiskAssetLoader {
         }
 
         return null;
+    }
+    
+    /**
+     * 压缩过大的Bitmap
+     */
+    private Bitmap compressLargeBitmap(Bitmap original) {
+        if (original == null) return null;
+        
+        // 计算Bitmap的内存大小（字节）
+        int byteCount = original.getByteCount();
+        int maxSize = 1024 * 1024; // 1MB限制
+        
+        // 如果大小超过限制，进行压缩
+        if (byteCount > maxSize) {
+            try {
+                // 计算压缩比例
+                float scale = (float) Math.sqrt((double) maxSize / byteCount);
+                int newWidth = Math.round(original.getWidth() * scale);
+                int newHeight = Math.round(original.getHeight() * scale);
+                
+                // 确保最小尺寸
+                newWidth = Math.max(newWidth, 300);
+                newHeight = Math.max(newHeight, 400);
+                
+                // 创建压缩后的Bitmap
+                Bitmap compressed = Bitmap.createScaledBitmap(original, newWidth, newHeight, true);
+                
+                LimeLog.info("DiskAssetLoader: Compressed bitmap from " + original.getWidth() + "x" + original.getHeight() + 
+                           " to " + newWidth + "x" + newHeight + " (size: " + byteCount + " -> " + compressed.getByteCount() + " bytes)");
+                
+                return compressed;
+            } catch (Exception e) {
+                LimeLog.warning("DiskAssetLoader: Failed to compress bitmap: " + e.getMessage());
+                return original;
+            }
+        }
+        
+        return original;
     }
 
     public File getFile(String computerUuid, int appId) {

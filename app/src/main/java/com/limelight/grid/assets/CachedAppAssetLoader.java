@@ -1,7 +1,5 @@
 package com.limelight.grid.assets;
 
-import android.app.Activity;
-import android.content.ContextWrapper;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
@@ -23,7 +21,6 @@ import com.limelight.nvstream.http.NvApp;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ref.WeakReference;
-import java.util.Objects;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -101,6 +98,48 @@ public class CachedAppAssetLoader {
         memoryLoader.clearCache();
     }
 
+    public ScaledBitmap getBitmapFromCache(LoaderTuple tuple) {
+        return diskLoader.loadBitmapFromCache(tuple, (int) scalingDivider);
+    }
+    
+    /**
+     * 压缩过大的Bitmap
+     */
+    private Bitmap compressLargeBitmap(Bitmap original) {
+        if (original == null) return null;
+        
+        // 计算Bitmap的内存大小（字节）
+        int byteCount = original.getByteCount();
+        int maxSize = 1024 * 1024; // 1MB限制
+        
+        // 如果大小超过限制，进行压缩
+        if (byteCount > maxSize) {
+            try {
+                // 计算压缩比例
+                float scale = (float) Math.sqrt((double) maxSize / byteCount);
+                int newWidth = Math.round(original.getWidth() * scale);
+                int newHeight = Math.round(original.getHeight() * scale);
+                
+                // 确保最小尺寸
+                newWidth = Math.max(newWidth, 300);
+                newHeight = Math.max(newHeight, 400);
+                
+                // 创建压缩后的Bitmap
+                Bitmap compressed = Bitmap.createScaledBitmap(original, newWidth, newHeight, true);
+                
+                LimeLog.info("Compressed bitmap from " + original.getWidth() + "x" + original.getHeight() + 
+                           " to " + newWidth + "x" + newHeight + " (size: " + byteCount + " -> " + compressed.getByteCount() + " bytes)");
+                
+                return compressed;
+            } catch (Exception e) {
+                LimeLog.warning("Failed to compress bitmap: " + e.getMessage());
+                return original;
+            }
+        }
+        
+        return original;
+    }
+
     private ScaledBitmap doNetworkAssetLoad(LoaderTuple tuple, LoaderTask task) {
         // Try 3 times
         for (int i = 0; i < 3; i++) {
@@ -156,18 +195,24 @@ public class CachedAppAssetLoader {
         private final WeakReference<TextView> textViewRef;
         private final boolean diskOnly;
         private final boolean isBackground;
+        private final Runnable onLoadComplete;
 
         private LoaderTuple tuple;
 
         public LoaderTask(ImageView imageView, TextView textView, boolean diskOnly) {
-            this(imageView, textView, diskOnly, false);
+            this(imageView, textView, diskOnly, false, null);
         }
 
         public LoaderTask(ImageView imageView, TextView textView, boolean diskOnly, boolean isBackground) {
+            this(imageView, textView, diskOnly, isBackground, null);
+        }
+        
+        public LoaderTask(ImageView imageView, TextView textView, boolean diskOnly, boolean isBackground, Runnable onLoadComplete) {
             this.imageViewRef = new WeakReference<>(imageView);
             this.textViewRef = new WeakReference<>(textView);
             this.diskOnly = diskOnly;
             this.isBackground = isBackground;
+            this.onLoadComplete = onLoadComplete;
         }
 
         @Override
@@ -193,7 +238,16 @@ public class CachedAppAssetLoader {
 
             // Cache the bitmap
             if (bmp != null) {
-                memoryLoader.populateCache(tuple, bmp);
+                // 压缩过大的Bitmap
+                Bitmap compressedBitmap = compressLargeBitmap(bmp.bitmap);
+                if (compressedBitmap != bmp.bitmap) {
+                    // 如果压缩了，创建新的ScaledBitmap
+                    ScaledBitmap compressedScaledBitmap = new ScaledBitmap(bmp.originalWidth, bmp.originalHeight, compressedBitmap);
+                    memoryLoader.populateCache(tuple, compressedScaledBitmap);
+                } else {
+                    // 如果没有压缩，使用原始Bitmap
+                    memoryLoader.populateCache(tuple, bmp);
+                }
             }
 
             return bmp;
@@ -267,6 +321,11 @@ public class CachedAppAssetLoader {
                         imageView.startAnimation(AnimationUtils.loadAnimation(imageView.getContext(), fadeInAnimRes));
                         imageView.setVisibility(View.VISIBLE);
                     }
+                }
+                
+                // 如果提供了回调，执行它
+                if (onLoadComplete != null) {
+                    onLoadComplete.run();
                 }
             }
         }
@@ -356,6 +415,10 @@ public class CachedAppAssetLoader {
     }
 
     public boolean populateImageView(AppView.AppObject obj, ImageView imgView, TextView textView, boolean isBackground) {
+        return populateImageView(obj, imgView, textView, isBackground, null);
+    }
+    
+    public boolean populateImageView(AppView.AppObject obj, ImageView imgView, TextView textView, boolean isBackground, Runnable onLoadComplete) {
         LoaderTuple tuple = new LoaderTuple(computer, obj.app);
 
         // If there's already a task in progress for this view,
@@ -375,12 +438,17 @@ public class CachedAppAssetLoader {
             imgView.setImageBitmap(bmp.bitmap);
             // Show the text if it's a placeholder bitmap
             textView.setVisibility(isBitmapPlaceholder(bmp) ? View.VISIBLE : View.GONE);
+            
+            // 如果提供了回调，执行它
+            if (onLoadComplete != null) {
+                onLoadComplete.run();
+            }
             return true;
         }
 
         // If it's not in memory, create an async task to load it. This task will be attached
         // via AsyncDrawable to this view.
-        final LoaderTask task = new LoaderTask(imgView, textView, true, isBackground);
+        final LoaderTask task = new LoaderTask(imgView, textView, true, isBackground, onLoadComplete);
         final AsyncDrawable asyncDrawable = new AsyncDrawable(imgView.getResources(), placeholderBitmap, task);
         textView.setVisibility(View.INVISIBLE);
         imgView.setVisibility(View.INVISIBLE);
