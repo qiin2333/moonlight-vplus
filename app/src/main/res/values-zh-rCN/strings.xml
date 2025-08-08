@@ -106,6 +106,7 @@
     <!-- In Game menu -->
     <string name="game_menu_toggle_keyboard"> 屏幕键盘 </string>
     <string name="game_menu_toggle_performance_overlay"> 性能监控图层 </string>
+    <string name="game_menu_toggle_virtual_controller"> 虚拟手柄 </string>
     <string name="game_menu_toggle_host_keyboard"> 主机键盘 </string>
     <string name="game_menu_toggle_mouse_on"> 手柄模拟鼠标-打开 </string>
     <string name="game_menu_toggle_mouse_off"> 手柄模拟鼠标-关闭 </string>
@@ -135,6 +136,15 @@
     <string name="summary_resolution_list">高分辨率提升图像清晰度。低分辨率提升在低端设备和较慢网络中的串流体验。</string>
     <string name="title_custom_resolutions"> 自定义分辨率 </string>
     <string name="summary_custom_resolutions">杂鱼～那么多分辨率都不能满足你了啊！</string>
+    <string name="custom_resolution_input_title">输入自定义分辨率</string>
+    <string name="width_label">宽度:</string>
+    <string name="height_label">高度:</string>
+    <string name="width_hint">例如: 1920</string>
+    <string name="height_hint">例如: 1080</string>
+    <string name="add_resolution">添加分辨率</string>
+    <string name="invalid_resolution_format">分辨率格式无效，请使用 宽度x高度 格式</string>
+    <string name="resolution_already_exists">该分辨率已存在</string>
+    <string name="resolution_added_successfully">分辨率添加成功</string>
     <string name="title_fps_list"> 视频帧数 </string>
     <string name="summary_fps_list">高帧数提升视频流流畅度。低帧数提升在低端设备中的串流体验。</string>
     <string name="title_seekbar_bitrate"> 视频码率 </string>
@@ -411,14 +421,14 @@
     <string name="title_moonlight_vplus_pc_download">Moonlight V+ PC版下载</string>
 
     <!-- Tip strings -->
-    <string name="tip_esc_exit">💡 串流考点：使用"退出"按钮可以快速完全地退出串流，让屏幕恢复到串流前的状态哦～</string>
-    <string name="tip_double_tap_mouse">💡 串流考点：主机列表页面长按顶部空白区域可以下载当前涩图呢～</string>
-    <string name="tip_long_press_controller">💡 串流考点：长按应用可以选择使用虚拟显示器串流，超方便的！</string>
-    <string name="tip_volume_keys">💡 串流考点：建议使用5GHz WiFi获得更好体验，网速飞起来～</string>
-    <string name="tip_stable_network">💡 串流考点：使用有线连接可以获得最低延迟与最高的稳定性，稳如泰山！</string>
-    <string name="tip_5ghz_wifi">💡 串流考点：使用"平衡"的帧数率模式可以获得最佳的帧率与延迟平衡，完美！</string>
-    <string name="tip_close_apps">💡 串流考点：启用HDR可以获得更好的色彩与对比度表现，在Sunshine基地版中绑定对应的HDR配置文件可以更精准地与客户端屏幕同步，色彩绚丽～</string>
-    <string name="tip_wired_connection">💡 串流考点：连接时请确保网络稳定，让游戏体验更流畅～</string>
-    <string name="tip_resolution_balance">💡 串流考点：关闭其他应用可以提升性能，让串流更顺畅～</string>
-    <string name="tip_hdr_colors">💡 串流考点：调整分辨率可以平衡画质和性能，找到最适合的设置～</string>
+    <string name="tip_esc_exit">💡 串流小课堂：使用"退出"按钮可以快速完全地退出串流，让屏幕恢复到串流前的状态哦～</string>
+    <string name="tip_double_tap_mouse">💡 串流小课堂：主机列表页面长按顶部空白区域可以下载当前涩图呢～</string>
+    <string name="tip_long_press_controller">💡 串流小课堂：长按应用可以选择使用虚拟显示器串流，超方便的！</string>
+    <string name="tip_volume_keys">💡 串流小课堂：建议使用5GHz WiFi获得更好体验，网速飞起来～</string>
+    <string name="tip_stable_network">💡 串流小课堂：使用有线连接可以获得最低延迟与最高的稳定性，稳如泰山！</string>
+    <string name="tip_5ghz_wifi">💡 串流小课堂：使用"平衡"的帧数率模式可以获得最佳的帧率与延迟平衡，完美！</string>
+    <string name="tip_close_apps">💡 串流小课堂：启用HDR可以获得更好的色彩与对比度表现，在Sunshine基地版中绑定对应的HDR配置文件可以更精准地与客户端屏幕同步，色彩绚丽～</string>
+    <string name="tip_wired_connection">💡 串流小课堂：连接时请确保网络稳定，让游戏体验更流畅～</string>
+    <string name="tip_resolution_balance">💡 串流小课堂：关闭其他应用可以提升性能，让串流更顺畅～</string>
+    <string name="tip_hdr_colors">💡 串流小课堂：调整分辨率可以平衡画质和性能，找到最适合的设置～</string>
 </resources>

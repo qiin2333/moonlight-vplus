@@ -3321,6 +3321,26 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     /**
+     * 切换虚拟手柄覆盖层的显示/隐藏状态
+     */
+    public void toggleVirtualController() {
+        if (virtualController != null && !virtualController.getElements().isEmpty()) {
+            // 检查第一个元素的可见性来判断当前状态
+            boolean isVisible = virtualController.getElements().get(0).getVisibility() == View.VISIBLE;
+            
+            if (isVisible) {
+                virtualController.hide();
+                Toast.makeText(this, "虚拟手柄已隐藏", Toast.LENGTH_SHORT).show();
+            } else {
+                virtualController.show();
+                Toast.makeText(this, "虚拟手柄已显示", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            Toast.makeText(this, "虚拟手柄未启用", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
      * 刷新性能覆盖层显示项配置（用户更改配置后调用）
      */
     public void refreshPerformanceOverlayConfig() {
