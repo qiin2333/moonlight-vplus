@@ -336,11 +336,21 @@ public class PreferenceConfiguration {
     }
 
     private static int getWidthFromResolutionString(String resString) {
-        return Integer.parseInt(resString.split("x")[0]);
+        try {
+            return Integer.parseInt(resString.split("x")[0]);
+        } catch (Exception e) {
+            // 如果解析失败，返回默认宽度
+            return Integer.parseInt(DEFAULT_RESOLUTION.split("x")[0]);
+        }
     }
 
     private static int getHeightFromResolutionString(String resString) {
-        return Integer.parseInt(resString.split("x")[1]);
+        try {
+            return Integer.parseInt(resString.split("x")[1]);
+        } catch (Exception e) {
+            // 如果解析失败，返回默认高度
+            return Integer.parseInt(DEFAULT_RESOLUTION.split("x")[1]);
+        }
     }
 
     private static String getResolutionString(int width, int height) {

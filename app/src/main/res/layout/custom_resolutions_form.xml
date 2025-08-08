@@ -2,25 +2,79 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:paddingHorizontal="8dp"
-    android:paddingVertical="@dimen/activity_safearea_top">
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingVertical="20dp">
 
-    <EditText
-        android:id="@+id/custom_resolution_field"
-        android:inputType="text"
-        android:layout_width="0dp"
+    <TextView
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:layout_weight="1" >
-        <requestFocus />
-    </EditText>
+        android:text="@string/custom_resolution_input_title"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp"
+        android:textSize="18sp"
+        android:gravity="center" />
 
-    <ImageButton
-        android:id="@+id/done_editing"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:contentDescription="save"
-        android:src="@drawable/ic_done" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/width_label"
+            android:layout_marginEnd="12dp"
+            android:textSize="16sp" />
+
+        <EditText
+            android:id="@+id/custom_resolution_width_field"
+            android:inputType="number"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:hint="@string/width_hint"
+            android:layout_marginEnd="16dp"
+            android:paddingHorizontal="12dp"
+            android:textSize="16sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/height_label"
+            android:layout_marginEnd="12dp"
+            android:textSize="16sp" />
+
+        <EditText
+            android:id="@+id/custom_resolution_height_field"
+            android:inputType="number"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:hint="@string/height_hint"
+            android:paddingHorizontal="12dp"
+            android:textSize="16sp" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp"
+        android:gravity="center">
+
+        <Button
+            android:id="@+id/add_resolution_button"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:text="@string/add_resolution"
+            android:textSize="16sp"
+            android:minWidth="120dp"
+            android:textColor="@android:color/white" />
+
+    </LinearLayout>
 
 </LinearLayout>

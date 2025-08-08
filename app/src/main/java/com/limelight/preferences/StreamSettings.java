@@ -234,9 +234,9 @@ public class StreamSettings extends Activity {
 
             List<CharSequence> preferencesList = Arrays.asList(pref.getEntryValues());
 
-            if(stored == null) {
+            if(stored == null || stored.isEmpty()) {
                 return;
-            };
+            }
 
             Comparator<String> lengthComparator = new Comparator<String>() {
                 @Override

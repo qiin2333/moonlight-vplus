@@ -147,6 +147,7 @@
     <!-- In Game menu -->
     <string name="game_menu_toggle_keyboard">Toggle On-screen Keyboard</string>
     <string name="game_menu_toggle_performance_overlay">Toggle Performance Overlay</string>
+    <string name="game_menu_toggle_virtual_controller">Toggle Virtual Controller</string>
     <string name="game_menu_toggle_host_keyboard">Toggle Host Keyboard</string>
     <string name="game_menu_toggle_all_keyboard">Toggle PC Keyboard</string>
     <string name="game_menu_toggle_mouse_on">Enable Controller Mouse Emulation</string>
@@ -195,6 +196,15 @@
     <string name="title_native_fps_dialog">Native FPS Warning</string>
     <string name="title_custom_resolutions">Custom resolutions</string>
     <string name="summary_custom_resolutions">Create your own custom resolutions</string>
+    <string name="custom_resolution_input_title">Enter Custom Resolution</string>
+    <string name="width_label">Width:</string>
+    <string name="height_label">Height:</string>
+    <string name="width_hint">e.g. 1920</string>
+    <string name="height_hint">e.g. 1080</string>
+    <string name="add_resolution">Add Resolution</string>
+    <string name="invalid_resolution_format">Invalid resolution format, please use width x height format</string>
+    <string name="resolution_already_exists">This resolution already exists</string>
+    <string name="resolution_added_successfully">Resolution added successfully</string>
 
     <string name="category_audio_settings">🔊 Audio Settings</string>
     <string name="title_audio_config_list">Surround sound configurationItem</string>

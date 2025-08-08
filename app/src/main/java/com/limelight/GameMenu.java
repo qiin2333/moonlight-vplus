@@ -51,6 +51,7 @@ public class GameMenu {
     static {
         ICON_MAP.put("game_menu_toggle_keyboard", R.drawable.ic_keyboard_cute);
         ICON_MAP.put("game_menu_toggle_performance_overlay", R.drawable.ic_performance_cute);
+        ICON_MAP.put("game_menu_toggle_virtual_controller", R.drawable.ic_controller_cute);
         ICON_MAP.put("game_menu_disconnect", R.drawable.ic_disconnect_cute);
         ICON_MAP.put("game_menu_send_keys", R.drawable.ic_send_keys_cute);
         ICON_MAP.put("game_menu_toggle_host_keyboard", R.drawable.ic_host_keyboard);
@@ -631,6 +632,12 @@ public class GameMenu {
 
         normalOptions.add(new MenuOption(getString(R.string.game_menu_toggle_performance_overlay),
                 false, game::togglePerformanceOverlay, "game_menu_toggle_performance_overlay", true));
+
+        // 只有在启用了虚拟手柄时才显示虚拟手柄切换选项
+        if (game.prefConfig.onscreenController) {
+            normalOptions.add(new MenuOption(getString(R.string.game_menu_toggle_virtual_controller),
+                    false, game::toggleVirtualController, "game_menu_toggle_virtual_controller", true));
+        }
 
         normalOptions.add(new MenuOption(getString(R.string.game_menu_send_keys),
                 false, this::showSpecialKeysMenu, "game_menu_send_keys", true));
