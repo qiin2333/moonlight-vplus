@@ -46,10 +46,10 @@ public class FullscreenProgressOverlay {
             activity.getString(R.string.tip_double_tap_mouse),
             activity.getString(R.string.tip_long_press_controller),
             activity.getString(R.string.tip_volume_keys),
-            activity.getString(R.string.tip_stable_network),
+            activity.getString(R.string.tip_wallpaper_change),
             activity.getString(R.string.tip_5ghz_wifi),
             activity.getString(R.string.tip_close_apps),
-            activity.getString(R.string.tip_wired_connection),
+            activity.getString(R.string.tip_home_saves),
             activity.getString(R.string.tip_resolution_balance),
             activity.getString(R.string.tip_hdr_colors)
         };

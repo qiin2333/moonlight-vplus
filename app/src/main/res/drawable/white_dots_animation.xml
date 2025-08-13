@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="60dp"
+            android:height="20dp"
+            android:viewportWidth="60"
+            android:viewportHeight="20">
+            
+            <!-- 第一个点 -->
+            <path
+                android:name="dot1"
+                android:pathData="M10,10m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0"
+                android:fillColor="#FFFFFF"/>
+            
+            <!-- 第二个点 -->
+            <path
+                android:name="dot2"
+                android:pathData="M30,10m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0"
+                android:fillColor="#FFFFFF"/>
+            
+            <!-- 第三个点 -->
+            <path
+                android:name="dot3"
+                android:pathData="M50,10m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0"
+                android:fillColor="#FFFFFF"/>
+        </vector>
+    </aapt:attr>
+
+    <target android:name="dot1">
+        <aapt:attr name="android:animation">
+            <set android:ordering="sequentially">
+                <objectAnimator
+                    android:propertyName="fillAlpha"
+                    android:duration="600"
+                    android:valueFrom="0.3"
+                    android:valueTo="1.0"
+                    android:valueType="floatType"
+                    android:repeatCount="infinite"
+                    android:repeatMode="reverse"/>
+            </set>
+        </aapt:attr>
+    </target>
+
+    <target android:name="dot2">
+        <aapt:attr name="android:animation">
+            <set android:ordering="sequentially">
+                <objectAnimator
+                    android:propertyName="fillAlpha"
+                    android:duration="600"
+                    android:valueFrom="0.3"
+                    android:valueTo="1.0"
+                    android:valueType="floatType"
+                    android:repeatCount="infinite"
+                    android:repeatMode="reverse"
+                    android:startOffset="200"/>
+            </set>
+        </aapt:attr>
+    </target>
+
+    <target android:name="dot3">
+        <aapt:attr name="android:animation">
+            <set android:ordering="sequentially">
+                <objectAnimator
+                    android:propertyName="fillAlpha"
+                    android:duration="600"
+                    android:valueFrom="0.3"
+                    android:valueTo="1.0"
+                    android:valueType="floatType"
+                    android:repeatCount="infinite"
+                    android:repeatMode="reverse"
+                    android:startOffset="400"/>
+            </set>
+        </aapt:attr>
+    </target>
+</animated-vector>
+

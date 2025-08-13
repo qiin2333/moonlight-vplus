@@ -164,7 +164,7 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
     }
 
     @Override
-    public void populateView(View parentView, ImageView imgView, ProgressBar prgView, TextView txtView, ImageView overlayView, AppView.AppObject obj) {
+    public void populateView(View parentView, ImageView imgView, View spinnerView, TextView txtView, ImageView overlayView, AppView.AppObject obj) {
         ImageView appBackgroundImage = getActivity(context).findViewById(R.id.appBackgroundImage);
         
         // Let the cached asset loader handle it with callback

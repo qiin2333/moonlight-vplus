@@ -54,7 +54,7 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
 
     @SuppressLint("SetTextI18n")
     @Override
-    public void populateView(View parentView, ImageView imgView, ProgressBar prgView, TextView txtView, ImageView overlayView, PcView.ComputerObject obj) {
+    public void populateView(View parentView, ImageView imgView, View spinnerView, TextView txtView, ImageView overlayView, PcView.ComputerObject obj) {
         imgView.setImageResource(R.drawable.ic_computer);
         if (obj.details.state == ComputerDetails.State.ONLINE) {
             imgView.setAlpha(1.0f);
@@ -63,11 +63,25 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
             imgView.setAlpha(0.4f);
         }
 
+        // 将View转换为ImageView来处理白色点点点动画
+        ImageView spinnerImageView = (ImageView) spinnerView;
         if (obj.details.state == ComputerDetails.State.UNKNOWN) {
-            prgView.setVisibility(View.VISIBLE);
+            spinnerImageView.setVisibility(View.VISIBLE);
+            // 启动动画
+            if (spinnerImageView.getDrawable() instanceof android.graphics.drawable.AnimatedVectorDrawable) {
+                android.graphics.drawable.AnimatedVectorDrawable animatedDrawable = 
+                    (android.graphics.drawable.AnimatedVectorDrawable) spinnerImageView.getDrawable();
+                animatedDrawable.start();
+            }
         }
         else {
-            prgView.setVisibility(View.INVISIBLE);
+            spinnerImageView.setVisibility(View.INVISIBLE);
+            // 停止动画
+            if (spinnerImageView.getDrawable() instanceof android.graphics.drawable.AnimatedVectorDrawable) {
+                android.graphics.drawable.AnimatedVectorDrawable animatedDrawable = 
+                    (android.graphics.drawable.AnimatedVectorDrawable) spinnerImageView.getDrawable();
+                animatedDrawable.stop();
+            }
         }
 
         SpannableString spannableString = new SpannableString(obj.details.name);

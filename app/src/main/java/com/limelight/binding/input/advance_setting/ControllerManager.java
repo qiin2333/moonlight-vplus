@@ -96,5 +96,22 @@ public class ControllerManager {
         getPageConfigController().initConfig();
     }
 
+    /**
+     * 隐藏王冠功能界面
+     */
+    public void hide() {
+        if (advanceSettingView != null) {
+            advanceSettingView.setVisibility(android.view.View.GONE);
+        }
+    }
+
+    /**
+     * 显示王冠功能界面
+     */
+    public void show() {
+        if (advanceSettingView != null) {
+            advanceSettingView.setVisibility(android.view.View.VISIBLE);
+        }
+    }
 
 }

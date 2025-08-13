@@ -184,6 +184,82 @@ public class Dialog implements Runnable {
             }
         });
         
+        // 设置焦点管理和键盘导航
+        copyButton.setFocusable(true);
+        copyButton.setFocusableInTouchMode(true);
+        contentView.setFocusable(true);
+        contentView.setFocusableInTouchMode(true);
+        
+        // 设置键盘导航监听器
+        copyButton.setOnKeyListener(new android.view.View.OnKeyListener() {
+            @Override
+            public boolean onKey(android.view.View v, int keyCode, android.view.KeyEvent event) {
+                if (event.getAction() == android.view.KeyEvent.ACTION_DOWN) {
+                    switch (keyCode) {
+                        case android.view.KeyEvent.KEYCODE_DPAD_CENTER:
+                        case android.view.KeyEvent.KEYCODE_ENTER:
+                            copyButton.performClick();
+                            return true;
+                        case android.view.KeyEvent.KEYCODE_DPAD_DOWN:
+                            // 向下导航到内容区域
+                            contentView.requestFocus();
+                            return true;
+                        case android.view.KeyEvent.KEYCODE_DPAD_UP:
+                            // 向上导航到标题区域
+                            titleView.requestFocus();
+                            return true;
+                        case android.view.KeyEvent.KEYCODE_BACK:
+                        case android.view.KeyEvent.KEYCODE_ESCAPE:
+                            // 关闭对话框
+                            alert.dismiss();
+                            return true;
+                    }
+                }
+                return false;
+            }
+        });
+        
+        contentView.setOnKeyListener(new android.view.View.OnKeyListener() {
+            @Override
+            public boolean onKey(android.view.View v, int keyCode, android.view.KeyEvent event) {
+                if (event.getAction() == android.view.KeyEvent.ACTION_DOWN) {
+                    switch (keyCode) {
+                        case android.view.KeyEvent.KEYCODE_DPAD_UP:
+                            // 向上导航到复制按钮
+                            copyButton.requestFocus();
+                            return true;
+                        case android.view.KeyEvent.KEYCODE_BACK:
+                        case android.view.KeyEvent.KEYCODE_ESCAPE:
+                            // 关闭对话框
+                            alert.dismiss();
+                            return true;
+                    }
+                }
+                return false;
+            }
+        });
+        
+        // 为标题区域也添加键盘导航支持
+        titleView.setOnKeyListener(new android.view.View.OnKeyListener() {
+            @Override
+            public boolean onKey(android.view.View v, int keyCode, android.view.KeyEvent event) {
+                if (event.getAction() == android.view.KeyEvent.ACTION_DOWN) {
+                    switch (keyCode) {
+                        case android.view.KeyEvent.KEYCODE_DPAD_DOWN:
+                            // 向下导航到复制按钮
+                            copyButton.requestFocus();
+                            return true;
+                        case android.view.KeyEvent.KEYCODE_BACK:
+                        case android.view.KeyEvent.KEYCODE_ESCAPE:
+                            // 关闭对话框
+                            alert.dismiss();
+                            return true;
+                    }
+                }
+                return false;
+            }
+        });
+        
         builder.setView(dialogView);
         builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
             @Override
@@ -212,6 +288,31 @@ public class Dialog implements Runnable {
             // layoutParams.dimAmount = 0.3f;
             alert.getWindow().setAttributes(layoutParams);
         }
+        
+        // 设置初始焦点到复制按钮
+        alert.setOnShowListener(new DialogInterface.OnShowListener() {
+            @Override
+            public void onShow(DialogInterface dialog) {
+                copyButton.requestFocus();
+            }
+        });
+        
+        // 为对话框设置键盘事件监听器
+        alert.setOnKeyListener(new DialogInterface.OnKeyListener() {
+            @Override
+            public boolean onKey(DialogInterface dialog, int keyCode, android.view.KeyEvent event) {
+                if (event.getAction() == android.view.KeyEvent.ACTION_DOWN) {
+                    switch (keyCode) {
+                        case android.view.KeyEvent.KEYCODE_BACK:
+                        case android.view.KeyEvent.KEYCODE_ESCAPE:
+                            // 关闭对话框
+                            alert.dismiss();
+                            return true;
+                    }
+                }
+                return false;
+            }
+        });
     }
 
     private String formatDetailsMessage(String message) {

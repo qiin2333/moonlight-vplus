@@ -15,6 +15,7 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.text.Html;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -59,6 +60,7 @@ public class GameMenu {
         ICON_MAP.put("game_menu_cancel", R.drawable.ic_cancel_cute);
         ICON_MAP.put("mouse_mode", R.drawable.ic_mouse_cute);
         ICON_MAP.put("game_menu_mouse_emulation", R.drawable.ic_mouse_emulation_cute);
+        ICON_MAP.put("crown_mode", R.drawable.ic_enhance);
     }
 
     /**
@@ -243,16 +245,25 @@ public class GameMenu {
     }
 
     /**
+     * 切换王冠功能
+     */
+    private void toggleCrownFeature() {
+        game.setCrownFeatureEnabled(!game.isCrownFeatureEnabled());
+        Toast.makeText(game, game.isCrownFeatureEnabled() ? getString(R.string.crown_switch_to_crown) : getString(R.string.crown_switch_to_normal), Toast.LENGTH_SHORT).show();
+    }
+
+    /**
      * 显示菜单对话框
      */
     private void showMenuDialog(String title, MenuOption[] normalOptions, MenuOption[] superOptions) {
         AlertDialog.Builder builder = new AlertDialog.Builder(game, R.style.GameMenuDialogStyle);
 
-        builder.setTitle(title);
-
         // 创建自定义视图
         View customView = createCustomView(builder);
         AlertDialog dialog = builder.create();
+
+        // 设置自定义标题栏
+        setupCustomTitleBar(customView, title);
 
         // 动态设置菜单列表区域高度
         setupMenuListHeight(customView);
@@ -363,6 +374,32 @@ public class GameMenu {
         } catch (Exception e) {
             // 如果计算失败，返回默认高度
             return (int) (220 * game.getResources().getDisplayMetrics().density);
+        }
+    }
+
+    /**
+     * 设置自定义标题
+     */
+    private void setupCustomTitleBar(View customView, String title) {
+        TextView titleTextView = customView.findViewById(R.id.customTitleTextView);
+        if (titleTextView != null) {
+            titleTextView.setText(title);
+        }
+        
+        // 设置王冠按钮的下划线样式和动态文本
+        TextView crownToggleButton = customView.findViewById(R.id.btnCrownToggle);
+        if (crownToggleButton != null) {
+            // 根据王冠功能状态设置文本
+            String crownText = game.isCrownFeatureEnabled() ? getString(R.string.crown_switch_to_normal) : getString(R.string.crown_switch_to_crown);
+            crownToggleButton.setText(Html.fromHtml("<u>" + crownText + "</u>"));
+            crownToggleButton.setOnClickListener(v -> {
+                // 先切换状态
+                boolean wasEnabled = game.isCrownFeatureEnabled();
+                toggleCrownFeature();
+                // 根据切换后的状态更新文本
+                String newCrownText = !wasEnabled ? getString(R.string.crown_switch_to_normal) : getString(R.string.crown_switch_to_crown);
+                crownToggleButton.setText(Html.fromHtml("<u>" + newCrownText + "</u>"));
+            });
         }
     }
 
