@@ -66,6 +66,16 @@ public class PageSuperMenuController {
             }
         });
 
+        // 添加切换到普通模式的点击事件
+        superMenuPage.findViewById(R.id.page_super_menu_toggle_normal_mode).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // 切换到普通模式
+                ((Game)context).setCrownFeatureEnabled(false);
+                android.widget.Toast.makeText(context, context.getString(com.limelight.R.string.crown_switch_to_normal), android.widget.Toast.LENGTH_SHORT).show();
+            }
+        });
+
     }
 
     public void open(){

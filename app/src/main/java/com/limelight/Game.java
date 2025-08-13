@@ -3235,7 +3235,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public void showGameMenu(GameInputDevice device) {
-        if (controllerManager != null){
+        if (controllerManager != null && prefConfig.onscreenKeyboard){
             controllerManager.getSuperPagesController().returnOperation();
         } else {
             new GameMenu(this, app, conn, device);
@@ -3338,6 +3338,43 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         } else {
             Toast.makeText(this, "虚拟手柄未启用", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    /**
+     * 初始化控制器管理器（王冠功能）
+     */
+    public void initializeControllerManager() {
+        if (controllerManager == null) {
+            controllerManager = new ControllerManager((FrameLayout)streamView.getParent(), this);
+            controllerManager.refreshLayout();
+        }
+    }
+
+    /**
+     * 设置王冠功能状态
+     */
+    public void setCrownFeatureEnabled(boolean enabled) {
+        prefConfig.onscreenKeyboard = enabled;
+        if (enabled) {
+            // 启用王冠模式
+            if (controllerManager != null) {
+                controllerManager.show();
+            } else {
+                initializeControllerManager();
+            }
+        } else {
+            // 禁用王冠模式
+            if (controllerManager != null) {
+                controllerManager.hide();
+            }
+        }
+    }
+
+    /**
+     * 获取王冠功能状态
+     */
+    public boolean isCrownFeatureEnabled() {
+        return prefConfig.onscreenKeyboard;
     }
 
     /**

@@ -35,7 +35,6 @@
                 </FrameLayout>
                 <Spinner
                     android:id="@+id/config_select_spinner"
-                    style="@style/AppSpinnerStyle"
                     android:layout_width="match_parent"
                     android:layout_height="25dp"
                     android:max="10"
@@ -55,7 +54,6 @@
                     android:text="开启触摸"/>
                 <Switch
                     android:id="@+id/mouse_enable_switch"
-                    style="@style/AppSwitchStyle"
                     android:layout_width="50dp"
                     android:layout_height="match_parent"
                     android:checked="true"/>
@@ -74,7 +72,6 @@
                     android:text="触控板模式"/>
                 <Switch
                     android:id="@+id/trackpad_enable_switch"
-                    style="@style/AppSwitchStyle"
                     android:layout_width="50dp"
                     android:layout_height="match_parent"
                     android:checked="true"/>
@@ -101,7 +98,6 @@
                     android:text="游戏震动"/>
                 <Switch
                     android:id="@+id/game_vibrator_enable_switch"
-                    style="@style/AppSwitchStyle"
                     android:layout_width="50dp"
                     android:layout_height="match_parent"
                     android:checked="true"/>
@@ -119,7 +115,6 @@
                     android:text="按键震动"/>
                 <Switch
                     android:id="@+id/button_vibrator_enable_switch"
-                    style="@style/AppSwitchStyle"
                     android:layout_width="50dp"
                     android:layout_height="match_parent"
                     android:checked="true"/>
@@ -131,21 +126,18 @@
                 android:layout_marginVertical="5dp">
                 <Button
                     android:id="@+id/add_config_button"
-                    style="@style/AppButtonStyle"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:text="新增"/>
                 <Button
                     android:id="@+id/rename_config_button"
-                    style="@style/AppButtonStyle"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:text="重命名"/>
                 <Button
                     android:id="@+id/delete_config_button"
-                    style="@style/AppButtonStyle"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"

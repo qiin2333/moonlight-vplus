@@ -32,13 +32,13 @@
             android:layout_width="50dp"
             android:layout_height="50dp">
         </ImageView>
-        <ProgressBar
+        <ImageView
             android:id="@+id/grid_spinner"
             android:layout_centerHorizontal="true"
             android:layout_marginTop="28dp"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:indeterminate="true">
-        </ProgressBar>
+            android:layout_width="60dp"
+            android:layout_height="20dp"
+            android:src="@drawable/white_dots_animation">
+        </ImageView>
     </RelativeLayout>
 </RelativeLayout>

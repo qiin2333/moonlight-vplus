@@ -139,8 +139,8 @@
     <string name="custom_resolution_input_title">输入自定义分辨率</string>
     <string name="width_label">宽度:</string>
     <string name="height_label">高度:</string>
-    <string name="width_hint">例如: 1920</string>
-    <string name="height_hint">例如: 1080</string>
+    <string name="width_hint">3000</string>
+    <string name="height_hint">2000</string>
     <string name="add_resolution">添加分辨率</string>
     <string name="invalid_resolution_format">分辨率格式无效，请使用 宽度x高度 格式</string>
     <string name="resolution_already_exists">该分辨率已存在</string>
@@ -403,6 +403,13 @@
     <string name="title_about_author">这是 V+ X 皇家版本</string>
     <string name="summary_about_author">王冠的B站:西瓜hub，请关注TA， github: https://github.com/WACrown/moonlight-android</string>
     
+    <!-- 王冠功能切换 -->
+    <string name="crown_toggle_button">王冠</string>
+    <string name="crown_mode_normal">普通模式</string>
+    <string name="crown_mode_crown">王冠模式</string>
+    <string name="crown_switch_to_normal">退出王冠模式</string>
+    <string name="crown_switch_to_crown">启用王冠模式</string>
+    
     <!-- External display -->
     <string name="title_use_external_display">使用外接显示器</string>
     <string name="summary_use_external_display">如果连接了外接显示器，则在外接显示器上显示串流画面</string>
@@ -425,10 +432,10 @@
     <string name="tip_double_tap_mouse">💡 串流小课堂：主机列表页面长按顶部空白区域可以下载当前涩图呢～</string>
     <string name="tip_long_press_controller">💡 串流小课堂：长按应用可以选择使用虚拟显示器串流，超方便的！</string>
     <string name="tip_volume_keys">💡 串流小课堂：建议使用5GHz WiFi获得更好体验，网速飞起来～</string>
-    <string name="tip_stable_network">💡 串流小课堂：使用有线连接可以获得最低延迟与最高的稳定性，稳如泰山！</string>
-    <string name="tip_5ghz_wifi">💡 串流小课堂：使用"平衡"的帧数率模式可以获得最佳的帧率与延迟平衡，完美！</string>
+    <string name="tip_wallpaper_change">💡 串流小课堂：壁纸API选项可以设置随机壁纸来源的API，也可以是单张图片地址哦</string>
+    <string name="tip_5ghz_wifi">💡 串流小课堂：使用"平衡"的帧速率模式可以获得最佳的帧率与延迟平衡，完美！</string>
     <string name="tip_close_apps">💡 串流小课堂：启用HDR可以获得更好的色彩与对比度表现，在Sunshine基地版中绑定对应的HDR配置文件可以更精准地与客户端屏幕同步，色彩绚丽～</string>
-    <string name="tip_wired_connection">💡 串流小课堂：连接时请确保网络稳定，让游戏体验更流畅～</string>
+    <string name="tip_home_saves">💡 串流小课堂：主页的5个小鲨牙可以快速保存和切换串流配置～</string>
     <string name="tip_resolution_balance">💡 串流小课堂：关闭其他应用可以提升性能，让串流更顺畅～</string>
     <string name="tip_hdr_colors">💡 串流小课堂：调整分辨率可以平衡画质和性能，找到最适合的设置～</string>
 </resources>

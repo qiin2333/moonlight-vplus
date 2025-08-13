@@ -424,6 +424,13 @@
     <string name="title_about_author">This is V+ X Royal Edition</string>
     <string name="summary_about_author">Crown\'s Bilibili: XiguaHub, please follow them. GitHub: https://github.com/WACrown/moonlight-android</string>
     
+    <!-- Crown feature toggle -->
+    <string name="crown_toggle_button">Crown</string>
+    <string name="crown_mode_normal">Normal Mode</string>
+    <string name="crown_mode_crown">Crown Mode</string>
+    <string name="crown_switch_to_normal">Switch to Normal Mode</string>
+    <string name="crown_switch_to_crown">Switch to Crown Mode</string>
+    
     <!-- External display -->
     <string name="title_use_external_display">Use External Display</string>
     <string name="summary_use_external_display">If an external display is connected, display the stream on the external display</string>
@@ -446,11 +453,10 @@
     <string name="tip_double_tap_mouse">💡 Tip: Long press the top blank area on the host list page to download the current wallpaper~</string>
     <string name="tip_long_press_controller">💡 Tip: Long press an app to choose virtual display streaming, super convenient!</string>
     <string name="tip_volume_keys">💡 Tip: Using 5GHz WiFi provides a better experience, lightning fast speeds~</string>
-    <string name="tip_stable_network">💡 Tip: Using a wired connection gives you the lowest latency and highest stability, rock solid!</string>
+    <string name="tip_wallpaper_change">💡 Tip: The wallpaper API option can set the API for random wallpaper sources, or a single image address</string>
     <string name="tip_5ghz_wifi">💡 Tip: Using "Balanced" frame rate mode gives you the best balance of frame rate and latency, perfect!</string>
     <string name="tip_close_apps">💡 Tip: Enabling HDR provides better color and contrast performance. In Sunshine base version, binding the corresponding HDR profile can more precisely sync with the client screen, gorgeous colors~</string>
-    <string name="tip_wired_connection">💡 Tip: Make sure your network is stable when connecting for a smoother gaming experience~</string>
+    <string name="tip_home_saves">💡 Tip: The 5 small sharks on the home page can quickly save and switch streaming configurations~</string>
     <string name="tip_resolution_balance">💡 Tip: Closing other apps can improve performance, making streaming smoother~</string>
     <string name="tip_hdr_colors">💡 Tip: Adjusting resolution can balance quality and performance, find the perfect settings~</string>
-
 </resources>

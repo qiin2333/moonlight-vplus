@@ -34,22 +34,23 @@
             android:layout_centerInParent="true"
             android:layout_centerVertical="true"
             android:layout_centerHorizontal="true">
-            <ProgressBar
-                android:id="@+id/pcs_loading"
-                android:layout_width="75dp"
-                android:layout_height="75dp"
-                android:indeterminate="true"/>
             <TextView
+                android:id="@+id/searching_pc_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_toRightOf="@+id/pcs_loading"
-                android:layout_toEndOf="@+id/pcs_loading"
-                android:layout_marginLeft="10dp"
-                android:layout_marginStart="10dp"
-                android:layout_centerVertical="true"
+                android:layout_centerHorizontal="true"
+                android:layout_marginBottom="20dp"
                 android:textAppearance="?android:attr/textAppearanceLarge"
                 android:gravity="center"
                 android:text="@string/searching_pc"/>
+            <ProgressBar
+                android:id="@+id/pcs_loading"
+                android:layout_width="200dp"
+                android:layout_height="8dp"
+                android:layout_below="@+id/searching_pc_text"
+                android:layout_centerHorizontal="true"
+                android:indeterminate="true"
+                style="?android:attr/progressBarStyleHorizontal"/>
         </RelativeLayout>
 
     </RelativeLayout>

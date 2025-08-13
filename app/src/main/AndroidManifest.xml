@@ -61,7 +61,7 @@
         android:isGame="true"
         android:banner="@drawable/atv_banner"
         android:appCategory="game"
-        android:icon="@drawable/ic_gura"
+        android:icon="@drawable/saba"
         android:installLocation="auto"
         android:gwpAsanMode="always"
         android:localeConfig="@xml/locales_config"
