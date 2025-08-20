@@ -451,4 +451,13 @@
     <string name="tip_home_saves">💡 串流小课堂：主页的5个小鲨牙可以快速保存和切换串流配置～</string>
     <string name="tip_resolution_balance">💡 串流小课堂：关闭其他应用可以提升性能，让串流更顺畅～</string>
     <string name="tip_hdr_colors">💡 串流小课堂：调整分辨率可以平衡画质和性能，找到最适合的设置～</string>
+
+    <!-- 触控模式切换菜单 -->
+    <string name="game_menu_switch_touch_mode">切换触控模式</string>
+    <string name="game_menu_touch_mode_enhanced">增强式多点触控</string>
+    <string name="game_menu_touch_mode_classic">经典鼠标模式</string>
+    <string name="game_menu_touch_mode_trackpad">触控板模式</string>
+    <string name="toast_touch_mode_enhanced_on">增强式多点触控已开启</string>
+    <string name="toast_touch_mode_classic_on">经典鼠标模式已开启</string>
+    <string name="toast_touch_mode_trackpad_on">触控板模式已开启</string>
 </resources>
