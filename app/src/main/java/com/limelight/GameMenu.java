@@ -237,6 +237,68 @@ public class GameMenu {
     }
 
     /**
+     * 显示一个菜单列表，用于在“增强式多点触控”,“经典鼠标模式”,“触控板模式”之间切换。
+     */
+    private void showTouchModeMenu() {
+        // 1. 获取所有相关的当前设置状态
+
+        // 获取“增强/经典”模式的状态
+        boolean isEnhancedTouch = game.prefConfig.enableEnhancedTouch;
+        // 获取触控板模式状态
+        boolean isTouchscreenTrackpad = game.prefConfig.touchscreenTrackpad;
+
+        // 2. 创建列表中的各个选项
+        MenuOption[] touchModeOptions = {
+
+                // 选项一：增强式多点触控
+                new MenuOption(
+                        getString(R.string.game_menu_touch_mode_enhanced),
+                        isEnhancedTouch,
+                        () -> {
+                            game.prefConfig.enableEnhancedTouch = true;
+                            game.setTouchMode(false);  // 必须先关闭触摸板模式才可以使用其他触控模式
+                            Toast.makeText(game, getString(R.string.toast_touch_mode_enhanced_on), Toast.LENGTH_SHORT).show();
+                        },
+                        null,
+                        false
+                ),
+
+                // 选项二：经典鼠标模式
+                new MenuOption(
+                        getString(R.string.game_menu_touch_mode_classic),
+                        !isEnhancedTouch,
+                        () -> {
+                            game.prefConfig.enableEnhancedTouch = false;
+                            game.setTouchMode(false);  // 必须先关闭触摸板模式才可以使用其他触控模式
+                            Toast.makeText(game, getString(R.string.toast_touch_mode_classic_on), Toast.LENGTH_SHORT).show();
+                        },
+                        null,
+                        false
+                ),
+
+                // 选项三：触控板模式
+                new MenuOption(
+                        getString(R.string.game_menu_touch_mode_trackpad),
+                        isTouchscreenTrackpad,
+                        () -> {
+                            game.setTouchMode(true);
+                            Toast.makeText(game, getString(R.string.toast_touch_mode_trackpad_on), Toast.LENGTH_SHORT).show();
+                        },
+                        null,
+                        false
+                ),
+
+        };
+
+        // 3. 显示菜单
+        showMenuDialog(
+                getString(R.string.game_menu_switch_touch_mode),
+                touchModeOptions,
+                new MenuOption[0]
+        );
+    }
+
+    /**
      * 切换麦克风开关
      */
     private void toggleMicrophone() {
@@ -781,9 +843,23 @@ public class GameMenu {
                 () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_LCONTROL, KeyboardTranslator.VK_O}),
                 "game_menu_toggle_host_keyboard", true));
 
+        // 显示当前触控模式
+        String touchModeText;
+        if (game.prefConfig.touchscreenTrackpad) {
+            touchModeText = getString(R.string.game_menu_touch_mode_trackpad);
+        } else if (game.prefConfig.enableEnhancedTouch) {
+            touchModeText = getString(R.string.game_menu_touch_mode_enhanced);
+        } else {
+            touchModeText = getString(R.string.game_menu_touch_mode_classic);
+        }
+        touchModeText = getString(R.string.game_menu_switch_touch_mode) + ": " + touchModeText;
+
         normalOptions.add(new MenuOption(
-                game.prefConfig.enableEnhancedTouch ? "切换到经典鼠标模式" : "切换到增强式多点触控",
-                true, this::toggleEnhancedTouch, "mouse_mode", true));
+                touchModeText,
+                true,
+                this::showTouchModeMenu,
+                "mouse_mode",
+                true));
 
         if (device != null) {
             normalOptions.addAll(device.getGameMenuOptions());

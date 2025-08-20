@@ -473,4 +473,13 @@
     <string name="tip_home_saves">💡 Tip: The 5 small sharks on the home page can quickly save and switch streaming configurations~</string>
     <string name="tip_resolution_balance">💡 Tip: Closing other apps can improve performance, making streaming smoother~</string>
     <string name="tip_hdr_colors">💡 Tip: Adjusting resolution can balance quality and performance, find the perfect settings~</string>
+
+    <!-- 触控模式切换菜单 -->
+    <string name="game_menu_switch_touch_mode">Switch touch mode</string>
+    <string name="game_menu_touch_mode_enhanced">Enhanced Multi Touch</string>
+    <string name="game_menu_touch_mode_classic">Classic Mouse Mode</string>
+    <string name="game_menu_touch_mode_trackpad">Touchpad mode</string>
+    <string name="toast_touch_mode_enhanced_on">Enhanced multi touch enabled</string>
+    <string name="toast_touch_mode_classic_on">Classic mouse mode enabled</string>
+    <string name="toast_touch_mode_trackpad_on">Touchpad mode enabled</string>
 </resources>
