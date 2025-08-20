@@ -122,6 +122,15 @@
     <string name="game_menu_send_keys_win_g">发送 WIN + G (打开 Xbox Game Bar)</string>
     <string name="game_menu_send_keys_shift_tab">发送 SHIFT + TAB (打开 Steam 图层)</string>
     <string name="game_menu_send_keys_alt_home">发送 ALT + HOME (小飞机/RTSS 主机性能监控开关)</string>
+    <string name="game_menu_adjust_bitrate">调整码率</string>
+    <string name="game_menu_bitrate_custom">自定义码率</string>
+    <string name="game_menu_bitrate_current">当前: %d Mbps</string>
+    <string name="game_menu_bitrate_adjustment_success">码率调整成功至 %d Mbps</string>
+    <string name="game_menu_bitrate_adjustment_failed">码率调整失败</string>
+    <string name="game_menu_ok">确定</string>
+    <string name="game_menu_bitrate_range">码率范围:</string>
+    <string name="game_menu_bitrate_range_value">0.5 - 200 Mbps</string>
+    <string name="game_menu_bitrate_tip">💡 提示：拖动滑动条预览码率，点击确定应用。需要更高的码率请到设置菜单操作。</string>
     <!-- Add computer manually activity -->
     <string name="title_add_pc"> 手动添加电脑 </string>
     <string name="msg_add_pc"> 正在连接电脑…… </string>
@@ -413,6 +422,10 @@
     <!-- External display -->
     <string name="title_use_external_display">使用外接显示器</string>
     <string name="summary_use_external_display">如果连接了外接显示器，则在外接显示器上显示串流画面</string>
+    
+    <!-- Analytics settings -->
+    <string name="title_enable_analytics">启用统计分析</string>
+    <string name="summary_enable_analytics">通过分享匿名使用统计数据来帮助改进应用</string>
     
     <!-- Background image API -->
     <string name="title_background_image_api">背景图片API</string>

@@ -479,6 +479,55 @@ public class NvHTTP {
         }
     }
 
+    /**
+     * 发送POST请求到API端点
+     * @param client HTTP客户端
+     * @param baseUrl 基础URL
+     * @param path API路径
+     * @param jsonData JSON数据
+     * @return 响应字符串
+     */
+    private String openHttpConnectionPost(OkHttpClient client, HttpUrl baseUrl, String path, String jsonData) throws IOException {
+        HttpUrl completeUrl = getCompleteUrl(baseUrl, path, null);
+        
+        // 构建POST请求
+        okhttp3.RequestBody body = okhttp3.RequestBody.create(
+            okhttp3.MediaType.parse("application/json; charset=utf-8"), 
+            jsonData
+        );
+        
+        Request request = new Request.Builder()
+            .url(completeUrl)
+            .post(body)
+            .addHeader("Content-Type", "application/json")
+            .build();
+            
+        Response response = performAndroidTlsHack(client).newCall(request).execute();
+        ResponseBody responseBody = response.body();
+        
+        if (response.isSuccessful() && responseBody != null) {
+            String respString = responseBody.string();
+            responseBody.close();
+            
+            if (verbose) {
+                LimeLog.info(completeUrl.toString() + " -> " + respString);
+            }
+            
+            return respString;
+        }
+        
+        // 处理错误
+        if (responseBody != null) {
+            responseBody.close();
+        }
+        
+        if (response.code() == 404) {
+            throw new FileNotFoundException(completeUrl.toString());
+        } else {
+            throw new HostHttpResponseException(response.code(), response.message());
+        }
+    }
+
     public String getServerVersion(String serverInfo) throws XmlPullParserException, IOException {
         // appversion is present in all supported GFE versions
         return getXmlString(serverInfo, "appversion", true);
@@ -835,5 +884,22 @@ public class NvHTTP {
     public boolean sendSuperCmd(String cmdId) throws IOException, XmlPullParserException {
         String xmlStr = openHttpConnectionToString(httpClientLongConnectNoReadTimeout, getHttpsUrl(true), "supercmd", "cmdId=" + cmdId);
         return !getXmlString(xmlStr, "supercmd", true).equals("0");
+    }
+
+    /**
+     * 发送码率调整命令
+     * @param bitrateKbps 目标码率（kbps）
+     * @return 是否成功
+     */
+    public boolean setBitrate(int bitrateKbps) throws IOException, XmlPullParserException {
+        // 构建查询参数
+        String query = String.format("bitrate=%d", bitrateKbps);
+        
+        // 调用主机端API: GET /api/stream/bitrate?bitrate=xxx
+        String xmlStr = openHttpConnectionToString(httpClientLongConnectNoReadTimeout, 
+            getHttpsUrl(true), "bitrate", query);
+        
+        // 检查响应是否成功
+        return !getXmlString(xmlStr, "bitrate", true).equals("0");
     }
 }

@@ -65,7 +65,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:padding="2dp"
-                android:weightSum="6">
+                android:weightSum="7">
 
                 <Button
                     android:id="@+id/btnWin"
@@ -111,6 +111,16 @@
                     android:text="Mic" />
 
                 <Button
+                    android:id="@+id/btnBitrate"
+                    style="@style/GameMenuButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    android:layout_weight="1"
+                    android:drawableStart="@drawable/ic_btn_bitrate"
+                    android:text="码率" />
+
+                <Button
                     android:id="@+id/btnSleep"
                     style="@style/GameMenuButtonStyle"
                     android:layout_width="0dp"
@@ -127,6 +137,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="2dp"
+                    android:layout_marginEnd="2dp"
                     android:layout_weight="1"
                     android:drawableStart="@drawable/ic_btn_quit"
                     android:text="退出" />

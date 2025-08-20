@@ -625,10 +625,72 @@ public class NvConnection {
     }
 
     /**
+     * 发送码率调整命令
+     * @param bitrateKbps 目标码率（kbps）
+     * @param callback 回调接口，用于通知结果
+     */
+    public void setBitrate(int bitrateKbps, BitrateAdjustmentCallback callback) throws IOException, XmlPullParserException {
+        new Thread(() -> {
+            NvHTTP h;
+            try {
+                h = new NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider);
+                LimeLog.info("NvHTTP created successfully for bitrate adjustment");
+            } catch (IOException e) {
+                // 记录错误但不抛出RuntimeException，避免应用崩溃
+                LimeLog.warning("Failed to create NvHTTP for bitrate adjustment: " + e.getMessage());
+                if (callback != null) {
+                    callback.onFailure("Failed to create HTTP connection: " + e.getMessage());
+                }
+                return;
+            }
+            try {
+                LimeLog.info("Sending bitrate adjustment request...");
+                boolean success = h.setBitrate(bitrateKbps);
+                if (success) {
+                    // 更新本地配置
+                    context.streamConfig.setBitrate(bitrateKbps);
+                    LimeLog.info("Bitrate adjustment successful, updated local config to " + bitrateKbps + " kbps");
+                    if (callback != null) {
+                        callback.onSuccess(bitrateKbps);
+                    }
+                } else {
+                    LimeLog.warning("Bitrate adjustment request failed (server returned false)");
+                    if (callback != null) {
+                        callback.onFailure("Server returned failure response");
+                    }
+                }
+            } catch (IOException | XmlPullParserException e) {
+                // 记录错误但不抛出RuntimeException，避免应用崩溃
+                LimeLog.warning("Failed to set bitrate: " + e.getMessage());
+                e.printStackTrace();
+                if (callback != null) {
+                    callback.onFailure("Network error: " + e.getMessage());
+                }
+            }
+        }).start();
+    }
+
+    /**
+     * 码率调整回调接口
+     */
+    public interface BitrateAdjustmentCallback {
+        void onSuccess(int newBitrate);
+        void onFailure(String errorMessage);
+    }
+
+    /**
      * 获取主机地址
      * @return 主机地址字符串
      */
     public String getHost() {
         return context.serverAddress.address;
+    }
+
+    /**
+     * 获取当前码率
+     * @return 当前码率（kbps）
+     */
+    public int getCurrentBitrate() {
+        return context.streamConfig.getBitrate();
     }
 }
