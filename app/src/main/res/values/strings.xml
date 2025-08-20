@@ -164,6 +164,15 @@
     <string name="game_menu_send_keys_win_g">Send WIN + G (Open Xbox Game Bar)</string>
     <string name="game_menu_send_keys_shift_tab">Send SHIFT + TAB (Open Steam Overlay)</string>
     <string name="game_menu_send_keys_alt_home">Send ALT + HOME (Toggle RTSS)</string>
+    <string name="game_menu_adjust_bitrate">Adjust Bitrate</string>
+    <string name="game_menu_bitrate_custom">Custom Bitrate</string>
+    <string name="game_menu_bitrate_current">Current: %d Mbps</string>
+    <string name="game_menu_bitrate_adjustment_success">Bitrate adjusted successfully to %d Mbps</string>
+    <string name="game_menu_bitrate_adjustment_failed">Failed to adjust bitrate</string>
+    <string name="game_menu_ok">OK</string>
+    <string name="game_menu_bitrate_range">Bitrate Range:</string>
+    <string name="game_menu_bitrate_range_value">0.5 - 200 Mbps</string>
+    <string name="game_menu_bitrate_tip">Tip: Drag the slider to preview bitrate, then click OK to apply. Higher values mean better quality but require better network.</string>
 
     <!-- Add computer manually activity -->
     <string name="title_add_pc">Add PC Manually</string>
@@ -447,6 +456,10 @@
     
     <!-- Moonlight V+ PC download -->
     <string name="title_moonlight_vplus_pc_download">Moonlight V+ PC Download</string>
+    
+    <!-- Analytics settings -->
+    <string name="title_enable_analytics">Enable Analytics</string>
+    <string name="summary_enable_analytics">Help improve the app by sharing anonymous usage statistics</string>
 
     <!-- Tip strings -->
     <string name="tip_esc_exit">💡 Tip: Use the "Exit" button to quickly and completely exit the stream, restoring your screen to its pre-stream state~</string>

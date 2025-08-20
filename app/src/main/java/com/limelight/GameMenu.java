@@ -13,6 +13,7 @@ import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.text.Html;
@@ -60,7 +61,6 @@ public class GameMenu {
         ICON_MAP.put("game_menu_cancel", R.drawable.ic_cancel_cute);
         ICON_MAP.put("mouse_mode", R.drawable.ic_mouse_cute);
         ICON_MAP.put("game_menu_mouse_emulation", R.drawable.ic_mouse_emulation_cute);
-        ICON_MAP.put("crown_mode", R.drawable.ic_enhance);
     }
 
     /**
@@ -251,6 +251,123 @@ public class GameMenu {
         game.setCrownFeatureEnabled(!game.isCrownFeatureEnabled());
         Toast.makeText(game, game.isCrownFeatureEnabled() ? getString(R.string.crown_switch_to_crown) : getString(R.string.crown_switch_to_normal), Toast.LENGTH_SHORT).show();
     }
+
+    /**
+     * 显示码率调整菜单（滑动条版本）
+     */
+    private void showBitrateAdjustmentMenu() {
+        // 创建自定义对话框布局
+        View dialogView = LayoutInflater.from(game).inflate(R.layout.bitrate_slider_dialog, null);
+        
+        // 获取当前码率
+        int currentBitrate = conn.getCurrentBitrate();
+        int currentBitrateMbps = currentBitrate / 1000;
+        
+        // 设置当前码率显示
+        TextView currentBitrateText = dialogView.findViewById(R.id.current_bitrate_text);
+        currentBitrateText.setText(String.format(getString(R.string.game_menu_bitrate_current), currentBitrateMbps));
+        
+        // 设置滑动条
+        SeekBar bitrateSeekBar = dialogView.findViewById(R.id.bitrate_seekbar);
+        TextView bitrateValueText = dialogView.findViewById(R.id.bitrate_value_text);
+        
+        // 设置滑动条范围：500-200000 kbps
+        bitrateSeekBar.setMax(1995); // 200000 - 500 = 199500，每100kbps一个单位
+        bitrateSeekBar.setProgress((currentBitrate - 500) / 100);
+        
+        // 显示当前值
+        bitrateValueText.setText(String.format("%d Mbps", currentBitrateMbps));
+        
+        // 滑动条变化监听
+        bitrateSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (fromUser) {
+                    int newBitrate = (progress * 100) + 500; // 500 + progress * 100
+                    int newBitrateMbps = newBitrate / 1000;
+                    bitrateValueText.setText(String.format("%d Mbps", newBitrateMbps));
+                }
+            }
+            
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                // 开始拖动时不做任何操作
+            }
+            
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                // 停止拖动时只更新显示，不应用码率调整
+                // 码率调整将在点击确认按钮时进行
+            }
+        });
+        
+        // 创建对话框
+        AlertDialog.Builder builder = new AlertDialog.Builder(game, R.style.GameMenuDialogStyle);
+        builder.setTitle(getString(R.string.game_menu_adjust_bitrate))
+               .setView(dialogView)
+               .setPositiveButton(getString(R.string.game_menu_ok), (dialog, which) -> {
+                   // 确认时调整码率
+                   int newBitrate = (bitrateSeekBar.getProgress() * 100) + 500;
+                   adjustBitrate(newBitrate);
+               })
+               .setNegativeButton(getString(R.string.game_menu_cancel), (dialog, which) -> {
+                   dialog.dismiss();
+               });
+        
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    /**
+     * 调整码率
+     */
+    private void adjustBitrate(int bitrateKbps) {
+        try {
+            // 显示正在调整的提示
+            Toast.makeText(game, "正在调整码率...", Toast.LENGTH_SHORT).show();
+            
+            // 调用码率调整，使用回调等待API真正返回结果
+            conn.setBitrate(bitrateKbps, new NvConnection.BitrateAdjustmentCallback() {
+                @Override
+                public void onSuccess(int newBitrate) {
+                    // API成功返回，在主线程显示成功消息
+                    game.runOnUiThread(() -> {
+                        try {
+                            String successMessage = String.format(getString(R.string.game_menu_bitrate_adjustment_success), newBitrate / 1000);
+                            Toast.makeText(game, successMessage, Toast.LENGTH_SHORT).show();
+                        } catch (Exception e) {
+                            LimeLog.warning("Failed to show success toast: " + e.getMessage());
+                        }
+                    });
+                }
+
+                @Override
+                public void onFailure(String errorMessage) {
+                    // API失败返回，在主线程显示错误消息
+                    game.runOnUiThread(() -> {
+                        try {
+                            String errorMsg = getString(R.string.game_menu_bitrate_adjustment_failed) + ": " + errorMessage;
+                            Toast.makeText(game, errorMsg, Toast.LENGTH_SHORT).show();
+                        } catch (Exception e) {
+                            LimeLog.warning("Failed to show error toast: " + e.getMessage());
+                        }
+                    });
+                }
+            });
+            
+        } catch (Exception e) {
+            // 调用setBitrate时发生异常（如参数错误等）
+            game.runOnUiThread(() -> {
+                try {
+                    Toast.makeText(game, getString(R.string.game_menu_bitrate_adjustment_failed) + ": " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                } catch (Exception toastException) {
+                    LimeLog.warning("Failed to show error toast: " + toastException.getMessage());
+                }
+            });
+        }
+    }
+
+
 
     /**
      * 显示菜单对话框
@@ -469,6 +586,12 @@ public class GameMenu {
         });
 
         setupButtonWithAnimation(customView.findViewById(R.id.btnQuit), scaleDown, scaleUp, v -> disconnectAndQuit());
+
+        // 设置码率调整按钮
+        setupButtonWithAnimation(customView.findViewById(R.id.btnBitrate), scaleDown, scaleUp, v -> {
+            dialog.dismiss(); // 关闭当前对话框
+            showBitrateAdjustmentMenu(); // 显示码率调整菜单
+        });
     }
 
     /**

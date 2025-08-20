@@ -32,9 +32,6 @@ import android.widget.Toast;
 import android.graphics.Color;
 import android.widget.ImageView;
 
-import androidx.annotation.NonNull;
-
-import com.limelight.Game;
 import com.limelight.LimeLog;
 import com.limelight.PcView;
 import com.limelight.R;
@@ -92,10 +89,8 @@ public class StreamSettings extends Activity {
         setContentView(R.layout.activity_stream_settings);
         
         // 确保状态栏透明
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            getWindow().setStatusBarColor(Color.TRANSPARENT);
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
-        }
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
 
         UiHelper.notifyNewRootView(this);
 
@@ -967,8 +962,10 @@ public class StreamSettings extends Activity {
     private void loadBackgroundImage() {
         ImageView imageView = findViewById(R.id.settingsBackgroundImage);
 
-        Glide.with(this)
+        runOnUiThread(() -> Glide.with(this)
             .load("https://raw.gitmirror.com/qiin2333/qiin.github.io/assets/img/moonlight-bg2.webp")
-            .into(imageView);
+            .apply(RequestOptions.bitmapTransform(new BlurTransformation(2, 3)))
+            .transform(new ColorFilterTransformation(Color.argb(120, 0, 0, 0)))
+            .into(imageView));
     }
 }

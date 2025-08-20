@@ -17,8 +17,8 @@ android {
         minSdk 22
         targetSdk 34
 
-        versionName "12.2.2.gh"
-        versionCode = 323
+        versionName "12.2.3.gh"
+        versionCode = 324
 
         // Generate native debug symbols to allow Google Play to symbolicate our native crashes
         ndk.debugSymbolLevel = 'FULL'
@@ -152,10 +152,10 @@ dependencies {
     implementation 'com.github.ZeyuKeithFu:KeyboardHeaderLayout:v1.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.2.0-beta01'
     implementation 'com.google.code.gson:gson:2.11.0'
-    implementation 'com.github.bumptech.glide:glide:5.0.0-rc01'
+    implementation 'com.github.bumptech.glide:glide:4.16.0'
     implementation 'jp.wasabeef:glide-transformations:4.3.0'
     implementation 'androidx.cardview:cardview:1.0.0'
-    annotationProcessor 'com.github.bumptech.glide:compiler:5.0.0-rc01'
+    annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0'
     
     // Firebase Analytics
     implementation platform('com.google.firebase:firebase-bom:32.7.0')

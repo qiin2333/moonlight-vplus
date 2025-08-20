@@ -21,6 +21,7 @@ public class AnalyticsManager {
     
     private static AnalyticsManager instance;
     private FirebaseAnalytics firebaseAnalytics;
+    private Context applicationContext;
     private ScheduledExecutorService scheduler;
     private long sessionStartTime;
     private boolean isSessionActive = false;
@@ -33,6 +34,7 @@ public class AnalyticsManager {
         }
         
         try {
+            this.applicationContext = context.getApplicationContext();
             firebaseAnalytics = FirebaseAnalytics.getInstance(context);
             scheduler = Executors.newScheduledThreadPool(1);
         } catch (Exception e) {
@@ -60,6 +62,20 @@ public class AnalyticsManager {
         if (firebaseAnalytics == null) {
             Log.w(TAG, "Firebase Analytics not initialized");
             return false;
+        }
+        
+        // 检查用户是否启用了统计
+        try {
+            if (applicationContext != null) {
+                android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(applicationContext);
+                boolean analyticsEnabled = prefs.getBoolean("checkbox_enable_analytics", true);
+                if (!analyticsEnabled) {
+                    Log.d(TAG, "Analytics disabled by user preference");
+                    return false;
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to check analytics preference: " + e.getMessage());
         }
         
         return true;

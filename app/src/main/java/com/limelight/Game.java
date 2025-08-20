@@ -2930,7 +2930,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 WindowManager.LayoutParams params = getWindow().getAttributes();
                 if (hdrEnabled) {
                     // 强制高亮度模式
-                    params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL;
+                    // params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL;
                     // 设置窗口标志以支持HDR
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                         getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);

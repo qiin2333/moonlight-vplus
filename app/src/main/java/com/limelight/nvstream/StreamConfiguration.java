@@ -202,6 +202,10 @@ public class StreamConfiguration {
         return bitrate;
     }
     
+    public void setBitrate(int bitrate) {
+        this.bitrate = bitrate;
+    }
+    
     public int getMaxPacketSize() {
         return maxPacketSize;
     }
