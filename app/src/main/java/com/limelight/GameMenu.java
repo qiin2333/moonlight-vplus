@@ -33,6 +33,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import android.app.Activity;
+import android.content.SharedPreferences;
+import android.text.TextUtils;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.Toast;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * 提供游戏流媒体进行中的选项菜单
  * 在游戏活动中按返回键时显示
@@ -46,6 +57,10 @@ public class GameMenu {
     private static final float DIALOG_ALPHA = 0.7f;
     private static final float DIALOG_DIM_AMOUNT = 0.3f;
     private static final String GAME_MENU_TITLE = "🍥🍬 V+ GAME MENU";
+
+    // 用于存储自定义按键的 SharedPreferences 文件名和键名
+    private static final String PREF_NAME = "custom_special_keys";
+    private static final String KEY_NAME = "data";
 
     // 图标映射缓存
     private static final Map<String, Integer> ICON_MAP = new HashMap<>();
@@ -809,11 +824,246 @@ public class GameMenu {
                 () -> sendKeys(new short[]{KeyboardTranslator.VK_MENU, KeyboardTranslator.VK_HOME}), null, false),
             new MenuOption(getString(R.string.game_menu_send_keys_shift_tab), false,
                 () -> sendKeys(new short[]{KeyboardTranslator.VK_LSHIFT, KeyboardTranslator.VK_TAB}), null, false),
-            new MenuOption(getString(R.string.game_menu_cancel), false, null, null, false)
+            new MenuOption(getString(R.string.game_menu_cancel), false, null, null, false),
         };
 
         showMenuDialog(getString(R.string.game_menu_send_keys), specialOptions, new MenuOption[0]);
     }
+
+
+    /**
+     * 显示特殊按键菜单（包含默认、自定义和添加选项）
+     */
+    private void showSpecialKeysMenu1() {
+        List<MenuOption> options = new ArrayList<>();
+
+        //  添加默认的特殊按键
+        options.add(new MenuOption(getString(R.string.game_menu_send_keys_f11), false,
+                () -> sendKeys(new short[]{KeyboardTranslator.VK_F11}), null, false));
+        options.add(new MenuOption(getString(R.string.game_menu_send_keys_ctrl_v), false,
+                () -> sendKeys(new short[]{KeyboardTranslator.VK_LCONTROL, KeyboardTranslator.VK_V}), null, false));
+        options.add(new MenuOption(getString(R.string.game_menu_send_keys_win_d), false,
+                () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_D}), null, false));
+        options.add(new MenuOption(getString(R.string.game_menu_send_keys_win_g), false,
+                () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_G}), null, false));
+        options.add(new MenuOption(getString(R.string.game_menu_send_keys_alt_home), false,
+                () -> sendKeys(new short[]{KeyboardTranslator.VK_MENU, KeyboardTranslator.VK_HOME}), null, false));
+        options.add(new MenuOption(getString(R.string.game_menu_send_keys_shift_tab), false,
+                () -> sendKeys(new short[]{KeyboardTranslator.VK_LSHIFT, KeyboardTranslator.VK_TAB}), null, false));
+
+        //  加载并添加已保存的自定义按键，并记录是否有自定义按键
+        boolean hasCustomKeys = loadAndAddCustomKeys(options);
+
+        //  添加 "添加自定义按键" 选项
+        options.add(new MenuOption(getString(R.string.game_menu_add_custom_key), false, this::showAddCustomKeyDialog, null, false));
+
+        //  如果存在自定义按键，则添加 "删除" 选项
+        if (hasCustomKeys) {
+            options.add(new MenuOption(getString(R.string.game_menu_delete_custom_key), false, this::showDeleteKeysDialog, null, false));
+        }
+
+        //  添加 "取消" 选项
+        options.add(new MenuOption(getString(R.string.game_menu_cancel), false, null, null, false));
+
+        //  显示菜单
+        showMenuDialog(getString(R.string.game_menu_send_keys), options.toArray(new MenuOption[0]), new MenuOption[0]);
+    }
+
+    /**
+     * 从 SharedPreferences 加载自定义按键并添加到菜单列表
+     * @param options 要添加到的菜单选项列表
+     */
+    private boolean  loadAndAddCustomKeys(List<MenuOption> options) {
+        SharedPreferences preferences = game.getSharedPreferences(PREF_NAME, Activity.MODE_PRIVATE);
+        String value = preferences.getString(KEY_NAME, "");
+
+        if (TextUtils.isEmpty(value)) {
+            return false;
+        }
+
+        try {
+            JSONObject root = new JSONObject(value);
+            JSONArray dataArray = root.optJSONArray("data");
+            if (dataArray != null && dataArray.length() > 0) {
+                for (int i = 0; i < dataArray.length(); i++) {
+                    JSONObject keyObject = dataArray.getJSONObject(i);
+                    String name = keyObject.optString("name");
+                    JSONArray codesArray = keyObject.getJSONArray("data");
+                    short[] datas = new short[codesArray.length()];
+                    for (int j = 0; j < codesArray.length(); j++) {
+                        String code = codesArray.getString(j);
+                        datas[j] = (short) Integer.parseInt(code.substring(2), 16);
+                    }
+                    MenuOption option = new MenuOption(name, false, () -> sendKeys(datas), null, false);
+                    options.add(option);
+                }
+                return true; // 成功加载，返回 true
+            }
+        } catch (Exception e) {
+            LimeLog.warning("Exception while loading custom keys" + e.getMessage());
+            Toast.makeText(game, getString(R.string.toast_load_custom_keys_corrupted), Toast.LENGTH_SHORT).show();
+        }
+        return false; // 没有加载到任何按键
+    }
+
+    /**
+     * 显示用于添加新自定义按键的对话框
+     */
+    private void showAddCustomKeyDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(game);
+        builder.setTitle(R.string.dialog_title_add_custom_key);
+
+        // 设置对话框的布局
+        LinearLayout layout = new LinearLayout(game);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(50, 40, 50, 20);
+
+        final EditText nameInput = new EditText(game);
+        nameInput.setHint(R.string.dialog_hint_key_name);
+        layout.addView(nameInput);
+
+        final EditText keysInput = new EditText(game);
+        keysInput.setHint(R.string.dialog_hint_key_codes);
+        layout.addView(keysInput);
+
+        builder.setView(layout);
+
+        // 设置按钮
+        builder.setPositiveButton(R.string.dialog_button_save, (dialog, which) -> {
+            String name = nameInput.getText().toString().trim();
+            String keys = keysInput.getText().toString().trim();
+
+            if (TextUtils.isEmpty(name) || TextUtils.isEmpty(keys)) {
+                Toast.makeText(game, R.string.toast_name_and_codes_cannot_be_empty, Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // 验证并保存按键
+            saveCustomKey(name, keys);
+        });
+        builder.setNegativeButton(R.string.dialog_button_cancel, (dialog, which) -> dialog.cancel());
+
+        builder.show();
+    }
+
+    /**
+     * 将新的自定义按键保存到 SharedPreferences
+     * @param name 按键的显示名称
+     * @param keysString 逗号分隔的十六进制按键码字符串
+     */
+    private void saveCustomKey(String name, String keysString) {
+        SharedPreferences preferences = game.getSharedPreferences(PREF_NAME, Activity.MODE_PRIVATE);
+        String value = preferences.getString(KEY_NAME, "{\"data\":[]}"); // 如果为空，提供默认JSON结构
+
+        try {
+            // 解析按键码
+            String[] keyParts = keysString.split(",");
+            JSONArray keyCodesArray = new JSONArray();
+            for (String part : keyParts) {
+                String trimmedPart = part.trim();
+                // 简单验证是否是 "0x" 开头的十六进制
+                if (!trimmedPart.startsWith("0x")) {
+                    Toast.makeText(game, R.string.toast_key_code_format_error, Toast.LENGTH_LONG).show();
+                    return;
+                }
+                keyCodesArray.put(trimmedPart);
+            }
+
+            // 读取现有的JSON数据
+            JSONObject root = new JSONObject(value);
+            JSONArray dataArray = root.getJSONArray("data");
+
+            // 创建新的JSON对象并添加
+            JSONObject newKeyEntry = new JSONObject();
+            newKeyEntry.put("name", name);
+            newKeyEntry.put("data", keyCodesArray);
+            dataArray.put(newKeyEntry);
+
+            // 写回SharedPreferences
+            SharedPreferences.Editor editor = preferences.edit();
+            editor.putString(KEY_NAME, root.toString());
+            editor.apply();
+
+            Toast.makeText(game, game.getString(R.string.toast_custom_key_saved, name), Toast.LENGTH_SHORT).show();
+
+        } catch (Exception e) {
+            LimeLog.warning("Exception while saving custom key" + e.getMessage());
+            Toast.makeText(game, R.string.toast_save_failed, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * 显示一个对话框，列出所有自定义按键，允许用户选择并删除。
+     */
+    private void showDeleteKeysDialog() {
+        SharedPreferences preferences = game.getSharedPreferences(PREF_NAME, Activity.MODE_PRIVATE);
+        String value = preferences.getString(KEY_NAME, "");
+
+        if (TextUtils.isEmpty(value)) {
+            Toast.makeText(game, R.string.toast_no_custom_keys_to_delete, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            JSONObject root = new JSONObject(value);
+            JSONArray dataArray = root.optJSONArray("data");
+
+            if (dataArray == null || dataArray.length() == 0) {
+                Toast.makeText(game, R.string.toast_no_custom_keys_to_delete, Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // 准备要在对话框中显示的列表
+            final List<String> keyNames = new ArrayList<>();
+            for (int i = 0; i < dataArray.length(); i++) {
+                keyNames.add(dataArray.getJSONObject(i).optString("name"));
+            }
+
+            // 用于跟踪哪些项被选中
+            final boolean[] checkedItems = new boolean[keyNames.size()];
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(game);
+            builder.setTitle(R.string.dialog_title_select_keys_to_delete);
+            builder.setMultiChoiceItems(keyNames.toArray(new CharSequence[0]), checkedItems,
+                    (dialog, which, isChecked) -> {
+                        // 当用户点击一个复选框时，更新 checkedItems 数组
+                        checkedItems[which] = isChecked;
+                    });
+
+            builder.setPositiveButton(R.string.dialog_button_delete, (dialog, which) -> {
+                try {
+                    // 关键：从后往前遍历，防止索引错乱
+                    for (int i = checkedItems.length - 1; i >= 0; i--) {
+                        if (checkedItems[i]) {
+                            dataArray.remove(i); // 从 JSONArray 中移除
+                        }
+                    }
+
+                    // 将修改后的 JSON 写回 SharedPreferences
+                    root.put("data", dataArray);
+                    SharedPreferences.Editor editor = preferences.edit();
+                    editor.putString(KEY_NAME, root.toString());
+                    editor.apply();
+
+                    Toast.makeText(game, R.string.toast_selected_keys_deleted, Toast.LENGTH_SHORT).show();
+
+                } catch (Exception e) {
+                    LimeLog.warning("Exception while deleting keys" + e.getMessage());
+
+                    Toast.makeText(game, R.string.toast_delete_failed, Toast.LENGTH_SHORT).show();
+                }
+            });
+
+            builder.setNegativeButton(R.string.dialog_button_cancel, null);
+            builder.create().show();
+
+        } catch (Exception e) {
+            LimeLog.warning("Exception while loading key list" + e.getMessage());
+            Toast.makeText(game, R.string.toast_load_key_list_failed, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+
 
     /**
      * 显示主菜单
@@ -876,7 +1126,7 @@ public class GameMenu {
         }
 
         normalOptions.add(new MenuOption(getString(R.string.game_menu_send_keys),
-                false, this::showSpecialKeysMenu, "game_menu_send_keys", true));
+                false, this::showSpecialKeysMenu1, "game_menu_send_keys", true));
 
         normalOptions.add(new MenuOption(getString(R.string.game_menu_disconnect), true,
                 game::disconnect, "game_menu_disconnect", true));
