@@ -12,6 +12,7 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
+import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -525,9 +526,10 @@ public class GameMenu {
             // 获取ListView
             ListView normalListView = container.findViewById(R.id.gameMenuList);
             ListView superListView = container.findViewById(R.id.superMenuList);
-            
+
             int totalHeight = 0;
-            
+            int maxItems= 0;
+
             // 计算普通菜单高度
             if (normalListView != null && normalListView.getAdapter() != null) {
                 int normalItemCount = normalListView.getAdapter().getCount();
@@ -537,13 +539,11 @@ public class GameMenu {
                     itemView.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
                                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
                     int itemHeight = itemView.getMeasuredHeight();
-                    
-                    // 计算总高度（最多显示8个item）
-                    int maxItems = Math.min(normalItemCount, 8);
+                    maxItems = normalItemCount;
                     totalHeight = Math.max(totalHeight, itemHeight * maxItems);
                 }
             }
-            
+
             // 计算超级菜单高度
             if (superListView != null && superListView.getAdapter() != null) {
                 int superItemCount = superListView.getAdapter().getCount();
@@ -553,18 +553,16 @@ public class GameMenu {
                     itemView.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
                                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
                     int itemHeight = itemView.getMeasuredHeight();
-                    
-                    // 计算总高度（最多显示8个item）
-                    int maxItems = Math.min(superItemCount, 8);
+                    maxItems = superItemCount;
                     totalHeight = Math.max(totalHeight, itemHeight * maxItems);
                 }
             }
-            
+
             // 添加一些padding和margin
-            totalHeight += (int) (32 * game.getResources().getDisplayMetrics().density);
-            
+            totalHeight += (int) ((maxItems*2) * game.getResources().getDisplayMetrics().density);
+
             return totalHeight;
-            
+
         } catch (Exception e) {
             // 如果计算失败，返回默认高度
             return (int) (220 * game.getResources().getDisplayMetrics().density);

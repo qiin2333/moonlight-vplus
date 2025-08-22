@@ -1,206 +1,224 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
     android:layout_margin="16dp"
-    android:padding="8dp"
-    android:orientation="vertical">
-
-    <RelativeLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="6dp">
-
-        <TextView
-            android:id="@+id/customTitleTextView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentStart="true"
-            android:layout_centerVertical="true"
-            android:text="🍥🍬 V+ GAME MENU"
-            android:textColor="@color/game_menu_text_primary"
-            android:textSize="18sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/btnCrownToggle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"
-            android:layout_marginEnd="2dp"
-            android:clickable="true"
-            android:drawablePadding="4dp"
-            android:focusable="true"
-            android:focusableInTouchMode="true"
-            android:paddingStart="4dp"
-            android:paddingTop="2dp"
-            android:paddingEnd="4dp"
-            android:paddingBottom="2dp"
-            android:text="启用王冠菜单"
-            android:textColor="@color/theme_pink_primary"
-            android:textSize="14sp"
-            app:drawableStartCompat="@drawable/ic_super_crown" />
-    </RelativeLayout>
+    android:fadeScrollbars="false"
+    android:scrollbars="vertical"
+    android:maxWidth="576dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="6dp"
-        android:gravity="center"
-        android:orientation="horizontal">
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:weightSum="2">
 
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:id="@+id/customTitleTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:text="🍥🍬 V+ GAME MENU"
+                android:textColor="@color/game_menu_text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/btnCrownToggle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="2dp"
+                android:text="启用王冠菜单"
+                android:textColor="@color/theme_pink_primary"
+                android:textSize="14sp"
+                android:clickable="true"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:drawablePadding="4dp"
+                app:drawableStartCompat="@drawable/ic_super_crown" />
+
+        </RelativeLayout>
+
+        <!-- 快捷按钮区域 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="2dp"
-            android:weightSum="7">
-
-            <Button
-                android:id="@+id/btnWin"
-                style="@style/GameMenuButtonStyle"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="2dp"
-                android:layout_weight="1"
-                android:drawableStart="@drawable/ic_btn_win"
-                android:text="WIN" />
-
-            <Button
-                android:id="@+id/btnEsc"
-                style="@style/GameMenuButtonStyle"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="2dp"
-                android:layout_marginEnd="2dp"
-                android:layout_weight="1"
-                android:drawableStart="@drawable/ic_btn_esc"
-                android:text="ESC" />
-
-            <Button
-                android:id="@+id/btnHDR"
-                style="@style/GameMenuButtonStyle"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="2dp"
-                android:layout_marginEnd="2dp"
-                android:layout_weight="1"
-                android:drawableStart="@drawable/ic_btn_hdr"
-                android:text="HDR" />
-
-            <Button
-                android:id="@+id/btnMic"
-                style="@style/GameMenuButtonStyle"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="2dp"
-                android:layout_marginEnd="2dp"
-                android:layout_weight="1"
-                android:drawableStart="@drawable/ic_mic_gm"
-                android:text="Mic" />
-
-            <Button
-                android:id="@+id/btnBitrate"
-                style="@style/GameMenuButtonStyle"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="2dp"
-                android:layout_weight="1"
-                android:drawableStart="@drawable/ic_btn_bitrate"
-                android:text="码率" />
-
-            <Button
-                android:id="@+id/btnSleep"
-                style="@style/GameMenuButtonStyle"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="2dp"
-                android:layout_marginEnd="2dp"
-                android:layout_weight="1"
-                android:drawableStart="@drawable/ic_btn_sleep"
-                android:text="睡眠" />
-
-            <Button
-                android:id="@+id/btnQuit"
-                style="@style/GameMenuButtonStyle"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="2dp"
-                android:layout_marginEnd="2dp"
-                android:layout_weight="1"
-                android:drawableStart="@drawable/ic_btn_quit"
-                android:text="退出" />
-        </LinearLayout>
-    </LinearLayout>
-
-    <!-- 菜单列表区域 -->
-    <LinearLayout
-        android:id="@+id/menuListContainer"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:minHeight="220dp"
-        android:orientation="horizontal">
-
-        <!-- 普通菜单 -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_marginEnd="4dp"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <ListView
-                android:id="@+id/gameMenuList"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:divider="@null"
-                android:dividerHeight="1dp"
-                android:fadeScrollbars="false"
-                android:scrollbars="vertical" />
-
-        </LinearLayout>
-
-        <!-- 超级菜单 -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_marginStart="4dp"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <ListView
-                android:id="@+id/superMenuList"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:divider="@null"
-                android:dividerHeight="1dp"
-                android:fadeScrollbars="false"
-                android:scrollbars="vertical" />
-
-        </LinearLayout>
-
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:gravity="center"
-        android:orientation="horizontal">
-
-        <TextView
-            android:id="@+id/appNameTextView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
             android:gravity="center"
-            android:padding="2dp"
-            android:text="Moonlight"
-            android:textColor="@color/theme_pink_primary"
-            android:textSize="12sp"
-            android:textStyle="bold" />
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="2dp"
+                android:weightSum="7">
+
+                <Button
+                    android:id="@+id/btnWin"
+                    style="@style/GameMenuButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="2dp"
+                    android:layout_weight="1"
+                    android:drawableStart="@drawable/ic_btn_win"
+                    android:text="WIN" />
+
+                <Button
+                    android:id="@+id/btnEsc"
+                    style="@style/GameMenuButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    android:layout_marginEnd="2dp"
+                    android:layout_weight="1"
+                    android:drawableStart="@drawable/ic_btn_esc"
+                    android:text="ESC" />
+
+                <Button
+                    android:id="@+id/btnHDR"
+                    style="@style/GameMenuButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    android:layout_marginEnd="2dp"
+                    android:layout_weight="1"
+                    android:drawableStart="@drawable/ic_btn_hdr"
+                    android:text="HDR" />
+
+                <Button
+                    android:id="@+id/btnMic"
+                    style="@style/GameMenuButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    android:layout_marginEnd="2dp"
+                    android:layout_weight="1"
+                    android:drawableStart="@drawable/ic_mic_gm"
+                    android:text="Mic" />
+
+                <Button
+                    android:id="@+id/btnBitrate"
+                    style="@style/GameMenuButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    android:layout_weight="1"
+                    android:drawableStart="@drawable/ic_btn_bitrate"
+                    android:text="码率" />
+
+                <Button
+                    android:id="@+id/btnSleep"
+                    style="@style/GameMenuButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    android:layout_marginEnd="2dp"
+                    android:layout_weight="1"
+                    android:drawableStart="@drawable/ic_btn_sleep"
+                    android:text="睡眠" />
+
+                <Button
+                    android:id="@+id/btnQuit"
+                    style="@style/GameMenuButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    android:layout_marginEnd="2dp"
+                    android:layout_weight="1"
+                    android:drawableStart="@drawable/ic_btn_quit"
+                    android:text="退出" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- 菜单列表区域 -->
+        <LinearLayout
+            android:id="@+id/menuListContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:minHeight="220dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <!-- 普通菜单 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <ListView
+                    android:id="@+id/gameMenuList"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:divider="@null"
+                    android:dividerHeight="1dp"
+                    android:fadeScrollbars="false"
+                    android:scrollbars="vertical" />
+
+            </LinearLayout>
+
+            <!-- 超级菜单 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <ListView
+                    android:id="@+id/superMenuList"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:divider="@null"
+                    android:dividerHeight="1dp"
+                    android:fadeScrollbars="false"
+                    android:scrollbars="vertical" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- App名字显示区域 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/appNameTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Moonlight"
+                android:textColor="@color/theme_pink_primary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:padding="2dp" />
+
+        </LinearLayout>
+
     </LinearLayout>
 
-</LinearLayout>
+</ScrollView>
