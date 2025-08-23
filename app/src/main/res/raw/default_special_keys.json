@@ -1,0 +1,28 @@
+{
+  "data": [
+    {
+      "name": "发送 F11 (全屏状态切换)",
+      "data": ["0x7A"]
+    },
+    {
+      "name": "发送 CTRL + V (粘贴剪贴板)",
+      "data": ["0xA2", "0x56"]
+    },
+    {
+      "name": "发送 WIN + D (切到桌面)",
+      "data": ["0x5B", "0x44"]
+    },
+    {
+      "name": "发送 WIN + G (打开 Xbox Game Bar)",
+      "data": ["0x5B", "0x47"]
+    },
+    {
+      "name": "发送 ALT + HOME (小飞机/RTSS 主机性能监控开关)",
+      "data": ["0x12", "0x24"]
+    },
+    {
+      "name": "发送 SHIFT + TAB (打开 Steam 图层)",
+      "data": ["0xA0", "0x09"]
+    }
+  ]
+}

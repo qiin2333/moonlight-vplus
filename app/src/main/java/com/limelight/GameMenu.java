@@ -39,11 +39,11 @@ import android.content.SharedPreferences;
 import android.text.TextUtils;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.Toast;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 /**
  * 提供游戏流媒体进行中的选项菜单
@@ -830,53 +830,52 @@ public class GameMenu {
 
 
     /**
-     * 显示特殊按键菜单（包含默认、自定义和添加选项）
+     * 显示特殊按键菜单（从rew加载默认配置，可自定义和添加选项）
      */
     private void showSpecialKeysMenu1() {
         List<MenuOption> options = new ArrayList<>();
 
-        //  添加默认的特殊按键
-        options.add(new MenuOption(getString(R.string.game_menu_send_keys_f11), false,
-                () -> sendKeys(new short[]{KeyboardTranslator.VK_F11}), null, false));
-        options.add(new MenuOption(getString(R.string.game_menu_send_keys_ctrl_v), false,
-                () -> sendKeys(new short[]{KeyboardTranslator.VK_LCONTROL, KeyboardTranslator.VK_V}), null, false));
-        options.add(new MenuOption(getString(R.string.game_menu_send_keys_win_d), false,
-                () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_D}), null, false));
-        options.add(new MenuOption(getString(R.string.game_menu_send_keys_win_g), false,
-                () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_G}), null, false));
-        options.add(new MenuOption(getString(R.string.game_menu_send_keys_alt_home), false,
-                () -> sendKeys(new short[]{KeyboardTranslator.VK_MENU, KeyboardTranslator.VK_HOME}), null, false));
-        options.add(new MenuOption(getString(R.string.game_menu_send_keys_shift_tab), false,
-                () -> sendKeys(new short[]{KeyboardTranslator.VK_LSHIFT, KeyboardTranslator.VK_TAB}), null, false));
+        // 从 SharedPreferences 加载所有按键。
+        // 如果是首次运行，则从 res/raw/default_special_keys.json 加载默认值。
+        boolean hasKeys = loadAndAddAllKeys(options);
 
-        //  加载并添加已保存的自定义按键，并记录是否有自定义按键
-        boolean hasCustomKeys = loadAndAddCustomKeys(options);
-
-        //  添加 "添加自定义按键" 选项
+        // 添加 "添加自定义按键" 选项
         options.add(new MenuOption(getString(R.string.game_menu_add_custom_key), false, this::showAddCustomKeyDialog, null, false));
 
-        //  如果存在自定义按键，则添加 "删除" 选项
-        if (hasCustomKeys) {
+        // 如果存在任何按键 (默认或自定义)，则添加 "删除" 选项
+        if (hasKeys) {
             options.add(new MenuOption(getString(R.string.game_menu_delete_custom_key), false, this::showDeleteKeysDialog, null, false));
         }
 
-        //  添加 "取消" 选项
+        // 添加 "取消" 选项
         options.add(new MenuOption(getString(R.string.game_menu_cancel), false, null, null, false));
 
-        //  显示菜单
+        // 显示菜单
         showMenuDialog(getString(R.string.game_menu_send_keys), options.toArray(new MenuOption[0]), new MenuOption[0]);
     }
 
+
     /**
-     * 从 SharedPreferences 加载自定义按键并添加到菜单列表
-     * @param options 要添加到的菜单选项列表
+     * 从 SharedPreferences 加载所有按键。
+     * 如果 SharedPreferences 为空，则从 res/raw/default_special_keys.json 加载默认按键并保存。
+     * @param options 用于填充菜单选项的列表
+     * @return 如果成功加载了至少一个按键，则返回 true
      */
-    private boolean  loadAndAddCustomKeys(List<MenuOption> options) {
+    private boolean loadAndAddAllKeys(List<MenuOption> options) {
         SharedPreferences preferences = game.getSharedPreferences(PREF_NAME, Activity.MODE_PRIVATE);
         String value = preferences.getString(KEY_NAME, "");
 
+        // 如果 SharedPreferences 中没有数据（例如首次启动），则从 raw 资源文件加载默认按键
         if (TextUtils.isEmpty(value)) {
-            return false;
+            value = readRawResourceAsString(R.raw.default_special_keys);
+            if (!TextUtils.isEmpty(value)) {
+                // 将从文件读取的默认值保存到 SharedPreferences 中，以便后续可以对其进行修改
+                preferences.edit().putString(KEY_NAME, value).apply();
+            }
+        }
+
+        if (TextUtils.isEmpty(value)) {
+            return false; // 如果值仍然为空（例如文件读取失败），则直接返回
         }
 
         try {
@@ -890,6 +889,7 @@ public class GameMenu {
                     short[] datas = new short[codesArray.length()];
                     for (int j = 0; j < codesArray.length(); j++) {
                         String code = codesArray.getString(j);
+                        // 解析 "0xXX" 格式的十六进制字符串
                         datas[j] = (short) Integer.parseInt(code.substring(2), 16);
                     }
                     MenuOption option = new MenuOption(name, false, () -> sendKeys(datas), null, false);
@@ -898,10 +898,30 @@ public class GameMenu {
                 return true; // 成功加载，返回 true
             }
         } catch (Exception e) {
-            LimeLog.warning("Exception while loading custom keys" + e.getMessage());
+            LimeLog.warning("Exception while loading keys from SharedPreferences: " + e.getMessage());
             Toast.makeText(game, getString(R.string.toast_load_custom_keys_corrupted), Toast.LENGTH_SHORT).show();
         }
         return false; // 没有加载到任何按键
+    }
+
+    /**
+     * 从 res/raw 目录读取资源文件内容并返回字符串。
+     * @param resourceId 资源文件的 ID (例如 R.raw.default_special_keys)
+     * @return 文件内容的字符串，如果失败则返回空字符串
+     */
+    private String readRawResourceAsString(int resourceId) {
+        try (InputStream inputStream = game.getResources().openRawResource(resourceId);
+             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+            StringBuilder builder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                builder.append(line);
+            }
+            return builder.toString();
+        } catch (IOException e) {
+            LimeLog.warning("Failed to read raw resource file: " + resourceId + ": " + e);
+            return "";
+        }
     }
 
     /**
