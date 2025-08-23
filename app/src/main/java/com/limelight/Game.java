@@ -88,6 +88,7 @@ import android.view.animation.AnimationUtils;
 import android.widget.FrameLayout;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -187,7 +188,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private boolean hasShownEscHint = false;
 
     private boolean isHidingOverlays;
-    private TextView notificationOverlayView;
+    private androidx.cardview.widget.CardView notificationOverlayView;
+    private TextView notificationTextView;
     private int requestedNotificationOverlayVisibility = View.GONE;
     private LinearLayout performanceOverlayView;
     private int requestedPerformanceOverlayVisibility = View.GONE;
@@ -355,6 +357,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
 
         notificationOverlayView = findViewById(R.id.notificationOverlay);
+        notificationTextView = findViewById(R.id.notificationText);
 
         performanceOverlayView = findViewById(R.id.performanceOverlay);
 
@@ -796,7 +799,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 }
 
                 performanceOverlayView.setVisibility(requestedPerformanceOverlayVisibility);
-                notificationOverlayView.setVisibility(requestedNotificationOverlayVisibility);
+                if (requestedNotificationOverlayVisibility == View.VISIBLE) {
+                    notificationOverlayView.setVisibility(View.VISIBLE);
+                } else {
+                    notificationOverlayView.setVisibility(View.GONE);
+                }
 
                 // 恢复麦克风按钮
                 if (microphoneManager != null) {
@@ -2749,13 +2756,15 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 }
 
                 if (connectionStatus == MoonBridge.CONN_STATUS_POOR) {
+                    String message;
                     if (prefConfig.bitrate > 5000) {
-                        notificationOverlayView.setText(getResources().getString(R.string.slow_connection_msg));
+                        message = getResources().getString(R.string.slow_connection_msg);
                     }
                     else {
-                        notificationOverlayView.setText(getResources().getString(R.string.poor_connection_msg));
+                        message = getResources().getString(R.string.poor_connection_msg);
                     }
-
+                    
+                    updateNotificationOverlay(connectionStatus, message);
                     requestedNotificationOverlayVisibility = View.VISIBLE;
                 }
                 else if (connectionStatus == MoonBridge.CONN_STATUS_OKAY) {
@@ -2763,7 +2772,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 }
 
                 if (!isHidingOverlays) {
-                    notificationOverlayView.setVisibility(requestedNotificationOverlayVisibility);
+                    if (requestedNotificationOverlayVisibility == View.VISIBLE) {
+                        notificationOverlayView.setVisibility(View.VISIBLE);
+                    } else {
+                        notificationOverlayView.setVisibility(View.GONE);
+                    }
                 }
             }
         });
@@ -3525,6 +3538,33 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     public boolean getHandleMotionEvent(StreamView streamView,MotionEvent event) {
         return handleMotionEvent(streamView,event);
+    }
+    
+    private void updateNotificationOverlay(int connectionStatus, String message) {
+        if (notificationOverlayView == null || notificationTextView == null) {
+            return;
+        }
+
+        // Set the text
+        notificationTextView.setText(message);
+
+        // Set different colors based on connection status with more transparency
+        int backgroundColor;
+        if (connectionStatus == MoonBridge.CONN_STATUS_POOR) {
+            if (prefConfig.bitrate > 5000) {
+                // Slow connection - orange warning
+                backgroundColor = 0x80FF9800; // Orange with more transparency
+            } else {
+                // Poor connection - red warning
+                backgroundColor = 0x80F44336; // Red with more transparency
+            }
+        } else {
+            // Default color
+            backgroundColor = 0x80FF5722; // Orange-red with more transparency
+        }
+
+        // Apply background color without animation
+        notificationOverlayView.setCardBackgroundColor(backgroundColor);
     }
     
     private void configurePerformanceOverlay() {

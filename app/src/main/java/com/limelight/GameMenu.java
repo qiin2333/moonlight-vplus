@@ -441,7 +441,6 @@ public class GameMenu {
 
     /**
      * 计算内容实际高度
-     * 使用性能优化的方式计算
      */
     private int calculateContentHeight(View container) {
         try {
