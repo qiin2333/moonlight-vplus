@@ -5,14 +5,18 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.os.Build;
 import android.os.Handler;
+import android.view.HapticFeedbackConstants;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -26,6 +30,8 @@ import com.limelight.binding.input.KeyboardTranslator;
 import com.limelight.nvstream.NvConnection;
 import com.limelight.nvstream.http.NvApp;
 import com.limelight.nvstream.input.KeyboardPacket;
+import com.limelight.utils.KeyCodeMapper;
+
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
@@ -38,7 +44,6 @@ import android.app.Activity;
 import android.content.SharedPreferences;
 import android.text.TextUtils;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.BufferedReader;
@@ -622,8 +627,8 @@ public class GameMenu {
      */
     private void setupQuickButtons(View customView, AlertDialog dialog) {
         // 创建动画
-        android.view.animation.Animation scaleDown = android.view.animation.AnimationUtils.loadAnimation(game, R.anim.button_scale_animation);
-        android.view.animation.Animation scaleUp = android.view.animation.AnimationUtils.loadAnimation(game, R.anim.button_scale_restore);
+        Animation scaleDown = AnimationUtils.loadAnimation(game, R.anim.button_scale_animation);
+        Animation scaleUp = AnimationUtils.loadAnimation(game, R.anim.button_scale_restore);
         
         // 设置按钮点击动画
         setupButtonWithAnimation(customView.findViewById(R.id.btnEsc), scaleDown, scaleUp, v ->
@@ -645,8 +650,8 @@ public class GameMenu {
             micButton.setEnabled(false);
             micButton.setAlpha(0.5f);
             // 设置禁用图标
-            if (micButton instanceof android.widget.Button) {
-                android.widget.Button button = (android.widget.Button) micButton;
+            if (micButton instanceof Button) {
+                Button button = (Button) micButton;
                 button.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_mic_gm_disabled, 0, 0, 0);
             }
             micButton.setOnClickListener(v -> {
@@ -673,11 +678,11 @@ public class GameMenu {
      * 为按钮设置动画效果
      */
     @SuppressLint("ClickableViewAccessibility")
-    private void setupButtonWithAnimation(View button, android.view.animation.Animation scaleDown,
-                                          android.view.animation.Animation scaleUp, View.OnClickListener listener) {
+    private void setupButtonWithAnimation(View button, Animation scaleDown,
+                                          Animation scaleUp, View.OnClickListener listener) {
         // 设置按钮样式
-        if (button instanceof android.widget.Button) {
-            android.widget.Button btn = (android.widget.Button) button;
+        if (button instanceof Button) {
+            Button btn = (Button) button;
             btn.setTextAppearance(game, R.style.GameMenuButtonStyle);
         }
 
@@ -701,7 +706,7 @@ public class GameMenu {
                     v.setAlpha(1.0f);
                     if (event.getAction() == MotionEvent.ACTION_UP) {
                         // 添加点击反馈
-                        v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
+                        v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
                         listener.onClick(v);
                     }
                     break;
@@ -716,14 +721,14 @@ public class GameMenu {
     /**
      * 通用按钮键盘事件处理方法
      */
-    private void setupButtonKeyListener(View button, android.view.animation.Animation scaleDown,
-                                        android.view.animation.Animation scaleUp, View.OnClickListener listener) {
+    private void setupButtonKeyListener(View button, Animation scaleDown,
+                                        Animation scaleUp, View.OnClickListener listener) {
         button.setOnKeyListener((v, keyCode, event) -> {
-            if (event.getAction() == android.view.KeyEvent.ACTION_DOWN) {
-                if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER ||
-                        keyCode == android.view.KeyEvent.KEYCODE_ENTER) {
+            if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                        keyCode == KeyEvent.KEYCODE_ENTER) {
                     // 添加点击反馈
-                    v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
+                    v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
                     // 播放动画
                     v.startAnimation(scaleDown);
                     v.postDelayed(() -> {
@@ -840,7 +845,7 @@ public class GameMenu {
         boolean hasKeys = loadAndAddAllKeys(options);
 
         // 添加 "添加自定义按键" 选项
-        options.add(new MenuOption(getString(R.string.game_menu_add_custom_key), false, this::showAddCustomKeyDialog, null, false));
+        options.add(new MenuOption(getString(R.string.game_menu_add_custom_key), false, this::showAddCustomKeyDialog1, null, false));
 
         // 如果存在任何按键 (默认或自定义)，则添加 "删除" 选项
         if (hasKeys) {
@@ -925,46 +930,6 @@ public class GameMenu {
     }
 
     /**
-     * 显示用于添加新自定义按键的对话框
-     */
-    private void showAddCustomKeyDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(game);
-        builder.setTitle(R.string.dialog_title_add_custom_key);
-
-        // 设置对话框的布局
-        LinearLayout layout = new LinearLayout(game);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(50, 40, 50, 20);
-
-        final EditText nameInput = new EditText(game);
-        nameInput.setHint(R.string.dialog_hint_key_name);
-        layout.addView(nameInput);
-
-        final EditText keysInput = new EditText(game);
-        keysInput.setHint(R.string.dialog_hint_key_codes);
-        layout.addView(keysInput);
-
-        builder.setView(layout);
-
-        // 设置按钮
-        builder.setPositiveButton(R.string.dialog_button_save, (dialog, which) -> {
-            String name = nameInput.getText().toString().trim();
-            String keys = keysInput.getText().toString().trim();
-
-            if (TextUtils.isEmpty(name) || TextUtils.isEmpty(keys)) {
-                Toast.makeText(game, R.string.toast_name_and_codes_cannot_be_empty, Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            // 验证并保存按键
-            saveCustomKey(name, keys);
-        });
-        builder.setNegativeButton(R.string.dialog_button_cancel, (dialog, which) -> dialog.cancel());
-
-        builder.show();
-    }
-
-    /**
      * 将新的自定义按键保存到 SharedPreferences
      * @param name 按键的显示名称
      * @param keysString 逗号分隔的十六进制按键码字符串
@@ -1010,6 +975,122 @@ public class GameMenu {
         }
     }
 
+    private void showAddCustomKeyDialog1() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(game,R.style.AppDialogStyle);
+        builder.setTitle(R.string.dialog_title_add_custom_key);
+
+        LayoutInflater inflater = LayoutInflater.from(game);
+        View dialogView = inflater.inflate(R.layout.dialog_add_custom_key, null);
+        builder.setView(dialogView);
+
+        final EditText nameInput = dialogView.findViewById(R.id.edit_text_key_name);
+        final TextView keysDisplay = dialogView.findViewById(R.id.text_view_key_codes);
+        final Button clearButton = dialogView.findViewById(R.id.button_clear_keys);
+
+        // 找到虚拟键盘的根视图
+        final ViewGroup keyboardRoot = dialogView.findViewById(R.id.keyboard_drawing);
+
+        // 设置清空按钮监听
+        clearButton.setOnClickListener(v -> keysDisplay.setText(""));
+
+        // 递归地为键盘上的所有按键设置监听器
+        setupKeyboardListeners(keyboardRoot, keysDisplay);
+
+        // 设置对话框的“保存”和“取消”按钮
+        builder.setPositiveButton(R.string.dialog_button_save, (dialog, which) -> {
+            String name = nameInput.getText().toString().trim();
+            String keyNamesString = keysDisplay.getText().toString().trim();
+
+            if (TextUtils.isEmpty(name) || TextUtils.isEmpty(keyNamesString)) {
+                Toast.makeText(game, R.string.toast_name_and_codes_cannot_be_empty, Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // --- 开始转换 ---
+          String[] keyNames = keyNamesString.split("\\+"); // 使用"+"分割按键名称
+
+            StringBuilder keyCodesBuilder = new StringBuilder();
+
+            for (int i = 0; i < keyNames.length; i++) {
+                String keyName = keyNames[i];
+                String keyCode = KeyCodeMapper.getKeyCode(keyName); // 使用映射器查找十六进制码
+
+                if (keyCode == null) {
+                    // 如果映射中找不到这个按键，转换失败
+                    Toast.makeText(game, "错误: 未知的按键名称 '" + keyName + "'", Toast.LENGTH_LONG).show();
+                    return; // 中断保存
+                }
+
+                keyCodesBuilder.append(keyCode);
+                if (i < keyNames.length - 1) {
+                    keyCodesBuilder.append(","); // 添加逗号分隔符
+                }
+            }
+
+            String finalKeyCodesString = keyCodesBuilder.toString(); // 这是 "0x1D,0x1E" 这样的字符串
+            // --- 转换结束 ---
+
+            // 使用转换后的字符串调用保存方法
+            saveCustomKey(name, finalKeyCodesString);
+        });
+        builder.setNegativeButton(R.string.dialog_button_cancel, (dialog, which) -> dialog.cancel());
+
+        builder.create().show();
+    }
+
+    /**
+     * 递归遍历一个ViewGroup，为所有带tag的TextView（按键）设置点击监听器
+     * @param parent ViewGroup to search within (e.g., the root of the keyboard layout)
+     * @param targetInput The EditText where the key text will be appended
+     */
+    private void setupKeyboardListeners(ViewGroup parent, final TextView  targetInput) {
+        if (parent == null) return;
+
+        for (int i = 0; i < parent.getChildCount(); i++) {
+            View child = parent.getChildAt(i);
+
+            // 如果子视图是另一个ViewGroup，则递归进去继续查找
+            if (child instanceof ViewGroup) {
+                setupKeyboardListeners((ViewGroup) child, targetInput);
+            }
+            // 如果子视图是TextView并且有tag，我们认为它是一个按键
+            else if (child instanceof TextView) {
+                final TextView keyView = (TextView) child;
+                if (keyView.getTag() != null) {
+                    keyView.setOnClickListener(v -> {
+                        String keyText = keyView.getText().toString();
+
+                        // 对于 "~\n`" 这样的文本，我们只取最后一部分作为按键值
+                        if (keyText.contains("\n")) {
+                            String[] parts = keyText.split("\n");
+                            keyText = parts[parts.length - 1];
+                        }
+
+                        // 使用辅助方法将按键文本添加到输入框
+                        appendKeyToInput(targetInput, keyText);
+                    });
+                }
+            }
+        }
+    }
+
+
+    /**
+     * 辅助方法，将按键码追加到输入框中，并自动添加空格
+     * @param textView 目标输入框
+     * @param combination 要追加的按键码
+     */
+    private void appendKeyToInput(TextView textView, String combination) {
+        String currentText = textView.getText().toString();
+        // 如果TextView当前显示的是hint，则currentText可能为空
+        if (TextUtils.isEmpty(currentText) || currentText.equals(textView.getHint().toString())) {
+            textView.setText(combination);
+        } else {
+            textView.setText(currentText + "+" + combination);
+
+        }
+    }
+
     /**
      * 显示一个对话框，列出所有自定义按键，允许用户选择并删除。
      */
@@ -1040,7 +1121,7 @@ public class GameMenu {
             // 用于跟踪哪些项被选中
             final boolean[] checkedItems = new boolean[keyNames.size()];
 
-            AlertDialog.Builder builder = new AlertDialog.Builder(game);
+            AlertDialog.Builder builder = new AlertDialog.Builder(game,R.style.AppDialogStyle);
             builder.setTitle(R.string.dialog_title_select_keys_to_delete);
             builder.setMultiChoiceItems(keyNames.toArray(new CharSequence[0]), checkedItems,
                     (dialog, which, isChecked) -> {
