@@ -5,14 +5,18 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.os.Build;
 import android.os.Handler;
+import android.view.HapticFeedbackConstants;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -26,6 +30,8 @@ import com.limelight.binding.input.KeyboardTranslator;
 import com.limelight.nvstream.NvConnection;
 import com.limelight.nvstream.http.NvApp;
 import com.limelight.nvstream.input.KeyboardPacket;
+import com.limelight.utils.KeyCodeMapper;
+
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
@@ -38,7 +44,6 @@ import android.app.Activity;
 import android.content.SharedPreferences;
 import android.text.TextUtils;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.BufferedReader;
@@ -256,43 +261,32 @@ public class GameMenu {
      * 显示一个菜单列表，用于在“增强式多点触控”,“经典鼠标模式”,“触控板模式”之间切换。
      */
     private void showTouchModeMenu() {
-        // 1. 获取所有相关的当前设置状态
-
-        // 获取“增强/经典”模式的状态
         boolean isEnhancedTouch = game.prefConfig.enableEnhancedTouch;
-        // 获取触控板模式状态
         boolean isTouchscreenTrackpad = game.prefConfig.touchscreenTrackpad;
 
-        // 2. 创建列表中的各个选项
         MenuOption[] touchModeOptions = {
-
-                // 选项一：增强式多点触控
                 new MenuOption(
                         getString(R.string.game_menu_touch_mode_enhanced),
                         isEnhancedTouch,
                         () -> {
                             game.prefConfig.enableEnhancedTouch = true;
-                            game.setTouchMode(false);  // 必须先关闭触摸板模式才可以使用其他触控模式
+                            game.setTouchMode(false);
                             Toast.makeText(game, getString(R.string.toast_touch_mode_enhanced_on), Toast.LENGTH_SHORT).show();
                         },
                         null,
                         false
                 ),
-
-                // 选项二：经典鼠标模式
                 new MenuOption(
                         getString(R.string.game_menu_touch_mode_classic),
                         !isEnhancedTouch,
                         () -> {
                             game.prefConfig.enableEnhancedTouch = false;
-                            game.setTouchMode(false);  // 必须先关闭触摸板模式才可以使用其他触控模式
+                            game.setTouchMode(false);
                             Toast.makeText(game, getString(R.string.toast_touch_mode_classic_on), Toast.LENGTH_SHORT).show();
                         },
                         null,
                         false
                 ),
-
-                // 选项三：触控板模式
                 new MenuOption(
                         getString(R.string.game_menu_touch_mode_trackpad),
                         isTouchscreenTrackpad,
@@ -302,16 +296,10 @@ public class GameMenu {
                         },
                         null,
                         false
-                ),
-
+                )
         };
 
-        // 3. 显示菜单
-        showMenuDialog(
-                getString(R.string.game_menu_switch_touch_mode),
-                touchModeOptions,
-                new MenuOption[0]
-        );
+        showMenuDialog(getString(R.string.game_menu_switch_touch_mode), touchModeOptions, new MenuOption[0]);
     }
 
     /**
@@ -622,8 +610,8 @@ public class GameMenu {
      */
     private void setupQuickButtons(View customView, AlertDialog dialog) {
         // 创建动画
-        android.view.animation.Animation scaleDown = android.view.animation.AnimationUtils.loadAnimation(game, R.anim.button_scale_animation);
-        android.view.animation.Animation scaleUp = android.view.animation.AnimationUtils.loadAnimation(game, R.anim.button_scale_restore);
+        Animation scaleDown = AnimationUtils.loadAnimation(game, R.anim.button_scale_animation);
+        Animation scaleUp = AnimationUtils.loadAnimation(game, R.anim.button_scale_restore);
         
         // 设置按钮点击动画
         setupButtonWithAnimation(customView.findViewById(R.id.btnEsc), scaleDown, scaleUp, v ->
@@ -645,8 +633,8 @@ public class GameMenu {
             micButton.setEnabled(false);
             micButton.setAlpha(0.5f);
             // 设置禁用图标
-            if (micButton instanceof android.widget.Button) {
-                android.widget.Button button = (android.widget.Button) micButton;
+            if (micButton instanceof Button) {
+                Button button = (Button) micButton;
                 button.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_mic_gm_disabled, 0, 0, 0);
             }
             micButton.setOnClickListener(v -> {
@@ -673,11 +661,11 @@ public class GameMenu {
      * 为按钮设置动画效果
      */
     @SuppressLint("ClickableViewAccessibility")
-    private void setupButtonWithAnimation(View button, android.view.animation.Animation scaleDown,
-                                          android.view.animation.Animation scaleUp, View.OnClickListener listener) {
+    private void setupButtonWithAnimation(View button, Animation scaleDown,
+                                          Animation scaleUp, View.OnClickListener listener) {
         // 设置按钮样式
-        if (button instanceof android.widget.Button) {
-            android.widget.Button btn = (android.widget.Button) button;
+        if (button instanceof Button) {
+            Button btn = (Button) button;
             btn.setTextAppearance(game, R.style.GameMenuButtonStyle);
         }
 
@@ -701,7 +689,7 @@ public class GameMenu {
                     v.setAlpha(1.0f);
                     if (event.getAction() == MotionEvent.ACTION_UP) {
                         // 添加点击反馈
-                        v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
+                        v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
                         listener.onClick(v);
                     }
                     break;
@@ -716,14 +704,14 @@ public class GameMenu {
     /**
      * 通用按钮键盘事件处理方法
      */
-    private void setupButtonKeyListener(View button, android.view.animation.Animation scaleDown,
-                                        android.view.animation.Animation scaleUp, View.OnClickListener listener) {
+    private void setupButtonKeyListener(View button, Animation scaleDown,
+                                        Animation scaleUp, View.OnClickListener listener) {
         button.setOnKeyListener((v, keyCode, event) -> {
-            if (event.getAction() == android.view.KeyEvent.ACTION_DOWN) {
-                if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER ||
-                        keyCode == android.view.KeyEvent.KEYCODE_ENTER) {
+            if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                        keyCode == KeyEvent.KEYCODE_ENTER) {
                     // 添加点击反馈
-                    v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
+                    v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
                     // 播放动画
                     v.startAnimation(scaleDown);
                     v.postDelayed(() -> {
@@ -840,7 +828,7 @@ public class GameMenu {
         boolean hasKeys = loadAndAddAllKeys(options);
 
         // 添加 "添加自定义按键" 选项
-        options.add(new MenuOption(getString(R.string.game_menu_add_custom_key), false, this::showAddCustomKeyDialog, null, false));
+        options.add(new MenuOption(getString(R.string.game_menu_add_custom_key), false, this::showAddCustomKeyDialog1, null, false));
 
         // 如果存在任何按键 (默认或自定义)，则添加 "删除" 选项
         if (hasKeys) {
@@ -925,46 +913,6 @@ public class GameMenu {
     }
 
     /**
-     * 显示用于添加新自定义按键的对话框
-     */
-    private void showAddCustomKeyDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(game);
-        builder.setTitle(R.string.dialog_title_add_custom_key);
-
-        // 设置对话框的布局
-        LinearLayout layout = new LinearLayout(game);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(50, 40, 50, 20);
-
-        final EditText nameInput = new EditText(game);
-        nameInput.setHint(R.string.dialog_hint_key_name);
-        layout.addView(nameInput);
-
-        final EditText keysInput = new EditText(game);
-        keysInput.setHint(R.string.dialog_hint_key_codes);
-        layout.addView(keysInput);
-
-        builder.setView(layout);
-
-        // 设置按钮
-        builder.setPositiveButton(R.string.dialog_button_save, (dialog, which) -> {
-            String name = nameInput.getText().toString().trim();
-            String keys = keysInput.getText().toString().trim();
-
-            if (TextUtils.isEmpty(name) || TextUtils.isEmpty(keys)) {
-                Toast.makeText(game, R.string.toast_name_and_codes_cannot_be_empty, Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            // 验证并保存按键
-            saveCustomKey(name, keys);
-        });
-        builder.setNegativeButton(R.string.dialog_button_cancel, (dialog, which) -> dialog.cancel());
-
-        builder.show();
-    }
-
-    /**
      * 将新的自定义按键保存到 SharedPreferences
      * @param name 按键的显示名称
      * @param keysString 逗号分隔的十六进制按键码字符串
@@ -1010,6 +958,93 @@ public class GameMenu {
         }
     }
 
+    private void showAddCustomKeyDialog1() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(game, R.style.AppDialogStyle);
+        builder.setTitle(R.string.dialog_title_add_custom_key);
+
+        View dialogView = LayoutInflater.from(game).inflate(R.layout.dialog_add_custom_key, null);
+        builder.setView(dialogView);
+
+        final EditText nameInput = dialogView.findViewById(R.id.edit_text_key_name);
+        final TextView keysDisplay = dialogView.findViewById(R.id.text_view_key_codes);
+        final Button clearButton = dialogView.findViewById(R.id.button_clear_keys);
+
+        // 初始化/重置 TextView 的数据存储 (tag) 和显示 (text)
+        keysDisplay.setTag("");
+        keysDisplay.setText("");
+        keysDisplay.setHint(R.string.dialog_hint_key_codes);
+
+        // 清空按钮: 同时清空数据(tag)和显示(text)
+        clearButton.setOnClickListener(v -> {
+            keysDisplay.setTag("");
+            keysDisplay.setText("");
+        });
+
+        // 递归设置键盘监听器
+        setupCompactKeyboardListeners((ViewGroup) dialogView.findViewById(R.id.keyboard_drawing), keysDisplay);
+
+        // 保存按钮
+        builder.setPositiveButton(R.string.dialog_button_save, (dialog, which) -> {
+            String name = nameInput.getText().toString().trim();
+            String androidKeyCodesStr = keysDisplay.getTag().toString(); // 从 tag 获取原始数据
+
+            if (TextUtils.isEmpty(name) || TextUtils.isEmpty(androidKeyCodesStr)) {
+                Toast.makeText(game, R.string.toast_name_and_codes_cannot_be_empty, Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // 将 Android KeyCodes 字符串转换为 Windows KeyCodes 字符串
+            String[] androidCodes = androidKeyCodesStr.split(",");
+            StringBuilder windowsCodesBuilder = new StringBuilder();
+            for (int i = 0; i < androidCodes.length; i++) {
+                try {
+                    int code = Integer.parseInt(androidCodes[i]);
+                    String windowsCode = KeyCodeMapper.getWindowsKeyCode(code);
+                    if (windowsCode == null) throw new NullPointerException(); // 如果找不到映射，则抛出异常
+
+                    windowsCodesBuilder.append(windowsCode).append(i < androidCodes.length - 1 ? "," : "");
+                } catch (Exception e) {
+                    Toast.makeText(game, "错误: 包含无效的按键码", Toast.LENGTH_LONG).show();
+                    return;
+                }
+            }
+            saveCustomKey(name, windowsCodesBuilder.toString());
+        });
+
+        builder.setNegativeButton(R.string.dialog_button_cancel, null);
+        builder.create().show();
+    }
+
+    /**
+     * 键盘监听器设置方法
+     * @param parent 键盘布局的根视图
+     * @param keysDisplay 用于存储和显示按键的 TextView
+     */
+    private void setupCompactKeyboardListeners(ViewGroup parent, final TextView keysDisplay) {
+        if (parent == null) return;
+        for (int i = 0; i < parent.getChildCount(); i++) {
+            View child = parent.getChildAt(i);
+            if (child instanceof ViewGroup) {
+                setupCompactKeyboardListeners((ViewGroup) child, keysDisplay); // 递归
+            } else if (child instanceof TextView && child.getTag() != null) {
+                child.setOnClickListener(v -> {
+                    String androidKeyCode = v.getTag().toString();
+                    String currentTag = keysDisplay.getTag().toString();
+
+                    // 1. 更新数据 (Tag)
+                    String newTag = currentTag.isEmpty() ? androidKeyCode : currentTag + "," + androidKeyCode;
+                    keysDisplay.setTag(newTag);
+
+                    // 2. 更新显示 (Text)
+                    String currentText = keysDisplay.getText().toString();
+                    String displayName = KeyCodeMapper.getDisplayName(Integer.parseInt(androidKeyCode));
+                    String newText = currentText.isEmpty() ? displayName : currentText + " + " + displayName;
+                    keysDisplay.setText(newText);
+                });
+            }
+        }
+    }
+
     /**
      * 显示一个对话框，列出所有自定义按键，允许用户选择并删除。
      */
@@ -1031,57 +1066,44 @@ public class GameMenu {
                 return;
             }
 
-            // 准备要在对话框中显示的列表
+            // 准备列表和选中状态
             final List<String> keyNames = new ArrayList<>();
             for (int i = 0; i < dataArray.length(); i++) {
                 keyNames.add(dataArray.getJSONObject(i).optString("name"));
             }
-
-            // 用于跟踪哪些项被选中
             final boolean[] checkedItems = new boolean[keyNames.size()];
 
-            AlertDialog.Builder builder = new AlertDialog.Builder(game);
-            builder.setTitle(R.string.dialog_title_select_keys_to_delete);
-            builder.setMultiChoiceItems(keyNames.toArray(new CharSequence[0]), checkedItems,
-                    (dialog, which, isChecked) -> {
-                        // 当用户点击一个复选框时，更新 checkedItems 数组
-                        checkedItems[which] = isChecked;
-                    });
-
-            builder.setPositiveButton(R.string.dialog_button_delete, (dialog, which) -> {
-                try {
-                    // 关键：从后往前遍历，防止索引错乱
-                    for (int i = checkedItems.length - 1; i >= 0; i--) {
-                        if (checkedItems[i]) {
-                            dataArray.remove(i); // 从 JSONArray 中移除
+            // 创建并显示对话框
+            AlertDialog.Builder builder = new AlertDialog.Builder(game, R.style.AppDialogStyle);
+            builder.setTitle(R.string.dialog_title_select_keys_to_delete)
+                    .setMultiChoiceItems(keyNames.toArray(new CharSequence[0]), checkedItems, (dialog, which, isChecked) ->
+                            checkedItems[which] = isChecked)
+                    .setPositiveButton(R.string.dialog_button_delete, (dialog, which) -> {
+                        try {
+                            // 从后往前删除选中项
+                            for (int i = checkedItems.length - 1; i >= 0; i--) {
+                                if (checkedItems[i]) {
+                                    dataArray.remove(i);
+                                }
+                            }
+                            // 保存更改
+                            root.put("data", dataArray);
+                            preferences.edit().putString(KEY_NAME, root.toString()).apply();
+                            Toast.makeText(game, R.string.toast_selected_keys_deleted, Toast.LENGTH_SHORT).show();
+                        } catch (Exception e) {
+                            LimeLog.warning("Exception while deleting keys" + e.getMessage());
+                            Toast.makeText(game, R.string.toast_delete_failed, Toast.LENGTH_SHORT).show();
                         }
-                    }
-
-                    // 将修改后的 JSON 写回 SharedPreferences
-                    root.put("data", dataArray);
-                    SharedPreferences.Editor editor = preferences.edit();
-                    editor.putString(KEY_NAME, root.toString());
-                    editor.apply();
-
-                    Toast.makeText(game, R.string.toast_selected_keys_deleted, Toast.LENGTH_SHORT).show();
-
-                } catch (Exception e) {
-                    LimeLog.warning("Exception while deleting keys" + e.getMessage());
-
-                    Toast.makeText(game, R.string.toast_delete_failed, Toast.LENGTH_SHORT).show();
-                }
-            });
-
-            builder.setNegativeButton(R.string.dialog_button_cancel, null);
-            builder.create().show();
+                    })
+                    .setNegativeButton(R.string.dialog_button_cancel, null)
+                    .create()
+                    .show();
 
         } catch (Exception e) {
             LimeLog.warning("Exception while loading key list" + e.getMessage());
             Toast.makeText(game, R.string.toast_load_key_list_failed, Toast.LENGTH_SHORT).show();
         }
     }
-
-
 
     /**
      * 显示主菜单
@@ -1113,15 +1135,11 @@ public class GameMenu {
                 "game_menu_toggle_host_keyboard", true));
 
         // 显示当前触控模式
-        String touchModeText;
-        if (game.prefConfig.touchscreenTrackpad) {
-            touchModeText = getString(R.string.game_menu_touch_mode_trackpad);
-        } else if (game.prefConfig.enableEnhancedTouch) {
-            touchModeText = getString(R.string.game_menu_touch_mode_enhanced);
-        } else {
-            touchModeText = getString(R.string.game_menu_touch_mode_classic);
-        }
-        touchModeText = getString(R.string.game_menu_switch_touch_mode) + ": " + touchModeText;
+        String touchModeText = getString(R.string.game_menu_switch_touch_mode) + ": " +
+                (game.prefConfig.touchscreenTrackpad ? getString(R.string.game_menu_touch_mode_trackpad) :
+                        game.prefConfig.enableEnhancedTouch ? getString(R.string.game_menu_touch_mode_enhanced) :
+                                getString(R.string.game_menu_touch_mode_classic));
+
 
         normalOptions.add(new MenuOption(
                 touchModeText,
