@@ -5,8 +5,7 @@
     android:layout_height="wrap_content"
     android:layout_margin="16dp"
     android:fadeScrollbars="false"
-    android:scrollbars="vertical"
-    android:maxWidth="576dp">
+    android:scrollbars="vertical">
 
     <LinearLayout
         android:layout_width="match_parent"
