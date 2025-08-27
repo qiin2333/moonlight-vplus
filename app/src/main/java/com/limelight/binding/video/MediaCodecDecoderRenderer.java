@@ -223,6 +223,15 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             return null;
         }
 
+        // In auto mode, prefer AV1 over HEVC
+        if (prefs.videoFormat == PreferenceConfiguration.FormatOption.AUTO) {
+            MediaCodecInfo av1DecoderInfo = MediaCodecHelper.findProbableSafeDecoder("video/av01", -1);
+            if (av1DecoderInfo != null && MediaCodecHelper.isDecoderWhitelistedForAv1(av1DecoderInfo)) {
+                LimeLog.info("AV1 decoder available, skipping HEVC in auto mode");
+                return null;
+            }
+        }
+
         // We don't try the first HEVC decoder. We'd rather fall back to hardware accelerated AVC instead
         //
         // We need HEVC Main profile, so we could pass that constant to findProbableSafeDecoder, however
@@ -259,8 +268,9 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     }
 
     private MediaCodecInfo findAv1Decoder(PreferenceConfiguration prefs) {
-        // For now, don't use AV1 unless explicitly requested
-        if (prefs.videoFormat != PreferenceConfiguration.FormatOption.FORCE_AV1) {
+        // Use AV1 if explicitly requested or in auto mode
+        if (prefs.videoFormat != PreferenceConfiguration.FormatOption.FORCE_AV1 && 
+            prefs.videoFormat != PreferenceConfiguration.FormatOption.AUTO) {
             return null;
         }
 
@@ -269,7 +279,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             if (!MediaCodecHelper.isDecoderWhitelistedForAv1(decoderInfo)) {
                 LimeLog.info("Found AV1 decoder, but it's not whitelisted - "+decoderInfo.getName());
 
-                // Force HEVC enabled if the user asked for it
+                // Force AV1 enabled if the user asked for it
                 if (prefs.videoFormat == PreferenceConfiguration.FormatOption.FORCE_AV1) {
                     LimeLog.info("Forcing AV1 enabled despite non-whitelisted decoder");
                 }

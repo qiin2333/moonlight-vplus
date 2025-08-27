@@ -807,8 +807,8 @@ public class MediaCodecHelper {
             return false;
         }
 
-        // TODO: Test some AV1 decoders
-        return false;
+        // Allow hardware-accelerated AV1 decoders
+        return true;
     }
 
     @SuppressWarnings("deprecation")
