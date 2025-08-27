@@ -45,3 +45,4 @@ app/.externalNativeBuild/
 app/src/main/jni/moonlight-core/Build.txt
 app/src/main/jni/moonlight-core/build-openssl.sh
 .vscode/
+app/google-services.json
