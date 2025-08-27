@@ -512,6 +512,6 @@
         <com.limelight.preferences.WebLauncherPreference
             android:title="@string/title_privacy_policy"
             android:summary="@string/summary_privacy_policy"
-            url="https://github.com/qiin2333/moonlight-android/blob/main/PRIVACY_POLICY.md"/>
+            url="https://github.com/qiin2333/moonlight-android/blob/master/PRIVACY_POLICY.md"/>
     </PreferenceCategory>
 </PreferenceScreen>
