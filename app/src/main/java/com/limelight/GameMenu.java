@@ -1230,6 +1230,7 @@ public class GameMenu {
         } else {
             touchModeText = getString(R.string.game_menu_touch_mode_classic);
         }
+              
         touchModeText = getString(R.string.game_menu_switch_touch_mode) + ": " + touchModeText;
 
         // 此菜单是 UI 操作，不应该依赖游戏窗口焦点
