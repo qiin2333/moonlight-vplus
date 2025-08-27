@@ -39,8 +39,10 @@ import android.text.TextUtils;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.Toast;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -87,6 +89,7 @@ public class GameMenu {
         private final Runnable runnable;
         private final String iconKey; // 用于图标映射的键
         private final boolean showIcon; // 是否显示图标
+        private final boolean keepDialog; // 点击此项时是否保留对话框并替换左侧菜单（用于二级菜单）
 
         public MenuOption(String label, boolean withGameFocus, Runnable runnable) {
             this(label, withGameFocus, runnable, null, true);
@@ -101,18 +104,33 @@ public class GameMenu {
         }
 
         public MenuOption(String label, boolean withGameFocus, Runnable runnable, String iconKey, boolean showIcon) {
+            this(label, withGameFocus, runnable, iconKey, showIcon, false);
+        }
+
+        public MenuOption(String label, boolean withGameFocus, Runnable runnable, String iconKey, boolean showIcon, boolean keepDialog) {
             this.label = label;
             this.withGameFocus = withGameFocus;
             this.runnable = runnable;
             this.iconKey = iconKey;
             this.showIcon = showIcon;
+            this.keepDialog = keepDialog;
         }
 
         public String getLabel() { return label; }
         public boolean isWithGameFocus() { return withGameFocus; }
         public Runnable getRunnable() { return runnable; }
-        public String getIconKey() { return iconKey; }
-        public boolean isShowIcon() { return showIcon; }
+
+        public String getIconKey() {
+            return iconKey;
+        }
+
+        public boolean isShowIcon() {
+            return showIcon;
+        }
+
+        public boolean isKeepDialog() {
+            return keepDialog;
+        }
     }
 
     // 实例变量
@@ -121,6 +139,14 @@ public class GameMenu {
     private final NvConnection conn;
     private final GameInputDevice device;
     private final Handler handler;
+    // 当前激活的对话框（如果有）
+    private AlertDialog activeDialog;
+    // 当前激活对话框所用的自定义视图引用（便于内部替换）
+    private View activeCustomView;
+    // 标志：上一次运行的选项是否打开了子菜单（由 showSubMenu 设置）
+    private boolean lastActionOpenedSubmenu = false;
+    // 菜单历史栈，用于二级/多级菜单的回退
+    private final java.util.Deque<MenuState> menuStack = new java.util.ArrayDeque<>();
 
     public GameMenu(Game game, NvApp app, NvConnection conn, GameInputDevice device) {
         this.game = game;
@@ -130,6 +156,19 @@ public class GameMenu {
         this.handler = new Handler();
 
         showMenu();
+    }
+
+    /**
+     * 菜单状态，用于回退
+     */
+    private static class MenuState {
+        final String title;
+        final MenuOption[] normalOptions;
+
+        MenuState(String title, MenuOption[] normalOptions) {
+            this.title = title;
+            this.normalOptions = normalOptions;
+        }
     }
 
     /**
@@ -305,12 +344,8 @@ public class GameMenu {
 
         };
 
-        // 3. 显示菜单
-        showMenuDialog(
-                getString(R.string.game_menu_switch_touch_mode),
-                touchModeOptions,
-                new MenuOption[0]
-        );
+        // 3. 显示为子菜单（在活动对话框内替换普通菜单区域）
+        showSubMenu(getString(R.string.game_menu_switch_touch_mode), touchModeOptions);
     }
 
     /**
@@ -455,6 +490,9 @@ public class GameMenu {
         // 创建自定义视图
         View customView = createCustomView(builder);
         AlertDialog dialog = builder.create();
+        // 记录为当前活动对话框
+        this.activeDialog = dialog;
+        this.activeCustomView = customView;
 
         // 设置自定义标题栏
         setupCustomTitleBar(customView, title);
@@ -476,6 +514,14 @@ public class GameMenu {
 
         // 设置对话框属性
         setupDialogProperties(dialog);
+
+        // 在对话框关闭时清理状态
+        dialog.setOnDismissListener(d -> {
+            // 清理活动引用和菜单栈
+            if (this.activeDialog == dialog) this.activeDialog = null;
+            if (this.activeCustomView != null) this.activeCustomView = null;
+            menuStack.clear();
+        });
 
         dialog.show();
     }
@@ -518,7 +564,6 @@ public class GameMenu {
 
     /**
      * 计算内容实际高度
-     * 使用性能优化的方式计算
      */
     private int calculateContentHeight(View container) {
         try {
@@ -748,10 +793,19 @@ public class GameMenu {
 
         listView.setOnItemClickListener((parent, view, pos, id) -> {
             MenuOption option = adapter.getItem(pos);
+            // 在执行前清除子菜单打开标志
+            lastActionOpenedSubmenu = false;
             if (option != null) {
                 run(option);
             }
-            dialog.dismiss();
+
+            // 根据选项或运行结果决定是否关闭 dialog：如果该选项需要保留 dialog（如打开二级菜单），或最近操作已打开子菜单，则不关闭
+            boolean shouldKeep = (option != null && option.isKeepDialog()) || lastActionOpenedSubmenu;
+            if (!shouldKeep) {
+                dialog.dismiss();
+            }
+            // 重置标志
+            lastActionOpenedSubmenu = false;
         });
     }
 
@@ -763,6 +817,77 @@ public class GameMenu {
         ListView normalListView = customView.findViewById(R.id.gameMenuList);
         normalListView.setAdapter(normalAdapter);
         setupMenu(normalListView, normalAdapter, dialog);
+    }
+
+    /**
+     * 在现有对话框中替换普通菜单区域为新的选项（用于二级菜单），并将当前状态推入栈以便回退
+     */
+    private void replaceNormalMenuInDialog(AlertDialog dialog, String title, MenuOption[] newNormalOptions, boolean pushToStack) {
+        if (dialog == null || dialog.getWindow() == null) return;
+        // 首先尝试使用保存的 custom view 引用
+        View customView = this.activeCustomView;
+        if (customView == null) {
+            customView = dialog.findViewById(android.R.id.content);
+        }
+        // dialog 的自定义视图可能不在 android.R.id.content，尝试通过 getLayoutInflater 找到
+        if (customView == null) {
+            // 通过反向查找原始创建时的视图引用
+            customView = dialog.getWindow().getDecorView().findViewById(android.R.id.content);
+        }
+
+        if (customView == null) return;
+
+        // 更新标题
+        TextView titleTextView = customView.findViewById(R.id.customTitleTextView);
+        if (titleTextView != null && title != null) titleTextView.setText(title);
+
+        // 更新普通菜单列表
+        ListView normalListView = customView.findViewById(R.id.gameMenuList);
+        if (normalListView != null) {
+            GameMenuAdapter adapter = new GameMenuAdapter(game, newNormalOptions);
+            normalListView.setAdapter(adapter);
+            setupMenu(normalListView, adapter, dialog);
+        }
+
+        // 替换后重新计算并应用列表容器高度
+        final View finalCustomView = customView;
+        if (finalCustomView != null) {
+            finalCustomView.post(() -> setupMenuListHeight(finalCustomView));
+        }
+
+        // 可选地推入栈
+        if (pushToStack) {
+            // 因为调用者可能已经将当前状态入栈，只有当需要时再入栈
+            menuStack.push(new MenuState(title, newNormalOptions));
+        }
+    }
+
+    /**
+     * 在当前打开的 dialog 中显示一个子菜单（保持超级菜单不变）
+     */
+    private void showSubMenu(String title, MenuOption[] subOptions) {
+        if (activeDialog != null && activeDialog.isShowing()) {
+            // 表示接下来要打开子菜单，避免点击后被自动 dismiss
+            lastActionOpenedSubmenu = true;
+            // 尝试读取当前普通菜单并保存到栈，以便回退
+            if (this.activeCustomView != null) {
+                ListView normalListView = this.activeCustomView.findViewById(R.id.gameMenuList);
+                if (normalListView != null && normalListView.getAdapter() != null) {
+                    int count = normalListView.getAdapter().getCount();
+                    MenuOption[] currentOptions = new MenuOption[count];
+                    for (int i = 0; i < count; i++) {
+                        currentOptions[i] = (MenuOption) normalListView.getAdapter().getItem(i);
+                    }
+                    menuStack.push(new MenuState(null, currentOptions));
+                }
+            }
+
+            // 替换为子菜单（不再自动将子菜单入栈，因为已经保存了当前状态）
+            replaceNormalMenuInDialog(activeDialog, title, subOptions, false);
+        } else {
+            // 没有活动 dialog，则创建新的
+            showMenuDialog(title, subOptions, new MenuOption[0]);
+        }
     }
 
     /**
@@ -824,10 +949,10 @@ public class GameMenu {
                 () -> sendKeys(new short[]{KeyboardTranslator.VK_MENU, KeyboardTranslator.VK_HOME}), null, false),
             new MenuOption(getString(R.string.game_menu_send_keys_shift_tab), false,
                 () -> sendKeys(new short[]{KeyboardTranslator.VK_LSHIFT, KeyboardTranslator.VK_TAB}), null, false),
-            new MenuOption(getString(R.string.game_menu_cancel), false, null, null, false),
+                new MenuOption(getString(R.string.game_menu_cancel), false, null, null, false),
         };
 
-        showMenuDialog(getString(R.string.game_menu_send_keys), specialOptions, new MenuOption[0]);
+        showSubMenu(getString(R.string.game_menu_send_keys), specialOptions);
     }
 
 
@@ -854,26 +979,27 @@ public class GameMenu {
         //  加载并添加已保存的自定义按键，并记录是否有自定义按键
         boolean hasCustomKeys = loadAndAddCustomKeys(options);
 
-        //  添加 "添加自定义按键" 选项
-        options.add(new MenuOption(getString(R.string.game_menu_add_custom_key), false, this::showAddCustomKeyDialog, null, false));
+        //  添加 "添加自定义按键" 选项 (保留父 dialog)
+        options.add(new MenuOption(getString(R.string.game_menu_add_custom_key), false, this::showAddCustomKeyDialog, null, false, true));
 
-        //  如果存在自定义按键，则添加 "删除" 选项
+        //  如果存在自定义按键，则添加 "删除" 选项 (保留父 dialog)
         if (hasCustomKeys) {
-            options.add(new MenuOption(getString(R.string.game_menu_delete_custom_key), false, this::showDeleteKeysDialog, null, false));
+            options.add(new MenuOption(getString(R.string.game_menu_delete_custom_key), false, this::showDeleteKeysDialog, null, false, true));
         }
 
         //  添加 "取消" 选项
         options.add(new MenuOption(getString(R.string.game_menu_cancel), false, null, null, false));
 
-        //  显示菜单
-        showMenuDialog(getString(R.string.game_menu_send_keys), options.toArray(new MenuOption[0]), new MenuOption[0]);
+        //  显示为子菜单
+        showSubMenu(getString(R.string.game_menu_send_keys), options.toArray(new MenuOption[0]));
     }
 
     /**
      * 从 SharedPreferences 加载自定义按键并添加到菜单列表
+     *
      * @param options 要添加到的菜单选项列表
      */
-    private boolean  loadAndAddCustomKeys(List<MenuOption> options) {
+    private boolean loadAndAddCustomKeys(List<MenuOption> options) {
         SharedPreferences preferences = game.getSharedPreferences(PREF_NAME, Activity.MODE_PRIVATE);
         String value = preferences.getString(KEY_NAME, "");
 
@@ -948,7 +1074,8 @@ public class GameMenu {
 
     /**
      * 将新的自定义按键保存到 SharedPreferences
-     * @param name 按键的显示名称
+     *
+     * @param name       按键的显示名称
      * @param keysString 逗号分隔的十六进制按键码字符串
      */
     private void saveCustomKey(String name, String keysString) {
@@ -1022,7 +1149,7 @@ public class GameMenu {
             // 用于跟踪哪些项被选中
             final boolean[] checkedItems = new boolean[keyNames.size()];
 
-            AlertDialog.Builder builder = new AlertDialog.Builder(game);
+            AlertDialog.Builder builder = new AlertDialog.Builder(game, R.style.AppDialogStyle);
             builder.setTitle(R.string.dialog_title_select_keys_to_delete);
             builder.setMultiChoiceItems(keyNames.toArray(new CharSequence[0]), checkedItems,
                     (dialog, which, isChecked) -> {
@@ -1103,14 +1230,16 @@ public class GameMenu {
         } else {
             touchModeText = getString(R.string.game_menu_touch_mode_classic);
         }
+              
         touchModeText = getString(R.string.game_menu_switch_touch_mode) + ": " + touchModeText;
 
+        // 此菜单是 UI 操作，不应该依赖游戏窗口焦点
         normalOptions.add(new MenuOption(
                 touchModeText,
-                true,
+                false,
                 this::showTouchModeMenu,
                 "mouse_mode",
-                true));
+                true, true));
 
         if (device != null) {
             normalOptions.addAll(device.getGameMenuOptions());
@@ -1126,7 +1255,7 @@ public class GameMenu {
         }
 
         normalOptions.add(new MenuOption(getString(R.string.game_menu_send_keys),
-                false, this::showSpecialKeysMenu1, "game_menu_send_keys", true));
+                false, this::showSpecialKeysMenu1, "game_menu_send_keys", true, true));
 
         normalOptions.add(new MenuOption(getString(R.string.game_menu_disconnect), true,
                 game::disconnect, "game_menu_disconnect", true));

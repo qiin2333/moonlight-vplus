@@ -8,5 +8,6 @@
 
     <dimen name="activity_safearea_top">46dp</dimen>
     <dimen name="keyboard_top_view_seek_bar_min_width">60dp</dimen>
+    <dimen name="game_menu_dialog_width">576dp</dimen>
 
 </resources>
