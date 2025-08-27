@@ -96,6 +96,7 @@
     <string name="conn_terminated_title">Connection Terminated</string>
     <string name="conn_terminated_msg">The connection was terminated.</string>
     <string name="error_code_prefix">Error code:</string>
+    <string name="notification_icon">Notification icon</string>
 
     <!-- Copy strings -->
     <string name="copy_content">Copy Content</string>

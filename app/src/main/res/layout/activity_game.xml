@@ -112,19 +112,59 @@
 
     </LinearLayout>
 
-    <TextView
+    <androidx.cardview.widget.CardView
         android:id="@+id/notificationOverlay"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginRight="10dp"
-        android:layout_marginEnd="10dp"
-        android:layout_marginTop="10dp"
+        android:layout_marginRight="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginTop="20dp"
         android:layout_gravity="right"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:gravity="right"
-        android:background="#80000000"
+        android:visibility="gone"
         android:preferKeepClear="true"
-        android:visibility="gone" />
+        app:cardCornerRadius="20dp"
+        app:cardElevation="16dp"
+        app:cardBackgroundColor="#80FF5722"
+        app:cardUseCompatPadding="true"
+        app:cardPreventCornerOverlap="false"
+        android:stateListAnimator="@null">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="16dp"
+            android:background="@drawable/notification_background">
+
+            <ImageView
+                android:id="@+id/notificationIcon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginEnd="12dp"
+                android:src="@drawable/ic_warning"
+                android:tint="#FFFFFF"
+                android:contentDescription="@string/notification_icon"
+                android:background="@drawable/icon_pulse_background" />
+
+            <TextView
+                android:id="@+id/notificationText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:maxLines="3"
+                android:ellipsize="end"
+                android:gravity="center_vertical"
+                android:shadowColor="#80000000"
+                android:shadowDx="1"
+                android:shadowDy="1"
+                android:shadowRadius="2" />
+
+        </LinearLayout>
+
+    </androidx.cardview.widget.CardView>
 
     <!-- 麦克风按钮 -->
     <ImageButton
