@@ -11,6 +11,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.SeekBar;
@@ -25,6 +26,8 @@ import com.limelight.binding.input.KeyboardTranslator;
 import com.limelight.nvstream.NvConnection;
 import com.limelight.nvstream.http.NvApp;
 import com.limelight.nvstream.input.KeyboardPacket;
+import com.limelight.utils.KeyCodeMapper;
+
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
@@ -37,14 +40,11 @@ import android.app.Activity;
 import android.content.SharedPreferences;
 import android.text.TextUtils;
 import android.widget.EditText;
-import android.widget.LinearLayout;
-import android.widget.Toast;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
-
-import java.util.ArrayList;
-import java.util.List;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 /**
  * 提供游戏流媒体进行中的选项菜单
@@ -294,43 +294,32 @@ public class GameMenu {
      * 显示一个菜单列表，用于在“增强式多点触控”,“经典鼠标模式”,“触控板模式”之间切换。
      */
     private void showTouchModeMenu() {
-        // 1. 获取所有相关的当前设置状态
-
-        // 获取“增强/经典”模式的状态
         boolean isEnhancedTouch = game.prefConfig.enableEnhancedTouch;
-        // 获取触控板模式状态
         boolean isTouchscreenTrackpad = game.prefConfig.touchscreenTrackpad;
 
-        // 2. 创建列表中的各个选项
         MenuOption[] touchModeOptions = {
-
-                // 选项一：增强式多点触控
                 new MenuOption(
                         getString(R.string.game_menu_touch_mode_enhanced),
                         isEnhancedTouch,
                         () -> {
                             game.prefConfig.enableEnhancedTouch = true;
-                            game.setTouchMode(false);  // 必须先关闭触摸板模式才可以使用其他触控模式
+                            game.setTouchMode(false);
                             Toast.makeText(game, getString(R.string.toast_touch_mode_enhanced_on), Toast.LENGTH_SHORT).show();
                         },
                         null,
                         false
                 ),
-
-                // 选项二：经典鼠标模式
                 new MenuOption(
                         getString(R.string.game_menu_touch_mode_classic),
                         !isEnhancedTouch,
                         () -> {
                             game.prefConfig.enableEnhancedTouch = false;
-                            game.setTouchMode(false);  // 必须先关闭触摸板模式才可以使用其他触控模式
+                            game.setTouchMode(false);
                             Toast.makeText(game, getString(R.string.toast_touch_mode_classic_on), Toast.LENGTH_SHORT).show();
                         },
                         null,
                         false
                 ),
-
-                // 选项三：触控板模式
                 new MenuOption(
                         getString(R.string.game_menu_touch_mode_trackpad),
                         isTouchscreenTrackpad,
@@ -340,8 +329,7 @@ public class GameMenu {
                         },
                         null,
                         false
-                ),
-
+                )
         };
 
         // 3. 显示为子菜单（在活动对话框内替换普通菜单区域）
@@ -503,15 +491,17 @@ public class GameMenu {
 
     /**
      * 计算内容实际高度
+     * 使用性能优化的方式计算
      */
     private int calculateContentHeight(View container) {
         try {
             // 获取ListView
             ListView normalListView = container.findViewById(R.id.gameMenuList);
             ListView superListView = container.findViewById(R.id.superMenuList);
-            
+
             int totalHeight = 0;
-            
+            int maxItems= 0;
+
             // 计算普通菜单高度
             if (normalListView != null && normalListView.getAdapter() != null) {
                 int normalItemCount = normalListView.getAdapter().getCount();
@@ -521,13 +511,11 @@ public class GameMenu {
                     itemView.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
                                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
                     int itemHeight = itemView.getMeasuredHeight();
-                    
-                    // 计算总高度（最多显示8个item）
-                    int maxItems = Math.min(normalItemCount, 8);
+                    maxItems = normalItemCount;
                     totalHeight = Math.max(totalHeight, itemHeight * maxItems);
                 }
             }
-            
+
             // 计算超级菜单高度
             if (superListView != null && superListView.getAdapter() != null) {
                 int superItemCount = superListView.getAdapter().getCount();
@@ -537,18 +525,16 @@ public class GameMenu {
                     itemView.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
                                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
                     int itemHeight = itemView.getMeasuredHeight();
-                    
-                    // 计算总高度（最多显示8个item）
-                    int maxItems = Math.min(superItemCount, 8);
+                    maxItems = superItemCount;
                     totalHeight = Math.max(totalHeight, itemHeight * maxItems);
                 }
             }
-            
+
             // 添加一些padding和margin
-            totalHeight += (int) (32 * game.getResources().getDisplayMetrics().density);
-            
+            totalHeight += (int) ((maxItems*2 + 8) * game.getResources().getDisplayMetrics().density);
+
             return totalHeight;
-            
+
         } catch (Exception e) {
             // 如果计算失败，返回默认高度
             return (int) (220 * game.getResources().getDisplayMetrics().density);
@@ -918,7 +904,7 @@ public class GameMenu {
                     // 控制器左右键改变滑动条值后，延迟应用码率
                     bitrateHandler.removeCallbacks(bitrateApplyRunnable);
                     bitrateHandler.postDelayed(bitrateApplyRunnable, 300);
-                    return false; // 让系统继续处理按键事件
+                    return false;
                 }
             }
             return false;
@@ -953,78 +939,52 @@ public class GameMenu {
     }
 
     /**
-     * 显示特殊按键菜单
+     * 显示特殊按键菜单（从rew加载默认配置，可自定义和添加选项）
      */
     private void showSpecialKeysMenu() {
-        MenuOption[] specialOptions = {
-            new MenuOption(getString(R.string.game_menu_send_keys_f11), false,
-                () -> sendKeys(new short[]{KeyboardTranslator.VK_F11}), null, false),
-            new MenuOption(getString(R.string.game_menu_send_keys_ctrl_v), false,
-                () -> sendKeys(new short[]{KeyboardTranslator.VK_LCONTROL, KeyboardTranslator.VK_V}), null, false),
-            new MenuOption(getString(R.string.game_menu_send_keys_win_d), false,
-                () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_D}), null, false),
-            new MenuOption(getString(R.string.game_menu_send_keys_win_g), false,
-                () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_G}), null, false),
-            new MenuOption(getString(R.string.game_menu_send_keys_alt_home), false,
-                () -> sendKeys(new short[]{KeyboardTranslator.VK_MENU, KeyboardTranslator.VK_HOME}), null, false),
-            new MenuOption(getString(R.string.game_menu_send_keys_shift_tab), false,
-                () -> sendKeys(new short[]{KeyboardTranslator.VK_LSHIFT, KeyboardTranslator.VK_TAB}), null, false),
-                new MenuOption(getString(R.string.game_menu_cancel), false, null, null, false),
-        };
-
-        showSubMenu(getString(R.string.game_menu_send_keys), specialOptions);
-    }
-
-
-    /**
-     * 显示特殊按键菜单（包含默认、自定义和添加选项）
-     */
-    private void showSpecialKeysMenu1() {
         List<MenuOption> options = new ArrayList<>();
 
-        //  添加默认的特殊按键
-        options.add(new MenuOption(getString(R.string.game_menu_send_keys_f11), false,
-                () -> sendKeys(new short[]{KeyboardTranslator.VK_F11}), null, false));
-        options.add(new MenuOption(getString(R.string.game_menu_send_keys_ctrl_v), false,
-                () -> sendKeys(new short[]{KeyboardTranslator.VK_LCONTROL, KeyboardTranslator.VK_V}), null, false));
-        options.add(new MenuOption(getString(R.string.game_menu_send_keys_win_d), false,
-                () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_D}), null, false));
-        options.add(new MenuOption(getString(R.string.game_menu_send_keys_win_g), false,
-                () -> sendKeys(new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_G}), null, false));
-        options.add(new MenuOption(getString(R.string.game_menu_send_keys_alt_home), false,
-                () -> sendKeys(new short[]{KeyboardTranslator.VK_MENU, KeyboardTranslator.VK_HOME}), null, false));
-        options.add(new MenuOption(getString(R.string.game_menu_send_keys_shift_tab), false,
-                () -> sendKeys(new short[]{KeyboardTranslator.VK_LSHIFT, KeyboardTranslator.VK_TAB}), null, false));
+        // 从 SharedPreferences 加载所有按键。
+        // 如果是首次运行，则从 res/raw/default_special_keys.json 加载默认值。
+        boolean hasKeys = loadAndAddAllKeys(options);
 
-        //  加载并添加已保存的自定义按键，并记录是否有自定义按键
-        boolean hasCustomKeys = loadAndAddCustomKeys(options);
+        // 添加 "添加自定义按键" 选项
+        options.add(new MenuOption(getString(R.string.game_menu_add_custom_key), false, this::showAddCustomKeyDialog, null, false));
 
-        //  添加 "添加自定义按键" 选项 (保留父 dialog)
-        options.add(new MenuOption(getString(R.string.game_menu_add_custom_key), false, this::showAddCustomKeyDialog, null, false, true));
-
-        //  如果存在自定义按键，则添加 "删除" 选项 (保留父 dialog)
-        if (hasCustomKeys) {
-            options.add(new MenuOption(getString(R.string.game_menu_delete_custom_key), false, this::showDeleteKeysDialog, null, false, true));
+        // 如果存在任何按键 (默认或自定义)，则添加 "删除" 选项
+        if (hasKeys) {
+            options.add(new MenuOption(getString(R.string.game_menu_delete_custom_key), false, this::showDeleteKeysDialog, null, false));
         }
 
-        //  添加 "取消" 选项
+        // 添加 "取消" 选项
         options.add(new MenuOption(getString(R.string.game_menu_cancel), false, null, null, false));
 
         //  显示为子菜单
         showSubMenu(getString(R.string.game_menu_send_keys), options.toArray(new MenuOption[0]));
     }
 
+
     /**
-     * 从 SharedPreferences 加载自定义按键并添加到菜单列表
-     *
-     * @param options 要添加到的菜单选项列表
+     * 从 SharedPreferences 加载所有按键。
+     * 如果 SharedPreferences 为空，则从 res/raw/default_special_keys.json 加载默认按键并保存。
+     * @param options 用于填充菜单选项的列表
+     * @return 如果成功加载了至少一个按键，则返回 true
      */
-    private boolean loadAndAddCustomKeys(List<MenuOption> options) {
+    private boolean loadAndAddAllKeys(List<MenuOption> options) {
         SharedPreferences preferences = game.getSharedPreferences(PREF_NAME, Activity.MODE_PRIVATE);
         String value = preferences.getString(KEY_NAME, "");
 
+        // 如果 SharedPreferences 中没有数据（例如首次启动），则从 raw 资源文件加载默认按键
         if (TextUtils.isEmpty(value)) {
-            return false;
+            value = readRawResourceAsString(R.raw.default_special_keys);
+            if (!TextUtils.isEmpty(value)) {
+                // 将从文件读取的默认值保存到 SharedPreferences 中，以便后续可以对其进行修改
+                preferences.edit().putString(KEY_NAME, value).apply();
+            }
+        }
+
+        if (TextUtils.isEmpty(value)) {
+            return false; // 如果值仍然为空（例如文件读取失败），则直接返回
         }
 
         try {
@@ -1038,6 +998,7 @@ public class GameMenu {
                     short[] datas = new short[codesArray.length()];
                     for (int j = 0; j < codesArray.length(); j++) {
                         String code = codesArray.getString(j);
+                        // 解析 "0xXX" 格式的十六进制字符串
                         datas[j] = (short) Integer.parseInt(code.substring(2), 16);
                     }
                     MenuOption option = new MenuOption(name, false, () -> sendKeys(datas), null, false);
@@ -1046,56 +1007,35 @@ public class GameMenu {
                 return true; // 成功加载，返回 true
             }
         } catch (Exception e) {
-            LimeLog.warning("Exception while loading custom keys" + e.getMessage());
+            LimeLog.warning("Exception while loading keys from SharedPreferences: " + e.getMessage());
             Toast.makeText(game, getString(R.string.toast_load_custom_keys_corrupted), Toast.LENGTH_SHORT).show();
         }
         return false; // 没有加载到任何按键
     }
 
     /**
-     * 显示用于添加新自定义按键的对话框
+     * 从 res/raw 目录读取资源文件内容并返回字符串。
+     * @param resourceId 资源文件的 ID (例如 R.raw.default_special_keys)
+     * @return 文件内容的字符串，如果失败则返回空字符串
      */
-    private void showAddCustomKeyDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(game);
-        builder.setTitle(R.string.dialog_title_add_custom_key);
-
-        // 设置对话框的布局
-        LinearLayout layout = new LinearLayout(game);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(50, 40, 50, 20);
-
-        final EditText nameInput = new EditText(game);
-        nameInput.setHint(R.string.dialog_hint_key_name);
-        layout.addView(nameInput);
-
-        final EditText keysInput = new EditText(game);
-        keysInput.setHint(R.string.dialog_hint_key_codes);
-        layout.addView(keysInput);
-
-        builder.setView(layout);
-
-        // 设置按钮
-        builder.setPositiveButton(R.string.dialog_button_save, (dialog, which) -> {
-            String name = nameInput.getText().toString().trim();
-            String keys = keysInput.getText().toString().trim();
-
-            if (TextUtils.isEmpty(name) || TextUtils.isEmpty(keys)) {
-                Toast.makeText(game, R.string.toast_name_and_codes_cannot_be_empty, Toast.LENGTH_SHORT).show();
-                return;
+    private String readRawResourceAsString(int resourceId) {
+        try (InputStream inputStream = game.getResources().openRawResource(resourceId);
+             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+            StringBuilder builder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                builder.append(line);
             }
-
-            // 验证并保存按键
-            saveCustomKey(name, keys);
-        });
-        builder.setNegativeButton(R.string.dialog_button_cancel, (dialog, which) -> dialog.cancel());
-
-        builder.show();
+            return builder.toString();
+        } catch (IOException e) {
+            LimeLog.warning("Failed to read raw resource file: " + resourceId + ": " + e);
+            return "";
+        }
     }
 
     /**
      * 将新的自定义按键保存到 SharedPreferences
-     *
-     * @param name       按键的显示名称
+     * @param name 按键的显示名称
      * @param keysString 逗号分隔的十六进制按键码字符串
      */
     private void saveCustomKey(String name, String keysString) {
@@ -1139,6 +1079,93 @@ public class GameMenu {
         }
     }
 
+    private void showAddCustomKeyDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(game, R.style.AppDialogStyle);
+        builder.setTitle(R.string.dialog_title_add_custom_key);
+
+        View dialogView = LayoutInflater.from(game).inflate(R.layout.dialog_add_custom_key, null);
+        builder.setView(dialogView);
+
+        final EditText nameInput = dialogView.findViewById(R.id.edit_text_key_name);
+        final TextView keysDisplay = dialogView.findViewById(R.id.text_view_key_codes);
+        final Button clearButton = dialogView.findViewById(R.id.button_clear_keys);
+
+        // 初始化/重置 TextView 的数据存储 (tag) 和显示 (text)
+        keysDisplay.setTag("");
+        keysDisplay.setText("");
+        keysDisplay.setHint(R.string.dialog_hint_key_codes);
+
+        // 清空按钮: 同时清空数据(tag)和显示(text)
+        clearButton.setOnClickListener(v -> {
+            keysDisplay.setTag("");
+            keysDisplay.setText("");
+        });
+
+        // 递归设置键盘监听器
+        setupCompactKeyboardListeners((ViewGroup) dialogView.findViewById(R.id.keyboard_drawing), keysDisplay);
+
+        // 保存按钮
+        builder.setPositiveButton(R.string.dialog_button_save, (dialog, which) -> {
+            String name = nameInput.getText().toString().trim();
+            String androidKeyCodesStr = keysDisplay.getTag().toString(); // 从 tag 获取原始数据
+
+            if (TextUtils.isEmpty(name) || TextUtils.isEmpty(androidKeyCodesStr)) {
+                Toast.makeText(game, R.string.toast_name_and_codes_cannot_be_empty, Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // 将 Android KeyCodes 字符串转换为 Windows KeyCodes 字符串
+            String[] androidCodes = androidKeyCodesStr.split(",");
+            StringBuilder windowsCodesBuilder = new StringBuilder();
+            for (int i = 0; i < androidCodes.length; i++) {
+                try {
+                    int code = Integer.parseInt(androidCodes[i]);
+                    String windowsCode = KeyCodeMapper.getWindowsKeyCode(code);
+                    if (windowsCode == null) throw new NullPointerException(); // 如果找不到映射，则抛出异常
+
+                    windowsCodesBuilder.append(windowsCode).append(i < androidCodes.length - 1 ? "," : "");
+                } catch (Exception e) {
+                    Toast.makeText(game, "错误: 包含无效的按键码", Toast.LENGTH_LONG).show();
+                    return;
+                }
+            }
+            saveCustomKey(name, windowsCodesBuilder.toString());
+        });
+
+        builder.setNegativeButton(R.string.dialog_button_cancel, null);
+        builder.create().show();
+    }
+
+    /**
+     * 键盘监听器设置方法
+     * @param parent 键盘布局的根视图
+     * @param keysDisplay 用于存储和显示按键的 TextView
+     */
+    private void setupCompactKeyboardListeners(ViewGroup parent, final TextView keysDisplay) {
+        if (parent == null) return;
+        for (int i = 0; i < parent.getChildCount(); i++) {
+            View child = parent.getChildAt(i);
+            if (child instanceof ViewGroup) {
+                setupCompactKeyboardListeners((ViewGroup) child, keysDisplay); // 递归
+            } else if (child instanceof TextView && child.getTag() != null) {
+                child.setOnClickListener(v -> {
+                    String androidKeyCode = v.getTag().toString();
+                    String currentTag = keysDisplay.getTag().toString();
+
+                    // 1. 更新数据 (Tag)
+                    String newTag = currentTag.isEmpty() ? androidKeyCode : currentTag + "," + androidKeyCode;
+                    keysDisplay.setTag(newTag);
+
+                    // 2. 更新显示 (Text)
+                    String currentText = keysDisplay.getText().toString();
+                    String displayName = KeyCodeMapper.getDisplayName(Integer.parseInt(androidKeyCode));
+                    String newText = currentText.isEmpty() ? displayName : currentText + " + " + displayName;
+                    keysDisplay.setText(newText);
+                });
+            }
+        }
+    }
+
     /**
      * 显示一个对话框，列出所有自定义按键，允许用户选择并删除。
      */
@@ -1160,57 +1187,44 @@ public class GameMenu {
                 return;
             }
 
-            // 准备要在对话框中显示的列表
+            // 准备列表和选中状态
             final List<String> keyNames = new ArrayList<>();
             for (int i = 0; i < dataArray.length(); i++) {
                 keyNames.add(dataArray.getJSONObject(i).optString("name"));
             }
-
-            // 用于跟踪哪些项被选中
             final boolean[] checkedItems = new boolean[keyNames.size()];
 
+            // 创建并显示对话框
             AlertDialog.Builder builder = new AlertDialog.Builder(game, R.style.AppDialogStyle);
-            builder.setTitle(R.string.dialog_title_select_keys_to_delete);
-            builder.setMultiChoiceItems(keyNames.toArray(new CharSequence[0]), checkedItems,
-                    (dialog, which, isChecked) -> {
-                        // 当用户点击一个复选框时，更新 checkedItems 数组
-                        checkedItems[which] = isChecked;
-                    });
-
-            builder.setPositiveButton(R.string.dialog_button_delete, (dialog, which) -> {
-                try {
-                    // 关键：从后往前遍历，防止索引错乱
-                    for (int i = checkedItems.length - 1; i >= 0; i--) {
-                        if (checkedItems[i]) {
-                            dataArray.remove(i); // 从 JSONArray 中移除
+            builder.setTitle(R.string.dialog_title_select_keys_to_delete)
+                    .setMultiChoiceItems(keyNames.toArray(new CharSequence[0]), checkedItems, (dialog, which, isChecked) ->
+                            checkedItems[which] = isChecked)
+                    .setPositiveButton(R.string.dialog_button_delete, (dialog, which) -> {
+                        try {
+                            // 从后往前删除选中项
+                            for (int i = checkedItems.length - 1; i >= 0; i--) {
+                                if (checkedItems[i]) {
+                                    dataArray.remove(i);
+                                }
+                            }
+                            // 保存更改
+                            root.put("data", dataArray);
+                            preferences.edit().putString(KEY_NAME, root.toString()).apply();
+                            Toast.makeText(game, R.string.toast_selected_keys_deleted, Toast.LENGTH_SHORT).show();
+                        } catch (Exception e) {
+                            LimeLog.warning("Exception while deleting keys" + e.getMessage());
+                            Toast.makeText(game, R.string.toast_delete_failed, Toast.LENGTH_SHORT).show();
                         }
-                    }
-
-                    // 将修改后的 JSON 写回 SharedPreferences
-                    root.put("data", dataArray);
-                    SharedPreferences.Editor editor = preferences.edit();
-                    editor.putString(KEY_NAME, root.toString());
-                    editor.apply();
-
-                    Toast.makeText(game, R.string.toast_selected_keys_deleted, Toast.LENGTH_SHORT).show();
-
-                } catch (Exception e) {
-                    LimeLog.warning("Exception while deleting keys" + e.getMessage());
-
-                    Toast.makeText(game, R.string.toast_delete_failed, Toast.LENGTH_SHORT).show();
-                }
-            });
-
-            builder.setNegativeButton(R.string.dialog_button_cancel, null);
-            builder.create().show();
+                    })
+                    .setNegativeButton(R.string.dialog_button_cancel, null)
+                    .create()
+                    .show();
 
         } catch (Exception e) {
             LimeLog.warning("Exception while loading key list" + e.getMessage());
             Toast.makeText(game, R.string.toast_load_key_list_failed, Toast.LENGTH_SHORT).show();
         }
     }
-
-
 
     /**
      * 显示主菜单
@@ -1242,16 +1256,11 @@ public class GameMenu {
                 "game_menu_toggle_host_keyboard", true));
 
         // 显示当前触控模式
-        String touchModeText;
-        if (game.prefConfig.touchscreenTrackpad) {
-            touchModeText = getString(R.string.game_menu_touch_mode_trackpad);
-        } else if (game.prefConfig.enableEnhancedTouch) {
-            touchModeText = getString(R.string.game_menu_touch_mode_enhanced);
-        } else {
-            touchModeText = getString(R.string.game_menu_touch_mode_classic);
-        }
-              
-        touchModeText = getString(R.string.game_menu_switch_touch_mode) + ": " + touchModeText;
+        String touchModeText = getString(R.string.game_menu_switch_touch_mode) + ": " +
+                (game.prefConfig.touchscreenTrackpad ? getString(R.string.game_menu_touch_mode_trackpad) :
+                        game.prefConfig.enableEnhancedTouch ? getString(R.string.game_menu_touch_mode_enhanced) :
+                                getString(R.string.game_menu_touch_mode_classic));
+
 
         // 此菜单是 UI 操作，不应该依赖游戏窗口焦点
         normalOptions.add(new MenuOption(
@@ -1275,7 +1284,7 @@ public class GameMenu {
         }
 
         normalOptions.add(new MenuOption(getString(R.string.game_menu_send_keys),
-                false, this::showSpecialKeysMenu1, "game_menu_send_keys", true, true));
+                false, this::showSpecialKeysMenu, "game_menu_send_keys", true, true));
 
         normalOptions.add(new MenuOption(getString(R.string.game_menu_disconnect), true,
                 game::disconnect, "game_menu_disconnect", true));

@@ -494,6 +494,7 @@
     <string name="dialog_hint_key_codes">Key codes (e.g. 0x11, 0x10, 0x1B)</string>
     <string name="dialog_button_save">SAVE</string>
     <string name="dialog_button_cancel">CANCEL</string>
+    <string name="dialog_button_clear">CLEAR</string>
 
     <!-- 删除自定义按键对话框 -->
     <string name="dialog_title_select_keys_to_delete">Select the button to delete</string>

@@ -474,6 +474,7 @@
     <string name="dialog_button_cancel">取消</string>
 
     <!-- 删除自定义按键对话框 -->
+    <string name="dialog_button_clear">清除</string>
     <string name="dialog_title_select_keys_to_delete">选择要删除的按键</string>
     <string name="dialog_button_delete">删除</string>
 
