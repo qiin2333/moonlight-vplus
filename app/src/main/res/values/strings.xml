@@ -173,7 +173,7 @@
     <string name="game_menu_ok">OK</string>
     <string name="game_menu_bitrate_range">Bitrate Range:</string>
     <string name="game_menu_bitrate_range_value">0.5 - 200 Mbps</string>
-    <string name="game_menu_bitrate_tip">Tip: Drag the slider to preview bitrate, then click OK to apply. Higher values mean better quality but require better network.</string>
+    <string name="game_menu_bitrate_tip">Drag the slider to adjust bitrate in real-time. Higher values mean better quality but require better network.</string>
 
     <!-- Add computer manually activity -->
     <string name="title_add_pc">Add PC Manually</string>
