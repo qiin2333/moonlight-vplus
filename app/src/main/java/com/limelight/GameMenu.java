@@ -846,9 +846,10 @@ public class GameMenu {
         SeekBar bitrateSeekBar = customView.findViewById(R.id.bitrateSeekBar);
         TextView currentBitrateText = customView.findViewById(R.id.currentBitrateText);
         TextView bitrateValueText = customView.findViewById(R.id.bitrateValueText);
+        ImageView bitrateTipIcon = customView.findViewById(R.id.bitrateTipIcon);
 
         if (bitrateContainer == null || bitrateSeekBar == null || 
-            currentBitrateText == null || bitrateValueText == null) {
+            currentBitrateText == null || bitrateValueText == null || bitrateTipIcon == null) {
             return;
         }
 
@@ -863,6 +864,24 @@ public class GameMenu {
 
         bitrateValueText.setText(String.format("%d Mbps", currentBitrateMbps));
 
+        bitrateTipIcon.setOnClickListener(v -> {
+            // 显示提示对话框
+            new AlertDialog.Builder(game, R.style.AppDialogStyle)
+                .setMessage(getString(R.string.game_menu_bitrate_tip))
+                .setPositiveButton("懂了", null)
+                .show();
+        });
+
+        // 添加延迟应用码率的机制
+        final Handler bitrateHandler = new Handler();
+        final Runnable bitrateApplyRunnable = new Runnable() {
+            @Override
+            public void run() {
+                int newBitrate = (bitrateSeekBar.getProgress() * 100) + 500;
+                adjustBitrate(newBitrate);
+            }
+        };
+
         bitrateSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -870,19 +889,39 @@ public class GameMenu {
                     int newBitrate = (progress * 100) + 500; // 500 + progress * 100
                     int newBitrateMbps = newBitrate / 1000;
                     bitrateValueText.setText(String.format("%d Mbps", newBitrateMbps));
+                    
+                    bitrateHandler.removeCallbacks(bitrateApplyRunnable);
+                    bitrateHandler.postDelayed(bitrateApplyRunnable, 500);
                 }
             }
             
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-                // 开始拖动时不做任何操作
+                // 开始拖动时取消之前的延迟应用
+                bitrateHandler.removeCallbacks(bitrateApplyRunnable);
             }
             
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
+                // 停止拖动时立即应用码率
+                bitrateHandler.removeCallbacks(bitrateApplyRunnable);
                 int newBitrate = (seekBar.getProgress() * 100) + 500;
                 adjustBitrate(newBitrate);
             }
+        });
+
+        // 添加键盘/控制器事件支持
+        bitrateSeekBar.setOnKeyListener((v, keyCode, event) -> {
+            if (event.getAction() == android.view.KeyEvent.ACTION_DOWN) {
+                if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT || 
+                    keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) {
+                    // 控制器左右键改变滑动条值后，延迟应用码率
+                    bitrateHandler.removeCallbacks(bitrateApplyRunnable);
+                    bitrateHandler.postDelayed(bitrateApplyRunnable, 300);
+                    return false; // 让系统继续处理按键事件
+                }
+            }
+            return false;
         });
     }
 

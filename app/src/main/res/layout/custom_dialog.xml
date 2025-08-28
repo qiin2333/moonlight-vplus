@@ -188,7 +188,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:layout_marginBottom="4dp">
+                        android:layout_marginBottom="4dp"
+                        android:gravity="center_vertical">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -200,6 +201,18 @@
                             android:drawableStart="@drawable/ic_btn_bitrate"
                             android:drawablePadding="4dp"
                             android:gravity="center_vertical" />
+
+                        <ImageView
+                            android:id="@+id/bitrateTipIcon"
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:src="@drawable/ic_info"
+                            android:layout_marginStart="6dp"
+                            android:layout_gravity="center_vertical"
+                            android:contentDescription="提示信息"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:background="?android:attr/selectableItemBackgroundBorderless" />
 
                         <TextView
                             android:id="@+id/currentBitrateText"
@@ -224,7 +237,9 @@
                         android:progressTint="@color/theme_pink_primary"
                         android:thumbTint="@color/theme_pink_primary"
                         android:splitTrack="false"
-                        android:layout_marginBottom="4dp" />
+                        android:layout_marginBottom="4dp"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true" />
 
                     <!-- 码率值显示 -->
                     <LinearLayout
