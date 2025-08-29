@@ -440,6 +440,13 @@
     <string name="crown_mode_crown">Crown Mode</string>
     <string name="crown_switch_to_normal">Switch to Normal Mode</string>
     <string name="crown_switch_to_crown">Switch to Crown Mode</string>
+    <string name="game_menu_crown_function">Crown Function</string>
+    <string name="game_menu_toggle_elements_visibility">Show/Hide Virtual Keys</string>
+    <string name="game_menu_configure_crown_function">Configure Crown Function</string>
+    <string name="toast_elements_visible">Virtual button displayed</string>
+    <string name="toast_elements_hidden">Virtual button hidden</string>
+    <string name="toast_back_key_menu_switch_1">The crown function configuration has been exited</string>
+    <string name="toast_back_key_menu_switch_2">Entered the crown function configuration</string>
     
     <!-- External display -->
     <string name="title_use_external_display">Use External Display</string>
@@ -510,5 +517,6 @@
     <string name="toast_delete_failed">Deletion failed</string>
     <string name="toast_load_key_list_failed">Failed to load button list</string>
     <string name="toast_load_custom_keys_corrupted">Failed to load custom button</string>
+
 
 </resources>

@@ -71,8 +71,10 @@ public class PageSuperMenuController {
             @Override
             public void onClick(View v) {
                 // 切换到普通模式
-                ((Game)context).setCrownFeatureEnabled(false);
-                android.widget.Toast.makeText(context, context.getString(com.limelight.R.string.crown_switch_to_normal), android.widget.Toast.LENGTH_SHORT).show();
+//                ((Game)context).setCrownFeatureEnabled(false);
+                ((Game)context).currentBackKeyMenu(true);
+                superPagesController.returnOperation();
+                android.widget.Toast.makeText(context, context.getString(com.limelight.R.string.toast_back_key_menu_switch_1), android.widget.Toast.LENGTH_SHORT).show();
             }
         });
 
