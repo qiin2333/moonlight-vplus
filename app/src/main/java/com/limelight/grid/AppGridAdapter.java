@@ -124,6 +124,10 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
         loader.freeCacheMemory();
     }
     
+    public CachedAppAssetLoader getLoader() {
+        return loader;
+    }
+    
     private static void sortList(List<AppView.AppObject> list) {
         Collections.sort(list, new Comparator<AppView.AppObject>() {
             @Override
@@ -139,22 +143,42 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
 
         // Always add the app to the all apps list
         allApps.add(app);
-//        sortList(allApps);
 
         // Add the app to the adapter data if it's not hidden
         if (showHiddenApps || !app.isHidden) {
             // Queue a request to fetch this bitmap into cache
             loader.queueCacheLoad(app.app);
 
-            // Add the app to our sorted list
+            // Add the app to the list (maintaining server order)
             itemList.add(app);
-//            sortList(itemList);
         }
     }
 
     public void removeApp(AppView.AppObject app) {
         itemList.remove(app);
         allApps.remove(app);
+    }
+
+    public void rebuildAppList(List<AppView.AppObject> newApps) {
+        // Clear existing lists
+        allApps.clear();
+        itemList.clear();
+        
+        // Add all new apps in server order
+        for (AppView.AppObject app : newApps) {
+            // Update hidden state
+            app.isHidden = hiddenAppIds.contains(app.app.getAppId());
+            
+            // Always add to allApps
+            allApps.add(app);
+            
+            // Add to itemList if not hidden or if showing hidden apps
+            if (showHiddenApps || !app.isHidden) {
+                // Queue a request to fetch this bitmap into cache
+                loader.queueCacheLoad(app.app);
+                itemList.add(app);
+            }
+        }
     }
 
     @Override

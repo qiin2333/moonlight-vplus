@@ -3,19 +3,26 @@
     android:id="@+id/keyboard_drawing"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    style="@style/VirtualKeyboardStyle"
+    android:minHeight="180dp"
+    android:maxHeight="450dp">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:orientation="horizontal">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:minHeight="32dp"
+        android:orientation="horizontal"
+        android:layout_marginBottom="2dp"
+        android:paddingLeft="1dp"
+        android:paddingRight="1dp">
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="111"
             android:text="ESC" />
 
@@ -23,8 +30,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="131"
             android:text="F1" />
 
@@ -32,8 +38,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="132"
             android:text="F2" />
 
@@ -41,8 +46,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="133"
             android:text="F3" />
 
@@ -50,8 +54,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="134"
             android:text="F4" />
 
@@ -59,8 +62,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="135"
             android:text="F5" />
 
@@ -68,8 +70,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="136"
             android:text="F6" />
 
@@ -77,8 +78,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="137"
             android:text="F7" />
 
@@ -86,8 +86,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="138"
             android:text="F8" />
 
@@ -95,8 +94,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="139"
             android:text="F9" />
 
@@ -104,8 +102,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="140"
             android:text="F10" />
 
@@ -113,8 +110,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="141"
             android:text="F11" />
 
@@ -122,8 +118,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="142"
             android:text="F12" />
 
@@ -131,8 +126,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="124"
             android:text="Ins" />
 
@@ -140,8 +134,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="112"
             android:text="Del" />
     </LinearLayout>
@@ -149,14 +142,16 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="40dp"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:layout_marginBottom="2dp"
+        android:paddingLeft="1dp"
+        android:paddingRight="1dp">
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="90"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="68"
             android:text="~\n`" />
 
@@ -164,8 +159,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="8"
             android:text="1" />
         <!-- 继续更新其他 TextView 的 android:tag 值 -->
@@ -173,8 +167,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="9"
             android:text="2" />
 
@@ -182,8 +175,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="10"
             android:text="3" />
         <!-- 以此类推，更新其他 TextView 的 android:tag 值 -->
@@ -191,8 +183,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="11"
             android:text="4" />
 
@@ -200,8 +191,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="12"
             android:text="5" />
 
@@ -209,8 +199,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="13"
             android:text="6" />
 
@@ -218,8 +207,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="14"
             android:text="7" />
 
@@ -227,8 +215,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="15"
             android:text="8" />
 
@@ -236,8 +223,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="16"
             android:text="9" />
 
@@ -245,8 +231,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="7"
             android:text="0" />
 
@@ -254,8 +239,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="69"
             android:text="_\n-" />
 
@@ -263,8 +247,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="70"
             android:text="+\n=" />
 
@@ -272,8 +255,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="140"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="67"
             android:text="Back" />
     </LinearLayout>
@@ -281,14 +263,16 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="40dp"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:layout_marginBottom="2dp"
+        android:paddingLeft="1dp"
+        android:paddingRight="1dp">
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="140"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="61"
             android:text="Tab" />
 
@@ -296,8 +280,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="45"
             android:text="Q" />
 
@@ -305,8 +288,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="51"
             android:text="W" />
 
@@ -314,8 +296,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="33"
             android:text="E" />
 
@@ -323,8 +304,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="46"
             android:text="R" />
 
@@ -332,8 +312,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="48"
             android:text="T" />
 
@@ -341,8 +320,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="53"
             android:text="Y" />
 
@@ -350,8 +328,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="49"
             android:text="U" />
 
@@ -359,8 +336,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="37"
             android:text="I" />
 
@@ -368,8 +344,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="43"
             android:text="O" />
 
@@ -377,8 +352,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="44"
             android:text="P" />
 
@@ -386,8 +360,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="71"
             android:text="{\n[" />
 
@@ -395,8 +368,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="72"
             android:text="}\n]" />
 
@@ -404,8 +376,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="73"
             android:text="|\n\\" />
     </LinearLayout>
@@ -413,14 +384,16 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="40dp"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:layout_marginBottom="2dp"
+        android:paddingLeft="1dp"
+        android:paddingRight="1dp">
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="150"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="115"
             android:text="Cap" />
 
@@ -428,8 +401,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="29"
             android:text="A" />
 
@@ -437,8 +409,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="47"
             android:text="S" />
 
@@ -446,8 +417,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="32"
             android:text="D" />
 
@@ -455,8 +425,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="34"
             android:text="F" />
 
@@ -464,8 +433,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="35"
             android:text="G" />
 
@@ -473,8 +441,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="36"
             android:text="H" />
 
@@ -482,8 +449,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="38"
             android:text="J" />
 
@@ -491,8 +457,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="39"
             android:text="K" />
 
@@ -500,8 +465,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="40"
             android:text="L" />
 
@@ -509,8 +473,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="74"
             android:text=":\n;" />
 
@@ -518,8 +481,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="75"
             android:text="&quot;\n'" />
 
@@ -527,8 +489,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="160"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="66"
             android:text="Enter" />
     </LinearLayout>
@@ -536,14 +497,16 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="40dp"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:layout_marginBottom="2dp"
+        android:paddingLeft="1dp"
+        android:paddingRight="1dp">
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="160"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="59"
             android:text="Shift" />
 
@@ -551,8 +514,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="54"
             android:text="Z" />
 
@@ -560,8 +522,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="52"
             android:text="X" />
 
@@ -569,8 +530,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="31"
             android:text="C" />
 
@@ -578,8 +538,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="50"
             android:text="V" />
 
@@ -587,8 +546,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="30"
             android:text="B" />
 
@@ -596,8 +554,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="42"
             android:text="N" />
 
@@ -605,8 +562,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="41"
             android:text="M" />
 
@@ -614,8 +570,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="55"
             android:text="&lt;\n," />
 
@@ -623,8 +578,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="56"
             android:text=">\n." />
 
@@ -632,8 +586,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="76"
             android:text="&#63;&#10;/" />
 
@@ -641,8 +594,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="160"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="60"
             android:text="Shift" />
     </LinearLayout>
@@ -650,14 +602,16 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="40dp"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:layout_marginBottom="2dp"
+        android:paddingLeft="1dp"
+        android:paddingRight="1dp">
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="113"
             android:text="Ctrl" />
 
@@ -665,8 +619,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="117"
             android:text="Win" />
 
@@ -674,17 +627,15 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="57"
             android:text="Alt" />
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="95"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            android:layout_weight="240"
+            style="@style/KeyboardSpaceKeyStyle"
             android:tag="62"
             android:text="Space" />
 
@@ -692,8 +643,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="58"
             android:text="Alt" />
 
@@ -701,8 +651,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="114"
             android:text="Ctrl" />
 
@@ -710,8 +659,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="19"
             android:text="↑" />
 
@@ -719,8 +667,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="20"
             android:text="↓" />
 
@@ -728,8 +675,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="21"
             android:text="←" />
 
@@ -737,8 +683,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardKeyStyle"
             android:tag="22"
             android:text="→" />
 
@@ -746,8 +691,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="122"
             android:text="Home" />
 
@@ -755,8 +699,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="123"
             android:text="End" />
 
@@ -764,8 +707,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="92"
             android:text="PgUp" />
 
@@ -773,8 +715,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="100"
-            android:background="@drawable/square_border"
-            android:gravity="center"
+            style="@style/KeyboardFunctionKeyStyle"
             android:tag="93"
             android:text="PgDn" />
     </LinearLayout>

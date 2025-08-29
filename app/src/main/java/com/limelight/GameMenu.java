@@ -12,8 +12,11 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -442,6 +445,21 @@ public class GameMenu {
         // 设置对话框属性
         setupDialogProperties(dialog);
 
+        // 设置返回键监听器，处理二级菜单返回
+        dialog.setOnKeyListener((dialogInterface, keyCode, event) -> {
+            if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.getAction() == android.view.KeyEvent.ACTION_DOWN) {
+                // 如果菜单栈不为空，说明在二级菜单中，需要返回一级菜单
+                if (!menuStack.isEmpty()) {
+                    MenuState previousState = menuStack.pop();
+                    replaceNormalMenuInDialog(dialog, previousState.title, previousState.normalOptions, false);
+                    return true; // 消费返回键事件
+                }
+                // 如果菜单栈为空，说明在一级菜单，正常关闭对话框
+                return false; // 不消费返回键事件，让系统正常关闭对话框
+            }
+            return false;
+        });
+
         // 在对话框关闭时清理状态
         dialog.setOnDismissListener(d -> {
             // 清理活动引用和菜单栈
@@ -790,6 +808,10 @@ public class GameMenu {
             lastActionOpenedSubmenu = true;
             // 尝试读取当前普通菜单并保存到栈，以便回退
             if (this.activeCustomView != null) {
+                // 获取当前标题
+                TextView titleTextView = this.activeCustomView.findViewById(R.id.customTitleTextView);
+                String currentTitle = titleTextView != null ? titleTextView.getText().toString() : null;
+                
                 ListView normalListView = this.activeCustomView.findViewById(R.id.gameMenuList);
                 if (normalListView != null && normalListView.getAdapter() != null) {
                     int count = normalListView.getAdapter().getCount();
@@ -797,7 +819,7 @@ public class GameMenu {
                     for (int i = 0; i < count; i++) {
                         currentOptions[i] = (MenuOption) normalListView.getAdapter().getItem(i);
                     }
-                    menuStack.push(new MenuState(null, currentOptions));
+                    menuStack.push(new MenuState(currentTitle, currentOptions));
                 }
             }
 
@@ -1080,15 +1102,50 @@ public class GameMenu {
     }
 
     private void showAddCustomKeyDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(game, R.style.AppDialogStyle);
-        builder.setTitle(R.string.dialog_title_add_custom_key);
+        AlertDialog.Builder builder = new AlertDialog.Builder(game, R.style.VirtualKeyboardDialogStyle);
 
         View dialogView = LayoutInflater.from(game).inflate(R.layout.dialog_add_custom_key, null);
         builder.setView(dialogView);
 
+        final LinearLayout dialogContent = dialogView.findViewById(R.id.dialog_content);
         final EditText nameInput = dialogView.findViewById(R.id.edit_text_key_name);
         final TextView keysDisplay = dialogView.findViewById(R.id.text_view_key_codes);
         final Button clearButton = dialogView.findViewById(R.id.button_clear_keys);
+        final Button closeButton = dialogView.findViewById(R.id.button_close_dialog);
+        final Button saveButton = dialogView.findViewById(R.id.button_save_key);
+
+        AlertDialog dialog = builder.create();
+
+        // 设置返回键监听器，返回到二级菜单
+        dialog.setOnKeyListener((dialogInterface, keyCode, event) -> {
+            if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.getAction() == android.view.KeyEvent.ACTION_DOWN) {
+                dialog.dismiss();
+                return true; // 消费返回键事件
+            }
+            return false;
+        });
+
+        // 关闭按钮事件
+        if (closeButton != null) {
+            closeButton.setOnClickListener(v -> dialog.dismiss());
+        }
+
+        // 点击背景关闭对话框
+        if (dialogView instanceof FrameLayout) {
+            FrameLayout rootLayout = (FrameLayout) dialogView;
+            rootLayout.setOnClickListener(v -> {
+                // 只有点击背景区域才关闭对话框
+                dialog.dismiss();
+            });
+            
+            // 防止内容区域的点击事件传播到背景
+            View contentArea = rootLayout.getChildAt(0); // ScrollView
+            if (contentArea != null) {
+                contentArea.setOnClickListener(v -> {
+                    // 阻止事件传播，不关闭对话框
+                });
+            }
+        }
 
         // 初始化/重置 TextView 的数据存储 (tag) 和显示 (text)
         keysDisplay.setTag("");
@@ -1104,8 +1161,9 @@ public class GameMenu {
         // 递归设置键盘监听器
         setupCompactKeyboardListeners((ViewGroup) dialogView.findViewById(R.id.keyboard_drawing), keysDisplay);
 
-        // 保存按钮
-        builder.setPositiveButton(R.string.dialog_button_save, (dialog, which) -> {
+        // 保存按钮事件
+        if (saveButton != null) {
+            saveButton.setOnClickListener(v -> {
             String name = nameInput.getText().toString().trim();
             String androidKeyCodesStr = keysDisplay.getTag().toString(); // 从 tag 获取原始数据
 
@@ -1125,15 +1183,18 @@ public class GameMenu {
 
                     windowsCodesBuilder.append(windowsCode).append(i < androidCodes.length - 1 ? "," : "");
                 } catch (Exception e) {
-                    Toast.makeText(game, "错误: 包含无效的按键码", Toast.LENGTH_LONG).show();
+                    Toast.makeText(game, "error: invalid key code", Toast.LENGTH_LONG).show();
                     return;
                 }
             }
             saveCustomKey(name, windowsCodesBuilder.toString());
-        });
+            dialog.dismiss();
+            });
+        }
 
-        builder.setNegativeButton(R.string.dialog_button_cancel, null);
-        builder.create().show();
+        // 显示对话框
+        dialog.show();
+        dialogContent.setMinimumHeight(game.getResources().getDisplayMetrics().heightPixels);
     }
 
     /**

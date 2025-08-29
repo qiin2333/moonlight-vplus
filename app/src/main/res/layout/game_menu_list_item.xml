@@ -21,7 +21,10 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:textSize="14sp"
-        android:textColor="@color/game_menu_text_primary" />
+        android:textColor="@color/game_menu_text_primary"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:maxLines="1" />
 
     <ImageView
         android:layout_width="14dp"

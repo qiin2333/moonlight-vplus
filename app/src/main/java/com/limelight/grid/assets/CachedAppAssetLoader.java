@@ -273,7 +273,9 @@ public class CachedAppAssetLoader {
                 int animationRes = isBackground ? R.anim.background_fadein : R.anim.boxart_fadein;
                 imageView.startAnimation(AnimationUtils.loadAnimation(imageView.getContext(), animationRes));
                 imageView.setVisibility(View.VISIBLE);
-                textView.setVisibility(View.VISIBLE);
+                if (textView != null) {
+                    textView.setVisibility(View.VISIBLE);
+                }
                 task.executeOnExecutor(networkExecutor, tuple);
             }
         }
@@ -291,7 +293,9 @@ public class CachedAppAssetLoader {
                 // Fade in the box art
                 if (bitmap != null) {
                     // Show the text if it's a placeholder
-                    textView.setVisibility(isBitmapPlaceholder(bitmap) ? View.VISIBLE : View.GONE);
+                    if (textView != null) {
+                        textView.setVisibility(isBitmapPlaceholder(bitmap) ? View.VISIBLE : View.GONE);
+                    }
 
                     if (imageView.getVisibility() == View.VISIBLE) {
                         // Fade out the placeholder first
@@ -429,7 +433,9 @@ public class CachedAppAssetLoader {
         }
 
         // Always set the name text so we have it if needed later
-        textView.setText(obj.app.getAppName());
+        if (textView != null) {
+            textView.setText(obj.app.getAppName());
+        }
         // First, try the memory cache in the current context
         ScaledBitmap bmp = memoryLoader.loadBitmapFromCache(tuple);
         if (bmp != null) {
@@ -437,7 +443,9 @@ public class CachedAppAssetLoader {
             imgView.setVisibility(View.VISIBLE);
             imgView.setImageBitmap(bmp.bitmap);
             // Show the text if it's a placeholder bitmap
-            textView.setVisibility(isBitmapPlaceholder(bmp) ? View.VISIBLE : View.GONE);
+            if (textView != null) {
+                textView.setVisibility(isBitmapPlaceholder(bmp) ? View.VISIBLE : View.GONE);
+            }
             
             // 如果提供了回调，执行它
             if (onLoadComplete != null) {
@@ -450,7 +458,9 @@ public class CachedAppAssetLoader {
         // via AsyncDrawable to this view.
         final LoaderTask task = new LoaderTask(imgView, textView, true, isBackground, onLoadComplete);
         final AsyncDrawable asyncDrawable = new AsyncDrawable(imgView.getResources(), placeholderBitmap, task);
-        textView.setVisibility(View.INVISIBLE);
+        if (textView != null) {
+            textView.setVisibility(View.INVISIBLE);
+        }
         imgView.setVisibility(View.INVISIBLE);
         imgView.setImageDrawable(asyncDrawable);
 

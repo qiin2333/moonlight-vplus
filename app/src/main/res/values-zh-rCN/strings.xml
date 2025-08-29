@@ -469,7 +469,7 @@
     <!-- 添加自定义按键对话框 -->
     <string name="dialog_title_add_custom_key">添加自定义按键</string>
     <string name="dialog_hint_key_name">按键名称 (例如: Ctrl+Shift+Esc)</string>
-    <string name="dialog_hint_key_codes">按键码 (例如: 0x11,0x10,0x1B)</string>
+    <string name="dialog_hint_key_codes">点击键盘上的按键来创建组合</string>
     <string name="dialog_button_save">保存</string>
     <string name="dialog_button_cancel">取消</string>
 
@@ -479,13 +479,13 @@
     <string name="dialog_button_delete">删除</string>
 
     <!-- Toast 提示信息 -->
-    <string name="toast_name_and_codes_cannot_be_empty">名称和按键码不能为空</string>
-    <string name="toast_key_code_format_error">格式错误，按键码必须以 \'0x\' 开头</string>
-    <string name="toast_custom_key_saved">自定义按键 \'%s\' 已保存</string>
-    <string name="toast_save_failed">保存失败，请检查格式</string>
-    <string name="toast_no_custom_keys_to_delete">没有可删除的自定义按键</string>
-    <string name="toast_selected_keys_deleted">已删除所选按键</string>
-    <string name="toast_delete_failed">删除失败</string>
-    <string name="toast_load_key_list_failed">加载按键列表失败</string>
-    <string name="toast_load_custom_keys_corrupted">加载自定义按键失败</string>
+    <string name="toast_name_and_codes_cannot_be_empty">名称和按键码不能为空哦～(｡•́︿•̀｡)</string>
+    <string name="toast_key_code_format_error">格式有点小问题，按键码要以“0x”开头喔~</string>
+    <string name="toast_custom_key_saved">自定义按键‘%s’已保存，棒棒哒！(๑•̀ㅂ•́)و✧</string>
+    <string name="toast_save_failed">保存失败了，请检查格式喵~</string>
+    <string name="toast_no_custom_keys_to_delete">还没有可删除的自定义按键呢(＞人＜;)</string>
+    <string name="toast_selected_keys_deleted">已成功删除选中的按键，干得漂亮！</string>
+    <string name="toast_delete_failed">删除失败了，试试看再来一次？</string>
+    <string name="toast_load_key_list_failed">加载按键列表失败了喵~</string>
+    <string name="toast_load_custom_keys_corrupted">加载自定义按键失败了，抱歉抱歉~</string>
 </resources>
