@@ -2,6 +2,7 @@ package com.limelight;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
@@ -9,6 +10,8 @@ import com.bumptech.glide.Glide;
 import com.limelight.computers.ComputerManagerListener;
 import com.limelight.computers.ComputerManagerService;
 import com.limelight.grid.AppGridAdapter;
+import com.limelight.grid.assets.CachedAppAssetLoader;
+import com.limelight.grid.assets.ScaledBitmap;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.nvstream.http.NvApp;
 import com.limelight.nvstream.http.NvHTTP;
@@ -378,6 +381,16 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         SpinnerDialog.closeDialogs(this);
         Dialog.closeDialogs();
 
+        // Cancel any pending image loading operations
+        if (appGridAdapter != null) {
+            appGridAdapter.cancelQueuedOperations();
+        }
+
+        // Clear background image to prevent memory leaks
+        if (backgroundImageManager != null) {
+            backgroundImageManager.clearBackground();
+        }
+
         if (managerBinder != null) {
             unbindService(serviceConnection);
         }
@@ -571,74 +584,107 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         AppView.this.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                boolean updated = false;
-
-                // First handle app updates and additions
+                // Prepare list of AppObjects in server order
+                List<AppObject> newAppObjects = new ArrayList<>();
+                
+                // Create AppObjects from server list, preserving order
                 for (NvApp app : appList) {
-                    boolean foundExistingApp = false;
-
-                    // Try to update an existing app in the list first
+                    // Look for existing AppObject to preserve running state
+                    AppObject existingApp = null;
                     for (int i = 0; i < appGridAdapter.getCount(); i++) {
-                        AppObject existingApp = (AppObject) appGridAdapter.getItem(i);
-                        if (existingApp.app.getAppId() == app.getAppId()) {
-                            // Found the app; update its properties
-                            if (!existingApp.app.getAppName().equals(app.getAppName())) {
-                                existingApp.app.setAppName(app.getAppName());
-                                updated = true;
+                        AppObject candidate = (AppObject) appGridAdapter.getItem(i);
+                        if (candidate.app.getAppId() == app.getAppId()) {
+                            existingApp = candidate;
+                            // Update app properties if needed
+                            if (!candidate.app.getAppName().equals(app.getAppName())) {
+                                candidate.app.setAppName(app.getAppName());
                             }
-
-                            foundExistingApp = true;
                             break;
                         }
                     }
-
-                    if (!foundExistingApp) {
-                        // This app must be new
-                        appGridAdapter.addApp(new AppObject(app));
-
-                        // We could have a leftover shortcut from last time this PC was paired
-                        // or if this app was removed then added again. Enable those shortcuts
-                        // again if present.
+                    
+                    if (existingApp != null) {
+                        // Use existing AppObject to preserve state (like isRunning)
+                        newAppObjects.add(existingApp);
+                    } else {
+                        // Create new AppObject for new app
+                        AppObject newAppObject = new AppObject(app);
+                        newAppObjects.add(newAppObject);
+                        
+                        // Enable shortcuts for new apps
                         shortcutHelper.enableAppShortcut(computer, app);
-
-                        updated = true;
                     }
                 }
-
-                // Next handle app removals
-                int i = 0;
-                while (i < appGridAdapter.getCount()) {
-                    boolean foundExistingApp = false;
+                
+                // Handle removed apps - disable shortcuts
+                for (int i = 0; i < appGridAdapter.getCount(); i++) {
                     AppObject existingApp = (AppObject) appGridAdapter.getItem(i);
-
-                    // Check if this app is in the latest list
+                    boolean stillExists = false;
+                    
                     for (NvApp app : appList) {
                         if (existingApp.app.getAppId() == app.getAppId()) {
-                            foundExistingApp = true;
+                            stillExists = true;
                             break;
                         }
                     }
-
-                    // This app was removed in the latest app list
-                    if (!foundExistingApp) {
+                    
+                    if (!stillExists) {
                         shortcutHelper.disableAppShortcut(computer, existingApp.app, "App removed from PC");
-                        appGridAdapter.removeApp(existingApp);
-                        updated = true;
-
-                        // Check this same index again because the item at i+1 is now at i after
-                        // the removal
-                        continue;
                     }
-
-                    // Move on to the next item
-                    i++;
                 }
-
-                if (updated) {
-                    appGridAdapter.notifyDataSetChanged();
-                }
+                
+                // Rebuild the entire list in server order
+                appGridAdapter.rebuildAppList(newAppObjects);
+                appGridAdapter.notifyDataSetChanged();
+                
+                // Set first app's cover as background if no current background
+                setFirstAppAsBackground(newAppObjects);
             }
         });
+    }
+
+    private void setFirstAppAsBackground(List<AppObject> appObjects) {
+        // Check if activity is still valid
+        if (isFinishing() || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && isDestroyed())) {
+            return;
+        }
+        
+        // Only set background if we don't have one already and there are apps
+        if (backgroundImageManager.getCurrentBackground() == null && 
+            !appObjects.isEmpty() && 
+            appBackgroundImage != null) {
+            
+            AppObject firstApp = appObjects.get(0);
+            
+            // Don't set background for hidden apps unless we're showing hidden apps
+            if (!firstApp.isHidden || showHiddenApps) {
+                if (appGridAdapter != null && appGridAdapter.getLoader() != null) {
+                    setFirstAppBackgroundImage(firstApp);
+                }
+            }
+        }
+    }
+    
+    private void setFirstAppBackgroundImage(AppObject firstApp) {
+        CachedAppAssetLoader loader = appGridAdapter.getLoader();
+        CachedAppAssetLoader.LoaderTuple tuple = new CachedAppAssetLoader.LoaderTuple(computer, firstApp.app);
+        
+        // Try memory cache first for immediate display
+        ScaledBitmap cachedBitmap = loader.getBitmapFromCache(tuple);
+        if (cachedBitmap != null && cachedBitmap.bitmap != null) {
+            backgroundImageManager.setBackgroundSmoothly(cachedBitmap.bitmap);
+        } else {
+            // Load asynchronously if not in cache
+            ImageView tempImageView = new ImageView(this);
+            loader.populateImageView(firstApp, tempImageView, null, false, () -> {
+                if (tempImageView.getDrawable() instanceof BitmapDrawable) {
+                    Bitmap bitmap = ((BitmapDrawable) tempImageView.getDrawable()).getBitmap();
+                    if (bitmap != null) {
+                        backgroundImageManager.setBackgroundSmoothly(bitmap);
+                    }
+                }
+            });
+        }
     }
 
     @Override

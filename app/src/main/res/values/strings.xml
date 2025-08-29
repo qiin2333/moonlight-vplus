@@ -495,6 +495,7 @@
     <string name="dialog_button_save">SAVE</string>
     <string name="dialog_button_cancel">CANCEL</string>
     <string name="dialog_button_clear">CLEAR</string>
+    <string name="dialog_virtual_keyboard_hint">Click on the keys to create a combination</string>
 
     <!-- 删除自定义按键对话框 -->
     <string name="dialog_title_select_keys_to_delete">Select the button to delete</string>
