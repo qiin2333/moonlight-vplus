@@ -38,11 +38,80 @@
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
     </style>
+    
+    <!-- 虚拟键盘样式 -->
+    <style name="VirtualKeyboardStyle">
+        <item name="android:background">@drawable/keyboard_background</item>
+        <item name="android:padding">4dp</item>
+        <item name="android:elevation">4dp</item>
+    </style>
+
+    <!-- 普通按键样式 -->
     <style name="KeyboardKeyStyle">
-        <item name="android:background">@drawable/square_border</item>
-        <item name="android:textSize">14sp</item>
-        <item name="android:textColor">#B3FFFFFF</item> <!-- 字体颜色 -->
+        <item name="android:background">@drawable/keyboard_key_selector</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textStyle">bold</item>
         <item name="android:gravity">center</item>
+        <item name="android:layout_margin">1dp</item>
+        <item name="android:elevation">3dp</item>
+        <item name="android:shadowColor">#66000000</item>
+        <item name="android:shadowDx">0</item>
+        <item name="android:shadowDy">2</item>
+        <item name="android:shadowRadius">4</item>
+        <item name="android:letterSpacing">0.05</item>
+        <item name="android:typeface">monospace</item>
+    </style>
+
+    <!-- 功能键样式 -->
+    <style name="KeyboardFunctionKeyStyle">
+        <item name="android:background">@drawable/keyboard_function_key_selector</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:gravity">center</item>
+        <item name="android:layout_margin">1dp</item>
+        <item name="android:elevation">3dp</item>
+        <item name="android:shadowColor">#66000000</item>
+        <item name="android:shadowDx">0</item>
+        <item name="android:shadowDy">2</item>
+        <item name="android:shadowRadius">4</item>
+        <item name="android:letterSpacing">0.03</item>
+        <item name="android:typeface">monospace</item>
+    </style>
+
+    <!-- 空格键特殊样式 -->
+    <style name="KeyboardSpaceKeyStyle" parent="KeyboardKeyStyle">
+        <item name="android:textSize">16sp</item>
+        <item name="android:letterSpacing">0.2</item>
+        <item name="android:elevation">4dp</item>
+    </style>
+
+    <!-- 虚拟键盘对话框样式 - 全屏透明 -->
+    <style name="VirtualKeyboardDialogStyle" parent="Theme.AppCompat.Light.Dialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowAnimationStyle">@style/VirtualKeyboardDialogAnimation</item>
+        <item name="android:windowSoftInputMode">adjustPan|stateHidden</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:textColorPrimary">@color/theme_pink_primary</item>
+        <item name="android:textColorSecondary">@color/game_menu_text_secondary</item>
+        <item name="android:colorAccent">@color/theme_pink_primary</item>
+        <item name="android:windowCloseOnTouchOutside">true</item>
+        <item name="android:fitsSystemWindows">false</item>
+    </style>
+
+    <!-- 虚拟键盘对话框动画 -->
+    <style name="VirtualKeyboardDialogAnimation">
+        <item name="android:windowEnterAnimation">@anim/background_fadein</item>
+        <item name="android:windowExitAnimation">@anim/background_fadeout</item>
     </style>
 
     <style name="PreferenceThemeWithShadow" parent="AppTheme">

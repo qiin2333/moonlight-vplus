@@ -1,63 +1,162 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="match_parent"
+    android:background="#80000000"
+    android:clickable="true"
+    android:focusable="true">
 
-    <LinearLayout
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="4dp">
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:fadeScrollbars="false"
+        android:fillViewport="true"
+        android:layoutMode="clipBounds"
+        android:overScrollMode="ifContentScrolls"
+        android:scrollbars="vertical"
+        tools:ignore="UselessParent">
 
-
-        <EditText
-            android:id="@+id/edit_text_key_name"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="@string/dialog_hint_key_name"
-            android:inputType="text"
-            android:maxLines="1"
-            android:textColor="#000000"
-            android:textColorHint="#888888" />
-
-        <!-- 按键组合输入框和清空按钮 -->
         <LinearLayout
+            android:id="@+id/dialog_content"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="0dp"
+            android:orientation="vertical"
             android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:paddingLeft="64dp"
+            android:paddingTop="20dp"
+            android:paddingRight="64dp"
+            android:paddingBottom="20dp">
 
-            <TextView
-                android:id="@+id/text_view_key_codes"
-                android:layout_width="0dp"
+            <!-- 标题栏 -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:paddingStart="4dp"
-                android:hint="@string/dialog_hint_key_codes"
-                android:minHeight="48dp"
+                android:layout_marginBottom="16dp"
                 android:gravity="center_vertical"
-                android:textAppearance="?android:attr/textAppearanceMedium"
-                android:textColor="#000000"
-                android:textColorHint="#888888"/>
+                android:orientation="horizontal">
 
-            <Button
-                android:id="@+id/button_clear_keys"
-                android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="@string/dialog_title_add_custom_key"
+                        android:textColor="@color/theme_pink_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="@string/dialog_virtual_keyboard_hint"
+                        android:textColor="@color/theme_pink_primary"
+                        android:textSize="14sp"
+                        android:textStyle="normal" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/button_save_key"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:minWidth="80dp"
+                    android:padding="8dp"
+                    android:text="@string/dialog_button_save"
+                    android:textColor="@color/theme_pink_primary"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/button_close_dialog"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:gravity="center"
+                    android:text="✕"
+                    android:textColor="@color/theme_pink_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+            <!-- 按键名称和按键码平行排列 -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:background="@android:color/transparent"
-                android:text="@string/dialog_button_clear"
-                android:textColor="@color/theme_pink_primary" />
+                android:layout_marginBottom="16dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <!-- 按键名称输入框 -->
+                <EditText
+                    android:id="@+id/edit_text_key_name"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:autofillHints=""
+                    android:hint="@string/dialog_hint_key_name"
+                    android:inputType="text"
+                    android:maxLines="1"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#888888" />
+
+                <!-- 按键码显示框 -->
+                <TextView
+                    android:id="@+id/text_view_key_codes"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="8dp"
+                    android:layout_marginRight="8dp"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:hint="@string/dialog_hint_key_codes"
+                    android:minHeight="48dp"
+                    android:paddingStart="4dp"
+                    android:textAppearance="?android:attr/textAppearanceMedium"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#888888"
+                    tools:ignore="RtlSymmetry" />
+
+                <!-- 清空按钮 -->
+                <Button
+                    android:id="@+id/button_clear_keys"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:background="@android:color/transparent"
+                    android:text="@string/dialog_button_clear"
+                    android:textColor="@color/theme_pink_primary" />
+
+            </LinearLayout>
+
+            <!-- 虚拟键盘容器 -->
+            <FrameLayout
+                android:id="@+id/keyboard_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="16dp">
+
+                <!-- 使用 <include> 标签嵌入虚拟键盘 -->
+                <include
+                    layout="@layout/virtual_keyboard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+            </FrameLayout>
 
         </LinearLayout>
 
-        <!-- 使用 <include> 标签嵌入虚拟键盘 -->
-        <include
-            layout="@layout/virtual_keyboard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp" />
+    </ScrollView>
 
-    </LinearLayout>
-</ScrollView>
+</FrameLayout>

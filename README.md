@@ -1,59 +1,160 @@
-首个实现分区触点移速调节的fork. 允许调整触点在右分屏或分屏的移速， 对调节米家游戏视角转动的灵敏度尤其有用。
-This is a fork with some manipulation on native multi-touch pointer coordinaties, allows pointer to move faster or slower on specified enhanced touch zone.
-Maybe useful for tweaking view rotation sensitivity in some games.
-<br>
-![image](https://github.com/TrueZhuangJia/moonlight-android-Enhanced-MultiTouch/assets/78474576/3bd8efeb-89ab-477d-b501-22f25cdb8fc6)
-![image](https://github.com/TrueZhuangJia/moonlight-android-Enhanced-MultiTouch/assets/78474576/0d58b391-71ef-48be-82f8-6fef1649e2eb)
+<div align="center">
+  <img src="./app/src/main/res/drawable/vplus.webp" width="100" alt="Moonlight V+ Logo">
+  
+  # Moonlight V+ 威力加强版
+  
+  [![Version](https://img.shields.io/badge/version-12.2.6-blue.svg)](https://github.com/your-repo/moonlight-android/releases)
+  [![Android](https://img.shields.io/badge/Android-5.0+-green.svg)](https://developer.android.com/about/versions)
+  [![License](https://img.shields.io/badge/license-GPL%20v3-orange.svg)](LICENSE.txt)
+  [![Stars](https://img.shields.io/github/stars/qiin2333/moonlight-android?style=social)](https://github.com/qiin2333/moonlight-android)
+  
+  **基于 Moonlight 的增强版 Android 串流客户端** 🎮
+  
+  *让您的 Android 设备成为强大的游戏串流终端！Gawr！* ✨
+</div>
 
 
-恢复原版moonlight多指敲击屏幕唤醒本地键盘的方式， 同时允许设置敲击手指数量 <br>
-Configurable local keyboard toggle: <br>
-![image](https://github.com/TrueZhuangJia/moonlight-android-Enhanced-MultiTouch/assets/78474576/416a2960-f0a7-4245-ac62-d8fb53ec4ca7)
-![image](https://github.com/TrueZhuangJia/moonlight-android-Enhanced-MultiTouch/assets/78474576/a0edaf21-a174-448e-832c-da2d171cefea)
+## 📱 应用截图展示
+
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/10800322-d8ab-4419-bd05-5fc37fd4c8f3" width="360" alt="主界面">
+  <img src="https://github.com/user-attachments/assets/5e227bab-afaa-4452-ae38-ac2cc9d22988" width="360" alt="游戏列表">
+  <img src="https://github.com/user-attachments/assets/c755d228-d9f5-4068-ae6c-c3f8ea0a0f2f" width="360" alt="串流界面">
+  <img src="https://github.com/user-attachments/assets/5046dd58-7013-494e-9f17-26e4de56a7dd" width="360" alt="设置界面">
+</div>
 
 
-还有两个的功能， 使用中你可能未必能感觉到有区别：<br>
-And some additional features like flat region to eliminate long press jitter:<br>
-![image](https://github.com/TrueZhuangJia/moonlight-android-Enhanced-MultiTouch/assets/78474576/0594b3ef-e381-4efc-bc2b-db8f209db272)
-![image](https://github.com/TrueZhuangJia/moonlight-android-Enhanced-MultiTouch/assets/78474576/98534adc-48ad-4433-8d7c-e60b88c13466)
+## ✨ 特性
+
+### 🎯 核心功能
+- **高性能串流**: 解锁 144/165Hz 刷新率，支持最高 800Mbps 码率，动态调节！
+- **HDR 支持**: 完整 HDR 内容串流，自动启用设备关联的 HDR 校准文件，串流画质上限！
+- **自定义分辨率**: 支持自定义分辨率和不对称分辨率串流，想怎么玩就怎么玩！
+- **多场景预设**: 快速切换不同游戏场景的串流设置，右下角鲨牙长按就能保存哦！
+
+### 🎮 游戏体验
+- **增强触控**: 支持触控笔和多点触控，可切换触控板模式，触控体验超顺滑！
+- **自定义按键**: 可移动按键布局，支持手柄瞄准，按键想放哪里就放哪里！
+- **快捷操作**: 一键睡眠、常用 PC 指令一键操作！
+- **性能监控**: 实时显示串流性能指标，支持拖动位置，性能一目了然！
+
+### 🎨 界面优化
+- **美化桌面**: 应用缩略图同步背景，自定义排序，桌面超好看！
+- **菜单重构**: 与 Sunshine 应用编辑页风格统一，界面超协调！
+- **实时调节**: 菜单集成码率调节面板，操作更便捷，调节超快速！
+
+### 🎤 音频功能
+- **麦克风重定向**: 支持远程语音（需 Sunshine 基地版 2025.0720+），音质好的不像在串流！
 
 
-触控与显示同步的话，可能有助理于视角旋转时画面的流畅性。
+## 🚀 快速开始
+
+### 系统要求
+- Android 5.0 (API 22) 或更高版本
+- 支持 HEVC 解码的设备
+- 稳定的网络连接
+
+### 安装方式
+
+#### 方式一：下载 APK（最简单的方式！）
+1. 从 [Releases](https://github.com/qiin2333/moonlight-android/releases) 页面下载最新版本
+2. 安装 APK 文件
+3. 按照应用内指引完成设置
+
+#### 方式二：从源码编译
+```bash
+# 克隆仓库
+git clone https://github.com/qiin2333/moonlight-android.git
+cd moonlight-android
+
+# 编译项目
+./gradlew assembleRelease
+```
+
+---
+
+## 📋 更新日志
+
+### v12.2.6 最新版本
+- 🎮 **发送特殊按键可自定义**，并支持键盘选取
+- 🖱️ **添加切换触控菜单**，可切换为触控板模式
+- ⚡ **菜单集成实时码率调节面板**，调节更快速
+
+### v12.2
+- 🎨 **重构游戏菜单**，与 Sunshine 应用编辑页风格统一
+- 🔗 **优化连接体验**，分享串流最佳实践
+- 🎤 **快捷功能增强**：麦克风按钮显示控制 + 实时码率调节
+- 📱 **更友好的主机与APP详情展示**
+- 🌍 **补全设置菜单英文翻译**
+
+### 2025/07/26
+- 🔧 **修复部分 Rockchip SOC 不能开启 HEVC HDR 的问题**
+- ✏️ **开启增强式多点触摸后触控笔也可正常使用**
+- 🎤 **优化麦克风长时间使用延迟增大的问题**
+
+### 2025/07/21
+- 🎤 **支持麦克风重定向**，需 Sunshine 基地版 2025.0720+
+
+### 2025/07/17
+- 📺 **外接屏幕支持**：可选择复制或沉浸式投屏
+- 🔋 **沉浸式投屏性能覆盖层**：本机屏幕展示并添加实时电量
+- 🏷️ **支持 sunshine 端修改客户端配对名字**
+
+### 2025/07/06
+- ⚡ **优化部分联发科 SOC 的显示解码时间** (天玑9300以下可能有效果)
+- 🔧 **修复 ColorOS 串流 HDR 内容时无法正确激发亮度**
+
+### 2025/06/22
+- 📊 **盯帧能力升级**：性能覆盖层可配置展示项目、位置、方向
+- 🖱️ **串流中可拖动性能覆盖层位置**
+
+### 2025/06/01
+- ⌨️ **外接物理键盘使用 ESC 键不首先弹出返回菜单**
+- ⚡ **优化部分骁龙 SOC 的显示解码时间** (8Gen2+)
+
+### 2025/04/08
+- 🎮 **可移动按键增加手柄瞄准**
+- 📈 **非线性码率调整**
+- 🔧 **修复关闭增强触摸恢复经典鼠标模式**
+
+### 2025/03/24
+- 📱 **反转分辨率（竖屏）功能**
+- 🎯 **串流画面位置设置**，支持八个方向加偏移量
+
+### 2025/02/23
+- 💾 **增加多场景预设切换能力**：右下角鲨牙长按保存当前预设，点击应用对应预设
 
 
-# Moonlight Android
+## 🔧 高级功能（隐藏技能）
 
-[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/232a8tadrrn8jv0k/branch/master?svg=true)](https://ci.appveyor.com/project/cgutman/moonlight-android/branch/master)
-[![Translation Status](https://hosted.weblate.org/widgets/moonlight/-/moonlight-android/svg-badge.svg)](https://hosted.weblate.org/projects/moonlight/moonlight-android/)
-[![follow us](http://pub.idqqimg.com/wpa/images/group.png)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=wOMgrbiTMY9MNUy3nW48ISytNvvUR_vU&authKey=wdzVqkJZ%2BqQAatwgb8gnVD4sTouR8ZnOQeSZEc28UIynHs9XzbAjMqiKAWEVn7Yj&noverify=0&group_code=904820296)
+### 需要 Sunshine 基地版支持的功能
+- 🎤 麦克风重定向
+- 🎮 超级菜单指令
+- 🎨 应用桌面美化
+- 🎯 自定义分辨率串流
+- 🔋 串流自动启用 HDR 校准文件
 
-[Moonlight for Android](https://moonlight-stream.org) is an open source client for NVIDIA GameStream and [Sunshine](https://github.com/LizardByte/Sunshine).
 
-Moonlight for Android will allow you to stream your full collection of games from your Windows PC to your Android device,
-whether in your own home or over the internet.
+## 🤝 贡献
 
-Moonlight also has a [PC client](https://github.com/moonlight-stream/moonlight-qt) and [iOS/tvOS client](https://github.com/moonlight-stream/moonlight-ios).
+欢迎提交 Issue 和 Pull Request！感谢每一位贡献者！
 
-You can follow development on our [Discord server](https://moonlight-stream.org/discord) and help translate Moonlight into your language on [Weblate](https://hosted.weblate.org/projects/moonlight/moonlight-android/).
+### 贡献者
+- [@cjcxj](https://github.com/cjcxj) - 特殊按键自定义、触控菜单（xxx！）
+- [@alonsojr1980](https://github.com/alonsojr1980) - SOC 解码优化（性能优化专家！）
+- [@Xmqor](https://github.com/Xmqor) - 手柄瞄准功能（瞄准高手！）
+- [@TrueZhuangJia](https://github.com/TrueZhuangJia) - 增强多点触控（搓屏专家！）
+- [@WACrown](https://github.com/WACrown) - 最强自定义按键（按键之王！）
 
-## Downloads
-* [Google Play Store](https://play.google.com/store/apps/details?id=com.limelight)
-* [Amazon App Store](https://www.amazon.com/gp/product/B00JK4MFN2)
-* [F-Droid](https://f-droid.org/packages/com.limelight)
-* [APK](https://github.com/moonlight-stream/moonlight-android/releases)
 
-## Building
-* Install Android Studio and the Android NDK
-* Run ‘git submodule update --init --recursive’ from within moonlight-android/
-* In moonlight-android/, create a file called ‘local.properties’. Add an ‘ndk.dir=’ property to the local.properties file and set it equal to your NDK directory.
-* Build the APK using Android Studio or gradle
 
-## Authors
+## 🙏 致谢
 
-* [Cameron Gutman](https://github.com/cgutman)  
-* [Diego Waxemberg](https://github.com/dwaxemberg)  
-* [Aaron Neyer](https://github.com/Aaronneyer)  
-* [Andrew Hennessy](https://github.com/yetanothername)
+- 基于 [Moonlight Android](https://github.com/moonlight-stream/moonlight-android) 项目（感谢原版！）
+- 特别感谢 [Sunshine](https://github.com/LizardByte/Sunshine) 项目团队
 
-Moonlight is the work of students at [Case Western](http://case.edu) and was
-started as a project at [MHacks](http://mhacks.org).
+---
+
+<div align="center">
+  <sub>如果这个项目对您有帮助，请给我们一个⭐ ！</sub>
+</div>
