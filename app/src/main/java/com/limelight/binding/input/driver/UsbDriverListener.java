@@ -8,4 +8,7 @@ public interface UsbDriverListener {
 
     void deviceRemoved(AbstractController controller);
     void deviceAdded(AbstractController controller);
+
+    // Report motion data sourced from the USB controller itself
+    void reportControllerMotion(int controllerId, byte motionType, float x, float y, float z);
 }

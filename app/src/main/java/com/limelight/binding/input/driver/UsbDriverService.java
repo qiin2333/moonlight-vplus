@@ -52,6 +52,13 @@ public class UsbDriverService extends Service implements UsbDriverListener {
     }
 
     @Override
+    public void reportControllerMotion(int controllerId, byte motionType, float x, float y, float z) {
+        if (listener != null) {
+            listener.reportControllerMotion(controllerId, motionType, x, y, z);
+        }
+    }
+
+    @Override
     public void deviceRemoved(AbstractController controller) {
         // Remove the the controller from our list (if not removed already)
         controllers.remove(controller);
@@ -194,6 +201,12 @@ public class UsbDriverService extends Service implements UsbDriverListener {
             else if (Xbox360WirelessDongle.canClaimDevice(device)) {
                 controller = new Xbox360WirelessDongle(device, connection, nextDeviceId++, this);
             }
+            else if (SwitchProController.canClaimDevice(device)) {
+                controller = new SwitchProController(device, connection, nextDeviceId++, this);
+            }
+            else if (DualSenseController.canClaimDevice(device)) {
+                controller = new DualSenseController(device, connection, nextDeviceId++, this);
+            }
             else {
                 // Unreachable
                 return;
@@ -278,7 +291,11 @@ public class UsbDriverService extends Service implements UsbDriverListener {
         return ((!kernelSupportsXboxOne() || !isRecognizedInputDevice(device) || claimAllAvailable) && XboxOneController.canClaimDevice(device)) ||
                 ((!isRecognizedInputDevice(device) || claimAllAvailable) && Xbox360Controller.canClaimDevice(device)) ||
                 // We must not call isRecognizedInputDevice() because wireless controllers don't share the same product ID as the dongle
-                ((!kernelSupportsXbox360W() || claimAllAvailable) && Xbox360WirelessDongle.canClaimDevice(device));
+                ((!kernelSupportsXbox360W() || claimAllAvailable) && Xbox360WirelessDongle.canClaimDevice(device)) ||
+                // Switch Pro: 只在 claimAllAvailable 或系统未识别为输入设备时接管，避免冲突
+                ((!isRecognizedInputDevice(device) || claimAllAvailable) && SwitchProController.canClaimDevice(device)) ||
+                // DualSense: 同理按策略接管
+                ((!isRecognizedInputDevice(device) || claimAllAvailable) && DualSenseController.canClaimDevice(device));
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")

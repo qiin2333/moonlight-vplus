@@ -8,7 +8,7 @@ import android.preference.CheckBoxPreference;
 import android.util.AttributeSet;
 import android.view.Display;
 
-import com.limelight.Game;
+import com.limelight.ExternalDisplayManager;
 
 /**
  * 外接显示器状态偏好设置
@@ -41,7 +41,7 @@ public class ExternalDisplayPreference extends CheckBoxPreference {
     }
 
     private void updateSummary() {
-        if (Game.hasExternalDisplay(getContext())) {
+        if (ExternalDisplayManager.hasExternalDisplay(getContext())) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
                 DisplayManager displayManager = (DisplayManager) getContext().getSystemService(Context.DISPLAY_SERVICE);
                 if (displayManager != null) {

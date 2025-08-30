@@ -74,4 +74,10 @@ public abstract class AbstractController {
     protected void notifyDeviceAdded() {
         listener.deviceAdded(this);
     }
+
+    protected void notifyControllerMotion(byte motionType, float x, float y, float z) {
+        if (listener != null) {
+            listener.reportControllerMotion(deviceId, motionType, x, y, z);
+        }
+    }
 }

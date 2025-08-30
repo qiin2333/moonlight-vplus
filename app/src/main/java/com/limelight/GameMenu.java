@@ -376,6 +376,38 @@ public class GameMenu {
     }
 
 
+    /**
+     * 本地测试震动：对控制器 0..3 发送 1 秒强震动
+     */
+    private void testLocalRumbleAll() {
+        try {
+            com.limelight.binding.input.ControllerHandler ch = game.getControllerHandler();
+            if (ch == null) {
+                Toast.makeText(game, "无法访问控制器", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            short on = (short) 0xFFFF;
+            short off = 0;
+            for (short n = 0; n < 4; n++) {
+                ch.handleRumble(n, on, on);
+            }
+
+            handler.postDelayed(() -> {
+                try {
+                    for (short n = 0; n < 4; n++) {
+                        ch.handleRumble(n, off, off);
+                    }
+                } catch (Exception ignored) {}
+            }, 1000);
+
+            Toast.makeText(game, "已发送本地震动测试", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(game, "震动测试失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+
 
     /**
      * 调整码率
@@ -1373,6 +1405,9 @@ public class GameMenu {
 
         normalOptions.add(new MenuOption(getString(R.string.game_menu_disconnect_and_quit), true,
                 this::disconnectAndQuit, "game_menu_disconnect_and_quit", true));
+
+        // 本地测试震动
+        normalOptions.add(new MenuOption("本地测试震动", false, this::testLocalRumbleAll, null, true));
 
         // normalOptions.add(new MenuOption(getString(R.string.game_menu_cancel), false, null, null, true));
     }

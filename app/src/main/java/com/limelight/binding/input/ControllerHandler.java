@@ -2869,6 +2869,17 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         usbDeviceContexts.put(controller.getControllerId(), context);
     }
 
+    @Override
+    public void reportControllerMotion(int controllerId, byte motionType, float x, float y, float z) {
+        UsbDeviceContext context = usbDeviceContexts.get(controllerId);
+        if (context == null) {
+            return;
+        }
+
+        // 将来自手柄自身 IMU 的数据直接上报到主机
+        conn.sendControllerMotionEvent((byte) context.controllerNumber, motionType, x, y, z);
+    }
+
     class GenericControllerContext implements GameInputDevice {
         public int id;
         public boolean external;
