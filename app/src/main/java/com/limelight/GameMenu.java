@@ -294,18 +294,21 @@ public class GameMenu {
     }
 
     /**
-     * 显示一个菜单列表，用于在“增强式多点触控”,“经典鼠标模式”,“触控板模式”之间切换。
+     * 显示一个菜单列表，用于在"增强式多点触控","经典鼠标模式","触控板模式","本地鼠标指针"之间切换。
      */
     private void showTouchModeMenu() {
         boolean isEnhancedTouch = game.prefConfig.enableEnhancedTouch;
         boolean isTouchscreenTrackpad = game.prefConfig.touchscreenTrackpad;
+        boolean isNativeMousePointer = game.prefConfig.enableNativeMousePointer;
 
         MenuOption[] touchModeOptions = {
                 new MenuOption(
                         getString(R.string.game_menu_touch_mode_enhanced),
-                        isEnhancedTouch,
+                        isEnhancedTouch && !isTouchscreenTrackpad && !isNativeMousePointer,
                         () -> {
                             game.prefConfig.enableEnhancedTouch = true;
+                            game.prefConfig.enableNativeMousePointer = false;
+                            game.enableNativeMousePointer(false);  // 关闭本地鼠标模式
                             game.setTouchMode(false);
                             Toast.makeText(game, getString(R.string.toast_touch_mode_enhanced_on), Toast.LENGTH_SHORT).show();
                         },
@@ -314,9 +317,11 @@ public class GameMenu {
                 ),
                 new MenuOption(
                         getString(R.string.game_menu_touch_mode_classic),
-                        !isEnhancedTouch,
+                        !isEnhancedTouch && !isTouchscreenTrackpad && !isNativeMousePointer,
                         () -> {
                             game.prefConfig.enableEnhancedTouch = false;
+                            game.prefConfig.enableNativeMousePointer = false;
+                            game.enableNativeMousePointer(false);  // 关闭本地鼠标模式
                             game.setTouchMode(false);
                             Toast.makeText(game, getString(R.string.toast_touch_mode_classic_on), Toast.LENGTH_SHORT).show();
                         },
@@ -325,10 +330,25 @@ public class GameMenu {
                 ),
                 new MenuOption(
                         getString(R.string.game_menu_touch_mode_trackpad),
-                        isTouchscreenTrackpad,
+                        isTouchscreenTrackpad && !isNativeMousePointer,
                         () -> {
+                            game.prefConfig.enableNativeMousePointer = false;
+                            game.enableNativeMousePointer(false);  // 关闭本地鼠标模式
                             game.setTouchMode(true);
                             Toast.makeText(game, getString(R.string.toast_touch_mode_trackpad_on), Toast.LENGTH_SHORT).show();
+                        },
+                        null,
+                        false
+                ),
+                new MenuOption(
+                        getString(R.string.game_menu_touch_mode_native_mouse),
+                        isNativeMousePointer,
+                        () -> {
+                            game.prefConfig.enableNativeMousePointer = true;
+                            game.prefConfig.enableEnhancedTouch = false;
+                            game.setTouchMode(false);
+                            game.enableNativeMousePointer(true);
+                            Toast.makeText(game, getString(R.string.toast_touch_mode_native_mouse_on), Toast.LENGTH_SHORT).show();
                         },
                         null,
                         false
@@ -1318,9 +1338,10 @@ public class GameMenu {
 
         // 显示当前触控模式
         String touchModeText = getString(R.string.game_menu_switch_touch_mode) + ": " +
-                (game.prefConfig.touchscreenTrackpad ? getString(R.string.game_menu_touch_mode_trackpad) :
-                        game.prefConfig.enableEnhancedTouch ? getString(R.string.game_menu_touch_mode_enhanced) :
-                                getString(R.string.game_menu_touch_mode_classic));
+                (game.prefConfig.enableNativeMousePointer ? getString(R.string.game_menu_touch_mode_native_mouse) :
+                        game.prefConfig.touchscreenTrackpad ? getString(R.string.game_menu_touch_mode_trackpad) :
+                                game.prefConfig.enableEnhancedTouch ? getString(R.string.game_menu_touch_mode_enhanced) :
+                                        getString(R.string.game_menu_touch_mode_classic));
 
 
         // 此菜单是 UI 操作，不应该依赖游戏窗口焦点

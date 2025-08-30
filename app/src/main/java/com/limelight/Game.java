@@ -137,7 +137,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private ControllerHandler controllerHandler;
     private KeyboardTranslator keyboardTranslator;
     private VirtualController virtualController;
-
+    
     public interface PerformanceInfoDisplay{
         void display(Map<String,String> performanceAttrs);
     }
@@ -262,7 +262,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        
         UiHelper.setLocale(this);
 
         // We don't want a title bar
@@ -325,17 +325,17 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // Listen for non-touch events on the game surface
         streamView = findViewById(R.id.surfaceView);
-        streamView.setOnGenericMotionListener(this);
-        streamView.setOnKeyListener(this);
-        streamView.setInputCallbacks(this);
-
+            streamView.setOnGenericMotionListener(this);
+            streamView.setOnKeyListener(this);
+            streamView.setInputCallbacks(this);
+        
         // Listen for touch events on the background touch view to enable trackpad mode
         // to work on areas outside of the StreamView itself. We use a separate View
         // for this rather than just handling it at the Activity level, because that
         // allows proper touch splitting, which the OSC relies upon.
         View backgroundTouchView = findViewById(R.id.backgroundTouchView);
-        backgroundTouchView.setOnTouchListener(this);
-
+            backgroundTouchView.setOnTouchListener(this);
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             // Request unbuffered input event dispatching for all input classes we handle here.
             // Without this, input events are buffered to be delivered in lock-step with VBlank,
@@ -1759,6 +1759,41 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         inputManager.toggleSoftInput(0, 0);
     }
 
+    /**
+     * 启用或禁用安卓本地鼠标指针
+     */
+    public void enableNativeMousePointer(boolean enable) {
+        LimeLog.info("Setting native mouse pointer: " + enable);
+        
+        prefConfig.enableNativeMousePointer = enable;
+        
+        if (enable) {
+            // 启用本地鼠标指针：释放鼠标捕获但保持键盘捕获
+            inputCaptureProvider.disableCapture();
+            cursorVisible = true;
+            
+            // 显示系统鼠标指针
+            if (inputCaptureProvider != null) {
+                inputCaptureProvider.showCursor();
+            }
+            
+            // 保持键盘快捷键捕获，确保Ctrl+Alt+Shift等组合键仍然工作
+            setMetaKeyCaptureState(true);
+            
+            // 注意：我们不设置 grabbedInput = false，这样按键事件仍能正常处理
+        } else {
+            // 禁用本地鼠标指针：恢复正常的输入捕获状态
+            cursorVisible = false;
+            
+            // 隐藏系统鼠标指针
+            if (inputCaptureProvider != null) {
+                inputCaptureProvider.hideCursor();
+            }
+            
+            setInputGrabState(true);
+        }
+    }
+
     private byte getLiTouchTypeFromEvent(MotionEvent event) {
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
@@ -2145,6 +2180,63 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         int eventSource = event.getSource();
         int deviceSources = event.getDevice() != null ? event.getDevice().getSources() : 0;
+
+        // 本地鼠标指针模式的特殊处理
+        if (prefConfig.enableNativeMousePointer && (eventSource & InputDevice.SOURCE_CLASS_POINTER) != 0) {
+            // 检查是否为真正的鼠标设备（而不是触摸屏）
+            boolean isActualMouse = (eventSource == InputDevice.SOURCE_MOUSE) ||
+                                   (eventSource == InputDevice.SOURCE_MOUSE_RELATIVE) ||
+                                   (event.getPointerCount() >= 1 && 
+                                    event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE) ||
+                                   (eventSource == 12290); // Samsung DeX mode
+            
+            if (isActualMouse) {
+                LimeLog.info("Native mouse event (processing): " + event.getActionMasked() + 
+                            ", source: " + eventSource + 
+                            ", x: " + event.getX() + 
+                            ", y: " + event.getY() + 
+                            ", buttons: " + event.getButtonState());
+                
+                // 在本地鼠标指针模式下，直接处理鼠标事件
+                updateMousePosition(view, event);
+                
+                int buttonState = event.getButtonState();
+                int changedButtons = buttonState ^ lastButtonState;
+                
+                if ((changedButtons & MotionEvent.BUTTON_PRIMARY) != 0) {
+                    if ((buttonState & MotionEvent.BUTTON_PRIMARY) != 0) {
+                        conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT);
+                    } else {
+                        conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT);
+                    }
+                }
+                if ((changedButtons & MotionEvent.BUTTON_SECONDARY) != 0) {
+                    if ((buttonState & MotionEvent.BUTTON_SECONDARY) != 0) {
+                        conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT);
+                    } else {
+                        conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT);
+                    }
+                }
+                if ((changedButtons & MotionEvent.BUTTON_TERTIARY) != 0) {
+                    if ((buttonState & MotionEvent.BUTTON_TERTIARY) != 0) {
+                        conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_MIDDLE);
+                    } else {
+                        conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE);
+                    }
+                }
+                
+                // 处理滚轮事件
+                if (event.getActionMasked() == MotionEvent.ACTION_SCROLL) {
+                    conn.sendMouseHighResScroll((short)(event.getAxisValue(MotionEvent.AXIS_VSCROLL) * 120));
+                    conn.sendMouseHighResHScroll((short)(event.getAxisValue(MotionEvent.AXIS_HSCROLL) * 120));
+                }
+                
+                lastButtonState = buttonState;
+                return true;
+            }
+            // 如果不是真正的鼠标设备（比如触摸屏），继续让后续代码处理
+        }
+
         if ((eventSource & InputDevice.SOURCE_CLASS_JOYSTICK) != 0) { //手柄所属条件
             if (controllerHandler.handleMotionEvent(event)) {
                 return true;
@@ -2805,7 +2897,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 h.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        setInputGrabState(true);
+                        // 根据配置决定是否启用原生鼠标指针
+                        if (prefConfig.enableNativeMousePointer) {
+                            enableNativeMousePointer(true);
+                        } else {
+                            setInputGrabState(true);
+                        }
                     }
                 }, 500);
 

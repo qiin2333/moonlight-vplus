@@ -330,7 +330,9 @@
     <string name="title_privacy_policy">隐私政策</string>
     <string name="summary_privacy_policy">查看 Moonlight 隐私政策</string>
     <string name="title_about_mode">关于 月光威力加强版</string>
-    <string name="summary_about_mode">APP检查更新</string>
+    <string name="summary_about_mode">请前往GitHub查看，喜欢的话点个Star支持一下我们吧</string>
+    <string name="check_for_updates">检查更新</string>
+    <string name="summary_check_for_updates">检查是否有新版本可用</string>
     <string name="category_help">帮助</string>
     <string name="title_setup_guide">安装向导</string>
     <string name="title_troubleshooting">解决方案向导</string>
@@ -457,9 +459,11 @@
     <string name="game_menu_touch_mode_enhanced">增强式多点触控</string>
     <string name="game_menu_touch_mode_classic">经典鼠标模式</string>
     <string name="game_menu_touch_mode_trackpad">触控板模式</string>
+    <string name="game_menu_touch_mode_native_mouse">本地鼠标指针</string>
     <string name="toast_touch_mode_enhanced_on">增强式多点触控已开启</string>
     <string name="toast_touch_mode_classic_on">经典鼠标模式已开启</string>
     <string name="toast_touch_mode_trackpad_on">触控板模式已开启</string>
+    <string name="toast_touch_mode_native_mouse_on">本地鼠标指针已开启</string>
 
     <!-- 自定义特殊按键 -->
     <!-- 菜单项 -->

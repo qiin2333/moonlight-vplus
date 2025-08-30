@@ -41,6 +41,7 @@ import com.limelight.binding.video.MediaCodecHelper;
 import com.limelight.utils.AspectRatioConverter;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.UiHelper;
+import com.limelight.utils.UpdateManager;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -847,6 +848,15 @@ public class StreamSettings extends Activity {
                 public boolean onPreferenceClick(Preference preference) {
                     Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.author_web)));
                     startActivity(intent);
+                    return true;
+                }
+            });
+
+            // 添加检查更新选项的点击事件
+            findPreference("check_for_updates").setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+                @Override
+                public boolean onPreferenceClick(Preference preference) {
+                    UpdateManager.checkForUpdates(getActivity(), true);
                     return true;
                 }
             });

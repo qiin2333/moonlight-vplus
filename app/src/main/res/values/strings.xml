@@ -365,7 +365,9 @@
     <string name="title_privacy_policy">Privacy policy</string>
     <string name="summary_privacy_policy">View Moonlight\'s privacy policy</string>
     <string name="title_about_mode">About</string>
-    <string name="summary_about_mode">Check for updates</string>
+    <string name="summary_about_mode">Please go to GitHub to view, if you like it, please give us a Star</string>
+    <string name="check_for_updates">Check for updates</string>
+    <string name="summary_check_for_updates">Check if there is a new version available</string>
 
     <!-- Toasts -->
     <string name="toast_controller_type_changed">Gamepad type may be changed due to motion sensor emulation</string>
@@ -479,9 +481,11 @@
     <string name="game_menu_touch_mode_enhanced">Enhanced Multi Touch</string>
     <string name="game_menu_touch_mode_classic">Classic Mouse Mode</string>
     <string name="game_menu_touch_mode_trackpad">Touchpad mode</string>
+    <string name="game_menu_touch_mode_native_mouse">Native mouse pointer</string>
     <string name="toast_touch_mode_enhanced_on">Enhanced multi touch enabled</string>
     <string name="toast_touch_mode_classic_on">Classic mouse mode enabled</string>
-    <string name="toast_touch_mode_trackpad_on">Touchpad mode enabled</string>
+    <string name="toast_touch_mode_trackpad_on">Trackpad mode enabled</string>
+    <string name="toast_touch_mode_native_mouse_on">Native mouse pointer enabled</string>
 
     <!-- 自定义特殊按键 -->
     <!-- 菜单项 -->

@@ -33,6 +33,7 @@ import com.limelight.utils.ServerHelper;
 import com.limelight.utils.ShortcutHelper;
 import com.limelight.utils.UiHelper;
 import com.limelight.utils.AnalyticsManager;
+import com.limelight.utils.UpdateManager;
 
 import com.bumptech.glide.Glide;
 
@@ -493,6 +494,9 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         // 初始化统计分析管理器
         analyticsManager = AnalyticsManager.getInstance(this);
         analyticsManager.logAppLaunch();
+
+        // 检查应用更新
+        UpdateManager.checkForUpdatesOnStartup(this);
 
         // Bind to the computer manager service
         bindService(new Intent(PcView.this, ComputerManagerService.class), serviceConnection,

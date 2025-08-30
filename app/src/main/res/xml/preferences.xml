@@ -502,6 +502,10 @@
             android:title="@string/title_troubleshooting"
             android:summary="@string/summary_troubleshooting"
             url="https://github.com/moonlight-stream/moonlight-docs/wiki/Troubleshooting"/> -->
+        <Preference
+            android:key="check_for_updates"
+            android:title="检查更新"
+            android:summary="检查应用是否有新版本可用" />
         <com.limelight.preferences.WebLauncherPreference
             android:title="@string/title_about_mode"
             android:summary="@string/summary_about_mode"
