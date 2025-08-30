@@ -223,12 +223,13 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             return null;
         }
 
-        // In auto mode, prefer AV1 over HEVC
+        // In auto mode, we should still prepare HEVC as a fallback even if AV1 is available
+        // The server will negotiate the final codec choice based on what it supports
         if (prefs.videoFormat == PreferenceConfiguration.FormatOption.AUTO) {
             MediaCodecInfo av1DecoderInfo = MediaCodecHelper.findProbableSafeDecoder("video/av01", -1);
             if (av1DecoderInfo != null && MediaCodecHelper.isDecoderWhitelistedForAv1(av1DecoderInfo)) {
-                LimeLog.info("AV1 decoder available, skipping HEVC in auto mode");
-                return null;
+                LimeLog.info("AV1 decoder available in auto mode, but still preparing HEVC as fallback");
+                // Continue to prepare HEVC decoder instead of returning null
             }
         }
 
