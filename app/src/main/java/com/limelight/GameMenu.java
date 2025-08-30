@@ -81,6 +81,7 @@ public class GameMenu {
         ICON_MAP.put("game_menu_cancel", R.drawable.ic_cancel_cute);
         ICON_MAP.put("mouse_mode", R.drawable.ic_mouse_cute);
         ICON_MAP.put("game_menu_mouse_emulation", R.drawable.ic_mouse_emulation_cute);
+        ICON_MAP.put("crown_function_menu", R.drawable.ic_super_crown);
     }
 
     /**
@@ -375,6 +376,38 @@ public class GameMenu {
         Toast.makeText(game, game.isCrownFeatureEnabled() ? getString(R.string.crown_switch_to_crown) : getString(R.string.crown_switch_to_normal), Toast.LENGTH_SHORT).show();
     }
 
+    /**
+     * 显示“王冠功能”的二级菜单，包含显隐和配置选项。
+     */
+    private void showCrownFunctionMenu() {
+        // 检查 王冠功能是否开启，如果没有开启则不显示任何选项
+        if (!game.isCrownFeatureEnabled()) {
+            Toast.makeText(game, "王冠功能未启用", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        MenuOption[] crownFunctionOptions = {
+                // --- 选项1: 显示/隐藏虚拟按键 ---
+                new MenuOption(
+                        getString(R.string.game_menu_toggle_elements_visibility),
+                        false,
+                        game::toggleVirtualControllerVisibility,
+                        "crown_function_menu",
+                        true
+                ),
+                // --- 选项2: 配置王冠功能 ---
+                new MenuOption(
+                        getString(R.string.game_menu_configure_crown_function),
+                        false,
+                        game::toggleBackKeyMenuType,
+                        "crown_function_menu",
+                        true
+                )
+        };
+
+        // 使用 showSubMenu 方法来显示这个二级菜单
+        showSubMenu(getString(R.string.game_menu_crown_function), crownFunctionOptions);
+    }
 
     /**
      * 本地测试震动：对控制器 0..3 发送 1 秒强震动
@@ -602,12 +635,13 @@ public class GameMenu {
 
             // 添加一些padding和margin
             totalHeight += (int) ((maxItems*2 + 8) * game.getResources().getDisplayMetrics().density);
+            totalHeight = Math.max(totalHeight, (int) (270 * game.getResources().getDisplayMetrics().density));
 
             return totalHeight;
 
         } catch (Exception e) {
             // 如果计算失败，返回默认高度
-            return (int) (220 * game.getResources().getDisplayMetrics().density);
+            return (int) (270 * game.getResources().getDisplayMetrics().density);
         }
     }
 
@@ -1383,6 +1417,16 @@ public class GameMenu {
                 this::showTouchModeMenu,
                 "mouse_mode",
                 true, true));
+
+        // 王冠功能
+            normalOptions.add(new MenuOption(
+                    getString(R.string.game_menu_crown_function),
+                    false,
+                    this::showCrownFunctionMenu,
+                    "crown_function_menu",
+                    true,
+                    true
+            ));
 
         if (device != null) {
             normalOptions.addAll(device.getGameMenuOptions());

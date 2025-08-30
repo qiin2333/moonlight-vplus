@@ -109,6 +109,24 @@ public class ElementController {
     private boolean gameVibrator = false;
     private boolean buttonVibrator = false;
 
+    /**
+     *隐藏所有虚拟按键的容器。
+     */
+    public void hideAllElementsForTest() {
+        if (elementsLayout != null) {
+            elementsLayout.setVisibility(View.INVISIBLE);
+        }
+    }
+
+    /**
+     *显示所有虚拟按键的容器。
+     */
+    public void showAllElementsForTest() {
+        if (elementsLayout != null) {
+            elementsLayout.setVisibility(View.VISIBLE);
+        }
+    }
+
 
     public void showToast(String message) {
         if (currentToast != null) {

@@ -85,7 +85,6 @@ import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -195,6 +194,46 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private WifiManager.WifiLock highPerfWifiLock;
     private WifiManager.WifiLock lowLatencyWifiLock;
     private Map<Integer, NativeTouchContext.Pointer> nativeTouchPointerMap = new HashMap<>();
+
+    private boolean currentBackKeyMenu = true; //默认为GAME_MENU
+
+    public void currentBackKeyMenu(boolean currentBackKeyMenu){
+        this.currentBackKeyMenu = currentBackKeyMenu;
+    }
+
+    private boolean areElementsVisible = true; // 用于追踪显隐状态
+
+
+    /**
+     * 切换虚拟控制器（虚拟按键）的可见性。
+     */
+    public void toggleVirtualControllerVisibility() {
+        if (controllerManager != null) {
+            areElementsVisible = !areElementsVisible;
+            if (areElementsVisible) {
+                controllerManager.getElementController().showAllElementsForTest();
+                Toast.makeText(this, getString(R.string.toast_elements_visible), Toast.LENGTH_SHORT).show();
+            } else {
+                controllerManager.getElementController().hideAllElementsForTest();
+                Toast.makeText(this, getString(R.string.toast_elements_hidden), Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    /**
+     * 王冠功能配置切换
+     */
+    public void toggleBackKeyMenuType() {
+        if (currentBackKeyMenu) {
+            currentBackKeyMenu = false;
+            areElementsVisible = true;
+            controllerManager.getElementController().showAllElementsForTest();
+            Toast.makeText(this, getString(R.string.toast_back_key_menu_switch_2), Toast.LENGTH_SHORT).show();
+        } else {
+            currentBackKeyMenu = true;
+            Toast.makeText(this, getString(R.string.toast_back_key_menu_switch_1), Toast.LENGTH_SHORT).show();
+        }
+    }
 
     private boolean connectedToUsbDriverService = false;
     private UsbDriverService.UsbDriverBinder usbDriverBinder;
@@ -3264,14 +3303,19 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         updatePipAutoEnter();
     }
 
-    @Override
+    /**
+     * 根据当前设置的状态，显示不同的游戏菜单。
+     * @param device 可能是触发菜单的输入设备，可以为 null
+     */
     public void showGameMenu(GameInputDevice device) {
-        if (controllerManager != null && prefConfig.onscreenKeyboard){
+        // 检查用户是否选择了 GAME_MENU
+        if (currentBackKeyMenu) {
+            new GameMenu(this, app, conn, device);
+        } else if (controllerManager != null && prefConfig.onscreenKeyboard) {
             controllerManager.getSuperPagesController().returnOperation();
         } else {
             new GameMenu(this, app, conn, device);
         }
-
     }
 
     @Override
