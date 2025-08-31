@@ -96,6 +96,9 @@ public class PreferenceConfiguration {
     private static final String FRAME_PACING_PREF_STRING = "frame_pacing";
     private static final String ABSOLUTE_MOUSE_MODE_PREF_STRING = "checkbox_absolute_mouse_mode";
     private static final String ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING = "checkbox_enable_native_mouse_pointer";
+    // Card visibility preferences
+    private static final String SHOW_BITRATE_CARD_PREF_STRING = "checkbox_show_bitrate_card";
+    private static final String SHOW_GYRO_CARD_PREF_STRING = "checkbox_show_gyro_card";
 
     private static final String ENABLE_ENHANCED_TOUCH_PREF_STRING = "checkbox_enable_enhanced_touch";
     private static final String ENHANCED_TOUCH_ON_RIGHT_PREF_STRING = "checkbox_enhanced_touch_on_which_side";
@@ -275,6 +278,9 @@ public class PreferenceConfiguration {
     public float gyroFullDeflectionDps;
     // Runtime-only: activation keycode to hold (Android keycode); 0 means LT analog, 1 means RT analog, otherwise Android key
     public int gyroActivationKeyCode;
+    // Card visibility
+    public boolean showBitrateCard;
+    public boolean showGyroCard;
 
     // 麦克风设置
     public boolean enableMic;
@@ -743,6 +749,10 @@ public class PreferenceConfiguration {
         config.gamepadMotionSensorsFallbackToDevice = prefs.getBoolean(GAMEPAD_MOTION_FALLBACK_PREF_STRING, DEFAULT_GAMEPAD_MOTION_FALLBACK);
         config.enableSimplifyPerfOverlay = false;
 
+        // Cards visibility (defaults to true)
+        config.showBitrateCard = prefs.getBoolean(SHOW_BITRATE_CARD_PREF_STRING, true);
+        config.showGyroCard = prefs.getBoolean(SHOW_GYRO_CARD_PREF_STRING, true);
+
         // 读取麦克风设置
         config.enableMic = prefs.getBoolean(ENABLE_MIC_PREF_STRING, DEFAULT_ENABLE_MIC);
         config.micBitrate = prefs.getInt(MIC_BITRATE_PREF_STRING, DEFAULT_MIC_BITRATE);
@@ -852,6 +862,8 @@ public class PreferenceConfiguration {
                     .putBoolean(ENABLE_HDR_PREF_STRING, enableHdr)
                     .putBoolean(ENABLE_PERF_OVERLAY_STRING, enablePerfOverlay)
                     .putBoolean(REVERSE_RESOLUTION_PREF_STRING, reverseResolution)
+                    .putBoolean(SHOW_BITRATE_CARD_PREF_STRING, showBitrateCard)
+                    .putBoolean(SHOW_GYRO_CARD_PREF_STRING, showGyroCard)
                     .putString(SCREEN_POSITION_PREF_STRING, positionString)
                     .putInt(SCREEN_OFFSET_X_PREF_STRING, screenOffsetX)
                     .putInt(SCREEN_OFFSET_Y_PREF_STRING, screenOffsetY)
@@ -891,6 +903,8 @@ public class PreferenceConfiguration {
         copy.gyroToRightStick = this.gyroToRightStick;
         copy.gyroFullDeflectionDps = this.gyroFullDeflectionDps;
         copy.gyroActivationKeyCode = this.gyroActivationKeyCode;
+        copy.showBitrateCard = this.showBitrateCard;
+        copy.showGyroCard = this.showGyroCard;
         return copy;
     }
 }
