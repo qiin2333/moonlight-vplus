@@ -526,10 +526,26 @@ public class GameMenu {
         setupSuperMenu(customView, superOptions, dialog);
 
         // 设置码率调整区域（委托卡片控制器）
-        new BitrateCardController(game, conn).setup(customView, dialog);
+        if (game.prefConfig.showBitrateCard) {
+            new BitrateCardController(game, conn).setup(customView, dialog);
+        } else {
+            View bitrate = customView.findViewById(R.id.bitrateAdjustmentContainer);
+            if (bitrate != null) bitrate.setVisibility(View.GONE);
+        }
 
         // 设置陀螺仪控制卡片（委托卡片控制器）
-        new GyroCardController(game).setup(customView, dialog);
+        if (game.prefConfig.showGyroCard) {
+            new GyroCardController(game).setup(customView, dialog);
+        } else {
+            View gyro = customView.findViewById(R.id.gyroAdjustmentContainer);
+            if (gyro != null) gyro.setVisibility(View.GONE);
+        }
+
+        // 卡片编辑入口
+        View cardEditor = customView.findViewById(R.id.cardEditorButton);
+        if (cardEditor != null) {
+            cardEditor.setOnClickListener(v -> showCardEditorDialog());
+        }
 
         // 设置对话框属性
         setupDialogProperties(dialog);
@@ -558,6 +574,32 @@ public class GameMenu {
         });
 
         dialog.show();
+    }
+
+    private void showCardEditorDialog() {
+        final String[] items = new String[] {"Bitrate", "Gyro"};
+        final boolean[] checked = new boolean[] {game.prefConfig.showBitrateCard, game.prefConfig.showGyroCard};
+        new AlertDialog.Builder(game, R.style.AppDialogStyle)
+                .setTitle("Visible cards")
+                .setMultiChoiceItems(items, checked, (d, which, isChecked) -> {
+                    checked[which] = isChecked;
+                })
+                .setPositiveButton("OK", (d, w) -> {
+                    game.prefConfig.showBitrateCard = checked[0];
+                    game.prefConfig.showGyroCard = checked[1];
+                    // Persist
+                    game.prefConfig.writePreferences(game);
+                    // Update UI within current dialog
+                    View root = activeCustomView != null ? activeCustomView : d instanceof AlertDialog ? ((AlertDialog) d).getOwnerActivity().findViewById(android.R.id.content) : null;
+                    if (root != null) {
+                        View bitrate = root.findViewById(R.id.bitrateAdjustmentContainer);
+                        if (bitrate != null) bitrate.setVisibility(game.prefConfig.showBitrateCard ? View.VISIBLE : View.GONE);
+                        View gyro = root.findViewById(R.id.gyroAdjustmentContainer);
+                        if (gyro != null) gyro.setVisibility(game.prefConfig.showGyroCard ? View.VISIBLE : View.GONE);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     /**
