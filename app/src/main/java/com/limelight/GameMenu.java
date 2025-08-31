@@ -82,6 +82,7 @@ public class GameMenu {
         ICON_MAP.put("mouse_mode", R.drawable.ic_mouse_cute);
         ICON_MAP.put("game_menu_mouse_emulation", R.drawable.ic_mouse_emulation_cute);
         ICON_MAP.put("crown_function_menu", R.drawable.ic_super_crown);
+        ICON_MAP.put("game_menu_test_local_rumble", R.drawable.ic_rumble_cute);
     }
 
     /**
@@ -1418,7 +1419,8 @@ public class GameMenu {
                 "mouse_mode",
                 true, true));
 
-        // 王冠功能
+        // 王冠功能 - 只在开启王冠功能时显示
+        if (game.isCrownFeatureEnabled()) {
             normalOptions.add(new MenuOption(
                     getString(R.string.game_menu_crown_function),
                     false,
@@ -1427,6 +1429,7 @@ public class GameMenu {
                     true,
                     true
             ));
+        }
 
         if (device != null) {
             normalOptions.addAll(device.getGameMenuOptions());
@@ -1444,14 +1447,14 @@ public class GameMenu {
         normalOptions.add(new MenuOption(getString(R.string.game_menu_send_keys),
                 false, this::showSpecialKeysMenu, "game_menu_send_keys", true, true));
 
+        // 本地测试震动
+        normalOptions.add(new MenuOption("震动测试", false, this::testLocalRumbleAll, "game_menu_test_local_rumble", true));
+
         normalOptions.add(new MenuOption(getString(R.string.game_menu_disconnect), true,
                 game::disconnect, "game_menu_disconnect", true));
 
         normalOptions.add(new MenuOption(getString(R.string.game_menu_disconnect_and_quit), true,
                 this::disconnectAndQuit, "game_menu_disconnect_and_quit", true));
-
-        // 本地测试震动
-        normalOptions.add(new MenuOption("本地测试震动", false, this::testLocalRumbleAll, null, true));
 
         // normalOptions.add(new MenuOption(getString(R.string.game_menu_cancel), false, null, null, true));
     }

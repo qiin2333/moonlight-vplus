@@ -293,9 +293,7 @@ public class UsbDriverService extends Service implements UsbDriverListener {
                 // We must not call isRecognizedInputDevice() because wireless controllers don't share the same product ID as the dongle
                 ((!kernelSupportsXbox360W() || claimAllAvailable) && Xbox360WirelessDongle.canClaimDevice(device)) ||
                 // Switch Pro: 只在 claimAllAvailable 或系统未识别为输入设备时接管，避免冲突
-                ((!isRecognizedInputDevice(device) || claimAllAvailable) && SwitchProController.canClaimDevice(device)) ||
-                // DualSense: 同理按策略接管
-                ((!isRecognizedInputDevice(device) || claimAllAvailable) && DualSenseController.canClaimDevice(device));
+                ((!isRecognizedInputDevice(device) || claimAllAvailable) && SwitchProController.canClaimDevice(device));
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
