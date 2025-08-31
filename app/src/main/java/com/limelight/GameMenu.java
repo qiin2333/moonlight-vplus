@@ -525,8 +525,11 @@ public class GameMenu {
         // 设置超级菜单
         setupSuperMenu(customView, superOptions, dialog);
 
-        // 设置码率调整区域
-        setupBitrateAdjustmentArea(customView, dialog);
+        // 设置码率调整区域（委托卡片控制器）
+        new BitrateCardController(game, conn).setup(customView, dialog);
+
+        // 设置陀螺仪控制卡片（委托卡片控制器）
+        new GyroCardController(game).setup(customView, dialog);
 
         // 设置对话框属性
         setupDialogProperties(dialog);
@@ -931,93 +934,6 @@ public class GameMenu {
         } else {
             setupEmptySuperMenu(superListView);
         }
-    }
-
-    /**
-     * 设置码率调整区域
-     */
-    private void setupBitrateAdjustmentArea(View customView, AlertDialog dialog) {
-        View bitrateContainer = customView.findViewById(R.id.bitrateAdjustmentContainer);
-        SeekBar bitrateSeekBar = customView.findViewById(R.id.bitrateSeekBar);
-        TextView currentBitrateText = customView.findViewById(R.id.currentBitrateText);
-        TextView bitrateValueText = customView.findViewById(R.id.bitrateValueText);
-        ImageView bitrateTipIcon = customView.findViewById(R.id.bitrateTipIcon);
-
-        if (bitrateContainer == null || bitrateSeekBar == null || 
-            currentBitrateText == null || bitrateValueText == null || bitrateTipIcon == null) {
-            return;
-        }
-
-        int currentBitrate = conn.getCurrentBitrate();
-        int currentBitrateMbps = currentBitrate / 1000;
-
-        currentBitrateText.setText(String.format(getString(R.string.game_menu_bitrate_current), currentBitrateMbps));
-
-        // 设置滑动条
-        bitrateSeekBar.setMax(1995); // 200000 - 500 = 199500，每100kbps一个单位
-        bitrateSeekBar.setProgress((currentBitrate - 500) / 100);
-
-        bitrateValueText.setText(String.format("%d Mbps", currentBitrateMbps));
-
-        bitrateTipIcon.setOnClickListener(v -> {
-            // 显示提示对话框
-            new AlertDialog.Builder(game, R.style.AppDialogStyle)
-                .setMessage(getString(R.string.game_menu_bitrate_tip))
-                .setPositiveButton("懂了", null)
-                .show();
-        });
-
-        // 添加延迟应用码率的机制
-        final Handler bitrateHandler = new Handler();
-        final Runnable bitrateApplyRunnable = new Runnable() {
-            @Override
-            public void run() {
-                int newBitrate = (bitrateSeekBar.getProgress() * 100) + 500;
-                adjustBitrate(newBitrate);
-            }
-        };
-
-        bitrateSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (fromUser) {
-                    int newBitrate = (progress * 100) + 500; // 500 + progress * 100
-                    int newBitrateMbps = newBitrate / 1000;
-                    bitrateValueText.setText(String.format("%d Mbps", newBitrateMbps));
-                    
-                    bitrateHandler.removeCallbacks(bitrateApplyRunnable);
-                    bitrateHandler.postDelayed(bitrateApplyRunnable, 500);
-                }
-            }
-            
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-                // 开始拖动时取消之前的延迟应用
-                bitrateHandler.removeCallbacks(bitrateApplyRunnable);
-            }
-            
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                // 停止拖动时立即应用码率
-                bitrateHandler.removeCallbacks(bitrateApplyRunnable);
-                int newBitrate = (seekBar.getProgress() * 100) + 500;
-                adjustBitrate(newBitrate);
-            }
-        });
-
-        // 添加键盘/控制器事件支持
-        bitrateSeekBar.setOnKeyListener((v, keyCode, event) -> {
-            if (event.getAction() == android.view.KeyEvent.ACTION_DOWN) {
-                if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT || 
-                    keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) {
-                    // 控制器左右键改变滑动条值后，延迟应用码率
-                    bitrateHandler.removeCallbacks(bitrateApplyRunnable);
-                    bitrateHandler.postDelayed(bitrateApplyRunnable, 300);
-                    return false;
-                }
-            }
-            return false;
-        });
     }
 
     /**

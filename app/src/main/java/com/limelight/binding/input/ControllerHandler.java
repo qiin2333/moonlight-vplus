@@ -133,6 +133,101 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     private final PreferenceConfiguration prefConfig;
     private short currentControllers, initialControllers;
 
+    // Gyro-to-right-stick mapping sensitivity (deg/s for full deflection)
+    private static final float GYRO_DEFAULT_FULL_DEFLECTION_DPS = 180.0f;
+    private static final float TRIGGER_ACTIVATE_THRESHOLD = 0.2f;
+    private SensorEventListener gyroToStickListener;
+
+    private static float clampFloat(float v, float min, float max) {
+        return v < min ? min : (v > max ? max : v);
+    }
+
+    private void applyGyroToRightStick(short controllerNumber, float gyroXDegPerSec, float gyroYDegPerSec) {
+        // Map deg/s to [-1,1] stick values using a simple linear scale, with clamping
+        float fullDeflection = prefConfig != null && prefConfig.gyroFullDeflectionDps > 0 ?
+                prefConfig.gyroFullDeflectionDps : GYRO_DEFAULT_FULL_DEFLECTION_DPS;
+        float scaledX = clampFloat(gyroXDegPerSec / fullDeflection, -1.0f, 1.0f);
+        float scaledY = clampFloat(gyroYDegPerSec / fullDeflection, -1.0f, 1.0f);
+
+        // Update the default context for this controller number by fusing at send time
+        for (int i = 0; i < usbDeviceContexts.size(); i++) {
+            UsbDeviceContext context = usbDeviceContexts.valueAt(i);
+            if (context.controllerNumber == controllerNumber) {
+                context.rightStickX = (short) (scaledX * 0x7FFE);
+                context.rightStickY = (short) (-scaledY * 0x7FFE);
+                // Keep other state intact and send a fused packet
+                sendControllerInputPacket(context);
+                return;
+            }
+        }
+
+        for (int i = 0; i < inputDeviceContexts.size(); i++) {
+            InputDeviceContext context = inputDeviceContexts.valueAt(i);
+            if (context.controllerNumber == controllerNumber) {
+                context.rightStickX = (short) (scaledX * 0x7FFE);
+                context.rightStickY = (short) (-scaledY * 0x7FFE);
+                sendControllerInputPacket(context);
+                return;
+            }
+        }
+    }
+
+    public void setGyroToRightStickEnabled(boolean enabled) {
+        prefConfig.gyroToRightStick = enabled;
+
+        if (!enabled) {
+            if (gyroToStickListener != null) {
+                try {
+                    deviceSensorManager.unregisterListener(gyroToStickListener);
+                } catch (Exception ignored) {}
+                gyroToStickListener = null;
+            }
+            return;
+        }
+
+        if (gyroToStickListener != null) {
+            return;
+        }
+
+        Sensor gyro = deviceSensorManager != null ? deviceSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE) : null;
+        if (gyro == null) {
+            return;
+        }
+
+        gyroToStickListener = new SensorEventListener() {
+            @Override
+            public void onSensorChanged(SensorEvent event) {
+                // Only apply when a hold is active for controller 0
+                if (isGyroHoldActiveFor((short) 0)) {
+                    float gx = event.values[0] * 57.2957795f;
+                    float gy = event.values[1] * 57.2957795f;
+                    applyGyroToRightStick((short) 0, gx, gy);
+                }
+            }
+
+            @Override
+            public void onAccuracyChanged(Sensor sensor, int accuracy) { }
+        };
+
+        try {
+            // Use a reasonable rate; SENSOR_DELAY_GAME ~ 50 Hz
+            deviceSensorManager.registerListener(gyroToStickListener, gyro, SensorManager.SENSOR_DELAY_GAME);
+        } catch (Exception ignored) {}
+    }
+
+    private boolean isGyroHoldActiveFor(short controllerNumber) {
+        for (int i = 0; i < usbDeviceContexts.size(); i++) {
+            UsbDeviceContext c = usbDeviceContexts.valueAt(i);
+            if (c.controllerNumber == controllerNumber && c.gyroHoldActive) return true;
+        }
+        for (int i = 0; i < inputDeviceContexts.size(); i++) {
+            InputDeviceContext c = inputDeviceContexts.valueAt(i);
+            if (c.controllerNumber == controllerNumber && c.gyroHoldActive) return true;
+        }
+        if (defaultContext.controllerNumber == controllerNumber && defaultContext.gyroHoldActive) return true;
+        return false;
+    }
+
     public ControllerHandler(Activity activityContext, NvConnection conn, GameGestures gestures, PreferenceConfiguration prefConfig) {
         this.activityContext = activityContext;
         this.conn = conn;
@@ -2208,11 +2303,18 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
                 if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO) {
                     // Convert from rad/s to deg/s
+                    float gx = sensorEvent.values[x] * xFactor * 57.2957795f;
+                    float gy = sensorEvent.values[y] * yFactor * 57.2957795f;
+                    float gz = sensorEvent.values[z] * zFactor * 57.2957795f;
+
+                    if (prefConfig.gyroToRightStick) {
+                        // Map device/controller gyro to right stick
+                        applyGyroToRightStick(controllerNumber, gx, gy);
+                        return;
+                    }
+
                     conn.sendControllerMotionEvent((byte) controllerNumber,
-                            motionType,
-                            sensorEvent.values[x] * xFactor * 57.2957795f,
-                            sensorEvent.values[y] * yFactor * 57.2957795f,
-                            sensorEvent.values[z] * zFactor * 57.2957795f);
+                            motionType, gx, gy, gz);
                 }
                 else {
                     // Pass m/s^2 directly without conversion
@@ -2479,6 +2581,9 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                 return true;
             }
             context.leftTrigger = 0;
+            if (prefConfig.gyroToRightStick && prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_L2) {
+                context.gyroHoldActive = false;
+            }
             break;
         case KeyEvent.KEYCODE_BUTTON_R2:
             if (context.rightTriggerAxisUsed) {
@@ -2486,6 +2591,9 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                 return true;
             }
             context.rightTrigger = 0;
+            if (prefConfig.gyroToRightStick && prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_R2) {
+                context.gyroHoldActive = false;
+            }
             break;
         case KeyEvent.KEYCODE_UNKNOWN:
             // Paddles aren't mapped in any of the Android key layout files,
@@ -2691,6 +2799,9 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                 return true;
             }
             context.leftTrigger = (byte)0xFF;
+            if (prefConfig.gyroToRightStick && prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_L2) {
+                context.gyroHoldActive = true;
+            }
             break;
         case KeyEvent.KEYCODE_BUTTON_R2:
             if (context.rightTriggerAxisUsed) {
@@ -2698,6 +2809,9 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                 return true;
             }
             context.rightTrigger = (byte)0xFF;
+            if (prefConfig.gyroToRightStick && prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_R2) {
+                context.gyroHoldActive = true;
+            }
             break;
         case KeyEvent.KEYCODE_UNKNOWN:
             // Paddles aren't mapped in any of the Android key layout files,
@@ -2819,6 +2933,17 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             return;
         }
 
+        // Gyro hold activation via analog LT/RT thresholds when mapped to L2/R2
+        if (prefConfig.gyroToRightStick) {
+            if (prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_L2) {
+                context.gyroHoldActive = (leftTrigger >= TRIGGER_ACTIVATE_THRESHOLD);
+            } else if (prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_R2) {
+                context.gyroHoldActive = (rightTrigger >= TRIGGER_ACTIVATE_THRESHOLD);
+            }
+        } else {
+            context.gyroHoldActive = false;
+        }
+
         Vector2d leftStickVector = populateCachedVector(leftStickX, leftStickY);
 
         handleDeadZone(leftStickVector, context.leftStickDeadzoneRadius);
@@ -2826,12 +2951,20 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         context.leftStickX = (short) (leftStickVector.getX() * 0x7FFE);
         context.leftStickY = (short) (-leftStickVector.getY() * 0x7FFE);
 
-        Vector2d rightStickVector = populateCachedVector(rightStickX, rightStickY);
+        // If gyro-hold is active for this context, override right stick with gyro-derived values
+        if (prefConfig.gyroToRightStick && context.gyroHoldActive) {
+            Vector2d rightStickVector = populateCachedVector(context.rightStickX / 32766.0f, -context.rightStickY / 32766.0f);
+            handleDeadZone(rightStickVector, context.rightStickDeadzoneRadius);
+            context.rightStickX = (short) (rightStickVector.getX() * 0x7FFE);
+            context.rightStickY = (short) (-rightStickVector.getY() * 0x7FFE);
+        } else {
+            Vector2d rightStickVector = populateCachedVector(rightStickX, rightStickY);
 
-        handleDeadZone(rightStickVector, context.rightStickDeadzoneRadius);
+            handleDeadZone(rightStickVector, context.rightStickDeadzoneRadius);
 
-        context.rightStickX = (short) (rightStickVector.getX() * 0x7FFE);
-        context.rightStickY = (short) (-rightStickVector.getY() * 0x7FFE);
+            context.rightStickX = (short) (rightStickVector.getX() * 0x7FFE);
+            context.rightStickY = (short) (-rightStickVector.getY() * 0x7FFE);
+        }
 
         if (leftTrigger <= context.triggerDeadzone) {
             leftTrigger = 0;
@@ -2876,7 +3009,13 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             return;
         }
 
-        // 将来自手柄自身 IMU 的数据直接上报到主机
+        // 当启用“陀螺仪模拟右摇杆”时，将手柄IMU的陀螺仪数据映射为右摇杆输入
+        if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO && prefConfig.gyroToRightStick) {
+            applyGyroToRightStick(context.controllerNumber, x, y);
+            return;
+        }
+
+        // 否则照常上报IMU数据到主机
         conn.sendControllerMotionEvent((byte) context.controllerNumber, motionType, x, y, z);
     }
 
@@ -2902,6 +3041,8 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         public short rightStickY = 0x0000;
         public short leftStickX = 0x0000;
         public short leftStickY = 0x0000;
+
+        public boolean gyroHoldActive;
 
         public boolean mouseEmulationActive;
         public int mouseEmulationLastInputMap;

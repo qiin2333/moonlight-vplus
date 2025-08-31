@@ -8,6 +8,7 @@ import android.preference.PreferenceManager;
 import android.view.Display;
 import android.graphics.Point;
 import android.view.WindowManager;
+import android.view.KeyEvent;
 
 import com.limelight.nvstream.jni.MoonBridge;
 
@@ -268,6 +269,12 @@ public class PreferenceConfiguration {
     public boolean gamepadTouchpadAsMouse;
     public boolean gamepadMotionSensorsFallbackToDevice;
     public boolean reverseResolution;
+    // Runtime-only: enable mapping gyroscope motion to right analog stick
+    public boolean gyroToRightStick;
+    // Runtime-only: sensitivity in deg/s for full stick deflection
+    public float gyroFullDeflectionDps;
+    // Runtime-only: activation keycode to hold (Android keycode); 0 means LT analog, 1 means RT analog, otherwise Android key
+    public int gyroActivationKeyCode;
 
     // 麦克风设置
     public boolean enableMic;
@@ -790,6 +797,11 @@ public class PreferenceConfiguration {
         
         config.useExternalDisplay = prefs.getBoolean("use_external_display", false);
 
+        // Runtime-only defaults; controlled via in-stream GameMenu
+        config.gyroToRightStick = false;
+        config.gyroFullDeflectionDps = 180.0f;
+        config.gyroActivationKeyCode = KeyEvent.KEYCODE_BUTTON_L2;
+
         return config;
     }
 
@@ -876,6 +888,9 @@ public class PreferenceConfiguration {
         copy.micBitrate = this.micBitrate;
         copy.enableEscMenu = this.enableEscMenu;
         copy.enableNativeMousePointer = this.enableNativeMousePointer;
+        copy.gyroToRightStick = this.gyroToRightStick;
+        copy.gyroFullDeflectionDps = this.gyroFullDeflectionDps;
+        copy.gyroActivationKeyCode = this.gyroActivationKeyCode;
         return copy;
     }
 }
