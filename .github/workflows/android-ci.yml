@@ -1,8 +1,16 @@
 name: Android CI
 
-'on':
-  push:
+on:
   pull_request:
+    branches:
+      - master
+    types:
+      - opened
+      - synchronize
+      - reopened
+  push:
+    branches:
+      - master
   workflow_dispatch:
 
 concurrency:
@@ -166,7 +174,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: Moonlight V+ ${{ env.VERSION_NAME != '' && env.VERSION_NAME || github.ref_name }}
+          name: ${{ env.VERSION_NAME != '' && env.VERSION_NAME || github.ref_name }}
           draft: false
           prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') }}
           body_path: release_notes.md
