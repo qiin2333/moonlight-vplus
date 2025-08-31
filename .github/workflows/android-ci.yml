@@ -53,6 +53,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
+          VERSION=${VERSION#v}
           echo "VERSION_NAME=$VERSION" >> $GITHUB_ENV
           echo "Using version from tag: $VERSION"
 
@@ -131,13 +132,25 @@ jobs:
           set -e
           DATE=$(date +'%Y-%m-%d')
           V="${VERSION_NAME:-${GITHUB_REF#refs/tags/}}"
+          V="${V#v}"
+          git fetch --tags --force
+          CUR_TAG="${GITHUB_REF#refs/tags/}"
+          PREV_TAG=$(git tag --sort=-creatordate | sed -n '2p' || true)
+          if [ -n "$PREV_TAG" ]; then
+            CHANGES=$(git log --pretty=format:'- %s (%h)' "${PREV_TAG}..${CUR_TAG}" || true)
+          else
+            CHANGES=$(git log --pretty=format:'- %s (%h)' -n 100 || true)
+          fi
+          if [ -z "$CHANGES" ]; then
+            CHANGES="- 初始发布"
+          fi
           cat > release_notes.md << EOF
           ## 🌙 Moonlight V+ ${V}
           
           感谢你使用 Moonlight V+！如果喜欢，记得点亮一颗 ⭐～
           
           ### ✨ 更新内容
-          - 在此列出本次更新的亮点与修复项
+          ${CHANGES}
           
           ### 📦 下载
           - APK 文件：Moonlight.V+.${V}.apk
