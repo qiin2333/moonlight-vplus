@@ -259,6 +259,13 @@ public class ElementController {
                 addElement(contentValues);
             }
         });
+        pageEdit.findViewById(R.id.page_edit_add_wheel_pad).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ContentValues contentValues = WheelPad.getInitialInfo();
+                addElement(contentValues);
+            }
+        });
     }
 
 
@@ -383,6 +390,12 @@ public class ElementController {
                 break;
             case Element.ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
                 element = new DigitalCombineButton(attributesMap,
+                        this,
+                        pageDeviceController,
+                        context);
+                break;
+            case Element.ELEMENT_TYPE_WHEEL_PAD:
+                element = new WheelPad(attributesMap,
                         this,
                         pageDeviceController,
                         context);
