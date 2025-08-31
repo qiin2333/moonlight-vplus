@@ -443,6 +443,15 @@
                 android:gravity="center"
                 android:padding="2dp" />
 
+
+            <ImageView
+                android:id="@+id/cardEditorButton"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginStart="4dp"
+                android:src="@android:drawable/ic_menu_edit"
+                android:contentDescription="Edit visible cards" />
+
         </LinearLayout>
 
     </LinearLayout>
