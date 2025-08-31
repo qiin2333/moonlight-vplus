@@ -1,8 +1,11 @@
 apply plugin: 'com.android.application'
 
-// 只在release版本中应用Google Services插件
-if (project.hasProperty('enableAnalytics') || gradle.startParameter.taskNames.any { it.contains('Release') }) {
+// 仅在存在 google-services.json 且满足条件时应用 Google Services 插件
+def hasGoogleServicesJson = file('google-services.json').exists()
+if (hasGoogleServicesJson && (project.hasProperty('enableAnalytics') || gradle.startParameter.taskNames.any { it.contains('Release') })) {
     apply plugin: 'com.google.gms.google-services'
+} else if (!hasGoogleServicesJson) {
+    logger.lifecycle("google-services.json not found; skipping Google Services plugin")
 }
 
 android {
@@ -85,6 +88,24 @@ android {
         }
     }
 
+    // 基于环境变量的可选签名配置（用于 CI 等环境）
+    def keystorePath = System.getenv("KEYSTORE_PATH")
+    def keystorePassword = System.getenv("KEYSTORE_PASSWORD")
+    def envKeyAlias = System.getenv("KEY_ALIAS")
+    def envKeyPassword = System.getenv("KEY_PASSWORD")
+    def hasSigningConfig = keystorePath != null && keystorePassword != null && envKeyAlias != null && envKeyPassword != null && new File(keystorePath).exists()
+
+    signingConfigs {
+        if (hasSigningConfig) {
+            release {
+                storeFile file(keystorePath)
+                storePassword keystorePassword
+                keyAlias envKeyAlias
+                keyPassword envKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix ".debug"
@@ -131,6 +152,9 @@ android {
 
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasSigningConfig && signingConfigs.hasProperty('release')) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 
