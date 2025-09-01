@@ -56,6 +56,7 @@ public abstract class Element extends View {
     public static final int EDIT_COLOR_EDIT = 0xf0dc143c;
     public static final int EDIT_COLOR_SELECT = 0xfffe9900;
     public static final int EDIT_COLOR_SELECTED = 0xff0112ff;
+    public final static int ELEMENT_TYPE_WHEEL_PAD = 54;
 
 
     public interface ElementSelectedCallBack{
