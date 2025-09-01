@@ -276,6 +276,8 @@ public class PreferenceConfiguration {
     public boolean gyroToRightStick;
     // Runtime-only: sensitivity in deg/s for full stick deflection
     public float gyroFullDeflectionDps;
+    // Runtime-only: sensitivity multiplier (higher -> faster)
+    public float gyroSensitivityMultiplier;
     // Runtime-only: activation keycode to hold (Android keycode); 0 means LT analog, 1 means RT analog, otherwise Android key
     public int gyroActivationKeyCode;
     // Card visibility
@@ -810,6 +812,7 @@ public class PreferenceConfiguration {
         // Runtime-only defaults; controlled via in-stream GameMenu
         config.gyroToRightStick = false;
         config.gyroFullDeflectionDps = 180.0f;
+        config.gyroSensitivityMultiplier = 1.0f;
         config.gyroActivationKeyCode = KeyEvent.KEYCODE_BUTTON_L2;
 
         return config;

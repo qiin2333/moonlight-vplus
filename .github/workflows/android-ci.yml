@@ -57,8 +57,15 @@ jobs:
         run: |
           if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
             mkdir -p app
-            printf '%s' "${{ secrets.GOOGLE_SERVICES_JSON }}" > app/google-services.json
-            echo "Created google-services.json from secrets"
+            # 清理并验证 JSON 格式
+            echo '${{ secrets.GOOGLE_SERVICES_JSON }}' | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' > app/google-services.json
+            # 验证 JSON 格式
+            if python3 -m json.tool app/google-services.json > /dev/null 2>&1; then
+              echo "Created valid google-services.json from secrets"
+            else
+              echo "ERROR: Invalid JSON format in GOOGLE_SERVICES_JSON secret"
+              exit 1
+            fi
           else
             echo "GOOGLE_SERVICES_JSON not set; skipping file creation"
           fi
