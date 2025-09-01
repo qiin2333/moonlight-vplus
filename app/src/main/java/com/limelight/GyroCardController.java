@@ -59,19 +59,21 @@ public class GyroCardController {
         }
 
         if (sensSeek != null && sensVal != null) {
-            // Map progress [6..36] -> [60..360] deg/s
-            int current = (int) Math.max(60, Math.min(360, game.prefConfig.gyroFullDeflectionDps));
-            int progress = Math.round(current / 10.0f);
-            sensSeek.setMax(36);
+            // 改为“灵敏度倍数”，越高越快。映射范围：0.5x .. 3.0x（步进 0.1）
+            int max = 25; // 0..25 -> +0..2.5  => 0.5..3.0
+            sensSeek.setMax(max);
+            // 反推当前 multiplier 到 progress
+            float mult = Math.max(0.5f, Math.min(3.0f, game.prefConfig.gyroSensitivityMultiplier > 0 ? game.prefConfig.gyroSensitivityMultiplier : 1.0f));
+            int progress = Math.round((mult - 0.5f) / 0.1f);
             sensSeek.setProgress(progress);
-            sensVal.setText(current + "°/s");
+            sensVal.setText(String.format("%.1fx", mult));
 
             sensSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
                 @Override
                 public void onProgressChanged(SeekBar seekBar, int p, boolean fromUser) {
-                    int dps = Math.max(60, Math.min(360, p * 10));
-                    game.prefConfig.gyroFullDeflectionDps = dps;
-                    sensVal.setText(dps + "°/s");
+                    float m = 0.5f + p * 0.1f;
+                    game.prefConfig.gyroSensitivityMultiplier = m;
+                    sensVal.setText(String.format("%.1fx", m));
                 }
                 @Override public void onStartTrackingTouch(SeekBar seekBar) {}
                 @Override public void onStopTrackingTouch(SeekBar seekBar) {}
