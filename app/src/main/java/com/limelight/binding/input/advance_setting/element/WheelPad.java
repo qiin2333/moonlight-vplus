@@ -1,5 +1,6 @@
 package com.limelight.binding.input.advance_setting.element;
 
+import android.app.AlertDialog;
 import android.content.ContentValues;
 import android.content.Context;
 import android.graphics.Canvas;
@@ -9,12 +10,14 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import android.text.InputFilter;
 import android.util.DisplayMetrics;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import com.limelight.Game;
@@ -41,7 +44,7 @@ public class WheelPad extends Element {
     private String centerText;
     private List<String> segmentValues;
     private List<String> segmentNames;
-    private List<ElementController.SendEventHandler> segmentSendHandlers;
+    private List<List<ElementController.SendEventHandler>> segmentSendHandlersList;
     private int normalColor;
     private int pressedColor;
     private int backgroundColor;
@@ -133,10 +136,30 @@ public class WheelPad extends Element {
             }
         }
 
-        segmentSendHandlers = new ArrayList<>();
+        updateAllSegmentSendHandlers();
+    }
+
+    private void updateAllSegmentSendHandlers() {
+        segmentSendHandlersList = new ArrayList<>();
         for (String value : segmentValues) {
-            segmentSendHandlers.add(controller.getSendEventHandler(value));
+            segmentSendHandlersList.add(getHandlersForValue(value));
         }
+    }
+
+    private List<ElementController.SendEventHandler> getHandlersForValue(String value) {
+        List<ElementController.SendEventHandler> handlers = new ArrayList<>();
+        if (value == null || value.isEmpty() || value.equals("null")) {
+            return handlers;
+        }
+
+        String[] keyValues = value.split("\\+");
+        for (String singleKeyValue : keyValues) {
+            ElementController.SendEventHandler handler = elementController.getSendEventHandler(singleKeyValue.trim());
+            if (handler != null) {
+                handlers.add(handler);
+            }
+        }
+        return handlers;
     }
 
     @Override
@@ -194,7 +217,7 @@ public class WheelPad extends Element {
                     if (i < segmentNames.size() && segmentNames.get(i) != null && !segmentNames.get(i).isEmpty()) {
                         displayName = segmentNames.get(i);
                     } else {
-                        displayName = pageDeviceController.getKeyNameByValue(segmentValues.get(i));
+                        displayName = getDisplayStringForValue(segmentValues.get(i));
                     }
                     canvas.drawTextOnPath(displayName, textPath, 0, 10, paintText);
                 }
@@ -221,7 +244,7 @@ public class WheelPad extends Element {
                     if (activeIndex < segmentNames.size() && segmentNames.get(activeIndex) != null && !segmentNames.get(activeIndex).isEmpty()) {
                         displayName = segmentNames.get(activeIndex);
                     } else {
-                        displayName = pageDeviceController.getKeyNameByValue(segmentValues.get(activeIndex));
+                        displayName = getDisplayStringForValue(segmentValues.get(activeIndex));
                     }
                     float textY = centerY - ((paintCenterText.descent() + paintCenterText.ascent()) / 2);
                     canvas.drawText(displayName, centerX, textY, paintCenterText);
@@ -238,29 +261,22 @@ public class WheelPad extends Element {
 
     @Override
     public boolean onElementTouchEvent(MotionEvent event) {
-        // 在编辑或选择模式下，控件应该总是响应触摸以便移动或选中
         if (elementController.getMode() != ElementController.Mode.Normal) {
             return true;
         }
 
-        // 如果不是弹出模式（即直接模式），则行为保持不变，总是处理触摸
         if (!isPopupMode) {
             handleDirectModeTouchEvent(event);
             return true;
         }
 
-        // 1. 如果轮盘已经被激活 (isWheelActive == true)，
-        //    那么必须继续处理所有的后续事件（MOVE, UP），所以直接调用处理方法并返回 true。
         if (isWheelActive) {
             handlePopupModeTouchEvent(event);
             return true;
         }
 
-        // 2. 如果轮盘还未被激活，我们只关心初始的 ACTION_DOWN 事件。
-        //    并且，这个 ACTION_DOWN 事件必须发生在中心圆内部。
         int action = event.getActionMasked();
         if (action == MotionEvent.ACTION_DOWN) {
-            // 计算触摸点到中心的距离
             float x = event.getX();
             float y = event.getY();
             float centerX = getWidth() / 2.0f;
@@ -272,19 +288,13 @@ public class WheelPad extends Element {
             float dy = y - centerY;
             double distance = Math.sqrt(dx * dx + dy * dy);
 
-            // 如果触摸点在中心激活区域内
             if (distance <= innerRadius) {
-                // 调用处理方法来激活轮盘
                 handlePopupModeTouchEvent(event);
-                // 返回 true，表示我们开始处理这个触摸序列（后续的MOVE和UP事件会发给我们）
                 return true;
             } else {
-                // 如果触摸点在中心圆之外，返回 false，让触摸事件可以“穿透”过去
                 return false;
             }
         }
-
-        // 3. 对于轮盘未激活时的其他事件（如用户在别处按下手指然后滑入本视图），我们不处理。
         return false;
     }
 
@@ -355,10 +365,14 @@ public class WheelPad extends Element {
                 break;
             case MotionEvent.ACTION_UP:
                 if (isWheelActive) {
-                    if (activeIndex != -1 && activeIndex < segmentSendHandlers.size()) {
-                        ElementController.SendEventHandler handler = segmentSendHandlers.get(activeIndex);
-                        handler.sendEvent(true);
-                        handler.sendEvent(false);
+                    if (activeIndex != -1 && activeIndex < segmentSendHandlersList.size()) {
+                        List<ElementController.SendEventHandler> handlers = segmentSendHandlersList.get(activeIndex);
+                        for (ElementController.SendEventHandler handler : handlers) {
+                            handler.sendEvent(true);
+                        }
+                        for (int i = handlers.size() - 1; i >= 0; i--) {
+                            handlers.get(i).sendEvent(false);
+                        }
                     }
                     isWheelActive = false;
                     activeIndex = -1;
@@ -377,11 +391,18 @@ public class WheelPad extends Element {
 
     private void updateSendingState() {
         if (activeIndex != lastActiveIndex) {
-            if (lastActiveIndex != -1 && lastActiveIndex < segmentSendHandlers.size()) {
-                segmentSendHandlers.get(lastActiveIndex).sendEvent(false);
+            if (lastActiveIndex != -1 && lastActiveIndex < segmentSendHandlersList.size()) {
+                List<ElementController.SendEventHandler> lastHandlers = segmentSendHandlersList.get(lastActiveIndex);
+                for (int i = lastHandlers.size() - 1; i >= 0; i--) {
+                    lastHandlers.get(i).sendEvent(false);
+                }
             }
-            if (activeIndex != -1 && activeIndex < segmentSendHandlers.size()) {
-                segmentSendHandlers.get(activeIndex).sendEvent(true);
+
+            if (activeIndex != -1 && activeIndex < segmentSendHandlersList.size()) {
+                List<ElementController.SendEventHandler> activeHandlers = segmentSendHandlersList.get(activeIndex);
+                for (ElementController.SendEventHandler handler : activeHandlers) {
+                    handler.sendEvent(true);
+                }
             }
             lastActiveIndex = activeIndex;
         }
@@ -672,17 +693,14 @@ public class WheelPad extends Element {
             segmentValues.remove(segmentValues.size() - 1);
             segmentNames.remove(segmentNames.size() - 1);
         }
-        segmentSendHandlers.clear();
-        for (String value : segmentValues) {
-            segmentSendHandlers.add(elementController.getSendEventHandler(value));
-        }
+        updateAllSegmentSendHandlers();
         invalidate();
     }
 
     protected void setSegmentValue(int index, String value) {
         if (index >= 0 && index < segmentValues.size()) {
             segmentValues.set(index, value);
-            segmentSendHandlers.set(index, elementController.getSendEventHandler(value));
+            segmentSendHandlersList.set(index, getHandlersForValue(value));
             invalidate();
         }
     }
@@ -726,6 +744,125 @@ public class WheelPad extends Element {
         }
     }
 
+    private String getDisplayStringForValue(String value) {
+        if (value == null || value.isEmpty() || value.equals("null")) {
+            return "空";
+        }
+        String[] singleKeyValues = value.split("\\+");
+        List<String> keyNames = new ArrayList<>();
+        for (String singleKeyValue : singleKeyValues) {
+            keyNames.add(pageDeviceController.getKeyNameByValue(singleKeyValue));
+        }
+        return String.join(" + ", keyNames);
+    }
+
+    private void updateKeyCombinationDisplay(LinearLayout keysContainer, List<String> currentKeys) {
+        keysContainer.removeAllViews();
+        Context context = keysContainer.getContext();
+
+        if (currentKeys.isEmpty()) {
+            TextView emptyText = new TextView(context);
+            emptyText.setText("当前无按键，请点击“添加”");
+            emptyText.setPadding(0, 10, 0, 10);
+            keysContainer.addView(emptyText);
+        } else {
+            for (int i = 0; i < currentKeys.size(); i++) {
+                final int keyIndex = i;
+                TextView keyView = new TextView(context);
+                keyView.setText(pageDeviceController.getKeyNameByValue(currentKeys.get(keyIndex)) + "  (点击移除)");
+                keyView.setTextSize(16);
+                keyView.setBackgroundResource(R.drawable.enabled_square);
+                keyView.setPadding(20, 15, 20, 15);
+                keyView.setGravity(Gravity.CENTER);
+
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                params.setMargins(0, 5, 0, 5);
+                keyView.setLayoutParams(params);
+
+                keyView.setOnClickListener(v -> {
+                    currentKeys.remove(keyIndex);
+                    updateKeyCombinationDisplay(keysContainer, currentKeys);
+                });
+                keysContainer.addView(keyView);
+            }
+        }
+    }
+
+    private void showKeyCombinationDialog(Context context, final int index, final TextView valueText) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("编辑按键(可组合) (分区 " + (index + 1) + ")");
+
+        // 1. 创建主布局 (垂直方向)
+        LinearLayout dialogLayout = new LinearLayout(context);
+        dialogLayout.setOrientation(LinearLayout.VERTICAL);
+        dialogLayout.setPadding(30, 20, 30, 20);
+
+        // 2. 创建用于显示按键的容器
+        LinearLayout keysContainer = new LinearLayout(context);
+        keysContainer.setOrientation(LinearLayout.VERTICAL);
+
+        // 3. 创建 ScrollView 并将 keysContainer 放入其中
+        ScrollView scrollView = new ScrollView(context);
+        // 设置布局参数，让 ScrollView 占据所有可用空间 (权重为1)
+        LinearLayout.LayoutParams scrollParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                0, // 高度设为0，由权重决定
+                1.0f
+        );
+        scrollParams.setMargins(0,0,0,20); // 给滚动区域和按钮之间增加一些间距
+        scrollView.setLayoutParams(scrollParams);
+        scrollView.addView(keysContainer); // 将按键容器放入滚动视图
+
+        // 获取当前按键列表
+        String currentValue = segmentValues.get(index);
+        final List<String> currentKeys = new ArrayList<>();
+        if (currentValue != null && !currentValue.isEmpty() && !currentValue.equals("null")) {
+            currentKeys.addAll(Arrays.asList(currentValue.split("\\+")));
+        }
+
+        // 初始显示
+        updateKeyCombinationDisplay(keysContainer, currentKeys);
+
+        // 创建 "添加按键" 按钮
+        Button addButton = new Button(context);
+        addButton.setText("添加按键");
+
+        // 4. 按正确的顺序将 ScrollView 和 Button 添加到主布局中
+        dialogLayout.addView(scrollView); // 先添加可滚动区域
+        dialogLayout.addView(addButton);  // 再添加按钮
+
+        // 设置对话框的视图和按钮
+        builder.setView(dialogLayout);
+        builder.setPositiveButton("确定", (dialog, which) -> {
+            String finalValue = currentKeys.isEmpty() ? "null" : String.join("+", currentKeys);
+            setSegmentValue(index, finalValue);
+            valueText.setText(getDisplayStringForValue(finalValue));
+            save();
+        });
+        builder.setNegativeButton("取消", (dialog, which) -> dialog.dismiss());
+
+        // 创建对话框实例
+        final AlertDialog dialog = builder.create();
+
+        // 为“添加按键”按钮设置监听器
+        addButton.setOnClickListener(v -> {
+            dialog.hide();
+            PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
+                @Override
+                public void OnKeyClick(TextView key) {
+                    currentKeys.add(key.getTag().toString());
+                    dialog.show();
+                    updateKeyCombinationDisplay(keysContainer, currentKeys);
+                }
+            };
+            pageDeviceController.open(deviceCallBack, View.VISIBLE, View.VISIBLE, View.VISIBLE);
+        });
+
+        // 显示对话框
+        dialog.show();
+    }
+
     private void updateValuesContainerUI() {
         valuesContainer.removeAllViews();
         for (int i = 0; i < segmentCount; i++) {
@@ -749,17 +886,10 @@ public class WheelPad extends Element {
                 }
             });
 
-            valueText.setText(pageDeviceController.getKeyNameByValue(segmentValues.get(i)));
+            valueText.setText(getDisplayStringForValue(segmentValues.get(i)));
+
             valueText.setOnClickListener(v -> {
-                PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
-                    @Override
-                    public void OnKeyClick(TextView key) {
-                        setSegmentValue(index, key.getTag().toString());
-                        ((TextView) v).setText(key.getText());
-                        save();
-                    }
-                };
-                pageDeviceController.open(deviceCallBack, View.VISIBLE, View.VISIBLE, View.VISIBLE);
+                showKeyCombinationDialog(getContext(), index, valueText);
             });
             valuesContainer.addView(valueView);
         }

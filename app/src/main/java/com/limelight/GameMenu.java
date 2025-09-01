@@ -370,11 +370,20 @@ public class GameMenu {
     }
 
     /**
-     * 切换王冠功能
+     * 切换王冠功能并刷新菜单
      */
     private void toggleCrownFeature() {
         game.setCrownFeatureEnabled(!game.isCrownFeatureEnabled());
         Toast.makeText(game, game.isCrownFeatureEnabled() ? getString(R.string.crown_switch_to_crown) : getString(R.string.crown_switch_to_normal), Toast.LENGTH_SHORT).show();
+
+        // 刷新整个菜单以显示王冠功能按钮
+        if (activeDialog != null && activeDialog.isShowing() && game.isCrownFeatureEnabled()) {
+            activeDialog.dismiss(); // 先关闭当前对话框
+            showMenu(); // 重新显示菜单
+        }
+        else if (activeDialog != null && activeDialog.isShowing() && !game.isCrownFeatureEnabled()) {
+            activeDialog.dismiss();
+        }
     }
 
     /**
