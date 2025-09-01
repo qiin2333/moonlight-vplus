@@ -143,20 +143,26 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     }
 
     private void applyGyroToRightStick(short controllerNumber, float gyroXDegPerSec, float gyroYDegPerSec) {
-        // Map deg/s to [-1,1] stick values using a simple linear scale, with clamping
-        float fullDeflection = prefConfig != null && prefConfig.gyroFullDeflectionDps > 0 ?
-                prefConfig.gyroFullDeflectionDps : GYRO_DEFAULT_FULL_DEFLECTION_DPS;
-        float scaledX = clampFloat(gyroXDegPerSec / fullDeflection, -1.0f, 1.0f);
-        float scaledY = clampFloat(gyroYDegPerSec / fullDeflection, -1.0f, 1.0f);
+        // Map deg/s to [-1,1] stick values using sensitivity multiplier
+        float effectiveSensitivity = 180.0f / prefConfig.gyroSensitivityMultiplier;
+        float scaledX = clampFloat(gyroXDegPerSec / effectiveSensitivity, -1.0f, 1.0f);
+        float scaledY = clampFloat(gyroYDegPerSec / effectiveSensitivity, -1.0f, 1.0f);
 
-        // Update the default context for this controller number by fusing at send time
+        short mappedX = (short) (scaledX * 0x7FFE);
+        short mappedY = (short) (-scaledY * 0x7FFE);
+
+        // Cache gyro-derived right stick separately to avoid racing with physical stick updates
         for (int i = 0; i < usbDeviceContexts.size(); i++) {
             UsbDeviceContext context = usbDeviceContexts.valueAt(i);
             if (context.controllerNumber == controllerNumber) {
-                context.rightStickX = (short) (scaledX * 0x7FFE);
-                context.rightStickY = (short) (-scaledY * 0x7FFE);
-                // Keep other state intact and send a fused packet
-                sendControllerInputPacket(context);
+                context.gyroRightStickX = mappedX;
+                context.gyroRightStickY = mappedY;
+                if (prefConfig.gyroToRightStick && context.gyroHoldActive) {
+                    // 在hold激活时，立即更新右摇杆值并发送
+                    context.rightStickX = mappedX;
+                    context.rightStickY = mappedY;
+                    sendFusedRightStick(context);
+                }
                 return;
             }
         }
@@ -164,11 +170,35 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         for (int i = 0; i < inputDeviceContexts.size(); i++) {
             InputDeviceContext context = inputDeviceContexts.valueAt(i);
             if (context.controllerNumber == controllerNumber) {
-                context.rightStickX = (short) (scaledX * 0x7FFE);
-                context.rightStickY = (short) (-scaledY * 0x7FFE);
-                sendControllerInputPacket(context);
+                context.gyroRightStickX = mappedX;
+                context.gyroRightStickY = mappedY;
+                if (prefConfig.gyroToRightStick && context.gyroHoldActive) {
+                    // 在hold激活时，立即更新右摇杆值并发送
+                    context.rightStickX = mappedX;
+                    context.rightStickY = mappedY;
+                    sendFusedRightStick(context);
+                }
                 return;
             }
+        }
+
+        // Fallback to default context for controller 0 (device sensors path)
+        if (controllerNumber == 0) {
+            defaultContext.gyroRightStickX = mappedX;
+            defaultContext.gyroRightStickY = mappedY;
+            if (prefConfig.gyroToRightStick && defaultContext.gyroHoldActive) {
+                // 在hold激活时，立即更新右摇杆值并发送
+                defaultContext.rightStickX = mappedX;
+                defaultContext.rightStickY = mappedY;
+                sendFusedRightStick(defaultContext);
+            }
+        }
+    }
+
+    private void sendFusedRightStick(GenericControllerContext context) {
+        // 在陀螺仪更新时，如果hold激活，立即发送更新
+        if (context.gyroHoldActive) {
+            sendControllerInputPacket(context);
         }
     }
 
@@ -182,10 +212,14 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                 } catch (Exception ignored) {}
                 gyroToStickListener = null;
             }
+            // Ensure all contexts exit hold state immediately on disable
+            clearGyroHoldForAllContexts();
             return;
         }
 
         if (gyroToStickListener != null) {
+            // Already active; just recompute hold state from current triggers
+            recomputeGyroHoldForAllContexts();
             return;
         }
 
@@ -213,6 +247,108 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             // Use a reasonable rate; SENSOR_DELAY_GAME ~ 50 Hz
             deviceSensorManager.registerListener(gyroToStickListener, gyro, SensorManager.SENSOR_DELAY_GAME);
         } catch (Exception ignored) {}
+
+        // After enabling, initialize hold state based on current trigger positions
+        recomputeGyroHoldForAllContexts();
+    }
+
+    private void clearGyroHoldForAllContexts() {
+        for (int i = 0; i < usbDeviceContexts.size(); i++) {
+            UsbDeviceContext c = usbDeviceContexts.valueAt(i);
+            c.gyroHoldActive = false;
+        }
+        for (int i = 0; i < inputDeviceContexts.size(); i++) {
+            InputDeviceContext c = inputDeviceContexts.valueAt(i);
+            c.gyroHoldActive = false;
+        }
+        defaultContext.gyroHoldActive = false;
+    }
+
+    private void recomputeGyroHoldForAllContexts() {
+        final boolean useL2 = prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_L2;
+        final boolean useR2 = prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_R2;
+
+        for (int i = 0; i < usbDeviceContexts.size(); i++) {
+            UsbDeviceContext c = usbDeviceContexts.valueAt(i);
+            boolean active = false;
+            if (useL2) {
+                active = (c.leftTrigger & 0xFF) / 255.0f >= TRIGGER_ACTIVATE_THRESHOLD;
+            } else if (useR2) {
+                active = (c.rightTrigger & 0xFF) / 255.0f >= TRIGGER_ACTIVATE_THRESHOLD;
+            }
+            c.gyroHoldActive = active;
+        }
+
+        for (int i = 0; i < inputDeviceContexts.size(); i++) {
+            InputDeviceContext c = inputDeviceContexts.valueAt(i);
+            boolean active = false;
+            if (useL2) {
+                active = (c.leftTrigger & 0xFF) / 255.0f >= TRIGGER_ACTIVATE_THRESHOLD;
+            } else if (useR2) {
+                active = (c.rightTrigger & 0xFF) / 255.0f >= TRIGGER_ACTIVATE_THRESHOLD;
+            }
+            c.gyroHoldActive = active;
+        }
+
+        if (useL2) {
+            defaultContext.gyroHoldActive = (defaultContext.leftTrigger & 0xFF) / 255.0f >= TRIGGER_ACTIVATE_THRESHOLD;
+        } else if (useR2) {
+            defaultContext.gyroHoldActive = (defaultContext.rightTrigger & 0xFF) / 255.0f >= TRIGGER_ACTIVATE_THRESHOLD;
+        } else {
+            defaultContext.gyroHoldActive = false;
+        }
+    }
+
+    // Future-proof activation handling helpers
+    private boolean computeAnalogActivation(float leftTrigger, float rightTrigger) {
+        if (prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_L2) {
+            return leftTrigger >= TRIGGER_ACTIVATE_THRESHOLD;
+        } else if (prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_R2) {
+            return rightTrigger >= TRIGGER_ACTIVATE_THRESHOLD;
+        }
+        return false;
+    }
+
+    private void updateGyroHoldFromDigital(InputDeviceContext context, int keyCode, boolean isDown) {
+        if (!prefConfig.gyroToRightStick) {
+            context.gyroHoldActive = false;
+            return;
+        }
+        if (keyCode == prefConfig.gyroActivationKeyCode) {
+            boolean was = context.gyroHoldActive;
+            context.gyroHoldActive = isDown;
+            if (was && !isDown) {
+                onGyroHoldDeactivated(context);
+            }
+        }
+    }
+
+    private void updateGyroHoldFromDigital(GenericControllerContext context, int keyCode, boolean isDown) {
+        if (!prefConfig.gyroToRightStick) {
+            context.gyroHoldActive = false;
+            return;
+        }
+        if (keyCode == prefConfig.gyroActivationKeyCode) {
+            boolean was = context.gyroHoldActive;
+            context.gyroHoldActive = isDown;
+            if (was && !isDown) {
+                onGyroHoldDeactivated(context);
+            }
+        }
+    }
+
+    private void onGyroHoldDeactivated(GenericControllerContext context) {
+        context.gyroRightStickX = 0;
+        context.gyroRightStickY = 0;
+        // 立即发送仅物理摇杆的状态，确保停止模拟
+        sendControllerInputPacket(context);
+    }
+
+    private void onGyroHoldDeactivated(InputDeviceContext context) {
+        context.gyroRightStickX = 0;
+        context.gyroRightStickY = 0;
+        // 立即发送仅物理摇杆的状态，确保停止模拟
+        sendControllerInputPacket(context);
     }
 
     private boolean isGyroHoldActiveFor(short controllerNumber) {
@@ -1690,13 +1826,15 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             context.leftStickY = (short) (-leftStickVector.getY() * 0x7FFE);
         }
 
+        // Handle physical right stick separately and then apply gyro fusion if needed
+        short physX = 0, physY = 0;
         if (context.rightStickXAxis != -1 && context.rightStickYAxis != -1) {
             Vector2d rightStickVector = populateCachedVector(rsX, rsY);
 
             handleDeadZone(rightStickVector, context.rightStickDeadzoneRadius);
 
-            context.rightStickX = (short) (rightStickVector.getX() * 0x7FFE);
-            context.rightStickY = (short) (-rightStickVector.getY() * 0x7FFE);
+            physX = (short) (rightStickVector.getX() * 0x7FFE);
+            physY = (short) (-rightStickVector.getY() * 0x7FFE);
         }
 
         if (context.leftTriggerAxis != -1 && context.rightTriggerAxis != -1) {
@@ -1728,6 +1866,22 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
             context.leftTrigger = (byte)(lt * 0xFF);
             context.rightTrigger = (byte)(rt * 0xFF);
+        }
+
+        // Handle gyro hold activation edge detection for analog triggers
+        boolean wasHold = context.gyroHoldActive;
+        context.gyroHoldActive = prefConfig.gyroToRightStick && computeAnalogActivation(lt, rt);
+        if (wasHold && !context.gyroHoldActive) {
+            onGyroHoldDeactivated(context);
+        }
+
+        // Apply gyro fusion to right stick if needed
+        if (prefConfig.gyroToRightStick && context.gyroHoldActive) {
+            context.rightStickX = context.gyroRightStickX;
+            context.rightStickY = context.gyroRightStickY;
+        } else {
+            context.rightStickX = physX;
+            context.rightStickY = physY;
         }
 
         if (context.hatXAxis != -1 && context.hatYAxis != -1) {
@@ -2581,9 +2735,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                 return true;
             }
             context.leftTrigger = 0;
-            if (prefConfig.gyroToRightStick && prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_L2) {
-                context.gyroHoldActive = false;
-            }
+            updateGyroHoldFromDigital(context, KeyEvent.KEYCODE_BUTTON_L2, false);
             break;
         case KeyEvent.KEYCODE_BUTTON_R2:
             if (context.rightTriggerAxisUsed) {
@@ -2591,9 +2743,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                 return true;
             }
             context.rightTrigger = 0;
-            if (prefConfig.gyroToRightStick && prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_R2) {
-                context.gyroHoldActive = false;
-            }
+            updateGyroHoldFromDigital(context, KeyEvent.KEYCODE_BUTTON_R2, false);
             break;
         case KeyEvent.KEYCODE_UNKNOWN:
             // Paddles aren't mapped in any of the Android key layout files,
@@ -2799,9 +2949,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                 return true;
             }
             context.leftTrigger = (byte)0xFF;
-            if (prefConfig.gyroToRightStick && prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_L2) {
-                context.gyroHoldActive = true;
-            }
+            updateGyroHoldFromDigital(context, KeyEvent.KEYCODE_BUTTON_L2, true);
             break;
         case KeyEvent.KEYCODE_BUTTON_R2:
             if (context.rightTriggerAxisUsed) {
@@ -2809,9 +2957,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                 return true;
             }
             context.rightTrigger = (byte)0xFF;
-            if (prefConfig.gyroToRightStick && prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_R2) {
-                context.gyroHoldActive = true;
-            }
+            updateGyroHoldFromDigital(context, KeyEvent.KEYCODE_BUTTON_R2, true);
             break;
         case KeyEvent.KEYCODE_UNKNOWN:
             // Paddles aren't mapped in any of the Android key layout files,
@@ -2934,14 +3080,11 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         }
 
         // Gyro hold activation via analog LT/RT thresholds when mapped to L2/R2
-        if (prefConfig.gyroToRightStick) {
-            if (prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_L2) {
-                context.gyroHoldActive = (leftTrigger >= TRIGGER_ACTIVATE_THRESHOLD);
-            } else if (prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_R2) {
-                context.gyroHoldActive = (rightTrigger >= TRIGGER_ACTIVATE_THRESHOLD);
-            }
-        } else {
-            context.gyroHoldActive = false;
+        boolean wasHold = context.gyroHoldActive;
+        context.gyroHoldActive = prefConfig.gyroToRightStick && computeAnalogActivation(leftTrigger, rightTrigger);
+        if (wasHold && !context.gyroHoldActive) {
+            // Ensure we immediately stop any residual gyro influence
+            onGyroHoldDeactivated(context);
         }
 
         Vector2d leftStickVector = populateCachedVector(leftStickX, leftStickY);
@@ -2951,19 +3094,24 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         context.leftStickX = (short) (leftStickVector.getX() * 0x7FFE);
         context.leftStickY = (short) (-leftStickVector.getY() * 0x7FFE);
 
-        // If gyro-hold is active for this context, override right stick with gyro-derived values
+        // Fuse physical right stick with gyro input to avoid jitter.
+        // Strategy: if gyro-hold is active, take the component with larger magnitude per-axis.
+        // Otherwise, use physical stick only.
+        short physX, physY;
+        {
+            Vector2d rsv = populateCachedVector(rightStickX, rightStickY);
+            handleDeadZone(rsv, context.rightStickDeadzoneRadius);
+            physX = (short) (rsv.getX() * 0x7FFE);
+            physY = (short) (-rsv.getY() * 0x7FFE);
+        }
+
         if (prefConfig.gyroToRightStick && context.gyroHoldActive) {
-            Vector2d rightStickVector = populateCachedVector(context.rightStickX / 32766.0f, -context.rightStickY / 32766.0f);
-            handleDeadZone(rightStickVector, context.rightStickDeadzoneRadius);
-            context.rightStickX = (short) (rightStickVector.getX() * 0x7FFE);
-            context.rightStickY = (short) (-rightStickVector.getY() * 0x7FFE);
+            // Hold 激活：直接使用陀螺映射值，避免与物理右摇杆抢写造成跳变
+            context.rightStickX = context.gyroRightStickX;
+            context.rightStickY = context.gyroRightStickY;
         } else {
-            Vector2d rightStickVector = populateCachedVector(rightStickX, rightStickY);
-
-            handleDeadZone(rightStickVector, context.rightStickDeadzoneRadius);
-
-            context.rightStickX = (short) (rightStickVector.getX() * 0x7FFE);
-            context.rightStickY = (short) (-rightStickVector.getY() * 0x7FFE);
+            context.rightStickX = physX;
+            context.rightStickY = physY;
         }
 
         if (leftTrigger <= context.triggerDeadzone) {
@@ -3039,6 +3187,8 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         public byte rightTrigger = 0x00;
         public short rightStickX = 0x0000;
         public short rightStickY = 0x0000;
+        public short gyroRightStickX = 0x0000;
+        public short gyroRightStickY = 0x0000;
         public short leftStickX = 0x0000;
         public short leftStickY = 0x0000;
 
