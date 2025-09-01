@@ -11,6 +11,7 @@ on:
   push:
     branches:
       - master
+    tags: [ 'v*' ]
   workflow_dispatch:
 
 concurrency:
@@ -30,6 +31,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -50,9 +53,15 @@ jobs:
         run: rm -f local.properties
 
       - name: Create google-services.json from secrets
+        shell: bash
         run: |
-          echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > app/google-services.json
-          echo "Created google-services.json from secrets"
+          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
+            mkdir -p app
+            printf '%s' "${{ secrets.GOOGLE_SERVICES_JSON }}" > app/google-services.json
+            echo "Created google-services.json from secrets"
+          else
+            echo "GOOGLE_SERVICES_JSON not set; skipping file creation"
+          fi
 
       - name: Grant execute permission for Gradle
         run: chmod +x gradlew
@@ -97,8 +106,9 @@ jobs:
           path: |
             app/build/outputs/apk/nonRoot/debug/*.apk
 
-      # ===== Release (Signed) Build =====
+      # ===== Release (Signed) Build (tags only) =====
       - name: Decode keystore for Release
+        if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -107,6 +117,7 @@ jobs:
           ls -l my-release.keystore
 
       - name: Build signed NonRoot Release APK
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/my-release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -115,6 +126,7 @@ jobs:
         run: ./gradlew :app:assembleNonRootRelease --no-daemon --stacktrace
 
       - name: Rename Release APK to Moonlight.V+.<version>.apk
+        if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         run: |
           set -e
@@ -139,9 +151,7 @@ jobs:
         run: |
           set -e
           DATE=$(date +'%Y-%m-%d')
-          V="${VERSION_NAME:-${GITHUB_REF#refs/tags/}}"
-          V="${V#v}"
-          git fetch --tags --force
+          V="${VERSION_NAME:-${GITHUB_REF#refs/tags/}}"; V="${V#v}"
           CUR_TAG="${GITHUB_REF#refs/tags/}"
           PREV_TAG=$(git tag --sort=-creatordate | sed -n '2p' || true)
           if [ -n "$PREV_TAG" ]; then
@@ -149,23 +159,21 @@ jobs:
           else
             CHANGES=$(git log --pretty=format:'- %s (%h)' -n 100 || true)
           fi
-          if [ -z "$CHANGES" ]; then
-            CHANGES="- 初始发布"
-          fi
+          [ -z "$CHANGES" ] && CHANGES="- 初始发布"
           cat > release_notes.md << EOF
           ## 🌙 Moonlight V+ ${V}
-          
+
           感谢你使用 Moonlight V+！如果喜欢，记得点亮一颗 ⭐～
-          
+
           ### ✨ 更新内容
           ${CHANGES}
-          
+
           ### 📦 下载
           - APK 文件：Moonlight.V+.${V}.apk
-          
+
           ### 🧭 另外
           - 如遇到问题，请在 Issues 反馈。祝你游戏顺利、低延迟满帧！🎮
-          
+
           —— 发布于 ${DATE}
           EOF
 
@@ -185,6 +193,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Release APK and mapping
+        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v4
         with:
           name: app-nonroot-release-signed
