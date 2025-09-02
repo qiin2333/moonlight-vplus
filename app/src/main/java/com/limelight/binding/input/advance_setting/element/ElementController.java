@@ -159,6 +159,11 @@ public class ElementController {
             public void onClick(View v) {
                 changeMode(Mode.Normal);
                 controllerManager.getPageSuperMenuController().open();
+                // 1. 通过公共方法通知 Game Activity 切换回普通菜单模式
+                ((Game)context).setcurrentBackKeyMenu(Game.BackKeyMenuMode.GAME_MENU);
+
+                // 2. 显示操作成功的提示信息
+                Toast.makeText(context, context.getString(R.string.toast_back_key_menu_switch_1), Toast.LENGTH_SHORT).show();
             }
         });
         ((NumberSeekbar)pageEdit.findViewById(R.id.page_edit_edit_grid_width)).setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {

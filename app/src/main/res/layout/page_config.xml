@@ -143,6 +143,14 @@
                     android:layout_weight="1"
                     android:text="删除"/>
             </LinearLayout>
+
+            <Button
+                android:id="@+id/exit_crown_config_button"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginVertical="5dp"
+                android:text="退出王冠配置" />
+
         </LinearLayout>
     </ScrollView>
 </com.limelight.binding.input.advance_setting.superpage.SuperPageLayout>

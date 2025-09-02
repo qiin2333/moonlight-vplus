@@ -457,6 +457,8 @@
     <string name="toast_elements_hidden">Virtual button hidden</string>
     <string name="toast_back_key_menu_switch_1">The crown function configuration has been exited</string>
     <string name="toast_back_key_menu_switch_2">Entered the crown function configuration</string>
+    <string name="game_menu_edit_mode">Crown button editing mode</string>
+    <string name="game_menu_configure_settings">Crown button configuration mode</string>
     
     <!-- External display -->
     <string name="title_use_external_display">Use External Display</string>
