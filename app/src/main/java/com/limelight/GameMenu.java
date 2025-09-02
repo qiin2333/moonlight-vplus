@@ -492,8 +492,6 @@ public class GameMenu {
         }
     }
 
-
-
     /**
      * 显示菜单对话框
      */
@@ -680,7 +678,7 @@ public class GameMenu {
             }
 
             // 添加一些padding和margin
-            totalHeight += (int) ((maxItems*2 + 8) * game.getResources().getDisplayMetrics().density);
+            totalHeight += (int) ((maxItems*2 + 48) * game.getResources().getDisplayMetrics().density);
             totalHeight = Math.max(totalHeight, (int) (270 * game.getResources().getDisplayMetrics().density));
 
             return totalHeight;

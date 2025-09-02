@@ -136,10 +136,23 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     // Gyro-to-right-stick mapping sensitivity (deg/s for full deflection)
     private static final float GYRO_DEFAULT_FULL_DEFLECTION_DPS = 180.0f;
     private static final float TRIGGER_ACTIVATE_THRESHOLD = 0.2f;
+    public static final int GYRO_ACTIVATION_ALWAYS = -1000;
     private SensorEventListener gyroToStickListener;
 
     private static float clampFloat(float v, float min, float max) {
         return v < min ? min : (v > max ? max : v);
+    }
+
+    private static short clampShortToStickRange(int v) {
+        if (v > 0x7FFE) return (short) 0x7FFE;
+        if (v < -0x7FFE) return (short) -0x7FFE;
+        return (short) v;
+    }
+
+    // Treat very small physical stick values as 0 to avoid jitter when summing
+    private static final short PHYS_EPSILON = 512; // ~1.6% of full scale
+    private static short denoisePhys(short v) {
+        return (short)(Math.abs(v) <= PHYS_EPSILON ? 0 : v);
     }
 
     private void applyGyroToRightStick(short controllerNumber, float gyroXDegPerSec, float gyroYDegPerSec) {
@@ -158,10 +171,12 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                 context.gyroRightStickX = mappedX;
                 context.gyroRightStickY = mappedY;
                 if (prefConfig.gyroToRightStick && context.gyroHoldActive) {
-                    // 在hold激活时，立即更新右摇杆值并发送
-                    context.rightStickX = mappedX;
-                    context.rightStickY = mappedY;
-                    sendFusedRightStick(context);
+                    // 在hold激活时，按轴叠加并限幅（物理值做EPS去抖）
+                    short px = denoisePhys(context.physRightStickX);
+                    short py = denoisePhys(context.physRightStickY);
+                    context.rightStickX = clampShortToStickRange(px + context.gyroRightStickX);
+                    context.rightStickY = clampShortToStickRange(py + context.gyroRightStickY);
+                    sendControllerInputPacket(context);
                 }
                 return;
             }
@@ -173,10 +188,12 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                 context.gyroRightStickX = mappedX;
                 context.gyroRightStickY = mappedY;
                 if (prefConfig.gyroToRightStick && context.gyroHoldActive) {
-                    // 在hold激活时，立即更新右摇杆值并发送
-                    context.rightStickX = mappedX;
-                    context.rightStickY = mappedY;
-                    sendFusedRightStick(context);
+                    // 在hold激活时，按轴叠加并限幅（物理值做EPS去抖）
+                    short px = denoisePhys(context.physRightStickX);
+                    short py = denoisePhys(context.physRightStickY);
+                    context.rightStickX = clampShortToStickRange(px + context.gyroRightStickX);
+                    context.rightStickY = clampShortToStickRange(py + context.gyroRightStickY);
+                    sendControllerInputPacket(context);
                 }
                 return;
             }
@@ -187,17 +204,21 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             defaultContext.gyroRightStickX = mappedX;
             defaultContext.gyroRightStickY = mappedY;
             if (prefConfig.gyroToRightStick && defaultContext.gyroHoldActive) {
-                // 在hold激活时，立即更新右摇杆值并发送
-                defaultContext.rightStickX = mappedX;
-                defaultContext.rightStickY = mappedY;
-                sendFusedRightStick(defaultContext);
+                // 在hold激活时，按轴叠加并限幅（物理值做EPS去抖）
+                short px = denoisePhys(defaultContext.physRightStickX);
+                short py = denoisePhys(defaultContext.physRightStickY);
+                defaultContext.rightStickX = clampShortToStickRange(px + defaultContext.gyroRightStickX);
+                defaultContext.rightStickY = clampShortToStickRange(py + defaultContext.gyroRightStickY);
+                sendControllerInputPacket(defaultContext);
             }
         }
     }
 
     private void sendFusedRightStick(GenericControllerContext context) {
-        // 在陀螺仪更新时，如果hold激活，立即发送更新
+        // 在陀螺仪更新时，如果hold激活，叠加物理与陀螺，并立即发送
         if (context.gyroHoldActive) {
+            context.rightStickX = clampShortToStickRange(context.physRightStickX + context.gyroRightStickX);
+            context.rightStickY = clampShortToStickRange(context.physRightStickY + context.gyroRightStickY);
             sendControllerInputPacket(context);
         }
     }
@@ -301,7 +322,9 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
     // Future-proof activation handling helpers
     private boolean computeAnalogActivation(float leftTrigger, float rightTrigger) {
-        if (prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_L2) {
+        if (prefConfig.gyroActivationKeyCode == GYRO_ACTIVATION_ALWAYS) {
+            return true;
+        } else if (prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_L2) {
             return leftTrigger >= TRIGGER_ACTIVATE_THRESHOLD;
         } else if (prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_R2) {
             return rightTrigger >= TRIGGER_ACTIVATE_THRESHOLD;
@@ -312,6 +335,10 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     private void updateGyroHoldFromDigital(InputDeviceContext context, int keyCode, boolean isDown) {
         if (!prefConfig.gyroToRightStick) {
             context.gyroHoldActive = false;
+            return;
+        }
+        if (prefConfig.gyroActivationKeyCode == GYRO_ACTIVATION_ALWAYS) {
+            context.gyroHoldActive = true;
             return;
         }
         if (keyCode == prefConfig.gyroActivationKeyCode) {
@@ -328,6 +355,10 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             context.gyroHoldActive = false;
             return;
         }
+        if (prefConfig.gyroActivationKeyCode == GYRO_ACTIVATION_ALWAYS) {
+            context.gyroHoldActive = true;
+            return;
+        }
         if (keyCode == prefConfig.gyroActivationKeyCode) {
             boolean was = context.gyroHoldActive;
             context.gyroHoldActive = isDown;
@@ -340,7 +371,9 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     private void onGyroHoldDeactivated(GenericControllerContext context) {
         context.gyroRightStickX = 0;
         context.gyroRightStickY = 0;
-        // 立即发送仅物理摇杆的状态，确保停止模拟
+        // 恢复为纯物理值并立即发送
+        context.rightStickX = context.physRightStickX;
+        context.rightStickY = context.physRightStickY;
         sendControllerInputPacket(context);
     }
 
@@ -1835,6 +1868,9 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
             physX = (short) (rightStickVector.getX() * 0x7FFE);
             physY = (short) (-rightStickVector.getY() * 0x7FFE);
+            // cache physical right stick and apply EPS denoising
+            context.physRightStickX = denoisePhys(physX);
+            context.physRightStickY = denoisePhys(physY);
         }
 
         if (context.leftTriggerAxis != -1 && context.rightTriggerAxis != -1) {
@@ -1877,8 +1913,11 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
         // Apply gyro fusion to right stick if needed
         if (prefConfig.gyroToRightStick && context.gyroHoldActive) {
-            context.rightStickX = context.gyroRightStickX;
-            context.rightStickY = context.gyroRightStickY;
+            // 融合策略：按轴叠加并限幅
+            short gx = context.gyroRightStickX;
+            short gy = context.gyroRightStickY;
+            context.rightStickX = clampShortToStickRange(physX + gx);
+            context.rightStickY = clampShortToStickRange(physY + gy);
         } else {
             context.rightStickX = physX;
             context.rightStickY = physY;
@@ -3103,12 +3142,17 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             handleDeadZone(rsv, context.rightStickDeadzoneRadius);
             physX = (short) (rsv.getX() * 0x7FFE);
             physY = (short) (-rsv.getY() * 0x7FFE);
+            // cache physical right stick and apply EPS denoising
+            context.physRightStickX = denoisePhys(physX);
+            context.physRightStickY = denoisePhys(physY);
         }
 
         if (prefConfig.gyroToRightStick && context.gyroHoldActive) {
-            // Hold 激活：直接使用陀螺映射值，避免与物理右摇杆抢写造成跳变
-            context.rightStickX = context.gyroRightStickX;
-            context.rightStickY = context.gyroRightStickY;
+            // 融合策略：按轴叠加并限幅
+            short gx = context.gyroRightStickX;
+            short gy = context.gyroRightStickY;
+            context.rightStickX = clampShortToStickRange(physX + gx);
+            context.rightStickY = clampShortToStickRange(physY + gy);
         } else {
             context.rightStickX = physX;
             context.rightStickY = physY;
@@ -3187,6 +3231,8 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         public byte rightTrigger = 0x00;
         public short rightStickX = 0x0000;
         public short rightStickY = 0x0000;
+        public short physRightStickX = 0x0000;
+        public short physRightStickY = 0x0000;
         public short gyroRightStickX = 0x0000;
         public short gyroRightStickY = 0x0000;
         public short leftStickX = 0x0000;

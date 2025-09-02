@@ -36,7 +36,7 @@ public class UpdateManager {
 
 	// API与下载的代理前缀（按优先级尝试）
 	private static final String[] PROXY_PREFIXES = new String[] {
-		"https://mirror.ghproxy.com/",
+		"https://ghfast.top/",
 		"https://ghp.ci/"
 	};
 
@@ -203,23 +203,24 @@ public class UpdateManager {
 			String message = "New version available!\n\n";
 			if (updateInfo.releaseNotes != null && !updateInfo.releaseNotes.isEmpty()) {
 				String notes = updateInfo.releaseNotes;
-				if (notes.length() > 500) {
-					notes = notes.substring(0, 500) + "...";
+				if (notes.length() > 300) {
+					notes = notes.substring(0, 300) + "...";
 				}
 				message += "What's changed:\n" + notes + "\n\n";
 			}
 			if (updateInfo.apkName != null) {
-				message += "Will download: " + updateInfo.apkName + "\n\n";
+				message += "File: " + updateInfo.apkName + "\n\n";
 			}
-			message += "Please choose the download method.";
+			message += "Please choose the download method";
 
 			builder.setMessage(message);
-			builder.setPositiveButton("Open in browser", (dialog, which) -> {
+
+			builder.setPositiveButton("打开浏览器更新", (dialog, which) -> {
 				Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(GITHUB_RELEASE_PAGE));
 				context.startActivity(intent);
 			});
 			if (updateInfo.apkDownloadUrl != null) {
-				builder.setNeutralButton("Download directly", (dialog, which) -> startDirectDownload(context, updateInfo));
+				builder.setNeutralButton("直接下载", (dialog, which) -> startDirectDownload(context, updateInfo));
 			}
 			builder.setNegativeButton("稍后", null);
 			builder.setCancelable(true);
@@ -234,29 +235,38 @@ public class UpdateManager {
 			String src = info.apkDownloadUrl;
 			String fileName = info.apkName != null ? info.apkName : ("moonlight-" + info.version + ".apk");
 
-			// 优先使用代理加速
+			// 构造候选列表（代理优先，最后直连）
 			List<String> candidates = new ArrayList<>();
 			for (String p : PROXY_PREFIXES) {
 				candidates.add(p + src);
 			}
-			// 最后尝试原始地址
 			candidates.add(src);
 
-			String chosen = candidates.get(0);
+			// 优先使用代理链接，提供备选方案
+			String primaryUrl = candidates.get(0);
+			Toast.makeText(context, "开始下载: " + fileName, Toast.LENGTH_SHORT).show();
 
 			DownloadManager dm = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
-			DownloadManager.Request req = new DownloadManager.Request(Uri.parse(chosen));
-			req.setTitle("Moonlight V+ Updating");
-			req.setDescription(fileName);
+			DownloadManager.Request req = new DownloadManager.Request(Uri.parse(primaryUrl));
+			req.setTitle("Moonlight V+ 更新下载");
+			req.setDescription(fileName + " (如下载失败可尝试浏览器下载)");
 			req.setMimeType("application/vnd.android.package-archive");
 			req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+			req.setVisibleInDownloadsUi(true);
+			req.setAllowedOverMetered(true);
+			req.setAllowedOverRoaming(true);
+			req.addRequestHeader("User-Agent", "Mozilla/5.0 (Android; Mobile; rv:40.0)");
+			req.addRequestHeader("Accept", "*/*");
+			req.addRequestHeader("Referer", "https://github.com/");
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 				req.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
 			} else {
 				req.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
 			}
-			dm.enqueue(req);
-			Toast.makeText(context, "Downloading started, please check the notification bar for progress", Toast.LENGTH_LONG).show();
+			
+			long downloadId = dm.enqueue(req);
+			Log.d(TAG, "已启动下载，ID: " + downloadId + ", URL: " + primaryUrl);
+			Toast.makeText(context, "已开始下载，请查看通知栏进度", Toast.LENGTH_LONG).show();
 		} catch (Exception e) {
 			Toast.makeText(context, "Downloading failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
 		}

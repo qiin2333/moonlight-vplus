@@ -82,12 +82,21 @@ public class GyroCardController {
     }
 
     private void showActivationKeyDialog(TextView activationKeyText) {
-        final CharSequence[] items = new CharSequence[] {"LT (L2)", "RT (R2)"};
-        int checked = game.prefConfig.gyroActivationKeyCode == android.view.KeyEvent.KEYCODE_BUTTON_R2 ? 1 : 0;
+        final CharSequence[] items = new CharSequence[] {"Always on", "LT (L2)", "RT (R2)"};
+        int checked;
+        if (game.prefConfig.gyroActivationKeyCode == ControllerHandler.GYRO_ACTIVATION_ALWAYS) {
+            checked = 0;
+        } else if (game.prefConfig.gyroActivationKeyCode == android.view.KeyEvent.KEYCODE_BUTTON_R2) {
+            checked = 2;
+        } else {
+            checked = 1;
+        }
         new AlertDialog.Builder(game, R.style.AppDialogStyle)
                 .setTitle("Choose activation key")
                 .setSingleChoiceItems(items, checked, (d, which) -> {
                     if (which == 0) {
+                        game.prefConfig.gyroActivationKeyCode = ControllerHandler.GYRO_ACTIVATION_ALWAYS;
+                    } else if (which == 1) {
                         game.prefConfig.gyroActivationKeyCode = android.view.KeyEvent.KEYCODE_BUTTON_L2;
                     } else {
                         game.prefConfig.gyroActivationKeyCode = android.view.KeyEvent.KEYCODE_BUTTON_R2;
@@ -102,7 +111,14 @@ public class GyroCardController {
     }
 
     private void updateActivationKeyText(TextView activationKeyText) {
-        String label = game.prefConfig.gyroActivationKeyCode == android.view.KeyEvent.KEYCODE_BUTTON_R2 ? "RT (R2)" : "LT (L2)";
+        String label;
+        if (game.prefConfig.gyroActivationKeyCode == ControllerHandler.GYRO_ACTIVATION_ALWAYS) {
+            label = "Always on";
+        } else if (game.prefConfig.gyroActivationKeyCode == android.view.KeyEvent.KEYCODE_BUTTON_R2) {
+            label = "RT (R2)";
+        } else {
+            label = "LT (L2)";
+        }
         activationKeyText.setText(label);
     }
 }
