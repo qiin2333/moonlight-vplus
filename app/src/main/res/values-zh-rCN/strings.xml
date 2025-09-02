@@ -427,6 +427,8 @@
     <string name="toast_elements_hidden">虚拟按键已隐藏</string>
     <string name="toast_back_key_menu_switch_1">已退出王冠功能配置</string>
     <string name="toast_back_key_menu_switch_2">已进入王冠功能配置</string>
+    <string name="game_menu_edit_mode">王冠按键编辑模式</string>
+    <string name="game_menu_configure_settings">王冠按键配置模式</string>
 
     <!-- External display -->
     <string name="title_use_external_display">使用外接显示器</string>

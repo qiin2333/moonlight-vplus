@@ -26,6 +26,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.limelight.binding.input.GameInputDevice;
 import com.limelight.binding.input.KeyboardTranslator;
+import com.limelight.binding.input.advance_setting.ControllerManager;
+import com.limelight.binding.input.advance_setting.element.ElementController;
 import com.limelight.nvstream.NvConnection;
 import com.limelight.nvstream.http.NvApp;
 import com.limelight.nvstream.input.KeyboardPacket;
@@ -390,12 +392,14 @@ public class GameMenu {
      * 显示“王冠功能”的二级菜单，包含显隐和配置选项。
      */
     private void showCrownFunctionMenu() {
+        // 从 Game Activity 获取 ControllerManager 实例
+        ControllerManager controllerManager = game.getControllerManager();
+
         // 检查 王冠功能是否开启，如果没有开启则不显示任何选项
         if (!game.isCrownFeatureEnabled()) {
             Toast.makeText(game, "王冠功能未启用", Toast.LENGTH_SHORT).show();
             return;
         }
-
         MenuOption[] crownFunctionOptions = {
                 // --- 选项1: 显示/隐藏虚拟按键 ---
                 new MenuOption(
@@ -405,7 +409,35 @@ public class GameMenu {
                         "crown_function_menu",
                         true
                 ),
-                // --- 选项2: 配置王冠功能 ---
+                // --- 配置设置 ---
+                new MenuOption(
+                        getString(R.string.game_menu_configure_settings),
+                        false,
+                        () -> {
+                            if (controllerManager != null) {
+                                game.toggleBackKeyMenuType();
+                                game.setcurrentBackKeyMenu(Game.BackKeyMenuMode.NO_MENU);
+                                controllerManager.getPageConfigController().open();
+                            }
+                        },
+                        "crown_function_menu",
+                        true
+                ),
+                // --- 编辑模式 ---
+                new MenuOption(
+                        getString(R.string.game_menu_edit_mode),
+                        false,
+                        () -> {
+                            if (controllerManager != null) {
+                                game.toggleBackKeyMenuType();
+                                controllerManager.getElementController().changeMode(ElementController.Mode.Edit);
+                                controllerManager.getElementController().open();
+                            }
+                        },
+                        "crown_function_menu",
+                        true
+                ),
+                // --- 配置王冠功能 ---
                 new MenuOption(
                         getString(R.string.game_menu_configure_crown_function),
                         false,

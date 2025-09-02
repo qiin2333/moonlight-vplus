@@ -1,4 +1,4 @@
-    package com.limelight.binding.input.advance_setting.config;
+package com.limelight.binding.input.advance_setting.config;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -16,6 +16,7 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.limelight.Game; // 确保导入 Game 类
 import com.limelight.R;
 import com.limelight.binding.input.advance_setting.ControllerManager;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
@@ -168,6 +169,21 @@ public class PageConfigController {
                     }
                 });
                 controllerManager.getSuperPagesController().openNewPage(pageWindow);
+            }
+        });
+
+        // 退出王冠配置按钮
+        pageConfig.findViewById(R.id.exit_crown_config_button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // 将 Game Activity 中的 currentBackKeyMenu 标志位设为 GAME_MENU，以切换回GAME_MENU模式
+                ((Game)context).setcurrentBackKeyMenu(Game.BackKeyMenuMode.GAME_MENU);
+
+                // 关闭当前的高级设置页面
+                controllerManager.getSuperPagesController().returnOperation();
+
+                // 显示提示信息
+                Toast.makeText(context, context.getString(R.string.toast_back_key_menu_switch_1), Toast.LENGTH_SHORT).show();
             }
         });
 
