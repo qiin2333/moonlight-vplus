@@ -1,5 +1,6 @@
 package com.limelight.preferences;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
@@ -86,6 +87,7 @@ public class AboutDialogPreference extends Preference {
         dialog.show();
     }
     
+    @SuppressLint("DefaultLocale")
     private String getVersionInfo(Context context) {
         try {
             PackageInfo packageInfo = context.getPackageManager()

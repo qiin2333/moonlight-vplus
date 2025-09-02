@@ -23,10 +23,15 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class UpdateManager {
 	private static final String TAG = "UpdateManager";
@@ -34,11 +39,11 @@ public class UpdateManager {
 	private static final String GITHUB_RELEASE_PAGE = "https://github.com/qiin2333/moonlight-android/releases/latest";
 	private static final long UPDATE_CHECK_INTERVAL = 4 * 60 * 60 * 1000;
 
-	// API与下载的代理前缀（按优先级尝试）
-	private static final String[] PROXY_PREFIXES = new String[] {
-		"https://ghfast.top/",
-		"https://ghp.ci/"
-	};
+	// 代理发现地址
+	private static final String PROXY_DISCOVERY_URL = "https://ghproxy.link/js/src_views_home_HomeView_vue.js";
+	
+	// API与下载的代理前缀（按优先级尝试）- 将在运行时动态更新
+	private static volatile String[] PROXY_PREFIXES = new String[] {};
 
 	private static final AtomicBoolean isChecking = new AtomicBoolean(false);
 	private static final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -72,6 +77,9 @@ public class UpdateManager {
 
 		@Override
 		public void run() {
+			// 首先尝试更新代理列表
+			updateProxyList();
+			
 			UpdateInfo updateInfo = null;
 			try {
 				String json = httpGetWithProxies(GITHUB_API_URL);
@@ -269,6 +277,194 @@ public class UpdateManager {
 			Toast.makeText(context, "已开始下载，请查看通知栏进度", Toast.LENGTH_LONG).show();
 		} catch (Exception e) {
 			Toast.makeText(context, "Downloading failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+		}
+	}
+
+	// 从 ghproxy.link 脚本中自动发现并更新代理地址
+	private static void updateProxyList() {
+		try {
+			Log.d(TAG, "开始更新代理列表...");
+			String scriptContent = fetchScriptContent();
+			if (scriptContent != null) {
+				String[] newProxies = extractProxiesFromScript(scriptContent);
+				if (newProxies.length > 0) {
+					// 合并新代理和现有代理，去重
+					Set<String> allProxies = new HashSet<>(Arrays.asList(PROXY_PREFIXES));
+					allProxies.addAll(Arrays.asList(newProxies));
+					
+					PROXY_PREFIXES = allProxies.toArray(new String[0]);
+					Log.d(TAG, "代理列表已更新，共 " + PROXY_PREFIXES.length + " 个代理：" + Arrays.toString(PROXY_PREFIXES));
+				}
+			}
+		} catch (Exception e) {
+			Log.w(TAG, "更新代理列表失败: " + e.getMessage());
+		}
+	}
+	
+	// 获取代理发现脚本内容
+	private static String fetchScriptContent() {
+		try {
+			// 直接访问脚本，不使用代理避免循环依赖
+			URL url = new URL(PROXY_DISCOVERY_URL);
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.setRequestMethod("GET");
+			conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile; rv:40.0)");
+			conn.setConnectTimeout(8000);
+			conn.setReadTimeout(8000);
+			
+			int responseCode = conn.getResponseCode();
+			if (responseCode == HttpURLConnection.HTTP_OK) {
+				BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+				StringBuilder content = new StringBuilder();
+				String line;
+				while ((line = reader.readLine()) != null) {
+					content.append(line).append("\n");
+				}
+				reader.close();
+				return content.toString();
+			}
+		} catch (Exception e) {
+			Log.w(TAG, "获取代理发现脚本失败: " + e.getMessage());
+		}
+		return null;
+	}
+	
+	// 从脚本内容中提取代理地址
+	private static String[] extractProxiesFromScript(String scriptContent) {
+		List<String> proxies = new ArrayList<>();
+		
+		try {
+			// 匹配 JavaScript 脚本中的 URL 模式 - 扩展域名后缀
+			String[] patterns = {
+				// 匹配引号中的完整URL: "https://xxx.com/"
+				"[\"']https://[\\w.-]+\\.(?:com|net|org|cn|top|cc|io|me|cf|tk|ml|ga|gg|xyz|site|online|tech|info|biz|work|space|shop|club|pro|dev|app|link|run|art|fun|live|store|world|today|design|cloud)/[\"']",
+				// 匹配变量赋值: baseUrl = "https://xxx.com/"
+				"baseUrl\\s*=\\s*[\"']https://[\\w.-]+\\.(?:com|net|org|cn|top|cc|io|me|cf|tk|ml|ga|gg|xyz|site|online|tech|info|biz|work|space|shop|club|pro|dev|app|link|run|art|fun|live|store|world|today|design|cloud)/[\"']",
+				// 匹配配置对象中的URL
+				"url:\\s*[\"']https://[\\w.-]+\\.(?:com|net|org|cn|top|cc|io|me|cf|tk|ml|ga|gg|xyz|site|online|tech|info|biz|work|space|shop|club|pro|dev|app|link|run|art|fun|live|store|world|today|design|cloud)/[\"']",
+				// 匹配GitHub代理特征的域名
+				"[\"']https://(?:gh|mirror|proxy|cdn)[\\w.-]*\\.(?:com|net|org|cn|top|cc|io|me|cf|tk|ml|ga|gg|xyz|site|online|tech|info|biz|work|space|shop|club|pro|dev|app|link|run|art|fun|live|store|world|today|design|cloud)/[\"']"
+			};
+			
+			for (String patternStr : patterns) {
+				Pattern pattern = Pattern.compile(patternStr, Pattern.CASE_INSENSITIVE);
+				Matcher matcher = pattern.matcher(scriptContent);
+				
+				while (matcher.find()) {
+					String match = matcher.group();
+					// 移除引号获取纯URL
+					String url = match.replaceAll("[\"']", "");
+					
+					// 确保URL格式正确
+					if (url.startsWith("https://") && url.endsWith("/")) {
+						// 过滤掉明显不是代理的地址
+						if (isValidProxyUrl(url)) {
+							proxies.add(url);
+							Log.d(TAG, "发现代理地址: " + url);
+						}
+					}
+				}
+			}
+			
+			// 额外查找脚本中的域名配置 - 扩展域名后缀
+			Pattern domainPattern = Pattern.compile("(?:proxy|mirror|gh|cdn)[\\w.-]*\\.(?:com|net|org|cn|top|cc|io|me|cf|tk|ml|ga|gg|xyz|site|online|tech|info|biz|work|space|shop|club|pro|dev|app|link|run|art|fun|live|store|world|today|design|cloud)", Pattern.CASE_INSENSITIVE);
+			Matcher domainMatcher = domainPattern.matcher(scriptContent);
+			
+			while (domainMatcher.find()) {
+				String domain = domainMatcher.group();
+				String proxyUrl = "https://" + domain + "/";
+				if (isValidProxyUrl(proxyUrl)) {
+					proxies.add(proxyUrl);
+					Log.d(TAG, "发现域名代理: " + proxyUrl);
+				}
+			}
+			
+		} catch (Exception e) {
+			Log.w(TAG, "解析代理地址失败: " + e.getMessage());
+		}
+		
+		// 去重并返回
+		Set<String> uniqueProxies = new HashSet<>(proxies);
+		return uniqueProxies.toArray(new String[0]);
+	}
+	
+	// 验证代理URL是否有效
+	private static boolean isValidProxyUrl(String url) {
+		if (url == null || url.length() < 15 || url.length() > 100) {
+			return false;
+		}
+		
+		// 排除明显不是代理的地址
+		String[] blacklist = {
+			"github.com", "googleapis.com", "gstatic.com", 
+			"jquery.com", "bootstrap.com", "cdnjs.com",
+			"unpkg.com", "jsdelivr.net", "ghproxy.link"
+		};
+		
+		for (String blocked : blacklist) {
+			if (url.contains(blocked)) {
+				return false;
+			}
+		}
+		
+		// 检测是否会重定向回 ghproxy.link（失效代理的常见行为）
+		if (detectRedirectToGhproxyLink(url)) {
+			Log.d(TAG, "代理失效或不可靠，已排除: " + url);
+			return false;
+		}
+		
+		// 代理通过所有检测，认为是有效的
+		Log.d(TAG, "代理验证通过: " + url);
+		return true;
+	}
+	
+	// 检测代理是否会重定向回 ghproxy.link
+	private static boolean detectRedirectToGhproxyLink(String proxyUrl) {
+		HttpURLConnection conn = null;
+		try {
+			// 测试访问一个简单的GitHub API
+			String testUrl = proxyUrl + "https://api.github.com/zen";
+			URL url = new URL(testUrl);
+			conn = (HttpURLConnection) url.openConnection();
+			conn.setRequestMethod("HEAD");
+			conn.setInstanceFollowRedirects(false); // 不自动跟随重定向
+			conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile; rv:40.0)");
+			conn.setConnectTimeout(5000);
+			conn.setReadTimeout(5000);
+			
+			int responseCode = conn.getResponseCode();
+			
+			// 检查重定向
+			if (responseCode >= 300 && responseCode < 400) {
+				String location = conn.getHeaderField("Location");
+				if (location != null && location.contains("ghproxy.link")) {
+					return true; // 重定向回 ghproxy.link，说明代理失效
+				}
+			}
+			
+			// 检查最终URL（即使没有重定向状态码，有些服务器可能直接返回ghproxy.link内容）
+			String finalUrl = conn.getURL().toString();
+			if (finalUrl.contains("ghproxy.link")) {
+				return true;
+			}
+			
+			// 检查响应头中的服务器信息
+			String server = conn.getHeaderField("Server");
+			if (server != null && server.toLowerCase().contains("ghproxy")) {
+				return true;
+			}
+			
+			// 代理检测成功，没有重定向问题
+			return false;
+			
+		} catch (Exception e) {
+			// 网络错误或异常情况，认为代理不可靠，排除
+			Log.w(TAG, "代理检测异常，排除不可靠代理: " + proxyUrl + " - " + e.getMessage());
+			return true; // 返回true表示有问题，应该排除
+		} finally {
+			if (conn != null) {
+				conn.disconnect();
+			}
 		}
 	}
 

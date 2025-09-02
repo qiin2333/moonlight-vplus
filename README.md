@@ -3,7 +3,7 @@
   
   # Moonlight V+ 威力加强版
   
-  [![Version](https://img.shields.io/badge/version-12.3.1-blue.svg)](https://github.com/qiin2333/moonlight-android/releases/tag/shortcut)
+  [![Version](https://img.shields.io/badge/version-12.3.2-blue.svg)](https://github.com/qiin2333/moonlight-android/releases/tag/shortcut)
   [![Android](https://img.shields.io/badge/Android-5.0+-green.svg)](https://developer.android.com/about/versions)
   [![License](https://img.shields.io/badge/license-GPL%20v3-orange.svg)](LICENSE.txt)
   [![Stars](https://img.shields.io/github/stars/qiin2333/moonlight-android?style=social)](https://github.com/qiin2333/moonlight-android)
@@ -13,14 +13,15 @@
   *让您的 Android 设备成为强大的游戏串流终端！Gawr！* ✨
 </div>
 
-
 ## 📱 应用截图展示
 
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/10800322-d8ab-4419-bd05-5fc37fd4c8f3" width="360" alt="主界面">
-  <img src="https://github.com/user-attachments/assets/5e227bab-afaa-4452-ae38-ac2cc9d22988" width="360" alt="游戏列表">
-  <img src="https://github.com/user-attachments/assets/c755d228-d9f5-4068-ae6c-c3f8ea0a0f2f" width="360" alt="串流界面">
-  <img src="https://github.com/user-attachments/assets/5046dd58-7013-494e-9f17-26e4de56a7dd" width="360" alt="设置界面">
+  <img src="https://github.com/user-attachments/assets/bb174547-9b0d-4827-81cf-59308f3cfa9e" width="640" alt="主界面">
+  <div align="center">
+    <img src="https://github.com/user-attachments/assets/5e227bab-afaa-4452-ae38-ac2cc9d22988" width="240" alt="游戏列表">
+    <img src="https://github.com/user-attachments/assets/c755d228-d9f5-4068-ae6c-c3f8ea0a0f2f" width="240" alt="串流界面">
+    <img src="https://github.com/user-attachments/assets/5046dd58-7013-494e-9f17-26e4de56a7dd" width="240" alt="设置界面">
+  </div>
 </div>
 
 
