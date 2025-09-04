@@ -178,6 +178,7 @@ public class PreferenceConfiguration {
     public static final int FRAME_PACING_BALANCED = 1;
     public static final int FRAME_PACING_CAP_FPS = 2;
     public static final int FRAME_PACING_MAX_SMOOTHNESS = 3;
+    public static final int FRAME_PACING_EXPERIMENTAL_LOW_LATENCY = 4;
 
     public static final String RES_360P = "640x360";
     public static final String RES_480P = "854x480";
@@ -526,6 +527,9 @@ public class PreferenceConfiguration {
         }
         else if (str.equals("smoothness")) {
             return FRAME_PACING_MAX_SMOOTHNESS;
+        }
+        else if (str.equals("experimental-low-latency")) {
+            return FRAME_PACING_EXPERIMENTAL_LOW_LATENCY;
         }
         else {
             // Should never get here
