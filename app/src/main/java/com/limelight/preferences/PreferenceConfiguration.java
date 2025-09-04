@@ -281,6 +281,8 @@ public class PreferenceConfiguration {
     public float gyroSensitivityMultiplier;
     // Runtime-only: activation keycode to hold (Android keycode); 0 means LT analog, 1 means RT analog, otherwise Android key
     public int gyroActivationKeyCode;
+    // Runtime-only: invert X-axis direction for gyro input
+    public boolean gyroInvertXAxis;
     // Card visibility
     public boolean showBitrateCard;
     public boolean showGyroCard;
@@ -818,6 +820,7 @@ public class PreferenceConfiguration {
         config.gyroFullDeflectionDps = 180.0f;
         config.gyroSensitivityMultiplier = 1.0f;
         config.gyroActivationKeyCode = KeyEvent.KEYCODE_BUTTON_L2;
+        config.gyroInvertXAxis = false;
 
         return config;
     }
@@ -910,6 +913,7 @@ public class PreferenceConfiguration {
         copy.gyroToRightStick = this.gyroToRightStick;
         copy.gyroFullDeflectionDps = this.gyroFullDeflectionDps;
         copy.gyroActivationKeyCode = this.gyroActivationKeyCode;
+        copy.gyroInvertXAxis = this.gyroInvertXAxis;
         copy.showBitrateCard = this.showBitrateCard;
         copy.showGyroCard = this.showGyroCard;
         return copy;

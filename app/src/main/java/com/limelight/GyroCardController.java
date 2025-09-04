@@ -31,6 +31,7 @@ public class GyroCardController {
         TextView activationKeyText = customView.findViewById(R.id.gyroActivationKeyText);
         SeekBar sensSeek = customView.findViewById(R.id.gyroSensitivitySeekBar);
         TextView sensVal = customView.findViewById(R.id.gyroSensitivityValueText);
+        CompoundButton invertXSwitch = customView.findViewById(R.id.gyroInvertXSwitch);
 
         if (statusText != null) {
             statusText.setText(game.prefConfig.gyroToRightStick ? "ON" : "OFF");
@@ -77,6 +78,13 @@ public class GyroCardController {
                 }
                 @Override public void onStartTrackingTouch(SeekBar seekBar) {}
                 @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+            });
+        }
+
+        if (invertXSwitch != null) {
+            invertXSwitch.setChecked(game.prefConfig.gyroInvertXAxis);
+            invertXSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                game.prefConfig.gyroInvertXAxis = isChecked;
             });
         }
     }
