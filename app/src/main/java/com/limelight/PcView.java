@@ -494,6 +494,9 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         // 初始化统计分析管理器
         analyticsManager = AnalyticsManager.getInstance(this);
         analyticsManager.logAppLaunch();
+        
+        // 智能上报设备信息（包括SOC信息）
+        analyticsManager.smartReportDeviceInfo();
 
         // 检查应用更新
         UpdateManager.checkForUpdatesOnStartup(this);
