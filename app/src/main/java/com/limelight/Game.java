@@ -42,6 +42,8 @@ import com.limelight.utils.FullscreenProgressOverlay;
 import com.limelight.utils.UiHelper;
 import com.limelight.utils.NetHelper;
 import com.limelight.utils.AnalyticsManager;
+import com.limelight.utils.AppCacheKeys;
+import com.limelight.utils.AppCacheManager;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
@@ -475,6 +477,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         app = new NvApp(appName != null ? appName : "app", appId, appSupportsHdr);
         if (cmdList != null) {
             app.setCmdList(cmdList);
+        }
+        
+        // 保存应用信息到SharedPreferences，供下次从捷径恢复时使用
+        if (appId != StreamConfiguration.INVALID_APP_ID && appName != null && !appName.equals("app")) {
+            AppCacheManager cacheManager = new AppCacheManager(this);
+            cacheManager.saveAppInfo(getIntent().getStringExtra(EXTRA_PC_UUID), app);
         }
 
         // Start the progress overlay
@@ -3291,9 +3299,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             long currentRxBytes = TrafficStats.getTotalRxBytes();
             long timeMillis = System.currentTimeMillis();
             long timeMillisInterval = timeMillis - previousTimeMillis;
-            if (timeMillisInterval < 3000) {
+            
+            // 只在时间间隔合理时计算带宽，避免异常值
+            if (timeMillisInterval > 0 && timeMillisInterval < 5000) {
                 performanceInfo.bandWidth = NetHelper.calculateBandwidth(currentRxBytes, previousRxBytes, timeMillisInterval);
             }
+            
             previousTimeMillis = timeMillis;
             previousRxBytes = currentRxBytes;
 

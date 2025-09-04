@@ -144,12 +144,14 @@
         <item>@string/pacing_balanced</item>
         <item>@string/pacing_balanced_alt</item>
         <item>@string/pacing_smoothness</item>
+        <item>@string/pacing_experimental_low_latency</item>
     </string-array>
     <string-array name="video_frame_pacing_values" translatable="false">
         <item>latency</item>
         <item>balanced</item>
         <item>cap-fps</item>
         <item>smoothness</item>
+        <item>experimental-low-latency</item>
     </string-array>
 
     <string-array name="analog_scrolling_names">

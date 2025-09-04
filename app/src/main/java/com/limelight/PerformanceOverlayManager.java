@@ -59,6 +59,8 @@ public class PerformanceOverlayManager {
     // 计算带宽用
     private long previousTimeMillis = 0;
     private long previousRxBytes = 0;
+    private boolean isFirstBandwidthCalculation = true;
+    private String lastValidBandwidth = "N/A";
 
     public PerformanceOverlayManager(Activity activity, PreferenceConfiguration prefConfig) {
         this.activity = activity;
@@ -162,7 +164,18 @@ public class PerformanceOverlayManager {
         long timeMillisInterval = timeMillis - previousTimeMillis;
 
         // 计算并更新带宽信息
-        performanceInfo.bandWidth = NetHelper.calculateBandwidth(currentRxBytes, previousRxBytes, timeMillisInterval);
+        String calculatedBandwidth = NetHelper.calculateBandwidth(currentRxBytes, previousRxBytes, timeMillisInterval);
+        
+        // 如果是第一次计算或时间间隔过长，跳过这次计算
+        if (isFirstBandwidthCalculation || timeMillisInterval > 5000) {
+            isFirstBandwidthCalculation = false;
+            performanceInfo.bandWidth = lastValidBandwidth;
+        } else {
+            // 使用计算出的带宽，但保持平滑
+            performanceInfo.bandWidth = calculatedBandwidth;
+            lastValidBandwidth = calculatedBandwidth;
+        }
+        
         previousTimeMillis = timeMillis;
         previousRxBytes = currentRxBytes;
 

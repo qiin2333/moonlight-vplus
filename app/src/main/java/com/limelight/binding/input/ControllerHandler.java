@@ -161,6 +161,11 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         float scaledX = clampFloat(gyroXDegPerSec / effectiveSensitivity, -1.0f, 1.0f);
         float scaledY = clampFloat(gyroYDegPerSec / effectiveSensitivity, -1.0f, 1.0f);
 
+        // Apply X-axis inversion if enabled
+        if (prefConfig.gyroInvertXAxis) {
+            scaledX = -scaledX;
+        }
+
         short mappedX = (short) (scaledX * 0x7FFE);
         short mappedY = (short) (-scaledY * 0x7FFE);
 

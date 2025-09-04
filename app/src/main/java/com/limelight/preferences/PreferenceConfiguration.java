@@ -178,6 +178,7 @@ public class PreferenceConfiguration {
     public static final int FRAME_PACING_BALANCED = 1;
     public static final int FRAME_PACING_CAP_FPS = 2;
     public static final int FRAME_PACING_MAX_SMOOTHNESS = 3;
+    public static final int FRAME_PACING_EXPERIMENTAL_LOW_LATENCY = 4;
 
     public static final String RES_360P = "640x360";
     public static final String RES_480P = "854x480";
@@ -280,6 +281,8 @@ public class PreferenceConfiguration {
     public float gyroSensitivityMultiplier;
     // Runtime-only: activation keycode to hold (Android keycode); 0 means LT analog, 1 means RT analog, otherwise Android key
     public int gyroActivationKeyCode;
+    // Runtime-only: invert X-axis direction for gyro input
+    public boolean gyroInvertXAxis;
     // Card visibility
     public boolean showBitrateCard;
     public boolean showGyroCard;
@@ -526,6 +529,9 @@ public class PreferenceConfiguration {
         }
         else if (str.equals("smoothness")) {
             return FRAME_PACING_MAX_SMOOTHNESS;
+        }
+        else if (str.equals("experimental-low-latency")) {
+            return FRAME_PACING_EXPERIMENTAL_LOW_LATENCY;
         }
         else {
             // Should never get here
@@ -814,6 +820,7 @@ public class PreferenceConfiguration {
         config.gyroFullDeflectionDps = 180.0f;
         config.gyroSensitivityMultiplier = 1.0f;
         config.gyroActivationKeyCode = KeyEvent.KEYCODE_BUTTON_L2;
+        config.gyroInvertXAxis = false;
 
         return config;
     }
@@ -906,6 +913,7 @@ public class PreferenceConfiguration {
         copy.gyroToRightStick = this.gyroToRightStick;
         copy.gyroFullDeflectionDps = this.gyroFullDeflectionDps;
         copy.gyroActivationKeyCode = this.gyroActivationKeyCode;
+        copy.gyroInvertXAxis = this.gyroInvertXAxis;
         copy.showBitrateCard = this.showBitrateCard;
         copy.showGyroCard = this.showGyroCard;
         return copy;

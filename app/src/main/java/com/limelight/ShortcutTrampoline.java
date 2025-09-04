@@ -21,6 +21,8 @@ import com.limelight.utils.Dialog;
 import com.limelight.utils.ServerHelper;
 import com.limelight.utils.SpinnerDialog;
 import com.limelight.utils.UiHelper;
+import com.limelight.utils.AppCacheKeys;
+import com.limelight.utils.AppCacheManager;
 
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -178,8 +180,15 @@ public class ShortcutTrampoline extends Activity {
 
                                                 // If a game is running, we'll make the stream the top level activity
                                                 if (details.runningGameId != 0) {
-                                                    intentStack.add(ServerHelper.createStartIntent(ShortcutTrampoline.this,
-                                                            new NvApp(null, details.runningGameId, false), details, managerBinder));
+                                                    // Try to get the complete NvApp object from the cached app list
+                                                    NvApp actualApp = getNvAppById(details.runningGameId, uuidString);
+                                                    if (actualApp != null) {
+                                                        intentStack.add(ServerHelper.createStartIntent(ShortcutTrampoline.this, actualApp, details, managerBinder));
+                                                    } else {
+                                                        // Fallback: create a basic NvApp object if we can't find the complete one
+                                                        intentStack.add(ServerHelper.createStartIntent(ShortcutTrampoline.this,
+                                                                new NvApp(null, details.runningGameId, false), details, managerBinder));
+                                                    }
                                                 }
 
                                                 // Now start the activities
@@ -268,6 +277,56 @@ public class ShortcutTrampoline extends Activity {
 
         return true;
     }
+
+    /**
+     * 根据appId从缓存的应用列表中获取完整的NvApp对象
+     * @param appId 应用ID
+     * @param uuidString PC的UUID
+     * @return 完整的NvApp对象，如果找不到则返回null
+     */
+    private NvApp getNvAppById(int appId, String uuidString) {
+        try {
+            String rawAppList = CacheHelper.readInputStreamToString(CacheHelper.openCacheFileForInput(getCacheDir(), "applist", uuidString));
+            if (rawAppList.isEmpty()) {
+                // 如果缓存为空，尝试从SharedPreferences获取上一次的应用信息
+                return getLastNvAppFromPreferences(appId, uuidString);
+            }
+            
+            List<NvApp> applist = NvHTTP.getAppListByReader(new StringReader(rawAppList));
+            for (NvApp app : applist) {
+                if (app.getAppId() == appId) {
+                    // 保存这个应用信息到SharedPreferences，供下次使用
+                    AppCacheManager cacheManager = new AppCacheManager(this);
+                    cacheManager.saveAppInfo(uuidString, app);
+                    return app;
+                }
+            }
+            
+            // 如果在应用列表中找不到，尝试从SharedPreferences获取
+            return getLastNvAppFromPreferences(appId, uuidString);
+        } catch (IOException | XmlPullParserException e) {
+            // 如果读取缓存失败，尝试从SharedPreferences获取
+            e.printStackTrace();
+            return getLastNvAppFromPreferences(appId, uuidString);
+        }
+    }
+
+    /**
+     * 从SharedPreferences获取上一次的完整NvApp对象
+     * @param appId 应用ID
+     * @param uuidString PC的UUID
+     * @return 完整的NvApp对象，如果找不到则返回null
+     */
+    private NvApp getLastNvAppFromPreferences(int appId, String uuidString) {
+        try {
+            AppCacheManager cacheManager = new AppCacheManager(this);
+            return cacheManager.getAppInfo(uuidString, appId);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

@@ -8,6 +8,7 @@ import android.util.Log;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.limelight.BuildConfig;
 
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -226,6 +227,165 @@ public class AnalyticsManager {
             return 0;
         }
         return System.currentTimeMillis() - sessionStartTime;
+    }
+    
+    /**
+     * 上报设备信息
+     * 在应用首次启动或设备信息发生变化时调用
+     */
+    public void reportDeviceInfo() {
+        if (!canExecuteAnalytics()) {
+            Log.d(TAG, "Device info reporting disabled");
+            return;
+        }
+        
+        try {
+            // 收集设备信息
+            Map<String, String> deviceInfo = DeviceInfoCollector.collectAllDeviceInfo(applicationContext);
+            
+            // 设置用户属性（设备指纹）
+            String deviceFingerprint = DeviceInfoCollector.generateDeviceFingerprint();
+            setUserProperty("device_fingerprint", deviceFingerprint);
+            
+            // 记录设备信息事件
+            Bundle bundle = new Bundle();
+            for (Map.Entry<String, String> entry : deviceInfo.entrySet()) {
+                String key = entry.getKey();
+                String value = entry.getValue();
+                
+                // Firebase Analytics对参数名和值有长度限制
+                if (key.length() > 40) {
+                    key = key.substring(0, 40);
+                }
+                if (value != null && value.length() > 100) {
+                    value = value.substring(0, 100);
+                }
+                
+                bundle.putString(key, value);
+            }
+            
+            firebaseAnalytics.logEvent("device_info", bundle);
+            
+            // 单独上报SOC信息（如果可用）
+            if (deviceInfo.containsKey("soc_manufacturer") || deviceInfo.containsKey("soc_model")) {
+                Bundle socBundle = new Bundle();
+                if (deviceInfo.containsKey("soc_manufacturer")) {
+                    socBundle.putString("soc_manufacturer", deviceInfo.get("soc_manufacturer"));
+                }
+                if (deviceInfo.containsKey("soc_model")) {
+                    socBundle.putString("soc_model", deviceInfo.get("soc_model"));
+                }
+                if (deviceInfo.containsKey("media_performance_class")) {
+                    socBundle.putString("performance_class", deviceInfo.get("media_performance_class"));
+                }
+                firebaseAnalytics.logEvent("soc_info", socBundle);
+            }
+            
+            Log.d(TAG, "Device info reported successfully");
+            
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to report device info: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 上报设备性能信息
+     * 包括内存、CPU核心数等性能相关数据
+     */
+    public void reportDevicePerformance() {
+        if (!canExecuteAnalytics()) {
+            Log.d(TAG, "Device performance reporting disabled");
+            return;
+        }
+        
+        try {
+            Map<String, String> deviceInfo = DeviceInfoCollector.collectAllDeviceInfo(applicationContext);
+            
+            Bundle bundle = new Bundle();
+            
+            // 内存信息
+            if (deviceInfo.containsKey("total_memory_mb")) {
+                bundle.putString("total_memory_mb", deviceInfo.get("total_memory_mb"));
+            }
+            
+            // CPU信息
+            if (deviceInfo.containsKey("processor_count")) {
+                bundle.putString("cpu_cores", deviceInfo.get("processor_count"));
+            }
+            if (deviceInfo.containsKey("processor_model")) {
+                bundle.putString("cpu_model", deviceInfo.get("processor_model"));
+            }
+            
+            // GPU信息
+            if (deviceInfo.containsKey("gpu_type")) {
+                bundle.putString("gpu_type", deviceInfo.get("gpu_type"));
+            }
+            
+            // 屏幕信息
+            if (deviceInfo.containsKey("screen_density")) {
+                bundle.putString("screen_density", deviceInfo.get("screen_density"));
+            }
+            
+            firebaseAnalytics.logEvent("device_performance", bundle);
+            
+            Log.d(TAG, "Device performance reported successfully");
+            
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to report device performance: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 检查是否需要重新上报设备信息
+     * 基于SharedPreferences中的时间戳判断
+     */
+    public boolean shouldReportDeviceInfo() {
+        if (applicationContext == null) {
+            return false;
+        }
+        
+        try {
+            android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(applicationContext);
+            long lastReportTime = prefs.getLong("last_device_info_report", 0);
+            long currentTime = System.currentTimeMillis();
+            
+            // 如果从未上报过，或者距离上次上报超过7天，则需要重新上报
+            return lastReportTime == 0 || (currentTime - lastReportTime) > (7 * 24 * 60 * 60 * 1000);
+            
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to check device info report status: " + e.getMessage());
+            return true; // 出错时默认需要上报
+        }
+    }
+    
+    /**
+     * 标记设备信息已上报
+     */
+    private void markDeviceInfoReported() {
+        if (applicationContext == null) {
+            return;
+        }
+        
+        try {
+            android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(applicationContext);
+            prefs.edit().putLong("last_device_info_report", System.currentTimeMillis()).apply();
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to mark device info as reported: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 智能上报设备信息
+     * 自动判断是否需要上报，避免频繁上报
+     */
+    public void smartReportDeviceInfo() {
+        if (shouldReportDeviceInfo()) {
+            reportDeviceInfo();
+            reportDevicePerformance();
+            markDeviceInfoReported();
+        } else {
+            Log.d(TAG, "Device info reporting skipped (recently reported)");
+        }
     }
     
     /**

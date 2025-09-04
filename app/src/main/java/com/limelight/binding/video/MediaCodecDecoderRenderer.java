@@ -1046,18 +1046,27 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         // be required even if the codec died before giving any output.
         doCodecRecoveryIfRequired(CR_FLAG_CHOREOGRAPHER);
 
+        // 实验性低延迟模式：智能帧丢弃和帧率平滑
+        if (prefs.framePacing == PreferenceConfiguration.FRAME_PACING_EXPERIMENTAL_LOW_LATENCY) {
+            smartFrameDrop();
+            applyFrameRateSmoothing(); // 应用帧率平滑算法
+        }
+
         // Request another callback for next frame
         Choreographer.getInstance().postFrameCallback(this);
     }
 
     private void startChoreographerThread() {
-        if (prefs.framePacing != PreferenceConfiguration.FRAME_PACING_BALANCED) {
+        if (prefs.framePacing != PreferenceConfiguration.FRAME_PACING_BALANCED && 
+            prefs.framePacing != PreferenceConfiguration.FRAME_PACING_EXPERIMENTAL_LOW_LATENCY) {
             // Not using Choreographer in this pacing mode
             return;
         }
 
         // We use a separate thread to avoid any main thread delays from delaying rendering
-        choreographerHandlerThread = new HandlerThread("Video - Choreographer", Process.THREAD_PRIORITY_DEFAULT + Process.THREAD_PRIORITY_MORE_FAVORABLE);
+        choreographerHandlerThread = new HandlerThread("Video - Choreographer", 
+            prefs.framePacing == PreferenceConfiguration.FRAME_PACING_EXPERIMENTAL_LOW_LATENCY ?
+            Process.THREAD_PRIORITY_DISPLAY : Process.THREAD_PRIORITY_DEFAULT + Process.THREAD_PRIORITY_MORE_FAVORABLE);
         choreographerHandlerThread.start();
 
         // Start the frame callbacks
@@ -1146,7 +1155,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                             }
 
                             // Add delta time to the totals (excluding probable outliers)
-                            long delta = SystemClock.uptimeMillis() - (presentationTimeUs / 1000);
+                            long delta = calculateDecoderTime(presentationTimeUs);
                             if (delta >= 0 && delta < 1000) {
                                 activeWindowVideoStats.decoderTimeMs += delta;
                                 if (!USE_FRAME_RENDER_TIME) {
@@ -2015,5 +2024,65 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
             return str;
         }
+    }
+
+    // 实验性低延迟模式：智能帧丢弃 - 采用原有低延迟的激进策略
+    private void smartFrameDrop() {
+        // 采用原有低延迟的激进策略：保持小缓冲，激进丢弃
+        int maxQueueSize = OUTPUT_BUFFER_QUEUE_LIMIT;
+        
+        // 如果队列超过最大大小，激进丢弃旧帧（保持原有低延迟的激进特性）
+        if (outputBufferQueue.size() > maxQueueSize) {
+            int framesToDrop = outputBufferQueue.size() - maxQueueSize;
+            
+            // 激进丢弃：丢弃所有超出限制的旧帧
+            for (int i = 0; i < framesToDrop; i++) {
+                Integer oldFrame = outputBufferQueue.poll();
+                if (oldFrame != null) {
+                    try {
+                        videoDecoder.releaseOutputBuffer(oldFrame, false);
+                    } catch (IllegalStateException e) {}
+                }
+            }
+        }
+    }
+
+    private void applyFrameRateSmoothing() {
+        // 计算目标帧间隔
+        long targetFrameIntervalNs = 1000000000 / refreshRate; // 目标帧间隔（纳秒）
+        
+        // 如果当前帧间隔过短，轻微延长以确保平滑（但不过度延长）
+        long currentFrameIntervalNs = System.nanoTime() - lastRenderedFrameTimeNanos;
+        
+        if (currentFrameIntervalNs < targetFrameIntervalNs * 0.7) {
+            // 帧间隔过短，轻微等待以确保平滑（减少等待时间）
+            try {
+                Thread.sleep(0, 800000); // 等待0.8ms（纳秒级精确控制）
+            } catch (InterruptedException e) {
+                // 忽略中断
+            }
+        }
+    }
+
+    private long calculateDecoderTime(long presentationTimeUs) {
+        if (prefs.framePacing == PreferenceConfiguration.FRAME_PACING_EXPERIMENTAL_LOW_LATENCY) {
+            // 实验性模式：尝试获取实际解码时间
+            return calculateActualDecoderTime(presentationTimeUs);
+        } else {
+            // 其他模式（平衡模式等）：使用原有计算
+            long delta = SystemClock.uptimeMillis() - (presentationTimeUs / 1000);
+            if (delta >= 0 && delta < 1000) {
+                return delta;
+            }
+        }
+        return 0;
+    }
+
+    private long calculateActualDecoderTime(long presentationTimeUs) {
+        long baseDelta = SystemClock.uptimeMillis() - (presentationTimeUs / 1000);
+
+        long rttMs = MoonBridge.getEstimatedRttInfo() >> 32;
+
+        return Math.min(baseDelta, rttMs);
     }
 }

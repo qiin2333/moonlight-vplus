@@ -40,11 +40,25 @@ public class NetHelper {
      */
     @SuppressLint("DefaultLocale")
     public static String calculateBandwidth(long currentRxBytes, long previousRxBytes, long timeInterval) {
-        if (timeInterval <= 0) {
+        // 检查时间间隔是否有效
+        if (timeInterval <= 0 || timeInterval > 5000) { // 超过5秒的间隔认为无效
             return "0 K/s";
         }
         
-        long rxBytesPerDifference = (currentRxBytes - previousRxBytes) / 1024;
+        // 检查字节数是否有效（防止TrafficStats返回异常值）
+        if (currentRxBytes < 0 || previousRxBytes < 0) {
+            return "0 K/s";
+        }
+        
+        // 防止字节数回绕（32位系统可能发生）
+        long rxBytesDifference = currentRxBytes - previousRxBytes;
+        if (rxBytesDifference < 0) {
+            // 如果出现负数，可能是计数器重置，返回0
+            return "0 K/s";
+        }
+        
+        // 转换为KB
+        long rxBytesPerDifference = rxBytesDifference / 1024;
         double speedKBps = rxBytesPerDifference / ((double) timeInterval / 1000);
         
         if (speedKBps < 1024) {
