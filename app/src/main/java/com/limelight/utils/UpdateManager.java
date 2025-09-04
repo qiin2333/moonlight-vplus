@@ -77,7 +77,6 @@ public class UpdateManager {
 
 		@Override
 		public void run() {
-			// 首先尝试更新代理列表
 			updateProxyList();
 			
 			UpdateInfo updateInfo = null;
@@ -279,7 +278,7 @@ public class UpdateManager {
 			Toast.makeText(context, "Downloading failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
 		}
 	}
-
+	
 	// 从 ghproxy.link 脚本中自动发现并更新代理地址
 	private static void updateProxyList() {
 		try {
@@ -309,8 +308,8 @@ public class UpdateManager {
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.setRequestMethod("GET");
 			conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile; rv:40.0)");
-			conn.setConnectTimeout(8000);
-			conn.setReadTimeout(8000);
+			conn.setConnectTimeout(3000);
+			conn.setReadTimeout(3000);
 			
 			int responseCode = conn.getResponseCode();
 			if (responseCode == HttpURLConnection.HTTP_OK) {
@@ -429,8 +428,8 @@ public class UpdateManager {
 			conn.setRequestMethod("HEAD");
 			conn.setInstanceFollowRedirects(false); // 不自动跟随重定向
 			conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile; rv:40.0)");
-			conn.setConnectTimeout(5000);
-			conn.setReadTimeout(5000);
+			conn.setConnectTimeout(1500); // 进一步缩短超时时间
+			conn.setReadTimeout(1500);
 			
 			int responseCode = conn.getResponseCode();
 			
@@ -474,13 +473,17 @@ public class UpdateManager {
 		for (String p : PROXY_PREFIXES) {
 			tries.add(p + url);
 		}
-		for (String u : tries) {
+		
+		// 限制最大尝试次数，避免等待过久
+		int maxTries = Math.min(tries.size(), 3);
+		for (int i = 0; i < maxTries; i++) {
+			String u = tries.get(i);
 			try {
 				HttpURLConnection connection = (HttpURLConnection) new URL(u).openConnection();
 				connection.setRequestMethod("GET");
 				connection.setRequestProperty("User-Agent", "Moonlight-Android");
-				connection.setConnectTimeout(10000);
-				connection.setReadTimeout(10000);
+				connection.setConnectTimeout(5000);
+				connection.setReadTimeout(5000);
 				int responseCode = connection.getResponseCode();
 				if (responseCode == HttpURLConnection.HTTP_OK) {
 					BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
@@ -493,7 +496,7 @@ public class UpdateManager {
 					return response.toString();
 				}
 			} catch (Exception e) {
-				Log.w(TAG, "Request failed, trying next: " + u);
+				Log.w(TAG, "Request failed, trying next: " + u + " - " + e.getMessage());
 			}
 		}
 		return null;

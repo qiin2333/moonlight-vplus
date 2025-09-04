@@ -3,7 +3,7 @@
   
   # Moonlight V+ 威力加强版
   
-  [![Version](https://img.shields.io/badge/version-12.3.2-blue.svg)](https://github.com/qiin2333/moonlight-android/releases/tag/shortcut)
+  [![Version](https://img.shields.io/badge/version-12.3.3-blue.svg)](https://github.com/qiin2333/moonlight-android/releases/tag/shortcut)
   [![Android](https://img.shields.io/badge/Android-5.0+-green.svg)](https://developer.android.com/about/versions)
   [![License](https://img.shields.io/badge/license-GPL%20v3-orange.svg)](LICENSE.txt)
   [![Stars](https://img.shields.io/github/stars/qiin2333/moonlight-android?style=social)](https://github.com/qiin2333/moonlight-android)
@@ -80,7 +80,13 @@ cd moonlight-android
 
 ## 📋 更新日志
 
-### v12.2.6 最新版本
+### v12.3 最新版本
+- 🔄 **新增自动更新功能**：应用启动时自动检查更新，支持手动检查，智能提醒避免频繁打扰
+- ⚡ **延迟优化**：增加一种延迟与平滑全都要的帧速率模式
+- 🎮 **体感猪手**: 增加一个功能卡片，支持串流中的体感模拟操作，无需其他映射工具
+- 🔧 **捷径修复**: 解决从桌面捷径恢复串流无法识别APP的问题
+
+### v12.2.6
 - 🎮 **发送特殊按键可自定义**，并支持键盘选取
 - 🖱️ **添加切换触控菜单**，可切换为触控板模式
 - ⚡ **菜单集成实时码率调节面板**，调节更快速
@@ -145,7 +151,7 @@ cd moonlight-android
 欢迎提交 Issue 和 Pull Request！感谢每一位贡献者！
 
 ### 贡献者
-- [@cjcxj](https://github.com/cjcxj) - 特殊按键自定义、触控菜单（xxx！）
+- [@cjcxj](https://github.com/cjcxj) - 特殊按键自定义、触控菜单（创意新星！）
 - [@alonsojr1980](https://github.com/alonsojr1980) - SOC 解码优化（性能优化专家！）
 - [@Xmqor](https://github.com/Xmqor) - 手柄瞄准功能（瞄准高手！）
 - [@TrueZhuangJia](https://github.com/TrueZhuangJia) - 增强多点触控（搓屏专家！）
