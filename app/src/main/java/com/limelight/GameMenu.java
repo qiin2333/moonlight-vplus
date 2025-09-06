@@ -69,6 +69,8 @@ public class GameMenu {
     private static final String PREF_NAME = "custom_special_keys";
     private static final String KEY_NAME = "data";
 
+    private static boolean mouse_enable_switch = false;
+
     // 图标映射缓存
     private static final Map<String, Integer> ICON_MAP = new HashMap<>();
 
@@ -406,6 +408,17 @@ public class GameMenu {
                         getString(R.string.game_menu_toggle_elements_visibility),
                         false,
                         game::toggleVirtualControllerVisibility,
+                        "crown_function_menu",
+                        true
+                ),
+                new MenuOption(
+                        "开启/关闭触控",
+                        false,
+                        () -> {
+                            controllerManager.getTouchController().enableTouch(mouse_enable_switch);
+                            Toast.makeText(game, mouse_enable_switch ? "触控已开启" : "触控已关闭", Toast.LENGTH_SHORT).show();
+                            mouse_enable_switch = !mouse_enable_switch;
+                        },
                         "crown_function_menu",
                         true
                 ),
