@@ -28,14 +28,13 @@ import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHel
 import com.limelight.binding.input.advance_setting.superpage.ElementEditText;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
-import com.limelight.utils.ColorPickerUtils;
+import com.limelight.utils.ColorPickerDialog;
 
 import java.util.Map;
 
 public class AnalogStick extends Element {
 
     private static final String COLUMN_INT_ELEMENT_DEAD_ZONE_RADIUS = COLUMN_INT_ELEMENT_SENSE;
-
 
     /**
      * outer radius size in percent of the ui element
@@ -823,11 +822,16 @@ public class AnalogStick extends Element {
         // 设置点击监听器，打开颜色选择器
         colorDisplay.setOnClickListener(v -> {
             // 再次获取当前颜色，确保打开时颜色是最新的
-            ColorPickerUtils.show(getContext(), initialColorFetcher.get(), newColor -> {
-                colorUpdater.accept(newColor); // 使用传入的 Lambda 更新颜色属性
-                save();                      // 保存更改
-                updateColorDisplay(colorDisplay, newColor); // 更新UI显示
-            });
+            new ColorPickerDialog(
+                    getContext(),
+                    initialColorFetcher.get(),
+                    true, // true 表示显示 Alpha 透明度滑块
+                    newColor -> {
+                        colorUpdater.accept(newColor); // 使用传入的 Lambda 更新颜色属性
+                        save();                      // 保存更改
+                        updateColorDisplay(colorDisplay, newColor); // 更新UI显示
+                    }
+            ).show(); // <-- 主要变化：在最后调用 .show()
         });
     }
 }
