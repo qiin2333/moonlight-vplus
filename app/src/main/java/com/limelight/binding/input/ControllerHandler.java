@@ -137,8 +137,6 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     private static final float GYRO_DEFAULT_FULL_DEFLECTION_DPS = 180.0f;
     private static final float TRIGGER_ACTIVATE_THRESHOLD = 0.2f;
     public static final int GYRO_ACTIVATION_ALWAYS = -1000;
-    private SensorEventListener gyroToStickListener;
-
     private static float clampFloat(float v, float min, float max) {
         return v < min ? min : (v > max ? max : v);
     }
@@ -156,137 +154,107 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     }
 
     private void applyGyroToRightStick(short controllerNumber, float gyroXDegPerSec, float gyroYDegPerSec) {
-        // Map deg/s to [-1,1] stick values using sensitivity multiplier
+        // 计算陀螺仪映射到摇杆的值
         float effectiveSensitivity = 180.0f / prefConfig.gyroSensitivityMultiplier;
-        float scaledX = clampFloat(gyroXDegPerSec / effectiveSensitivity, -1.0f, 1.0f);
+        float scaledX = -clampFloat(gyroXDegPerSec / effectiveSensitivity, -1.0f, 1.0f);
         float scaledY = clampFloat(gyroYDegPerSec / effectiveSensitivity, -1.0f, 1.0f);
 
-        // Apply X-axis inversion if enabled
+        // 应用X轴反转设置
         if (prefConfig.gyroInvertXAxis) {
             scaledX = -scaledX;
         }
+        
+        // 应用Y轴反转设置
+        if (prefConfig.gyroInvertYAxis) {
+            scaledY = -scaledY;
+        }
 
         short mappedX = (short) (scaledX * 0x7FFE);
-        short mappedY = (short) (-scaledY * 0x7FFE);
+        short mappedY = (short) (scaledY * 0x7FFE);
 
-        // Cache gyro-derived right stick separately to avoid racing with physical stick updates
-        for (int i = 0; i < usbDeviceContexts.size(); i++) {
-            UsbDeviceContext context = usbDeviceContexts.valueAt(i);
-            if (context.controllerNumber == controllerNumber) {
-                context.gyroRightStickX = mappedX;
-                context.gyroRightStickY = mappedY;
-                if (prefConfig.gyroToRightStick && context.gyroHoldActive) {
-                    // 在hold激活时，按轴叠加并限幅（物理值做EPS去抖）
-                    short px = denoisePhys(context.physRightStickX);
-                    short py = denoisePhys(context.physRightStickY);
-                    context.rightStickX = clampShortToStickRange(px + context.gyroRightStickX);
-                    context.rightStickY = clampShortToStickRange(py + context.gyroRightStickY);
-                    sendControllerInputPacket(context);
-                }
-                return;
-            }
-        }
-
-        for (int i = 0; i < inputDeviceContexts.size(); i++) {
-            InputDeviceContext context = inputDeviceContexts.valueAt(i);
-            if (context.controllerNumber == controllerNumber) {
-                context.gyroRightStickX = mappedX;
-                context.gyroRightStickY = mappedY;
-                if (prefConfig.gyroToRightStick && context.gyroHoldActive) {
-                    // 在hold激活时，按轴叠加并限幅（物理值做EPS去抖）
-                    short px = denoisePhys(context.physRightStickX);
-                    short py = denoisePhys(context.physRightStickY);
-                    context.rightStickX = clampShortToStickRange(px + context.gyroRightStickX);
-                    context.rightStickY = clampShortToStickRange(py + context.gyroRightStickY);
-                    sendControllerInputPacket(context);
-                }
-                return;
-            }
-        }
-
-        // Fallback to default context for controller 0 (device sensors path)
-        if (controllerNumber == 0) {
-            defaultContext.gyroRightStickX = mappedX;
-            defaultContext.gyroRightStickY = mappedY;
-            if (prefConfig.gyroToRightStick && defaultContext.gyroHoldActive) {
-                // 在hold激活时，按轴叠加并限幅（物理值做EPS去抖）
-                short px = denoisePhys(defaultContext.physRightStickX);
-                short py = denoisePhys(defaultContext.physRightStickY);
-                defaultContext.rightStickX = clampShortToStickRange(px + defaultContext.gyroRightStickX);
-                defaultContext.rightStickY = clampShortToStickRange(py + defaultContext.gyroRightStickY);
-                sendControllerInputPacket(defaultContext);
-            }
+        // 更新对应控制器上下文的陀螺仪摇杆值
+        GenericControllerContext targetContext = findControllerContext(controllerNumber);
+        if (targetContext != null) {
+            updateContextWithGyroData(targetContext, mappedX, mappedY);
         }
     }
 
-    private void sendFusedRightStick(GenericControllerContext context) {
-        // 在陀螺仪更新时，如果hold激活，叠加物理与陀螺，并立即发送
-        if (context.gyroHoldActive) {
-            context.rightStickX = clampShortToStickRange(context.physRightStickX + context.gyroRightStickX);
-            context.rightStickY = clampShortToStickRange(context.physRightStickY + context.gyroRightStickY);
+    private GenericControllerContext findControllerContext(short controllerNumber) {
+        // 首先查找USB设备上下文
+        for (int i = 0; i < usbDeviceContexts.size(); i++) {
+            UsbDeviceContext context = usbDeviceContexts.valueAt(i);
+            if (context.controllerNumber == controllerNumber) {
+                return context;
+            }
+        }
+
+        // 查找输入设备上下文
+        for (int i = 0; i < inputDeviceContexts.size(); i++) {
+            InputDeviceContext context = inputDeviceContexts.valueAt(i);
+            if (context.controllerNumber == controllerNumber) {
+                return context;
+            }
+        }
+
+        // 控制器0的默认上下文回退
+        if (controllerNumber == 0) {
+            return defaultContext;
+        }
+
+        return null;
+    }
+
+    private void updateContextWithGyroData(GenericControllerContext context, short mappedX, short mappedY) {
+        context.gyroRightStickX = mappedX;
+        context.gyroRightStickY = mappedY;
+        
+        // 如果陀螺仪到右摇杆映射启用且hold状态激活，则应用融合
+        if (prefConfig.gyroToRightStick && context.gyroHoldActive) {
+            // 按轴叠加并限幅（物理值应用EPS去噪）
+            short px = denoisePhys(context.physRightStickX);
+            short py = denoisePhys(context.physRightStickY);
+            context.rightStickX = clampShortToStickRange(px + context.gyroRightStickX);
+            context.rightStickY = clampShortToStickRange(py + context.gyroRightStickY);
             sendControllerInputPacket(context);
         }
     }
 
     public void setGyroToRightStickEnabled(boolean enabled) {
         prefConfig.gyroToRightStick = enabled;
-
-        if (!enabled) {
-            if (gyroToStickListener != null) {
-                try {
-                    deviceSensorManager.unregisterListener(gyroToStickListener);
-                } catch (Exception ignored) {}
-                gyroToStickListener = null;
+        
+        if (enabled) {
+            // 确保控制器0有可用的sensorManager
+            InputDeviceContext defaultContext = inputDeviceContexts.get(0);
+            if (defaultContext != null && defaultContext.sensorManager == null) {
+                // 如果控制器0没有sensorManager，使用设备陀螺仪作为回退
+                defaultContext.sensorManager = deviceSensorManager;
+                LimeLog.info("controller0 has no sensormanager, fallback to device gyro");
             }
-            // Ensure all contexts exit hold state immediately on disable
-            clearGyroHoldForAllContexts();
-            return;
-        }
-
-        if (gyroToStickListener != null) {
-            // Already active; just recompute hold state from current triggers
+            
+            handleSetMotionEventState((short) 0, MoonBridge.LI_MOTION_TYPE_GYRO, (short) 120);
             recomputeGyroHoldForAllContexts();
-            return;
+        } else {
+            handleSetMotionEventState((short) 0, MoonBridge.LI_MOTION_TYPE_GYRO, (short) 0);
+            clearAllGyroStates();
         }
-
-        Sensor gyro = deviceSensorManager != null ? deviceSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE) : null;
-        if (gyro == null) {
-            return;
-        }
-
-        gyroToStickListener = new SensorEventListener() {
-            @Override
-            public void onSensorChanged(SensorEvent event) {
-                // Only apply when a hold is active for controller 0
-                if (isGyroHoldActiveFor((short) 0)) {
-                    float gx = event.values[0] * 57.2957795f;
-                    float gy = event.values[1] * 57.2957795f;
-                    applyGyroToRightStick((short) 0, gx, gy);
-                }
-            }
-
-            @Override
-            public void onAccuracyChanged(Sensor sensor, int accuracy) { }
-        };
-
-        try {
-            // Use a reasonable rate; SENSOR_DELAY_GAME ~ 50 Hz
-            deviceSensorManager.registerListener(gyroToStickListener, gyro, SensorManager.SENSOR_DELAY_GAME);
-        } catch (Exception ignored) {}
-
-        // After enabling, initialize hold state based on current trigger positions
-        recomputeGyroHoldForAllContexts();
     }
 
-    private void clearGyroHoldForAllContexts() {
+    private void clearAllGyroStates() {
+        // 清除所有控制器的陀螺仪摇杆数据和保持状态
         for (int i = 0; i < usbDeviceContexts.size(); i++) {
             UsbDeviceContext c = usbDeviceContexts.valueAt(i);
+            c.gyroRightStickX = 0;
+            c.gyroRightStickY = 0;
             c.gyroHoldActive = false;
         }
         for (int i = 0; i < inputDeviceContexts.size(); i++) {
             InputDeviceContext c = inputDeviceContexts.valueAt(i);
+            c.gyroRightStickX = 0;
+            c.gyroRightStickY = 0;
             c.gyroHoldActive = false;
         }
+        defaultContext.gyroRightStickX = 0;
+        defaultContext.gyroRightStickY = 0;
         defaultContext.gyroHoldActive = false;
     }
 
@@ -2507,7 +2475,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
                     if (prefConfig.gyroToRightStick) {
                         // Map device/controller gyro to right stick
-                        applyGyroToRightStick(controllerNumber, gx, gy);
+                        applyGyroToRightStick(controllerNumber, gz, gx);
                         return;
                     }
 

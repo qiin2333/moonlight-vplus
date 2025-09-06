@@ -113,6 +113,12 @@ public class PreferenceConfiguration {
     private static final String GAMEPAD_TOUCHPAD_AS_MOUSE_PREF_STRING = "checkbox_gamepad_touchpad_as_mouse";
     private static final String GAMEPAD_MOTION_SENSORS_PREF_STRING = "checkbox_gamepad_motion_sensors";
     private static final String GAMEPAD_MOTION_FALLBACK_PREF_STRING = "checkbox_gamepad_motion_fallback";
+    
+    // 陀螺仪偏好设置
+    private static final String GYRO_SENSITIVITY_MULTIPLIER_PREF_STRING = "gyro_sensitivity_multiplier";
+    private static final String GYRO_INVERT_X_AXIS_PREF_STRING = "gyro_invert_x_axis";
+    private static final String GYRO_INVERT_Y_AXIS_PREF_STRING = "gyro_invert_y_axis";
+    private static final String GYRO_ACTIVATION_KEY_CODE_PREF_STRING = "gyro_activation_key_code";
 
     // 麦克风设置
     private static final String ENABLE_MIC_PREF_STRING = "checkbox_enable_mic";
@@ -168,6 +174,12 @@ public class PreferenceConfiguration {
     private static final boolean DEFAULT_GAMEPAD_TOUCHPAD_AS_MOUSE = false;
     private static final boolean DEFAULT_GAMEPAD_MOTION_SENSORS = true;
     private static final boolean DEFAULT_GAMEPAD_MOTION_FALLBACK = false;
+    
+    // 陀螺仪偏好默认值
+    private static final float DEFAULT_GYRO_SENSITIVITY_MULTIPLIER = 1.0f;
+    private static final boolean DEFAULT_GYRO_INVERT_X_AXIS = false;
+    private static final boolean DEFAULT_GYRO_INVERT_Y_AXIS = false;
+    private static final int DEFAULT_GYRO_ACTIVATION_KEY_CODE = KeyEvent.KEYCODE_BUTTON_L2;
 
     // 麦克风设置默认值
     private static final boolean DEFAULT_ENABLE_MIC = false;
@@ -277,12 +289,14 @@ public class PreferenceConfiguration {
     public boolean gyroToRightStick;
     // Runtime-only: sensitivity in deg/s for full stick deflection
     public float gyroFullDeflectionDps;
-    // Runtime-only: sensitivity multiplier (higher -> faster)
+    // Persistent: sensitivity multiplier (higher -> faster)
     public float gyroSensitivityMultiplier;
-    // Runtime-only: activation keycode to hold (Android keycode); 0 means LT analog, 1 means RT analog, otherwise Android key
+    // Persistent: activation keycode to hold (Android keycode); 0 means LT analog, 1 means RT analog, otherwise Android key
     public int gyroActivationKeyCode;
-    // Runtime-only: invert X-axis direction for gyro input
+    // Persistent: invert X-axis direction for gyro input
     public boolean gyroInvertXAxis;
+    // Persistent: invert Y-axis direction for gyro input
+    public boolean gyroInvertYAxis;
     // Card visibility
     public boolean showBitrateCard;
     public boolean showGyroCard;
@@ -756,6 +770,12 @@ public class PreferenceConfiguration {
         config.gamepadMotionSensors = prefs.getBoolean(GAMEPAD_MOTION_SENSORS_PREF_STRING, DEFAULT_GAMEPAD_MOTION_SENSORS);
         config.gamepadMotionSensorsFallbackToDevice = prefs.getBoolean(GAMEPAD_MOTION_FALLBACK_PREF_STRING, DEFAULT_GAMEPAD_MOTION_FALLBACK);
         config.enableSimplifyPerfOverlay = false;
+        
+        // 加载陀螺仪偏好设置
+        config.gyroSensitivityMultiplier = prefs.getFloat(GYRO_SENSITIVITY_MULTIPLIER_PREF_STRING, DEFAULT_GYRO_SENSITIVITY_MULTIPLIER);
+        config.gyroInvertXAxis = prefs.getBoolean(GYRO_INVERT_X_AXIS_PREF_STRING, DEFAULT_GYRO_INVERT_X_AXIS);
+        config.gyroInvertYAxis = prefs.getBoolean(GYRO_INVERT_Y_AXIS_PREF_STRING, DEFAULT_GYRO_INVERT_Y_AXIS);
+        config.gyroActivationKeyCode = prefs.getInt(GYRO_ACTIVATION_KEY_CODE_PREF_STRING, DEFAULT_GYRO_ACTIVATION_KEY_CODE);
 
         // Cards visibility (defaults to true)
         config.showBitrateCard = prefs.getBoolean(SHOW_BITRATE_CARD_PREF_STRING, true);
@@ -818,9 +838,6 @@ public class PreferenceConfiguration {
         // Runtime-only defaults; controlled via in-stream GameMenu
         config.gyroToRightStick = false;
         config.gyroFullDeflectionDps = 180.0f;
-        config.gyroSensitivityMultiplier = 1.0f;
-        config.gyroActivationKeyCode = KeyEvent.KEYCODE_BUTTON_L2;
-        config.gyroInvertXAxis = false;
 
         return config;
     }
@@ -882,6 +899,10 @@ public class PreferenceConfiguration {
                     .putInt(MIC_BITRATE_PREF_STRING, micBitrate)
                     .putBoolean(ENABLE_ESC_MENU_PREF_STRING, enableEscMenu)
                     .putBoolean(ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, enableNativeMousePointer)
+                    .putFloat(GYRO_SENSITIVITY_MULTIPLIER_PREF_STRING, gyroSensitivityMultiplier)
+                    .putBoolean(GYRO_INVERT_X_AXIS_PREF_STRING, gyroInvertXAxis)
+                    .putBoolean(GYRO_INVERT_Y_AXIS_PREF_STRING, gyroInvertYAxis)
+                    .putInt(GYRO_ACTIVATION_KEY_CODE_PREF_STRING, gyroActivationKeyCode)
                     .apply();
             return true;
         } catch (Exception e) {
@@ -914,6 +935,7 @@ public class PreferenceConfiguration {
         copy.gyroFullDeflectionDps = this.gyroFullDeflectionDps;
         copy.gyroActivationKeyCode = this.gyroActivationKeyCode;
         copy.gyroInvertXAxis = this.gyroInvertXAxis;
+        copy.gyroInvertYAxis = this.gyroInvertYAxis;
         copy.showBitrateCard = this.showBitrateCard;
         copy.showGyroCard = this.showGyroCard;
         return copy;

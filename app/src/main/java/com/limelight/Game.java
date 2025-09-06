@@ -1313,12 +1313,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         if (microphoneManager != null) {
             microphoneManager.stopMicrophoneStream();
         }
-        
-        // 记录游戏流媒体结束事件
-        if (analyticsManager != null && pcName != null && streamStartTime > 0) {
-            long streamDuration = System.currentTimeMillis() - streamStartTime;
-            analyticsManager.logGameStreamEnd(pcName, appName, streamDuration);
-        }
     }
 
     @Override
@@ -1350,9 +1344,22 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             virtualController.hide();
         }
 
-        if (conn != null) {
+        String decoderMessage = "UNKNOWN";
+        if (decoderRenderer != null) {
             int videoFormat = decoderRenderer.getActiveVideoFormat();
+            if ((videoFormat & MoonBridge.VIDEO_FORMAT_MASK_H264) != 0) {
+                decoderMessage = "H.264";
+            } else if ((videoFormat & MoonBridge.VIDEO_FORMAT_MASK_H265) != 0) {
+                decoderMessage = "HEVC";
+            } else if ((videoFormat & MoonBridge.VIDEO_FORMAT_MASK_AV1) != 0) {
+                decoderMessage = "AV1";
+            }
+            if ((videoFormat & MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0) {
+                decoderMessage += " HDR";
+            }
+        }
 
+        if (conn != null) {
             displayedFailureDialog = true;
             stopConnection();
 
@@ -1373,24 +1380,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 // Add the video codec to the post-stream toast
                 if (message != null) {
                     message += " [";
-
-                    if ((videoFormat & MoonBridge.VIDEO_FORMAT_MASK_H264) != 0) {
-                        message += "H.264";
-                    }
-                    else if ((videoFormat & MoonBridge.VIDEO_FORMAT_MASK_H265) != 0) {
-                        message += "HEVC";
-                    }
-                    else if ((videoFormat & MoonBridge.VIDEO_FORMAT_MASK_AV1) != 0) {
-                        message += "AV1";
-                    }
-                    else {
-                        message += "UNKNOWN";
-                    }
-
-                    if ((videoFormat & MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0) {
-                        message += " HDR";
-                    }
-
+                    message += decoderMessage;
                     message += "]";
                 }
 
@@ -1416,6 +1406,28 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                         .putInt("LastNotifiedCrashCount", 0)
                         .apply();
             }
+        }
+
+        // 记录游戏流媒体结束事件
+        if (analyticsManager != null && pcName != null && streamStartTime > 0) {
+            long streamDuration = System.currentTimeMillis() - streamStartTime;
+            
+            // 收集性能数据
+            int resolutionWidth = 0;
+            int resolutionHeight = 0;
+            int averageEndToEndLatency = 0;
+            int averageDecoderLatency = 0;
+            
+            if (decoderRenderer != null) {
+                resolutionWidth = prefConfig.width;
+                resolutionHeight = prefConfig.height;
+                averageEndToEndLatency = decoderRenderer.getAverageEndToEndLatency();
+                averageDecoderLatency = decoderRenderer.getAverageDecoderLatency();
+            }
+            
+            analyticsManager.logGameStreamEnd(pcName, appName, streamDuration,
+                decoderMessage, resolutionWidth, resolutionHeight,
+                averageEndToEndLatency, averageDecoderLatency);
         }
 
         finish();

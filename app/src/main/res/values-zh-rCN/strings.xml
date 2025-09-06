@@ -503,4 +503,12 @@
     <string name="toast_delete_failed">删除失败了，试试看再来一次？</string>
     <string name="toast_load_key_list_failed">加载按键列表失败了喵~</string>
     <string name="toast_load_custom_keys_corrupted">加载自定义按键失败了，抱歉抱歉~</string>
+    
+    <!-- 陀螺仪相关字符串 -->
+    <string name="gyro_activation_method">激活方式</string>
+    <string name="gyro_invert_x_axis">X 轴反转</string>
+    <string name="gyro_invert_y_axis">Y 轴反转</string>
+    <string name="gyro_sensitivity">灵敏度</string>
+    <string name="gyro_sensitivity_format">灵敏度 %.1fx</string>
+    <string name="gyro_activation_always">常开</string>
 </resources>

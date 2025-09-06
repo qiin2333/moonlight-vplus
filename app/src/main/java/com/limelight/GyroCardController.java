@@ -32,6 +32,7 @@ public class GyroCardController {
         SeekBar sensSeek = customView.findViewById(R.id.gyroSensitivitySeekBar);
         TextView sensVal = customView.findViewById(R.id.gyroSensitivityValueText);
         CompoundButton invertXSwitch = customView.findViewById(R.id.gyroInvertXSwitch);
+        CompoundButton invertYSwitch = customView.findViewById(R.id.gyroInvertYSwitch);
 
         if (statusText != null) {
             statusText.setText(game.prefConfig.gyroToRightStick ? "ON" : "OFF");
@@ -77,7 +78,10 @@ public class GyroCardController {
                     sensVal.setText(String.format("%.1fx", m));
                 }
                 @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-                @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+                @Override 
+                public void onStopTrackingTouch(SeekBar seekBar) {
+                    game.prefConfig.writePreferences(game);
+                }
             });
         }
 
@@ -85,12 +89,25 @@ public class GyroCardController {
             invertXSwitch.setChecked(game.prefConfig.gyroInvertXAxis);
             invertXSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 game.prefConfig.gyroInvertXAxis = isChecked;
+                game.prefConfig.writePreferences(game);
+            });
+        }
+
+        if (invertYSwitch != null) {
+            invertYSwitch.setChecked(game.prefConfig.gyroInvertYAxis);
+            invertYSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                game.prefConfig.gyroInvertYAxis = isChecked;
+                game.prefConfig.writePreferences(game);
             });
         }
     }
 
     private void showActivationKeyDialog(TextView activationKeyText) {
-        final CharSequence[] items = new CharSequence[] {"Always on", "LT (L2)", "RT (R2)"};
+        final CharSequence[] items = new CharSequence[]{
+            game.getString(R.string.gyro_activation_always), 
+            "LT (L2)", 
+            "RT (R2)"
+        };
         int checked;
         if (game.prefConfig.gyroActivationKeyCode == ControllerHandler.GYRO_ACTIVATION_ALWAYS) {
             checked = 0;
@@ -100,7 +117,7 @@ public class GyroCardController {
             checked = 1;
         }
         new AlertDialog.Builder(game, R.style.AppDialogStyle)
-                .setTitle("Choose activation key")
+                .setTitle(R.string.gyro_activation_method)
                 .setSingleChoiceItems(items, checked, (d, which) -> {
                     if (which == 0) {
                         game.prefConfig.gyroActivationKeyCode = ControllerHandler.GYRO_ACTIVATION_ALWAYS;
@@ -109,6 +126,7 @@ public class GyroCardController {
                     } else {
                         game.prefConfig.gyroActivationKeyCode = android.view.KeyEvent.KEYCODE_BUTTON_R2;
                     }
+                    game.prefConfig.writePreferences(game);
                     if (activationKeyText != null) {
                         updateActivationKeyText(activationKeyText);
                     }

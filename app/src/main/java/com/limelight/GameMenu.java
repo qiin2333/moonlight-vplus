@@ -564,7 +564,7 @@ public class GameMenu {
         // 设置超级菜单
         setupSuperMenu(customView, superOptions, dialog);
 
-        // 设置码率调整区域（委托卡片控制器）
+        // 设置码率调整区域
         if (game.prefConfig.showBitrateCard) {
             new BitrateCardController(game, conn).setup(customView, dialog);
         } else {
@@ -572,7 +572,7 @@ public class GameMenu {
             if (bitrate != null) bitrate.setVisibility(View.GONE);
         }
 
-        // 设置陀螺仪控制卡片（委托卡片控制器）
+        // 设置陀螺仪控制卡片
         if (game.prefConfig.showGyroCard) {
             new GyroCardController(game).setup(customView, dialog);
         } else {
@@ -616,10 +616,10 @@ public class GameMenu {
     }
 
     private void showCardEditorDialog() {
-        final String[] items = new String[] {"Bitrate", "Gyro"};
+        final String[] items = new String[] {"码率调整 Bitrate", "体感助手 Gyro"};
         final boolean[] checked = new boolean[] {game.prefConfig.showBitrateCard, game.prefConfig.showGyroCard};
         new AlertDialog.Builder(game, R.style.AppDialogStyle)
-                .setTitle("Visible cards")
+                .setTitle("卡片配置 Visible cards")
                 .setMultiChoiceItems(items, checked, (d, which, isChecked) -> {
                     checked[which] = isChecked;
                 })
@@ -719,7 +719,7 @@ public class GameMenu {
             }
 
             // 添加一些padding和margin
-            totalHeight += (int) ((maxItems*2 + 48) * game.getResources().getDisplayMetrics().density);
+            totalHeight += (int) ((maxItems*2 + 50) * game.getResources().getDisplayMetrics().density);
             totalHeight = Math.max(totalHeight, (int) (270 * game.getResources().getDisplayMetrics().density));
 
             return totalHeight;
@@ -1445,7 +1445,7 @@ public class GameMenu {
                 false, this::showSpecialKeysMenu, "game_menu_send_keys", true, true));
 
         // 本地测试震动
-        normalOptions.add(new MenuOption("震动测试", false, this::testLocalRumbleAll, "game_menu_test_local_rumble", true));
+        // normalOptions.add(new MenuOption("震动测试", false, this::testLocalRumbleAll, "game_menu_test_local_rumble", true));
 
         normalOptions.add(new MenuOption(getString(R.string.game_menu_disconnect), true,
                 game::disconnect, "game_menu_disconnect", true));

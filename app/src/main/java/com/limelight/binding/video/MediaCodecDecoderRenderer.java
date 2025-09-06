@@ -1480,24 +1480,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             float maxHostProcessingLatency = (float)lastTwo.minHostProcessingLatency / 10;
             float aveHostProcessingLatency = (float)lastTwo.totalHostProcessingLatency / 10 / lastTwo.framesWithHostProcessingLatency;
 
-//            StringBuilder sb = new StringBuilder();
-//            sb.append(context.getString(R.string.perf_overlay_streamdetails, initialWidth + "x" + initialHeight, fps.totalFps)).append('\n');
-//            sb.append(context.getString(R.string.perf_overlay_decoder, decoder)).append('\n');
-//            sb.append(context.getString(R.string.perf_overlay_incomingfps, fps.receivedFps)).append('\n');
-//            sb.append(context.getString(R.string.perf_overlay_renderingfps, fps.renderedFps)).append('\n');
-//            sb.append(context.getString(R.string.perf_overlay_netdrops,
-//                    (float) lastTwo.framesLost / lastTwo.totalFrames * 100)).append('\n');
-//            sb.append(context.getString(R.string.perf_overlay_netlatency,
-//                    (int) (rttInfo >> 32), (int) rttInfo)).append('\n');
-//            if (lastTwo.framesWithHostProcessingLatency > 0) {
-//                sb.append(context.getString(R.string.perf_overlay_hostprocessinglatency,
-//                        (float) lastTwo.minHostProcessingLatency / 10,
-//                        (float) lastTwo.maxHostProcessingLatency / 10,
-//                        (float) lastTwo.totalHostProcessingLatency / 10 / lastTwo.framesWithHostProcessingLatency)).append('\n');
-//            }
-//            sb.append(context.getString(R.string.perf_overlay_dectime, decodeTimeMs));
-//            perfListener.onPerfUpdate(sb.toString());
-
             PerformanceInfo performanceInfo = new PerformanceInfo();
             performanceInfo.context = context;
             performanceInfo.initialWidth = initialWidth;
@@ -2051,38 +2033,44 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         // 计算目标帧间隔
         long targetFrameIntervalNs = 1000000000 / refreshRate; // 目标帧间隔（纳秒）
         
-        // 如果当前帧间隔过短，轻微延长以确保平滑（但不过度延长）
+        // 如果当前帧间隔过短，适当延长以确保平滑
         long currentFrameIntervalNs = System.nanoTime() - lastRenderedFrameTimeNanos;
         
-        if (currentFrameIntervalNs < targetFrameIntervalNs * 0.7) {
-            // 帧间隔过短，轻微等待以确保平滑（减少等待时间）
-            try {
-                Thread.sleep(0, 800000); // 等待0.8ms（纳秒级精确控制）
-            } catch (InterruptedException e) {
-                // 忽略中断
+        if (currentFrameIntervalNs < targetFrameIntervalNs * 0.8) {
+            // 帧间隔过短，适当等待以确保平滑
+            // 根据帧率调整等待时间，提高平滑性
+            long waitTimeNs = calculateOptimalWaitTime(targetFrameIntervalNs, currentFrameIntervalNs);
+            
+            if (waitTimeNs > 0) {
+                try {
+                    Thread.sleep(0, (int)waitTimeNs);
+                } catch (InterruptedException e) {
+                    // 忽略中断
+                }
             }
+        }
+    }
+    
+    // 计算最优等待时间 - 根据帧率和当前间隔智能调整
+    private long calculateOptimalWaitTime(long targetIntervalNs, long currentIntervalNs) {
+        // 基础等待时间：目标间隔的15-25%
+        long baseWaitNs = targetIntervalNs / 6; // 约16.7%
+        
+        // 根据帧率调整等待时间
+        if (refreshRate >= 120) {
+            // 120fps: 更精确的等待，减少掉帧感觉
+            return Math.min(baseWaitNs * 2, 2000000); // 最多2ms
+        } else if (refreshRate >= 60) {
+            // 60fps: 适中的等待，平衡延迟与平滑
+            return Math.min(baseWaitNs * 3, 3000000); // 最多3ms
+        } else {
+            // 30fps: 较长的等待，优先平滑性
+            return Math.min(baseWaitNs * 4, 4000000); // 最多4ms
         }
     }
 
     private long calculateDecoderTime(long presentationTimeUs) {
-        if (prefs.framePacing == PreferenceConfiguration.FRAME_PACING_EXPERIMENTAL_LOW_LATENCY) {
-            // 实验性模式：尝试获取实际解码时间
-            return calculateActualDecoderTime(presentationTimeUs);
-        } else {
-            // 其他模式（平衡模式等）：使用原有计算
-            long delta = SystemClock.uptimeMillis() - (presentationTimeUs / 1000);
-            if (delta >= 0 && delta < 1000) {
-                return delta;
-            }
-        }
-        return 0;
-    }
-
-    private long calculateActualDecoderTime(long presentationTimeUs) {
-        long baseDelta = SystemClock.uptimeMillis() - (presentationTimeUs / 1000);
-
-        long rttMs = MoonBridge.getEstimatedRttInfo() >> 32;
-
-        return Math.min(baseDelta, rttMs);
+        long delta = SystemClock.uptimeMillis() - (presentationTimeUs / 1000);
+        return delta > 0 && delta < 1000 ? delta : 0;
     }
 }

@@ -534,5 +534,11 @@
     <string name="toast_load_key_list_failed">Failed to load button list</string>
     <string name="toast_load_custom_keys_corrupted">Failed to load custom button</string>
 
-
+    <!-- gyro related strings -->
+    <string name="gyro_activation_method">Activation Method</string>
+    <string name="gyro_invert_x_axis">X Rev</string>
+    <string name="gyro_invert_y_axis">Y Rev</string>
+    <string name="gyro_sensitivity">Sensitivity</string>
+    <string name="gyro_sensitivity_format">Sensitivity %.1fx</string>
+    <string name="gyro_activation_always">Always On</string>
 </resources>
