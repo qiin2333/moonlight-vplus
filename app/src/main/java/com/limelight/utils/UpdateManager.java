@@ -47,6 +47,10 @@ public class UpdateManager {
 
 	private static final AtomicBoolean isChecking = new AtomicBoolean(false);
 	private static final ExecutorService executor = Executors.newSingleThreadExecutor();
+	
+	// 代理缓存相关
+	private static final long PROXY_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24小时
+	private static final String PREF_LAST_PROXY_UPDATE_TIME = "last_proxy_update_time";
 
 	public static void checkForUpdates(Context context, boolean showToast) {
 		if (isChecking.getAndSet(true)) {
@@ -77,7 +81,9 @@ public class UpdateManager {
 
 		@Override
 		public void run() {
-			updateProxyList();
+			if (shouldUpdateProxyList(context)) {
+				updateProxyList(context);
+			}
 			
 			UpdateInfo updateInfo = null;
 			try {
@@ -279,8 +285,16 @@ public class UpdateManager {
 		}
 	}
 	
+	// 检查是否需要更新代理列表
+	private static boolean shouldUpdateProxyList(Context context) {
+		long currentTime = System.currentTimeMillis();
+		long lastUpdateTime = context.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
+				.getLong(PREF_LAST_PROXY_UPDATE_TIME, 0);
+		return (currentTime - lastUpdateTime) > PROXY_CACHE_DURATION || PROXY_PREFIXES.length == 0;
+	}
+	
 	// 从 ghproxy.link 脚本中自动发现并更新代理地址
-	private static void updateProxyList() {
+	private static void updateProxyList(Context context) {
 		try {
 			Log.d(TAG, "开始更新代理列表...");
 			String scriptContent = fetchScriptContent();
@@ -292,6 +306,13 @@ public class UpdateManager {
 					allProxies.addAll(Arrays.asList(newProxies));
 					
 					PROXY_PREFIXES = allProxies.toArray(new String[0]);
+					
+					// 保存代理更新时间到SharedPreferences
+					context.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
+							.edit()
+							.putLong(PREF_LAST_PROXY_UPDATE_TIME, System.currentTimeMillis())
+							.apply();
+					
 					Log.d(TAG, "代理列表已更新，共 " + PROXY_PREFIXES.length + " 个代理：" + Arrays.toString(PROXY_PREFIXES));
 				}
 			}
@@ -308,8 +329,8 @@ public class UpdateManager {
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.setRequestMethod("GET");
 			conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile; rv:40.0)");
-			conn.setConnectTimeout(3000);
-			conn.setReadTimeout(3000);
+			conn.setConnectTimeout(2000);
+			conn.setReadTimeout(2000);
 			
 			int responseCode = conn.getResponseCode();
 			if (responseCode == HttpURLConnection.HTTP_OK) {
@@ -408,12 +429,9 @@ public class UpdateManager {
 		
 		// 检测是否会重定向回 ghproxy.link（失效代理的常见行为）
 		if (detectRedirectToGhproxyLink(url)) {
-			Log.d(TAG, "代理失效或不可靠，已排除: " + url);
 			return false;
 		}
 		
-		// 代理通过所有检测，认为是有效的
-		Log.d(TAG, "代理验证通过: " + url);
 		return true;
 	}
 	
@@ -428,8 +446,8 @@ public class UpdateManager {
 			conn.setRequestMethod("HEAD");
 			conn.setInstanceFollowRedirects(false); // 不自动跟随重定向
 			conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile; rv:40.0)");
-			conn.setConnectTimeout(1500); // 进一步缩短超时时间
-			conn.setReadTimeout(1500);
+			conn.setConnectTimeout(1000); // 进一步缩短超时时间
+			conn.setReadTimeout(1000);
 			
 			int responseCode = conn.getResponseCode();
 			
@@ -482,8 +500,8 @@ public class UpdateManager {
 				HttpURLConnection connection = (HttpURLConnection) new URL(u).openConnection();
 				connection.setRequestMethod("GET");
 				connection.setRequestProperty("User-Agent", "Moonlight-Android");
-				connection.setConnectTimeout(5000);
-				connection.setReadTimeout(5000);
+				connection.setConnectTimeout(3000);
+				connection.setReadTimeout(3000);
 				int responseCode = connection.getResponseCode();
 				if (responseCode == HttpURLConnection.HTTP_OK) {
 					BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));

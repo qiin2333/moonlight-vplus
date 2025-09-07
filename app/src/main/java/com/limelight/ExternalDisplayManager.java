@@ -328,10 +328,39 @@ public class ExternalDisplayManager {
             // 创建定时更新任务
             final Handler handler = new Handler();
             final Runnable updateBatteryTask = new Runnable() {
+                private final int[] gravityOptions = {
+                    Gravity.CENTER,
+                    Gravity.TOP | Gravity.CENTER_HORIZONTAL,
+                    Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL,
+                    Gravity.CENTER_VERTICAL | Gravity.LEFT,
+                    Gravity.CENTER_VERTICAL | Gravity.RIGHT,
+                    Gravity.TOP | Gravity.LEFT,
+                    Gravity.TOP | Gravity.RIGHT,
+                    Gravity.BOTTOM | Gravity.LEFT,
+                    Gravity.BOTTOM | Gravity.RIGHT
+                };
+                
                 @Override
                 public void run() {
+                    // 更新电量显示
                     batteryTextView.setText(String.format("🔋 %d%%", UiHelper.getBatteryLevel(activity)));
-                    handler.postDelayed(this, 60000); // 每分钟更新一次
+                    
+                    // 随机选择位置和参数以避免烧屏
+                    int randomGravity = gravityOptions[(int) (Math.random() * gravityOptions.length)];
+                    
+                    // 随机生成边距参数（-200到200像素之间）
+                    int randomMarginLeft = (int) (Math.random() * 401) - 200;
+                    int randomMarginTop = (int) (Math.random() * 401) - 200;
+                    int randomMarginRight = (int) (Math.random() * 401) - 200;
+                    int randomMarginBottom = (int) (Math.random() * 401) - 200;
+                    
+                    FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) batteryTextView.getLayoutParams();
+                    params.gravity = randomGravity;
+                    params.setMargins(randomMarginLeft, randomMarginTop, randomMarginRight, randomMarginBottom);
+                    batteryTextView.setLayoutParams(params);
+                    
+                    // 每分钟更新一次
+                    handler.postDelayed(this, 60000);
                 }
             };
 
