@@ -877,6 +877,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
                 // Enable sensors again after exiting PiP
                 controllerHandler.enableSensors();
+                
+                // 恢复陀螺仪功能（如果之前启用了）
+                controllerHandler.onSensorsReenabled();
 
                 // Update GameManager state to indicate we're out of PiP (gaming, non-interruptible)
                 UiHelper.notifyStreamExitingPiP(this);

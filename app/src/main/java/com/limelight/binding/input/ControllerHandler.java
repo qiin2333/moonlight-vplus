@@ -238,6 +238,14 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             clearAllGyroStates();
         }
     }
+    
+    // 在系统重新启用传感器时，检查并恢复陀螺仪功能
+    public void onSensorsReenabled() {
+        if (prefConfig.gyroToRightStick) {
+            LimeLog.info("Sensors re-enabled, restoring gyro to right stick functionality");
+            handleSetMotionEventState((short) 0, MoonBridge.LI_MOTION_TYPE_GYRO, (short) 120);
+        }
+    }
 
     private void clearAllGyroStates() {
         // 清除所有控制器的陀螺仪摇杆数据和保持状态
