@@ -128,18 +128,18 @@ public class GyroCardController {
                     }
                     game.prefConfig.writePreferences(game);
                     if (activationKeyText != null) {
-                        updateActivationKeyText(activationKeyText);
+                        activationKeyText.setText(items[which]);
                     }
                     d.dismiss();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(R.string.dialog_button_cancel, null)
                 .show();
     }
 
     private void updateActivationKeyText(TextView activationKeyText) {
         String label;
         if (game.prefConfig.gyroActivationKeyCode == ControllerHandler.GYRO_ACTIVATION_ALWAYS) {
-            label = "Always on";
+            label = game.getString(R.string.gyro_activation_always);
         } else if (game.prefConfig.gyroActivationKeyCode == android.view.KeyEvent.KEYCODE_BUTTON_R2) {
             label = "RT (R2)";
         } else {

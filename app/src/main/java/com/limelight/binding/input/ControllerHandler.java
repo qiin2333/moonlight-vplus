@@ -313,6 +313,31 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         return false;
     }
 
+    /**
+     * 处理来自虚拟控制器的陀螺仪数据
+     * 这个方法允许虚拟控制器报告陀螺仪数据到ControllerHandler
+     */
+    public void reportVirtualControllerGyro(float gx, float gy, float gz) {
+        if (!prefConfig.gyroToRightStick) {
+            return;
+        }
+        
+        // 使用控制器0（虚拟控制器的默认控制器编号）
+        applyGyroToRightStick((short) 0, gx, gy);
+        
+        // 对于虚拟控制器，如果陀螺仪激活，直接发送数据包
+        if (defaultContext.gyroHoldActive) {
+            // 应用陀螺仪融合到右摇杆
+            short px = denoisePhys(defaultContext.physRightStickX);
+            short py = denoisePhys(defaultContext.physRightStickY);
+            defaultContext.rightStickX = clampShortToStickRange(px + defaultContext.gyroRightStickX);
+            defaultContext.rightStickY = clampShortToStickRange(py + defaultContext.gyroRightStickY);
+            
+            // 直接发送数据包，不依赖reportOscState
+            sendControllerInputPacket(defaultContext);
+        }
+    }
+
     private void updateGyroHoldFromDigital(InputDeviceContext context, int keyCode, boolean isDown) {
         if (!prefConfig.gyroToRightStick) {
             context.gyroHoldActive = false;
@@ -3078,11 +3103,29 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         defaultContext.leftStickX = leftStickX;
         defaultContext.leftStickY = leftStickY;
 
-        defaultContext.rightStickX = rightStickX;
-        defaultContext.rightStickY = rightStickY;
+        // 更新物理右摇杆值（用于陀螺仪融合）
+        defaultContext.physRightStickX = rightStickX;
+        defaultContext.physRightStickY = rightStickY;
 
         defaultContext.leftTrigger = leftTrigger;
         defaultContext.rightTrigger = rightTrigger;
+
+        // 更新陀螺仪激活状态
+        boolean wasHold = defaultContext.gyroHoldActive;
+        // 将byte类型的触发键值转换为float (0.0-1.0范围)
+        float leftTriggerFloat = (leftTrigger & 0xFF) / 255.0f;
+        float rightTriggerFloat = (rightTrigger & 0xFF) / 255.0f;
+        defaultContext.gyroHoldActive = prefConfig.gyroToRightStick && computeAnalogActivation(leftTriggerFloat, rightTriggerFloat);
+        
+        if (wasHold && !defaultContext.gyroHoldActive) {
+            // 确保我们立即停止任何残留的陀螺仪影响
+            onGyroHoldDeactivated(defaultContext);
+        }
+
+        if (!prefConfig.gyroToRightStick || !defaultContext.gyroHoldActive) {
+            defaultContext.rightStickX = rightStickX;
+            defaultContext.rightStickY = rightStickY;
+        }
 
         defaultContext.inputMap = buttonFlags;
 

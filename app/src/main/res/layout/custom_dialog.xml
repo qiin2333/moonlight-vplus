@@ -357,12 +357,12 @@
                                 android:textColor="@color/theme_pink_primary"
                                 android:textSize="11sp" />
 
-                            <ImageView
+                            <!-- <ImageView
                                 android:layout_width="16dp"
                                 android:layout_height="16dp"
                                 android:layout_marginStart="4dp"
                                 android:contentDescription="Set activation key"
-                                android:src="@android:drawable/ic_menu_edit" />
+                                android:src="@android:drawable/ic_menu_edit" /> -->
                         </LinearLayout>
 
                         <!-- X轴反转开关 -->

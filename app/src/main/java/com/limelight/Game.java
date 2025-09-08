@@ -689,6 +689,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     this);
             virtualController.refreshLayout();
             virtualController.show();
+            
+            virtualController.setGyroEnabled(true);
         }
 
         if (prefConfig.onscreenKeyboard) {
@@ -1345,6 +1347,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         if (virtualController != null) {
             virtualController.hide();
+            virtualController.cleanup(); // 清理陀螺仪传感器监听
         }
 
         String decoderMessage = "UNKNOWN";

@@ -600,11 +600,34 @@ public class MediaCodecHelper {
             //ALONSOJR1980
             else if (isDecoderInList(mtkDecoderPrefixes, decoderInfo.getName())) {
                 if (tryNumber < 4) {
-
+                    videoFormat.setInteger("vendor.mtk.vdec.cpu.boost.mode", 1);
                     videoFormat.setInteger("vendor.mtk.vdec.cpu.boost.mode.value", 2);
                     videoFormat.setInteger("vendor.mtk.ext.dolby.vision.cpu-boost", 1);
+
+                    videoFormat.setInteger("vendor.mtk.vdec.dvfs.mode", 1);
+                    videoFormat.setInteger("vendor.mtk.vdec.dvfs.level", 1);
+
                     videoFormat.setInteger("vendor.mtk.vdec.bq.guard.interval.time.value", 2);
                     videoFormat.setInteger("vendor.mtk.vdec.buffer.fetch.timeout.ms.value", 2);
+
+                    // Pacing: controlled by the app
+                    videoFormat.setInteger("vendor.mtk.vdec.vsync.adjust.enable", 0);
+
+                    // Queue / timeouts (moderate)
+                    try {
+                        videoFormat.setInteger("vendor.mtk.vdec.buffer.fetch.timeout.ms", 4);
+                        videoFormat.setInteger("vendor.mtk.vdec.bq.guard.interval.time", 4);
+                        videoFormat.setInteger("vendor.mtk.vdec.input.max.queue.depth", 3);
+                        videoFormat.setInteger("vendor.mtk.vdec.output.max.queue.depth", 3);
+                    } catch (Throwable ignored) {}
+
+                    // Pipeline / code path
+                    try {
+                        videoFormat.setInteger("vendor.mtk.vdec.low-latency.mode", 1);    // Enable low-latency path
+                        videoFormat.setInteger("vendor.mtk.vdec.ultra-low-latency", 0);   // ULL off for stability
+                        videoFormat.setInteger("vendor.mtk.vdec.disable-idle", 1);        // Prevent clock downscaling
+                        videoFormat.setInteger("vendor.mtk.vdec.preload.frame.count", 1); // Light prebuffering
+                    } catch (Throwable ignored) {}
 
                     setNewOption = true;
                 }
