@@ -112,7 +112,11 @@ public class ElementController {
     // 滚轮按住事件管理
     private Map<Integer, Runnable> mouseScrollRunnableMap = new HashMap<>();
     private static final int MOUSE_SCROLL_INITIAL_DELAY = 150; // 初始延迟（毫秒）
-    private static final int MOUSE_SCROLL_REPEAT_INTERVAL = 50; // 重复间隔（毫秒）
+    private static int MOUSE_SCROLL_REPEAT_INTERVAL = 100; // 重复间隔（毫秒）
+
+    public static void setMouseScrollRepeatInterval(int interval) {
+        MOUSE_SCROLL_REPEAT_INTERVAL = interval;
+    }
 
 
     /**

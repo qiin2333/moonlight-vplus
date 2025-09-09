@@ -134,7 +134,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "super_config.db";
     private static final int DATABASE_OLD_VERSION_1 = 1;
     private static final int DATABASE_OLD_VERSION_2 = 2;
-    private static final int DATABASE_VERSION = 3;
+    private static final int DATABASE_VERSION = 4;
     private SQLiteDatabase writableDataBase;
     private SQLiteDatabase readableDataBase;
 
@@ -179,8 +179,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
                 "element_pressed_color INTEGER," +
                 "element_create_time INTEGER" +
                 ")";
-
-        // 执行SQL语句
+       // 执行SQL语句
         db.execSQL(createElementTable);
 
         String createConfigTable = "CREATE TABLE IF NOT EXISTS config (" +
@@ -191,7 +190,8 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
                 "touch_mode TEXT," +
                 "touch_sense INTEGER," +
                 "game_vibrator TEXT," +
-                "button_vibrator TEXT" +
+                "button_vibrator TEXT," +
+                "mouse_wheel_speed INTEGER" +
                 ")";
 
         db.execSQL(createConfigTable);
@@ -210,6 +210,10 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         if (oldVersion == 2){
             db.execSQL("ALTER TABLE config ADD COLUMN game_vibrator TEXT DEFAULT 'false';");
             db.execSQL("ALTER TABLE config ADD COLUMN button_vibrator TEXT DEFAULT 'false';");
+        }
+        // 添加对 mouse_wheel_speed 列的升级支持
+        if (oldVersion <= 3) {
+            db.execSQL("ALTER TABLE config ADD COLUMN mouse_wheel_speed INTEGER DEFAULT 20;");
         }
     }
 

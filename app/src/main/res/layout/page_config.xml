@@ -85,6 +85,17 @@
                 app:max="500"
                 app:min="1"
                 app:progress="100" />
+
+            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                android:id="@+id/mouse_wheel_speed_number_seekbar"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginVertical="5dp"
+                app:max="100"
+                app:min="1"
+                app:progress="20"
+                app:text="虚拟鼠标滚轮速度" />
+
             <LinearLayout
                 android:orientation="horizontal"
                 android:layout_width="match_parent"
