@@ -19,6 +19,7 @@ import android.widget.Toast;
 import com.limelight.Game; // 确保导入 Game 类
 import com.limelight.R;
 import com.limelight.binding.input.advance_setting.ControllerManager;
+import com.limelight.binding.input.advance_setting.element.ElementController;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
 
@@ -36,6 +37,8 @@ public class PageConfigController {
     public static final String COLUMN_BOOLEAN_GAME_VIBRATOR = "game_vibrator";
     public static final String COLUMN_BOOLEAN_BUTTON_VIBRATOR = "button_vibrator";
     public static final String COLUMN_LONG_CONFIG_ID = "config_id";
+    private static final String COLUMN_INT_MOUSE_WHEEL_SPEED = "mouse_wheel_speed";
+
 
     private SuperPageLayout pageConfig;
     private Context context;
@@ -252,6 +255,7 @@ public class PageConfigController {
         loadMouseEnable();
         loadMouseMode();
         loadMouseSense();
+        loadMouseWheelSpeed();
         loadGameVibrator();
         loadButtonVibrator();
         controllerManager.getElementController().loadAllElement(currentConfigId);
@@ -329,6 +333,34 @@ public class PageConfigController {
                 controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId,contentValues);
                 //做实际的设置
                 controllerManager.getTouchController().adjustTouchSense(seekBar.getProgress());
+            }
+        });
+    }
+
+    private void loadMouseWheelSpeed() {
+        NumberSeekbar mouseWheelSpeedSeekBar = pageConfig.findViewById(R.id.mouse_wheel_speed_number_seekbar);
+        int mouseWheelSpeed = ((Long) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, COLUMN_INT_MOUSE_WHEEL_SPEED, 20L)).intValue();
+        mouseWheelSpeedSeekBar.setValueWithNoCallBack(mouseWheelSpeed);
+        // 数值越小，滚动越快，所以用 120 - mouseWheelSpeed 来转换
+        ElementController.setMouseScrollRepeatInterval(120 - mouseWheelSpeed);
+        mouseWheelSpeedSeekBar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                ContentValues contentValues = new ContentValues();
+                contentValues.put(COLUMN_INT_MOUSE_WHEEL_SPEED, seekBar.getProgress());
+                //保存到数据库中
+                controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId, contentValues);
+                //做实际的设置
+                // 数值越小，滚动越快，所以用 120 - seekBar.getProgress() 来转换
+                ElementController.setMouseScrollRepeatInterval(120 - seekBar.getProgress());
             }
         });
     }

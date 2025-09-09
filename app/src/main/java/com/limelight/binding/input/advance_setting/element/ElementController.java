@@ -109,6 +109,16 @@ public class ElementController {
     private boolean gameVibrator = false;
     private boolean buttonVibrator = false;
 
+    // 滚轮按住事件管理
+    private Map<Integer, Runnable> mouseScrollRunnableMap = new HashMap<>();
+    private static final int MOUSE_SCROLL_INITIAL_DELAY = 150; // 初始延迟（毫秒）
+    private static int MOUSE_SCROLL_REPEAT_INTERVAL = 100; // 重复间隔（毫秒）
+
+    public static void setMouseScrollRepeatInterval(int interval) {
+        MOUSE_SCROLL_REPEAT_INTERVAL = interval;
+    }
+
+
     /**
      *隐藏所有虚拟按键的容器。
      */
@@ -557,6 +567,45 @@ public class ElementController {
     }
 
 
+    // 添加开始滚轮按住的方法
+    public void startMouseScrollHold(int scrollDirection) {
+        // 立即发送一次滚轮事件（按下事件）
+        game.mouseVScroll((byte) scrollDirection);
+
+        // 创建持续滚动的Runnable
+        final int direction = scrollDirection;
+        Runnable scrollRunnable = new Runnable() {
+            @Override
+            public void run() {
+                // 发送重复的滚轮事件（按住事件）
+                game.mouseVScroll((byte) direction);
+                // 继续安排下一次滚动
+                handler.postDelayed(this, MOUSE_SCROLL_REPEAT_INTERVAL);
+            }
+        };
+
+        // 取消之前相同方向的滚动任务
+        if (mouseScrollRunnableMap.containsKey(scrollDirection)) {
+            handler.removeCallbacks(mouseScrollRunnableMap.get(scrollDirection));
+        }
+
+        // 存储新的滚动任务
+        mouseScrollRunnableMap.put(scrollDirection, scrollRunnable);
+
+        // 安排首次重复滚动（延迟执行，区分按下和按住）
+        handler.postDelayed(scrollRunnable, MOUSE_SCROLL_INITIAL_DELAY);
+    }
+
+    // 添加停止滚轮按住的方法
+    public void stopMouseScrollHold(int scrollDirection) {
+        if (mouseScrollRunnableMap.containsKey(scrollDirection)) {
+            handler.removeCallbacks(mouseScrollRunnableMap.get(scrollDirection));
+            mouseScrollRunnableMap.remove(scrollDirection);
+        }
+    }
+
+
+
     public SendEventHandler getSendEventHandler(String key){
         if (key.matches("k\\d+")){
 
@@ -668,12 +717,14 @@ public class ElementController {
 
                 }
             };
-        } else if (key.equals(SPECIAL_KEY_MOUSE_SCROLL_UP)){
+        } else if (key.equals(SPECIAL_KEY_MOUSE_SCROLL_UP)) {
             return new SendEventHandler() {
                 @Override
                 public void sendEvent(boolean down) {
-                    if (down){
-                        sendMouseScroll(1);
+                    if (down) {
+                        startMouseScrollHold(1);  // 开始向上滚动按住
+                    } else {
+                        stopMouseScrollHold(1);   // 停止向上滚动按住
                     }
                 }
 
@@ -682,12 +733,14 @@ public class ElementController {
 
                 }
             };
-        } else if (key.equals(SPECIAL_KEY_MOUSE_SCROLL_DOWN)){
+        } else if (key.equals(SPECIAL_KEY_MOUSE_SCROLL_DOWN)) {
             return new SendEventHandler() {
                 @Override
                 public void sendEvent(boolean down) {
-                    if (down){
-                        sendMouseScroll(-1);
+                    if (down) {
+                        startMouseScrollHold(-1); // 开始向下滚动按住
+                    } else {
+                        stopMouseScrollHold(-1);  // 停止向下滚动按住
                     }
                 }
 
