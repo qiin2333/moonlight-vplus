@@ -732,14 +732,14 @@ public class GameMenu {
             }
 
             // 添加一些padding和margin
-            totalHeight += (int) ((maxItems*2 + 50) * game.getResources().getDisplayMetrics().density);
-            totalHeight = Math.max(totalHeight, (int) (270 * game.getResources().getDisplayMetrics().density));
+            totalHeight += (int) ((maxItems*2 + 8) * game.getResources().getDisplayMetrics().density);
+            totalHeight = Math.max(totalHeight, (int) (340 * game.getResources().getDisplayMetrics().density));
 
             return totalHeight;
 
         } catch (Exception e) {
             // 如果计算失败，返回默认高度
-            return (int) (270 * game.getResources().getDisplayMetrics().density);
+            return (int) (340 * game.getResources().getDisplayMetrics().density);
         }
     }
 

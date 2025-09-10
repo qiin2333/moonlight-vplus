@@ -170,6 +170,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private boolean waitingForAllModifiersUp = false;
     private int specialKeyCode = KeyEvent.KEYCODE_UNKNOWN;
     private StreamView streamView;
+    private StreamView externalStreamView; // 外接显示器的StreamView
     private long lastAbsTouchUpTime = 0;
     private long lastAbsTouchDownTime = 0;
     private float lastAbsTouchUpX, lastAbsTouchUpY;
@@ -735,15 +736,33 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             @Override
             public void onExternalDisplayConnected(Display display) {
                 // 外接显示器连接时的处理
+                LimeLog.info("External display connected, reinitializing input capture provider");
+                
+                // 重新初始化输入捕获提供者以支持外接显示器
+                if (inputCaptureProvider != null) {
+                    inputCaptureProvider.disableCapture();
+                }
+                inputCaptureProvider = InputCaptureManager.getInputCaptureProviderForExternalDisplay(Game.this, Game.this);
             }
 
             @Override
             public void onExternalDisplayDisconnected() {
                 // 外接显示器断开时的处理
+                externalStreamView = null;
+                LimeLog.info("External display disconnected, cleared externalStreamView");
+                
+                // 重新初始化输入捕获提供者回到标准模式
+                if (inputCaptureProvider != null) {
+                    inputCaptureProvider.disableCapture();
+                }
+                inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(Game.this, Game.this);
             }
 
             @Override
             public void onStreamViewReady(StreamView streamView) {
+                // 保存外接显示器的StreamView引用
+                externalStreamView = streamView;
+                
                 // 外接显示器StreamView准备就绪时的处理
                 streamView.setOnGenericMotionListener(Game.this);
                 streamView.setOnKeyListener(Game.this);
@@ -757,6 +776,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
                 // 设置Surface回调
                 streamView.getHolder().addCallback(Game.this);
+                
+                LimeLog.info("External display StreamView ready: " + streamView.getWidth() + "x" + streamView.getHeight());
             }
         });
         externalDisplayManager.initialize();
@@ -1911,6 +1932,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
 
     private float[] getStreamViewRelativeNormalizedXY(View view, MotionEvent event, int pointerIndex) {
+        // 获取当前活动的StreamView
+        StreamView activeStreamView = getActiveStreamView();
+        
         float normalizedX;
         float normalizedY;
         if (prefConfig.enableEnhancedTouch) {
@@ -1931,21 +1955,21 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // For the containing background view, we must subtract the origin
         // of the StreamView to get video-relative coordinates.
-        if (view != streamView) {
-            normalizedX -= streamView.getX();
-            normalizedY -= streamView.getY();
+        if (view != activeStreamView) {
+            normalizedX -= activeStreamView.getX();
+            normalizedY -= activeStreamView.getY();
         }
 
         // 限制坐标范围以避免超出视图边界
         normalizedX = Math.max(normalizedX, 0.0f);
         normalizedY = Math.max(normalizedY, 0.0f);
 
-        normalizedX = Math.min(normalizedX, streamView.getWidth());
-        normalizedY = Math.min(normalizedY, streamView.getHeight());
+        normalizedX = Math.min(normalizedX, activeStreamView.getWidth());
+        normalizedY = Math.min(normalizedY, activeStreamView.getHeight());
 
         // 归一化坐标到0到1的范围
-        normalizedX /= streamView.getWidth();
-        normalizedY /= streamView.getHeight();
+        normalizedX /= activeStreamView.getWidth();
+        normalizedY /= activeStreamView.getHeight();
 
         return new float[] { normalizedX, normalizedY };
     }
@@ -2374,7 +2398,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                         if (prefConfig.absoluteMouseMode) {
                             // NB: view may be null, but we can unconditionally use streamView because we don't need to adjust
                             // relative axis deltas for the position of the streamView within the parent's coordinate system.
-                            conn.sendMouseMoveAsMousePosition(deltaX, deltaY, (short)streamView.getWidth(), (short)streamView.getHeight());
+                            StreamView activeStreamView = getActiveStreamView();
+                            conn.sendMouseMoveAsMousePosition(deltaX, deltaY, (short)activeStreamView.getWidth(), (short)activeStreamView.getHeight());
                         }
                         else {
                             conn.sendMouseMove(deltaX, deltaY);
@@ -2671,19 +2696,22 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     private void updateMousePosition(View touchedView, MotionEvent event) {
+        // 获取当前活动的StreamView
+        StreamView activeStreamView = getActiveStreamView();
+        
         // X and Y are already relative to the provided view object
         float eventX, eventY;
 
         // For our StreamView itself, we can use the coordinates unmodified.
-        if (touchedView == streamView) {
+        if (touchedView == activeStreamView) {
             eventX = event.getX(0);
             eventY = event.getY(0);
         }
         else {
             // For the containing background view, we must subtract the origin
             // of the StreamView to get video-relative coordinates.
-            eventX = event.getX(0) - streamView.getX();
-            eventY = event.getY(0) - streamView.getY();
+            eventX = event.getX(0) - activeStreamView.getX();
+            eventY = event.getY(0) - activeStreamView.getY();
         }
 
         if (event.getPointerCount() == 1 && event.getActionIndex() == 0 &&
@@ -2717,10 +2745,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // Normalize these to the view size. We can't just drop them because we won't always get an event
         // right at the boundary of the view, so dropping them would result in our cursor never really
         // reaching the sides of the screen.
-        eventX = Math.min(Math.max(eventX, 0), streamView.getWidth());
-        eventY = Math.min(Math.max(eventY, 0), streamView.getHeight());
+        eventX = Math.min(Math.max(eventX, 0), activeStreamView.getWidth());
+        eventY = Math.min(Math.max(eventY, 0), activeStreamView.getHeight());
 
-        conn.sendMousePosition((short)eventX, (short)eventY, (short)streamView.getWidth(), (short)streamView.getHeight());
+        conn.sendMousePosition((short)eventX, (short)eventY, (short)activeStreamView.getWidth(), (short)activeStreamView.getHeight());
     }
 
     @Override
@@ -3557,6 +3585,16 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     public StreamView getStreamView() {
+        return streamView;
+    }
+
+    /**
+     * 获取当前活动的StreamView（优先使用外接显示器的StreamView）
+     */
+    public StreamView getActiveStreamView() {
+        if (externalDisplayManager != null && externalDisplayManager.isUsingExternalDisplay() && externalStreamView != null) {
+            return externalStreamView;
+        }
         return streamView;
     }
 

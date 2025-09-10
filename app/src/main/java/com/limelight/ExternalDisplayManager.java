@@ -122,6 +122,13 @@ public class ExternalDisplayManager {
     }
     
     /**
+     * 检查是否正在使用外接显示器
+     */
+    public boolean isUsingExternalDisplay() {
+        return useExternalDisplay && externalDisplay != null;
+    }
+    
+    /**
      * 检查是否有外接显示器连接
      */
     public static boolean hasExternalDisplay(Context context) {

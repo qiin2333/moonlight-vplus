@@ -35,6 +35,7 @@ import android.widget.ImageView;
 import com.limelight.LimeLog;
 import com.limelight.PcView;
 import com.limelight.R;
+import com.limelight.ExternalDisplayManager;
 import com.limelight.binding.input.advance_setting.config.PageConfigController;
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper;
 import com.limelight.binding.video.MediaCodecHelper;
@@ -61,6 +62,7 @@ public class StreamSettings extends Activity {
 
     private PreferenceConfiguration previousPrefs;
     private int previousDisplayPixelCount;
+    private ExternalDisplayManager externalDisplayManager;
 
     // HACK for Android 9
     static DisplayCutout displayCutoutP;
@@ -83,6 +85,12 @@ public class StreamSettings extends Activity {
         super.onCreate(savedInstanceState);
 
         previousPrefs = PreferenceConfiguration.readPreferences(this);
+
+        // 初始化外接显示器管理器
+        if (previousPrefs.useExternalDisplay) {
+            externalDisplayManager = new ExternalDisplayManager(this, previousPrefs, null, null, null, null);
+            externalDisplayManager.initialize();
+        }
 
         UiHelper.setLocale(this);
 
@@ -136,6 +144,17 @@ public class StreamSettings extends Activity {
     }
 
     @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        
+        // 清理外接显示器管理器
+        if (externalDisplayManager != null) {
+            externalDisplayManager.cleanup();
+            externalDisplayManager = null;
+        }
+    }
+
+    @Override
     // NOTE: This will NOT be called on Android 13+ with android:enableOnBackInvokedCallback="true"
     public void onBackPressed() {
         finish();
@@ -159,6 +178,17 @@ public class StreamSettings extends Activity {
         private boolean nativeFramerateShown = false;
 
         private String exportConfigString = null;
+
+        /**
+         * 获取目标显示器（优先使用外接显示器）
+         */
+        private Display getTargetDisplay() {
+            StreamSettings settingsActivity = (StreamSettings) getActivity();
+            if (settingsActivity != null && settingsActivity.externalDisplayManager != null) {
+                return settingsActivity.externalDisplayManager.getTargetDisplay();
+            }
+            return getActivity().getWindowManager().getDefaultDisplay();
+        }
 
         private void setValue(String preferenceKey, String value) {
             ListPreference pref = (ListPreference) findPreference(preferenceKey);
@@ -451,7 +481,8 @@ public class StreamSettings extends Activity {
                 category_gamepad_settings.removePreference(findPreference("seekbar_vibrate_fallback_strength"));
             }
 
-            Display display = getActivity().getWindowManager().getDefaultDisplay();
+            // 获取目标显示器（优先使用外接显示器）
+            Display display = getTargetDisplay();
             float maxSupportedFps = display.getRefreshRate();
 
             // Hide non-supported resolution/FPS combinations
@@ -688,7 +719,9 @@ public class StreamSettings extends Activity {
                 category.removePreference(findPreference("checkbox_enable_hdr"));
             }
             else {
-                Display.HdrCapabilities hdrCaps = display.getHdrCapabilities();
+                // 获取目标显示器的 HDR 能力（优先使用外接显示器）
+                Display targetDisplay = getTargetDisplay();
+                Display.HdrCapabilities hdrCaps = targetDisplay.getHdrCapabilities();
 
                 // We must now ensure our display is compatible with HDR10
                 boolean foundHdr10 = false;
