@@ -505,6 +505,10 @@ public class ElementController {
         }
     }
 
+    public SuperPageLayout getCurrentEditingPage() {
+        return controllerManager.getSuperPagesController().getPageNow();
+    }
+
 
     public void open(){
         SuperPagesController superPagesController = controllerManager.getSuperPagesController();
@@ -765,18 +769,42 @@ public class ElementController {
                 @Override
                 public void sendEvent(boolean down) {
                     if (down){
-                        boolean mouseMode = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, PageConfigController.COLUMN_BOOLEAN_TOUCH_MODE,String.valueOf(true)));
+                        // 获取当前设置
+                        boolean touchMode = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, PageConfigController.COLUMN_BOOLEAN_TOUCH_MODE, String.valueOf(false)));
+                        boolean enhancedTouch = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH, String.valueOf(false)));
+
+                        // 确定当前模式并切换到下一个模式
+                        // 模式1: 经典鼠标模式 (touchMode=false, enhancedTouch=false)
+                        // 模式2: 多点触控模式 (touchMode=false, enhancedTouch=true)
+                        // 模式3: 触控板模式 (touchMode=true, enhancedTouch=false)
+
                         ContentValues contentValues = new ContentValues();
-                        contentValues.put(PageConfigController.COLUMN_BOOLEAN_TOUCH_MODE,String.valueOf(!mouseMode));
-                        //保存到数据库中
-                        controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId,contentValues);
-                        //做实际的设置
-                        controllerManager.getTouchController().setTouchMode(!mouseMode);
-                        if (mouseMode){
+
+                        if (!touchMode && !enhancedTouch) {
+                            // 当前是经典鼠标模式 -> 切换到多点触控模式
+                            contentValues.put(PageConfigController.COLUMN_BOOLEAN_TOUCH_MODE, String.valueOf(false));
+                            contentValues.put(PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH, String.valueOf(true));
+                            controllerManager.getTouchController().setTouchMode(false);
+                            controllerManager.getTouchController().setEnhancedTouch(true);
                             showToast("多点触控模式");
-                        } else {
+                        } else if (!touchMode && enhancedTouch) {
+                            // 当前是多点触控模式 -> 切换到触控板模式
+                            contentValues.put(PageConfigController.COLUMN_BOOLEAN_TOUCH_MODE, String.valueOf(true));
+                            contentValues.put(PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH, String.valueOf(false));
+                            controllerManager.getTouchController().setTouchMode(true);
+                            controllerManager.getTouchController().setEnhancedTouch(false);
                             showToast("触控板模式");
+                        } else {
+                            // 当前是触控板模式 -> 切换到经典鼠标模式
+                            contentValues.put(PageConfigController.COLUMN_BOOLEAN_TOUCH_MODE, String.valueOf(false));
+                            contentValues.put(PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH, String.valueOf(false));
+                            controllerManager.getTouchController().setTouchMode(false);
+                            controllerManager.getTouchController().setEnhancedTouch(false);
+                            showToast("经典鼠标模式");
                         }
+
+                        // 保存到数据库中
+                        controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId, contentValues);
                     }
 
                 }

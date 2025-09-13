@@ -50,6 +50,30 @@
                     android:background="@drawable/enabled_square"/>
             </LinearLayout>
 
+            <LinearLayout
+                android:id="@+id/page_wheel_pad_popup_options_container"
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginVertical="10dp"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="屏幕中心显示轮盘"
+                    android:layout_marginEnd="10dp"/>
+
+                <Switch
+                    android:id="@+id/page_wheel_pad_popup_at_center_switch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textOn=""
+                    android:textOff=""/>
+
+            </LinearLayout>
+
 
             <!-- Wheel Specific Settings -->
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
@@ -61,6 +85,14 @@
                 app:max="16"
                 app:min="2"
                 app:progress="8" />
+
+            <!-- The ONLY size control -->
+            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                android:id="@+id/page_wheel_pad_size"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginVertical="5dp"
+                app:text="大小 (直径)" />
 
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                 android:id="@+id/page_wheel_pad_inner_radius"
@@ -100,14 +132,6 @@
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
                 app:text="Y" />
-
-            <!-- The ONLY size control -->
-            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
-                android:id="@+id/page_wheel_pad_size"
-                android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:layout_marginVertical="5dp"
-                app:text="大小 (直径)" />
 
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                 android:id="@+id/page_wheel_pad_thick"

@@ -134,7 +134,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "super_config.db";
     private static final int DATABASE_OLD_VERSION_1 = 1;
     private static final int DATABASE_OLD_VERSION_2 = 2;
-    private static final int DATABASE_VERSION = 5;
+    private static final int DATABASE_VERSION = 6;
     private SQLiteDatabase writableDataBase;
     private SQLiteDatabase readableDataBase;
 
@@ -177,7 +177,8 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
                 "element_background_color INTEGER," +
                 "element_color INTEGER," +
                 "element_pressed_color INTEGER," +
-                "element_create_time INTEGER" +
+                "element_create_time INTEGER," +
+                Element.COLUMN_INT_ELEMENT_FLAG1 + " INTEGER DEFAULT 1" +
                 ")";
        // 执行SQL语句
         db.execSQL(createElementTable);
@@ -219,6 +220,9 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         if (oldVersion <= 4) {
             String alterTableSQL = "ALTER TABLE config" + " ADD COLUMN " + PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH + " TEXT DEFAULT 'false'";
             db.execSQL(alterTableSQL);
+        }
+        if (oldVersion <= 5) {
+            db.execSQL("ALTER TABLE element ADD COLUMN " + Element.COLUMN_INT_ELEMENT_FLAG1 + " INTEGER DEFAULT 1;");
         }
     }
 

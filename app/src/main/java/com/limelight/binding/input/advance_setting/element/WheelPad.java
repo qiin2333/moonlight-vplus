@@ -9,7 +9,6 @@ import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
-import android.text.InputFilter;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -20,7 +19,11 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
+import android.widget.Switch;
 import android.widget.TextView;
+
+import androidx.appcompat.widget.SwitchCompat;
+
 import com.limelight.Game;
 import com.limelight.R;
 import com.limelight.binding.input.advance_setting.PageDeviceController;
@@ -52,6 +55,9 @@ public class WheelPad extends Element {
     private int backgroundColor;
     private int thick;
 
+    private final int screenWidth;
+    private final int screenHeight;
+
     private final Paint paintBorder = new Paint();
     private final Paint paintSegmentFill = new Paint();
     private final Paint paintSegmentFillPressed = new Paint();
@@ -65,6 +71,7 @@ public class WheelPad extends Element {
     private int activeIndex = -1;
     private int lastActiveIndex = -1;
     private boolean isWheelActive = false;
+    private boolean popupAtScreenCenter;
 
     private SuperPageLayout wheelPadPage;
     private NumberSeekbar centralXNumberSeekbar;
@@ -80,6 +87,9 @@ public class WheelPad extends Element {
 
         DisplayMetrics displayMetrics = new DisplayMetrics();
         ((Game) context).getWindowManager().getDefaultDisplay().getRealMetrics(displayMetrics);
+        this.screenWidth = displayMetrics.widthPixels;
+        this.screenHeight = displayMetrics.heightPixels;
+
         super.centralXMax = displayMetrics.widthPixels;
         super.centralXMin = 0;
         super.centralYMax = displayMetrics.heightPixels;
@@ -123,6 +133,10 @@ public class WheelPad extends Element {
         segmentCount = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_MODE)).intValue();
         innerRadiusPercent = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_SENSE)).intValue();
 
+        // Load the popup behavior flag. Default to true (new behavior) for old configs.
+        Object popupFlagObj = attributesMap.get(COLUMN_INT_ELEMENT_FLAG1);
+        this.popupAtScreenCenter = (popupFlagObj == null) || ((Long) popupFlagObj).intValue() == 1;
+
         String valuesString = (String) attributesMap.get(COLUMN_STRING_ELEMENT_VALUE);
         segmentValues = new ArrayList<>();
         segmentNames = new ArrayList<>();
@@ -164,10 +178,73 @@ public class WheelPad extends Element {
         return handlers;
     }
 
+    public boolean isBeingEdited() {
+        if (elementController != null) {
+            SuperPageLayout currentPage = elementController.getCurrentEditingPage();
+            return this.wheelPadPage != null && currentPage == this.wheelPadPage;
+        }
+        return false;
+    }
+
     @Override
     protected void onElementDraw(Canvas canvas) {
         ElementController.Mode currentMode = elementController.getMode();
+        boolean isTheOneBeingEdited = isBeingEdited();
+        if (isPopupMode && popupAtScreenCenter) {
+            drawInactivePopupCenter(canvas);
+            boolean shouldDrawCentralPreview =
+                    (currentMode == ElementController.Mode.Normal && isWheelActive) ||
+                            (currentMode == ElementController.Mode.Edit && isTheOneBeingEdited);
 
+            if (shouldDrawCentralPreview) {
+                canvas.save();
+                float translateX = (screenWidth / 2.0f) - getElementCentralX();
+                float translateY = (screenHeight / 2.0f) - getElementCentralY();
+                canvas.translate(translateX, translateY);
+                drawFullWheel(canvas);
+                canvas.restore();
+            }
+
+        } else {
+            boolean shouldDrawTriggerInsteadOfFullWheel = isPopupMode && !popupAtScreenCenter &&
+                    currentMode == ElementController.Mode.Normal && !isWheelActive;
+            if (shouldDrawTriggerInsteadOfFullWheel) {
+                drawInactivePopupCenter(canvas);
+            } else {
+                drawFullWheel(canvas);
+            }
+        }
+
+        if (currentMode == ElementController.Mode.Edit || currentMode == ElementController.Mode.Select) {
+            rect.left = rect.top = 2; rect.right = getWidth() - 2; rect.bottom = getHeight() - 2;
+            paintEdit.setColor(editColor);
+            canvas.drawRect(rect, paintEdit);
+        }
+    }
+
+    private void drawInactivePopupCenter(Canvas canvas) {
+        float centerX = getWidth() / 2.0f;
+        float centerY = getHeight() / 2.0f;
+        float fillOuterRadius = (getWidth() / 2.0f) - thick;
+        if (fillOuterRadius < 0) fillOuterRadius = 0;
+        float fillInnerRadius = fillOuterRadius * (innerRadiusPercent / 100.0f);
+        float borderInnerDrawRadius = fillInnerRadius + (thick / 2.0f);
+
+        paintBorder.setColor(normalColor);
+        paintBorder.setStrokeWidth(thick);
+
+        paintSegmentFill.setColor(0x80000000);
+        canvas.drawCircle(centerX, centerY, fillInnerRadius, paintSegmentFill);
+
+        rect.set(centerX - borderInnerDrawRadius, centerY - borderInnerDrawRadius, centerX + borderInnerDrawRadius, centerY + borderInnerDrawRadius);
+        canvas.drawOval(rect, paintBorder);
+
+        float textY = centerY - ((paintCenterText.descent() + paintCenterText.ascent()) / 2);
+        canvas.drawText(centerText, centerX, textY, paintCenterText);
+    }
+
+    private void drawFullWheel(Canvas canvas) {
+        ElementController.Mode currentMode = elementController.getMode();
         float centerX = getWidth() / 2.0f;
         float centerY = getHeight() / 2.0f;
 
@@ -182,82 +259,63 @@ public class WheelPad extends Element {
         paintBorder.setStrokeWidth(thick);
         paintBackground.setColor(0xFF000000);
 
-        boolean shouldHideSegments = isPopupMode && !isWheelActive && currentMode == ElementController.Mode.Normal;
+        paintSegmentFill.setColor(backgroundColor);
+        paintSegmentFillPressed.setColor(pressedColor);
+        float sweepAngle = 360.0f / segmentCount;
 
-        if (shouldHideSegments) {
-            paintSegmentFill.setColor(0x80000000);
-            canvas.drawCircle(centerX, centerY, fillInnerRadius, paintSegmentFill);
+        rect.set(centerX - fillOuterRadius, centerY - fillOuterRadius, centerX + fillOuterRadius, centerY + fillOuterRadius);
+        for (int i = 0; i < segmentCount; i++) {
+            float startAngle = (i * sweepAngle) - (sweepAngle / 2) - 90;
+            Paint currentFillPaint = (i == activeIndex) ? paintSegmentFillPressed : paintSegmentFill;
+            canvas.drawArc(rect, startAngle, sweepAngle, true, currentFillPaint);
+        }
 
-            rect.set(centerX - borderInnerDrawRadius, centerY - borderInnerDrawRadius, centerX + borderInnerDrawRadius, centerY + borderInnerDrawRadius);
-            canvas.drawOval(rect, paintBorder);
+        canvas.drawCircle(centerX, centerY, fillInnerRadius, paintBackground);
 
-            float textY = centerY - ((paintCenterText.descent() + paintCenterText.ascent()) / 2);
-            canvas.drawText(centerText, centerX, textY, paintCenterText);
-        } else {
-            paintSegmentFill.setColor(backgroundColor);
-            paintSegmentFillPressed.setColor(pressedColor);
-            float sweepAngle = 360.0f / segmentCount;
-
-            rect.set(centerX - fillOuterRadius, centerY - fillOuterRadius, centerX + fillOuterRadius, centerY + fillOuterRadius);
-            for (int i = 0; i < segmentCount; i++) {
-                float startAngle = (i * sweepAngle) - (sweepAngle / 2) - 90;
-                Paint currentFillPaint = (i == activeIndex) ? paintSegmentFillPressed : paintSegmentFill;
-                canvas.drawArc(rect, startAngle, sweepAngle, true, currentFillPaint);
-            }
-
-            canvas.drawCircle(centerX, centerY, fillInnerRadius, paintBackground);
-
-            float textRadius = fillInnerRadius + (fillOuterRadius - fillInnerRadius) / 2.0f;
-            for (int i = 0; i < segmentCount; i++) {
-                float startAngle = (i * sweepAngle) - (sweepAngle / 2) - 90;
-                float textAngle = (startAngle + sweepAngle / 2.0f);
-                textPath.reset();
-                RectF textRect = new RectF(centerX - textRadius, centerY - textRadius, centerX + textRadius, centerY + textRadius);
-                textPath.addArc(textRect, textAngle - 45, 90);
-                if (i < segmentValues.size()) {
-                    String displayName;
-                    if (i < segmentNames.size() && segmentNames.get(i) != null && !segmentNames.get(i).isEmpty()) {
-                        displayName = segmentNames.get(i);
-                    } else {
-                        displayName = getDisplayStringForValue(segmentValues.get(i));
-                    }
-                    canvas.drawTextOnPath(displayName, textPath, 0, 10, paintText);
+        float textRadius = fillInnerRadius + (fillOuterRadius - fillInnerRadius) / 2.0f;
+        for (int i = 0; i < segmentCount; i++) {
+            float startAngle = (i * sweepAngle) - (sweepAngle / 2) - 90;
+            float textAngle = startAngle + sweepAngle / 2.0f;
+            textPath.reset();
+            RectF textRect = new RectF(centerX - textRadius, centerY - textRadius, centerX + textRadius, centerY + textRadius);
+            textPath.addArc(textRect, textAngle - 45, 90);
+            if (i < segmentValues.size()) {
+                String displayName;
+                if (i < segmentNames.size() && segmentNames.get(i) != null && !segmentNames.get(i).isEmpty()) {
+                    displayName = segmentNames.get(i);
+                } else {
+                    displayName = getDisplayStringForValue(segmentValues.get(i));
                 }
-            }
-
-            rect.set(centerX - borderOuterDrawRadius, centerY - borderOuterDrawRadius, centerX + borderOuterDrawRadius, centerY + borderOuterDrawRadius);
-            canvas.drawOval(rect, paintBorder);
-            rect.set(centerX - borderInnerDrawRadius, centerY - borderInnerDrawRadius, centerX + borderInnerDrawRadius, centerY + borderInnerDrawRadius);
-            canvas.drawOval(rect, paintBorder);
-
-            for (int i = 0; i < segmentCount; i++) {
-                float angle = (i * sweepAngle) - (sweepAngle / 2) - 90;
-                double angleRad = Math.toRadians(angle);
-                float startX = centerX + (float) (fillInnerRadius * Math.cos(angleRad));
-                float startY = centerY + (float) (fillInnerRadius * Math.sin(angleRad));
-                float endX = centerX + (float) (fillOuterRadius * Math.cos(angleRad));
-                float endY = centerY + (float) (fillOuterRadius * Math.sin(angleRad));
-                canvas.drawLine(startX, startY, endX, endY, paintBorder);
-            }
-
-            if (isPopupMode && activeIndex != -1 && currentMode == ElementController.Mode.Normal) {
-                if (activeIndex < segmentValues.size()) {
-                    String displayName;
-                    if (activeIndex < segmentNames.size() && segmentNames.get(activeIndex) != null && !segmentNames.get(activeIndex).isEmpty()) {
-                        displayName = segmentNames.get(activeIndex);
-                    } else {
-                        displayName = getDisplayStringForValue(segmentValues.get(activeIndex));
-                    }
-                    float textY = centerY - ((paintCenterText.descent() + paintCenterText.ascent()) / 2);
-                    canvas.drawText(displayName, centerX, textY, paintCenterText);
-                }
+                canvas.drawTextOnPath(displayName, textPath, 0, 10, paintText);
             }
         }
 
-        if (currentMode == ElementController.Mode.Edit || currentMode == ElementController.Mode.Select) {
-            rect.left = rect.top = 2; rect.right = getWidth() - 2; rect.bottom = getHeight() - 2;
-            paintEdit.setColor(editColor);
-            canvas.drawRect(rect, paintEdit);
+        rect.set(centerX - borderOuterDrawRadius, centerY - borderOuterDrawRadius, centerX + borderOuterDrawRadius, centerY + borderOuterDrawRadius);
+        canvas.drawOval(rect, paintBorder);
+        rect.set(centerX - borderInnerDrawRadius, centerY - borderInnerDrawRadius, centerX + borderInnerDrawRadius, centerY + borderInnerDrawRadius);
+        canvas.drawOval(rect, paintBorder);
+
+        for (int i = 0; i < segmentCount; i++) {
+            float angle = (i * sweepAngle) - (sweepAngle / 2) - 90;
+            double angleRad = Math.toRadians(angle);
+            float startX = centerX + (float) (fillInnerRadius * Math.cos(angleRad));
+            float startY = centerY + (float) (fillInnerRadius * Math.sin(angleRad));
+            float endX = centerX + (float) (fillOuterRadius * Math.cos(angleRad));
+            float endY = centerY + (float) (fillOuterRadius * Math.sin(angleRad));
+            canvas.drawLine(startX, startY, endX, endY, paintBorder);
+        }
+
+        if (isPopupMode && activeIndex != -1 && currentMode == ElementController.Mode.Normal) {
+            if (activeIndex < segmentValues.size()) {
+                String displayName;
+                if (activeIndex < segmentNames.size() && segmentNames.get(activeIndex) != null && !segmentNames.get(activeIndex).isEmpty()) {
+                    displayName = segmentNames.get(activeIndex);
+                } else {
+                    displayName = getDisplayStringForValue(segmentValues.get(activeIndex));
+                }
+                float textY = centerY - ((paintCenterText.descent() + paintCenterText.ascent()) / 2);
+                canvas.drawText(displayName, centerX, textY, paintCenterText);
+            }
         }
     }
 
@@ -277,8 +335,7 @@ public class WheelPad extends Element {
             return true;
         }
 
-        int action = event.getActionMasked();
-        if (action == MotionEvent.ACTION_DOWN) {
+        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
             float x = event.getX();
             float y = event.getY();
             float centerX = getWidth() / 2.0f;
@@ -293,8 +350,6 @@ public class WheelPad extends Element {
             if (distance <= innerRadius) {
                 handlePopupModeTouchEvent(event);
                 return true;
-            } else {
-                return false;
             }
         }
         return false;
@@ -337,9 +392,11 @@ public class WheelPad extends Element {
         float y = event.getY();
         float centerX = getWidth() / 2.0f;
         float centerY = getHeight() / 2.0f;
+
         float outerRadius = (getWidth() / 2.0f) - thick;
         if (outerRadius < 0) outerRadius = 0;
         float innerRadius = outerRadius * (innerRadiusPercent / 100.0f);
+
         float dx = x - centerX;
         float dy = y - centerY;
         double distance = Math.sqrt(dx * dx + dy * dy);
@@ -354,6 +411,7 @@ public class WheelPad extends Element {
                 break;
             case MotionEvent.ACTION_MOVE:
                 if (isWheelActive) {
+                    // Touch area is the entire screen outside the central dead zone.
                     if (distance > innerRadius) {
                         double angle = Math.toDegrees(Math.atan2(dy, dx)) + 90;
                         if (angle < 0) angle += 360;
@@ -419,7 +477,12 @@ public class WheelPad extends Element {
             valuesContainer = wheelPadPage.findViewById(R.id.page_wheel_pad_values_container);
         }
 
+        // Find all views
         ElementEditText centerTextInput = wheelPadPage.findViewById(R.id.page_wheel_pad_center_text);
+        final Switch popupSwitch = wheelPadPage.findViewById(R.id.page_wheel_pad_popup_at_center_switch);
+
+        final LinearLayout popupOptionsContainer = wheelPadPage.findViewById(R.id.page_wheel_pad_popup_options_container);
+
         NumberSeekbar sizeNumberSeekbar = wheelPadPage.findViewById(R.id.page_wheel_pad_size);
         NumberSeekbar thickNumberSeekbar = wheelPadPage.findViewById(R.id.page_wheel_pad_thick);
         NumberSeekbar layerNumberSeekbar = wheelPadPage.findViewById(R.id.page_wheel_pad_layer);
@@ -434,6 +497,28 @@ public class WheelPad extends Element {
         setupCommonControls(centerTextInput, sizeNumberSeekbar, thickNumberSeekbar, layerNumberSeekbar,
                 normalColorElementEditText, pressedColorElementEditText, backgroundColorElementEditText,
                 copyButton, deleteButton);
+
+        // Setup the switch
+        popupSwitch.setChecked(this.popupAtScreenCenter);
+        popupSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            this.popupAtScreenCenter = isChecked;
+            invalidate();
+            save();
+        });
+
+        // Set the initial visibility based on the current mode
+        boolean isPopup = !this.centerText.isEmpty();
+        popupOptionsContainer.setVisibility(isPopup ? View.VISIBLE : View.GONE);
+
+        // Override the listener to control visibility of the container
+        centerTextInput.setOnTextChangedListener(text -> {
+            setCenterText(text);
+            boolean isPopupNow = !text.isEmpty();
+            // Show/Hide the entire container based on popup mode
+            popupOptionsContainer.setVisibility(isPopupNow ? View.VISIBLE : View.GONE);
+            invalidate();
+            save();
+        });
 
         segmentCountNumberSeekbar.setValueWithNoCallBack(segmentCount);
         segmentCountNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
@@ -487,6 +572,7 @@ public class WheelPad extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, backgroundColor);
         contentValues.put(COLUMN_INT_ELEMENT_MODE, segmentCount);
         contentValues.put(COLUMN_INT_ELEMENT_SENSE, innerRadiusPercent);
+        contentValues.put(COLUMN_INT_ELEMENT_FLAG1, popupAtScreenCenter ? 1 : 0);
 
         List<String> combinedSegments = new ArrayList<>();
         for (int i = 0; i < segmentValues.size(); i++) {
@@ -509,7 +595,7 @@ public class WheelPad extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_WIDTH, 400);
         contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, 400);
         contentValues.put(COLUMN_STRING_ELEMENT_TEXT, "");
-        contentValues.put(COLUMN_INT_ELEMENT_LAYER, 50);
+        contentValues.put(COLUMN_INT_ELEMENT_LAYER, 40);
         contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, 250);
         contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, 250);
         contentValues.put(COLUMN_INT_ELEMENT_THICK, 5);
@@ -518,6 +604,7 @@ public class WheelPad extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, 0xAA444444);
         contentValues.put(COLUMN_INT_ELEMENT_MODE, 8);
         contentValues.put(COLUMN_INT_ELEMENT_SENSE, 30);
+        contentValues.put(COLUMN_INT_ELEMENT_FLAG1, 1);
         return contentValues;
     }
 
@@ -526,6 +613,7 @@ public class WheelPad extends Element {
                                      Button copy, Button delete) {
 
         centerTextInput.setTextWithNoTextChangedCallBack(this.centerText);
+        // NOTE: The listener is set/overridden in getInfoPage() to handle the switch logic
         centerTextInput.setOnTextChangedListener(text -> {
             setCenterText(text);
             save();
@@ -637,6 +725,7 @@ public class WheelPad extends Element {
             cv.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, this.backgroundColor);
             cv.put(COLUMN_INT_ELEMENT_MODE, this.segmentCount);
             cv.put(COLUMN_INT_ELEMENT_SENSE, this.innerRadiusPercent);
+            cv.put(COLUMN_INT_ELEMENT_FLAG1, this.popupAtScreenCenter ? 1 : 0);
 
             List<String> combinedSegments = new ArrayList<>();
             for (int i = 0; i < segmentValues.size(); i++) {
@@ -775,46 +864,37 @@ public class WheelPad extends Element {
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle("编辑按键(可组合) (分区 " + (index + 1) + ")");
 
-        // 1. 创建主布局 (垂直方向)
         LinearLayout dialogLayout = new LinearLayout(context);
         dialogLayout.setOrientation(LinearLayout.VERTICAL);
         dialogLayout.setPadding(30, 20, 30, 20);
 
-        // 2. 创建用于显示按键的容器
         LinearLayout keysContainer = new LinearLayout(context);
         keysContainer.setOrientation(LinearLayout.VERTICAL);
 
-        // 3. 创建 ScrollView 并将 keysContainer 放入其中
         ScrollView scrollView = new ScrollView(context);
-        // 设置布局参数，让 ScrollView 占据所有可用空间 (权重为1)
         LinearLayout.LayoutParams scrollParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                0, // 高度设为0，由权重决定
+                0,
                 1.0f
         );
-        scrollParams.setMargins(0,0,0,20); // 给滚动区域和按钮之间增加一些间距
+        scrollParams.setMargins(0,0,0,20);
         scrollView.setLayoutParams(scrollParams);
-        scrollView.addView(keysContainer); // 将按键容器放入滚动视图
+        scrollView.addView(keysContainer);
 
-        // 获取当前按键列表
         String currentValue = segmentValues.get(index);
         final List<String> currentKeys = new ArrayList<>();
         if (currentValue != null && !currentValue.isEmpty() && !currentValue.equals("null")) {
             currentKeys.addAll(Arrays.asList(currentValue.split("\\+")));
         }
 
-        // 初始显示
         updateKeyCombinationDisplay(keysContainer, currentKeys);
 
-        // 创建 "添加按键" 按钮
         Button addButton = new Button(context);
         addButton.setText("添加按键");
 
-        // 4. 按正确的顺序将 ScrollView 和 Button 添加到主布局中
-        dialogLayout.addView(scrollView); // 先添加可滚动区域
-        dialogLayout.addView(addButton);  // 再添加按钮
+        dialogLayout.addView(scrollView);
+        dialogLayout.addView(addButton);
 
-        // 设置对话框的视图和按钮
         builder.setView(dialogLayout);
         builder.setPositiveButton("确定", (dialog, which) -> {
             String finalValue = currentKeys.isEmpty() ? "null" : String.join("+", currentKeys);
@@ -824,10 +904,8 @@ public class WheelPad extends Element {
         });
         builder.setNegativeButton("取消", (dialog, which) -> dialog.dismiss());
 
-        // 创建对话框实例
         final AlertDialog dialog = builder.create();
 
-        // 为“添加按键”按钮设置监听器
         addButton.setOnClickListener(v -> {
             dialog.hide();
             PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
@@ -841,11 +919,11 @@ public class WheelPad extends Element {
             pageDeviceController.open(deviceCallBack, View.VISIBLE, View.VISIBLE, View.VISIBLE);
         });
 
-        // 显示对话框
         dialog.show();
     }
 
     private void updateValuesContainerUI() {
+        if (valuesContainer == null) return;
         valuesContainer.removeAllViews();
         for (int i = 0; i < segmentCount; i++) {
             if (i >= segmentValues.size()) continue;
@@ -884,50 +962,31 @@ public class WheelPad extends Element {
     private interface IntConsumer {
         void accept(int value);
     }
-    /**
-     * 更新颜色显示按钮的外观（文本、背景色、文本颜色）。
-     */
-    private void updateColorDisplay(ElementEditText colorDisplay, int color) {
-        // 显示十六进制颜色码
-        colorDisplay.setTextWithNoTextChangedCallBack(String.format("%08X", color));
-        // 将背景设置为当前颜色
-        colorDisplay.setBackgroundColor(color);
 
-        // 根据背景色的亮度自动设置文本颜色为黑色或白色，以确保可读性
+    private void updateColorDisplay(ElementEditText colorDisplay, int color) {
+        colorDisplay.setTextWithNoTextChangedCallBack(String.format("%08X", color));
+        colorDisplay.setBackgroundColor(color);
         double luminance = (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255;
         colorDisplay.setTextColor(luminance > 0.5 ? Color.BLACK : Color.WHITE);
         colorDisplay.setGravity(Gravity.CENTER);
     }
 
-    /**
-     * 配置一个 ElementEditText 控件，使其作为颜色选择器按钮使用。
-     *
-     * @param colorDisplay 用于作为按钮的 ElementEditText 视图。
-     * @param initialColorFetcher 一个用于获取当前颜色值的 Lambda 表达式。
-     * @param colorUpdater      一个用于设置新颜色值的 Lambda 表达式。
-     */
     private void setupColorPickerButton(ElementEditText colorDisplay, IntSupplier initialColorFetcher, IntConsumer colorUpdater) {
-        // 禁输入，让 EditText 表现得像一个按钮
         colorDisplay.setFocusable(false);
         colorDisplay.setCursorVisible(false);
         colorDisplay.setKeyListener(null);
-
-        // 使用传入的 Lambda 获取初始颜色并设置外观
         updateColorDisplay(colorDisplay, initialColorFetcher.get());
-
-        // 设置点击监听器，打开颜色选择器
         colorDisplay.setOnClickListener(v -> {
-            // 再次获取当前颜色，确保打开时颜色是最新的
             new ColorPickerDialog(
                     getContext(),
                     initialColorFetcher.get(),
-                    true, // true 表示显示 Alpha 透明度滑块
+                    true,
                     newColor -> {
-                        colorUpdater.accept(newColor); // 使用传入的 Lambda 更新颜色属性
-                        save();                      // 保存更改
-                        updateColorDisplay(colorDisplay, newColor); // 更新UI显示
+                        colorUpdater.accept(newColor);
+                        save();
+                        updateColorDisplay(colorDisplay, newColor);
                     }
-            ).show(); // <-- 主要变化：在最后调用 .show()
+            ).show();
         });
     }
 }
