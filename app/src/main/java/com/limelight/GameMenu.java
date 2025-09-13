@@ -2,6 +2,7 @@ package com.limelight;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
+import android.content.ContentValues;
 import android.content.Context;
 import android.os.Build;
 import android.os.Handler;
@@ -27,6 +28,7 @@ import com.google.gson.JsonObject;
 import com.limelight.binding.input.GameInputDevice;
 import com.limelight.binding.input.KeyboardTranslator;
 import com.limelight.binding.input.advance_setting.ControllerManager;
+import com.limelight.binding.input.advance_setting.config.PageConfigController;
 import com.limelight.binding.input.advance_setting.element.ElementController;
 import com.limelight.nvstream.NvConnection;
 import com.limelight.nvstream.http.NvApp;
@@ -316,6 +318,8 @@ public class GameMenu {
                             game.prefConfig.enableNativeMousePointer = false;
                             game.enableNativeMousePointer(false);  // 关闭本地鼠标模式
                             game.setTouchMode(false);
+                            updateEnhancedTouchSetting(true);
+                            updateTouchModeSetting(false);
                             Toast.makeText(game, getString(R.string.toast_touch_mode_enhanced_on), Toast.LENGTH_SHORT).show();
                         },
                         null,
@@ -329,6 +333,8 @@ public class GameMenu {
                             game.prefConfig.enableNativeMousePointer = false;
                             game.enableNativeMousePointer(false);  // 关闭本地鼠标模式
                             game.setTouchMode(false);
+                            updateEnhancedTouchSetting(false);
+                            updateTouchModeSetting(false);
                             Toast.makeText(game, getString(R.string.toast_touch_mode_classic_on), Toast.LENGTH_SHORT).show();
                         },
                         null,
@@ -341,6 +347,7 @@ public class GameMenu {
                             game.prefConfig.enableNativeMousePointer = false;
                             game.enableNativeMousePointer(false);  // 关闭本地鼠标模式
                             game.setTouchMode(true);
+                            updateTouchModeSetting(true);
                             Toast.makeText(game, getString(R.string.toast_touch_mode_trackpad_on), Toast.LENGTH_SHORT).show();
                         },
                         null,
@@ -354,6 +361,7 @@ public class GameMenu {
                             game.prefConfig.enableEnhancedTouch = false;
                             game.setTouchMode(false);
                             game.enableNativeMousePointer(true);
+                            updateTouchModeSetting(false);
                             Toast.makeText(game, getString(R.string.toast_touch_mode_native_mouse_on), Toast.LENGTH_SHORT).show();
                         },
                         null,
@@ -363,6 +371,39 @@ public class GameMenu {
 
         // 3. 显示为子菜单（在活动对话框内替换普通菜单区域）
         showSubMenu(getString(R.string.game_menu_switch_touch_mode), touchModeOptions);
+    }
+
+    /**
+     * 将当前的触控模式（是否为触摸板模式）保存到数据库中。
+     * @param isTrackpadMode true 表示保存为触摸板板模式，false 表示保存为其他模式。
+     */
+    private void updateTouchModeSetting(boolean isTrackpadMode) {
+        // 从 Game Activity 获取 ControllerManager 实例
+        ControllerManager controllerManager = game.getControllerManager();
+        // 创建一个 ContentValues 对象，用于存放要更新的数据
+        ContentValues contentValues = new ContentValues();
+
+        // 1. 从 PageConfigController 获取当前正在使用的配置ID
+        Long currentConfigId = controllerManager.getPageConfigController().getCurrentConfigId();
+
+        // 2. 将传入的布尔值转换为字符串，并放入 ContentValues
+        //    键是数据库的列名，值是传入的 isTrackpadMode 的状态
+        contentValues.put(PageConfigController.COLUMN_BOOLEAN_TOUCH_MODE, String.valueOf(isTrackpadMode));
+
+        // 3. 调用数据库帮助类的方法，将数据更新到数据库中
+        controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId, contentValues);
+    }
+
+    private void updateEnhancedTouchSetting(boolean isEnabled) {
+        // 从 Game Activity 获取 ControllerManager 实例
+        ControllerManager controllerManager = game.getControllerManager();
+        ContentValues contentValues = new ContentValues();
+        Long currentConfigId = controllerManager.getPageConfigController().getCurrentConfigId();
+
+        contentValues.put(PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH, String.valueOf(isEnabled));
+
+        // 更新到数据库
+        controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId, contentValues);
     }
 
     /**

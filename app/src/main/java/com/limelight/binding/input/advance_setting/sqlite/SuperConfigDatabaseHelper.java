@@ -134,7 +134,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "super_config.db";
     private static final int DATABASE_OLD_VERSION_1 = 1;
     private static final int DATABASE_OLD_VERSION_2 = 2;
-    private static final int DATABASE_VERSION = 4;
+    private static final int DATABASE_VERSION = 5;
     private SQLiteDatabase writableDataBase;
     private SQLiteDatabase readableDataBase;
 
@@ -191,7 +191,8 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
                 "touch_sense INTEGER," +
                 "game_vibrator TEXT," +
                 "button_vibrator TEXT," +
-                "mouse_wheel_speed INTEGER" +
+                "mouse_wheel_speed INTEGER," +
+                PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH + " TEXT DEFAULT 'false'"+
                 ")";
 
         db.execSQL(createConfigTable);
@@ -214,6 +215,10 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         // 添加对 mouse_wheel_speed 列的升级支持
         if (oldVersion <= 3) {
             db.execSQL("ALTER TABLE config ADD COLUMN mouse_wheel_speed INTEGER DEFAULT 20;");
+        }
+        if (oldVersion <= 4) {
+            String alterTableSQL = "ALTER TABLE config" + " ADD COLUMN " + PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH + " TEXT DEFAULT 'false'";
+            db.execSQL(alterTableSQL);
         }
     }
 

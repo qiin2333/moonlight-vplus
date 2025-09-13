@@ -10,6 +10,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.Switch;
@@ -38,6 +39,7 @@ public class PageConfigController {
     public static final String COLUMN_BOOLEAN_BUTTON_VIBRATOR = "button_vibrator";
     public static final String COLUMN_LONG_CONFIG_ID = "config_id";
     private static final String COLUMN_INT_MOUSE_WHEEL_SPEED = "mouse_wheel_speed";
+    public static final String COLUMN_BOOLEAN_ENHANCED_TOUCH = "enhanced_touch";
 
 
     private SuperPageLayout pageConfig;
@@ -45,6 +47,7 @@ public class PageConfigController {
     private ControllerManager controllerManager;
     private Long currentConfigId = 0L;
     private Spinner configSelectSpinner;
+    private LinearLayout enhancedTouchLayout;
 
     private List<Long> configIds = new ArrayList<>();
     private List<String> configNames = new ArrayList<>();
@@ -54,6 +57,7 @@ public class PageConfigController {
     public PageConfigController(ControllerManager controllerManager, Context context){
         this.context = context;
         this.pageConfig = (SuperPageLayout) LayoutInflater.from(context).inflate(R.layout.page_config,null);
+        this.enhancedTouchLayout = pageConfig.findViewById(R.id.enhanced_touch_layout);
         this.controllerManager = controllerManager;
         configSelectSpinner = pageConfig.findViewById(R.id.config_select_spinner);
 
@@ -182,7 +186,7 @@ public class PageConfigController {
                 // 将 Game Activity 中的 currentBackKeyMenu 标志位设为 GAME_MENU，以切换回GAME_MENU模式
                 ((Game)context).setcurrentBackKeyMenu(Game.BackKeyMenuMode.GAME_MENU);
 
-                // 关闭当前的高级设置页面
+                // 关闭当前的高级设置页面，相当于按返回键
                 controllerManager.getSuperPagesController().returnOperation();
 
                 // 显示提示信息
@@ -258,6 +262,7 @@ public class PageConfigController {
         loadMouseWheelSpeed();
         loadGameVibrator();
         loadButtonVibrator();
+        loadEnhancedTouch();
         controllerManager.getElementController().loadAllElement(currentConfigId);
         if (currentConfigId == 0L){
             pageConfig.findViewById(R.id.rename_config_button).setVisibility(View.GONE);
@@ -295,12 +300,24 @@ public class PageConfigController {
         //mouse mode
         Switch mouseModeSwitch = pageConfig.findViewById(R.id.trackpad_enable_switch);
         boolean mouseMode = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, COLUMN_BOOLEAN_TOUCH_MODE, String.valueOf(true)));
+        if (mouseMode) {
+            enhancedTouchLayout.setVisibility(View.GONE); // 如果是触控板模式，隐藏
+        } else {
+            enhancedTouchLayout.setVisibility(View.VISIBLE); // 否则，显示
+        }
         mouseModeSwitch.setOnCheckedChangeListener(null);
         mouseModeSwitch.setChecked(mouseMode);
         controllerManager.getTouchController().setTouchMode(mouseMode);
         mouseModeSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    // 如果开启了触控板模式，隐藏“多点触控模式”布局
+                    enhancedTouchLayout.setVisibility(View.GONE);
+                } else {
+                    // 如果关闭了触控板模式，显示“多点触控模式”布局
+                    enhancedTouchLayout.setVisibility(View.VISIBLE);
+                }
                 ContentValues contentValues = new ContentValues();
                 contentValues.put(COLUMN_BOOLEAN_TOUCH_MODE,String.valueOf(isChecked));
                 //保存到数据库中
@@ -403,6 +420,31 @@ public class PageConfigController {
                 //做实际的设置
                 controllerManager.getElementController().setButtonVibrator(isChecked);
             }
+        });
+    }
+
+    private void loadEnhancedTouch() {
+        Switch enhancedTouchSwitch = pageConfig.findViewById(R.id.enhanced_touch_switch);
+
+        // 从数据库读取值，提供一个默认值 'false'
+        String dbValue = (String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(
+                currentConfigId,
+                COLUMN_BOOLEAN_ENHANCED_TOUCH,
+                String.valueOf(false)
+        );
+        boolean isEnabled = Boolean.parseBoolean(dbValue);
+        // 更新 UI，但不触发监听器
+        enhancedTouchSwitch.setOnCheckedChangeListener(null);
+        enhancedTouchSwitch.setChecked(isEnabled);
+        controllerManager.getTouchController().setEnhancedTouch(isEnabled);
+        // 重新设置监听器，用于用户手动操作
+        enhancedTouchSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            ContentValues contentValues = new ContentValues();
+            // 使用我们新定义的常量来保存新的状态
+            contentValues.put(PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH, String.valueOf(isChecked));
+            // 更新到数据库
+            controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId, contentValues);
+            controllerManager.getTouchController().setEnhancedTouch(isChecked);
         });
     }
 

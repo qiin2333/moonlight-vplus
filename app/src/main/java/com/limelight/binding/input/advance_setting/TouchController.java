@@ -51,6 +51,10 @@ public class TouchController{
         game.setTouchMode(enableRelativeTouch);
     }
 
+    public void setEnhancedTouch(boolean enableRelativeTouch){
+        game.setEnhancedTouch(enableRelativeTouch);
+    }
+
     public void enableTouch(boolean enable){
         if (enable) {
             touchView.setOnTouchListener(game);
