@@ -40,6 +40,7 @@ public abstract class Element extends View {
     public static final String COLUMN_INT_ELEMENT_NORMAL_COLOR = "element_color";
     public static final String COLUMN_INT_ELEMENT_PRESSED_COLOR = "element_pressed_color";
     public static final String COLUMN_INT_ELEMENT_BACKGROUND_COLOR = "element_background_color";
+    public static final String COLUMN_INT_ELEMENT_FLAG1 = "element_flag1";
 
     public static final int ELEMENT_TYPE_DIGITAL_COMMON_BUTTON = 0;
     public static final int ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON = 1;

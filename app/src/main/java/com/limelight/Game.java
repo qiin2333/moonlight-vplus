@@ -1843,6 +1843,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
     }
 
+    public void setEnhancedTouch(boolean enableRelativeTouch){
+        prefConfig.enableEnhancedTouch = enableRelativeTouch;
+    }
+
     @Override
     public void toggleKeyboard() {
         LimeLog.info("Toggling keyboard overlay");

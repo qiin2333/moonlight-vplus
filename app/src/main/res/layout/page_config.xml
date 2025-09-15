@@ -76,6 +76,26 @@
                     android:layout_height="match_parent"
                     android:checked="true"/>
             </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/enhanced_touch_layout"
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginVertical="5dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:layout_weight="1"
+                    android:text="多点触控模式"/>
+                <Switch
+                    android:id="@+id/enhanced_touch_switch"
+                    android:layout_width="50dp"
+                    android:layout_height="match_parent"
+                    android:checked="false"/>
+            </LinearLayout>
+
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                 android:id="@+id/mouse_sense_number_seekbar"
                 android:layout_width="match_parent"
