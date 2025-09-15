@@ -118,6 +118,10 @@ public class ElementController {
         MOUSE_SCROLL_REPEAT_INTERVAL = interval;
     }
 
+    public SuperPagesController getSuperPagesController() {
+        return controllerManager.getSuperPagesController();
+    }
+
 
     /**
      *隐藏所有虚拟按键的容器。
@@ -529,6 +533,11 @@ public class ElementController {
     }
 
     public void changeMode(Mode mode){
+        if (this.mode == mode) {
+            return;
+        }
+
+        this.mode = mode;
         switch (mode){
             case Normal:
                 controllerManager.getTouchController().enableTouch(true);
@@ -559,6 +568,19 @@ public class ElementController {
                 }
                 break;
         }
+        // 无论切换到什么模式，都通知所有元素，并让它们重绘
+        for (Element element : elements) {
+            element.onModeChanged(mode); // <-- 调用新方法
+
+            // 我们仍然需要根据模式设置颜色
+            if (mode == Mode.Edit) {
+                element.setEditColor(Element.EDIT_COLOR_EDIT);
+            } else if (mode == Mode.Select) {
+                element.setEditColor(Element.EDIT_COLOR_SELECT);
+            }
+
+            element.invalidate();
+        }
     }
 
     public Mode getMode() {
@@ -569,6 +591,23 @@ public class ElementController {
     public List<Element> getElements() {
         return elements;
     }
+
+    /**
+     * 根据提供的元素ID查找并返回对应的 Element 对象。
+     *
+     * @param elementId 要查找的元素的ID。
+     * @return 如果找到，则返回 Element 对象；否则返回 null。
+     */
+    public Element findElementById(long elementId) {
+        // 直接遍历类成员 'elements' 列表
+        for (Element element : elements) {
+            if (element.elementId.equals(elementId)) {
+                return element;
+            }
+        }
+        return null; // 如果没有找到
+    }
+
 
 
     // 添加开始滚轮按住的方法
@@ -608,6 +647,16 @@ public class ElementController {
         }
     }
 
+    // 辅助方法，创建一个什么都不做的安全处理器
+    private SendEventHandler createEmptyHandler() {
+        return new SendEventHandler() {
+            @Override
+            public void sendEvent(boolean down) {}
+            @Override
+            public void sendEvent(int analog1, int analog2) {}
+        };
+    }
+
 
 
     public SendEventHandler getSendEventHandler(String key){
@@ -640,26 +689,89 @@ public class ElementController {
                 }
             };
 
-        } else if (key.matches("g\\d+")){
-            int padCode = Integer.parseInt(key.substring(1));
-            return new SendEventHandler() {
-                @Override
-                public void sendEvent(boolean down) {
-                    if (down) {
-                        gamepadInputContext.inputMap |= padCode;
+        } else if (key.startsWith("g")) {
+            String idString = key.substring(1);
+            // --- 优先尝试解析为 GroupButton ID ---
+            // 检查字符串长度。一个int最多10位，时间戳通常13位。
+            // 这是一个快速判断，避免对过长的字符串尝试 Integer.parseInt
+            if (idString.length() > 10) {
+                // 长度超过int范围，它只可能是 GroupButton ID
+                try {
+                    long elementId = Long.parseLong(idString);
+                    Element element = findElementById(elementId);
+
+                    if (element instanceof GroupButton) {
+                        final GroupButton groupButton = (GroupButton) element;
+                        return new SendEventHandler() {
+                            @Override
+                            public void sendEvent(boolean down) {
+                                if (down) {
+                                    handler.post(groupButton::triggerAction);
+                                }
+                            }
+
+                            @Override
+                            public void sendEvent(int analog1, int analog2) {
+                            }
+                        };
                     } else {
-                        gamepadInputContext.inputMap &= ~padCode;
+                        // 找到了ID但不是GroupButton，或者在加载期间没找到（返回null）
+                        // 这是一个无效的配置，返回一个安全的空处理器
+                        return createEmptyHandler();
                     }
-                    sendGamepadEvent();
+                } catch (NumberFormatException e) {
+                    // 无法解析为long，无效配置
+                    return createEmptyHandler();
                 }
+            }
+            // --- 如果长度在int范围内，可能是手柄码或GroupButton ID ---
+            try {
+                // 仍然先尝试解析为 long，因为它更通用
+                long elementId = Long.parseLong(idString);
+                Element element = findElementById(elementId);
+                if (element instanceof GroupButton) {
+                    // 明确找到了一个GroupButton
+                    final GroupButton groupButton = (GroupButton) element;
+                    return new SendEventHandler() {
+                        @Override
+                        public void sendEvent(boolean down) {
+                            if (down) {
+                                handler.post(groupButton::triggerAction);
+                            }
+                        }
 
-                @Override
-                public void sendEvent(int analog1, int analog2) {
-
+                        @Override
+                        public void sendEvent(int analog1, int analog2) {
+                        }
+                    };
                 }
-            };
+            } catch (NumberFormatException e) {
+                // 解析long失败，说明不是GroupButton ID，可以安全地继续
+            }
+            // --- 最后，尝试作为手柄按键码处理 ---
+            try {
+                int padCode = Integer.parseInt(idString);
+                return new SendEventHandler() {
+                    @Override
+                    public void sendEvent(boolean down) {
+                        if (down) {
+                            gamepadInputContext.inputMap |= padCode;
+                        } else {
+                            gamepadInputContext.inputMap &= ~padCode;
+                        }
+                        sendGamepadEvent();
+                    }
 
-        } else if (key.equals(SPECIAL_KEY_GAMEPAD_LEFT_STICK)){
+                    @Override
+                    public void sendEvent(int analog1, int analog2) {
+                    }
+                };
+            } catch (NumberFormatException e) {
+                // 解析为int也失败了，这是一个完全无效的 "g" 值
+                return createEmptyHandler();
+            }
+
+        } else if (key.equals(SPECIAL_KEY_GAMEPAD_LEFT_STICK)) {
             return new SendEventHandler() {
                 @Override
                 public void sendEvent(boolean down) {

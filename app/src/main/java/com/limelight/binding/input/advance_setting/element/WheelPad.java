@@ -21,6 +21,7 @@ import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.widget.SwitchCompat;
 
@@ -49,7 +50,6 @@ public class WheelPad extends Element {
     private String centerText;
     private List<String> segmentValues;
     private List<String> segmentNames;
-    private List<List<ElementController.SendEventHandler>> segmentSendHandlersList;
     private int normalColor;
     private int pressedColor;
     private int backgroundColor;
@@ -151,18 +151,17 @@ public class WheelPad extends Element {
                 segmentNames.add("");
             }
         }
-
-        updateAllSegmentSendHandlers();
     }
 
-    private void updateAllSegmentSendHandlers() {
-        segmentSendHandlersList = new ArrayList<>();
-        for (String value : segmentValues) {
-            segmentSendHandlersList.add(getHandlersForValue(value));
+    public boolean isBeingEdited() {
+        if (elementController != null) {
+            SuperPageLayout currentPage = elementController.getCurrentEditingPage();
+            return this.wheelPadPage != null && currentPage == this.wheelPadPage;
         }
+        return false;
     }
 
-    private List<ElementController.SendEventHandler> getHandlersForValue(String value) {
+    private List<ElementController.SendEventHandler> getHandlersForValueNow(String value) {
         List<ElementController.SendEventHandler> handlers = new ArrayList<>();
         if (value == null || value.isEmpty() || value.equals("null")) {
             return handlers;
@@ -176,14 +175,6 @@ public class WheelPad extends Element {
             }
         }
         return handlers;
-    }
-
-    public boolean isBeingEdited() {
-        if (elementController != null) {
-            SuperPageLayout currentPage = elementController.getCurrentEditingPage();
-            return this.wheelPadPage != null && currentPage == this.wheelPadPage;
-        }
-        return false;
     }
 
     @Override
@@ -425,22 +416,20 @@ public class WheelPad extends Element {
                 break;
             case MotionEvent.ACTION_UP:
                 if (isWheelActive) {
-                    if (activeIndex != -1 && activeIndex < segmentSendHandlersList.size()) {
-                        List<ElementController.SendEventHandler> handlers = segmentSendHandlersList.get(activeIndex);
+                    if (activeIndex != -1 && activeIndex < segmentValues.size()) {
+                        String value = segmentValues.get(activeIndex);
+                        // 即时获取 handlers
+                        List<ElementController.SendEventHandler> handlers = getHandlersForValueNow(value);
+
+                        // 按下
                         for (ElementController.SendEventHandler handler : handlers) {
                             handler.sendEvent(true);
                         }
+                        // 释放
                         for (int i = handlers.size() - 1; i >= 0; i--) {
                             handlers.get(i).sendEvent(false);
                         }
                     }
-                    isWheelActive = false;
-                    activeIndex = -1;
-                    invalidate();
-                }
-                break;
-            case MotionEvent.ACTION_CANCEL:
-                if (isWheelActive) {
                     isWheelActive = false;
                     activeIndex = -1;
                     invalidate();
@@ -451,15 +440,21 @@ public class WheelPad extends Element {
 
     private void updateSendingState() {
         if (activeIndex != lastActiveIndex) {
-            if (lastActiveIndex != -1 && lastActiveIndex < segmentSendHandlersList.size()) {
-                List<ElementController.SendEventHandler> lastHandlers = segmentSendHandlersList.get(lastActiveIndex);
+            // --- 释放上一个 ---
+            if (lastActiveIndex != -1 && lastActiveIndex < segmentValues.size()) {
+                String lastValue = segmentValues.get(lastActiveIndex);
+                // 即时获取 handlers
+                List<ElementController.SendEventHandler> lastHandlers = getHandlersForValueNow(lastValue);
                 for (int i = lastHandlers.size() - 1; i >= 0; i--) {
                     lastHandlers.get(i).sendEvent(false);
                 }
             }
 
-            if (activeIndex != -1 && activeIndex < segmentSendHandlersList.size()) {
-                List<ElementController.SendEventHandler> activeHandlers = segmentSendHandlersList.get(activeIndex);
+            // --- 按下新的 ---
+            if (activeIndex != -1 && activeIndex < segmentValues.size()) {
+                String activeValue = segmentValues.get(activeIndex);
+                // 即时获取 handlers
+                List<ElementController.SendEventHandler> activeHandlers = getHandlersForValueNow(activeValue);
                 for (ElementController.SendEventHandler handler : activeHandlers) {
                     handler.sendEvent(true);
                 }
@@ -764,14 +759,12 @@ public class WheelPad extends Element {
             segmentValues.remove(segmentValues.size() - 1);
             segmentNames.remove(segmentNames.size() - 1);
         }
-        updateAllSegmentSendHandlers();
         invalidate();
     }
 
     protected void setSegmentValue(int index, String value) {
         if (index >= 0 && index < segmentValues.size()) {
             segmentValues.set(index, value);
-            segmentSendHandlersList.set(index, getHandlersForValue(value));
             invalidate();
         }
     }
@@ -819,6 +812,21 @@ public class WheelPad extends Element {
         if (value == null || value.isEmpty() || value.equals("null")) {
             return "空";
         }
+
+        if (value.startsWith("g")) {
+            try {
+                long elementId = Long.parseLong(value.substring(1));
+                Element element = elementController.findElementById(elementId);
+                if (element instanceof GroupButton) {
+                    return "[组] " + ((GroupButton) element).getText();
+                } else {
+                    return "[无效的组]";
+                }
+            } catch (NumberFormatException e) {
+                return "[格式错误的组ID]";
+            }
+        }
+
         String[] singleKeyValues = value.split("\\+");
         List<String> keyNames = new ArrayList<>();
         for (String singleKeyValue : singleKeyValues) {
@@ -827,16 +835,77 @@ public class WheelPad extends Element {
         return String.join(" + ", keyNames);
     }
 
-    private void updateKeyCombinationDisplay(LinearLayout keysContainer, List<String> currentKeys) {
+    private void updateKeyCombinationDisplay(LinearLayout keysContainer, List<String> currentKeys, Button addButton, Button addGroupButton, final AlertDialog dialog) {
         keysContainer.removeAllViews();
         Context context = keysContainer.getContext();
+        boolean isGroup = !currentKeys.isEmpty() && currentKeys.get(0).startsWith("g");
+
+        // 根据是否已选择组按键，更新按钮的可见性
+        if (isGroup) {
+            addButton.setVisibility(View.GONE);
+            addGroupButton.setVisibility(View.GONE);
+        } else {
+            addButton.setVisibility(View.VISIBLE);
+            addGroupButton.setVisibility(View.VISIBLE);
+        }
 
         if (currentKeys.isEmpty()) {
             TextView emptyText = new TextView(context);
-            emptyText.setText("当前无按键，请点击“添加”");
+            emptyText.setText("当前无按键，请点击下方按钮添加");
             emptyText.setPadding(0, 10, 0, 10);
             keysContainer.addView(emptyText);
+        } else if (isGroup) {
+            // --- 显示组按键 ---
+            try {
+                long elementId = Long.parseLong(currentKeys.get(0).substring(1));
+                Element element = elementController.findElementById(elementId);
+                if (element instanceof GroupButton) {
+                    final GroupButton groupButton = (GroupButton) element;
+                    final SuperPageLayout groupButtonSettingsPage = groupButton.getInfoPage();
+                    Button groupBtnDisplay = new Button(context);
+                    groupBtnDisplay.setText("[组] " + groupButton.getText() + " (单击设置/长按删除)");
+                    groupBtnDisplay.setAllCaps(false);
+
+                    // 单击打开组按键设置页
+                    groupBtnDisplay.setOnClickListener(v -> {
+                        if (dialog != null) {
+                            dialog.dismiss();
+                        }
+                        // 打开设置页面
+                        elementController.getSuperPagesController().openNewPage(groupButtonSettingsPage);
+                    });
+
+                    // 长按删除
+                    groupBtnDisplay.setOnLongClickListener(v -> {
+                        // 清空当前分区的按键设置
+                        currentKeys.clear();
+
+                        // 更新UI以反映移除
+                        updateKeyCombinationDisplay(keysContainer, currentKeys, addButton, addGroupButton, dialog);
+
+                        Toast.makeText(context, "已从此分区移除组按键", Toast.LENGTH_SHORT).show();
+
+                        return true; // 返回true表示事件已被消费
+                    });
+                    keysContainer.addView(groupBtnDisplay);
+                }
+                else {
+                    // 如果找到了元素但类型不对，也显示错误
+                    currentKeys.clear();
+                    TextView errorText = new TextView(context);
+                    errorText.setText("错误：ID " + elementId + " 不是一个组按键。");
+                    keysContainer.addView(errorText);
+                    updateKeyCombinationDisplay(keysContainer, currentKeys, addButton, addGroupButton, dialog);
+                }
+            } catch (Exception e) {
+                // 如果解析或查找失败，显示错误信息并允许重新选择
+                currentKeys.clear();
+                TextView errorText = new TextView(context);
+                errorText.setText("错误：关联的组按键已不存在，请重新设置。");
+                keysContainer.addView(errorText);
+            }
         } else {
+            // --- 显示普通按键列表 ---
             for (int i = 0; i < currentKeys.size(); i++) {
                 final int keyIndex = i;
                 TextView keyView = new TextView(context);
@@ -853,7 +922,7 @@ public class WheelPad extends Element {
 
                 keyView.setOnClickListener(v -> {
                     currentKeys.remove(keyIndex);
-                    updateKeyCombinationDisplay(keysContainer, currentKeys);
+                    updateKeyCombinationDisplay(keysContainer, currentKeys, addButton, addGroupButton, dialog);
                 });
                 keysContainer.addView(keyView);
             }
@@ -877,34 +946,124 @@ public class WheelPad extends Element {
                 0,
                 1.0f
         );
-        scrollParams.setMargins(0,0,0,20);
+        scrollParams.setMargins(0, 0, 0, 20);
         scrollView.setLayoutParams(scrollParams);
         scrollView.addView(keysContainer);
 
         String currentValue = segmentValues.get(index);
         final List<String> currentKeys = new ArrayList<>();
         if (currentValue != null && !currentValue.isEmpty() && !currentValue.equals("null")) {
-            currentKeys.addAll(Arrays.asList(currentValue.split("\\+")));
+            // 组按键只有一个值 "g<ID>", 普通按键用 "+" 分隔
+            if (currentValue.startsWith("g")) {
+                currentKeys.add(currentValue);
+            } else {
+                currentKeys.addAll(Arrays.asList(currentValue.split("\\+")));
+            }
         }
 
-        updateKeyCombinationDisplay(keysContainer, currentKeys);
+        // --- 新增按钮布局和按钮 ---
+        LinearLayout buttonContainer = new LinearLayout(context);
+        buttonContainer.setOrientation(LinearLayout.HORIZONTAL);
+        buttonContainer.setGravity(Gravity.CENTER);
 
         Button addButton = new Button(context);
         addButton.setText("添加按键");
+        LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        buttonParams.setMarginEnd(10);
+        addButton.setLayoutParams(buttonParams);
+
+        Button addGroupButton = new Button(context);
+        addGroupButton.setText("添加组按键");
+        LinearLayout.LayoutParams groupButtonParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        groupButtonParams.setMarginStart(10);
+        addGroupButton.setLayoutParams(groupButtonParams);
+
+        buttonContainer.addView(addButton);
+        buttonContainer.addView(addGroupButton);
 
         dialogLayout.addView(scrollView);
-        dialogLayout.addView(addButton);
+        dialogLayout.addView(buttonContainer);
 
-        builder.setView(dialogLayout);
-        builder.setPositiveButton("确定", (dialog, which) -> {
-            String finalValue = currentKeys.isEmpty() ? "null" : String.join("+", currentKeys);
+        final AlertDialog dialog = builder.create();
+
+        // 初始状态更新
+        updateKeyCombinationDisplay(keysContainer, currentKeys, addButton, addGroupButton, dialog);
+        dialog.setView(dialogLayout);
+
+        dialog.setButton(AlertDialog.BUTTON_POSITIVE, "确定", (d, which) -> {
+            String finalValue;
+            if (currentKeys.isEmpty()) {
+                finalValue = "null";
+            } else if (currentKeys.get(0).startsWith("g")) {
+                finalValue = currentKeys.get(0);
+            } else {
+                finalValue = String.join("+", currentKeys);
+            }
             setSegmentValue(index, finalValue);
             valueText.setText(getDisplayStringForValue(finalValue));
             save();
         });
-        builder.setNegativeButton("取消", (dialog, which) -> dialog.dismiss());
+        dialog.setButton(AlertDialog.BUTTON_NEGATIVE, "取消", (d, which) -> d.dismiss());
 
-        final AlertDialog dialog = builder.create();
+        // "添加组按键" 的点击逻辑
+        addGroupButton.setOnClickListener(v -> {
+            // 1. 查找所有现有的 GroupButton
+            List<GroupButton> groupButtons = new ArrayList<>();
+            for (Element el : elementController.getElements()) {
+                if (el instanceof GroupButton) {
+                    groupButtons.add((GroupButton) el);
+                }
+            }
+
+            // 2. 创建选项列表
+            final List<String> options = new ArrayList<>();
+            for (GroupButton gb : groupButtons) {
+                options.add(gb.getText() + " (ID: " + gb.elementId + ")");
+            }
+            options.add("创建新的组按键...");
+
+            // 3. 显示选择对话框
+            new AlertDialog.Builder(context)
+                    .setTitle("选择一个组按键")
+                    .setItems(options.toArray(new String[0]), (selectionDialog, which) -> {
+
+                        String selectedValue = null;
+                        Element newElementToEdit = null;
+
+                        if (which == options.size() - 1) {
+                            // --- 用户选择 "创建新的" ---
+                            ContentValues cv = GroupButton.getInitialInfo();
+                            Element newElement = elementController.addElement(cv);
+                            if (newElement != null) {
+                                selectedValue = "g" + newElement.elementId;
+                                newElementToEdit = newElement; // 记录下来，以便后续打开其设置页
+                            }
+                        } else {
+                            // --- 用户选择一个现有的 ---
+                            GroupButton selectedGb = groupButtons.get(which);
+                            selectedValue = "g" + selectedGb.elementId;
+                        }
+
+                        if (selectedValue != null) {
+                            // 立即设置值并保存
+                            setSegmentValue(index, selectedValue);
+                            save();
+
+                            // 更新主设置页面上该分区的显示文本
+                            valueText.setText(getDisplayStringForValue(selectedValue));
+
+                            // 关闭“编辑按键”这个主弹窗
+                            dialog.dismiss();
+
+                            // 如果是新创建的，提示用户去配置
+                            if (newElementToEdit != null) {
+                                Toast.makeText(context, "新组按键已创建并关联，请进行配置", Toast.LENGTH_LONG).show();
+                                elementController.toggleInfoPage(newElementToEdit.getInfoPage());
+                            }
+                        }
+                    })
+                    .show();
+        });
 
         addButton.setOnClickListener(v -> {
             dialog.hide();
@@ -913,7 +1072,7 @@ public class WheelPad extends Element {
                 public void OnKeyClick(TextView key) {
                     currentKeys.add(key.getTag().toString());
                     dialog.show();
-                    updateKeyCombinationDisplay(keysContainer, currentKeys);
+                    updateKeyCombinationDisplay(keysContainer, currentKeys, addButton, addGroupButton, dialog);
                 }
             };
             pageDeviceController.open(deviceCallBack, View.VISIBLE, View.VISIBLE, View.VISIBLE);
