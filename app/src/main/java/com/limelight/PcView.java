@@ -34,6 +34,7 @@ import com.limelight.utils.ShortcutHelper;
 import com.limelight.utils.UiHelper;
 import com.limelight.utils.AnalyticsManager;
 import com.limelight.utils.UpdateManager;
+import com.limelight.dialogs.AddressSelectionDialog;
 
 import com.bumptech.glide.Glide;
 
@@ -848,6 +849,30 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         startActivity(i);
     }
 
+    /**
+     * 显示地址选择对话框
+     */
+    private void showAddressSelectionDialog(ComputerDetails computer) {
+        AddressSelectionDialog dialog = new AddressSelectionDialog(this, computer, new AddressSelectionDialog.OnAddressSelectedListener() {
+            @Override
+            public void onAddressSelected(ComputerDetails.AddressTuple address) {
+                // 使用选中的地址创建临时ComputerDetails对象
+                ComputerDetails tempComputer = new ComputerDetails(computer);
+                tempComputer.activeAddress = address;
+                
+                // 使用选中的地址进入应用列表
+                doAppList(tempComputer, false, false);
+            }
+
+            @Override
+            public void onCancelled() {
+                // 用户取消选择，不做任何操作
+            }
+        });
+        
+        dialog.show();
+    }
+
     @Override
     public boolean onContextItemSelected(MenuItem item) {
         AdapterContextMenuInfo info = (AdapterContextMenuInfo) item.getMenuInfo();
@@ -1008,7 +1033,12 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                 // Pair an unpaired machine by default
                 doPair(computer.details);
             } else {
-                doAppList(computer.details, false, false);
+                // 检查是否有多个可用地址
+                if (computer.details.hasMultipleAddresses()) {
+                    showAddressSelectionDialog(computer.details);
+                } else {
+                    doAppList(computer.details, false, false);
+                }
             }
         });
         UiHelper.applyStatusBarPadding(listView);

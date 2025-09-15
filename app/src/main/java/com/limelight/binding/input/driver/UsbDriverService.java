@@ -204,9 +204,6 @@ public class UsbDriverService extends Service implements UsbDriverListener {
             else if (SwitchProController.canClaimDevice(device)) {
                 controller = new SwitchProController(device, connection, nextDeviceId++, this);
             }
-            else if (DualSenseController.canClaimDevice(device)) {
-                controller = new DualSenseController(device, connection, nextDeviceId++, this);
-            }
             else {
                 // Unreachable
                 return;
