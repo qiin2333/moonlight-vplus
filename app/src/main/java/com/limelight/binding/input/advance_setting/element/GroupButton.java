@@ -16,6 +16,7 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.SeekBar;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import com.limelight.Game;
@@ -111,6 +112,7 @@ public class GroupButton extends Element {
     private final Paint paintText = new Paint();
     private final Paint paintEdit = new Paint();
     private final RectF rect = new RectF();
+    private boolean hidden = false;
 
 
 
@@ -159,6 +161,9 @@ public class GroupButton extends Element {
         backgroundColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_BACKGROUND_COLOR)).intValue();
         value = (String) attributesMap.get(COLUMN_STRING_ELEMENT_VALUE);
 
+        Object hiddenFlagObj = attributesMap.get(COLUMN_INT_ELEMENT_FLAG1);
+        this.hidden = (hiddenFlagObj != null) && ((Long) hiddenFlagObj).intValue() == 1;
+
         String[] childElementIds = value.split(",");
         List<Element> allElements = elementController.getElements();
         StringBuilder newValue = new StringBuilder("-1");
@@ -199,6 +204,8 @@ public class GroupButton extends Element {
                 save();
             }
         };
+        // 在构造函数的最后，根据当前模式设置初始可见性
+        onModeChanged(controller.getMode());
     }
 
     @Override
@@ -434,6 +441,7 @@ public class GroupButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
+        contentValues.put(COLUMN_INT_ELEMENT_FLAG1, hidden ? 1 : 0);
         elementController.updateElement(elementId,contentValues);
 
     }
@@ -749,6 +757,12 @@ public class GroupButton extends Element {
             }
         });
 
+        Switch hiddenSwitch = groupButtonPage.findViewById(R.id.page_group_button_hidden_switch);
+        hiddenSwitch.setChecked(hidden);
+        hiddenSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            setHidden(isChecked);
+        });
+
         groupButtonPage.findViewById(R.id.page_group_button_select_child_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -828,6 +842,31 @@ public class GroupButton extends Element {
         }
     }
 
+    public void triggerAction() {
+       //正常模式下的默认操作是切换子可见性，这由onRelease处理。
+        if (listener != null) {
+            listener.onRelease();
+        }
+    }
+
+    public void setHidden(boolean hidden) {
+        this.hidden = hidden;
+        // 调用 onModeChanged 来重新评估可见性，而不是直接 invalidate
+        onModeChanged(elementController.getMode());
+        save();
+    }
+
+    @Override
+    public void onModeChanged(ElementController.Mode newMode) {
+        super.onModeChanged(newMode);
+
+        if (newMode == ElementController.Mode.Normal && hidden) {
+            setVisibility(INVISIBLE);
+        } else {
+            setVisibility(VISIBLE);
+        }
+    }
+
     private void deleteChildElement(Element deleteElement){
         if (childElementList.remove(deleteElement)){
             value = "-1";
@@ -836,6 +875,14 @@ public class GroupButton extends Element {
             }
         }
 
+    }
+
+    /**
+     *按钮显示文本的公共getter。
+     * @return GroupButton的当前文本。
+     */
+    public String getText() {
+        return this.text;
     }
 
 

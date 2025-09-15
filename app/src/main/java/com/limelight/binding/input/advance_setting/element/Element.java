@@ -221,6 +221,14 @@ public abstract class Element extends View {
         super.onDraw(canvas);
     }
 
+    /**
+    *当全局模式（正常、编辑、选择）更改时，由ElementController调用。
+    *子类可以重写此项以更新其状态。
+     */
+    public void onModeChanged(ElementController.Mode newMode) {
+        // Default implementation does nothing.
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         // Ignore secondary touches on controls
