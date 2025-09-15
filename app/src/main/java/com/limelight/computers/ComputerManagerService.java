@@ -638,54 +638,65 @@ public class ComputerManagerService extends Service {
         startParallelPollThread(remoteInfo, uniqueAddresses);
         startParallelPollThread(ipv6Info, uniqueAddresses);
 
+        ComputerDetails result = null;
+        ComputerDetails.AddressTuple primaryAddress = null;
+
         try {
-            // Check local first
+            // 等待所有轮询完成
             synchronized (localInfo) {
                 while (!localInfo.complete) {
                     localInfo.wait();
                 }
-
-                if (localInfo.returnedDetails != null) {
-                    localInfo.returnedDetails.activeAddress = localInfo.address;
-                    return localInfo.returnedDetails;
-                }
             }
-
-            // Now manual
             synchronized (manualInfo) {
                 while (!manualInfo.complete) {
                     manualInfo.wait();
                 }
-
-                if (manualInfo.returnedDetails != null) {
-                    manualInfo.returnedDetails.activeAddress = manualInfo.address;
-                    return manualInfo.returnedDetails;
-                }
             }
-
-            // Now remote IPv4
             synchronized (remoteInfo) {
                 while (!remoteInfo.complete) {
                     remoteInfo.wait();
                 }
-
-                if (remoteInfo.returnedDetails != null) {
-                    remoteInfo.returnedDetails.activeAddress = remoteInfo.address;
-                    return remoteInfo.returnedDetails;
-                }
             }
-
-            // Now global IPv6
             synchronized (ipv6Info) {
                 while (!ipv6Info.complete) {
                     ipv6Info.wait();
                 }
-
-                if (ipv6Info.returnedDetails != null) {
-                    ipv6Info.returnedDetails.activeAddress = ipv6Info.address;
-                    return ipv6Info.returnedDetails;
-                }
             }
+
+            // 按优先级收集所有成功的地址
+            if (localInfo.returnedDetails != null) {
+                result = localInfo.returnedDetails;
+                primaryAddress = localInfo.address;
+                result.addAvailableAddress(localInfo.address);
+            }
+            if (manualInfo.returnedDetails != null) {
+                if (result == null) {
+                    result = manualInfo.returnedDetails;
+                    primaryAddress = manualInfo.address;
+                }
+                result.addAvailableAddress(manualInfo.address);
+            }
+            if (remoteInfo.returnedDetails != null) {
+                if (result == null) {
+                    result = remoteInfo.returnedDetails;
+                    primaryAddress = remoteInfo.address;
+                }
+                result.addAvailableAddress(remoteInfo.address);
+            }
+            if (ipv6Info.returnedDetails != null) {
+                if (result == null) {
+                    result = ipv6Info.returnedDetails;
+                    primaryAddress = ipv6Info.address;
+                }
+                result.addAvailableAddress(ipv6Info.address);
+            }
+
+            // 设置主要活跃地址
+            if (result != null && primaryAddress != null) {
+                result.activeAddress = primaryAddress;
+            }
+
         } finally {
             // Stop any further polling if we've found a working address or we've been
             // interrupted by an attempt to stop polling.
@@ -695,7 +706,7 @@ public class ComputerManagerService extends Service {
             ipv6Info.interrupt();
         }
 
-        return null;
+        return result;
     }
 
     private boolean pollComputer(ComputerDetails details) throws InterruptedException {

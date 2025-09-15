@@ -63,6 +63,14 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
             imgView.setAlpha(0.4f);
         }
 
+        // 设置多层叠加背景效果
+        if (obj.details.state == ComputerDetails.State.ONLINE && 
+            obj.details.hasMultipleAddresses()) {
+            parentView.setBackgroundResource(R.drawable.pc_item_multiple_addresses_selector);
+        } else {
+            parentView.setBackgroundResource(R.drawable.pc_item_selector);
+        }
+
         // 将View转换为ImageView来处理白色点点点动画
         ImageView spinnerImageView = (ImageView) spinnerView;
         if (obj.details.state == ComputerDetails.State.UNKNOWN) {

@@ -1005,33 +1005,13 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            // 获取V-Sync偏移量，确保精确的帧同步
-            long vsyncOffset = activity.getWindowManager().getDefaultDisplay().getAppVsyncOffsetNanos();
-            frameTimeNanos -= vsyncOffset;
-            
-            // 实验性低延迟模式：进一步优化V-Sync处理
-            if (prefs.framePacing == PreferenceConfiguration.FRAME_PACING_EXPERIMENTAL_LOW_LATENCY) {
-                // 根据帧率动态调整提前量，避免副作用
-                long vsyncPeriodNs = 1000000000 / refreshRate;
-                // 安全的提前量：不超过V-Sync周期的1/4
-                long maxAdvanceNs = vsyncPeriodNs / 4;
-                frameTimeNanos -= maxAdvanceNs;
-            }
+            frameTimeNanos -= activity.getWindowManager().getDefaultDisplay().getAppVsyncOffsetNanos();
         }
 
         // Don't render unless a new frame is due. This prevents microstutter when streaming
         // at a frame rate that doesn't match the display (such as 60 FPS on 120 Hz).
         long actualFrameTimeDeltaNs = frameTimeNanos - lastRenderedFrameTimeNanos;
-        
-        // 根据模式调整帧率控制阈值
-        long expectedFrameTimeDeltaNs;
-        if (prefs.framePacing == PreferenceConfiguration.FRAME_PACING_EXPERIMENTAL_LOW_LATENCY) {
-            // 实验性低延迟模式：使用更激进的70%阈值，进一步减少延迟
-            expectedFrameTimeDeltaNs = 700000000 / refreshRate; // within 70% of the next frame
-        } else {
-            // 其他模式：使用保守的80%阈值
-            expectedFrameTimeDeltaNs = 800000000 / refreshRate; // within 80% of the next frame
-        }
+        long expectedFrameTimeDeltaNs = 800000000 / refreshRate; // within 80% of the next frame
         if (actualFrameTimeDeltaNs >= expectedFrameTimeDeltaNs) {
             // Render up to one frame when in frame pacing mode.
             //
@@ -1040,6 +1020,11 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             // frame of buffer to smooth over network/rendering jitter.
             Integer nextOutputBuffer = outputBufferQueue.poll();
             if (nextOutputBuffer != null) {
+                if (prefs.framePacing == PreferenceConfiguration.FRAME_PACING_EXPERIMENTAL_LOW_LATENCY) {
+                    // 实验性低延迟模式：进一步优化V-Sync处理
+                    // 安全的提前量：不超过V-Sync周期的1/2
+                    frameTimeNanos -= 500000000 / refreshRate;
+                }
                 try {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                         videoDecoder.releaseOutputBuffer(nextOutputBuffer, frameTimeNanos);
@@ -1048,15 +1033,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                         videoDecoder.releaseOutputBuffer(nextOutputBuffer, true);
                     }
 
-                    // 对于实验性低延迟模式，需要调整lastRenderedFrameTimeNanos以保持正确的帧率控制
-                    if (prefs.framePacing == PreferenceConfiguration.FRAME_PACING_EXPERIMENTAL_LOW_LATENCY) {
-                        // 使用原始的frameTimeNanos（加上提前量）来更新lastRenderedFrameTimeNanos
-                        long vsyncPeriodNs = 1000000000 / refreshRate;
-                        long maxAdvanceNs = vsyncPeriodNs / 4;
-                        lastRenderedFrameTimeNanos = frameTimeNanos + maxAdvanceNs;
-                    } else {
-                        lastRenderedFrameTimeNanos = frameTimeNanos;
-                    }
+                    lastRenderedFrameTimeNanos = frameTimeNanos;
                     activeWindowVideoStats.totalFramesRendered++;
                 } catch (IllegalStateException ignored) {
                     try {

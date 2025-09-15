@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 
@@ -73,6 +75,7 @@ public class ComputerDetails {
     // Transient attributes
     public State state;
     public AddressTuple activeAddress;
+    public List<AddressTuple> availableAddresses; // 存储所有可用的地址
     public int httpsPort;
     public int externalPort;
     public PairingManager.PairState pairState;
@@ -84,6 +87,7 @@ public class ComputerDetails {
     public ComputerDetails() {
         // Use defaults
         state = State.UNKNOWN;
+        availableAddresses = new ArrayList<>();
     }
 
     public ComputerDetails(ComputerDetails details) {
@@ -151,6 +155,57 @@ public class ComputerDetails {
         this.nvidiaServer = details.nvidiaServer;
         this.useVdd = details.useVdd;
         this.rawAppList = details.rawAppList;
+        if (details.availableAddresses != null) {
+            this.availableAddresses = new ArrayList<>(details.availableAddresses);
+        }
+    }
+
+    /**
+     * 添加可用地址到列表中
+     */
+    public void addAvailableAddress(AddressTuple address) {
+        if (availableAddresses == null) {
+            availableAddresses = new ArrayList<>();
+        }
+        if (address != null && !availableAddresses.contains(address)) {
+            availableAddresses.add(address);
+        }
+    }
+
+    /**
+     * 获取所有可用地址
+     */
+    public List<AddressTuple> getAvailableAddresses() {
+        if (availableAddresses == null) {
+            availableAddresses = new ArrayList<>();
+        }
+        return availableAddresses;
+    }
+
+    /**
+     * 检查是否有多个可用地址
+     */
+    public boolean hasMultipleAddresses() {
+        return availableAddresses != null && availableAddresses.size() > 1;
+    }
+
+    /**
+     * 获取地址类型描述
+     */
+    public String getAddressTypeDescription(AddressTuple address) {
+        if (address == null) return "";
+        
+        if (address.equals(localAddress)) {
+            return "本地网络";
+        } else if (address.equals(remoteAddress)) {
+            return "远程网络";
+        } else if (address.equals(manualAddress)) {
+            return "手动配置";
+        } else if (address.equals(ipv6Address)) {
+            return "IPv6网络";
+        } else {
+            return "其他网络";
+        }
     }
 
     public String getPairName(Context context) {

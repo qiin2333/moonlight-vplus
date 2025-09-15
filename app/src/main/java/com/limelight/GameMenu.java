@@ -774,13 +774,13 @@ public class GameMenu {
 
             // 添加一些padding和margin
             totalHeight += (int) ((maxItems*2 + 8) * game.getResources().getDisplayMetrics().density);
-            totalHeight = Math.max(totalHeight, (int) (340 * game.getResources().getDisplayMetrics().density));
+            totalHeight = Math.max(totalHeight, (int) (320 * game.getResources().getDisplayMetrics().density));
 
             return totalHeight;
 
         } catch (Exception e) {
             // 如果计算失败，返回默认高度
-            return (int) (340 * game.getResources().getDisplayMetrics().density);
+            return (int) (320 * game.getResources().getDisplayMetrics().density);
         }
     }
 
@@ -1075,7 +1075,17 @@ public class GameMenu {
      * 设置空的超级菜单
      */
     private void setupEmptySuperMenu(ListView superListView) {
-        View emptyView = LayoutInflater.from(game).inflate(R.layout.game_menu_super_empty, superListView, false);
+        // 计算当前显示的卡片数量
+        int visibleCardCount = 0;
+        if (game.prefConfig.showBitrateCard) visibleCardCount++;
+        if (game.prefConfig.showGyroCard) visibleCardCount++;
+        
+        // 根据卡片数量决定使用哪个布局
+        int layoutRes = (visibleCardCount >= 2) ? 
+            R.layout.game_menu_super_empty_text_only : 
+            R.layout.game_menu_super_empty;
+            
+        View emptyView = LayoutInflater.from(game).inflate(layoutRes, superListView, false);
         ViewGroup parent = (ViewGroup) superListView.getParent();
         parent.addView(emptyView);
         superListView.setEmptyView(emptyView);

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 按下状态 -->
+    <item android:state_pressed="true">
+        <layer-list>
+            <!-- 第三层背景 (最底层) - 正上方偏移 -->
+            <item android:bottom="20dp" android:left="0dp">
+                <shape android:shape="rectangle">
+                    <solid android:color="#A0000000" />
+                    <corners android:radius="8dp" />
+                </shape>
+            </item>
+            
+            <!-- 第二层背景 (中间层) - 正上方偏移 -->
+            <item android:bottom="10dp" android:left="0dp">
+                <shape android:shape="rectangle">
+                    <solid android:color="#80000000" />
+                    <corners android:radius="6dp" />
+                </shape>
+            </item>
+            
+            <!-- 第一层背景 (最上层) - 主背景 -->
+            <item>
+                <shape android:shape="rectangle">
+                    <solid android:color="#CCEDE7F6" />
+                    <corners android:radius="4dp" />
+                    <stroke android:width="2dp" android:color="#3CA4E0" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+    
+    <!-- 焦点状态 -->
+    <item android:state_focused="true">
+        <layer-list>
+            <!-- 第三层背景 (最底层) - 正上方偏移 -->
+            <item android:bottom="20dp" android:left="0dp">
+                <shape android:shape="rectangle">
+                    <solid android:color="#A0000000" />
+                    <corners android:radius="8dp" />
+                </shape>
+            </item>
+            
+            <!-- 第二层背景 (中间层) - 正上方偏移 -->
+            <item android:bottom="10dp" android:left="0dp">
+                <shape android:shape="rectangle">
+                    <solid android:color="#80000000" />
+                    <corners android:radius="6dp" />
+                </shape>
+            </item>
+            
+            <!-- 第一层背景 (最上层) - 主背景 -->
+            <item>
+                <shape android:shape="rectangle">
+                    <solid android:color="#CCEDE7F6" />
+                    <corners android:radius="4dp" />
+                    <stroke android:width="2dp" android:color="#3CA4E0" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+    
+    <!-- 默认状态 - 多层叠加效果 -->
+    <item>
+        <layer-list>
+            <!-- 第三层背景 (最底层) - 正上方偏移 -->
+            <item android:bottom="20dp" android:left="0dp">
+                <shape android:shape="rectangle">
+                    <solid android:color="#80000000" />
+                    <corners android:radius="8dp" />
+                </shape>
+            </item>
+            
+            <!-- 第二层背景 (中间层) - 正上方偏移 -->
+            <item android:bottom="10dp" android:left="0dp">
+                <shape android:shape="rectangle">
+                    <solid android:color="#60000000" />
+                    <corners android:radius="6dp" />
+                </shape>
+            </item>
+            
+            <!-- 第一层背景 (最上层) - 主背景 -->
+            <item>
+                <shape android:shape="rectangle">
+                    <solid android:color="#99EDE7F6" />
+                    <corners android:radius="4dp" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+</selector>
