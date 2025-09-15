@@ -846,6 +846,13 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         i.putExtra(AppView.UUID_EXTRA, computer.uuid);
         i.putExtra(AppView.NEW_PAIR_EXTRA, newlyPaired);
         i.putExtra(AppView.SHOW_HIDDEN_APPS_EXTRA, showHiddenGames);
+        
+        // 如果activeAddress与默认地址不同，说明用户选择了特定地址，需要传递这个信息
+        if (computer.activeAddress != null) {
+            i.putExtra(AppView.SELECTED_ADDRESS_EXTRA, computer.activeAddress.address);
+            i.putExtra(AppView.SELECTED_PORT_EXTRA, computer.activeAddress.port);
+        }
+        
         startActivity(i);
     }
 

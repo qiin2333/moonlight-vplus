@@ -86,6 +86,8 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
     public final static String UUID_EXTRA = "UUID";
     public final static String NEW_PAIR_EXTRA = "NewPair";
     public final static String SHOW_HIDDEN_APPS_EXTRA = "ShowHiddenApps";
+    public final static String SELECTED_ADDRESS_EXTRA = "SelectedAddress";
+    public final static String SELECTED_PORT_EXTRA = "SelectedPort";
 
     private ComputerManagerService.ComputerManagerBinder managerBinder;
     private final ServiceConnection serviceConnection = new ServiceConnection() {
@@ -105,6 +107,13 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                     if (computer == null) {
                         finish();
                         return;
+                    }
+                    
+                    // 如果Intent中传递了选中的地址，则使用该地址覆盖activeAddress
+                    String selectedAddress = getIntent().getStringExtra(SELECTED_ADDRESS_EXTRA);
+                    int selectedPort = getIntent().getIntExtra(SELECTED_PORT_EXTRA, -1);
+                    if (selectedAddress != null && selectedPort > 0) {
+                        computer.activeAddress = new ComputerDetails.AddressTuple(selectedAddress, selectedPort);
                     }
 
                     // Add a launcher shortcut for this PC (forced, since this is user interaction)
