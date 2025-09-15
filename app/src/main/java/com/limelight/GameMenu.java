@@ -380,6 +380,13 @@ public class GameMenu {
     private void updateTouchModeSetting(boolean isTrackpadMode) {
         // 从 Game Activity 获取 ControllerManager 实例
         ControllerManager controllerManager = game.getControllerManager();
+
+        // 添加空值检查
+        if (controllerManager == null) {
+            LimeLog.warning("ControllerManager is null, cannot update touch mode setting");
+            return;
+        }
+
         // 创建一个 ContentValues 对象，用于存放要更新的数据
         ContentValues contentValues = new ContentValues();
 
@@ -397,6 +404,13 @@ public class GameMenu {
     private void updateEnhancedTouchSetting(boolean isEnabled) {
         // 从 Game Activity 获取 ControllerManager 实例
         ControllerManager controllerManager = game.getControllerManager();
+
+        // 添加空值检查
+        if (controllerManager == null) {
+            LimeLog.warning("ControllerManager is null, cannot update touch mode setting");
+            return;
+        }
+
         ContentValues contentValues = new ContentValues();
         Long currentConfigId = controllerManager.getPageConfigController().getCurrentConfigId();
 
