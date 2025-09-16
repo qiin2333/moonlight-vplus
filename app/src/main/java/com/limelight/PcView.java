@@ -34,7 +34,15 @@ import com.limelight.utils.ShortcutHelper;
 import com.limelight.utils.UiHelper;
 import com.limelight.utils.AnalyticsManager;
 import com.limelight.utils.UpdateManager;
+import com.limelight.utils.AppCacheManager;
+import com.limelight.utils.CacheHelper;
 import com.limelight.dialogs.AddressSelectionDialog;
+
+import org.xmlpull.v1.XmlPullParserException;
+
+import java.io.IOException;
+import java.io.StringReader;
+import java.util.List;
 
 import com.bumptech.glide.Glide;
 
@@ -921,7 +929,14 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                     return true;
                 }
 
-                ServerHelper.doStart(this, new NvApp("app", computer.details.runningGameId, false), computer.details, managerBinder);
+                // 尝试获取完整的NvApp对象（包括cmdList）
+                NvApp actualApp = getNvAppById(computer.details.runningGameId, computer.details.uuid.toString());
+                if (actualApp != null) {
+                    ServerHelper.doStart(this, actualApp, computer.details, managerBinder);
+                } else {
+                    // 如果找不到完整的应用信息，使用基本的NvApp对象作为备用
+                    ServerHelper.doStart(this, new NvApp("app", computer.details.runningGameId, false), computer.details, managerBinder);
+                }
                 return true;
 
             case QUIT_ID:
@@ -961,6 +976,39 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         }
     }
     
+    /**
+     * 根据应用ID获取完整的NvApp对象（包括cmdList）
+     * @param appId 应用ID
+     * @param uuidString PC的UUID
+     * @return 完整的NvApp对象，如果找不到则返回null
+     */
+    private NvApp getNvAppById(int appId, String uuidString) {
+        try {
+            // 首先尝试从缓存的应用列表中获取
+            String rawAppList = CacheHelper.readInputStreamToString(CacheHelper.openCacheFileForInput(getCacheDir(), "applist", uuidString));
+            if (!rawAppList.isEmpty()) {
+                List<NvApp> applist = NvHTTP.getAppListByReader(new StringReader(rawAppList));
+                for (NvApp app : applist) {
+                    if (app.getAppId() == appId) {
+                        // 保存这个应用信息到SharedPreferences，供下次使用
+                        AppCacheManager cacheManager = new AppCacheManager(this);
+                        cacheManager.saveAppInfo(uuidString, app);
+                        return app;
+                    }
+                }
+            }
+            
+            // 如果在应用列表中找不到，尝试从SharedPreferences获取
+            AppCacheManager cacheManager = new AppCacheManager(this);
+            return cacheManager.getAppInfo(uuidString, appId);
+        } catch (IOException | XmlPullParserException e) {
+            // 如果读取缓存失败，尝试从SharedPreferences获取
+            e.printStackTrace();
+            AppCacheManager cacheManager = new AppCacheManager(this);
+            return cacheManager.getAppInfo(uuidString, appId);
+        }
+    }
+
     private void removeComputer(ComputerDetails details) {
         managerBinder.removeComputer(details);
 
