@@ -18,6 +18,7 @@ import android.widget.SeekBar;
 import android.widget.Toast;
 
 import com.limelight.Game;
+import com.limelight.LimeLog;
 import com.limelight.R;
 import com.limelight.binding.input.ControllerHandler;
 import com.limelight.binding.input.advance_setting.ControllerManager;
@@ -689,87 +690,59 @@ public class ElementController {
                 }
             };
 
-        } else if (key.startsWith("g")) {
-            String idString = key.substring(1);
-            // --- 优先尝试解析为 GroupButton ID ---
-            // 检查字符串长度。一个int最多10位，时间戳通常13位。
-            // 这是一个快速判断，避免对过长的字符串尝试 Integer.parseInt
-            if (idString.length() > 10) {
-                // 长度超过int范围，它只可能是 GroupButton ID
-                try {
-                    long elementId = Long.parseLong(idString);
-                    Element element = findElementById(elementId);
-
-                    if (element instanceof GroupButton) {
-                        final GroupButton groupButton = (GroupButton) element;
-                        return new SendEventHandler() {
-                            @Override
-                            public void sendEvent(boolean down) {
-                                if (down) {
-                                    handler.post(groupButton::triggerAction);
-                                }
-                            }
-
-                            @Override
-                            public void sendEvent(int analog1, int analog2) {
-                            }
-                        };
-                    } else {
-                        // 找到了ID但不是GroupButton，或者在加载期间没找到（返回null）
-                        // 这是一个无效的配置，返回一个安全的空处理器
-                        return createEmptyHandler();
-                    }
-                } catch (NumberFormatException e) {
-                    // 无法解析为long，无效配置
-                    return createEmptyHandler();
-                }
-            }
-            // --- 如果长度在int范围内，可能是手柄码或GroupButton ID ---
+        } else if (key.startsWith("gb")) {
+            // 前缀是 "gb"，说明这一定是一个组按键的ID
+            String idString = key.substring(2); // 从第3个字符开始截取 (跳过 "gb")
             try {
-                // 仍然先尝试解析为 long，因为它更通用
                 long elementId = Long.parseLong(idString);
                 Element element = findElementById(elementId);
+
                 if (element instanceof GroupButton) {
-                    // 明确找到了一个GroupButton
                     final GroupButton groupButton = (GroupButton) element;
                     return new SendEventHandler() {
                         @Override
                         public void sendEvent(boolean down) {
                             if (down) {
+                                // 在UI线程上执行按钮的动作
                                 handler.post(groupButton::triggerAction);
                             }
                         }
 
                         @Override
                         public void sendEvent(int analog1, int analog2) {
+                            // GroupButton 不处理模拟量事件
                         }
                     };
+                } else {
+                    // 找到了ID，但它不是GroupButton，或者在加载期间没找到（返回null）
+                    // 这是一个无效的配置，返回一个安全的空处理器
+                    LimeLog.warning("EventHandler:" + "Invalid GroupButton configuration for key: " + key);
+                    return createEmptyHandler();
                 }
             } catch (NumberFormatException e) {
-                // 解析long失败，说明不是GroupButton ID，可以安全地继续
-            }
-            // --- 最后，尝试作为手柄按键码处理 ---
-            try {
-                int padCode = Integer.parseInt(idString);
-                return new SendEventHandler() {
-                    @Override
-                    public void sendEvent(boolean down) {
-                        if (down) {
-                            gamepadInputContext.inputMap |= padCode;
-                        } else {
-                            gamepadInputContext.inputMap &= ~padCode;
-                        }
-                        sendGamepadEvent();
-                    }
-
-                    @Override
-                    public void sendEvent(int analog1, int analog2) {
-                    }
-                };
-            } catch (NumberFormatException e) {
-                // 解析为int也失败了，这是一个完全无效的 "g" 值
+                // ID部分无法解析为long，无效配置
+                LimeLog.warning("EventHandler:" + "Failed to parse GroupButton ID for key: " + key + e);
                 return createEmptyHandler();
             }
+
+        }else if (key.matches("g\\d+")){
+            int padCode = Integer.parseInt(key.substring(1));
+            return new SendEventHandler() {
+                @Override
+                public void sendEvent(boolean down) {
+                    if (down) {
+                        gamepadInputContext.inputMap |= padCode;
+                    } else {
+                        gamepadInputContext.inputMap &= ~padCode;
+                    }
+                    sendGamepadEvent();
+                }
+
+                @Override
+                public void sendEvent(int analog1, int analog2) {
+
+                }
+            };
 
         } else if (key.equals(SPECIAL_KEY_GAMEPAD_LEFT_STICK)) {
             return new SendEventHandler() {

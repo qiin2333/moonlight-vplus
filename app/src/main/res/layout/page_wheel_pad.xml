@@ -149,7 +149,8 @@
                 android:layout_marginVertical="5dp"
                 app:text="层级"
                 app:max="140"
-                app:min="40" />
+                app:min="40"
+                app:progress="40"/>
 
             <!-- Color Settings -->
             <LinearLayout

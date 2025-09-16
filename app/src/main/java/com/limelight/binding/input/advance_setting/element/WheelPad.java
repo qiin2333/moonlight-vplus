@@ -813,9 +813,9 @@ public class WheelPad extends Element {
             return "空";
         }
 
-        if (value.startsWith("g")) {
+        if (value.startsWith("gb")) {
             try {
-                long elementId = Long.parseLong(value.substring(1));
+                long elementId = Long.parseLong(value.substring(2));
                 Element element = elementController.findElementById(elementId);
                 if (element instanceof GroupButton) {
                     return "[组] " + ((GroupButton) element).getText();
@@ -838,7 +838,7 @@ public class WheelPad extends Element {
     private void updateKeyCombinationDisplay(LinearLayout keysContainer, List<String> currentKeys, Button addButton, Button addGroupButton, final AlertDialog dialog) {
         keysContainer.removeAllViews();
         Context context = keysContainer.getContext();
-        boolean isGroup = !currentKeys.isEmpty() && currentKeys.get(0).startsWith("g");
+        boolean isGroup = !currentKeys.isEmpty() && currentKeys.get(0).startsWith("gb");
 
         // 根据是否已选择组按键，更新按钮的可见性
         if (isGroup) {
@@ -857,7 +857,7 @@ public class WheelPad extends Element {
         } else if (isGroup) {
             // --- 显示组按键 ---
             try {
-                long elementId = Long.parseLong(currentKeys.get(0).substring(1));
+                long elementId = Long.parseLong(currentKeys.get(0).substring(2));
                 Element element = elementController.findElementById(elementId);
                 if (element instanceof GroupButton) {
                     final GroupButton groupButton = (GroupButton) element;
@@ -871,7 +871,14 @@ public class WheelPad extends Element {
                         if (dialog != null) {
                             dialog.dismiss();
                         }
-                        // 打开设置页面
+                        final SuperPageLayout wheelPadSettingsPage = wheelPad.getInfoPage();
+                        groupButtonSettingsPage.setLastPage(wheelPadSettingsPage);
+                        groupButtonSettingsPage.setPageReturnListener(new SuperPageLayout.ReturnListener() {
+                            @Override
+                            public void returnCallBack() {
+                                elementController.getSuperPagesController().openNewPage(wheelPadSettingsPage);
+                            }
+                        });
                         elementController.getSuperPagesController().openNewPage(groupButtonSettingsPage);
                     });
 
@@ -883,7 +890,7 @@ public class WheelPad extends Element {
                         // 更新UI以反映移除
                         updateKeyCombinationDisplay(keysContainer, currentKeys, addButton, addGroupButton, dialog);
 
-                        Toast.makeText(context, "已从此分区移除组按键", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(context, "已移除组按键，点击确定保存设置", Toast.LENGTH_SHORT).show();
 
                         return true; // 返回true表示事件已被消费
                     });
@@ -953,8 +960,8 @@ public class WheelPad extends Element {
         String currentValue = segmentValues.get(index);
         final List<String> currentKeys = new ArrayList<>();
         if (currentValue != null && !currentValue.isEmpty() && !currentValue.equals("null")) {
-            // 组按键只有一个值 "g<ID>", 普通按键用 "+" 分隔
-            if (currentValue.startsWith("g")) {
+            // 组按键只有一个值 "gb<ID>", 普通按键用 "+" 分隔
+            if (currentValue.startsWith("gb")) {
                 currentKeys.add(currentValue);
             } else {
                 currentKeys.addAll(Arrays.asList(currentValue.split("\\+")));
@@ -994,7 +1001,7 @@ public class WheelPad extends Element {
             String finalValue;
             if (currentKeys.isEmpty()) {
                 finalValue = "null";
-            } else if (currentKeys.get(0).startsWith("g")) {
+            } else if (currentKeys.get(0).startsWith("gb")) {
                 finalValue = currentKeys.get(0);
             } else {
                 finalValue = String.join("+", currentKeys);
@@ -1035,13 +1042,13 @@ public class WheelPad extends Element {
                             ContentValues cv = GroupButton.getInitialInfo();
                             Element newElement = elementController.addElement(cv);
                             if (newElement != null) {
-                                selectedValue = "g" + newElement.elementId;
+                                selectedValue = "gb" + newElement.elementId;
                                 newElementToEdit = newElement; // 记录下来，以便后续打开其设置页
                             }
                         } else {
                             // --- 用户选择一个现有的 ---
                             GroupButton selectedGb = groupButtons.get(which);
-                            selectedValue = "g" + selectedGb.elementId;
+                            selectedValue = "gb" + selectedGb.elementId;
                         }
 
                         if (selectedValue != null) {

@@ -429,19 +429,61 @@ public class GameMenu {
     }
 
     /**
-     * 切换王冠功能并刷新菜单
+     * 切换王冠功能并即时刷新菜单内容
      */
     private void toggleCrownFeature() {
+        // 切换王冠功能状态
         game.setCrownFeatureEnabled(!game.isCrownFeatureEnabled());
-        Toast.makeText(game, game.isCrownFeatureEnabled() ? getString(R.string.crown_switch_to_crown) : getString(R.string.crown_switch_to_normal), Toast.LENGTH_SHORT).show();
 
-        // 刷新整个菜单以显示王冠功能按钮
-        if (activeDialog != null && activeDialog.isShowing() && game.isCrownFeatureEnabled()) {
-            activeDialog.dismiss(); // 先关闭当前对话框
-            showMenu(); // 重新显示菜单
+        // 显示状态变更提示
+        Toast.makeText(game, game.isCrownFeatureEnabled() ?
+                        getString(R.string.crown_switch_to_crown) :
+                        getString(R.string.crown_switch_to_normal),
+                Toast.LENGTH_SHORT).show();
+
+        // 即时更新菜单内容，而不是重新创建整个对话框
+        if (activeDialog != null && activeDialog.isShowing()) {
+            // 更新标题栏的王冠按钮文本
+            updateCrownToggleButton();
+
+            // 重新构建并更新菜单列表
+            rebuildAndReplaceMenu();
         }
-        else if (activeDialog != null && activeDialog.isShowing() && !game.isCrownFeatureEnabled()) {
-            activeDialog.dismiss();
+    }
+
+    /**
+     * 更新标题栏王冠按钮文本
+     */
+    private void updateCrownToggleButton() {
+        if (activeCustomView != null) {
+            TextView crownToggleButton = activeCustomView.findViewById(R.id.btnCrownToggle);
+            if (crownToggleButton != null) {
+                String crownText = game.isCrownFeatureEnabled() ?
+                        getString(R.string.crown_switch_to_normal) :
+                        getString(R.string.crown_switch_to_crown);
+                crownToggleButton.setText(Html.fromHtml("<u>" + crownText + "</u>"));
+            }
+        }
+    }
+
+    /**
+     * 重新构建并替换菜单内容
+     */
+    private void rebuildAndReplaceMenu() {
+        if (activeDialog == null || activeCustomView == null) return;
+
+        // 重新构建普通菜单选项
+        List<MenuOption> normalOptions = new ArrayList<>();
+        buildNormalMenuOptions(normalOptions);
+
+        // 更新普通菜单列表
+        ListView normalListView = activeCustomView.findViewById(R.id.gameMenuList);
+        if (normalListView != null) {
+            GameMenuAdapter adapter = new GameMenuAdapter(game,
+                    normalOptions.toArray(new MenuOption[0]));
+            normalListView.setAdapter(adapter);
+            // 重新设置点击监听器
+            setupMenu(normalListView, adapter, activeDialog);
         }
     }
 
