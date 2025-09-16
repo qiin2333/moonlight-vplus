@@ -541,4 +541,13 @@
     <string name="gyro_sensitivity">Sensitivity</string>
     <string name="gyro_sensitivity_format">Sensitivity %.1fx</string>
     <string name="gyro_activation_always">Always On</string>
+
+    <string name="app_name">Moonlight</string>
+    <string name="accessibility_service_label">Moonlight 键盘服务</string>
+    <string name="accessibility_service_description">
+        为了让您的外接键盘在串流游戏中获得完整的PC体验，此服务需要捕获所有键盘按键。\n\n
+        开启后，您将可以在游戏中无缝使用 Win/Command 键、Alt+Tab 等所有系统快捷键，就像在电脑前一样。\n\n
+        请放心，此服务仅用于将按键操作实时发送到您的电脑，我们不会记录或上传您的任何输入内容。
+    </string>
+
 </resources>
