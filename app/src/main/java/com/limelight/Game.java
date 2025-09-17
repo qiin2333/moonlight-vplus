@@ -1939,8 +1939,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     /**
-     * false : RelativeTouchContext
-     * true : AbsoluteTouchContext
+     * false : AbsoluteTouchContext
+     * true : RelativeTouchContext
      */
     public void setTouchMode(boolean enableRelativeTouch){
 

@@ -214,6 +214,11 @@
             android:summary="@string/summary_checkbox_touchscreen_trackpad"
             android:defaultValue="false" />
         <CheckBoxPreference
+            android:key="pref_enable_double_click_drag"
+            android:title="启用触控板双击拖动"
+            android:summary="双击并按住拖动，但会影响快速双击"
+            android:defaultValue="false" />
+        <CheckBoxPreference
             android:key="checkbox_sync_touch_event_with_display"
             android:title="@string/title_checkbox_sync_touch_event_with_display"
             android:summary="@string/summary_checkbox_sync_touch_event_with_display"
