@@ -1686,10 +1686,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 // 让事件继续被正常处理。
                 break;
             default:
-                // 如果是普通游戏按键，则执行去重逻辑。
-                // 如果事件不是来自服务，并且服务实例存在（即服务正在运行），
-                // 那么这就是一个来自UI的重复事件，我们应该忽略它。
-                if (!isEventFromAccessibilityService && KeyboardAccessibilityService.getInstance() != null) {
+                // 只有当事件不是来自服务、服务正在运行、且事件源不是虚拟键盘（即来自物理键盘）时，
+                // 才将其判定为重复事件并忽略。
+                InputDevice device = event.getDevice();
+                if (!isEventFromAccessibilityService &&
+                        KeyboardAccessibilityService.getInstance() != null &&
+                        (device != null && !device.isVirtual())) {
+
                     return true;
                 }
                 break;
@@ -1785,7 +1788,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 break;
             default:
                 // 如果是普通游戏按键，则执行去重逻辑。
-                if (!isEventFromAccessibilityService && KeyboardAccessibilityService.getInstance() != null) {
+                InputDevice device = event.getDevice();
+                if (!isEventFromAccessibilityService &&
+                        KeyboardAccessibilityService.getInstance() != null &&
+                        (device != null && !device.isVirtual())) {
+
                     return true;
                 }
                 break;
