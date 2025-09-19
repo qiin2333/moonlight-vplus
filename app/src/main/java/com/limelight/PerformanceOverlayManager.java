@@ -3,7 +3,15 @@ package com.limelight;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.SharedPreferences;
+import android.graphics.Typeface;
 import android.net.TrafficStats;
+import android.text.SpannableString;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.RelativeSizeSpan;
+import android.text.style.StyleSpan;
+import android.text.style.TypefaceSpan;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -161,33 +169,10 @@ public class PerformanceOverlayManager {
         // 计算带宽信息
         updateBandwidthInfo(performanceInfo);
 
-        // 准备性能信息显示文本
-        final String resInfo = String.format("🎬 %dx%d@%.0f",
-            performanceInfo.initialWidth, performanceInfo.initialHeight, performanceInfo.totalFps);
-
-        final String decoderInfo = buildDecoderInfo(performanceInfo);
-
-        final String renderFpsInfo = String.format("Rx %.0f / Rd %.0f FPS",
-            performanceInfo.receivedFps, performanceInfo.renderedFps);
-
-        final String packetLossInfo = String.format("📶 %.2f%%", performanceInfo.lostFrameRate);
-
-        final String networkLatencyInfo = String.format("%s   %d ± %d ms",
-            performanceInfo.bandWidth,
-            (int) (performanceInfo.rttInfo >> 32),
-            (int) performanceInfo.rttInfo);
-
-        final String decodeLatencyInfo = String.format(performanceInfo.decodeTimeMs < 15 ?
-            "⏱️ %.2f ms" : "🥵 %.2f ms", performanceInfo.decodeTimeMs);
-
-        final String hostLatencyInfo = performanceInfo.framesWithHostProcessingLatency > 0 ?
-            String.format("🖥 %.1f ms", performanceInfo.aveHostProcessingLatency) : "🧋 Ver.V+";
-
         // 在UI线程中更新显示
         activity.runOnUiThread(() -> {
             showOverlayIfNeeded();
-            updatePerformanceViews(resInfo, decoderInfo, renderFpsInfo, packetLossInfo, 
-                                 networkLatencyInfo, decodeLatencyInfo, hostLatencyInfo, performanceInfo);
+            updatePerformanceViewsWithStyledText(performanceInfo);
         });
     }
 
@@ -229,7 +214,8 @@ public class PerformanceOverlayManager {
      */
     private String buildDecoderInfo(PerformanceInfo performanceInfo) {
         String decoderInfo = performanceInfo.decoder.replaceFirst(".*\\.(avc|hevc|av1).*", "$1").toUpperCase();
-        if (prefConfig.enableHdr) {
+        // 基于实际HDR激活状态而不是配置
+        if (performanceInfo.isHdrActive) {
             decoderInfo += " HDR";
         }
         return decoderInfo;
@@ -247,51 +233,120 @@ public class PerformanceOverlayManager {
     }
 
     /**
-     * 更新所有性能视图
+     * 创建带有优雅字体样式的SpannableString
+     * @param icon 图标或前缀
+     * @param value 主要数值
+     * @param unit 单位或后缀
+     * @param valueColor 数值颜色（可选）
+     * @return 带样式的SpannableString
      */
-    private void updatePerformanceViews(String resInfo, String decoderInfo, String renderFpsInfo,
-                                      String packetLossInfo, String networkLatencyInfo, 
-                                      String decodeLatencyInfo, String hostLatencyInfo,
-                                      PerformanceInfo performanceInfo) {
+    private SpannableString createStyledText(String icon, String value, String unit, Integer valueColor) {
+        SpannableStringBuilder builder = new SpannableStringBuilder();
+        
+        // 添加图标（使用标题样式）
+        if (icon != null && !icon.isEmpty()) {
+            int iconStart = builder.length();
+            builder.append(icon);
+            builder.setSpan(new StyleSpan(Typeface.BOLD), iconStart, builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            builder.setSpan(new RelativeSizeSpan(1.1f), iconStart, builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            builder.append(" ");
+        }
+        
+        // 添加数值（使用中等粗细样式）
+        if (value != null && !value.isEmpty()) {
+            int valueStart = builder.length();
+            builder.append(value);
+            builder.setSpan(new TypefaceSpan("sans-serif-medium"), valueStart, builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            builder.setSpan(new RelativeSizeSpan(1.0f), valueStart, builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            if (valueColor != null) {
+                builder.setSpan(new ForegroundColorSpan(valueColor), valueStart, builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+        }
+        
+        // 添加单位（使用细体样式）
+        if (unit != null && !unit.isEmpty()) {
+            builder.append(" ");
+            int unitStart = builder.length();
+            builder.append(unit);
+            builder.setSpan(new TypefaceSpan("sans-serif-light"), unitStart, builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            builder.setSpan(new RelativeSizeSpan(0.9f), unitStart, builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            builder.setSpan(new ForegroundColorSpan(0xCCFFFFFF), unitStart, builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        
+        return new SpannableString(builder);
+    }
+
+    /**
+     * 创建简单的带样式文本（用于复合信息）
+     */
+    private SpannableString createSimpleStyledText(String text) {
+        SpannableStringBuilder builder = new SpannableStringBuilder();
+        builder.append(text);
+        builder.setSpan(new TypefaceSpan("sans-serif"), 0, builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        return new SpannableString(builder);
+    }
+
+    /**
+     * 更新所有性能视图（使用优雅的字体样式）
+     */
+    private void updatePerformanceViewsWithStyledText(PerformanceInfo performanceInfo) {
         // 更新分辨率信息
         if (perfResView != null && perfResView.getVisibility() == View.VISIBLE) {
-            perfResView.setText(resInfo);
+            String resValue = String.format("%dx%d@%.0f", 
+                performanceInfo.initialWidth, performanceInfo.initialHeight, performanceInfo.totalFps);
+            perfResView.setText(createStyledText("🌙", resValue, "", null));
         }
         
         // 更新解码器信息
         if (perfDecoderView != null && perfDecoderView.getVisibility() == View.VISIBLE) {
-            perfDecoderView.setText(decoderInfo);
+            String decoderInfo = buildDecoderInfo(performanceInfo);
+            perfDecoderView.setText(createStyledText("", decoderInfo, "", null));
+            perfDecoderView.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         }
         
         // 更新渲染FPS信息
         if (perfRenderFpsView != null && perfRenderFpsView.getVisibility() == View.VISIBLE) {
-            perfRenderFpsView.setText(renderFpsInfo);
+            String fpsValue = String.format("Rx %.0f / Rd %.0f", performanceInfo.receivedFps, performanceInfo.renderedFps);
+            perfRenderFpsView.setText(createStyledText("", fpsValue, "FPS", 0xFF0DDAF4));
         }
         
         // 更新丢包率信息
         if (packetLossView != null && packetLossView.getVisibility() == View.VISIBLE) {
-            packetLossView.setText(packetLossInfo);
-            // 根据丢包率设置颜色：小于5%为绿色，否则为红色
-            packetLossView.setTextColor(performanceInfo.lostFrameRate < 5.0f ? 0xFF7D9D7D : 0xFFB57D7D);
+            String lossValue = String.format("%.2f", performanceInfo.lostFrameRate);
+            int lossColor = performanceInfo.lostFrameRate < 5.0f ? 0xFF7D9D7D : 0xFFB57D7D;
+            packetLossView.setText(createStyledText("📶", lossValue, "%", lossColor));
         }
         
         // 更新网络延迟信息
         if (networkLatencyView != null && networkLatencyView.getVisibility() == View.VISIBLE) {
-            // 当丢包率不显示时，在网络延迟前添加信号图标
             boolean showPacketLoss = packetLossView != null && packetLossView.getVisibility() == View.VISIBLE;
-            String displayText = showPacketLoss ? networkLatencyInfo : "🌐 " + networkLatencyInfo;
-            networkLatencyView.setText(displayText);
+            String icon = showPacketLoss ? "" : "🌐";
+            String bandwidthAndLatency = String.format("%s   %d ± %d", 
+                performanceInfo.bandWidth,
+                (int) (performanceInfo.rttInfo >> 32),
+                (int) performanceInfo.rttInfo);
+            networkLatencyView.setText(createStyledText(icon, bandwidthAndLatency, "ms", 0xFFBCEDD3));
         }
         
         // 更新解码延迟信息
         if (decodeLatencyView != null && decodeLatencyView.getVisibility() == View.VISIBLE) {
-            decodeLatencyView.setText(decodeLatencyInfo);
+            String icon = performanceInfo.decodeTimeMs < 15 ? "⏱️" : "🥵";
+            String latencyValue = String.format("%.2f", performanceInfo.decodeTimeMs);
+            decodeLatencyView.setText(createStyledText(icon, latencyValue, "ms", 0xFFD597E3));
         }
         
         // 更新主机延迟信息
         if (hostLatencyView != null && hostLatencyView.getVisibility() == View.VISIBLE) {
-            hostLatencyView.setText(hostLatencyInfo);
+            if (performanceInfo.framesWithHostProcessingLatency > 0) {
+                String latencyValue = String.format("%.1f", performanceInfo.aveHostProcessingLatency);
+                hostLatencyView.setText(createStyledText("🖥", latencyValue, "ms", 0xFF009688));
+            } else {
+                hostLatencyView.setText(createStyledText("🧋", "Ver.V+", "", 0xFF009688));
+            }
         }
+        
+        // 确保文字对齐方式得到正确应用
+        configureTextAlignment();
     }
 
     private void configurePerformanceOverlay() {
@@ -411,7 +466,10 @@ public class PerformanceOverlayManager {
         boolean isRightSide = determineRightSidePosition(isVertical);
 
         // 只在垂直布局且位置在右侧时，将文字设置为右对齐
-        int gravity = (isVertical && isRightSide) ? android.view.Gravity.END : android.view.Gravity.START;
+        // 注意：需要保持 center_vertical 以确保文字垂直居中
+        int gravity = (isVertical && isRightSide) ? 
+            (android.view.Gravity.CENTER_VERTICAL | android.view.Gravity.END) : 
+            (android.view.Gravity.CENTER_VERTICAL | android.view.Gravity.START);
 
         // 批量设置所有性能信息文本的对齐方式和阴影效果
         TextView[] perfViews = {
@@ -449,19 +507,56 @@ public class PerformanceOverlayManager {
     }
 
     /**
-     * 配置单个TextView的样式（对齐方式和阴影效果）
+     * 配置单个TextView的样式（对齐方式、阴影效果和字体）
      */
     private void configureTextViewStyle(TextView textView, int gravity, boolean isVertical) {
         // 设置文字对齐方式
         textView.setGravity(gravity);
 
+        // 设置基础字体属性
+        textView.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+        textView.setLetterSpacing(0.02f);
+        textView.setIncludeFontPadding(false);
+
         // 根据布局方向设置阴影效果
         if (isVertical) {
             // 竖屏时添加字体阴影，提高可读性
-            textView.setShadowLayer(2.0f, 1.0f, 1.0f, 0x80000000);
+            textView.setShadowLayer(2.5f, 1.0f, 1.0f, 0x80000000);
         } else {
-            // 横屏时移除阴影
-            textView.setShadowLayer(0, 0, 0, 0);
+            // 横屏时使用较轻的阴影
+            textView.setShadowLayer(1.5f, 0.5f, 0.5f, 0x60000000);
+        }
+
+        // 根据TextView的ID设置特定的字体样式
+        int viewId = textView.getId();
+        if (viewId == R.id.perfRes) {
+            // 分辨率信息 - 标题样式
+            textView.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+            textView.setTextSize(11);
+        } else if (viewId == R.id.perfDecoder) {
+            // 解码器信息 - 强调样式
+            textView.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+            textView.setTextSize(10);
+        } else if (viewId == R.id.perfRenderFps) {
+            // FPS信息 - 数值样式
+            textView.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+            textView.setTextSize(10);
+        } else if (viewId == R.id.perfPacketLoss) {
+            // 丢包率 - 状态样式
+            textView.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+            textView.setTextSize(10);
+        } else if (viewId == R.id.perfNetworkLatency) {
+            // 网络延迟 - 状态样式
+            textView.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+            textView.setTextSize(10);
+        } else if (viewId == R.id.perfDecodeLatency) {
+            // 解码延迟 - 状态样式
+            textView.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+            textView.setTextSize(10);
+        } else if (viewId == R.id.perfHostLatency) {
+            // 主机延迟 - 状态样式
+            textView.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+            textView.setTextSize(10);
         }
     }
 

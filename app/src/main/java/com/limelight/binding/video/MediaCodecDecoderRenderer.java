@@ -1491,6 +1491,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             performanceInfo.lostFrameRate = lostFrameRate;
             performanceInfo.rttInfo = rttInfo;
             performanceInfo.framesWithHostProcessingLatency = frameHostProcessingLatency;
+            performanceInfo.isHdrActive = (currentHdrMetadata != null); // 基于实际HDR元数据状态
             performanceInfo.minHostProcessingLatency = minHostProcessingLatency;
             performanceInfo.maxHostProcessingLatency = maxHostProcessingLatency;
             performanceInfo.aveHostProcessingLatency = aveHostProcessingLatency;

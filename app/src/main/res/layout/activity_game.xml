@@ -37,78 +37,104 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
-        android:background="#80161616"
+        android:background="#88161616"
         android:gravity="start"
         android:orientation="horizontal"
-        android:paddingTop="2dp"
-        android:paddingLeft="6dp"
-        android:paddingBottom="3dp"
-        android:paddingRight="6dp"
+        android:paddingTop="4dp"
+        android:paddingLeft="8dp"
+        android:paddingBottom="4dp"
+        android:paddingRight="8dp"
         android:preferKeepClear="true"
         android:clickable="false"
         android:focusable="false"
-        android:visibility="gone">
+        android:visibility="gone"
+        android:elevation="4dp">
 
         <TextView
             android:id="@+id/perfRes"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginEnd="10dp"
-            android:textAppearance="?android:attr/textAppearanceSmall"
-            android:textSize="10sp" />
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:textColor="@android:color/white"
+            android:textSize="11sp"
+            android:fontFamily="sans-serif-medium"
+            android:textStyle="bold"
+            android:letterSpacing="0.03"
+            android:includeFontPadding="false"
+            android:gravity="center_vertical" />
 
         <TextView
             android:id="@+id/perfDecoder"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginEnd="10dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:textColor="@android:color/white"
             android:textSize="10sp"
-            android:textAppearance="?android:attr/textAppearanceSmall" />
+            android:fontFamily="sans-serif-medium"
+            android:textStyle="bold"
+            android:letterSpacing="0.02"
+            android:includeFontPadding="false"
+            android:gravity="center_vertical" />
 
         <TextView
             android:id="@+id/perfRenderFps"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginEnd="10dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
             android:textColor="#0DDAF4"
             android:textSize="10sp"
-            android:textAppearance="?android:attr/textAppearanceSmall" />
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.01"
+            android:includeFontPadding="false"
+            android:gravity="center_vertical" />
             
         <TextView
             android:id="@+id/perfPacketLoss"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginEnd="10dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
             android:textColor="#7D9D7D"
             android:textSize="10sp"
-            android:textAppearance="?android:attr/textAppearanceSmall" />
+            android:fontFamily="sans-serif"
+            android:letterSpacing="0.01"
+            android:includeFontPadding="false"
+            android:gravity="center_vertical" />
 
         <TextView
             android:id="@+id/perfNetworkLatency"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginEnd="10dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
             android:textColor="#BCEDD385"
-            android:textAppearance="?android:attr/textAppearanceSmall"
-            android:textSize="10sp" />
+            android:textSize="10sp"
+            android:fontFamily="sans-serif"
+            android:letterSpacing="0.01"
+            android:includeFontPadding="false"
+            android:gravity="center_vertical" />
 
         <TextView
             android:id="@+id/perfDecodeLatency"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginEnd="10dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
             android:textColor="#E1D597E3"
             android:textSize="10sp"
-            android:textAppearance="?android:attr/textAppearanceSmall" />
+            android:fontFamily="sans-serif"
+            android:letterSpacing="0.01"
+            android:includeFontPadding="false"
+            android:gravity="center_vertical" />
 
         <TextView
             android:id="@+id/perfHostLatency"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginEnd="10dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="0dp"
             android:textColor="#009688"
             android:textSize="10sp"
-            android:textAppearance="?android:attr/textAppearanceSmall" />
+            android:fontFamily="sans-serif"
+            android:letterSpacing="0.01"
+            android:includeFontPadding="false"
+            android:gravity="center_vertical" />
 
     </LinearLayout>
 

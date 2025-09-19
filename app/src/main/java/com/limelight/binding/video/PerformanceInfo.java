@@ -19,6 +19,5 @@ public class PerformanceInfo {
     public float aveHostProcessingLatency;
     public float decodeTimeMs;
     public String bandWidth;
-
-
+    public boolean isHdrActive; // 实际HDR激活状态
 }
