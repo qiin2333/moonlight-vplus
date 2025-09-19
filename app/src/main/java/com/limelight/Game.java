@@ -105,11 +105,15 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Locale;
 
+import com.limelight.services.KeyboardAccessibilityService;
+
 public class Game extends Activity implements SurfaceHolder.Callback,
         OnGenericMotionListener, OnTouchListener, NvConnectionListener, EvdevListener,
         OnSystemUiVisibilityChangeListener, GameGestures, StreamView.InputCallbacks,
-        PerfOverlayListener, UsbDriverService.UsbDriverStateListener, View.OnKeyListener {
+        PerfOverlayListener, UsbDriverService.UsbDriverStateListener, View.OnKeyListener,KeyboardAccessibilityService.KeyEventCallback {
     private int lastButtonState = 0;
+    // 这个标志位用于区分事件是来自无障碍服务还是来自UI（如StreamView）
+    private boolean isEventFromAccessibilityService = false;
     private static final int TOUCH_CONTEXT_LENGTH = 2;
 
     // Only 2 touches are supported
@@ -783,6 +787,44 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         externalDisplayManager.initialize();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        // 当 Activity 回到前台时，通知服务开始拦截键盘事件。
+        KeyboardAccessibilityService.setIntercepting(true);
+
+        // 获取服务实例并注册回调，这样我们就能收到从服务传来的按键事件。
+        KeyboardAccessibilityService service = KeyboardAccessibilityService.getInstance();
+        if (service != null) {
+            service.setKeyEventCallback(this);
+        } else {
+            LimeLog.warning("KeyboardAccessibilityService is not running.");
+        }
+        // END: ACCESSIBILITY SERVICE INTEGRATION
+    }
+
+    /**
+     * 实现 KeyEventCallback 接口的方法。
+     * 所有被无障碍服务拦截的按键事件最终都会通过这个方法到达这里。
+     * @param event 从服务传来的按键事件。
+     */
+    @Override
+    public void onKeyEvent(KeyEvent event) {
+        // 在调用处理方法之前，设置标志位
+        isEventFromAccessibilityService = true;
+
+        // 将事件分发到已有的处理逻辑中
+        if (event.getAction() == KeyEvent.ACTION_DOWN) {
+            onKeyDown(event.getKeyCode(), event);
+        } else if (event.getAction() == KeyEvent.ACTION_UP) {
+            onKeyUp(event.getKeyCode(), event);
+        }
+
+        // 处理完毕后，重置标志位
+        isEventFromAccessibilityService = false;
+    }
+
     private void setPreferredOrientationForCurrentDisplay() {
         Display display = externalDisplayManager != null ?
                 externalDisplayManager.getTargetDisplay() : getWindowManager().getDefaultDisplay();
@@ -1343,6 +1385,15 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     protected void onPause() {
+        // 当 Activity 进入后台时，必须停止拦截，否则会影响手机的正常使用！
+        KeyboardAccessibilityService.setIntercepting(false);
+
+        // 注销回调，防止内存泄漏。
+        KeyboardAccessibilityService service = KeyboardAccessibilityService.getInstance();
+        if (service != null) {
+            service.setKeyEventCallback(null);
+        }
+
         if (isFinishing()) {
             // Stop any further input device notifications before we lose focus (and pointer capture)
             if (controllerHandler != null) {
@@ -1627,6 +1678,26 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public boolean handleKeyDown(KeyEvent event) {
+        switch (event.getKeyCode()) {
+            case KeyEvent.KEYCODE_BACK:
+            case KeyEvent.KEYCODE_HOME:
+            case KeyEvent.KEYCODE_APP_SWITCH:
+                // 如果是系统导航键，则跳过我们的去重逻辑，
+                // 让事件继续被正常处理。
+                break;
+            default:
+                // 只有当事件不是来自服务、服务正在运行、且事件源不是虚拟键盘（即来自物理键盘）时，
+                // 才将其判定为重复事件并忽略。
+                InputDevice device = event.getDevice();
+                if (!isEventFromAccessibilityService &&
+                        KeyboardAccessibilityService.getInstance() != null &&
+                        (device != null && !device.isVirtual())) {
+
+                    return true;
+                }
+                break;
+        }
+
         // Pass-through virtual navigation keys
         if ((event.getFlags() & KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0) {
             return false;
@@ -1709,6 +1780,24 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public boolean handleKeyUp(KeyEvent event) {
+        switch (event.getKeyCode()) {
+            case KeyEvent.KEYCODE_BACK:
+            case KeyEvent.KEYCODE_HOME:
+            case KeyEvent.KEYCODE_APP_SWITCH:
+                // 如果是系统导航键，则跳过我们的去重逻辑。
+                break;
+            default:
+                // 如果是普通游戏按键，则执行去重逻辑。
+                InputDevice device = event.getDevice();
+                if (!isEventFromAccessibilityService &&
+                        KeyboardAccessibilityService.getInstance() != null &&
+                        (device != null && !device.isVirtual())) {
+
+                    return true;
+                }
+                break;
+        }
+
         if (isPhysicalKeyboardConnected()) {
             // ESC键双击逻辑
             if (event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE && prefConfig.enableEscMenu) {
