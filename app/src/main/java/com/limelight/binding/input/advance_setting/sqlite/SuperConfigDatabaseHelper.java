@@ -134,6 +134,9 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "super_config.db";
     private static final int DATABASE_OLD_VERSION_1 = 1;
     private static final int DATABASE_OLD_VERSION_2 = 2;
+    private static final int DATABASE_OLD_VERSION_3 = 3;
+    private static final int DATABASE_OLD_VERSION_4 = 4;
+    private static final int DATABASE_OLD_VERSION_5 = 5;
     private static final int DATABASE_VERSION = 6;
     private SQLiteDatabase writableDataBase;
     private SQLiteDatabase readableDataBase;
@@ -209,21 +212,95 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         // 升级数据库时执行的操作
         System.out.println("SuperConfigDatabaseHelper.onUpgrade");
-        if (oldVersion == 2){
+        // 采用更健壮的 fall-through 结构
+        if (oldVersion < 3){
             db.execSQL("ALTER TABLE config ADD COLUMN game_vibrator TEXT DEFAULT 'false';");
             db.execSQL("ALTER TABLE config ADD COLUMN button_vibrator TEXT DEFAULT 'false';");
         }
-        // 添加对 mouse_wheel_speed 列的升级支持
-        if (oldVersion <= 3) {
+        if (oldVersion < 4) {
             db.execSQL("ALTER TABLE config ADD COLUMN mouse_wheel_speed INTEGER DEFAULT 20;");
         }
-        if (oldVersion <= 4) {
+        if (oldVersion < 5) {
             String alterTableSQL = "ALTER TABLE config" + " ADD COLUMN " + PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH + " TEXT DEFAULT 'false'";
             db.execSQL(alterTableSQL);
         }
-        if (oldVersion <= 5) {
+        if (oldVersion < 6) {
             db.execSQL("ALTER TABLE element ADD COLUMN " + Element.COLUMN_INT_ELEMENT_FLAG1 + " INTEGER DEFAULT 1;");
         }
+    }
+
+    /**
+     * 辅助方法，用于升级导出的配置文件JSON数据
+     * @param exportFile 从文件中解析出的对象
+     * @param gson 用于JSON操作的实例
+     * @return 如果成功升级则返回true，否则返回false
+     */
+    private boolean upgradeExportedConfig(ExportFile exportFile, Gson gson) {
+        int version = exportFile.getVersion();
+        String settings = exportFile.getSettings();
+        String elements = exportFile.getElements();
+
+        // 如果版本已经是最新，则无需操作
+        if (version == DATABASE_VERSION) {
+            return true;
+        }
+
+        // 如果版本比已知的最老兼容版本还老，则拒绝
+        if (version < DATABASE_OLD_VERSION_1) {
+            return false;
+        }
+
+        // 使用 fall-through (无break) 的 switch 结构模拟 onUpgrade 升级过程
+        // 关键：将JSON字符串转换为可操作的JsonObject和JsonArray
+        JsonObject settingsJson = gson.fromJson(settings, JsonObject.class);
+        JsonElement elementsJsonElement = gson.fromJson(elements, JsonElement.class);
+
+        switch (version) {
+            case DATABASE_OLD_VERSION_1:
+                // 版本1 -> 2: 特殊的正则表达式替换
+                String regex = "(\"element_type\":)\\s*51";
+                Pattern pattern = Pattern.compile(regex);
+                Matcher matcher = pattern.matcher(elements);
+                if (matcher.find()) {
+                    elements = matcher.replaceAll("$13");
+                    // 重新解析被修改过的 elements 字符串
+                    elementsJsonElement = gson.fromJson(elements, JsonElement.class);
+                }
+                // Fall-through to next case
+            case DATABASE_OLD_VERSION_2:
+                // 版本2 -> 3: 在 config 表中添加 game_vibrator 和 button_vibrator
+                settingsJson.addProperty("game_vibrator", "false");
+                settingsJson.addProperty("button_vibrator", "false");
+                // Fall-through to next case
+            case DATABASE_OLD_VERSION_3:
+                // 版本3 -> 4: 在 config 表中添加 mouse_wheel_speed
+                settingsJson.addProperty("mouse_wheel_speed", 20);
+                // Fall-through to next case
+            case DATABASE_OLD_VERSION_4:
+                // 版本4 -> 5: 在 config 表中添加 enhanced_touch
+                settingsJson.addProperty(PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH, "false");
+                // Fall-through to next case
+            case DATABASE_OLD_VERSION_5:
+                // 版本5 -> 6: 在 element 表中添加 flag1
+                if (elementsJsonElement.isJsonArray()) {
+                    for (JsonElement element : elementsJsonElement.getAsJsonArray()) {
+                        element.getAsJsonObject().addProperty(Element.COLUMN_INT_ELEMENT_FLAG1, 1);
+                    }
+                }
+                // Fall-through to final version
+            case DATABASE_VERSION:
+                break; // 到达最新版本，停止
+            default:
+                // 未知版本，无法升级
+                return false;
+        }
+
+        // 将修改后的Json对象转换回字符串，并更新到exportFile中
+        exportFile.setSettings(gson.toJson(settingsJson));
+        exportFile.setElements(gson.toJson(elementsJsonElement));
+        exportFile.setVersion(DATABASE_VERSION); // 版本号也更新为最新的
+
+        return true;
     }
 
     public void insertElement(ContentValues values){
@@ -628,40 +705,27 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         gsonBuilder.registerTypeAdapter(ContentValues.class, new ContentValuesSerializer());
         Gson gson = gsonBuilder.create();
         ExportFile exportFile;
-        int version;
-        String settingString;
-        String elementsString;
-        String md5;
+
         try {
             exportFile = gson.fromJson(configString, ExportFile.class);
-            version = exportFile.getVersion();
-            settingString = exportFile.getSettings();
-            elementsString = exportFile.getElements();
-            md5 = exportFile.getMd5();
         } catch (Exception e){
-            return -1;
+            return -1; // -1: 文件格式错误
         }
 
-
-
-        if (!md5.equals(MathUtils.computeMD5(version + settingString + elementsString))){
-            return -2;
+        // MD5校验 (原始数据校验)
+        if (!exportFile.getMd5().equals(MathUtils.computeMD5(exportFile.getVersion() + exportFile.getSettings() + exportFile.getElements()))){
+            return -2; // -2: 文件被篡改或损坏
         }
-        if (version == DATABASE_OLD_VERSION_1){
-            // 正则表达式
-            String regex = "(\"element_type\":)\\s*51";
-            Pattern pattern = Pattern.compile(regex);
-            Matcher matcher = pattern.matcher(elementsString);
-            // 检查是否有匹配项
-            if (matcher.find()) {
-                // 替换51为3
-                elementsString = matcher.replaceAll("$13");// 输出: {"element_type":3, "other_key":123}
-            }
-        } else if (version == DATABASE_OLD_VERSION_2){
 
-        } else if (version != DATABASE_VERSION){
-            return -3;
+        // 调用升级逻辑
+        if (!upgradeExportedConfig(exportFile, gson)) {
+            return -3; // -3: 版本不匹配且无法升级
         }
+
+        // 从升级后的 exportFile 获取最新的数据
+        String settingString = exportFile.getSettings();
+        String elementsString = exportFile.getElements();
+
         ContentValues settingValues = gson.fromJson(settingString, ContentValues.class);
         ContentValues[] elements = gson.fromJson(elementsString, ContentValues[].class);
 
@@ -721,41 +785,25 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         gsonBuilder.registerTypeAdapter(ContentValues.class, new ContentValuesSerializer());
         Gson gson = gsonBuilder.create();
         ExportFile exportFile;
-        int version;
-        String settingString;
-        String elementsString;
-        String md5;
+
         try {
             exportFile = gson.fromJson(configString, ExportFile.class);
-            version = exportFile.getVersion();
-            settingString = exportFile.getSettings();
-            elementsString = exportFile.getElements();
-            md5 = exportFile.getMd5();
         } catch (Exception e){
-            return -1;
+            return -1; // -1: 文件格式错误
         }
 
-
-
-        if (!md5.equals(MathUtils.computeMD5(version + settingString + elementsString))){
-            return -2;
+        // MD5校验
+        if (!exportFile.getMd5().equals(MathUtils.computeMD5(exportFile.getVersion() + exportFile.getSettings() + exportFile.getElements()))){
+            return -2; // -2: 文件被篡改或损坏
         }
 
-        if (version == DATABASE_OLD_VERSION_1){
-            // 正则表达式
-            String regex = "(\"element_type\":)\\s*51";
-            Pattern pattern = Pattern.compile(regex);
-            Matcher matcher = pattern.matcher(elementsString);
-            // 检查是否有匹配项
-            if (matcher.find()) {
-                // 替换51为3
-                elementsString = matcher.replaceAll("$13");// 输出: {"element_type":3, "other_key":123}
-            }
-        } else if (version == DATABASE_OLD_VERSION_2){
-
-        } else if (version != DATABASE_VERSION){
-            return -3;
+        // 调用升级逻辑
+        if (!upgradeExportedConfig(exportFile, gson)) {
+            return -3; // -3: 版本不匹配且无法升级
         }
+
+        // 从升级后的 exportFile 获取最新的数据 (mergeConfig不需要settings)
+        String elementsString = exportFile.getElements();
 
         ContentValues[] elements = gson.fromJson(elementsString, ContentValues[].class);
 
