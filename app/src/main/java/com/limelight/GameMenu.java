@@ -421,6 +421,41 @@ public class GameMenu {
         controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId, contentValues);
     }
 
+    private void showTouchOverrideMenu() {
+        MenuOption[] touchOverrideOptions = {
+                new MenuOption(
+                        "手势缩放模式",
+                        false,
+                        () -> game.setTouchOverrideMode(Game.TouchOverrideMode.GESTURE_ZOOM),
+                        "game_menu_mouse_emulation",
+                        true
+                ),
+                new MenuOption(
+                        "禁用虚拟按键触控",
+                        false,
+                        () -> game.setTouchOverrideMode(Game.TouchOverrideMode.VIRTUAL_CONTROLLER_TOUCH_DISABLED),
+                        "ic_controller_cute",
+                        true
+                ),
+                new MenuOption(
+                        "恢复默认触控",
+                        false,
+                        () -> game.setTouchOverrideMode(Game.TouchOverrideMode.DEFAULT),
+                        "ic_cancel_cute",
+                        true
+                ),
+                // --- 在这里添加新的菜单选项 ---
+                new MenuOption(
+                        "重置画面缩放",  // 新增的选项
+                        false,
+                        game::resetStreamViewTransformations, // 调用我们刚刚在 Game.java 中添加的新方法
+                        "game_menu_disconnect", // 您可以选用一个更合适的图标
+                        true
+                )
+        };
+        showSubMenu("特殊触控模式", touchOverrideOptions);
+    }
+
     /**
      * 切换麦克风开关
      */
@@ -1536,6 +1571,15 @@ public class GameMenu {
                 this::showTouchModeMenu,
                 "mouse_mode",
                 true, true));
+
+        normalOptions.add(new MenuOption(
+                "特殊触控模式",
+                false,
+                this::showTouchOverrideMenu, // 调用我们刚刚创建的方法
+                "mouse_mode",
+                true,
+                true // true 表示点击后会打开子菜单，对话框不关闭
+        ));
 
         // 王冠功能 - 只在开启王冠功能时显示
         if (game.isCrownFeatureEnabled()) {

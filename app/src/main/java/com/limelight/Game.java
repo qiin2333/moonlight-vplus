@@ -8,6 +8,7 @@ import com.limelight.binding.input.ControllerHandler;
 import com.limelight.binding.input.GameInputDevice;
 import com.limelight.binding.input.KeyboardTranslator;
 import com.limelight.binding.input.advance_setting.ControllerManager;
+import com.limelight.binding.input.advance_setting.TouchController;
 import com.limelight.binding.input.capture.InputCaptureManager;
 import com.limelight.binding.input.capture.InputCaptureProvider;
 import com.limelight.binding.input.touch.AbsoluteTouchContext;
@@ -264,6 +265,64 @@ public class Game extends Activity implements SurfaceHolder.Callback,
      */
     public ControllerManager getControllerManager() {
         return this.controllerManager;
+    }
+
+    // 1. 定义一个枚举来表示不同的触摸覆盖模式
+    public enum TouchOverrideMode {
+        /** 默认行为，触摸事件正常传递给虚拟按键和游戏 */
+        DEFAULT,
+        /** 禁用虚拟按键的触摸，让触摸事件穿透 */
+        VIRTUAL_CONTROLLER_TOUCH_DISABLED,
+        /** 启用视图的手势缩放和旋转功能 */
+        GESTURE_ZOOM
+    }
+
+    // 3. 添加一个中心化的方法来切换模式
+    public void setTouchOverrideMode(TouchOverrideMode newMode) {
+        if (controllerManager == null || streamView == null || currentTouchMode == newMode) {
+            return;
+        }
+
+        TouchController touchController = controllerManager.getTouchController();
+
+        switch (newMode) {
+            case GESTURE_ZOOM:
+                streamView.setGesturesEnabled(true);
+                touchController.setTouchBypass(true);
+                Toast.makeText(this, "手势缩放模式已开启", Toast.LENGTH_SHORT).show();
+                break;
+            case VIRTUAL_CONTROLLER_TOUCH_DISABLED:
+                streamView.setGesturesEnabled(false);
+                touchController.setTouchBypass(false);
+                touchController.enableTouch(false);
+                Toast.makeText(this, "虚拟按键触控已禁用", Toast.LENGTH_SHORT).show();
+                break;
+            case DEFAULT:
+            default:
+                streamView.setGesturesEnabled(false);
+                touchController.setTouchBypass(false);
+                touchController.enableTouch(true);
+                Toast.makeText(this, "已恢复默认触控模式", Toast.LENGTH_SHORT).show();
+                break;
+        }
+
+        this.currentTouchMode = newMode;
+    }
+
+    public TouchOverrideMode getCurrentTouchMode() {
+        return currentTouchMode;
+    }
+
+    private TouchOverrideMode currentTouchMode = TouchOverrideMode.DEFAULT;
+
+    /**
+     * 手动重置 StreamView 的缩放和平移状态
+     */
+    public void resetStreamViewTransformations() {
+        if (streamView != null) {
+            streamView.resetTransformations();
+            Toast.makeText(this, "画面已重置", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private boolean connectedToUsbDriverService = false;
