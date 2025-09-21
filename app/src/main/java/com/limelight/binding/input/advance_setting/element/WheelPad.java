@@ -26,6 +26,8 @@ import android.widget.Toast;
 
 import androidx.appcompat.widget.SwitchCompat;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.limelight.Game;
 import com.limelight.R;
 import com.limelight.binding.input.advance_setting.PageDeviceController;
@@ -55,6 +57,14 @@ public class WheelPad extends Element {
     private int pressedColor;
     private int backgroundColor;
     private int thick;
+    private int normalTextColor;
+    private int pressedTextColor;
+    private int centerTextColor;  // 中心文字颜色，可以与 normalTextColor 分开
+    private int textSizePercent;  // 分区文字大小百分比
+    private int centerTextSizePercent; // 选择预览文字大小百分比
+
+    private int triggerTextSizePercent; // 触发器文字大小百分比
+
 
     private final int screenWidth;
     private final int screenHeight;
@@ -138,6 +148,48 @@ public class WheelPad extends Element {
         Object popupFlagObj = attributesMap.get(COLUMN_INT_ELEMENT_FLAG1);
         this.popupAtScreenCenter = (popupFlagObj == null) || ((Long) popupFlagObj).intValue() == 1;
 
+        if (attributesMap.containsKey("extra_attributes")) {
+            String extraAttrsJsonString = (String) attributesMap.get("extra_attributes");
+            if (extraAttrsJsonString != null && !extraAttrsJsonString.isEmpty()) {
+                try {
+                    JsonObject extraAttrs = new Gson().fromJson(extraAttrsJsonString, JsonObject.class);
+
+                    // 从 extraAttrs 中安全地读取值
+                    if (extraAttrs.has("normalTextColor")) {
+                        this.normalTextColor = extraAttrs.get("normalTextColor").getAsInt();
+                    } else { this.normalTextColor = 0xFFFFFFFF; }
+
+                    if (extraAttrs.has("centerTextColor")) {
+                        this.centerTextColor = extraAttrs.get("centerTextColor").getAsInt();
+                    } else { this.centerTextColor = 0xFFFFFFFF; }
+
+                    if (extraAttrs.has("textSizePercent")) {
+                        this.textSizePercent = extraAttrs.get("textSizePercent").getAsInt();
+                    } else { this.textSizePercent = 35; }
+
+                    if (extraAttrs.has("centerTextSizePercent")) {
+                        this.centerTextSizePercent = extraAttrs.get("centerTextSizePercent").getAsInt();
+                    } else { this.centerTextSizePercent = 60; }
+                    if (extraAttrs.has("triggerTextSizePercent")) {
+                        this.triggerTextSizePercent = extraAttrs.get("triggerTextSizePercent").getAsInt();
+                    } else {
+                        // 提供一个合理的默认值，通常应该比中心预览文字小
+                        this.triggerTextSizePercent = 14;
+                    }
+
+                } catch (Exception e) {
+                    // JSON 解析失败，使用默认值
+                    initializeDefaultFontAttributes();
+                }
+            } else {
+                // 字段存在但为空，使用默认值
+                initializeDefaultFontAttributes();
+            }
+        } else {
+            // 字段不存在（旧数据），使用默认值
+            initializeDefaultFontAttributes();
+        }
+
         String valuesString = (String) attributesMap.get(COLUMN_STRING_ELEMENT_VALUE);
         segmentValues = new ArrayList<>();
         segmentNames = new ArrayList<>();
@@ -152,6 +204,14 @@ public class WheelPad extends Element {
                 segmentNames.add("");
             }
         }
+    }
+
+    private void initializeDefaultFontAttributes() {
+        this.normalTextColor = 0xFFFFFFFF;
+        this.centerTextColor = 0xFFFFFFFF;
+        this.textSizePercent = 35;
+        this.centerTextSizePercent = 60;
+        this.triggerTextSizePercent = 14;
     }
 
     public boolean isBeingEdited() {
@@ -231,6 +291,11 @@ public class WheelPad extends Element {
         rect.set(centerX - borderInnerDrawRadius, centerY - borderInnerDrawRadius, centerX + borderInnerDrawRadius, centerY + borderInnerDrawRadius);
         canvas.drawOval(rect, paintBorder);
 
+        // 应用中心文字的颜色和大小 ---
+        paintCenterText.setColor(this.centerTextColor);
+        float triggerTextSize = getWidth() * (this.triggerTextSizePercent / 100.0f);
+        paintCenterText.setTextSize(triggerTextSize);
+
         float textY = centerY - ((paintCenterText.descent() + paintCenterText.ascent()) / 2);
         canvas.drawText(centerText, centerX, textY, paintCenterText);
     }
@@ -253,6 +318,13 @@ public class WheelPad extends Element {
 
         paintSegmentFill.setColor(backgroundColor);
         paintSegmentFillPressed.setColor(pressedColor);
+
+        paintText.setColor(this.normalTextColor);
+        // 字体大小基于内外半径的差值（环带厚度）来计算，这样更直观
+        float ringThickness = fillOuterRadius - fillInnerRadius;
+        float segmentTextSize = ringThickness * (this.textSizePercent / 100.0f);
+        paintText.setTextSize(segmentTextSize);
+
         float sweepAngle = 360.0f / segmentCount;
 
         rect.set(centerX - fillOuterRadius, centerY - fillOuterRadius, centerX + fillOuterRadius, centerY + fillOuterRadius);
@@ -297,17 +369,35 @@ public class WheelPad extends Element {
             canvas.drawLine(startX, startY, endX, endY, paintBorder);
         }
 
-        if (isPopupMode && activeIndex != -1 && currentMode == ElementController.Mode.Normal) {
-            if (activeIndex < segmentValues.size()) {
-                String displayName;
-                if (activeIndex < segmentNames.size() && segmentNames.get(activeIndex) != null && !segmentNames.get(activeIndex).isEmpty()) {
-                    displayName = segmentNames.get(activeIndex);
+        boolean showCenterTextInNormalMode = isPopupMode && activeIndex != -1 && currentMode == ElementController.Mode.Normal;
+        boolean showCenterTextInEditMode = currentMode == ElementController.Mode.Edit && isBeingEdited();
+
+        if (showCenterTextInNormalMode || showCenterTextInEditMode) {
+            String displayName;
+
+            if (showCenterTextInNormalMode) {
+                // 正常模式下，显示当前选中的分区文本
+                if (activeIndex < segmentValues.size()) {
+                    if (activeIndex < segmentNames.size() && segmentNames.get(activeIndex) != null && !segmentNames.get(activeIndex).isEmpty()) {
+                        displayName = segmentNames.get(activeIndex);
+                    } else {
+                        displayName = getDisplayStringForValue(segmentValues.get(activeIndex));
+                    }
                 } else {
-                    displayName = getDisplayStringForValue(segmentValues.get(activeIndex));
+                    displayName = "预览"; // 备用
                 }
-                float textY = centerY - ((paintCenterText.descent() + paintCenterText.ascent()) / 2);
-                canvas.drawText(displayName, centerX, textY, paintCenterText);
+            } else {
+                // 编辑模式下，显示固定的示例文本
+                displayName = "预览";
             }
+
+            // 应用中心文字的颜色和大小 (这部分逻辑不变)
+            paintCenterText.setColor(this.centerTextColor);
+            float centerTextSize = fillInnerRadius * 2 * (this.centerTextSizePercent / 100.0f);
+            paintCenterText.setTextSize(centerTextSize);
+
+            float textY = centerY - ((paintCenterText.descent() + paintCenterText.ascent()) / 2);
+            canvas.drawText(displayName, centerX, textY, paintCenterText);
         }
     }
 
@@ -490,6 +580,12 @@ public class WheelPad extends Element {
         NumberSeekbar segmentCountNumberSeekbar = wheelPadPage.findViewById(R.id.page_wheel_pad_segment_count);
         NumberSeekbar innerRadiusNumberSeekbar = wheelPadPage.findViewById(R.id.page_wheel_pad_inner_radius);
 
+        NumberSeekbar textSizeNumberSeekbar = wheelPadPage.findViewById(R.id.page_wheel_pad_text_size);
+        ElementEditText normalTextColorElementEditText = wheelPadPage.findViewById(R.id.page_wheel_pad_normal_text_color);
+        NumberSeekbar centerTextSizeNumberSeekbar = wheelPadPage.findViewById(R.id.page_wheel_pad_center_text_size);
+        ElementEditText centerTextColorElementEditText = wheelPadPage.findViewById(R.id.page_wheel_pad_center_text_color);
+        NumberSeekbar triggerTextSizeNumberSeekbar = wheelPadPage.findViewById(R.id.page_wheel_pad_trigger_text_size);
+
         setupCommonControls(centerTextInput, sizeNumberSeekbar, thickNumberSeekbar, layerNumberSeekbar,
                 normalColorElementEditText, pressedColorElementEditText, backgroundColorElementEditText,
                 copyButton, deleteButton);
@@ -549,6 +645,60 @@ public class WheelPad extends Element {
                 save();
             }
         });
+
+        // 分区文字大小
+        textSizeNumberSeekbar.setProgressMin(10); // 10%
+        textSizeNumberSeekbar.setProgressMax(100); // 100%
+        textSizeNumberSeekbar.setValueWithNoCallBack(this.textSizePercent);
+        textSizeNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                textSizePercent = progress;
+                invalidate();
+            }
+            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+            @Override public void onStopTrackingTouch(SeekBar seekBar) { save(); }
+        });
+
+        // 中心文字大小
+        centerTextSizeNumberSeekbar.setProgressMin(10); // 10%
+        centerTextSizeNumberSeekbar.setProgressMax(150); // 150%
+        centerTextSizeNumberSeekbar.setValueWithNoCallBack(this.centerTextSizePercent);
+        centerTextSizeNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                centerTextSizePercent = progress;
+                invalidate();
+            }
+            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+            @Override public void onStopTrackingTouch(SeekBar seekBar) { save(); }
+        });
+
+        // 设置颜色选择器 (你需要确保 setupColorPickerButton 方法在 WheelPad.java 中也存在)
+        setupColorPickerButton(normalTextColorElementEditText, () -> this.normalTextColor, color -> {
+            this.normalTextColor = color;
+            invalidate();
+        });
+        setupColorPickerButton(centerTextColorElementEditText, () -> this.centerTextColor, color -> {
+            this.centerTextColor = color;
+            invalidate();
+        });
+        // --- 设置触发器文字大小的 seekbar ---
+        triggerTextSizeNumberSeekbar.setProgressMin(5);
+        triggerTextSizeNumberSeekbar.setProgressMax(150);
+        triggerTextSizeNumberSeekbar.setValueWithNoCallBack(this.triggerTextSizePercent);
+        triggerTextSizeNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                triggerTextSizePercent = progress;
+                invalidate(); // 实时预览
+            }
+            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+            @Override public void onStopTrackingTouch(SeekBar seekBar) {
+                save(); // 保存设置
+            }
+        });
+
         updateValuesContainerUI();
         return wheelPadPage;
     }
@@ -569,6 +719,14 @@ public class WheelPad extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_MODE, segmentCount);
         contentValues.put(COLUMN_INT_ELEMENT_SENSE, innerRadiusPercent);
         contentValues.put(COLUMN_INT_ELEMENT_FLAG1, popupAtScreenCenter ? 1 : 0);
+
+        JsonObject extraAttrs = new JsonObject();
+        extraAttrs.addProperty("normalTextColor", this.normalTextColor);
+        extraAttrs.addProperty("centerTextColor", this.centerTextColor);
+        extraAttrs.addProperty("textSizePercent", this.textSizePercent);
+        extraAttrs.addProperty("centerTextSizePercent", this.centerTextSizePercent);
+        extraAttrs.addProperty("triggerTextSizePercent", this.triggerTextSizePercent);
+        contentValues.put("extra_attributes", new Gson().toJson(extraAttrs));
 
         List<String> combinedSegments = new ArrayList<>();
         for (int i = 0; i < segmentValues.size(); i++) {
@@ -601,6 +759,18 @@ public class WheelPad extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_MODE, 8);
         contentValues.put(COLUMN_INT_ELEMENT_SENSE, 30);
         contentValues.put(COLUMN_INT_ELEMENT_FLAG1, 1);
+
+        JsonObject extraAttrs = new JsonObject();
+        // **为所有新的字体属性设置默认值**
+        extraAttrs.addProperty("normalTextColor", 0xFFFFFFFF); // White
+        extraAttrs.addProperty("pressedTextColor", 0xFFFFFFFF); // White
+        extraAttrs.addProperty("centerTextColor", 0xFFFFFFFF); // White
+        extraAttrs.addProperty("textSizePercent", 35); // 35%
+        extraAttrs.addProperty("centerTextSizePercent", 60); // 60%
+        extraAttrs.addProperty("triggerTextSizePercent", 14);
+        // 将 JsonObject 转换为字符串，并存入通用的 "extra_attributes" 列
+        contentValues.put("extra_attributes", new Gson().toJson(extraAttrs));
+
         return contentValues;
     }
 
@@ -722,6 +892,19 @@ public class WheelPad extends Element {
             cv.put(COLUMN_INT_ELEMENT_MODE, this.segmentCount);
             cv.put(COLUMN_INT_ELEMENT_SENSE, this.innerRadiusPercent);
             cv.put(COLUMN_INT_ELEMENT_FLAG1, this.popupAtScreenCenter ? 1 : 0);
+
+            // 创建一个 JsonObject 来存储所有没有独立数据库列的属性
+            JsonObject extraAttrs = new JsonObject();
+            // **放入所有新的字体属性**
+            extraAttrs.addProperty("normalTextColor", this.normalTextColor);
+            extraAttrs.addProperty("pressedTextColor", this.pressedTextColor);
+            extraAttrs.addProperty("centerTextColor", this.centerTextColor);
+            extraAttrs.addProperty("textSizePercent", this.textSizePercent);
+            extraAttrs.addProperty("centerTextSizePercent", this.centerTextSizePercent);
+            extraAttrs.addProperty("triggerTextSizePercent", this.triggerTextSizePercent);
+
+            // 将 JsonObject 转换为字符串，并存入通用的 "extra_attributes" 列
+            cv.put("extra_attributes", new Gson().toJson(extraAttrs));
 
             List<String> combinedSegments = new ArrayList<>();
             for (int i = 0; i < segmentValues.size(); i++) {

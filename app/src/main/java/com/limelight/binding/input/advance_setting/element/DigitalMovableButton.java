@@ -37,11 +37,6 @@ import java.util.Map;
  */
 public class DigitalMovableButton extends Element {
 
-    // Re-use constants from DigitalSwitchButton to maintain consistency
-    public static final String COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR = DigitalSwitchButton.COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR;
-    public static final String COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR = DigitalSwitchButton.COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR;
-    public static final String COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT = DigitalSwitchButton.COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT;
-
     /**
      * Listener interface to update registered observers.
      */
@@ -150,7 +145,8 @@ public class DigitalMovableButton extends Element {
         pressedColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_PRESSED_COLOR)).intValue();
         backgroundColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_BACKGROUND_COLOR)).intValue();
         value = (String) attributesMap.get(COLUMN_STRING_ELEMENT_VALUE);
-        enableTouch = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_MODE)).intValue();
+        Object modeObj = attributesMap.get(COLUMN_INT_ELEMENT_MODE);
+        this.enableTouch = (modeObj != null) ? ((Long) modeObj).intValue() : 0;
 
         // Load new text properties with backward compatibility
         if (attributesMap.containsKey(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR)) {

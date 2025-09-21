@@ -139,7 +139,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
     private static final int DATABASE_OLD_VERSION_4 = 4;
     private static final int DATABASE_OLD_VERSION_5 = 5;
     private static final int DATABASE_OLD_VERSION_6 = 6;
-    private static final int DATABASE_VERSION = 7;
+    private static final int DATABASE_VERSION = 8;
     private SQLiteDatabase writableDataBase;
     private SQLiteDatabase readableDataBase;
 
@@ -183,11 +183,12 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
                 "element_background_color INTEGER," +
                 "element_color INTEGER," +
                 "element_pressed_color INTEGER," +
-                DigitalSwitchButton.COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR + " INTEGER," +
-                DigitalSwitchButton.COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR + " INTEGER," +
-                DigitalSwitchButton.COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT + " INTEGER," +
+                Element.COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR + " INTEGER," +
+                Element.COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR + " INTEGER," +
+                Element.COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT + " INTEGER," +
                 "element_create_time INTEGER," +
-                Element.COLUMN_INT_ELEMENT_FLAG1 + " INTEGER DEFAULT 1" +
+                Element.COLUMN_INT_ELEMENT_FLAG1 + " INTEGER DEFAULT 1," +
+                "extra_attributes TEXT" + // 添加一个名为 extra_attributes 的文本列
                 ")";
         // 执行SQL语句
         db.execSQL(createElementTable);
@@ -240,6 +241,9 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
             db.execSQL("ALTER TABLE element ADD COLUMN " + DigitalSwitchButton.COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR + " INTEGER DEFAULT -1;"); // 0xFFFFFFFF
             db.execSQL("ALTER TABLE element ADD COLUMN " + DigitalSwitchButton.COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR + " INTEGER DEFAULT -3355444;"); // 0xFFCCCCCC
             db.execSQL("ALTER TABLE element ADD COLUMN " + DigitalSwitchButton.COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT + " INTEGER DEFAULT 63;");
+        }
+        if (oldVersion < 8) {
+            db.execSQL("ALTER TABLE element ADD COLUMN extra_attributes TEXT;");
         }
     }
 
@@ -314,6 +318,13 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
                     }
                 }
                 // Fall-through to final version
+            case 7:
+                if (elementsJsonElement.isJsonArray()) {
+                    for (JsonElement element : elementsJsonElement.getAsJsonArray()) {
+                        // 对于旧配置，这个字段可以是 null 或空json对象
+                        element.getAsJsonObject().addProperty("extra_attributes", "{}");
+                    }
+                }
             case DATABASE_VERSION:
                 break; // 到达最新版本，停止
             default:

@@ -34,11 +34,6 @@ import java.util.Map;
  */
 public class DigitalCombineButton extends Element {
 
-    // Re-use constants from DigitalSwitchButton to maintain consistency
-    public static final String COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR = DigitalSwitchButton.COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR;
-    public static final String COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR = DigitalSwitchButton.COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR;
-    public static final String COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT = DigitalSwitchButton.COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT;
-
     private static final String COLUMN_STRING_ELEMENT_VALUE_1 = COLUMN_STRING_ELEMENT_VALUE;
     private static final String COLUMN_STRING_ELEMENT_VALUE_2 = COLUMN_STRING_ELEMENT_UP_VALUE;
     private static final String COLUMN_STRING_ELEMENT_VALUE_3 = COLUMN_STRING_ELEMENT_DOWN_VALUE;

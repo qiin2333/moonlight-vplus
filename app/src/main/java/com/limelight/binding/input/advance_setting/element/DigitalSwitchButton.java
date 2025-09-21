@@ -34,11 +34,6 @@ import java.util.Map;
  */
 public class DigitalSwitchButton extends Element {
 
-    // New constants for text color and size database columns
-    public static final String COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR = "normalTextColor";
-    public static final String COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR = "pressedTextColor";
-    public static final String COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT = "textSizePercent";
-
     /**
      * Listener interface to update registered observers.
      */
