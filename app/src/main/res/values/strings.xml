@@ -542,12 +542,35 @@
     <string name="gyro_sensitivity_format">Sensitivity %.1fx</string>
     <string name="gyro_activation_always">Always On</string>
 
-    <string name="app_name">Moonlight</string>
-    <string name="accessibility_service_label">Moonlight 键盘服务</string>
+    <!-- Accessibility service -->
+    <string name="accessibility_service_label">Moonlight Keyboard Service</string>
     <string name="accessibility_service_description">
-        为了让您的外接键盘在串流游戏中获得完整的PC体验，此服务需要捕获所有键盘按键。\n\n
-        开启后，您将可以在游戏中无缝使用 Win/Command 键、Alt+Tab 等所有系统快捷键，就像在电脑前一样。\n\n
-        请放心，此服务仅用于将按键操作实时发送到您的电脑，我们不会记录或上传您的任何输入内容。
+        To provide a complete PC gaming experience with your external keyboard, this service needs to capture all keyboard keys.
+        \n\n
+        Once enabled, you will be able to use all system shortcuts like Win/Command keys, Alt+Tab, etc., just like on your computer.
+        \n\n
+        Rest assured, this service is only used to send key operations directly to your computer, and we will not record or upload any of your input content.
     </string>
+
+    <!-- Performance Overlay Info Dialogs -->
+    <string name="perf_moon_phase_info">Today\'s Moon Phase\n\n%s %s\nMoon Phase Cycle: %.1f%%\nCycle Day: Day %d\nDate: %s\n\n%s</string>
+    
+    <string name="perf_decoder_title">🎬 Decoder Information</string>
+    <string name="perf_decoder_info">The decoder is responsible for decoding video streams into displayable images.\n\nCommon Decoders:\n• H.264 (AVC) - Best compatibility\n• H.265 (HEVC) - Higher compression\n• AV1 - Latest standard, most efficient\n\nHDR Support:\n• High Dynamic Range video\n• Richer color representation\n• Requires hardware support</string>
+    
+    <string name="perf_fps_title">📊 Frame Rate Information</string>
+    <string name="perf_fps_info">Rx FPS: Received Frame Rate\n• Number of video frames received from host\n• Should be stable under ideal conditions\n\nRd FPS: Rendered Frame Rate\n• Number of frames actually rendered to screen\n• May be reduced due to device performance\n\nPerformance Indicators:\n• Close values indicate good performance\n• Low render FPS may affect smoothness</string>
+    
+    <string name="perf_packet_loss_title">📶 Packet Loss Information</string>
+    <string name="perf_packet_loss_info">Packet loss represents the percentage of data packets lost during network transmission.\n\nNormal Range:\n• 0-0.5%: Excellent network quality\n• 0.5-2%: Good network quality\n• 2-5%: Fair network quality\n• &gt;5%: Poor network quality\n\nInfluencing Factors:\n• Network stability\n• Router performance\n• Wireless signal strength</string>
+    
+    <string name="perf_network_latency_title">🌐 Network Latency Information</string>
+    <string name="perf_network_latency_info">Network latency represents the round-trip time for data packets from host to device.\n\nLatency Range:\n• &lt;20ms: Excellent\n• 20-50ms: Good\n• 50-100ms: Acceptable\n• &gt;100ms: Poor\n\nBandwidth:\n• Represents network transmission speed\n• Affects maximum video quality\n\n± Value:\n• Represents latency fluctuation range\n• Smaller values indicate more stability</string>
+    
+    <string name="perf_decode_latency_title">⏱️ Decode Latency Information</string>
+    <string name="perf_decode_latency_info">Decode latency represents the time required to decode video frames.\n\nLatency Range:\n• &lt;5ms: Excellent decoder performance\n• 5-10ms: Good decoder performance\n• 10-20ms: Fair decoder performance\n• &gt;20ms: Poor decoder performance\n\nInfluencing Factors:\n• Hardware decoder performance\n• Video encoding complexity\n• Device CPU/GPU load</string>
+    
+    <string name="perf_host_latency_title">🖥️ Host Latency Information</string>
+    <string name="perf_host_latency_info">Host latency represents the time for the game host to process frames.\n\nLatency Range:\n• &lt;5ms: Strong host performance\n• 5-10ms: Good host performance\n• 10-20ms: Fair host performance\n• &gt;20ms: Weak host performance\n\nInfluencing Factors:\n• Host hardware performance\n• Game load\n• Background program usage\n\nVer.V+:\n• Indicates version information\n• Displayed when no host latency data available</string>
 
 </resources>

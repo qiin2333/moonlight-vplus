@@ -511,4 +511,28 @@
     <string name="gyro_sensitivity">灵敏度</string>
     <string name="gyro_sensitivity_format">灵敏度 %.1fx</string>
     <string name="gyro_activation_always">常开</string>
+
+    <!-- Accessibility service -->
+    <string name="accessibility_service_label">Moonlight 键盘服务</string>
+    <string name="accessibility_service_description">
+        为了让您的外接键盘在串流游戏中获得完整的PC体验，此服务需要捕获所有键盘按键。\n\n
+        开启后，您将可以在游戏中无缝使用 Win/Command 键、Alt+Tab 等所有系统快捷键，就像在电脑前一样。\n\n
+        请放心，此服务仅用于将按键操作实时发送到您的电脑，我们不会记录或上传您的任何输入内容。
+    </string>
+
+    <!-- Performance Overlay Info Dialogs -->
+    <string name="perf_moon_phase_info">今日月相\n\n%s %s\n月相周期：%.1f%%\n周期天数：第%d天\n日期：%s\n\n%s</string>
+    <string name="perf_decoder_title">🎬 解码器信息</string>
+    <string name="perf_decoder_info">解码器负责将视频流解码为可显示的图像。\n\n常见解码器：\n• H.264 (AVC) - 兼容性最好\n• H.265 (HEVC) - 压缩率更高\n• AV1 - 最新标准，效率最高\n\nHDR支持：\n• 高动态范围视频\n• 更丰富的色彩表现\n• 需要硬件支持</string>
+    <string name="perf_fps_title">📊 帧率信息</string>
+    <string name="perf_fps_info">Rx FPS：接收帧率\n• 从主机接收的视频帧数\n• 理想情况下应该稳定\n\nRd FPS：渲染帧率\n• 实际渲染到屏幕的帧数\n• 可能因设备性能而降低\n\n性能指标：\n• 两者接近表示性能良好\n• 渲染帧率过低可能影响流畅度</string>
+    <string name="perf_packet_loss_title">📶 丢包率信息</string>
+    <string name="perf_packet_loss_info">丢包率表示网络传输中丢失的数据包比例。\n\n正常范围：\n• 0–0.5%：网络质量优秀\n• 0.5–2%：网络质量良好\n• 2–5%：网络质量一般\n• &gt;5%：网络质量较差\n\n影响因素：\n• 网络稳定性\n• 路由器性能\n• 无线信号强度</string>
+    <string name="perf_network_latency_title">🌐 网络延迟信息</string>
+    <string name="perf_network_latency_info">网络延迟表示数据包从主机到设备的往返时间。\n\n延迟范围：\n• &lt;20ms：极佳\n• 20–50ms：良好\n• 50–100ms：可接受\n• &gt;100ms：较差\n\n带宽：\n• 表示网络传输速度\n• 影响视频质量上限\n\n±值：\n• 表示延迟波动范围\n• 越小越稳定</string>
+    <string name="perf_decode_latency_title">⏱️ 解码延迟信息</string>
+    <string name="perf_decode_latency_info">解码延迟表示解码视频帧所需的时间。\n\n延迟范围：\n• &lt;5ms：极佳解码器性能\n• 5–10ms：良好解码器性能\n• 10–20ms：一般解码器性能\n• &gt;20ms：较差解码器性能\n\n影响因素：\n• 硬件解码器性能\n• 视频编码复杂度\n• 设备CPU/GPU负载</string>
+    <string name="perf_host_latency_title">🖥 主机延迟信息</string>
+    <string name="perf_host_latency_info">主机延迟表示主机处理帧所需的时间。\n\n延迟范围：\n• &lt;5ms：极佳主机性能\n• 5–10ms：良好主机性能\n• 10–20ms：一般主机性能\n• &gt;20ms：较差主机性能\n\n影响因素：\n• 主机硬件性能\n• 游戏负载\n• 后台程序使用\n\nVer.V+：\n• 表示版本信息\n• 当没有主机延迟数据时显示</string>
+
 </resources>
