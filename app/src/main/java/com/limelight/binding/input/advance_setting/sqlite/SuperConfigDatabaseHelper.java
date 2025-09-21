@@ -31,7 +31,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
-    private class ExportFile{
+    private class ExportFile {
         private int version;
         private String settings;
         private String elements;
@@ -139,7 +139,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
     private static final int DATABASE_OLD_VERSION_4 = 4;
     private static final int DATABASE_OLD_VERSION_5 = 5;
     private static final int DATABASE_OLD_VERSION_6 = 6;
-    private static final int DATABASE_VERSION = 7;
+    private static final int DATABASE_VERSION = 8;
     private SQLiteDatabase writableDataBase;
     private SQLiteDatabase readableDataBase;
 
@@ -183,11 +183,12 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
                 "element_background_color INTEGER," +
                 "element_color INTEGER," +
                 "element_pressed_color INTEGER," +
-                DigitalSwitchButton.COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR + " INTEGER," +
-                DigitalSwitchButton.COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR + " INTEGER," +
-                DigitalSwitchButton.COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT + " INTEGER," +
+                Element.COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR + " INTEGER," +
+                Element.COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR + " INTEGER," +
+                Element.COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT + " INTEGER," +
                 "element_create_time INTEGER," +
-                Element.COLUMN_INT_ELEMENT_FLAG1 + " INTEGER DEFAULT 1" +
+                Element.COLUMN_INT_ELEMENT_FLAG1 + " INTEGER DEFAULT 1," +
+                "extra_attributes TEXT" + // 添加一个名为 extra_attributes 的文本列
                 ")";
         // 执行SQL语句
         db.execSQL(createElementTable);
@@ -202,16 +203,16 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
                 "game_vibrator TEXT," +
                 "button_vibrator TEXT," +
                 "mouse_wheel_speed INTEGER," +
-                PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH + " TEXT DEFAULT 'false'"+
+                PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH + " TEXT DEFAULT 'false'" +
                 ")";
 
         db.execSQL(createConfigTable);
     }
-    public void deleteTable(String tableName){
+
+    public void deleteTable(String tableName) {
         SQLiteDatabase db = this.getWritableDatabase();
         db.execSQL("DROP TABLE IF EXISTS " + tableName);
     }
-
 
 
     @Override
@@ -220,7 +221,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         // 升级数据库时执行的操作
         System.out.println("SuperConfigDatabaseHelper.onUpgrade from " + oldVersion + " to " + newVersion);
         // 采用更健壮的 fall-through 结构
-        if (oldVersion < 3){
+        if (oldVersion < 3) {
             db.execSQL("ALTER TABLE config ADD COLUMN game_vibrator TEXT DEFAULT 'false';");
             db.execSQL("ALTER TABLE config ADD COLUMN button_vibrator TEXT DEFAULT 'false';");
         }
@@ -241,12 +242,16 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
             db.execSQL("ALTER TABLE element ADD COLUMN " + DigitalSwitchButton.COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR + " INTEGER DEFAULT -3355444;"); // 0xFFCCCCCC
             db.execSQL("ALTER TABLE element ADD COLUMN " + DigitalSwitchButton.COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT + " INTEGER DEFAULT 63;");
         }
+        if (oldVersion < 8) {
+            db.execSQL("ALTER TABLE element ADD COLUMN extra_attributes TEXT;");
+        }
     }
 
     /**
      * 辅助方法，用于升级导出的配置文件JSON数据
+     *
      * @param exportFile 从文件中解析出的对象
-     * @param gson 用于JSON操作的实例
+     * @param gson       用于JSON操作的实例
      * @return 如果成功升级则返回true，否则返回false
      */
     private boolean upgradeExportedConfig(ExportFile exportFile, Gson gson) {
@@ -314,6 +319,13 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
                     }
                 }
                 // Fall-through to final version
+            case 7:
+                if (elementsJsonElement.isJsonArray()) {
+                    for (JsonElement element : elementsJsonElement.getAsJsonArray()) {
+                        // 对于旧配置，这个字段可以是 null 或空json对象
+                        element.getAsJsonObject().addProperty("extra_attributes", "{}");
+                    }
+                }
             case DATABASE_VERSION:
                 break; // 到达最新版本，停止
             default:
@@ -329,27 +341,27 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         return true;
     }
 
-    public void insertElement(ContentValues values){
-        writableDataBase.insert("element",null,values);
+    public void insertElement(ContentValues values) {
+        writableDataBase.insert("element", null, values);
     }
 
-    public void deleteElement(long configId,long elementId){
+    public void deleteElement(long configId, long elementId) {
 
         // 定义 WHERE 子句
         String selection = "config_id = ? AND element_id = ?";
         // 定义 WHERE 子句中的参数
-        String[] selectionArgs = { String.valueOf(configId), String.valueOf(elementId) };
+        String[] selectionArgs = {String.valueOf(configId), String.valueOf(elementId)};
 
         // 执行删除操作
         writableDataBase.delete("element", selection, selectionArgs);
     }
 
-    public void updateElement(long configId,long elementId,ContentValues values){
+    public void updateElement(long configId, long elementId, ContentValues values) {
 
         // 定义 WHERE 子句
         String selection = "config_id = ? AND element_id = ?";
         // 定义 WHERE 子句中的参数
-        String[] selectionArgs = { String.valueOf(configId), String.valueOf(elementId) };
+        String[] selectionArgs = {String.valueOf(configId), String.valueOf(elementId)};
 
         writableDataBase.update(
                 "element",   // 要更新的表
@@ -359,15 +371,15 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         );
     }
 
-    public List<Long> queryAllElementIds(long configId){
+    public List<Long> queryAllElementIds(long configId) {
 
         // 定义要查询的列
-        String[] projection = { "element_id", "element_layer" };
+        String[] projection = {"element_id", "element_layer"};
 
         // 定义 WHERE 子句
         String selection = "config_id = ?";
         // 定义 WHERE 子句中的参数
-        String[] selectionArgs = { String.valueOf(configId) };
+        String[] selectionArgs = {String.valueOf(configId)};
         // 排序方式，增序
         String orderBy = "element_id + (element_layer * 281474976710656) ASC";
 
@@ -394,15 +406,16 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         System.out.println("elementIds = " + elementIds);
         return elementIds;
     }
-    public Object queryElementAttribute(long configId,long elementId,String elementAttribute){
+
+    public Object queryElementAttribute(long configId, long elementId, String elementAttribute) {
 
         // 定义要查询的列
-        String[] projection = { elementAttribute };
+        String[] projection = {elementAttribute};
 
         // 定义 WHERE 子句
         String selection = "config_id = ? AND element_id = ?";
         // 定义 WHERE 子句中的参数
-        String[] selectionArgs = { String.valueOf(configId), String.valueOf(elementId) };
+        String[] selectionArgs = {String.valueOf(configId), String.valueOf(elementId)};
 
         // 执行查询
         Cursor cursor = readableDataBase.query(
@@ -439,16 +452,16 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
             }
             cursor.close();
         }
-        
+
         return o;
     }
 
-    public Map<String, Object> queryAllElementAttributes(long configId,long elementId){
+    public Map<String, Object> queryAllElementAttributes(long configId, long elementId) {
         Map<String, Object> resultMap = new HashMap<>();
         // 定义 WHERE 子句
         String selection = "config_id = ? AND element_id = ?";
         // 定义 WHERE 子句中的参数
-        String[] selectionArgs = { String.valueOf(configId), String.valueOf(elementId) };
+        String[] selectionArgs = {String.valueOf(configId), String.valueOf(elementId)};
 
         // 执行查询
         Cursor cursor = readableDataBase.query(
@@ -488,33 +501,33 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         return resultMap;
     }
 
-    public void insertConfig(ContentValues values){
+    public void insertConfig(ContentValues values) {
 
-        writableDataBase.insert("config",null,values);
-        
+        writableDataBase.insert("config", null, values);
+
     }
 
-    public void deleteConfig(long configId){
+    public void deleteConfig(long configId) {
 
         // 定义 WHERE 子句
         String selection = "config_id = ?";
         // 定义 WHERE 子句中的参数
-        String[] selectionArgs = { String.valueOf(configId) };
+        String[] selectionArgs = {String.valueOf(configId)};
 
         // 执行删除操作
         writableDataBase.delete("config", selection, selectionArgs);
 
         //删除element表中所有的config_id的element
         writableDataBase.delete("element", selection, selectionArgs);
-        
+
     }
 
-    public void updateConfig(long configId,ContentValues values){
+    public void updateConfig(long configId, ContentValues values) {
 
         // SQL WHERE 子句
         String selection = "config_id = ?";
         // selectionArgs 数组提供了 WHERE 子句中占位符 ? 的实际值
-        String[] selectionArgs = { String.valueOf(configId) };
+        String[] selectionArgs = {String.valueOf(configId)};
 
         writableDataBase.update(
                 "config",   // 要更新的表
@@ -522,14 +535,14 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
                 selection, // WHERE 子句
                 selectionArgs // WHERE 子句中的占位符值
         );
-        
+
 
     }
 
-    public List<Long> queryAllConfigIds(){
+    public List<Long> queryAllConfigIds() {
 
         // 定义要查询的列
-        String[] projection = { "config_id" };
+        String[] projection = {"config_id"};
         // 排序方式，增序
         String orderBy = "config_id ASC";
         // 执行查询
@@ -552,20 +565,20 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
             }
             cursor.close();
         }
-        
+
         System.out.println("configIds = " + configIds);
         return configIds;
     }
 
-    public Object queryConfigAttribute(long configId,String configAttribute,Object defaultValue){
+    public Object queryConfigAttribute(long configId, String configAttribute, Object defaultValue) {
 
         // 定义要查询的列
-        String[] projection = { configAttribute };
+        String[] projection = {configAttribute};
 
         // 定义 WHERE 子句
         String selection = "config_id = ?";
         // 定义 WHERE 子句中的参数
-        String[] selectionArgs = { String.valueOf(configId) };
+        String[] selectionArgs = {String.valueOf(configId)};
 
         // 执行查询
         Cursor cursor = readableDataBase.query(
@@ -602,13 +615,13 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
             }
             cursor.close();
         }
-        if (o == null){
+        if (o == null) {
             return defaultValue;
         }
         return o;
     }
 
-    public String exportConfig(Long configId){
+    public String exportConfig(Long configId) {
         List<ContentValues> elementsValueList = new ArrayList<>();
         ContentValues settingValues = new ContentValues();
 
@@ -616,7 +629,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         String selection = "config_id = ?";
 
         // 定义 WHERE 子句中的参数
-        String[] selectionArgs = { String.valueOf(configId) };
+        String[] selectionArgs = {String.valueOf(configId)};
 
         Cursor cursor = readableDataBase.query(
                 "element",   // 表名
@@ -636,7 +649,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
                 // 将当前行的所有数据存入 ContentValues
                 for (int i = 0; i < cursor.getColumnCount(); i++) {
                     String columnName = cursor.getColumnName(i);
-                    if (columnName.equals("_id")){
+                    if (columnName.equals("_id")) {
                         continue;
                     }
                     int type = cursor.getType(i);
@@ -667,7 +680,6 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         }
 
 
-
         cursor = readableDataBase.query(
                 "config",   // 表名
                 null, // 要查询的列
@@ -682,7 +694,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
             // 将当前行的所有数据存入 ContentValues
             for (int i = 0; i < cursor.getColumnCount(); i++) {
                 String columnName = cursor.getColumnName(i);
-                if (columnName.equals("_id")){
+                if (columnName.equals("_id")) {
                     continue;
                 }
                 int type = cursor.getType(i);
@@ -720,13 +732,12 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         String elementsString = gson.toJson(elementsValues);
 
 
-        return gson.toJson(new ExportFile(DATABASE_VERSION,settingString,elementsString));
-
+        return gson.toJson(new ExportFile(DATABASE_VERSION, settingString, elementsString));
 
 
     }
 
-    public int importConfig(String configString){
+    public int importConfig(String configString) {
         GsonBuilder gsonBuilder = new GsonBuilder();
         gsonBuilder.registerTypeAdapter(ContentValues.class, new ContentValuesSerializer());
         Gson gson = gsonBuilder.create();
@@ -734,12 +745,12 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
 
         try {
             exportFile = gson.fromJson(configString, ExportFile.class);
-        } catch (Exception e){
+        } catch (Exception e) {
             return -1; // -1: 文件格式错误
         }
 
         // MD5校验 (原始数据校验)
-        if (!exportFile.getMd5().equals(MathUtils.computeMD5(exportFile.getVersion() + exportFile.getSettings() + exportFile.getElements()))){
+        if (!exportFile.getMd5().equals(MathUtils.computeMD5(exportFile.getVersion() + exportFile.getSettings() + exportFile.getElements()))) {
             return -2; // -2: 文件被篡改或损坏
         }
 
@@ -756,49 +767,49 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         ContentValues[] elements = gson.fromJson(elementsString, ContentValues[].class);
 
         // 将组按键及其子按键存储在MAP中
-        Map<ContentValues,List<ContentValues>> groupButtonMaps = new HashMap<>();
-        for (ContentValues groupButtonElement : elements){
-            if (groupButtonElement.containsKey(Element.COLUMN_INT_ELEMENT_TYPE) && (long)groupButtonElement.get(Element.COLUMN_INT_ELEMENT_TYPE) == Element.ELEMENT_TYPE_GROUP_BUTTON){
+        Map<ContentValues, List<ContentValues>> groupButtonMaps = new HashMap<>();
+        for (ContentValues groupButtonElement : elements) {
+            if (groupButtonElement.containsKey(Element.COLUMN_INT_ELEMENT_TYPE) && (long) groupButtonElement.get(Element.COLUMN_INT_ELEMENT_TYPE) == Element.ELEMENT_TYPE_GROUP_BUTTON) {
                 List<ContentValues> childElements = new ArrayList<>();
 
                 String[] childElementStringIds = ((String) groupButtonElement.get(Element.COLUMN_STRING_ELEMENT_VALUE)).split(",");
                 // 按键组的值，子按键们的ID
-                for (String childElementStringId : childElementStringIds){
+                for (String childElementStringId : childElementStringIds) {
                     long childElementId = Long.parseLong(childElementStringId);
-                    for (ContentValues element : elements){
-                        if (element.containsKey(Element.COLUMN_LONG_ELEMENT_ID) && (long)element.get(Element.COLUMN_LONG_ELEMENT_ID) == childElementId){
+                    for (ContentValues element : elements) {
+                        if (element.containsKey(Element.COLUMN_LONG_ELEMENT_ID) && (long) element.get(Element.COLUMN_LONG_ELEMENT_ID) == childElementId) {
                             childElements.add(element);
                             break;
                         }
                     }
                 }
-                groupButtonMaps.put(groupButtonElement,childElements);
+                groupButtonMaps.put(groupButtonElement, childElements);
 
             }
         }
 
 
         Long newConfigId = System.currentTimeMillis();
-        settingValues.put(PageConfigController.COLUMN_LONG_CONFIG_ID,newConfigId);
+        settingValues.put(PageConfigController.COLUMN_LONG_CONFIG_ID, newConfigId);
         insertConfig(settingValues);
 
         // 更新所有按键的ID
         long elementId = System.currentTimeMillis();
-        for (ContentValues contentValues : elements){
-            contentValues.put(Element.COLUMN_LONG_ELEMENT_ID,elementId ++);
-            contentValues.put(Element.COLUMN_LONG_CONFIG_ID,newConfigId);
+        for (ContentValues contentValues : elements) {
+            contentValues.put(Element.COLUMN_LONG_ELEMENT_ID, elementId++);
+            contentValues.put(Element.COLUMN_LONG_CONFIG_ID, newConfigId);
             insertElement(contentValues);
         }
 
         // 更新组按键的值
         for (Map.Entry<ContentValues, List<ContentValues>> groupButtonMap : groupButtonMaps.entrySet()) {
             String newValue = "-1";
-            for (ContentValues childElement : groupButtonMap.getValue()){
+            for (ContentValues childElement : groupButtonMap.getValue()) {
                 newValue = newValue + "," + childElement.get(Element.COLUMN_LONG_ELEMENT_ID);
             }
             ContentValues groupButton = groupButtonMap.getKey();
-            groupButton.put(Element.COLUMN_STRING_ELEMENT_VALUE,newValue);
-            updateElement(  (Long) groupButton.get(Element.COLUMN_LONG_CONFIG_ID),
+            groupButton.put(Element.COLUMN_STRING_ELEMENT_VALUE, newValue);
+            updateElement((Long) groupButton.get(Element.COLUMN_LONG_CONFIG_ID),
                     (Long) groupButton.get(Element.COLUMN_LONG_ELEMENT_ID),
                     groupButton);
         }
@@ -806,7 +817,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         return 0;
     }
 
-    public int mergeConfig(String configString,Long existConfigId){
+    public int mergeConfig(String configString, Long existConfigId) {
         GsonBuilder gsonBuilder = new GsonBuilder();
         gsonBuilder.registerTypeAdapter(ContentValues.class, new ContentValuesSerializer());
         Gson gson = gsonBuilder.create();
@@ -814,12 +825,12 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
 
         try {
             exportFile = gson.fromJson(configString, ExportFile.class);
-        } catch (Exception e){
+        } catch (Exception e) {
             return -1; // -1: 文件格式错误
         }
 
         // MD5校验
-        if (!exportFile.getMd5().equals(MathUtils.computeMD5(exportFile.getVersion() + exportFile.getSettings() + exportFile.getElements()))){
+        if (!exportFile.getMd5().equals(MathUtils.computeMD5(exportFile.getVersion() + exportFile.getSettings() + exportFile.getElements()))) {
             return -2; // -2: 文件被篡改或损坏
         }
 
@@ -834,44 +845,44 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         ContentValues[] elements = gson.fromJson(elementsString, ContentValues[].class);
 
         // 将组按键及其子按键存储在MAP中
-        Map<ContentValues,List<ContentValues>> groupButtonMaps = new HashMap<>();
-        for (ContentValues groupButtonElement : elements){
-            if (groupButtonElement.containsKey(Element.COLUMN_INT_ELEMENT_TYPE) && (long)groupButtonElement.get(Element.COLUMN_INT_ELEMENT_TYPE) == Element.ELEMENT_TYPE_GROUP_BUTTON){
+        Map<ContentValues, List<ContentValues>> groupButtonMaps = new HashMap<>();
+        for (ContentValues groupButtonElement : elements) {
+            if (groupButtonElement.containsKey(Element.COLUMN_INT_ELEMENT_TYPE) && (long) groupButtonElement.get(Element.COLUMN_INT_ELEMENT_TYPE) == Element.ELEMENT_TYPE_GROUP_BUTTON) {
                 List<ContentValues> childElements = new ArrayList<>();
 
                 String[] childElementStringIds = ((String) groupButtonElement.get(Element.COLUMN_STRING_ELEMENT_VALUE)).split(",");
                 // 按键组的值，子按键们的ID
-                for (String childElementStringId : childElementStringIds){
+                for (String childElementStringId : childElementStringIds) {
                     long childElementId = Long.parseLong(childElementStringId);
-                    for (ContentValues element : elements){
-                        if (element.containsKey(Element.COLUMN_LONG_ELEMENT_ID) && (long)element.get(Element.COLUMN_LONG_ELEMENT_ID) == childElementId){
+                    for (ContentValues element : elements) {
+                        if (element.containsKey(Element.COLUMN_LONG_ELEMENT_ID) && (long) element.get(Element.COLUMN_LONG_ELEMENT_ID) == childElementId) {
                             childElements.add(element);
                             break;
                         }
                     }
                 }
-                groupButtonMaps.put(groupButtonElement,childElements);
+                groupButtonMaps.put(groupButtonElement, childElements);
 
             }
         }
 
         // 更新所有按键的ID
         long elementId = System.currentTimeMillis();
-        for (ContentValues contentValues : elements){
-            contentValues.put(Element.COLUMN_LONG_ELEMENT_ID,elementId ++);
-            contentValues.put(Element.COLUMN_LONG_CONFIG_ID,existConfigId);
+        for (ContentValues contentValues : elements) {
+            contentValues.put(Element.COLUMN_LONG_ELEMENT_ID, elementId++);
+            contentValues.put(Element.COLUMN_LONG_CONFIG_ID, existConfigId);
             insertElement(contentValues);
         }
 
         // 更新组按键的值
         for (Map.Entry<ContentValues, List<ContentValues>> groupButtonMap : groupButtonMaps.entrySet()) {
             String newValue = "-1";
-            for (ContentValues childElement : groupButtonMap.getValue()){
+            for (ContentValues childElement : groupButtonMap.getValue()) {
                 newValue = newValue + "," + childElement.get(Element.COLUMN_LONG_ELEMENT_ID);
             }
             ContentValues groupButton = groupButtonMap.getKey();
-            groupButton.put(Element.COLUMN_STRING_ELEMENT_VALUE,newValue);
-            updateElement(  (Long) groupButton.get(Element.COLUMN_LONG_CONFIG_ID),
+            groupButton.put(Element.COLUMN_STRING_ELEMENT_VALUE, newValue);
+            updateElement((Long) groupButton.get(Element.COLUMN_LONG_CONFIG_ID),
                     (Long) groupButton.get(Element.COLUMN_LONG_ELEMENT_ID),
                     groupButton);
         }

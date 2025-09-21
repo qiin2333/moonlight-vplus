@@ -37,11 +37,6 @@ import java.util.Map;
  */
 public class DigitalMovableButton extends Element {
 
-    // Re-use constants from DigitalSwitchButton to maintain consistency
-    public static final String COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR = DigitalSwitchButton.COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR;
-    public static final String COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR = DigitalSwitchButton.COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR;
-    public static final String COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT = DigitalSwitchButton.COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT;
-
     /**
      * Listener interface to update registered observers.
      */
@@ -111,12 +106,11 @@ public class DigitalMovableButton extends Element {
     private final RectF rect = new RectF();
 
 
-
-    public DigitalMovableButton(Map<String,Object> attributesMap,
+    public DigitalMovableButton(Map<String, Object> attributesMap,
                                 ElementController controller,
                                 TouchController touchController,
                                 PageDeviceController pageDeviceController, Context context) {
-        super(attributesMap,controller,context);
+        super(attributesMap, controller, context);
         this.touchController = touchController;
         this.pageDeviceController = pageDeviceController;
         this.digitalMovableButton = this;
@@ -124,15 +118,15 @@ public class DigitalMovableButton extends Element {
         this.game = (Game) context;
 
         DisplayMetrics displayMetrics = new DisplayMetrics();
-        ((Game)context).getWindowManager().getDefaultDisplay().getRealMetrics(displayMetrics);
-        super.centralXMax  = displayMetrics.widthPixels;
-        super.centralXMin  = 0;
-        super.centralYMax  = displayMetrics.heightPixels;
-        super.centralYMin  = 0;
-        super.widthMax  = displayMetrics.widthPixels / 2;
-        super.widthMin  = 50;
-        super.heightMax  = displayMetrics.heightPixels / 2;
-        super.heightMin  = 50;
+        ((Game) context).getWindowManager().getDefaultDisplay().getRealMetrics(displayMetrics);
+        super.centralXMax = displayMetrics.widthPixels;
+        super.centralXMin = 0;
+        super.centralYMax = displayMetrics.heightPixels;
+        super.centralYMin = 0;
+        super.widthMax = displayMetrics.widthPixels / 2;
+        super.widthMin = 50;
+        super.heightMax = displayMetrics.heightPixels / 2;
+        super.heightMin = 50;
 
         paintEdit.setStyle(Paint.Style.STROKE);
         paintEdit.setStrokeWidth(4);
@@ -150,7 +144,8 @@ public class DigitalMovableButton extends Element {
         pressedColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_PRESSED_COLOR)).intValue();
         backgroundColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_BACKGROUND_COLOR)).intValue();
         value = (String) attributesMap.get(COLUMN_STRING_ELEMENT_VALUE);
-        enableTouch = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_MODE)).intValue();
+        Object modeObj = attributesMap.get(COLUMN_INT_ELEMENT_MODE);
+        this.enableTouch = (modeObj != null) ? ((Long) modeObj).intValue() : 0;
 
         // Load new text properties with backward compatibility
         if (attributesMap.containsKey(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR)) {
@@ -229,14 +224,14 @@ public class DigitalMovableButton extends Element {
         canvas.drawText(text, centerX, baselineY, paintText);
 
         ElementController.Mode mode = elementController.getMode();
-        if (mode == ElementController.Mode.Edit || mode == ElementController.Mode.Select){
+        if (mode == ElementController.Mode.Edit || mode == ElementController.Mode.Select) {
             // Drawing bounds
             rect.left = rect.top = 2;
             rect.right = getWidth() - 2;
             rect.bottom = getHeight() - 2;
             // Border
             paintEdit.setColor(editColor);
-            canvas.drawRect(rect,paintEdit);
+            canvas.drawRect(rect, paintEdit);
 
         }
     }
@@ -268,7 +263,7 @@ public class DigitalMovableButton extends Element {
     public boolean onElementTouchEvent(MotionEvent event) {
         // get masked (not specific to a pointer) action
         int action = event.getActionMasked();
-        if(enableTouch==1) {
+        if (enableTouch == 1) {
             if (isFirstTouch) {
                 isFirstTouch = false;
                 FirstTouchX = event.getX();
@@ -304,8 +299,7 @@ public class DigitalMovableButton extends Element {
             } catch (NullPointerException e) {
                 System.out.println("NullPointerException");
             }
-        }
-        else {
+        } else {
             FirstTouchX = event.getX();
             FirstTouchY = event.getY();
         }
@@ -322,7 +316,7 @@ public class DigitalMovableButton extends Element {
             case MotionEvent.ACTION_MOVE: {
                 float deltaX = event.getX() - lastX;
                 float deltaY = event.getY() - lastY;
-                if(enableTouch!=1) {
+                if (enableTouch != 1) {
                     touchController.mouseMove(deltaX, deltaY, 0.01 * sense);
                 }
                 lastX = event.getX();
@@ -350,28 +344,28 @@ public class DigitalMovableButton extends Element {
         ContentValues contentValues = new ContentValues();
         contentValues.put(COLUMN_STRING_ELEMENT_TEXT, text);
         contentValues.put(COLUMN_STRING_ELEMENT_VALUE, value);
-        contentValues.put(COLUMN_INT_ELEMENT_MODE,enableTouch);
-        contentValues.put(COLUMN_INT_ELEMENT_SENSE,sense);
+        contentValues.put(COLUMN_INT_ELEMENT_MODE, enableTouch);
+        contentValues.put(COLUMN_INT_ELEMENT_SENSE, sense);
         contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
         contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,getElementCentralX());
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, getElementCentralX());
         contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
-        contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
-        contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
-        contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
-        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
-        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
-        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
+        contentValues.put(COLUMN_INT_ELEMENT_RADIUS, radius);
+        contentValues.put(COLUMN_INT_ELEMENT_THICK, thick);
+        contentValues.put(COLUMN_INT_ELEMENT_LAYER, layer);
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR, normalColor);
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, pressedColor);
+        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, backgroundColor);
         // Save new text properties
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, normalTextColor);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, pressedTextColor);
         contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, textSizePercent);
-        elementController.updateElement(elementId,contentValues);
+        elementController.updateElement(elementId, contentValues);
     }
 
     @Override
     protected void updatePage() {
-        if (digitalMovableButtonPage != null){
+        if (digitalMovableButtonPage != null) {
             centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
             centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
         }
@@ -379,8 +373,8 @@ public class DigitalMovableButton extends Element {
 
     @Override
     protected SuperPageLayout getInfoPage() {
-        if (digitalMovableButtonPage == null){
-            digitalMovableButtonPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_digital_movable_button,null);
+        if (digitalMovableButtonPage == null) {
+            digitalMovableButtonPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_digital_movable_button, null);
             centralXNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_central_x);
             centralYNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_central_y);
         }
@@ -423,10 +417,10 @@ public class DigitalMovableButton extends Element {
                     save();
                 }
             };
-            pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
+            pageDeviceController.open(deviceCallBack, View.VISIBLE, View.VISIBLE, View.VISIBLE);
         });
 
-        enableTouchSwitch.setChecked(enableTouch==1);
+        enableTouchSwitch.setChecked(enableTouch == 1);
         enableTouchSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             enableTouch = isChecked ? 1 : 0;
             save();
@@ -437,11 +431,18 @@ public class DigitalMovableButton extends Element {
         centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
         centralXNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { setElementCentralX(progress); }
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementCentralX(progress);
+            }
+
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) { }
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
             @Override
-            public void onStopTrackingTouch(SeekBar seekBar) { save(); }
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
+            }
         });
 
         centralYNumberSeekbar.setProgressMin(centralYMin);
@@ -449,11 +450,18 @@ public class DigitalMovableButton extends Element {
         centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
         centralYNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { setElementCentralY(progress); }
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementCentralY(progress);
+            }
+
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) { }
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
             @Override
-            public void onStopTrackingTouch(SeekBar seekBar) { save(); }
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
+            }
         });
 
         widthNumberSeekbar.setProgressMax(widthMax);
@@ -461,9 +469,14 @@ public class DigitalMovableButton extends Element {
         widthNumberSeekbar.setValueWithNoCallBack(getElementWidth());
         widthNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { setElementWidth(progress); }
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementWidth(progress);
+            }
+
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) { }
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
@@ -476,9 +489,14 @@ public class DigitalMovableButton extends Element {
         heightNumberSeekbar.setValueWithNoCallBack(getElementHeight());
         heightNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { setElementHeight(progress); }
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementHeight(progress);
+            }
+
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) { }
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
@@ -489,40 +507,65 @@ public class DigitalMovableButton extends Element {
         senseNumberSeekbar.setValueWithNoCallBack(sense);
         senseNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { setElementSense(progress); }
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementSense(progress);
+            }
+
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) { }
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
             @Override
-            public void onStopTrackingTouch(SeekBar seekBar) { save(); }
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
+            }
         });
 
         radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
         radiusNumberSeekbar.setValueWithNoCallBack(radius);
         radiusNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { setElementRadius(progress); }
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementRadius(progress);
+            }
+
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) { }
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
             @Override
-            public void onStopTrackingTouch(SeekBar seekBar) { save(); }
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
+            }
         });
 
         thickNumberSeekbar.setValueWithNoCallBack(thick);
         thickNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { setElementThick(progress); }
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementThick(progress);
+            }
+
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) { }
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
             @Override
-            public void onStopTrackingTouch(SeekBar seekBar) { save(); }
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
+            }
         });
 
         layerNumberSeekbar.setValueWithNoCallBack(layer);
         layerNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { }
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            }
+
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) { }
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 setElementLayer(seekBar.getProgress());
@@ -536,11 +579,18 @@ public class DigitalMovableButton extends Element {
         textSizeNumberSeekbar.setValueWithNoCallBack(textSizePercent);
         textSizeNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { setElementTextSizePercent(progress); }
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementTextSizePercent(progress);
+            }
+
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) { }
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
             @Override
-            public void onStopTrackingTouch(SeekBar seekBar) { save(); }
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
+            }
         });
 
         // Setup for all color pickers
@@ -553,21 +603,21 @@ public class DigitalMovableButton extends Element {
 
         copyButton.setOnClickListener(v -> {
             ContentValues contentValues = new ContentValues();
-            contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON);
+            contentValues.put(COLUMN_INT_ELEMENT_TYPE, ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON);
             contentValues.put(COLUMN_STRING_ELEMENT_TEXT, text);
             contentValues.put(COLUMN_STRING_ELEMENT_VALUE, value);
-            contentValues.put(COLUMN_INT_ELEMENT_MODE,enableTouch);
-            contentValues.put(COLUMN_INT_ELEMENT_SENSE,sense);
+            contentValues.put(COLUMN_INT_ELEMENT_MODE, enableTouch);
+            contentValues.put(COLUMN_INT_ELEMENT_SENSE, sense);
             contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
             contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
-            contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
-            contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,Math.max(Math.min(getElementCentralX() + getElementWidth(),centralXMax),centralXMin));
+            contentValues.put(COLUMN_INT_ELEMENT_LAYER, layer);
+            contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, Math.max(Math.min(getElementCentralX() + getElementWidth(), centralXMax), centralXMin));
             contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
-            contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
-            contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
-            contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
-            contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
-            contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
+            contentValues.put(COLUMN_INT_ELEMENT_RADIUS, radius);
+            contentValues.put(COLUMN_INT_ELEMENT_THICK, thick);
+            contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR, normalColor);
+            contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, pressedColor);
+            contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, backgroundColor);
             // Add new properties for copy
             contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, normalTextColor);
             contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, pressedTextColor);
@@ -593,7 +643,7 @@ public class DigitalMovableButton extends Element {
         valueSendHandler = elementController.getSendEventHandler(value);
     }
 
-    protected void setElementSense(int sense){
+    protected void setElementSense(int sense) {
         this.sense = sense;
     }
 
@@ -638,23 +688,23 @@ public class DigitalMovableButton extends Element {
         invalidate();
     }
 
-    public static ContentValues getInitialInfo(){
+    public static ContentValues getInitialInfo() {
         ContentValues contentValues = new ContentValues();
-        contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON);
-        contentValues.put(COLUMN_STRING_ELEMENT_TEXT,"A");
-        contentValues.put(COLUMN_STRING_ELEMENT_VALUE,"k29");
-        contentValues.put(COLUMN_INT_ELEMENT_MODE,0);
-        contentValues.put(COLUMN_INT_ELEMENT_SENSE,100);
-        contentValues.put(COLUMN_INT_ELEMENT_WIDTH,100);
-        contentValues.put(COLUMN_INT_ELEMENT_HEIGHT,100);
-        contentValues.put(COLUMN_INT_ELEMENT_LAYER,50);
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,100);
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y,100);
-        contentValues.put(COLUMN_INT_ELEMENT_RADIUS,0);
-        contentValues.put(COLUMN_INT_ELEMENT_THICK,5);
-        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,0xF0888888);
-        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,0xF00000FF);
-        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,0x00FFFFFF);
+        contentValues.put(COLUMN_INT_ELEMENT_TYPE, ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON);
+        contentValues.put(COLUMN_STRING_ELEMENT_TEXT, "A");
+        contentValues.put(COLUMN_STRING_ELEMENT_VALUE, "k29");
+        contentValues.put(COLUMN_INT_ELEMENT_MODE, 0);
+        contentValues.put(COLUMN_INT_ELEMENT_SENSE, 100);
+        contentValues.put(COLUMN_INT_ELEMENT_WIDTH, 100);
+        contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, 100);
+        contentValues.put(COLUMN_INT_ELEMENT_LAYER, 50);
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, 100);
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, 100);
+        contentValues.put(COLUMN_INT_ELEMENT_RADIUS, 0);
+        contentValues.put(COLUMN_INT_ELEMENT_THICK, 5);
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR, 0xF0888888);
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, 0xF00000FF);
+        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, 0x00FFFFFF);
         // Add new properties with good defaults
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, 0xFFFFFFFF); // White
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, 0xFFCCCCCC); // Light Grey for pressed state
@@ -662,8 +712,13 @@ public class DigitalMovableButton extends Element {
         return contentValues;
     }
 
-    private interface IntSupplier { int get(); }
-    private interface IntConsumer { void accept(int value); }
+    private interface IntSupplier {
+        int get();
+    }
+
+    private interface IntConsumer {
+        void accept(int value);
+    }
 
     private void updateColorDisplay(ElementEditText colorDisplay, int color) {
         colorDisplay.setTextWithNoTextChangedCallBack(String.format("%08X", color));

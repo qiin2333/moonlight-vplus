@@ -41,11 +41,6 @@ import java.util.Map;
  */
 public class GroupButton extends Element {
 
-    // Re-use constants from DigitalSwitchButton to maintain consistency
-    public static final String COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR = DigitalSwitchButton.COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR;
-    public static final String COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR = DigitalSwitchButton.COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR;
-    public static final String COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT = DigitalSwitchButton.COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT;
-
     private static final String COLUMN_INT_CHILD_VISIBILITY = COLUMN_INT_ELEMENT_SENSE;
 
     private static final int CHILD_VISIBLE = VISIBLE;
@@ -128,13 +123,12 @@ public class GroupButton extends Element {
     private boolean hidden = false;
 
 
-
-    public GroupButton(Map<String,Object> attributesMap,
+    public GroupButton(Map<String, Object> attributesMap,
                        ElementController controller,
                        PageDeviceController pageDeviceController,
                        SuperPagesController superPagesController,
                        Context context) {
-        super(attributesMap,controller,context);
+        super(attributesMap, controller, context);
         this.pageDeviceController = pageDeviceController;
         this.groupButton = this;
         this.elementController = controller;
@@ -143,19 +137,19 @@ public class GroupButton extends Element {
 
 
         DisplayMetrics displayMetrics = new DisplayMetrics();
-        ((Game)context).getWindowManager().getDefaultDisplay().getRealMetrics(displayMetrics);
+        ((Game) context).getWindowManager().getDefaultDisplay().getRealMetrics(displayMetrics);
         initialCentralXMax = displayMetrics.widthPixels;
         initialCentralXMin = 0;
         initialCentralYMax = displayMetrics.heightPixels;
         initialCentralYMin = 0;
-        super.centralXMax  = initialCentralXMax;
-        super.centralXMin  = initialCentralXMin;
-        super.centralYMax  = initialCentralYMax;
-        super.centralYMin  = initialCentralYMin;
-        super.widthMax  = displayMetrics.widthPixels / 2;
-        super.widthMin  = 50;
-        super.heightMax  = displayMetrics.heightPixels / 2;
-        super.heightMin  = 50;
+        super.centralXMax = initialCentralXMax;
+        super.centralXMin = initialCentralXMin;
+        super.centralYMax = initialCentralYMax;
+        super.centralYMin = initialCentralYMin;
+        super.widthMax = displayMetrics.widthPixels / 2;
+        super.widthMin = 50;
+        super.heightMax = displayMetrics.heightPixels / 2;
+        super.heightMin = 50;
 
         paintEdit.setStyle(Paint.Style.STROKE);
         paintEdit.setStrokeWidth(4);
@@ -202,10 +196,10 @@ public class GroupButton extends Element {
         String[] childElementIds = value.split(",");
         List<Element> allElements = elementController.getElements();
         StringBuilder newValue = new StringBuilder("-1");
-        for (String childElementIdString : childElementIds){
+        for (String childElementIdString : childElementIds) {
             Long childElementId = Long.parseLong(childElementIdString);
-            for (Element element : allElements){
-                if (element.elementId.equals(childElementId)){
+            for (Element element : allElements) {
+                if (element.elementId.equals(childElementId)) {
                     childElementList.add(element);
                     newValue.append(",").append(childElementId);
                 }
@@ -213,8 +207,8 @@ public class GroupButton extends Element {
         }
         value = newValue.toString();
         ContentValues contentValues = new ContentValues();
-        contentValues.put(COLUMN_STRING_ELEMENT_VALUE,value);
-        elementController.updateElement(elementId,contentValues);
+        contentValues.put(COLUMN_STRING_ELEMENT_VALUE, value);
+        elementController.updateElement(elementId, contentValues);
         setElementChildVisibility(childVisibility);
 
         listener = new GroupButtonListener() {
@@ -231,7 +225,7 @@ public class GroupButton extends Element {
 
             @Override
             public void onRelease() {
-                if (childVisibility == CHILD_VISIBLE){
+                if (childVisibility == CHILD_VISIBLE) {
                     setElementChildVisibility(CHILD_INVISIBLE);
                 } else {
                     setElementChildVisibility(CHILD_VISIBLE);
@@ -283,16 +277,16 @@ public class GroupButton extends Element {
         // Draw text using the calculated precise coordinates
         canvas.drawText(text, centerX, baselineY, paintText);
 
-        if (elementController.getMode() == ElementController.Mode.Edit){
+        if (elementController.getMode() == ElementController.Mode.Edit) {
             // 绘画范围
             rect.left = rect.top = 2;
             rect.right = getWidth() - 2;
             rect.bottom = getHeight() - 2;
             // 边框
             paintEdit.setColor(editColor);
-            canvas.drawRect(rect,paintEdit);
+            canvas.drawRect(rect, paintEdit);
 
-        } else if (elementController.getMode() == ElementController.Mode.Select && selectMode){
+        } else if (elementController.getMode() == ElementController.Mode.Select && selectMode) {
             // 选中的group button做标记
             // 绘画范围
             rect.left = rect.top = 2;
@@ -300,7 +294,7 @@ public class GroupButton extends Element {
             rect.bottom = getHeight() - 2;
             // 边框
             paintEdit.setColor(0xff00f91a);
-            canvas.drawRect(rect,paintEdit);
+            canvas.drawRect(rect, paintEdit);
         }
     }
 
@@ -319,8 +313,8 @@ public class GroupButton extends Element {
         listener.onLongClick();
         elementController.buttonVibrator();
         movable = true;
-        if (childPositionAttributeFollow){
-            for (Element element : childElementList){
+        if (childPositionAttributeFollow) {
+            for (Element element : childElementList) {
                 element.setAlpha(0.5f);
             }
         }
@@ -344,7 +338,7 @@ public class GroupButton extends Element {
             return true;
         }
 
-        switch (elementController.getMode()){
+        switch (elementController.getMode()) {
             case Normal:
                 switch (event.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN: {
@@ -367,10 +361,10 @@ public class GroupButton extends Element {
                             float deltaX = x - lastX;
                             float deltaY = y - lastY;
                             //小位移算作点击
-                            if (Math.abs(deltaX) + Math.abs(deltaY) < 0.2){
+                            if (Math.abs(deltaX) + Math.abs(deltaY) < 0.2) {
                                 return true;
                             }
-                            if (layoutComplete){
+                            if (layoutComplete) {
                                 layoutComplete = false;
                                 setElementCentralX((int) getX() + getWidth() / 2 + (int) deltaX);
                                 setElementCentralY((int) getY() + getHeight() / 2 + (int) deltaY);
@@ -383,9 +377,9 @@ public class GroupButton extends Element {
                     case MotionEvent.ACTION_CANCEL:
                     case MotionEvent.ACTION_UP: {
                         setPressed(false);
-                        if (movable){
-                            if (childPositionAttributeFollow){
-                                for (Element element : childElementList){
+                        if (movable) {
+                            if (childPositionAttributeFollow) {
+                                for (Element element : childElementList) {
                                     element.setAlpha(1);
                                     element.save();
                                 }
@@ -422,10 +416,10 @@ public class GroupButton extends Element {
                         float deltaX = x - lastX;
                         float deltaY = y - lastY;
                         //小位移算作点击
-                        if (Math.abs(deltaX) + Math.abs(deltaY) < 0.2){
+                        if (Math.abs(deltaX) + Math.abs(deltaY) < 0.2) {
                             return true;
                         }
-                        if (layoutComplete){
+                        if (layoutComplete) {
                             layoutComplete = false;
                             setElementCentralX((int) getX() + getWidth() / 2 + (int) deltaX);
                             setElementCentralY((int) getY() + getHeight() / 2 + (int) deltaY);
@@ -436,9 +430,9 @@ public class GroupButton extends Element {
                     }
                     case MotionEvent.ACTION_CANCEL:
                     case MotionEvent.ACTION_UP: {
-                        if (movable){
-                            if (childPositionAttributeFollow){
-                                for (Element element : childElementList){
+                        if (movable) {
+                            if (childPositionAttributeFollow) {
+                                for (Element element : childElementList) {
                                     element.save();
                                 }
                             }
@@ -476,26 +470,26 @@ public class GroupButton extends Element {
         contentValues.put(COLUMN_INT_CHILD_VISIBILITY, childVisibility);
         contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
         contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,getElementCentralX());
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, getElementCentralX());
         contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
-        contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
-        contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
-        contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
-        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
-        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
-        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
+        contentValues.put(COLUMN_INT_ELEMENT_RADIUS, radius);
+        contentValues.put(COLUMN_INT_ELEMENT_THICK, thick);
+        contentValues.put(COLUMN_INT_ELEMENT_LAYER, layer);
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR, normalColor);
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, pressedColor);
+        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, backgroundColor);
         contentValues.put(COLUMN_INT_ELEMENT_FLAG1, hidden ? 1 : 0);
         // Save new text properties
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, normalTextColor);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, pressedTextColor);
         contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, textSizePercent);
-        elementController.updateElement(elementId,contentValues);
+        elementController.updateElement(elementId, contentValues);
 
     }
 
     @Override
     protected void updatePage() {
-        if (groupButtonPage != null){
+        if (groupButtonPage != null) {
             centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
             centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
         }
@@ -504,8 +498,8 @@ public class GroupButton extends Element {
 
     @Override
     protected SuperPageLayout getInfoPage() {
-        if (groupButtonPage == null){
-            groupButtonPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_group_button,null);
+        if (groupButtonPage == null) {
+            groupButtonPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_group_button, null);
             centralXNumberSeekbar = groupButtonPage.findViewById(R.id.page_group_button_central_x);
             centralYNumberSeekbar = groupButtonPage.findViewById(R.id.page_group_button_central_y);
 
@@ -545,7 +539,7 @@ public class GroupButton extends Element {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 childPositionAttributeFollow = isChecked;
-                if (!childPositionAttributeFollow){
+                if (!childPositionAttributeFollow) {
                     centralXMax = initialCentralXMax;
                     centralXMin = initialCentralXMin;
                     centralYMax = initialCentralYMax;
@@ -591,8 +585,8 @@ public class GroupButton extends Element {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                if (childPositionAttributeFollow){
-                    for (Element element : childElementList){
+                if (childPositionAttributeFollow) {
+                    for (Element element : childElementList) {
                         element.save();
                     }
                 }
@@ -605,7 +599,7 @@ public class GroupButton extends Element {
         centralYNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (layoutComplete){
+                if (layoutComplete) {
                     layoutComplete = false;
                     setElementCentralY(progress);
                 }
@@ -618,8 +612,8 @@ public class GroupButton extends Element {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                if (childPositionAttributeFollow){
-                    for (Element element : childElementList){
+                if (childPositionAttributeFollow) {
+                    for (Element element : childElementList) {
                         element.save();
                     }
                 }
@@ -647,8 +641,8 @@ public class GroupButton extends Element {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
-                if (childOtherAttributeFollow){
-                    for (Element element : childElementList){
+                if (childOtherAttributeFollow) {
+                    for (Element element : childElementList) {
                         element.save();
                     }
                 }
@@ -675,15 +669,14 @@ public class GroupButton extends Element {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
-                if (childOtherAttributeFollow){
-                    for (Element element : childElementList){
+                if (childOtherAttributeFollow) {
+                    for (Element element : childElementList) {
                         element.save();
                     }
                 }
                 save();
             }
         });
-
 
 
         radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
@@ -700,8 +693,8 @@ public class GroupButton extends Element {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                if (childOtherAttributeFollow){
-                    for (Element element : childElementList){
+                if (childOtherAttributeFollow) {
+                    for (Element element : childElementList) {
                         element.save();
                     }
                 }
@@ -723,8 +716,8 @@ public class GroupButton extends Element {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                if (childOtherAttributeFollow){
-                    for (Element element : childElementList){
+                if (childOtherAttributeFollow) {
+                    for (Element element : childElementList) {
                         element.save();
                     }
                 }
@@ -746,8 +739,8 @@ public class GroupButton extends Element {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 setElementLayer(seekBar.getProgress());
-                if (childOtherAttributeFollow){
-                    for (Element element : childElementList){
+                if (childOtherAttributeFollow) {
+                    for (Element element : childElementList) {
                         element.save();
                     }
                 }
@@ -761,13 +754,18 @@ public class GroupButton extends Element {
         textSizeNumberSeekbar.setValueWithNoCallBack(textSizePercent);
         textSizeNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { setElementTextSizePercent(progress); }
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementTextSizePercent(progress);
+            }
+
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) { }
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                if (childOtherAttributeFollow){
-                    for (Element element : childElementList){
+                if (childOtherAttributeFollow) {
+                    for (Element element : childElementList) {
                         element.save();
                     }
                 }
@@ -798,7 +796,7 @@ public class GroupButton extends Element {
                 ElementSelectedCallBack elementSelectedCallBack = new ElementSelectedCallBack() {
                     @Override
                     public void elementSelected(Element element) {
-                        if (childElementList.contains(element)){
+                        if (childElementList.contains(element)) {
                             deleteChildElement(element);
                             element.setEditColor(EDIT_COLOR_SELECT);
                             element.invalidate();
@@ -809,11 +807,11 @@ public class GroupButton extends Element {
                         }
                     }
                 };
-                for (Element element : childElementList){
+                for (Element element : childElementList) {
                     element.setEditColor(EDIT_COLOR_SELECTED);
                 }
                 // 将子按键的编辑颜色设置为选中颜色
-                for (Element element : elementController.getElements()){
+                for (Element element : elementController.getElements()) {
                     element.setElementSelectedCallBack(elementSelectedCallBack);
                 }
                 // 打开空白页
@@ -838,31 +836,30 @@ public class GroupButton extends Element {
         deleteButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (deleteEditText.getText().toString().equals("DELETE")){
+                if (deleteEditText.getText().toString().equals("DELETE")) {
                     List<Element> allElement = elementController.getElements();
-                    for (Element element : childElementList){
-                        if (!allElement.contains(element)){
+                    for (Element element : childElementList) {
+                        if (!allElement.contains(element)) {
                             continue;
                         }
                         elementController.deleteElement(element);
                     }
                     elementController.toggleInfoPage(groupButtonPage);
                     elementController.deleteElement(groupButton);
-                    Toast.makeText(context,"删除成功",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(context, "删除成功", Toast.LENGTH_SHORT).show();
                 }
 
             }
         });
 
 
-
         return groupButtonPage;
     }
 
-    private void addChildElement(Element newElement){
+    private void addChildElement(Element newElement) {
         childElementList.add(newElement);
         value = "-1";
-        for (Element element : childElementList){
+        for (Element element : childElementList) {
             value = value + "," + element.elementId.toString();
         }
     }
@@ -892,10 +889,10 @@ public class GroupButton extends Element {
         }
     }
 
-    private void deleteChildElement(Element deleteElement){
-        if (childElementList.remove(deleteElement)){
+    private void deleteChildElement(Element deleteElement) {
+        if (childElementList.remove(deleteElement)) {
             value = "-1";
-            for (Element element : childElementList){
+            for (Element element : childElementList) {
                 value = value + "," + element.elementId.toString();
             }
         }
@@ -903,7 +900,8 @@ public class GroupButton extends Element {
     }
 
     /**
-     *按钮显示文本的公共getter。
+     * 按钮显示文本的公共getter。
+     *
      * @return GroupButton的当前文本。
      */
     public String getText() {
@@ -918,19 +916,19 @@ public class GroupButton extends Element {
 
     @Override
     protected void setElementCentralX(int centralX) {
-        if (childPositionAttributeFollow){
+        if (childPositionAttributeFollow) {
             int previousX = getElementCentralX();
             super.setElementCentralX(centralX);
             int deltaX = getElementCentralX() - previousX;
-            for (Element element : childElementList){
+            for (Element element : childElementList) {
                 element.setElementCentralX(element.getElementCentralX() + deltaX);
             }
-            if (resizeXBorder){
+            if (resizeXBorder) {
                 int leftMargin = centralXMax;
                 int rightMargin = centralXMax;
                 List<Element> allElement = elementController.getElements();
-                for (Element element : childElementList){
-                    if (!allElement.contains(element)){
+                for (Element element : childElementList) {
+                    if (!allElement.contains(element)) {
                         continue;
                     }
                     int elementCentralX = element.getElementCentralX();
@@ -943,7 +941,7 @@ public class GroupButton extends Element {
 
                 centralXMin = elementCentralX - leftMargin;
                 centralXMax = elementCentralX + rightMargin;
-                if (centralXNumberSeekbar != null){
+                if (centralXNumberSeekbar != null) {
                     centralXNumberSeekbar.setProgressMin(centralXMin);
                     centralXNumberSeekbar.setProgressMax(centralXMax);
                 }
@@ -957,19 +955,19 @@ public class GroupButton extends Element {
 
     @Override
     protected void setElementCentralY(int centralY) {
-        if (childPositionAttributeFollow){
+        if (childPositionAttributeFollow) {
             int previousY = getElementCentralY();
             super.setElementCentralY(centralY);
             int deltaY = getElementCentralY() - previousY;
-            for (Element element : childElementList){
+            for (Element element : childElementList) {
                 element.setElementCentralY(element.getElementCentralY() + deltaY);
             }
-            if (resizeYBorder){
+            if (resizeYBorder) {
                 int bottomMargin = centralYMax;
                 int topMargin = centralYMax;
                 List<Element> allElement = elementController.getElements();
-                for (Element element : childElementList){
-                    if (!allElement.contains(element)){
+                for (Element element : childElementList) {
+                    if (!allElement.contains(element)) {
                         continue;
                     }
                     int elementCentralY = element.getElementCentralY();
@@ -982,7 +980,7 @@ public class GroupButton extends Element {
 
                 centralYMin = elementCentralY - topMargin;
                 centralYMax = elementCentralY + bottomMargin;
-                if (centralYNumberSeekbar != null){
+                if (centralYNumberSeekbar != null) {
                     centralYNumberSeekbar.setProgressMin(centralYMin);
                     centralYNumberSeekbar.setProgressMax(centralYMax);
                 }
@@ -997,9 +995,9 @@ public class GroupButton extends Element {
     @Override
     protected void setElementWidth(int width) {
         super.setElementWidth(width);
-        if (childOtherAttributeFollow){
-            for (Element element : childElementList){
-                switch (element.elementType){
+        if (childOtherAttributeFollow) {
+            for (Element element : childElementList) {
+                switch (element.elementType) {
                     case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
                     case ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
                     case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
@@ -1017,9 +1015,9 @@ public class GroupButton extends Element {
     @Override
     protected void setElementHeight(int height) {
         super.setElementHeight(height);
-        if (childOtherAttributeFollow){
-            for (Element element : childElementList){
-                switch (element.elementType){
+        if (childOtherAttributeFollow) {
+            for (Element element : childElementList) {
+                switch (element.elementType) {
                     case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
                     case ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
                     case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
@@ -1033,9 +1031,9 @@ public class GroupButton extends Element {
         }
     }
 
-    protected void setElementChildVisibility(int childVisibility){
+    protected void setElementChildVisibility(int childVisibility) {
         this.childVisibility = childVisibility;
-        for (Element element : childElementList){
+        for (Element element : childElementList) {
             element.setVisibility(childVisibility);
         }
     }
@@ -1043,20 +1041,20 @@ public class GroupButton extends Element {
     protected void setElementRadius(int radius) {
         this.radius = radius;
         invalidate();
-        if (childOtherAttributeFollow){
-            for (Element element : childElementList){
-                switch (element.elementType){
+        if (childOtherAttributeFollow) {
+            for (Element element : childElementList) {
+                switch (element.elementType) {
                     case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
-                        ((DigitalCommonButton)element).setElementRadius(radius);
+                        ((DigitalCommonButton) element).setElementRadius(radius);
                         break;
                     case ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
-                        ((DigitalSwitchButton)element).setElementRadius(radius);
+                        ((DigitalSwitchButton) element).setElementRadius(radius);
                         break;
                     case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
-                        ((DigitalCombineButton)element).setElementRadius(radius);
+                        ((DigitalCombineButton) element).setElementRadius(radius);
                         break;
                     case ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
-                        ((DigitalMovableButton)element).setElementRadius(radius);
+                        ((DigitalMovableButton) element).setElementRadius(radius);
                         break;
                     default:
                         break;
@@ -1068,35 +1066,35 @@ public class GroupButton extends Element {
     protected void setElementThick(int thick) {
         this.thick = thick;
         invalidate();
-        if (childOtherAttributeFollow){
-            for (Element element : childElementList){
-                switch (element.elementType){
+        if (childOtherAttributeFollow) {
+            for (Element element : childElementList) {
+                switch (element.elementType) {
                     case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
-                        ((DigitalCommonButton)element).setElementThick(thick);
+                        ((DigitalCommonButton) element).setElementThick(thick);
                         break;
                     case ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
-                        ((DigitalSwitchButton)element).setElementThick(thick);
+                        ((DigitalSwitchButton) element).setElementThick(thick);
                         break;
                     case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
-                        ((DigitalCombineButton)element).setElementThick(thick);
+                        ((DigitalCombineButton) element).setElementThick(thick);
                         break;
                     case ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
-                        ((DigitalMovableButton)element).setElementThick(thick);
+                        ((DigitalMovableButton) element).setElementThick(thick);
                         break;
                     case ELEMENT_TYPE_DIGITAL_PAD:
-                        ((DigitalPad)element).setElementThick(thick);
+                        ((DigitalPad) element).setElementThick(thick);
                         break;
                     case ELEMENT_TYPE_ANALOG_STICK:
-                        ((AnalogStick)element).setElementThick(thick);
+                        ((AnalogStick) element).setElementThick(thick);
                         break;
                     case ELEMENT_TYPE_DIGITAL_STICK:
-                        ((DigitalStick)element).setElementThick(thick);
+                        ((DigitalStick) element).setElementThick(thick);
                         break;
                     case ELEMENT_TYPE_INVISIBLE_ANALOG_STICK:
-                        ((InvisibleAnalogStick)element).setElementThick(thick);
+                        ((InvisibleAnalogStick) element).setElementThick(thick);
                         break;
                     case ELEMENT_TYPE_INVISIBLE_DIGITAL_STICK:
-                        ((InvisibleDigitalStick)element).setElementThick(thick);
+                        ((InvisibleDigitalStick) element).setElementThick(thick);
                         break;
                     default:
                         break;
@@ -1107,8 +1105,8 @@ public class GroupButton extends Element {
 
     @Override
     protected void setElementLayer(int layer) {
-        if (childOtherAttributeFollow){
-            for (Element element : childElementList){
+        if (childOtherAttributeFollow) {
+            for (Element element : childElementList) {
                 element.setElementLayer(layer);
             }
         }
@@ -1118,35 +1116,35 @@ public class GroupButton extends Element {
     protected void setElementNormalColor(int normalColor) {
         this.normalColor = normalColor;
         invalidate();
-        if (childOtherAttributeFollow){
-            for (Element element : childElementList){
-                switch (element.elementType){
+        if (childOtherAttributeFollow) {
+            for (Element element : childElementList) {
+                switch (element.elementType) {
                     case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
-                        ((DigitalCommonButton)element).setElementNormalColor(normalColor);
+                        ((DigitalCommonButton) element).setElementNormalColor(normalColor);
                         break;
                     case ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
-                        ((DigitalSwitchButton)element).setElementNormalColor(normalColor);
+                        ((DigitalSwitchButton) element).setElementNormalColor(normalColor);
                         break;
                     case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
-                        ((DigitalCombineButton)element).setElementNormalColor(normalColor);
+                        ((DigitalCombineButton) element).setElementNormalColor(normalColor);
                         break;
                     case ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
-                        ((DigitalMovableButton)element).setElementNormalColor(normalColor);
+                        ((DigitalMovableButton) element).setElementNormalColor(normalColor);
                         break;
                     case ELEMENT_TYPE_DIGITAL_PAD:
-                        ((DigitalPad)element).setElementNormalColor(normalColor);
+                        ((DigitalPad) element).setElementNormalColor(normalColor);
                         break;
                     case ELEMENT_TYPE_ANALOG_STICK:
-                        ((AnalogStick)element).setElementNormalColor(normalColor);
+                        ((AnalogStick) element).setElementNormalColor(normalColor);
                         break;
                     case ELEMENT_TYPE_DIGITAL_STICK:
-                        ((DigitalStick)element).setElementNormalColor(normalColor);
+                        ((DigitalStick) element).setElementNormalColor(normalColor);
                         break;
                     case ELEMENT_TYPE_INVISIBLE_ANALOG_STICK:
-                        ((InvisibleAnalogStick)element).setElementNormalColor(normalColor);
+                        ((InvisibleAnalogStick) element).setElementNormalColor(normalColor);
                         break;
                     case ELEMENT_TYPE_INVISIBLE_DIGITAL_STICK:
-                        ((InvisibleDigitalStick)element).setElementNormalColor(normalColor);
+                        ((InvisibleDigitalStick) element).setElementNormalColor(normalColor);
                         break;
                     default:
                         break;
@@ -1158,35 +1156,35 @@ public class GroupButton extends Element {
     protected void setElementPressedColor(int pressedColor) {
         this.pressedColor = pressedColor;
         invalidate();
-        if (childOtherAttributeFollow){
-            for (Element element : childElementList){
-                switch (element.elementType){
+        if (childOtherAttributeFollow) {
+            for (Element element : childElementList) {
+                switch (element.elementType) {
                     case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
-                        ((DigitalCommonButton)element).setElementPressedColor(pressedColor);
+                        ((DigitalCommonButton) element).setElementPressedColor(pressedColor);
                         break;
                     case ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
-                        ((DigitalSwitchButton)element).setElementPressedColor(pressedColor);
+                        ((DigitalSwitchButton) element).setElementPressedColor(pressedColor);
                         break;
                     case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
-                        ((DigitalCombineButton)element).setElementPressedColor(pressedColor);
+                        ((DigitalCombineButton) element).setElementPressedColor(pressedColor);
                         break;
                     case ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
-                        ((DigitalMovableButton)element).setElementPressedColor(pressedColor);
+                        ((DigitalMovableButton) element).setElementPressedColor(pressedColor);
                         break;
                     case ELEMENT_TYPE_DIGITAL_PAD:
-                        ((DigitalPad)element).setElementPressedColor(pressedColor);
+                        ((DigitalPad) element).setElementPressedColor(pressedColor);
                         break;
                     case ELEMENT_TYPE_ANALOG_STICK:
-                        ((AnalogStick)element).setElementPressedColor(pressedColor);
+                        ((AnalogStick) element).setElementPressedColor(pressedColor);
                         break;
                     case ELEMENT_TYPE_DIGITAL_STICK:
-                        ((DigitalStick)element).setElementPressedColor(pressedColor);
+                        ((DigitalStick) element).setElementPressedColor(pressedColor);
                         break;
                     case ELEMENT_TYPE_INVISIBLE_ANALOG_STICK:
-                        ((InvisibleAnalogStick)element).setElementPressedColor(pressedColor);
+                        ((InvisibleAnalogStick) element).setElementPressedColor(pressedColor);
                         break;
                     case ELEMENT_TYPE_INVISIBLE_DIGITAL_STICK:
-                        ((InvisibleDigitalStick)element).setElementPressedColor(pressedColor);
+                        ((InvisibleDigitalStick) element).setElementPressedColor(pressedColor);
                         break;
                     default:
                         break;
@@ -1198,35 +1196,35 @@ public class GroupButton extends Element {
     protected void setElementBackgroundColor(int backgroundColor) {
         this.backgroundColor = backgroundColor;
         invalidate();
-        if (childOtherAttributeFollow){
-            for (Element element : childElementList){
-                switch (element.elementType){
+        if (childOtherAttributeFollow) {
+            for (Element element : childElementList) {
+                switch (element.elementType) {
                     case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
-                        ((DigitalCommonButton)element).setElementBackgroundColor(backgroundColor);
+                        ((DigitalCommonButton) element).setElementBackgroundColor(backgroundColor);
                         break;
                     case ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
-                        ((DigitalSwitchButton)element).setElementBackgroundColor(backgroundColor);
+                        ((DigitalSwitchButton) element).setElementBackgroundColor(backgroundColor);
                         break;
                     case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
-                        ((DigitalCombineButton)element).setElementBackgroundColor(backgroundColor);
+                        ((DigitalCombineButton) element).setElementBackgroundColor(backgroundColor);
                         break;
                     case ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
-                        ((DigitalMovableButton)element).setElementBackgroundColor(backgroundColor);
+                        ((DigitalMovableButton) element).setElementBackgroundColor(backgroundColor);
                         break;
                     case ELEMENT_TYPE_DIGITAL_PAD:
-                        ((DigitalPad)element).setElementBackgroundColor(backgroundColor);
+                        ((DigitalPad) element).setElementBackgroundColor(backgroundColor);
                         break;
                     case ELEMENT_TYPE_ANALOG_STICK:
-                        ((AnalogStick)element).setElementBackgroundColor(backgroundColor);
+                        ((AnalogStick) element).setElementBackgroundColor(backgroundColor);
                         break;
                     case ELEMENT_TYPE_DIGITAL_STICK:
-                        ((DigitalStick)element).setElementBackgroundColor(backgroundColor);
+                        ((DigitalStick) element).setElementBackgroundColor(backgroundColor);
                         break;
                     case ELEMENT_TYPE_INVISIBLE_ANALOG_STICK:
-                        ((InvisibleAnalogStick)element).setElementBackgroundColor(backgroundColor);
+                        ((InvisibleAnalogStick) element).setElementBackgroundColor(backgroundColor);
                         break;
                     case ELEMENT_TYPE_INVISIBLE_DIGITAL_STICK:
-                        ((InvisibleDigitalStick)element).setElementBackgroundColor(backgroundColor);
+                        ((InvisibleDigitalStick) element).setElementBackgroundColor(backgroundColor);
                         break;
                     default:
                         break;
@@ -1238,20 +1236,20 @@ public class GroupButton extends Element {
     protected void setElementNormalTextColor(int normalTextColor) {
         this.normalTextColor = normalTextColor;
         invalidate();
-        if (childOtherAttributeFollow){
-            for (Element element : childElementList){
-                switch (element.elementType){
+        if (childOtherAttributeFollow) {
+            for (Element element : childElementList) {
+                switch (element.elementType) {
                     case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
-                        ((DigitalCommonButton)element).setElementNormalTextColor(normalTextColor);
+                        ((DigitalCommonButton) element).setElementNormalTextColor(normalTextColor);
                         break;
                     case ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
-                        ((DigitalSwitchButton)element).setElementNormalTextColor(normalTextColor);
+                        ((DigitalSwitchButton) element).setElementNormalTextColor(normalTextColor);
                         break;
                     case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
-                        ((DigitalCombineButton)element).setElementNormalTextColor(normalTextColor);
+                        ((DigitalCombineButton) element).setElementNormalTextColor(normalTextColor);
                         break;
                     case ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
-                        ((DigitalMovableButton)element).setElementNormalTextColor(normalTextColor);
+                        ((DigitalMovableButton) element).setElementNormalTextColor(normalTextColor);
                         break;
                 }
             }
@@ -1261,20 +1259,20 @@ public class GroupButton extends Element {
     protected void setElementPressedTextColor(int pressedTextColor) {
         this.pressedTextColor = pressedTextColor;
         invalidate();
-        if (childOtherAttributeFollow){
-            for (Element element : childElementList){
-                switch (element.elementType){
+        if (childOtherAttributeFollow) {
+            for (Element element : childElementList) {
+                switch (element.elementType) {
                     case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
-                        ((DigitalCommonButton)element).setElementPressedTextColor(pressedTextColor);
+                        ((DigitalCommonButton) element).setElementPressedTextColor(pressedTextColor);
                         break;
                     case ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
-                        ((DigitalSwitchButton)element).setElementPressedTextColor(pressedTextColor);
+                        ((DigitalSwitchButton) element).setElementPressedTextColor(pressedTextColor);
                         break;
                     case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
-                        ((DigitalCombineButton)element).setElementPressedTextColor(pressedTextColor);
+                        ((DigitalCombineButton) element).setElementPressedTextColor(pressedTextColor);
                         break;
                     case ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
-                        ((DigitalMovableButton)element).setElementPressedTextColor(pressedTextColor);
+                        ((DigitalMovableButton) element).setElementPressedTextColor(pressedTextColor);
                         break;
                 }
             }
@@ -1284,42 +1282,42 @@ public class GroupButton extends Element {
     protected void setElementTextSizePercent(int textSizePercent) {
         this.textSizePercent = textSizePercent;
         invalidate();
-        if (childOtherAttributeFollow){
-            for (Element element : childElementList){
-                switch (element.elementType){
+        if (childOtherAttributeFollow) {
+            for (Element element : childElementList) {
+                switch (element.elementType) {
                     case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
-                        ((DigitalCommonButton)element).setElementTextSizePercent(textSizePercent);
+                        ((DigitalCommonButton) element).setElementTextSizePercent(textSizePercent);
                         break;
                     case ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
-                        ((DigitalSwitchButton)element).setElementTextSizePercent(textSizePercent);
+                        ((DigitalSwitchButton) element).setElementTextSizePercent(textSizePercent);
                         break;
                     case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
-                        ((DigitalCombineButton)element).setElementTextSizePercent(textSizePercent);
+                        ((DigitalCombineButton) element).setElementTextSizePercent(textSizePercent);
                         break;
                     case ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
-                        ((DigitalMovableButton)element).setElementTextSizePercent(textSizePercent);
+                        ((DigitalMovableButton) element).setElementTextSizePercent(textSizePercent);
                         break;
                 }
             }
         }
     }
 
-    public static ContentValues getInitialInfo(){
+    public static ContentValues getInitialInfo() {
         ContentValues contentValues = new ContentValues();
-        contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_GROUP_BUTTON);
-        contentValues.put(COLUMN_STRING_ELEMENT_TEXT,"GROUP");
-        contentValues.put(COLUMN_STRING_ELEMENT_VALUE,"-1");
+        contentValues.put(COLUMN_INT_ELEMENT_TYPE, ELEMENT_TYPE_GROUP_BUTTON);
+        contentValues.put(COLUMN_STRING_ELEMENT_TEXT, "GROUP");
+        contentValues.put(COLUMN_STRING_ELEMENT_VALUE, "-1");
         contentValues.put(COLUMN_INT_CHILD_VISIBILITY, VISIBLE);
-        contentValues.put(COLUMN_INT_ELEMENT_WIDTH,100);
-        contentValues.put(COLUMN_INT_ELEMENT_HEIGHT,100);
-        contentValues.put(COLUMN_INT_ELEMENT_LAYER,50);
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,100);
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y,100);
-        contentValues.put(COLUMN_INT_ELEMENT_RADIUS,0);
-        contentValues.put(COLUMN_INT_ELEMENT_THICK,5);
-        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,0xF0888888);
-        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,0xF00000FF);
-        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,0x00FFFFFF);
+        contentValues.put(COLUMN_INT_ELEMENT_WIDTH, 100);
+        contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, 100);
+        contentValues.put(COLUMN_INT_ELEMENT_LAYER, 50);
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, 100);
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, 100);
+        contentValues.put(COLUMN_INT_ELEMENT_RADIUS, 0);
+        contentValues.put(COLUMN_INT_ELEMENT_THICK, 5);
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR, 0xF0888888);
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, 0xF00000FF);
+        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, 0x00FFFFFF);
         // Add new properties with good defaults
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, 0xFFFFFFFF); // White
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, 0xFFCCCCCC); // Light Grey
@@ -1336,6 +1334,7 @@ public class GroupButton extends Element {
     private interface IntConsumer {
         void accept(int value);
     }
+
     /**
      * 更新颜色显示按钮的外观（文本、背景色、文本颜色）。
      */
@@ -1354,9 +1353,9 @@ public class GroupButton extends Element {
     /**
      * 配置一个 ElementEditText 控件，使其作为颜色选择器按钮使用。
      *
-     * @param colorDisplay 用于作为按钮的 ElementEditText 视图。
+     * @param colorDisplay        用于作为按钮的 ElementEditText 视图。
      * @param initialColorFetcher 一个用于获取当前颜色值的 Lambda 表达式。
-     * @param colorUpdater      一个用于设置新颜色值的 Lambda 表达式。
+     * @param colorUpdater        一个用于设置新颜色值的 Lambda 表达式。
      */
     private void setupColorPickerButton(ElementEditText colorDisplay, IntSupplier initialColorFetcher, IntConsumer colorUpdater) {
         // 禁输入，让 EditText 表现得像一个按钮

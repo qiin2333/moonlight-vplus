@@ -211,6 +211,67 @@
                     android:background="@drawable/enabled_square" />
             </LinearLayout>
 
+            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                android:id="@+id/page_wheel_pad_text_size"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginVertical="5dp"
+                app:text="分区文字大小 (%)"/>
+
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginVertical="5dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:text="分区文字颜色" />
+                <com.limelight.binding.input.advance_setting.superpage.ElementEditText
+                    android:id="@+id/page_wheel_pad_normal_text_color"
+                    android:layout_width="100dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:textSize="15dp"
+                    android:background="@drawable/enabled_square" />
+            </LinearLayout>
+
+            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                android:id="@+id/page_wheel_pad_trigger_text_size"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginVertical="5dp"
+                app:text="触发器文字大小 (%)"/>
+
+            <!-- 中心文字大小 -->
+            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                android:id="@+id/page_wheel_pad_center_text_size"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginVertical="5dp"
+                app:text="中心预览文字大小 (%)"/>
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginVertical="5dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:text="中心文字颜色" />
+                <com.limelight.binding.input.advance_setting.superpage.ElementEditText
+                    android:id="@+id/page_wheel_pad_center_text_color"
+                    android:layout_width="100dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:textSize="15dp"
+                    android:background="@drawable/enabled_square" />
+            </LinearLayout>
+
             <!-- Action Buttons -->
             <LinearLayout
                 android:orientation="horizontal"

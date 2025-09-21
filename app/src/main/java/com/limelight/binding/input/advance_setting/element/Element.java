@@ -42,6 +42,10 @@ public abstract class Element extends View {
     public static final String COLUMN_INT_ELEMENT_BACKGROUND_COLOR = "element_background_color";
     public static final String COLUMN_INT_ELEMENT_FLAG1 = "element_flag1";
 
+    public static final String COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR = "normalTextColor";
+    public static final String COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR = "pressedTextColor";
+    public static final String COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT = "textSizePercent";
+
     public static final int ELEMENT_TYPE_DIGITAL_COMMON_BUTTON = 0;
     public static final int ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON = 1;
     public static final int ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON = 2;
@@ -60,7 +64,7 @@ public abstract class Element extends View {
     public final static int ELEMENT_TYPE_WHEEL_PAD = 54;
 
 
-    public interface ElementSelectedCallBack{
+    public interface ElementSelectedCallBack {
         void elementSelected(Element element);
     }
 
@@ -101,49 +105,49 @@ public abstract class Element extends View {
     private ElementSelectedCallBack elementSelectedCallBack;
 
 
-    public Element(Map<String,Object> attributesMap, ElementController elementController, Context context) {
+    public Element(Map<String, Object> attributesMap, ElementController elementController, Context context) {
         super(context);
         this.context = context;
         this.elementId = (Long) attributesMap.get(Element.COLUMN_LONG_ELEMENT_ID);
-        this.configId = (Long)attributesMap.get(Element.COLUMN_LONG_CONFIG_ID);
+        this.configId = (Long) attributesMap.get(Element.COLUMN_LONG_CONFIG_ID);
         this.elementType = ((Long) attributesMap.get(Element.COLUMN_INT_ELEMENT_TYPE)).intValue();
         this.layer = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_LAYER)).intValue();
         this.elementController = elementController;
 
     }
 
-    protected int getElementCentralX(){
+    protected int getElementCentralX() {
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
         return layoutParams.leftMargin + layoutParams.width / 2;
     }
 
-    protected int getElementCentralY(){
+    protected int getElementCentralY() {
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
         return layoutParams.topMargin + layoutParams.height / 2;
     }
 
-    protected int getElementWidth(){
+    protected int getElementWidth() {
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
         return layoutParams.width;
     }
 
-    protected int getElementHeight(){
+    protected int getElementHeight() {
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
         return layoutParams.height;
     }
 
-    protected void setElementCentralX(int centralX){
+    protected void setElementCentralX(int centralX) {
         centralX = elementController.editGridHandle(centralX);
-        if (centralX > centralXMax){
+        if (centralX > centralXMax) {
             centralX = elementController.editGridHandle(centralXMax);
         }
         innerSetElementCentralX(centralX);
     }
 
-    protected void setElementCentralY(int centralY){
+    protected void setElementCentralY(int centralY) {
 
         centralY = elementController.editGridHandle(centralY);
-        if (centralY > centralYMax){
+        if (centralY > centralYMax) {
             centralY = elementController.editGridHandle(centralYMax);
         }
 
@@ -151,37 +155,37 @@ public abstract class Element extends View {
     }
 
     //inner 方法防止setWidth、Height方法会调用子类重写的setElementCentralX、Y
-    private void innerSetElementCentralX(int centralX){
+    private void innerSetElementCentralX(int centralX) {
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
-        if (centralX > centralXMax){
-            layoutParams.leftMargin = centralXMax - layoutParams.width/2;
-        } else if (centralX < centralXMin){
-            layoutParams.leftMargin = centralXMin - layoutParams.width/2;
+        if (centralX > centralXMax) {
+            layoutParams.leftMargin = centralXMax - layoutParams.width / 2;
+        } else if (centralX < centralXMin) {
+            layoutParams.leftMargin = centralXMin - layoutParams.width / 2;
         } else {
-            layoutParams.leftMargin = centralX - layoutParams.width/2;
+            layoutParams.leftMargin = centralX - layoutParams.width / 2;
         }
         //保存中心点坐标
         requestLayout();
     }
 
-    private void innerSetElementCentralY(int centralY){
+    private void innerSetElementCentralY(int centralY) {
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
-        if (centralY > centralYMax){
-            layoutParams.topMargin = centralYMax - layoutParams.height/2;
-        } else if (centralY < centralYMin){
-            layoutParams.topMargin = centralYMin - layoutParams.height/2;
+        if (centralY > centralYMax) {
+            layoutParams.topMargin = centralYMax - layoutParams.height / 2;
+        } else if (centralY < centralYMin) {
+            layoutParams.topMargin = centralYMin - layoutParams.height / 2;
         } else {
-            layoutParams.topMargin = centralY - layoutParams.height/2;
+            layoutParams.topMargin = centralY - layoutParams.height / 2;
         }
         requestLayout();
     }
 
-    protected void setElementWidth(int width){
+    protected void setElementWidth(int width) {
         int centralPosX = getElementCentralX();
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
-        if (width > widthMax){
+        if (width > widthMax) {
             layoutParams.width = widthMax;
-        } else if (width < widthMin){
+        } else if (width < widthMin) {
             layoutParams.width = widthMin;
         } else {
             layoutParams.width = width;
@@ -189,12 +193,12 @@ public abstract class Element extends View {
         innerSetElementCentralX(centralPosX);
     }
 
-    protected void setElementHeight(int height){
+    protected void setElementHeight(int height) {
         int centralPosY = getElementCentralY();
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
-        if (height > heightMax){
+        if (height > heightMax) {
             layoutParams.height = heightMax;
-        } else if (height < heightMin){
+        } else if (height < heightMin) {
             layoutParams.height = heightMin;
         } else {
             layoutParams.height = height;
@@ -211,7 +215,7 @@ public abstract class Element extends View {
         this.editColor = editColor;
     }
 
-    public void setElementSelectedCallBack(ElementSelectedCallBack elementSelectedCallBack){
+    public void setElementSelectedCallBack(ElementSelectedCallBack elementSelectedCallBack) {
         this.elementSelectedCallBack = elementSelectedCallBack;
     }
 
@@ -222,8 +226,8 @@ public abstract class Element extends View {
     }
 
     /**
-    *当全局模式（正常、编辑、选择）更改时，由ElementController调用。
-    *子类可以重写此项以更新其状态。
+     * 当全局模式（正常、编辑、选择）更改时，由ElementController调用。
+     * 子类可以重写此项以更新其状态。
      */
     public void onModeChanged(ElementController.Mode newMode) {
         // Default implementation does nothing.
@@ -239,7 +243,7 @@ public abstract class Element extends View {
         if (event.getActionIndex() != 0) {
             return true;
         }
-        switch (elementController.getMode()){
+        switch (elementController.getMode()) {
             case Normal:
                 return onElementTouchEvent(event);
 
@@ -260,7 +264,7 @@ public abstract class Element extends View {
                         float deltaX = x - lastX;
                         float deltaY = y - lastY;
                         //小位移算作点击
-                        if (Math.abs(deltaX) + Math.abs(deltaY) < 0.2){
+                        if (Math.abs(deltaX) + Math.abs(deltaY) < 0.2) {
                             return true;
                         }
                         isClick = false;
@@ -273,7 +277,7 @@ public abstract class Element extends View {
                     case MotionEvent.ACTION_UP: {
                         editColor = 0xffdc143c;
                         invalidate();
-                        if (isClick){
+                        if (isClick) {
                             elementController.toggleInfoPage(getInfoPage());
                         } else {
                             save();
@@ -287,13 +291,14 @@ public abstract class Element extends View {
 
 
             case Select:
-                if (event.getActionMasked() == MotionEvent.ACTION_DOWN){
+                if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
                     elementSelectedCallBack.elementSelected(this);
                 }
                 return true;
         }
         return true;
     }
+
     abstract protected SuperPageLayout getInfoPage();
 
     abstract protected void updatePage();

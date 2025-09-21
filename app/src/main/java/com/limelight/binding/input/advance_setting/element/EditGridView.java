@@ -10,6 +10,7 @@ public class EditGridView extends View {
     private final static int minDisplayWidth = 3;
     private Paint paint;
     private int editGridWidth = 1;
+
     public EditGridView(Context context) {
         super(context);
         paint = new Paint();
@@ -40,7 +41,7 @@ public class EditGridView extends View {
         }
     }
 
-    public void setEditGridWidth(int editGridWidth){
+    public void setEditGridWidth(int editGridWidth) {
         this.editGridWidth = editGridWidth;
         invalidate();
     }
