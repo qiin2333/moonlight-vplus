@@ -1,3 +1,4 @@
+//可移动按键
 package com.limelight.binding.input.advance_setting.element;
 
 import android.content.ContentValues;
@@ -36,6 +37,11 @@ import java.util.Map;
  */
 public class DigitalMovableButton extends Element {
 
+    // Re-use constants from DigitalSwitchButton to maintain consistency
+    public static final String COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR = DigitalSwitchButton.COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR;
+    public static final String COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR = DigitalSwitchButton.COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR;
+    public static final String COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT = DigitalSwitchButton.COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT;
+
     /**
      * Listener interface to update registered observers.
      */
@@ -58,7 +64,6 @@ public class DigitalMovableButton extends Element {
     }
 
     private TouchController touchController;
-    private SuperConfigDatabaseHelper superConfigDatabaseHelper;
     private PageDeviceController pageDeviceController;
     private DigitalMovableButton digitalMovableButton;
 
@@ -74,6 +79,10 @@ public class DigitalMovableButton extends Element {
     private int normalColor;
     private int pressedColor;
     private int backgroundColor;
+    // New member variables
+    private int normalTextColor;
+    private int pressedTextColor;
+    private int textSizePercent;
 
     private SuperPageLayout digitalMovableButtonPage;
     private NumberSeekbar centralXNumberSeekbar;
@@ -132,30 +141,39 @@ public class DigitalMovableButton extends Element {
         paintBorder.setStyle(Paint.Style.STROKE);
         paintBackground.setStyle(Paint.Style.FILL);
 
-        try {
-            text = (String) attributesMap.get(COLUMN_STRING_ELEMENT_TEXT);
-            radius = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_RADIUS)).intValue();
-            sense = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_SENSE)).intValue();
-            thick = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_THICK)).intValue();
-            normalColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_NORMAL_COLOR)).intValue();
-            pressedColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_PRESSED_COLOR)).intValue();
-            backgroundColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_BACKGROUND_COLOR)).intValue();
-            value = (String) attributesMap.get(COLUMN_STRING_ELEMENT_VALUE);
-            enableTouch = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_MODE)).intValue();
-        } catch (Exception e) {
-            // 处理旧版布局兼容性问题，设置默认值
-            if (text == null) text = "A";
-            if (radius == 0) radius = 0;
-            if (sense == 0) sense = 100;
-            if (thick == 0) thick = 5;
-            if (normalColor == 0) normalColor = 0xF0888888;
-            if (pressedColor == 0) pressedColor = 0xF00000FF;
-            if (backgroundColor == 0) backgroundColor = 0x00FFFFFF;
-            if (value == null) value = "k29";
-            if (enableTouch == 0) enableTouch = 0;
-            System.out.println("加载按键时发生错误，已应用默认值: " + e.getMessage());
+        // Standard properties
+        text = (String) attributesMap.get(COLUMN_STRING_ELEMENT_TEXT);
+        radius = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_RADIUS)).intValue();
+        sense = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_SENSE)).intValue();
+        thick = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_THICK)).intValue();
+        normalColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_NORMAL_COLOR)).intValue();
+        pressedColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_PRESSED_COLOR)).intValue();
+        backgroundColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_BACKGROUND_COLOR)).intValue();
+        value = (String) attributesMap.get(COLUMN_STRING_ELEMENT_VALUE);
+        enableTouch = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_MODE)).intValue();
+
+        // Load new text properties with backward compatibility
+        if (attributesMap.containsKey(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR)) {
+            normalTextColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR)).intValue();
+        } else {
+            // Default to old behavior: use border color
+            normalTextColor = normalColor;
         }
-        
+
+        if (attributesMap.containsKey(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR)) {
+            pressedTextColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR)).intValue();
+        } else {
+            // Default to old behavior: use border color
+            pressedTextColor = pressedColor;
+        }
+
+        if (attributesMap.containsKey(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT)) {
+            textSizePercent = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT)).intValue();
+        } else {
+            // Default based on original hardcoded logic
+            textSizePercent = 63;
+        }
+
         valueSendHandler = controller.getSendEventHandler(value);
         listener = new DigitalMovableButtonListener() {
             @Override
@@ -178,35 +196,45 @@ public class DigitalMovableButton extends Element {
     @Override
     protected void onElementDraw(Canvas canvas) {
 
-        // 文字
+        // Get element dimensions
         int elementWidth = getElementWidth();
         int elementHeight = getElementHeight();
-        float textSize = getPercent(elementWidth, 25);
-        textSize = Math.min(textSize,getPercent(elementHeight,63));
+
+        // Set text size based on percentage of height
+        float textSize = getPercent(elementHeight, textSizePercent);
         paintText.setTextSize(textSize);
-        paintText.setColor(isPressed() ? pressedColor : normalColor);
-        // 边框
+        // Set text color based on press state using new properties
+        paintText.setColor(isPressed() ? pressedTextColor : normalTextColor);
+        // Border
         paintBorder.setStrokeWidth(thick);
         paintBorder.setColor(isPressed() ? pressedColor : normalColor);
-        // 背景颜色
+        // Background color
         paintBackground.setColor(backgroundColor);
-        // 绘画范围
+
+        float centerX = elementWidth / 2f;
+        // Calculate the baseline Y for vertical centering
+        Paint.FontMetrics fontMetrics = paintText.getFontMetrics();
+        float baselineY = elementHeight / 2f - (fontMetrics.top + fontMetrics.bottom) / 2f;
+
+        // 3. Start drawing
+        // Drawing bounds
         rect.left = rect.top = (float) thick / 2;
         rect.right = getElementWidth() - rect.left;
         rect.bottom = getHeight() - rect.top;
-        // 绘制背景
+        // Draw background
         canvas.drawRoundRect(rect, radius, radius, paintBackground);
-        // 绘制边框
+        // Draw border
         canvas.drawRoundRect(rect, radius, radius, paintBorder);
-        // 绘制文字
-        canvas.drawText(text, getPercent(elementWidth, 50), getPercent(elementHeight, 63), paintText);
+        // Draw text using the calculated precise coordinates
+        canvas.drawText(text, centerX, baselineY, paintText);
+
         ElementController.Mode mode = elementController.getMode();
         if (mode == ElementController.Mode.Edit || mode == ElementController.Mode.Select){
-            // 绘画范围
+            // Drawing bounds
             rect.left = rect.top = 2;
             rect.right = getWidth() - 2;
             rect.bottom = getHeight() - 2;
-            // 边框
+            // Border
             paintEdit.setColor(editColor);
             canvas.drawRect(rect,paintEdit);
 
@@ -334,6 +362,10 @@ public class DigitalMovableButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
+        // Save new text properties
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, normalTextColor);
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, pressedTextColor);
+        contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, textSizePercent);
         elementController.updateElement(elementId,contentValues);
     }
 
@@ -368,81 +400,60 @@ public class DigitalMovableButton extends Element {
         Button copyButton = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_copy);
         Button deleteButton = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_delete);
 
+        // Find new views for text properties (assuming these IDs exist in the XML layout)
+        NumberSeekbar textSizeNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_text_size);
+        ElementEditText normalTextColorElementEditText = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_normal_text_color);
+        ElementEditText pressedTextColorElementEditText = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_pressed_text_color);
+
         textElementEditText.setTextWithNoTextChangedCallBack(text);
-        textElementEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
-            @Override
-            public void textChanged(String text) {
-                setElementText(text);
-                save();
-            }
+        textElementEditText.setOnTextChangedListener(text -> {
+            setElementText(text);
+            save();
         });
 
         valueTextView.setText(pageDeviceController.getKeyNameByValue(value));
-        valueTextView.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
-                    @Override
-                    public void OnKeyClick(TextView key) {
-                        CharSequence text = key.getText();
-                        // page页设置值文本
-                        ((TextView) v).setText(text);
-                        // element text 设置文本
-                        textElementEditText.setText(text);
-                        setElementValue(key.getTag().toString());
-                        save();
-                    }
-                };
-                pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
-            }
+        valueTextView.setOnClickListener(v -> {
+            PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
+                @Override
+                public void OnKeyClick(TextView key) {
+                    CharSequence text = key.getText();
+                    ((TextView) v).setText(text);
+                    textElementEditText.setText(text);
+                    setElementValue(key.getTag().toString());
+                    save();
+                }
+            };
+            pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
         });
 
         enableTouchSwitch.setChecked(enableTouch==1);
-        enableTouchSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                enableTouch = isChecked ? 1 : 0;
-                save();
-            }
+        enableTouchSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            enableTouch = isChecked ? 1 : 0;
+            save();
         });
-
-
 
         centralXNumberSeekbar.setProgressMin(centralXMin);
         centralXNumberSeekbar.setProgressMax(centralXMax);
         centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
         centralXNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                setElementCentralX(progress);
-            }
-
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { setElementCentralX(progress); }
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
+            public void onStartTrackingTouch(SeekBar seekBar) { }
             @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                save();
-            }
+            public void onStopTrackingTouch(SeekBar seekBar) { save(); }
         });
+
         centralYNumberSeekbar.setProgressMin(centralYMin);
         centralYNumberSeekbar.setProgressMax(centralYMax);
         centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
         centralYNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                setElementCentralY(progress);
-            }
-
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { setElementCentralY(progress); }
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
+            public void onStartTrackingTouch(SeekBar seekBar) { }
             @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                save();
-            }
+            public void onStopTrackingTouch(SeekBar seekBar) { save(); }
         });
 
         widthNumberSeekbar.setProgressMax(widthMax);
@@ -450,14 +461,9 @@ public class DigitalMovableButton extends Element {
         widthNumberSeekbar.setValueWithNoCallBack(getElementWidth());
         widthNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                setElementWidth(progress);
-            }
-
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { setElementWidth(progress); }
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
+            public void onStartTrackingTouch(SeekBar seekBar) { }
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
@@ -470,14 +476,9 @@ public class DigitalMovableButton extends Element {
         heightNumberSeekbar.setValueWithNoCallBack(getElementHeight());
         heightNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                setElementHeight(progress);
-            }
-
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { setElementHeight(progress); }
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
+            public void onStartTrackingTouch(SeekBar seekBar) { }
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
@@ -488,65 +489,40 @@ public class DigitalMovableButton extends Element {
         senseNumberSeekbar.setValueWithNoCallBack(sense);
         senseNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                setElementSense(progress);
-            }
-
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { setElementSense(progress); }
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
+            public void onStartTrackingTouch(SeekBar seekBar) { }
             @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                save();
-            }
+            public void onStopTrackingTouch(SeekBar seekBar) { save(); }
         });
 
         radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
         radiusNumberSeekbar.setValueWithNoCallBack(radius);
         radiusNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-               setElementRadius(progress);
-            }
-
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { setElementRadius(progress); }
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
+            public void onStartTrackingTouch(SeekBar seekBar) { }
             @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                save();
-            }
+            public void onStopTrackingTouch(SeekBar seekBar) { save(); }
         });
 
         thickNumberSeekbar.setValueWithNoCallBack(thick);
         thickNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-               setElementThick(progress);
-            }
-
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { setElementThick(progress); }
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
+            public void onStartTrackingTouch(SeekBar seekBar) { }
             @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-               save();
-            }
+            public void onStopTrackingTouch(SeekBar seekBar) { save(); }
         });
 
         layerNumberSeekbar.setValueWithNoCallBack(layer);
         layerNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-            }
-
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { }
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
+            public void onStartTrackingTouch(SeekBar seekBar) { }
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 setElementLayer(seekBar.getProgress());
@@ -554,39 +530,54 @@ public class DigitalMovableButton extends Element {
             }
         });
 
+        // Setup for new text size seekbar
+        textSizeNumberSeekbar.setProgressMin(10); // 10%
+        textSizeNumberSeekbar.setProgressMax(150); // 150%
+        textSizeNumberSeekbar.setValueWithNoCallBack(textSizePercent);
+        textSizeNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { setElementTextSizePercent(progress); }
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) { }
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) { save(); }
+        });
+
+        // Setup for all color pickers
         setupColorPickerButton(normalColorElementEditText, () -> this.normalColor, this::setElementNormalColor);
         setupColorPickerButton(pressedColorElementEditText, () -> this.pressedColor, this::setElementPressedColor);
         setupColorPickerButton(backgroundColorElementEditText, () -> this.backgroundColor, this::setElementBackgroundColor);
+        setupColorPickerButton(normalTextColorElementEditText, () -> this.normalTextColor, this::setElementNormalTextColor);
+        setupColorPickerButton(pressedTextColorElementEditText, () -> this.pressedTextColor, this::setElementPressedTextColor);
 
-        copyButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON);
-                contentValues.put(COLUMN_STRING_ELEMENT_TEXT, text);
-                contentValues.put(COLUMN_STRING_ELEMENT_VALUE, value);
-                contentValues.put(COLUMN_INT_ELEMENT_MODE,enableTouch);
-                contentValues.put(COLUMN_INT_ELEMENT_SENSE,sense);
-                contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
-                contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
-                contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,Math.max(Math.min(getElementCentralX() + getElementWidth(),centralXMax),centralXMin));
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
-                contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
-                contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
-                contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
-                contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
-                contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
-                elementController.addElement(contentValues);
-            }
+
+        copyButton.setOnClickListener(v -> {
+            ContentValues contentValues = new ContentValues();
+            contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON);
+            contentValues.put(COLUMN_STRING_ELEMENT_TEXT, text);
+            contentValues.put(COLUMN_STRING_ELEMENT_VALUE, value);
+            contentValues.put(COLUMN_INT_ELEMENT_MODE,enableTouch);
+            contentValues.put(COLUMN_INT_ELEMENT_SENSE,sense);
+            contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
+            contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
+            contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
+            contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,Math.max(Math.min(getElementCentralX() + getElementWidth(),centralXMax),centralXMin));
+            contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
+            contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
+            contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
+            contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
+            contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
+            contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
+            // Add new properties for copy
+            contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, normalTextColor);
+            contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, pressedTextColor);
+            contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, textSizePercent);
+            elementController.addElement(contentValues);
         });
 
-        deleteButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                elementController.toggleInfoPage(digitalMovableButtonPage);
-                elementController.deleteElement(digitalMovableButton);
-            }
+        deleteButton.setOnClickListener(v -> {
+            elementController.toggleInfoPage(digitalMovableButtonPage);
+            elementController.deleteElement(digitalMovableButton);
         });
 
         return digitalMovableButtonPage;
@@ -623,10 +614,27 @@ public class DigitalMovableButton extends Element {
 
     protected void setElementPressedColor(int pressedColor) {
         this.pressedColor = pressedColor;
+        invalidate(); // Added invalidate() for immediate visual feedback
     }
 
     protected void setElementBackgroundColor(int backgroundColor) {
         this.backgroundColor = backgroundColor;
+        invalidate();
+    }
+
+    // New setters for text properties
+    protected void setElementNormalTextColor(int normalTextColor) {
+        this.normalTextColor = normalTextColor;
+        invalidate();
+    }
+
+    protected void setElementPressedTextColor(int pressedTextColor) {
+        this.pressedTextColor = pressedTextColor;
+        invalidate();
+    }
+
+    protected void setElementTextSizePercent(int textSizePercent) {
+        this.textSizePercent = textSizePercent;
         invalidate();
     }
 
@@ -647,60 +655,38 @@ public class DigitalMovableButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,0xF0888888);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,0xF00000FF);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,0x00FFFFFF);
+        // Add new properties with good defaults
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, 0xFFFFFFFF); // White
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, 0xFFCCCCCC); // Light Grey for pressed state
+        contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, 63);
         return contentValues;
     }
 
-    private interface IntSupplier {
-        int get();
-    }
+    private interface IntSupplier { int get(); }
+    private interface IntConsumer { void accept(int value); }
 
-    private interface IntConsumer {
-        void accept(int value);
-    }
-    /**
-     * 更新颜色显示按钮的外观（文本、背景色、文本颜色）。
-     */
     private void updateColorDisplay(ElementEditText colorDisplay, int color) {
-        // 显示十六进制颜色码
         colorDisplay.setTextWithNoTextChangedCallBack(String.format("%08X", color));
-        // 将背景设置为当前颜色
         colorDisplay.setBackgroundColor(color);
-
-        // 根据背景色的亮度自动设置文本颜色为黑色或白色，以确保可读性
         double luminance = (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255;
         colorDisplay.setTextColor(luminance > 0.5 ? Color.BLACK : Color.WHITE);
         colorDisplay.setGravity(Gravity.CENTER);
     }
 
-    /**
-     * 配置一个 ElementEditText 控件，使其作为颜色选择器按钮使用。
-     *
-     * @param colorDisplay 用于作为按钮的 ElementEditText 视图。
-     * @param initialColorFetcher 一个用于获取当前颜色值的 Lambda 表达式。
-     * @param colorUpdater      一个用于设置新颜色值的 Lambda 表达式。
-     */
     private void setupColorPickerButton(ElementEditText colorDisplay, IntSupplier initialColorFetcher, IntConsumer colorUpdater) {
-        // 禁输入，让 EditText 表现得像一个按钮
         colorDisplay.setFocusable(false);
         colorDisplay.setCursorVisible(false);
         colorDisplay.setKeyListener(null);
-
-        // 使用传入的 Lambda 获取初始颜色并设置外观
         updateColorDisplay(colorDisplay, initialColorFetcher.get());
-
-        // 设置点击监听器，打开颜色选择器
-        colorDisplay.setOnClickListener(v -> {
-            // 再次获取当前颜色，确保打开时颜色是最新的
-            new ColorPickerDialog(
-                    getContext(),
-                    initialColorFetcher.get(),
-                    true, // true 表示显示 Alpha 透明度滑块
-                    newColor -> {
-                        colorUpdater.accept(newColor); // 使用传入的 Lambda 更新颜色属性
-                        save();                      // 保存更改
-                        updateColorDisplay(colorDisplay, newColor); // 更新UI显示
-                    }
-            ).show(); // <-- 主要变化：在最后调用 .show()
-        });
+        colorDisplay.setOnClickListener(v -> new ColorPickerDialog(
+                getContext(),
+                initialColorFetcher.get(),
+                true,
+                newColor -> {
+                    colorUpdater.accept(newColor);
+                    save();
+                    updateColorDisplay(colorDisplay, newColor);
+                }
+        ).show());
     }
 }

@@ -18,6 +18,7 @@ import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.limelight.binding.input.advance_setting.config.PageConfigController;
+import com.limelight.binding.input.advance_setting.element.DigitalSwitchButton;
 import com.limelight.binding.input.advance_setting.element.Element;
 import com.limelight.utils.MathUtils;
 
@@ -137,7 +138,8 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
     private static final int DATABASE_OLD_VERSION_3 = 3;
     private static final int DATABASE_OLD_VERSION_4 = 4;
     private static final int DATABASE_OLD_VERSION_5 = 5;
-    private static final int DATABASE_VERSION = 6;
+    private static final int DATABASE_OLD_VERSION_6 = 6;
+    private static final int DATABASE_VERSION = 7;
     private SQLiteDatabase writableDataBase;
     private SQLiteDatabase readableDataBase;
 
@@ -149,6 +151,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
+        // 更新 onCreate，添加新字段
         // 创建表格的SQL语句
         String createElementTable = "CREATE TABLE IF NOT EXISTS element (" +
                 "_id INTEGER PRIMARY KEY, " +
@@ -180,10 +183,13 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
                 "element_background_color INTEGER," +
                 "element_color INTEGER," +
                 "element_pressed_color INTEGER," +
+                DigitalSwitchButton.COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR + " INTEGER," +
+                DigitalSwitchButton.COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR + " INTEGER," +
+                DigitalSwitchButton.COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT + " INTEGER," +
                 "element_create_time INTEGER," +
                 Element.COLUMN_INT_ELEMENT_FLAG1 + " INTEGER DEFAULT 1" +
                 ")";
-       // 执行SQL语句
+        // 执行SQL语句
         db.execSQL(createElementTable);
 
         String createConfigTable = "CREATE TABLE IF NOT EXISTS config (" +
@@ -210,8 +216,9 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        // 更新 onUpgrade，为老用户添加新字段
         // 升级数据库时执行的操作
-        System.out.println("SuperConfigDatabaseHelper.onUpgrade");
+        System.out.println("SuperConfigDatabaseHelper.onUpgrade from " + oldVersion + " to " + newVersion);
         // 采用更健壮的 fall-through 结构
         if (oldVersion < 3){
             db.execSQL("ALTER TABLE config ADD COLUMN game_vibrator TEXT DEFAULT 'false';");
@@ -226,6 +233,13 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         }
         if (oldVersion < 6) {
             db.execSQL("ALTER TABLE element ADD COLUMN " + Element.COLUMN_INT_ELEMENT_FLAG1 + " INTEGER DEFAULT 1;");
+        }
+        // 新增的升级逻辑
+        if (oldVersion < 7) {
+            // 为 element 表添加字体颜色和大小的列，并设置默认值
+            db.execSQL("ALTER TABLE element ADD COLUMN " + DigitalSwitchButton.COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR + " INTEGER DEFAULT -1;"); // 0xFFFFFFFF
+            db.execSQL("ALTER TABLE element ADD COLUMN " + DigitalSwitchButton.COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR + " INTEGER DEFAULT -3355444;"); // 0xFFCCCCCC
+            db.execSQL("ALTER TABLE element ADD COLUMN " + DigitalSwitchButton.COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT + " INTEGER DEFAULT 63;");
         }
     }
 
@@ -285,6 +299,18 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
                 if (elementsJsonElement.isJsonArray()) {
                     for (JsonElement element : elementsJsonElement.getAsJsonArray()) {
                         element.getAsJsonObject().addProperty(Element.COLUMN_INT_ELEMENT_FLAG1, 1);
+                    }
+                }
+                // 更新 import/export 升级逻辑
+            case DATABASE_OLD_VERSION_6:
+                // 版本6 -> 7: 在 element 中添加字体颜色和大小
+                if (elementsJsonElement.isJsonArray()) {
+                    for (JsonElement element : elementsJsonElement.getAsJsonArray()) {
+                        JsonObject elementObject = element.getAsJsonObject();
+                        // 添加新属性并设置合理的默认值
+                        elementObject.addProperty(DigitalSwitchButton.COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, 0xFFFFFFFF);
+                        elementObject.addProperty(DigitalSwitchButton.COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, 0xFFCCCCCC);
+                        elementObject.addProperty(DigitalSwitchButton.COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, 63);
                     }
                 }
                 // Fall-through to final version
@@ -732,7 +758,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         // 将组按键及其子按键存储在MAP中
         Map<ContentValues,List<ContentValues>> groupButtonMaps = new HashMap<>();
         for (ContentValues groupButtonElement : elements){
-            if ((long)groupButtonElement.get(Element.COLUMN_INT_ELEMENT_TYPE) == Element.ELEMENT_TYPE_GROUP_BUTTON){
+            if (groupButtonElement.containsKey(Element.COLUMN_INT_ELEMENT_TYPE) && (long)groupButtonElement.get(Element.COLUMN_INT_ELEMENT_TYPE) == Element.ELEMENT_TYPE_GROUP_BUTTON){
                 List<ContentValues> childElements = new ArrayList<>();
 
                 String[] childElementStringIds = ((String) groupButtonElement.get(Element.COLUMN_STRING_ELEMENT_VALUE)).split(",");
@@ -740,7 +766,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
                 for (String childElementStringId : childElementStringIds){
                     long childElementId = Long.parseLong(childElementStringId);
                     for (ContentValues element : elements){
-                        if ((long)element.get(Element.COLUMN_LONG_ELEMENT_ID) == childElementId){
+                        if (element.containsKey(Element.COLUMN_LONG_ELEMENT_ID) && (long)element.get(Element.COLUMN_LONG_ELEMENT_ID) == childElementId){
                             childElements.add(element);
                             break;
                         }
@@ -810,7 +836,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         // 将组按键及其子按键存储在MAP中
         Map<ContentValues,List<ContentValues>> groupButtonMaps = new HashMap<>();
         for (ContentValues groupButtonElement : elements){
-            if ((long)groupButtonElement.get(Element.COLUMN_INT_ELEMENT_TYPE) == Element.ELEMENT_TYPE_GROUP_BUTTON){
+            if (groupButtonElement.containsKey(Element.COLUMN_INT_ELEMENT_TYPE) && (long)groupButtonElement.get(Element.COLUMN_INT_ELEMENT_TYPE) == Element.ELEMENT_TYPE_GROUP_BUTTON){
                 List<ContentValues> childElements = new ArrayList<>();
 
                 String[] childElementStringIds = ((String) groupButtonElement.get(Element.COLUMN_STRING_ELEMENT_VALUE)).split(",");
@@ -818,7 +844,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
                 for (String childElementStringId : childElementStringIds){
                     long childElementId = Long.parseLong(childElementStringId);
                     for (ContentValues element : elements){
-                        if ((long)element.get(Element.COLUMN_LONG_ELEMENT_ID) == childElementId){
+                        if (element.containsKey(Element.COLUMN_LONG_ELEMENT_ID) && (long)element.get(Element.COLUMN_LONG_ELEMENT_ID) == childElementId){
                             childElements.add(element);
                             break;
                         }
@@ -846,8 +872,8 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
             ContentValues groupButton = groupButtonMap.getKey();
             groupButton.put(Element.COLUMN_STRING_ELEMENT_VALUE,newValue);
             updateElement(  (Long) groupButton.get(Element.COLUMN_LONG_CONFIG_ID),
-                            (Long) groupButton.get(Element.COLUMN_LONG_ELEMENT_ID),
-                            groupButton);
+                    (Long) groupButton.get(Element.COLUMN_LONG_ELEMENT_ID),
+                    groupButton);
         }
 
         return 0;

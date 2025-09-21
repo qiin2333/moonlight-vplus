@@ -1,3 +1,4 @@
+//开关按键
 package com.limelight.binding.input.advance_setting.element;
 
 import android.content.ContentValues;
@@ -33,6 +34,11 @@ import java.util.Map;
  */
 public class DigitalSwitchButton extends Element {
 
+    // New constants for text color and size database columns
+    public static final String COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR = "normalTextColor";
+    public static final String COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR = "pressedTextColor";
+    public static final String COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT = "textSizePercent";
+
     /**
      * Listener interface to update registered observers.
      */
@@ -67,6 +73,11 @@ public class DigitalSwitchButton extends Element {
     private int normalColor;
     private int pressedColor;
     private int backgroundColor;
+
+    // New member variables for text color and size
+    private int normalTextColor;
+    private int pressedTextColor;
+    private int textSizePercent;
 
     private SuperPageLayout digitalSwitchButtonPage;
     private NumberSeekbar centralXNumberSeekbar;
@@ -121,6 +132,29 @@ public class DigitalSwitchButton extends Element {
         pressedColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_PRESSED_COLOR)).intValue();
         backgroundColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_BACKGROUND_COLOR)).intValue();
         value = (String) attributesMap.get(COLUMN_STRING_ELEMENT_VALUE);
+
+        // Load new text properties with backward compatibility
+        if (attributesMap.containsKey(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR)) {
+            normalTextColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR)).intValue();
+        } else {
+            // Default to old behavior: use border color
+            normalTextColor = normalColor;
+        }
+
+        if (attributesMap.containsKey(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR)) {
+            pressedTextColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR)).intValue();
+        } else {
+            // Default to old behavior: use border color
+            pressedTextColor = pressedColor;
+        }
+
+        if (attributesMap.containsKey(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT)) {
+            textSizePercent = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT)).intValue();
+        } else {
+            // Default based on original hardcoded logic
+            textSizePercent = 63;
+        }
+
         valueSendHandler = controller.getSendEventHandler(value);
         listener = new DigitalSwitchButtonListener() {
             @Override
@@ -143,28 +177,44 @@ public class DigitalSwitchButton extends Element {
     @Override
     protected void onElementDraw(Canvas canvas) {
 
-        // 文字
+        // 获取元素尺寸
         int elementWidth = getElementWidth();
         int elementHeight = getElementHeight();
-        float textSize = getPercent(elementWidth, 25);
-        textSize = Math.min(textSize,getPercent(elementHeight,63));
+
+        // 1. 设置画笔属性
+        // 根据百分比设置字体大小
+        float textSize = getPercent(elementHeight, textSizePercent);
         paintText.setTextSize(textSize);
-        paintText.setColor(isPressed() ? pressedColor : normalColor);
+        // 设置字体颜色
+        paintText.setColor(isPressed() ? pressedTextColor : normalTextColor);
         // 边框
         paintBorder.setStrokeWidth(thick);
         paintBorder.setColor(isPressed() ? pressedColor : normalColor);
         // 背景颜色
         paintBackground.setColor(backgroundColor);
+
+        // 2. 计算精确的居中坐标
+        // 水平中心 X 坐标
+        float centerX = elementWidth / 2f;
+
+        // 计算垂直居中的基线 Y 坐标
+        Paint.FontMetrics fontMetrics = paintText.getFontMetrics();
+        float baselineY = elementHeight / 2f - (fontMetrics.top + fontMetrics.bottom) / 2f;
+
+        // 3. 开始绘制
         // 绘画范围
         rect.left = rect.top = (float) thick / 2;
-        rect.right = getElementWidth() - rect.left;
-        rect.bottom = getHeight() - rect.top;
+        rect.right = elementWidth - rect.left;
+        rect.bottom = elementHeight - rect.top;
         // 绘制背景
         canvas.drawRoundRect(rect, radius, radius, paintBackground);
         // 绘制边框
         canvas.drawRoundRect(rect, radius, radius, paintBorder);
-        // 绘制文字
-        canvas.drawText(text, getPercent(elementWidth, 50), getPercent(elementHeight, 63), paintText);
+
+        // 绘制文字 (使用计算出的精确坐标)
+        canvas.drawText(text, centerX, baselineY, paintText);
+
+        // 4. 绘制编辑模式的虚线框
         ElementController.Mode mode = elementController.getMode();
         if (mode == ElementController.Mode.Edit || mode == ElementController.Mode.Select){
             // 绘画范围
@@ -174,7 +224,6 @@ public class DigitalSwitchButton extends Element {
             // 边框
             paintEdit.setColor(editColor);
             canvas.drawRect(rect,paintEdit);
-
         }
     }
 
@@ -247,6 +296,10 @@ public class DigitalSwitchButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
+        // Save new text properties
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, normalTextColor);
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, pressedTextColor);
+        contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, textSizePercent);
         elementController.updateElement(elementId,contentValues);
 
     }
@@ -279,6 +332,10 @@ public class DigitalSwitchButton extends Element {
         ElementEditText normalColorElementEditText = digitalSwitchButtonPage.findViewById(R.id.page_digital_switch_button_normal_color);
         ElementEditText pressedColorElementEditText = digitalSwitchButtonPage.findViewById(R.id.page_digital_switch_button_pressed_color);
         ElementEditText backgroundColorElementEditText = digitalSwitchButtonPage.findViewById(R.id.page_digital_switch_button_background_color);
+        // Find new views for text properties (assuming these IDs exist in the XML layout)
+        NumberSeekbar textSizeNumberSeekbar = digitalSwitchButtonPage.findViewById(R.id.page_digital_switch_button_text_size);
+        ElementEditText normalTextColorElementEditText = digitalSwitchButtonPage.findViewById(R.id.page_digital_switch_button_normal_text_color);
+        ElementEditText pressedTextColorElementEditText = digitalSwitchButtonPage.findViewById(R.id.page_digital_switch_button_pressed_text_color);
         Button copyButton = digitalSwitchButtonPage.findViewById(R.id.page_digital_switch_button_copy);
         Button deleteButton = digitalSwitchButtonPage.findViewById(R.id.page_digital_switch_button_delete);
 
@@ -290,9 +347,6 @@ public class DigitalSwitchButton extends Element {
                 save();
             }
         });
-
-
-
 
         valueTextView.setText(pageDeviceController.getKeyNameByValue(value));
         valueTextView.setOnClickListener(new OnClickListener() {
@@ -449,21 +503,32 @@ public class DigitalSwitchButton extends Element {
             }
         });
 
-        normalColorElementEditText.setTextWithNoTextChangedCallBack(String.format("%08X",normalColor));
-        normalColorElementEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new Element.HexInputFilter()});
-        normalColorElementEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
+        // Setup for new text size seekbar
+        textSizeNumberSeekbar.setProgressMin(10); // 10%
+        textSizeNumberSeekbar.setProgressMax(150); // 150%
+        textSizeNumberSeekbar.setValueWithNoCallBack(textSizePercent);
+        textSizeNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void textChanged(String text) {
-                if (text.matches("^[A-F0-9]{8}$")){
-                    setElementNormalColor((int) Long.parseLong(text, 16));
-                    save();
-                }
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementTextSizePercent(progress);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) { }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
             }
         });
 
+        // Refactored setup for all color pickers
         setupColorPickerButton(normalColorElementEditText, () -> this.normalColor, this::setElementNormalColor);
         setupColorPickerButton(pressedColorElementEditText, () -> this.pressedColor, this::setElementPressedColor);
         setupColorPickerButton(backgroundColorElementEditText, () -> this.backgroundColor, this::setElementBackgroundColor);
+        setupColorPickerButton(normalTextColorElementEditText, () -> this.normalTextColor, this::setElementNormalTextColor);
+        setupColorPickerButton(pressedTextColorElementEditText, () -> this.pressedTextColor, this::setElementPressedTextColor);
+
 
         copyButton.setOnClickListener(new OnClickListener() {
             @Override
@@ -482,6 +547,10 @@ public class DigitalSwitchButton extends Element {
                 contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
                 contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
                 contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
+                // Add new properties for copy
+                contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, normalTextColor);
+                contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, pressedTextColor);
+                contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, textSizePercent);
                 elementController.addElement(contentValues);
             }
         });
@@ -534,6 +603,22 @@ public class DigitalSwitchButton extends Element {
         invalidate();
     }
 
+    // New setter methods for text properties
+    protected void setElementNormalTextColor(int normalTextColor) {
+        this.normalTextColor = normalTextColor;
+        invalidate();
+    }
+
+    protected void setElementPressedTextColor(int pressedTextColor) {
+        this.pressedTextColor = pressedTextColor;
+        invalidate();
+    }
+
+    protected void setElementTextSizePercent(int textSizePercent) {
+        this.textSizePercent = textSizePercent;
+        invalidate();
+    }
+
     public static ContentValues getInitialInfo(){
         ContentValues contentValues = new ContentValues();
         contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON);
@@ -549,6 +634,10 @@ public class DigitalSwitchButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,0xF0888888);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,0xF00000FF);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,0x00FFFFFF);
+        // Add new text properties with good defaults for new buttons
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, 0xFFFFFFFF); // White
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, 0xFFCCCCCC); // Light Grey for pressed state
+        contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, 63);
         return contentValues;
 
 

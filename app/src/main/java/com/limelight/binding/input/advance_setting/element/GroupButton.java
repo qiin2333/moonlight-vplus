@@ -1,13 +1,16 @@
+//组按键
 package com.limelight.binding.input.advance_setting.element;
 
 import android.content.ContentValues;
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.text.InputFilter;
 import android.util.DisplayMetrics;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -27,6 +30,7 @@ import com.limelight.binding.input.advance_setting.PageDeviceController;
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
 import com.limelight.binding.input.advance_setting.superpage.SuperPagesController;
+import com.limelight.utils.ColorPickerDialog;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +40,11 @@ import java.util.Map;
  * This is a digital button on screen element. It is used to get click and double click user input.
  */
 public class GroupButton extends Element {
+
+    // Re-use constants from DigitalSwitchButton to maintain consistency
+    public static final String COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR = DigitalSwitchButton.COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR;
+    public static final String COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR = DigitalSwitchButton.COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR;
+    public static final String COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT = DigitalSwitchButton.COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT;
 
     private static final String COLUMN_INT_CHILD_VISIBILITY = COLUMN_INT_ELEMENT_SENSE;
 
@@ -80,6 +89,10 @@ public class GroupButton extends Element {
     private int normalColor;
     private int pressedColor;
     private int backgroundColor;
+    // New member variables for text properties
+    private int normalTextColor;
+    private int pressedTextColor;
+    private int textSizePercent;
 
     private float lastX;
     private float lastY;
@@ -161,6 +174,28 @@ public class GroupButton extends Element {
         backgroundColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_BACKGROUND_COLOR)).intValue();
         value = (String) attributesMap.get(COLUMN_STRING_ELEMENT_VALUE);
 
+        // Load new text properties with backward compatibility
+        if (attributesMap.containsKey(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR)) {
+            normalTextColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR)).intValue();
+        } else {
+            // Default to old behavior: use border color
+            normalTextColor = normalColor;
+        }
+
+        if (attributesMap.containsKey(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR)) {
+            pressedTextColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR)).intValue();
+        } else {
+            // Default to old behavior: use border color
+            pressedTextColor = pressedColor;
+        }
+
+        if (attributesMap.containsKey(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT)) {
+            textSizePercent = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT)).intValue();
+        } else {
+            // Default based on a reasonable value, old logic was complex
+            textSizePercent = 63;
+        }
+
         Object hiddenFlagObj = attributesMap.get(COLUMN_INT_ELEMENT_FLAG1);
         this.hidden = (hiddenFlagObj != null) && ((Long) hiddenFlagObj).intValue() == 1;
 
@@ -217,28 +252,36 @@ public class GroupButton extends Element {
     @Override
     protected void onElementDraw(Canvas canvas) {
 
-        // 文字
+        // Get element dimensions
         int elementWidth = getElementWidth();
         int elementHeight = getElementHeight();
-        float textSize = getPercent(elementWidth, 25);
-        textSize = Math.min(textSize,getPercent(elementHeight,63));
+
+        // Set text size based on percentage of height
+        float textSize = getPercent(elementHeight, textSizePercent);
         paintText.setTextSize(textSize);
-        paintText.setColor(isPressed() ? pressedColor : normalColor);
-        // 边框
+        // Set text color based on press state using new properties
+        paintText.setColor(isPressed() ? pressedTextColor : normalTextColor);
+        // Border
         paintBorder.setStrokeWidth(thick);
         paintBorder.setColor(isPressed() ? pressedColor : normalColor);
-        // 背景颜色
+        // Background color
         paintBackground.setColor(backgroundColor);
-        // 绘画范围
+
+        float centerX = elementWidth / 2f;
+        // Calculate the baseline Y for vertical centering
+        Paint.FontMetrics fontMetrics = paintText.getFontMetrics();
+        float baselineY = elementHeight / 2f - (fontMetrics.top + fontMetrics.bottom) / 2f;
+
+        // Drawing bounds
         rect.left = rect.top = (float) thick / 2;
         rect.right = getElementWidth() - rect.left;
         rect.bottom = getHeight() - rect.top;
-        // 绘制背景
+        // Draw background
         canvas.drawRoundRect(rect, radius, radius, paintBackground);
-        // 绘制边框
+        // Draw border
         canvas.drawRoundRect(rect, radius, radius, paintBorder);
-        // 绘制文字
-        canvas.drawText(text, getPercent(elementWidth, 50), getPercent(elementHeight, 63), paintText);
+        // Draw text using the calculated precise coordinates
+        canvas.drawText(text, centerX, baselineY, paintText);
 
         if (elementController.getMode() == ElementController.Mode.Edit){
             // 绘画范围
@@ -442,6 +485,10 @@ public class GroupButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
         contentValues.put(COLUMN_INT_ELEMENT_FLAG1, hidden ? 1 : 0);
+        // Save new text properties
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, normalTextColor);
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, pressedTextColor);
+        contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, textSizePercent);
         elementController.updateElement(elementId,contentValues);
 
     }
@@ -478,6 +525,11 @@ public class GroupButton extends Element {
         ElementEditText backgroundColorElementEditText = groupButtonPage.findViewById(R.id.page_group_button_background_color);
         EditText deleteEditText = groupButtonPage.findViewById(R.id.page_group_button_delete_edittext);
         Button deleteButton = groupButtonPage.findViewById(R.id.page_group_button_delete);
+
+        // Find new views for text properties (assuming these IDs exist in the XML layout)
+        NumberSeekbar textSizeNumberSeekbar = groupButtonPage.findViewById(R.id.page_group_button_text_size);
+        ElementEditText normalTextColorElementEditText = groupButtonPage.findViewById(R.id.page_group_button_normal_text_color);
+        ElementEditText pressedTextColorElementEditText = groupButtonPage.findViewById(R.id.page_group_button_pressed_text_color);
 
         textElementEditText.setTextWithNoTextChangedCallBack(text);
         textElementEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
@@ -653,7 +705,7 @@ public class GroupButton extends Element {
                         element.save();
                     }
                 }
-               save();
+                save();
             }
         });
 
@@ -703,59 +755,32 @@ public class GroupButton extends Element {
             }
         });
 
-
-        normalColorElementEditText.setTextWithNoTextChangedCallBack(String.format("%08X",normalColor));
-        normalColorElementEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new Element.HexInputFilter()});
-        normalColorElementEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
+        // Setup for new text size seekbar
+        textSizeNumberSeekbar.setProgressMin(10); // 10%
+        textSizeNumberSeekbar.setProgressMax(150); // 150%
+        textSizeNumberSeekbar.setValueWithNoCallBack(textSizePercent);
+        textSizeNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
-            public void textChanged(String text) {
-                if (text.matches("^[A-F0-9]{8}$")){
-                    setElementNormalColor((int) Long.parseLong(text, 16));
-                    if (childOtherAttributeFollow){
-                        for (Element element : childElementList){
-                            element.save();
-                        }
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { setElementTextSizePercent(progress); }
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) { }
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                if (childOtherAttributeFollow){
+                    for (Element element : childElementList){
+                        element.save();
                     }
-                    save();
                 }
+                save();
             }
         });
 
+        setupColorPickerButton(normalColorElementEditText, () -> this.normalColor, this::setElementNormalColor);
+        setupColorPickerButton(pressedColorElementEditText, () -> this.pressedColor, this::setElementPressedColor);
+        setupColorPickerButton(backgroundColorElementEditText, () -> this.backgroundColor, this::setElementBackgroundColor);
+        setupColorPickerButton(normalTextColorElementEditText, () -> this.normalTextColor, this::setElementNormalTextColor);
+        setupColorPickerButton(pressedTextColorElementEditText, () -> this.pressedTextColor, this::setElementPressedTextColor);
 
-        pressedColorElementEditText.setTextWithNoTextChangedCallBack(String.format("%08X",pressedColor));
-        pressedColorElementEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new Element.HexInputFilter()});
-        pressedColorElementEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
-            @Override
-            public void textChanged(String text) {
-                if (text.matches("^[A-F0-9]{8}$")){
-                    setElementPressedColor((int) Long.parseLong(text, 16));
-                    if (childOtherAttributeFollow){
-                        for (Element element : childElementList){
-                            element.save();
-                        }
-                    }
-                    save();
-                }
-            }
-        });
-
-
-        backgroundColorElementEditText.setTextWithNoTextChangedCallBack(String.format("%08X",backgroundColor));
-        backgroundColorElementEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new Element.HexInputFilter()});
-        backgroundColorElementEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
-            @Override
-            public void textChanged(String text) {
-                if (text.matches("^[A-F0-9]{8}$")){
-                    setElementBackgroundColor((int) Long.parseLong(text, 16));
-                    if (childOtherAttributeFollow){
-                        for (Element element : childElementList){
-                            element.save();
-                        }
-                    }
-                    save();
-                }
-            }
-        });
 
         Switch hiddenSwitch = groupButtonPage.findViewById(R.id.page_group_button_hidden_switch);
         hiddenSwitch.setChecked(hidden);
@@ -843,7 +868,7 @@ public class GroupButton extends Element {
     }
 
     public void triggerAction() {
-       //正常模式下的默认操作是切换子可见性，这由onRelease处理。
+        //正常模式下的默认操作是切换子可见性，这由onRelease处理。
         if (listener != null) {
             listener.onRelease();
         }
@@ -1210,6 +1235,75 @@ public class GroupButton extends Element {
         }
     }
 
+    protected void setElementNormalTextColor(int normalTextColor) {
+        this.normalTextColor = normalTextColor;
+        invalidate();
+        if (childOtherAttributeFollow){
+            for (Element element : childElementList){
+                switch (element.elementType){
+                    case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
+                        ((DigitalCommonButton)element).setElementNormalTextColor(normalTextColor);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
+                        ((DigitalSwitchButton)element).setElementNormalTextColor(normalTextColor);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
+                        ((DigitalCombineButton)element).setElementNormalTextColor(normalTextColor);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
+                        ((DigitalMovableButton)element).setElementNormalTextColor(normalTextColor);
+                        break;
+                }
+            }
+        }
+    }
+
+    protected void setElementPressedTextColor(int pressedTextColor) {
+        this.pressedTextColor = pressedTextColor;
+        invalidate();
+        if (childOtherAttributeFollow){
+            for (Element element : childElementList){
+                switch (element.elementType){
+                    case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
+                        ((DigitalCommonButton)element).setElementPressedTextColor(pressedTextColor);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
+                        ((DigitalSwitchButton)element).setElementPressedTextColor(pressedTextColor);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
+                        ((DigitalCombineButton)element).setElementPressedTextColor(pressedTextColor);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
+                        ((DigitalMovableButton)element).setElementPressedTextColor(pressedTextColor);
+                        break;
+                }
+            }
+        }
+    }
+
+    protected void setElementTextSizePercent(int textSizePercent) {
+        this.textSizePercent = textSizePercent;
+        invalidate();
+        if (childOtherAttributeFollow){
+            for (Element element : childElementList){
+                switch (element.elementType){
+                    case ELEMENT_TYPE_DIGITAL_COMMON_BUTTON:
+                        ((DigitalCommonButton)element).setElementTextSizePercent(textSizePercent);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON:
+                        ((DigitalSwitchButton)element).setElementTextSizePercent(textSizePercent);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON:
+                        ((DigitalCombineButton)element).setElementTextSizePercent(textSizePercent);
+                        break;
+                    case ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON:
+                        ((DigitalMovableButton)element).setElementTextSizePercent(textSizePercent);
+                        break;
+                }
+            }
+        }
+    }
+
     public static ContentValues getInitialInfo(){
         ContentValues contentValues = new ContentValues();
         contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_GROUP_BUTTON);
@@ -1226,9 +1320,67 @@ public class GroupButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,0xF0888888);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,0xF00000FF);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,0x00FFFFFF);
+        // Add new properties with good defaults
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, 0xFFFFFFFF); // White
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, 0xFFCCCCCC); // Light Grey
+        contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, 63);
         return contentValues;
 
 
+    }
+
+    private interface IntSupplier {
+        int get();
+    }
+
+    private interface IntConsumer {
+        void accept(int value);
+    }
+    /**
+     * 更新颜色显示按钮的外观（文本、背景色、文本颜色）。
+     */
+    private void updateColorDisplay(ElementEditText colorDisplay, int color) {
+        // 显示十六进制颜色码
+        colorDisplay.setTextWithNoTextChangedCallBack(String.format("%08X", color));
+        // 将背景设置为当前颜色
+        colorDisplay.setBackgroundColor(color);
+
+        // 根据背景色的亮度自动设置文本颜色为黑色或白色，以确保可读性
+        double luminance = (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255;
+        colorDisplay.setTextColor(luminance > 0.5 ? Color.BLACK : Color.WHITE);
+        colorDisplay.setGravity(Gravity.CENTER);
+    }
+
+    /**
+     * 配置一个 ElementEditText 控件，使其作为颜色选择器按钮使用。
+     *
+     * @param colorDisplay 用于作为按钮的 ElementEditText 视图。
+     * @param initialColorFetcher 一个用于获取当前颜色值的 Lambda 表达式。
+     * @param colorUpdater      一个用于设置新颜色值的 Lambda 表达式。
+     */
+    private void setupColorPickerButton(ElementEditText colorDisplay, IntSupplier initialColorFetcher, IntConsumer colorUpdater) {
+        // 禁输入，让 EditText 表现得像一个按钮
+        colorDisplay.setFocusable(false);
+        colorDisplay.setCursorVisible(false);
+        colorDisplay.setKeyListener(null);
+
+        // 使用传入的 Lambda 获取初始颜色并设置外观
+        updateColorDisplay(colorDisplay, initialColorFetcher.get());
+
+        // 设置点击监听器，打开颜色选择器
+        colorDisplay.setOnClickListener(v -> {
+            // 再次获取当前颜色，确保打开时颜色是最新的
+            new ColorPickerDialog(
+                    getContext(),
+                    initialColorFetcher.get(),
+                    true, // true 表示显示 Alpha 透明度滑块
+                    newColor -> {
+                        colorUpdater.accept(newColor); // 使用传入的 Lambda 更新颜色属性
+                        save();                      // 保存更改
+                        updateColorDisplay(colorDisplay, newColor); // 更新UI显示
+                    }
+            ).show();
+        });
     }
 
 }
