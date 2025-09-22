@@ -8,7 +8,8 @@ import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.RectF;
-import android.text.InputFilter;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.InputType;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
@@ -34,16 +35,14 @@ import java.util.regex.Pattern;
 
 public class SimplifyPerformance extends Element {
 
-    private static final String SIMPLIFY_PERFORMANCE_TEXT_DEFAULT = "  带宽: ##band_width##    主机/网络/解码: ##host_latency## / ##net_latency## / ##decode_time##    帧率: ##fps##    丢帧: ##lost_frame##  ";
+    private static final String SIMPLIFY_PERFORMANCE_TEXT_DEFAULT = "  带宽: ##带宽##    主机/网络/解码: ##主机延时## / ##网络延时## / ##解码时间##    帧率: ##帧率##    丢帧: ##丢帧率##  ";
     private static final String COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_SIZE = COLUMN_INT_ELEMENT_THICK;
     private static final String COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_COLOR = COLUMN_INT_ELEMENT_NORMAL_COLOR;
     private static final String COLUMN_INT_SIMPLIFY_PERFORMANCE_PRE_PARSE_TEXT = COLUMN_STRING_ELEMENT_TEXT;
 
-    private SuperConfigDatabaseHelper superConfigDatabaseHelper;
-    private SimplifyPerformance simplifyPerformance;
-    private Pattern pattern = Pattern.compile("##(.*?)##");
-    private DisplayMetrics displayMetrics = new DisplayMetrics();
-    ;
+    private final SimplifyPerformance simplifyPerformance;
+    private final Pattern pattern = Pattern.compile("##(.*?)##");
+    private final DisplayMetrics displayMetrics = new DisplayMetrics();
 
     private String afterParseText = "null";
 
@@ -65,6 +64,13 @@ public class SimplifyPerformance extends Element {
     private final Paint paintText = new Paint();
     private final Paint paintEdit = new Paint();
     private final RectF rect = new RectF();
+
+    // --- 自驱动心跳机制 ---
+    private final Handler heartbeatHandler = new Handler(Looper.getMainLooper());
+    private Runnable heartbeatRunnable;
+    private boolean isHeartbeatActive = false;
+    private static final long HEARTBEAT_INTERVAL_MS = 1000; // 1秒心跳间隔
+    private final Game.PerformanceInfoDisplay performanceInfoDisplayListener;
 
     public SimplifyPerformance(Map<String, Object> attributesMap,
                                ElementController controller,
@@ -95,26 +101,65 @@ public class SimplifyPerformance extends Element {
         textColor = ((Long) attributesMap.get(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_COLOR)).intValue();
         backgroundColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_BACKGROUND_COLOR)).intValue();
 
-        ((Game) context).addPerformanceInfoDisplay(new Game.PerformanceInfoDisplay() {
-            @Override
-            public void display(Map<String, String> performanceAttrs) {
-                Matcher matcher = pattern.matcher(preParseText);
-                StringBuffer sb = new StringBuffer();
-                try {
-                    while (matcher.find()) {
-                        String key = matcher.group(1); // 获取 ##中间的内容##
-                        String replacement = performanceAttrs.getOrDefault(key, ""); // 从 perfAttrs 中获取相应的值
-                        matcher.appendReplacement(sb, replacement);
-                    }
-                    matcher.appendTail(sb);
-                    afterParseText = sb.toString();
-                } catch (Exception e) {
-                    afterParseText = "error";
+        // 1. 创建监听器并持有其引用
+        performanceInfoDisplayListener = performanceAttrs -> {
+            Matcher matcher = pattern.matcher(preParseText);
+            StringBuffer sb = new StringBuffer();
+            try {
+                while (matcher.find()) {
+                    String key = matcher.group(1);
+                    String replacement = performanceAttrs.getOrDefault(key, "N/A");
+                    matcher.appendReplacement(sb, replacement);
                 }
-                changeSize();
+                matcher.appendTail(sb);
+                afterParseText = sb.toString();
+            } catch (Exception e) {
+                afterParseText = "error";
             }
-        });
+            // 数据更新后，立即重算尺寸
+            changeSize();
+        };
+        ((Game) context).addPerformanceInfoDisplay(performanceInfoDisplayListener);
+
+        // 2. 初始化并启动心跳
+        initializeHeartbeat();
+        startHeartbeat();
     }
+
+    // --- 心跳和生命周期管理 ---
+
+    private void initializeHeartbeat() {
+        heartbeatRunnable = () -> {
+            if (isHeartbeatActive) {
+                invalidate(); // 周期性地请求重绘
+                heartbeatHandler.postDelayed(heartbeatRunnable, HEARTBEAT_INTERVAL_MS);
+            }
+        };
+    }
+
+    private void startHeartbeat() {
+        if (!isHeartbeatActive) {
+            isHeartbeatActive = true;
+            heartbeatHandler.post(heartbeatRunnable);
+        }
+    }
+
+    private void stopHeartbeat() {
+        isHeartbeatActive = false;
+        heartbeatHandler.removeCallbacks(heartbeatRunnable);
+    }
+
+    /**
+     * 元素销毁时调用的清理方法
+     */
+    public void destroy() {
+        stopHeartbeat();
+        if (getContext() instanceof Game && performanceInfoDisplayListener != null) {
+            ((Game) getContext()).removePerformanceInfoDisplay(performanceInfoDisplayListener);
+        }
+    }
+
+    // --- 尺寸和绘制 ---
 
     private void changeSize() {
         paintText.setTextSize(textSize);
@@ -141,9 +186,8 @@ public class SimplifyPerformance extends Element {
         float singleLineHeight = fontMetrics.bottom - fontMetrics.top;
         int totalTextHeight = (int) (singleLineHeight * lines.length);
 
-        // 设置元素的最终宽高（包含内外边距）
-        int width = (int) maxWidth + horizontalPadding + horizontalPadding;
-        int height = totalTextHeight + verticalPadding + verticalPadding;
+        int width = (int) maxWidth + horizontalPadding * 2;
+        int height = totalTextHeight + verticalPadding * 2;
         setElementWidth(width);
         setElementHeight(height);
 
@@ -151,6 +195,7 @@ public class SimplifyPerformance extends Element {
         if (radiusNumberSeekbar != null) {
             radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
         }
+        invalidate();
     }
 
 
@@ -195,6 +240,8 @@ public class SimplifyPerformance extends Element {
             canvas.drawRect(rect, paintEdit);
         }
     }
+
+    // --- UI 和页面逻辑 ---
 
     @Override
     protected SuperPageLayout getInfoPage() {
@@ -275,23 +322,17 @@ public class SimplifyPerformance extends Element {
         // 使 EditText 支持多行输入
         textEditText.setSingleLine(false);
         textEditText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-        textEditText.setGravity(Gravity.TOP | Gravity.START); // 文本从左上角开始
-        textEditText.setText(preParseText.replace("\\n", "\n")); // 显示时将 "\n" 字符串转为真正的换行符
-        textEnsureButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                setElementPreParseText(textEditText.getText().toString());
-                save();
-            }
+        textEditText.setGravity(Gravity.TOP | Gravity.START);
+        textEditText.setText(preParseText.replace("\\n", "\n"));
+        textEnsureButton.setOnClickListener(v -> {
+            setElementPreParseText(textEditText.getText().toString());
+            save();
         });
 
-        textResetButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                setElementPreParseText(SIMPLIFY_PERFORMANCE_TEXT_DEFAULT);
-                textEditText.setText(SIMPLIFY_PERFORMANCE_TEXT_DEFAULT); // 同时更新UI
-                save();
-            }
+        textResetButton.setOnClickListener(v -> {
+            setElementPreParseText(SIMPLIFY_PERFORMANCE_TEXT_DEFAULT);
+            textEditText.setText(SIMPLIFY_PERFORMANCE_TEXT_DEFAULT);
+            save();
         });
 
         textSizeNumberSeekbar.setProgressMin(10);
@@ -334,39 +375,26 @@ public class SimplifyPerformance extends Element {
         setupColorPickerButton(textColorElementEditText, () -> this.textColor, this::setElementTextColor);
         setupColorPickerButton(backgroundColorElementEditText, () -> this.backgroundColor, this::setElementBackgroundColor);
 
-        copyButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_TYPE, ELEMENT_TYPE_SIMPLIFY_PERFORMANCE);
-                contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_PRE_PARSE_TEXT, preParseText);
-                contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
-                contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
-                contentValues.put(COLUMN_INT_ELEMENT_LAYER, layer);
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, Math.max(Math.min(getElementCentralX() + getElementWidth(), centralXMax), centralXMin));
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
-                contentValues.put(COLUMN_INT_ELEMENT_RADIUS, radius);
-                contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_SIZE, textSize);
-                contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_COLOR, textColor);
-                contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, backgroundColor);
-                elementController.addElement(contentValues);
-            }
+        copyButton.setOnClickListener(v -> {
+            ContentValues contentValues = getSaveContentValues();
+            contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, Math.max(Math.min(getElementCentralX() + getElementWidth(), centralXMax), centralXMin));
+            elementController.addElement(contentValues);
         });
 
-        deleteButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                elementController.toggleInfoPage(simplifyPerformancePage);
-                elementController.deleteElement(simplifyPerformance);
-            }
+        deleteButton.setOnClickListener(v -> {
+            destroy(); // 在删除前清理资源
+            elementController.toggleInfoPage(simplifyPerformancePage);
+            elementController.deleteElement(simplifyPerformance);
         });
 
         return simplifyPerformancePage;
     }
 
-    @Override
-    public void save() {
+    // --- 数据持久化和状态更新 ---
+
+    private ContentValues getSaveContentValues() {
         ContentValues contentValues = new ContentValues();
+        contentValues.put(COLUMN_INT_ELEMENT_TYPE, ELEMENT_TYPE_SIMPLIFY_PERFORMANCE);
         contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_PRE_PARSE_TEXT, preParseText);
         contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
         contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
@@ -377,8 +405,12 @@ public class SimplifyPerformance extends Element {
         contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_SIZE, textSize);
         contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_COLOR, textColor);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, backgroundColor);
-        elementController.updateElement(elementId, contentValues);
+        return contentValues;
+    }
 
+    @Override
+    public void save() {
+        elementController.updateElement(elementId, getSaveContentValues());
     }
 
     @Override
@@ -387,15 +419,12 @@ public class SimplifyPerformance extends Element {
             centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
             centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
         }
-
     }
 
+    // --- Setters ---
+
     public void setElementPreParseText(String preParseText) {
-        if (preParseText.equals("")) {
-            this.preParseText = " "; // 使用空格而不是空字符串，避免分割时出现空数组导致计算错误
-        } else {
-            this.preParseText = preParseText;
-        }
+        this.preParseText = preParseText.isEmpty() ? " " : preParseText;
     }
 
     public void setElementRadius(int radius) {
@@ -412,14 +441,15 @@ public class SimplifyPerformance extends Element {
 
     public void setElementTextSize(int textSize) {
         this.textSize = textSize;
-        changeSize(); // 字体大小改变后需要重新计算尺寸
-        invalidate(); // 并重绘
+        changeSize();
     }
 
     public void setElementBackgroundColor(int backgroundColor) {
         this.backgroundColor = backgroundColor;
         invalidate();
     }
+
+    // --- 其他 ---
 
     @Override
     public boolean onElementTouchEvent(MotionEvent event) {
