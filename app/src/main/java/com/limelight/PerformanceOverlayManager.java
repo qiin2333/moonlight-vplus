@@ -23,10 +23,12 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
 
-import java.util.Calendar;
-import java.util.TimeZone;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
+import java.util.TimeZone;
 
 import com.limelight.binding.video.PerformanceInfo;
 import com.limelight.preferences.PerfOverlayDisplayItemsPreference;
@@ -88,6 +90,34 @@ public class PerformanceOverlayManager {
     // 月相缓存
     private String currentMoonPhaseIcon = "🌙";
     private int lastCalculatedDay = -1;
+
+    // 当前性能信息缓存
+    private PerformanceInfo currentPerformanceInfo;
+
+    // 解码器类型映射表
+    private static final Map<String, DecoderTypeInfo> DECODER_TYPE_MAP = new HashMap<>();
+
+    static {
+        // 初始化解码器类型映射
+        DECODER_TYPE_MAP.put("avc", new DecoderTypeInfo("H.264/AVC", "AVC"));
+        DECODER_TYPE_MAP.put("h264", new DecoderTypeInfo("H.264/AVC", "AVC"));
+        DECODER_TYPE_MAP.put("hevc", new DecoderTypeInfo("H.265/HEVC", "HEVC"));
+        DECODER_TYPE_MAP.put("h265", new DecoderTypeInfo("H.265/HEVC", "HEVC"));
+        DECODER_TYPE_MAP.put("av1", new DecoderTypeInfo("AV1", "AV1"));
+        DECODER_TYPE_MAP.put("vp9", new DecoderTypeInfo("VP9", "VP9"));
+        DECODER_TYPE_MAP.put("vp8", new DecoderTypeInfo("VP8", "VP8"));
+    }
+
+    // 解码器类型信息类
+    private static class DecoderTypeInfo {
+        final String fullName;
+        final String shortName;
+
+        DecoderTypeInfo(String fullName, String shortName) {
+            this.fullName = fullName;
+            this.shortName = shortName;
+        }
+    }
 
     public PerformanceOverlayManager(Activity activity, PreferenceConfiguration prefConfig) {
         this.activity = activity;
@@ -189,6 +219,9 @@ public class PerformanceOverlayManager {
      * 更新性能信息（带宽、丢包、延迟等）并刷新文案
      */
     public void updatePerformanceInfo(final PerformanceInfo performanceInfo) {
+        // 保存当前性能信息，用于弹窗显示
+        currentPerformanceInfo = performanceInfo;
+        
         // 计算带宽信息
         updateBandwidthInfo(performanceInfo);
 
@@ -236,7 +269,9 @@ public class PerformanceOverlayManager {
      * 构建解码器信息字符串
      */
     private String buildDecoderInfo(PerformanceInfo performanceInfo) {
-        String decoderInfo = performanceInfo.decoder.replaceFirst(".*\\.(avc|hevc|av1).*", "$1").toUpperCase();
+        DecoderTypeInfo decoderTypeInfo = getDecoderTypeInfo(performanceInfo.decoder);
+        String decoderInfo = decoderTypeInfo.shortName;
+        
         // 基于实际HDR激活状态而不是配置
         if (performanceInfo.isHdrActive) {
             decoderInfo += " HDR";
@@ -853,8 +888,6 @@ public class PerformanceOverlayManager {
      */
     private void showMoonPhaseInfo() {
         MoonPhaseUtils.MoonPhaseInfo moonPhaseInfo = MoonPhaseUtils.getCurrentMoonPhaseInfo();
-
-        // 计算月相百分比和天数
         double moonPhase = MoonPhaseUtils.getCurrentMoonPhase();
         double phasePercentage = MoonPhaseUtils.getMoonPhasePercentage(moonPhase);
         int daysInCycle = MoonPhaseUtils.getDaysInMoonCycle(moonPhase);
@@ -869,18 +902,15 @@ public class PerformanceOverlayManager {
                 moonPhaseInfo.icon, moonPhaseInfo.name, phasePercentage, daysInCycle, currentDate, moonPhaseInfo.description
         );
 
-        // 显示对话框
-        showMoonPhaseDialog(moonInfo);
+        showMoonPhaseDialog(moonPhaseInfo.poeticTitle, moonInfo);
     }
 
     /**
      * 显示月相信息对话框
      */
-    private void showMoonPhaseDialog(String message) {
-        MoonPhaseUtils.MoonPhaseInfo moonInfo = MoonPhaseUtils.getCurrentMoonPhaseInfo();
-
+    private void showMoonPhaseDialog(String title, String message) {
         new AlertDialog.Builder(activity, R.style.AppDialogStyle)
-                .setTitle(moonInfo.poeticTitle)
+                .setTitle(title)
                 .setMessage(message)
                 .setPositiveButton("Ok", null)
                 .setCancelable(true)
@@ -892,9 +922,79 @@ public class PerformanceOverlayManager {
      * 显示解码器信息
      */
     private void showDecoderInfo() {
+        // 获取当前性能信息中的完整解码器信息
+        String fullDecoderInfo = getCurrentDecoderInfo();
+        
         showInfoDialog(
                 activity.getString(R.string.perf_decoder_title),
-                activity.getString(R.string.perf_decoder_info)
+                fullDecoderInfo
+        );
+    }
+
+    /**
+     * 获取当前完整的解码器信息
+     */
+    private String getCurrentDecoderInfo() {
+        StringBuilder decoderInfo = new StringBuilder();
+        // 这里需要获取当前的PerformanceInfo对象
+        // 由于PerformanceInfo是在updatePerformanceInfo方法中传入的，
+        // 我们需要保存最新的PerformanceInfo对象
+        if (currentPerformanceInfo != null) {
+            // 添加完整解码器名称
+            decoderInfo.append("解码器: ").append(currentPerformanceInfo.decoder).append("\n\n");
+
+            // 添加解码器类型
+            DecoderTypeInfo decoderTypeInfo = getDecoderTypeInfo(currentPerformanceInfo.decoder);
+            decoderInfo.append("类型: ").append(decoderTypeInfo.fullName).append("\n");
+
+            // 添加HDR状态
+            if (currentPerformanceInfo.isHdrActive) {
+                decoderInfo.append("HDR: 已启用\n");
+            } else {
+                decoderInfo.append("HDR: 未启用\n");
+            }
+        }
+
+        decoderInfo.append("NOTE\n");
+        decoderInfo.append(activity.getString(R.string.perf_decoder_info));
+        return decoderInfo.toString();
+    }
+
+    /**
+     * 统一的解码器类型识别方法
+     * 返回包含完整名称和简短名称的DecoderTypeInfo对象
+     */
+    private DecoderTypeInfo getDecoderTypeInfo(String fullDecoderName) {
+        if (fullDecoderName == null) {
+            return new DecoderTypeInfo("Unknown", "Unknown");
+        }
+
+        String lowerName = fullDecoderName.toLowerCase();
+
+        // 在映射表中查找匹配的解码器类型
+        for (Map.Entry<String, DecoderTypeInfo> entry : DECODER_TYPE_MAP.entrySet()) {
+            if (lowerName.contains(entry.getKey())) {
+                return entry.getValue();
+            }
+        }
+
+        // 如果没有找到匹配的类型，尝试提取最后一个点后面的部分
+        String[] parts = fullDecoderName.split("\\.");
+        if (parts.length > 0) {
+            String extractedName = parts[parts.length - 1];
+            return new DecoderTypeInfo(fullDecoderName, extractedName.toUpperCase());
+        }
+
+        return new DecoderTypeInfo(fullDecoderName, fullDecoderName);
+    }
+
+    /**
+     * 通用的性能信息显示方法
+     */
+    private void showPerformanceInfo(int titleResId, int infoResId) {
+        showInfoDialog(
+                activity.getString(titleResId),
+                activity.getString(infoResId)
         );
     }
 
@@ -902,50 +1002,35 @@ public class PerformanceOverlayManager {
      * 显示FPS信息
      */
     private void showFpsInfo() {
-        showInfoDialog(
-                activity.getString(R.string.perf_fps_title),
-                activity.getString(R.string.perf_fps_info)
-        );
+        showPerformanceInfo(R.string.perf_fps_title, R.string.perf_fps_info);
     }
 
     /**
      * 显示丢包率信息
      */
     private void showPacketLossInfo() {
-        showInfoDialog(
-                activity.getString(R.string.perf_packet_loss_title),
-                activity.getString(R.string.perf_packet_loss_info)
-        );
+        showPerformanceInfo(R.string.perf_packet_loss_title, R.string.perf_packet_loss_info);
     }
 
     /**
      * 显示网络延迟信息
      */
     private void showNetworkLatencyInfo() {
-        showInfoDialog(
-                activity.getString(R.string.perf_network_latency_title),
-                activity.getString(R.string.perf_network_latency_info)
-        );
+        showPerformanceInfo(R.string.perf_network_latency_title, R.string.perf_network_latency_info);
     }
 
     /**
      * 显示解码延迟信息
      */
     private void showDecodeLatencyInfo() {
-        showInfoDialog(
-                activity.getString(R.string.perf_decode_latency_title),
-                activity.getString(R.string.perf_decode_latency_info)
-        );
+        showPerformanceInfo(R.string.perf_decode_latency_title, R.string.perf_decode_latency_info);
     }
 
     /**
      * 显示主机延迟信息
      */
     private void showHostLatencyInfo() {
-        showInfoDialog(
-                activity.getString(R.string.perf_host_latency_title),
-                activity.getString(R.string.perf_host_latency_info)
-        );
+        showPerformanceInfo(R.string.perf_host_latency_title, R.string.perf_host_latency_info);
     }
 
     /**
