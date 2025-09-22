@@ -1375,7 +1375,13 @@ public class GroupButton extends Element {
                     true, // true 表示显示 Alpha 透明度滑块
                     newColor -> {
                         colorUpdater.accept(newColor); // 使用传入的 Lambda 更新颜色属性
-                        save();                      // 保存更改
+                        // 如果启用了“其他属性跟随”，则遍历并保存所有子按键的状态
+                        if (childOtherAttributeFollow) {
+                            for (Element element : childElementList) {
+                                element.save(); // 保存每个子按键的更改
+                            }
+                        }
+                        save();                      //保存 GroupButton 自身的更改
                         updateColorDisplay(colorDisplay, newColor); // 更新UI显示
                     }
             ).show();
