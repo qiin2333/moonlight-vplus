@@ -1,3 +1,4 @@
+//组合键
 package com.limelight.binding.input.advance_setting.element;
 
 import android.content.ContentValues;
@@ -59,8 +60,7 @@ public class DigitalCombineButton extends Element {
          */
         void onRelease();
     }
-    
-    private SuperConfigDatabaseHelper superConfigDatabaseHelper;
+
     private PageDeviceController pageDeviceController;
     private DigitalCombineButton digitalCombineButton;
 
@@ -81,6 +81,10 @@ public class DigitalCombineButton extends Element {
     private int normalColor;
     private int pressedColor;
     private int backgroundColor;
+    // New member variables
+    private int normalTextColor;
+    private int pressedTextColor;
+    private int textSizePercent;
 
     private SuperPageLayout digitalCombineButtonPage;
     private NumberSeekbar centralXNumberSeekbar;
@@ -101,24 +105,23 @@ public class DigitalCombineButton extends Element {
     private final RectF rect = new RectF();
 
 
-
-    public DigitalCombineButton(Map<String,Object> attributesMap,
+    public DigitalCombineButton(Map<String, Object> attributesMap,
                                 ElementController controller,
                                 PageDeviceController pageDeviceController, Context context) {
-        super(attributesMap,controller,context);
+        super(attributesMap, controller, context);
         this.pageDeviceController = pageDeviceController;
         this.digitalCombineButton = this;
 
         DisplayMetrics displayMetrics = new DisplayMetrics();
-        ((Game)context).getWindowManager().getDefaultDisplay().getRealMetrics(displayMetrics);
-        super.centralXMax  = displayMetrics.widthPixels;
-        super.centralXMin  = 0;
-        super.centralYMax  = displayMetrics.heightPixels;
-        super.centralYMin  = 0;
-        super.widthMax  = displayMetrics.widthPixels / 2;
-        super.widthMin  = 50;
-        super.heightMax  = displayMetrics.heightPixels / 2;
-        super.heightMin  = 50;
+        ((Game) context).getWindowManager().getDefaultDisplay().getRealMetrics(displayMetrics);
+        super.centralXMax = displayMetrics.widthPixels;
+        super.centralXMin = 0;
+        super.centralYMax = displayMetrics.heightPixels;
+        super.centralYMin = 0;
+        super.widthMax = displayMetrics.widthPixels / 2;
+        super.widthMin = 50;
+        super.heightMax = displayMetrics.heightPixels / 2;
+        super.heightMin = 50;
 
         paintEdit.setStyle(Paint.Style.STROKE);
         paintEdit.setStrokeWidth(4);
@@ -139,6 +142,29 @@ public class DigitalCombineButton extends Element {
         value3 = (String) attributesMap.get(COLUMN_STRING_ELEMENT_VALUE_3);
         value4 = (String) attributesMap.get(COLUMN_STRING_ELEMENT_VALUE_4);
         value5 = (String) attributesMap.get(COLUMN_STRING_ELEMENT_VALUE_5);
+
+        // Load new text properties with backward compatibility
+        if (attributesMap.containsKey(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR)) {
+            normalTextColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR)).intValue();
+        } else {
+            // Default to old behavior: use border color
+            normalTextColor = normalColor;
+        }
+
+        if (attributesMap.containsKey(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR)) {
+            pressedTextColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR)).intValue();
+        } else {
+            // Default to old behavior: use border color
+            pressedTextColor = pressedColor;
+        }
+
+        if (attributesMap.containsKey(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT)) {
+            textSizePercent = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT)).intValue();
+        } else {
+            // Default based on original hardcoded logic
+            textSizePercent = 63;
+        }
+
         value1SendHandler = controller.getSendEventHandler(value1);
         value2SendHandler = controller.getSendEventHandler(value2);
         value3SendHandler = controller.getSendEventHandler(value3);
@@ -173,38 +199,46 @@ public class DigitalCombineButton extends Element {
     @Override
     protected void onElementDraw(Canvas canvas) {
 
-        // 文字
+        // Get element dimensions
         int elementWidth = getElementWidth();
         int elementHeight = getElementHeight();
-        float textSize = getPercent(elementWidth, 25);
-        textSize = Math.min(textSize,getPercent(elementHeight,80));
+
+        // Set text size based on percentage of height
+        float textSize = getPercent(elementHeight, textSizePercent);
         paintText.setTextSize(textSize);
-        paintText.setColor(isPressed() ? pressedColor : normalColor);
-        // 边框
+        // Set text color based on press state using new properties
+        paintText.setColor(isPressed() ? pressedTextColor : normalTextColor);
+        // Border
         paintBorder.setStrokeWidth(thick);
         paintBorder.setColor(isPressed() ? pressedColor : normalColor);
-        // 背景颜色
+        // Background color
         paintBackground.setColor(backgroundColor);
-        // 绘画范围
+
+        float centerX = elementWidth / 2f;
+        // Calculate the baseline Y for vertical centering
+        Paint.FontMetrics fontMetrics = paintText.getFontMetrics();
+        float baselineY = elementHeight / 2f - (fontMetrics.top + fontMetrics.bottom) / 2f;
+
+        // Drawing bounds
         rect.left = rect.top = (float) thick / 2;
         rect.right = getElementWidth() - rect.left;
         rect.bottom = getHeight() - rect.top;
-        // 绘制背景
+        // Draw background
         canvas.drawRoundRect(rect, radius, radius, paintBackground);
-        // 绘制边框
+        // Draw border
         canvas.drawRoundRect(rect, radius, radius, paintBorder);
-        // 绘制文字
-        canvas.drawText(text, getPercent(elementWidth, 50), getPercent(elementHeight, 63), paintText);
+        // Draw text using the calculated precise coordinates
+        canvas.drawText(text, centerX, baselineY, paintText);
 
         ElementController.Mode mode = elementController.getMode();
-        if (mode == ElementController.Mode.Edit || mode == ElementController.Mode.Select){
-            // 绘画范围
+        if (mode == ElementController.Mode.Edit || mode == ElementController.Mode.Select) {
+            // Drawing bounds
             rect.left = rect.top = 2;
             rect.right = getWidth() - 2;
             rect.bottom = getHeight() - 2;
-            // 边框
+            // Border
             paintEdit.setColor(editColor);
-            canvas.drawRect(rect,paintEdit);
+            canvas.drawRect(rect, paintEdit);
         }
     }
 
@@ -271,21 +305,25 @@ public class DigitalCombineButton extends Element {
         contentValues.put(COLUMN_STRING_ELEMENT_VALUE_5, value5);
         contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
         contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
-        contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,getElementCentralX());
+        contentValues.put(COLUMN_INT_ELEMENT_LAYER, layer);
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, getElementCentralX());
         contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
-        contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
-        contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
-        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
-        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
-        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
-        elementController.updateElement(elementId,contentValues);
+        contentValues.put(COLUMN_INT_ELEMENT_RADIUS, radius);
+        contentValues.put(COLUMN_INT_ELEMENT_THICK, thick);
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR, normalColor);
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, pressedColor);
+        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, backgroundColor);
+        // Save new text properties
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, normalTextColor);
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, pressedTextColor);
+        contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, textSizePercent);
+        elementController.updateElement(elementId, contentValues);
 
     }
 
     @Override
     protected void updatePage() {
-        if (digitalCombineButtonPage != null){
+        if (digitalCombineButtonPage != null) {
             centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
             centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
         }
@@ -294,8 +332,8 @@ public class DigitalCombineButton extends Element {
 
     @Override
     protected SuperPageLayout getInfoPage() {
-        if (digitalCombineButtonPage == null){
-            digitalCombineButtonPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_digital_combine_button,null);
+        if (digitalCombineButtonPage == null) {
+            digitalCombineButtonPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_digital_combine_button, null);
             centralXNumberSeekbar = digitalCombineButtonPage.findViewById(R.id.page_digital_combine_button_central_x);
             centralYNumberSeekbar = digitalCombineButtonPage.findViewById(R.id.page_digital_combine_button_central_y);
 
@@ -318,104 +356,23 @@ public class DigitalCombineButton extends Element {
         Button copyButton = digitalCombineButtonPage.findViewById(R.id.page_digital_combine_button_copy);
         Button deleteButton = digitalCombineButtonPage.findViewById(R.id.page_digital_combine_button_delete);
 
+        // Find new views for text properties (assuming these IDs exist in the XML layout)
+        NumberSeekbar textSizeNumberSeekbar = digitalCombineButtonPage.findViewById(R.id.page_digital_combine_button_text_size);
+        ElementEditText normalTextColorElementEditText = digitalCombineButtonPage.findViewById(R.id.page_digital_combine_button_normal_text_color);
+        ElementEditText pressedTextColorElementEditText = digitalCombineButtonPage.findViewById(R.id.page_digital_combine_button_pressed_text_color);
+
         textElementEditText.setTextWithNoTextChangedCallBack(text);
-        textElementEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
-            @Override
-            public void textChanged(String text) {
-                setElementText(text);
-                save();
-            }
+        textElementEditText.setOnTextChangedListener(text -> {
+            setElementText(text);
+            save();
         });
 
+        setupValueTextView(value1TextView, value1, this::setElementValue1);
+        setupValueTextView(value2TextView, value2, this::setElementValue2);
+        setupValueTextView(value3TextView, value3, this::setElementValue3);
+        setupValueTextView(value4TextView, value4, this::setElementValue4);
+        setupValueTextView(value5TextView, value5, this::setElementValue5);
 
-
-
-        value1TextView.setText(pageDeviceController.getKeyNameByValue(value1));
-        value1TextView.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
-                    @Override
-                    public void OnKeyClick(TextView key) {
-                        // page页设置值文本
-                        ((TextView) v).setText(key.getText());
-                        setElementValue1(key.getTag().toString());
-                        save();
-                    }
-                };
-                pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
-            }
-        });
-
-        value2TextView.setText(pageDeviceController.getKeyNameByValue(value2));
-        value2TextView.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
-                    @Override
-                    public void OnKeyClick(TextView key) {
-                        // page页设置值文本
-                        ((TextView) v).setText(key.getText());
-                        setElementValue2(key.getTag().toString());
-                        save();
-                    }
-                };
-                pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
-            }
-        });
-
-        value3TextView.setText(pageDeviceController.getKeyNameByValue(value3));
-        value3TextView.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
-                    @Override
-                    public void OnKeyClick(TextView key) {
-                        // page页设置值文本
-                        ((TextView) v).setText(key.getText());
-                        setElementValue3(key.getTag().toString());
-                        save();
-                    }
-                };
-                pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
-            }
-        });
-
-
-        value4TextView.setText(pageDeviceController.getKeyNameByValue(value4));
-        value4TextView.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
-                    @Override
-                    public void OnKeyClick(TextView key) {
-                        // page页设置值文本
-                        ((TextView) v).setText(key.getText());
-                        setElementValue4(key.getTag().toString());
-                        save();
-                    }
-                };
-                pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
-            }
-        });
-
-
-        value5TextView.setText(pageDeviceController.getKeyNameByValue(value5));
-        value5TextView.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
-                    @Override
-                    public void OnKeyClick(TextView key) {
-                        // page页设置值文本
-                        ((TextView) v).setText(key.getText());
-                        setElementValue5(key.getTag().toString());
-                        save();
-                    }
-                };
-                pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
-            }
-        });
         centralXNumberSeekbar.setProgressMin(centralXMin);
         centralXNumberSeekbar.setProgressMax(centralXMax);
         centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
@@ -434,6 +391,7 @@ public class DigitalCombineButton extends Element {
                 save();
             }
         });
+
         centralYNumberSeekbar.setProgressMin(centralYMin);
         centralYNumberSeekbar.setProgressMax(centralYMax);
         centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
@@ -495,7 +453,6 @@ public class DigitalCombineButton extends Element {
         });
 
 
-
         radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
         radiusNumberSeekbar.setValueWithNoCallBack(radius);
         radiusNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
@@ -550,46 +507,85 @@ public class DigitalCombineButton extends Element {
             }
         });
 
+        // Setup for new text size seekbar
+        textSizeNumberSeekbar.setProgressMin(10); // 10%
+        textSizeNumberSeekbar.setProgressMax(150); // 150%
+        textSizeNumberSeekbar.setValueWithNoCallBack(textSizePercent);
+        textSizeNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementTextSizePercent(progress);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
+            }
+        });
+
+        // Refactored setup for all color pickers
         setupColorPickerButton(normalColorElementEditText, () -> this.normalColor, this::setElementNormalColor);
         setupColorPickerButton(pressedColorElementEditText, () -> this.pressedColor, this::setElementPressedColor);
         setupColorPickerButton(backgroundColorElementEditText, () -> this.backgroundColor, this::setElementBackgroundColor);
+        setupColorPickerButton(normalTextColorElementEditText, () -> this.normalTextColor, this::setElementNormalTextColor);
+        setupColorPickerButton(pressedTextColorElementEditText, () -> this.pressedTextColor, this::setElementPressedTextColor);
 
-        copyButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON);
-                contentValues.put(COLUMN_STRING_ELEMENT_TEXT, text);
-                contentValues.put(COLUMN_STRING_ELEMENT_VALUE_1, value1);
-                contentValues.put(COLUMN_STRING_ELEMENT_VALUE_2, value2);
-                contentValues.put(COLUMN_STRING_ELEMENT_VALUE_3, value3);
-                contentValues.put(COLUMN_STRING_ELEMENT_VALUE_4, value4);
-                contentValues.put(COLUMN_STRING_ELEMENT_VALUE_5, value5);
-                contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
-                contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
-                contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,Math.max(Math.min(getElementCentralX() + getElementWidth(),centralXMax),centralXMin));
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
-                contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
-                contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
-                contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
-                contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
-                contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
-                elementController.addElement(contentValues);
-            }
+
+        copyButton.setOnClickListener(v -> {
+            ContentValues contentValues = new ContentValues();
+            contentValues.put(COLUMN_INT_ELEMENT_TYPE, ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON);
+            contentValues.put(COLUMN_STRING_ELEMENT_TEXT, text);
+            contentValues.put(COLUMN_STRING_ELEMENT_VALUE_1, value1);
+            contentValues.put(COLUMN_STRING_ELEMENT_VALUE_2, value2);
+            contentValues.put(COLUMN_STRING_ELEMENT_VALUE_3, value3);
+            contentValues.put(COLUMN_STRING_ELEMENT_VALUE_4, value4);
+            contentValues.put(COLUMN_STRING_ELEMENT_VALUE_5, value5);
+            contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
+            contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
+            contentValues.put(COLUMN_INT_ELEMENT_LAYER, layer);
+            contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, Math.max(Math.min(getElementCentralX() + getElementWidth(), centralXMax), centralXMin));
+            contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
+            contentValues.put(COLUMN_INT_ELEMENT_RADIUS, radius);
+            contentValues.put(COLUMN_INT_ELEMENT_THICK, thick);
+            contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR, normalColor);
+            contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, pressedColor);
+            contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, backgroundColor);
+            // Add new properties for copy
+            contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, normalTextColor);
+            contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, pressedTextColor);
+            contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, textSizePercent);
+            elementController.addElement(contentValues);
         });
 
-        deleteButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                elementController.toggleInfoPage(digitalCombineButtonPage);
-                elementController.deleteElement(digitalCombineButton);
-            }
+        deleteButton.setOnClickListener(v -> {
+            elementController.toggleInfoPage(digitalCombineButtonPage);
+            elementController.deleteElement(digitalCombineButton);
         });
-
-
 
         return digitalCombineButtonPage;
+    }
+
+    private interface StringConsumer {
+        void accept(String value);
+    }
+
+    private void setupValueTextView(TextView textView, String initialValue, StringConsumer valueSetter) {
+        textView.setText(pageDeviceController.getKeyNameByValue(initialValue));
+        textView.setOnClickListener(v -> {
+            PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
+                @Override
+                public void OnKeyClick(TextView key) {
+                    ((TextView) v).setText(key.getText());
+                    valueSetter.accept(key.getTag().toString());
+                    save();
+                }
+            };
+            pageDeviceController.open(deviceCallBack, View.VISIBLE, View.VISIBLE, View.VISIBLE);
+        });
     }
 
     protected void setElementText(String text) {
@@ -601,18 +597,22 @@ public class DigitalCombineButton extends Element {
         this.value1 = value1;
         value1SendHandler = elementController.getSendEventHandler(value1);
     }
+
     protected void setElementValue2(String value2) {
         this.value2 = value2;
         value2SendHandler = elementController.getSendEventHandler(value2);
     }
+
     protected void setElementValue3(String value3) {
         this.value3 = value3;
         value3SendHandler = elementController.getSendEventHandler(value3);
     }
+
     protected void setElementValue4(String value4) {
         this.value4 = value4;
         value4SendHandler = elementController.getSendEventHandler(value4);
     }
+
     protected void setElementValue5(String value5) {
         this.value5 = value5;
         value5SendHandler = elementController.getSendEventHandler(value5);
@@ -643,25 +643,45 @@ public class DigitalCombineButton extends Element {
         invalidate();
     }
 
-    public static ContentValues getInitialInfo(){
+    // New setters for text properties
+    protected void setElementNormalTextColor(int normalTextColor) {
+        this.normalTextColor = normalTextColor;
+        invalidate();
+    }
+
+    protected void setElementPressedTextColor(int pressedTextColor) {
+        this.pressedTextColor = pressedTextColor;
+        invalidate();
+    }
+
+    protected void setElementTextSizePercent(int textSizePercent) {
+        this.textSizePercent = textSizePercent;
+        invalidate();
+    }
+
+    public static ContentValues getInitialInfo() {
         ContentValues contentValues = new ContentValues();
-        contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON);
-        contentValues.put(COLUMN_STRING_ELEMENT_TEXT,"组合键");
-        contentValues.put(COLUMN_STRING_ELEMENT_VALUE_1,"k29");
-        contentValues.put(COLUMN_STRING_ELEMENT_VALUE_2,"null");
-        contentValues.put(COLUMN_STRING_ELEMENT_VALUE_3,"null");
-        contentValues.put(COLUMN_STRING_ELEMENT_VALUE_4,"null");
-        contentValues.put(COLUMN_STRING_ELEMENT_VALUE_5,"null");
-        contentValues.put(COLUMN_INT_ELEMENT_WIDTH,100);
-        contentValues.put(COLUMN_INT_ELEMENT_HEIGHT,100);
-        contentValues.put(COLUMN_INT_ELEMENT_LAYER,50);
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,100);
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y,100);
-        contentValues.put(COLUMN_INT_ELEMENT_RADIUS,0);
-        contentValues.put(COLUMN_INT_ELEMENT_THICK,5);
-        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,0xF0888888);
-        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,0xF00000FF);
-        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,0x00FFFFFF);
+        contentValues.put(COLUMN_INT_ELEMENT_TYPE, ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON);
+        contentValues.put(COLUMN_STRING_ELEMENT_TEXT, "组合键");
+        contentValues.put(COLUMN_STRING_ELEMENT_VALUE_1, "k29");
+        contentValues.put(COLUMN_STRING_ELEMENT_VALUE_2, "null");
+        contentValues.put(COLUMN_STRING_ELEMENT_VALUE_3, "null");
+        contentValues.put(COLUMN_STRING_ELEMENT_VALUE_4, "null");
+        contentValues.put(COLUMN_STRING_ELEMENT_VALUE_5, "null");
+        contentValues.put(COLUMN_INT_ELEMENT_WIDTH, 100);
+        contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, 100);
+        contentValues.put(COLUMN_INT_ELEMENT_LAYER, 50);
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, 100);
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, 100);
+        contentValues.put(COLUMN_INT_ELEMENT_RADIUS, 0);
+        contentValues.put(COLUMN_INT_ELEMENT_THICK, 5);
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR, 0xF0888888);
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, 0xF00000FF);
+        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, 0x00FFFFFF);
+        // Add new properties with good defaults
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, 0xFFFFFFFF); // White
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, 0xFFCCCCCC); // Light Grey for pressed state
+        contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, 63);
         return contentValues;
 
 
@@ -674,6 +694,7 @@ public class DigitalCombineButton extends Element {
     private interface IntConsumer {
         void accept(int value);
     }
+
     /**
      * 更新颜色显示按钮的外观（文本、背景色、文本颜色）。
      */
@@ -692,9 +713,9 @@ public class DigitalCombineButton extends Element {
     /**
      * 配置一个 ElementEditText 控件，使其作为颜色选择器按钮使用。
      *
-     * @param colorDisplay 用于作为按钮的 ElementEditText 视图。
+     * @param colorDisplay        用于作为按钮的 ElementEditText 视图。
      * @param initialColorFetcher 一个用于获取当前颜色值的 Lambda 表达式。
-     * @param colorUpdater      一个用于设置新颜色值的 Lambda 表达式。
+     * @param colorUpdater        一个用于设置新颜色值的 Lambda 表达式。
      */
     private void setupColorPickerButton(ElementEditText colorDisplay, IntSupplier initialColorFetcher, IntConsumer colorUpdater) {
         // 禁输入，让 EditText 表现得像一个按钮

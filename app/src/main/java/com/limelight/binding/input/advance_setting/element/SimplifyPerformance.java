@@ -1,13 +1,16 @@
+//串流信息
 package com.limelight.binding.input.advance_setting.element;
 
 import android.content.ContentValues;
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.text.InputFilter;
 import android.util.DisplayMetrics;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -22,6 +25,7 @@ import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHel
 import com.limelight.binding.input.advance_setting.superpage.ElementEditText;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
+import com.limelight.utils.ColorPickerDialog;
 
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -37,7 +41,8 @@ public class SimplifyPerformance extends Element {
     private SuperConfigDatabaseHelper superConfigDatabaseHelper;
     private SimplifyPerformance simplifyPerformance;
     private Pattern pattern = Pattern.compile("##(.*?)##");
-    private DisplayMetrics displayMetrics = new DisplayMetrics();;
+    private DisplayMetrics displayMetrics = new DisplayMetrics();
+    ;
 
     private String afterParseText = "null";
 
@@ -59,20 +64,20 @@ public class SimplifyPerformance extends Element {
     private final Paint paintEdit = new Paint();
     private final RectF rect = new RectF();
 
-    public SimplifyPerformance(Map<String,Object> attributesMap,
+    public SimplifyPerformance(Map<String, Object> attributesMap,
                                ElementController controller,
                                Context context) {
-        super(attributesMap,controller,context);
+        super(attributesMap, controller, context);
         this.simplifyPerformance = this;
-        ((Game)context).getWindowManager().getDefaultDisplay().getRealMetrics(displayMetrics);
-        super.centralXMax  = displayMetrics.widthPixels;
-        super.centralXMin  = 0;
-        super.centralYMax  = displayMetrics.heightPixels;
-        super.centralYMin  = 0;
-        super.widthMax  = 100000;
-        super.widthMin  = 0;
-        super.heightMax  = 100000;
-        super.heightMin  = 0;
+        ((Game) context).getWindowManager().getDefaultDisplay().getRealMetrics(displayMetrics);
+        super.centralXMax = displayMetrics.widthPixels;
+        super.centralXMin = 0;
+        super.centralYMax = displayMetrics.heightPixels;
+        super.centralYMin = 0;
+        super.widthMax = 100000;
+        super.widthMin = 0;
+        super.heightMax = 100000;
+        super.heightMin = 0;
 
         paintEdit.setStyle(Paint.Style.STROKE);
         paintEdit.setStrokeWidth(4);
@@ -88,7 +93,7 @@ public class SimplifyPerformance extends Element {
         textColor = ((Long) attributesMap.get(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_COLOR)).intValue();
         backgroundColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_BACKGROUND_COLOR)).intValue();
 
-        ((Game)context).addPerformanceInfoDisplay(new Game.PerformanceInfoDisplay() {
+        ((Game) context).addPerformanceInfoDisplay(new Game.PerformanceInfoDisplay() {
             @Override
             public void display(Map<String, String> performanceAttrs) {
                 Matcher matcher = pattern.matcher(preParseText);
@@ -101,7 +106,7 @@ public class SimplifyPerformance extends Element {
                     }
                     matcher.appendTail(sb);
                     afterParseText = sb.toString();
-                } catch (Exception e){
+                } catch (Exception e) {
                     afterParseText = "error";
                 }
                 changeSize();
@@ -109,7 +114,7 @@ public class SimplifyPerformance extends Element {
         });
     }
 
-    private void changeSize(){
+    private void changeSize() {
         paintText.setTextSize(textSize);
         int textWidth = (int) paintText.measureText(afterParseText);
         Paint.FontMetrics fontMetrics = paintText.getFontMetrics();
@@ -118,7 +123,7 @@ public class SimplifyPerformance extends Element {
         int height = textHeight + verticalPadding + verticalPadding;
         setElementWidth(width);
         setElementHeight(height);
-        if (radiusNumberSeekbar != null){
+        if (radiusNumberSeekbar != null) {
             radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
         }
 
@@ -139,25 +144,25 @@ public class SimplifyPerformance extends Element {
         // 绘制背景
         canvas.drawRoundRect(rect, radius, radius, paintBackground);
         // 绘制文字
-        canvas.drawText(afterParseText,0,verticalPadding + textSize ,paintText);
+        canvas.drawText(afterParseText, 0, verticalPadding + textSize, paintText);
 
         ElementController.Mode mode = elementController.getMode();
-        if (mode == ElementController.Mode.Edit || mode == ElementController.Mode.Select){
+        if (mode == ElementController.Mode.Edit || mode == ElementController.Mode.Select) {
             // 绘画范围
             rect.left = rect.top = 2;
             rect.right = getElementWidth() - 2;
             rect.bottom = getElementHeight() - 2;
             // 边框
             paintEdit.setColor(editColor);
-            canvas.drawRect(rect,paintEdit);
+            canvas.drawRect(rect, paintEdit);
 
         }
     }
 
     @Override
     protected SuperPageLayout getInfoPage() {
-        if (simplifyPerformancePage == null){
-            simplifyPerformancePage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_simplify_performance,null);
+        if (simplifyPerformancePage == null) {
+            simplifyPerformancePage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_simplify_performance, null);
             centralXNumberSeekbar = simplifyPerformancePage.findViewById(R.id.page_simplify_performance_central_x);
             centralYNumberSeekbar = simplifyPerformancePage.findViewById(R.id.page_simplify_performance_central_y);
 
@@ -284,29 +289,8 @@ public class SimplifyPerformance extends Element {
             }
         });
 
-        textColorElementEditText.setTextWithNoTextChangedCallBack(String.format("%08X",textColor));
-        textColorElementEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new HexInputFilter()});
-        textColorElementEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
-            @Override
-            public void textChanged(String text) {
-                if (text.matches("^[A-F0-9]{8}$")){
-                    setElementTextColor((int) Long.parseLong(text, 16));
-                    save();
-                }
-            }
-        });
-
-        backgroundColorElementEditText.setTextWithNoTextChangedCallBack(String.format("%08X",backgroundColor));
-        backgroundColorElementEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new HexInputFilter()});
-        backgroundColorElementEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
-            @Override
-            public void textChanged(String text) {
-                if (text.matches("^[A-F0-9]{8}$")){
-                    setElementBackgroundColor((int) Long.parseLong(text, 16));
-                    save();
-                }
-            }
-        });
+        setupColorPickerButton(textColorElementEditText, () -> this.textColor, this::setElementTextColor);
+        setupColorPickerButton(backgroundColorElementEditText, () -> this.backgroundColor, this::setElementBackgroundColor);
 
         copyButton.setOnClickListener(new OnClickListener() {
             @Override
@@ -316,13 +300,13 @@ public class SimplifyPerformance extends Element {
                 contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_PRE_PARSE_TEXT, preParseText);
                 contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
                 contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
-                contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,Math.max(Math.min(getElementCentralX() + getElementWidth(),centralXMax),centralXMin));
+                contentValues.put(COLUMN_INT_ELEMENT_LAYER, layer);
+                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, Math.max(Math.min(getElementCentralX() + getElementWidth(), centralXMax), centralXMin));
                 contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
-                contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
-                contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_SIZE,textSize);
-                contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_COLOR,textColor);
-                contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
+                contentValues.put(COLUMN_INT_ELEMENT_RADIUS, radius);
+                contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_SIZE, textSize);
+                contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_COLOR, textColor);
+                contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, backgroundColor);
                 elementController.addElement(contentValues);
             }
         });
@@ -344,20 +328,20 @@ public class SimplifyPerformance extends Element {
         contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_PRE_PARSE_TEXT, preParseText);
         contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
         contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
-        contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,getElementCentralX());
+        contentValues.put(COLUMN_INT_ELEMENT_LAYER, layer);
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, getElementCentralX());
         contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
-        contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
-        contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_SIZE,textSize);
-        contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_COLOR,textColor);
-        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
-        elementController.updateElement(elementId,contentValues);
+        contentValues.put(COLUMN_INT_ELEMENT_RADIUS, radius);
+        contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_SIZE, textSize);
+        contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_COLOR, textColor);
+        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, backgroundColor);
+        elementController.updateElement(elementId, contentValues);
 
     }
 
     @Override
     protected void updatePage() {
-        if (simplifyPerformancePage != null){
+        if (simplifyPerformancePage != null) {
             centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
             centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
         }
@@ -365,7 +349,7 @@ public class SimplifyPerformance extends Element {
     }
 
     public void setElementPreParseText(String preParseText) {
-        if (preParseText.equals("")){
+        if (preParseText.equals("")) {
             this.preParseText = "   ";
         } else {
             this.preParseText = preParseText;
@@ -408,22 +392,77 @@ public class SimplifyPerformance extends Element {
         return true;
     }
 
-    public static ContentValues getInitialInfo(){
+    public static ContentValues getInitialInfo() {
         ContentValues contentValues = new ContentValues();
-        contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_SIMPLIFY_PERFORMANCE);
-        contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_PRE_PARSE_TEXT,SIMPLIFY_PERFORMANCE_TEXT_DEFAULT);
+        contentValues.put(COLUMN_INT_ELEMENT_TYPE, ELEMENT_TYPE_SIMPLIFY_PERFORMANCE);
+        contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_PRE_PARSE_TEXT, SIMPLIFY_PERFORMANCE_TEXT_DEFAULT);
         contentValues.put(COLUMN_INT_ELEMENT_WIDTH, 100);
-        contentValues.put(COLUMN_INT_ELEMENT_HEIGHT,20);
-        contentValues.put(COLUMN_INT_ELEMENT_LAYER,50);
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,100);
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y,100);
-        contentValues.put(COLUMN_INT_ELEMENT_RADIUS,19);
-        contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_SIZE,30);
-        contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_COLOR,0xB3FFFFFF);
-        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,0xF0555555);
+        contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, 20);
+        contentValues.put(COLUMN_INT_ELEMENT_LAYER, 50);
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, 100);
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, 100);
+        contentValues.put(COLUMN_INT_ELEMENT_RADIUS, 19);
+        contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_SIZE, 30);
+        contentValues.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_COLOR, 0xB3FFFFFF);
+        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, 0xF0555555);
         return contentValues;
 
 
+    }
+
+    private interface IntSupplier {
+        int get();
+    }
+
+    private interface IntConsumer {
+        void accept(int value);
+    }
+
+    /**
+     * 更新颜色显示按钮的外观（文本、背景色、文本颜色）。
+     */
+    private void updateColorDisplay(ElementEditText colorDisplay, int color) {
+        // 显示十六进制颜色码
+        colorDisplay.setTextWithNoTextChangedCallBack(String.format("%08X", color));
+        // 将背景设置为当前颜色
+        colorDisplay.setBackgroundColor(color);
+
+        // 根据背景色的亮度自动设置文本颜色为黑色或白色，以确保可读性
+        double luminance = (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255;
+        colorDisplay.setTextColor(luminance > 0.5 ? Color.BLACK : Color.WHITE);
+        colorDisplay.setGravity(Gravity.CENTER);
+    }
+
+    /**
+     * 配置一个 ElementEditText 控件，使其作为颜色选择器按钮使用。
+     *
+     * @param colorDisplay        用于作为按钮的 ElementEditText 视图。
+     * @param initialColorFetcher 一个用于获取当前颜色值的 Lambda 表达式。
+     * @param colorUpdater        一个用于设置新颜色值的 Lambda 表达式。
+     */
+    private void setupColorPickerButton(ElementEditText colorDisplay, IntSupplier initialColorFetcher, IntConsumer colorUpdater) {
+        // 禁输入，让 EditText 表现得像一个按钮
+        colorDisplay.setFocusable(false);
+        colorDisplay.setCursorVisible(false);
+        colorDisplay.setKeyListener(null);
+
+        // 使用传入的 Lambda 获取初始颜色并设置外观
+        updateColorDisplay(colorDisplay, initialColorFetcher.get());
+
+        // 设置点击监听器，打开颜色选择器
+        colorDisplay.setOnClickListener(v -> {
+            // 再次获取当前颜色，确保打开时颜色是最新的
+            new ColorPickerDialog(
+                    getContext(),
+                    initialColorFetcher.get(),
+                    true, // true 表示显示 Alpha 透明度滑块
+                    newColor -> {
+                        colorUpdater.accept(newColor); // 使用传入的 Lambda 更新颜色属性
+                        save();                      // 保存更改
+                        updateColorDisplay(colorDisplay, newColor); // 更新UI显示
+                    }
+            ).show(); // <-- 主要变化：在最后调用 .show()
+        });
     }
 }
 

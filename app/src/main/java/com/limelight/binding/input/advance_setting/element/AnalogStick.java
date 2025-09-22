@@ -1,3 +1,4 @@
+//手柄摇杆
 package com.limelight.binding.input.advance_setting.element;
 
 import android.content.ContentValues;
@@ -59,6 +60,7 @@ public class AnalogStick extends Element {
     public final static long timeoutDeadzone = 150;
 
     private int moveMode = 0; // 0: 绝对位置模式, 1: 相对移动模式
+
     /**
      * Listener interface to update registered observers.
      */
@@ -209,10 +211,10 @@ public class AnalogStick extends Element {
         }
     }
 
-    public AnalogStick(Map<String,Object> attributesMap,
+    public AnalogStick(Map<String, Object> attributesMap,
                        ElementController controller,
                        PageDeviceController pageDeviceController, Context context) {
-        super(attributesMap,controller,context);
+        super(attributesMap, controller, context);
         // reset stick position
         position_stick_x = getWidth() / 2;
         position_stick_y = getHeight() / 2;
@@ -222,7 +224,7 @@ public class AnalogStick extends Element {
 
 
         DisplayMetrics displayMetrics = new DisplayMetrics();
-        ((Game)context).getWindowManager().getDefaultDisplay().getRealMetrics(displayMetrics);
+        ((Game) context).getWindowManager().getDefaultDisplay().getRealMetrics(displayMetrics);
         super.centralXMax = displayMetrics.widthPixels;
         super.centralXMin = 0;
         super.centralYMax = displayMetrics.heightPixels;
@@ -247,16 +249,15 @@ public class AnalogStick extends Element {
             middleValue = (String) attributesMap.get(COLUMN_STRING_ELEMENT_MIDDLE_VALUE);
             value = (String) attributesMap.get(COLUMN_STRING_ELEMENT_VALUE);
             moveMode = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_MODE)).intValue();
-        }
-        catch (Exception e) {
-            if(radius==0)radius = 100;
-            if(deadZoneRadius==0)deadZoneRadius = 30;
-            if(thick==0)thick = 5;
-            if(normalColor==0)normalColor = 0xF0888888;
-            if(pressedColor==0)pressedColor = 0xF00000FF;
-            if(backgroundColor==0)backgroundColor = 0x00FFFFFF;
-            if(middleValue==null)middleValue = "g64";
-            if(value==null)value = "LS";
+        } catch (Exception e) {
+            if (radius == 0) radius = 100;
+            if (deadZoneRadius == 0) deadZoneRadius = 30;
+            if (thick == 0) thick = 5;
+            if (normalColor == 0) normalColor = 0xF0888888;
+            if (pressedColor == 0) pressedColor = 0xF00000FF;
+            if (backgroundColor == 0) backgroundColor = 0x00FFFFFF;
+            if (middleValue == null) middleValue = "g64";
+            if (value == null) value = "LS";
             if (moveMode == 0) moveMode = 0;
             System.out.println("加载按摇杆时发生错误，已应用默认值: " + e.getMessage());
         }
@@ -270,7 +271,7 @@ public class AnalogStick extends Element {
         listener = new AnalogStickListener() {
             @Override
             public void onMovement(float x, float y) {
-                valueSendHandler.sendEvent((int) (x * 0x7FFE),(int) (y * 0x7FFE));
+                valueSendHandler.sendEvent((int) (x * 0x7FFE), (int) (y * 0x7FFE));
             }
 
             @Override
@@ -311,14 +312,14 @@ public class AnalogStick extends Element {
         // notify listeners
         listener.onRevoke();
     }
-    
+
 
     @Override
     protected void onElementDraw(Canvas canvas) {
         // set transparent background
         paintBackground.setColor(backgroundColor);
         canvas.drawCircle(radius, radius, radius_complete, paintBackground);
-        
+
         paintStick.setStrokeWidth(thick);
         // draw outer circle
         if (!isPressed() || click_state == AnalogStick.CLICK_STATE.SINGLE) {
@@ -348,14 +349,14 @@ public class AnalogStick extends Element {
         }
 
         ElementController.Mode mode = elementController.getMode();
-        if (mode == ElementController.Mode.Edit || mode == ElementController.Mode.Select){
+        if (mode == ElementController.Mode.Edit || mode == ElementController.Mode.Select) {
             // 绘画范围
             rect.left = rect.top = 2;
             rect.right = getWidth() - 2;
             rect.bottom = getHeight() - 2;
             // 边框
             paintEdit.setColor(editColor);
-            canvas.drawRect(rect,paintEdit);
+            canvas.drawRect(rect, paintEdit);
 
         }
     }
@@ -399,13 +400,10 @@ public class AnalogStick extends Element {
 
 
         // get absolute way for each axis
-        if (moveMode==1)
-        {
-            relative_x = event.getX()-FirstTouchX;
-            relative_y = event.getY()-FirstTouchY;
-        }
-        else
-        {
+        if (moveMode == 1) {
+            relative_x = event.getX() - FirstTouchX;
+            relative_y = event.getY() - FirstTouchY;
+        } else {
             relative_x = -(radius - event.getX());
             relative_y = -(radius - event.getY());
         }
@@ -473,13 +471,13 @@ public class AnalogStick extends Element {
 
     @Override
     protected SuperPageLayout getInfoPage() {
-        if (analogStickPage == null){
-            analogStickPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_analog_stick,null);
+        if (analogStickPage == null) {
+            analogStickPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_analog_stick, null);
             centralXNumberSeekbar = analogStickPage.findViewById(R.id.page_analog_stick_central_x);
             centralYNumberSeekbar = analogStickPage.findViewById(R.id.page_analog_stick_central_y);
 
         }
-        
+
         NumberSeekbar radiusNumberSeekbar = analogStickPage.findViewById(R.id.page_analog_stick_radius);
         TextView middleValueTextView = analogStickPage.findViewById(R.id.page_analog_stick_middle_value);
         RadioGroup modeRadioGroup = analogStickPage.findViewById(R.id.page_analog_stick_value);
@@ -516,10 +514,10 @@ public class AnalogStick extends Element {
                         save();
                     }
                 };
-                pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
+                pageDeviceController.open(deviceCallBack, View.VISIBLE, View.VISIBLE, View.VISIBLE);
             }
         });
-        moveModeSwitch.setChecked(moveMode==1);
+        moveModeSwitch.setChecked(moveMode == 1);
         moveModeSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -585,11 +583,8 @@ public class AnalogStick extends Element {
         });
 
 
-
-
-
         radiusNumberSeekbar.setProgressMax(widthMax < heightMax ? widthMax / 2 : heightMax / 2);
-        radiusNumberSeekbar.setProgressMin(widthMin/2);
+        radiusNumberSeekbar.setProgressMin(widthMin / 2);
         radiusNumberSeekbar.setValueWithNoCallBack(radius);
         radiusNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
@@ -603,7 +598,7 @@ public class AnalogStick extends Element {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-               save();
+                save();
             }
         });
 
@@ -651,20 +646,20 @@ public class AnalogStick extends Element {
             @Override
             public void onClick(View v) {
                 ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_ANALOG_STICK);
-                contentValues.put(COLUMN_STRING_ELEMENT_VALUE,value);
-                contentValues.put(COLUMN_STRING_ELEMENT_MIDDLE_VALUE,middleValue);
+                contentValues.put(COLUMN_INT_ELEMENT_TYPE, ELEMENT_TYPE_ANALOG_STICK);
+                contentValues.put(COLUMN_STRING_ELEMENT_VALUE, value);
+                contentValues.put(COLUMN_STRING_ELEMENT_MIDDLE_VALUE, middleValue);
                 contentValues.put(COLUMN_INT_ELEMENT_DEAD_ZONE_RADIUS, deadZoneRadius);
                 contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
                 contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
-                contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,Math.max(Math.min(getElementCentralX() + getElementWidth(),centralXMax),centralXMin));
+                contentValues.put(COLUMN_INT_ELEMENT_LAYER, layer);
+                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, Math.max(Math.min(getElementCentralX() + getElementWidth(), centralXMax), centralXMin));
                 contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
-                contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
-                contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
-                contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
-                contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
-                contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
+                contentValues.put(COLUMN_INT_ELEMENT_RADIUS, radius);
+                contentValues.put(COLUMN_INT_ELEMENT_THICK, thick);
+                contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR, normalColor);
+                contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, pressedColor);
+                contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, backgroundColor);
                 contentValues.put(COLUMN_INT_ELEMENT_MODE, moveMode);
                 elementController.addElement(contentValues);
             }
@@ -679,34 +674,33 @@ public class AnalogStick extends Element {
         });
 
 
-
         return analogStickPage;
     }
 
     @Override
     public void save() {
         ContentValues contentValues = new ContentValues();
-        contentValues.put(COLUMN_STRING_ELEMENT_VALUE,value);
-        contentValues.put(COLUMN_STRING_ELEMENT_MIDDLE_VALUE,middleValue);
+        contentValues.put(COLUMN_STRING_ELEMENT_VALUE, value);
+        contentValues.put(COLUMN_STRING_ELEMENT_MIDDLE_VALUE, middleValue);
         contentValues.put(COLUMN_INT_ELEMENT_DEAD_ZONE_RADIUS, deadZoneRadius);
         contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
         contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
-        contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
+        contentValues.put(COLUMN_INT_ELEMENT_LAYER, layer);
         contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, getElementCentralX());
         contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
-        contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
-        contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
-        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
-        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
-        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
+        contentValues.put(COLUMN_INT_ELEMENT_RADIUS, radius);
+        contentValues.put(COLUMN_INT_ELEMENT_THICK, thick);
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR, normalColor);
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, pressedColor);
+        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, backgroundColor);
         contentValues.put(COLUMN_INT_ELEMENT_MODE, moveMode);
-        elementController.updateElement(elementId,contentValues);
+        elementController.updateElement(elementId, contentValues);
 
     }
 
     @Override
     protected void updatePage() {
-        if (analogStickPage != null){
+        if (analogStickPage != null) {
             centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
             centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
         }
@@ -728,8 +722,8 @@ public class AnalogStick extends Element {
         radius_complete = getPercent(radius, 100) - 2 * thick;
         radius_dead_zone = getPercent(radius, deadZoneRadius);
         radius_analog_stick = getPercent(radius, 20);
-        setElementWidth(radius*2);
-        setElementHeight(radius*2);
+        setElementWidth(radius * 2);
+        setElementHeight(radius * 2);
         invalidate();
     }
 
@@ -759,23 +753,23 @@ public class AnalogStick extends Element {
         invalidate();
     }
 
-    public static ContentValues getInitialInfo(){
+    public static ContentValues getInitialInfo() {
         ContentValues contentValues = new ContentValues();
-        contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_ANALOG_STICK);
-        contentValues.put(COLUMN_STRING_ELEMENT_VALUE,"LS");
-        contentValues.put(COLUMN_STRING_ELEMENT_MIDDLE_VALUE,"g64");
-        contentValues.put(COLUMN_INT_ELEMENT_DEAD_ZONE_RADIUS,30);
-        contentValues.put(COLUMN_INT_ELEMENT_WIDTH,200);
-        contentValues.put(COLUMN_INT_ELEMENT_HEIGHT,200);
-        contentValues.put(COLUMN_INT_ELEMENT_LAYER,50);
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,400);
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y,400);
-        contentValues.put(COLUMN_INT_ELEMENT_RADIUS,100);
-        contentValues.put(COLUMN_INT_ELEMENT_THICK,5);
-        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,0xF0888888);
-        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,0xF00000FF);
-        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,0x00FFFFFF);
-        contentValues.put(COLUMN_INT_ELEMENT_MODE,0);
+        contentValues.put(COLUMN_INT_ELEMENT_TYPE, ELEMENT_TYPE_ANALOG_STICK);
+        contentValues.put(COLUMN_STRING_ELEMENT_VALUE, "LS");
+        contentValues.put(COLUMN_STRING_ELEMENT_MIDDLE_VALUE, "g64");
+        contentValues.put(COLUMN_INT_ELEMENT_DEAD_ZONE_RADIUS, 30);
+        contentValues.put(COLUMN_INT_ELEMENT_WIDTH, 200);
+        contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, 200);
+        contentValues.put(COLUMN_INT_ELEMENT_LAYER, 50);
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, 400);
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, 400);
+        contentValues.put(COLUMN_INT_ELEMENT_RADIUS, 100);
+        contentValues.put(COLUMN_INT_ELEMENT_THICK, 5);
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR, 0xF0888888);
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, 0xF00000FF);
+        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, 0x00FFFFFF);
+        contentValues.put(COLUMN_INT_ELEMENT_MODE, 0);
         return contentValues;
 
 
@@ -788,6 +782,7 @@ public class AnalogStick extends Element {
     private interface IntConsumer {
         void accept(int value);
     }
+
     /**
      * 更新颜色显示按钮的外观（文本、背景色、文本颜色）。
      */
@@ -806,9 +801,9 @@ public class AnalogStick extends Element {
     /**
      * 配置一个 ElementEditText 控件，使其作为颜色选择器按钮使用。
      *
-     * @param colorDisplay 用于作为按钮的 ElementEditText 视图。
+     * @param colorDisplay        用于作为按钮的 ElementEditText 视图。
      * @param initialColorFetcher 一个用于获取当前颜色值的 Lambda 表达式。
-     * @param colorUpdater      一个用于设置新颜色值的 Lambda 表达式。
+     * @param colorUpdater        一个用于设置新颜色值的 Lambda 表达式。
      */
     private void setupColorPickerButton(ElementEditText colorDisplay, IntSupplier initialColorFetcher, IntConsumer colorUpdater) {
         // 禁输入，让 EditText 表现得像一个按钮

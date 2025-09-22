@@ -1,3 +1,4 @@
+//十字键
 package com.limelight.binding.input.advance_setting.element;
 
 import android.content.ContentValues;
@@ -71,23 +72,23 @@ public class DigitalPad extends Element {
     private final Paint paintEdit = new Paint();
     private final RectF rect = new RectF();
 
-    public DigitalPad(Map<String,Object> attributesMap,
+    public DigitalPad(Map<String, Object> attributesMap,
                       ElementController controller,
                       PageDeviceController pageDeviceController, Context context) {
-        super(attributesMap,controller,context);
+        super(attributesMap, controller, context);
         this.pageDeviceController = pageDeviceController;
         this.digitalPad = this;
 
         DisplayMetrics displayMetrics = new DisplayMetrics();
-        ((Game)context).getWindowManager().getDefaultDisplay().getRealMetrics(displayMetrics);
-        super.centralXMax  = displayMetrics.widthPixels;
-        super.centralXMin  = 0;
-        super.centralYMax  = displayMetrics.heightPixels;
-        super.centralYMin  = 0;
-        super.widthMax  = displayMetrics.widthPixels / 2;
-        super.widthMin  = 150;
-        super.heightMax  = displayMetrics.heightPixels / 2;
-        super.heightMin  = 150;
+        ((Game) context).getWindowManager().getDefaultDisplay().getRealMetrics(displayMetrics);
+        super.centralXMax = displayMetrics.widthPixels;
+        super.centralXMin = 0;
+        super.centralYMax = displayMetrics.heightPixels;
+        super.centralYMin = 0;
+        super.widthMax = displayMetrics.widthPixels / 2;
+        super.widthMin = 150;
+        super.heightMax = displayMetrics.heightPixels / 2;
+        super.heightMin = 150;
 
         paintText.setTextAlign(Paint.Align.CENTER);
         paintBorder.setStyle(Paint.Style.STROKE);
@@ -113,16 +114,16 @@ public class DigitalPad extends Element {
             @Override
             public void onDirectionChange(int direction) {
                 int directionChange = lastDirection ^ direction;
-                if ((directionChange & DIGITAL_PAD_DIRECTION_LEFT) != 0 ){
+                if ((directionChange & DIGITAL_PAD_DIRECTION_LEFT) != 0) {
                     leftValueSenderHandler.sendEvent((direction & DIGITAL_PAD_DIRECTION_LEFT) != 0);
                 }
-                if ((directionChange & DIGITAL_PAD_DIRECTION_RIGHT) != 0 ){
+                if ((directionChange & DIGITAL_PAD_DIRECTION_RIGHT) != 0) {
                     rightValueSenderHandler.sendEvent((direction & DIGITAL_PAD_DIRECTION_RIGHT) != 0);
                 }
-                if ((directionChange & DIGITAL_PAD_DIRECTION_UP) != 0 ){
+                if ((directionChange & DIGITAL_PAD_DIRECTION_UP) != 0) {
                     upValueSenderHandler.sendEvent((direction & DIGITAL_PAD_DIRECTION_UP) != 0);
                 }
-                if ((directionChange & DIGITAL_PAD_DIRECTION_DOWN) != 0 ){
+                if ((directionChange & DIGITAL_PAD_DIRECTION_DOWN) != 0) {
                     downValueSenderHandler.sendEvent((direction & DIGITAL_PAD_DIRECTION_DOWN) != 0);
                 }
                 lastDirection = direction;
@@ -132,29 +133,27 @@ public class DigitalPad extends Element {
     }
 
 
-
-
     @Override
     protected void onElementDraw(Canvas canvas) {
 
 
         paintBorder.setStrokeWidth(thick);
         int correctedBorderPosition = thick + DPAD_MARGIN;
-        
+
         paintBackground.setStyle(Paint.Style.FILL);
         paintBackground.setStrokeWidth(10);
         paintBackground.setColor(backgroundColor);
         pathBackground.reset();
-        pathBackground.moveTo(getPercent(getWidth(), 33),correctedBorderPosition);
-        pathBackground.lineTo(getPercent(getWidth(), 66),correctedBorderPosition);
-        pathBackground.lineTo(getWidth() - correctedBorderPosition,getPercent(getHeight(), 33));
-        pathBackground.lineTo(getWidth() - correctedBorderPosition,getPercent(getHeight(), 66));
-        pathBackground.lineTo(getPercent(getWidth(), 66),getHeight() - correctedBorderPosition);
-        pathBackground.lineTo(getPercent(getWidth(), 33),getHeight() - correctedBorderPosition);
-        pathBackground.lineTo(correctedBorderPosition,getPercent(getHeight(), 66));
-        pathBackground.lineTo(correctedBorderPosition,getPercent(getHeight(), 33));
-        pathBackground.lineTo(getPercent(getWidth(), 33),correctedBorderPosition);
-        canvas.drawPath(pathBackground,paintBackground);
+        pathBackground.moveTo(getPercent(getWidth(), 33), correctedBorderPosition);
+        pathBackground.lineTo(getPercent(getWidth(), 66), correctedBorderPosition);
+        pathBackground.lineTo(getWidth() - correctedBorderPosition, getPercent(getHeight(), 33));
+        pathBackground.lineTo(getWidth() - correctedBorderPosition, getPercent(getHeight(), 66));
+        pathBackground.lineTo(getPercent(getWidth(), 66), getHeight() - correctedBorderPosition);
+        pathBackground.lineTo(getPercent(getWidth(), 33), getHeight() - correctedBorderPosition);
+        pathBackground.lineTo(correctedBorderPosition, getPercent(getHeight(), 66));
+        pathBackground.lineTo(correctedBorderPosition, getPercent(getHeight(), 33));
+        pathBackground.lineTo(getPercent(getWidth(), 33), correctedBorderPosition);
+        canvas.drawPath(pathBackground, paintBackground);
 
 
         if (direction == DIGITAL_PAD_DIRECTION_NO_DIRECTION) {
@@ -243,8 +242,8 @@ public class DigitalPad extends Element {
         );
         paintBorder.setStyle(Paint.Style.STROKE);
         canvas.drawLine(
-                getWidth()-paintBorder.getStrokeWidth(), getPercent(getHeight(), 66),
-                getPercent(getWidth(), 66), getHeight()-correctedBorderPosition,
+                getWidth() - paintBorder.getStrokeWidth(), getPercent(getHeight(), 66),
+                getPercent(getWidth(), 66), getHeight() - correctedBorderPosition,
                 paintBorder
         );
 
@@ -256,20 +255,20 @@ public class DigitalPad extends Element {
         );
         paintBorder.setStyle(Paint.Style.STROKE);
         canvas.drawLine(
-                getPercent(getWidth(), 33), getHeight()-correctedBorderPosition,
+                getPercent(getWidth(), 33), getHeight() - correctedBorderPosition,
                 correctedBorderPosition, getPercent(getHeight(), 66),
                 paintBorder
         );
 
         ElementController.Mode mode = elementController.getMode();
-        if (mode == ElementController.Mode.Edit || mode == ElementController.Mode.Select){
+        if (mode == ElementController.Mode.Edit || mode == ElementController.Mode.Select) {
             // 绘画范围
             rect.left = rect.top = 2;
             rect.right = getWidth() - 2;
             rect.bottom = getHeight() - 2;
             // 边框
             paintEdit.setColor(editColor);
-            canvas.drawRect(rect,paintEdit);
+            canvas.drawRect(rect, paintEdit);
 
         }
     }
@@ -327,8 +326,8 @@ public class DigitalPad extends Element {
 
     @Override
     protected SuperPageLayout getInfoPage() {
-        if (digitalPadPage == null){
-            digitalPadPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_digital_pad,null);
+        if (digitalPadPage == null) {
+            digitalPadPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_digital_pad, null);
             centralXNumberSeekbar = digitalPadPage.findViewById(R.id.page_digital_pad_central_x);
             centralYNumberSeekbar = digitalPadPage.findViewById(R.id.page_digital_pad_central_y);
         }
@@ -361,7 +360,7 @@ public class DigitalPad extends Element {
                         save();
                     }
                 };
-                pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
+                pageDeviceController.open(deviceCallBack, View.VISIBLE, View.VISIBLE, View.VISIBLE);
             }
         });
 
@@ -378,7 +377,7 @@ public class DigitalPad extends Element {
                         save();
                     }
                 };
-                pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
+                pageDeviceController.open(deviceCallBack, View.VISIBLE, View.VISIBLE, View.VISIBLE);
             }
         });
 
@@ -395,7 +394,7 @@ public class DigitalPad extends Element {
                         save();
                     }
                 };
-                pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
+                pageDeviceController.open(deviceCallBack, View.VISIBLE, View.VISIBLE, View.VISIBLE);
             }
         });
 
@@ -412,7 +411,7 @@ public class DigitalPad extends Element {
                         save();
                     }
                 };
-                pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
+                pageDeviceController.open(deviceCallBack, View.VISIBLE, View.VISIBLE, View.VISIBLE);
             }
         });
 
@@ -493,7 +492,6 @@ public class DigitalPad extends Element {
         });
 
 
-
         thickNumberSeekbar.setValueWithNoCallBack(thick);
         thickNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
             @Override
@@ -544,13 +542,13 @@ public class DigitalPad extends Element {
                 contentValues.put(COLUMN_STRING_ELEMENT_RIGHT_VALUE, rightValue);
                 contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
                 contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
-                contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,Math.max(Math.min(getElementCentralX() + getElementWidth(),centralXMax),centralXMin));
+                contentValues.put(COLUMN_INT_ELEMENT_LAYER, layer);
+                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, Math.max(Math.min(getElementCentralX() + getElementWidth(), centralXMax), centralXMin));
                 contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
-                contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
-                contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
-                contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
-                contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
+                contentValues.put(COLUMN_INT_ELEMENT_THICK, thick);
+                contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR, normalColor);
+                contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, pressedColor);
+                contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, backgroundColor);
                 elementController.addElement(contentValues);
             }
         });
@@ -575,20 +573,20 @@ public class DigitalPad extends Element {
         contentValues.put(COLUMN_STRING_ELEMENT_RIGHT_VALUE, rightValue);
         contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
         contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
-        contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,getElementCentralX());
+        contentValues.put(COLUMN_INT_ELEMENT_LAYER, layer);
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, getElementCentralX());
         contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
-        contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
-        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
-        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
-        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
-        elementController.updateElement(elementId,contentValues);
+        contentValues.put(COLUMN_INT_ELEMENT_THICK, thick);
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR, normalColor);
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, pressedColor);
+        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, backgroundColor);
+        elementController.updateElement(elementId, contentValues);
 
     }
 
     @Override
     protected void updatePage() {
-        if (digitalPadPage != null){
+        if (digitalPadPage != null) {
             centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
             centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
         }
@@ -635,22 +633,22 @@ public class DigitalPad extends Element {
         invalidate();
     }
 
-    public static ContentValues getInitialInfo(){
+    public static ContentValues getInitialInfo() {
         ContentValues contentValues = new ContentValues();
         contentValues.put(COLUMN_INT_ELEMENT_TYPE, ELEMENT_TYPE_DIGITAL_PAD);
-        contentValues.put(COLUMN_STRING_ELEMENT_UP_VALUE,"k51");
-        contentValues.put(COLUMN_STRING_ELEMENT_DOWN_VALUE,"k47");
-        contentValues.put(COLUMN_STRING_ELEMENT_LEFT_VALUE,"k29");
-        contentValues.put(COLUMN_STRING_ELEMENT_RIGHT_VALUE,"k32");
-        contentValues.put(COLUMN_INT_ELEMENT_WIDTH,300);
-        contentValues.put(COLUMN_INT_ELEMENT_HEIGHT,300);
-        contentValues.put(COLUMN_INT_ELEMENT_LAYER,50);
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,100);
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y,100);
-        contentValues.put(COLUMN_INT_ELEMENT_THICK,5);
-        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,0xF0888888);
-        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,0xF00000FF);
-        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,0x00FFFFFF);
+        contentValues.put(COLUMN_STRING_ELEMENT_UP_VALUE, "k51");
+        contentValues.put(COLUMN_STRING_ELEMENT_DOWN_VALUE, "k47");
+        contentValues.put(COLUMN_STRING_ELEMENT_LEFT_VALUE, "k29");
+        contentValues.put(COLUMN_STRING_ELEMENT_RIGHT_VALUE, "k32");
+        contentValues.put(COLUMN_INT_ELEMENT_WIDTH, 300);
+        contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, 300);
+        contentValues.put(COLUMN_INT_ELEMENT_LAYER, 50);
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, 100);
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, 100);
+        contentValues.put(COLUMN_INT_ELEMENT_THICK, 5);
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR, 0xF0888888);
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, 0xF00000FF);
+        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, 0x00FFFFFF);
         return contentValues;
 
 
@@ -663,6 +661,7 @@ public class DigitalPad extends Element {
     private interface IntConsumer {
         void accept(int value);
     }
+
     /**
      * 更新颜色显示按钮的外观（文本、背景色、文本颜色）。
      */
@@ -681,9 +680,9 @@ public class DigitalPad extends Element {
     /**
      * 配置一个 ElementEditText 控件，使其作为颜色选择器按钮使用。
      *
-     * @param colorDisplay 用于作为按钮的 ElementEditText 视图。
+     * @param colorDisplay        用于作为按钮的 ElementEditText 视图。
      * @param initialColorFetcher 一个用于获取当前颜色值的 Lambda 表达式。
-     * @param colorUpdater      一个用于设置新颜色值的 Lambda 表达式。
+     * @param colorUpdater        一个用于设置新颜色值的 Lambda 表达式。
      */
     private void setupColorPickerButton(ElementEditText colorDisplay, IntSupplier initialColorFetcher, IntConsumer colorUpdater) {
         // 禁输入，让 EditText 表现得像一个按钮

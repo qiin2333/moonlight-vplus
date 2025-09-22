@@ -1,13 +1,16 @@
+//隐藏式手柄摇杆
 package com.limelight.binding.input.advance_setting.element;
 
 import android.content.ContentValues;
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.text.InputFilter;
 import android.util.DisplayMetrics;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -24,6 +27,7 @@ import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHel
 import com.limelight.binding.input.advance_setting.superpage.ElementEditText;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
+import com.limelight.utils.ColorPickerDialog;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -204,10 +208,10 @@ public class InvisibleAnalogStick extends Element {
         }
     }
 
-    public InvisibleAnalogStick(Map<String,Object> attributesMap,
+    public InvisibleAnalogStick(Map<String, Object> attributesMap,
                                 ElementController controller,
                                 PageDeviceController pageDeviceController, Context context) {
-        super(attributesMap,controller,context);
+        super(attributesMap, controller, context);
         // reset stick position
         circleCenterX = getWidth() / 2;
         circleCenterY = getHeight() / 2;
@@ -220,15 +224,15 @@ public class InvisibleAnalogStick extends Element {
 
 
         DisplayMetrics displayMetrics = new DisplayMetrics();
-        ((Game)context).getWindowManager().getDefaultDisplay().getRealMetrics(displayMetrics);
-        super.centralXMax  = displayMetrics.widthPixels;
-        super.centralXMin  = 0;
-        super.centralYMax  = displayMetrics.heightPixels;
-        super.centralYMin  = 0;
-        super.widthMax  = displayMetrics.widthPixels;
-        super.widthMin  = 100;
-        super.heightMax  = displayMetrics.heightPixels;
-        super.heightMin  = 100;
+        ((Game) context).getWindowManager().getDefaultDisplay().getRealMetrics(displayMetrics);
+        super.centralXMax = displayMetrics.widthPixels;
+        super.centralXMin = 0;
+        super.centralYMax = displayMetrics.heightPixels;
+        super.centralYMin = 0;
+        super.widthMax = displayMetrics.widthPixels;
+        super.widthMin = 100;
+        super.heightMax = displayMetrics.heightPixels;
+        super.heightMin = 100;
 
         paintBackground.setStyle(Paint.Style.FILL);
         paintStick.setStyle(Paint.Style.STROKE);
@@ -250,7 +254,7 @@ public class InvisibleAnalogStick extends Element {
         listener = new InvisibleAnalogStickListener() {
             @Override
             public void onMovement(float x, float y) {
-                valueSendHandler.sendEvent((int) (x * 0x7FFE),(int) (y * 0x7FFE));
+                valueSendHandler.sendEvent((int) (x * 0x7FFE), (int) (y * 0x7FFE));
             }
 
             @Override
@@ -296,8 +300,8 @@ public class InvisibleAnalogStick extends Element {
 
     @Override
     protected SuperPageLayout getInfoPage() {
-        if (invisibleAnalogStickPage == null){
-            invisibleAnalogStickPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_invisible_analog_stick,null);
+        if (invisibleAnalogStickPage == null) {
+            invisibleAnalogStickPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_invisible_analog_stick, null);
             centralXNumberSeekbar = invisibleAnalogStickPage.findViewById(R.id.page_invisible_analog_stick_central_x);
             centralYNumberSeekbar = invisibleAnalogStickPage.findViewById(R.id.page_invisible_analog_stick_central_y);
 
@@ -341,7 +345,7 @@ public class InvisibleAnalogStick extends Element {
                         save();
                     }
                 };
-                pageDeviceController.open(deviceCallBack,View.VISIBLE,View.VISIBLE,View.VISIBLE);
+                pageDeviceController.open(deviceCallBack, View.VISIBLE, View.VISIBLE, View.VISIBLE);
             }
         });
 
@@ -444,9 +448,6 @@ public class InvisibleAnalogStick extends Element {
         });
 
 
-
-
-
         radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
         radiusNumberSeekbar.setProgressMin(10);
         radiusNumberSeekbar.setValueWithNoCallBack(radius);
@@ -502,63 +503,29 @@ public class InvisibleAnalogStick extends Element {
             }
         });
 
-        normalColorEditText.setTextWithNoTextChangedCallBack(String.format("%08X",normalColor));
-        normalColorEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new HexInputFilter()});
-        normalColorEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
-            @Override
-            public void textChanged(String text) {
-                if (text.matches("^[A-F0-9]{8}$")){
-                    setElementNormalColor((int) Long.parseLong(text, 16));
-                    save();
-                }
-            }
-        });
-
-
-        pressedColorEditText.setTextWithNoTextChangedCallBack(String.format("%08X",pressedColor));
-        pressedColorEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new HexInputFilter()});
-        pressedColorEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
-            @Override
-            public void textChanged(String text) {
-                if (text.matches("^[A-F0-9]{8}$")){
-                    setElementPressedColor((int) Long.parseLong(text, 16));
-                    save();
-                }
-            }
-        });
-
-
-        backgroundColorEditText.setTextWithNoTextChangedCallBack(String.format("%08X",backgroundColor));
-        backgroundColorEditText.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new HexInputFilter()});
-        backgroundColorEditText.setOnTextChangedListener(new ElementEditText.OnTextChangedListener() {
-            @Override
-            public void textChanged(String text) {
-                if (text.matches("^[A-F0-9]{8}$")){
-                    setElementBackgroundColor((int) Long.parseLong(text, 16));
-                    save();
-                }
-            }
-        });
+        setupColorPickerButton(normalColorEditText, () -> this.normalColor, this::setElementNormalColor);
+        setupColorPickerButton(pressedColorEditText, () -> this.pressedColor, this::setElementPressedColor);
+        setupColorPickerButton(backgroundColorEditText, () -> this.backgroundColor, this::setElementBackgroundColor);
 
 
         copyButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_INVISIBLE_ANALOG_STICK);
+                contentValues.put(COLUMN_INT_ELEMENT_TYPE, ELEMENT_TYPE_INVISIBLE_ANALOG_STICK);
                 contentValues.put(COLUMN_STRING_ELEMENT_VALUE, value);
                 contentValues.put(COLUMN_STRING_ELEMENT_MIDDLE_VALUE, middleValue);
                 contentValues.put(COLUMN_INT_ELEMENT_DEAD_ZONE_RADIUS, deadZoneRadius);
                 contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
                 contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
-                contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
-                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,Math.max(Math.min(getElementCentralX() + getElementWidth(),centralXMax),centralXMin));
+                contentValues.put(COLUMN_INT_ELEMENT_LAYER, layer);
+                contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, Math.max(Math.min(getElementCentralX() + getElementWidth(), centralXMax), centralXMin));
                 contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
-                contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
-                contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
-                contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
-                contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
-                contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
+                contentValues.put(COLUMN_INT_ELEMENT_RADIUS, radius);
+                contentValues.put(COLUMN_INT_ELEMENT_THICK, thick);
+                contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR, normalColor);
+                contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, pressedColor);
+                contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, backgroundColor);
                 elementController.addElement(contentValues);
             }
         });
@@ -572,7 +539,6 @@ public class InvisibleAnalogStick extends Element {
         });
 
 
-
         return invisibleAnalogStickPage;
     }
 
@@ -584,21 +550,21 @@ public class InvisibleAnalogStick extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_DEAD_ZONE_RADIUS, deadZoneRadius);
         contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
         contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
-        contentValues.put(COLUMN_INT_ELEMENT_LAYER,layer);
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,getElementCentralX());
+        contentValues.put(COLUMN_INT_ELEMENT_LAYER, layer);
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, getElementCentralX());
         contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY());
-        contentValues.put(COLUMN_INT_ELEMENT_RADIUS,radius);
-        contentValues.put(COLUMN_INT_ELEMENT_THICK,thick);
-        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,normalColor);
-        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,pressedColor);
-        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,backgroundColor);
-        elementController.updateElement(elementId,contentValues);
+        contentValues.put(COLUMN_INT_ELEMENT_RADIUS, radius);
+        contentValues.put(COLUMN_INT_ELEMENT_THICK, thick);
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR, normalColor);
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, pressedColor);
+        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, backgroundColor);
+        elementController.updateElement(elementId, contentValues);
 
     }
 
     @Override
     protected void updatePage() {
-        if (invisibleAnalogStickPage != null){
+        if (invisibleAnalogStickPage != null) {
             centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
             centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
         }
@@ -613,17 +579,17 @@ public class InvisibleAnalogStick extends Element {
         rect.left = 0;
         rect.right = getWidth();
         rect.bottom = getHeight();
-        canvas.drawRect(rect,paintBackground);
+        canvas.drawRect(rect, paintBackground);
 
         ElementController.Mode mode = elementController.getMode();
-        if (mode == ElementController.Mode.Edit || mode == ElementController.Mode.Select){
+        if (mode == ElementController.Mode.Edit || mode == ElementController.Mode.Select) {
             // 绘画范围
             rect.left = rect.top = 2;
             rect.right = getWidth() - 2;
             rect.bottom = getHeight() - 2;
             // 边框
             paintEdit.setColor(editColor);
-            canvas.drawRect(rect,paintEdit);
+            canvas.drawRect(rect, paintEdit);
 
 
             paintStick.setStrokeWidth(thick);
@@ -633,7 +599,7 @@ public class InvisibleAnalogStick extends Element {
             } else {
                 paintStick.setColor(pressedColor);
             }
-            canvas.drawCircle(getWidth() / 2, getHeight() / 2 , radius_complete, paintStick);
+            canvas.drawCircle(getWidth() / 2, getHeight() / 2, radius_complete, paintStick);
 
             paintStick.setColor(normalColor);
             // draw dead zone
@@ -643,7 +609,7 @@ public class InvisibleAnalogStick extends Element {
             canvas.drawCircle(getWidth() / 2, getHeight() / 2, radius_analog_stick, paintStick);
         }
 
-        if (!isPressed()){
+        if (!isPressed()) {
             return;
         }
 
@@ -707,7 +673,7 @@ public class InvisibleAnalogStick extends Element {
 
     @Override
     public boolean onElementTouchEvent(MotionEvent event) {
-        if (event.getActionMasked() == MotionEvent.ACTION_DOWN){
+        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
             //点击后扩大view，防止摇杆显示不全
             circleCenterX = event.getX();
             circleCenterY = event.getY();
@@ -823,24 +789,80 @@ public class InvisibleAnalogStick extends Element {
         invalidate();
     }
 
-    public static ContentValues getInitialInfo(){
+    public static ContentValues getInitialInfo() {
         ContentValues contentValues = new ContentValues();
-        contentValues.put(COLUMN_INT_ELEMENT_TYPE,ELEMENT_TYPE_INVISIBLE_ANALOG_STICK);
-        contentValues.put(COLUMN_STRING_ELEMENT_VALUE,"LS");
-        contentValues.put(COLUMN_STRING_ELEMENT_MIDDLE_VALUE,"g64");
-        contentValues.put(COLUMN_INT_ELEMENT_DEAD_ZONE_RADIUS,30);
-        contentValues.put(COLUMN_INT_ELEMENT_WIDTH,400);
-        contentValues.put(COLUMN_INT_ELEMENT_HEIGHT,400);
-        contentValues.put(COLUMN_INT_ELEMENT_LAYER,45);
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X,400);
-        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y,400);
-        contentValues.put(COLUMN_INT_ELEMENT_RADIUS,100);
-        contentValues.put(COLUMN_INT_ELEMENT_THICK,5);
-        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR,0xF0888888);
-        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR,0xF00000FF);
-        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR,0x00FFFFFF);
+        contentValues.put(COLUMN_INT_ELEMENT_TYPE, ELEMENT_TYPE_INVISIBLE_ANALOG_STICK);
+        contentValues.put(COLUMN_STRING_ELEMENT_VALUE, "LS");
+        contentValues.put(COLUMN_STRING_ELEMENT_MIDDLE_VALUE, "g64");
+        contentValues.put(COLUMN_INT_ELEMENT_DEAD_ZONE_RADIUS, 30);
+        contentValues.put(COLUMN_INT_ELEMENT_WIDTH, 400);
+        contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, 400);
+        contentValues.put(COLUMN_INT_ELEMENT_LAYER, 45);
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, 400);
+        contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_Y, 400);
+        contentValues.put(COLUMN_INT_ELEMENT_RADIUS, 100);
+        contentValues.put(COLUMN_INT_ELEMENT_THICK, 5);
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR, 0xF0888888);
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, 0xF00000FF);
+        contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, 0x00FFFFFF);
         return contentValues;
 
 
     }
+
+    private interface IntSupplier {
+        int get();
+    }
+
+    private interface IntConsumer {
+        void accept(int value);
+    }
+
+    /**
+     * 更新颜色显示按钮的外观（文本、背景色、文本颜色）。
+     */
+    private void updateColorDisplay(ElementEditText colorDisplay, int color) {
+        // 显示十六进制颜色码
+        colorDisplay.setTextWithNoTextChangedCallBack(String.format("%08X", color));
+        // 将背景设置为当前颜色
+        colorDisplay.setBackgroundColor(color);
+
+        // 根据背景色的亮度自动设置文本颜色为黑色或白色，以确保可读性
+        double luminance = (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255;
+        colorDisplay.setTextColor(luminance > 0.5 ? Color.BLACK : Color.WHITE);
+        colorDisplay.setGravity(Gravity.CENTER);
+    }
+
+    /**
+     * 配置一个 ElementEditText 控件，使其作为颜色选择器按钮使用。
+     *
+     * @param colorDisplay        用于作为按钮的 ElementEditText 视图。
+     * @param initialColorFetcher 一个用于获取当前颜色值的 Lambda 表达式。
+     * @param colorUpdater        一个用于设置新颜色值的 Lambda 表达式。
+     */
+    private void setupColorPickerButton(ElementEditText colorDisplay, IntSupplier initialColorFetcher, IntConsumer colorUpdater) {
+        // 禁输入，让 EditText 表现得像一个按钮
+        colorDisplay.setFocusable(false);
+        colorDisplay.setCursorVisible(false);
+        colorDisplay.setKeyListener(null);
+
+        // 使用传入的 Lambda 获取初始颜色并设置外观
+        updateColorDisplay(colorDisplay, initialColorFetcher.get());
+
+        // 设置点击监听器，打开颜色选择器
+        colorDisplay.setOnClickListener(v -> {
+            // 再次获取当前颜色，确保打开时颜色是最新的
+            new ColorPickerDialog(
+                    getContext(),
+                    initialColorFetcher.get(),
+                    true, // true 表示显示 Alpha 透明度滑块
+                    newColor -> {
+                        colorUpdater.accept(newColor); // 使用传入的 Lambda 更新颜色属性
+                        save();                      // 保存更改
+                        updateColorDisplay(colorDisplay, newColor); // 更新UI显示
+                    }
+            ).show(); // <-- 主要变化：在最后调用 .show()
+        });
+    }
+
 }
