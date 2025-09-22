@@ -462,8 +462,14 @@
     <string name="tip_5ghz_wifi">💡 串流小课堂：使用"平衡"的帧速率模式可以获得最佳的帧率与延迟平衡，完美！</string>
     <string name="tip_close_apps">💡 串流小课堂：启用HDR可以获得更好的色彩与对比度表现，在Sunshine基地版中绑定对应的HDR配置文件可以更精准地与客户端屏幕同步，色彩绚丽～</string>
     <string name="tip_home_saves">💡 串流小课堂：主页的5个小鲨牙可以快速保存和切换串流配置～</string>
-    <string name="tip_resolution_balance">💡 串流小课堂：关闭其他应用可以提升性能，让串流更顺畅～</string>
     <string name="tip_hdr_colors">💡 串流小课堂：调整分辨率可以平衡画质和性能，找到最适合的设置～</string>
+    <string name="tip_touch_modes">💡 串流小课堂：游戏菜单中可以切换触控模式，增强式多点触控适合手游，触控板模式适合办公，找到最适合你的操作方式～</string>
+    <string name="tip_custom_keys">💡 串流小课堂：可以添加自定义按键组合，比如Ctrl+Shift+Esc快速打开任务管理器，让操作更便捷～</string>
+    <string name="tip_performance_overlay">💡 串流小课堂：性能覆盖层可以拖动到任意位置，双击可以切换横竖布局，点击各项指标还能查看详细说明哦～</string>
+    <string name="tip_audio_config">💡 串流小课堂：启用Dolby Atmos或DTS:X可以获得更沉浸的音频体验，而此时需要启用系统均衡器来获得最佳效果～</string>
+    <string name="tip_external_display">💡 串流小课堂：连接外接显示器时，可以在设置中选择在外接显示器上显示串流画面，大屏游戏更爽～</string>
+    <string name="tip_virtual_display">💡 串流小课堂：虚拟显示器功能可以创建独立的显示空间，特别适合多任务场景，让串流更灵活～</string>
+    <string name="tip_dynamic_bitrate">💡 串流小课堂：使用HEVC或AV1解码器时，串流中可以调整码率，不用退出串流即可找到最适合你的网络和设备的最佳码率～</string>
 
     <!-- 触控模式切换菜单 -->
     <string name="game_menu_switch_touch_mode">切换触控模式</string>
@@ -531,7 +537,7 @@
     <string name="perf_network_latency_title">🌐 网络延迟信息</string>
     <string name="perf_network_latency_info">网络延迟表示数据包从主机到设备的往返时间。\n\n延迟范围：\n• &lt;20ms：极佳\n• 20–50ms：良好\n• 50–100ms：可接受\n• &gt;100ms：较差\n\n带宽：\n• 表示网络传输速度\n• 影响视频质量上限\n\n±值：\n• 表示延迟波动范围\n• 越小越稳定</string>
     <string name="perf_decode_latency_title">⏱️ 解码延迟信息</string>
-    <string name="perf_decode_latency_info">解码延迟表示解码视频帧所需的时间。\n\n延迟范围：\n• &lt;5ms：极佳解码器性能\n• 5–10ms：良好解码器性能\n• 10–20ms：一般解码器性能\n• &gt;20ms：较差解码器性能\n\n影响因素：\n• 硬件解码器性能\n• 视频编码复杂度\n• 设备CPU/GPU负载</string>
+    <string name="perf_decode_latency_info">解码延迟表示解码视频帧所需的时间。\n\n延迟范围：\n• &lt;5ms：极佳解码器性能\n• 5–10ms：良好解码器性能\n• 10–20ms：一般解码器性能\n• &gt;20ms：较差解码器性能\n\n影响因素：\n• 硬件解码器性能\n• 视频编码复杂度\n• 设备CPU/GPU负载\n• 当解码延迟低于10ms时更应关注设备的其他性能(比如帧率、分辨率、画质等)</string>
     <string name="perf_host_latency_title">🖥 主机延迟信息</string>
     <string name="perf_host_latency_info">主机延迟表示主机处理帧所需的时间。\n\n延迟范围：\n• &lt;5ms：极佳主机性能\n• 5–10ms：良好主机性能\n• 10–20ms：一般主机性能\n• &gt;20ms：较差主机性能\n\n影响因素：\n• 主机硬件性能\n• 游戏负载\n• 后台程序使用\n\nVer.V+：\n• 表示版本信息\n• 当没有主机延迟数据时显示</string>
 

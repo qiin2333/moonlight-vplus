@@ -50,8 +50,14 @@ public class FullscreenProgressOverlay {
             activity.getString(R.string.tip_5ghz_wifi),
             activity.getString(R.string.tip_close_apps),
             activity.getString(R.string.tip_home_saves),
-            activity.getString(R.string.tip_resolution_balance),
-            activity.getString(R.string.tip_hdr_colors)
+            activity.getString(R.string.tip_hdr_colors),
+            activity.getString(R.string.tip_touch_modes),
+            activity.getString(R.string.tip_custom_keys),
+            activity.getString(R.string.tip_performance_overlay),
+            activity.getString(R.string.tip_audio_config),
+            activity.getString(R.string.tip_external_display),
+            activity.getString(R.string.tip_virtual_display),
+            activity.getString(R.string.tip_dynamic_bitrate)
         };
 
         // 获取根视图

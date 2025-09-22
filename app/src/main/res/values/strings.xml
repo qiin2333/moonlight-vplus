@@ -491,8 +491,14 @@
     <string name="tip_5ghz_wifi">💡 Tip: Using "Balanced" frame rate mode gives you the best balance of frame rate and latency, perfect!</string>
     <string name="tip_close_apps">💡 Tip: Enabling HDR provides better color and contrast performance. In Sunshine base version, binding the corresponding HDR profile can more precisely sync with the client screen, gorgeous colors~</string>
     <string name="tip_home_saves">💡 Tip: The 5 small sharks on the home page can quickly save and switch streaming configurations~</string>
-    <string name="tip_resolution_balance">💡 Tip: Closing other apps can improve performance, making streaming smoother~</string>
     <string name="tip_hdr_colors">💡 Tip: Adjusting resolution can balance quality and performance, find the perfect settings~</string>
+    <string name="tip_touch_modes">💡 Tip: You can switch touch modes in the game menu. Enhanced multi-touch is suitable for mobile games, trackpad mode is great for office work. Find the operation method that suits you best~</string>
+    <string name="tip_custom_keys">💡 Tip: You can add custom key combinations, like Ctrl+Shift+Esc to quickly open Task Manager, making operations more convenient~</string>
+    <string name="tip_performance_overlay">💡 Tip: The performance overlay can be dragged to any position, double-tap to switch between horizontal and vertical layouts, and click on various metrics to view detailed explanations~</string>
+    <string name="tip_audio_config">💡 Tip: Enabling Dolby Atmos or DTS:X provides a more immersive audio experience, and you need to enable the system equalizer for the best effect~</string>
+    <string name="tip_external_display">💡 Tip: When connecting an external display, you can choose to display the stream on the external display in settings, making big screen gaming even more enjoyable~</string>
+    <string name="tip_virtual_display">💡 Tip: Virtual display function can create independent display spaces, especially suitable for multi-tasking scenarios, making streaming more flexible~</string>
+    <string name="tip_dynamic_bitrate">💡 Tip: When using HEVC or AV1 decoders, you can adjust the bitrate during streaming without exiting, finding the optimal bitrate for your network and device~</string>
 
     <!-- 触控模式切换菜单 -->
     <string name="game_menu_switch_touch_mode">Switch touch mode</string>
@@ -568,7 +574,7 @@
     <string name="perf_network_latency_info">Network latency represents the round-trip time for data packets from host to device.\n\nLatency Range:\n• &lt;20ms: Excellent\n• 20-50ms: Good\n• 50-100ms: Acceptable\n• &gt;100ms: Poor\n\nBandwidth:\n• Represents network transmission speed\n• Affects maximum video quality\n\n± Value:\n• Represents latency fluctuation range\n• Smaller values indicate more stability</string>
     
     <string name="perf_decode_latency_title">⏱️ Decode Latency Information</string>
-    <string name="perf_decode_latency_info">Decode latency represents the time required to decode video frames.\n\nLatency Range:\n• &lt;5ms: Excellent decoder performance\n• 5-10ms: Good decoder performance\n• 10-20ms: Fair decoder performance\n• &gt;20ms: Poor decoder performance\n\nInfluencing Factors:\n• Hardware decoder performance\n• Video encoding complexity\n• Device CPU/GPU load</string>
+    <string name="perf_decode_latency_info">Decode latency represents the time required to decode video frames.\n\nLatency Range:\n• &lt;5ms: Excellent decoder performance\n• 5-10ms: Good decoder performance\n• 10-20ms: Fair decoder performance\n• &gt;20ms: Poor decoder performance\n\nInfluencing Factors:\n• Hardware decoder performance\n• Video encoding complexity\n• Device CPU/GPU load\n• When decode latency is less than 10ms, it is recommended to pay attention to other performance of the device (e.g. frame rate, resolution, image quality, etc.)</string>
     
     <string name="perf_host_latency_title">🖥️ Host Latency Information</string>
     <string name="perf_host_latency_info">Host latency represents the time for the game host to process frames.\n\nLatency Range:\n• &lt;5ms: Strong host performance\n• 5-10ms: Good host performance\n• 10-20ms: Fair host performance\n• &gt;20ms: Weak host performance\n\nInfluencing Factors:\n• Host hardware performance\n• Game load\n• Background program usage\n\nVer.V+:\n• Indicates version information\n• Displayed when no host latency data available</string>
