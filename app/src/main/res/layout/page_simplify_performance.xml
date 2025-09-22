@@ -127,7 +127,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="match_parent"
                         android:gravity="center_vertical"
-                        android:text="显示文本"/>
+                        android:text="显示文本(可换行)"/>
                 </FrameLayout>
                 <EditText
                     android:id="@+id/page_simplify_performance_text"

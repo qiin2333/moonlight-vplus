@@ -9,6 +9,7 @@ import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.text.InputFilter;
+import android.text.InputType;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -48,7 +49,8 @@ public class SimplifyPerformance extends Element {
 
     private String preParseText;
     private int radius;
-    private int verticalPadding;
+    private int verticalPadding = 10; // 给一个默认的垂直内边距，使文本看起来更舒适
+    private int horizontalPadding = 10; // 增加一个水平内边距
     private int textColor;
     private int textSize;
     private int layer;
@@ -116,46 +118,81 @@ public class SimplifyPerformance extends Element {
 
     private void changeSize() {
         paintText.setTextSize(textSize);
-        int textWidth = (int) paintText.measureText(afterParseText);
+
+        // 按换行符分割文本
+        String[] lines = afterParseText.split("\n");
+        if (lines.length == 0) { // 处理空文本的情况
+            setElementWidth(horizontalPadding * 2);
+            setElementHeight(verticalPadding * 2);
+            return;
+        }
+
+        // 计算最长一行的宽度
+        float maxWidth = 0;
+        for (String line : lines) {
+            float lineWidth = paintText.measureText(line);
+            if (lineWidth > maxWidth) {
+                maxWidth = lineWidth;
+            }
+        }
+
+        // 计算总高度
         Paint.FontMetrics fontMetrics = paintText.getFontMetrics();
-        int textHeight = (int) (fontMetrics.bottom - fontMetrics.top);
-        int width = textWidth;
-        int height = textHeight + verticalPadding + verticalPadding;
+        float singleLineHeight = fontMetrics.bottom - fontMetrics.top;
+        int totalTextHeight = (int) (singleLineHeight * lines.length);
+
+        // 设置元素的最终宽高（包含内外边距）
+        int width = (int) maxWidth + horizontalPadding + horizontalPadding;
+        int height = totalTextHeight + verticalPadding + verticalPadding;
         setElementWidth(width);
         setElementHeight(height);
+
+        // 更新半径滑块的最大值
         if (radiusNumberSeekbar != null) {
             radiusNumberSeekbar.setProgressMax(Math.min(getElementWidth(), getElementHeight()) / 2);
         }
-
-
     }
+
 
     @Override
     protected void onElementDraw(Canvas canvas) {
-
-        // 文字
+        // 设置画笔颜色
         paintText.setColor(textColor);
-        // 背景颜色
         paintBackground.setColor(backgroundColor);
-        // 绘画范围
+
+        // 定义背景绘制范围
         rect.left = rect.top = 0;
         rect.right = getElementWidth();
         rect.bottom = getElementHeight();
-        // 绘制背景
-        canvas.drawRoundRect(rect, radius, radius, paintBackground);
-        // 绘制文字
-        canvas.drawText(afterParseText, 0, verticalPadding + textSize, paintText);
 
+        // 绘制圆角背景
+        canvas.drawRoundRect(rect, radius, radius, paintBackground);
+
+        // [修改] 逐行绘制文本以支持换行
+        String[] lines = afterParseText.split("\n");
+        Paint.FontMetrics fontMetrics = paintText.getFontMetrics();
+        float lineHeight = fontMetrics.bottom - fontMetrics.top;
+
+        // 计算第一行文本的基线 (baseline) Y坐标
+        // y坐标在 drawText 中是基线的位置，而不是文本的顶部。
+        // -fontMetrics.top 可以得到从顶部到基线的距离
+        float startY = verticalPadding - fontMetrics.top;
+
+        for (int i = 0; i < lines.length; i++) {
+            // 计算当前行的Y坐标
+            float currentY = startY + (i * lineHeight);
+            // 从水平内边距开始绘制
+            canvas.drawText(lines[i], horizontalPadding, currentY, paintText);
+        }
+
+        // 绘制编辑模式下的边框
         ElementController.Mode mode = elementController.getMode();
         if (mode == ElementController.Mode.Edit || mode == ElementController.Mode.Select) {
-            // 绘画范围
             rect.left = rect.top = 2;
             rect.right = getElementWidth() - 2;
             rect.bottom = getElementHeight() - 2;
-            // 边框
             paintEdit.setColor(editColor);
             canvas.drawRect(rect, paintEdit);
-
         }
     }
 
@@ -235,7 +272,11 @@ public class SimplifyPerformance extends Element {
             }
         });
 
-        textEditText.setText(preParseText);
+        // 使 EditText 支持多行输入
+        textEditText.setSingleLine(false);
+        textEditText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        textEditText.setGravity(Gravity.TOP | Gravity.START); // 文本从左上角开始
+        textEditText.setText(preParseText.replace("\\n", "\n")); // 显示时将 "\n" 字符串转为真正的换行符
         textEnsureButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -248,6 +289,7 @@ public class SimplifyPerformance extends Element {
             @Override
             public void onClick(View v) {
                 setElementPreParseText(SIMPLIFY_PERFORMANCE_TEXT_DEFAULT);
+                textEditText.setText(SIMPLIFY_PERFORMANCE_TEXT_DEFAULT); // 同时更新UI
                 save();
             }
         });
@@ -350,17 +392,10 @@ public class SimplifyPerformance extends Element {
 
     public void setElementPreParseText(String preParseText) {
         if (preParseText.equals("")) {
-            this.preParseText = "   ";
+            this.preParseText = " "; // 使用空格而不是空字符串，避免分割时出现空数组导致计算错误
         } else {
             this.preParseText = preParseText;
         }
-        simplifyPerformance.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-            @Override
-            public void onGlobalLayout() {
-                radiusNumberSeekbar.setProgressMax(centralXNumberSeekbar.getHeight() / 2);
-                simplifyPerformance.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-            }
-        });
     }
 
     public void setElementRadius(int radius) {
@@ -368,9 +403,7 @@ public class SimplifyPerformance extends Element {
         invalidate();
     }
 
-    public void setElementVerticalPadding(int verticalPadding) {
-        this.verticalPadding = verticalPadding;
-    }
+
 
     public void setElementTextColor(int textColor) {
         this.textColor = textColor;
@@ -379,7 +412,8 @@ public class SimplifyPerformance extends Element {
 
     public void setElementTextSize(int textSize) {
         this.textSize = textSize;
-        changeSize();
+        changeSize(); // 字体大小改变后需要重新计算尺寸
+        invalidate(); // 并重绘
     }
 
     public void setElementBackgroundColor(int backgroundColor) {
@@ -461,7 +495,7 @@ public class SimplifyPerformance extends Element {
                         save();                      // 保存更改
                         updateColorDisplay(colorDisplay, newColor); // 更新UI显示
                     }
-            ).show(); // <-- 主要变化：在最后调用 .show()
+            ).show();
         });
     }
 }
