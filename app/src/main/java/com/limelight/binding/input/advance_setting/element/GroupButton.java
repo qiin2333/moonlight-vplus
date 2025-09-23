@@ -197,12 +197,16 @@ public class GroupButton extends Element {
         List<Element> allElements = elementController.getElements();
         StringBuilder newValue = new StringBuilder("-1");
         for (String childElementIdString : childElementIds) {
-            Long childElementId = Long.parseLong(childElementIdString);
-            for (Element element : allElements) {
-                if (element.elementId.equals(childElementId)) {
-                    childElementList.add(element);
-                    newValue.append(",").append(childElementId);
+            try { // 添加try-catch防止ID格式错误
+                Long childElementId = Long.parseLong(childElementIdString);
+                for (Element element : allElements) {
+                    if (element.elementId.equals(childElementId)) {
+                        childElementList.add(element);
+                        newValue.append(",").append(childElementId);
+                    }
                 }
+            } catch (NumberFormatException e) {
+                // 忽略无效的ID
             }
         }
         value = newValue.toString();
@@ -906,6 +910,24 @@ public class GroupButton extends Element {
      */
     public String getText() {
         return this.text;
+    }
+
+
+    /**
+     * 获取此组按键包含的所有子元素的ID列表。
+     * 这个公共方法是为了让其他组件（如WheelPad）能够查询组的内容以实现预览等功能。
+     * @return 一个包含所有子元素ID的列表。
+     */
+    public List<Long> getChildIds() {
+        List<Long> childIds = new ArrayList<>();
+        if (childElementList != null) {
+            for (Element child : childElementList) {
+                if (child != null) {
+                    childIds.add(child.elementId);
+                }
+            }
+        }
+        return childIds;
     }
 
 

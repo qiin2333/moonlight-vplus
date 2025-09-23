@@ -52,26 +52,53 @@
 
             <LinearLayout
                 android:id="@+id/page_wheel_pad_popup_options_container"
-                android:orientation="horizontal"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginVertical="10dp"
-                android:gravity="center_vertical">
+                android:orientation="vertical">
 
-                <TextView
-                    android:layout_width="0dp"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="屏幕中心显示轮盘"
-                    android:layout_marginEnd="10dp"/>
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="5dp"
+                    android:orientation="horizontal">
 
-                <Switch
-                    android:id="@+id/page_wheel_pad_popup_at_center_switch"
-                    android:layout_width="wrap_content"
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="10dp"
+                        android:layout_weight="1"
+                        android:text="屏幕中心显示轮盘" />
+
+                    <Switch
+                        android:id="@+id/page_wheel_pad_popup_at_center_switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textOff=""
+                        android:textOn="" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textOn=""
-                    android:textOff=""/>
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="10dp"
+                        android:layout_weight="1"
+                        android:text="悬停时预览组按键" />
+
+                    <Switch
+                        android:id="@+id/page_wheel_pad_preview_group_switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textOff=""
+                        android:textOn="" />
+                </LinearLayout>
             </LinearLayout>
 
 
