@@ -470,6 +470,7 @@
     <string name="tip_external_display">💡 串流小课堂：连接外接显示器时，可以在设置中选择在外接显示器上显示串流画面，大屏游戏更爽～</string>
     <string name="tip_virtual_display">💡 串流小课堂：虚拟显示器功能可以创建独立的显示空间，特别适合多任务场景，让串流更灵活～</string>
     <string name="tip_dynamic_bitrate">💡 串流小课堂：使用HEVC或AV1解码器时，串流中可以调整码率，不用退出串流即可找到最适合你的网络和设备的最佳码率～</string>
+    <string name="tip_cards_show">💡 串流小课堂：游戏菜单最下方可以编辑展示的功能卡片，不需要的卡片可以收起来哦～</string>
 
     <!-- 触控模式切换菜单 -->
     <string name="game_menu_switch_touch_mode">切换触控模式</string>

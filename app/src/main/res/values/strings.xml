@@ -499,6 +499,7 @@
     <string name="tip_external_display">💡 Tip: When connecting an external display, you can choose to display the stream on the external display in settings, making big screen gaming even more enjoyable~</string>
     <string name="tip_virtual_display">💡 Tip: Virtual display function can create independent display spaces, especially suitable for multi-tasking scenarios, making streaming more flexible~</string>
     <string name="tip_dynamic_bitrate">💡 Tip: When using HEVC or AV1 decoders, you can adjust the bitrate during streaming without exiting, finding the optimal bitrate for your network and device~</string>
+    <string name="tip_cards_show">💡 Tip: You can edit the displayed function cards in the game menu. Unnecessary cards can be hidden~</string>
 
     <!-- 触控模式切换菜单 -->
     <string name="game_menu_switch_touch_mode">Switch touch mode</string>

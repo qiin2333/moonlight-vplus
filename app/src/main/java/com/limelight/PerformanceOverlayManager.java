@@ -36,6 +36,7 @@ import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.ui.StreamView;
 import com.limelight.utils.NetHelper;
 import com.limelight.utils.MoonPhaseUtils;
+import com.limelight.utils.UiHelper;
 
 /**
  * 性能覆盖层管理器
@@ -730,7 +731,7 @@ public class PerformanceOverlayManager {
                                     }, DOUBLE_CLICK_TIMEOUT);
                                 }
                             } else {
-                                snapToNearestPosition(v);
+                            snapToNearestPosition(v);
                             }
 
                             return true;
@@ -825,7 +826,7 @@ public class PerformanceOverlayManager {
 
         if (perfResView != null && perfResView.getVisibility() == View.VISIBLE) {
             if (currentIndex == index) {
-                showMoonPhaseInfo();
+                showResolutionInfo();
                 return;
             }
             currentIndex++;
@@ -919,6 +920,42 @@ public class PerformanceOverlayManager {
 
 
     /**
+     * 显示分辨率信息
+     */
+    private void showResolutionInfo() {
+        if (currentPerformanceInfo == null) {
+            showMoonPhaseInfo(); // 如果没有性能信息，显示月相信息
+            return;
+        }
+        
+        // 计算主机端分辨率（客户端分辨率 * 缩放比例）
+        // 从设置中获取缩放比例，默认为100（即1.0）
+        int scalePercent = prefConfig.resolutionScale;
+        float scaleFactor = scalePercent / 100.0f;
+        int hostWidth = (int) (currentPerformanceInfo.initialWidth * scaleFactor);
+        int hostHeight = (int) (currentPerformanceInfo.initialHeight * scaleFactor);
+        
+        // 创建分辨率信息文本
+        StringBuilder resolutionInfo = new StringBuilder();
+        resolutionInfo.append("Client Resolution: ").append(currentPerformanceInfo.initialWidth)
+                     .append(" × ").append(currentPerformanceInfo.initialHeight).append("\n");
+        resolutionInfo.append("Host Resolution: ").append(hostWidth)
+                     .append(" × ").append(hostHeight).append("\n");
+        resolutionInfo.append("Scale Factor: ").append(String.format("%.2f", scaleFactor)).append(" (").append(scalePercent).append("%)\n");
+        // 获取设备支持的刷新率
+        float deviceRefreshRate = UiHelper.getDeviceRefreshRate(activity);
+        
+        resolutionInfo.append("Target FPS: ").append(prefConfig.fps).append(" FPS\n");
+        resolutionInfo.append("Current FPS: ").append(String.format("%.0f", currentPerformanceInfo.totalFps)).append(" FPS\n");
+        resolutionInfo.append("Device Refresh Rate: ").append(String.format("%.0f", deviceRefreshRate)).append(" Hz\n");
+        
+        showInfoDialog(
+                "📱 Resolution Information",
+                resolutionInfo.toString()
+        );
+    }
+
+    /**
      * 显示解码器信息
      */
     private void showDecoderInfo() {
@@ -941,21 +978,20 @@ public class PerformanceOverlayManager {
         // 我们需要保存最新的PerformanceInfo对象
         if (currentPerformanceInfo != null) {
             // 添加完整解码器名称
-            decoderInfo.append("解码器: ").append(currentPerformanceInfo.decoder).append("\n\n");
+            decoderInfo.append("Codec: ").append(currentPerformanceInfo.decoder).append("\n\n");
 
             // 添加解码器类型
             DecoderTypeInfo decoderTypeInfo = getDecoderTypeInfo(currentPerformanceInfo.decoder);
-            decoderInfo.append("类型: ").append(decoderTypeInfo.fullName).append("\n");
+            decoderInfo.append("Type: ").append(decoderTypeInfo.fullName).append("\n");
 
             // 添加HDR状态
             if (currentPerformanceInfo.isHdrActive) {
-                decoderInfo.append("HDR: 已启用\n");
+                decoderInfo.append("HDR: Enabled\n");
             } else {
-                decoderInfo.append("HDR: 未启用\n");
+                decoderInfo.append("HDR: Disabled\n");
             }
         }
 
-        decoderInfo.append("NOTE\n");
         decoderInfo.append(activity.getString(R.string.perf_decoder_info));
         return decoderInfo.toString();
     }

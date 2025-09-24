@@ -57,7 +57,8 @@ public class FullscreenProgressOverlay {
             activity.getString(R.string.tip_audio_config),
             activity.getString(R.string.tip_external_display),
             activity.getString(R.string.tip_virtual_display),
-            activity.getString(R.string.tip_dynamic_bitrate)
+            activity.getString(R.string.tip_dynamic_bitrate),
+            activity.getString(R.string.tip_cards_show)
         };
 
         // 获取根视图
