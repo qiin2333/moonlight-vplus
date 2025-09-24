@@ -45,6 +45,7 @@ public abstract class Element extends View {
     public static final String COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR = "normalTextColor";
     public static final String COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR = "pressedTextColor";
     public static final String COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT = "textSizePercent";
+    public static final String COLUMN_STRING_EXTRA_ATTRIBUTES = "extra_attributes";
 
     public static final int ELEMENT_TYPE_DIGITAL_COMMON_BUTTON = 0;
     public static final int ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON = 1;
@@ -235,20 +236,23 @@ public abstract class Element extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        // Ignore secondary touches on controls
-        //
-        // NB: We can get an additional pointer down if the user touches a non-StreamView area
-        // while also touching an OSC control, even if that pointer down doesn't correspond to
-        // an area of the OSC control.
+        // 忽略多点触控中的非主手指
         if (event.getActionIndex() != 0) {
             return true;
         }
+
+        // 确保控制器存在
+        if (elementController == null) {
+            return true;
+        }
+
         switch (elementController.getMode()) {
             case Normal:
+                // Normal 模式逻辑
                 return onElementTouchEvent(event);
 
-
             case Edit:
+                // Edit 模式逻辑
                 switch (event.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN: {
                         lastX = event.getX();
@@ -284,16 +288,21 @@ public abstract class Element extends View {
                         }
                         return true;
                     }
-                    default: {
-                    }
                 }
                 return true;
 
-
             case Select:
-                if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                    elementSelectedCallBack.elementSelected(this);
+                // 1. 将触发时机从 ACTION_DOWN 改为 ACTION_UP (手指抬起时)
+                if (event.getActionMasked() == MotionEvent.ACTION_UP) {
+
+                    // 2. 增加对回调的 null 检查，防止应用崩溃
+                    if (elementSelectedCallBack != null) {
+                        // 3. 安全地调用回调方法
+                        // 假设回调接口的方法名是 onElementSelected 或者 elementSelected
+                        elementSelectedCallBack.elementSelected (this);
+                    }
                 }
+                // 4. 必须返回 true，表示事件已被处理
                 return true;
         }
         return true;

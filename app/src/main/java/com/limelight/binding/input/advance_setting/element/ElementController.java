@@ -294,18 +294,26 @@ public class ElementController {
         currentConfigId = configId;
         removeAllElementsOnScreen();
         elementIds = controllerManager.getSuperConfigDatabaseHelper().queryAllElementIds(configId);
-        List<Long> groupButtonElementIdList = new ArrayList<>();
-        for (Long elementId : elementIds) {
-            long elementType = (long) controllerManager.getSuperConfigDatabaseHelper().queryElementAttribute(currentConfigId, elementId, Element.COLUMN_INT_ELEMENT_TYPE);
-            if (elementType == Element.ELEMENT_TYPE_GROUP_BUTTON) {
-                groupButtonElementIdList.add(elementId);
-            } else {
-                loadElement(elementId);
-            }
 
+        // 用于在第二阶段链接关系的 GroupButton 列表
+        List<GroupButton> groupButtonsToLink = new ArrayList<>();
+
+        // --- 阶段一：创建所有 Element 对象 ---
+        // 遍历所有 elementId，不区分类型，统一调用 loadElement 创建对象
+        for (Long elementId : elementIds) {
+            Element newElement = loadElement(elementId);
+
+            // 如果创建的是一个 GroupButton，将其添加到待链接列表
+            if (newElement instanceof GroupButton) {
+                groupButtonsToLink.add((GroupButton) newElement);
+            }
         }
-        for (Long elementId : groupButtonElementIdList) {
-            loadElement(elementId);
+
+        // --- 阶段二：链接 GroupButton 的子元素 ---
+        // 此时，`elements` 列表已经包含了当前配置下的所有 Element 对象
+        for (GroupButton gb : groupButtonsToLink) {
+            // 调用我们将在 GroupButton 类中添加的新方法
+            gb.linkChildElements(elements);
         }
     }
 
