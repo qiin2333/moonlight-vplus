@@ -13,8 +13,10 @@ import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CompoundButton;
 import android.widget.FrameLayout;
 import android.widget.SeekBar;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import com.limelight.Game;
@@ -137,6 +139,19 @@ public class ElementController {
         if (elementsLayout != null) {
             elementsLayout.setVisibility(View.VISIBLE);
         }
+    }
+
+    // 拖动编辑开关变量
+    private boolean dragEditEnabled = true;
+
+    // 设置拖动编辑开关的方法
+    public void setDragEditEnabled(boolean enabled) {
+        this.dragEditEnabled = enabled;
+    }
+
+    // 获取拖动编辑开关状态的方法
+    public boolean isDragEditEnabled() {
+        return dragEditEnabled;
     }
 
 
@@ -282,6 +297,24 @@ public class ElementController {
                 addElement(contentValues);
             }
         });
+        Switch dragEditSwitch = pageEdit.findViewById(R.id.page_edit_drag_edit_switch);
+        if (dragEditSwitch != null) {
+            // 设置初始状态
+            dragEditSwitch.setChecked(true); // 默认启用拖动编辑
+
+            // 添加开关监听器
+            dragEditSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                    // 设置 ElementController 的拖动编辑开关状态
+                    setDragEditEnabled(isChecked);
+
+                    // 显示提示信息
+                    String message = isChecked ? "已启用拖动编辑" : "已禁用拖动编辑";
+                    showToast(message);
+                }
+            });
+        }
     }
 
 

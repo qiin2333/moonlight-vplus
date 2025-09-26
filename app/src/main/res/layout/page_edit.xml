@@ -39,6 +39,28 @@
                         android:background="@drawable/right_arrow"/>
                 </LinearLayout>
             </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="5dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="10dp"
+                    android:layout_weight="1"
+                    android:text="启用拖动编辑" />
+
+                <Switch
+                    android:id="@+id/page_edit_drag_edit_switch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textOff=""
+                    android:textOn=""
+                    android:checked="true" />
+            </LinearLayout>
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                 android:id="@+id/page_edit_edit_grid_width"
                 android:layout_width="match_parent"

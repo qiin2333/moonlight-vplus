@@ -422,6 +422,11 @@ public class GroupButton extends Element {
                         return true;
 
                     case MotionEvent.ACTION_MOVE:
+                        // 检查是否启用了拖动编辑功能
+                        if (!elementController.isDragEditEnabled()) {
+                            movable = true;
+                            return true; // 如果禁用了拖动编辑，则不处理移动事件
+                        }
                         float deltaX = event.getX() - lastX;
                         float deltaY = event.getY() - lastY;
                         if (Math.abs(deltaX) + Math.abs(deltaY) < 0.2) return true;
@@ -438,7 +443,10 @@ public class GroupButton extends Element {
                     case MotionEvent.ACTION_CANCEL:
                     case MotionEvent.ACTION_UP:
                         if (movable) {
-                            save();
+                            // 只有在启用拖动编辑时才保存
+                            if (elementController.isDragEditEnabled()) {
+                                save();
+                            }
                             movable = false;
                         } else {
                             elementController.toggleInfoPage(getInfoPage());
@@ -788,7 +796,7 @@ public class GroupButton extends Element {
         permanentIndependentSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             isPermanentlyIndependent = isChecked; // 控制新的永久状态变量
             save(); // 保存更改
-            if(isChecked) {
+            if (isChecked) {
                 Toast.makeText(context, "此组按键将永久保持独立状态", Toast.LENGTH_SHORT).show();
             } else {
                 Toast.makeText(context, "此组按键将重新跟随父级", Toast.LENGTH_SHORT).show();

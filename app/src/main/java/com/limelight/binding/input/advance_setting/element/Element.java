@@ -263,6 +263,12 @@ public abstract class Element extends View {
                         return true;
                     }
                     case MotionEvent.ACTION_MOVE: {
+                        // 检查是否启用了拖动编辑功能
+                        if (!elementController.isDragEditEnabled()) {
+                            isClick = false;
+                            return true; // 如果禁用了拖动编辑，则不处理移动事件
+                        }
+
                         float x = event.getX();
                         float y = event.getY();
                         float deltaX = x - lastX;
@@ -284,15 +290,18 @@ public abstract class Element extends View {
                         if (isClick) {
                             elementController.toggleInfoPage(getInfoPage());
                         } else {
-                            save();
+                            // 只有在启用拖动编辑时才保存
+                            if (elementController.isDragEditEnabled()) {
+                                save();
+                            }
                         }
                         return true;
                     }
                 }
                 return true;
-
+            //组按键选择子按键时使用，可更改为ACTION_DOWN来快速（滑动）选择按键
             case Select:
-                // 1. 将触发时机从 ACTION_DOWN 改为 ACTION_UP (手指抬起时)
+                // 1. 触发时机ACTION_UP (手指抬起时)
                 if (event.getActionMasked() == MotionEvent.ACTION_UP) {
 
                     // 2. 增加对回调的 null 检查，防止应用崩溃
