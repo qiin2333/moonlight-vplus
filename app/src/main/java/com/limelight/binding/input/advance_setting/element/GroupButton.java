@@ -12,6 +12,7 @@ import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
+import android.view.ViewConfiguration;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -117,6 +118,20 @@ public class GroupButton extends Element {
     private boolean movableInNormalMode = false;
     private boolean userHasManuallySet = false;
     private boolean isPermanentlyIndependent = false;
+
+    // 在编辑模式下，如果元素被按住超过系统定义的长按时间，就允许拖动，
+    // 以避免用户想打开按键设置而不是移动按键
+    private static final long DRAG_EDIT_LONG_PRESS_TIMEOUT = 250;
+    private boolean longPressDetected = false;
+    private final Runnable longPressRunnable = new Runnable() {
+        @Override
+        public void run() {
+            longPressDetected = true;
+            // 可以添加视觉反馈，比如改变边框颜色
+            editColor = 0xff00f91a; // 绿色表示可以拖动
+            invalidate();
+        }
+    };
 
 
     public GroupButton(Map<String, Object> attributesMap,
@@ -417,31 +432,47 @@ public class GroupButton extends Element {
                         resizeYBorder = true;
                         lastX = event.getX();
                         lastY = event.getY();
-                        editColor = 0xff00f91a;
+                        movable = false; // 重置移动标志
+                        longPressDetected = false; // 重置长按标志
+                        editColor = 0xffdc143c; // 红色表示初始状态
                         invalidate();
+
+                        // 启动长按检测
+                        elementController.getHandler().removeCallbacks(longPressRunnable);
+                        elementController.getHandler().postDelayed(longPressRunnable, DRAG_EDIT_LONG_PRESS_TIMEOUT);
                         return true;
 
                     case MotionEvent.ACTION_MOVE:
                         // 检查是否启用了拖动编辑功能
                         if (!elementController.isDragEditEnabled()) {
-                            movable = true;
                             return true; // 如果禁用了拖动编辑，则不处理移动事件
                         }
+
                         float deltaX = event.getX() - lastX;
                         float deltaY = event.getY() - lastY;
-                        if (Math.abs(deltaX) + Math.abs(deltaY) < 0.2) return true;
 
-                        if (layoutComplete) {
-                            layoutComplete = false;
-                            setElementCentralX((int) getX() + getWidth() / 2 + (int) deltaX);
-                            setElementCentralY((int) getY() + getHeight() / 2 + (int) deltaY);
+                        // 小位移算作点击
+                        if (Math.abs(deltaX) + Math.abs(deltaY) < 0.2) {
+                            return true;
                         }
-                        updatePage();
-                        movable = true;
+
+                        // 只有检测到长按后才允许拖动
+                        if (longPressDetected) {
+                            movable = true;
+                            if (layoutComplete) {
+                                layoutComplete = false;
+                                setElementCentralX((int) getX() + getWidth() / 2 + (int) deltaX);
+                                setElementCentralY((int) getY() + getHeight() / 2 + (int) deltaY);
+                            }
+                            updatePage();
+                        }
                         return true;
 
                     case MotionEvent.ACTION_CANCEL:
                     case MotionEvent.ACTION_UP:
+                        // 取消长按检测
+                        elementController.getHandler().removeCallbacks(longPressRunnable);
+
                         if (movable) {
                             // 只有在启用拖动编辑时才保存
                             if (elementController.isDragEditEnabled()) {
