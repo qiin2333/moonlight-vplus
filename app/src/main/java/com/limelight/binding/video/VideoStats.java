@@ -16,6 +16,7 @@ class VideoStats {
     int totalHostProcessingLatency;
     int framesWithHostProcessingLatency;
     long measurementStartTimestamp;
+    public long renderingTimeMs;// 渲染时间
 
     void add(VideoStats other) {
         this.decoderTimeMs += other.decoderTimeMs;
@@ -25,6 +26,9 @@ class VideoStats {
         this.totalFramesRendered += other.totalFramesRendered;
         this.frameLossEvents += other.frameLossEvents;
         this.framesLost += other.framesLost;
+
+        // 累加渲染时间
+        this.renderingTimeMs += other.renderingTimeMs;
 
         if (this.minHostProcessingLatency == 0) {
             this.minHostProcessingLatency = other.minHostProcessingLatency;
@@ -55,6 +59,9 @@ class VideoStats {
         this.totalHostProcessingLatency = other.totalHostProcessingLatency;
         this.framesWithHostProcessingLatency = other.framesWithHostProcessingLatency;
         this.measurementStartTimestamp = other.measurementStartTimestamp;
+
+        // 复制渲染时间
+        this.renderingTimeMs = other.renderingTimeMs;
     }
 
     void clear() {
@@ -70,6 +77,7 @@ class VideoStats {
         this.totalHostProcessingLatency = 0;
         this.framesWithHostProcessingLatency = 0;
         this.measurementStartTimestamp = 0;
+        this.renderingTimeMs = 0;
     }
 
     VideoStatsFps getFps() {

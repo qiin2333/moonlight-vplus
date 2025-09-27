@@ -39,7 +39,7 @@ import android.view.SurfaceHolder;
 
 public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements Choreographer.FrameCallback {
 
-    private static final boolean USE_FRAME_RENDER_TIME = false;
+    private static final boolean USE_FRAME_RENDER_TIME = true;
     private static final boolean FRAME_RENDER_TIME_ONLY = USE_FRAME_RENDER_TIME && false;
 
     // Used on versions < 5.0
@@ -714,11 +714,17 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             videoDecoder.setOnFrameRenderedListener(new MediaCodec.OnFrameRenderedListener() {
                 @Override
                 public void onFrameRendered(MediaCodec mediaCodec, long presentationTimeUs, long renderTimeNanos) {
-                    long delta = (renderTimeNanos / 1000000L) - (presentationTimeUs / 1000);
+                    // presentationTimeUs: 我们告诉系统这一帧应该在什么时间点显示 (单位: 微秒)
+                    // renderTimeNanos: 系统报告的这一帧实际显示在屏幕上的时间点 (单位: 纳秒)
+                    long presentationTimeMs = presentationTimeUs / 1000;
+                    long renderTimeMs = renderTimeNanos / 1000000L;
+
+                    // 计算从“应该显示”到“实际显示”的延迟
+                    long delta = renderTimeMs - presentationTimeMs;
+
+                    // 过滤掉异常值
                     if (delta >= 0 && delta < 1000) {
-                        if (USE_FRAME_RENDER_TIME) {
-                            activeWindowVideoStats.totalTimeMs += delta;
-                        }
+                        activeWindowVideoStats.renderingTimeMs += delta;
                     }
                 }
             }, null);
@@ -1479,6 +1485,15 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             float minHostProcessingLatency = (float)lastTwo.minHostProcessingLatency / 10;
             float maxHostProcessingLatency = (float)lastTwo.minHostProcessingLatency / 10;
             float aveHostProcessingLatency = (float)lastTwo.totalHostProcessingLatency / 10 / lastTwo.framesWithHostProcessingLatency;
+            // 计算平均“解码+渲染”总时间
+            float aveTotalProcessingTimeMs = 0;
+            if (lastTwo.totalFramesRendered > 0) {
+                aveTotalProcessingTimeMs = (float) lastTwo.renderingTimeMs / lastTwo.totalFramesRendered;
+            }
+
+            // 计算平均“纯渲染延迟”
+            // 注意：这里用总处理时间减去解码时间。如果结果为负，说明数据有抖动，取0即可。
+            float avePureRenderingLatencyMs = Math.max(0, aveTotalProcessingTimeMs - decodeTimeMs);
 
             PerformanceInfo performanceInfo = new PerformanceInfo();
             performanceInfo.context = context;
@@ -1496,6 +1511,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             performanceInfo.maxHostProcessingLatency = maxHostProcessingLatency;
             performanceInfo.aveHostProcessingLatency = aveHostProcessingLatency;
             performanceInfo.decodeTimeMs = decodeTimeMs;
+            performanceInfo.renderingLatencyMs = avePureRenderingLatencyMs;
 
             perfListener.onPerfUpdateV(performanceInfo);
             perfListener.onPerfUpdateWG(performanceInfo);

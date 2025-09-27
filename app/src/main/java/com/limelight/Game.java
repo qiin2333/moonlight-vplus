@@ -3454,9 +3454,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 perfAttrs.put("帧率", String.format("%.0f", performanceInfo.totalFps));
                 perfAttrs.put("丢帧率", String.format("%.1f", performanceInfo.lostFrameRate));
                 perfAttrs.put("网络延时", String.format("%d", (int) (performanceInfo.rttInfo >> 32)));
-                perfAttrs.put("主机延时", String.format("%.1f", performanceInfo.aveHostProcessingLatency));
-                perfAttrs.put("解码时间", String.format("%.1f", performanceInfo.decodeTimeMs));
+                perfAttrs.put("主机延时", String.format("%.2f", performanceInfo.aveHostProcessingLatency));
+                perfAttrs.put("解码时间", String.format("%.2f", performanceInfo.decodeTimeMs));
                 perfAttrs.put("带宽", performanceInfo.bandWidth);
+                perfAttrs.put("渲染延迟", String.format("%.2f", performanceInfo.renderingLatencyMs));
                 for (PerformanceInfoDisplay performanceInfoDisplay : performanceInfoDisplays) {
                     performanceInfoDisplay.display(perfAttrs);
                 }
