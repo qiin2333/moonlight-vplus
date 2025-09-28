@@ -443,11 +443,6 @@ public class GroupButton extends Element {
                         return true;
 
                     case MotionEvent.ACTION_MOVE:
-                        // 检查是否启用了拖动编辑功能
-                        if (!elementController.isDragEditEnabled()) {
-                            return true; // 如果禁用了拖动编辑，则不处理移动事件
-                        }
-
                         float deltaX = event.getX() - lastX;
                         float deltaY = event.getY() - lastY;
 
@@ -456,8 +451,8 @@ public class GroupButton extends Element {
                             return true;
                         }
 
-                        // 只有检测到长按后才允许拖动
-                        if (longPressDetected) {
+                        // 只有检测到长按或关闭长按移动后才允许拖动
+                        if (!elementController.isDragEditEnabled() | longPressDetected) {
                             movable = true;
                             if (layoutComplete) {
                                 layoutComplete = false;
@@ -474,10 +469,7 @@ public class GroupButton extends Element {
                         elementController.getHandler().removeCallbacks(longPressRunnable);
 
                         if (movable) {
-                            // 只有在启用拖动编辑时才保存
-                            if (elementController.isDragEditEnabled()) {
                                 save();
-                            }
                             movable = false;
                         } else {
                             elementController.toggleInfoPage(getInfoPage());

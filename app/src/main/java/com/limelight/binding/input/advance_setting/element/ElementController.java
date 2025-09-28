@@ -303,17 +303,14 @@ public class ElementController {
         Switch dragEditSwitch = pageEdit.findViewById(R.id.page_edit_drag_edit_switch);
         if (dragEditSwitch != null) {
             // 设置初始状态
-            dragEditSwitch.setChecked(true); // 默认启用拖动编辑
+            dragEditSwitch.setChecked(true); // 默认启用长按移动按键
 
             // 添加开关监听器
             dragEditSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                 @Override
                 public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    // 设置 ElementController 的拖动编辑开关状态
                     setDragEditEnabled(isChecked);
-
-                    // 显示提示信息
-                    String message = isChecked ? "已启用拖动编辑" : "已禁用拖动编辑";
+                    String message = isChecked ? "长按移动按键" : "可直接拖动按键";
                     showToast(message);
                 }
             });

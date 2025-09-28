@@ -51,7 +51,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="10dp"
                     android:layout_weight="1"
-                    android:text="启用拖动编辑" />
+                    android:text="长按移动按键" />
 
                 <Switch
                     android:id="@+id/page_edit_drag_edit_switch"

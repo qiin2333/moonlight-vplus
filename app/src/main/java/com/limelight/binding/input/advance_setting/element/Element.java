@@ -285,11 +285,6 @@ public abstract class Element extends View {
                         return true;
                     }
                     case MotionEvent.ACTION_MOVE: {
-                        // 检查是否启用了拖动编辑功能
-                        if (!elementController.isDragEditEnabled()) {
-                            return true; // 如果禁用了拖动编辑，则不处理移动事件
-                        }
-
                         float x = event.getX();
                         float y = event.getY();
                         float deltaX = x - lastX;
@@ -300,8 +295,8 @@ public abstract class Element extends View {
                             return true;
                         }
 
-                        // 只有检测到长按后才允许拖动
-                        if (longPressDetected) {
+                        // 只有检测到长按或没有开启长按移动后才允许拖动
+                        if (!elementController.isDragEditEnabled() | longPressDetected) {
                             isClick = false;
                             setElementCentralX((int) getX() + getWidth() / 2 + (int) deltaX);
                             setElementCentralY((int) getY() + getHeight() / 2 + (int) deltaY);
@@ -320,10 +315,7 @@ public abstract class Element extends View {
                         if (isClick || !longPressDetected) {
                             elementController.toggleInfoPage(getInfoPage());
                         } else {
-                            // 只有在启用拖动编辑时才保存
-                            if (elementController.isDragEditEnabled()) {
                                 save();
-                            }
                         }
                         return true;
                     }
