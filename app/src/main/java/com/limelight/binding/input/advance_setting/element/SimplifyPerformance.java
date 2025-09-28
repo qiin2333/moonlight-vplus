@@ -453,7 +453,7 @@ public class SimplifyPerformance extends Element {
 
     @Override
     public boolean onElementTouchEvent(MotionEvent event) {
-        return true;
+        return false;
     }
 
     public static ContentValues getInitialInfo() {
