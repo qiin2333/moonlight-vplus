@@ -231,6 +231,9 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                 LimeLog.info("controller0 has no sensormanager, fallback to device gyro");
             }
             
+            // 强制重新启用传感器以确保陀螺仪功能正常工作
+            enableSensors();
+            
             handleSetMotionEventState((short) 0, MoonBridge.LI_MOTION_TYPE_GYRO, (short) 120);
             recomputeGyroHoldForAllContexts();
         } else {
@@ -588,6 +591,9 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             InputDeviceContext deviceContext = inputDeviceContexts.valueAt(i);
             deviceContext.enableSensors();
         }
+        
+        // 如果陀螺仪模拟右摇杆功能已启用，需要重新激活
+        onSensorsReenabled();
     }
 
     private static boolean hasJoystickAxes(InputDevice device) {

@@ -3,6 +3,7 @@ package com.limelight.dialogs;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,6 +30,7 @@ public class AddressSelectionDialog {
     private OnAddressSelectedListener listener;
     private ComputerDetails.AddressTuple selectedAddress;
     private AddressListAdapter adapter;
+    private ListView addressList;
     
     public AddressSelectionDialog(Context context, ComputerDetails computerDetails, OnAddressSelectedListener listener) {
         this.computerDetails = computerDetails;
@@ -47,9 +49,12 @@ public class AddressSelectionDialog {
         computerNameView.setText(computerDetails.name);
         
         // 设置地址列表
-        ListView addressList = dialogView.findViewById(R.id.address_list);
+        addressList = dialogView.findViewById(R.id.address_list);
         adapter = new AddressListAdapter(context, computerDetails.getAvailableAddresses());
         addressList.setAdapter(adapter);
+        
+        // 设置控制器支持
+        setupControllerSupport();
         
         // 设置按钮
         Button cancelButton = dialogView.findViewById(R.id.btn_cancel);
@@ -83,6 +88,51 @@ public class AddressSelectionDialog {
         if (dialog != null) {
             dialog.dismiss();
         }
+    }
+    
+    /**
+     * 设置控制器支持
+     */
+    private void setupControllerSupport() {
+        // 设置ListView的焦点支持
+        addressList.setFocusable(true);
+        addressList.setFocusableInTouchMode(true);
+        addressList.setClickable(true);
+        
+        // 设置初始焦点
+        addressList.requestFocus();
+        
+        // 处理ListView的按键事件
+        addressList.setOnKeyListener((v, keyCode, event) -> {
+            if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                // 只处理确认键选择，让系统处理方向键导航
+                if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || 
+                    keyCode == KeyEvent.KEYCODE_ENTER) {
+                    return handleListViewKeyEvent(keyCode);
+                }
+            }
+            return false; // 让系统处理所有方向键导航
+        });
+    }
+    
+    /**
+     * 处理ListView的按键事件
+     */
+    private boolean handleListViewKeyEvent(int keyCode) {
+        int itemCount = adapter.getCount();
+        if (itemCount == 0) return false;
+        
+        if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) {
+            // 选择当前项
+            int selectedPosition = addressList.getSelectedItemPosition();
+            if (selectedPosition >= 0 && selectedPosition < itemCount) {
+                ComputerDetails.AddressTuple address = (ComputerDetails.AddressTuple) adapter.getItem(selectedPosition);
+                selectedAddress = address;
+                adapter.notifyDataSetChanged();
+            }
+            return true;
+        }
+        return false;
     }
     
     private class AddressListAdapter extends BaseAdapter {
@@ -137,6 +187,11 @@ public class AddressSelectionDialog {
             // 设置选中状态
             boolean isSelected = address.equals(selectedAddress);
             holder.selectedIndicator.setVisibility(isSelected ? View.VISIBLE : View.GONE);
+            
+            // 设置焦点状态
+            boolean isFocused = (position == addressList.getSelectedItemPosition());
+            convertView.setSelected(isFocused);
+            convertView.setActivated(isSelected);
             
             // 设置点击事件
             convertView.setOnClickListener(v -> {

@@ -44,4 +44,7 @@
     <color name="theme_pink_gradient_center">#FF8BB3</color>
     <color name="theme_pink_gradient_end">#FFA3C7</color>
     <color name="theme_pink_dark">#FF4A7C</color>
+
+    <!-- 主题蓝色 -->
+    <color name="theme_blue_primary">#3CA4E0</color>
 </resources>

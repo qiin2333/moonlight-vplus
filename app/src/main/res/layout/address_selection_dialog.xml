@@ -8,7 +8,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="选择连接地址"
+        android:text="Choose a connection address"
         android:textSize="18sp"
         android:textStyle="bold"
         android:textColor="@android:color/black"
@@ -19,7 +19,7 @@
         android:id="@+id/computer_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="主机名称"
+        android:text="Host name"
         android:textSize="16sp"
         android:textColor="@android:color/black"
         android:gravity="center"
@@ -31,7 +31,12 @@
         android:layout_height="wrap_content"
         android:maxHeight="300dp"
         android:divider="@android:color/transparent"
-        android:dividerHeight="8dp" />
+        android:dividerHeight="8dp"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:clickable="true"
+        android:choiceMode="singleChoice"
+        android:nextFocusDown="@+id/btn_connect" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -44,8 +49,10 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="取消"
+            android:text="@string/no"
             android:layout_marginEnd="8dp"
+            android:nextFocusUp="@+id/address_list"
+            android:nextFocusRight="@+id/btn_connect"
             style="@style/AppDialogButtonStyle" />
 
         <Button
@@ -53,8 +60,10 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="连接"
+            android:text="@string/yes"
             android:layout_marginStart="8dp"
+            android:nextFocusUp="@+id/address_list"
+            android:nextFocusLeft="@+id/btn_cancel"
             style="@style/AppDialogButtonStyle" />
 
     </LinearLayout>

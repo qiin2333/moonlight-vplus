@@ -10,8 +10,11 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.provider.Settings;
 import android.util.Log;
 import android.widget.Toast;
+
+import androidx.annotation.RequiresApi;
 
 import com.limelight.BuildConfig;
 
@@ -245,6 +248,14 @@ public class UpdateManager {
 
 	private static void startDirectDownload(Context context, UpdateInfo info) {
 		try {
+			// 检查安装权限
+			if (!canInstallApk(context)) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    showInstallPermissionDialog(context);
+                }
+                return;
+			}
+			
 			String src = info.apkDownloadUrl;
 			String fileName = info.apkName != null ? info.apkName : ("moonlight-" + info.version + ".apk");
 
@@ -262,7 +273,7 @@ public class UpdateManager {
 			DownloadManager dm = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
 			DownloadManager.Request req = new DownloadManager.Request(Uri.parse(primaryUrl));
 			req.setTitle("Moonlight V+ 更新下载");
-			req.setDescription(fileName + " (如下载失败可尝试浏览器下载)");
+			req.setDescription(fileName + " (下载完成后点击通知即可安装)");
 			req.setMimeType("application/vnd.android.package-archive");
 			req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
 			req.setVisibleInDownloadsUi(true);
@@ -271,6 +282,8 @@ public class UpdateManager {
 			req.addRequestHeader("User-Agent", "Mozilla/5.0 (Android; Mobile; rv:40.0)");
 			req.addRequestHeader("Accept", "*/*");
 			req.addRequestHeader("Referer", "https://github.com/");
+
+			// 设置下载路径
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 				req.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
 			} else {
@@ -279,10 +292,46 @@ public class UpdateManager {
 			
 			long downloadId = dm.enqueue(req);
 			Log.d(TAG, "已启动下载，ID: " + downloadId + ", URL: " + primaryUrl);
-			Toast.makeText(context, "已开始下载，请查看通知栏进度", Toast.LENGTH_LONG).show();
+			Toast.makeText(context, "已开始下载，下载完成后点击通知栏即可安装", Toast.LENGTH_LONG).show();
 		} catch (Exception e) {
-			Toast.makeText(context, "Downloading failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+			Toast.makeText(context, "下载失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
 		}
+	}
+
+	// 检查是否可以安装APK
+	private static boolean canInstallApk(Context context) {
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+			return context.getPackageManager().canRequestPackageInstalls();
+		}
+		return true; // Android 8.0以下不需要此权限
+	}
+
+	// 显示安装权限请求对话框
+	@RequiresApi(api = Build.VERSION_CODES.O)
+    private static void showInstallPermissionDialog(Context context) {
+		if (!(context instanceof Activity)) {
+			Toast.makeText(context, "需要安装权限才能自动安装更新", Toast.LENGTH_LONG).show();
+			return;
+		}
+
+		Activity activity = (Activity) context;
+		AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+		builder.setTitle("需要安装权限");
+		builder.setMessage("为了自动安装更新，需要授予应用安装权限。\n\n点击确定前往设置页面开启权限。");
+		builder.setPositiveButton(activity.getResources().getText(android.R.string.ok), (dialog, which) -> {
+			try {
+				Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
+				intent.setData(Uri.parse("package:" + context.getPackageName()));
+				activity.startActivity(intent);
+			} catch (Exception e) {
+				// 如果无法打开特定包名的设置，则打开通用设置
+				Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
+				activity.startActivity(intent);
+			}
+		});
+		builder.setNegativeButton(activity.getResources().getText(android.R.string.cancel), null);
+		builder.setCancelable(true);
+		builder.show();
 	}
 	
 	// 检查是否需要更新代理列表
