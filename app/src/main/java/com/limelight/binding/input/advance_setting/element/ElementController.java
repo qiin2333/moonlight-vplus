@@ -52,6 +52,9 @@ public class ElementController {
     // 滚轮下滚
     private static final String SPECIAL_KEY_MOUSE_SCROLL_DOWN = "SD";
     private static final String SPECIAL_KEY_MOUSE_MODE_SWITCH = "MMS";
+    private static final String SPECIAL_KEY_CLASSIC_MOUSE_SWITCH = "CMS"; // 经典鼠标
+    private static final String SPECIAL_KEY_TRACKPAD_MODE = "TPM";         // 触控板
+    private static final String SPECIAL_KEY_MULTI_TOUCH_MODE = "MTM";      // 多点触控
     private static final String SPECIAL_KEY_MOUSE_ENABLE_SWITCH = "MES";
     private static final String SPECIAL_KEY_PC_KEYBOARD_SWITCH = "PKS";
     private static final String SPECIAL_KEY_ANDROID_KEYBOARD_SWITCH = "AKS";
@@ -936,6 +939,12 @@ public class ElementController {
 
                 }
             };
+        } else if (key.equals(SPECIAL_KEY_CLASSIC_MOUSE_SWITCH)) {
+            return switchMouseMode(false, false, "经典鼠标模式");
+        } else if (key.equals(SPECIAL_KEY_TRACKPAD_MODE)) {
+            return switchMouseMode(true, false, "触控板模式");
+        } else if (key.equals(SPECIAL_KEY_MULTI_TOUCH_MODE)) {
+            return switchMouseMode(false, true, "多点触控模式");
         } else if (key.equals(SPECIAL_KEY_PC_KEYBOARD_SWITCH)) {
             return new SendEventHandler() {
                 @Override
@@ -991,6 +1000,31 @@ public class ElementController {
             };
         }
         return null;
+    }
+
+    //鼠标模式切换
+    private SendEventHandler switchMouseMode(boolean touchMode, boolean enhancedTouch, String toastMessage) {
+        return new SendEventHandler() {
+            @Override
+            public void sendEvent(boolean down) {
+                if (down) {
+                    ContentValues contentValues = new ContentValues();
+                    contentValues.put(PageConfigController.COLUMN_BOOLEAN_TOUCH_MODE, String.valueOf(touchMode));
+                    contentValues.put(PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH, String.valueOf(enhancedTouch));
+                    controllerManager.getTouchController().setTouchMode(touchMode);
+                    controllerManager.getTouchController().setEnhancedTouch(enhancedTouch);
+                    showToast(toastMessage);
+                    controllerManager.getSuperConfigDatabaseHelper().
+
+                            updateConfig(currentConfigId, contentValues);
+                }
+            }
+
+            @Override
+            public void sendEvent(int analog1, int analog2) {
+
+            }
+        };
     }
 
 

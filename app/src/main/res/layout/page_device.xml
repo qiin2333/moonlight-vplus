@@ -47,6 +47,27 @@
                         android:layout_width="match_parent"
                         android:layout_height="50dp"
                         android:layout_marginVertical="5dp"
+                        android:tag="CMS"
+                        style="@style/KeyboardKeyStyle"
+                        android:text="经典鼠标"/>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        android:layout_marginVertical="5dp"
+                        android:tag="TPM"
+                        style="@style/KeyboardKeyStyle"
+                        android:text="触控板"/>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        android:layout_marginVertical="5dp"
+                        android:tag="MTM"
+                        style="@style/KeyboardKeyStyle"
+                        android:text="多点触控"/>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        android:layout_marginVertical="5dp"
                         android:tag="MES"
                         style="@style/KeyboardKeyStyle"
                         android:text="触控开关"/>
