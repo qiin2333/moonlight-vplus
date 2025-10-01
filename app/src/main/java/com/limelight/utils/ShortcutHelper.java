@@ -5,6 +5,15 @@ import android.app.Activity;
 import android.content.pm.ShortcutInfo;
 import android.content.pm.ShortcutManager;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.Rect;
+import android.graphics.RectF;
+import android.graphics.drawable.AdaptiveIconDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Icon;
 import android.os.Build;
 
@@ -151,7 +160,8 @@ public class ShortcutHelper {
             Icon appIcon;
 
             if (iconBits != null) {
-                appIcon = Icon.createWithAdaptiveBitmap(iconBits);
+                Bitmap adaptiveSquare = prepareAdaptiveSquareBitmap(iconBits);
+                appIcon = Icon.createWithAdaptiveBitmap(adaptiveSquare);
             } else {
                 appIcon = Icon.createWithResource(context, R.mipmap.ic_pc_scut);
             }
@@ -166,6 +176,125 @@ public class ShortcutHelper {
         } else {
             return false;
         }
+    }
+
+    private static Bitmap prepareAdaptiveSquareBitmap(Bitmap source) {
+        if (source == null) {
+            return null;
+        }
+
+        int srcWidth = source.getWidth();
+        int srcHeight = source.getHeight();
+        if (srcWidth <= 0 || srcHeight <= 0) {
+            return source;
+        }
+
+        // 确保来源位图为软件位图（避免在软件画布上绘制硬件位图导致异常）
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && source.getConfig() == Bitmap.Config.HARDWARE) {
+            Bitmap softwareCopy = source.copy(Bitmap.Config.ARGB_8888, false);
+            if (softwareCopy != null) {
+                source = softwareCopy;
+                srcWidth = source.getWidth();
+                srcHeight = source.getHeight();
+            } else {
+                // 无法转换则直接返回原图，跳过绘制流程以避免崩溃
+                return source;
+            }
+        }
+
+        // 创建方形透明画布，边长取原图较大边
+        int side = Math.max(srcWidth, srcHeight);
+        Bitmap output = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(output);
+
+        // 使用 centerCrop 模式：计算缩放比例，取较大值确保填满整个画布
+        float scale = Math.max((float) side / srcWidth, (float) side / srcHeight);
+        
+        // 计算缩放后的尺寸
+        int scaledWidth = Math.round(srcWidth * scale);
+        int scaledHeight = Math.round(srcHeight * scale);
+        
+        // 计算居中裁剪的源图区域
+        int srcLeft = (scaledWidth - side) / 2;
+        int srcTop = (scaledHeight - side) / 2;
+        
+        // 将缩放后的坐标转换回原始图片坐标
+        int actualSrcLeft = Math.round(srcLeft / scale);
+        int actualSrcTop = Math.round(srcTop / scale);
+        int actualSrcRight = Math.round((srcLeft + side) / scale);
+        int actualSrcBottom = Math.round((srcTop + side) / scale);
+        
+        // 确保不超出源图边界
+        actualSrcLeft = Math.max(0, actualSrcLeft);
+        actualSrcTop = Math.max(0, actualSrcTop);
+        actualSrcRight = Math.min(srcWidth, actualSrcRight);
+        actualSrcBottom = Math.min(srcHeight, actualSrcBottom);
+
+        Rect srcRect = new Rect(actualSrcLeft, actualSrcTop, actualSrcRight, actualSrcBottom);
+        Rect dstRect = new Rect(0, 0, side, side);
+        canvas.drawBitmap(source, srcRect, dstRect, null);
+
+        // 绘制白色边框（安全内缩 + 圆角），避免被 Launcher 遮罩裁切
+        Paint borderPaint = new Paint();
+        borderPaint.setColor(Color.WHITE);
+        borderPaint.setStyle(Paint.Style.STROKE);
+        borderPaint.setAntiAlias(true);
+        borderPaint.setStrokeJoin(Paint.Join.ROUND);
+        borderPaint.setStrokeCap(Paint.Cap.ROUND);
+
+        // 边框加粗并提高可见性：约 3.5% 边长，最小 6px
+        float borderWidth = Math.max(6f, side * 0.035f);
+        borderPaint.setStrokeWidth(borderWidth);
+
+        // 计算与系统 Adaptive Icon 遮罩匹配的路径（Android 8.0+）
+        Path maskPath = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                // 使用一个空的 AdaptiveIconDrawable 来获取系统遮罩路径
+                AdaptiveIconDrawable aid = new AdaptiveIconDrawable(new ColorDrawable(Color.TRANSPARENT), new ColorDrawable(Color.TRANSPARENT));
+                Path sysPath = aid.getIconMask();
+                if (sysPath != null) {
+                    maskPath = new Path(sysPath);
+                    // 缩放并平移到安全区域矩形内
+                    float inset = Math.max(side * 0.18f, borderWidth / 2f);
+                    RectF target = new RectF(inset, inset, side - inset, side - inset);
+                    RectF srcBounds = new RectF();
+                    maskPath.computeBounds(srcBounds, true);
+                    Matrix m = new Matrix();
+                    m.setRectToRect(srcBounds, target, Matrix.ScaleToFit.FILL);
+                    maskPath.transform(m);
+
+                    // 用系统遮罩路径描边，确保与 Launcher 圆角一致
+                    canvas.drawPath(maskPath, borderPaint);
+
+                    // 内侧暗线（提升对比度）
+                    Paint innerPaint = new Paint(borderPaint);
+                    innerPaint.setColor(Color.argb(60, 0, 0, 0));
+                    innerPaint.setStrokeWidth(borderWidth * 0.5f);
+                    canvas.drawPath(maskPath, innerPaint);
+                }
+            }
+            catch (Throwable ignored) {
+                // 回退到近似的圆角矩形方案
+            }
+        }
+
+        if (maskPath == null) {
+            // 回退：使用近似圆角矩形
+            float inset = Math.max(side * 0.18f, borderWidth / 2f);
+            RectF borderRect = new RectF(inset, inset, side - inset, side - inset);
+            float radius = side * 0.22f;
+            canvas.drawRoundRect(borderRect, radius, radius, borderPaint);
+
+            Paint innerPaint = new Paint(borderPaint);
+            innerPaint.setColor(Color.argb(60, 0, 0, 0));
+            innerPaint.setStrokeWidth(borderWidth * 0.5f);
+            float innerInset = inset + borderWidth * 0.25f;
+            RectF innerRect = new RectF(innerInset, innerInset, side - innerInset, side - innerInset);
+            canvas.drawRoundRect(innerRect, radius, radius, innerPaint);
+        }
+
+        return output;
     }
 
     public void disableComputerShortcut(ComputerDetails computer, CharSequence reason) {
