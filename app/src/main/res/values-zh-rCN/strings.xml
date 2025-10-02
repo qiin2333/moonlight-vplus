@@ -222,7 +222,7 @@
 
     <string name="title_checkbox_flip_face_buttons"> 反转技能键 </string>
     <string name="summary_checkbox_flip_face_buttons"> 为手柄和虚拟手柄调转A/B和X/Y技能键 </string>
-    <string name="category_on_screen_controls_settings">📱 屏幕控制按钮设置</string>
+    <string name="category_on_screen_controls_settings">🎛️ 屏幕控制按钮设置</string>
     <string name="title_checkbox_show_onscreen_controls"> 显示屏幕控制按钮 </string>
     <string name="summary_checkbox_show_onscreen_controls"> 在触摸屏上显示一层虚拟手柄 </string>
     <string name="title_checkbox_vibrate_osc"> 启用震动 </string>
@@ -333,7 +333,7 @@
     <string name="summary_about_mode">请前往GitHub查看，喜欢的话点个Star支持一下我们吧</string>
     <string name="check_for_updates">检查更新</string>
     <string name="summary_check_for_updates">检查是否有新版本可用</string>
-    <string name="category_help">帮助</string>
+    <string name="category_help">❓ 帮助</string>
     <string name="title_setup_guide">安装向导</string>
     <string name="title_troubleshooting">解决方案向导</string>
     <string name="summary_troubleshooting">查看有关诊断和修复常见流传输问题的提示</string>
@@ -395,7 +395,7 @@
     <string name="mic_permission_required">需要麦克风权限</string>
     
     <!-- Screen position settings -->
-    <string name="category_screen_position_settings">画面位置设置</string>
+    <string name="category_screen_position_settings">📱 画面位置设置</string>
     <string name="title_screen_position">画面位置</string>
     <string name="summary_screen_position">选择非全屏分辨率时画面的位置</string>
     <string name="title_screen_offset_x">水平偏移</string>
@@ -404,7 +404,7 @@
     <string name="summary_screen_offset_y">画面垂直方向的偏移量</string>
     
     <!-- Crown feature area -->
-    <string name="category_crown_features">王冠的功能区</string>
+    <string name="category_crown_features">👑 王冠的功能区</string>
     <string name="title_crown_super_features">王冠的超级功能</string>
     <string name="summary_crown_super_features">串流中自定义按键和一些设置，并将这些保存到自定义可快速切换的配置中</string>
     <string name="title_export_super_config">导出配置</string>

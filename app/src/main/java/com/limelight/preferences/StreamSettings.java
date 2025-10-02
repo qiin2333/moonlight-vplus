@@ -31,6 +31,12 @@ import android.view.WindowManager;
 import android.widget.Toast;
 import android.graphics.Color;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.graphics.drawable.GradientDrawable;
+import android.util.TypedValue;
+import android.widget.ListView;
+import android.preference.PreferenceGroup;
 
 import com.limelight.LimeLog;
 import com.limelight.PcView;
@@ -72,9 +78,9 @@ public class StreamSettings extends Activity {
             Display.Mode mode = getWindowManager().getDefaultDisplay().getMode();
             previousDisplayPixelCount = mode.getPhysicalWidth() * mode.getPhysicalHeight();
         }
-        getFragmentManager().beginTransaction().replace(
-                R.id.stream_settings, new SettingsFragment()
-        ).commitAllowingStateLoss();
+		getFragmentManager().beginTransaction().replace(
+				R.id.preference_container, new SettingsFragment()
+		).commitAllowingStateLoss();
     }
 
     @Override
@@ -387,14 +393,137 @@ public class StreamSettings extends Activity {
                 // 确保列表背景透明
                 view.setBackgroundColor(Color.TRANSPARENT);
                 
-                // 增加顶部安全距离
+                // 减少顶部间距，让设置内容更贴近导航栏
                 int topPadding = view.getPaddingTop();
-                int additionalPadding = (int) (32 * getResources().getDisplayMetrics().density);
-                view.setPadding(view.getPaddingLeft(), topPadding + additionalPadding, 
+                int reducedPadding = Math.max(0, topPadding - (int) (16 * getResources().getDisplayMetrics().density));
+                view.setPadding(view.getPaddingLeft(), reducedPadding, 
                                 view.getPaddingRight(), view.getPaddingBottom());
             }
             UiHelper.applyStatusBarPadding(view);
             return view;
+        }
+
+        @Override
+        public void onActivityCreated(Bundle savedInstanceState) {
+            super.onActivityCreated(savedInstanceState);
+
+            Activity activity = getActivity();
+            if (activity == null) {
+                return;
+            }
+
+            LinearLayout navContainer = activity.findViewById(R.id.settings_nav_container);
+            if (navContainer == null) {
+                return;
+            }
+
+            // 清空旧导航
+            navContainer.removeAllViews();
+
+            PreferenceScreen screen = getPreferenceScreen();
+            if (screen == null) {
+                return;
+            }
+
+            // 构建分类列表并生成导航按钮
+            for (int i = 0; i < screen.getPreferenceCount(); i++) {
+                Preference pref = screen.getPreference(i);
+                if (pref instanceof PreferenceCategory) {
+                    PreferenceCategory category = (PreferenceCategory) pref;
+                    if (category.getTitle() == null) {
+                        continue;
+                    }
+
+                    final TextView tab = new TextView(activity);
+                    tab.setText(category.getTitle());
+                    tab.setTextColor(Color.WHITE);
+                    tab.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+                    tab.setSingleLine(true);
+                    tab.setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6));
+
+                    GradientDrawable bg = new GradientDrawable();
+                    bg.setColor(Color.parseColor("#33FFFFFF"));
+                    bg.setCornerRadius(dpToPx(16));
+                    tab.setBackground(bg);
+
+                    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                    );
+                    lp.rightMargin = dpToPx(12);
+                    tab.setLayoutParams(lp);
+
+                    tab.setOnClickListener(v -> {
+                        int position = findAdapterPositionForPreference(category);
+                        if (position >= 0) {
+							ListView listView = null;
+							View fragmentView = getView();
+							if (fragmentView != null) {
+								listView = (ListView) fragmentView.findViewById(android.R.id.list);
+							}
+							else {
+								listView = (ListView) activity.findViewById(android.R.id.list);
+							}
+							if (listView != null) {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                                    listView.smoothScrollToPositionFromTop(position, dpToPx(8));
+                                }
+                                else {
+                                    listView.smoothScrollToPosition(position);
+                                }
+                            }
+                        }
+                    });
+
+                    navContainer.addView(tab);
+                }
+            }
+        }
+
+        private int dpToPx(int dp) {
+            float density = getResources().getDisplayMetrics().density;
+            return Math.round(dp * density);
+        }
+
+        private static class PositionCounter {
+            int position = 0;
+            boolean found = false;
+        }
+
+        private int findAdapterPositionForPreference(Preference target) {
+            PreferenceScreen screen = getPreferenceScreen();
+            if (screen == null || target == null) {
+                return -1;
+            }
+
+            PositionCounter counter = new PositionCounter();
+            computePosition(screen, target, counter, true);
+            return counter.found ? counter.position : -1;
+        }
+
+        private void computePosition(PreferenceGroup group, Preference target, PositionCounter counter, boolean isRoot) {
+            if (counter.found) {
+                return;
+            }
+
+            final int count = group.getPreferenceCount();
+            for (int i = 0; i < count; i++) {
+                Preference pref = group.getPreference(i);
+
+                // 适配器包含每个 Preference 自身
+                counter.position++;
+                if (pref == target) {
+                    counter.found = true;
+                    return;
+                }
+
+                if (pref instanceof PreferenceGroup) {
+                    computePosition((PreferenceGroup) pref, target, counter, false);
+                    if (counter.found) {
+                        return;
+                    }
+                }
+            }
         }
 
         @Override
