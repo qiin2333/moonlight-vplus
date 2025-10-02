@@ -52,24 +52,29 @@ public class AddressSelectionDialog {
         addressList = dialogView.findViewById(R.id.address_list);
         adapter = new AddressListAdapter(context, computerDetails.getAvailableAddresses());
         addressList.setAdapter(adapter);
+        // 默认选中第一项，避免首次按确认只进入选择态
+        if (adapter.getCount() > 0) {
+            addressList.setSelection(0);
+        }
         
         // 设置控制器支持
         setupControllerSupport();
-        
-        // 设置按钮
-        Button cancelButton = dialogView.findViewById(R.id.btn_cancel);
-        Button connectButton = dialogView.findViewById(R.id.btn_connect);
-        
-        cancelButton.setOnClickListener(v -> {
+
+        // 列表项点击：直接连接
+        addressList.setOnItemClickListener((parent, view, position, id) -> {
+            ComputerDetails.AddressTuple address = (ComputerDetails.AddressTuple) adapter.getItem(position);
             if (listener != null) {
-                listener.onCancelled();
+                listener.onAddressSelected(address);
             }
             dialog.dismiss();
         });
         
-        connectButton.setOnClickListener(v -> {
-            if (listener != null && selectedAddress != null) {
-                listener.onAddressSelected(selectedAddress);
+        // 设置按钮
+        Button cancelButton = dialogView.findViewById(R.id.btn_cancel);
+        
+        cancelButton.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onCancelled();
             }
             dialog.dismiss();
         });
@@ -123,12 +128,14 @@ public class AddressSelectionDialog {
         if (itemCount == 0) return false;
         
         if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) {
-            // 选择当前项
+            // 直接连接当前项
             int selectedPosition = addressList.getSelectedItemPosition();
             if (selectedPosition >= 0 && selectedPosition < itemCount) {
                 ComputerDetails.AddressTuple address = (ComputerDetails.AddressTuple) adapter.getItem(selectedPosition);
-                selectedAddress = address;
-                adapter.notifyDataSetChanged();
+                if (listener != null) {
+                    listener.onAddressSelected(address);
+                }
+                dialog.dismiss();
             }
             return true;
         }
@@ -169,7 +176,6 @@ public class AddressSelectionDialog {
                 // holder.addressIcon = convertView.findViewById(R.id.address_icon);
                 holder.addressText = convertView.findViewById(R.id.address_text);
                 holder.addressType = convertView.findViewById(R.id.address_type);
-                holder.selectedIndicator = convertView.findViewById(R.id.selected_indicator);
                 convertView.setTag(holder);
             } else {
                 holder = (ViewHolder) convertView.getTag();
@@ -184,19 +190,16 @@ public class AddressSelectionDialog {
             String addressType = computerDetails.getAddressTypeDescription(address);
             holder.addressType.setText(addressType);
             
-            // 设置选中状态
-            boolean isSelected = address.equals(selectedAddress);
-            holder.selectedIndicator.setVisibility(isSelected ? View.VISIBLE : View.GONE);
-            
             // 设置焦点状态
             boolean isFocused = (position == addressList.getSelectedItemPosition());
             convertView.setSelected(isFocused);
-            convertView.setActivated(isSelected);
             
-            // 设置点击事件
+            // 设置点击事件 - 直接连接
             convertView.setOnClickListener(v -> {
-                selectedAddress = address;
-                notifyDataSetChanged();
+                if (listener != null) {
+                    listener.onAddressSelected(address);
+                }
+                dialog.dismiss();
             });
             
             return convertView;
@@ -206,7 +209,6 @@ public class AddressSelectionDialog {
             ImageView addressIcon;
             TextView addressText;
             TextView addressType;
-            ImageView selectedIndicator;
         }
     }
 }

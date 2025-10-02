@@ -16,10 +16,35 @@
         android:layout_height="match_parent"
         android:background="#B3333333" />
     
+    <HorizontalScrollView
+        android:id="@+id/settings_nav_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fillViewport="true"
+        android:scrollbars="none"
+        android:layout_alignParentTop="true"
+        android:paddingTop="@dimen/activity_safearea_top"
+        android:paddingBottom="8dp"
+        android:paddingLeft="0dp"
+        android:paddingRight="0dp"
+        android:fitsSystemWindows="false">
+
+        <LinearLayout
+            android:id="@+id/settings_nav_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginLeft="12dp"
+            android:layout_marginRight="12dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical" />
+    </HorizontalScrollView>
+
     <FrameLayout
         android:id="@+id/preference_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@android:color/transparent"/>
+        android:background="@android:color/transparent"
+        android:layout_below="@id/settings_nav_scroll"/>
         
 </RelativeLayout>

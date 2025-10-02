@@ -31,6 +31,14 @@ import android.view.WindowManager;
 import android.widget.Toast;
 import android.graphics.Color;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.graphics.drawable.GradientDrawable;
+import android.util.TypedValue;
+import android.widget.ListView;
+import android.preference.PreferenceGroup;
+
+import androidx.annotation.NonNull;
 
 import com.limelight.LimeLog;
 import com.limelight.PcView;
@@ -72,9 +80,9 @@ public class StreamSettings extends Activity {
             Display.Mode mode = getWindowManager().getDefaultDisplay().getMode();
             previousDisplayPixelCount = mode.getPhysicalWidth() * mode.getPhysicalHeight();
         }
-        getFragmentManager().beginTransaction().replace(
-                R.id.stream_settings, new SettingsFragment()
-        ).commitAllowingStateLoss();
+		getFragmentManager().beginTransaction().replace(
+				R.id.preference_container, new SettingsFragment()
+		).commitAllowingStateLoss();
     }
 
     @Override
@@ -126,7 +134,7 @@ public class StreamSettings extends Activity {
     }
 
     @Override
-    public void onConfigurationChanged(Configuration newConfig) {
+    public void onConfigurationChanged(@NonNull Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -264,23 +272,20 @@ public class StreamSettings extends Activity {
                 return;
             }
 
-            Comparator<String> lengthComparator = new Comparator<String>() {
-                @Override
-                public int compare(String s1, String s2) {
-                    String[] s1Size = s1.split("x");
-                    String[] s2Size = s2.split("x");
+            Comparator<String> lengthComparator = (s1, s2) -> {
+                String[] s1Size = s1.split("x");
+                String[] s2Size = s2.split("x");
 
-                    int w1 = Integer.parseInt(s1Size[0]);
-                    int w2 = Integer.parseInt(s2Size[0]);
+                int w1 = Integer.parseInt(s1Size[0]);
+                int w2 = Integer.parseInt(s2Size[0]);
 
-                    int h1 = Integer.parseInt(s1Size[1]);
-                    int h2 = Integer.parseInt(s2Size[1]);
+                int h1 = Integer.parseInt(s1Size[1]);
+                int h2 = Integer.parseInt(s2Size[1]);
 
-                    if(w1 == w2) {
-                        return Integer.compare(h1, h2);
-                    }
-                    return Integer.compare(w1, w2);
+                if (w1 == w2) {
+                    return Integer.compare(h1, h2);
                 }
+                return Integer.compare(w1, w2);
             };
 
             ArrayList<String> list = new ArrayList<>(stored);
@@ -387,14 +392,132 @@ public class StreamSettings extends Activity {
                 // 确保列表背景透明
                 view.setBackgroundColor(Color.TRANSPARENT);
                 
-                // 增加顶部安全距离
+                // 减少顶部间距，让设置内容更贴近导航栏
                 int topPadding = view.getPaddingTop();
-                int additionalPadding = (int) (32 * getResources().getDisplayMetrics().density);
-                view.setPadding(view.getPaddingLeft(), topPadding + additionalPadding, 
+                int reducedPadding = Math.max(0, topPadding - (int) (16 * getResources().getDisplayMetrics().density));
+                view.setPadding(view.getPaddingLeft(), reducedPadding, 
                                 view.getPaddingRight(), view.getPaddingBottom());
             }
             UiHelper.applyStatusBarPadding(view);
             return view;
+        }
+
+        @Override
+        public void onActivityCreated(Bundle savedInstanceState) {
+            super.onActivityCreated(savedInstanceState);
+
+            Activity activity = getActivity();
+            if (activity == null) {
+                return;
+            }
+
+            LinearLayout navContainer = activity.findViewById(R.id.settings_nav_container);
+            if (navContainer == null) {
+                return;
+            }
+
+            // 清空旧导航
+            navContainer.removeAllViews();
+
+            PreferenceScreen screen = getPreferenceScreen();
+            if (screen == null) {
+                return;
+            }
+
+            // 构建分类列表并生成导航按钮
+            for (int i = 0; i < screen.getPreferenceCount(); i++) {
+                Preference pref = screen.getPreference(i);
+                if (pref instanceof PreferenceCategory) {
+                    PreferenceCategory category = (PreferenceCategory) pref;
+                    if (category.getTitle() == null) {
+                        continue;
+                    }
+
+                    final TextView tab = new TextView(activity);
+                    tab.setText(category.getTitle());
+                    tab.setTextColor(Color.WHITE);
+                    tab.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+                    tab.setSingleLine(true);
+                    tab.setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6));
+
+                    GradientDrawable bg = new GradientDrawable();
+                    bg.setColor(Color.parseColor("#33FFFFFF"));
+                    bg.setCornerRadius(dpToPx(16));
+                    tab.setBackground(bg);
+
+                    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                    );
+                    lp.rightMargin = dpToPx(12);
+                    tab.setLayoutParams(lp);
+
+                    tab.setOnClickListener(v -> {
+                        int position = findAdapterPositionForPreference(category);
+                        if (position >= 0) {
+							ListView listView = null;
+							View fragmentView = getView();
+							if (fragmentView != null) {
+								listView = fragmentView.findViewById(android.R.id.list);
+							}
+							else {
+								listView = activity.findViewById(android.R.id.list);
+							}
+							if (listView != null) {
+                                listView.smoothScrollToPositionFromTop(position, dpToPx(8));
+                            }
+                        }
+                    });
+
+                    navContainer.addView(tab);
+                }
+            }
+        }
+
+        private int dpToPx(int dp) {
+            float density = getResources().getDisplayMetrics().density;
+            return Math.round(dp * density);
+        }
+
+        private static class PositionCounter {
+            int position = 0;
+            boolean found = false;
+        }
+
+        private int findAdapterPositionForPreference(Preference target) {
+            PreferenceScreen screen = getPreferenceScreen();
+            if (screen == null || target == null) {
+                return -1;
+            }
+
+            PositionCounter counter = new PositionCounter();
+            computePosition(screen, target, counter, true);
+            return counter.found ? counter.position : -1;
+        }
+
+        private void computePosition(PreferenceGroup group, Preference target, PositionCounter counter, boolean isRoot) {
+            if (counter.found) {
+                return;
+            }
+
+            final int count = group.getPreferenceCount();
+            for (int i = 0; i < count; i++) {
+                Preference pref = group.getPreference(i);
+
+                // 适配器包含每个 Preference 自身
+                counter.position++;
+                if (pref == target) {
+                    counter.found = true;
+                    return;
+                }
+
+                if (pref instanceof PreferenceGroup) {
+                    computePosition((PreferenceGroup) pref, target, counter, false);
+                    if (counter.found) {
+                        return;
+                    }
+                }
+            }
         }
 
         @Override
@@ -608,24 +731,18 @@ public class StreamSettings extends Activity {
                 if (maxSupportedResW != 0) {
                     if (maxSupportedResW < 3840) {
                         // 4K is unsupported
-                        removeValue(PreferenceConfiguration.RESOLUTION_PREF_STRING, PreferenceConfiguration.RES_4K, new Runnable() {
-                            @Override
-                            public void run() {
-                                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
-                                setValue(PreferenceConfiguration.RESOLUTION_PREF_STRING, PreferenceConfiguration.RES_1440P);
-                                resetBitrateToDefault(prefs, null, null);
-                            }
+                        removeValue(PreferenceConfiguration.RESOLUTION_PREF_STRING, PreferenceConfiguration.RES_4K, () -> {
+                            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
+                            setValue(PreferenceConfiguration.RESOLUTION_PREF_STRING, PreferenceConfiguration.RES_1440P);
+                            resetBitrateToDefault(prefs, null, null);
                         });
                     }
                     if (maxSupportedResW < 2560) {
                         // 1440p is unsupported
-                        removeValue(PreferenceConfiguration.RESOLUTION_PREF_STRING, PreferenceConfiguration.RES_1440P, new Runnable() {
-                            @Override
-                            public void run() {
-                                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
-                                setValue(PreferenceConfiguration.RESOLUTION_PREF_STRING, PreferenceConfiguration.RES_1080P);
-                                resetBitrateToDefault(prefs, null, null);
-                            }
+                        removeValue(PreferenceConfiguration.RESOLUTION_PREF_STRING, PreferenceConfiguration.RES_1440P, () -> {
+                            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
+                            setValue(PreferenceConfiguration.RESOLUTION_PREF_STRING, PreferenceConfiguration.RES_1080P);
+                            resetBitrateToDefault(prefs, null, null);
                         });
                     }
                     if (maxSupportedResW < 1920) {
@@ -689,26 +806,20 @@ public class StreamSettings extends Activity {
 
             // Android L introduces the drop duplicate behavior of releaseOutputBuffer()
             // that the unlock FPS option relies on to not massively increase latency.
-            findPreference(PreferenceConfiguration.UNLOCK_FPS_STRING).setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
-                @Override
-                public boolean onPreferenceChange(Preference preference, Object newValue) {
-                    // HACK: We need to let the preference change succeed before reinitializing to ensure
-                    // it's reflected in the new layout.
-                    final Handler h = new Handler();
-                    h.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            // Ensure the activity is still open when this timeout expires
-                            StreamSettings settingsActivity = (StreamSettings) SettingsFragment.this.getActivity();
-                            if (settingsActivity != null) {
-                                settingsActivity.reloadSettings();
-                            }
-                        }
-                    }, 500);
+            findPreference(PreferenceConfiguration.UNLOCK_FPS_STRING).setOnPreferenceChangeListener((preference, newValue) -> {
+                // HACK: We need to let the preference change succeed before reinitializing to ensure
+                // it's reflected in the new layout.
+                final Handler h = new Handler();
+                h.postDelayed(() -> {
+                    // Ensure the activity is still open when this timeout expires
+                    StreamSettings settingsActivity = (StreamSettings) SettingsFragment.this.getActivity();
+                    if (settingsActivity != null) {
+                        settingsActivity.reloadSettings();
+                    }
+                }, 500);
 
-                    // Allow the original preference change to take place
-                    return true;
-                }
+                // Allow the original preference change to take place
+                return true;
             });
 
             // Remove HDR preference for devices below Nougat
@@ -754,37 +865,34 @@ public class StreamSettings extends Activity {
 
             // Add a listener to the FPS and resolution preference
             // so the bitrate can be auto-adjusted
-            findPreference(PreferenceConfiguration.RESOLUTION_PREF_STRING).setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
-                @Override
-                public boolean onPreferenceChange(Preference preference, Object newValue) {
-                    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
-                    String valueStr = (String) newValue;
+            findPreference(PreferenceConfiguration.RESOLUTION_PREF_STRING).setOnPreferenceChangeListener((preference, newValue) -> {
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
+                String valueStr = (String) newValue;
 
-                    // Detect if this value is the native resolution option
-                    CharSequence[] values = ((ListPreference)preference).getEntryValues();
-                    boolean isNativeRes = true;
-                    for (int i = 0; i < values.length; i++) {
-                        // Look for a match prior to the start of the native resolution entries
-                        if (valueStr.equals(values[i].toString()) && i < nativeResolutionStartIndex) {
-                            isNativeRes = false;
-                            break;
-                        }
+                // Detect if this value is the native resolution option
+                CharSequence[] values = ((ListPreference)preference).getEntryValues();
+                boolean isNativeRes = true;
+                for (int i = 0; i < values.length; i++) {
+                    // Look for a match prior to the start of the native resolution entries
+                    if (valueStr.equals(values[i].toString()) && i < nativeResolutionStartIndex) {
+                        isNativeRes = false;
+                        break;
                     }
-
-                    // If this is native resolution, show the warning dialog
-                    if (isNativeRes) {
-                        Dialog.displayDialog(getActivity(),
-                                getResources().getString(R.string.title_native_res_dialog),
-                                getResources().getString(R.string.text_native_res_dialog),
-                                false);
-                    }
-
-                    // Write the new bitrate value
-                    resetBitrateToDefault(prefs, valueStr, null);
-
-                    // Allow the original preference change to take place
-                    return true;
                 }
+
+                // If this is native resolution, show the warning dialog
+                if (isNativeRes) {
+                    Dialog.displayDialog(getActivity(),
+                            getResources().getString(R.string.title_native_res_dialog),
+                            getResources().getString(R.string.text_native_res_dialog),
+                            false);
+                }
+
+                // Write the new bitrate value
+                resetBitrateToDefault(prefs, valueStr, null);
+
+                // Allow the original preference change to take place
+                return true;
             });
             findPreference(PreferenceConfiguration.FPS_PREF_STRING).setOnPreferenceChangeListener((preference, newValue) -> {
                 SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
@@ -830,18 +938,15 @@ public class StreamSettings extends Activity {
                 exportPreference.setEntries(nameEntries);
                 exportPreference.setEntryValues(nameEntryValues);
 
-                exportPreference.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
-                    @Override
-                    public boolean onPreferenceChange(Preference preference, Object newValue) {
-                        exportConfigString = superConfigDatabaseHelper.exportConfig(Long.parseLong((String) newValue));
-                        String fileName = configMap.get(newValue);
-                        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
-                        intent.addCategory(Intent.CATEGORY_OPENABLE);
-                        intent.setType("*/*");
-                        intent.putExtra(Intent.EXTRA_TITLE, fileName + ".mdat");
-                        startActivityForResult(intent, 1);
-                        return false;
-                    }
+                exportPreference.setOnPreferenceChangeListener((preference, newValue) -> {
+                    exportConfigString = superConfigDatabaseHelper.exportConfig(Long.parseLong((String) newValue));
+                    String fileName = configMap.get(newValue);
+                    Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    intent.setType("*/*");
+                    intent.putExtra(Intent.EXTRA_TITLE, fileName + ".mdat");
+                    startActivityForResult(intent, 1);
+                    return false;
                 });
 
             }
@@ -862,36 +967,27 @@ public class StreamSettings extends Activity {
                 mergePreference.setEntries(nameEntries);
                 mergePreference.setEntryValues(nameEntryValues);
 
-                mergePreference.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
-                    @Override
-                    public boolean onPreferenceChange(Preference preference, Object newValue) {
-                        exportConfigString = (String) newValue;
-                        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                        intent.addCategory(Intent.CATEGORY_OPENABLE);
-                        intent.setType("*/*");
-                        startActivityForResult(intent, 3);
-                        return false;
-                    }
+                mergePreference.setOnPreferenceChangeListener((preference, newValue) -> {
+                    exportConfigString = (String) newValue;
+                    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    intent.setType("*/*");
+                    startActivityForResult(intent, 3);
+                    return false;
                 });
 
             }
 
-            findPreference(PreferenceConfiguration.ABOUT_AUTHOR).setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
-                @Override
-                public boolean onPreferenceClick(Preference preference) {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.author_web)));
-                    startActivity(intent);
-                    return true;
-                }
+            findPreference(PreferenceConfiguration.ABOUT_AUTHOR).setOnPreferenceClickListener(preference -> {
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.author_web)));
+                startActivity(intent);
+                return true;
             });
 
             // 添加检查更新选项的点击事件
-            findPreference("check_for_updates").setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
-                @Override
-                public boolean onPreferenceClick(Preference preference) {
-                    UpdateManager.checkForUpdates(getActivity(), true);
-                    return true;
-                }
+            findPreference("check_for_updates").setOnPreferenceClickListener(preference -> {
+                UpdateManager.checkForUpdates(getActivity(), true);
+                return true;
             });
 
         }

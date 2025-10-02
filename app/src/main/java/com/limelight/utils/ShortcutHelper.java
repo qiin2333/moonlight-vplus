@@ -5,6 +5,15 @@ import android.app.Activity;
 import android.content.pm.ShortcutInfo;
 import android.content.pm.ShortcutManager;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.Rect;
+import android.graphics.RectF;
+import android.graphics.drawable.AdaptiveIconDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Icon;
 import android.os.Build;
 
@@ -151,7 +160,8 @@ public class ShortcutHelper {
             Icon appIcon;
 
             if (iconBits != null) {
-                appIcon = Icon.createWithAdaptiveBitmap(iconBits);
+                Bitmap adaptiveSquare = prepareAdaptiveSquareBitmap(iconBits);
+                appIcon = Icon.createWithAdaptiveBitmap(adaptiveSquare);
             } else {
                 appIcon = Icon.createWithResource(context, R.mipmap.ic_pc_scut);
             }
@@ -166,6 +176,65 @@ public class ShortcutHelper {
         } else {
             return false;
         }
+    }
+
+    private static Bitmap prepareAdaptiveSquareBitmap(Bitmap source) {
+        if (source == null) {
+            return null;
+        }
+
+        int srcWidth = source.getWidth();
+        int srcHeight = source.getHeight();
+        if (srcWidth <= 0 || srcHeight <= 0) {
+            return source;
+        }
+
+        // 确保来源位图为软件位图（避免在软件画布上绘制硬件位图导致异常）
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && source.getConfig() == Bitmap.Config.HARDWARE) {
+            Bitmap softwareCopy = source.copy(Bitmap.Config.ARGB_8888, false);
+            if (softwareCopy != null) {
+                source = softwareCopy;
+                srcWidth = source.getWidth();
+                srcHeight = source.getHeight();
+            } else {
+                // 无法转换则直接返回原图，跳过绘制流程以避免崩溃
+                return source;
+            }
+        }
+
+        // 创建方形透明画布，边长取原图较大边
+        int side = Math.max(srcWidth, srcHeight);
+        Bitmap output = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(output);
+
+        // 使用 centerCrop 模式：计算缩放比例，取较大值确保填满整个画布
+        float scale = Math.max((float) side / srcWidth, (float) side / srcHeight);
+        
+        // 计算缩放后的尺寸
+        int scaledWidth = Math.round(srcWidth * scale);
+        int scaledHeight = Math.round(srcHeight * scale);
+        
+        // 计算居中裁剪的源图区域
+        int srcLeft = (scaledWidth - side) / 2;
+        int srcTop = (scaledHeight - side) / 2;
+        
+        // 将缩放后的坐标转换回原始图片坐标
+        int actualSrcLeft = Math.round(srcLeft / scale);
+        int actualSrcTop = Math.round(srcTop / scale);
+        int actualSrcRight = Math.round((srcLeft + side) / scale);
+        int actualSrcBottom = Math.round((srcTop + side) / scale);
+        
+        // 确保不超出源图边界
+        actualSrcLeft = Math.max(0, actualSrcLeft);
+        actualSrcTop = Math.max(0, actualSrcTop);
+        actualSrcRight = Math.min(srcWidth, actualSrcRight);
+        actualSrcBottom = Math.min(srcHeight, actualSrcBottom);
+
+        Rect srcRect = new Rect(actualSrcLeft, actualSrcTop, actualSrcRight, actualSrcBottom);
+        Rect dstRect = new Rect(0, 0, side, side);
+        canvas.drawBitmap(source, srcRect, dstRect, null);
+
+        return output;
     }
 
     public void disableComputerShortcut(ComputerDetails computer, CharSequence reason) {

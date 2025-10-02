@@ -297,7 +297,7 @@
     <string name="dialog_title_fixed_x_velocity">Set fixed X (horizontal) velocity in pixels. Set 0 to disable fixed x velocity.</string>
     <string name="suffix_fixed_x_velocity">pixels</string>
 
-    <string name="category_on_screen_controls_settings">📱 On-screen Controls Settings</string>
+    <string name="category_on_screen_controls_settings">🎛️ On-screen Controls Settings</string>
     <string name="title_checkbox_show_onscreen_controls">Show on-screen controls</string>
     <string name="summary_checkbox_show_onscreen_controls">Show virtual controller overlay on touchscreen</string>
     <string name="title_checkbox_vibrate_osc">Enable vibration</string>
@@ -359,7 +359,7 @@
     <string name="summary_checkbox_lock_screen_after_disconnect">Automatically lock the device screen after disconnecting and exiting the stream</string>
     <string name="mic_stats_continuity">Audio continuity: %.1f%% (Captured:%d Encoded:%d Sent:%d Dropped:%d)</string>
 
-    <string name="category_help">Help</string>
+    <string name="category_help">❓ Help</string>
     <string name="title_setup_guide">Setup guide</string>
     <string name="summary_setup_guide">View instructions on how to set up your gaming PC for streaming</string>
     <string name="title_troubleshooting">Troubleshooting guide</string>
@@ -426,7 +426,7 @@
     <string name="mic_permission_required">Microphone permission required</string>
     
     <!-- Screen position settings -->
-    <string name="category_screen_position_settings">Screen Position Settings</string>
+    <string name="category_screen_position_settings">📱 Screen Position Settings</string>
     <string name="title_screen_position">Screen Position</string>
     <string name="summary_screen_position">Choose the position of the screen when using non-fullscreen resolution</string>
     <string name="title_screen_offset_x">Horizontal Offset</string>

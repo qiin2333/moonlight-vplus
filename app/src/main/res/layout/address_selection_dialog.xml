@@ -36,36 +36,15 @@
         android:focusableInTouchMode="true"
         android:clickable="true"
         android:choiceMode="singleChoice"
-        android:nextFocusDown="@+id/btn_connect" />
+        android:nextFocusDown="@+id/btn_cancel" />
 
-    <LinearLayout
+    <Button
+        android:id="@+id/btn_cancel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="16dp">
-
-        <Button
-            android:id="@+id/btn_cancel"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/no"
-            android:layout_marginEnd="8dp"
-            android:nextFocusUp="@+id/address_list"
-            android:nextFocusRight="@+id/btn_connect"
-            style="@style/AppDialogButtonStyle" />
-
-        <Button
-            android:id="@+id/btn_connect"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/yes"
-            android:layout_marginStart="8dp"
-            android:nextFocusUp="@+id/address_list"
-            android:nextFocusLeft="@+id/btn_cancel"
-            style="@style/AppDialogButtonStyle" />
-
-    </LinearLayout>
+        android:text="@string/no"
+        android:layout_marginTop="16dp"
+        android:nextFocusUp="@+id/address_list"
+        style="@style/AppDialogButtonStyle" />
 
 </LinearLayout>
