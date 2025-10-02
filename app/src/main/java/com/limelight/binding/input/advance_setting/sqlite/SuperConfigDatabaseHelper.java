@@ -737,6 +737,13 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
 
     }
 
+    /**
+     * 从 JSON 字符串导入一个完整的配置，包括设置和所有元素。
+     * 此方法会为所有项创建新的ID，并智能地修复元素之间的引用关系（如GroupButton的子元素和WheelPad的组按键）。
+     *
+     * @param configString 包含配置信息的JSON字符串。
+     * @return 0表示成功，负数表示不同的错误代码。
+     */
     public int importConfig(String configString) {
         GsonBuilder gsonBuilder = new GsonBuilder();
         gsonBuilder.registerTypeAdapter(ContentValues.class, new ContentValuesSerializer());
@@ -754,67 +761,103 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
             return -2; // -2: 文件被篡改或损坏
         }
 
-        // 调用升级逻辑
+        // 调用升级逻辑以兼容旧版本配置
         if (!upgradeExportedConfig(exportFile, gson)) {
             return -3; // -3: 版本不匹配且无法升级
         }
 
-        // 从升级后的 exportFile 获取最新的数据
+        // 从可能已升级的 exportFile 获取最新的数据
         String settingString = exportFile.getSettings();
         String elementsString = exportFile.getElements();
 
         ContentValues settingValues = gson.fromJson(settingString, ContentValues.class);
         ContentValues[] elements = gson.fromJson(elementsString, ContentValues[].class);
 
-        // 将组按键及其子按键存储在MAP中
-        Map<ContentValues, List<ContentValues>> groupButtonMaps = new HashMap<>();
-        for (ContentValues groupButtonElement : elements) {
-            if (groupButtonElement.containsKey(Element.COLUMN_INT_ELEMENT_TYPE) && (long) groupButtonElement.get(Element.COLUMN_INT_ELEMENT_TYPE) == Element.ELEMENT_TYPE_GROUP_BUTTON) {
-                List<ContentValues> childElements = new ArrayList<>();
-
-                String[] childElementStringIds = ((String) groupButtonElement.get(Element.COLUMN_STRING_ELEMENT_VALUE)).split(",");
-                // 按键组的值，子按键们的ID
-                for (String childElementStringId : childElementStringIds) {
-                    long childElementId = Long.parseLong(childElementStringId);
-                    for (ContentValues element : elements) {
-                        if (element.containsKey(Element.COLUMN_LONG_ELEMENT_ID) && (long) element.get(Element.COLUMN_LONG_ELEMENT_ID) == childElementId) {
-                            childElements.add(element);
-                            break;
-                        }
-                    }
-                }
-                groupButtonMaps.put(groupButtonElement, childElements);
-
+        // --- 预处理，建立从旧ID到内存中ContentValues对象的映射 ---
+        Map<Long, ContentValues> oldIdToObjectMap = new HashMap<>();
+        for (ContentValues element : elements) {
+            if (element.containsKey(Element.COLUMN_LONG_ELEMENT_ID)) {
+                oldIdToObjectMap.put(element.getAsLong(Element.COLUMN_LONG_ELEMENT_ID), element);
             }
         }
 
-
+        // --- 插入新的配置 setting，并获取新的 configId ---
         Long newConfigId = System.currentTimeMillis();
         settingValues.put(PageConfigController.COLUMN_LONG_CONFIG_ID, newConfigId);
         insertConfig(settingValues);
 
-        // 更新所有按键的ID
-        long elementId = System.currentTimeMillis();
-        for (ContentValues contentValues : elements) {
-            contentValues.put(Element.COLUMN_LONG_ELEMENT_ID, elementId++);
-            contentValues.put(Element.COLUMN_LONG_CONFIG_ID, newConfigId);
-            insertElement(contentValues);
+        // --- 插入所有元素，并为它们分配新的ID ---
+        // 这个过程会直接修改内存中的 ContentValues 对象，为后续的引用修复做准备。
+        long elementIdCounter = System.currentTimeMillis();
+        for (ContentValues element : elements) {
+            element.put(Element.COLUMN_LONG_ELEMENT_ID, elementIdCounter++);
+            element.put(Element.COLUMN_LONG_CONFIG_ID, newConfigId);
+            insertElement(element);
         }
 
-        // 更新组按键的值
-        for (Map.Entry<ContentValues, List<ContentValues>> groupButtonMap : groupButtonMaps.entrySet()) {
-            String newValue = "-1";
-            for (ContentValues childElement : groupButtonMap.getValue()) {
-                newValue = newValue + "," + childElement.get(Element.COLUMN_LONG_ELEMENT_ID);
+        // --- 统一修复所有元素的引用关系 ---
+        // 遍历所有内存中的元素对象，检查它们是否需要修复引用字段。
+        for (ContentValues element : elements) {
+
+            // --- GroupButton 的子元素引用 ---
+            if (element.containsKey(Element.COLUMN_INT_ELEMENT_TYPE) && element.getAsLong(Element.COLUMN_INT_ELEMENT_TYPE) == Element.ELEMENT_TYPE_GROUP_BUTTON) {
+                StringBuilder newValue = new StringBuilder("-1");
+                String[] oldChildIds = element.getAsString(Element.COLUMN_STRING_ELEMENT_VALUE).split(",");
+                for (String oldChildIdStr : oldChildIds) {
+                    if (oldChildIdStr.equals("-1") || oldChildIdStr.isEmpty()) continue;
+                    try {
+                        long oldChildId = Long.parseLong(oldChildIdStr);
+                        ContentValues childObject = oldIdToObjectMap.get(oldChildId);
+                        if (childObject != null) {
+                            // 从子元素对象中获取它刚刚被分配的新ID
+                            newValue.append(",").append(childObject.getAsLong(Element.COLUMN_LONG_ELEMENT_ID));
+                        }
+                    } catch (NumberFormatException e) { /* 忽略格式错误的ID */ }
+                }
+                element.put(Element.COLUMN_STRING_ELEMENT_VALUE, newValue.toString());
+                updateElement(element.getAsLong(Element.COLUMN_LONG_CONFIG_ID), element.getAsLong(Element.COLUMN_LONG_ELEMENT_ID), element);
             }
-            ContentValues groupButton = groupButtonMap.getKey();
-            groupButton.put(Element.COLUMN_STRING_ELEMENT_VALUE, newValue);
-            updateElement((Long) groupButton.get(Element.COLUMN_LONG_CONFIG_ID),
-                    (Long) groupButton.get(Element.COLUMN_LONG_ELEMENT_ID),
-                    groupButton);
+
+            // --- WheelPad 的组按键引用 ---
+            if (element.containsKey(Element.COLUMN_INT_ELEMENT_TYPE) && element.getAsLong(Element.COLUMN_INT_ELEMENT_TYPE) == Element.ELEMENT_TYPE_WHEEL_PAD) {
+                String oldSegmentValues = element.getAsString(Element.COLUMN_STRING_ELEMENT_VALUE);
+                if (oldSegmentValues == null || oldSegmentValues.isEmpty()) continue;
+
+                String[] segments = oldSegmentValues.split(",");
+                StringBuilder newSegmentValues = new StringBuilder();
+                for (int i = 0; i < segments.length; i++) {
+                    String segment = segments[i];
+                    String valuePart = segment.split("\\|")[0];
+                    String namePart = segment.contains("|") ? segment.substring(segment.indexOf("|")) : "";
+
+                    if (valuePart.startsWith("gb")) {
+                        try {
+                            long oldGroupId = Long.parseLong(valuePart.substring(2));
+                            ContentValues groupObject = oldIdToObjectMap.get(oldGroupId);
+                            if (groupObject != null) {
+                                // 从 GroupButton 对象中获取它刚刚被分配的新ID
+                                newSegmentValues.append("gb").append(groupObject.getAsLong(Element.COLUMN_LONG_ELEMENT_ID)).append(namePart);
+                            } else {
+                                // 如果找不到对应的组按键，保留原始值或设为null
+                                newSegmentValues.append(segment);
+                            }
+                        } catch (NumberFormatException e) {
+                            newSegmentValues.append(segment); // 解析失败则保留原始值
+                        }
+                    } else {
+                        newSegmentValues.append(segment); // 不是组按键引用，直接附加
+                    }
+
+                    if (i < segments.length - 1) {
+                        newSegmentValues.append(",");
+                    }
+                }
+                element.put(Element.COLUMN_STRING_ELEMENT_VALUE, newSegmentValues.toString());
+                updateElement(element.getAsLong(Element.COLUMN_LONG_CONFIG_ID), element.getAsLong(Element.COLUMN_LONG_ELEMENT_ID), element);
+            }
         }
 
-        return 0;
+        return 0; // 成功
     }
 
     public int mergeConfig(String configString, Long existConfigId) {

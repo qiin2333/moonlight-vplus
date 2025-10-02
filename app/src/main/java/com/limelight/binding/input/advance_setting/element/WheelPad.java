@@ -59,7 +59,7 @@ public class WheelPad extends Element {
     private int thick;
     private int normalTextColor;
     private int pressedTextColor;
-    private int centerTextColor;  // 中心文字颜色，可以与 normalTextColor 分开
+    private int centerTextColor;  // 中心文字颜色
     private int textSizePercent;  // 分区文字大小百分比
     private int centerTextSizePercent; // 选择预览文字大小百分比
 
@@ -83,6 +83,9 @@ public class WheelPad extends Element {
     private int lastActiveIndex = -1;
     private boolean isWheelActive = false;
     private boolean popupAtScreenCenter;
+    private boolean previewGroupChildren;
+    // 用于追踪当前悬停的组按键，以实现子按键预览
+    private GroupButton hoveredGroupButton = null;
 
     private SuperPageLayout wheelPadPage;
     private NumberSeekbar centralXNumberSeekbar;
@@ -184,6 +187,11 @@ public class WheelPad extends Element {
                         // 提供一个合理的默认值，通常应该比中心预览文字小
                         this.triggerTextSizePercent = 14;
                     }
+                    if (extraAttrs.has("previewGroupChildren")) {
+                        this.previewGroupChildren = extraAttrs.get("previewGroupChildren").getAsBoolean();
+                    } else {
+                        this.previewGroupChildren = true; // 默认为开启
+                    }
 
                 } catch (Exception e) {
                     // JSON 解析失败，使用默认值
@@ -220,6 +228,7 @@ public class WheelPad extends Element {
         this.textSizePercent = 35;
         this.centerTextSizePercent = 60;
         this.triggerTextSizePercent = 14;
+        this.previewGroupChildren = true;
     }
 
     public boolean isBeingEdited() {
@@ -250,6 +259,7 @@ public class WheelPad extends Element {
     protected void onElementDraw(Canvas canvas) {
         ElementController.Mode currentMode = elementController.getMode();
         boolean isTheOneBeingEdited = isBeingEdited();
+        // 屏幕中心预览
         if (isPopupMode && popupAtScreenCenter) {
             drawInactivePopupCenter(canvas);
             boolean shouldDrawCentralPreview =
@@ -262,6 +272,13 @@ public class WheelPad extends Element {
                 float translateY = (screenHeight / 2.0f) - getElementCentralY();
                 canvas.translate(translateX, translateY);
                 drawFullWheel(canvas);
+
+                // 在绘制完轮盘后，如果悬停在组按键上，则绘制其子按键预览
+                // 如果开启了预览功能，则绘制子按键
+                if (previewGroupChildren) {
+                    drawHoveredGroupButtonChildren(canvas, translateX, translateY);
+                }
+
                 canvas.restore();
             }
 
@@ -271,7 +288,19 @@ public class WheelPad extends Element {
             if (shouldDrawTriggerInsteadOfFullWheel) {
                 drawInactivePopupCenter(canvas);
             } else {
+                // 原地预览
                 drawFullWheel(canvas);
+                // 检查是否为激活的 "原地弹出模式"，如果是，则添加组按键预览
+                boolean isActiveOnSitePopup = isPopupMode && !popupAtScreenCenter &&
+                        currentMode == ElementController.Mode.Normal && isWheelActive;
+
+                if (isActiveOnSitePopup) {
+                    // 因为是原地绘制，没有对画布进行平移，所以平移量为0
+                    // 如果开启了预览功能，并且是激活的原地弹出模式，则绘制
+                    if (previewGroupChildren && isActiveOnSitePopup) {
+                        drawHoveredGroupButtonChildren(canvas, 0, 0);
+                    }
+                }
             }
         }
 
@@ -281,6 +310,48 @@ public class WheelPad extends Element {
             rect.bottom = getHeight() - 2;
             paintEdit.setColor(editColor);
             canvas.drawRect(rect, paintEdit);
+        }
+    }
+
+    /**
+     * 在轮盘预览模式下，绘制当前悬停的组按键的子按键。
+     * @param canvas 画布。对于屏幕中心模式，其坐标系已平移；对于原地模式，坐标系为WheelPad的视图坐标系。
+     * @param wheelTranslateX 轮盘绘制时在X轴上的平移量 (原地弹出时为0)。
+     * @param wheelTranslateY 轮盘绘制时在Y轴上的平移量 (原地弹出时为0)。
+     */
+    private void drawHoveredGroupButtonChildren(Canvas canvas, float wheelTranslateX, float wheelTranslateY) {
+        if (hoveredGroupButton == null) {
+            return;
+        }
+
+        List<Long> childIds = hoveredGroupButton.getChildIds();
+        if (childIds == null || childIds.isEmpty()) {
+            return;
+        }
+
+        for (Long childId : childIds) {
+            Element child = elementController.findElementById(childId);
+            if (child != null) {
+                canvas.save();
+
+                // 计算子元素相对于当前画布坐标系原点的位置。
+                // 1. child.getLeft() 是子元素在屏幕上的绝对X坐标。
+                // 2. this.getLeft() 是WheelPad视图在屏幕上的绝对X坐标。
+                // 3. wheelTranslateX 是为了将轮盘居中而额外平移的量。
+                // 最终，(this.getLeft() + wheelTranslateX) 就是当前画布原点在屏幕上的绝对X坐标。
+                // 两者相减，得到子元素应该在当前画布的哪个相对位置绘制。
+                float childDrawX = child.getLeft() - (this.getLeft() + wheelTranslateX);
+                float childDrawY = child.getTop() - (this.getTop() + wheelTranslateY);
+
+                // 将画布平移到子元素应该被绘制的相对位置。
+                canvas.translate(childDrawX, childDrawY);
+
+                // 调用子元素的绘制方法。
+                // onElementDraw 期望画布原点已经位于元素的左上角，我们刚刚通过translate实现了这一点。
+                child.onElementDraw(canvas);
+
+                canvas.restore();
+            }
         }
     }
 
@@ -503,12 +574,31 @@ public class WheelPad extends Element {
                 break;
             case MotionEvent.ACTION_MOVE:
                 if (isWheelActive) {
-                    // Touch area is the entire screen outside the central dead zone.
+                    // 清除上一帧的悬停状态
+                    hoveredGroupButton = null;
+
                     if (distance > innerRadius) {
                         double angle = Math.toDegrees(Math.atan2(dy, dx)) + 90;
                         if (angle < 0) angle += 360;
                         float sweepAngle = 360.0f / segmentCount;
                         activeIndex = (int) ((angle + sweepAngle / 2) % 360 / sweepAngle);
+
+                        // 检查当前分区是否为组按键，如果是，则获取其实例用于预览
+                        if (activeIndex != -1 && activeIndex < segmentValues.size()) {
+                            String value = segmentValues.get(activeIndex);
+                            if (value != null && value.startsWith("gb")) {
+                                try {
+                                    long groupId = Long.parseLong(value.substring(2));
+                                    Element element = elementController.findElementById(groupId);
+                                    if (element instanceof GroupButton) {
+                                        hoveredGroupButton = (GroupButton) element;
+                                    }
+                                } catch (Exception e) {
+                                    // 如果ID解析失败或找不到元素，确保悬停状态被清除
+                                    hoveredGroupButton = null;
+                                }
+                            }
+                        }
                     } else {
                         activeIndex = -1;
                     }
@@ -533,6 +623,8 @@ public class WheelPad extends Element {
                     }
                     isWheelActive = false;
                     activeIndex = -1;
+                    // 手指抬起，清除组按键预览
+                    hoveredGroupButton = null;
                     invalidate();
                 }
                 break;
@@ -577,6 +669,8 @@ public class WheelPad extends Element {
         ElementEditText centerTextInput = wheelPadPage.findViewById(R.id.page_wheel_pad_center_text);
         final Switch popupSwitch = wheelPadPage.findViewById(R.id.page_wheel_pad_popup_at_center_switch);
 
+        final Switch previewGroupSwitch = wheelPadPage.findViewById(R.id.page_wheel_pad_preview_group_switch);
+
         final LinearLayout popupOptionsContainer = wheelPadPage.findViewById(R.id.page_wheel_pad_popup_options_container);
 
         NumberSeekbar sizeNumberSeekbar = wheelPadPage.findViewById(R.id.page_wheel_pad_size);
@@ -605,6 +699,14 @@ public class WheelPad extends Element {
         popupSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             this.popupAtScreenCenter = isChecked;
             invalidate();
+            save();
+        });
+
+        // 设置预览开关
+        previewGroupSwitch.setChecked(this.previewGroupChildren);
+        previewGroupSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            this.previewGroupChildren = isChecked;
+            // 预览开关不需要实时 invalidate()，因为它只在轮盘激活时生效
             save();
         });
 
@@ -698,7 +800,6 @@ public class WheelPad extends Element {
             }
         });
 
-        // 设置颜色选择器 (你需要确保 setupColorPickerButton 方法在 WheelPad.java 中也存在)
         setupColorPickerButton(normalTextColorElementEditText, () -> this.normalTextColor, color -> {
             this.normalTextColor = color;
             invalidate();
@@ -755,6 +856,7 @@ public class WheelPad extends Element {
         extraAttrs.addProperty("textSizePercent", this.textSizePercent);
         extraAttrs.addProperty("centerTextSizePercent", this.centerTextSizePercent);
         extraAttrs.addProperty("triggerTextSizePercent", this.triggerTextSizePercent);
+        extraAttrs.addProperty("previewGroupChildren", this.previewGroupChildren);
         contentValues.put("extra_attributes", new Gson().toJson(extraAttrs));
 
         List<String> combinedSegments = new ArrayList<>();
@@ -797,6 +899,7 @@ public class WheelPad extends Element {
         extraAttrs.addProperty("textSizePercent", 35); // 35%
         extraAttrs.addProperty("centerTextSizePercent", 60); // 60%
         extraAttrs.addProperty("triggerTextSizePercent", 14);
+        extraAttrs.addProperty("previewGroupChildren", true);
         // 将 JsonObject 转换为字符串，并存入通用的 "extra_attributes" 列
         contentValues.put("extra_attributes", new Gson().toJson(extraAttrs));
 
@@ -931,6 +1034,7 @@ public class WheelPad extends Element {
             extraAttrs.addProperty("textSizePercent", this.textSizePercent);
             extraAttrs.addProperty("centerTextSizePercent", this.centerTextSizePercent);
             extraAttrs.addProperty("triggerTextSizePercent", this.triggerTextSizePercent);
+            extraAttrs.addProperty("previewGroupChildren", this.previewGroupChildren);
 
             // 将 JsonObject 转换为字符串，并存入通用的 "extra_attributes" 列
             cv.put("extra_attributes", new Gson().toJson(extraAttrs));

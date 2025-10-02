@@ -8,6 +8,7 @@ import android.text.InputFilter;
 import android.text.Spanned;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.widget.FrameLayout;
 
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
@@ -45,6 +46,7 @@ public abstract class Element extends View {
     public static final String COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR = "normalTextColor";
     public static final String COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR = "pressedTextColor";
     public static final String COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT = "textSizePercent";
+    public static final String COLUMN_STRING_EXTRA_ATTRIBUTES = "extra_attributes";
 
     public static final int ELEMENT_TYPE_DIGITAL_COMMON_BUTTON = 0;
     public static final int ELEMENT_TYPE_DIGITAL_SWITCH_BUTTON = 1;
@@ -62,6 +64,22 @@ public abstract class Element extends View {
     public static final int EDIT_COLOR_SELECT = 0xfffe9900;
     public static final int EDIT_COLOR_SELECTED = 0xff0112ff;
     public final static int ELEMENT_TYPE_WHEEL_PAD = 54;
+
+
+    // 在编辑模式下，如果元素被按住超过系统定义的长按时间，就允许拖动，
+    // 以避免用户想打开按键设置而不是移动按键
+    private static final long DRAG_EDIT_LONG_PRESS_TIMEOUT = 250;
+    private boolean longPressDetected = false;
+    private final Runnable longPressRunnable = new Runnable() {
+        @Override
+        public void run() {
+            longPressDetected = true;
+            // 可以添加视觉反馈，比如改变边框颜色
+            editColor = 0xff00f91a; // 绿色表示可以拖动
+            invalidate();
+        }
+    };
+
 
 
     public interface ElementSelectedCallBack {
@@ -235,27 +253,35 @@ public abstract class Element extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        // Ignore secondary touches on controls
-        //
-        // NB: We can get an additional pointer down if the user touches a non-StreamView area
-        // while also touching an OSC control, even if that pointer down doesn't correspond to
-        // an area of the OSC control.
+        // 忽略多点触控中的非主手指
         if (event.getActionIndex() != 0) {
             return true;
         }
+
+        // 确保控制器存在
+        if (elementController == null) {
+            return true;
+        }
+
         switch (elementController.getMode()) {
             case Normal:
+                // Normal 模式逻辑
                 return onElementTouchEvent(event);
 
-
             case Edit:
+                // Edit 模式逻辑
                 switch (event.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN: {
                         lastX = event.getX();
                         lastY = event.getY();
                         isClick = true;
-                        editColor = 0xff00f91a;
+                        longPressDetected = false;
+                        editColor = 0xffdc143c; // 红色表示初始状态
                         invalidate();
+
+                        // 启动长按检测
+                        elementController.getHandler().removeCallbacks(longPressRunnable);
+                        elementController.getHandler().postDelayed(longPressRunnable, DRAG_EDIT_LONG_PRESS_TIMEOUT);
                         return true;
                     }
                     case MotionEvent.ACTION_MOVE: {
@@ -263,37 +289,51 @@ public abstract class Element extends View {
                         float y = event.getY();
                         float deltaX = x - lastX;
                         float deltaY = y - lastY;
-                        //小位移算作点击
+
+                        // 小位移算作点击
                         if (Math.abs(deltaX) + Math.abs(deltaY) < 0.2) {
                             return true;
                         }
-                        isClick = false;
-                        setElementCentralX((int) getX() + getWidth() / 2 + (int) deltaX);
-                        setElementCentralY((int) getY() + getHeight() / 2 + (int) deltaY);
-                        updatePage();
+
+                        // 只有检测到长按或没有开启长按移动后才允许拖动
+                        if (!elementController.isDragEditEnabled() | longPressDetected) {
+                            isClick = false;
+                            setElementCentralX((int) getX() + getWidth() / 2 + (int) deltaX);
+                            setElementCentralY((int) getY() + getHeight() / 2 + (int) deltaY);
+                            updatePage();
+                        }
                         return true;
                     }
                     case MotionEvent.ACTION_CANCEL:
                     case MotionEvent.ACTION_UP: {
+                        // 取消长按检测
+                        elementController.getHandler().removeCallbacks(longPressRunnable);
+
                         editColor = 0xffdc143c;
                         invalidate();
-                        if (isClick) {
+
+                        if (isClick || !longPressDetected) {
                             elementController.toggleInfoPage(getInfoPage());
                         } else {
-                            save();
+                                save();
                         }
                         return true;
                     }
-                    default: {
-                    }
                 }
                 return true;
-
-
+            //组按键选择子按键时使用，可更改为ACTION_DOWN来快速（滑动）选择按键
             case Select:
-                if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                    elementSelectedCallBack.elementSelected(this);
+                // 1. 触发时机ACTION_UP (手指抬起时)
+                if (event.getActionMasked() == MotionEvent.ACTION_UP) {
+
+                    // 2. 增加对回调的 null 检查，防止应用崩溃
+                    if (elementSelectedCallBack != null) {
+                        // 3. 安全地调用回调方法
+                        // 假设回调接口的方法名是 onElementSelected 或者 elementSelected
+                        elementSelectedCallBack.elementSelected (this);
+                    }
                 }
+                // 4. 必须返回 true，表示事件已被处理
                 return true;
         }
         return true;

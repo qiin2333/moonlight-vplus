@@ -13,8 +13,10 @@ import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CompoundButton;
 import android.widget.FrameLayout;
 import android.widget.SeekBar;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import com.limelight.Game;
@@ -50,6 +52,9 @@ public class ElementController {
     // 滚轮下滚
     private static final String SPECIAL_KEY_MOUSE_SCROLL_DOWN = "SD";
     private static final String SPECIAL_KEY_MOUSE_MODE_SWITCH = "MMS";
+    private static final String SPECIAL_KEY_CLASSIC_MOUSE_SWITCH = "CMS"; // 经典鼠标
+    private static final String SPECIAL_KEY_TRACKPAD_MODE = "TPM";         // 触控板
+    private static final String SPECIAL_KEY_MULTI_TOUCH_MODE = "MTM";      // 多点触控
     private static final String SPECIAL_KEY_MOUSE_ENABLE_SWITCH = "MES";
     private static final String SPECIAL_KEY_PC_KEYBOARD_SWITCH = "PKS";
     private static final String SPECIAL_KEY_ANDROID_KEYBOARD_SWITCH = "AKS";
@@ -137,6 +142,19 @@ public class ElementController {
         if (elementsLayout != null) {
             elementsLayout.setVisibility(View.VISIBLE);
         }
+    }
+
+    // 拖动编辑开关变量
+    private boolean dragEditEnabled = true;
+
+    // 设置拖动编辑开关的方法
+    public void setDragEditEnabled(boolean enabled) {
+        this.dragEditEnabled = enabled;
+    }
+
+    // 获取拖动编辑开关状态的方法
+    public boolean isDragEditEnabled() {
+        return dragEditEnabled;
     }
 
 
@@ -282,6 +300,21 @@ public class ElementController {
                 addElement(contentValues);
             }
         });
+        Switch dragEditSwitch = pageEdit.findViewById(R.id.page_edit_drag_edit_switch);
+        if (dragEditSwitch != null) {
+            // 设置初始状态
+            dragEditSwitch.setChecked(true); // 默认启用长按移动按键
+
+            // 添加开关监听器
+            dragEditSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                    setDragEditEnabled(isChecked);
+                    String message = isChecked ? "长按移动按键" : "可直接拖动按键";
+                    showToast(message);
+                }
+            });
+        }
     }
 
 
@@ -294,18 +327,26 @@ public class ElementController {
         currentConfigId = configId;
         removeAllElementsOnScreen();
         elementIds = controllerManager.getSuperConfigDatabaseHelper().queryAllElementIds(configId);
-        List<Long> groupButtonElementIdList = new ArrayList<>();
-        for (Long elementId : elementIds) {
-            long elementType = (long) controllerManager.getSuperConfigDatabaseHelper().queryElementAttribute(currentConfigId, elementId, Element.COLUMN_INT_ELEMENT_TYPE);
-            if (elementType == Element.ELEMENT_TYPE_GROUP_BUTTON) {
-                groupButtonElementIdList.add(elementId);
-            } else {
-                loadElement(elementId);
-            }
 
+        // 用于在第二阶段链接关系的 GroupButton 列表
+        List<GroupButton> groupButtonsToLink = new ArrayList<>();
+
+        // --- 阶段一：创建所有 Element 对象 ---
+        // 遍历所有 elementId，不区分类型，统一调用 loadElement 创建对象
+        for (Long elementId : elementIds) {
+            Element newElement = loadElement(elementId);
+
+            // 如果创建的是一个 GroupButton，将其添加到待链接列表
+            if (newElement instanceof GroupButton) {
+                groupButtonsToLink.add((GroupButton) newElement);
+            }
         }
-        for (Long elementId : groupButtonElementIdList) {
-            loadElement(elementId);
+
+        // --- 阶段二：链接 GroupButton 的子元素 ---
+        // 此时，`elements` 列表已经包含了当前配置下的所有 Element 对象
+        for (GroupButton gb : groupButtonsToLink) {
+            // 调用我们将在 GroupButton 类中添加的新方法
+            gb.linkChildElements(elements);
         }
     }
 
@@ -895,6 +936,12 @@ public class ElementController {
 
                 }
             };
+        } else if (key.equals(SPECIAL_KEY_CLASSIC_MOUSE_SWITCH)) {
+            return switchMouseMode(false, false, "经典鼠标模式");
+        } else if (key.equals(SPECIAL_KEY_TRACKPAD_MODE)) {
+            return switchMouseMode(true, false, "触控板模式");
+        } else if (key.equals(SPECIAL_KEY_MULTI_TOUCH_MODE)) {
+            return switchMouseMode(false, true, "多点触控模式");
         } else if (key.equals(SPECIAL_KEY_PC_KEYBOARD_SWITCH)) {
             return new SendEventHandler() {
                 @Override
@@ -950,6 +997,31 @@ public class ElementController {
             };
         }
         return null;
+    }
+
+    //鼠标模式切换
+    private SendEventHandler switchMouseMode(boolean touchMode, boolean enhancedTouch, String toastMessage) {
+        return new SendEventHandler() {
+            @Override
+            public void sendEvent(boolean down) {
+                if (down) {
+                    ContentValues contentValues = new ContentValues();
+                    contentValues.put(PageConfigController.COLUMN_BOOLEAN_TOUCH_MODE, String.valueOf(touchMode));
+                    contentValues.put(PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH, String.valueOf(enhancedTouch));
+                    controllerManager.getTouchController().setTouchMode(touchMode);
+                    controllerManager.getTouchController().setEnhancedTouch(enhancedTouch);
+                    showToast(toastMessage);
+                    controllerManager.getSuperConfigDatabaseHelper().
+
+                            updateConfig(currentConfigId, contentValues);
+                }
+            }
+
+            @Override
+            public void sendEvent(int analog1, int analog2) {
+
+            }
+        };
     }
 
 

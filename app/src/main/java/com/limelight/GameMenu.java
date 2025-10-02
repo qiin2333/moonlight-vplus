@@ -6,6 +6,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.os.Build;
 import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -1571,9 +1572,38 @@ public class GameMenu {
                 game::disconnect, "game_menu_disconnect", true));
 
         normalOptions.add(new MenuOption(getString(R.string.game_menu_disconnect_and_quit), true,
-                this::disconnectAndQuit, "game_menu_disconnect_and_quit", true));
+                () -> {
+                    if (game.prefConfig.lockScreenAfterDisconnect) {
+                        lockAndDisconnectWithDelay();
+                    }
+                    else disconnectAndQuit();
+                }, "game_menu_disconnect_and_quit", true));
 
         // normalOptions.add(new MenuOption(getString(R.string.game_menu_cancel), false, null, null, true));
+    }
+
+    // 由于不能直接发送win+L来锁定屏幕，可以先打开Windows的屏幕键盘，再发送win+L
+    public void lockAndDisconnectWithDelay() {
+        // 动作1：发送 Ctrl+Win+O 打开屏幕键盘
+        sendKeys(new short[]{
+                KeyboardTranslator.VK_LCONTROL,
+                KeyboardTranslator.VK_LWIN,
+                KeyboardTranslator.VK_O
+        });
+
+        // 动作2：使用 Handler 安排延迟任务
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            // 动作3：发送 Win+L 锁定屏幕
+            sendKeys(new short[]{
+                    KeyboardTranslator.VK_LWIN,
+                    KeyboardTranslator.VK_L
+            });
+            // 动作4：安排最终的断开任务
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                disconnectAndQuit();
+            }, 100); // 保险延迟，确保锁屏命令发出
+
+        }, 900); // 关键延迟，等待OSK启动
     }
 
     /**

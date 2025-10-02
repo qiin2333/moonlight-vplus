@@ -151,9 +151,9 @@ public class PerformanceOverlayManager {
                 performanceOverlayView.setVisibility(View.GONE);
                 performanceOverlayView.setAlpha(0.0f);
             }
-            // 配置性能覆盖层的方向和位置
-            configurePerformanceOverlay();
         }
+        // 配置性能覆盖层的方向和位置
+        configurePerformanceOverlay();
     }
 
     /** 隐藏覆盖层（立即） */

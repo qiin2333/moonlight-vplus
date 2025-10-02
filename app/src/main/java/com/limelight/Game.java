@@ -3449,20 +3449,25 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
             if (controllerManager != null && !performanceInfoDisplays.isEmpty()) {
                 Map<String, String> perfAttrs = new HashMap<>();
-                perfAttrs.put("decoder", performanceInfo.decoder);
-                perfAttrs.put("resolution", performanceInfo.initialWidth + "x" + performanceInfo.initialHeight);
-                perfAttrs.put("fps", String.format("%.0f", performanceInfo.totalFps));
-                perfAttrs.put("lost_frame", String.format("%.1f", performanceInfo.lostFrameRate));
-                perfAttrs.put("net_latency", String.format("%d", (int) (performanceInfo.rttInfo >> 32)));
-                perfAttrs.put("host_latency", String.format("%.1f", performanceInfo.aveHostProcessingLatency));
-                perfAttrs.put("decode_time", String.format("%.1f", performanceInfo.decodeTimeMs));
-                perfAttrs.put("band_width", performanceInfo.bandWidth);
+                perfAttrs.put("解码器", performanceInfo.decoder);
+                perfAttrs.put("分辨率", performanceInfo.initialWidth + "x" + performanceInfo.initialHeight);
+                perfAttrs.put("帧率", String.format("%.0f", performanceInfo.totalFps));
+                perfAttrs.put("丢帧率", String.format("%.1f", performanceInfo.lostFrameRate));
+                perfAttrs.put("网络延时", String.format("%d", (int) (performanceInfo.rttInfo >> 32)));
+                perfAttrs.put("主机延时", String.format("%.2f", performanceInfo.aveHostProcessingLatency));
+                perfAttrs.put("解码时间", String.format("%.2f", performanceInfo.decodeTimeMs));
+                perfAttrs.put("带宽", performanceInfo.bandWidth);
+                perfAttrs.put("渲染延迟", String.format("%.2f", performanceInfo.renderingLatencyMs));
                 for (PerformanceInfoDisplay performanceInfoDisplay : performanceInfoDisplays) {
                     performanceInfoDisplay.display(perfAttrs);
                 }
             }
 
         });
+    }
+
+    public void removePerformanceInfoDisplay(PerformanceInfoDisplay display) {
+        performanceInfoDisplays.remove(display);
     }
 
     @Override

@@ -20,4 +20,5 @@ public class PerformanceInfo {
     public float decodeTimeMs;
     public String bandWidth;
     public boolean isHdrActive; // 实际HDR激活状态
+    public float renderingLatencyMs; // 渲染时间
 }

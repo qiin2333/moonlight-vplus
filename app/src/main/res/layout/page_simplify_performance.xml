@@ -127,7 +127,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="match_parent"
                         android:gravity="center_vertical"
-                        android:text="显示文本"/>
+                        android:text="显示文本(可换行)"/>
                 </FrameLayout>
                 <EditText
                     android:id="@+id/page_simplify_performance_text"
@@ -160,7 +160,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="解码器:      ##decoder## \n分辨率:      ##resolution## \n丢帧率:      ##lost_frame##\n主机延时:  ##host_latency##\n网络延时:  ##net_latency##\n解码时间:  ##decode_time##\n带宽:         ##band_width## \n帧率:         ##fps## \n" />
+                        android:text="解码器:      ##解码器## \n分辨率:      ##分辨率## \n丢帧率:      ##丢帧率##\n主机延时:  ##主机延时##\n网络延时:  ##网络延时##\n解码时间:  ##解码时间##\n带宽:         ##带宽## \n帧率:         ##帧率## \n渲染:         ##渲染延迟## \n" />
                 </LinearLayout>
                 <LinearLayout
                     android:orientation="horizontal"
