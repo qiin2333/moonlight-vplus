@@ -234,66 +234,6 @@ public class ShortcutHelper {
         Rect dstRect = new Rect(0, 0, side, side);
         canvas.drawBitmap(source, srcRect, dstRect, null);
 
-        // 绘制白色边框（安全内缩 + 圆角），避免被 Launcher 遮罩裁切
-        Paint borderPaint = new Paint();
-        borderPaint.setColor(Color.WHITE);
-        borderPaint.setStyle(Paint.Style.STROKE);
-        borderPaint.setAntiAlias(true);
-        borderPaint.setStrokeJoin(Paint.Join.ROUND);
-        borderPaint.setStrokeCap(Paint.Cap.ROUND);
-
-        // 边框加粗并提高可见性：约 3.5% 边长，最小 6px
-        float borderWidth = Math.max(6f, side * 0.035f);
-        borderPaint.setStrokeWidth(borderWidth);
-
-        // 计算与系统 Adaptive Icon 遮罩匹配的路径（Android 8.0+）
-        Path maskPath = null;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            try {
-                // 使用一个空的 AdaptiveIconDrawable 来获取系统遮罩路径
-                AdaptiveIconDrawable aid = new AdaptiveIconDrawable(new ColorDrawable(Color.TRANSPARENT), new ColorDrawable(Color.TRANSPARENT));
-                Path sysPath = aid.getIconMask();
-                if (sysPath != null) {
-                    maskPath = new Path(sysPath);
-                    // 缩放并平移到安全区域矩形内
-                    float inset = Math.max(side * 0.18f, borderWidth / 2f);
-                    RectF target = new RectF(inset, inset, side - inset, side - inset);
-                    RectF srcBounds = new RectF();
-                    maskPath.computeBounds(srcBounds, true);
-                    Matrix m = new Matrix();
-                    m.setRectToRect(srcBounds, target, Matrix.ScaleToFit.FILL);
-                    maskPath.transform(m);
-
-                    // 用系统遮罩路径描边，确保与 Launcher 圆角一致
-                    canvas.drawPath(maskPath, borderPaint);
-
-                    // 内侧暗线（提升对比度）
-                    Paint innerPaint = new Paint(borderPaint);
-                    innerPaint.setColor(Color.argb(60, 0, 0, 0));
-                    innerPaint.setStrokeWidth(borderWidth * 0.5f);
-                    canvas.drawPath(maskPath, innerPaint);
-                }
-            }
-            catch (Throwable ignored) {
-                // 回退到近似的圆角矩形方案
-            }
-        }
-
-        if (maskPath == null) {
-            // 回退：使用近似圆角矩形
-            float inset = Math.max(side * 0.18f, borderWidth / 2f);
-            RectF borderRect = new RectF(inset, inset, side - inset, side - inset);
-            float radius = side * 0.22f;
-            canvas.drawRoundRect(borderRect, radius, radius, borderPaint);
-
-            Paint innerPaint = new Paint(borderPaint);
-            innerPaint.setColor(Color.argb(60, 0, 0, 0));
-            innerPaint.setStrokeWidth(borderWidth * 0.5f);
-            float innerInset = inset + borderWidth * 0.25f;
-            RectF innerRect = new RectF(innerInset, innerInset, side - innerInset, side - innerInset);
-            canvas.drawRoundRect(innerRect, radius, radius, innerPaint);
-        }
-
         return output;
     }
 
