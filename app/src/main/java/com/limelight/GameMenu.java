@@ -1575,7 +1575,7 @@ public class GameMenu {
         normalOptions.add(new MenuOption(
                 "特殊触控模式",
                 false,
-                this::showTouchOverrideMenu, // 调用我们刚刚创建的方法
+                this::showTouchOverrideMenu,
                 "mouse_mode",
                 true,
                 true // true 表示点击后会打开子菜单，对话框不关闭
@@ -1628,26 +1628,14 @@ public class GameMenu {
 
     // 由于不能直接发送win+L来锁定屏幕，可以先打开Windows的屏幕键盘，再发送win+L
     public void lockAndDisconnectWithDelay() {
-        // 动作1：发送 Ctrl+Win+O 打开屏幕键盘
+        //需要用户先自行打开屏幕键盘
+        // 发送 Win+L 锁定屏幕
         sendKeys(new short[]{
-                KeyboardTranslator.VK_LCONTROL,
                 KeyboardTranslator.VK_LWIN,
-                KeyboardTranslator.VK_O
+                KeyboardTranslator.VK_L
         });
-
-        // 动作2：使用 Handler 安排延迟任务
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            // 动作3：发送 Win+L 锁定屏幕
-            sendKeys(new short[]{
-                    KeyboardTranslator.VK_LWIN,
-                    KeyboardTranslator.VK_L
-            });
-            // 动作4：安排最终的断开任务
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                disconnectAndQuit();
-            }, 100); // 保险延迟，确保锁屏命令发出
-
-        }, 900); // 关键延迟，等待OSK启动
+        // 断开并退出串流
+        disconnectAndQuit();
     }
 
     /**
