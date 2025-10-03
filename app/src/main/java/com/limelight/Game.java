@@ -912,7 +912,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 }
 
                 // Disable sensors while in PiP mode
-                controllerHandler.disableSensors();
+                if (controllerHandler != null) {
+                    controllerHandler.disableSensors();
+                }
 
                 // Update GameManager state to indicate we're in PiP (still gaming, but interruptible)
                 UiHelper.notifyStreamEnteringPiP(this);
@@ -941,10 +943,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 }
 
                 // Enable sensors again after exiting PiP
-                controllerHandler.enableSensors();
-                
-                // 恢复陀螺仪功能（如果之前启用了）
-                controllerHandler.onSensorsReenabled();
+                if (controllerHandler != null) {
+                    controllerHandler.enableSensors();
+                    
+                    // 恢复陀螺仪功能（如果之前启用了）
+                    controllerHandler.onSensorsReenabled();
+                }
 
                 // Update GameManager state to indicate we're out of PiP (gaming, non-interruptible)
                 UiHelper.notifyStreamExitingPiP(this);
@@ -2885,7 +2889,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             connecting = connected = false;
             updatePipAutoEnter();
 
-            controllerHandler.stop();
+            if (controllerHandler != null) {
+                controllerHandler.stop();
+            }
 
             // 停止并释放 USB 控制器接管
             stopAndUnbindUsbDriverService();

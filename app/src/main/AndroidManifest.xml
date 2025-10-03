@@ -72,7 +72,7 @@
         android:localeConfig="@xml/locales_config"
         android:enableOnBackInvokedCallback="false"
         android:theme="@style/AppTheme"
-        tools:targetApi="tiramisu">
+        tools:targetApi="vanillaIceCream">
 
         <provider
             android:name=".PosterContentProvider"

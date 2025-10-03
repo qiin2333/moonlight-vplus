@@ -11,17 +11,17 @@ if (hasGoogleServicesJson && (project.hasProperty('enableAnalytics') || gradle.s
 android {
     ndkVersion "27.0.12077973"
 
-    compileSdk 34
+    compileSdk 35
 
 
     namespace 'com.limelight'
 
     defaultConfig {
         minSdk 22
-        targetSdk 34
+        targetSdk 35
 
-        versionName "12.3.8"
-        versionCode = 337
+        versionName "12.3.9"
+        versionCode = 338
 
         // Generate native debug symbols to allow Google Play to symbolicate our native crashes
         ndk.debugSymbolLevel = 'FULL'

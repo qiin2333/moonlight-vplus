@@ -133,13 +133,15 @@ public class UiHelper {
         }
 
         if (modeMgr.getCurrentModeType() == Configuration.UI_MODE_TYPE_TELEVISION) {
-            // Increase view padding on TVs
-            float scale = activity.getResources().getDisplayMetrics().density;
-            int verticalPaddingPixels = (int) (TV_VERTICAL_PADDING_DP*scale + 0.5f);
-            int horizontalPaddingPixels = (int) (TV_HORIZONTAL_PADDING_DP*scale + 0.5f);
+            // Only apply legacy overscan padding on pre-Android 10 TVs
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                float scale = activity.getResources().getDisplayMetrics().density;
+                int verticalPaddingPixels = (int) (TV_VERTICAL_PADDING_DP*scale + 0.5f);
+                int horizontalPaddingPixels = (int) (TV_HORIZONTAL_PADDING_DP*scale + 0.5f);
 
-            rootView.setPadding(horizontalPaddingPixels, verticalPaddingPixels,
-                    horizontalPaddingPixels, verticalPaddingPixels);
+                rootView.setPadding(horizontalPaddingPixels, verticalPaddingPixels,
+                        horizontalPaddingPixels, verticalPaddingPixels);
+            }
         }
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             // Draw under the status bar on Android Q devices

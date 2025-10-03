@@ -1,8 +1,22 @@
+Moonlight V+ is an enhanced version of the popular Moonlight game streaming app, featuring advanced capabilities and optimizations for the ultimate streaming experience.
+
 This app streams games, programs, or your full desktop from your PC or <a href="https://github.com/LizardByte/Sunshine">Sunshine</a> on your local network or the Internet. Mouse, keyboard, and controller input is sent from your Android device to the PC.
 
 Streaming performance may vary based on your client device and network setup. HDR requires an HDR10-capable device, a GPU that can encode HEVC Main 10, and an HDR10-enabled game.
 
-'''Features'''
+'''Enhanced V+ Features'''
+* 🚀 **Ultra-High Refresh Rates**: Unlock 144/165Hz streaming for buttery smooth gameplay
+* 🎨 **HDR Support**: Complete HDR content streaming with automatic device calibration
+* 📱 **Custom Resolutions**: Support for custom resolutions, aspect ratios, and asymmetric resolutions
+* 🎮 **Advanced Touch Controls**: Enhanced multi-touch, stylus support, and touchpad mode
+* 🎯 **Gyro Assistant**: Built-in gyroscope support for motion controls and aiming
+* 📊 **Performance Monitoring**: Real-time FPS, bitrate, latency, and packet loss display
+* 🎛️ **Scene Presets**: Save and switch between different streaming configurations
+* 🎤 **Microphone Redirection**: High-quality remote voice chat (requires Sunshine 2025.0720+)
+* 🖥️ **Desktop Enhancement**: Beautiful app thumbnails and custom sorting
+* 🔧 **Smart Updates**: Automatic update checking with intelligent notifications
+
+'''Core Features'''
 * Open-source and completely free (no ads, IAPs, or "Pro")
 * Streams games purchased from any store
 * Works on your home network or over the Internet/LTE
