@@ -87,6 +87,7 @@
     <!-- AppList activity -->
     <string name="applist_connect_msg"> 正在连接电脑…… </string>
     <string name="applist_menu_start_with_vdd"> 使用虚拟显示器开始串流 </string>
+    <string name="applist_menu_start_with_last_settings">使用上一次设置启动</string>
     <string name="applist_menu_resume"> 恢复串流 </string>
     <string name="applist_menu_quit"> 退出串流 </string>
     <string name="applist_menu_quit_and_start"> 退出当前游戏并开始这个游戏 </string>
@@ -543,5 +544,32 @@
     <string name="perf_decode_latency_info">解码延迟表示解码视频帧所需的时间。\n\n延迟范围：\n• &lt;5ms：极佳解码器性能\n• 5–10ms：良好解码器性能\n• 10–20ms：一般解码器性能\n• &gt;20ms：较差解码器性能\n\n影响因素：\n• 硬件解码器性能\n• 视频编码复杂度\n• 设备CPU/GPU负载\n• 当解码延迟低于10ms时更应关注设备的其他性能(比如帧率、分辨率、画质等)</string>
     <string name="perf_host_latency_title">🖥 主机延迟信息</string>
     <string name="perf_host_latency_info">主机延迟表示主机处理帧所需的时间。\n\n延迟范围：\n• &lt;5ms：极佳主机性能\n• 5–10ms：良好主机性能\n• 10–20ms：一般主机性能\n• &gt;20ms：较差主机性能\n\n影响因素：\n• 主机硬件性能\n• 游戏负载\n• 后台程序使用\n\nVer.V+：\n• 表示版本信息\n• 当没有主机延迟数据时显示</string>
+
+    <!-- App Last Settings strings -->
+    <string name="app_last_settings_title">上一次设置</string>
+    <string name="app_last_settings_none">无上一次设置</string>
+    <string name="app_last_settings_use_checkbox">使用上一次设置</string>
+    <string name="app_last_settings_apply_success">已应用上一次设置</string>
+    <string name="app_last_settings_start_with_last">使用上一次设置启动</string>
+    
+    <!-- Setting detail strings -->
+    <string name="setting_resolution">分辨率：%1$dx%2$d</string>
+    <string name="setting_fps">帧率：%1$dfps</string>
+    <string name="setting_bitrate">码率：%1$dkbps</string>
+    <string name="setting_scale">缩放：%1$d%%</string>
+    <string name="setting_format">视频编码：%1$s</string>
+    <string name="setting_hdr_enabled">HDR：开启</string>
+    <string name="setting_mic_enabled">麦克风：%1$dkbps</string>
+    <string name="setting_native_mouse_enabled">原生鼠标：开启</string>
+    <string name="setting_gyro_sensitivity">陀螺仪：%1$.1fx</string>
+    <string name="setting_bitrate_card_enabled">码率卡片：开启</string>
+    <string name="setting_gyro_card_enabled">陀螺仪卡片：开启</string>
+    
+    <!-- Time format strings -->
+    <string name="time_just_now">刚刚</string>
+    <string name="time_minutes_ago">%1$d分钟前</string>
+    <string name="time_hours_ago">%1$d小时前</string>
+    <string name="time_days_ago">%1$d天前</string>
+    <string name="time_unknown">未知时间</string>
 
 </resources>

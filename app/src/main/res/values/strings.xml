@@ -127,6 +127,7 @@
     <!-- AppList activity -->
     <string name="applist_connect_msg">Connecting to PC…</string>
     <string name="applist_menu_start_with_vdd"> Start With Virtual Display </string>
+    <string name="applist_menu_start_with_last_settings">Start with Last Settings</string>
     <string name="applist_menu_resume">Resume Session</string>
     <string name="applist_menu_quit">Quit Session</string>
     <string name="applist_menu_quit_and_start">Quit Current Game and Start</string>
@@ -581,5 +582,32 @@
     
     <string name="perf_host_latency_title">🖥️ Host Latency Information</string>
     <string name="perf_host_latency_info">Host latency represents the time for the game host to process frames.\n\nLatency Range:\n• &lt;5ms: Strong host performance\n• 5-10ms: Good host performance\n• 10-20ms: Fair host performance\n• &gt;20ms: Weak host performance\n\nInfluencing Factors:\n• Host hardware performance\n• Game load\n• Background program usage\n\nVer.V+:\n• Indicates version information\n• Displayed when no host latency data available</string>
+
+    <!-- App Last Settings strings -->
+    <string name="app_last_settings_title">Last Settings</string>
+    <string name="app_last_settings_none">No last settings</string>
+    <string name="app_last_settings_use_checkbox">Use last settings</string>
+    <string name="app_last_settings_apply_success">Applied last settings</string>
+    <string name="app_last_settings_start_with_last">Started with last settings</string>
+    
+    <!-- Setting detail strings -->
+    <string name="setting_resolution">Resolution: %1$dx%2$d</string>
+    <string name="setting_fps">Frame Rate: %1$dfps</string>
+    <string name="setting_bitrate">Bitrate: %1$dkbps</string>
+    <string name="setting_scale">Scale: %1$d%%</string>
+    <string name="setting_format">Video Codec: %1$s</string>
+    <string name="setting_hdr_enabled">HDR: Enabled</string>
+    <string name="setting_mic_enabled">Microphone: %1$dkbps</string>
+    <string name="setting_native_mouse_enabled">Native Mouse: Enabled</string>
+    <string name="setting_gyro_sensitivity">Gyroscope: %1$.1fx</string>
+    <string name="setting_bitrate_card_enabled">Bitrate Card: Enabled</string>
+    <string name="setting_gyro_card_enabled">Gyro Card: Enabled</string>
+    
+    <!-- Time format strings -->
+    <string name="time_just_now">Just now</string>
+    <string name="time_minutes_ago">%1$d minutes ago</string>
+    <string name="time_hours_ago">%1$d hours ago</string>
+    <string name="time_days_ago">%1$d days ago</string>
+    <string name="time_unknown">Unknown time</string>
 
 </resources>

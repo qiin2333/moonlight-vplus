@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="150dp"
-    android:layout_height="200dp"
-    android:padding="10dp">
+    android:layout_width="180dp"
+    android:layout_height="240dp"
+    android:padding="10dp"
+    android:focusable="true"
+    android:focusableInTouchMode="false"
+    android:background="?android:attr/selectableItemBackground">
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -16,8 +19,8 @@
     </ImageView>
     <ImageView
         android:id="@+id/grid_overlay"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="10dp"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="8dp"
         android:layout_width="50dp"
         android:layout_height="50dp">
     </ImageView>

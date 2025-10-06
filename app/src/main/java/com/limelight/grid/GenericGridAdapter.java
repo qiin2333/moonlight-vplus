@@ -18,12 +18,24 @@ public abstract class GenericGridAdapter<T> extends BaseAdapter {
     private int layoutId;
     final ArrayList<T> itemList = new ArrayList<>();
     private final LayoutInflater inflater;
+    // Track a selected position for UI updates (some activities call setSelectedPosition)
+    protected int selectedPosition = -1;
 
     GenericGridAdapter(Context context, int layoutId) {
         this.context = context;
         this.layoutId = layoutId;
 
         this.inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+    }
+
+    public void setSelectedPosition(int pos) {
+        this.selectedPosition = pos;
+        // Let views refresh to reflect selection change if they care
+        notifyDataSetChanged();
+    }
+
+    public int getSelectedPosition() {
+        return selectedPosition;
     }
 
     void setLayoutId(int layoutId) {

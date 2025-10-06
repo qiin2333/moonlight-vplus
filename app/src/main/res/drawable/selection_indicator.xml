@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <!-- 主边框 -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#00000000"/> <!-- 透明背景 -->
+            <corners android:radius="4dp"/>
+            <stroke 
+                android:width="1dp"
+                android:color="#80808080"/>
+        </shape>
+    </item>
+    
+    <!-- 渐变光效层 -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="4dp"/>
+            <gradient
+                android:type="linear"
+                android:angle="135"
+                android:startColor="#60FFFFFF"
+                android:centerColor="#30FFFFFF"
+                android:endColor="#10FFFFFF"/>
+        </shape>
+    </item>
+
+    <!-- Gura发卡装饰 - 旋转-45° 镜像移动到左上角 (放在最上层) 带有一些阴影 -->
+    <!--
+    <item android:gravity="top|start" android:width="40dp" android:height="40dp" android:top="-12dp" android:left="-12dp">
+        <rotate
+            android:fromDegrees="-45"
+            android:toDegrees="0"
+            android:pivotX="50%"
+            android:pivotY="50%">
+            <layer-list>
+                <item android:right="2dp" android:top="1dp">
+                    <vector android:width="30dp" android:height="30dp" android:viewportWidth="30" android:viewportHeight="30">
+                        <path
+                            android:fillColor="#40000000"
+                            android:pathData="M15,3 L21,15 L9,15 Z"/>
+                        
+                        <path
+                            android:fillColor="#40000000"
+                            android:pathData="M15,27 L9,15 L21,15 Z"/>
+                    </vector>
+                </item>
+                
+                <item>
+                    <vector android:width="30dp" android:height="30dp" android:viewportWidth="30" android:viewportHeight="30">
+                        <path
+                            android:fillColor="#3CA4E0"
+                            android:pathData="M15,3 L21,15 L9,15 Z"/>
+                        
+                        <path
+                            android:fillColor="#FF6B6B"
+                            android:pathData="M15,27 L9,15 L21,15 Z"/>
+                    </vector>
+                </item>
+            </layer-list>
+        </rotate>
+    </item>
+    -->
+</layer-list>

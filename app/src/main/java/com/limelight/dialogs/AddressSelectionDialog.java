@@ -8,7 +8,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -22,7 +21,6 @@ public class AddressSelectionDialog {
     
     public interface OnAddressSelectedListener {
         void onAddressSelected(ComputerDetails.AddressTuple address);
-        void onCancelled();
     }
     
     private AlertDialog dialog;
@@ -69,15 +67,6 @@ public class AddressSelectionDialog {
             dialog.dismiss();
         });
         
-        // 设置按钮
-        Button cancelButton = dialogView.findViewById(R.id.btn_cancel);
-        
-        cancelButton.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onCancelled();
-            }
-            dialog.dismiss();
-        });
         
         builder.setView(dialogView);
         dialog = builder.create();

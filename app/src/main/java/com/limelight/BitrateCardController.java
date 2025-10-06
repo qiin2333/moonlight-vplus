@@ -114,6 +114,9 @@ public class BitrateCardController {
                 public void onSuccess(int newBitrate) {
                     game.runOnUiThread(() -> {
                         try {
+                            // Update prefConfig with the new bitrate so it gets saved when streaming ends
+                            game.prefConfig.bitrate = newBitrate;
+                            
                             String successMessage = String.format(game.getResources().getString(R.string.game_menu_bitrate_adjustment_success), newBitrate / 1000);
                             Toast.makeText(game, successMessage, Toast.LENGTH_SHORT).show();
                         } catch (Exception e) {

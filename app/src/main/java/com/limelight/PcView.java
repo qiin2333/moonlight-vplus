@@ -27,6 +27,7 @@ import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.preferences.StreamSettings;
 import com.limelight.ui.AdapterFragment;
 import com.limelight.ui.AdapterFragmentCallbacks;
+import com.limelight.ui.AdapterRecyclerBridge;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.HelpLauncher;
 import com.limelight.utils.ServerHelper;
@@ -97,6 +98,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
     private RelativeLayout noPcFoundLayout;
     private PcGridAdapter pcGridAdapter;
     private ShortcutHelper shortcutHelper;
+    private int selectedPosition = -1;
     private ComputerManagerService.ComputerManagerBinder managerBinder;
     private boolean freezeUpdates, runningPolling, inForeground, completeOnCreateCalled;
     private final ServiceConnection serviceConnection = new ServiceConnection() {
@@ -609,9 +611,19 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
 
         // Call superclass
         super.onCreateContextMenu(menu, v, menuInfo);
-                
-        AdapterContextMenuInfo info = (AdapterContextMenuInfo) menuInfo;
-        ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(info.position);
+
+        int position = -1;
+        if (menuInfo instanceof AdapterContextMenuInfo) {
+            position = ((AdapterContextMenuInfo) menuInfo).position;
+        } else if (v != null && v.getTag() instanceof Integer) {
+            position = (Integer) v.getTag();
+        } else if (selectedPosition >= 0) {
+            position = selectedPosition;
+        }
+
+        if (position < 0) return;
+
+        ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(position);
 
         // Add a header with PC status details
         menu.clearHeader();
@@ -879,10 +891,6 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                 doAppList(tempComputer, false, false);
             }
 
-            @Override
-            public void onCancelled() {
-                // 用户取消选择，不做任何操作
-            }
         });
         
         dialog.show();
@@ -890,8 +898,19 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
 
     @Override
     public boolean onContextItemSelected(MenuItem item) {
-        AdapterContextMenuInfo info = (AdapterContextMenuInfo) item.getMenuInfo();
-        final ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(info.position);
+        int position = -1;
+        ContextMenuInfo menuInfo = item.getMenuInfo();
+        if (menuInfo instanceof AdapterContextMenuInfo) {
+            position = ((AdapterContextMenuInfo) menuInfo).position;
+        }
+
+        if (position < 0) {
+            position = this.selectedPosition;
+        }
+
+        if (position < 0) return super.onContextItemSelected(item);
+
+        final ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(position);
         switch (item.getItemId()) {
             case PAIR_ID:
                 doPair(computer.details);
@@ -1075,29 +1094,45 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         return R.layout.pc_grid_view;
     }
 
-    @Override
     public void receiveAbsListView(AbsListView listView) {
-        listView.setAdapter(pcGridAdapter);
-        listView.setOnItemClickListener((arg0, arg1, pos, id) -> {
-            ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(pos);
-            if (computer.details.state == ComputerDetails.State.UNKNOWN ||
-                computer.details.state == ComputerDetails.State.OFFLINE) {
-                // Open the context menu if a PC is offline or refreshing
-                openContextMenu(arg1);
-            } else if (computer.details.pairState != PairState.PAIRED) {
-                // Pair an unpaired machine by default
-                doPair(computer.details);
-            } else {
-                // 检查是否有多个可用地址
-                if (computer.details.hasMultipleAddresses()) {
-                    showAddressSelectionDialog(computer.details);
+        // Delegate to generalized method
+        receiveAdapterView((View) listView);
+    }
+
+    @Override
+    public void receiveAbsListView(View view) {
+        // Generalized interface implementation
+        receiveAdapterView(view);
+    }
+
+    public void receiveAdapterView(View view) {
+        if (view instanceof androidx.recyclerview.widget.RecyclerView) {
+            // Update selectionAnimator's RecyclerView and Adapter references
+        }
+        else if (view instanceof AbsListView) {
+            AbsListView listView = (AbsListView) view;
+            listView.setAdapter(pcGridAdapter);
+            listView.setOnItemClickListener((arg0, arg1, pos, id) -> {
+                ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(pos);
+                if (computer.details.state == ComputerDetails.State.UNKNOWN ||
+                    computer.details.state == ComputerDetails.State.OFFLINE) {
+                    // Open the context menu if a PC is offline or refreshing
+                    openContextMenu(arg1);
+                } else if (computer.details.pairState != PairState.PAIRED) {
+                    // Pair an unpaired machine by default
+                    doPair(computer.details);
                 } else {
-                    doAppList(computer.details, false, false);
+                    // 检查是否有多个可用地址
+                    if (computer.details.hasMultipleAddresses()) {
+                        showAddressSelectionDialog(computer.details);
+                    } else {
+                        doAppList(computer.details, false, false);
+                    }
                 }
-            }
-        });
-        UiHelper.applyStatusBarPadding(listView);
-        registerForContextMenu(listView);
+            });
+            UiHelper.applyStatusBarPadding(listView);
+            registerForContextMenu(listView);
+        }
     }
 
     public static class ComputerObject {

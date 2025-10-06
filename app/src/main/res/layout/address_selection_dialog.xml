@@ -35,16 +35,6 @@
         android:focusable="true"
         android:focusableInTouchMode="true"
         android:clickable="true"
-        android:choiceMode="singleChoice"
-        android:nextFocusDown="@+id/btn_cancel" />
-
-    <Button
-        android:id="@+id/btn_cancel"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/no"
-        android:layout_marginTop="16dp"
-        android:nextFocusUp="@+id/address_list"
-        style="@style/AppDialogButtonStyle" />
+        android:choiceMode="singleChoice" />
 
 </LinearLayout>

@@ -1,28 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- 按下状态 -->
+    <!-- 按下状态 - 粉色渐变叠加效果 -->
     <item android:state_pressed="true">
         <layer-list>
-            <!-- 第三层背景 (最底层) - 正上方偏移 -->
+            <!-- 第三层背景 (最底层) - 正上方偏移 - 深粉色 -->
             <item android:bottom="20dp" android:left="0dp">
                 <shape android:shape="rectangle">
-                    <solid android:color="#A0000000" />
+                    <gradient
+                        android:startColor="#FFE91E63"
+                        android:centerColor="#C0F06292"
+                        android:endColor="#80F8BBD9"
+                        android:angle="-45" />
                     <corners android:radius="8dp" />
                 </shape>
             </item>
             
-            <!-- 第二层背景 (中间层) - 正上方偏移 -->
+            <!-- 第二层背景 (中间层) - 正上方偏移 - 中粉色 -->
             <item android:bottom="10dp" android:left="0dp">
                 <shape android:shape="rectangle">
-                    <solid android:color="#80000000" />
+                    <gradient
+                        android:startColor="#FFF06292"
+                        android:centerColor="#A0F48FB1"
+                        android:endColor="#80F8BBD9"
+                        android:angle="-45" />
                     <corners android:radius="6dp" />
                 </shape>
             </item>
             
-            <!-- 第一层背景 (最上层) - 主背景 -->
+            <!-- 第一层背景 (最上层) - 主背景 - 浅粉色 -->
             <item>
                 <shape android:shape="rectangle">
-                    <solid android:color="#CCEDE7F6" />
+                    <gradient
+                        android:startColor="#FFF8BBD9"
+                        android:centerColor="#E6FCE4EC"
+                        android:endColor="#80F3E5F5"
+                        android:angle="-45" />
                     <corners android:radius="4dp" />
                     <stroke android:width="2dp" android:color="#3CA4E0" />
                 </shape>
@@ -30,59 +42,143 @@
         </layer-list>
     </item>
     
-    <!-- 焦点状态 -->
+    <!-- 焦点状态 - 粉色渐变增强效果 -->
     <item android:state_focused="true">
         <layer-list>
-            <!-- 第三层背景 (最底层) - 正上方偏移 -->
+            <!-- 第三层背景 (最底层) - 正上方偏移 - 深粉色 -->
             <item android:bottom="20dp" android:left="0dp">
                 <shape android:shape="rectangle">
-                    <solid android:color="#A0000000" />
+                    <gradient
+                        android:startColor="#FFE91E63"
+                        android:centerColor="#B0F06292"
+                        android:endColor="#80F8BBD9"
+                        android:angle="-45" />
                     <corners android:radius="8dp" />
                 </shape>
             </item>
             
-            <!-- 第二层背景 (中间层) - 正上方偏移 -->
+            <!-- 第二层背景 (中间层) - 正上方偏移 - 中粉色 -->
             <item android:bottom="10dp" android:left="0dp">
                 <shape android:shape="rectangle">
-                    <solid android:color="#80000000" />
+                    <gradient
+                        android:startColor="#FFF06292"
+                        android:centerColor="#90F48FB1"
+                        android:endColor="#80F8BBD9"
+                        android:angle="-45" />
                     <corners android:radius="6dp" />
                 </shape>
             </item>
             
-            <!-- 第一层背景 (最上层) - 主背景 -->
+            <!-- 第一层背景 (最上层) - 主背景 - 浅粉色 -->
             <item>
                 <shape android:shape="rectangle">
-                    <solid android:color="#CCEDE7F6" />
+                    <gradient
+                        android:startColor="#FFF8BBD9"
+                        android:centerColor="#E6FCE4EC"
+                        android:endColor="#80F3E5F5"
+                        android:angle="-45" />
                     <corners android:radius="4dp" />
                     <stroke android:width="2dp" android:color="#3CA4E0" />
+                </shape>
+            </item>
+            
+            <!-- 额外的聚焦光晕效果 -->
+            <item android:top="-2dp" android:bottom="-2dp" android:left="-2dp" android:right="-2dp">
+                <shape android:shape="rectangle">
+                    <solid android:color="@android:color/transparent" />
+                    <corners android:radius="6dp" />
+                    <stroke android:width="1dp" android:color="#66FFFFFF" />
                 </shape>
             </item>
         </layer-list>
     </item>
     
-    <!-- 默认状态 - 多层叠加效果 -->
-    <item>
+    <!-- 选中状态 - 粉色渐变增强效果 -->
+    <item android:state_selected="true">
         <layer-list>
-            <!-- 第三层背景 (最底层) - 正上方偏移 -->
+            <!-- 第三层背景 (最底层) - 正上方偏移 - 深粉色 -->
             <item android:bottom="20dp" android:left="0dp">
                 <shape android:shape="rectangle">
-                    <solid android:color="#80000000" />
+                    <gradient
+                        android:startColor="#FFE91E63"
+                        android:centerColor="#B0F06292"
+                        android:endColor="#80F8BBD9"
+                        android:angle="-45" />
                     <corners android:radius="8dp" />
                 </shape>
             </item>
             
-            <!-- 第二层背景 (中间层) - 正上方偏移 -->
+            <!-- 第二层背景 (中间层) - 正上方偏移 - 中粉色 -->
             <item android:bottom="10dp" android:left="0dp">
                 <shape android:shape="rectangle">
-                    <solid android:color="#60000000" />
+                    <gradient
+                        android:startColor="#FFF06292"
+                        android:centerColor="#90F48FB1"
+                        android:endColor="#80F8BBD9"
+                        android:angle="-45" />
                     <corners android:radius="6dp" />
                 </shape>
             </item>
             
-            <!-- 第一层背景 (最上层) - 主背景 -->
+            <!-- 第一层背景 (最上层) - 主背景 - 浅粉色 -->
             <item>
                 <shape android:shape="rectangle">
-                    <solid android:color="#99EDE7F6" />
+                    <gradient
+                        android:startColor="#FFF8BBD9"
+                        android:centerColor="#E6FCE4EC"
+                        android:endColor="#80F3E5F5"
+                        android:angle="-45" />
+                    <corners android:radius="4dp" />
+                    <stroke android:width="2dp" android:color="#3CA4E0" />
+                </shape>
+            </item>
+            
+            <!-- 额外的聚焦光晕效果 -->
+            <item android:top="-2dp" android:bottom="-2dp" android:left="-2dp" android:right="-2dp">
+                <shape android:shape="rectangle">
+                    <solid android:color="@android:color/transparent" />
+                    <corners android:radius="6dp" />
+                    <stroke android:width="1dp" android:color="#66FFFFFF" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+    
+    <!-- 默认状态 - 粉色渐变叠加效果 -->
+    <item>
+        <layer-list>
+            <!-- 第三层背景 (最底层) - 正上方偏移 - 深粉色 -->
+            <item android:bottom="20dp" android:left="0dp">
+                <shape android:shape="rectangle">
+                    <gradient
+                        android:startColor="#FFE91E63"
+                        android:centerColor="#80F06292"
+                        android:endColor="#40F8BBD9"
+                        android:angle="-45" />
+                    <corners android:radius="8dp" />
+                </shape>
+            </item>
+            
+            <!-- 第二层背景 (中间层) - 正上方偏移 - 中粉色 -->
+            <item android:bottom="10dp" android:left="0dp">
+                <shape android:shape="rectangle">
+                    <gradient
+                        android:startColor="#FFF06292"
+                        android:centerColor="#60F48FB1"
+                        android:endColor="#40F8BBD9"
+                        android:angle="-45" />
+                    <corners android:radius="6dp" />
+                </shape>
+            </item>
+            
+            <!-- 第一层背景 (最上层) - 主背景 - 浅粉色 -->
+            <item>
+                <shape android:shape="rectangle">
+                    <gradient
+                        android:startColor="#FFF8BBD9"
+                        android:centerColor="#99FCE4EC"
+                        android:endColor="#40F3E5F5"
+                        android:angle="-45" />
                     <corners android:radius="4dp" />
                 </shape>
             </item>
