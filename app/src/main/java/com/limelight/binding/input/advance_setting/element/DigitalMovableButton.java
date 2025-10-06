@@ -219,7 +219,7 @@ public class DigitalMovableButton extends Element {
             textSizePercent = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT)).intValue();
         } else {
             // Default based on original hardcoded logic
-            textSizePercent = 63;
+            textSizePercent = 25;
         }
 
         valueSendHandler = controller.getSendEventHandler(value);
@@ -899,7 +899,7 @@ public class DigitalMovableButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, 0x00FFFFFF);
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, 0xFFFFFFFF);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, 0xFFCCCCCC);
-        contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, 63);
+        contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, 25);
 
         // --- 为 extra_attributes 设置默认的 JSON 值 ---
         Map<String, Object> extraAttrs = new HashMap<>();

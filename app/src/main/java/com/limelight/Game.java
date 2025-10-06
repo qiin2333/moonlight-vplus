@@ -37,6 +37,7 @@ import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.ui.GameGestures;
 import com.limelight.ui.StreamView;
 import com.limelight.utils.Dialog;
+import com.limelight.utils.PanZoomHandler;
 import com.limelight.utils.ServerHelper;
 import com.limelight.utils.ShortcutHelper;
 import com.limelight.utils.FullscreenProgressOverlay;
@@ -133,6 +134,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private ControllerHandler controllerHandler;
     private KeyboardTranslator keyboardTranslator;
     private VirtualController virtualController;
+    private PanZoomHandler panZoomHandler;
     
     public interface PerformanceInfoDisplay{
         void display(Map<String,String> performanceAttrs);
@@ -267,62 +269,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         return this.controllerManager;
     }
 
-    // 1. 定义一个枚举来表示不同的触摸覆盖模式
-    public enum TouchOverrideMode {
-        /** 默认行为，触摸事件正常传递给虚拟按键和游戏 */
-        DEFAULT,
-        /** 禁用虚拟按键的触摸，让触摸事件穿透 */
-        VIRTUAL_CONTROLLER_TOUCH_DISABLED,
-        /** 启用视图的手势缩放和旋转功能 */
-        GESTURE_ZOOM
+    public boolean isTouchOverrideEnabled = false;
+    public boolean getisTouchOverrideEnabled() {
+        return isTouchOverrideEnabled;
     }
-
-    // 3. 添加一个中心化的方法来切换模式
-    public void setTouchOverrideMode(TouchOverrideMode newMode) {
-        if (controllerManager == null || streamView == null || currentTouchMode == newMode) {
-            return;
-        }
-
-        TouchController touchController = controllerManager.getTouchController();
-
-        switch (newMode) {
-            case GESTURE_ZOOM:
-                streamView.setGesturesEnabled(true);
-                touchController.setTouchBypass(true);
-                Toast.makeText(this, "手势缩放模式已开启", Toast.LENGTH_SHORT).show();
-                break;
-            case VIRTUAL_CONTROLLER_TOUCH_DISABLED:
-                streamView.setGesturesEnabled(false);
-                touchController.setTouchBypass(false);
-                touchController.enableTouch(false);
-                Toast.makeText(this, "虚拟按键触控已禁用", Toast.LENGTH_SHORT).show();
-                break;
-            case DEFAULT:
-            default:
-                streamView.setGesturesEnabled(false);
-                touchController.setTouchBypass(false);
-                touchController.enableTouch(true);
-                Toast.makeText(this, "已恢复默认触控模式", Toast.LENGTH_SHORT).show();
-                break;
-        }
-
-        this.currentTouchMode = newMode;
-    }
-
-    public TouchOverrideMode getCurrentTouchMode() {
-        return currentTouchMode;
-    }
-
-    private TouchOverrideMode currentTouchMode = TouchOverrideMode.DEFAULT;
-
-    /**
-     * 手动重置 StreamView 的缩放和平移状态
-     */
-    public void resetStreamViewTransformations() {
-        if (streamView != null) {
-            streamView.resetTransformations();
-            Toast.makeText(this, "画面已重置", Toast.LENGTH_SHORT).show();
-        }
+    public void setisTouchOverrideEnabled(boolean isTouchOverrideEnabled){
+        this.isTouchOverrideEnabled = isTouchOverrideEnabled;
     }
 
     private boolean connectedToUsbDriverService = false;
@@ -457,6 +409,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             streamView.setOnGenericMotionListener(this);
             streamView.setOnKeyListener(this);
             streamView.setInputCallbacks(this);
+
+        panZoomHandler = new PanZoomHandler(this, this, streamView, prefConfig);
         
         // Listen for touch events on the background touch view to enable trackpad mode
         // to work on areas outside of the StreamView itself. We use a separate View
@@ -1055,7 +1009,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         return builder.build();
     }
 
-    private void updatePipAutoEnter() {
+    public void updatePipAutoEnter() {
         if (!prefConfig.enablePip) {
             return;
         }
@@ -2107,45 +2061,48 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
 
+    /**
+     * getStreamViewRelativeNormalizedXY
+     * 正确地处理了视图的平移(Pan)和缩放(Zoom)。
+     */
     private float[] getStreamViewRelativeNormalizedXY(View view, MotionEvent event, int pointerIndex) {
-        // 获取当前活动的StreamView
         StreamView activeStreamView = getActiveStreamView();
-        
-        float normalizedX;
-        float normalizedY;
-        if (prefConfig.enableEnhancedTouch) {
-            // Coords are replaced by NativeTouchContext here.
-            NativeTouchContext.Pointer pointer = nativeTouchPointerMap.get(event.getPointerId(pointerIndex));
-            if (pointer != null) {
-                float targetCoords[] = pointer.XYCoordSelector(); // decides to passthrough or manipulate coords.
-                normalizedX = targetCoords[0];
-                normalizedY = targetCoords[1];
-            } else {
-                normalizedX = 0f; // in this case (pointer == null), pointers are already all up.
-                normalizedY = 0f;
-            }
-        } else {
-            normalizedX = event.getX(pointerIndex);
-            normalizedY = event.getY(pointerIndex);
+        if (activeStreamView == null) {
+            return new float[] { 0.0f, 0.0f };
         }
 
-        // For the containing background view, we must subtract the origin
-        // of the StreamView to get video-relative coordinates.
-        if (view != activeStreamView) {
-            normalizedX -= activeStreamView.getX();
-            normalizedY -= activeStreamView.getY();
+        // --- 第一步：获取原始屏幕坐标 ---
+        float rawX = event.getX(pointerIndex);
+        float rawY = event.getY(pointerIndex);
+
+        // --- 第二步：进行正确的坐标逆变换（同时处理平移和缩放）---
+        float scaleX = activeStreamView.getScaleX();
+        float scaleY = activeStreamView.getScaleY();
+
+        if (scaleX == 0 || scaleY == 0) {
+            return new float[] { 0.0f, 0.0f };
         }
 
-        // 限制坐标范围以避免超出视图边界
-        normalizedX = Math.max(normalizedX, 0.0f);
-        normalizedY = Math.max(normalizedY, 0.0f);
+        // 计算出在游戏画面中的【绝对像素坐标】
+        float absoluteX = (rawX - activeStreamView.getX()) / scaleX;
+        float absoluteY = (rawY - activeStreamView.getY()) / scaleY;
 
-        normalizedX = Math.min(normalizedX, activeStreamView.getWidth());
-        normalizedY = Math.min(normalizedY, activeStreamView.getHeight());
+        // --- 第三步：将绝对像素坐标归一化为 0-1 的比例 ---
+        int streamWidth = activeStreamView.getWidth();
+        int streamHeight = activeStreamView.getHeight();
 
-        // 归一化坐标到0到1的范围
-        normalizedX /= activeStreamView.getWidth();
-        normalizedY /= activeStreamView.getHeight();
+        if (streamWidth == 0 || streamHeight == 0) {
+            return new float[] { 0.0f, 0.0f };
+        }
+
+        float normalizedX = absoluteX / streamWidth;
+        float normalizedY = absoluteY / streamHeight;
+
+        // 确保坐标在 [0.0, 1.0] 的范围内，防止越界
+        normalizedX = Math.max(0.0f, Math.min(1.0f, normalizedX));
+        normalizedY = Math.max(0.0f, Math.min(1.0f, normalizedY));
+
+
 
         return new float[] { normalizedX, normalizedY };
     }
@@ -2444,6 +2401,29 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
     }
 
+    // 处理缩放下的经典鼠标模式
+    /**
+     * 核心坐标转换函数
+     * 将屏幕上的原始触摸坐标，根据 streamView 的平移和缩放状态，转换为游戏内的“真实”坐标。
+     */
+    private float[] getNormalizedCoordinates(View streamView, float rawX, float rawY) {
+        if (streamView == null) {
+            return new float[] { rawX, rawY };
+        }
+        float scaleX = streamView.getScaleX();
+        float scaleY = streamView.getScaleY();
+
+        // 防止除以零
+        if (scaleX == 0 || scaleY == 0) {
+            return new float[] { rawX, rawY };
+        }
+
+        float normalizedX = (rawX - streamView.getX()) / scaleX;
+        float normalizedY = (rawY - streamView.getY()) / scaleY;
+
+        return new float[] { normalizedX, normalizedY };
+    }
+
     // Returns true if the event was consumed
     // NB: View is only present if called from a view callback
     private boolean handleMotionEvent(View view, MotionEvent event) {
@@ -2715,10 +2695,16 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             // This case is for fingers
             else  //abs touch 和 屏幕虚拟手柄所属的判断条件
             {
+                // 如果处于手势模式，则消费事件用于视图操作，然后立即返回
+                if (isTouchOverrideEnabled) {
+                    panZoomHandler.handleTouchEvent(event);
+                    return true; // 事件被完全消费，不传递给游戏
+                }
                 // TODO: Re-enable native touch when have a better solution for handling
                 // cancelled touches from Android gestures and 3 finger taps to activate
                 // the software keyboard.
-                // 调整一下native touch passthrough的代码顺序
+                // ---  多点触控模式 ---
+                // 检查是否启用了多点触控，并调用 trySendTouchEvent。
                 if (!prefConfig.touchscreenTrackpad && prefConfig.enableEnhancedTouch && trySendTouchEvent(view, event)) {
                     // If this host supports touch events and absolute touch is enabled,
                     // send it directly as a touch event.
@@ -2734,20 +2720,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
                 // If this is the parent view, we'll offset our coordinates to appear as if they
                 // are relative to the StreamView like our StreamView touch events are.
-                float xOffset, yOffset;
-                if (view != streamView && !prefConfig.touchscreenTrackpad) {
-                    xOffset = -streamView.getX();
-                    yOffset = -streamView.getY();
-                }
-                else {
-                    xOffset = 0.f;
-                    yOffset = 0.f;
-                }
-
                 int actionIndex = event.getActionIndex();
-
-                int eventX = (int)(event.getX(actionIndex) + xOffset);
-                int eventY = (int)(event.getY(actionIndex) + yOffset);
 
                 // Special handling for 3 finger gesture
                 if (event.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN &&
@@ -2781,68 +2754,65 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 switch (event.getActionMasked())
                 {
                     case MotionEvent.ACTION_POINTER_DOWN:
-                    case MotionEvent.ACTION_DOWN:
-                    for (TouchContext touchContext : touchContextMap) {
-                        touchContext.setPointerCount(event.getPointerCount());
-                    }
-                        context.touchDownEvent(eventX, eventY, event.getEventTime(), true);
-                    break;
-                    case MotionEvent.ACTION_POINTER_UP:
-                    case MotionEvent.ACTION_UP:
-                    if (event.getPointerCount() == 1 &&
-                            (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || (event.getFlags() & MotionEvent.FLAG_CANCELED) == 0)) {
-                        // All fingers up
-                        if (event.getEventTime() - multiFingerDownTime < MULTI_FINGER_TAP_THRESHOLD) {
-                            // This is a 3 finger tap to bring up the keyboard
-                            // multiFingerDownTime, previously threeFingerDowntime, is also used in native-touch for keyboard toggle.
-                            toggleKeyboard();
-                            return true;
+                    case MotionEvent.ACTION_DOWN: {
+                        float[] normalizedCoords = getNormalizedCoordinates(streamView, event.getX(actionIndex), event.getY(actionIndex));
+                        for (TouchContext touchContext : touchContextMap) {
+                            touchContext.setPointerCount(event.getPointerCount());
                         }
+                        context.touchDownEvent((int) normalizedCoords[0], (int) normalizedCoords[1], event.getEventTime(), true);
+                        break;
                     }
+                    case MotionEvent.ACTION_POINTER_UP:
+                    case MotionEvent.ACTION_UP: {
+                        // 对主触摸点进行转换
+                        float[] normalizedCoords = getNormalizedCoordinates(streamView, event.getX(actionIndex), event.getY(actionIndex));
+                        if (event.getPointerCount() == 1 &&
+                                (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || (event.getFlags() & MotionEvent.FLAG_CANCELED) == 0)) {
+                            // All fingers up
+                            if (event.getEventTime() - multiFingerDownTime < MULTI_FINGER_TAP_THRESHOLD) {
+                                // This is a 3 finger tap to bring up the keyboard
+                                // multiFingerDownTime, previously threeFingerDowntime, is also used in native-touch for keyboard toggle.
+                                toggleKeyboard();
+                                return true;
+                            }
+                        }
 
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && (event.getFlags() & MotionEvent.FLAG_CANCELED) != 0) {
                             context.cancelTouch();
-                    }
-                    else {
-                            context.touchUpEvent(eventX, eventY, event.getEventTime());
+                        } else {
+                            context.touchUpEvent((int) normalizedCoords[0], (int) normalizedCoords[1], event.getEventTime());
                         }
 
                         for (TouchContext touchContext : touchContextMap) {
                             touchContext.setPointerCount(event.getPointerCount() - 1);
                         }
                         if (actionIndex == 0 && event.getPointerCount() > 1 && !context.isCancelled()) {
-                        // The original secondary touch now becomes primary
-                        context.touchDownEvent(
-                                (int)(event.getX(1) + xOffset),
-                                (int)(event.getY(1) + yOffset),
-                                event.getEventTime(), false);
+                            // 对于多点触控的特殊情况，也需要转换第二个触摸点的坐标
+                            float[] normalizedSecondaryCoords = getNormalizedCoordinates(streamView, event.getX(1), event.getY(1));
+                            context.touchDownEvent(
+                                    (int) normalizedSecondaryCoords[0],
+                                    (int) normalizedSecondaryCoords[1],
+                                    event.getEventTime(), false);
                         }
-                    break;
+                        break;
+                    }
                 case MotionEvent.ACTION_MOVE:
-                    // ACTION_MOVE is special because it always has actionIndex == 0
-                    // We'll call the move handlers for all indexes manually
-
-                    // First process the historical events
+                    // ACTION_MOVE 的处理需要更仔细，因为它有历史事件
+                    // 首先处理历史事件
                     for (int i = 0; i < event.getHistorySize(); i++) {
                         for (TouchContext aTouchContextMap : touchContextMap) {
-                            if (aTouchContextMap.getActionIndex() < event.getPointerCount())
-                            {
-                                aTouchContextMap.touchMoveEvent(
-                                        (int)(event.getHistoricalX(aTouchContextMap.getActionIndex(), i) + xOffset),
-                                        (int)(event.getHistoricalY(aTouchContextMap.getActionIndex(), i) + yOffset),
-                                        event.getHistoricalEventTime(i));
+                            if (aTouchContextMap.getActionIndex() < event.getPointerCount()) {
+                                float[] histCoords = getNormalizedCoordinates(streamView, event.getHistoricalX(aTouchContextMap.getActionIndex(), i), event.getHistoricalY(aTouchContextMap.getActionIndex(), i));
+                                aTouchContextMap.touchMoveEvent((int) histCoords[0], (int) histCoords[1], event.getHistoricalEventTime(i));
                             }
                         }
                     }
 
                     // Now process the current values
                     for (TouchContext aTouchContextMap : touchContextMap) {
-                        if (aTouchContextMap.getActionIndex() < event.getPointerCount())
-                        {
-                            aTouchContextMap.touchMoveEvent(
-                                    (int)(event.getX(aTouchContextMap.getActionIndex()) + xOffset),
-                                    (int)(event.getY(aTouchContextMap.getActionIndex()) + yOffset),
-                                    event.getEventTime());
+                        if (aTouchContextMap.getActionIndex() < event.getPointerCount()) {
+                            float[] currentCoords = getNormalizedCoordinates(streamView, event.getX(aTouchContextMap.getActionIndex()), event.getY(aTouchContextMap.getActionIndex()));
+                            aTouchContextMap.touchMoveEvent((int) currentCoords[0], (int) currentCoords[1], event.getEventTime());
                         }
                     }
                     break;
@@ -3373,6 +3343,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             conn.start(new AndroidAudioRenderer(Game.this, prefConfig.enableAudioFx, prefConfig.enableSpatializer),
                     decoderRenderer, Game.this);
         }
+
+        panZoomHandler.handleSurfaceChange();
     }
 
     @Override
