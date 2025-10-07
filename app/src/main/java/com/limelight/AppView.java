@@ -559,72 +559,22 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         }
 
         String settingsSummary = appSettingsManager.getSettingsSummary(computer.uuid, app.app);
+        String noneSettingsText = getString(R.string.app_last_settings_none);
 
-        if (settingsSummary != null && !settingsSummary.equals(getString(R.string.app_last_settings_none))) {
-            lastSettingsText.setText(getString(R.string.app_last_settings_title) + " " + settingsSummary);
+        boolean hasValidSettings = settingsSummary != null && !settingsSummary.equals(noneSettingsText);
+
+        if (hasValidSettings) {
+            String displayText = getString(R.string.app_last_settings_title) + " " + settingsSummary;
+            lastSettingsText.setText(displayText);
             lastSettingsInfo.setVisibility(View.VISIBLE);
 
-            // 只在复选框状态与保存的状态不一致时才更新
+            // 同步复选框状态(避免不必要的更新)
             boolean useLastSettings = appSettingsManager.isUseLastSettingsEnabled();
             if (useLastSettingsCheckbox.isChecked() != useLastSettings) {
                 useLastSettingsCheckbox.setChecked(useLastSettings);
             }
         } else {
             lastSettingsInfo.setVisibility(View.GONE);
-        }
-    }
-
-    /**
-     * 重置焦点状态，用于从GameView返回后修复焦点框位置异常
-     */
-    private void resetFocusState() {
-        // 重置第一次焦点标志
-        isFirstFocus = true;
-
-        // 隐藏选中框
-        if (selectionAnimator != null) {
-            View selectionIndicator = findViewById(R.id.selectionIndicator);
-            if (selectionIndicator != null) {
-                selectionIndicator.setVisibility(View.INVISIBLE);
-            }
-        }
-
-        // 重置选中位置
-        selectedPosition = -1;
-
-        // 如果有RecyclerView，延迟重置焦点
-        if (currentRecyclerView != null) {
-            currentRecyclerView.post(() -> {
-                // 清除所有子项的焦点
-                for (int i = 0; i < currentRecyclerView.getChildCount(); i++) {
-                    View child = currentRecyclerView.getChildAt(i);
-                    if (child != null) {
-                        child.clearFocus();
-                    }
-                }
-
-                // 优先聚焦到running app，如果没有则聚焦到第一个item
-                if (selectionAnimator != null && lastRunningAppId != 0) {
-                    boolean movedToRunningApp = selectionAnimator.moveToRunningApp(lastRunningAppId);
-                    if (movedToRunningApp) {
-                        // 找到running app，更新选中位置和相关状态
-                        int runningAppPosition = selectionAnimator.findRunningAppPosition(lastRunningAppId);
-                        if (runningAppPosition >= 0) {
-                            AppObject runningApp = (AppObject) appGridAdapter.getItem(runningAppPosition);
-                            handleSelectionChange(runningAppPosition, runningApp);
-                            return; // 成功聚焦到running app，不需要继续
-                        }
-                    }
-                }
-
-                // 如果没有running app，聚焦到第一个item
-                if (currentRecyclerView.getChildCount() > 0) {
-                    View firstChild = currentRecyclerView.getChildAt(0);
-                    if (firstChild != null) {
-                        firstChild.requestFocus();
-                    }
-                }
-            });
         }
     }
 
@@ -774,7 +724,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         startComputerUpdates();
 
         // 重置焦点状态
-        resetFocusState();
+        // resetFocusState();
     }
 
     @Override
@@ -829,11 +779,10 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
         // Only show the hide checkbox if this is not the currently running app or it's already hidden
         if (lastRunningAppId != selectedApp.app.getAppId() || selectedApp.isHidden) {
+            menu.add(Menu.NONE, START_WITH_VDD, 1, getResources().getString(R.string.applist_menu_start_with_vdd));
             // Add "Start with Last Settings" option if last settings exist
             if (appSettingsManager != null && appSettingsManager.hasLastSettings(computer.uuid, selectedApp.app)) {
                 menu.add(Menu.NONE, START_WITH_LAST_SETTINGS_ID, 2, getResources().getString(R.string.applist_menu_start_with_last_settings));
-            } else {
-                menu.add(Menu.NONE, START_WITH_VDD, 1, getResources().getString(R.string.applist_menu_start_with_vdd));
             }
             
             MenuItem hideAppItem = menu.add(Menu.NONE, HIDE_APP_ID, 3, getResources().getString(R.string.applist_menu_hide_app));
@@ -1297,7 +1246,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         AppObject app = (AppObject) item;
         handleSelectionChange(position, app);
 
-        if (shouldShowContextMenu(app)) {
+        if (lastRunningAppId != 0) {
             showContextMenuForPosition(position);
         } else {
             startStreamWithLastSettingsIfEnabled(app);
@@ -1326,18 +1275,6 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         return showContextMenuForPosition(position);
     }
 
-    private boolean shouldShowContextMenu(AppObject app) {
-        if (lastRunningAppId != 0) {
-            return true;
-        }
-
-        if (appSettingsManager != null && appSettingsManager.hasLastSettings(computer.uuid, app.app)) {
-            return !appSettingsManager.isUseLastSettingsEnabled();
-        }
-
-        return false;
-    }
-
     private boolean showContextMenuForPosition(int position) {
         if (currentRecyclerView == null) return false;
 
@@ -1361,9 +1298,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
             AppObject app = (AppObject) appGridAdapter.getItem(pos);
             handleSelectionChange(pos, app);
 
-            boolean shouldShowMenu = shouldShowContextMenu(app);
-
-            if (shouldShowMenu) {
+            if (lastRunningAppId != 0) {
                 openContextMenu(arg1);
             } else {
                 startStreamWithLastSettingsIfEnabled(app);

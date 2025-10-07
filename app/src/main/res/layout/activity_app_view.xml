@@ -85,6 +85,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="5dp"
+            android:focusable="true"
             android:text="@string/app_last_settings_use_checkbox"
             android:textColor="#CCFFFFFF"
             android:textSize="12sp"

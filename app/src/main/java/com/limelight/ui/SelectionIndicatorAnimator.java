@@ -10,8 +10,8 @@ import com.limelight.AppView;
 import com.limelight.grid.GenericGridAdapter;
 
 /**
- * 选中框动画控制器
- * 负责管理选中框的移动动画和位置计算
+ * Selection Indicator Animator
+ * Manages the animation and position calculation of the selection indicator
  */
 public class SelectionIndicatorAnimator {
 
@@ -20,7 +20,7 @@ public class SelectionIndicatorAnimator {
     private GenericGridAdapter<?> adapter;
     private View rootView;
 
-    // 动画配置
+    // Animation configuration
     private static final int NORMAL_ANIMATION_DURATION = 200;
     private static final int SCALE_ANIMATION_DURATION = 150;
     private static final int SCROLL_WAIT_DELAY = 50;
@@ -35,7 +35,7 @@ public class SelectionIndicatorAnimator {
     }
 
     /**
-     * 更新RecyclerView和Adapter引用
+     * Update RecyclerView and Adapter references
      */
     public void updateReferences(RecyclerView recyclerView, GenericGridAdapter<?> adapter) {
         this.recyclerView = recyclerView;
@@ -43,10 +43,10 @@ public class SelectionIndicatorAnimator {
     }
 
     /**
-     * 移动选中框到指定位置
+     * Move selection indicator to specified position
      *
-     * @param position     目标位置
-     * @param isFirstFocus 是否为第一次获得焦点（从位置0开始）
+     * @param position     Target position
+     * @param isFirstFocus Whether this is the first focus (starting from position 0)
      */
     public void moveToPosition(int position, boolean isFirstFocus) {
         if (!isValidPosition(position)) {
@@ -56,31 +56,31 @@ public class SelectionIndicatorAnimator {
         RecyclerView.ViewHolder viewHolder = recyclerView.findViewHolderForAdapterPosition(position);
         if (viewHolder != null) {
             if (isFirstFocus) {
-                // 第一次获得焦点，直接定位，不使用动画
+                // First focus, position directly without animation
                 setIndicatorPosition(viewHolder.itemView, false);
             } else {
-                // 正常情况：item在可见区域，使用动画
+                // Normal case: item is in visible area, use animation
                 animateToView(viewHolder.itemView);
             }
         } else {
-            // 边界情况：item不在可见区域，需要滚动
+            // Edge case: item is not in visible area, need to scroll
             scrollToPositionAndAnimate(position);
         }
     }
 
     /**
-     * 移动选中框到指定位置（默认使用动画）
+     * Move selection indicator to specified position (with animation by default)
      *
-     * @param position 目标位置
+     * @param position Target position
      */
     public void moveToPosition(int position) {
         moveToPosition(position, false);
     }
 
     /**
-     * 更新选中框位置（用于滚动时调用）
+     * Update selection indicator position (called during scrolling)
      *
-     * @param position 当前选中位置
+     * @param position Current selected position
      */
     public void updatePosition(int position) {
         if (!isValidPosition(position)) {
@@ -94,31 +94,31 @@ public class SelectionIndicatorAnimator {
     }
 
     /**
-     * 快速设置选中框位置 - 专用于滚动时的更新，最小化计算
+     * Fast set indicator position - dedicated for scroll updates, minimizing calculations
      *
-     * @param targetView 目标View
+     * @param targetView Target View
      */
     private void setIndicatorPositionFast(View targetView) {
-        // 使用getLocationInWindow获取相对于窗口的绝对位置
+        // Use getLocationInWindow to get absolute position relative to window
         int[] targetLocation = new int[2];
         targetView.getLocationInWindow(targetLocation);
         
-        // 获取根布局的位置作为参考点
+        // Get root layout position as reference point
         int[] rootLocation = new int[2];
         rootView.getLocationInWindow(rootLocation);
         
-        // 计算相对于根布局的位置
+        // Calculate position relative to root layout
         float targetX = targetLocation[0] - rootLocation[0];
         float targetY = targetLocation[1] - rootLocation[1];
 
-        // 直接设置位置，不进行复杂的尺寸检查
+        // Set position directly without complex size checks
         selectionIndicator.setTranslationX(targetX);
         selectionIndicator.setTranslationY(targetY);
         selectionIndicator.setVisibility(View.VISIBLE);
     }
 
     /**
-     * 检查位置是否有效
+     * Check if position is valid
      */
     private boolean isValidPosition(int position) {
         return selectionIndicator != null &&
@@ -129,51 +129,51 @@ public class SelectionIndicatorAnimator {
     }
 
     /**
-     * 动画移动到指定View
+     * Animate to specified View
      */
     private void animateToView(View targetView) {
-        // 检查是否有其他动画正在进行
+        // Check if another animation is in progress
         if (recyclerView.getScrollState() != RecyclerView.SCROLL_STATE_IDLE) {
-            // 如果RecyclerView正在滚动，等待滚动完成
+            // If RecyclerView is scrolling, wait for scroll to complete
             recyclerView.postDelayed(() -> {
-                // 重新计算位置，因为滚动可能已经改变
+                // Recalculate position as scrolling may have changed it
                 RecyclerView.ViewHolder viewHolder = recyclerView.findViewHolderForAdapterPosition(getCurrentPosition());
                 if (viewHolder != null) {
                     animateToView(viewHolder.itemView);
                 }
             }, RETRY_DELAY);
         } else {
-            // 平滑移动到新位置
+            // Smoothly move to new position
             setIndicatorPosition(targetView, true);
         }
     }
 
     /**
-     * 滚动到指定位置并执行动画
+     * Scroll to specified position and execute animation
      */
     private void scrollToPositionAndAnimate(int position) {
-        // 暂时隐藏选中框，避免在滚动过程中显示错误位置
+        // Temporarily hide indicator to avoid showing wrong position during scroll
         selectionIndicator.setVisibility(View.INVISIBLE);
 
-        // 平滑滚动到指定位置
+        // Smooth scroll to specified position
         recyclerView.smoothScrollToPosition(position);
 
-        // 使用OnScrollListener来检测滚动完成
+        // Use OnScrollListener to detect scroll completion
         RecyclerView.OnScrollListener scrollListener = new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
                 super.onScrollStateChanged(recyclerView, newState);
-                // 当滚动停止时，执行选中框动画
+                // When scrolling stops, execute indicator animation
                 if (newState == RecyclerView.SCROLL_STATE_IDLE) {
-                    // 移除这个临时的滚动监听器
+                    // Remove this temporary scroll listener
                     recyclerView.removeOnScrollListener(this);
 
-                    // 延迟一小段时间确保滚动完全停止，然后执行选中框动画
+                    // Delay briefly to ensure scroll is completely stopped, then execute indicator animation
                     recyclerView.postDelayed(() -> {
                         RecyclerView.ViewHolder viewHolder = recyclerView.findViewHolderForAdapterPosition(position);
                         if (viewHolder != null) {
                             setIndicatorPosition(viewHolder.itemView, true);
-                            // 添加缩放强调效果
+                            // Add scale emphasis effect
                             addScaleAnimation();
                         }
                     }, SCROLL_WAIT_DELAY);
@@ -181,34 +181,34 @@ public class SelectionIndicatorAnimator {
             }
         };
 
-        // 添加临时的滚动监听器
+        // Add temporary scroll listener
         recyclerView.addOnScrollListener(scrollListener);
     }
 
     /**
-     * 设置选中框位置
+     * Set indicator position
      *
-     * @param targetView    目标View
-     * @param withAnimation 是否使用动画
+     * @param targetView    Target View
+     * @param withAnimation Whether to use animation
      */
     private void setIndicatorPosition(View targetView, boolean withAnimation) {
-        // 使用getLocationInWindow获取相对于窗口的绝对位置
+        // Use getLocationInWindow to get absolute position relative to window
         int[] targetLocation = new int[2];
         targetView.getLocationInWindow(targetLocation);
         
-        // 获取根布局的位置作为参考点
+        // Get root layout position as reference point
         int[] rootLocation = new int[2];
         rootView.getLocationInWindow(rootLocation);
         
-        // 计算相对于根布局的位置
+        // Calculate position relative to root layout
         float targetX = targetLocation[0] - rootLocation[0];
         float targetY = targetLocation[1] - rootLocation[1];
 
-        // 缓存尺寸，避免重复设置
+        // Cache dimensions to avoid repeated settings
         int targetWidth = targetView.getWidth();
         int targetHeight = targetView.getHeight();
 
-        // 只有当尺寸发生变化时才更新LayoutParams
+        // Only update LayoutParams when dimensions change
         ViewGroup.LayoutParams params = selectionIndicator.getLayoutParams();
         if (params.width != targetWidth || params.height != targetHeight) {
             params.width = targetWidth;
@@ -216,26 +216,26 @@ public class SelectionIndicatorAnimator {
             selectionIndicator.setLayoutParams(params);
         }
 
-        // 显示选中框
+        // Show indicator
         selectionIndicator.setVisibility(View.VISIBLE);
 
         if (withAnimation) {
-            // 使用更快的动画方法
+            // Use faster animation method
             selectionIndicator.animate()
                     .translationX(targetX)
                     .translationY(targetY)
-                    .setDuration(Math.min(NORMAL_ANIMATION_DURATION, 120)) // 进一步减少动画时间
-                    .setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f)) // 使用更快的插值器
+                    .setDuration(Math.min(NORMAL_ANIMATION_DURATION, 120)) // Further reduce animation time
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f)) // Use faster interpolator
                     .start();
         } else {
-            // 直接设置位置，使用translationX/Y提高性能
+            // Set position directly, use translationX/Y for better performance
             selectionIndicator.setTranslationX(targetX);
             selectionIndicator.setTranslationY(targetY);
         }
     }
 
     /**
-     * 添加缩放强调动画
+     * Add scale emphasis animation
      */
     private void addScaleAnimation() {
         selectionIndicator.setScaleX(0.8f);
@@ -248,7 +248,7 @@ public class SelectionIndicatorAnimator {
     }
 
     /**
-     * 设置当前选中位置获取器
+     * Interface for current selected position provider
      */
     public interface PositionProvider {
         int getCurrentPosition();
@@ -260,54 +260,21 @@ public class SelectionIndicatorAnimator {
         this.positionProvider = provider;
     }
 
+    public void hideIndicator() {
+        selectionIndicator.setVisibility(View.INVISIBLE);
+    }
+
+    public void showIndicator() {
+        selectionIndicator.setVisibility(View.VISIBLE);
+    }
+
     /**
-     * 获取当前选中位置
+     * Get current selected position
      */
     private int getCurrentPosition() {
         if (positionProvider != null) {
             return positionProvider.getCurrentPosition();
         }
         return -1;
-    }
-
-    /**
-     * 查找running app的位置
-     *
-     * @param runningAppId running app的ID，0表示没有running app
-     * @return running app的位置，如果没有找到返回-1
-     */
-    public int findRunningAppPosition(int runningAppId) {
-        if (runningAppId == 0 || adapter == null) {
-            return -1;
-        }
-
-        // 遍历所有item查找running app
-        for (int i = 0; i < adapter.getCount(); i++) {
-            Object item = adapter.getItem(i);
-            if (item instanceof AppView.AppObject) {
-                AppView.AppObject appObject = (AppView.AppObject) item;
-                if (appObject.app.getAppId() == runningAppId && appObject.isRunning) {
-                    return i;
-                }
-            }
-        }
-
-        return -1;
-    }
-
-    /**
-     * 移动到running app位置（如果有的话）
-     *
-     * @param runningAppId running app的ID
-     * @return 是否成功移动到running app
-     */
-    public boolean moveToRunningApp(int runningAppId) {
-        int runningAppPosition = findRunningAppPosition(runningAppId);
-        if (runningAppPosition >= 0) {
-            // 移动到running app位置，不使用动画（因为是默认焦点）
-            moveToPosition(runningAppPosition, true);
-            return true;
-        }
-        return false;
     }
 }
