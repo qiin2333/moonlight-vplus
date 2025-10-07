@@ -42,8 +42,8 @@ import com.limelight.utils.FullscreenProgressOverlay;
 import com.limelight.utils.UiHelper;
 import com.limelight.utils.NetHelper;
 import com.limelight.utils.AnalyticsManager;
-import com.limelight.utils.AppCacheKeys;
 import com.limelight.utils.AppCacheManager;
+import com.limelight.utils.AppSettingsManager;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
@@ -81,17 +81,13 @@ import android.view.View;
 import android.view.View.OnGenericMotionListener;
 import android.view.View.OnSystemUiVisibilityChangeListener;
 import android.view.View.OnTouchListener;
-import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ImageButton;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.view.Gravity;
-import android.util.DisplayMetrics;
 
 import java.io.ByteArrayInputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -166,6 +162,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private String appName;
     private NvApp app;
     private float desiredRefreshRate;
+    private AppSettingsManager appSettingsManager;
+    private String computerUuid;
 
     private InputCaptureProvider inputCaptureProvider;
     private int modifierFlags = 0;
@@ -357,6 +355,16 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // Read the stream preferences
         prefConfig = PreferenceConfiguration.readPreferences(this);
         tombstonePrefs = Game.this.getSharedPreferences("DecoderTombstone", 0);
+        
+        // Initialize app settings manager
+        appSettingsManager = new AppSettingsManager(this);
+        
+        // Save computer UUID for later use
+        computerUuid = getIntent().getStringExtra(EXTRA_PC_UUID);
+        
+        // 检查是否使用上一次设置并应用（不覆盖全局配置）
+        applyLastSettingsToCurrentSession();
+        
         // Set flat region size for long press jitter elimination.
         NativeTouchContext.INTIAL_ZONE_PIXELS = prefConfig.longPressflatRegionPixels;
         NativeTouchContext.ENABLE_ENHANCED_TOUCH = prefConfig.enableEnhancedTouch;
@@ -2904,6 +2912,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             // Update GameManager state to indicate we're no longer in game
             UiHelper.notifyStreamEnded(this);
 
+            // Save current settings for this app before stopping connection
+            if (appSettingsManager != null && computerUuid != null && app != null) {
+                appSettingsManager.saveAppLastSettings(computerUuid, app, prefConfig);
+            }
+
             // Stop may take a few hundred ms to do some network I/O to tell
             // the server we're going away and clean up. Let it run in a separate
             // thread to keep things smooth for the UI. Inside moonlight-common,
@@ -3704,6 +3717,21 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     public boolean getHandleMotionEvent(StreamView streamView,MotionEvent event) {
         return handleMotionEvent(streamView,event);
+    }
+    
+    /**
+     * 应用上一次设置到当前会话（不覆盖全局配置）
+     */
+    private void applyLastSettingsToCurrentSession() {
+        if (appSettingsManager != null) {
+            // 使用AppSettingsManager统一处理上一次设置的应用
+            boolean applied = appSettingsManager.applyLastSettingsFromIntent(getIntent(), prefConfig);
+            
+            if (applied) {
+                // 显示提示信息
+                Toast.makeText(this, getString(R.string.app_last_settings_start_with_last), Toast.LENGTH_SHORT).show();
+            }
+        }
     }
     
     private void updateNotificationOverlay(int connectionStatus, String message) {

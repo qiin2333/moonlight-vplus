@@ -38,11 +38,6 @@ import com.limelight.utils.NetHelper;
 import com.limelight.utils.MoonPhaseUtils;
 import com.limelight.utils.UiHelper;
 
-/**
- * 性能覆盖层管理器
- * 负责性能覆盖层的显示、隐藏、配置、拖动和位置管理。
- * 保留了原有注释与行为。
- */
 public class PerformanceOverlayManager {
 
     private final Activity activity;
@@ -95,6 +90,51 @@ public class PerformanceOverlayManager {
     // 当前性能信息缓存
     private PerformanceInfo currentPerformanceInfo;
 
+    /**
+     * 性能项目枚举 - 统一管理所有性能指标
+     */
+    private enum PerformanceItem {
+        RESOLUTION(R.id.perfRes, "resolution", "perfResView"),
+        DECODER(R.id.perfDecoder, "decoder", "perfDecoderView"),
+        RENDER_FPS(R.id.perfRenderFps, "render_fps", "perfRenderFpsView"),
+        PACKET_LOSS(R.id.perfPacketLoss, "packet_loss", "packetLossView"),
+        NETWORK_LATENCY(R.id.perfNetworkLatency, "network_latency", "networkLatencyView"),
+        DECODE_LATENCY(R.id.perfDecodeLatency, "decode_latency", "decodeLatencyView"),
+        HOST_LATENCY(R.id.perfHostLatency, "host_latency", "hostLatencyView");
+
+        final int viewId;
+        final String preferenceKey;
+        final String fieldName;
+
+        PerformanceItem(int viewId, String preferenceKey, String fieldName) {
+            this.viewId = viewId;
+            this.preferenceKey = preferenceKey;
+            this.fieldName = fieldName;
+        }
+    }
+
+    /**
+     * 性能项目信息类 - 包含View引用和相关信息
+     */
+    private static class PerformanceItemInfo {
+        final PerformanceItem item;
+        final TextView view;
+        final Runnable infoMethod;
+
+        PerformanceItemInfo(PerformanceItem item, TextView view, Runnable infoMethod) {
+            this.item = item;
+            this.view = view;
+            this.infoMethod = infoMethod;
+        }
+
+        boolean isVisible() {
+            return view != null && view.getVisibility() == View.VISIBLE;
+        }
+    }
+
+    // 性能项目信息数组
+    private PerformanceItemInfo[] performanceItems;
+
     // 解码器类型映射表
     private static final Map<String, DecoderTypeInfo> DECODER_TYPE_MAP = new HashMap<>();
 
@@ -132,13 +172,8 @@ public class PerformanceOverlayManager {
         performanceOverlayView = activity.findViewById(R.id.performanceOverlay);
         streamView = activity.findViewById(R.id.surfaceView);
 
-        perfResView = activity.findViewById(R.id.perfRes);
-        perfDecoderView = activity.findViewById(R.id.perfDecoder);
-        perfRenderFpsView = activity.findViewById(R.id.perfRenderFps);
-        networkLatencyView = activity.findViewById(R.id.perfNetworkLatency);
-        decodeLatencyView = activity.findViewById(R.id.perfDecodeLatency);
-        hostLatencyView = activity.findViewById(R.id.perfHostLatency);
-        packetLossView = activity.findViewById(R.id.perfPacketLoss);
+        // 初始化性能项目信息
+        initializePerformanceItems();
 
         // 加载保存的布局方向设置
         loadLayoutOrientation();
@@ -154,6 +189,37 @@ public class PerformanceOverlayManager {
         }
         // 配置性能覆盖层的方向和位置
         configurePerformanceOverlay();
+    }
+
+    /**
+     * 初始化性能项目信息数组
+     */
+    private void initializePerformanceItems() {
+        performanceItems = new PerformanceItemInfo[PerformanceItem.values().length];
+        
+        for (int i = 0; i < PerformanceItem.values().length; i++) {
+            PerformanceItem item = PerformanceItem.values()[i];
+            TextView view = activity.findViewById(item.viewId);
+            Runnable infoMethod = getInfoMethodForItem(item);
+            
+            performanceItems[i] = new PerformanceItemInfo(item, view, infoMethod);
+        }
+    }
+
+    /**
+     * 根据性能项目获取对应的信息显示方法
+     */
+    private Runnable getInfoMethodForItem(PerformanceItem item) {
+        switch (item) {
+            case RESOLUTION: return this::showResolutionInfo;
+            case DECODER: return this::showDecoderInfo;
+            case RENDER_FPS: return this::showFpsInfo;
+            case PACKET_LOSS: return this::showPacketLossInfo;
+            case NETWORK_LATENCY: return this::showNetworkLatencyInfo;
+            case DECODE_LATENCY: return this::showDecodeLatencyInfo;
+            case HOST_LATENCY: return this::showHostLatencyInfo;
+            default: return this::showMoonPhaseInfo;
+        }
     }
 
     /** 隐藏覆盖层（立即） */
@@ -312,14 +378,6 @@ public class PerformanceOverlayManager {
         }
     }
 
-    /**
-     * 创建带有优雅字体样式的SpannableString
-     * @param icon 图标或前缀
-     * @param value 主要数值
-     * @param unit 单位或后缀
-     * @param valueColor 数值颜色（可选）
-     * @return 带样式的SpannableString
-     */
     private SpannableString createStyledText(String icon, String value, String unit, Integer valueColor) {
         SpannableStringBuilder builder = new SpannableStringBuilder();
         
@@ -356,68 +414,107 @@ public class PerformanceOverlayManager {
         return new SpannableString(builder);
     }
 
-    /**
-     * 更新所有性能视图（使用优雅的字体样式）
-     */
     private void updatePerformanceViewsWithStyledText(PerformanceInfo performanceInfo) {
-        // 更新分辨率信息
-        if (perfResView != null && perfResView.getVisibility() == View.VISIBLE) {
-            @SuppressLint("DefaultLocale") String resValue = String.format("%dx%d@%.0f",
-                performanceInfo.initialWidth, performanceInfo.initialHeight, performanceInfo.totalFps);
-            String moonIcon = getCurrentMoonPhaseIcon();
-            perfResView.setText(createStyledText(moonIcon, resValue, "", null));
-        }
-        
-        // 更新解码器信息
-        if (perfDecoderView != null && perfDecoderView.getVisibility() == View.VISIBLE) {
-            String decoderInfo = buildDecoderInfo(performanceInfo);
-            perfDecoderView.setText(createStyledText("", decoderInfo, "", null));
-            perfDecoderView.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-        }
-        
-        // 更新渲染FPS信息
-        if (perfRenderFpsView != null && perfRenderFpsView.getVisibility() == View.VISIBLE) {
-            @SuppressLint("DefaultLocale") String fpsValue = String.format("Rx %.0f / Rd %.0f", performanceInfo.receivedFps, performanceInfo.renderedFps);
-            perfRenderFpsView.setText(createStyledText("", fpsValue, "FPS", 0xFF0DDAF4));
-        }
-        
-        // 更新丢包率信息
-        if (packetLossView != null && packetLossView.getVisibility() == View.VISIBLE) {
-            @SuppressLint("DefaultLocale") String lossValue = String.format("%.2f", performanceInfo.lostFrameRate);
-            int lossColor = performanceInfo.lostFrameRate < 5.0f ? 0xFF7D9D7D : 0xFFB57D7D;
-            packetLossView.setText(createStyledText("📶", lossValue, "%", lossColor));
-        }
-        
-        // 更新网络延迟信息
-        if (networkLatencyView != null && networkLatencyView.getVisibility() == View.VISIBLE) {
-            boolean showPacketLoss = packetLossView != null && packetLossView.getVisibility() == View.VISIBLE;
-            String icon = showPacketLoss ? "" : "🌐";
-            @SuppressLint("DefaultLocale") String bandwidthAndLatency = String.format("%s   %d ± %d",
-                performanceInfo.bandWidth,
-                (int) (performanceInfo.rttInfo >> 32),
-                (int) performanceInfo.rttInfo);
-            networkLatencyView.setText(createStyledText(icon, bandwidthAndLatency, "ms", 0xFFBCEDD3));
-        }
-        
-        // 更新解码延迟信息
-        if (decodeLatencyView != null && decodeLatencyView.getVisibility() == View.VISIBLE) {
-            String icon = performanceInfo.decodeTimeMs < 15 ? "⏱️" : "🥵";
-            @SuppressLint("DefaultLocale") String latencyValue = String.format("%.2f", performanceInfo.decodeTimeMs);
-            decodeLatencyView.setText(createStyledText(icon, latencyValue, "ms", 0xFFD597E3));
-        }
-        
-        // 更新主机延迟信息
-        if (hostLatencyView != null && hostLatencyView.getVisibility() == View.VISIBLE) {
-            if (performanceInfo.framesWithHostProcessingLatency > 0) {
-                @SuppressLint("DefaultLocale") String latencyValue = String.format("%.1f", performanceInfo.aveHostProcessingLatency);
-                hostLatencyView.setText(createStyledText("🖥", latencyValue, "ms", 0xFF009688));
-            } else {
-                hostLatencyView.setText(createStyledText("🧋", "Ver.V+", "", 0xFF009688));
+        // 更新所有可见的性能项目
+        for (PerformanceItemInfo itemInfo : performanceItems) {
+            if (itemInfo.isVisible()) {
+                updatePerformanceItemText(itemInfo, performanceInfo);
             }
         }
-        
-        // 确保文字对齐方式得到正确应用
+
         configureTextAlignment();
+    }
+
+    /**
+     * 更新单个性能项目的文本
+     */
+    private void updatePerformanceItemText(PerformanceItemInfo itemInfo, PerformanceInfo performanceInfo) {
+        switch (itemInfo.item) {
+            case RESOLUTION:
+                updateResolutionText(itemInfo.view, performanceInfo);
+                break;
+            case DECODER:
+                updateDecoderText(itemInfo.view, performanceInfo);
+                break;
+            case RENDER_FPS:
+                updateRenderFpsText(itemInfo.view, performanceInfo);
+                break;
+            case PACKET_LOSS:
+                updatePacketLossText(itemInfo.view, performanceInfo);
+                break;
+            case NETWORK_LATENCY:
+                updateNetworkLatencyText(itemInfo.view, performanceInfo);
+                break;
+            case DECODE_LATENCY:
+                updateDecodeLatencyText(itemInfo.view, performanceInfo);
+                break;
+            case HOST_LATENCY:
+                updateHostLatencyText(itemInfo.view, performanceInfo);
+                break;
+        }
+    }
+
+    private void updateResolutionText(TextView view, PerformanceInfo performanceInfo) {
+        @SuppressLint("DefaultLocale") String resValue = String.format("%dx%d@%.0f",
+            performanceInfo.initialWidth, performanceInfo.initialHeight, performanceInfo.totalFps);
+        String moonIcon = getCurrentMoonPhaseIcon();
+        view.setText(createStyledText(moonIcon, resValue, "", null));
+    }
+
+    private void updateDecoderText(TextView view, PerformanceInfo performanceInfo) {
+        String decoderInfo = buildDecoderInfo(performanceInfo);
+        view.setText(createStyledText("", decoderInfo, "", null));
+        view.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+    }
+
+    private void updateRenderFpsText(TextView view, PerformanceInfo performanceInfo) {
+        @SuppressLint("DefaultLocale") String fpsValue = String.format("Rx %.0f / Rd %.0f", 
+            performanceInfo.receivedFps, performanceInfo.renderedFps);
+        view.setText(createStyledText("", fpsValue, "FPS", 0xFF0DDAF4));
+    }
+
+    private void updatePacketLossText(TextView view, PerformanceInfo performanceInfo) {
+        @SuppressLint("DefaultLocale") String lossValue = String.format("%.2f", performanceInfo.lostFrameRate);
+        int lossColor = performanceInfo.lostFrameRate < 5.0f ? 0xFF7D9D7D : 0xFFB57D7D;
+        view.setText(createStyledText("📶", lossValue, "%", lossColor));
+    }
+
+    private void updateNetworkLatencyText(TextView view, PerformanceInfo performanceInfo) {
+        boolean showPacketLoss = getPerformanceItemView(PerformanceItem.PACKET_LOSS) != null && 
+                                getPerformanceItemView(PerformanceItem.PACKET_LOSS).getVisibility() == View.VISIBLE;
+        String icon = showPacketLoss ? "" : "🌐";
+        @SuppressLint("DefaultLocale") String bandwidthAndLatency = String.format("%s   %d ± %d",
+            performanceInfo.bandWidth,
+            (int) (performanceInfo.rttInfo >> 32),
+            (int) performanceInfo.rttInfo);
+        view.setText(createStyledText(icon, bandwidthAndLatency, "ms", 0xFFBCEDD3));
+    }
+
+    private void updateDecodeLatencyText(TextView view, PerformanceInfo performanceInfo) {
+        String icon = performanceInfo.decodeTimeMs < 15 ? "⏱️" : "🥵";
+        @SuppressLint("DefaultLocale") String latencyValue = String.format("%.2f", performanceInfo.decodeTimeMs);
+        view.setText(createStyledText(icon, latencyValue, "ms", 0xFFD597E3));
+    }
+
+    private void updateHostLatencyText(TextView view, PerformanceInfo performanceInfo) {
+        if (performanceInfo.framesWithHostProcessingLatency > 0) {
+            @SuppressLint("DefaultLocale") String latencyValue = String.format("%.1f", performanceInfo.aveHostProcessingLatency);
+            view.setText(createStyledText("🖥", latencyValue, "ms", 0xFF009688));
+        } else {
+            view.setText(createStyledText("🧋", "Ver.V+", "", 0xFF009688));
+        }
+    }
+
+    /**
+     * 获取指定性能项目的View
+     */
+    private TextView getPerformanceItemView(PerformanceItem item) {
+        for (PerformanceItemInfo itemInfo : performanceItems) {
+            if (itemInfo.item == item) {
+                return itemInfo.view;
+            }
+        }
+        return null;
     }
 
     private void configurePerformanceOverlay() {
@@ -491,33 +588,11 @@ public class PerformanceOverlayManager {
 
     private void configureDisplayItems() {
         // 根据用户配置显示/隐藏特定的性能指标
-        if (perfResView != null) {
-            perfResView.setVisibility(PerfOverlayDisplayItemsPreference.isItemEnabled(activity, "resolution") ?
-                View.VISIBLE : View.GONE);
-        }
-        if (perfDecoderView != null) {
-            perfDecoderView.setVisibility(PerfOverlayDisplayItemsPreference.isItemEnabled(activity, "decoder") ?
-                View.VISIBLE : View.GONE);
-        }
-        if (perfRenderFpsView != null) {
-            perfRenderFpsView.setVisibility(PerfOverlayDisplayItemsPreference.isItemEnabled(activity, "render_fps") ?
-                View.VISIBLE : View.GONE);
-        }
-        if (networkLatencyView != null) {
-            networkLatencyView.setVisibility(PerfOverlayDisplayItemsPreference.isItemEnabled(activity, "network_latency") ?
-                View.VISIBLE : View.GONE);
-        }
-        if (decodeLatencyView != null) {
-            decodeLatencyView.setVisibility(PerfOverlayDisplayItemsPreference.isItemEnabled(activity, "decode_latency") ?
-                View.VISIBLE : View.GONE);
-        }
-        if (hostLatencyView != null) {
-            hostLatencyView.setVisibility(PerfOverlayDisplayItemsPreference.isItemEnabled(activity, "host_latency") ?
-                View.VISIBLE : View.GONE);
-        }
-        if (packetLossView != null) {
-            packetLossView.setVisibility(PerfOverlayDisplayItemsPreference.isItemEnabled(activity, "packet_loss") ?
-                    View.VISIBLE : View.GONE);
+        for (PerformanceItemInfo itemInfo : performanceItems) {
+            if (itemInfo.view != null) {
+                boolean isEnabled = PerfOverlayDisplayItemsPreference.isItemEnabled(activity, itemInfo.item.preferenceKey);
+                itemInfo.view.setVisibility(isEnabled ? View.VISIBLE : View.GONE);
+            }
         }
     }
 
@@ -535,15 +610,9 @@ public class PerformanceOverlayManager {
             (android.view.Gravity.CENTER_VERTICAL | android.view.Gravity.END) : 
             (android.view.Gravity.CENTER_VERTICAL | android.view.Gravity.START);
 
-        // 批量设置所有性能信息文本的对齐方式和阴影效果
-        TextView[] perfViews = {
-            perfResView, perfDecoderView, perfRenderFpsView,
-                networkLatencyView, decodeLatencyView, hostLatencyView, packetLossView
-        };
-
-        for (TextView textView : perfViews) {
-            if (textView != null && textView.getVisibility() == View.VISIBLE) {
-                configureTextViewStyle(textView, gravity, isVertical);
+        for (PerformanceItemInfo itemInfo : performanceItems) {
+            if (itemInfo.isVisible()) {
+                configureTextViewStyle(itemInfo.view, gravity, isVertical);
             }
         }
     }
@@ -570,9 +639,6 @@ public class PerformanceOverlayManager {
         }
     }
 
-    /**
-     * 配置单个TextView的样式（对齐方式、阴影效果和字体）
-     */
     private void configureTextViewStyle(TextView textView, int gravity, boolean isVertical) {
         // 设置文字对齐方式
         textView.setGravity(gravity);
@@ -594,31 +660,24 @@ public class PerformanceOverlayManager {
         // 根据TextView的ID设置特定的字体样式
         int viewId = textView.getId();
         if (viewId == R.id.perfRes) {
-            // 分辨率信息 - 标题样式
             textView.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
             textView.setTextSize(11);
         } else if (viewId == R.id.perfDecoder) {
-            // 解码器信息 - 强调样式
             textView.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
             textView.setTextSize(10);
         } else if (viewId == R.id.perfRenderFps) {
-            // FPS信息 - 数值样式
             textView.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
             textView.setTextSize(10);
         } else if (viewId == R.id.perfPacketLoss) {
-            // 丢包率 - 状态样式
             textView.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
             textView.setTextSize(10);
         } else if (viewId == R.id.perfNetworkLatency) {
-            // 网络延迟 - 状态样式
             textView.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
             textView.setTextSize(10);
         } else if (viewId == R.id.perfDecodeLatency) {
-            // 解码延迟 - 状态样式
             textView.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
             textView.setTextSize(10);
         } else if (viewId == R.id.perfHostLatency) {
-            // 主机延迟 - 状态样式
             textView.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
             textView.setTextSize(10);
         }
@@ -631,129 +690,163 @@ public class PerformanceOverlayManager {
         }
 
         performanceOverlayView.setOnTouchListener((v, event) -> {
-                switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        isDraggingPerfOverlay = true;
-                        perfOverlayStartX = event.getRawX();
-                        perfOverlayStartY = event.getRawY();
-                        clickStartTime = System.currentTimeMillis();
-                        // 记录点击位置，用于判断点击的是哪个项目
-                        clickStartX = event.getX();
-                        clickStartY = event.getY();
-                        // 重置双击处理标记
-                        isDoubleClickHandled = false;
-                        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) v.getLayoutParams();
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    return handleActionDown(v, event);
 
-                        // 如果使用预设位置（gravity不为NO_GRAVITY），需要转换为实际坐标
-                        if (layoutParams.gravity != Gravity.NO_GRAVITY) {
-                            int[] viewLocation = new int[2];
-                            int[] parentLocation = new int[2];
-                            v.getLocationInWindow(viewLocation);
-                            ((View)v.getParent()).getLocationInWindow(parentLocation);
+                case MotionEvent.ACTION_MOVE:
+                    return handleActionMove(v, event);
 
-                            // 将预设位置转换为相对于父容器的leftMargin和topMargin
-                            layoutParams.leftMargin = viewLocation[0] - parentLocation[0];
-                            layoutParams.topMargin = viewLocation[1] - parentLocation[1];
-                            layoutParams.gravity = Gravity.NO_GRAVITY;
-                            v.setLayoutParams(layoutParams);
-                        }
-
-                        perfOverlayDeltaX = perfOverlayStartX - layoutParams.leftMargin;
-                        perfOverlayDeltaY = perfOverlayStartY - layoutParams.topMargin;
-
-                        // 添加视觉反馈：降低透明度表示正在拖动
-                        v.setAlpha(0.7f);
-                        v.setScaleX(1.05f);
-                        v.setScaleY(1.05f);
-                        return true;
-
-                    case MotionEvent.ACTION_MOVE:
-                        if (isDraggingPerfOverlay) {
-                            // 获取父容器和View的尺寸
-                            int[] parentDimensions = getParentDimensions(v);
-                            int[] viewDimensions = getViewDimensions(v);
-                            int parentWidth = parentDimensions[0];
-                            int parentHeight = parentDimensions[1];
-                            int viewWidth = viewDimensions[0];
-                            int viewHeight = viewDimensions[1];
-
-                            layoutParams = (FrameLayout.LayoutParams) v.getLayoutParams();
-                            int newLeftMargin = (int) (event.getRawX() - perfOverlayDeltaX);
-                            int newTopMargin = (int) (event.getRawY() - perfOverlayDeltaY);
-
-                            // 边界检查，防止移出屏幕
-                            newLeftMargin = Math.max(0, Math.min(newLeftMargin, parentWidth - viewWidth));
-                            newTopMargin = Math.max(0, Math.min(newTopMargin, parentHeight - viewHeight));
-
-                            layoutParams.leftMargin = newLeftMargin;
-                            layoutParams.topMargin = newTopMargin;
-                            layoutParams.gravity = Gravity.NO_GRAVITY;
-                            v.setLayoutParams(layoutParams);
-
-                            // 拖动过程中实时更新文字对齐
-                            configureTextAlignment();
-                            return true;
-                        }
-                        break;
-
-                    case MotionEvent.ACTION_UP:
-                        if (isDraggingPerfOverlay) {
-                            isDraggingPerfOverlay = false;
-
-                            // 恢复视觉效果
-                            v.setAlpha(1.0f);
-                            v.setScaleX(1.0f);
-                            v.setScaleY(1.0f);
-
-                            // 检测是否为点击事件
-                            if (isClick(event)) {
-                                // 检查是否为双击
-                                long currentTime = System.currentTimeMillis();
-                                long timeSinceLastClick = currentTime - lastClickTime;
-
-                                if (timeSinceLastClick < DOUBLE_CLICK_TIMEOUT && lastClickTime > 0) {
-                                    // 双击：切换布局，完全消费事件，不传播给子View
-                                    toggleLayoutOrientation();
-                                    lastClickTime = 0; // 重置
-                                    isDoubleClickHandled = true; // 标记双击已处理
-                                    // 双击时完全消费事件，不传播给任何子View
-                                    return true;
-                                } else {
-                                    // 单击：延迟显示项目信息，等待确认不是双击
-                                    lastClickTime = currentTime;
-                                    isDoubleClickHandled = false; // 重置双击标记
-                                    // 延迟显示单击效果，等待双击检测窗口
-                                    performanceOverlayView.postDelayed(() -> {
-                                        // 检查是否在延迟期间被双击处理
-                                        if (!isDoubleClickHandled && lastClickTime > 0) {
-                                            showClickedItemInfo();
-                                        }
-                                    }, DOUBLE_CLICK_TIMEOUT);
-                                }
-                            } else {
-                            snapToNearestPosition(v);
-                            }
-
-                            return true;
-                        }
-                        break;
-                }
-                return false;
+                case MotionEvent.ACTION_UP:
+                    return handleActionUp(v, event);
+            }
+            return false;
         });
+    }
+
+    /**
+     * 处理触摸按下事件
+     */
+    private boolean handleActionDown(View v, MotionEvent event) {
+        isDraggingPerfOverlay = true;
+        perfOverlayStartX = event.getRawX();
+        perfOverlayStartY = event.getRawY();
+        clickStartTime = System.currentTimeMillis();
+        clickStartX = event.getX();
+        clickStartY = event.getY();
+        isDoubleClickHandled = false;
+
+        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) v.getLayoutParams();
+
+        // 如果使用预设位置（gravity不为NO_GRAVITY），需要转换为实际坐标
+        if (layoutParams.gravity != Gravity.NO_GRAVITY) {
+            convertGravityToMargins(v, layoutParams);
+        }
+
+        perfOverlayDeltaX = perfOverlayStartX - layoutParams.leftMargin;
+        perfOverlayDeltaY = perfOverlayStartY - layoutParams.topMargin;
+
+        // 添加视觉反馈：降低透明度表示正在拖动
+        applyDraggingVisualFeedback(v, true);
+        return true;
+    }
+
+    /**
+     * 处理触摸移动事件
+     */
+    private boolean handleActionMove(View v, MotionEvent event) {
+        if (!isDraggingPerfOverlay) {
+            return false;
+        }
+
+        // 获取父容器和View的尺寸
+        int[] parentDimensions = getParentDimensions(v);
+        int[] viewDimensions = getViewDimensions(v);
+        int parentWidth = parentDimensions[0];
+        int parentHeight = parentDimensions[1];
+        int viewWidth = viewDimensions[0];
+        int viewHeight = viewDimensions[1];
+
+        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) v.getLayoutParams();
+        int newLeftMargin = (int) (event.getRawX() - perfOverlayDeltaX);
+        int newTopMargin = (int) (event.getRawY() - perfOverlayDeltaY);
+
+        // 边界检查，防止移出屏幕
+        newLeftMargin = Math.max(0, Math.min(newLeftMargin, parentWidth - viewWidth));
+        newTopMargin = Math.max(0, Math.min(newTopMargin, parentHeight - viewHeight));
+
+        layoutParams.leftMargin = newLeftMargin;
+        layoutParams.topMargin = newTopMargin;
+        layoutParams.gravity = Gravity.NO_GRAVITY;
+        v.setLayoutParams(layoutParams);
+
+        // 拖动过程中实时更新文字对齐
+        configureTextAlignment();
+        return true;
+    }
+
+    /**
+     * 处理触摸抬起事件
+     */
+    private boolean handleActionUp(View v, MotionEvent event) {
+        if (!isDraggingPerfOverlay) {
+            return false;
+        }
+
+        isDraggingPerfOverlay = false;
+        applyDraggingVisualFeedback(v, false);
+
+        // 检测是否为点击事件
+        if (isClick(event)) {
+            handleClickEvent();
+        } else {
+            snapToNearestPosition(v);
+        }
+
+        return true;
+    }
+
+    /**
+     * 将预设位置转换为实际边距
+     */
+    private void convertGravityToMargins(View v, FrameLayout.LayoutParams layoutParams) {
+        int[] viewLocation = new int[2];
+        int[] parentLocation = new int[2];
+        v.getLocationInWindow(viewLocation);
+        ((View) v.getParent()).getLocationInWindow(parentLocation);
+
+        layoutParams.leftMargin = viewLocation[0] - parentLocation[0];
+        layoutParams.topMargin = viewLocation[1] - parentLocation[1];
+        layoutParams.gravity = Gravity.NO_GRAVITY;
+        v.setLayoutParams(layoutParams);
+    }
+
+    /**
+     * 应用拖动视觉反馈效果
+     */
+    private void applyDraggingVisualFeedback(View v, boolean isDragging) {
+        if (isDragging) {
+            v.setAlpha(0.7f);
+            v.setScaleX(1.05f);
+            v.setScaleY(1.05f);
+        } else {
+            v.setAlpha(1.0f);
+            v.setScaleX(1.0f);
+            v.setScaleY(1.0f);
+        }
+    }
+
+    /**
+     * 处理点击事件（单击和双击）
+     */
+    private void handleClickEvent() {
+        long currentTime = System.currentTimeMillis();
+        long timeSinceLastClick = currentTime - lastClickTime;
+
+        if (timeSinceLastClick < DOUBLE_CLICK_TIMEOUT && lastClickTime > 0) {
+            // 双击：切换布局
+            toggleLayoutOrientation();
+            lastClickTime = 0;
+            isDoubleClickHandled = true;
+        } else {
+            // 单击：延迟显示项目信息，等待确认不是双击
+            lastClickTime = currentTime;
+            isDoubleClickHandled = false;
+            performanceOverlayView.postDelayed(() -> {
+                if (!isDoubleClickHandled && lastClickTime > 0) {
+                    showClickedItemInfo();
+                }
+            }, DOUBLE_CLICK_TIMEOUT);
+        }
     }
 
     /**
      * 根据点击位置显示对应项目的信息
      */
     private void showClickedItemInfo() {
-        // 简化的点击检测：根据点击的Y坐标判断是哪个项目
-        boolean isVertical = prefConfig.perfOverlayOrientation == PreferenceConfiguration.PerfOverlayOrientation.VERTICAL;
-
-        if (isVertical) {
-            // 垂直布局：根据Y坐标判断
+        if (prefConfig.perfOverlayOrientation == PreferenceConfiguration.PerfOverlayOrientation.VERTICAL) {
             showClickedItemInfoVertical();
         } else {
-            // 水平布局：根据X坐标判断
             showClickedItemInfoHorizontal();
         }
     }
@@ -784,22 +877,53 @@ public class PerformanceOverlayManager {
      * 水平布局的点击检测
      */
     private void showClickedItemInfoHorizontal() {
-        // 获取覆盖层宽度和可见项目数量
+        // 获取覆盖层宽度
         int overlayWidth = performanceOverlayView.getWidth();
         if (overlayWidth == 0) return;
 
-        // 计算每个项目的平均宽度
+        // 获取可见项目数量
         int visibleItemCount = getVisibleItemCount();
         if (visibleItemCount == 0) {
             showMoonPhaseInfo(); // 默认显示月相信息
             return;
         }
 
-        int itemWidth = overlayWidth / visibleItemCount;
-        int clickedItemIndex = (int) (clickStartX / itemWidth);
-
+        // 使用实际View边界进行点击检测
+        int clickedItemIndex = findClickedItemByBoundaries();
+        
         // 根据索引显示对应信息
         showInfoByIndex(clickedItemIndex);
+    }
+
+    /**
+     * 基于实际View边界查找被点击的项目
+     */
+    private int findClickedItemByBoundaries() {
+        int currentIndex = 0;
+        for (PerformanceItemInfo itemInfo : performanceItems) {
+            if (itemInfo.isVisible()) {
+                // 获取View在父容器中的位置
+                int[] viewLocation = new int[2];
+                itemInfo.view.getLocationInWindow(viewLocation);
+                
+                // 获取覆盖层在父容器中的位置
+                int[] overlayLocation = new int[2];
+                performanceOverlayView.getLocationInWindow(overlayLocation);
+                
+                // 计算View相对于覆盖层的边界
+                int viewLeft = viewLocation[0] - overlayLocation[0];
+                int viewRight = viewLeft + itemInfo.view.getWidth();
+                
+                // 检查点击位置是否在此View的边界内
+                if (clickStartX >= viewLeft && clickStartX <= viewRight) {
+                    return currentIndex;
+                }
+                
+                currentIndex++;
+            }
+        }
+        
+        return -1;
     }
 
     /**
@@ -807,14 +931,11 @@ public class PerformanceOverlayManager {
      */
     private int getVisibleItemCount() {
         int count = 0;
-        if (perfResView != null && perfResView.getVisibility() == View.VISIBLE) count++;
-        if (perfDecoderView != null && perfDecoderView.getVisibility() == View.VISIBLE) count++;
-        if (perfRenderFpsView != null && perfRenderFpsView.getVisibility() == View.VISIBLE) count++;
-        if (packetLossView != null && packetLossView.getVisibility() == View.VISIBLE) count++;
-        if (networkLatencyView != null && networkLatencyView.getVisibility() == View.VISIBLE)
-            count++;
-        if (decodeLatencyView != null && decodeLatencyView.getVisibility() == View.VISIBLE) count++;
-        if (hostLatencyView != null && hostLatencyView.getVisibility() == View.VISIBLE) count++;
+        for (PerformanceItemInfo itemInfo : performanceItems) {
+            if (itemInfo.isVisible()) {
+                count++;
+            }
+        }
         return count;
     }
 
@@ -823,64 +944,16 @@ public class PerformanceOverlayManager {
      */
     private void showInfoByIndex(int index) {
         int currentIndex = 0;
-
-        if (perfResView != null && perfResView.getVisibility() == View.VISIBLE) {
-            if (currentIndex == index) {
-                showResolutionInfo();
-                return;
+        for (PerformanceItemInfo itemInfo : performanceItems) {
+            if (itemInfo.isVisible()) {
+                if (currentIndex == index) {
+                    itemInfo.infoMethod.run();
+                    return;
+                }
+                currentIndex++;
             }
-            currentIndex++;
         }
-
-        if (perfDecoderView != null && perfDecoderView.getVisibility() == View.VISIBLE) {
-            if (currentIndex == index) {
-                showDecoderInfo();
-                return;
-            }
-            currentIndex++;
-        }
-
-        if (perfRenderFpsView != null && perfRenderFpsView.getVisibility() == View.VISIBLE) {
-            if (currentIndex == index) {
-                showFpsInfo();
-                return;
-            }
-            currentIndex++;
-        }
-
-        if (packetLossView != null && packetLossView.getVisibility() == View.VISIBLE) {
-            if (currentIndex == index) {
-                showPacketLossInfo();
-                return;
-            }
-            currentIndex++;
-        }
-
-        if (networkLatencyView != null && networkLatencyView.getVisibility() == View.VISIBLE) {
-            if (currentIndex == index) {
-                showNetworkLatencyInfo();
-                return;
-            }
-            currentIndex++;
-        }
-
-        if (decodeLatencyView != null && decodeLatencyView.getVisibility() == View.VISIBLE) {
-            if (currentIndex == index) {
-                showDecodeLatencyInfo();
-                return;
-            }
-            currentIndex++;
-        }
-
-        if (hostLatencyView != null && hostLatencyView.getVisibility() == View.VISIBLE) {
-            if (currentIndex == index) {
-                showHostLatencyInfo();
-                return;
-            }
-            currentIndex++;
-        }
-
-        // 如果没有找到匹配的项目，显示默认信息
+        
         showMoonPhaseInfo();
     }
 
@@ -1024,9 +1097,6 @@ public class PerformanceOverlayManager {
         return new DecoderTypeInfo(fullDecoderName, fullDecoderName);
     }
 
-    /**
-     * 通用的性能信息显示方法
-     */
     private void showPerformanceInfo(int titleResId, int infoResId) {
         showInfoDialog(
                 activity.getString(titleResId),
@@ -1034,44 +1104,27 @@ public class PerformanceOverlayManager {
         );
     }
 
-    /**
-     * 显示FPS信息
-     */
+
     private void showFpsInfo() {
         showPerformanceInfo(R.string.perf_fps_title, R.string.perf_fps_info);
     }
 
-    /**
-     * 显示丢包率信息
-     */
     private void showPacketLossInfo() {
         showPerformanceInfo(R.string.perf_packet_loss_title, R.string.perf_packet_loss_info);
     }
 
-    /**
-     * 显示网络延迟信息
-     */
     private void showNetworkLatencyInfo() {
         showPerformanceInfo(R.string.perf_network_latency_title, R.string.perf_network_latency_info);
     }
 
-    /**
-     * 显示解码延迟信息
-     */
     private void showDecodeLatencyInfo() {
         showPerformanceInfo(R.string.perf_decode_latency_title, R.string.perf_decode_latency_info);
     }
 
-    /**
-     * 显示主机延迟信息
-     */
     private void showHostLatencyInfo() {
         showPerformanceInfo(R.string.perf_host_latency_title, R.string.perf_host_latency_info);
     }
 
-    /**
-     * 显示信息对话框
-     */
     private void showInfoDialog(String title, String message) {
         new AlertDialog.Builder(activity, R.style.AppDialogStyle)
                 .setTitle(title)
@@ -1081,9 +1134,6 @@ public class PerformanceOverlayManager {
                 .show();
     }
 
-    /**
-     * 切换性能覆盖层布局方向
-     */
     private void toggleLayoutOrientation() {
         // 切换布局方向
         if (prefConfig.perfOverlayOrientation == PreferenceConfiguration.PerfOverlayOrientation.VERTICAL) {
@@ -1099,9 +1149,6 @@ public class PerformanceOverlayManager {
         configurePerformanceOverlay();
     }
 
-    /**
-     * 保存布局方向设置
-     */
     private void saveLayoutOrientation() {
         SharedPreferences prefs = activity.getSharedPreferences("performance_overlay", Activity.MODE_PRIVATE);
         prefs.edit()
@@ -1109,9 +1156,6 @@ public class PerformanceOverlayManager {
                 .apply();
     }
 
-    /**
-     * 加载保存的布局方向设置
-     */
     private void loadLayoutOrientation() {
         SharedPreferences prefs = activity.getSharedPreferences("performance_overlay", Activity.MODE_PRIVATE);
         String savedOrientation = prefs.getString("layout_orientation", null);

@@ -31,8 +31,8 @@ import java.util.Set;
 @SuppressWarnings("unchecked")
 public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
     private static final int ART_WIDTH_PX = 300;
-    private static final int SMALL_WIDTH_DP = 100;
-    private static final int LARGE_WIDTH_DP = 150;
+    private static final int SMALL_WIDTH_DP = 120;
+    private static final int LARGE_WIDTH_DP = 180;
 
     private final ComputerDetails computer;
     private final String uniqueId;
@@ -211,7 +211,7 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
 
         if (obj.isRunning) {
             // Show the play button overlay
-            overlayView.setImageResource(R.drawable.ic_play);
+            overlayView.setImageResource(R.drawable.ic_play_cute);
             overlayView.setVisibility(View.VISIBLE);
             // 使用更平滑的背景图片加载
             loader.populateImageView(obj, appBackgroundImage, txtView, true);

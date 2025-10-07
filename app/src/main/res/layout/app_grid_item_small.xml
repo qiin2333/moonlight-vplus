@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="100dp"
-    android:layout_height="133dp"
-    android:padding="5dp">
+    android:layout_width="120dp"
+    android:layout_height="160dp"
+    android:padding="6dp"
+    android:focusable="true"
+    android:focusableInTouchMode="false">
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -16,8 +18,8 @@
         </ImageView>
         <ImageView
             android:id="@+id/grid_overlay"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="10dp"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="6dp"
             android:layout_width="33dp"
             android:layout_height="33dp">
         </ImageView>

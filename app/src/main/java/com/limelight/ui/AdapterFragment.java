@@ -30,6 +30,8 @@ public class AdapterFragment extends Fragment {
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        callbacks.receiveAbsListView(getView().findViewById(R.id.fragmentView));
+    // Pass the view (could be a GridView or RecyclerView) to the activity
+    callbacks.receiveAbsListView(getView().findViewById(R.id.fragmentView));
     }
 }
+

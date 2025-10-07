@@ -6,8 +6,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
-import com.bumptech.glide.Glide;
-import com.limelight.computers.ComputerManagerListener;
 import com.limelight.computers.ComputerManagerService;
 import com.limelight.grid.AppGridAdapter;
 import com.limelight.grid.assets.CachedAppAssetLoader;
@@ -19,6 +17,8 @@ import com.limelight.nvstream.http.PairingManager;
 import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.ui.AdapterFragment;
 import com.limelight.ui.AdapterFragmentCallbacks;
+import com.limelight.ui.AdapterRecyclerBridge;
+import com.limelight.ui.SelectionIndicatorAnimator;
 import com.limelight.utils.BackgroundImageManager;
 import com.limelight.utils.CacheHelper;
 import com.limelight.utils.Dialog;
@@ -26,7 +26,9 @@ import com.limelight.utils.ServerHelper;
 import com.limelight.utils.ShortcutHelper;
 import com.limelight.utils.SpinnerDialog;
 import com.limelight.utils.UiHelper;
+import com.limelight.utils.AppSettingsManager;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Service;
 import android.content.ComponentName;
@@ -34,24 +36,32 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
-import android.database.DataSetObserver;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.RelativeSizeSpan;
 import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ContextMenu.ContextMenuInfo;
+import android.view.ViewGroup;
 import android.widget.AbsListView;
-import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemClickListener;
+import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.AdapterView.AdapterContextMenuInfo;
+import android.widget.CheckBox;
+import android.widget.LinearLayout;
+import android.os.Handler;
+import android.os.Looper;
+
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.GridLayoutManager;
 
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -71,6 +81,25 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
     private HashSet<Integer> hiddenAppIds = new HashSet<>();
     private ImageView appBackgroundImage;
     private BackgroundImageManager backgroundImageManager;
+    private int selectedPosition = -1; // 跟踪当前选中的位置
+    private String computerName; // 存储计算机名称
+
+    // 选中框动画相关
+    private SelectionIndicatorAnimator selectionAnimator;
+    private RecyclerView currentRecyclerView;
+    private AdapterRecyclerBridge currentAdapterBridge;
+    private boolean isFirstFocus = true; // 跟踪是否是第一次获得焦点
+
+    // 防抖相关变量
+    private final Handler backgroundChangeHandler = new Handler(Looper.getMainLooper());
+    private Runnable backgroundChangeRunnable;
+    private static final int BACKGROUND_CHANGE_DELAY = 300; // 300ms防抖延迟
+
+    // 上一次设置相关
+    private AppSettingsManager appSettingsManager;
+    private LinearLayout lastSettingsInfo;
+    private TextView lastSettingsText;
+    private CheckBox useLastSettingsCheckbox;
 
     private final static int START_OR_RESUME_ID = 1;
     private final static int QUIT_ID = 2;
@@ -79,6 +108,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
     private final static int VIEW_DETAILS_ID = 5;
     private final static int CREATE_SHORTCUT_ID = 6;
     private final static int HIDE_APP_ID = 7;
+    private final static int START_WITH_LAST_SETTINGS_ID = 8;
 
     public final static String HIDDEN_APPS_PREF_FILENAME = "HiddenApps";
 
@@ -88,6 +118,10 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
     public final static String SHOW_HIDDEN_APPS_EXTRA = "ShowHiddenApps";
     public final static String SELECTED_ADDRESS_EXTRA = "SelectedAddress";
     public final static String SELECTED_PORT_EXTRA = "SelectedPort";
+
+    private final static int DEFAULT_VERTICAL_SPAN_COUNT = 2;
+    private final static int DEFAULT_HORIZONTAL_SPAN_COUNT = 1;
+    private final static int VERTICAL_SINGLE_ROW_THRESHOLD = 4; // 竖屏时，app数量小于等于4个时使用1行
 
     private ComputerManagerService.ComputerManagerBinder managerBinder;
     private final ServiceConnection serviceConnection = new ServiceConnection() {
@@ -147,23 +181,20 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                     // Start updates
                     startComputerUpdates();
 
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (isFinishing() || isChangingConfigurations()) {
-                                return;
-                            }
+                    runOnUiThread(() -> {
+                        if (isFinishing() || isChangingConfigurations()) {
+                            return;
+                        }
 
-                            // Despite my best efforts to catch all conditions that could
-                            // cause the activity to be destroyed when we try to commit
-                            // I haven't been able to, so we have this try-catch block.
-                            try {
-                                getFragmentManager().beginTransaction()
-                                        .replace(R.id.appFragmentContainer, new AdapterFragment())
-                                        .commitAllowingStateLoss();
-                            } catch (IllegalStateException e) {
-                                e.printStackTrace();
-                            }
+                        // Despite my best efforts to catch all conditions that could
+                        // cause the activity to be destroyed when we try to commit
+                        // I haven't been able to, so we have this try-catch block.
+                        try {
+                            getFragmentManager().beginTransaction()
+                                    .replace(R.id.appFragmentContainer, new AdapterFragment())
+                                    .commitAllowingStateLoss();
+                        } catch (IllegalStateException e) {
+                            e.printStackTrace();
                         }
                     });
                 }
@@ -190,6 +221,13 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                 getFragmentManager().beginTransaction()
                         .replace(R.id.appFragmentContainer, new AdapterFragment())
                         .commitAllowingStateLoss();
+
+                // 延迟检查布局，等待Fragment重新创建完成
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    if (currentRecyclerView != null) {
+                        checkAndUpdateLayout(currentRecyclerView);
+                    }
+                }, 100);
             } catch (IllegalStateException e) {
                 e.printStackTrace();
             }
@@ -202,78 +240,69 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
             return;
         }
 
-        managerBinder.startPolling(new ComputerManagerListener() {
-            @Override
-            public void notifyComputerUpdated(final ComputerDetails details) {
-                // Do nothing if updates are suspended
-                if (suspendGridUpdates) {
-                    return;
-                }
+        managerBinder.startPolling(details -> {
+            // Do nothing if updates are suspended
+            if (suspendGridUpdates) {
+                return;
+            }
 
-                // Don't care about other computers
-                if (!details.uuid.equalsIgnoreCase(uuidString)) {
-                    return;
-                }
+            // Don't care about other computers
+            if (!details.uuid.equalsIgnoreCase(uuidString)) {
+                return;
+            }
 
-                if (details.state == ComputerDetails.State.OFFLINE) {
-                    // The PC is unreachable now
-                    AppView.this.runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            // Display a toast to the user and quit the activity
-                            Toast.makeText(AppView.this, getResources().getText(R.string.lost_connection), Toast.LENGTH_SHORT).show();
-                            finish();
-                        }
-                    });
+            if (details.state == ComputerDetails.State.OFFLINE) {
+                // The PC is unreachable now
+                runOnUiThread(() -> {
+                    // Display a toast to the user and quit the activity
+                    Toast.makeText(AppView.this, getResources().getText(R.string.lost_connection), Toast.LENGTH_SHORT).show();
+                    finish();
+                });
 
-                    return;
-                }
+                return;
+            }
 
-                // Close immediately if the PC is no longer paired
-                if (details.state == ComputerDetails.State.ONLINE && details.pairState != PairingManager.PairState.PAIRED) {
-                    AppView.this.runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            // Disable shortcuts referencing this PC for now
-                            shortcutHelper.disableComputerShortcut(details,
-                                    getResources().getString(R.string.scut_not_paired));
+            // Close immediately if the PC is no longer paired
+            if (details.state == ComputerDetails.State.ONLINE && details.pairState != PairingManager.PairState.PAIRED) {
+                runOnUiThread(() -> {
+                    // Disable shortcuts referencing this PC for now
+                    shortcutHelper.disableComputerShortcut(details,
+                            getResources().getString(R.string.scut_not_paired));
 
-                            // Display a toast to the user and quit the activity
-                            Toast.makeText(AppView.this, getResources().getText(R.string.scut_not_paired), Toast.LENGTH_SHORT).show();
-                            finish();
-                        }
-                    });
+                    // Display a toast to the user and quit the activity
+                    Toast.makeText(AppView.this, getResources().getText(R.string.scut_not_paired), Toast.LENGTH_SHORT).show();
+                    finish();
+                });
 
-                    return;
-                }
+                return;
+            }
 
-                // App list is the same or empty
-                if (details.rawAppList == null || details.rawAppList.equals(lastRawApplist)) {
+            // App list is the same or empty
+            if (details.rawAppList == null || details.rawAppList.equals(lastRawApplist)) {
 
-                    // Let's check if the running app ID changed
-                    if (details.runningGameId != lastRunningAppId) {
-                        // Update the currently running game using the app ID
-                        lastRunningAppId = details.runningGameId;
-                        updateUiWithServerinfo(details);
-                    }
-
-                    return;
-                }
-
-                lastRunningAppId = details.runningGameId;
-                lastRawApplist = details.rawAppList;
-
-                try {
-                    updateUiWithAppList(NvHTTP.getAppListByReader(new StringReader(details.rawAppList)));
+                // Let's check if the running app ID changed
+                if (details.runningGameId != lastRunningAppId) {
+                    // Update the currently running game using the app ID
+                    lastRunningAppId = details.runningGameId;
                     updateUiWithServerinfo(details);
-
-                    if (blockingLoadSpinner != null) {
-                        blockingLoadSpinner.dismiss();
-                        blockingLoadSpinner = null;
-                    }
-                } catch (XmlPullParserException | IOException e) {
-                    e.printStackTrace();
                 }
+
+                return;
+            }
+
+            lastRunningAppId = details.runningGameId;
+            lastRawApplist = details.rawAppList;
+
+            try {
+                updateUiWithAppList(NvHTTP.getAppListByReader(new StringReader(details.rawAppList)));
+                updateUiWithServerinfo(details);
+
+                if (blockingLoadSpinner != null) {
+                    blockingLoadSpinner.dismiss();
+                    blockingLoadSpinner = null;
+                }
+            } catch (XmlPullParserException | IOException e) {
+                e.printStackTrace();
             }
         });
 
@@ -319,6 +348,27 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         appBackgroundImage = findViewById(R.id.appBackgroundImage);
         backgroundImageManager = new BackgroundImageManager(this, appBackgroundImage);
 
+        // Initialize app settings manager and UI components
+        appSettingsManager = new AppSettingsManager(this);
+        lastSettingsInfo = findViewById(R.id.lastSettingsInfo);
+        lastSettingsText = findViewById(R.id.lastSettingsText);
+        useLastSettingsCheckbox = findViewById(R.id.useLastSettingsCheckbox);
+
+        // Set up event listeners
+        useLastSettingsCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            appSettingsManager.setUseLastSettingsEnabled(isChecked);
+        });
+
+        // Initialize selection indicator animator
+        View selectionIndicator = findViewById(R.id.selectionIndicator);
+        selectionAnimator = new SelectionIndicatorAnimator(
+                selectionIndicator,
+                null, // RecyclerView will be set later
+                null, // Adapter will be set later
+                findViewById(android.R.id.content)
+        );
+        selectionAnimator.setPositionProvider(() -> selectedPosition);
+
         // Allow floating expanded PiP overlays while browsing apps
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             setShouldDockBigOverlays(false);
@@ -330,11 +380,11 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         uuidString = getIntent().getStringExtra(UUID_EXTRA);
 
         SharedPreferences hiddenAppsPrefs = getSharedPreferences(HIDDEN_APPS_PREF_FILENAME, MODE_PRIVATE);
-        for (String hiddenAppIdStr : hiddenAppsPrefs.getStringSet(uuidString, new HashSet<String>())) {
+        for (String hiddenAppIdStr : hiddenAppsPrefs.getStringSet(uuidString, new HashSet<>())) {
             hiddenAppIds.add(Integer.parseInt(hiddenAppIdStr));
         }
 
-        String computerName = getIntent().getStringExtra(NAME_EXTRA);
+        computerName = getIntent().getStringExtra(NAME_EXTRA);
 
         TextView label = findViewById(R.id.appListText);
         setTitle(computerName);
@@ -358,6 +408,252 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                 .apply();
 
         appGridAdapter.updateHiddenApps(hiddenAppIds, hideImmediately);
+    }
+
+    @SuppressLint("SetTextI18n")
+    private void updateTitle(String appName) {
+        TextView label = findViewById(R.id.appListText);
+        if (appName != null && !appName.isEmpty()) {
+            // 检查当前是否为横屏
+            boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+
+            // 根据屏幕方向选择分隔符
+            String separator = isLandscape ? " - " : "\n";
+            String text = computerName + separator + appName;
+
+            SpannableString spannableString = new SpannableString(text);
+            int appNameStart = computerName.length() + 1; // +1 是分隔符
+
+            // 设置应用名称的字体大小
+            spannableString.setSpan(
+                    new RelativeSizeSpan(0.85f),
+                    appNameStart,
+                    text.length(),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            );
+
+            label.setText(spannableString);
+        } else {
+            label.setText(computerName);
+        }
+    }
+
+    /**
+     * 防抖的背景切换方法
+     *
+     * @param app 要切换背景的应用对象
+     */
+    private void changeBackgroundWithDebounce(AppView.AppObject app) {
+        // 取消之前的延迟任务
+        if (backgroundChangeRunnable != null) {
+            backgroundChangeHandler.removeCallbacks(backgroundChangeRunnable);
+        }
+
+        // 创建新的延迟任务
+        backgroundChangeRunnable = () -> {
+            if (app != null && appGridAdapter != null && appGridAdapter.getLoader() != null) {
+                setAppAsBackground(app);
+            }
+            backgroundChangeRunnable = null;
+        };
+
+        // 延迟执行背景切换
+        backgroundChangeHandler.postDelayed(backgroundChangeRunnable, BACKGROUND_CHANGE_DELAY);
+    }
+
+    /**
+     * 设置指定应用为背景
+     *
+     * @param appObject 应用对象
+     */
+    private void setAppAsBackground(AppView.AppObject appObject) {
+        if (isFinishing() || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && isDestroyed())) {
+            return;
+        }
+
+        if (backgroundImageManager != null && appBackgroundImage != null) {
+            CachedAppAssetLoader loader = appGridAdapter.getLoader();
+            CachedAppAssetLoader.LoaderTuple tuple = new CachedAppAssetLoader.LoaderTuple(computer, appObject.app);
+
+            // 尝试从内存缓存获取bitmap
+            ScaledBitmap cachedBitmap = loader.getBitmapFromCache(tuple);
+            if (cachedBitmap != null && cachedBitmap.bitmap != null) {
+                backgroundImageManager.setBackgroundSmoothly(cachedBitmap.bitmap);
+            } else {
+                // 如果缓存中没有，异步加载
+                ImageView tempImageView = new ImageView(this);
+                loader.populateImageView(appObject, tempImageView, null, false, () -> {
+                    if (tempImageView.getDrawable() instanceof BitmapDrawable) {
+                        Bitmap bitmap = ((BitmapDrawable) tempImageView.getDrawable()).getBitmap();
+                        if (bitmap != null) {
+                            backgroundImageManager.setBackgroundSmoothly(bitmap);
+                        }
+                    }
+                });
+            }
+        }
+    }
+
+    /**
+     * 计算最优的spanCount
+     *
+     * @param orientation 屏幕方向
+     * @return 最优的行数
+     */
+    private int calculateOptimalSpanCount(int orientation) {
+        if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            return DEFAULT_HORIZONTAL_SPAN_COUNT;
+        } else {
+            // 竖屏：根据app数量固定阈值判断
+            if (appGridAdapter == null) {
+                return DEFAULT_VERTICAL_SPAN_COUNT;
+            }
+
+            int appCount = appGridAdapter.getCount();
+            if (appCount == 0) {
+                return DEFAULT_VERTICAL_SPAN_COUNT;
+            }
+
+            // 简化逻辑：app数量小于等于4个时使用1行，大于4个时使用2行
+            if (appCount <= VERTICAL_SINGLE_ROW_THRESHOLD) {
+                return DEFAULT_HORIZONTAL_SPAN_COUNT;
+            } else {
+                return DEFAULT_VERTICAL_SPAN_COUNT;
+            }
+        }
+    }
+
+    /**
+     * 处理选中项变化
+     *
+     * @param position 选中位置
+     * @param app      选中的应用对象
+     */
+    private void handleSelectionChange(int position, AppObject app) {
+        selectedPosition = position;
+        updateTitle(app.app.getAppName());
+        appGridAdapter.setSelectedPosition(position);
+        appGridAdapter.notifyDataSetChanged();
+
+        // 防抖切换背景
+        changeBackgroundWithDebounce(app);
+
+        // 移动选中框动画
+        if (selectionAnimator != null) {
+            selectionAnimator.moveToPosition(position, isFirstFocus);
+            isFirstFocus = false; // 第一次后设置为false
+        }
+
+        // 更新上一次设置信息显示
+        updateLastSettingsInfo(app);
+    }
+
+    /**
+     * 更新上一次设置信息显示
+     *
+     * @param app 应用对象
+     */
+    private void updateLastSettingsInfo(AppObject app) {
+        if (appSettingsManager == null || computer == null) {
+            return;
+        }
+
+        String settingsSummary = appSettingsManager.getSettingsSummary(computer.uuid, app.app);
+        String noneSettingsText = getString(R.string.app_last_settings_none);
+
+        boolean hasValidSettings = settingsSummary != null && !settingsSummary.equals(noneSettingsText);
+
+        if (hasValidSettings) {
+            String displayText = getString(R.string.app_last_settings_title) + " " + settingsSummary;
+            lastSettingsText.setText(displayText);
+            lastSettingsInfo.setVisibility(View.VISIBLE);
+
+            // 同步复选框状态(避免不必要的更新)
+            boolean useLastSettings = appSettingsManager.isUseLastSettingsEnabled();
+            if (useLastSettingsCheckbox.isChecked() != useLastSettings) {
+                useLastSettingsCheckbox.setChecked(useLastSettings);
+            }
+        } else {
+            lastSettingsInfo.setVisibility(View.GONE);
+        }
+    }
+
+    /**
+     * 启动串流，如果勾选了使用上一次设置则使用上一次设置
+     *
+     * @param app 应用对象
+     */
+    private void startStreamWithLastSettingsIfEnabled(AppObject app) {
+        if (appSettingsManager != null && computer != null) {
+            // 使用AppSettingsManager统一管理启动逻辑
+            Intent startIntent = appSettingsManager.createStartIntentWithLastSettingsIfEnabled(
+                    this, app.app, computer, managerBinder);
+            startActivity(startIntent);
+        } else {
+            // 回退到默认方式启动
+            ServerHelper.doStart(this, app.app, computer, managerBinder);
+        }
+    }
+
+    /**
+     * 获取当前使用的item宽度
+     *
+     * @return item宽度（像素）
+     */
+    private int getCurrentItemWidth() {
+        // 获取当前显示模式
+        boolean isLargeMode = isLargeItemMode();
+
+        // 根据模式返回对应的宽度
+        if (isLargeMode) {
+            // 大图标模式：180dp
+            return (int) (180 * getResources().getDisplayMetrics().density);
+        } else {
+            // 小图标模式：120dp
+            return (int) (120 * getResources().getDisplayMetrics().density);
+        }
+    }
+
+    /**
+     * 判断当前是否为大图标模式
+     *
+     * @return true为大图标模式，false为小图标模式
+     */
+    private boolean isLargeItemMode() {
+        // 根据PreferenceConfiguration判断显示模式
+        PreferenceConfiguration prefs = PreferenceConfiguration.readPreferences(this);
+        return !prefs.smallIconMode; // smallIconMode为false表示大图标模式
+    }
+
+    /**
+     * 检查并更新布局（竖屏时根据app数量调整行数）
+     */
+    private void checkAndUpdateLayout(RecyclerView recyclerView) {
+        if (recyclerView == null || appGridAdapter == null) {
+            return;
+        }
+
+        // 检查LayoutManager是否已经设置
+        if (recyclerView.getLayoutManager() == null) {
+            return;
+        }
+
+        int orientation = getResources().getConfiguration().orientation;
+        if (orientation == Configuration.ORIENTATION_PORTRAIT) {
+            int currentSpanCount = ((GridLayoutManager) recyclerView.getLayoutManager()).getSpanCount();
+            int optimalSpanCount = calculateOptimalSpanCount(orientation);
+
+            if (currentSpanCount != optimalSpanCount) {
+                // 需要更新布局
+                GridLayoutManager newGlm = new GridLayoutManager(this, optimalSpanCount, GridLayoutManager.HORIZONTAL, false);
+                recyclerView.setLayoutManager(newGlm);
+
+                // 重新计算选中框位置
+                if (selectionAnimator != null && selectedPosition >= 0) {
+                    selectionAnimator.moveToPosition(selectedPosition, false);
+                }
+            }
+        }
     }
 
     private void populateAppGridWithCache() {
@@ -400,8 +696,20 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
             backgroundImageManager.clearBackground();
         }
 
+        // 清理防抖Handler
+        if (backgroundChangeRunnable != null) {
+            backgroundChangeHandler.removeCallbacks(backgroundChangeRunnable);
+            backgroundChangeRunnable = null;
+        }
+
         if (managerBinder != null) {
             unbindService(serviceConnection);
+        }
+
+        // 清理AdapterRecyclerBridge
+        if (currentAdapterBridge != null) {
+            currentAdapterBridge.cleanup();
+            currentAdapterBridge = null;
         }
     }
 
@@ -414,6 +722,9 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
         inForeground = true;
         startComputerUpdates();
+
+        // 重置焦点状态
+        // resetFocusState();
     }
 
     @Override
@@ -428,8 +739,31 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
         super.onCreateContextMenu(menu, v, menuInfo);
 
-        AdapterContextMenuInfo info = (AdapterContextMenuInfo) menuInfo;
-        AppObject selectedApp = (AppObject) appGridAdapter.getItem(info.position);
+        int position = -1;
+        View targetView = null;
+
+        if (menuInfo instanceof AdapterContextMenuInfo) {
+            // AbsListView的情况
+            AdapterContextMenuInfo info = (AdapterContextMenuInfo) menuInfo;
+            position = info.position;
+            targetView = info.targetView;
+        } else if (v instanceof RecyclerView) {
+            // RecyclerView的情况，需要从当前选中的位置获取
+            if (selectedPosition >= 0 && selectedPosition < appGridAdapter.getCount()) {
+                position = selectedPosition;
+                RecyclerView rv = (RecyclerView) v;
+                RecyclerView.ViewHolder viewHolder = rv.findViewHolderForAdapterPosition(selectedPosition);
+                if (viewHolder != null) {
+                    targetView = viewHolder.itemView;
+                }
+            }
+        } else if (selectedPosition >= 0) {
+            position = selectedPosition;
+        }
+
+        if (position < 0 || position >= appGridAdapter.getCount()) return;
+
+        AppObject selectedApp = (AppObject) appGridAdapter.getItem(position);
 
         menu.setHeaderTitle(selectedApp.app.getAppName());
 
@@ -446,6 +780,11 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         // Only show the hide checkbox if this is not the currently running app or it's already hidden
         if (lastRunningAppId != selectedApp.app.getAppId() || selectedApp.isHidden) {
             menu.add(Menu.NONE, START_WITH_VDD, 1, getResources().getString(R.string.applist_menu_start_with_vdd));
+            // Add "Start with Last Settings" option if last settings exist
+            if (appSettingsManager != null && appSettingsManager.hasLastSettings(computer.uuid, selectedApp.app)) {
+                menu.add(Menu.NONE, START_WITH_LAST_SETTINGS_ID, 2, getResources().getString(R.string.applist_menu_start_with_last_settings));
+            }
+            
             MenuItem hideAppItem = menu.add(Menu.NONE, HIDE_APP_ID, 3, getResources().getString(R.string.applist_menu_hide_app));
             hideAppItem.setCheckable(true);
             hideAppItem.setChecked(selectedApp.isHidden);
@@ -456,13 +795,15 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // Only add an option to create shortcut if box art is loaded
             // and when we're in grid-mode (not list-mode).
-            ImageView appImageView = info.targetView.findViewById(R.id.grid_image);
-            if (appImageView != null) {
-                // We have a grid ImageView, so we must be in grid-mode
-                BitmapDrawable drawable = (BitmapDrawable)appImageView.getDrawable();
-                if (drawable != null && drawable.getBitmap() != null) {
-                    // We have a bitmap loaded too
-                    menu.add(Menu.NONE, CREATE_SHORTCUT_ID, 5, getResources().getString(R.string.applist_menu_scut));
+            if (targetView != null) {
+                ImageView appImageView = targetView.findViewById(R.id.grid_image);
+                if (appImageView != null) {
+                    // We have a grid ImageView, so we must be in grid-mode
+                    BitmapDrawable drawable = (BitmapDrawable) appImageView.getDrawable();
+                    if (drawable != null && drawable.getBitmap() != null) {
+                        // We have a bitmap loaded too
+                        menu.add(Menu.NONE, CREATE_SHORTCUT_ID, 5, getResources().getString(R.string.applist_menu_scut));
+                    }
                 }
             }
         }
@@ -474,47 +815,61 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
     @Override
     public boolean onContextItemSelected(MenuItem item) {
-        AdapterContextMenuInfo info = (AdapterContextMenuInfo) item.getMenuInfo();
-        final AppObject app = (AppObject) appGridAdapter.getItem(info.position);
+        int position = -1;
+        View targetView = null;
+
+        ContextMenuInfo menuInfo = item.getMenuInfo();
+        if (menuInfo instanceof AdapterContextMenuInfo) {
+            // AbsListView的情况
+            AdapterContextMenuInfo info = (AdapterContextMenuInfo) menuInfo;
+            position = info.position;
+            targetView = info.targetView;
+        } else {
+            // RecyclerView的情况，使用当前选中的位置
+            position = selectedPosition;
+        }
+
+        if (position < 0 || position >= appGridAdapter.getCount()) return false;
+
+        final AppObject app = (AppObject) appGridAdapter.getItem(position);
         switch (item.getItemId()) {
             case START_WITH_QUIT:
                 // Display a confirmation dialog first
-                UiHelper.displayQuitConfirmationDialog(this, new Runnable() {
-                    @Override
-                    public void run() {
-                        ServerHelper.doStart(AppView.this, app.app, computer, managerBinder);
-                    }
-                }, null);
+                UiHelper.displayQuitConfirmationDialog(this,
+                        () -> startStreamWithLastSettingsIfEnabled(app),
+                        null);
                 return true;
 
             case START_OR_RESUME_ID:
                 // Resume is the same as start for us
-                ServerHelper.doStart(AppView.this, app.app, computer, managerBinder);
+                startStreamWithLastSettingsIfEnabled(app);
                 return true;
 
             case START_WITH_VDD:
                 computer.useVdd = true;
-                ServerHelper.doStart(AppView.this, app.app, computer, managerBinder);
+                startStreamWithLastSettingsIfEnabled(app);
+                return true;
+
+            case START_WITH_LAST_SETTINGS_ID:
+                // Start with last settings (force use last settings for this launch)
+                if (appSettingsManager != null && computer != null) {
+                    Intent startIntent = appSettingsManager.createStartIntentWithLastSettingsIfEnabled(
+                            this, app.app, computer, managerBinder);
+                    startActivity(startIntent);
+                }
                 return true;
 
             case QUIT_ID:
                 // Display a confirmation dialog first
-                UiHelper.displayQuitConfirmationDialog(this, new Runnable() {
-                    @Override
-                    public void run() {
-                        suspendGridUpdates = true;
-                        ServerHelper.doQuit(AppView.this, computer,
-                                app.app, managerBinder, new Runnable() {
-                            @Override
-                            public void run() {
-                                // Trigger a poll immediately
-                                suspendGridUpdates = false;
-                                if (poller != null) {
-                                    poller.pollNow();
-                                }
-                            }
-                        });
-                    }
+                UiHelper.displayQuitConfirmationDialog(this, () -> {
+                    suspendGridUpdates = true;
+                    ServerHelper.doQuit(this, computer, app.app, managerBinder, () -> {
+                        // Trigger a poll immediately
+                        suspendGridUpdates = false;
+                        if (poller != null) {
+                            poller.pollNow();
+                        }
+                    });
                 }, null);
                 return true;
 
@@ -535,9 +890,33 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                 return true;
 
             case CREATE_SHORTCUT_ID:
-                ImageView appImageView = info.targetView.findViewById(R.id.grid_image);
-                Bitmap appBits = ((BitmapDrawable)appImageView.getDrawable()).getBitmap();
-                if (!shortcutHelper.createPinnedGameShortcut(computer, app.app, appBits)) {
+                // 对于RecyclerView，我们需要从缓存中获取bitmap
+                Bitmap appBitmap = null;
+
+                // 首先尝试从目标视图获取bitmap
+                if (targetView != null) {
+                    ImageView appImageView = targetView.findViewById(R.id.grid_image);
+                    if (appImageView != null && appImageView.getDrawable() instanceof BitmapDrawable) {
+                        BitmapDrawable drawable = (BitmapDrawable) appImageView.getDrawable();
+                        appBitmap = drawable.getBitmap();
+                    }
+                }
+
+                // 如果从视图获取失败,尝试从缓存获取
+                if (appBitmap == null && appGridAdapter != null && appGridAdapter.getLoader() != null) {
+                    CachedAppAssetLoader.LoaderTuple tuple = new CachedAppAssetLoader.LoaderTuple(computer, app.app);
+                    ScaledBitmap cachedBitmap = appGridAdapter.getLoader().getBitmapFromCache(tuple);
+                    if (cachedBitmap != null) {
+                        appBitmap = cachedBitmap.bitmap;
+                    }
+                }
+
+                // 创建快捷方式
+                if (appBitmap != null) {
+                    if (!shortcutHelper.createPinnedGameShortcut(computer, app.app, appBitmap)) {
+                        Toast.makeText(AppView.this, getResources().getString(R.string.unable_to_pin_shortcut), Toast.LENGTH_LONG).show();
+                    }
+                } else {
                     Toast.makeText(AppView.this, getResources().getString(R.string.unable_to_pin_shortcut), Toast.LENGTH_LONG).show();
                 }
                 return true;
@@ -548,9 +927,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
     }
 
     private void updateUiWithServerinfo(final ComputerDetails details) {
-        AppView.this.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
+        runOnUiThread(() -> {
                 boolean updated = false;
                 boolean hasRunningApp = false;
 
@@ -584,70 +961,76 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
                 if (updated) {
                     appGridAdapter.notifyDataSetChanged();
+                    // Also refresh RecyclerView if it exists - use more efficient update
+                    if (currentRecyclerView != null && currentRecyclerView.getAdapter() != null) {
+                        // 使用更精确的更新方式，只更新可见的项目
+                        currentRecyclerView.getAdapter().notifyItemRangeChanged(0, appGridAdapter.getCount());
+                    }
                 }
-            }
         });
     }
 
     private void updateUiWithAppList(final List<NvApp> appList) {
-        AppView.this.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                // Prepare list of AppObjects in server order
-                List<AppObject> newAppObjects = new ArrayList<>();
-                
-                // Create AppObjects from server list, preserving order
-                for (NvApp app : appList) {
-                    // Look for existing AppObject to preserve running state
-                    AppObject existingApp = null;
-                    for (int i = 0; i < appGridAdapter.getCount(); i++) {
-                        AppObject candidate = (AppObject) appGridAdapter.getItem(i);
-                        if (candidate.app.getAppId() == app.getAppId()) {
-                            existingApp = candidate;
-                            // Update app properties if needed
-                            if (!candidate.app.getAppName().equals(app.getAppName())) {
-                                candidate.app.setAppName(app.getAppName());
-                            }
-                            break;
-                        }
-                    }
-                    
-                    if (existingApp != null) {
-                        // Use existing AppObject to preserve state (like isRunning)
-                        newAppObjects.add(existingApp);
-                    } else {
-                        // Create new AppObject for new app
-                        AppObject newAppObject = new AppObject(app);
-                        newAppObjects.add(newAppObject);
-                        
-                        // Enable shortcuts for new apps
-                        shortcutHelper.enableAppShortcut(computer, app);
-                    }
-                }
-                
-                // Handle removed apps - disable shortcuts
+        runOnUiThread(() -> {
+            // Prepare list of AppObjects in server order
+            List<AppObject> newAppObjects = new ArrayList<>();
+
+            // Create AppObjects from server list, preserving order
+            for (NvApp app : appList) {
+                // Look for existing AppObject to preserve running state
+                AppObject existingApp = null;
                 for (int i = 0; i < appGridAdapter.getCount(); i++) {
-                    AppObject existingApp = (AppObject) appGridAdapter.getItem(i);
-                    boolean stillExists = false;
-                    
-                    for (NvApp app : appList) {
-                        if (existingApp.app.getAppId() == app.getAppId()) {
-                            stillExists = true;
-                            break;
+                    AppObject candidate = (AppObject) appGridAdapter.getItem(i);
+                    if (candidate.app.getAppId() == app.getAppId()) {
+                        existingApp = candidate;
+                        // Update app properties if needed
+                        if (!candidate.app.getAppName().equals(app.getAppName())) {
+                            candidate.app.setAppName(app.getAppName());
                         }
-                    }
-                    
-                    if (!stillExists) {
-                        shortcutHelper.disableAppShortcut(computer, existingApp.app, "App removed from PC");
+                        break;
                     }
                 }
-                
-                // Rebuild the entire list in server order
-                appGridAdapter.rebuildAppList(newAppObjects);
-                appGridAdapter.notifyDataSetChanged();
-                
-                // Set first app's cover as background if no current background
-                setFirstAppAsBackground(newAppObjects);
+
+                if (existingApp != null) {
+                    // Use existing AppObject to preserve state (like isRunning)
+                    newAppObjects.add(existingApp);
+                } else {
+                    // Create new AppObject for new app
+                    AppObject newAppObject = new AppObject(app);
+                    newAppObjects.add(newAppObject);
+
+                    // Enable shortcuts for new apps
+                    shortcutHelper.enableAppShortcut(computer, app);
+                }
+            }
+
+            // Handle removed apps - disable shortcuts
+            for (int i = 0; i < appGridAdapter.getCount(); i++) {
+                AppObject existingApp = (AppObject) appGridAdapter.getItem(i);
+                boolean stillExists = false;
+
+                for (NvApp app : appList) {
+                    if (existingApp.app.getAppId() == app.getAppId()) {
+                        stillExists = true;
+                        break;
+                    }
+                }
+
+                if (!stillExists) {
+                    shortcutHelper.disableAppShortcut(computer, existingApp.app, "App removed from PC");
+                }
+            }
+
+            // Rebuild the entire list in server order
+            appGridAdapter.rebuildAppList(newAppObjects);
+            appGridAdapter.notifyDataSetChanged();
+
+            // Set first app's cover as background if no current background
+            setFirstAppAsBackground(newAppObjects);
+
+            // 检查并更新布局（竖屏时根据app数量调整行数）
+            if (currentRecyclerView != null) {
+                checkAndUpdateLayout(currentRecyclerView);
             }
         });
     }
@@ -702,26 +1085,228 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                     R.layout.app_grid_view_small : R.layout.app_grid_view;
     }
 
-    @Override
     public void receiveAbsListView(AbsListView listView) {
-        listView.setAdapter(appGridAdapter);
-        listView.setOnItemClickListener(new OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> arg0, View arg1, int pos,
-                                    long id) {
-                AppObject app = (AppObject) appGridAdapter.getItem(pos);
+        // Backwards-compatible wrapper: if a RecyclerView was passed as a View,
+        // AdapterFragmentCallbacks signature was generalized but compile-time this
+        // method remains for binary compat. Delegate to the View-based method.
+        receiveAdapterView(listView);
+    }
 
-                // Only open the context menu if something is running, otherwise start it
-                if (lastRunningAppId != 0) {
-                    openContextMenu(arg1);
-                } else {
-                    ServerHelper.doStart(AppView.this, app.app, computer, managerBinder);
+    @Override
+    public void receiveAbsListView(View view) {
+        // Implementation for the generalized interface method
+        receiveAdapterView(view);
+    }
+
+    // New generalized receiver to accept RecyclerView or legacy AbsListView
+    public void receiveAdapterView(View view) {
+        if (view instanceof RecyclerView) {
+            setupRecyclerView((RecyclerView) view);
+        } else if (view instanceof AbsListView) {
+            setupAbsListView((AbsListView) view);
+        }
+    }
+
+    private void setupRecyclerView(RecyclerView rv) {
+        currentRecyclerView = rv;
+
+        // 更新selectionAnimator的RecyclerView和Adapter引用
+        if (selectionAnimator != null) {
+            selectionAnimator.updateReferences(rv, appGridAdapter);
+        }
+
+        // 创建并设置bridge adapter
+        setupBridgeAdapter(rv);
+
+        // 配置布局管理器
+        setupLayoutManager(rv);
+
+        // 优化RecyclerView性能
+        optimizeRecyclerViewPerformance(rv);
+
+        // 设置事件监听器
+        setupRecyclerViewListeners(rv);
+
+        // 应用UI配置
+        UiHelper.applyStatusBarPadding(rv);
+        registerForContextMenu(rv);
+    }
+
+    private void setupBridgeAdapter(RecyclerView rv) {
+        AdapterRecyclerBridge bridge = new AdapterRecyclerBridge(this, appGridAdapter);
+        rv.setAdapter(bridge);
+
+        // 清理之前的bridge并保存新的引用
+        if (currentAdapterBridge != null) {
+            currentAdapterBridge.cleanup();
+        }
+        currentAdapterBridge = bridge;
+
+        // 设置点击监听器
+        bridge.setOnItemClickListener(this::handleItemClick);
+
+        // 设置按键监听器
+        bridge.setOnItemKeyListener(this::handleItemKey);
+
+        // 设置长按监听器
+        bridge.setOnItemLongClickListener(this::handleItemLongClick);
+    }
+
+    private void setupLayoutManager(RecyclerView rv) {
+        int orientation = getResources().getConfiguration().orientation;
+        int spanCount = calculateOptimalSpanCount(orientation);
+        GridLayoutManager glm = new GridLayoutManager(this, spanCount, GridLayoutManager.HORIZONTAL, false);
+        rv.setLayoutManager(glm);
+
+        // 设置预加载
+        glm.setInitialPrefetchItemCount(4);
+    }
+
+    private void optimizeRecyclerViewPerformance(RecyclerView rv) {
+        // 基础性能优化
+        rv.setHasFixedSize(true);
+        rv.setItemViewCacheSize(15);
+        rv.setDrawingCacheEnabled(true);
+        rv.setDrawingCacheQuality(View.DRAWING_CACHE_QUALITY_HIGH);
+        rv.setNestedScrollingEnabled(false);
+
+        // 滑动性能优化
+        rv.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        rv.setItemAnimator(null);
+
+        // 硬件加速
+        rv.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+
+        // 回收池优化
+        RecyclerView.RecycledViewPool pool = rv.getRecycledViewPool();
+        pool.setMaxRecycledViews(0, 20);
+    }
+
+    private void setupRecyclerViewListeners(RecyclerView rv) {
+        // 添加滚动监听器
+        rv.addOnScrollListener(createScrollListener());
+
+        // 添加子项焦点变化监听
+        rv.addOnChildAttachStateChangeListener(createChildAttachStateChangeListener(rv));
+    }
+
+    private RecyclerView.OnScrollListener createScrollListener() {
+        return new RecyclerView.OnScrollListener() {
+            private long lastUpdateTime = 0;
+            private static final long MIN_UPDATE_INTERVAL = 16; // 约60fps
+
+            @Override
+            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                    updateSelectionPosition();
                 }
             }
+
+            @Override
+            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - lastUpdateTime >= MIN_UPDATE_INTERVAL) {
+                    updateSelectionPosition();
+                    lastUpdateTime = currentTime;
+                }
+            }
+        };
+    }
+
+    private RecyclerView.OnChildAttachStateChangeListener createChildAttachStateChangeListener(RecyclerView rv) {
+        return new RecyclerView.OnChildAttachStateChangeListener() {
+            @Override
+            public void onChildViewAttachedToWindow(View view) {
+                view.setOnFocusChangeListener((v, hasFocus) -> {
+                    if (!hasFocus) return;
+
+                    int pos = rv.getChildAdapterPosition(v);
+                    if (pos < 0 || pos >= appGridAdapter.getCount()) return;
+
+                    AppObject app = (AppObject) appGridAdapter.getItem(pos);
+                    // 延迟处理焦点变化，确保点击事件优先处理
+                    v.post(() -> {
+                        if (v.hasFocus()) {
+                            handleSelectionChange(pos, app);
+                        }
+                    });
+                });
+            }
+
+            @Override
+            public void onChildViewDetachedFromWindow(View view) {
+                view.setOnFocusChangeListener(null);
+            }
+        };
+    }
+
+    private void handleItemClick(int position, Object item) {
+        AppObject app = (AppObject) item;
+        handleSelectionChange(position, app);
+
+        if (lastRunningAppId != 0) {
+            showContextMenuForPosition(position);
+        } else {
+            startStreamWithLastSettingsIfEnabled(app);
+        }
+    }
+
+    private boolean handleItemKey(int position, Object item, int keyCode, android.view.KeyEvent event) {
+        if (event.getAction() != android.view.KeyEvent.ACTION_DOWN) {
+            return false;
+        }
+
+        if (keyCode == android.view.KeyEvent.KEYCODE_BUTTON_X ||
+                keyCode == android.view.KeyEvent.KEYCODE_BUTTON_Y) {
+            AppObject app = (AppObject) item;
+            handleSelectionChange(position, app);
+            showContextMenuForPosition(position);
+            return true;
+        }
+
+        return false;
+    }
+
+    private boolean handleItemLongClick(int position, Object item) {
+        AppObject app = (AppObject) item;
+        handleSelectionChange(position, app);
+        return showContextMenuForPosition(position);
+    }
+
+    private boolean showContextMenuForPosition(int position) {
+        if (currentRecyclerView == null) return false;
+
+        RecyclerView.ViewHolder viewHolder = currentRecyclerView.findViewHolderForAdapterPosition(position);
+        if (viewHolder != null) {
+            openContextMenu(viewHolder.itemView);
+            return true;
+        }
+        return false;
+    }
+
+    private void updateSelectionPosition() {
+        if (selectedPosition >= 0 && selectionAnimator != null) {
+            selectionAnimator.updatePosition(selectedPosition);
+        }
+    }
+
+    private void setupAbsListView(AbsListView listView) {
+        listView.setAdapter(appGridAdapter);
+        listView.setOnItemClickListener((arg0, arg1, pos, id) -> {
+            AppObject app = (AppObject) appGridAdapter.getItem(pos);
+            handleSelectionChange(pos, app);
+
+            if (lastRunningAppId != 0) {
+                openContextMenu(arg1);
+            } else {
+                startStreamWithLastSettingsIfEnabled(app);
+            }
         });
+
         UiHelper.applyStatusBarPadding(listView);
         registerForContextMenu(listView);
-        listView.requestFocus();
     }
 
     public static class AppObject {

@@ -3,6 +3,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/advance_setting_background"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     tools:context=".AppView" >
 
     <ImageView
@@ -21,19 +23,94 @@
         android:layout_alignParentStart="true"
         android:layout_alignParentRight="true"
         android:layout_alignParentEnd="true"
-        android:layout_alignParentBottom="true"
-        android:layout_below="@+id/appListText"/>
+        android:layout_centerVertical="true" />
+    
+    <!-- 选中框动画View -->
+    <View
+        android:id="@+id/selectionIndicator"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/selection_indicator"
+        android:visibility="invisible"
+        android:elevation="8dp"
+        android:clipChildren="false"
+        android:clipToPadding="false"/>
     
     <TextView
         android:id="@+id/appListText"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:layout_alignParentTop="true"
-        android:gravity="center"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="20dp"
+        android:layout_marginRight="20dp"
+        android:layout_marginEnd="20dp"
+        android:gravity="end"
         android:paddingTop="@dimen/activity_safearea_top"
-        android:paddingBottom="5dp"
+        android:paddingBottom="15dp"
         android:preferKeepClear="true"
-        android:textSize="28sp"/>
+        android:textSize="24sp"
+        android:textStyle="normal"
+        android:fontFamily="sans-serif-light"
+        android:textColor="#FFFFFF"
+        android:shadowColor="#80000000"
+        android:shadowDx="2"
+        android:shadowDy="2"
+        android:shadowRadius="4"
+        android:singleLine="false"
+        android:maxLines="3"
+        android:ellipsize="end"
+        android:lineSpacingExtra="4dp"
+        android:breakStrategy="balanced"
+        android:hyphenationFrequency="normal" />
+
+    <!-- 上一次设置信息显示区域 - 放在应用列表下方 -->
+    <LinearLayout
+        android:id="@+id/lastSettingsInfo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_marginTop="20dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="20dp"
+        android:orientation="vertical"
+        android:gravity="end"
+        android:visibility="gone">
+
+        <CheckBox
+            android:id="@+id/useLastSettingsCheckbox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:focusable="true"
+            android:text="@string/app_last_settings_use_checkbox"
+            android:textColor="#CCFFFFFF"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-light"
+            android:buttonTint="#FFFFFF"
+            android:checked="false" />
+
+        <TextView
+            android:id="@+id/lastSettingsText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="13sp"
+            android:textColor="#CCFFFFFF"
+            android:shadowColor="#80000000"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="2"
+            android:fontFamily="sans-serif-light"
+            android:background="@drawable/settings_info_background"
+            android:padding="8dp"
+            android:maxLines="3"
+            android:ellipsize="end"
+            android:lineSpacingExtra="2dp"
+            android:text="@string/app_last_settings_title" />
+
+    </LinearLayout>
 
 </RelativeLayout>
