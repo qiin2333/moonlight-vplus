@@ -121,7 +121,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
     private final static int DEFAULT_VERTICAL_SPAN_COUNT = 2;
     private final static int DEFAULT_HORIZONTAL_SPAN_COUNT = 1;
-    private final static int VERTICAL_SINGLE_ROW_THRESHOLD = 4; // 竖屏时，app数量小于等于4个时使用1行
+    private final static int VERTICAL_SINGLE_ROW_THRESHOLD = 5; // 竖屏时，app数量小于等于4个时使用1行
 
     private ComputerManagerService.ComputerManagerBinder managerBinder;
     private final ServiceConnection serviceConnection = new ServiceConnection() {
@@ -514,7 +514,6 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                 return DEFAULT_VERTICAL_SPAN_COUNT;
             }
 
-            // 简化逻辑：app数量小于等于4个时使用1行，大于4个时使用2行
             if (appCount <= VERTICAL_SINGLE_ROW_THRESHOLD) {
                 return DEFAULT_HORIZONTAL_SPAN_COUNT;
             } else {
@@ -1031,6 +1030,11 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
             // 检查并更新布局（竖屏时根据app数量调整行数）
             if (currentRecyclerView != null) {
                 checkAndUpdateLayout(currentRecyclerView);
+                
+                // 重新计算居中布局
+                int orientation = getResources().getConfiguration().orientation;
+                int spanCount = calculateOptimalSpanCount(orientation);
+                setupCenterAlignment(currentRecyclerView, spanCount);
             }
         });
     }
@@ -1160,6 +1164,38 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
         // 设置预加载
         glm.setInitialPrefetchItemCount(4);
+        
+        // 设置居中布局
+        setupCenterAlignment(rv, spanCount);
+    }
+
+    /**
+     * 设置RecyclerView的居中对齐
+     */
+    private void setupCenterAlignment(RecyclerView rv, int spanCount) {
+        rv.post(() -> {
+            if (appGridAdapter == null) {
+                return;
+            }
+            
+            int itemCount = appGridAdapter.getCount();
+            int totalRows = (int) Math.ceil((double) itemCount / spanCount);
+            int screenWidth = getResources().getDisplayMetrics().widthPixels;
+            int actualItemSize = getCurrentItemWidth();
+            
+            // 如果RecyclerView已经有子视图,优先使用实际测量的尺寸
+            if (rv.getChildCount() > 0) {
+                View firstChild = rv.getChildAt(0);
+                if (firstChild != null && firstChild.getWidth() > 0) {
+                    actualItemSize = firstChild.getWidth();
+                }
+            }
+
+            // 计算并设置居中padding
+            int totalWidth = actualItemSize * totalRows;
+            int horizontalPadding = totalWidth < screenWidth ? (screenWidth - totalWidth) / 2 : 0;
+            rv.setPadding(horizontalPadding, rv.getPaddingTop(), horizontalPadding, rv.getPaddingBottom());
+        });
     }
 
     private void optimizeRecyclerViewPerformance(RecyclerView rv) {
@@ -1199,18 +1235,22 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
                 super.onScrollStateChanged(recyclerView, newState);
                 if (newState == RecyclerView.SCROLL_STATE_IDLE) {
-                    updateSelectionPosition();
+                    if (selectionAnimator != null) {
+                        selectionAnimator.showIndicator();
+                        updateSelectionPosition();
+                    }
+                } else if (newState == RecyclerView.SCROLL_STATE_DRAGGING || 
+                          newState == RecyclerView.SCROLL_STATE_SETTLING) {
+                    if (selectionAnimator != null) {
+                        selectionAnimator.hideIndicator();
+                    }
                 }
             }
 
             @Override
             public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
-                long currentTime = System.currentTimeMillis();
-                if (currentTime - lastUpdateTime >= MIN_UPDATE_INTERVAL) {
-                    updateSelectionPosition();
-                    lastUpdateTime = currentTime;
-                }
+                lastUpdateTime = System.currentTimeMillis();
             }
         };
     }
@@ -1288,7 +1328,13 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
     private void updateSelectionPosition() {
         if (selectedPosition >= 0 && selectionAnimator != null) {
-            selectionAnimator.updatePosition(selectedPosition);
+            // 尝试更新到当前选中位置
+            boolean positionUpdated = selectionAnimator.updatePosition(selectedPosition);
+            
+            // 如果更新失败（item滑出屏幕外），隐藏焦点框
+            if (!positionUpdated) {
+                selectionAnimator.hideIndicator();
+            }
         }
     }
 

@@ -81,16 +81,21 @@ public class SelectionIndicatorAnimator {
      * Update selection indicator position (called during scrolling)
      *
      * @param position Current selected position
+     * @return true if position was successfully updated, false if item is not visible
      */
-    public void updatePosition(int position) {
+    public boolean updatePosition(int position) {
         if (!isValidPosition(position)) {
-            return;
+            return false;
         }
 
         RecyclerView.ViewHolder viewHolder = recyclerView.findViewHolderForAdapterPosition(position);
         if (viewHolder != null) {
             setIndicatorPositionFast(viewHolder.itemView);
+            return true;
         }
+        
+        // Item is not visible (scrolled out of screen)
+        return false;
     }
 
     /**

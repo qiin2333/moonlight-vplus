@@ -20,8 +20,8 @@ android {
         minSdk 22
         targetSdk 35
 
-        versionName "12.3.9"
-        versionCode = 338
+        versionName "12.3.10"
+        versionCode = 339
 
         // Generate native debug symbols to allow Google Play to symbolicate our native crashes
         ndk.debugSymbolLevel = 'FULL'
