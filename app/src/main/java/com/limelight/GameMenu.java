@@ -355,6 +355,20 @@ public class GameMenu {
                         false
                 ),
                 new MenuOption(
+                        getString(R.string.game_menu_touch_mode_trackpad) + " - " + 
+                        (game.prefConfig.enableDoubleClickDrag ? "关闭双击按住" : "开启双击按住"),
+                        false,
+                        () -> {
+                            game.prefConfig.enableDoubleClickDrag = !game.prefConfig.enableDoubleClickDrag;
+                            // 不保存到持久化存储，只在当前会话中生效
+                            Toast.makeText(game, 
+                                game.prefConfig.enableDoubleClickDrag ? "已开启双击按住功能" : "已关闭双击按住功能", 
+                                Toast.LENGTH_SHORT).show();
+                        },
+                        null,
+                        false
+                ),
+                new MenuOption(
                         getString(R.string.game_menu_touch_mode_native_mouse),
                         isNativeMousePointer,
                         () -> {

@@ -34,7 +34,6 @@ public class RelativeTouchContext implements TouchContext {
     /** 标志位，表示当前是否处于“双击并按住”触发的拖拽模式 */
     private boolean isDoubleClickDrag = false;
     private boolean isPotentialDoubleClick = false;
-    private final boolean isDoubleClickDragEnabled;
 
     private final NvConnection conn;
     private final int actionIndex;
@@ -90,8 +89,6 @@ public class RelativeTouchContext implements TouchContext {
                 () -> conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X2)
         };
 
-        // 从配置中读取并设置功能开关
-        this.isDoubleClickDragEnabled = prefConfig.enableDoubleClickDrag;
     }
 
     @Override
@@ -141,8 +138,8 @@ public class RelativeTouchContext implements TouchContext {
             cancelled = confirmedDrag = confirmedMove = confirmedScroll = isDoubleClickDrag = false;
             distanceMoved = 0;
 
-            // 只有当功能开关开启时，才检查双击
-            if (isDoubleClickDragEnabled) {
+            // 只有当功能开关开启时，才检查双击（动态读取配置）
+            if (prefConfig.enableDoubleClickDrag) {
                 long timeSinceLastTap = eventTime - lastTapUpTime;
                 int xDelta = Math.abs(eventX - lastTapUpX);
                 int yDelta = Math.abs(eventY - lastTapUpY);
