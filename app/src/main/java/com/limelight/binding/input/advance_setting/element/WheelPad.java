@@ -76,6 +76,7 @@ public class WheelPad extends Element {
     private final Paint paintText = new Paint();
     private final Paint paintEdit = new Paint();
     private final Paint paintCenterText = new Paint();
+    private final Paint paintGlow = new Paint(); // 用于激活分区的发光效果
     private final RectF rect = new RectF();
     private final Path textPath = new Path();
 
@@ -133,6 +134,10 @@ public class WheelPad extends Element {
         paintCenterText.setTextAlign(Paint.Align.CENTER);
         paintCenterText.setAntiAlias(true);
         paintCenterText.setFakeBoldText(true);
+        
+        // 初始化发光效果画笔
+        paintGlow.setStyle(Paint.Style.FILL);
+        paintGlow.setAntiAlias(true);
 
         this.diameter = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_WIDTH)).intValue();
 
@@ -170,6 +175,12 @@ public class WheelPad extends Element {
                         this.centerTextColor = 0xFFFFFFFF;
                     }
 
+                    if (extraAttrs.has("pressedTextColor")) {
+                        this.pressedTextColor = extraAttrs.get("pressedTextColor").getAsInt();
+                    } else {
+                        this.pressedTextColor = 0xFFFFFFFF;
+                    }
+
                     if (extraAttrs.has("textSizePercent")) {
                         this.textSizePercent = extraAttrs.get("textSizePercent").getAsInt();
                     } else {
@@ -185,7 +196,7 @@ public class WheelPad extends Element {
                         this.triggerTextSizePercent = extraAttrs.get("triggerTextSizePercent").getAsInt();
                     } else {
                         // 提供一个合理的默认值，通常应该比中心预览文字小
-                        this.triggerTextSizePercent = 14;
+                        this.triggerTextSizePercent = 40;
                     }
                     if (extraAttrs.has("previewGroupChildren")) {
                         this.previewGroupChildren = extraAttrs.get("previewGroupChildren").getAsBoolean();
@@ -224,10 +235,11 @@ public class WheelPad extends Element {
 
     private void initializeDefaultFontAttributes() {
         this.normalTextColor = 0xFFFFFFFF;
+        this.pressedTextColor = 0xFFFFFFFF;
         this.centerTextColor = 0xFFFFFFFF;
         this.textSizePercent = 35;
         this.centerTextSizePercent = 60;
-        this.triggerTextSizePercent = 14;
+        this.triggerTextSizePercent = 40;
         this.previewGroupChildren = true;
     }
 
@@ -365,17 +377,23 @@ public class WheelPad extends Element {
 
         paintBorder.setColor(normalColor);
         paintBorder.setStrokeWidth(thick);
+        // 柔和内圈高亮轮廓
+        paintBorder.setShadowLayer(thick * 0.6f, 0, 0, (normalColor & 0x00FFFFFF) | 0x33000000);
 
         paintSegmentFill.setColor(0x80000000);
         canvas.drawCircle(centerX, centerY, fillInnerRadius, paintSegmentFill);
 
         rect.set(centerX - borderInnerDrawRadius, centerY - borderInnerDrawRadius, centerX + borderInnerDrawRadius, centerY + borderInnerDrawRadius);
         canvas.drawOval(rect, paintBorder);
+        // 清除阴影以免影响后续绘制
+        paintBorder.setShadowLayer(0, 0, 0, 0);
 
         // 应用中心文字的颜色和大小 ---
         paintCenterText.setColor(this.centerTextColor);
-        float triggerTextSize = getWidth() * (this.triggerTextSizePercent / 100.0f);
+        // 触发器文字大小改为基于内圈直径计算，随中心分区大小联动
+        float triggerTextSize = (fillInnerRadius * 2) * (this.triggerTextSizePercent / 100.0f);
         paintCenterText.setTextSize(triggerTextSize);
+        paintCenterText.setShadowLayer(Math.max(2, thick * 0.3f), 0, Math.max(1, thick * 0.2f), 0x88000000);
 
         float textY = centerY - ((paintCenterText.descent() + paintCenterText.ascent()) / 2);
         canvas.drawText(centerText, centerX, textY, paintCenterText);
@@ -413,6 +431,14 @@ public class WheelPad extends Element {
             float startAngle = (i * sweepAngle) - (sweepAngle / 2) - 90;
             Paint currentFillPaint = (i == activeIndex) ? paintSegmentFillPressed : paintSegmentFill;
             canvas.drawArc(rect, startAngle, sweepAngle, true, currentFillPaint);
+            
+            // 为激活分区添加发光效果
+            if (i == activeIndex) {
+                paintGlow.setColor(Color.argb(60, Color.red(pressedColor), Color.green(pressedColor), Color.blue(pressedColor)));
+                paintGlow.setShadowLayer(fillOuterRadius * 0.15f, 0, 0, pressedColor);
+                canvas.drawArc(rect, startAngle, sweepAngle, true, paintGlow);
+                paintGlow.setShadowLayer(0, 0, 0, 0); // 清除阴影
+            }
         }
 
         canvas.drawCircle(centerX, centerY, fillInnerRadius, paintBackground);
@@ -420,10 +446,8 @@ public class WheelPad extends Element {
         float textRadius = fillInnerRadius + (fillOuterRadius - fillInnerRadius) / 2.0f;
         for (int i = 0; i < segmentCount; i++) {
             float startAngle = (i * sweepAngle) - (sweepAngle / 2) - 90;
-            float textAngle = startAngle + sweepAngle / 2.0f;
-            textPath.reset();
-            RectF textRect = new RectF(centerX - textRadius, centerY - textRadius, centerX + textRadius, centerY + textRadius);
-            textPath.addArc(textRect, textAngle - 45, 90);
+            float textAngle = startAngle + sweepAngle / 2.0f; // 分区中心角度（以上方为-90度起点）
+
             if (i < segmentValues.size()) {
                 String displayName;
                 if (i < segmentNames.size() && segmentNames.get(i) != null && !segmentNames.get(i).isEmpty()) {
@@ -431,7 +455,26 @@ public class WheelPad extends Element {
                 } else {
                     displayName = getDisplayStringForValue(segmentValues.get(i));
                 }
-                canvas.drawTextOnPath(displayName, textPath, 0, 10, paintText);
+
+                // 根据激活状态切换文字颜色与粗体
+                if (i == activeIndex) {
+                    paintText.setColor(this.pressedTextColor);
+                    paintText.setFakeBoldText(true);
+                } else {
+                    paintText.setColor(this.normalTextColor);
+                    paintText.setFakeBoldText(false);
+                }
+
+                // 计算文字中心点坐标（保持文字水平，不旋转）
+                double textRad = Math.toRadians(textAngle);
+                float textCenterX = centerX + (float) (textRadius * Math.cos(textRad));
+                float textCenterY = centerY + (float) (textRadius * Math.sin(textRad));
+
+                // 将中心点转换为基线位置，使用字体度量保证垂直居中
+                Paint.FontMetrics fm = paintText.getFontMetrics();
+                float baselineY = textCenterY - (fm.ascent + fm.descent) / 2.0f;
+
+                canvas.drawText(displayName, textCenterX, baselineY, paintText);
             }
         }
 
@@ -448,6 +491,11 @@ public class WheelPad extends Element {
             float endX = centerX + (float) (fillOuterRadius * Math.cos(angleRad));
             float endY = centerY + (float) (fillOuterRadius * Math.sin(angleRad));
             canvas.drawLine(startX, startY, endX, endY, paintBorder);
+        }
+
+        // 在中心模式时，为外圈描边添加柔和阴影以增强层次
+        if (isPopupMode && popupAtScreenCenter) {
+            paintBorder.setShadowLayer(Math.max(2, thick * 0.6f), 0, 0, 0x55000000);
         }
 
         boolean showCenterTextInNormalMode = isPopupMode && activeIndex != -1 && currentMode == ElementController.Mode.Normal;
@@ -476,9 +524,15 @@ public class WheelPad extends Element {
             paintCenterText.setColor(this.centerTextColor);
             float centerTextSize = fillInnerRadius * 2 * (this.centerTextSizePercent / 100.0f);
             paintCenterText.setTextSize(centerTextSize);
+            paintCenterText.setShadowLayer(Math.max(2, centerTextSize * 0.06f), 0, Math.max(1, centerTextSize * 0.04f), 0x88000000);
 
             float textY = centerY - ((paintCenterText.descent() + paintCenterText.ascent()) / 2);
             canvas.drawText(displayName, centerX, textY, paintCenterText);
+        }
+
+        // 清除描边阴影，避免影响外部绘制
+        if (isPopupMode && popupAtScreenCenter) {
+            paintBorder.setShadowLayer(0, 0, 0, 0);
         }
     }
 
@@ -898,7 +952,7 @@ public class WheelPad extends Element {
         extraAttrs.addProperty("centerTextColor", 0xFFFFFFFF); // White
         extraAttrs.addProperty("textSizePercent", 35); // 35%
         extraAttrs.addProperty("centerTextSizePercent", 60); // 60%
-        extraAttrs.addProperty("triggerTextSizePercent", 14);
+        extraAttrs.addProperty("triggerTextSizePercent", 40);
         extraAttrs.addProperty("previewGroupChildren", true);
         // 将 JsonObject 转换为字符串，并存入通用的 "extra_attributes" 列
         contentValues.put("extra_attributes", new Gson().toJson(extraAttrs));
