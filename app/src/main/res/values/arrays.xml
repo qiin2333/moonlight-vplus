@@ -145,6 +145,7 @@
         <item>@string/pacing_balanced_alt</item>
         <item>@string/pacing_smoothness</item>
         <item>@string/pacing_experimental_low_latency</item>
+        <item>@string/pacing_surface_flinger_raw</item>
     </string-array>
     <string-array name="video_frame_pacing_values" translatable="false">
         <item>latency</item>
@@ -152,6 +153,7 @@
         <item>cap-fps</item>
         <item>smoothness</item>
         <item>experimental-low-latency</item>
+        <item>surface-flinger-raw</item>
     </string-array>
 
     <string-array name="analog_scrolling_names">

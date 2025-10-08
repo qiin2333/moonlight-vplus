@@ -1484,6 +1484,16 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     }
                 }
 
+                // Add Surface Flinger Raw mode frame skip statistics
+                String surfaceFlingerStats = decoderRenderer.getSurfaceFlingerStats();
+                if (surfaceFlingerStats != null) {
+                    if (message != null) {
+                        message += "\n" + surfaceFlingerStats;
+                    } else {
+                        message = surfaceFlingerStats;
+                    }
+                }
+
                 if (message != null) {
                     Toast.makeText(this, message, Toast.LENGTH_LONG).show();
                 }

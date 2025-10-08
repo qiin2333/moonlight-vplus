@@ -18,6 +18,7 @@ public class PerformanceInfo {
     public float maxHostProcessingLatency;
     public float aveHostProcessingLatency;
     public float decodeTimeMs;
+    public float totalTimeMs;
     public String bandWidth;
     public boolean isHdrActive; // 实际HDR激活状态
     public float renderingLatencyMs; // 渲染时间
