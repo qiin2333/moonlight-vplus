@@ -130,6 +130,10 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     private long surfaceFlingerFrameInterval;
     private int surfaceFlingerFrameCount;
     private int surfaceFlingerSkippedFrames; // 记录跳过的帧数
+
+    // 高精度帧率控制
+    private long surfaceFlingerTargetTime; // 目标渲染时间（绝对时间）
+    private long surfaceFlingerTimingError; // 累积时间误差
     
     /**
      * 安全地设置线程优先级
@@ -1125,9 +1129,11 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         
         surfaceFlingerActive = true;
         surfaceFlingerFrameInterval = 1000000000L / refreshRate; // 纳秒
+        surfaceFlingerTargetTime = System.nanoTime() + surfaceFlingerFrameInterval;
         surfaceFlingerLastFrameTime = System.nanoTime();
         surfaceFlingerFrameCount = 0;
         surfaceFlingerSkippedFrames = 0;
+        surfaceFlingerTimingError = 0;
 
         surfaceFlingerThread = new Thread() {
             @Override
@@ -1139,9 +1145,9 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                 while (surfaceFlingerActive && !stopping) {
                     try {
                         long currentTime = System.nanoTime();
-                        long timeSinceLastFrame = currentTime - surfaceFlingerLastFrameTime;
-                        
-                        if (timeSinceLastFrame >= surfaceFlingerFrameInterval) {
+
+                        // 使用绝对目标时间而不是相对时间间隔
+                        if (currentTime >= surfaceFlingerTargetTime) {
                             // 检查是否有待渲染的帧
                             Integer nextOutputBuffer = outputBufferQueue.poll();
                             if (nextOutputBuffer != null) {
@@ -1157,10 +1163,16 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                                     surfaceFlingerLastFrameTime = currentTime;
                                     surfaceFlingerFrameCount++;
                                     activeWindowVideoStats.totalFramesRendered++;
+
+                                    // 计算时间误差并进行补偿
+                                    long actualInterval = currentTime - surfaceFlingerLastFrameTime;
+                                    surfaceFlingerTimingError += (actualInterval - surfaceFlingerFrameInterval);
                                     
                                     // 每100帧记录一次性能数据
                                     if (surfaceFlingerFrameCount % 100 == 0) {
-                                        LimeLog.info("Surface Flinger Raw模式已渲染 " + surfaceFlingerFrameCount + " 帧, 跳帧: " + surfaceFlingerSkippedFrames);
+                                        float avgError = surfaceFlingerTimingError / 1000000.0f / surfaceFlingerFrameCount;
+                                        LimeLog.info(String.format("SF Raw: %d帧, 跳帧: %d, 平均误差: %.3fms",
+                                                surfaceFlingerFrameCount, surfaceFlingerSkippedFrames, avgError));
                                     }
                                     
                                 } catch (IllegalStateException e) {
@@ -1171,17 +1183,35 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                                 // 没有可用的帧，记录为跳帧
                                 surfaceFlingerSkippedFrames++;
                             }
-                            
-                            // 精确的帧间隔控制
-                            long sleepTime = surfaceFlingerFrameInterval - (System.nanoTime() - currentTime);
-                            if (sleepTime > 0) {
-                                Thread.sleep(sleepTime / 1000000, (int)(sleepTime % 1000000));
+
+                            // 更新下一帧的绝对目标时间
+                            surfaceFlingerTargetTime += surfaceFlingerFrameInterval;
+
+                            // 如果累积误差过大（>2帧），重新同步
+                            if (Math.abs(currentTime - surfaceFlingerTargetTime) > surfaceFlingerFrameInterval * 2) {
+                                LimeLog.warning("SF Raw: 时间漂移过大，重新同步");
+                                surfaceFlingerTargetTime = currentTime + surfaceFlingerFrameInterval;
+                                surfaceFlingerTimingError = 0;
                             }
-                        } else {
-                            // 如果还没到渲染时间，短暂休眠
-                            long sleepTime = (surfaceFlingerFrameInterval - timeSinceLastFrame) / 1000000;
-                            if (sleepTime > 0) {
-                                Thread.sleep(sleepTime);
+                        }
+
+                        // 精确休眠到下一帧
+                        currentTime = System.nanoTime();
+                        long sleepTimeNs = surfaceFlingerTargetTime - currentTime;
+
+                        if (sleepTimeNs > 2000000) { // 超过2ms，使用sleep
+                            // 提前1ms醒来，用忙等待精确控制
+                            long sleepMs = (sleepTimeNs - 1000000) / 1000000;
+                            if (sleepMs > 0) {
+                                Thread.sleep(sleepMs);
+                            }
+                        }
+
+                        // 忙等待最后的微秒级精度
+                        while (System.nanoTime() < surfaceFlingerTargetTime) {
+                            // 短暂让出CPU，避免100%占用
+                            if (surfaceFlingerTargetTime - System.nanoTime() > 100000) {
+                                Thread.yield();
                             }
                         }
                         
@@ -1237,18 +1267,15 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                                         // Use a PTS that will cause this frame to never be dropped
                                         videoDecoder.releaseOutputBuffer(lastIndex, 0);
-                                    }
-                                    else {
+                                    } else {
                                         videoDecoder.releaseOutputBuffer(lastIndex, true);
                                     }
-                                }
-                                else {
+                                } else {
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                                         // Use a PTS that will cause this frame to be dropped if another comes in within
                                         // the same V-sync period
                                         videoDecoder.releaseOutputBuffer(lastIndex, System.nanoTime());
-                                    }
-                                    else {
+                                    } else {
                                         videoDecoder.releaseOutputBuffer(lastIndex, true);
                                     }
                                 }

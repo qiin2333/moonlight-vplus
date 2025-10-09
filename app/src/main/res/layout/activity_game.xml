@@ -40,7 +40,7 @@
         android:background="#88161616"
         android:gravity="start"
         android:orientation="horizontal"
-        android:paddingTop="4dp"
+        android:paddingTop="3dp"
         android:paddingBottom="4dp"
         android:paddingRight="12dp"
         android:preferKeepClear="true"
