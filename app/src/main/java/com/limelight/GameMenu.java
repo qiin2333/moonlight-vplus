@@ -1558,7 +1558,7 @@ public class GameMenu {
                     Toast.makeText(game, game.getisTouchOverrideEnabled()?"已关闭平移/缩放":"已开启平移/缩放", Toast.LENGTH_SHORT).show();
                     game.setisTouchOverrideEnabled(!game.getisTouchOverrideEnabled());
                 },
-                "mouse_mode",
+                "game_menu_mouse_emulation",
                 true
         ));
 

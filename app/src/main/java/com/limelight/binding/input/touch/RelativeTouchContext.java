@@ -146,8 +146,11 @@ public class RelativeTouchContext implements TouchContext {
 
                 if (actionIndex == 0 && timeSinceLastTap <= DOUBLE_TAP_TIME_THRESHOLD &&
                         xDelta <= DOUBLE_TAP_MOVEMENT_THRESHOLD && yDelta <= DOUBLE_TAP_MOVEMENT_THRESHOLD) {
+                    // It's a double-tap. The first tap has already been sent,
+                    // so we just need to prevent the drag timer from firing for
+                    // this second tap and flag that we're in a potential double-click.
                     isPotentialDoubleClick = true;
-                    handler.removeCallbacks(buttonUpRunnables[MouseButtonPacket.BUTTON_LEFT - 1]);
+                    cancelDragTimer();
                     return true;
                 }
             }
@@ -172,6 +175,7 @@ public class RelativeTouchContext implements TouchContext {
 
         // 决策点1：如果在“待定”状态下抬起，说明用户意图是“双击”
         if (isPotentialDoubleClick) {
+            // This is the second tap of a double-tap. Send the click now.
             isPotentialDoubleClick = false;
 
             byte buttonIndex = MouseButtonPacket.BUTTON_LEFT;
@@ -180,6 +184,7 @@ public class RelativeTouchContext implements TouchContext {
             handler.removeCallbacks(buttonUpRunnable);
             handler.postDelayed(buttonUpRunnable, 100);
 
+            // Invalidate the tap time to prevent a triple-tap from becoming a double-tap drag
             lastTapUpTime = 0;
             return;
         }
@@ -243,6 +248,7 @@ public class RelativeTouchContext implements TouchContext {
             int xDelta = Math.abs(eventX - originalTouchX);
             int yDelta = Math.abs(eventY - originalTouchY);
             if (xDelta > DRAG_START_THRESHOLD || yDelta > DRAG_START_THRESHOLD) {
+                // Start a double-tap drag
                 isPotentialDoubleClick = false;
                 isDoubleClickDrag = true;
                 confirmedMove = true;
