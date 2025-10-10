@@ -109,6 +109,11 @@
             android:summary="@string/summary_checkbox_enable_audiofx"
             android:defaultValue="false" />
         <CheckBoxPreference
+            android:key="checkbox_enable_spatializer"
+            android:title="@string/title_checkbox_enable_spatializer"
+            android:summary="@string/summary_checkbox_enable_spatializer"
+            android:defaultValue="false" />
+        <CheckBoxPreference
             android:key="checkbox_enable_mic"
             android:title="@string/title_checkbox_enable_mic"
             android:summary="@string/summary_checkbox_enable_mic"

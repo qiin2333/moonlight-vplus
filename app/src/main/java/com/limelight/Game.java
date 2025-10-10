@@ -1029,9 +1029,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             else {
                 LimeLog.warning("SemWindowManager.getInstance() returned null");
             }
-        } catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException |
-                 IllegalAccessException e) {
-            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            // This is expected on non-Samsung devices - silently ignore
+        } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+            // Log other unexpected errors
+            LimeLog.warning("Failed to set meta key capture state: " + e.getMessage());
         }
     }
 
@@ -3309,7 +3311,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             UiHelper.notifyStreamConnecting(Game.this);
 
             decoderRenderer.setRenderTarget(holder);
-            conn.start(new AndroidAudioRenderer(Game.this, prefConfig.enableAudioFx),
+            conn.start(new AndroidAudioRenderer(Game.this, prefConfig.enableAudioFx, prefConfig.enableSpatializer),
                     decoderRenderer, Game.this);
         }
     }

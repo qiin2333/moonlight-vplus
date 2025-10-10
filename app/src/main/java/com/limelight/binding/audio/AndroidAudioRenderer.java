@@ -6,6 +6,7 @@ import android.media.AudioAttributes;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
+import android.media.Spatializer;
 import android.media.audiofx.AudioEffect;
 import android.os.Build;
 
@@ -17,17 +18,26 @@ public class AndroidAudioRenderer implements AudioRenderer {
 
     private final Context context;
     private final boolean enableAudioFx;
+    private final boolean enableSpatializer;
 
     private AudioTrack track;
+    private Spatializer spatializer;
 
-    public AndroidAudioRenderer(Context context, boolean enableAudioFx) {
+    public AndroidAudioRenderer(Context context, boolean enableAudioFx, boolean enableSpatializer) {
         this.context = context;
         this.enableAudioFx = enableAudioFx;
+        this.enableSpatializer = enableSpatializer;
     }
 
     private AudioTrack createAudioTrack(int channelConfig, int sampleRate, int bufferSize, boolean lowLatency) {
         AudioAttributes.Builder attributesBuilder = new AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_GAME);
+        
+        // Enable spatialization attribute if supported and requested
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && enableSpatializer) {
+            attributesBuilder.setSpatializationBehavior(AudioAttributes.SPATIALIZATION_BEHAVIOR_AUTO);
+        }
+        
         AudioFormat format = new AudioFormat.Builder()
                 .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
                 .setSampleRate(sampleRate)
@@ -180,6 +190,36 @@ public class AndroidAudioRenderer implements AudioRenderer {
         if (track == null) {
             // Couldn't create any audio track for playback
             return -2;
+        }
+
+        // Initialize Spatializer if supported and enabled
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && enableSpatializer) {
+            try {
+                AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+                spatializer = audioManager.getSpatializer();
+                
+                if (spatializer != null && spatializer.isAvailable()) {
+                    // Check if the track can be spatialized
+                    AudioAttributes attributes = track.getAudioAttributes();
+                    AudioFormat trackFormat = track.getFormat();
+                    
+                    if (spatializer.canBeSpatialized(attributes, trackFormat)) {
+                        LimeLog.info("Spatializer is available and track can be spatialized");
+                        LimeLog.info("Spatializer enabled: " + spatializer.isEnabled());
+                        LimeLog.info("Spatializer level: " + spatializer.getImmersiveAudioLevel());
+                    } else {
+                        LimeLog.warning("Spatializer is available but track cannot be spatialized");
+                        spatializer = null;
+                    }
+                } else {
+                    LimeLog.info("Spatializer is not available on this device");
+                    spatializer = null;
+                }
+            } catch (Exception e) {
+                LimeLog.warning("Failed to initialize Spatializer: " + e.getMessage());
+                e.printStackTrace();
+                spatializer = null;
+            }
         }
 
         return 0;
