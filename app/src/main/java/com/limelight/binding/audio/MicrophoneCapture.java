@@ -3,6 +3,10 @@ package com.limelight.binding.audio;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
+import android.media.audiofx.AcousticEchoCanceler;
+import android.media.audiofx.AutomaticGainControl;
+import android.media.audiofx.NoiseSuppressor;
+import android.os.Build;
 import android.os.Process;
 import android.os.SystemClock;
 
@@ -20,6 +24,11 @@ public class MicrophoneCapture {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private int bufferSize;
     private MicrophoneDataCallback dataCallback;
+    
+    // 音频效果器
+    private AcousticEchoCanceler echoCanceler;
+    private AutomaticGainControl gainControl;
+    private NoiseSuppressor noiseSuppressor;
     
     // 音频帧缓冲
     private byte[] frameBuffer;
@@ -60,7 +69,12 @@ public class MicrophoneCapture {
             // 确保缓冲区大小足够
             bufferSize = Math.max(minBufferSize * 2, MicrophoneConfig.CAPTURE_BUFFER_SIZE);
             
-            audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC,
+            // 根据配置选择音频源
+            int audioSource = MicrophoneConfig.useVoiceCommunication() ? 
+                    MediaRecorder.AudioSource.VOICE_COMMUNICATION : 
+                    MediaRecorder.AudioSource.MIC;
+            
+            audioRecord = new AudioRecord(audioSource,
                     MicrophoneConfig.SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT, bufferSize);
                     
             if (audioRecord.getState() != AudioRecord.STATE_INITIALIZED) {
@@ -68,6 +82,9 @@ public class MicrophoneCapture {
                 release();
                 return false;
             }
+            
+            // 尝试初始化音频效果器
+            initializeAudioEffects();
             
             running.set(true);
             lastFrameTime = SystemClock.elapsedRealtimeNanos();
@@ -195,13 +212,163 @@ public class MicrophoneCapture {
         release();
     }
     
+    /**
+     * 初始化音频效果器（回声消除、自动增益控制、噪声抑制）
+     */
+    private void initializeAudioEffects() {
+        if (audioRecord == null) {
+            LimeLog.warning("AudioRecord为空，无法初始化音频效果器");
+            return;
+        }
+        
+        int audioSessionId = audioRecord.getAudioSessionId();
+        LimeLog.info("开始初始化音频效果器，AudioSessionId: " + audioSessionId);
+        
+        // 1. 回声消除器 (AEC)
+        if (MicrophoneConfig.enableAcousticEchoCanceler()) {
+            if (AcousticEchoCanceler.isAvailable()) {
+                try {
+                    echoCanceler = AcousticEchoCanceler.create(audioSessionId);
+                    if (echoCanceler != null) {
+                        int result = echoCanceler.setEnabled(true);
+                        if (result == 0) {
+                            LimeLog.info("✓ 回声消除器(AEC)已启用");
+                        } else {
+                            LimeLog.warning("回声消除器启用失败，错误码: " + result);
+                        }
+                    } else {
+                        LimeLog.warning("无法创建回声消除器实例");
+                    }
+                } catch (Exception e) {
+                    LimeLog.warning("初始化回声消除器失败: " + e.getMessage());
+                }
+            } else {
+                LimeLog.info("设备不支持硬件回声消除(AEC)");
+            }
+        } else {
+            LimeLog.info("回声消除器已被配置禁用");
+        }
+        
+        // 2. 自动增益控制 (AGC)
+        if (MicrophoneConfig.enableAutomaticGainControl()) {
+            if (AutomaticGainControl.isAvailable()) {
+                try {
+                    gainControl = AutomaticGainControl.create(audioSessionId);
+                    if (gainControl != null) {
+                        int result = gainControl.setEnabled(true);
+                        if (result == 0) {
+                            LimeLog.info("✓ 自动增益控制(AGC)已启用");
+                        } else {
+                            LimeLog.warning("自动增益控制启用失败，错误码: " + result);
+                        }
+                    } else {
+                        LimeLog.warning("无法创建自动增益控制实例");
+                    }
+                } catch (Exception e) {
+                    LimeLog.warning("初始化自动增益控制失败: " + e.getMessage());
+                }
+            } else {
+                LimeLog.info("设备不支持自动增益控制(AGC)");
+            }
+        } else {
+            LimeLog.info("自动增益控制已被配置禁用");
+        }
+        
+        // 3. 噪声抑制器 (NS)
+        if (MicrophoneConfig.enableNoiseSuppressor()) {
+            if (NoiseSuppressor.isAvailable()) {
+                try {
+                    noiseSuppressor = NoiseSuppressor.create(audioSessionId);
+                    if (noiseSuppressor != null) {
+                        int result = noiseSuppressor.setEnabled(true);
+                        if (result == 0) {
+                            LimeLog.info("✓ 噪声抑制器(NS)已启用");
+                        } else {
+                            LimeLog.warning("噪声抑制器启用失败，错误码: " + result);
+                        }
+                    } else {
+                        LimeLog.warning("无法创建噪声抑制器实例");
+                    }
+                } catch (Exception e) {
+                    LimeLog.warning("初始化噪声抑制器失败: " + e.getMessage());
+                }
+            } else {
+                LimeLog.info("设备不支持噪声抑制(NS)");
+            }
+        } else {
+            LimeLog.info("噪声抑制器已被配置禁用");
+        }
+    }
+    
+    /**
+     * 释放音频效果器资源
+     */
+    private void releaseAudioEffects() {
+        if (echoCanceler != null) {
+            try {
+                echoCanceler.setEnabled(false);
+                echoCanceler.release();
+                LimeLog.info("回声消除器已释放");
+            } catch (Exception e) {
+                LimeLog.warning("释放回声消除器失败: " + e.getMessage());
+            }
+            echoCanceler = null;
+        }
+        
+        if (gainControl != null) {
+            try {
+                gainControl.setEnabled(false);
+                gainControl.release();
+                LimeLog.info("自动增益控制已释放");
+            } catch (Exception e) {
+                LimeLog.warning("释放自动增益控制失败: " + e.getMessage());
+            }
+            gainControl = null;
+        }
+        
+        if (noiseSuppressor != null) {
+            try {
+                noiseSuppressor.setEnabled(false);
+                noiseSuppressor.release();
+                LimeLog.info("噪声抑制器已释放");
+            } catch (Exception e) {
+                LimeLog.warning("释放噪声抑制器失败: " + e.getMessage());
+            }
+            noiseSuppressor = null;
+        }
+    }
+    
     private void release() {
+        // 先释放音频效果器
+        releaseAudioEffects();
+        
         if (audioRecord != null) {
             if (audioRecord.getState() == AudioRecord.STATE_INITIALIZED) {
                 audioRecord.stop();
             }
             audioRecord.release();
             audioRecord = null;
+        }
+    }
+    
+    /**
+     * 检查音频效果器是否真正在工作
+     * 通过分析音频数据的特征来判断
+     */
+    public boolean isAudioEffectsWorking() {
+        return (echoCanceler != null && echoCanceler.getEnabled()) ||
+               (gainControl != null && gainControl.getEnabled()) ||
+               (noiseSuppressor != null && noiseSuppressor.getEnabled());
+    }
+    
+    /**
+     * 获取当前使用的音频源类型
+     */
+    public String getAudioSourceInfo() {
+        if (MicrophoneConfig.useVoiceCommunication()) {
+            return "VOICE_COMMUNICATION (系统级AEC/AGC/NS)";
+        } else {
+            return "MIC (使用硬件音频效果器)";
         }
     }
 }

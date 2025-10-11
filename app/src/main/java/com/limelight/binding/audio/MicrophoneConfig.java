@@ -43,6 +43,12 @@ public class MicrophoneConfig {
     public static final boolean ENABLE_AUDIO_SYNC = true; // 启用音频同步
     public static final int MAX_FRAME_DELAY_MS = 50; // 最大帧延迟 (毫秒)
     
+    // 回声消除和音频处理参数
+    private static boolean enableAEC = true; // 启用回声消除器
+    private static boolean enableAGC = true; // 启用自动增益控制
+    private static boolean enableNS = true; // 启用噪声抑制
+    private static boolean useVoiceComm = false; // 使用VOICE_COMMUNICATION音频源（自动启用AEC+AGC+NS）
+    
     /**
      * 获取当前配置的Opus比特率
      * @return 比特率（bps）
@@ -68,6 +74,78 @@ public class MicrophoneConfig {
             PreferenceConfiguration config = PreferenceConfiguration.readPreferences(context);
             setOpusBitrate(config.micBitrate);
         }
+    }
+    
+    // ========== 回声消除和音频处理配置方法 ==========
+    
+    /**
+     * 是否启用回声消除器(AEC)
+     */
+    public static boolean enableAcousticEchoCanceler() {
+        return enableAEC;
+    }
+    
+    /**
+     * 设置是否启用回声消除器(AEC)
+     */
+    public static void setEnableAcousticEchoCanceler(boolean enable) {
+        enableAEC = enable;
+    }
+    
+    /**
+     * 是否启用自动增益控制(AGC)
+     */
+    public static boolean enableAutomaticGainControl() {
+        return enableAGC;
+    }
+    
+    /**
+     * 设置是否启用自动增益控制(AGC)
+     */
+    public static void setEnableAutomaticGainControl(boolean enable) {
+        enableAGC = enable;
+    }
+    
+    /**
+     * 是否启用噪声抑制(NS)
+     */
+    public static boolean enableNoiseSuppressor() {
+        return enableNS;
+    }
+    
+    /**
+     * 设置是否启用噪声抑制(NS)
+     */
+    public static void setEnableNoiseSuppressor(boolean enable) {
+        enableNS = enable;
+    }
+    
+    /**
+     * 是否使用VOICE_COMMUNICATION音频源
+     * VOICE_COMMUNICATION会自动启用系统级的AEC、AGC、NS
+     */
+    public static boolean useVoiceCommunication() {
+        return useVoiceComm;
+    }
+    
+    /**
+     * 设置是否使用VOICE_COMMUNICATION音频源
+     */
+    public static void setUseVoiceCommunication(boolean use) {
+        useVoiceComm = use;
+    }
+    
+    /**
+     * 获取音频处理配置的摘要信息
+     */
+    public static String getAudioProcessingConfigSummary() {
+        StringBuilder summary = new StringBuilder();
+        summary.append("音频处理配置:\n");
+        summary.append("音频源: ").append(useVoiceComm ? "VOICE_COMMUNICATION" : "MIC").append("\n");
+        summary.append("回声消除(AEC): ").append(enableAEC ? "启用" : "禁用").append("\n");
+        summary.append("自动增益(AGC): ").append(enableAGC ? "启用" : "禁用").append("\n");
+        summary.append("噪声抑制(NS): ").append(enableNS ? "启用" : "禁用");
+        return summary.toString();
     }
     
     private MicrophoneConfig() {
