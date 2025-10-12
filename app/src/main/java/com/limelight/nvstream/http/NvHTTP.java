@@ -190,7 +190,7 @@ public class NvHTTP {
                 .build();
     }
 
-    public HttpUrl getHttpsUrl(boolean likelyOnline) throws IOException {
+    public HttpUrl getHttpsUrl(boolean likelyOnline) throws IOException, InterruptedException {
         if (httpsPort == 0) {
             // Fetch the HTTPS port if we don't have it already
             httpsPort = getHttpsPort(openHttpConnectionToString(likelyOnline ? httpClientLongConnectTimeout : httpClientShortConnectTimeout,
@@ -301,7 +301,7 @@ public class NvHTTP {
         }
     }
     
-    public String getServerInfo(boolean likelyOnline) throws IOException, XmlPullParserException {
+    public String getServerInfo(boolean likelyOnline) throws IOException, XmlPullParserException, InterruptedException {
         String resp;
 
         // If we believe the PC is online, give it a little extra time to respond
@@ -394,7 +394,7 @@ public class NvHTTP {
         return details;
     }
     
-    public ComputerDetails getComputerDetails(boolean likelyOnline) throws IOException, XmlPullParserException {
+    public ComputerDetails getComputerDetails(boolean likelyOnline) throws IOException, XmlPullParserException, InterruptedException {
         return getComputerDetails(getServerInfo(likelyOnline));
     }
 
@@ -422,7 +422,7 @@ public class NvHTTP {
                 .build();
     }
 
-    private ResponseBody openHttpConnection(OkHttpClient client, HttpUrl baseUrl, String path) throws IOException {
+    private ResponseBody openHttpConnection(OkHttpClient client, HttpUrl baseUrl, String path) throws IOException, InterruptedException {
         return openHttpConnection(client, baseUrl, path, null);
     }
 
@@ -430,7 +430,7 @@ public class NvHTTP {
     // on the GFE server. Examples of queries that DO require outside action are launch, resume, and quit.
     // The initial pair query does require outside action (user entering a PIN) but subsequent pairing
     // queries do not.
-    private ResponseBody openHttpConnection(OkHttpClient client, HttpUrl baseUrl, String path, String query) throws IOException {
+    private ResponseBody openHttpConnection(OkHttpClient client, HttpUrl baseUrl, String path, String query) throws IOException, InterruptedException {
         HttpUrl completeUrl = getCompleteUrl(baseUrl, path, query);
         Request request = new Request.Builder().url(completeUrl).get().build();
         Response response = performAndroidTlsHack(client).newCall(request).execute();
@@ -454,11 +454,11 @@ public class NvHTTP {
         }
     }
 
-    private String openHttpConnectionToString(OkHttpClient client, HttpUrl baseUrl, String path) throws IOException {
+    private String openHttpConnectionToString(OkHttpClient client, HttpUrl baseUrl, String path) throws IOException, InterruptedException {
         return openHttpConnectionToString(client, baseUrl, path, null);
     }
 
-    private String openHttpConnectionToString(OkHttpClient client, HttpUrl baseUrl, String path, String query) throws IOException {
+    private String openHttpConnectionToString(OkHttpClient client, HttpUrl baseUrl, String path, String query) throws IOException, InterruptedException {
         try {
             ResponseBody resp = openHttpConnection(client, baseUrl, path, query);
             String respString = resp.string();
@@ -487,7 +487,7 @@ public class NvHTTP {
      * @param jsonData JSON数据
      * @return 响应字符串
      */
-    private String openHttpConnectionPost(OkHttpClient client, HttpUrl baseUrl, String path, String jsonData) throws IOException {
+    private String openHttpConnectionPost(OkHttpClient client, HttpUrl baseUrl, String path, String jsonData) throws IOException, InterruptedException {
         HttpUrl completeUrl = getCompleteUrl(baseUrl, path, null);
         
         // 构建POST请求
@@ -533,7 +533,7 @@ public class NvHTTP {
         return getXmlString(serverInfo, "appversion", true);
     }
 
-    public PairingManager.PairState getPairState() throws IOException, XmlPullParserException {
+    public PairingManager.PairState getPairState() throws IOException, XmlPullParserException, InterruptedException {
         return getPairState(getServerInfo(true));
     }
 
@@ -645,7 +645,7 @@ public class NvHTTP {
      * @see #getAppByName(String) for alternative.
      * @return app details, or null if no app with that ID exists
      */
-    public NvApp getAppById(int appId) throws IOException, XmlPullParserException {
+    public NvApp getAppById(int appId) throws IOException, XmlPullParserException, InterruptedException {
         LinkedList<NvApp> appList = getAppList();
         for (NvApp appFromList : appList) {
             if (appFromList.getAppId() == appId) {
@@ -664,7 +664,7 @@ public class NvHTTP {
      * @see #getAppById(int) for alternative.
      * @return app details, or null if no app with that name exists
      */
-    public NvApp getAppByName(String appName) throws IOException, XmlPullParserException {
+    public NvApp getAppByName(String appName) throws IOException, XmlPullParserException, InterruptedException {
         LinkedList<NvApp> appList = getAppList();
         for (NvApp appFromList : appList) {
             if (appFromList.getAppName().equalsIgnoreCase(appName)) {
@@ -745,11 +745,11 @@ public class NvHTTP {
         return appList;
     }
     
-    public String getAppListRaw() throws IOException {
+    public String getAppListRaw() throws IOException, InterruptedException {
         return openHttpConnectionToString(httpClientLongConnectTimeout, getHttpsUrl(true), "applist");
     }
     
-    public LinkedList<NvApp> getAppList() throws HostHttpResponseException, IOException, XmlPullParserException {
+    public LinkedList<NvApp> getAppList() throws HostHttpResponseException, IOException, XmlPullParserException, InterruptedException {
         if (verbose) {
             // Use the raw function so the app list is printed
             return getAppListByReader(new StringReader(getAppListRaw()));
@@ -761,21 +761,21 @@ public class NvHTTP {
         }
     }
 
-    String executePairingCommand(String additionalArguments, boolean enableReadTimeout) throws HostHttpResponseException, IOException {
+    String executePairingCommand(String additionalArguments, boolean enableReadTimeout) throws HostHttpResponseException, IOException, InterruptedException {
         return openHttpConnectionToString(enableReadTimeout ? httpClientLongConnectTimeout : httpClientLongConnectNoReadTimeout,
                 baseUrlHttp, "pair", "devicename=roth&updateState=1&" + additionalArguments);
     }
 
-    String executePairingChallenge() throws HostHttpResponseException, IOException {
+    String executePairingChallenge() throws HostHttpResponseException, IOException, InterruptedException {
         return openHttpConnectionToString(httpClientLongConnectTimeout, getHttpsUrl(true),
                 "pair", "devicename=roth&updateState=1&phrase=pairchallenge");
     }
 
-    public void unpair() throws IOException {
+    public void unpair() throws IOException, InterruptedException {
         openHttpConnectionToString(httpClientLongConnectTimeout, baseUrlHttp, "unpair");
     }
     
-    public InputStream getBoxArt(NvApp app) throws IOException {
+    public InputStream getBoxArt(NvApp app) throws IOException, InterruptedException {
         ResponseBody resp = openHttpConnection(httpClientLongConnectTimeout, getHttpsUrl(true), "appasset", "appid=" + app.getAppId() + "&AssetType=2&AssetIdx=0");
         return resp.byteStream();
     }
@@ -811,7 +811,7 @@ public class NvHTTP {
         return new String(hexChars);
     }
     
-    public boolean launchApp(ConnectionContext context, String verb, int appId, boolean enableHdr) throws IOException, XmlPullParserException {
+    public boolean launchApp(ConnectionContext context, String verb, int appId, boolean enableHdr) throws IOException, XmlPullParserException, InterruptedException {
         // Using an FPS value over 60 causes SOPS to default to 720p60,
         // so force it to 0 to ensure the correct resolution is set. We
         // used to use 60 here but that locked the frame rate to 60 FPS
@@ -859,7 +859,7 @@ public class NvHTTP {
         }
     }
     
-    public boolean quitApp() throws IOException, XmlPullParserException {
+    public boolean quitApp() throws IOException, XmlPullParserException, InterruptedException {
         String xmlStr = openHttpConnectionToString(httpClientLongConnectNoReadTimeout, getHttpsUrl(true), "cancel");
         if (getXmlString(xmlStr, "cancel", true).equals("0")) {
             return false;
@@ -876,12 +876,12 @@ public class NvHTTP {
         return true;
     }
 
-    public boolean pcSleep() throws IOException, XmlPullParserException {
+    public boolean pcSleep() throws IOException, XmlPullParserException, InterruptedException {
         String xmlStr = openHttpConnectionToString(httpClientLongConnectNoReadTimeout, getHttpsUrl(true), "pcsleep");
         return !getXmlString(xmlStr, "pcsleep", true).equals("0");
     }
 
-    public boolean sendSuperCmd(String cmdId) throws IOException, XmlPullParserException {
+    public boolean sendSuperCmd(String cmdId) throws IOException, XmlPullParserException, InterruptedException {
         String xmlStr = openHttpConnectionToString(httpClientLongConnectNoReadTimeout, getHttpsUrl(true), "supercmd", "cmdId=" + cmdId);
         return !getXmlString(xmlStr, "supercmd", true).equals("0");
     }
@@ -891,7 +891,7 @@ public class NvHTTP {
      * @param bitrateKbps 目标码率（kbps）
      * @return 是否成功
      */
-    public boolean setBitrate(int bitrateKbps) throws IOException, XmlPullParserException {
+    public boolean setBitrate(int bitrateKbps) throws IOException, XmlPullParserException, InterruptedException {
         // 构建查询参数
         String query = String.format("bitrate=%d", bitrateKbps);
         

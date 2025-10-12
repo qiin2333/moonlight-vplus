@@ -190,7 +190,7 @@ public class PairingManager {
      * @throws IOException
      * @throws XmlPullParserException
      */
-    public PairResult pair(String serverInfo, String pin) throws IOException, XmlPullParserException {
+    public PairResult pair(String serverInfo, String pin) throws IOException, XmlPullParserException, InterruptedException {
         PairingHashAlgorithm hashAlgo;
 
         int serverMajorVersion = http.getServerMajorVersion(serverInfo);

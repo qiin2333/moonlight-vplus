@@ -26,6 +26,8 @@ public class NetworkAssetLoader {
                     tuple.computer.httpsPort, uniqueId, "", tuple.computer.serverCert,
                     PlatformBinding.getCryptoProvider(context));
             in = http.getBoxArt(tuple.app);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt(); // Restore interrupt status
         } catch (IOException ignored) {}
 
         if (in != null) {

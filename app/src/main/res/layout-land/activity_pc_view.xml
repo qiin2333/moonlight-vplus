@@ -88,6 +88,18 @@
         android:src="@drawable/ic_add"
         style="?android:attr/borderlessButtonStyle"/>
 
+    <ImageButton
+        android:id="@+id/restoreSessionButton"
+        android:layout_width="70dp"
+        android:layout_height="65dp"
+        android:cropToPadding="false"
+        android:scaleType="fitXY"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@id/manuallyAddPc"
+        android:src="@drawable/ic_restore"
+        style="?android:attr/borderlessButtonStyle"/>
+
     <!-- 场景预设按钮组 -->
     <LinearLayout
         android:id="@+id/scenePresetContainer"

@@ -55,6 +55,24 @@ public class AddComputerManually extends Activity {
         }
     };
 
+    /**
+     * 检测是否为IPv6地址
+     */
+    private boolean isIPv6Address(String address) {
+        try {
+            InetAddress inetAddress = InetAddress.getByName(address);
+            // IPv6地址的字节长度为16，IPv4为4
+            return inetAddress.getAddress().length == 16;
+        } catch (Exception e) {
+            // 如果无法解析，通过格式判断（包含多个冒号）
+            int colonCount = 0;
+            for (char c : address.toCharArray()) {
+                if (c == ':') colonCount++;
+            }
+            return colonCount >= 2;
+        }
+    }
+
     private boolean isWrongSubnetSiteLocalAddress(String address) {
         try {
             InetAddress targetAddress = InetAddress.getByName(address);
@@ -99,6 +117,16 @@ public class AddComputerManually extends Activity {
     }
 
     private URI parseRawUserInputToUri(String rawUserInput) {
+        // 检测是否可能是IPv6地址（包含多个冒号）
+        // IPv6地址至少有2个冒号，例如 ::1 或 fe80::1
+        int colonCount = 0;
+        for (char c : rawUserInput.toCharArray()) {
+            if (c == ':') colonCount++;
+        }
+        
+        // 如果有多个冒号，很可能是IPv6地址
+        boolean likelyIPv6 = colonCount >= 2;
+        
         try {
             // Try adding a scheme and parsing the remaining input.
             // This handles input like 127.0.0.1:47989, [::1], [::1]:47989, and 127.0.0.1.
@@ -108,14 +136,62 @@ public class AddComputerManually extends Activity {
             }
         } catch (URISyntaxException ignored) {}
 
-        try {
-            // Attempt to escape the input as an IPv6 literal.
-            // This handles input like ::1.
-            URI uri = new URI("moonlight://[" + rawUserInput + "]");
-            if (uri.getHost() != null && !uri.getHost().isEmpty()) {
-                return uri;
-            }
-        } catch (URISyntaxException ignored) {}
+        // 如果第一次解析失败，且输入看起来像IPv6地址
+        if (likelyIPv6 && !rawUserInput.startsWith("[")) {
+            try {
+                // 尝试智能添加中括号
+                // 情况1: 纯IPv6地址，如 "::1" 或 "2001:0db8::1"
+                // 情况2: IPv6地址+端口，如 "::1:47989" 或 "2001:0db8::1:47989"
+                
+                // 查找最后一个冒号，可能是端口分隔符
+                int lastColonIndex = rawUserInput.lastIndexOf(':');
+                
+                // 尝试判断最后部分是否是端口号（纯数字）
+                boolean hasPort = false;
+                if (lastColonIndex > 0 && lastColonIndex < rawUserInput.length() - 1) {
+                    String possiblePort = rawUserInput.substring(lastColonIndex + 1);
+                    try {
+                        int port = Integer.parseInt(possiblePort);
+                        // 合理的端口范围
+                        if (port > 0 && port <= 65535) {
+                            hasPort = true;
+                        }
+                    } catch (NumberFormatException e) {
+                        // 不是数字，不是端口
+                    }
+                }
+                
+                String addressWithBrackets;
+                if (hasPort) {
+                    // 将地址部分用中括号括起来，保留端口
+                    // "2001:0db8::1:47989" -> "[2001:0db8::1]:47989"
+                    String address = rawUserInput.substring(0, lastColonIndex);
+                    String port = rawUserInput.substring(lastColonIndex + 1);
+                    addressWithBrackets = "[" + address + "]:" + port;
+                } else {
+                    // 整个地址用中括号括起来
+                    // "2001:0db8::1" -> "[2001:0db8::1]"
+                    addressWithBrackets = "[" + rawUserInput + "]";
+                }
+                
+                URI uri = new URI("moonlight://" + addressWithBrackets);
+                if (uri.getHost() != null && !uri.getHost().isEmpty()) {
+                    return uri;
+                }
+            } catch (URISyntaxException ignored) {}
+        }
+        
+        // 最后的回退：尝试简单地添加中括号（处理边缘情况）
+        if (!rawUserInput.startsWith("[")) {
+            try {
+                // Attempt to escape the input as an IPv6 literal.
+                // This handles input like ::1.
+                URI uri = new URI("moonlight://[" + rawUserInput + "]");
+                if (uri.getHost() != null && !uri.getHost().isEmpty()) {
+                    return uri;
+                }
+            } catch (URISyntaxException ignored) {}
+        }
 
         return null;
     }
@@ -125,6 +201,8 @@ public class AddComputerManually extends Activity {
         boolean invalidInput = false;
         boolean success;
         int portTestResult;
+        String hostAddress = null; // 保存主机地址用于后续判断
+        boolean isIPv6 = false; // 标记是否为IPv6地址
 
         SpinnerDialog dialog = SpinnerDialog.displayDialog(this, getResources().getString(R.string.title_add_pc),
             getResources().getString(R.string.msg_add_pc), false);
@@ -137,6 +215,10 @@ public class AddComputerManually extends Activity {
             if (uri != null && uri.getHost() != null && !uri.getHost().isEmpty()) {
                 String host = uri.getHost();
                 int port = uri.getPort();
+
+                // 保存主机地址并检测是否为IPv6
+                hostAddress = host;
+                isIPv6 = isIPv6Address(host);
 
                 // If a port was not specified, use the default
                 if (port == -1) {
@@ -191,6 +273,15 @@ public class AddComputerManually extends Activity {
             else {
                 dialogText = getResources().getString(R.string.addpc_fail);
             }
+            
+            // 如果是IPv6地址连接失败，添加防火墙提示
+            if (isIPv6) {
+                dialogText += "\n\n提示：如果您使用的是IPv6地址，请检查：\n" +
+                             "1. 光猫防火墙是否放行了IPv6流量\n" +
+                             "2. 路由器是否启用了IPv6端口转发\n" +
+                             "3. 目标主机的IPv6防火墙设置";
+            }
+            
             Dialog.displayDialog(this, getResources().getString(R.string.conn_error_title), dialogText, false);
         }
         else {

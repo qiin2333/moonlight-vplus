@@ -86,6 +86,20 @@
         style="?android:attr/borderlessButtonStyle"/>
     
     <ImageButton
+        android:id="@+id/restoreSessionButton"
+        android:layout_width="70dp"
+        android:layout_height="65dp"
+        android:cropToPadding="false"
+        android:scaleType="fitXY"
+        android:layout_marginTop="@dimen/activity_safearea_top"
+        android:layout_alignParentTop="true"
+        android:layout_toLeftOf="@+id/manuallyAddPc"
+        android:layout_toStartOf="@+id/manuallyAddPc"
+        android:src="@drawable/ic_restore"
+        android:preferKeepClear="true"
+        style="?android:attr/borderlessButtonStyle"/>
+
+    <ImageButton
         android:id="@+id/manuallyAddPc"
         android:layout_width="70dp"
         android:layout_height="65dp"
