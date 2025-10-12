@@ -153,6 +153,8 @@ public class ServerHelper {
             } catch (IOException | XmlPullParserException e) {
                 message = e.getMessage();
                 e.printStackTrace();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             } finally {
                 if (onComplete != null) {
                     onComplete.run();
@@ -197,6 +199,8 @@ public class ServerHelper {
             } catch (IOException | XmlPullParserException e) {
                 message = e.getMessage();
                 e.printStackTrace();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             } finally {
                 if (onComplete != null) {
                     onComplete.run();

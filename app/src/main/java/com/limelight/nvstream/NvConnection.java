@@ -222,8 +222,7 @@ public class NvConnection {
         return StreamConfiguration.STREAM_CFG_AUTO;
     }
     
-    private boolean startApp() throws XmlPullParserException, IOException
-    {
+    private boolean startApp() throws XmlPullParserException, IOException, InterruptedException {
         NvHTTP h = new NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider);
 
         String serverInfo = h.getServerInfo(true);
@@ -348,7 +347,7 @@ public class NvConnection {
     }
 
     protected boolean quitAndLaunch(NvHTTP h, ConnectionContext context) throws IOException,
-            XmlPullParserException {
+            XmlPullParserException, InterruptedException {
         try {
             if (!h.quitApp()) {
                 context.connListener.displayMessage("Failed to quit previous session! You must quit it manually");
@@ -370,7 +369,7 @@ public class NvConnection {
     }
     
     private boolean launchNotRunningApp(NvHTTP h, ConnectionContext context)
-            throws IOException, XmlPullParserException {
+            throws IOException, XmlPullParserException, InterruptedException {
         // Launch the app since it's not running
         if (!h.launchApp(context, "launch", context.streamConfig.getApp().getAppId(), context.negotiatedHdr)) {
             context.connListener.displayMessage("Failed to launch application");
@@ -408,6 +407,8 @@ public class NvConnection {
                 context.connListener.displayMessage(e.getMessage());
                 context.connListener.stageFailed(appName, MoonBridge.ML_PORT_FLAG_TCP_47984 | MoonBridge.ML_PORT_FLAG_TCP_47989, 0);
                 return;
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
 
             ByteBuffer ib = ByteBuffer.allocate(16);
@@ -602,7 +603,7 @@ public class NvConnection {
             }
             try {
                 h.quitApp();
-            } catch (IOException | XmlPullParserException e) {
+            } catch (IOException | XmlPullParserException | InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }).start();
@@ -618,7 +619,7 @@ public class NvConnection {
             }
             try {
                 h.sendSuperCmd(cmdId);
-            } catch (IOException | XmlPullParserException e) {
+            } catch (IOException | XmlPullParserException | InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }).start();
@@ -658,6 +659,13 @@ public class NvConnection {
                     if (callback != null) {
                         callback.onFailure("Server returned failure response");
                     }
+                }
+            } catch (InterruptedException e) {
+                // Thread was interrupted during bitrate adjustment
+                Thread.currentThread().interrupt(); // Restore interrupt status
+                LimeLog.warning("Bitrate adjustment interrupted: " + e.getMessage());
+                if (callback != null) {
+                    callback.onFailure("Operation interrupted");
                 }
             } catch (IOException | XmlPullParserException e) {
                 // 记录错误但不抛出RuntimeException，避免应用崩溃
