@@ -408,7 +408,10 @@ public class NvConnection {
                 context.connListener.stageFailed(appName, MoonBridge.ML_PORT_FLAG_TCP_47984 | MoonBridge.ML_PORT_FLAG_TCP_47989, 0);
                 return;
             } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                // Thread was interrupted during app start
+                context.connListener.displayMessage("Connection interrupted");
+                context.connListener.stageFailed(appName, 0, 0);
+                return;
             }
 
             ByteBuffer ib = ByteBuffer.allocate(16);
@@ -603,8 +606,11 @@ public class NvConnection {
             }
             try {
                 h.quitApp();
-            } catch (IOException | XmlPullParserException | InterruptedException e) {
-                throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                // Thread was interrupted during quit, just return
+                LimeLog.info("Quit app interrupted");
+            } catch (IOException | XmlPullParserException e) {
+                e.printStackTrace();
             }
         }).start();
     }
@@ -619,8 +625,11 @@ public class NvConnection {
             }
             try {
                 h.sendSuperCmd(cmdId);
-            } catch (IOException | XmlPullParserException | InterruptedException e) {
-                throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                // Thread was interrupted during super command, just return
+                LimeLog.info("Send super command interrupted");
+            } catch (IOException | XmlPullParserException e) {
+                e.printStackTrace();
             }
         }).start();
     }
