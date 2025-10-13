@@ -19,8 +19,8 @@ android {
         minSdk 22
         targetSdk 35
 
-        versionName "12.3.10"
-        versionCode = 339
+        versionName "12.3.11"
+        versionCode = 340
 
         // Generate native debug symbols to allow Google Play to symbolicate our native crashes
         ndk.debugSymbolLevel = 'FULL'
@@ -180,11 +180,9 @@ dependencies {
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
     annotationProcessor 'com.github.bumptech.glide:compiler:5.0.5'
+    implementation 'com.squareup:seismic:1.0.3'
 
     // Firebase Analytics
     implementation platform('com.google.firebase:firebase-bom:32.7.0')
     implementation 'com.google.firebase:firebase-analytics'
-    
-    // 摇一摇检测库
-    implementation 'com.squareup:seismic:1.0.3'
 }
