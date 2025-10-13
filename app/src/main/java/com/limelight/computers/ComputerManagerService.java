@@ -942,7 +942,9 @@ public class ComputerManagerService extends Service {
                         } catch (XmlPullParserException e) {
                             e.printStackTrace();
                         } catch (InterruptedException e) {
-                            throw new RuntimeException(e);
+                            // Thread was interrupted, exit gracefully
+                            LimeLog.info("App list polling thread interrupted for " + computer.name);
+                            break;
                         }
                     } while (waitPollingDelay());
                 }
