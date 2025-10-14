@@ -63,6 +63,8 @@ public class ElementController {
     private static final String SPECIAL_KEY_ANDROID_KEYBOARD_SWITCH = "AKS";
     // 切换配置
     private static final String SPECIAL_KEY_CONFIG_SWITCH = "CSW";
+    private static final String SPECIAL_KEY_PAN_ZOOM_MODE = "PZM";
+
 
 
     public interface SendEventHandler {
@@ -1029,7 +1031,22 @@ public class ElementController {
                 public void sendEvent(int analog1, int analog2) {
                 }
             };
-        } else if (key.equals(SPECIAL_KEY_MOUSE_ENABLE_SWITCH)) {
+        } else if (key.equals(SPECIAL_KEY_PAN_ZOOM_MODE)) {
+            return new SendEventHandler() {
+                @Override
+                public void sendEvent(boolean down) {
+                    if (down) {
+                        Toast.makeText(game, game.getisTouchOverrideEnabled()?"已关闭平移/缩放":"已开启平移/缩放", Toast.LENGTH_SHORT).show();
+                        game.setisTouchOverrideEnabled(!game.getisTouchOverrideEnabled());
+                    }
+                }
+                @Override
+                public void sendEvent(int analog1, int analog2) {
+
+                }
+            };
+        }
+        else if (key.equals(SPECIAL_KEY_MOUSE_ENABLE_SWITCH)) {
             return new SendEventHandler() {
                 @Override
                 public void sendEvent(boolean down) {

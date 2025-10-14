@@ -92,6 +92,13 @@
 						android:tag="CSW"
 						style="@style/KeyboardKeyStyle"
 						android:text="切换配置"/>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        android:layout_marginVertical="5dp"
+                        android:tag="PZM"
+                        style="@style/KeyboardKeyStyle"
+                        android:text="平移/缩放"/>
 
                 </LinearLayout>
             </ScrollView>
