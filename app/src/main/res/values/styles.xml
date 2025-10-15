@@ -246,4 +246,37 @@
         <item name="android:indeterminateTint">@color/theme_pink_primary</item>
         <item name="android:indeterminateDrawable">@drawable/app_progress_indeterminate</item>
     </style>
+
+    <!-- 专门用于 iPerf3 对话框的样式 -->
+    <style name="Iperf3DialogTheme" parent="Theme.AppCompat.Dialog.Alert">
+        <!-- 对话框窗口背景色 (这是整个窗口的背景，包括标题和按钮区域) -->
+        <item name="android:background">#1C1C1E</item>
+        <!-- 标题文字样式 -->
+        <item name="android:windowTitleStyle">@style/Iperf3DialogTitleText</item>
+        <!-- 内容区域文字颜色 (虽然我们自定义了布局，但设置一下没坏处) -->
+        <item name="android:textColor">#FFFFFF</item>
+        <!-- 标题文字颜色 (更通用的方式) -->
+        <item name="android:textColorPrimary">#FFFFFF</item>
+        <!-- 次要文字颜色 -->
+        <item name="android:textColorSecondary">#CCCCCC</item>
+        <!-- 按钮样式 -->
+        <item name="buttonBarPositiveButtonStyle">@style/Iperf3DialogButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/Iperf3DialogButton</item>
+        <item name="buttonBarNeutralButtonStyle">@style/Iperf3DialogButton</item>
+        <!-- 按钮颜色 (这是控制按钮文字颜色的关键属性) -->
+        <item name="colorAccent">#007AFF</item>
+    </style>
+    <!-- 自定义标题文字样式 -->
+    <style name="Iperf3DialogTitleText" parent="@style/RtlOverlay.DialogWindowTitle.AppCompat">
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <!-- 自定义按钮样式 (可以进一步定制，比如背景等) -->
+    <style name="Iperf3DialogButton" parent="Widget.AppCompat.Button.ButtonBar.AlertDialog">
+        <!-- 按钮文字颜色会继承自上面定义的 colorAccent -->
+        <item name="android:textColor">#007AFF</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
 </resources>

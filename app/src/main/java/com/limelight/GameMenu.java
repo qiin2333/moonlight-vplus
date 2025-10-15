@@ -355,6 +355,20 @@ public class GameMenu {
                         false
                 ),
                 new MenuOption(
+                        getString(R.string.game_menu_touch_mode_trackpad) + " - " + 
+                        (game.prefConfig.enableDoubleClickDrag ? "关闭双击按住" : "开启双击按住"),
+                        false,
+                        () -> {
+                            game.prefConfig.enableDoubleClickDrag = !game.prefConfig.enableDoubleClickDrag;
+                            // 不保存到持久化存储，只在当前会话中生效
+                            Toast.makeText(game, 
+                                game.prefConfig.enableDoubleClickDrag ? "已开启双击按住功能" : "已关闭双击按住功能", 
+                                Toast.LENGTH_SHORT).show();
+                        },
+                        null,
+                        false
+                ),
+                new MenuOption(
                         getString(R.string.game_menu_touch_mode_native_mouse),
                         isNativeMousePointer,
                         () -> {
@@ -1537,6 +1551,17 @@ public class GameMenu {
                 "mouse_mode",
                 true, true));
 
+        normalOptions.add(new MenuOption(
+                game.getisTouchOverrideEnabled()?"关闭平移/缩放":"开启平移/缩放",
+                false,
+                () -> {
+                    Toast.makeText(game, game.getisTouchOverrideEnabled()?"已关闭平移/缩放":"已开启平移/缩放", Toast.LENGTH_SHORT).show();
+                    game.setisTouchOverrideEnabled(!game.getisTouchOverrideEnabled());
+                },
+                "game_menu_mouse_emulation",
+                true
+        ));
+
         // 王冠功能 - 只在开启王冠功能时显示
         if (game.isCrownFeatureEnabled()) {
             normalOptions.add(new MenuOption(
@@ -1584,26 +1609,14 @@ public class GameMenu {
 
     // 由于不能直接发送win+L来锁定屏幕，可以先打开Windows的屏幕键盘，再发送win+L
     public void lockAndDisconnectWithDelay() {
-        // 动作1：发送 Ctrl+Win+O 打开屏幕键盘
+        //需要用户先自行打开屏幕键盘
+        // 发送 Win+L 锁定屏幕
         sendKeys(new short[]{
-                KeyboardTranslator.VK_LCONTROL,
                 KeyboardTranslator.VK_LWIN,
-                KeyboardTranslator.VK_O
+                KeyboardTranslator.VK_L
         });
-
-        // 动作2：使用 Handler 安排延迟任务
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            // 动作3：发送 Win+L 锁定屏幕
-            sendKeys(new short[]{
-                    KeyboardTranslator.VK_LWIN,
-                    KeyboardTranslator.VK_L
-            });
-            // 动作4：安排最终的断开任务
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                disconnectAndQuit();
-            }, 100); // 保险延迟，确保锁屏命令发出
-
-        }, 900); // 关键延迟，等待OSK启动
+        // 断开并退出串流
+        disconnectAndQuit();
     }
 
     /**

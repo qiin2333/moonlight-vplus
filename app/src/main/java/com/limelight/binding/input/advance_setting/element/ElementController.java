@@ -2,6 +2,8 @@ package com.limelight.binding.input.advance_setting.element;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.preference.PreferenceManager;
 import android.media.AudioAttributes;
 import android.os.Build;
 import android.os.Handler;
@@ -15,6 +17,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CompoundButton;
 import android.widget.FrameLayout;
+import android.app.AlertDialog;
 import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.Toast;
@@ -58,6 +61,8 @@ public class ElementController {
     private static final String SPECIAL_KEY_MOUSE_ENABLE_SWITCH = "MES";
     private static final String SPECIAL_KEY_PC_KEYBOARD_SWITCH = "PKS";
     private static final String SPECIAL_KEY_ANDROID_KEYBOARD_SWITCH = "AKS";
+    // 切换配置
+    private static final String SPECIAL_KEY_CONFIG_SWITCH = "CSW";
 
 
     public interface SendEventHandler {
@@ -968,6 +973,60 @@ public class ElementController {
                 @Override
                 public void sendEvent(int analog1, int analog2) {
 
+                }
+            };
+        } else if (key.equals(SPECIAL_KEY_CONFIG_SWITCH)) {
+            return new SendEventHandler() {
+                @Override
+                public void sendEvent(boolean down) {
+                    if (!down) {
+                        return;
+                    }
+
+                    try {
+                        // 读取所有配置ID与名称
+                        List<Long> configIds = controllerManager.getSuperConfigDatabaseHelper().queryAllConfigIds();
+                        List<String> configNames = new ArrayList<>();
+                        for (Long id : configIds) {
+                            String name = (String) controllerManager.getSuperConfigDatabaseHelper()
+                                    .queryConfigAttribute(id, PageConfigController.COLUMN_STRING_CONFIG_NAME, "default");
+                            configNames.add(name);
+                        }
+
+                        // 弹出选择对话框
+                        AlertDialog.Builder builder = new AlertDialog.Builder(context, R.style.AppDialogStyle);
+                        builder.setTitle("选择配置")
+                                .setItems(configNames.toArray(new String[0]), new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        if (which < 0 || which >= configIds.size()) return;
+                                        Long newConfigId = configIds.get(which);
+                                        String newName = configNames.get(which);
+
+                                        // 保存到首选项
+                                        PreferenceManager.getDefaultSharedPreferences(context)
+                                                .edit()
+                                                .putLong("current_config_id", newConfigId)
+                                                .apply();
+
+                                        // 刷新配置与元素
+                                        try {
+                                            controllerManager.getPageConfigController().initConfig();
+                                        } catch (Exception ignored) {}
+                                        loadAllElement(newConfigId);
+
+                                        showToast("已切换到: " + newName);
+                                    }
+                                })
+                                .setNegativeButton(R.string.game_menu_cancel, null)
+                                .show();
+                    } catch (Exception e) {
+                        Toast.makeText(context, "无法加载配置列表", Toast.LENGTH_SHORT).show();
+                    }
+                }
+
+                @Override
+                public void sendEvent(int analog1, int analog2) {
                 }
             };
         } else if (key.equals(SPECIAL_KEY_MOUSE_ENABLE_SWITCH)) {
