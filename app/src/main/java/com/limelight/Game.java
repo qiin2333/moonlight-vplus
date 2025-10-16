@@ -865,9 +865,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 desiredOrientation = Configuration.ORIENTATION_LANDSCAPE;
             }
         }
-        
-        // 对于接近正方形的屏幕，应用更复杂的逻辑
-        if (PreferenceConfiguration.isSquarishScreen(display)) {
+
+        if (prefConfig.rotableScreen) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
+        } else if (PreferenceConfiguration.isSquarishScreen(display)) {
+            // 对于接近正方形的屏幕，应用更复杂的逻辑
             if (desiredOrientation == Configuration.ORIENTATION_LANDSCAPE) {
                 setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
             } else if (desiredOrientation == Configuration.ORIENTATION_PORTRAIT) {

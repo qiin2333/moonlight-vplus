@@ -220,6 +220,9 @@ public class PreferenceConfiguration {
     private static final String REVERSE_RESOLUTION_PREF_STRING = "checkbox_reverse_resolution";
     private static final boolean DEFAULT_REVERSE_RESOLUTION = false;
 
+    private static final String ROTABLE_SCREEN_PREF_STRING = "checkbox_rotable_screen";
+    private static final boolean DEFAULT_ROTABLE_SCREEN = false;
+
     // 画面位置常量
     private static final String SCREEN_POSITION_PREF_STRING = "list_screen_position";
     private static final String SCREEN_OFFSET_X_PREF_STRING = "seekbar_screen_offset_x";
@@ -295,6 +298,7 @@ public class PreferenceConfiguration {
     public boolean gamepadTouchpadAsMouse;
     public boolean gamepadMotionSensorsFallbackToDevice;
     public boolean reverseResolution;
+    public boolean rotableScreen;
     // Runtime-only: enable mapping gyroscope motion to right analog stick
     public boolean gyroToRightStick;
     // Runtime-only: sensitivity in deg/s for full stick deflection
@@ -805,6 +809,7 @@ public class PreferenceConfiguration {
         config.enableEscMenu = prefs.getBoolean(ENABLE_ESC_MENU_PREF_STRING, DEFAULT_ENABLE_ESC_MENU);
 
         config.reverseResolution = prefs.getBoolean(REVERSE_RESOLUTION_PREF_STRING, DEFAULT_REVERSE_RESOLUTION);
+        config.rotableScreen = prefs.getBoolean(ROTABLE_SCREEN_PREF_STRING, DEFAULT_ROTABLE_SCREEN);
 
         // 如果启用了分辨率反转，则交换宽度和高度
         if (config.reverseResolution) {
@@ -915,6 +920,7 @@ public class PreferenceConfiguration {
                     .putBoolean(ENABLE_HDR_PREF_STRING, enableHdr)
                     .putBoolean(ENABLE_PERF_OVERLAY_STRING, enablePerfOverlay)
                     .putBoolean(REVERSE_RESOLUTION_PREF_STRING, reverseResolution)
+                    .putBoolean(ROTABLE_SCREEN_PREF_STRING, rotableScreen)
                     .putBoolean(SHOW_BITRATE_CARD_PREF_STRING, showBitrateCard)
                     .putBoolean(SHOW_GYRO_CARD_PREF_STRING, showGyroCard)
                     .putString(SCREEN_POSITION_PREF_STRING, positionString)
@@ -954,6 +960,7 @@ public class PreferenceConfiguration {
         copy.perfOverlayOrientation = this.perfOverlayOrientation;
         copy.perfOverlayPosition = this.perfOverlayPosition;
         copy.reverseResolution = this.reverseResolution;
+        copy.rotableScreen = this.rotableScreen;
         copy.screenPosition = this.screenPosition;
         copy.screenOffsetX = this.screenOffsetX;
         copy.screenOffsetY = this.screenOffsetY;

@@ -357,6 +357,7 @@ public class AppSettingsManager {
         settings.useExternalDisplay = false;
         settings.enablePerfOverlay = false;
         settings.reverseResolution = false;
+        settings.rotableScreen = false;
         settings.showBitrateCard = false;
         settings.showGyroCard = false;
 
