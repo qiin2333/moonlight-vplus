@@ -154,7 +154,8 @@ public class ServerHelper {
                 message = e.getMessage();
                 e.printStackTrace();
             } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                // Thread was interrupted, exit gracefully
+                message = parent.getResources().getString(R.string.error_interrupted);
             } finally {
                 if (onComplete != null) {
                     onComplete.run();
@@ -200,7 +201,8 @@ public class ServerHelper {
                 message = e.getMessage();
                 e.printStackTrace();
             } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                // Thread was interrupted, exit gracefully
+                message = parent.getResources().getString(R.string.error_interrupted);
             } finally {
                 if (onComplete != null) {
                     onComplete.run();

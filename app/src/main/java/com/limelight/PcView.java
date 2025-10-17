@@ -913,7 +913,8 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
                 message = e.getMessage();
                 e.printStackTrace();
             } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                // Thread was interrupted during unpair
+                message = getResources().getString(R.string.error_interrupted);
             }
 
             final String toastMessage = message;
