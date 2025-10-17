@@ -229,6 +229,10 @@ public class PreferenceConfiguration {
     private static final String SCREEN_POSITION_PREF_STRING = "list_screen_position";
     private static final String SCREEN_OFFSET_X_PREF_STRING = "seekbar_screen_offset_x";
     private static final String SCREEN_OFFSET_Y_PREF_STRING = "seekbar_screen_offset_y";
+    private static final String CUTOUT_SUPPORT_PREF_STRING = "checkbox_cutout_support";
+    private static final String ROUND_CORNER_SUPPORT_PREF_STRING = "checkbox_round_corner_support";
+
+    private static final String USE_EXTERNAL_DISPLAY_PREF_STRING = "use_external_display";
 
     // 默认值
     private static final String DEFAULT_SCREEN_POSITION = "center"; // 居中
@@ -328,6 +332,8 @@ public class PreferenceConfiguration {
     public ScreenPosition screenPosition;
     public int screenOffsetX;
     public int screenOffsetY;
+    public boolean cutoutSupport;
+    public boolean roundCornerSupport;
     
     public boolean useExternalDisplay;
 
@@ -857,8 +863,11 @@ public class PreferenceConfiguration {
         // 读取偏移百分比
         config.screenOffsetX = prefs.getInt(SCREEN_OFFSET_X_PREF_STRING, DEFAULT_SCREEN_OFFSET_X);
         config.screenOffsetY = prefs.getInt(SCREEN_OFFSET_Y_PREF_STRING, DEFAULT_SCREEN_OFFSET_Y);
+
+        config.cutoutSupport = prefs.getBoolean(CUTOUT_SUPPORT_PREF_STRING, false);
+        config.roundCornerSupport = prefs.getBoolean(ROUND_CORNER_SUPPORT_PREF_STRING, false);
         
-        config.useExternalDisplay = prefs.getBoolean("use_external_display", false);
+        config.useExternalDisplay = prefs.getBoolean(USE_EXTERNAL_DISPLAY_PREF_STRING, false);
 
         // Runtime-only defaults; controlled via in-stream GameMenu
         config.gyroToRightStick = false;
@@ -930,7 +939,9 @@ public class PreferenceConfiguration {
                     .putString(SCREEN_POSITION_PREF_STRING, positionString)
                     .putInt(SCREEN_OFFSET_X_PREF_STRING, screenOffsetX)
                     .putInt(SCREEN_OFFSET_Y_PREF_STRING, screenOffsetY)
-                    .putBoolean("use_external_display", useExternalDisplay)
+                    .putBoolean(CUTOUT_SUPPORT_PREF_STRING, cutoutSupport)
+                    .putBoolean(ROUND_CORNER_SUPPORT_PREF_STRING, roundCornerSupport)
+                    .putBoolean(USE_EXTERNAL_DISPLAY_PREF_STRING, useExternalDisplay)
                     .putBoolean(ENABLE_MIC_PREF_STRING, enableMic)
                     .putInt(MIC_BITRATE_PREF_STRING, micBitrate)
                     .putBoolean(ENABLE_ESC_MENU_PREF_STRING, enableEscMenu)

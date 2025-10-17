@@ -97,7 +97,17 @@
             android:summary="@string/summary_screen_offset_y"
             android:defaultValue="0"
             android:max="100" />
-        
+
+        <CheckBoxPreference
+            android:key="checkbox_cutout_support"
+            android:title="避免刘海遮挡"
+            android:summary="让屏幕的刘海不遮挡串流内容"
+            android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_round_corner_support"
+            android:title="避免圆角遮挡"
+            android:summary="让屏幕的圆角不遮挡串流内容"
+            android:defaultValue="false" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_audio_settings"
         android:layout="@layout/preference_category_material">

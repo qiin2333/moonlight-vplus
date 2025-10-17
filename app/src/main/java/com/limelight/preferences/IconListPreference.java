@@ -8,7 +8,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
-import android.widget.TextView;
 
 import com.limelight.R;
 import com.limelight.Game;
@@ -117,7 +116,7 @@ public class IconListPreference extends ListPreference {
             
             // 如果当前正在游戏中，通知Activity刷新显示位置
             if (getContext() instanceof Game) {
-                ((Game) getContext()).refreshDisplayPosition();
+                ((Game) getContext()).refreshDisplayStatus();
             }
         }
     }
