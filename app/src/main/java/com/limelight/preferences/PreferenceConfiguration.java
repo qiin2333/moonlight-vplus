@@ -78,6 +78,7 @@ public class PreferenceConfiguration {
     private static final String ONSCREEN_KEYBOARD_PREF_STRING = "checkbox_show_onscreen_keyboard";
     private static final String ONLY_L3_R3_PREF_STRING = "checkbox_only_show_L3R3";
     private static final String SHOW_GUIDE_BUTTON_PREF_STRING = "checkbox_show_guide_button";
+    private static final String HALF_HEIGHT_OSC_PORTRAIT_PREF_STRING = "checkbox_half_height_osc_portrait";
     private static final String LEGACY_DISABLE_FRAME_DROP_PREF_STRING = "checkbox_disable_frame_drop";
     private static final String ENABLE_HDR_PREF_STRING = "checkbox_enable_hdr";
     private static final String ENABLE_PIP_PREF_STRING = "checkbox_enable_pip";
@@ -152,6 +153,7 @@ public class PreferenceConfiguration {
     private static final boolean ONSCREEN_KEYBOARD_DEFAULT = false;
     private static final boolean ONLY_L3_R3_DEFAULT = false;
     private static final boolean SHOW_GUIDE_BUTTON_DEFAULT = true;
+    private static final boolean HALF_HEIGHT_OSC_PORTRAIT_DEFAULT = true;
     private static final boolean DEFAULT_ENABLE_HDR = false;
     private static final boolean DEFAULT_ENABLE_PIP = false;
     private static final boolean DEFAULT_ENABLE_PERF_OVERLAY = false;
@@ -220,10 +222,17 @@ public class PreferenceConfiguration {
     private static final String REVERSE_RESOLUTION_PREF_STRING = "checkbox_reverse_resolution";
     private static final boolean DEFAULT_REVERSE_RESOLUTION = false;
 
+    private static final String ROTABLE_SCREEN_PREF_STRING = "checkbox_rotable_screen";
+    private static final boolean DEFAULT_ROTABLE_SCREEN = false;
+
     // 画面位置常量
     private static final String SCREEN_POSITION_PREF_STRING = "list_screen_position";
     private static final String SCREEN_OFFSET_X_PREF_STRING = "seekbar_screen_offset_x";
     private static final String SCREEN_OFFSET_Y_PREF_STRING = "seekbar_screen_offset_y";
+    private static final String CUTOUT_SUPPORT_PREF_STRING = "checkbox_cutout_support";
+    private static final String ROUND_CORNER_SUPPORT_PREF_STRING = "checkbox_round_corner_support";
+
+    private static final String USE_EXTERNAL_DISPLAY_PREF_STRING = "use_external_display";
 
     // 默认值
     private static final String DEFAULT_SCREEN_POSITION = "center"; // 居中
@@ -266,6 +275,7 @@ public class PreferenceConfiguration {
     public boolean onscreenKeyboard;
     public boolean onlyL3R3;
     public boolean showGuideButton;
+    public boolean halfHeightOscPortrait;
     public boolean enableHdr;
     public boolean enablePip;
     public boolean enablePerfOverlay;
@@ -295,6 +305,7 @@ public class PreferenceConfiguration {
     public boolean gamepadTouchpadAsMouse;
     public boolean gamepadMotionSensorsFallbackToDevice;
     public boolean reverseResolution;
+    public boolean rotableScreen;
     // Runtime-only: enable mapping gyroscope motion to right analog stick
     public boolean gyroToRightStick;
     // Runtime-only: sensitivity in deg/s for full stick deflection
@@ -321,6 +332,8 @@ public class PreferenceConfiguration {
     public ScreenPosition screenPosition;
     public int screenOffsetX;
     public int screenOffsetY;
+    public boolean cutoutSupport;
+    public boolean roundCornerSupport;
     
     public boolean useExternalDisplay;
 
@@ -731,6 +744,7 @@ public class PreferenceConfiguration {
         config.onscreenKeyboard = prefs.getBoolean(ONSCREEN_KEYBOARD_PREF_STRING, ONSCREEN_KEYBOARD_DEFAULT);
         config.onlyL3R3 = prefs.getBoolean(ONLY_L3_R3_PREF_STRING, ONLY_L3_R3_DEFAULT);
         config.showGuideButton = prefs.getBoolean(SHOW_GUIDE_BUTTON_PREF_STRING, SHOW_GUIDE_BUTTON_DEFAULT);
+        config.halfHeightOscPortrait = prefs.getBoolean(HALF_HEIGHT_OSC_PORTRAIT_PREF_STRING, HALF_HEIGHT_OSC_PORTRAIT_DEFAULT);
         config.enableHdr = prefs.getBoolean(ENABLE_HDR_PREF_STRING, DEFAULT_ENABLE_HDR) && !isShieldAtvFirmwareWithBrokenHdr();
         config.enablePip = prefs.getBoolean(ENABLE_PIP_PREF_STRING, DEFAULT_ENABLE_PIP);
         config.enablePerfOverlay = prefs.getBoolean(ENABLE_PERF_OVERLAY_STRING, DEFAULT_ENABLE_PERF_OVERLAY);
@@ -805,6 +819,7 @@ public class PreferenceConfiguration {
         config.enableEscMenu = prefs.getBoolean(ENABLE_ESC_MENU_PREF_STRING, DEFAULT_ENABLE_ESC_MENU);
 
         config.reverseResolution = prefs.getBoolean(REVERSE_RESOLUTION_PREF_STRING, DEFAULT_REVERSE_RESOLUTION);
+        config.rotableScreen = prefs.getBoolean(ROTABLE_SCREEN_PREF_STRING, DEFAULT_ROTABLE_SCREEN);
 
         // 如果启用了分辨率反转，则交换宽度和高度
         if (config.reverseResolution) {
@@ -848,8 +863,11 @@ public class PreferenceConfiguration {
         // 读取偏移百分比
         config.screenOffsetX = prefs.getInt(SCREEN_OFFSET_X_PREF_STRING, DEFAULT_SCREEN_OFFSET_X);
         config.screenOffsetY = prefs.getInt(SCREEN_OFFSET_Y_PREF_STRING, DEFAULT_SCREEN_OFFSET_Y);
+
+        config.cutoutSupport = prefs.getBoolean(CUTOUT_SUPPORT_PREF_STRING, false);
+        config.roundCornerSupport = prefs.getBoolean(ROUND_CORNER_SUPPORT_PREF_STRING, false);
         
-        config.useExternalDisplay = prefs.getBoolean("use_external_display", false);
+        config.useExternalDisplay = prefs.getBoolean(USE_EXTERNAL_DISPLAY_PREF_STRING, false);
 
         // Runtime-only defaults; controlled via in-stream GameMenu
         config.gyroToRightStick = false;
@@ -915,12 +933,15 @@ public class PreferenceConfiguration {
                     .putBoolean(ENABLE_HDR_PREF_STRING, enableHdr)
                     .putBoolean(ENABLE_PERF_OVERLAY_STRING, enablePerfOverlay)
                     .putBoolean(REVERSE_RESOLUTION_PREF_STRING, reverseResolution)
+                    .putBoolean(ROTABLE_SCREEN_PREF_STRING, rotableScreen)
                     .putBoolean(SHOW_BITRATE_CARD_PREF_STRING, showBitrateCard)
                     .putBoolean(SHOW_GYRO_CARD_PREF_STRING, showGyroCard)
                     .putString(SCREEN_POSITION_PREF_STRING, positionString)
                     .putInt(SCREEN_OFFSET_X_PREF_STRING, screenOffsetX)
                     .putInt(SCREEN_OFFSET_Y_PREF_STRING, screenOffsetY)
-                    .putBoolean("use_external_display", useExternalDisplay)
+                    .putBoolean(CUTOUT_SUPPORT_PREF_STRING, cutoutSupport)
+                    .putBoolean(ROUND_CORNER_SUPPORT_PREF_STRING, roundCornerSupport)
+                    .putBoolean(USE_EXTERNAL_DISPLAY_PREF_STRING, useExternalDisplay)
                     .putBoolean(ENABLE_MIC_PREF_STRING, enableMic)
                     .putInt(MIC_BITRATE_PREF_STRING, micBitrate)
                     .putBoolean(ENABLE_ESC_MENU_PREF_STRING, enableEscMenu)
@@ -954,6 +975,7 @@ public class PreferenceConfiguration {
         copy.perfOverlayOrientation = this.perfOverlayOrientation;
         copy.perfOverlayPosition = this.perfOverlayPosition;
         copy.reverseResolution = this.reverseResolution;
+        copy.rotableScreen = this.rotableScreen;
         copy.screenPosition = this.screenPosition;
         copy.screenOffsetX = this.screenOffsetX;
         copy.screenOffsetY = this.screenOffsetY;

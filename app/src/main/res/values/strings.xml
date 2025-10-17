@@ -440,7 +440,7 @@
     <string name="summary_screen_offset_y">Vertical offset of the screen</string>
     
     <!-- Crown feature area -->
-    <string name="category_crown_features">Crown Feature Area</string>
+    <string name="category_crown_features">👑 Crown Feature Area</string>
     <string name="title_crown_super_features">Crown Super Features</string>
     <string name="summary_crown_super_features">Custom buttons and settings during streaming, saved to custom configurations for quick switching</string>
     <string name="title_export_super_config">Export Configuration</string>

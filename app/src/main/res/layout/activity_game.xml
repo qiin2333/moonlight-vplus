@@ -11,17 +11,22 @@
         android:layout_height="match_parent"
         android:layout_gravity="center" />
 
-    <com.limelight.ui.StreamView
-        android:id="@+id/surfaceView"
+    <FrameLayout
+        android:id="@+id/surfaceFrame"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_gravity="center"
-        android:focusable="true"
-        android:focusableInTouchMode="true"
-        android:focusedByDefault="true"
-        android:defaultFocusHighlightEnabled="false">
-        <requestFocus />
-    </com.limelight.ui.StreamView>
+        android:layout_height="match_parent">
+        <com.limelight.ui.StreamView
+            android:id="@+id/surfaceView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:focusedByDefault="true"
+            android:defaultFocusHighlightEnabled="false">
+            <requestFocus />
+        </com.limelight.ui.StreamView>
+    </FrameLayout>
     <FrameLayout
         android:id="@+id/advance_setting_view"
         android:layout_width="match_parent"

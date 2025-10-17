@@ -8,7 +8,6 @@ import com.limelight.binding.input.ControllerHandler;
 import com.limelight.binding.input.GameInputDevice;
 import com.limelight.binding.input.KeyboardTranslator;
 import com.limelight.binding.input.advance_setting.ControllerManager;
-import com.limelight.binding.input.advance_setting.TouchController;
 import com.limelight.binding.input.capture.InputCaptureManager;
 import com.limelight.binding.input.capture.InputCaptureProvider;
 import com.limelight.binding.input.touch.AbsoluteTouchContext;
@@ -174,6 +173,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private boolean cursorVisible = false;
     private boolean waitingForAllModifiersUp = false;
     private int specialKeyCode = KeyEvent.KEYCODE_UNKNOWN;
+    private FrameLayout streamFrame;
     private StreamView streamView;
     private StreamView externalStreamView; // 外接显示器的StreamView
     private long lastAbsTouchUpTime = 0;
@@ -404,6 +404,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             }
         }
 
+        streamFrame = findViewById(R.id.surfaceFrame);
         // Listen for non-touch events on the game surface
         streamView = findViewById(R.id.surfaceView);
             streamView.setOnGenericMotionListener(this);
@@ -711,7 +712,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         if (prefConfig.onscreenController) {
             // create virtual onscreen controller
             virtualController = new VirtualController(controllerHandler,
-                    (FrameLayout)streamView.getParent(),
+                    (FrameLayout)streamFrame.getParent(),
                     this);
             virtualController.refreshLayout();
             virtualController.show();
@@ -721,7 +722,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         if (prefConfig.onscreenKeyboard) {
             // create virtual onscreen keyboard
-            controllerManager = new ControllerManager((FrameLayout)streamView.getParent(),this);
+            controllerManager = new ControllerManager((FrameLayout)streamFrame.getParent(),this);
             controllerManager.refreshLayout();
         }
 
@@ -754,6 +755,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // Set up display position
         new DisplayPositionManager(this, prefConfig, streamView).setupDisplayPosition();
+        new DisplayMarginManager(this, streamFrame).setupDisplayMargin();
 
         // 初始化外接显示器管理器
         externalDisplayManager = new ExternalDisplayManager(this, prefConfig, conn, decoderRenderer, pcName, appName);
@@ -865,9 +867,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 desiredOrientation = Configuration.ORIENTATION_LANDSCAPE;
             }
         }
-        
-        // 对于接近正方形的屏幕，应用更复杂的逻辑
-        if (PreferenceConfiguration.isSquarishScreen(display)) {
+
+        if (prefConfig.rotableScreen) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
+        } else if (PreferenceConfiguration.isSquarishScreen(display)) {
+            // 对于接近正方形的屏幕，应用更复杂的逻辑
             if (desiredOrientation == Configuration.ORIENTATION_LANDSCAPE) {
                 setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
             } else if (desiredOrientation == Configuration.ORIENTATION_PORTRAIT) {
@@ -977,7 +981,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
 
         // Re-apply display position
-        refreshDisplayPosition();
+        refreshDisplayStatus();
     }
 
     @TargetApi(Build.VERSION_CODES.O)
@@ -3650,7 +3654,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
      */
     public void initializeControllerManager() {
         if (controllerManager == null) {
-            controllerManager = new ControllerManager((FrameLayout)streamView.getParent(), this);
+            controllerManager = new ControllerManager((FrameLayout)streamFrame.getParent(), this);
             controllerManager.refreshLayout();
         }
     }
@@ -3740,8 +3744,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     // 更新刷新显示位置方法
-    public void refreshDisplayPosition() {
+    public void refreshDisplayStatus() {
         new DisplayPositionManager(this, prefConfig, streamView).refreshDisplayPosition(surfaceCreated);
+        new DisplayMarginManager(this, streamFrame).refreshDisplayMargin(surfaceCreated);
     }
 
     public StreamView getStreamView() {

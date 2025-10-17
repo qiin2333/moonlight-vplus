@@ -41,22 +41,28 @@ public class ExternalDisplayPreference extends CheckBoxPreference {
     }
 
     private void updateSummary() {
-        if (ExternalDisplayManager.hasExternalDisplay(getContext())) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                DisplayManager displayManager = (DisplayManager) getContext().getSystemService(Context.DISPLAY_SERVICE);
-                if (displayManager != null) {
-                    Display[] displays = displayManager.getDisplays();
-                    for (Display display : displays) {
-                        if (display.getDisplayId() != Display.DEFAULT_DISPLAY) {
-                            setSummary("检测到外接显示器: " + display.getName() + " (ID: " + display.getDisplayId() + ")");
-                            setEnabled(true);
-                            return;
+        try {
+            if (ExternalDisplayManager.hasExternalDisplay(getContext())) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                    DisplayManager displayManager = (DisplayManager) getContext().getSystemService(Context.DISPLAY_SERVICE);
+                    if (displayManager != null) {
+                        Display[] displays = displayManager.getDisplays();
+                        for (Display display : displays) {
+                            if (display.getDisplayId() != Display.DEFAULT_DISPLAY) {
+                                setSummary("检测到外接显示器: " + display.getName() + " (ID: " + display.getDisplayId() + ")");
+                                setEnabled(true);
+                                return;
+                            }
                         }
                     }
                 }
+            } else {
+                setSummary("未检测到外接显示器");
+                setEnabled(false);
+                setChecked(false);
             }
-        } else {
-            setSummary("未检测到外接显示器");
+        } catch (Exception e) {
+            setSummary("检测外接显示器失败: " + e);
             setEnabled(false);
             setChecked(false);
         }

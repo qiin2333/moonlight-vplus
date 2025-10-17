@@ -7,6 +7,7 @@ package com.limelight.binding.input.virtual_controller;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.util.DisplayMetrics;
 
 import com.limelight.nvstream.input.ControllerPacket;
@@ -26,7 +27,10 @@ public class VirtualControllerConfigurationLoader {
 
     // The default controls are specified using a grid of 128*72 cells at 16:9
     private static int screenScale(int units, int height) {
-        return (int) (((float) height / (float) 72) * (float) units);
+        return Math.round(((float) height / (float) 72) * (float) units);
+    }
+    private static int screenScaleReverse(int pixel, int height) {
+        return Math.round((float) pixel / ((float) height / (float) 72));
     }
 
     private static DigitalPad createDigitalPad(
@@ -189,15 +193,25 @@ public class VirtualControllerConfigurationLoader {
     private static final int GUIDE_X = START_X-BACK_X;
     private static final int GUIDE_Y = START_BACK_Y;
 
+    private static int screenHeight = 1080;
+    private static int screenWidth = 1920;
+    private static int baseYUnit = 0;
+
     public static void createDefaultLayout(final VirtualController controller, final Context context) {
 
         DisplayMetrics screen = context.getResources().getDisplayMetrics();
         PreferenceConfiguration config = PreferenceConfiguration.readPreferences(context);
 
-        // Displace controls on the right by this amount of pixels to account for different aspect ratios
-        int rightDisplacement = screen.widthPixels - screen.heightPixels * 16 / 9;
+        screenHeight = screen.heightPixels;
+        baseYUnit = 0;
+        if (config.halfHeightOscPortrait && context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+            screenHeight /= 2;
+            baseYUnit = 72;
+        }
 
-        int height = screen.heightPixels;
+        // Displace controls on the right by this amount of pixels to account for different aspect ratios
+        screenWidth = screen.widthPixels;
+        int rightDisplacement = screenWidth - screenHeight * 16 / 9;
 
         // NOTE: Some of these getPercent() expressions seem like they can be combined
         // into a single call. Due to floating point rounding, this isn't actually possible.
@@ -205,149 +219,177 @@ public class VirtualControllerConfigurationLoader {
         if (!config.onlyL3R3)
         {
             controller.addElement(createDigitalPad(controller, context),
-                    screenScale(DPAD_BASE_X, height),
-                    screenScale(DPAD_BASE_Y, height),
-                    screenScale(DPAD_SIZE, height),
-                    screenScale(DPAD_SIZE, height)
+                    screenScale(DPAD_BASE_X, screenHeight),
+                    screenScale(DPAD_BASE_Y + baseYUnit, screenHeight),
+                    screenScale(DPAD_SIZE, screenHeight),
+                    screenScale(DPAD_SIZE, screenHeight)
             );
 
             controller.addElement(createDigitalButton(
                     VirtualControllerElement.EID_A,
                     !config.flipFaceButtons ? ControllerPacket.A_FLAG : ControllerPacket.B_FLAG, 0, 1,
                     !config.flipFaceButtons ? "A" : "B", -1, controller, context),
-                    screenScale(BUTTON_BASE_X, height) + rightDisplacement,
-                    screenScale(BUTTON_BASE_Y + 2 * BUTTON_SIZE, height),
-                    screenScale(BUTTON_SIZE, height),
-                    screenScale(BUTTON_SIZE, height)
+                    screenScale(BUTTON_BASE_X, screenHeight) + rightDisplacement,
+                    screenScale(BUTTON_BASE_Y + 2 * BUTTON_SIZE + baseYUnit, screenHeight),
+                    screenScale(BUTTON_SIZE, screenHeight),
+                    screenScale(BUTTON_SIZE, screenHeight)
             );
 
             controller.addElement(createDigitalButton(
                     VirtualControllerElement.EID_B,
                     config.flipFaceButtons ? ControllerPacket.A_FLAG : ControllerPacket.B_FLAG, 0, 1,
                     config.flipFaceButtons ? "A" : "B", -1, controller, context),
-                    screenScale(BUTTON_BASE_X + BUTTON_SIZE, height) + rightDisplacement,
-                    screenScale(BUTTON_BASE_Y + BUTTON_SIZE, height),
-                    screenScale(BUTTON_SIZE, height),
-                    screenScale(BUTTON_SIZE, height)
+                    screenScale(BUTTON_BASE_X + BUTTON_SIZE, screenHeight) + rightDisplacement,
+                    screenScale(BUTTON_BASE_Y + BUTTON_SIZE + baseYUnit, screenHeight),
+                    screenScale(BUTTON_SIZE, screenHeight),
+                    screenScale(BUTTON_SIZE, screenHeight)
             );
 
             controller.addElement(createDigitalButton(
                     VirtualControllerElement.EID_X,
                     !config.flipFaceButtons ? ControllerPacket.X_FLAG : ControllerPacket.Y_FLAG, 0, 1,
                     !config.flipFaceButtons ? "X" : "Y", -1, controller, context),
-                    screenScale(BUTTON_BASE_X - BUTTON_SIZE, height) + rightDisplacement,
-                    screenScale(BUTTON_BASE_Y + BUTTON_SIZE, height),
-                    screenScale(BUTTON_SIZE, height),
-                    screenScale(BUTTON_SIZE, height)
+                    screenScale(BUTTON_BASE_X - BUTTON_SIZE, screenHeight) + rightDisplacement,
+                    screenScale(BUTTON_BASE_Y + BUTTON_SIZE + baseYUnit, screenHeight),
+                    screenScale(BUTTON_SIZE, screenHeight),
+                    screenScale(BUTTON_SIZE, screenHeight)
             );
 
             controller.addElement(createDigitalButton(
                     VirtualControllerElement.EID_Y,
                     config.flipFaceButtons ? ControllerPacket.X_FLAG : ControllerPacket.Y_FLAG, 0, 1,
                     config.flipFaceButtons ? "X" : "Y", -1, controller, context),
-                    screenScale(BUTTON_BASE_X, height) + rightDisplacement,
-                    screenScale(BUTTON_BASE_Y, height),
-                    screenScale(BUTTON_SIZE, height),
-                    screenScale(BUTTON_SIZE, height)
+                    screenScale(BUTTON_BASE_X, screenHeight) + rightDisplacement,
+                    screenScale(BUTTON_BASE_Y + baseYUnit, screenHeight),
+                    screenScale(BUTTON_SIZE, screenHeight),
+                    screenScale(BUTTON_SIZE, screenHeight)
             );
 
             controller.addElement(createLeftTrigger(
                     1, "LT", -1, controller, context),
-                    screenScale(TRIGGER_L_BASE_X, height),
-                    screenScale(TRIGGER_BASE_Y, height),
-                    screenScale(TRIGGER_WIDTH, height),
-                    screenScale(TRIGGER_HEIGHT, height)
+                    screenScale(TRIGGER_L_BASE_X, screenHeight),
+                    screenScale(TRIGGER_BASE_Y + baseYUnit, screenHeight),
+                    screenScale(TRIGGER_WIDTH, screenHeight),
+                    screenScale(TRIGGER_HEIGHT, screenHeight)
             );
 
             controller.addElement(createRightTrigger(
                     1, "RT", -1, controller, context),
-                    screenScale(TRIGGER_R_BASE_X + TRIGGER_DISTANCE, height) + rightDisplacement,
-                    screenScale(TRIGGER_BASE_Y, height),
-                    screenScale(TRIGGER_WIDTH, height),
-                    screenScale(TRIGGER_HEIGHT, height)
+                    screenScale(TRIGGER_R_BASE_X + TRIGGER_DISTANCE, screenHeight) + rightDisplacement,
+                    screenScale(TRIGGER_BASE_Y + baseYUnit, screenHeight),
+                    screenScale(TRIGGER_WIDTH, screenHeight),
+                    screenScale(TRIGGER_HEIGHT, screenHeight)
             );
 
             controller.addElement(createDigitalButton(
                     VirtualControllerElement.EID_LB,
                     ControllerPacket.LB_FLAG, 0, 1, "LB", -1, controller, context),
-                    screenScale(TRIGGER_L_BASE_X + TRIGGER_DISTANCE, height),
-                    screenScale(TRIGGER_BASE_Y, height),
-                    screenScale(TRIGGER_WIDTH, height),
-                    screenScale(TRIGGER_HEIGHT, height)
+                    screenScale(TRIGGER_L_BASE_X + TRIGGER_DISTANCE, screenHeight),
+                    screenScale(TRIGGER_BASE_Y + baseYUnit, screenHeight),
+                    screenScale(TRIGGER_WIDTH, screenHeight),
+                    screenScale(TRIGGER_HEIGHT, screenHeight)
             );
 
             controller.addElement(createDigitalButton(
                     VirtualControllerElement.EID_RB,
                     ControllerPacket.RB_FLAG, 0, 1, "RB", -1, controller, context),
-                    screenScale(TRIGGER_R_BASE_X, height) + rightDisplacement,
-                    screenScale(TRIGGER_BASE_Y, height),
-                    screenScale(TRIGGER_WIDTH, height),
-                    screenScale(TRIGGER_HEIGHT, height)
+                    screenScale(TRIGGER_R_BASE_X, screenHeight) + rightDisplacement,
+                    screenScale(TRIGGER_BASE_Y + baseYUnit, screenHeight),
+                    screenScale(TRIGGER_WIDTH, screenHeight),
+                    screenScale(TRIGGER_HEIGHT, screenHeight)
             );
 
             controller.addElement(createLeftStick(controller, context),
-                    screenScale(ANALOG_L_BASE_X, height),
-                    screenScale(ANALOG_L_BASE_Y, height),
-                    screenScale(ANALOG_SIZE, height),
-                    screenScale(ANALOG_SIZE, height)
+                    screenScale(ANALOG_L_BASE_X, screenHeight),
+                    screenScale(ANALOG_L_BASE_Y + baseYUnit, screenHeight),
+                    screenScale(ANALOG_SIZE, screenHeight),
+                    screenScale(ANALOG_SIZE, screenHeight)
             );
 
             controller.addElement(createRightStick(controller, context),
-                    screenScale(ANALOG_R_BASE_X, height) + rightDisplacement,
-                    screenScale(ANALOG_R_BASE_Y, height),
-                    screenScale(ANALOG_SIZE, height),
-                    screenScale(ANALOG_SIZE, height)
+                    screenScale(ANALOG_R_BASE_X, screenHeight) + rightDisplacement,
+                    screenScale(ANALOG_R_BASE_Y + baseYUnit, screenHeight),
+                    screenScale(ANALOG_SIZE, screenHeight),
+                    screenScale(ANALOG_SIZE, screenHeight)
             );
 
             controller.addElement(createDigitalButton(
                     VirtualControllerElement.EID_BACK,
                     ControllerPacket.BACK_FLAG, 0, 2, "BACK", -1, controller, context),
-                    screenScale(BACK_X, height),
-                    screenScale(START_BACK_Y, height),
-                    screenScale(START_BACK_WIDTH, height),
-                    screenScale(START_BACK_HEIGHT, height)
+                    screenScale(BACK_X, screenHeight),
+                    screenScale(START_BACK_Y + baseYUnit, screenHeight),
+                    screenScale(START_BACK_WIDTH, screenHeight),
+                    screenScale(START_BACK_HEIGHT, screenHeight)
             );
 
             controller.addElement(createDigitalButton(
                     VirtualControllerElement.EID_START,
                     ControllerPacket.PLAY_FLAG, 0, 3, "START", -1, controller, context),
-                    screenScale(START_X, height) + rightDisplacement,
-                    screenScale(START_BACK_Y, height),
-                    screenScale(START_BACK_WIDTH, height),
-                    screenScale(START_BACK_HEIGHT, height)
+                    screenScale(START_X, screenHeight) + rightDisplacement,
+                    screenScale(START_BACK_Y + baseYUnit, screenHeight),
+                    screenScale(START_BACK_WIDTH, screenHeight),
+                    screenScale(START_BACK_HEIGHT, screenHeight)
             );
         }
         else {
             controller.addElement(createDigitalButton(
                     VirtualControllerElement.EID_LSB,
                     ControllerPacket.LS_CLK_FLAG, 0, 1, "L3", -1, controller, context),
-                    screenScale(TRIGGER_L_BASE_X, height),
-                    screenScale(L3_R3_BASE_Y, height),
-                    screenScale(TRIGGER_WIDTH, height),
-                    screenScale(TRIGGER_HEIGHT, height)
+                    screenScale(TRIGGER_L_BASE_X, screenHeight),
+                    screenScale(L3_R3_BASE_Y + baseYUnit, screenHeight),
+                    screenScale(TRIGGER_WIDTH, screenHeight),
+                    screenScale(TRIGGER_HEIGHT, screenHeight)
             );
 
             controller.addElement(createDigitalButton(
                     VirtualControllerElement.EID_RSB,
                     ControllerPacket.RS_CLK_FLAG, 0, 1, "R3", -1, controller, context),
-                    screenScale(TRIGGER_R_BASE_X + TRIGGER_DISTANCE, height) + rightDisplacement,
-                    screenScale(L3_R3_BASE_Y, height),
-                    screenScale(TRIGGER_WIDTH, height),
-                    screenScale(TRIGGER_HEIGHT, height)
+                    screenScale(TRIGGER_R_BASE_X + TRIGGER_DISTANCE, screenHeight) + rightDisplacement,
+                    screenScale(L3_R3_BASE_Y + baseYUnit, screenHeight),
+                    screenScale(TRIGGER_WIDTH, screenHeight),
+                    screenScale(TRIGGER_HEIGHT, screenHeight)
             );
         }
 
         if(config.showGuideButton){
             controller.addElement(createDigitalButton(VirtualControllerElement.EID_GDB,
                             ControllerPacket.SPECIAL_BUTTON_FLAG, 0, 1, "GUIDE", -1, controller, context),
-                    screenScale(GUIDE_X, height)+ rightDisplacement,
-                    screenScale(GUIDE_Y, height),
-                    screenScale(START_BACK_WIDTH, height),
-                    screenScale(START_BACK_HEIGHT, height)
+                    screenScale(GUIDE_X, screenHeight)+ rightDisplacement,
+                    screenScale(GUIDE_Y + baseYUnit, screenHeight),
+                    screenScale(START_BACK_WIDTH, screenHeight),
+                    screenScale(START_BACK_HEIGHT, screenHeight)
             );
         }
 
         controller.setOpacity(config.oscOpacity);
+    }
+
+    public static JSONObject prepareSave(JSONObject config) throws JSONException {
+        // 靠右侧的右对齐
+        int dPosX = config.optInt("LEFT") * 2 + config.optInt("WIDTH");
+        if (dPosX < screenWidth) {
+            config.put("R_SIDE", false);
+            config.put("LEFT", screenScaleReverse(config.optInt("LEFT"), screenHeight));
+        } else {
+            config.put("R_SIDE", true);
+            config.put("LEFT", screenScaleReverse(screenWidth - config.optInt("LEFT"), screenHeight));
+        }
+        config.put("TOP", screenScaleReverse(config.optInt("TOP"), screenHeight) - baseYUnit);
+        config.put("WIDTH", screenScaleReverse(config.optInt("WIDTH"), screenHeight));
+        config.put("HEIGHT", screenScaleReverse(config.optInt("HEIGHT"), screenHeight));
+        return config;
+    }
+
+    public static JSONObject prepareLoad(JSONObject config) throws JSONException {
+        if (config.optBoolean("R_SIDE")) {
+            config.put("LEFT", screenWidth - screenScale(config.optInt("LEFT"), screenHeight));
+        } else {
+            config.put("LEFT", screenScale(config.optInt("LEFT"), screenHeight));
+        }
+        config.put("TOP", screenScale(config.optInt("TOP") + baseYUnit, screenHeight));
+        config.put("WIDTH", screenScale(config.optInt("WIDTH"), screenHeight));
+        config.put("HEIGHT", screenScale(config.optInt("HEIGHT"), screenHeight));
+        return config;
     }
 
     public static void saveProfile(final VirtualController controller,
@@ -357,7 +399,7 @@ public class VirtualControllerConfigurationLoader {
         for (VirtualControllerElement element : controller.getElements()) {
             String prefKey = ""+element.elementId;
             try {
-                prefEditor.putString(prefKey, element.getConfiguration().toString());
+                prefEditor.putString(prefKey, prepareSave(element.getConfiguration()).toString());
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -375,7 +417,7 @@ public class VirtualControllerConfigurationLoader {
             String jsonConfig = pref.getString(prefKey, null);
             if (jsonConfig != null) {
                 try {
-                    element.loadConfiguration(new JSONObject(jsonConfig));
+                    element.loadConfiguration(prepareLoad(new JSONObject(jsonConfig)));
                 } catch (JSONException e) {
                     e.printStackTrace();
 

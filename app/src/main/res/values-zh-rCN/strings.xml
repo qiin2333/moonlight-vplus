@@ -230,6 +230,8 @@
     <string name="summary_checkbox_vibrate_osc"> 使用屏幕控制按钮时震动设备以模拟游戏震动效果 </string>
     <string name="title_only_l3r3"> 只显示L3和R3 </string>
     <string name="summary_only_l3r3"> 隐藏除L3和R3外的所有虚拟按钮 </string>
+    <string name="title_show_guide_button"> 显示Guide按钮 </string>
+    <string name="summary_show_guide_button"> 在屏幕上显示Guide按钮 </string>
     <string name="title_reset_osc"> 重置已保存的屏幕控制按钮布局 </string>
     <string name="summary_reset_osc"> 重置所有屏幕控制按钮为默认大小和位置 </string>
     <string name="dialog_title_reset_osc"> 重置按钮布局 </string>
