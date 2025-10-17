@@ -7,6 +7,7 @@ package com.limelight.binding.input.virtual_controller;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.util.DisplayMetrics;
 
 import com.limelight.nvstream.input.ControllerPacket;
@@ -194,10 +195,15 @@ public class VirtualControllerConfigurationLoader {
         DisplayMetrics screen = context.getResources().getDisplayMetrics();
         PreferenceConfiguration config = PreferenceConfiguration.readPreferences(context);
 
-        // Displace controls on the right by this amount of pixels to account for different aspect ratios
-        int rightDisplacement = screen.widthPixels - screen.heightPixels * 16 / 9;
-
         int height = screen.heightPixels;
+        int baseYUnit = 0;
+        if (config.halfHeightOscPortrait && context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+            height /= 2;
+            baseYUnit = 72;
+        }
+
+        // Displace controls on the right by this amount of pixels to account for different aspect ratios
+        int rightDisplacement = screen.widthPixels - height * 16 / 9;
 
         // NOTE: Some of these getPercent() expressions seem like they can be combined
         // into a single call. Due to floating point rounding, this isn't actually possible.
@@ -206,7 +212,7 @@ public class VirtualControllerConfigurationLoader {
         {
             controller.addElement(createDigitalPad(controller, context),
                     screenScale(DPAD_BASE_X, height),
-                    screenScale(DPAD_BASE_Y, height),
+                    screenScale(DPAD_BASE_Y + baseYUnit, height),
                     screenScale(DPAD_SIZE, height),
                     screenScale(DPAD_SIZE, height)
             );
@@ -216,7 +222,7 @@ public class VirtualControllerConfigurationLoader {
                     !config.flipFaceButtons ? ControllerPacket.A_FLAG : ControllerPacket.B_FLAG, 0, 1,
                     !config.flipFaceButtons ? "A" : "B", -1, controller, context),
                     screenScale(BUTTON_BASE_X, height) + rightDisplacement,
-                    screenScale(BUTTON_BASE_Y + 2 * BUTTON_SIZE, height),
+                    screenScale(BUTTON_BASE_Y + 2 * BUTTON_SIZE + baseYUnit, height),
                     screenScale(BUTTON_SIZE, height),
                     screenScale(BUTTON_SIZE, height)
             );
@@ -226,7 +232,7 @@ public class VirtualControllerConfigurationLoader {
                     config.flipFaceButtons ? ControllerPacket.A_FLAG : ControllerPacket.B_FLAG, 0, 1,
                     config.flipFaceButtons ? "A" : "B", -1, controller, context),
                     screenScale(BUTTON_BASE_X + BUTTON_SIZE, height) + rightDisplacement,
-                    screenScale(BUTTON_BASE_Y + BUTTON_SIZE, height),
+                    screenScale(BUTTON_BASE_Y + BUTTON_SIZE + baseYUnit, height),
                     screenScale(BUTTON_SIZE, height),
                     screenScale(BUTTON_SIZE, height)
             );
@@ -236,7 +242,7 @@ public class VirtualControllerConfigurationLoader {
                     !config.flipFaceButtons ? ControllerPacket.X_FLAG : ControllerPacket.Y_FLAG, 0, 1,
                     !config.flipFaceButtons ? "X" : "Y", -1, controller, context),
                     screenScale(BUTTON_BASE_X - BUTTON_SIZE, height) + rightDisplacement,
-                    screenScale(BUTTON_BASE_Y + BUTTON_SIZE, height),
+                    screenScale(BUTTON_BASE_Y + BUTTON_SIZE + baseYUnit, height),
                     screenScale(BUTTON_SIZE, height),
                     screenScale(BUTTON_SIZE, height)
             );
@@ -246,7 +252,7 @@ public class VirtualControllerConfigurationLoader {
                     config.flipFaceButtons ? ControllerPacket.X_FLAG : ControllerPacket.Y_FLAG, 0, 1,
                     config.flipFaceButtons ? "X" : "Y", -1, controller, context),
                     screenScale(BUTTON_BASE_X, height) + rightDisplacement,
-                    screenScale(BUTTON_BASE_Y, height),
+                    screenScale(BUTTON_BASE_Y + baseYUnit, height),
                     screenScale(BUTTON_SIZE, height),
                     screenScale(BUTTON_SIZE, height)
             );
@@ -254,7 +260,7 @@ public class VirtualControllerConfigurationLoader {
             controller.addElement(createLeftTrigger(
                     1, "LT", -1, controller, context),
                     screenScale(TRIGGER_L_BASE_X, height),
-                    screenScale(TRIGGER_BASE_Y, height),
+                    screenScale(TRIGGER_BASE_Y + baseYUnit, height),
                     screenScale(TRIGGER_WIDTH, height),
                     screenScale(TRIGGER_HEIGHT, height)
             );
@@ -262,7 +268,7 @@ public class VirtualControllerConfigurationLoader {
             controller.addElement(createRightTrigger(
                     1, "RT", -1, controller, context),
                     screenScale(TRIGGER_R_BASE_X + TRIGGER_DISTANCE, height) + rightDisplacement,
-                    screenScale(TRIGGER_BASE_Y, height),
+                    screenScale(TRIGGER_BASE_Y + baseYUnit, height),
                     screenScale(TRIGGER_WIDTH, height),
                     screenScale(TRIGGER_HEIGHT, height)
             );
@@ -271,7 +277,7 @@ public class VirtualControllerConfigurationLoader {
                     VirtualControllerElement.EID_LB,
                     ControllerPacket.LB_FLAG, 0, 1, "LB", -1, controller, context),
                     screenScale(TRIGGER_L_BASE_X + TRIGGER_DISTANCE, height),
-                    screenScale(TRIGGER_BASE_Y, height),
+                    screenScale(TRIGGER_BASE_Y + baseYUnit, height),
                     screenScale(TRIGGER_WIDTH, height),
                     screenScale(TRIGGER_HEIGHT, height)
             );
@@ -280,21 +286,21 @@ public class VirtualControllerConfigurationLoader {
                     VirtualControllerElement.EID_RB,
                     ControllerPacket.RB_FLAG, 0, 1, "RB", -1, controller, context),
                     screenScale(TRIGGER_R_BASE_X, height) + rightDisplacement,
-                    screenScale(TRIGGER_BASE_Y, height),
+                    screenScale(TRIGGER_BASE_Y + baseYUnit, height),
                     screenScale(TRIGGER_WIDTH, height),
                     screenScale(TRIGGER_HEIGHT, height)
             );
 
             controller.addElement(createLeftStick(controller, context),
                     screenScale(ANALOG_L_BASE_X, height),
-                    screenScale(ANALOG_L_BASE_Y, height),
+                    screenScale(ANALOG_L_BASE_Y + baseYUnit, height),
                     screenScale(ANALOG_SIZE, height),
                     screenScale(ANALOG_SIZE, height)
             );
 
             controller.addElement(createRightStick(controller, context),
                     screenScale(ANALOG_R_BASE_X, height) + rightDisplacement,
-                    screenScale(ANALOG_R_BASE_Y, height),
+                    screenScale(ANALOG_R_BASE_Y + baseYUnit, height),
                     screenScale(ANALOG_SIZE, height),
                     screenScale(ANALOG_SIZE, height)
             );
@@ -303,7 +309,7 @@ public class VirtualControllerConfigurationLoader {
                     VirtualControllerElement.EID_BACK,
                     ControllerPacket.BACK_FLAG, 0, 2, "BACK", -1, controller, context),
                     screenScale(BACK_X, height),
-                    screenScale(START_BACK_Y, height),
+                    screenScale(START_BACK_Y + baseYUnit, height),
                     screenScale(START_BACK_WIDTH, height),
                     screenScale(START_BACK_HEIGHT, height)
             );
@@ -312,7 +318,7 @@ public class VirtualControllerConfigurationLoader {
                     VirtualControllerElement.EID_START,
                     ControllerPacket.PLAY_FLAG, 0, 3, "START", -1, controller, context),
                     screenScale(START_X, height) + rightDisplacement,
-                    screenScale(START_BACK_Y, height),
+                    screenScale(START_BACK_Y + baseYUnit, height),
                     screenScale(START_BACK_WIDTH, height),
                     screenScale(START_BACK_HEIGHT, height)
             );
@@ -322,7 +328,7 @@ public class VirtualControllerConfigurationLoader {
                     VirtualControllerElement.EID_LSB,
                     ControllerPacket.LS_CLK_FLAG, 0, 1, "L3", -1, controller, context),
                     screenScale(TRIGGER_L_BASE_X, height),
-                    screenScale(L3_R3_BASE_Y, height),
+                    screenScale(L3_R3_BASE_Y + baseYUnit, height),
                     screenScale(TRIGGER_WIDTH, height),
                     screenScale(TRIGGER_HEIGHT, height)
             );
@@ -331,7 +337,7 @@ public class VirtualControllerConfigurationLoader {
                     VirtualControllerElement.EID_RSB,
                     ControllerPacket.RS_CLK_FLAG, 0, 1, "R3", -1, controller, context),
                     screenScale(TRIGGER_R_BASE_X + TRIGGER_DISTANCE, height) + rightDisplacement,
-                    screenScale(L3_R3_BASE_Y, height),
+                    screenScale(L3_R3_BASE_Y + baseYUnit, height),
                     screenScale(TRIGGER_WIDTH, height),
                     screenScale(TRIGGER_HEIGHT, height)
             );
@@ -341,7 +347,7 @@ public class VirtualControllerConfigurationLoader {
             controller.addElement(createDigitalButton(VirtualControllerElement.EID_GDB,
                             ControllerPacket.SPECIAL_BUTTON_FLAG, 0, 1, "GUIDE", -1, controller, context),
                     screenScale(GUIDE_X, height)+ rightDisplacement,
-                    screenScale(GUIDE_Y, height),
+                    screenScale(GUIDE_Y + baseYUnit, height),
                     screenScale(START_BACK_WIDTH, height),
                     screenScale(START_BACK_HEIGHT, height)
             );

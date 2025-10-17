@@ -340,6 +340,12 @@
             android:key="checkbox_show_guide_button"
             android:summary="@string/summary_show_guide_button"
             android:title="@string/title_show_guide_button" />
+        <CheckBoxPreference
+            android:key="checkbox_half_height_osc_portrait"
+            android:dependency="checkbox_show_onscreen_controls"
+            android:title="竖屏模式半高"
+            android:summary="竖屏下控制按钮将显示于下半屏"
+            android:defaultValue="true" />
         <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_osc_opacity"
             android:dependency="checkbox_show_onscreen_controls"
