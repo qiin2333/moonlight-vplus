@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="#1C1C1E">
+
+    <!-- 服务器IP输入 -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="服务器IP/主机名"
+        android:textColor="#BBBBBB"
+        android:textSize="12sp"
+        android:layout_marginStart="4dp"/>
+    <EditText
+        android:id="@+id/edit_text_server_ip"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/edit_text_background"
+        android:inputType="textUri"
+        android:padding="12dp"
+        android:textColor="@android:color/white"
+        android:textColorHint="#888888"
+        android:textCursorDrawable="@null"
+        android:textSize="16sp" />
+
+    <!-- 参数章节标题  -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="测试参数"
+        android:textColor="@android:color/white"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="12dp"/>
+
+    <!-- 方向 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="方向:"
+            android:textColor="#DDDDDD"
+            android:textSize="14sp"
+            android:layout_marginEnd="8dp"/>
+        <RadioGroup
+            android:id="@+id/radio_group_direction"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <RadioButton
+                android:id="@+id/radio_upload"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="上传"
+                android:textColor="@android:color/white"
+                android:buttonTint="#007AFF"
+                android:layout_marginEnd="16dp"
+                android:checked="true"/>
+            <RadioButton
+                android:id="@+id/radio_download"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="下载"
+                android:textColor="@android:color/white"
+                android:buttonTint="#007AFF"/>
+        </RadioGroup>
+    </LinearLayout>
+
+    <!-- 持续时间  -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="持续时间(s):"
+            android:textColor="#DDDDDD"
+            android:textSize="14sp"
+            android:layout_marginEnd="8dp"/>
+        <SeekBar
+            android:id="@+id/seek_bar_duration"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:max="30"
+            android:progress="5"
+            android:min="1"
+            android:thumbTint="#007AFF"
+            android:progressTint="#007AFF"
+            android:layout_marginEnd="8dp"/>
+        <TextView
+            android:id="@+id/text_view_duration_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="5s"
+            android:textColor="@android:color/white"
+            android:textSize="14sp"
+            android:minWidth="30dp"
+            android:gravity="end"/>
+    </LinearLayout>
+
+    <!-- 端口和UDP复选框  -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="端口:"
+            android:textColor="#DDDDDD"
+            android:textSize="14sp"
+            android:layout_marginEnd="8dp"/>
+        <EditText
+            android:id="@+id/edit_text_port"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:inputType="number"
+            android:text="5201"
+            android:background="@drawable/edit_text_background_small"
+            android:padding="8dp"
+            android:textColor="@android:color/white"
+            android:textCursorDrawable="@null"
+            android:maxLength="5"
+            android:layout_marginEnd="8dp"/>
+        <CheckBox
+            android:id="@+id/checkbox_udp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="UDP"
+            android:textColor="@android:color/white"
+            android:buttonTint="#007AFF"/>
+    </LinearLayout>
+
+    <!-- UDP 带宽设置  -->
+    <LinearLayout
+        android:id="@+id/layout_udp_bandwidth"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp"
+        android:visibility="gone"> <!-- 默认隐藏 -->
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="带宽:"
+            android:textColor="#DDDDDD"
+            android:textSize="14sp"
+            android:layout_marginEnd="8dp"/>
+
+        <EditText
+            android:id="@+id/edit_text_udp_bandwidth"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:inputType="text"
+            android:text="100M"
+            android:background="@drawable/edit_text_background_small"
+            android:padding="8dp"
+            android:textColor="@android:color/white"
+            android:textCursorDrawable="@null"
+            android:hint="例如100M、1G"
+            android:textColorHint="#888888"/>
+    </LinearLayout>
+
+    <!-- 其他参数输入 -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="附加iPerf3参数（可选）"
+        android:textColor="#BBBBBB"
+        android:textSize="12sp"
+        android:layout_marginStart="4dp"
+        android:layout_marginTop="8dp"/>
+    <EditText
+        android:id="@+id/edit_text_raw_args"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/edit_text_background"
+        android:gravity="top"
+        android:hint="例如，-f M"
+        android:inputType="textMultiLine"
+        android:minLines="1"
+        android:padding="12dp"
+        android:scrollbars="vertical"
+        android:textColor="@android:color/white"
+        android:textColorHint="#888888"
+        android:textCursorDrawable="@null"
+        android:textSize="16sp" />
+
+    <!-- 输出部分  -->
+    <ScrollView
+        android:id="@+id/output_scroll_view"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:background="#000000"
+        android:padding="8dp"
+        android:fadeScrollbars="false">
+        <TextView
+            android:id="@+id/text_view_iperf3_output"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:textColor="#00FF00"
+            android:textSize="12sp"
+            android:textIsSelectable="true"
+            android:lineSpacingExtra="2dp"/>
+    </ScrollView>
+
+</LinearLayout>

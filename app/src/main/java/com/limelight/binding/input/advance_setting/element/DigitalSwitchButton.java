@@ -146,7 +146,7 @@ public class DigitalSwitchButton extends Element {
             textSizePercent = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT)).intValue();
         } else {
             // Default based on original hardcoded logic
-            textSizePercent = 63;
+            textSizePercent = 25;
         }
 
         valueSendHandler = controller.getSendEventHandler(value);
@@ -630,7 +630,7 @@ public class DigitalSwitchButton extends Element {
         // Add new text properties with good defaults for new buttons
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, 0xFFFFFFFF); // White
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, 0xFFCCCCCC); // Light Grey for pressed state
-        contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, 63);
+        contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, 25);
         return contentValues;
 
 

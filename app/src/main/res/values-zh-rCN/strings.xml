@@ -265,7 +265,7 @@
     <string name="title_enable_post_stream_toast">串流完毕显示延迟信息</string>
     <string name="summary_enable_post_stream_toast">串流结束后显示延迟信息</string>
     <string name="title_checkbox_lock_screen_after_disconnect">断开并退出串流时锁定屏幕</string>
-    <string name="summary_checkbox_lock_screen_after_disconnect">在断开并退出串流后自动锁定设备屏幕(通过特殊技巧锁定远程电脑：程序会先快速打开屏幕键盘再发送锁屏指令。此操作依赖时序，偶尔可能因网络或电脑性能影响而锁定失败。注意：这会在您下次登录时留下一个需要手动关闭的屏幕键盘窗口。)</string>
+    <string name="summary_checkbox_lock_screen_after_disconnect">在断开并退出串流后自动锁定设备屏幕(需先手动开启屏幕键盘，就是菜单中的主机键盘)</string>
     <string name="mic_stats_continuity">音频连续性: %.1f%% (捕获:%d 编码:%d 发送:%d 丢弃:%d)</string>
     <string name="title_osc_opacity">更改屏幕按钮透明度</string>
     <string name="dialog_title_osc_opacity">透明度</string>

@@ -8,34 +8,51 @@ import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.RectF;
-import android.text.InputFilter;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CompoundButton;
 import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.limelight.Game;
 import com.limelight.R;
 import com.limelight.binding.input.advance_setting.PageDeviceController;
 import com.limelight.binding.input.advance_setting.TouchController;
-import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper;
 import com.limelight.binding.input.advance_setting.superpage.ElementEditText;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
 import com.limelight.utils.ColorPickerDialog;
 
+import java.lang.reflect.Type;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
- * This is a digital button on screen element. It is used to get click and double click user input.
+ * This is a digital button on screen element. It can function as a simple button,
+ * a joystick-like mouse mover, or a mini-trackpad with tap and drag capabilities.
  */
 public class DigitalMovableButton extends Element {
+
+    // --- 定义用于存储 JSON 属性的新列名 ---
+    public static final String COLUMN_STRING_EXTRA_ATTRIBUTES = "extra_attributes";
+
+    // --- 触控板逻辑所需的常量 ---
+    private static final int DRAG_TIME_THRESHOLD = 300;
+    private static final int TAP_MOVEMENT_THRESHOLD = 20;
+
+    // --- 用于在触控板模式下临时存储原始键值 ---
+    private String valueBeforeTrackpad;
+
+    // --- 定义鼠标左键的常量 ---
+    private static final String LEFT_MOUSE_VALUE = "m1";
 
     /**
      * Listener interface to update registered observers.
@@ -67,7 +84,10 @@ public class DigitalMovableButton extends Element {
     private final Game game;
     private String text;
     private String value;
-    private int enableTouch = 0;
+
+    private int enableTouch = 0; // 0 = 按钮, 1 = 摇杆。
+    private boolean isTrackpadMode = false;
+
     private int radius;
     private int sense;
     private int thick;
@@ -87,10 +107,18 @@ public class DigitalMovableButton extends Element {
     private float lastX;
     private float lastY;
 
+    // --- 用于摇杆模式 (Joystick Mode) ---
     private boolean isFirstTouch = true;
     private float FirstTouchX = 0;
     private float FirstTouchY = 0;
 
+    // --- 用于触控板模式 (Trackpad Mode) ---
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private float originalTouchX = 0;
+    private float originalTouchY = 0;
+    private boolean confirmedMove = false;
+    private boolean confirmedDrag = false;
+    private final Runnable dragTimerRunnable;
 
     private long timerLongClickTimeout = 3000;
     private final Runnable longClickRunnable = new Runnable() {
@@ -147,7 +175,32 @@ public class DigitalMovableButton extends Element {
         Object modeObj = attributesMap.get(COLUMN_INT_ELEMENT_MODE);
         this.enableTouch = (modeObj != null) ? ((Long) modeObj).intValue() : 0;
 
-        // Load new text properties with backward compatibility
+        // --- 读取并解析新的 extra_attributes JSON 列 ---
+        Object extraAttrObj = attributesMap.get(COLUMN_STRING_EXTRA_ATTRIBUTES);
+        if (extraAttrObj instanceof String) {
+            String json = (String) extraAttrObj;
+            // 使用 try-catch 块防止因 JSON 格式错误导致崩溃
+            try {
+                Gson gson = new Gson();
+                // 定义要解析的目标类型
+                Type type = new TypeToken<Map<String, Object>>() {
+                }.getType();
+                Map<String, Object> extraAttrs = gson.fromJson(json, type);
+
+                if (extraAttrs != null && extraAttrs.containsKey("isTrackpadMode")) {
+                    // Gson 可能会将 JSON 的布尔值解析为 Boolean 对象
+                    Object trackpadValue = extraAttrs.get("isTrackpadMode");
+                    if (trackpadValue instanceof Boolean) {
+                        this.isTrackpadMode = (Boolean) trackpadValue;
+                    }
+                }
+            } catch (Exception e) {
+                // 如果 JSON 格式错误，打印错误日志并使用默认值继续运行
+                e.printStackTrace();
+            }
+        }
+
+        // 读取文本颜色等属性
         if (attributesMap.containsKey(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR)) {
             normalTextColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR)).intValue();
         } else {
@@ -166,7 +219,7 @@ public class DigitalMovableButton extends Element {
             textSizePercent = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT)).intValue();
         } else {
             // Default based on original hardcoded logic
-            textSizePercent = 63;
+            textSizePercent = 25;
         }
 
         valueSendHandler = controller.getSendEventHandler(value);
@@ -185,6 +238,15 @@ public class DigitalMovableButton extends Element {
             public void onRelease() {
                 valueSendHandler.sendEvent(false);
             }
+        };
+
+        dragTimerRunnable = () -> {
+            if (confirmedMove) return;
+            confirmedDrag = true;
+            listener.onClick();
+            elementController.buttonVibrator();
+            setPressed(true);
+            invalidate();
         };
     }
 
@@ -261,48 +323,65 @@ public class DigitalMovableButton extends Element {
 
     @Override
     public boolean onElementTouchEvent(MotionEvent event) {
-        // get masked (not specific to a pointer) action
-        int action = event.getActionMasked();
-        if (enableTouch == 1) {
-            if (isFirstTouch) {
-                isFirstTouch = false;
-                FirstTouchX = event.getX();
-                FirstTouchY = event.getY();
-            }
-            float touchXTemp, touchYTemp;
-
-            touchXTemp = (float) (game.getStreamView().getWidth() / 2 + (event.getX() - FirstTouchX) * sense * 0.01);
-            touchYTemp = (float) (game.getStreamView().getHeight() / 2 + (event.getY() - FirstTouchY) * sense * 0.01);
-
-            MotionEvent EventTemp = MotionEvent.obtain(
-                    event.getDownTime(),    // 按下时间
-                    event.getEventTime(),   // 事件时间
-                    action,      // 动作类型
-                    touchXTemp,      // X坐标
-                    touchYTemp,      // Y坐标
-                    event.getPressure(),    // 压力值
-                    event.getSize(),        // 触摸大小
-                    event.getMetaState(),   // 元状态
-                    event.getXPrecision(),  // X精度
-                    event.getYPrecision(),  // Y精度
-                    event.getDeviceId(),    // 设备ID
-                    event.getEdgeFlags()    // 边缘标志
-            );
-
-            if (touchXTemp < 0 || touchXTemp > game.getStreamView().getWidth() || touchYTemp < 0 || touchYTemp > game.getStreamView().getHeight()) {
-                FirstTouchX = event.getX();
-                FirstTouchY = event.getY();
-                EventTemp.setAction(MotionEvent.ACTION_CANCEL);
-            }
-            try {
-                game.getHandleMotionEvent(game.getStreamView(), EventTemp);
-            } catch (NullPointerException e) {
-                System.out.println("NullPointerException");
-            }
-        } else {
-            FirstTouchX = event.getX();
-            FirstTouchY = event.getY();
+        if (isTrackpadMode) {
+            return handleTrackpadTouchEvent(event);
+        } else if (enableTouch == 1) {
+            return handleJoystickTouchEvent(event);
+        } else { // enableTouch == 0
+            return handleButtonTouchEvent(event);
         }
+    }
+
+    private boolean handleTrackpadTouchEvent(MotionEvent event) {
+        int action = event.getActionMasked();
+        switch (action) {
+            case MotionEvent.ACTION_DOWN: {
+                lastX = event.getX();
+                lastY = event.getY();
+                originalTouchX = event.getX();
+                originalTouchY = event.getY();
+                confirmedMove = false;
+                confirmedDrag = false;
+                handler.postDelayed(dragTimerRunnable, DRAG_TIME_THRESHOLD);
+                return true;
+            }
+            case MotionEvent.ACTION_MOVE: {
+                float deltaX = event.getX() - lastX;
+                float deltaY = event.getY() - lastY;
+                if (!confirmedMove && !confirmedDrag) {
+                    float moveDistance = (float) Math.hypot(event.getX() - originalTouchX, event.getY() - originalTouchY);
+                    if (moveDistance > TAP_MOVEMENT_THRESHOLD) {
+                        confirmedMove = true;
+                        handler.removeCallbacks(dragTimerRunnable);
+                    }
+                }
+                if (confirmedMove || confirmedDrag) {
+                    touchController.mouseMove(deltaX, deltaY, 0.01 * sense);
+                }
+                lastX = event.getX();
+                lastY = event.getY();
+                return true;
+            }
+            case MotionEvent.ACTION_CANCEL:
+            case MotionEvent.ACTION_UP: {
+                handler.removeCallbacks(dragTimerRunnable);
+                if (confirmedDrag) {
+                    listener.onRelease();
+                } else if (!confirmedMove) {
+                    elementController.buttonVibrator();
+                    listener.onClick();
+                    handler.postDelayed(listener::onRelease, 50);
+                }
+                setPressed(false);
+                invalidate();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean handleButtonTouchEvent(MotionEvent event) {
+        int action = event.getActionMasked();
         switch (action) {
             case MotionEvent.ACTION_DOWN: {
                 elementController.buttonVibrator();
@@ -316,9 +395,7 @@ public class DigitalMovableButton extends Element {
             case MotionEvent.ACTION_MOVE: {
                 float deltaX = event.getX() - lastX;
                 float deltaY = event.getY() - lastY;
-                if (enableTouch != 1) {
-                    touchController.mouseMove(deltaX, deltaY, 0.01 * sense);
-                }
+                touchController.mouseMove(deltaX, deltaY, 0.01 * sense);
                 lastX = event.getX();
                 lastY = event.getY();
                 return true;
@@ -326,15 +403,53 @@ public class DigitalMovableButton extends Element {
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP: {
                 setPressed(false);
-                FirstTouchX = 0;
-                FirstTouchY = 0;
-                isFirstTouch = true;
                 onReleaseCallback();
                 invalidate();
                 return true;
             }
-            default: {
-            }
+        }
+        return true;
+    }
+
+    private boolean handleJoystickTouchEvent(MotionEvent event) {
+        int action = event.getActionMasked();
+        switch (action) {
+            case MotionEvent.ACTION_DOWN:
+                elementController.buttonVibrator();
+                setPressed(true);
+                onClickCallback();
+                invalidate();
+                break;
+            case MotionEvent.ACTION_CANCEL:
+            case MotionEvent.ACTION_UP:
+                setPressed(false);
+                onReleaseCallback();
+                invalidate();
+                break;
+        }
+        if (isFirstTouch) {
+            isFirstTouch = false;
+            FirstTouchX = event.getX();
+            FirstTouchY = event.getY();
+        }
+        float touchXTemp, touchYTemp;
+        touchXTemp = (float) (game.getStreamView().getWidth() / 2 + (event.getX() - FirstTouchX) * sense * 0.01);
+        touchYTemp = (float) (game.getStreamView().getHeight() / 2 + (event.getY() - FirstTouchY) * sense * 0.01);
+        MotionEvent EventTemp = MotionEvent.obtain(event.getDownTime(), event.getEventTime(), action, touchXTemp, touchYTemp, event.getPressure(), event.getSize(), event.getMetaState(), event.getXPrecision(), event.getYPrecision(), event.getDeviceId(), event.getEdgeFlags());
+        if (touchXTemp < 0 || touchXTemp > game.getStreamView().getWidth() || touchYTemp < 0 || touchYTemp > game.getStreamView().getHeight()) {
+            FirstTouchX = event.getX();
+            FirstTouchY = event.getY();
+            EventTemp.setAction(MotionEvent.ACTION_CANCEL);
+        }
+        try {
+            game.getHandleMotionEvent(game.getStreamView(), EventTemp);
+        } catch (NullPointerException e) {
+            System.out.println("NullPointerException");
+        }
+        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+            FirstTouchX = 0;
+            FirstTouchY = 0;
+            isFirstTouch = true;
         }
         return true;
     }
@@ -342,6 +457,7 @@ public class DigitalMovableButton extends Element {
     @Override
     public void save() {
         ContentValues contentValues = new ContentValues();
+
         contentValues.put(COLUMN_STRING_ELEMENT_TEXT, text);
         contentValues.put(COLUMN_STRING_ELEMENT_VALUE, value);
         contentValues.put(COLUMN_INT_ELEMENT_MODE, enableTouch);
@@ -356,10 +472,19 @@ public class DigitalMovableButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR, normalColor);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, pressedColor);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, backgroundColor);
-        // Save new text properties
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, normalTextColor);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, pressedTextColor);
         contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, textSizePercent);
+
+        // --- 创建并保存 extra_attributes 的 JSON 字符串 ---
+        Map<String, Object> extraAttrs = new HashMap<>();
+        extraAttrs.put("isTrackpadMode", isTrackpadMode);
+
+        Gson gson = new Gson();
+        String json = gson.toJson(extraAttrs);
+
+        contentValues.put(COLUMN_STRING_EXTRA_ATTRIBUTES, json);
+
         elementController.updateElement(elementId, contentValues);
     }
 
@@ -379,12 +504,88 @@ public class DigitalMovableButton extends Element {
             centralYNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_central_y);
         }
 
+        // --- 获取所有需要的控件 ---
+        Switch joystickModeSwitch = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_enable_touch);
+        View joystickModeContainer = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_joystick_mode_container);
+        Switch trackpadModeSwitch = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_trackpad_mode);
+        View trackpadModeContainer = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_trackpad_mode_container);
+        TextView valueTextView = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_value);
+
+        Runnable updateValueViewState = () -> {
+            if (isTrackpadMode) {
+                valueTextView.setText(pageDeviceController.getKeyNameByValue(LEFT_MOUSE_VALUE));
+                valueTextView.setEnabled(false);
+                valueTextView.setAlpha(0.5f); // 设置为半透明，视觉上更明确
+            } else {
+                valueTextView.setText(pageDeviceController.getKeyNameByValue(this.value));
+                valueTextView.setEnabled(true);
+                valueTextView.setAlpha(1.0f);
+            }
+        };
+
+        // 根据初始状态设置控件的可见性
+        if (isTrackpadMode) {
+            joystickModeContainer.setVisibility(View.GONE);
+        } else if (enableTouch == 1) {
+            trackpadModeContainer.setVisibility(View.GONE);
+        }
+
+        // 设置开关的初始选中状态
+        joystickModeSwitch.setChecked(enableTouch == 1);
+        trackpadModeSwitch.setChecked(isTrackpadMode);
+
+        // 调用辅助方法，初始化键值UI
+        updateValueViewState.run();
+
+        // --- 为开关设置新的监听器，包含所有联动逻辑 ---
+        joystickModeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            enableTouch = isChecked ? 1 : 0;
+            trackpadModeContainer.setVisibility(isChecked ? View.GONE : View.VISIBLE);
+            if (isChecked && isTrackpadMode) {
+                isTrackpadMode = false;
+                trackpadModeSwitch.setChecked(false);
+                // 因为触控板模式被关闭了，所以需要更新键值UI
+                updateValueViewState.run();
+            }
+            save();
+        });
+
+        trackpadModeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            isTrackpadMode = isChecked;
+            joystickModeContainer.setVisibility(isChecked ? View.GONE : View.VISIBLE);
+
+            if (isChecked) {
+                // --- 开启触控板模式 ---
+                // 1. 保存当前键值 (如果还没保存过)
+                if (valueBeforeTrackpad == null) {
+                    valueBeforeTrackpad = this.value;
+                }
+                // 2. 强制设置键值为鼠标左键
+                setElementValue(LEFT_MOUSE_VALUE);
+            } else {
+                // --- 关闭触控板模式 ---
+                // 1. 恢复之前的键值 (如果存在)
+                if (valueBeforeTrackpad != null) {
+                    setElementValue(valueBeforeTrackpad);
+                    valueBeforeTrackpad = null; // 清空临时存储
+                }
+            }
+
+            // 确保与摇杆模式互斥
+            if (isChecked && enableTouch == 1) {
+                enableTouch = 0;
+                joystickModeSwitch.setChecked(false);
+            }
+
+            // 更新键值UI状态
+            updateValueViewState.run();
+            save();
+        });
+
         NumberSeekbar widthNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_width);
         NumberSeekbar heightNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_height);
         NumberSeekbar radiusNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_radius);
         ElementEditText textElementEditText = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_text);
-        TextView valueTextView = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_value);
-        Switch enableTouchSwitch = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_enable_touch);
         NumberSeekbar senseNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_sense);
         NumberSeekbar thickNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_thick);
         NumberSeekbar layerNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_layer);
@@ -393,8 +594,6 @@ public class DigitalMovableButton extends Element {
         ElementEditText backgroundColorElementEditText = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_background_color);
         Button copyButton = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_copy);
         Button deleteButton = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_delete);
-
-        // Find new views for text properties (assuming these IDs exist in the XML layout)
         NumberSeekbar textSizeNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_text_size);
         ElementEditText normalTextColorElementEditText = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_normal_text_color);
         ElementEditText pressedTextColorElementEditText = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_pressed_text_color);
@@ -405,7 +604,6 @@ public class DigitalMovableButton extends Element {
             save();
         });
 
-        valueTextView.setText(pageDeviceController.getKeyNameByValue(value));
         valueTextView.setOnClickListener(v -> {
             PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
                 @Override
@@ -414,16 +612,12 @@ public class DigitalMovableButton extends Element {
                     ((TextView) v).setText(text);
                     textElementEditText.setText(text);
                     setElementValue(key.getTag().toString());
+                    // 当用户手动选择一个键值后，清除临时的“恢复值”
+                    valueBeforeTrackpad = null;
                     save();
                 }
             };
             pageDeviceController.open(deviceCallBack, View.VISIBLE, View.VISIBLE, View.VISIBLE);
-        });
-
-        enableTouchSwitch.setChecked(enableTouch == 1);
-        enableTouchSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            enableTouch = isChecked ? 1 : 0;
-            save();
         });
 
         centralXNumberSeekbar.setProgressMin(centralXMin);
@@ -434,11 +628,8 @@ public class DigitalMovableButton extends Element {
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 setElementCentralX(progress);
             }
-
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
+            public void onStartTrackingTouch(SeekBar seekBar) { }
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 save();
@@ -607,6 +798,7 @@ public class DigitalMovableButton extends Element {
             contentValues.put(COLUMN_STRING_ELEMENT_TEXT, text);
             contentValues.put(COLUMN_STRING_ELEMENT_VALUE, value);
             contentValues.put(COLUMN_INT_ELEMENT_MODE, enableTouch);
+            contentValues.put(COLUMN_STRING_EXTRA_ATTRIBUTES, new Gson().toJson(new HashMap<String, Object>() {{ put("isTrackpadMode", isTrackpadMode); }}));
             contentValues.put(COLUMN_INT_ELEMENT_SENSE, sense);
             contentValues.put(COLUMN_INT_ELEMENT_WIDTH, getElementWidth());
             contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, getElementHeight());
@@ -693,7 +885,7 @@ public class DigitalMovableButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_TYPE, ELEMENT_TYPE_DIGITAL_MOVABLE_BUTTON);
         contentValues.put(COLUMN_STRING_ELEMENT_TEXT, "A");
         contentValues.put(COLUMN_STRING_ELEMENT_VALUE, "k29");
-        contentValues.put(COLUMN_INT_ELEMENT_MODE, 0);
+        contentValues.put(COLUMN_INT_ELEMENT_MODE, 0); // 默认摇杆模式关闭
         contentValues.put(COLUMN_INT_ELEMENT_SENSE, 100);
         contentValues.put(COLUMN_INT_ELEMENT_WIDTH, 100);
         contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, 100);
@@ -705,10 +897,15 @@ public class DigitalMovableButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_COLOR, 0xF0888888);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, 0xF00000FF);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, 0x00FFFFFF);
-        // Add new properties with good defaults
-        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, 0xFFFFFFFF); // White
-        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, 0xFFCCCCCC); // Light Grey for pressed state
-        contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, 63);
+        contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, 0xFFFFFFFF);
+        contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, 0xFFCCCCCC);
+        contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, 25);
+
+        // --- 为 extra_attributes 设置默认的 JSON 值 ---
+        Map<String, Object> extraAttrs = new HashMap<>();
+        extraAttrs.put("isTrackpadMode", false); // 默认触控板模式关闭
+        contentValues.put(COLUMN_STRING_EXTRA_ATTRIBUTES, new Gson().toJson(extraAttrs));
+
         return contentValues;
     }
 
@@ -727,6 +924,7 @@ public class DigitalMovableButton extends Element {
         colorDisplay.setTextColor(luminance > 0.5 ? Color.BLACK : Color.WHITE);
         colorDisplay.setGravity(Gravity.CENTER);
     }
+
 
     private void setupColorPickerButton(ElementEditText colorDisplay, IntSupplier initialColorFetcher, IntConsumer colorUpdater) {
         colorDisplay.setFocusable(false);

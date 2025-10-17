@@ -240,7 +240,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
             // 为 element 表添加字体颜色和大小的列，并设置默认值
             db.execSQL("ALTER TABLE element ADD COLUMN " + DigitalSwitchButton.COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR + " INTEGER DEFAULT -1;"); // 0xFFFFFFFF
             db.execSQL("ALTER TABLE element ADD COLUMN " + DigitalSwitchButton.COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR + " INTEGER DEFAULT -3355444;"); // 0xFFCCCCCC
-            db.execSQL("ALTER TABLE element ADD COLUMN " + DigitalSwitchButton.COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT + " INTEGER DEFAULT 63;");
+            db.execSQL("ALTER TABLE element ADD COLUMN " + DigitalSwitchButton.COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT + " INTEGER DEFAULT 25;");
         }
         if (oldVersion < 8) {
             db.execSQL("ALTER TABLE element ADD COLUMN extra_attributes TEXT;");
@@ -248,7 +248,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
     }
 
     /**
-     * 辅助方法，用于升级导出的配置文件JSON数据
+     * 辅助方法，用于升级导入导出的配置文件JSON数据
      *
      * @param exportFile 从文件中解析出的对象
      * @param gson       用于JSON操作的实例
@@ -315,7 +315,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
                         // 添加新属性并设置合理的默认值
                         elementObject.addProperty(DigitalSwitchButton.COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, 0xFFFFFFFF);
                         elementObject.addProperty(DigitalSwitchButton.COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, 0xFFCCCCCC);
-                        elementObject.addProperty(DigitalSwitchButton.COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, 63);
+                        elementObject.addProperty(DigitalSwitchButton.COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, 25);
                     }
                 }
                 // Fall-through to final version

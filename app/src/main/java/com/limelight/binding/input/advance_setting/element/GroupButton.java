@@ -198,7 +198,7 @@ public class GroupButton extends Element {
             textSizePercent = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT)).intValue();
         } else {
             // Default based on a reasonable value, old logic was complex
-            textSizePercent = 63;
+            textSizePercent = 25;
         }
 
         Object hiddenFlagObj = attributesMap.get(COLUMN_INT_ELEMENT_FLAG1);
@@ -1432,7 +1432,7 @@ public class GroupButton extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, 0x00FFFFFF);
         contentValues.put(COLUMN_INT_ELEMENT_NORMAL_TEXT_COLOR, 0xFFFFFFFF);
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_TEXT_COLOR, 0xFFCCCCCC);
-        contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, 63);
+        contentValues.put(COLUMN_INT_ELEMENT_TEXT_SIZE_PERCENT, 25);
         contentValues.put(COLUMN_INT_ELEMENT_FLAG1, 0); // hidden flag
 
         JsonObject extraAttrs = new JsonObject();

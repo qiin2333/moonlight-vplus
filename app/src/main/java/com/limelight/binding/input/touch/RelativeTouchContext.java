@@ -26,11 +26,22 @@ public class RelativeTouchContext implements TouchContext {
     private int pointerCount;
     private int maxPointerCountInGesture;
 
+    private long lastTapUpTime = 0;
+    /** 记录上一次成功单击的结束位置X */
+    private int lastTapUpX = 0;
+    /** 记录上一次成功单击的结束位置Y */
+    private int lastTapUpY = 0;
+    /** 标志位，表示当前是否处于“双击并按住”触发的拖拽模式 */
+    private boolean isDoubleClickDrag = false;
+    private boolean isPotentialDoubleClick = false;
+
     private final NvConnection conn;
     private final int actionIndex;
     private final View targetView;
     private final PreferenceConfiguration prefConfig;
     private final Handler handler;
+
+    private final Runnable[] buttonUpRunnables;
 
     private final Runnable dragTimerRunnable = new Runnable() {
         @Override
@@ -51,44 +62,14 @@ public class RelativeTouchContext implements TouchContext {
         }
     };
 
-    // Indexed by MouseButtonPacket.BUTTON_XXX - 1
-    private final Runnable[] buttonUpRunnables = new Runnable[] {
-            new Runnable() {
-                @Override
-                public void run() {
-                    conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT);
-                }
-            },
-            new Runnable() {
-                @Override
-                public void run() {
-                    conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE);
-                }
-            },
-            new Runnable() {
-                @Override
-                public void run() {
-                    conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT);
-                }
-            },
-            new Runnable() {
-                @Override
-                public void run() {
-                    conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X1);
-                }
-            },
-            new Runnable() {
-                @Override
-                public void run() {
-                    conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X2);
-                }
-            }
-    };
-
-    private static final int TAP_MOVEMENT_THRESHOLD = 20;
-    private static final int TAP_DISTANCE_THRESHOLD = 25;
+    private static final int TAP_MOVEMENT_THRESHOLD = 40;
+    private static final int TAP_DISTANCE_THRESHOLD = 50;
     private static final int TAP_TIME_THRESHOLD = 250;
     private static final int DRAG_TIME_THRESHOLD = 650;
+    private static final int DRAG_START_THRESHOLD = 10;
+    private static final int DOUBLE_TAP_TIME_THRESHOLD = 300;
+    /** 定义双击时，两次点击位置的最大允许偏差 */
+    private static final int DOUBLE_TAP_MOVEMENT_THRESHOLD = 40;
 
     private static final int SCROLL_SPEED_FACTOR = 5;
 
@@ -100,20 +81,24 @@ public class RelativeTouchContext implements TouchContext {
         this.targetView = view;
         this.prefConfig = prefConfig;
         this.handler = new Handler(Looper.getMainLooper());
+        this.buttonUpRunnables = new Runnable[] {
+                () -> conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT),
+                () -> conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE),
+                () -> conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT),
+                () -> conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X1),
+                () -> conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X2)
+        };
+
     }
 
     @Override
-    public int getActionIndex()
-    {
-        return actionIndex;
-    }
+    public int getActionIndex() { return actionIndex; }
 
     private boolean isWithinTapBounds(int touchX, int touchY)
     {
         int xDelta = Math.abs(touchX - originalTouchX);
         int yDelta = Math.abs(touchY - originalTouchY);
-        return xDelta <= TAP_MOVEMENT_THRESHOLD &&
-                yDelta <= TAP_MOVEMENT_THRESHOLD;
+        return xDelta <= TAP_MOVEMENT_THRESHOLD && yDelta <= TAP_MOVEMENT_THRESHOLD;
     }
 
     private boolean isTap(long eventTime)
@@ -133,14 +118,8 @@ public class RelativeTouchContext implements TouchContext {
         return isWithinTapBounds(lastTouchX, lastTouchY) && timeDelta <= TAP_TIME_THRESHOLD;
     }
 
-    private byte getMouseButtonIndex()
-    {
-        if (actionIndex == 1) {
-            return MouseButtonPacket.BUTTON_RIGHT;
-        }
-        else {
-            return MouseButtonPacket.BUTTON_LEFT;
-        }
+    private byte getMouseButtonIndex() {
+        return (actionIndex == 1) ? MouseButtonPacket.BUTTON_RIGHT : MouseButtonPacket.BUTTON_LEFT;
     }
 
     @Override
@@ -156,8 +135,27 @@ public class RelativeTouchContext implements TouchContext {
         if (isNewFinger) {
             maxPointerCountInGesture = pointerCount;
             originalTouchTime = eventTime;
-            cancelled = confirmedDrag = confirmedMove = confirmedScroll = false;
+            cancelled = confirmedDrag = confirmedMove = confirmedScroll = isDoubleClickDrag = false;
             distanceMoved = 0;
+
+            // 只有当功能开关开启时，才检查双击（动态读取配置）
+            if (prefConfig.enableDoubleClickDrag) {
+                long timeSinceLastTap = eventTime - lastTapUpTime;
+                int xDelta = Math.abs(eventX - lastTapUpX);
+                int yDelta = Math.abs(eventY - lastTapUpY);
+
+                if (actionIndex == 0 && timeSinceLastTap <= DOUBLE_TAP_TIME_THRESHOLD &&
+                        xDelta <= DOUBLE_TAP_MOVEMENT_THRESHOLD && yDelta <= DOUBLE_TAP_MOVEMENT_THRESHOLD) {
+                    // It's a double-tap. The first tap has already been sent,
+                    // so we just need to prevent the drag timer from firing for
+                    // this second tap and flag that we're in a potential double-click.
+                    isPotentialDoubleClick = true;
+                    cancelDragTimer();
+                    return true;
+                }
+            }
+
+            isPotentialDoubleClick = false;
 
             if (actionIndex == 0) {
                 // Start the timer for engaging a drag
@@ -175,6 +173,31 @@ public class RelativeTouchContext implements TouchContext {
             return;
         }
 
+        // 决策点1：如果在“待定”状态下抬起，说明用户意图是“双击”
+        if (isPotentialDoubleClick) {
+            // This is the second tap of a double-tap. Send the click now.
+            isPotentialDoubleClick = false;
+
+            byte buttonIndex = MouseButtonPacket.BUTTON_LEFT;
+            conn.sendMouseButtonDown(buttonIndex);
+            Runnable buttonUpRunnable = buttonUpRunnables[buttonIndex - 1];
+            handler.removeCallbacks(buttonUpRunnable);
+            handler.postDelayed(buttonUpRunnable, 100);
+
+            // Invalidate the tap time to prevent a triple-tap from becoming a double-tap drag
+            lastTapUpTime = 0;
+            return;
+        }
+
+        if (isDoubleClickDrag) {
+            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT);
+            isDoubleClickDrag = false;
+            // 重置tap记录，确保下次是全新的单击
+            lastTapUpTime = 0;
+            return;
+        }
+        // --- 结束新增逻辑 ---
+
         // Cancel the drag timer
         cancelDragTimer();
 
@@ -186,6 +209,19 @@ public class RelativeTouchContext implements TouchContext {
         }
         else if (isTap(eventTime))
         {
+
+            // --- 新增逻辑: 在确认是tap后，记录时间和位置 ---
+            // 只有左键单击（主手指）才记录，用于双击检测
+            if (buttonIndex == MouseButtonPacket.BUTTON_LEFT) {
+                lastTapUpTime = eventTime;
+                lastTapUpX = eventX;
+                lastTapUpY = eventY;
+            } else {
+                // 如果是右键或其他点击，则清除记录，打断双击链
+                lastTapUpTime = 0;
+            }
+            // --- 结束新增逻辑 ---
+
             // Lower the mouse button
             conn.sendMouseButtonDown(buttonIndex);
 
@@ -194,45 +230,10 @@ public class RelativeTouchContext implements TouchContext {
             Runnable buttonUpRunnable = buttonUpRunnables[buttonIndex - 1];
             handler.removeCallbacks(buttonUpRunnable);
             handler.postDelayed(buttonUpRunnable, 100);
+        } else {
+            // 无效点击，重置
+            lastTapUpTime = 0;
         }
-    }
-
-    private void startDragTimer() {
-        cancelDragTimer();
-        handler.postDelayed(dragTimerRunnable, DRAG_TIME_THRESHOLD);
-    }
-
-    private void cancelDragTimer() {
-        handler.removeCallbacks(dragTimerRunnable);
-    }
-
-    private void checkForConfirmedMove(int eventX, int eventY) {
-        // If we've already confirmed something, get out now
-        if (confirmedMove || confirmedDrag) {
-            return;
-        }
-
-        // If it leaves the tap bounds before the drag time expires, it's a move.
-        if (!isWithinTapBounds(eventX, eventY)) {
-            confirmedMove = true;
-            cancelDragTimer();
-            return;
-        }
-
-        // Check if we've exceeded the maximum distance moved
-        distanceMoved += Math.sqrt(Math.pow(eventX - lastTouchX, 2) + Math.pow(eventY - lastTouchY, 2));
-        if (distanceMoved >= TAP_DISTANCE_THRESHOLD) {
-            confirmedMove = true;
-            cancelDragTimer();
-            return;
-        }
-    }
-
-    private void checkForConfirmedScroll() {
-        // Enter scrolling mode if we've already left the tap zone
-        // and we have 2 fingers on screen. Leave scroll mode if
-        // we no longer have 2 fingers on screen
-        confirmedScroll = (actionIndex == 0 && pointerCount == 2 && confirmedMove);
     }
 
     @Override
@@ -242,8 +243,21 @@ public class RelativeTouchContext implements TouchContext {
             return true;
         }
 
-        if (eventX != lastTouchX || eventY != lastTouchY)
-        {
+        // 决策点2：如果在“待定”状态下移动，说明用户意图是“双击拖拽”
+        if (isPotentialDoubleClick) {
+            int xDelta = Math.abs(eventX - originalTouchX);
+            int yDelta = Math.abs(eventY - originalTouchY);
+            if (xDelta > DRAG_START_THRESHOLD || yDelta > DRAG_START_THRESHOLD) {
+                // Start a double-tap drag
+                isPotentialDoubleClick = false;
+                isDoubleClickDrag = true;
+                confirmedMove = true;
+
+                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT);
+            }
+        }
+
+        if (eventX != lastTouchX || eventY != lastTouchY) {
             checkForConfirmedMove(eventX, eventY);
             checkForConfirmedScroll();
 
@@ -251,24 +265,14 @@ public class RelativeTouchContext implements TouchContext {
             if (actionIndex == 0) {
                 int deltaX = eventX - lastTouchX;
                 int deltaY = eventY - lastTouchY;
-
-                // Scale the deltas based on the factors passed to our constructor
-                deltaX = (int) Math.round((double) Math.abs(deltaX) * xFactor);
-                deltaY = (int) Math.round((double) Math.abs(deltaY) * yFactor);
-
-                // Fix up the signs
-                if (eventX < lastTouchX) {
-                    deltaX = -deltaX;
-                }
-                if (eventY < lastTouchY) {
-                    deltaY = -deltaY;
-                }
+                deltaX = (int) Math.round(Math.abs(deltaX) * xFactor * (eventX < lastTouchX ? -1 : 1));
+                deltaY = (int) Math.round(Math.abs(deltaY) * yFactor * (eventY < lastTouchY ? -1 : 1));
 
                 if (pointerCount == 2) {
                     if (confirmedScroll) {
                         conn.sendMouseHighResScroll((short)(deltaY * SCROLL_SPEED_FACTOR));
                     }
-                } else {
+                } else if (confirmedMove || isDoubleClickDrag || confirmedDrag) { // 只在确认移动/拖拽时发送
                     if (prefConfig.absoluteMouseMode) {
                         conn.sendMouseMoveAsMousePosition(
                                 (short) deltaX,
@@ -307,12 +311,43 @@ public class RelativeTouchContext implements TouchContext {
         // Cancel the drag timer
         cancelDragTimer();
 
+        // --- 新增逻辑 ---
+        if (isDoubleClickDrag) {
+            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT);
+            isDoubleClickDrag = false;
+        }
+        // --- 结束新增逻辑 ---
+
         // If it was a confirmed drag, we'll need to raise the button now
         if (confirmedDrag) {
             conn.sendMouseButtonUp(getMouseButtonIndex());
         }
+        // 重置所有状态
+        lastTapUpTime = 0;
+        isPotentialDoubleClick = false;
     }
 
+    private void startDragTimer() {
+        cancelDragTimer();
+        handler.postDelayed(dragTimerRunnable, DRAG_TIME_THRESHOLD);
+    }
+    private void cancelDragTimer() { handler.removeCallbacks(dragTimerRunnable); }
+    private void checkForConfirmedMove(int eventX, int eventY) {
+        if (confirmedMove || confirmedDrag || isPotentialDoubleClick) return; // 在待定状态下，由moveEvent自己决策
+        if (!isWithinTapBounds(eventX, eventY)) {
+            confirmedMove = true;
+            cancelDragTimer();
+            return;
+        }
+        distanceMoved += Math.sqrt(Math.pow(eventX - lastTouchX, 2) + Math.pow(eventY - lastTouchY, 2));
+        if (distanceMoved >= TAP_DISTANCE_THRESHOLD) {
+            confirmedMove = true;
+            cancelDragTimer();
+        }
+    }
+    private void checkForConfirmedScroll() {
+        confirmedScroll = (actionIndex == 0 && pointerCount == 2 && confirmedMove);
+    }
     @Override
     public boolean isCancelled() {
         return cancelled;
