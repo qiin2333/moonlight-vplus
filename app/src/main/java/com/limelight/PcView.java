@@ -28,6 +28,7 @@ import com.limelight.ui.AdapterFragment;
 import com.limelight.ui.AdapterFragmentCallbacks;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.HelpLauncher;
+import com.limelight.utils.Iperf3Tester;
 import com.limelight.utils.ServerHelper;
 import com.limelight.utils.ShortcutHelper;
 import com.limelight.utils.UiHelper;
@@ -164,6 +165,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
     private final static int TEST_NETWORK_ID = 10;
     private final static int GAMESTREAM_EOL_ID = 11;
     private final static int SLEEP_ID = 12;
+    private final static int IPERF3_TEST_ID = 13;
 
     public String clientName;
     private LruCache<String, Bitmap> bitmapLruCache;
@@ -737,6 +739,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         }
 
         menu.add(Menu.NONE, TEST_NETWORK_ID, 5, getResources().getString(R.string.pcview_menu_test_network));
+        menu.add(Menu.NONE, IPERF3_TEST_ID, 6, "网络带宽测试 (iPerf3)");
         menu.add(Menu.NONE, DELETE_ID, 6, getResources().getString(R.string.pcview_menu_delete_pc));
         menu.add(Menu.NONE, VIEW_DETAILS_ID, 7,  getResources().getString(R.string.pcview_menu_details));
     }
@@ -913,7 +916,8 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
                 message = e.getMessage();
                 e.printStackTrace();
             } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                // Thread was interrupted during unpair
+                message = getResources().getString(R.string.error_interrupted);
             }
 
             final String toastMessage = message;
@@ -1050,6 +1054,24 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
 
             case TEST_NETWORK_ID:
                 ServerHelper.doNetworkTest(PcView.this);
+                return true;
+
+            case IPERF3_TEST_ID:
+                try {
+                    // 1. 直接在UI线程获取地址对象 (因为此操作不耗时)
+                    ComputerDetails.AddressTuple addressTuple = ServerHelper.getCurrentAddressFromComputer(computer.details);
+
+                    // 2. 从对象中提取IP地址字符串
+                    String currentIp = addressTuple.address;
+
+                    // 3. 直接创建并显示对话框
+                    new Iperf3Tester(PcView.this, currentIp).show();
+
+                } catch (IOException e) {
+                    // 捕获因 activeAddress 为 null 导致的异常
+                    e.printStackTrace();
+                    Toast.makeText(this, "无法获取PC地址: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                }
                 return true;
 
             case GAMESTREAM_EOL_ID:

@@ -46,6 +46,8 @@ public class PreferenceConfiguration {
         BOTTOM_RIGHT
     }
 
+    private static final String ENABLE_DOUBLE_CLICK_DRAG_PREF_STRING = "pref_enable_double_click_drag";
+
     private static final String LEGACY_RES_FPS_PREF_STRING = "list_resolution_fps";
     private static final String LEGACY_ENABLE_51_SURROUND_PREF_STRING = "checkbox_51_surround";
 
@@ -189,6 +191,8 @@ public class PreferenceConfiguration {
     private static final int DEFAULT_MIC_BITRATE = 96; // 默认128 kbps
     private static final boolean DEFAULT_ENABLE_ESC_MENU = true; // 默认启用ESC菜单
 
+    private static final boolean DEFAULT_ENABLE_DOUBLE_CLICK_DRAG = false;
+    public boolean enableDoubleClickDrag;
     public static final int FRAME_PACING_MIN_LATENCY = 0;
     public static final int FRAME_PACING_BALANCED = 1;
     public static final int FRAME_PACING_CAP_FPS = 2;
@@ -716,6 +720,7 @@ public class PreferenceConfiguration {
 
         // Checkbox preferences
         config.disableWarnings = prefs.getBoolean(DISABLE_TOASTS_PREF_STRING, DEFAULT_DISABLE_TOASTS);
+        config.enableDoubleClickDrag = prefs.getBoolean(ENABLE_DOUBLE_CLICK_DRAG_PREF_STRING, DEFAULT_ENABLE_DOUBLE_CLICK_DRAG);
         config.enableSops = prefs.getBoolean(SOPS_PREF_STRING, DEFAULT_SOPS);
         config.stretchVideo = prefs.getBoolean(STRETCH_PREF_STRING, DEFAULT_STRETCH);
         config.playHostAudio = prefs.getBoolean(HOST_AUDIO_PREF_STRING, DEFAULT_HOST_AUDIO);

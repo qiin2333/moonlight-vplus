@@ -70,6 +70,7 @@
     <string name="error_404">GFE returned an HTTP 404 error. Make sure your PC is running a supported GPU.
 	    Using remote desktop software can also cause this error. Try rebooting your machine or reinstalling GFE.
     </string>
+    <string name="error_interrupted">The operation was interrupted</string>
     <string name="title_decoding_error">Video Decoder Crashed</string>
     <string name="message_decoding_error">Moonlight has crashed due to an incompatibility with this device\'s video decoder. Try adjusting the streaming settings if the crashes continue.</string>
     <string name="title_decoding_reset">Video Settings Reset</string>
@@ -359,7 +360,7 @@
     <string name="title_enable_post_stream_toast">Show latency message after streaming</string>
     <string name="summary_enable_post_stream_toast">Display a latency information message after the stream ends</string>
     <string name="title_checkbox_lock_screen_after_disconnect">Lock screen when disconnecting and exiting the stream</string>
-    <string name="summary_checkbox_lock_screen_after_disconnect">Automatically lock the device screen after disconnecting and exiting the stream</string>
+    <string name="summary_checkbox_lock_screen_after_disconnect">Automatically lock the device screen after disconnecting and exiting the stream (you need to manually turn on the on-screen keyboard, which is the host keyboard in the menu)</string>
     <string name="mic_stats_continuity">Audio continuity: %.1f%% (Captured:%d Encoded:%d Sent:%d Dropped:%d)</string>
 
     <string name="category_help">❓ Help</string>
