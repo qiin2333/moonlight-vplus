@@ -512,7 +512,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     public void onInputDeviceRemoved(int deviceId) {
         InputDeviceContext context = inputDeviceContexts.get(deviceId);
         if (context != null) {
-            LimeLog.info("Removed controller: "+context.name+" ("+deviceId+")");
+            LimeLog.info("Removed controller: "+context.name+" (ID: "+deviceId+")");
             releaseControllerNumber(context);
             context.destroy();
             inputDeviceContexts.remove(deviceId);
@@ -534,7 +534,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             return;
         }
 
-        LimeLog.info("Device changed: "+existingContext.name+" ("+deviceId+")");
+        LimeLog.info("Device changed: "+existingContext.name+" (ID: "+deviceId+")");
 
         // Migrate the existing context into this new one by moving any stateful elements
         InputDeviceContext newContext = createInputDeviceContextForDevice(device);
@@ -991,14 +991,20 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     private InputDeviceContext createInputDeviceContextForDevice(InputDevice dev) {
         InputDeviceContext context = new InputDeviceContext();
         String devName = dev.getName();
+        
+        // 优化设备名称显示，截断过长的名称并添加唯一标识符
+        String displayName = optimizeDeviceName(dev);
 
-        LimeLog.info("Creating controller context for device: "+devName);
+        LimeLog.info("Creating controller context for device: "+displayName);
+        LimeLog.info("Original name: "+devName);
         LimeLog.info("Vendor ID: " + dev.getVendorId());
         LimeLog.info("Product ID: "+dev.getProductId());
+        LimeLog.info("Device ID: "+dev.getId());
+        LimeLog.info("Descriptor: "+dev.getDescriptor());
         LimeLog.info(dev.toString());
 
         context.inputDevice = dev;
-        context.name = devName;
+        context.name = displayName; // 使用优化后的显示名称
         context.id = dev.getId();
         context.external = isExternal(dev);
 
@@ -3654,5 +3660,53 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             conn.sendControllerArrivalEvent((byte)controllerNumber, getActiveControllerMask(),
                     device.getType(), device.getSupportedButtonFlags(), device.getCapabilities());
         }
+    }
+
+    /**
+     * 优化设备名称显示，解决相同名称设备的识别问题
+     * @param device 输入设备
+     * @return 优化后的显示名称
+     */
+    private String optimizeDeviceName(InputDevice device) {
+        String originalName = device.getName();
+        if (originalName == null || originalName.isEmpty()) {
+            return "Unknown Device";
+        }
+
+        // 截断过长的设备名称（保留前20个字符）
+        String truncatedName = originalName.length() > 20 ? 
+            originalName.substring(0, 20) + "..." : originalName;
+
+        // 检查是否有相同名称的设备
+        boolean hasDuplicateName = false;
+        int[] deviceIds = InputDevice.getDeviceIds();
+        for (int id : deviceIds) {
+            InputDevice otherDevice = InputDevice.getDevice(id);
+            if (otherDevice != null && otherDevice.getId() != device.getId() && 
+                originalName.equals(otherDevice.getName())) {
+                hasDuplicateName = true;
+                break;
+            }
+        }
+
+        // 如果有重复名称，添加唯一标识符
+        if (hasDuplicateName) {
+            // 使用设备ID和描述符的后几位作为唯一标识符
+            String descriptor = device.getDescriptor();
+            String uniqueId = "";
+            
+            if (descriptor != null && !descriptor.isEmpty()) {
+                // 取描述符的最后4个字符作为标识符
+                uniqueId = descriptor.length() > 4 ? 
+                    descriptor.substring(descriptor.length() - 4) : descriptor;
+            } else {
+                // 如果没有描述符，使用设备ID
+                uniqueId = String.valueOf(device.getId());
+            }
+            
+            return truncatedName + " [" + uniqueId + "]";
+        }
+
+        return truncatedName;
     }
 }
