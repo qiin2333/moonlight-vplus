@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <!-- 1. 标签页按钮 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/tab_button_status"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="网络状态" />
+
+        <Button
+            android:id="@+id/tab_button_config"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="编辑配置" />
+    </LinearLayout>
+
+    <!-- 2. 内容容器 -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="450dp"> <!-- 给内容区一个固定的高度，并让其内部可滚动 -->
+
+        <!-- 2A. 状态页内容 -->
+        <ScrollView
+            android:id="@+id/tab_content_status"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <!-- 使用 FrameLayout 来实现叠加效果 -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp">
+
+                <!-- 1. 内容层：所有状态信息放在这里 -->
+                <LinearLayout
+                    android:id="@+id/panel_status_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="100dp"
+                    android:orientation="vertical">
+                    <!-- 状态信息将动态添加到这里 -->
+                </LinearLayout>
+
+                <!-- 2. 按钮层：浮动在右上角 -->
+                <ImageButton
+                    android:id="@+id/button_refresh_status"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="top|end"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="刷新状态"
+                    android:src="@android:drawable/ic_menu_rotate" />
+
+            </FrameLayout>
+        </ScrollView>
+
+        <!-- 2B. 配置页内容 (默认隐藏) -->
+        <ScrollView
+            android:id="@+id/tab_content_config"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:visibility="gone"> <!-- 默认隐藏 -->
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/ConfigLabel"
+                    android:text="网络名称 (Network Name)" />
+
+                <EditText
+                    android:id="@+id/edit_network_name"
+                    style="@style/ConfigEditText"
+                    android:hint="例如: easytier" />
+
+                <TextView
+                    style="@style/ConfigLabel"
+                    android:text="网络密钥 (Network Secret)" />
+
+                <EditText
+                    android:id="@+id/edit_network_secret"
+                    style="@style/ConfigEditText" />
+
+                <TextView
+                    style="@style/ConfigLabel"
+                    android:text="本机虚拟 IPv4 地址 (掩码默认为 /24)" />
+
+                <EditText
+                    android:id="@+id/edit_ipv4"
+                    style="@style/ConfigEditText"
+                    android:hint="例如: 10.0.0.6"
+                    android:inputType="phone" />
+
+                <TextView
+                    style="@style/ConfigLabel"
+                    android:text="监听器 (Listeners, 每行一个)" />
+
+                <EditText
+                    android:id="@+id/edit_listeners"
+                    style="@style/ConfigEditText.MultiLine"
+                    android:hint="例如: udp://0.0.0.0:11010" />
+
+                <TextView
+                    style="@style/ConfigLabel"
+                    android:text="对等节点 (Peers, 每行一个)" />
+
+                <EditText
+                    android:id="@+id/edit_peers"
+                    style="@style/ConfigEditText.MultiLine"
+                    android:hint="例如: tcp://1.2.3.4:11010" />
+
+                <!-- ================== 高级功能标志 ================== -->
+                <RelativeLayout
+                    android:id="@+id/advanced_flags_header"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        style="?android:attr/listSeparatorTextViewStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        android:text="高级功能标志 (Flags)" />
+
+                    <ImageView
+                        android:id="@+id/advanced_flags_arrow"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:src="@android:drawable/arrow_down_float" />
+                </RelativeLayout>
+
+                <!-- 包含所有 Switch 的容器，默认隐藏 -->
+                <LinearLayout
+                    android:id="@+id/advanced_flags_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <!-- 核心网络行为 -->
+                    <TextView
+                        style="@style/ConfigSubLabel"
+                        android:text="核心网络行为" />
+
+                    <Switch
+                        android:id="@+id/flag_use_smoltcp"
+                        style="@style/ConfigSwitch"
+                        android:text="使用 Smoltcp" />
+
+                    <Switch
+                        android:id="@+id/flag_latency_first"
+                        style="@style/ConfigSwitch"
+                        android:text="延迟优先" />
+
+                    <Switch
+                        android:id="@+id/flag_disable_p2p"
+                        style="@style/ConfigSwitch"
+                        android:text="禁用 P2P (强制中继)" />
+
+                    <Switch
+                        android:id="@+id/flag_private_mode"
+                        style="@style/ConfigSwitch"
+                        android:text="私有模式" />
+
+                    <Switch
+                        android:id="@+id/flag_enable_ipv6"
+                        style="@style/ConfigSwitch"
+                        android:text="禁用 IPv6" />
+
+                    <!-- 代理与协议 -->
+                    <TextView
+                        style="@style/ConfigSubLabel"
+                        android:text="代理与协议" />
+
+                    <Switch
+                        android:id="@+id/flag_enable_kcp_proxy"
+                        style="@style/ConfigSwitch"
+                        android:text="启用 KCP 代理" />
+
+                    <Switch
+                        android:id="@+id/flag_disable_kcp_input"
+                        style="@style/ConfigSwitch"
+                        android:text="禁用 KCP 输入" />
+
+                    <Switch
+                        android:id="@+id/flag_enable_quic_proxy"
+                        style="@style/ConfigSwitch"
+                        android:text="启用 QUIC 代理" />
+
+                    <Switch
+                        android:id="@+id/flag_disable_quic_input"
+                        style="@style/ConfigSwitch"
+                        android:text="禁用 QUIC 输入" />
+
+                    <Switch
+                        android:id="@+id/flag_proxy_forward_by_system"
+                        style="@style/ConfigSwitch"
+                        android:text="使用系统代理转发" />
+
+                    <!-- 安全与连接 -->
+                    <TextView
+                        style="@style/ConfigSubLabel"
+                        android:text="安全与连接" />
+
+                    <Switch
+                        android:id="@+id/flag_enable_encryption"
+                        style="@style/ConfigSwitch"
+                        android:text="禁用加密" />
+
+                    <Switch
+                        android:id="@+id/flag_disable_udp_hole_punching"
+                        style="@style/ConfigSwitch"
+                        android:text="禁用 UDP 打洞" />
+
+                    <Switch
+                        android:id="@+id/flag_disable_sym_hole_punching"
+                        style="@style/ConfigSwitch"
+                        android:text="禁用对称 NAT 打洞" />
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+    </FrameLayout>
+</LinearLayout>

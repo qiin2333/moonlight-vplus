@@ -84,6 +84,19 @@
         android:src="@drawable/ic_qq"
         android:preferKeepClear="true"
         style="?android:attr/borderlessButtonStyle"/>
+
+    <ImageButton
+        android:id="@+id/easyTierControlButton"
+        android:layout_width="70dp"
+        android:layout_height="65dp"
+        android:cropToPadding="false"
+        android:scaleType="fitXY"
+        android:layout_marginTop="@dimen/activity_safearea_top"
+        android:layout_alignParentTop="true"
+        android:layout_toRightOf="@+id/helpButton"
+        android:layout_toEndOf="@+id/helpButton"
+        android:src="@drawable/ic_network_control"
+        style="?android:attr/borderlessButtonStyle"/>
     
     <ImageButton
         android:id="@+id/restoreSessionButton"

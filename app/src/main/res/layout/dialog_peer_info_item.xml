@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:layout_marginTop="8dp"
+    android:layout_marginBottom="8dp">
+
+    <!-- 主机名标题 -->
+    <TextView
+        android:id="@+id/peer_hostname"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:paddingBottom="8dp"
+        android:text="Peer Hostname"/>
+
+    <!-- 虚拟 IP 行 -->
+    <LinearLayout style="@style/DialogRowLayout">
+        <TextView style="@style/DialogRowLabel" android:text="虚拟 IP:" />
+        <TextView android:id="@+id/peer_value_virtual_ip" style="@style/DialogRowValue" />
+    </LinearLayout>
+
+    <!-- NAT 类型行 -->
+    <LinearLayout style="@style/DialogRowLayout">
+        <TextView style="@style/DialogRowLabel" android:text="NAT 类型:" />
+        <TextView android:id="@+id/peer_value_nat_type" style="@style/DialogRowValue" />
+    </LinearLayout>
+
+    <!-- 连接信息行 -->
+    <LinearLayout style="@style/DialogRowLayout">
+        <TextView android:id="@+id/peer_label_connection" style="@style/DialogRowLabel" />
+        <TextView android:id="@+id/peer_value_connection" style="@style/DialogRowValue" />
+    </LinearLayout>
+
+    <!-- 延迟行 -->
+    <LinearLayout style="@style/DialogRowLayout">
+        <TextView style="@style/DialogRowLabel" android:text="延迟:" />
+        <TextView android:id="@+id/peer_value_latency" style="@style/DialogRowValue" />
+    </LinearLayout>
+
+    <!-- 流量行 -->
+    <LinearLayout style="@style/DialogRowLayout">
+        <TextView style="@style/DialogRowLabel" android:text="流量 (收/发):" />
+        <TextView android:id="@+id/peer_value_traffic" style="@style/DialogRowValue" />
+    </LinearLayout>
+</LinearLayout>

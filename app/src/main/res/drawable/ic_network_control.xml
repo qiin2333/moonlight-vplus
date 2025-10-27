@@ -1,0 +1,22 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+
+    <!--
+    这个路径定义了整个图标的形状。
+    它首先画一个外圆，然后画出 "E" 和 "T" 的轮廓。
+    fillType="evenOdd" 规则使得被多次包围的区域 (字母部分) 变为透明，
+    从而实现镂空效果。
+    -->
+    <path
+        android:fillColor="@android:color/white"
+        android:fillType="evenOdd"
+        android:pathData="
+            M12,2 C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2z
+            M6.5,8 H11.5 V9.5 H8 V11.25 H11 V12.75 H8 V14.5 H11.5 V16 H6.5 V8z
+            M12.5,8 H17.5 V9.5 H15.75 V16 H14.25 V9.5 H12.5 V8z" />
+
+</vector>

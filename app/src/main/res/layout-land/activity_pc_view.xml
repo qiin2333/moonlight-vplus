@@ -69,24 +69,38 @@
         android:scaleType="fitCenter"
         android:scaleX="0.8"
         android:scaleY="0.8"
-        android:nextFocusForward="@id/manuallyAddPc"
+        android:nextFocusForward="@id/easyTierControlButton"
         android:layout_alignParentStart="true"
         android:layout_alignParentLeft="true"
         android:layout_below="@id/settingsButton"
         android:src="@drawable/ic_qq"
         style="?android:attr/borderlessButtonStyle"/>
 
+    <!-- EasyTier 控制按钮 -->
     <ImageButton
-        android:id="@+id/manuallyAddPc"
+        android:id="@+id/easyTierControlButton"
         android:layout_width="70dp"
         android:layout_height="65dp"
         android:cropToPadding="false"
         android:scaleType="fitXY"
+        android:nextFocusForward="@id/manuallyAddPc"
         android:layout_alignParentStart="true"
         android:layout_alignParentLeft="true"
         android:layout_below="@id/helpButton"
-        android:src="@drawable/ic_add"
+        android:src="@drawable/ic_network_control"
         style="?android:attr/borderlessButtonStyle"/>
+
+    <ImageButton
+        android:id="@+id/manuallyAddPc"
+        style="?android:attr/borderlessButtonStyle"
+        android:layout_width="70dp"
+        android:layout_height="65dp"
+        android:layout_below="@id/easyTierControlButton"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentLeft="true"
+        android:cropToPadding="false"
+        android:scaleType="fitXY"
+        android:src="@drawable/ic_add" />
 
     <ImageButton
         android:id="@+id/restoreSessionButton"
