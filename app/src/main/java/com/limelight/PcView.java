@@ -27,6 +27,7 @@ import com.limelight.preferences.StreamSettings;
 import com.limelight.ui.AdapterFragment;
 import com.limelight.ui.AdapterFragmentCallbacks;
 import com.limelight.utils.Dialog;
+import com.limelight.utils.EasyTierController;
 import com.limelight.utils.HelpLauncher;
 import com.limelight.utils.Iperf3Tester;
 import com.limelight.utils.ServerHelper;
@@ -38,15 +39,10 @@ import com.limelight.utils.AppCacheManager;
 import com.limelight.utils.CacheHelper;
 import com.limelight.dialogs.AddressSelectionDialog;
 
-import org.json.JSONArray;
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import com.bumptech.glide.Glide;
 
@@ -61,7 +57,6 @@ import android.content.ServiceConnection;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Color;
-import android.graphics.Typeface;
 import android.net.Uri;
 import android.net.VpnService;
 import android.opengl.GLSurfaceView;
@@ -71,26 +66,16 @@ import android.os.Environment;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
-import android.text.TextUtils;
-import android.util.Log;
 import android.util.LruCache;
 import android.view.ContextMenu;
-import android.view.Gravity;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.widget.AbsListView;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
-import android.widget.ScrollView;
-import android.widget.Switch;
-import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 
@@ -112,13 +97,15 @@ import android.hardware.SensorManager;
 import com.squareup.seismic.ShakeDetector;
 import com.easytier.jni.EasyTierManager;
 
-public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeDetector.Listener {
+public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeDetector.Listener, EasyTierController.VpnPermissionCallback {
     private RelativeLayout noPcFoundLayout;
     private PcGridAdapter pcGridAdapter;
     private ShortcutHelper shortcutHelper;
     private int selectedPosition = -1;
     private ComputerManagerService.ComputerManagerBinder managerBinder;
     private boolean freezeUpdates, runningPolling, inForeground, completeOnCreateCalled;
+
+    private EasyTierController easyTierController;
     
     private ShakeDetector shakeDetector;
     private long lastShakeTime = 0;
@@ -412,7 +399,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        initEasyTierManager();
+        easyTierController = new EasyTierController(this, this);
 
         // Assume we're in the foreground when created to avoid a race
         // between binding to CMS and onResume()
@@ -637,8 +624,8 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
     public void onDestroy() {
         super.onDestroy();
 
-        if (easyTierManager != null) {
-            easyTierManager.stop();
+        if (easyTierController != null) {
+            easyTierController.onDestroy();
         }
 
         if (managerBinder != null) {
@@ -1474,644 +1461,12 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
     }
 
     /**
-     * 获取 EasyTier 的 TOML 配置字符串。
-     * 优先从 SharedPreferences 读取，如果不存在，则返回一个硬编码的默认配置。
-     * @return TOML 格式的配置字符串
-     */
-    private String getEasyTierConfig() {
-        // 1. 获取 SharedPreferences 实例
-        SharedPreferences prefs = getSharedPreferences(EASYTIER_PREFS, MODE_PRIVATE);
-
-        // 2. 定义默认配置
-        String defaultConfig = "instance_name = \"Default\"\n" +
-                "hostname = \"moonlight-V+\"\n" +
-                "ipv4 = \"10.0.0.1/24\"\n" +
-                "dhcp = false\n" +
-                "listeners = [\"tcp://0.0.0.0:11010\", \"udp://0.0.0.0:11010\", \"wg://0.0.0.0:11011\"]\n" +
-                "rpc_portal = \"0.0.0.0:0\"\n" +
-                "\n" +
-                "[network_identity]\n" +
-                "network_name = \"easytier\"\n" +
-                "network_secret = \"\"\n" +
-                "\n" +
-                "[[peer]]\n" +
-                "uri = \"tcp://public.easytier.top:11010\"\n" +
-                "\n" +
-                "[flags]\n";
-
-        // 3. 尝试读取已保存的配置，如果不存在，则使用 defaultConfig
-        return prefs.getString(KEY_TOML_CONFIG, defaultConfig);
-    }
-
-    /** 主数据容器，存放所有要在对话框显示的信息 */
-    private static class EasyTierDisplayInfo {
-        String hostname;
-        String version;
-        String virtualIp;
-        String publicIp;
-        String natType;
-        List<FinalPeerInfo> finalPeerList = new ArrayList<>();
-    }
-
-    /**
-     * 存储最终整合好的、用于显示的对等节点信息
-     */
-    private static class FinalPeerInfo {
-        final String hostname, virtualIp, connectionDetails, latency, traffic, version, natType, instId;
-        final boolean isDirectConnection;
-        final boolean isInSameSubnet;
-        final int routeCost;
-        final long nextHopPeerId, peerId;
-
-        FinalPeerInfo(String hostname, String virtualIp, boolean isDirectConnection, boolean isInSameSubnet, String connectionDetails, String latency, String traffic, String version, String natType, int routeCost, long nextHopPeerId, long peerId, String instId) {
-            this.hostname = hostname;
-            this.virtualIp = virtualIp;
-            this.isDirectConnection = isDirectConnection;
-            this.isInSameSubnet = isInSameSubnet;
-            this.connectionDetails = connectionDetails;
-            this.latency = latency;
-            this.traffic = traffic;
-            this.version = version;
-            this.natType = natType;
-            this.routeCost = routeCost;
-            this.nextHopPeerId = nextHopPeerId;
-            this.peerId = peerId;
-            this.instId = instId;
-        }
-    }
-
-    /**
-     * 存储从 'routes' 数组解析出的中间数据
-     */
-    private static class RouteData {
-        final long peerId, nextHopPeerId;
-        final String hostname, virtualIp, version, natType, instId;
-        final int pathLatency, cost;
-
-        RouteData(long peerId, String hostname, String virtualIp, long nextHopPeerId, int pathLatency, int cost, String version, String natType, String instId) {
-            this.peerId = peerId;
-            this.hostname = hostname;
-            this.virtualIp = virtualIp;
-            this.nextHopPeerId = nextHopPeerId;
-            this.pathLatency = pathLatency;
-            this.cost = cost;
-            this.version = version;
-            this.natType = natType;
-            this.instId = instId;
-        }
-    }
-
-    /**
-     * 存储从 'peers' 数组解析出的直连信息
-     */
-    private static class PeerConnectionData {
-        final long peerId, latencyUs, rxBytes, txBytes;
-        final String physicalAddr;
-
-        PeerConnectionData(long peerId, String physicalAddr, long latencyUs, long rxBytes, long txBytes) {
-            this.peerId = peerId;
-            this.physicalAddr = physicalAddr;
-            this.latencyUs = latencyUs;
-            this.rxBytes = rxBytes;
-            this.txBytes = txBytes;
-        }
-    }
-
-    private EasyTierDisplayInfo parseNetworkInfoForDialog(String jsonString, String instanceName) {
-        EasyTierDisplayInfo displayInfo = new EasyTierDisplayInfo();
-        try {
-            JSONObject root = new JSONObject(jsonString);
-            JSONObject instance = root.getJSONObject("map").getJSONObject(instanceName);
-
-            // --- A. 解析本机信息  ---
-            JSONObject myNode = instance.getJSONObject("my_node_info");
-            String myIp = null;
-            int myPrefix = 0;
-            displayInfo.hostname = myNode.getString("hostname");
-            displayInfo.version = myNode.getString("version");
-            JSONObject virtualIpv4 = myNode.optJSONObject("virtual_ipv4");
-            if (virtualIpv4 != null) {
-                myPrefix = virtualIpv4.getInt("network_length");
-                myIp = ipFromInt(virtualIpv4.getJSONObject("address").getInt("addr"));
-            }
-            displayInfo.virtualIp = (virtualIpv4 != null) ? (ipFromInt(virtualIpv4.getJSONObject("address").getInt("addr")) + "/" + virtualIpv4.getInt("network_length")) : "获取中...";
-            JSONObject stunInfo = myNode.getJSONObject("stun_info");
-            // 循环遍历 stun_info.public_ip 数组，它可能包含 IPv4 和 IPv6
-            StringBuilder ipBuilder = new StringBuilder();
-            JSONArray publicIps = stunInfo.optJSONArray("public_ip");
-            if (publicIps != null && publicIps.length() > 0) {
-                for (int i = 0; i < publicIps.length(); i++) {
-                    if (i > 0) {
-                        ipBuilder.append("\n"); // 从第二个 IP 开始，在前面加换行符
-                    }
-                    ipBuilder.append(publicIps.getString(i));
-                }
-                displayInfo.publicIp = ipBuilder.toString();
-            } else {
-                displayInfo.publicIp
-                        = "N/A";
-            }
-            displayInfo.natType = parseNatType(stunInfo.getInt("udp_nat_type"));
-
-            // --- B. 分别解析 routes 和 peers 到 Map 中 (核心逻辑) ---
-            Map<Long, RouteData> routesMap = parseRoutesToJavaMap(instance.getJSONArray("routes"));
-            Map<Long, PeerConnectionData> peersMap = parsePeersToJavaMap(instance.getJSONArray("peers"));
-
-            // --- C. 遍历 routes，结合 peers 信息，构建最终的 FinalPeerInfo 列表 ---
-            List<FinalPeerInfo> finalPeerList = new ArrayList<>();
-            for (RouteData route : routesMap.values()) {
-                // --- 在这里进行网段检查 ---
-                boolean inSameSubnet = true; // 默认为 true
-                if (myIp != null && myPrefix > 0 && !route.virtualIp.equals("无")) {
-                    inSameSubnet = isInSameSubnet(myIp, route.virtualIp, myPrefix);
-                }
-
-                PeerConnectionData peerConn = peersMap.get(route.peerId);
-
-                if (peerConn != null) {
-                    // 情况1: 找到了直接连接 (信息来自 route 和 peerConn)
-                    finalPeerList.add(new FinalPeerInfo(
-                            route.hostname,
-                            route.virtualIp,
-                            true, // isDirectConnection
-                            inSameSubnet,
-                            peerConn.physicalAddr,
-                            (peerConn.latencyUs / 1000) + " ms",
-                            formatBytes(peerConn.rxBytes) + " / " + formatBytes(peerConn.txBytes),
-                            route.version,
-                            route.natType,
-                            route.cost,
-                            route.nextHopPeerId,
-                            route.peerId,
-                            route.instId
-                    ));
-                } else {
-                    // 情况2: 未找到直接连接，是中继路由 (信息仅来自 route)
-                    RouteData nextHop = routesMap.get(route.nextHopPeerId);
-                    String nextHopHostname = (nextHop != null) ? nextHop.hostname : "未知";
-                    finalPeerList.add(new FinalPeerInfo(
-                            route.hostname,
-                            route.virtualIp,
-                            false,
-                            inSameSubnet,
-                            "通过 " + nextHopHostname,
-                            route.pathLatency + " ms (路径)",
-                            "N/A", // traffic
-                            route.version,
-                            route.natType,
-                            route.cost,
-                            route.nextHopPeerId,
-                            route.peerId,
-                            route.instId
-                    ));
-                }
-            }
-
-            // --- D. 排序并存入最终的显示对象 ---
-            finalPeerList.sort(Comparator.comparing(p -> p.hostname));
-            displayInfo.finalPeerList = finalPeerList;
-
-        } catch (Exception e) {
-            LimeLog.warning("PcView_Parser解析JSON失败:" + e);
-            displayInfo.hostname = "解析错误";
-            displayInfo.version = e.getMessage();
-            return displayInfo;
-        }
-        return displayInfo;
-    }
-
-    private Map<Long, RouteData> parseRoutesToJavaMap(JSONArray routesJson) throws Exception {
-        Map<Long, RouteData> map = new HashMap<>();
-        for (int i = 0; i < routesJson.length(); i++) {
-            JSONObject route = routesJson.getJSONObject(i);
-            long peerId = route.getLong("peer_id");
-            JSONObject ipv4AddrJson = route.optJSONObject("ipv4_addr");
-            String virtualIp = (ipv4AddrJson != null) ? ipFromInt(ipv4AddrJson.getJSONObject("address").getInt("addr")) : "无";
-
-            map.put(peerId, new RouteData(
-                    peerId,
-                    route.getString("hostname"),
-                    virtualIp,
-                    route.getLong("next_hop_peer_id"),
-                    route.getInt("path_latency"),
-                    route.getInt("cost"),
-                    route.getString("version"),
-                    parseNatType(route.getJSONObject("stun_info").getInt("udp_nat_type")),
-                    route.getString("inst_id")
-            ));
-        }
-        return map;
-    }
-
-    private Map<Long, PeerConnectionData> parsePeersToJavaMap(JSONArray peersJson) throws Exception {
-        Map<Long, PeerConnectionData> map = new HashMap<>();
-        for (int i = 0; i < peersJson.length(); i++) {
-            JSONObject peer = peersJson.getJSONObject(i);
-            JSONArray conns = peer.getJSONArray("conns");
-            if (conns.length() > 0) {
-                JSONObject conn = conns.getJSONObject(0);
-                long peerId = conn.getLong("peer_id");
-                map.put(peerId, new PeerConnectionData(
-                        peerId,
-                        conn.getJSONObject("tunnel").getJSONObject("remote_addr").getString("url"),
-                        conn.getJSONObject("stats").getLong("latency_us"),
-                        conn.getJSONObject("stats").getLong("rx_bytes"),
-                        conn.getJSONObject("stats").getLong("tx_bytes")
-                ));
-            }
-        }
-        return map;
-    }
-
-    private static String ipFromInt(int addr) {
-        return ((addr >>> 24) & 0xFF) + "." + ((addr >>> 16) & 0xFF) + "." + ((addr >>> 8) & 0xFF) + "." + (addr & 0xFF);
-    }
-
-    private static String formatBytes(long bytes) {
-        if (bytes < 1024) return bytes + " B";
-        int exp = (int) (Math.log(bytes) / Math.log(1024));
-        char pre = "KMGTPE".charAt(exp - 1);
-        return String.format(java.util.Locale.US, "%.1f %sB", bytes / Math.pow(1024, exp), pre);
-    }
-
-
-    /**
-     * 将 NAT 类型代码解析为人类可读的字符串。
-     * @param typeCode 从 JSON 获取的 NAT 类型代码。
-     * @return 详细的 NAT 类型描述。
-     */
-    private static String parseNatType(int typeCode) {
-        switch (typeCode) {
-            case 0: return "Unknown (未知类型)";
-            case 1: return "Open Internet (开放互联网)";
-            case 2: return "No PAT (无端口转换)";
-            case 3: return "Full Cone (完全锥形)";
-            case 4: return "Restricted Cone (限制锥形)";
-            case 5: return "Port Restricted (端口限制锥形)";
-            case 6: return "Symmetric (对称型)";
-            case 7: return "Symmetric UDP Firewall (对称UDP防火墙)";
-            case 8: return "Symmetric Easy Inc (对称型-端口递增)";
-            case 9: return "Symmetric Easy Dec (对称型-端口递减)";
-            default: return "Other Type (" + typeCode + ")";
-        }
-    }
-
-    /**
      * 显示集成了状态显示和配置编辑的 EasyTier 控制面板。
      */
     private void showEasyTierControlDialog() {
-        if (easyTierManager == null) {
-            Toast.makeText(this, "EasyTier Manager尚未初始化", Toast.LENGTH_SHORT).show();
-            return;
+        if (easyTierController != null) {
+            easyTierController.showControlDialog();
         }
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        LayoutInflater inflater = getLayoutInflater();
-        View dialogView = inflater.inflate(R.layout.dialog_easytier_panel, null);
-        builder.setView(dialogView);
-        builder.setTitle("EasyTier 控制面板");
-
-        // --- 找到所有 UI 控件 ---
-        // 标签按钮
-        final Button tabStatusButton = dialogView.findViewById(R.id.tab_button_status);
-        final Button tabConfigButton = dialogView.findViewById(R.id.tab_button_config);
-        // 标签内容
-        final ScrollView statusContent = dialogView.findViewById(R.id.tab_content_status);
-        final ScrollView configContent = dialogView.findViewById(R.id.tab_content_config);
-        // 状态页内的控件
-        final ImageButton refreshButton = dialogView.findViewById(R.id.button_refresh_status);
-        final LinearLayout statusContainer = dialogView.findViewById(R.id.panel_status_container);
-        // 配置页内的控件
-        final EditText editNetworkName = dialogView.findViewById(R.id.edit_network_name);
-        final EditText editNetworkSecret = dialogView.findViewById(R.id.edit_network_secret);
-        final EditText editIpv4 = dialogView.findViewById(R.id.edit_ipv4);
-        final EditText editListeners = dialogView.findViewById(R.id.edit_listeners);
-        final EditText editPeers = dialogView.findViewById(R.id.edit_peers);
-        final Switch flagUseSmoltcp = dialogView.findViewById(R.id.flag_use_smoltcp);
-        final Switch flagLatencyFirst = dialogView.findViewById(R.id.flag_latency_first);
-        final Switch flagDisableP2p = dialogView.findViewById(R.id.flag_disable_p2p);
-        final Switch flagPrivateMode = dialogView.findViewById(R.id.flag_private_mode);
-        final Switch flagEnableIpv6 = dialogView.findViewById(R.id.flag_enable_ipv6);
-        final Switch flagEnableKcpProxy = dialogView.findViewById(R.id.flag_enable_kcp_proxy);
-        final Switch flagDisableKcpInput = dialogView.findViewById(R.id.flag_disable_kcp_input);
-        final Switch flagEnableQuicProxy = dialogView.findViewById(R.id.flag_enable_quic_proxy);
-        final Switch flagDisableQuicInput = dialogView.findViewById(R.id.flag_disable_quic_input);
-        final Switch flagProxyForwardBySystem = dialogView.findViewById(R.id.flag_proxy_forward_by_system);
-        final Switch flagEnableEncryption = dialogView.findViewById(R.id.flag_enable_encryption);
-        final Switch flagDisableUdpHolePunching = dialogView.findViewById(R.id.flag_disable_udp_hole_punching);
-        final Switch flagDisableSymHolePunching = dialogView.findViewById(R.id.flag_disable_sym_hole_punching);
-
-        // --- 折叠逻辑 ---
-        final LinearLayout flagsContainer = dialogView.findViewById(R.id.advanced_flags_container);
-        final ImageView flagsArrow = dialogView.findViewById(R.id.advanced_flags_arrow);
-        dialogView.findViewById(R.id.advanced_flags_header).setOnClickListener(v -> {
-            boolean isVisible = flagsContainer.getVisibility() == View.VISIBLE;
-            flagsContainer.setVisibility(isVisible ? View.GONE : View.VISIBLE);
-            flagsArrow.setRotation(isVisible ? 0 : 180);
-        });
-
-        // --- 标签页切换逻辑 ---
-        tabStatusButton.setOnClickListener(v -> {
-            statusContent.setVisibility(View.VISIBLE);
-            configContent.setVisibility(View.GONE);
-            tabStatusButton.setEnabled(false); // 当前选中的标签不可点击
-            tabConfigButton.setEnabled(true);
-        });
-        tabConfigButton.setOnClickListener(v -> {
-            statusContent.setVisibility(View.GONE);
-            configContent.setVisibility(View.VISIBLE);
-            tabStatusButton.setEnabled(true);
-            tabConfigButton.setEnabled(false); // 当前选中的标签不可点击
-        });
-        // 默认选中状态页
-        tabStatusButton.performClick();
-
-        // --- 加载配置到配置页 (逻辑不变) ---
-        String currentTomlConfig = getEasyTierConfig();
-        loadSimpleConfigIntoUi(currentTomlConfig, editNetworkName, editNetworkSecret, editIpv4, editListeners, editPeers,
-                flagUseSmoltcp, flagLatencyFirst, flagDisableP2p, flagPrivateMode, flagEnableIpv6,
-                flagEnableKcpProxy, flagDisableKcpInput, flagEnableQuicProxy, flagDisableQuicInput,
-                flagProxyForwardBySystem, flagEnableEncryption, flagDisableUdpHolePunching, flagDisableSymHolePunching);
-
-        // --- 对话框按钮 ---
-        builder.setPositiveButton("启动/停止", null);
-        builder.setNeutralButton("保存配置", null);
-        builder.setNegativeButton("关闭", null);
-
-        AlertDialog dialog = builder.create();
-
-        dialog.setOnShowListener(dialogInterface -> {
-            final Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
-            final Button neutralButton = dialog.getButton(AlertDialog.BUTTON_NEUTRAL);
-            // --- 封装的状态刷新逻辑 ---
-            Runnable refreshStatusRunnable = () -> {
-                String json = (easyTierManager != null) ? easyTierManager.getLatestNetworkInfoJson() : null;
-                updateStatusUi(statusContainer, json);
-                boolean isRunningNow = (json != null && !json.isEmpty());
-                positiveButton.setText(isRunningNow ? "停止服务" : "启动服务");
-            };
-            // --- 刷新按钮的点击事件，使用封装的逻辑 ---
-            refreshButton.setOnClickListener(v -> {
-                refreshStatusRunnable.run();
-                Toast.makeText(this, "状态已刷新", Toast.LENGTH_SHORT).show();
-            });
-
-            // --- “启动/停止”按钮的逻辑 ---
-            positiveButton.setOnClickListener(v -> {
-                if (easyTierManager.getLatestNetworkInfoJson() != null) {
-                    Toast.makeText(this, "Easytier服务已停止", Toast.LENGTH_SHORT).show();
-                    easyTierManager.stop();
-                    dialog.dismiss();
-                } else {
-                    requestVpnPermission();
-                    dialog.dismiss();
-                }
-            });
-
-            // --- “保存配置”按钮的逻辑 ---
-            neutralButton.setOnClickListener(v -> {
-                // 1. 从 UI 控件构建新的 TOML 字符串
-                String newToml = buildSimpleTomlFromUi(editNetworkName, editNetworkSecret, editIpv4, editListeners, editPeers,
-                        flagUseSmoltcp, flagLatencyFirst, flagDisableP2p, flagPrivateMode, flagEnableIpv6,
-                        flagEnableKcpProxy, flagDisableKcpInput, flagEnableQuicProxy, flagDisableQuicInput,
-                        flagProxyForwardBySystem, flagEnableEncryption, flagDisableUdpHolePunching, flagDisableSymHolePunching);
-
-                // 2. 将新的 TOML 字符串保存到 SharedPreferences
-                getSharedPreferences(EASYTIER_PREFS, MODE_PRIVATE)
-                        .edit()
-                        .putString(KEY_TOML_CONFIG, newToml)
-                        .apply(); // apply() 会在后台异步保存，不会阻塞 UI
-
-                // 3. 重新初始化 EasyTierManager，使其立即加载并持有最新的配置
-                //    这样，如果用户接下来点击“启动”，就会使用新配置了。
-                initEasyTierManager();
-
-                refreshStatusRunnable.run();
-
-                // 4. 给用户反馈
-                Toast.makeText(this, "配置已保存，服务已根据新配置重新初始化。", Toast.LENGTH_LONG).show();
-            });
-
-            // 对话框首次显示时，自动刷新一次状态
-            refreshButton.performClick();
-        });
-
-        dialog.show();
-    }
-
-    /**
-     * 从 TOML 字符串解析配置并填充到 UI。
-     */
-    private void loadSimpleConfigIntoUi(String toml,
-                                        EditText editNetworkName, EditText editNetworkSecret, EditText editIpv4, EditText editListeners, EditText editPeers,
-                                        Switch flagUseSmoltcp, Switch flagLatencyFirst, Switch flagDisableP2p, Switch flagPrivateMode, Switch flagEnableIpv6,
-                                        Switch flagEnableKcpProxy, Switch flagDisableKcpInput, Switch flagEnableQuicProxy, Switch flagDisableQuicInput,
-                                        Switch flagProxyForwardBySystem, Switch flagEnableEncryption, Switch flagDisableUdpHolePunching, Switch flagDisableSymHolePunching) {
-        editNetworkName.setText(extractValue(toml, "network_name", ""));
-        editNetworkSecret.setText(extractValue(toml, "network_secret", ""));
-        String ipv4Full = extractValue(toml, "ipv4", "");
-        if (ipv4Full.contains("/")) {
-            editIpv4.setText(ipv4Full.split("/")[0]);
-        } else {
-            editIpv4.setText(ipv4Full);
-        }
-        editListeners.setText(extractListAsString(toml, "listeners"));
-        editPeers.setText(extractListAsString(toml, "uri"));
-        // 加载 Flags
-        flagUseSmoltcp.setChecked(Boolean.parseBoolean(extractValue(toml, "use_smoltcp", "false")));
-        flagLatencyFirst.setChecked(Boolean.parseBoolean(extractValue(toml, "latency_first", "false")));
-        flagDisableP2p.setChecked(Boolean.parseBoolean(extractValue(toml, "disable_p2p", "false")));
-        flagPrivateMode.setChecked(Boolean.parseBoolean(extractValue(toml, "private_mode", "false")));
-        // 对于 enable_ipv6:
-        // 1. EasyTier 核心默认值为 true (启用 IPv6)。
-        // 2. 我们从 TOML 中读取 `enable_ipv6` 的值，如果不存在，则使用默认值 "true"。
-        boolean isIpv6Enabled = Boolean.parseBoolean(extractValue(toml, "enable_ipv6", "true"));
-        // 3. UI 开关“禁用 IPv6”的状态，与 isIpv6Enabled 的值正好相反。
-        //    isIpv6Enabled=true  => "禁用"开关应为 false (不勾选)
-        //    isIpv6Enabled=false => "禁用"开关应为 true  (勾选)
-        flagEnableIpv6.setChecked(!isIpv6Enabled);
-        flagEnableKcpProxy.setChecked(Boolean.parseBoolean(extractValue(toml, "enable_kcp_proxy", "false")));
-        flagDisableKcpInput.setChecked(Boolean.parseBoolean(extractValue(toml, "disable_kcp_input", "false")));
-        flagEnableQuicProxy.setChecked(Boolean.parseBoolean(extractValue(toml, "enable_quic_proxy", "false")));
-        flagDisableQuicInput.setChecked(Boolean.parseBoolean(extractValue(toml, "disable_quic_input", "false")));
-        flagProxyForwardBySystem.setChecked(Boolean.parseBoolean(extractValue(toml, "proxy_forward_by_system", "false")));
-        // 对于 enable_encryption:
-        // 1. EasyTier 核心默认值为 true (启用加密)。
-        // 2. 我们从 TOML 中读取 `enable_encryption` 的值，如果不存在，则使用默认值 "true"。
-        boolean isEncryptionEnabled = Boolean.parseBoolean(extractValue(toml, "enable_encryption", "true"));
-        // 3. UI 开关“禁用加密”的状态，与 isEncryptionEnabled 的值正好相反。
-        flagEnableEncryption.setChecked(!isEncryptionEnabled);
-        flagDisableUdpHolePunching.setChecked(Boolean.parseBoolean(extractValue(toml, "disable_udp_hole_punching", "false")));
-        flagDisableSymHolePunching.setChecked(Boolean.parseBoolean(extractValue(toml, "disable_sym_hole_punching", "false")));
-    }
-
-
-    /**
-     * 从 UI 控件收集数据并构建TOML 字符串。
-     */
-    private String buildSimpleTomlFromUi(EditText editNetworkName, EditText editNetworkSecret, EditText editIpv4, EditText editListeners, EditText editPeers,
-                                         Switch flagUseSmoltcp, Switch flagLatencyFirst, Switch flagDisableP2p, Switch flagPrivateMode, Switch flagEnableIpv6,
-                                         Switch flagEnableKcpProxy, Switch flagDisableKcpInput, Switch flagEnableQuicProxy, Switch flagDisableQuicInput,
-                                         Switch flagProxyForwardBySystem, Switch flagEnableEncryption, Switch flagDisableUdpHolePunching, Switch flagDisableSymHolePunching) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("hostname = \"moonlight-V+\"\n");
-        sb.append("instance_name = \"Default\"\n");
-        sb.append("dhcp = false\n");
-        sb.append("ipv4 = \"").append(editIpv4.getText().toString()).append("/24\"\n");
-        appendList(sb, "listeners", editListeners.getText().toString());
-        sb.append("rpc_portal = \"0.0.0.0:0\"\n");
-        sb.append("\n[network_identity]\n");
-        appendString(sb, "network_name", editNetworkName.getText().toString());
-        appendString(sb, "network_secret", editNetworkSecret.getText().toString());
-        String[] peers = editPeers.getText().toString().split("\n");
-        for (String peer : peers) {
-            if (!peer.trim().isEmpty()) {
-                sb.append("\n[[peer]]\n");
-                sb.append("uri = \"").append(peer.trim()).append("\"\n");
-            }
-        }
-        // -- 构建 [flags] 部分 --
-        // 只写入与“默认值”不同的标志，以保持配置文件简洁
-        sb.append("\n[flags]\n");
-        appendFlagIfNotDefault(sb, "use_smoltcp", flagUseSmoltcp.isChecked(), false);
-        appendFlagIfNotDefault(sb, "latency_first", flagLatencyFirst.isChecked(), false);
-        appendFlagIfNotDefault(sb, "disable_p2p", flagDisableP2p.isChecked(), false);
-        appendFlagIfNotDefault(sb, "private_mode", flagPrivateMode.isChecked(), false);
-        appendFlagIfNotDefault(sb, "enable_ipv6", !flagEnableIpv6.isChecked(), true);
-        appendFlagIfNotDefault(sb, "enable_kcp_proxy", flagEnableKcpProxy.isChecked(), false);
-        appendFlagIfNotDefault(sb, "disable_kcp_input", flagDisableKcpInput.isChecked(), false);
-        appendFlagIfNotDefault(sb, "enable_quic_proxy", flagEnableQuicProxy.isChecked(), false);
-        appendFlagIfNotDefault(sb, "disable_quic_input", flagDisableQuicInput.isChecked(), false);
-        appendFlagIfNotDefault(sb, "proxy_forward_by_system", flagProxyForwardBySystem.isChecked(), false);
-        appendFlagIfNotDefault(sb, "enable_encryption", !flagEnableEncryption.isChecked(), true);
-        appendFlagIfNotDefault(sb, "disable_udp_hole_punching", flagDisableUdpHolePunching.isChecked(), false);
-        appendFlagIfNotDefault(sb, "disable_sym_hole_punching", flagDisableSymHolePunching.isChecked(), false);
-        return sb.toString();
-    }
-
-    private void appendFlagIfNotDefault(StringBuilder sb, String key, boolean value, boolean defaultValue) {
-        if (value != defaultValue) {
-            sb.append(key).append(" = ").append(value).append("\n");
-        }
-    }
-
-    /**
-     * 动态更新对话框中的状态显示区域。
-     */
-    private void updateStatusUi(LinearLayout container, String json) {
-        container.removeAllViews();
-        LayoutInflater inflater = LayoutInflater.from(this);
-
-        if (json == null || json.isEmpty()) {
-            TextView placeholder = new TextView(this);
-            placeholder.setText("服务未运行或正在连接...\n请点击刷新按钮获取最新状态。");
-            placeholder.setGravity(Gravity.CENTER);
-            placeholder.setPadding(0, 40, 0, 40);
-            container.addView(placeholder);
-            return;
-        }
-
-        EasyTierDisplayInfo displayInfo = parseNetworkInfoForDialog(json, "Default"); // TODO: 实例名
-
-        // --- 动态创建并添加“本机信息”和“STUN信息”的标题和行 ---
-        addSectionTitle(container, "本机信息");
-        addStatusRow(container, "主机名:", displayInfo.hostname);
-        addStatusRow(container, "虚拟 IP:", displayInfo.virtualIp);
-        addStatusRow(container, "公网 IP:", displayInfo.publicIp);
-        addStatusRow(container, "NAT 类型:", displayInfo.natType);
-
-        // --- 动态创建并添加“对等节点”的标题和详细列表 ---
-        addSectionTitle(container, "对等节点 (" + displayInfo.finalPeerList.size() + ")");
-
-        if (displayInfo.finalPeerList.isEmpty()) {
-            TextView noPeersText = new TextView(this);
-            noPeersText.setText("暂无其他节点");
-            noPeersText.setPadding(20, 4, 0, 4);
-            container.addView(noPeersText);
-        } else {
-            for (FinalPeerInfo peer : displayInfo.finalPeerList) {
-                // 1. 加载对等节点的模板布局
-                View peerView = inflater.inflate(R.layout.dialog_peer_info_item, container, false);
-
-                // 2. 查找模板内的所有 TextView
-                TextView hostname = peerView.findViewById(R.id.peer_hostname);
-                TextView virtualIp = peerView.findViewById(R.id.peer_value_virtual_ip);
-                TextView natType = peerView.findViewById(R.id.peer_value_nat_type);
-                TextView connectionLabel = peerView.findViewById(R.id.peer_label_connection);
-                TextView connectionValue = peerView.findViewById(R.id.peer_value_connection);
-                TextView latency = peerView.findViewById(R.id.peer_value_latency);
-                TextView traffic = peerView.findViewById(R.id.peer_value_traffic);
-
-                // 3. 填充主机名和警告
-                String title = peer.hostname;
-                if (!peer.isInSameSubnet) {
-                    title += " (网段不匹配!)";
-                    hostname.setTextColor(Color.RED);
-                } else if (!peer.isDirectConnection) {
-                    title += " (中转)";
-                }
-                hostname.setText(title);
-
-                // 4. 填充所有其他详细信息
-                virtualIp.setText(peer.virtualIp != null ? peer.virtualIp : "N/A");
-                natType.setText(peer.natType != null ? peer.natType : "N/A");
-                latency.setText(peer.latency != null ? peer.latency : "N/A");
-                traffic.setText(peer.traffic != null ? peer.traffic : "N/A");
-                String connLabelText = peer.isDirectConnection ? "物理地址:" : "下一跳节点:";
-                connectionLabel.setText(connLabelText);
-                connectionValue.setText(peer.connectionDetails != null ? peer.connectionDetails : "N/A");
-
-                // 5. 将填充好数据的 Peer 视图添加到主容器中
-                container.addView(peerView);
-            }
-        }
-    }
-
-    /**
-     * 辅助方法：动态创建一个键值对行并添加到父布局。
-     */
-    private void addStatusRow(LinearLayout parent, String label, String value) {
-        LinearLayout rowLayout = new LinearLayout(this);
-        rowLayout.setOrientation(LinearLayout.HORIZONTAL);
-        LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        int padding = (int) (8 * getResources().getDisplayMetrics().density);
-        rowLayout.setPadding(0, padding, 0, padding);
-        rowLayout.setLayoutParams(rowParams);
-
-        TextView labelView = new TextView(this);
-        labelView.setText(label);
-        labelView.setTypeface(null, Typeface.BOLD);
-        LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
-                (int) (120 * getResources().getDisplayMetrics().density), // 120dp
-                LinearLayout.LayoutParams.WRAP_CONTENT
-        );
-        labelView.setLayoutParams(labelParams);
-
-        TextView valueView = new TextView(this);
-        valueView.setText(value != null ? value : "N/A");
-        valueView.setTextIsSelectable(true);
-
-        rowLayout.addView(labelView);
-        rowLayout.addView(valueView);
-        parent.addView(rowLayout);
-    }
-
-    private void addSectionTitle(LinearLayout parent, String title) {
-        TextView titleView = new TextView(this);
-        titleView.setText(title);
-        titleView.setTextSize(16f);
-        titleView.setTypeface(null, Typeface.BOLD);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-        );
-        // dp to px conversion
-        int topMargin = (int) (16 * getResources().getDisplayMetrics().density);
-        int bottomMargin = (int) (8 * getResources().getDisplayMetrics().density);
-        params.setMargins(0, topMargin, 0, bottomMargin);
-        titleView.setLayoutParams(params);
-        parent.addView(titleView);
     }
 
 
@@ -2119,14 +1474,13 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
     /**
      * 检查并请求 VPN 权限。
      */
-    private void requestVpnPermission() {
+    @Override
+    public void requestVpnPermission() {
         Intent intent = VpnService.prepare(this);
         if (intent != null) {
-            LimeLog.info("PcView:请求VPN权限...");
             startActivityForResult(intent, VPN_PERMISSION_REQUEST_CODE);
         } else {
-            LimeLog.info("PcView:VPN权限已授予，直接启动服务。");
-            onActivityResult(VPN_PERMISSION_REQUEST_CODE, Activity.RESULT_OK, null);
+            onActivityResult(VPN_PERMISSION_REQUEST_CODE, RESULT_OK, null);
         }
     }
 
@@ -2134,135 +1488,9 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == VPN_PERMISSION_REQUEST_CODE) {
-            if (resultCode == Activity.RESULT_OK) {
-                LimeLog.info("PcView:VPN权限已获取，启动EasyTier Manager。");
-                // 权限获取成功后，才真正启动 EasyTierManager
-                // Manager 内部的 monitorNetworkStatus 会在获取到 IP 后启动 VpnService
-                easyTierManager.start();
-                Toast.makeText(this, "EasyTier服务正在启动...", Toast.LENGTH_SHORT).show();
-            } else {
-                LimeLog.warning("PcView:VPN权限被拒绝。");
-                Toast.makeText(this, "需要VPN权限才能启动服务。", Toast.LENGTH_LONG).show();
+            if (easyTierController != null) {
+                easyTierController.handleVpnPermissionResult(resultCode);
             }
         }
     }
-
-    /**
-     * 辅助方法：将点分十进制的 IPv4 字符串转换为整数。
-     */
-    private int ipToInt(String ip) {
-        String[] parts = ip.split("\\.");
-        return (Integer.parseInt(parts[0]) << 24) |
-                (Integer.parseInt(parts[1]) << 16) |
-                (Integer.parseInt(parts[2]) << 8) |
-                (Integer.parseInt(parts[3]));
-    }
-
-    /**
-     判断两个 IP 地址是否在同一个子网中。
-     */
-    private boolean isInSameSubnet(String ip1, String ip2, int prefix) {
-        try {
-            // 1. 将两个 IP 地址都转换为整数
-            int ip1Int = ipToInt(ip1);
-            int ip2Int = ipToInt(ip2);
-
-            // 2. 根据前缀长度计算子网掩码
-            //    -1 在二进制中是 32 个 1。
-            //    左移 (32 - prefix) 位后，高位被 0 填充，低位是 (32 - prefix) 个 0。
-            //    例如，prefix = 24，(32-24)=8，-1 << 8 的结果是 11111111 11111111 11111111 00000000
-            int mask = -1 << (32 - prefix);
-
-            // 3. 将每个 IP 地址与子网掩码进行“与”运算，得到它们各自的网络地址
-            int network1 = ip1Int & mask;
-            int network2 = ip2Int & mask;
-
-            // 4. 如果两个网络地址相等，说明它们在同一个子网
-            return network1 == network2;
-        } catch (Exception e) {
-            // 如果 IP 格式不正确导致解析失败，保守地返回 false
-            LimeLog.warning("未能检查子网的IP：" + ip1 + ", " + ip2 + e);
-            return false;
-        }
-    }
-
-    /**
-     * 辅助方法：从 TOML 字符串中提取单个键的值。
-     */
-    private String extractValue(String toml, String key, String defaultValue) {
-        for (String line : toml.split("\n")) {
-            line = line.trim();
-            if (line.startsWith(key + " =")) {
-                try {
-                    return line.split("=", 2)[1].trim().replace("\"", "");
-                } catch (Exception e) { /* ignore */ }
-            }
-        }
-        return defaultValue;
-    }
-
-    /**
-     * 辅助方法：从 TOML 字符串中提取列表类型的值。
-     */
-    private String extractListAsString(String toml, String key) {
-        if ("uri".equals(key)) {
-            StringBuilder peers = new StringBuilder();
-            for (String line : toml.split("\n")) {
-                line = line.trim();
-                if (line.startsWith("uri =")) {
-                    if (peers.length() > 0) peers.append("\n");
-                    peers.append(line.split("=", 2)[1].trim().replace("\"", ""));
-                }
-            }
-            return peers.toString();
-        }
-        for (String line : toml.split("\n")) {
-            line = line.trim();
-            if (line.startsWith(key + " =")) {
-                try {
-                    String list = line.substring(line.indexOf('[') + 1, line.lastIndexOf(']'));
-                    return list.replace("\"", "").replace(", ", "\n");
-                } catch (Exception e) { /* ignore */ }
-            }
-        }
-        return "";
-    }
-
-    /**
-     * 辅助方法：向 StringBuilder 中追加一个字符串类型的键值对。
-     */
-    private void appendString(StringBuilder sb, String key, String value) {
-        if (!TextUtils.isEmpty(value)) sb.append(key).append(" = \"").append(value).append("\"\n");
-    }
-
-    /**
-     * 辅助方法：向 StringBuilder 中追加一个列表类型的键值对。
-     */
-    private void appendList(StringBuilder sb, String key, String value) {
-        if (!TextUtils.isEmpty(value)) {
-            String[] items = value.split("\n");
-            List<String> quotedItems = new ArrayList<>();
-            for (String item : items) {
-                if (!item.trim().isEmpty()) quotedItems.add("\"" + item.trim() + "\"");
-            }
-            if (!quotedItems.isEmpty()) sb.append(key).append(" = [").append(TextUtils.join(", ", quotedItems)).append("]\n");
-        }
-    }
-
-    /**
-     * 初始化或重新初始化 EasyTierManager。
-     */
-    private void initEasyTierManager() {
-        String config = getEasyTierConfig();
-        String instanceName = "Default";
-
-        // 如果 manager 已经在运行，先停止它
-        if (easyTierManager != null && easyTierManager.getLatestNetworkInfoJson() != null) {
-            easyTierManager.stop();
-        }
-        LimeLog.info("使用的easytier配置为：\n" + config);
-        easyTierManager = new EasyTierManager(this, instanceName, config);
-        LimeLog.info("PcView:" + "EasyTierManager initialized/re-initialized with instance: " + instanceName);
-    }
-
 }
