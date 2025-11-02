@@ -33,6 +33,7 @@ public class RelativeTouchContext implements TouchContext {
     private int lastTapUpY = 0;
     /** 标志位，表示当前是否处于“双击并按住”触发的拖拽模式 */
     private boolean isDoubleClickDrag = false;
+    /** 标志位，表示当前手势可能是双击的第二次点击，处于“待定”状态 */
     private boolean isPotentialDoubleClick = false;
 
     private final NvConnection conn;
@@ -42,6 +43,11 @@ public class RelativeTouchContext implements TouchContext {
     private final Handler handler;
 
     private final Runnable[] buttonUpRunnables;
+
+    // 用于延迟发送单击事件的Runnable
+    private Runnable singleTapRunnable;
+    //  用于处理“双击并按住”的计时器
+    private Runnable doubleTapHoldRunnable;
 
     private final Runnable dragTimerRunnable = new Runnable() {
         @Override
@@ -67,7 +73,10 @@ public class RelativeTouchContext implements TouchContext {
     private static final int TAP_TIME_THRESHOLD = 250;
     private static final int DRAG_TIME_THRESHOLD = 650;
     private static final int DRAG_START_THRESHOLD = 10;
-    private static final int DOUBLE_TAP_TIME_THRESHOLD = 300;
+    // 定义2次点击的间隔小于多久才为双击按住
+    private static final int DOUBLE_TAP_TIME_THRESHOLD = 100;
+    //  定义双击后按住多久确认为拖拽
+    private static final int DOUBLE_TAP_HOLD_TO_DRAG_THRESHOLD = 200;
     /** 定义双击时，两次点击位置的最大允许偏差 */
     private static final int DOUBLE_TAP_MOVEMENT_THRESHOLD = 40;
 
@@ -133,12 +142,18 @@ public class RelativeTouchContext implements TouchContext {
         originalTouchY = lastTouchY = eventY;
 
         if (isNewFinger) {
+            // 新手势开始时，取消可能存在的延迟单击任务
+            cancelSingleTapTimer();
+            //  新手势开始，取消任何可能存在的按住计时器
+            cancelDoubleTapHoldTimer();
+
             maxPointerCountInGesture = pointerCount;
             originalTouchTime = eventTime;
             cancelled = confirmedDrag = confirmedMove = confirmedScroll = isDoubleClickDrag = false;
             distanceMoved = 0;
 
-            // 只有当功能开关开启时，才检查双击（动态读取配置）
+            isPotentialDoubleClick = false; // 重置双击待定状态
+
             if (prefConfig.enableDoubleClickDrag) {
                 long timeSinceLastTap = eventTime - lastTapUpTime;
                 int xDelta = Math.abs(eventX - lastTapUpX);
@@ -146,16 +161,17 @@ public class RelativeTouchContext implements TouchContext {
 
                 if (actionIndex == 0 && timeSinceLastTap <= DOUBLE_TAP_TIME_THRESHOLD &&
                         xDelta <= DOUBLE_TAP_MOVEMENT_THRESHOLD && yDelta <= DOUBLE_TAP_MOVEMENT_THRESHOLD) {
-                    // It's a double-tap. The first tap has already been sent,
-                    // so we just need to prevent the drag timer from firing for
-                    // this second tap and flag that we're in a potential double-click.
+
+                    //  符合双击条件，取消第一次单击的发送，进入“待定”状态
+                    cancelSingleTapTimer(); // 关键：阻止第一次单击事件发送
                     isPotentialDoubleClick = true;
                     cancelDragTimer();
+
+                    //  启动“按住确认拖拽”计时器
+                    startDoubleTapHoldTimer();
                     return true;
                 }
             }
-
-            isPotentialDoubleClick = false;
 
             if (actionIndex == 0) {
                 // Start the timer for engaging a drag
@@ -175,10 +191,17 @@ public class RelativeTouchContext implements TouchContext {
 
         // 决策点1：如果在“待定”状态下抬起，说明用户意图是“双击”
         if (isPotentialDoubleClick) {
-            // This is the second tap of a double-tap. Send the click now.
+            //  用户抬起了，说明是双击，取消“按住确认拖拽”计时器
+            cancelDoubleTapHoldTimer();
+
             isPotentialDoubleClick = false;
 
+            // 立即发送一次完整的点击 (模拟第一次点击)
             byte buttonIndex = MouseButtonPacket.BUTTON_LEFT;
+            conn.sendMouseButtonDown(buttonIndex);
+            conn.sendMouseButtonUp(buttonIndex);
+
+            // 紧接着发送第二次点击
             conn.sendMouseButtonDown(buttonIndex);
             Runnable buttonUpRunnable = buttonUpRunnables[buttonIndex - 1];
             handler.removeCallbacks(buttonUpRunnable);
@@ -192,44 +215,46 @@ public class RelativeTouchContext implements TouchContext {
         if (isDoubleClickDrag) {
             conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT);
             isDoubleClickDrag = false;
-            // 重置tap记录，确保下次是全新的单击
             lastTapUpTime = 0;
             return;
         }
-        // --- 结束新增逻辑 ---
 
-        // Cancel the drag timer
         cancelDragTimer();
 
         byte buttonIndex = getMouseButtonIndex();
 
         if (confirmedDrag) {
-            // Raise the button after a drag
             conn.sendMouseButtonUp(buttonIndex);
         }
         else if (isTap(eventTime))
         {
-
-            // --- 新增逻辑: 在确认是tap后，记录时间和位置 ---
-            // 只有左键单击（主手指）才记录，用于双击检测
-            if (buttonIndex == MouseButtonPacket.BUTTON_LEFT) {
+            // 只有在双击拖拽功能开启时，才需要延迟单击以判断是否为双击
+            if (prefConfig.enableDoubleClickDrag && buttonIndex == MouseButtonPacket.BUTTON_LEFT) {
+                // 记录时间和位置，用于下一次的touchDown判断
                 lastTapUpTime = eventTime;
                 lastTapUpX = eventX;
                 lastTapUpY = eventY;
+
+                // 创建一个“单击”任务，并延迟执行
+                singleTapRunnable = () -> {
+                    conn.sendMouseButtonDown(buttonIndex);
+                    Runnable buttonUpRunnable = buttonUpRunnables[buttonIndex - 1];
+                    handler.postDelayed(buttonUpRunnable, 100);
+                    singleTapRunnable = null; // 执行后清空
+                };
+                handler.postDelayed(singleTapRunnable, DOUBLE_TAP_TIME_THRESHOLD);
             } else {
-                // 如果是右键或其他点击，则清除记录，打断双击链
-                lastTapUpTime = 0;
+                // 如果功能关闭，或者不是左键单击（如右键），则立即发送，不延迟
+                lastTapUpTime = 0; // 清除非左键单击的记录
+
+                conn.sendMouseButtonDown(buttonIndex);
+
+                // Release the mouse button in 100ms to allow for apps that use polling
+                // to detect mouse button presses.
+                Runnable buttonUpRunnable = buttonUpRunnables[buttonIndex - 1];
+                handler.removeCallbacks(buttonUpRunnable);
+                handler.postDelayed(buttonUpRunnable, 100);
             }
-            // --- 结束新增逻辑 ---
-
-            // Lower the mouse button
-            conn.sendMouseButtonDown(buttonIndex);
-
-            // Release the mouse button in 100ms to allow for apps that use polling
-            // to detect mouse button presses.
-            Runnable buttonUpRunnable = buttonUpRunnables[buttonIndex - 1];
-            handler.removeCallbacks(buttonUpRunnable);
-            handler.postDelayed(buttonUpRunnable, 100);
         } else {
             // 无效点击，重置
             lastTapUpTime = 0;
@@ -248,20 +273,26 @@ public class RelativeTouchContext implements TouchContext {
             int xDelta = Math.abs(eventX - originalTouchX);
             int yDelta = Math.abs(eventY - originalTouchY);
             if (xDelta > DRAG_START_THRESHOLD || yDelta > DRAG_START_THRESHOLD) {
-                // Start a double-tap drag
+                //  用户移动了，说明是拖拽，取消“按住确认拖拽”计时器
+                cancelDoubleTapHoldTimer();
+                // 确认是双击拖拽，此时才发送鼠标按下事件
                 isPotentialDoubleClick = false;
                 isDoubleClickDrag = true;
-                confirmedMove = true;
+                confirmedMove = true; // 标记为已移动，避免后续逻辑冲突
 
                 conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT);
             }
+        }
+
+        //  如果发生移动，说明不是单击，取消待处理的单击任务
+        if (!isWithinTapBounds(eventX, eventY)) {
+            cancelSingleTapTimer();
         }
 
         if (eventX != lastTouchX || eventY != lastTouchY) {
             checkForConfirmedMove(eventX, eventY);
             checkForConfirmedScroll();
 
-            // We only send moves and drags for the primary touch point
             if (actionIndex == 0) {
                 int deltaX = eventX - lastTouchX;
                 int deltaY = eventY - lastTouchY;
@@ -308,32 +339,67 @@ public class RelativeTouchContext implements TouchContext {
     public void cancelTouch() {
         cancelled = true;
 
-        // Cancel the drag timer
         cancelDragTimer();
+        //  取消手势时，清除待处理的单击任务
+        cancelSingleTapTimer();
+        //  取消手势时，也要清理这个新计时器
+        cancelDoubleTapHoldTimer();
 
-        // --- 新增逻辑 ---
         if (isDoubleClickDrag) {
             conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT);
             isDoubleClickDrag = false;
         }
-        // --- 结束新增逻辑 ---
 
-        // If it was a confirmed drag, we'll need to raise the button now
         if (confirmedDrag) {
             conn.sendMouseButtonUp(getMouseButtonIndex());
         }
-        // 重置所有状态
+
         lastTapUpTime = 0;
         isPotentialDoubleClick = false;
+    }
+
+    //  启动“按住确认拖拽”计时器的方法
+    private void startDoubleTapHoldTimer() {
+        cancelDoubleTapHoldTimer(); // 防御性取消
+        doubleTapHoldRunnable = () -> {
+            // 计时器触发，说明用户按住不动，我们主动确认为拖拽
+            if (isPotentialDoubleClick) {
+                isPotentialDoubleClick = false;
+                isDoubleClickDrag = true;
+                confirmedMove = true;
+                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT);
+            }
+        };
+        handler.postDelayed(doubleTapHoldRunnable, DOUBLE_TAP_HOLD_TO_DRAG_THRESHOLD);
+    }
+
+    //  取消“按住确认拖拽”计时器的方法
+    private void cancelDoubleTapHoldTimer() {
+        if (doubleTapHoldRunnable != null) {
+            handler.removeCallbacks(doubleTapHoldRunnable);
+            doubleTapHoldRunnable = null;
+        }
     }
 
     private void startDragTimer() {
         cancelDragTimer();
         handler.postDelayed(dragTimerRunnable, DRAG_TIME_THRESHOLD);
     }
-    private void cancelDragTimer() { handler.removeCallbacks(dragTimerRunnable); }
+
+    private void cancelDragTimer() {
+        handler.removeCallbacks(dragTimerRunnable);
+    }
+
+    // 用于取消延迟单击任务的辅助方法
+    private void cancelSingleTapTimer() {
+        if (singleTapRunnable != null) {
+            handler.removeCallbacks(singleTapRunnable);
+            singleTapRunnable = null;
+        }
+    }
+
     private void checkForConfirmedMove(int eventX, int eventY) {
-        if (confirmedMove || confirmedDrag || isPotentialDoubleClick) return; // 在待定状态下，由moveEvent自己决策
+        if (confirmedMove || confirmedDrag || isPotentialDoubleClick) return;
         if (!isWithinTapBounds(eventX, eventY)) {
             confirmedMove = true;
             cancelDragTimer();
