@@ -675,7 +675,7 @@ public class GameMenu {
         setupCustomTitleBar(customView, title);
 
         // 动态设置菜单列表区域高度
-        setupMenuListHeight(customView);
+//        setupMenuListHeight(customView);
         
         // 设置App名字显示
         setupAppNameDisplay(customView);
@@ -780,27 +780,27 @@ public class GameMenu {
      * 动态设置菜单列表区域高度
      * 最大高度就是内容实际高度，不做屏幕高度约束
      */
-    private void setupMenuListHeight(View customView) {
-        customView.post(() -> {
-            View menuListContainer = customView.findViewById(R.id.menuListContainer);
-            if (menuListContainer == null) return;
-
-            float density = game.getResources().getDisplayMetrics().density;
-            int minHeight = (int) (220 * density);
-
-            int contentHeight = 0;
-            try {
-                contentHeight = calculateContentHeight(menuListContainer);
-            } catch (Exception ignored) {}
-
-            int finalHeight = Math.max(minHeight, contentHeight);
-            ViewGroup.LayoutParams lp = menuListContainer.getLayoutParams();
-            if (lp != null) {
-                lp.height = finalHeight > 0 ? finalHeight : minHeight;
-                menuListContainer.setLayoutParams(lp);
-            }
-        });
-    }
+//    private void setupMenuListHeight(View customView) {
+//        customView.post(() -> {
+//            View menuListContainer = customView.findViewById(R.id.menuListContainer);
+//            if (menuListContainer == null) return;
+//
+//            float density = game.getResources().getDisplayMetrics().density;
+//            int minHeight = (int) (220 * density);
+//
+//            int contentHeight = 0;
+//            try {
+//                contentHeight = calculateContentHeight(menuListContainer);
+//            } catch (Exception ignored) {}
+//
+//            int finalHeight = Math.max(minHeight, contentHeight);
+//            ViewGroup.LayoutParams lp = menuListContainer.getLayoutParams();
+//            if (lp != null) {
+//                lp.height = finalHeight > 0 ? finalHeight : minHeight;
+//                menuListContainer.setLayoutParams(lp);
+//            }
+//        });
+//    }
 
     /**
      * 计算内容实际高度
@@ -1090,10 +1090,10 @@ public class GameMenu {
         }
 
         // 替换后重新计算并应用列表容器高度
-        final View finalCustomView = customView;
-        if (finalCustomView != null) {
-            finalCustomView.post(() -> setupMenuListHeight(finalCustomView));
-        }
+//        final View finalCustomView = customView;
+//        if (finalCustomView != null) {
+//            finalCustomView.post(() -> setupMenuListHeight(finalCustomView));
+//        }
 
         // 可选地推入栈
         if (pushToStack) {
