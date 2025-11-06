@@ -47,11 +47,9 @@ public class EasyTierVpnService extends VpnService {
 
         IntentFilter filter = new IntentFilter(ACTION_STOP_VPN);
 
-        // 这里的 if/else 逻辑保持不变
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(stopVpnReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
         } else {
-            // Lint 工具会警告这一行，但 @SuppressLint 会让警告消失
             registerReceiver(stopVpnReceiver, filter);
         }
     }
@@ -97,9 +95,11 @@ public class EasyTierVpnService extends VpnService {
             Log.i(TAG, "为虚拟网络添加了VPN路由：" + addressInfo.ip + "/" + addressInfo.networkLength);
 
             for (String cidr : proxyCidrs) {
+                Log.i(TAG, "为虚拟网络添加代理CIDR：" + cidr);
                 try {
                     IpAddressInfo routeInfo = parseCidr(cidr);
                     builder.addRoute(routeInfo.ip, routeInfo.networkLength);
+                    Log.i(TAG, "为虚拟网络添加了VPN路由：" + routeInfo.ip + "/" + routeInfo.networkLength);
                 } catch (Exception e) {
                     Log.w(TAG, "解析代理CIDR失败：" + cidr, e);
                 }

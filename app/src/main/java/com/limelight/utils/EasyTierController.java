@@ -143,6 +143,7 @@ public class EasyTierController {
                 easyTierManager.stop();
                 currentDialog.dismiss();
             } else {
+                saveConfigurationFromUi(dialogView,  false);
                 vpnCallback.requestVpnPermission();
                 currentDialog.dismiss();
             }
@@ -150,7 +151,7 @@ public class EasyTierController {
 
         // 保存配置按钮
         neutralButton.setOnClickListener(v -> {
-            saveConfigurationFromUi(dialogView);
+            saveConfigurationFromUi(dialogView, true);
         });
     }
 
@@ -269,7 +270,7 @@ public class EasyTierController {
         flagDisableSymHolePunching.setChecked(Boolean.parseBoolean(extractValue(currentTomlConfig, "disable_sym_hole_punching", "false")));
     }
 
-    private void saveConfigurationFromUi(View dialogView) {
+    private void saveConfigurationFromUi(View dialogView, boolean showToast) {
         // 获取UI控件
         EditText editNetworkName = dialogView.findViewById(R.id.edit_network_name);
         EditText editNetworkSecret = dialogView.findViewById(R.id.edit_network_secret);
@@ -325,7 +326,9 @@ public class EasyTierController {
         // 刷新状态
         refreshStatus(dialogView);
 
-        Toast.makeText(activity, "配置已保存，服务已根据新配置重新初始化。", Toast.LENGTH_LONG).show();
+        if (showToast) {
+            Toast.makeText(activity, "配置已保存，服务已根据新配置重新初始化。", Toast.LENGTH_LONG).show();
+        }
     }
 
     private String buildTomlFromUi(
