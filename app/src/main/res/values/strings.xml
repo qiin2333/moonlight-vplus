@@ -597,7 +597,7 @@
     <string name="app_last_settings_use_checkbox">Use last settings</string>
     <string name="app_last_settings_apply_success">Applied last settings</string>
     <string name="app_last_settings_start_with_last">Started with last settings</string>
-    
+
     <!-- Setting detail strings -->
     <string name="setting_resolution">Resolution: %1$dx%2$d</string>
     <string name="setting_fps">Frame Rate: %1$dfps</string>
@@ -610,7 +610,7 @@
     <string name="setting_gyro_sensitivity">Gyroscope: %1$.1fx</string>
     <string name="setting_bitrate_card_enabled">Bitrate Card: Enabled</string>
     <string name="setting_gyro_card_enabled">Gyro Card: Enabled</string>
-    
+
     <!-- Time format strings -->
     <string name="time_just_now">Just now</string>
     <string name="time_minutes_ago">%1$d minutes ago</string>
@@ -645,5 +645,8 @@
     <string name="background_refreshed_with_remaining">Background refreshed! (%1$d left today)</string>
     <string name="refresh_failed_please_retry">Refresh failed, please retry</string>
     <string name="refresh_failed_with_error">Refresh failed: %1$s</string>
+
+    <string name="game_menu_toggle_remote_mouse">Show/Hide Remote Mouse</string>
+    <string name="toast_remote_mouse_toast">Remote mouse displayed/hidden</string>
 
 </resources>

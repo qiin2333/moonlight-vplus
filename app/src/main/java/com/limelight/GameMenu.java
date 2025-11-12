@@ -310,7 +310,10 @@ public class GameMenu {
         boolean isTouchscreenTrackpad = game.prefConfig.touchscreenTrackpad;
         boolean isNativeMousePointer = game.prefConfig.enableNativeMousePointer;
 
-        MenuOption[] touchModeOptions = {
+        // 创建一个列表来存储菜单选项
+        List<MenuOption> touchModeOptionsList = new ArrayList<>();
+
+        touchModeOptionsList.add(
                 new MenuOption(
                         getString(R.string.game_menu_touch_mode_enhanced),
                         isEnhancedTouch && !isTouchscreenTrackpad && !isNativeMousePointer,
@@ -325,7 +328,8 @@ public class GameMenu {
                         },
                         null,
                         false
-                ),
+                ));
+        touchModeOptionsList.add(
                 new MenuOption(
                         getString(R.string.game_menu_touch_mode_classic),
                         !isEnhancedTouch && !isTouchscreenTrackpad && !isNativeMousePointer,
@@ -340,7 +344,8 @@ public class GameMenu {
                         },
                         null,
                         false
-                ),
+                ));
+        touchModeOptionsList.add(
                 new MenuOption(
                         getString(R.string.game_menu_touch_mode_trackpad),
                         isTouchscreenTrackpad && !isNativeMousePointer,
@@ -353,21 +358,23 @@ public class GameMenu {
                         },
                         null,
                         false
-                ),
+                ));
+        touchModeOptionsList.add(
                 new MenuOption(
-                        getString(R.string.game_menu_touch_mode_trackpad) + " - " + 
-                        (game.prefConfig.enableDoubleClickDrag ? "关闭双击按住" : "开启双击按住"),
+                        getString(R.string.game_menu_touch_mode_trackpad) + " - " +
+                                (game.prefConfig.enableDoubleClickDrag ? "关闭双击按住" : "开启双击按住"),
                         false,
                         () -> {
                             game.prefConfig.enableDoubleClickDrag = !game.prefConfig.enableDoubleClickDrag;
                             // 不保存到持久化存储，只在当前会话中生效
-                            Toast.makeText(game, 
-                                game.prefConfig.enableDoubleClickDrag ? "已开启双击按住功能" : "已关闭双击按住功能", 
-                                Toast.LENGTH_SHORT).show();
+                            Toast.makeText(game,
+                                    game.prefConfig.enableDoubleClickDrag ? "已开启双击按住功能" : "已关闭双击按住功能",
+                                    Toast.LENGTH_SHORT).show();
                         },
                         null,
                         false
-                ),
+                ));
+        touchModeOptionsList.add(
                 new MenuOption(
                         getString(R.string.game_menu_touch_mode_native_mouse),
                         isNativeMousePointer,
@@ -381,8 +388,31 @@ public class GameMenu {
                         },
                         null,
                         false
-                )
-        };
+                ));
+
+        if (game.prefConfig.enableNativeMousePointer) {
+            touchModeOptionsList.add(
+                    new MenuOption(
+                            getString(R.string.game_menu_toggle_remote_mouse),
+                            false,
+                            () -> {
+                                sendKeys(new short[]{
+                                        KeyboardTranslator.VK_LCONTROL,
+                                        KeyboardTranslator.VK_MENU,
+                                        KeyboardTranslator.VK_LSHIFT,
+                                        KeyboardTranslator.VK_N
+                                });
+                                Toast.makeText(game, getString(R.string.toast_remote_mouse_toast), Toast.LENGTH_SHORT).show();
+                            },
+                            null,
+                            false
+                    )
+            );
+
+        }
+
+        // 将列表转换为数组
+        MenuOption[] touchModeOptions = touchModeOptionsList.toArray(new MenuOption[0]);
 
         // 3. 显示为子菜单（在活动对话框内替换普通菜单区域）
         showSubMenu(getString(R.string.game_menu_switch_touch_mode), touchModeOptions);

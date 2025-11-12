@@ -557,7 +557,7 @@
     <string name="app_last_settings_use_checkbox">使用上一次设置</string>
     <string name="app_last_settings_apply_success">已应用上一次设置</string>
     <string name="app_last_settings_start_with_last">使用上一次设置启动</string>
-    
+
     <!-- Setting detail strings -->
     <string name="setting_resolution">分辨率：%1$dx%2$d</string>
     <string name="setting_fps">帧率：%1$dfps</string>
@@ -570,7 +570,7 @@
     <string name="setting_gyro_sensitivity">陀螺仪：%1$.1fx</string>
     <string name="setting_bitrate_card_enabled">码率卡片：开启</string>
     <string name="setting_gyro_card_enabled">陀螺仪卡片：开启</string>
-    
+
     <!-- Time format strings -->
     <string name="time_just_now">刚刚</string>
     <string name="time_minutes_ago">%1$d分钟前</string>
@@ -605,5 +605,9 @@
     <string name="background_refreshed_with_remaining">背景刷新成功！(今日剩余 %1$d 次)</string>
     <string name="refresh_failed_please_retry">刷新失败，请重试</string>
     <string name="refresh_failed_with_error">刷新失败: %1$s</string>
+
+    <string name="game_menu_toggle_remote_mouse">显示/隐藏远程鼠标</string>
+    <string name="toast_remote_mouse_toast">远程鼠标已显示/隐藏。</string>
+
 
 </resources>
