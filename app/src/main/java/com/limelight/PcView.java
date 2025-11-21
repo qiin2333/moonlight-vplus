@@ -519,6 +519,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
                 Toast.makeText(this, getResources().getString(R.string.scene_not_configured, sceneNumber), Toast.LENGTH_SHORT).show();
             }
         } catch (Exception e) {
+            LimeLog.warning("Scene apply failed: "+ e);
             runOnUiThread(() -> Toast.makeText(PcView.this, getResources().getString(R.string.config_apply_failed), Toast.LENGTH_SHORT).show());
         }
     }

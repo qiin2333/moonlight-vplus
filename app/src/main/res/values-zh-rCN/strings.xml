@@ -591,7 +591,7 @@
     <string name="image_saved_successfully">涩图成功保存到了系统目录(Picture/setu)</string>
     <string name="image_save_failed_with_error">涩图保存失败: %1$s</string>
     <string name="config_save_failed">配置保存失败</string>
-    <string name="scene_config_applied">已应用场景%1$d配置：%2$dx%3$d@%4$dFPS %.2fMbps %5$s HDR %6$s</string>
+    <string name="scene_config_applied">已应用场景%1$d配置: %2$dx%3$d@%4$dFPS %5$.2fMbps %6$s HDR %7$s</string>
     <string name="scene_not_configured">场景%1$d未配置</string>
     <string name="config_apply_failed">配置应用失败</string>
     <string name="save_to_scene">保存到场景%1$d</string>

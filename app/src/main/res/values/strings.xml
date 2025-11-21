@@ -631,7 +631,7 @@
     <string name="image_saved_successfully">Image successfully saved to system directory (Picture/setu)</string>
     <string name="image_save_failed_with_error">Image save failed: %1$s</string>
     <string name="config_save_failed">Configuration save failed</string>
-    <string name="scene_config_applied">Applied scene %1$d configuration: %2$dx%3$d@%4$dFPS %.2fMbps %5$s HDR %6$s</string>
+    <string name="scene_config_applied">Applied scene %1$d configuration: %2$dx%3$d@%4$dFPS %5.2fMbps %6$s HDR %7$s</string>
     <string name="scene_not_configured">Scene %1$d not configured</string>
     <string name="config_apply_failed">Configuration apply failed</string>
     <string name="save_to_scene">Save to Scene %1$d</string>
