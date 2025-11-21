@@ -3611,10 +3611,36 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         return getResources().getConfiguration().keyboard == Configuration.KEYBOARD_QWERTY;
     }
 
+    /**
+     * 切换逻辑：关闭 -> 悬浮 -> 固定 -> 关闭
+     */
     public void togglePerformanceOverlay() {
-        if (performanceOverlayManager != null) {
-            performanceOverlayManager.togglePerformanceOverlay();
+        if (performanceOverlayManager == null) {
+            return;
         }
+
+        // 1. 当前是【关闭】状态 -> 切换到【悬浮】
+        if (!prefConfig.enablePerfOverlay) {
+            prefConfig.enablePerfOverlay = true;
+            prefConfig.perfOverlayLocked = false;
+            performanceOverlayManager.applyOverlayState(); // 应用状态
+        }
+
+        // 2. 当前是【悬浮】状态 -> 切换到【固定】
+        else if (!prefConfig.perfOverlayLocked) {
+            prefConfig.enablePerfOverlay = true;
+            prefConfig.perfOverlayLocked = true;
+            performanceOverlayManager.applyOverlayState(); // 应用状态
+        }
+
+        // 3. 当前是【固定】状态 -> 切换到【关闭】
+        else {
+            prefConfig.enablePerfOverlay = false;
+            prefConfig.perfOverlayLocked = false; // 重置回默认
+            performanceOverlayManager.applyOverlayState(); // 应用状态
+        }
+
+        prefConfig.writePreferences(this);
     }
 
     /**

@@ -189,6 +189,9 @@ public class PerformanceOverlayManager {
         }
         // 配置性能覆盖层的方向和位置
         configurePerformanceOverlay();
+
+        // 强制应用一次当前的配置（为了处理初始就是 锁定 的情况）
+        setupPerformanceOverlayDragging();
     }
 
     /**
@@ -272,6 +275,48 @@ public class PerformanceOverlayManager {
             performanceOverlayView.setVisibility(View.VISIBLE);
             performanceOverlayView.setAlpha(1.0f);
         }
+    }
+
+    public void applyOverlayState() {
+        if (performanceOverlayView == null) return;
+
+        // ------------------------------------------------
+        // 情况 A: 需要隐藏 (enablePerfOverlay == false)
+        // ------------------------------------------------
+        if (!prefConfig.enablePerfOverlay) {
+            requestedPerformanceOverlayVisibility = View.GONE;
+            hasShownPerfOverlay = false;
+
+            // 执行淡出动画
+            Animation fadeOutAnimation = AnimationUtils.loadAnimation(activity, R.anim.perf_overlay_fadeout);
+            performanceOverlayView.startAnimation(fadeOutAnimation);
+            fadeOutAnimation.setAnimationListener(new Animation.AnimationListener() {
+                @Override
+                public void onAnimationStart(Animation animation) {}
+                @Override
+                public void onAnimationEnd(Animation animation) {
+                    performanceOverlayView.setVisibility(View.GONE);
+                    performanceOverlayView.setAlpha(0.0f);
+                }
+                @Override
+                public void onAnimationRepeat(Animation animation) {}
+            });
+            return;
+        }
+
+        // ------------------------------------------------
+        // 情况 B: 需要显示 (enablePerfOverlay == true)
+        // ------------------------------------------------
+        requestedPerformanceOverlayVisibility = View.VISIBLE;
+
+        // 如果之前是隐藏的，现在显示出来
+        if (performanceOverlayView.getVisibility() != View.VISIBLE || performanceOverlayView.getAlpha() < 1.0f) {
+            performanceOverlayView.setVisibility(View.VISIBLE);
+            performanceOverlayView.setAlpha(1.0f);
+            hasShownPerfOverlay = true;
+        }
+
+        setupPerformanceOverlayDragging();
     }
 
     /** 刷新覆盖层配置（显示项与对齐） */
@@ -371,10 +416,13 @@ public class PerformanceOverlayManager {
      * 如果需要则显示覆盖层
      */
     private void showOverlayIfNeeded() {
-        if (!hasShownPerfOverlay && requestedPerformanceOverlayVisibility == View.VISIBLE && performanceOverlayView != null) {
+        // 只有当 enabled 为 true 且还没显示过时才执行
+        if (prefConfig.enablePerfOverlay && !hasShownPerfOverlay && performanceOverlayView != null) {
             performanceOverlayView.setVisibility(View.VISIBLE);
             performanceOverlayView.setAlpha(1.0f);
             hasShownPerfOverlay = true;
+            // 确保由于自动显示时，触摸状态是正确的
+            setupPerformanceOverlayDragging();
         }
     }
 
@@ -689,21 +737,42 @@ public class PerformanceOverlayManager {
             return;
         }
 
-        performanceOverlayView.setOnTouchListener((v, event) -> {
-            switch (event.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    return handleActionDown(v, event);
+        // 检查新的参数：是否锁定？
+        if (prefConfig.perfOverlayLocked) {
+            // =========================
+            // 模式：固定 (Locked)
+            // =========================
+            // 1. 移除监听器
+            performanceOverlayView.setOnTouchListener(null);
 
-                case MotionEvent.ACTION_MOVE:
-                    return handleActionMove(v, event);
+            // 2. 设置不可点击，让事件穿透到底层游戏画面
+            performanceOverlayView.setClickable(false);
+            performanceOverlayView.setFocusable(false);
+            performanceOverlayView.setLongClickable(false);
 
-                case MotionEvent.ACTION_UP:
-                    return handleActionUp(v, event);
-            }
-            return false;
-        });
+        } else {
+            // =========================
+            // 模式：悬浮 (Floating)
+            // =========================
+            // 1. 恢复可点击
+            performanceOverlayView.setClickable(true);
+            performanceOverlayView.setFocusable(true);
+            performanceOverlayView.setLongClickable(true);
+
+            // 2. 绑定正常的拖动/点击逻辑
+            performanceOverlayView.setOnTouchListener((v, event) -> {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        return handleActionDown(v, event);
+                    case MotionEvent.ACTION_MOVE:
+                        return handleActionMove(v, event);
+                    case MotionEvent.ACTION_UP:
+                        return handleActionUp(v, event);
+                }
+                return false;
+            });
+        }
     }
-
     /**
      * 处理触摸按下事件
      */

@@ -107,6 +107,9 @@
     <!-- In Game menu -->
     <string name="game_menu_toggle_keyboard"> 屏幕键盘 </string>
     <string name="game_menu_toggle_performance_overlay"> 性能监控图层 </string>
+    <string name="perf_overlay_hidden">关闭</string>
+    <string name="perf_overlay_floating">悬浮</string>
+    <string name="perf_overlay_locked">固定</string>
     <string name="game_menu_toggle_virtual_controller"> 虚拟手柄 </string>
     <string name="game_menu_toggle_host_keyboard"> 主机键盘 </string>
     <string name="game_menu_toggle_mouse_on"> 手柄模拟鼠标-打开 </string>

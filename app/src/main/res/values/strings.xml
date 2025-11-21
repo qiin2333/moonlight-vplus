@@ -150,6 +150,9 @@
     <!-- In Game menu -->
     <string name="game_menu_toggle_keyboard">Toggle On-screen Keyboard</string>
     <string name="game_menu_toggle_performance_overlay">Toggle Performance Overlay</string>
+    <string name="perf_overlay_hidden">CLOSE</string>
+    <string name="perf_overlay_floating">SUSPENSION</string>
+    <string name="perf_overlay_locked">Fixed</string>
     <string name="game_menu_toggle_virtual_controller">Toggle Virtual Controller</string>
     <string name="game_menu_toggle_host_keyboard">Toggle Host Keyboard</string>
     <string name="game_menu_toggle_all_keyboard">Toggle PC Keyboard</string>
