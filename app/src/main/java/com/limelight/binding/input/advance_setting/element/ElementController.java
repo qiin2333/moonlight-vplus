@@ -64,6 +64,7 @@ public class ElementController {
     // 切换配置
     private static final String SPECIAL_KEY_CONFIG_SWITCH = "CSW";
     private static final String SPECIAL_KEY_PAN_ZOOM_MODE = "PZM";
+    private static final String SPECIAL_KEY_OPEN_GAME_MENU = "OGM";
 
 
 
@@ -1038,6 +1039,19 @@ public class ElementController {
                     if (down) {
                         Toast.makeText(game, game.getisTouchOverrideEnabled()?"已关闭平移/缩放":"已开启平移/缩放", Toast.LENGTH_SHORT).show();
                         game.setisTouchOverrideEnabled(!game.getisTouchOverrideEnabled());
+                    }
+                }
+                @Override
+                public void sendEvent(int analog1, int analog2) {
+
+                }
+            };
+        } else if (key.equals(SPECIAL_KEY_OPEN_GAME_MENU)) {
+            return new SendEventHandler() {
+                @Override
+                public void sendEvent(boolean down) {
+                    if (down) {
+                        game.showGameMenu( null);
                     }
                 }
                 @Override

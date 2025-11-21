@@ -99,6 +99,13 @@
                         android:tag="PZM"
                         style="@style/KeyboardKeyStyle"
                         android:text="平移/缩放"/>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        android:layout_marginVertical="5dp"
+                        android:tag="OGM"
+                        style="@style/KeyboardKeyStyle"
+                        android:text="打开GAME MENU"/>
 
                 </LinearLayout>
             </ScrollView>
