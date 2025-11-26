@@ -735,6 +735,9 @@ public class GameMenu {
             if (gyro != null) gyro.setVisibility(View.GONE);
         }
 
+        // --- 设置快捷指令卡片 ---
+        setupCustomKeysCard(customView);
+
         // 卡片编辑入口
         View cardEditor = customView.findViewById(R.id.cardEditorButton);
         if (cardEditor != null) {
@@ -771,8 +774,19 @@ public class GameMenu {
     }
 
     private void showCardEditorDialog() {
-        final String[] items = new String[] {"码率调整 Bitrate", "体感助手 Gyro"};
-        final boolean[] checked = new boolean[] {game.prefConfig.showBitrateCard, game.prefConfig.showGyroCard};
+        final String[] items = new String[] {
+                "码率调整 Bitrate",
+                "体感助手 Gyro",
+                "特殊按键 Shortcuts"
+        };
+
+        // 获取当前状态
+        final boolean[] checked = new boolean[] {
+                game.prefConfig.showBitrateCard,
+                game.prefConfig.showGyroCard,
+                game.prefConfig.showQuickKeyCard
+        };
+
         new AlertDialog.Builder(game, R.style.AppDialogStyle)
                 .setTitle("卡片配置 Visible cards")
                 .setMultiChoiceItems(items, checked, (d, which, isChecked) -> {
@@ -781,15 +795,32 @@ public class GameMenu {
                 .setPositiveButton("OK", (d, w) -> {
                     game.prefConfig.showBitrateCard = checked[0];
                     game.prefConfig.showGyroCard = checked[1];
+                    game.prefConfig.showQuickKeyCard = checked[2];
+
                     // Persist
                     game.prefConfig.writePreferences(game);
-                    // Update UI within current dialog
-                    View root = activeCustomView != null ? activeCustomView : d instanceof AlertDialog ? ((AlertDialog) d).getOwnerActivity().findViewById(android.R.id.content) : null;
+
+                    // Update UI within current dialog (刷新界面)
+                    View root = activeCustomView != null ? activeCustomView :
+                            d instanceof AlertDialog ? ((AlertDialog) d).getOwnerActivity().findViewById(android.R.id.content) : null;
+
                     if (root != null) {
                         View bitrate = root.findViewById(R.id.bitrateAdjustmentContainer);
                         if (bitrate != null) bitrate.setVisibility(game.prefConfig.showBitrateCard ? View.VISIBLE : View.GONE);
+
                         View gyro = root.findViewById(R.id.gyroAdjustmentContainer);
                         if (gyro != null) gyro.setVisibility(game.prefConfig.showGyroCard ? View.VISIBLE : View.GONE);
+
+                        // 刷新快捷指令卡片可见性
+                        View keysCard = root.findViewById(R.id.customKeysCardContainer);
+                        if (keysCard != null) {
+                            // 如果刚才设置为显示，可能需要重新 build 一次按钮(如果之前是GONE的话)
+                            if (game.prefConfig.showQuickKeyCard) {
+                                setupCustomKeysCard(root);
+                            } else {
+                                keysCard.setVisibility(View.GONE);
+                            }
+                        }
                     }
                 })
                 .setNegativeButton("Cancel", null)
@@ -806,83 +837,153 @@ public class GameMenu {
         return customView;
     }
 
-    /**
-     * 动态设置菜单列表区域高度
-     * 最大高度就是内容实际高度，不做屏幕高度约束
-     */
-//    private void setupMenuListHeight(View customView) {
-//        customView.post(() -> {
-//            View menuListContainer = customView.findViewById(R.id.menuListContainer);
-//            if (menuListContainer == null) return;
-//
-//            float density = game.getResources().getDisplayMetrics().density;
-//            int minHeight = (int) (220 * density);
-//
-//            int contentHeight = 0;
-//            try {
-//                contentHeight = calculateContentHeight(menuListContainer);
-//            } catch (Exception ignored) {}
-//
-//            int finalHeight = Math.max(minHeight, contentHeight);
-//            ViewGroup.LayoutParams lp = menuListContainer.getLayoutParams();
-//            if (lp != null) {
-//                lp.height = finalHeight > 0 ? finalHeight : minHeight;
-//                menuListContainer.setLayoutParams(lp);
-//            }
-//        });
-//    }
+    // --- 简单的按键数据模型 ---
+    private static class CustomKeyData {
+        String name;
+        short[] keys;
 
-    /**
-     * 计算内容实际高度
-     * 使用性能优化的方式计算
-     */
-    private int calculateContentHeight(View container) {
-        try {
-            // 获取ListView
-            ListView normalListView = container.findViewById(R.id.gameMenuList);
-            ListView superListView = container.findViewById(R.id.superMenuList);
-
-            int totalHeight = 0;
-            int maxItems= 0;
-
-            // 计算普通菜单高度
-            if (normalListView != null && normalListView.getAdapter() != null) {
-                int normalItemCount = normalListView.getAdapter().getCount();
-                if (normalItemCount > 0) {
-                    // 获取单个item的高度
-                    View itemView = normalListView.getAdapter().getView(0, null, normalListView);
-                    itemView.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-                                   View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
-                    int itemHeight = itemView.getMeasuredHeight();
-                    maxItems = normalItemCount;
-                    totalHeight = Math.max(totalHeight, itemHeight * maxItems);
-                }
-            }
-
-            // 计算超级菜单高度
-            if (superListView != null && superListView.getAdapter() != null) {
-                int superItemCount = superListView.getAdapter().getCount();
-                if (superItemCount > 0) {
-                    // 获取单个item的高度
-                    View itemView = superListView.getAdapter().getView(0, null, superListView);
-                    itemView.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-                                   View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
-                    int itemHeight = itemView.getMeasuredHeight();
-                    maxItems = superItemCount;
-                    totalHeight = Math.max(totalHeight, itemHeight * maxItems);
-                }
-            }
-
-            // 添加一些padding和margin
-            totalHeight += (int) ((maxItems*2 + 8) * game.getResources().getDisplayMetrics().density);
-            totalHeight = Math.max(totalHeight, (int) (320 * game.getResources().getDisplayMetrics().density));
-
-            return totalHeight;
-
-        } catch (Exception e) {
-            // 如果计算失败，返回默认高度
-            return (int) (320 * game.getResources().getDisplayMetrics().density);
+        CustomKeyData(String name, short[] keys) {
+            this.name = name;
+            this.keys = keys;
         }
+    }
+
+    /**
+     * 从存储或默认资源中获取解析好的按键数据列表
+     */
+    private List<CustomKeyData> getSavedCustomKeys() {
+        List<CustomKeyData> resultList = new ArrayList<>();
+
+        SharedPreferences preferences = game.getSharedPreferences(PREF_NAME, Activity.MODE_PRIVATE);
+        String value = preferences.getString(KEY_NAME, "");
+
+        // 1. 如果 SharedPreferences 中没有数据（例如首次启动），则从 raw 资源文件加载默认按键
+        if (TextUtils.isEmpty(value)) {
+            value = readRawResourceAsString(R.raw.default_special_keys);
+            if (!TextUtils.isEmpty(value)) {
+                // 将从文件读取的默认值保存到 SharedPreferences 中，以便后续可以对其进行修改
+                preferences.edit().putString(KEY_NAME, value).apply();
+            }
+        }
+
+        // 2. 如果依然为空，直接返回空列表
+        if (TextUtils.isEmpty(value)) {
+            return resultList;
+        }
+
+        // 3. 解析 JSON 数据
+        try {
+            JSONObject root = new JSONObject(value);
+            JSONArray dataArray = root.optJSONArray("data");
+
+            if (dataArray != null && dataArray.length() > 0) {
+                for (int i = 0; i < dataArray.length(); i++) {
+                    JSONObject keyObject = dataArray.getJSONObject(i);
+                    String name = keyObject.optString("name");
+                    JSONArray codesArray = keyObject.getJSONArray("data");
+
+                    if (codesArray != null) {
+                        short[] datas = new short[codesArray.length()];
+                        for (int j = 0; j < codesArray.length(); j++) {
+                            String code = codesArray.getString(j);
+                            // 解析 "0xXX" 格式的十六进制字符串
+                            datas[j] = (short) Integer.parseInt(code.substring(2), 16);
+                        }
+                        resultList.add(new CustomKeyData(name, datas));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LimeLog.warning("Exception while loading keys from SharedPreferences: " + e.getMessage());
+            Toast.makeText(game, getString(R.string.toast_load_custom_keys_corrupted), Toast.LENGTH_SHORT).show();
+        }
+
+        return resultList;
+    }
+
+    /**
+     * 设置自定义按键卡片
+     */
+    private void setupCustomKeysCard(View customView) {
+        View cardContainer = customView.findViewById(R.id.customKeysCardContainer);
+        LinearLayout listLayout = customView.findViewById(R.id.customKeysListLayout);
+
+        if (cardContainer == null || listLayout == null) return;
+
+        // 检查配置开关
+        if (!game.prefConfig.showQuickKeyCard) {
+            cardContainer.setVisibility(View.GONE);
+            return;
+        }
+
+        List<CustomKeyData> keys = getSavedCustomKeys();
+        if (keys.isEmpty()) {
+            cardContainer.setVisibility(View.GONE);
+            return;
+        }
+
+        // 显示容器
+        cardContainer.setVisibility(View.VISIBLE);
+        listLayout.removeAllViews();
+
+        // 3. 循环创建美化的列表项
+        for (int i = 0; i < keys.size(); i++) {
+            CustomKeyData keyData = keys.get(i);
+
+            // --- 创建文本项  ---
+            TextView itemView = new TextView(game);
+            itemView.setText(keyData.name);
+
+            // 样式设置
+            itemView.setTextColor(0xFF333333); // 灰色文字
+            itemView.setTextSize(14); // 字体大小
+            itemView.setGravity(android.view.Gravity.CENTER); // 文字居中
+
+            // 设置内边距 (Padding)
+            int paddingVertical = dpToPx(7);
+            int paddingHorizontal = dpToPx(10);
+            itemView.setPadding(paddingHorizontal, paddingVertical, paddingHorizontal, paddingVertical);
+
+            // 布局参数
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            itemView.setLayoutParams(params);
+
+            // 添加点击效果
+            itemView.setBackground(game.getDrawable(R.drawable.button_selector_background));
+
+            // 点击事件
+            itemView.setOnClickListener(v -> {
+                sendKeys(keyData.keys);
+                // 震动反馈
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
+            });
+
+            // 添加 Item
+            listLayout.addView(itemView);
+
+            // --- 添加分割线 (除了最后一个) ---
+            if (i < keys.size() - 1) {
+                View divider = new View(game);
+                LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        1 // 高度 1px
+                );
+                // 移除左右边距
+                dividerParams.setMargins(0, 0, 0, 0);
+
+                divider.setLayoutParams(dividerParams);
+                divider.setBackgroundColor(0x33000000); // 20% 透明度的黑色
+                listLayout.addView(divider);
+            }
+        }
+    }
+
+    // 辅助方法：dp转px
+    private int dpToPx(float dp) {
+        return (int) (dp * game.getResources().getDisplayMetrics().density + 0.5f);
     }
 
     /**
@@ -1119,12 +1220,6 @@ public class GameMenu {
             setupMenu(normalListView, adapter, dialog);
         }
 
-        // 替换后重新计算并应用列表容器高度
-//        final View finalCustomView = customView;
-//        if (finalCustomView != null) {
-//            finalCustomView.post(() -> setupMenuListHeight(finalCustomView));
-//        }
-
         // 可选地推入栈
         if (pushToStack) {
             // 因为调用者可能已经将当前状态入栈，只有当需要时再入栈
@@ -1187,9 +1282,10 @@ public class GameMenu {
         int visibleCardCount = 0;
         if (game.prefConfig.showBitrateCard) visibleCardCount++;
         if (game.prefConfig.showGyroCard) visibleCardCount++;
+        if (game.prefConfig.showQuickKeyCard) visibleCardCount++;
         
         // 根据卡片数量决定使用哪个布局
-        int layoutRes = (visibleCardCount >= 2) ? 
+        int layoutRes = (visibleCardCount >= 2 | game.prefConfig.showQuickKeyCard) ?
             R.layout.game_menu_super_empty_text_only : 
             R.layout.game_menu_super_empty;
             
@@ -1243,52 +1339,30 @@ public class GameMenu {
 
 
     /**
-     * 从 SharedPreferences 加载所有按键。
-     * 如果 SharedPreferences 为空，则从 res/raw/default_special_keys.json 加载默认按键并保存。
+     * 加载所有按键并添加到菜单选项列表中
      * @param options 用于填充菜单选项的列表
      * @return 如果成功加载了至少一个按键，则返回 true
      */
     private boolean loadAndAddAllKeys(List<MenuOption> options) {
-        SharedPreferences preferences = game.getSharedPreferences(PREF_NAME, Activity.MODE_PRIVATE);
-        String value = preferences.getString(KEY_NAME, "");
+        List<CustomKeyData> loadedKeys = getSavedCustomKeys();
 
-        // 如果 SharedPreferences 中没有数据（例如首次启动），则从 raw 资源文件加载默认按键
-        if (TextUtils.isEmpty(value)) {
-            value = readRawResourceAsString(R.raw.default_special_keys);
-            if (!TextUtils.isEmpty(value)) {
-                // 将从文件读取的默认值保存到 SharedPreferences 中，以便后续可以对其进行修改
-                preferences.edit().putString(KEY_NAME, value).apply();
-            }
+        if (loadedKeys.isEmpty()) {
+            return false;
         }
 
-        if (TextUtils.isEmpty(value)) {
-            return false; // 如果值仍然为空（例如文件读取失败），则直接返回
+        // 将数据转换为菜单选项
+        for (CustomKeyData keyData : loadedKeys) {
+            MenuOption option = new MenuOption(
+                    keyData.name,
+                    false,
+                    () -> sendKeys(keyData.keys),
+                    null,
+                    false
+            );
+            options.add(option);
         }
 
-        try {
-            JSONObject root = new JSONObject(value);
-            JSONArray dataArray = root.optJSONArray("data");
-            if (dataArray != null && dataArray.length() > 0) {
-                for (int i = 0; i < dataArray.length(); i++) {
-                    JSONObject keyObject = dataArray.getJSONObject(i);
-                    String name = keyObject.optString("name");
-                    JSONArray codesArray = keyObject.getJSONArray("data");
-                    short[] datas = new short[codesArray.length()];
-                    for (int j = 0; j < codesArray.length(); j++) {
-                        String code = codesArray.getString(j);
-                        // 解析 "0xXX" 格式的十六进制字符串
-                        datas[j] = (short) Integer.parseInt(code.substring(2), 16);
-                    }
-                    MenuOption option = new MenuOption(name, false, () -> sendKeys(datas), null, false);
-                    options.add(option);
-                }
-                return true; // 成功加载，返回 true
-            }
-        } catch (Exception e) {
-            LimeLog.warning("Exception while loading keys from SharedPreferences: " + e.getMessage());
-            Toast.makeText(game, getString(R.string.toast_load_custom_keys_corrupted), Toast.LENGTH_SHORT).show();
-        }
-        return false; // 没有加载到任何按键
+        return true;
     }
 
     /**

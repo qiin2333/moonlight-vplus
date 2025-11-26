@@ -622,6 +622,7 @@
     <string name="setting_gyro_sensitivity">Gyroscope: %1$.1fx</string>
     <string name="setting_bitrate_card_enabled">Bitrate Card: Enabled</string>
     <string name="setting_gyro_card_enabled">Gyro Card: Enabled</string>
+    <string name="setting_QuickKey_card_enabled">Special key card: Activate</string>
 
     <!-- Time format strings -->
     <string name="time_just_now">Just now</string>

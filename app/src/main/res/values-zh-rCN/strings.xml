@@ -582,6 +582,7 @@
     <string name="setting_gyro_sensitivity">陀螺仪：%1$.1fx</string>
     <string name="setting_bitrate_card_enabled">码率卡片：开启</string>
     <string name="setting_gyro_card_enabled">陀螺仪卡片：开启</string>
+    <string name="setting_QuickKey_card_enabled">特殊按键卡片：开启</string>
 
     <!-- Time format strings -->
     <string name="time_just_now">刚刚</string>

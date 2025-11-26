@@ -107,6 +107,7 @@ public class PreferenceConfiguration {
     // Card visibility preferences
     private static final String SHOW_BITRATE_CARD_PREF_STRING = "checkbox_show_bitrate_card";
     private static final String SHOW_GYRO_CARD_PREF_STRING = "checkbox_show_gyro_card";
+    private static final String SHOW_QuickKeyCard = "checkbox_show_QuickKeyCard";
 
     public static final String ENABLE_ENHANCED_TOUCH_PREF_STRING = "checkbox_enable_enhanced_touch";
     private static final String ENHANCED_TOUCH_ON_RIGHT_PREF_STRING = "checkbox_enhanced_touch_on_which_side";
@@ -327,6 +328,7 @@ public class PreferenceConfiguration {
     // Card visibility
     public boolean showBitrateCard;
     public boolean showGyroCard;
+    public boolean showQuickKeyCard;
 
     // 麦克风设置
     public boolean enableMic;
@@ -828,6 +830,7 @@ public class PreferenceConfiguration {
         // Cards visibility (defaults to true)
         config.showBitrateCard = prefs.getBoolean(SHOW_BITRATE_CARD_PREF_STRING, true);
         config.showGyroCard = prefs.getBoolean(SHOW_GYRO_CARD_PREF_STRING, true);
+        config.showQuickKeyCard = prefs.getBoolean(SHOW_QuickKeyCard, true);
 
         // 读取麦克风设置
         config.enableMic = prefs.getBoolean(ENABLE_MIC_PREF_STRING, DEFAULT_ENABLE_MIC);
@@ -952,6 +955,7 @@ public class PreferenceConfiguration {
                     .putBoolean(ROTABLE_SCREEN_PREF_STRING, rotableScreen)
                     .putBoolean(SHOW_BITRATE_CARD_PREF_STRING, showBitrateCard)
                     .putBoolean(SHOW_GYRO_CARD_PREF_STRING, showGyroCard)
+                    .putBoolean(SHOW_QuickKeyCard, showQuickKeyCard)
                     .putString(SCREEN_POSITION_PREF_STRING, positionString)
                     .putInt(SCREEN_OFFSET_X_PREF_STRING, screenOffsetX)
                     .putInt(SCREEN_OFFSET_Y_PREF_STRING, screenOffsetY)
@@ -1007,6 +1011,7 @@ public class PreferenceConfiguration {
         copy.gyroInvertYAxis = this.gyroInvertYAxis;
         copy.showBitrateCard = this.showBitrateCard;
         copy.showGyroCard = this.showGyroCard;
+        copy.showQuickKeyCard = this.showQuickKeyCard;
         return copy;
     }
 }
