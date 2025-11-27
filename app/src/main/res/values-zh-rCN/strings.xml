@@ -458,6 +458,10 @@
     <string name="dialog_title_background_image_api">背景图片API</string>
     <string name="dialog_message_background_image_api">请输入完整的图片API</string>
     
+    <!-- Local image picker -->
+    <string name="title_local_image_picker">选择本地图片</string>
+    <string name="summary_local_image_picker">从本地相册中选择一张图片作为背景</string>
+    
     <!-- Reverse resolution -->
     <string name="title_checkbox_reverse_resolution">反转分辨率</string>
     <string name="summary_checkbox_reverse_resolution">交换宽度和高度值，用于特殊显示需求</string>

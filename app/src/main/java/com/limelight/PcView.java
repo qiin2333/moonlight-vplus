@@ -50,9 +50,11 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
@@ -108,7 +110,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
     private EasyTierController easyTierController;
     
     private AddressSelectionDialog currentAddressDialog;
-    
+
     private ShakeDetector shakeDetector;
     private long lastShakeTime = 0;
     private static final long SHAKE_DEBOUNCE_INTERVAL = 3000; // 3 seconds debounce
@@ -117,6 +119,9 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
     private static final String REFRESH_COUNT_KEY = "refresh_count";
     private static final String REFRESH_DATE_KEY = "refresh_date";
     
+    // 背景图片刷新广播接收器
+    private BroadcastReceiver backgroundImageRefreshReceiver;
+
     private final ServiceConnection serviceConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className, IBinder binder) {
             final ComputerManagerService.ComputerManagerBinder localBinder =
@@ -204,9 +209,22 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         // set background image
         new Thread(() -> {
             try {
+                // 将 imageUrl 转换为可被 Glide 正确识别的对象
+                Object glideLoadTarget;
+                if (imageUrl.startsWith("http")) {
+                    // URL 直接使用
+                    glideLoadTarget = imageUrl;
+                } else if (new File(imageUrl).exists()) {
+                    // 本地文件路径，转换为 File 对象
+                    glideLoadTarget = new File(imageUrl);
+                } else {
+                    // 文件不存在或无效，使用默认 URL
+                    glideLoadTarget = "https://img-api.pipw.top";
+                }
+
                 final Bitmap bitmap = Glide.with(PcView.this)
                         .asBitmap()
-                        .load(imageUrl)
+                        .load(glideLoadTarget)
                         .skipMemoryCache(true).diskCacheStrategy(DiskCacheStrategy.NONE)
                         .submit()
                         .get();
@@ -329,9 +347,23 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
                 new Thread(() -> {
                     try {
                         String imageUrl = getBackgroundImageUrl();
+
+                        // 将 imageUrl 转换为可被 Glide 正确识别的对象
+                        Object glideLoadTarget;
+                        if (imageUrl.startsWith("http")) {
+                            // URL 直接使用
+                            glideLoadTarget = imageUrl;
+                        } else if (new File(imageUrl).exists()) {
+                            // 本地文件路径，转换为 File 对象
+                            glideLoadTarget = new File(imageUrl);
+                        } else {
+                            // 文件不存在或无效，使用默认 URL
+                            glideLoadTarget = "https://img-api.pipw.top";
+                        }
+
                         Bitmap downloadedBitmap = Glide.with(PcView.this)
                                 .asBitmap()
-                                .load(imageUrl)
+                                .load(glideLoadTarget)
                                 .submit()
                                 .get();
                         
@@ -559,6 +591,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         }
     }
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     private void completeOnCreate() {
         completeOnCreateCalled = true;
 
@@ -582,6 +615,19 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         SensorManager sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         shakeDetector = new ShakeDetector(this);
         shakeDetector.setSensitivity(ShakeDetector.SENSITIVITY_MEDIUM); // 设置中等灵敏度
+
+        // 注册背景图片刷新广播接收器
+        backgroundImageRefreshReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if ("com.limelight.REFRESH_BACKGROUND_IMAGE".equals(intent.getAction())) {
+                    // 传入 false，表示这不是通过摇一摇触发的，不需要显示每日限制提示
+                    refreshBackgroundImage(false);
+                }
+            }
+        };
+        IntentFilter filter = new IntentFilter("com.limelight.REFRESH_BACKGROUND_IMAGE");
+        registerReceiver(backgroundImageRefreshReceiver, filter);
 
         initializeViews();
     }
@@ -640,7 +686,16 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
             currentAddressDialog.dismiss();
             currentAddressDialog = null;
         }
-        
+
+        // 注销背景图片刷新广播接收器
+        if (backgroundImageRefreshReceiver != null) {
+            try {
+                unregisterReceiver(backgroundImageRefreshReceiver);
+            } catch (IllegalArgumentException e) {
+                LimeLog.warning("Failed to unregister background image refresh receiver: " + e.getMessage());
+            }
+        }
+
         // 清理统计分析资源
         if (analyticsManager != null) {
             analyticsManager.cleanup();
@@ -701,12 +756,6 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         super.onStop();
 
         Dialog.closeDialogs();
-        
-        // 关闭地址选择对话框
-        if (currentAddressDialog != null) {
-            currentAddressDialog.dismiss();
-            currentAddressDialog = null;
-        }
     }
 
     @Override
@@ -989,25 +1038,16 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
      * 显示地址选择对话框
      */
     private void showAddressSelectionDialog(ComputerDetails computer) {
-        // 如果已经有对话框在显示，先关闭它
-        if (currentAddressDialog != null) {
-            currentAddressDialog.dismiss();
-            currentAddressDialog = null;
-        }
-        
-        currentAddressDialog = new AddressSelectionDialog(this, computer, address -> {
+        AddressSelectionDialog dialog = new AddressSelectionDialog(this, computer, address -> {
             // 使用选中的地址创建临时ComputerDetails对象
             ComputerDetails tempComputer = new ComputerDetails(computer);
             tempComputer.activeAddress = address;
 
             // 使用选中的地址进入应用列表
             doAppList(tempComputer, false, false);
-            
-            // 清除对话框引用
-            currentAddressDialog = null;
         });
         
-        currentAddressDialog.show();
+        dialog.show();
     }
 
     @Override
@@ -1347,7 +1387,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         runOnUiThread(() -> {
             String message = getResources().getString(R.string.refreshing_with_remaining, remaining);
             Toast.makeText(PcView.this, message, Toast.LENGTH_SHORT).show();
-            refreshBackgroundImage();
+            refreshBackgroundImage(true);
         });
     }
     
@@ -1422,7 +1462,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
     /**
      * Refresh background image
      */
-    private void refreshBackgroundImage() {
+    private void refreshBackgroundImage(boolean isFromShake) {
         ImageView imageView = findViewById(R.id.pcBackgroundImage);
         if (imageView == null) return;
         
@@ -1433,9 +1473,22 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         // Reload the image in a background thread
         new Thread(() -> {
             try {
+                // 将 imageUrl 转换为可被 Glide 正确识别的对象
+                Object glideLoadTarget;
+                if (imageUrl.startsWith("http")) {
+                    // URL 直接使用
+                    glideLoadTarget = imageUrl;
+                } else if (new File(imageUrl).exists()) {
+                    // 本地文件路径，转换为 File 对象
+                    glideLoadTarget = new File(imageUrl);
+                } else {
+                    // 文件不存在或无效，使用默认 URL
+                    glideLoadTarget = "https://img-api.pipw.top";
+                }
+
                 final Bitmap bitmap = Glide.with(PcView.this)
                         .asBitmap()
-                        .load(imageUrl)
+                        .load(glideLoadTarget)
                         .skipMemoryCache(true)
                         .diskCacheStrategy(DiskCacheStrategy.NONE)
                         .submit()
@@ -1449,9 +1502,11 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
                                 .apply(RequestOptions.bitmapTransform(new BlurTransformation(2, 3)))
                                 .transform(new ColorFilterTransformation(Color.argb(120, 0, 0, 0)))
                                 .into(imageView);
-                        int remaining = getRemainingRefreshCount();
-                        String message = getResources().getString(R.string.background_refreshed_with_remaining, remaining);
-                        Toast.makeText(PcView.this, message, Toast.LENGTH_SHORT).show();
+                        if (isFromShake) {
+                            int remaining = getRemainingRefreshCount();
+                            String message = getResources().getString(R.string.background_refreshed_with_remaining, remaining);
+                            Toast.makeText(PcView.this, message, Toast.LENGTH_SHORT).show();
+                        }
                     });
                 } else {
                     runOnUiThread(() -> Toast.makeText(PcView.this, getResources().getString(R.string.refresh_failed_please_retry), Toast.LENGTH_SHORT).show());

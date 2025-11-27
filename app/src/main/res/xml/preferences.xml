@@ -453,6 +453,10 @@
             android:dialogTitle="@string/dialog_title_background_image_api"
             android:dialogMessage="@string/dialog_message_background_image_api"
             android:defaultValue="" />
+        <com.limelight.preferences.LocalImagePickerPreference
+            android:key="local_image_picker"
+            android:title="@string/title_local_image_picker"
+            android:summary="@string/summary_local_image_picker" />
         <CheckBoxPreference
             android:key="checkbox_enable_analytics"
             android:title="@string/title_enable_analytics"

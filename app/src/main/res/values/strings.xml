@@ -485,6 +485,10 @@
     <string name="dialog_title_background_image_api">Background Image API</string>
     <string name="dialog_message_background_image_api">Please enter the complete image API</string>
     
+    <!-- Local image picker -->
+    <string name="title_local_image_picker">Select Local Image</string>
+    <string name="summary_local_image_picker">Choose an image from your gallery as the background</string>
+    
     <!-- Reverse resolution -->
     <string name="title_checkbox_reverse_resolution">Reverse Resolution</string>
     <string name="summary_checkbox_reverse_resolution">Swap width and height values for special display requirements</string>
