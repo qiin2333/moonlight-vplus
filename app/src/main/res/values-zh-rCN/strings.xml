@@ -493,6 +493,7 @@
     <string name="game_menu_touch_mode_enhanced">增强式多点触控</string>
     <string name="game_menu_touch_mode_classic">经典鼠标模式</string>
     <string name="game_menu_touch_mode_trackpad">触控板模式</string>
+    <string name="game_menu_local_cursor_rendering">本地光标渲染</string>
     <string name="game_menu_touch_mode_native_mouse">本地鼠标指针</string>
     <string name="toast_touch_mode_enhanced_on">增强式多点触控已开启</string>
     <string name="toast_touch_mode_classic_on">经典鼠标模式已开启</string>

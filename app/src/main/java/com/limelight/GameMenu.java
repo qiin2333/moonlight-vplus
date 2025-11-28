@@ -31,6 +31,7 @@ import com.limelight.binding.input.KeyboardTranslator;
 import com.limelight.binding.input.advance_setting.ControllerManager;
 import com.limelight.binding.input.advance_setting.config.PageConfigController;
 import com.limelight.binding.input.advance_setting.element.ElementController;
+import com.limelight.binding.input.touch.RelativeTouchContext;
 import com.limelight.nvstream.NvConnection;
 import com.limelight.nvstream.http.NvApp;
 import com.limelight.nvstream.input.KeyboardPacket;
@@ -374,6 +375,37 @@ public class GameMenu {
                         null,
                         false
                 ));
+        
+        // 本地光标渲染选项（仅在触屏触控板模式下显示）
+        if (isTouchscreenTrackpad) {
+            touchModeOptionsList.add(
+                    new MenuOption(
+                            getString(R.string.game_menu_local_cursor_rendering) + " - " +
+                                    (game.prefConfig.enableLocalCursorRendering ? "开启" : "关闭"),
+                            false,
+                            () -> {
+                                game.prefConfig.enableLocalCursorRendering = !game.prefConfig.enableLocalCursorRendering;
+                                
+                                // 同步更新所有相对触摸上下文的光标渲染器状态
+                                RelativeTouchContext[] relativeTouchContexts = game.getRelativeTouchContextMap();
+                                if (relativeTouchContexts != null) {
+                                    for (RelativeTouchContext context : relativeTouchContexts) {
+                                        if (context != null) {
+                                            context.setEnableLocalCursorRendering(game.prefConfig.enableLocalCursorRendering);
+                                        }
+                                    }
+                                }
+                                
+                                String message = game.prefConfig.enableLocalCursorRendering ? 
+                                    "本地光标渲染已开启" : "本地光标渲染已关闭";
+                                Toast.makeText(game, message, Toast.LENGTH_SHORT).show();
+                            },
+                            null,
+                            false
+                    )
+            );
+        }
+        
         touchModeOptionsList.add(
                 new MenuOption(
                         getString(R.string.game_menu_touch_mode_native_mouse),
@@ -390,7 +422,7 @@ public class GameMenu {
                         false
                 ));
 
-        if (game.prefConfig.enableNativeMousePointer) {
+        if (game.prefConfig.enableNativeMousePointer || isTouchscreenTrackpad) {
             touchModeOptionsList.add(
                     new MenuOption(
                             getString(R.string.game_menu_toggle_remote_mouse),

@@ -22,6 +22,17 @@
         android:defaultFocusHighlightEnabled="false">
         <requestFocus />
     </com.limelight.ui.StreamView>
+
+    <com.limelight.ui.CursorView
+        android:id="@+id/cursorOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/transparent"
+        android:visibility="gone"
+        android:clickable="false"
+        android:focusable="false"
+        android:elevation="10dp" />
+
     <FrameLayout
         android:id="@+id/advance_setting_view"
         android:layout_width="match_parent"

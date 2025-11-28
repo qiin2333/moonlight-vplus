@@ -47,6 +47,7 @@ public class PreferenceConfiguration {
     }
 
     private static final String ENABLE_DOUBLE_CLICK_DRAG_PREF_STRING = "pref_enable_double_click_drag";
+    private static final String ENABLE_LOCAL_CURSOR_RENDERING_PREF_STRING = "pref_enable_local_cursor_rendering";
 
     private static final String LEGACY_RES_FPS_PREF_STRING = "list_resolution_fps";
     private static final String LEGACY_ENABLE_51_SURROUND_PREF_STRING = "checkbox_51_surround";
@@ -203,6 +204,10 @@ public class PreferenceConfiguration {
 
     private static final boolean DEFAULT_ENABLE_DOUBLE_CLICK_DRAG = false;
     public boolean enableDoubleClickDrag;
+    
+    private static final boolean DEFAULT_ENABLE_LOCAL_CURSOR_RENDERING = true;
+    public boolean enableLocalCursorRendering;
+    
     public static final int FRAME_PACING_MIN_LATENCY = 0;
     public static final int FRAME_PACING_BALANCED = 1;
     public static final int FRAME_PACING_CAP_FPS = 2;
@@ -740,6 +745,7 @@ public class PreferenceConfiguration {
         // Checkbox preferences
         config.disableWarnings = prefs.getBoolean(DISABLE_TOASTS_PREF_STRING, DEFAULT_DISABLE_TOASTS);
         config.enableDoubleClickDrag = prefs.getBoolean(ENABLE_DOUBLE_CLICK_DRAG_PREF_STRING, DEFAULT_ENABLE_DOUBLE_CLICK_DRAG);
+        config.enableLocalCursorRendering = prefs.getBoolean(ENABLE_LOCAL_CURSOR_RENDERING_PREF_STRING, DEFAULT_ENABLE_LOCAL_CURSOR_RENDERING);
         config.enableSops = prefs.getBoolean(SOPS_PREF_STRING, DEFAULT_SOPS);
         config.stretchVideo = prefs.getBoolean(STRETCH_PREF_STRING, DEFAULT_STRETCH);
         config.playHostAudio = prefs.getBoolean(HOST_AUDIO_PREF_STRING, DEFAULT_HOST_AUDIO);
@@ -964,6 +970,8 @@ public class PreferenceConfiguration {
                     .putInt(MIC_BITRATE_PREF_STRING, micBitrate)
                     .putBoolean(ENABLE_ESC_MENU_PREF_STRING, enableEscMenu)
                     .putBoolean(ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, enableNativeMousePointer)
+                    .putBoolean(ENABLE_DOUBLE_CLICK_DRAG_PREF_STRING, enableDoubleClickDrag)
+                    .putBoolean(ENABLE_LOCAL_CURSOR_RENDERING_PREF_STRING, enableLocalCursorRendering)
                     .putFloat(GYRO_SENSITIVITY_MULTIPLIER_PREF_STRING, gyroSensitivityMultiplier)
                     .putBoolean(GYRO_INVERT_X_AXIS_PREF_STRING, gyroInvertXAxis)
                     .putBoolean(GYRO_INVERT_Y_AXIS_PREF_STRING, gyroInvertYAxis)
@@ -1003,6 +1011,8 @@ public class PreferenceConfiguration {
         copy.micBitrate = this.micBitrate;
         copy.enableEscMenu = this.enableEscMenu;
         copy.enableNativeMousePointer = this.enableNativeMousePointer;
+        copy.enableDoubleClickDrag = this.enableDoubleClickDrag;
+        copy.enableLocalCursorRendering = this.enableLocalCursorRendering;
         copy.gyroToRightStick = this.gyroToRightStick;
         copy.gyroFullDeflectionDps = this.gyroFullDeflectionDps;
         copy.gyroSensitivityMultiplier = this.gyroSensitivityMultiplier;

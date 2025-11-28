@@ -11,6 +11,7 @@ import com.limelight.binding.input.advance_setting.ControllerManager;
 import com.limelight.binding.input.capture.InputCaptureManager;
 import com.limelight.binding.input.capture.InputCaptureProvider;
 import com.limelight.binding.input.touch.AbsoluteTouchContext;
+import com.limelight.binding.input.touch.LocalCursorRenderer;
 import com.limelight.binding.input.touch.NativeTouchContext;
 import com.limelight.binding.input.touch.RelativeTouchContext;
 import com.limelight.binding.input.driver.UsbDriverService;
@@ -33,6 +34,7 @@ import com.limelight.nvstream.input.MouseButtonPacket;
 import com.limelight.nvstream.jni.MoonBridge;
 import com.limelight.preferences.GlPreferences;
 import com.limelight.preferences.PreferenceConfiguration;
+import com.limelight.ui.CursorView;
 import com.limelight.ui.GameGestures;
 import com.limelight.ui.StreamView;
 import com.limelight.utils.Dialog;
@@ -82,6 +84,7 @@ import android.view.View;
 import android.view.View.OnGenericMotionListener;
 import android.view.View.OnSystemUiVisibilityChangeListener;
 import android.view.View.OnTouchListener;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
@@ -418,6 +421,23 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             streamView.setInputCallbacks(this);
 
         panZoomHandler = new PanZoomHandler(this, this, streamView, prefConfig);
+
+        // 1. 添加监听器 (应对屏幕旋转、大小变化)
+        streamView.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+            // 只有当尺寸或位置真的变了才执行
+            if (left != oldLeft || top != oldTop || right != oldRight || bottom != oldBottom) {
+                syncCursorWithStream();
+            }
+        });
+
+        // 2. 手动强制执行一次
+        // 使用 post 确保在 UI 绘制队列的下一个节拍执行，此时 View 的宽/高已经计算好了
+        streamView.post(new Runnable() {
+            @Override
+            public void run() {
+                syncCursorWithStream();
+            }
+        });
         
         // Listen for touch events on the background touch view to enable trackpad mode
         // to work on areas outside of the StreamView itself. We use a separate View
@@ -1956,8 +1976,14 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         return touchContextMap;
     }
 
-    public TouchContext[] getRelativeTouchContextMap(){
-        return  relativeTouchContextMap;
+    public RelativeTouchContext[] getRelativeTouchContextMap(){
+        RelativeTouchContext[] result = new RelativeTouchContext[relativeTouchContextMap.length];
+        for (int i = 0; i < relativeTouchContextMap.length; i++) {
+            if (relativeTouchContextMap[i] instanceof RelativeTouchContext) {
+                result[i] = (RelativeTouchContext) relativeTouchContextMap[i];
+            }
+        }
+        return result;
     }
 
     /**
@@ -3375,10 +3401,16 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             UiHelper.notifyStreamConnecting(Game.this);
 
             decoderRenderer.setRenderTarget(holder);
+
             conn.start(new AndroidAudioRenderer(Game.this, prefConfig.enableAudioFx, prefConfig.enableSpatializer),
                     decoderRenderer, Game.this);
+
+            if (streamView != null) {
+                streamView.post(this::syncCursorWithStream);
+            }
         }
 
+        // 处理缩放手势
         panZoomHandler.handleSurfaceChange();
     }
 
@@ -3424,6 +3456,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             throw new IllegalStateException("Surface destroyed before creation!");
         }
 
+        // 销毁本地光标渲染器
+        destroyLocalCursorRenderers();
+
         if (attemptedConnection) {
             // Let the decoder know immediately that the surface is gone
             decoderRenderer.prepareForStop();
@@ -3432,6 +3467,95 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 stopConnection();
             }
         }
+    }
+
+    /**
+     * 初始化本地光标渲染器
+     * 通过 findViewById 找到 XML 中的 CursorView
+     */
+    private void initializeLocalCursorRenderers(int width, int height) {
+        // 新增字段保存引用
+        CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
+
+        if (cursorOverlay == null) {
+            // 如果 XML 没更新，这里会返回 null，防止崩溃
+            return;
+        }
+
+        if (relativeTouchContextMap != null && prefConfig.touchscreenTrackpad && prefConfig.enableLocalCursorRendering) {
+            for (TouchContext context : relativeTouchContextMap) {
+                if (context instanceof RelativeTouchContext) {
+                    RelativeTouchContext relativeContext = (RelativeTouchContext) context;
+                    // 传入 View 而不是 Holder
+                    relativeContext.initializeLocalCursorRenderer(cursorOverlay, width, height);
+                    relativeContext.setEnableLocalCursorRendering(prefConfig.enableLocalCursorRendering);
+                }
+            }
+        }
+    }
+
+    /**
+     * 销毁本地光标渲染器
+     * 清理所有相对触摸上下文的光标渲染器
+     */
+    private void destroyLocalCursorRenderers() {
+        if (relativeTouchContextMap != null) {
+            for (TouchContext context : relativeTouchContextMap) {
+                if (context instanceof RelativeTouchContext) {
+                    RelativeTouchContext relativeContext = (RelativeTouchContext) context;
+                    relativeContext.destroyLocalCursorRenderer();
+                }
+            }
+        }
+    }
+
+    /**
+     * 强制将光标层与视频层 1:1 对齐
+     */
+    private void syncCursorWithStream() {
+        if (streamView == null) return;
+        CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
+        if (cursorOverlay == null) return;
+
+        // 获取 StreamView 当前的真实位置和大小
+        float x = streamView.getX();
+        float y = streamView.getY();
+        int w = streamView.getWidth();
+        int h = streamView.getHeight();
+
+        // 如果视频还没渲染出来（宽高为0），直接返回，等下次
+        if (w == 0 || h == 0) return;
+
+        ViewGroup.LayoutParams params = cursorOverlay.getLayoutParams();
+
+        // 1. 强制清除 Gravity
+        // 我们要用 setX/setY 绝对定位，所以必须把 Gravity 设为左上角，否则会发生双重偏移
+        if (params instanceof android.widget.FrameLayout.LayoutParams) {
+            ((android.widget.FrameLayout.LayoutParams) params).gravity = android.view.Gravity.TOP | android.view.Gravity.LEFT;
+        }
+
+        // 2. 同步大小
+        boolean needLayout = false;
+        if (params.width != w || params.height != h) {
+            params.width = w;
+            params.height = h;
+            needLayout = true;
+        }
+
+        if (needLayout) {
+            cursorOverlay.setLayoutParams(params);
+        }
+
+        // 3. 同步位置
+        cursorOverlay.setX(x);
+        cursorOverlay.setY(y);
+
+        // 4. 同步渲染器边界
+        if (relativeTouchContextMap != null) {
+            initializeLocalCursorRenderers(w, h);
+        }
+
+        LimeLog.info("CursorFix:" + "Sync executed: W=" + w + " H=" + h + " X=" + x);
     }
 
     @Override

@@ -524,6 +524,7 @@
     <string name="game_menu_touch_mode_enhanced">Enhanced Multi Touch</string>
     <string name="game_menu_touch_mode_classic">Classic Mouse Mode</string>
     <string name="game_menu_touch_mode_trackpad">Touchpad mode</string>
+    <string name="game_menu_local_cursor_rendering">Local cursor rendering</string>
     <string name="game_menu_touch_mode_native_mouse">Native mouse pointer</string>
     <string name="toast_touch_mode_enhanced_on">Enhanced multi touch enabled</string>
     <string name="toast_touch_mode_classic_on">Classic mouse mode enabled</string>
