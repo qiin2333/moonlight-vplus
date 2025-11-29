@@ -204,6 +204,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private WifiManager.WifiLock highPerfWifiLock;
     private WifiManager.WifiLock lowLatencyWifiLock;
     private Map<Integer, NativeTouchContext.Pointer> nativeTouchPointerMap = new HashMap<>();
+    private String currentHostAddress; // 新增：保存当前连接的IP
 
     public enum BackKeyMenuMode {
         GAME_MENU,     // 游戏菜单模式
@@ -3028,6 +3029,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     conn.stop();
                 }
             }.start();
+
+            stopCursorService();
         }
     }
 
@@ -3291,6 +3294,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         if (analyticsManager != null && pcName != null) {
             analyticsManager.logGameStreamStart(pcName, appName);
         }
+
+        // 1. 获取并保存 IP (存到全局变量)
+        this.currentHostAddress = getIntent().getStringExtra(EXTRA_HOST);
+
+        // 2. 调用统一的状态管理方法 (代替原来的直接启动逻辑)
+        updateCursorServiceState();
     }
 
     @Override
@@ -3482,13 +3491,14 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             return;
         }
 
-        if (relativeTouchContextMap != null && prefConfig.touchscreenTrackpad && prefConfig.enableLocalCursorRendering) {
+        if (relativeTouchContextMap != null) {
             for (TouchContext context : relativeTouchContextMap) {
                 if (context instanceof RelativeTouchContext) {
                     RelativeTouchContext relativeContext = (RelativeTouchContext) context;
                     // 传入 View 而不是 Holder
                     relativeContext.initializeLocalCursorRenderer(cursorOverlay, width, height);
-                    relativeContext.setEnableLocalCursorRendering(prefConfig.enableLocalCursorRendering);
+                    boolean shouldShow = prefConfig.enableLocalCursorRendering;
+                    relativeContext.setEnableLocalCursorRendering(shouldShow);
                 }
             }
         }
@@ -3504,6 +3514,20 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 if (context instanceof RelativeTouchContext) {
                     RelativeTouchContext relativeContext = (RelativeTouchContext) context;
                     relativeContext.destroyLocalCursorRenderer();
+                }
+            }
+        }
+    }
+
+    public void refreshLocalCursorState(boolean  enabled) {
+        if (relativeTouchContextMap != null) {
+            for (TouchContext context : relativeTouchContextMap) {
+                if (context instanceof RelativeTouchContext) {
+                    // 动态判断是否应该显示
+                    boolean shouldShow = prefConfig.touchscreenTrackpad && enabled;
+
+                    ((RelativeTouchContext) context)
+                            .setEnableLocalCursorRendering(shouldShow);
                 }
             }
         }
@@ -3556,6 +3580,186 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
 
         LimeLog.info("CursorFix:" + "Sync executed: W=" + w + " H=" + h + " X=" + x);
+    }
+
+    // UDP 相关变量
+    private Thread cursorNetworkThread;
+    private boolean isCursorNetworking = false;
+    private java.net.DatagramSocket cursorSocket;
+    private static final int CURSOR_PORT = 5005;
+
+    private String computerIpAddress;
+
+
+    private android.util.LruCache<Long, android.graphics.Bitmap> cursorCache = new android.util.LruCache<>(20);
+
+    private void startCursorService(String hostIp) {
+        if (isCursorNetworking) return;
+        this.computerIpAddress = hostIp;
+        this.isCursorNetworking = true;
+
+        // 每次启动服务时清空缓存，防止上次残留的数据导致错乱
+        if (cursorCache != null) {
+            cursorCache.evictAll();
+        }
+
+        cursorNetworkThread = new Thread(() -> {
+            try {
+                // 1. 初始化 Socket
+                cursorSocket = new java.net.DatagramSocket();
+                cursorSocket.setSoTimeout(1000); // 1秒超时
+
+                java.net.InetAddress serverAddr = java.net.InetAddress.getByName(computerIpAddress);
+                byte[] helloData = "CURSOR_HELLO".getBytes("UTF-8");
+                java.net.DatagramPacket helloPacket = new java.net.DatagramPacket(
+                        helloData, helloData.length, serverAddr, CURSOR_PORT);
+
+                // 增大缓冲区，防止 4K 屏大光标被截断
+                byte[] receiveBuffer = new byte[64 * 1024];
+                java.net.DatagramPacket receivePacket = new java.net.DatagramPacket(receiveBuffer, receiveBuffer.length);
+
+                LimeLog.info("CursorNet:" + "Starting handshake with " + computerIpAddress);
+
+                long lastHelloTime = 0;
+                // 初始化为当前时间，避免刚启动就触发超时重置
+                long lastReceiveTime = System.currentTimeMillis();
+
+                while (isCursorNetworking) {
+                    // 发送握手包 (每2秒一次)
+                    long now = System.currentTimeMillis();
+                    if (now - lastHelloTime > 2000) {
+                        try {
+                            cursorSocket.send(helloPacket);
+                            lastHelloTime = now;
+                        } catch (Exception e) {
+                            // ignore
+                        }
+                    }
+
+                    // 接收数据
+                    try {
+                        // 重置 packet 长度
+                        receivePacket.setLength(receiveBuffer.length);
+
+                        // 阻塞接收
+                        cursorSocket.receive(receivePacket);
+
+                        // 只有成功接收到数据后，才更新时间！
+                        lastReceiveTime = System.currentTimeMillis();
+
+                        byte[] data = receivePacket.getData();
+                        int length = receivePacket.getLength();
+
+                        // 最小包长检测
+                        if (length >= 17) {
+                            java.nio.ByteBuffer wrapped = java.nio.ByteBuffer.wrap(data);
+                            wrapped.order(java.nio.ByteOrder.LITTLE_ENDIAN);
+
+                            byte type = wrapped.get();      // 0=全量, 1=缓存
+                            long hash = wrapped.getLong();  // CRC32
+                            int hotX = wrapped.getInt();
+                            int hotY = wrapped.getInt();
+
+                            android.graphics.Bitmap targetBitmap = null;
+
+                            if (type == 1) {
+                                // === 缓存命中 ===
+                                targetBitmap = cursorCache.get(hash);
+                            } else if (type == 0) {
+                                // === 全量数据 ===
+                                int imageOffset = 17;
+                                int imageLen = length - imageOffset;
+                                if (imageLen > 0) {
+                                    targetBitmap = android.graphics.BitmapFactory.decodeByteArray(data, imageOffset, imageLen);
+                                    if (targetBitmap != null) {
+                                        cursorCache.put(hash, targetBitmap); // 存入缓存
+                                    }
+                                }
+                            }
+
+                            if (targetBitmap != null) {
+                                final android.graphics.Bitmap finalBmp = targetBitmap;
+                                runOnUiThread(() -> {
+                                    com.limelight.ui.CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
+                                    if (cursorOverlay != null) {
+                                        cursorOverlay.setCursorBitmap(finalBmp, hotX, hotY);
+                                    }
+                                });
+                            }
+                        }
+                    }catch (java.net.SocketTimeoutException e) {
+                        // 因为 Python 端现在每 1 秒会发一次心跳包。
+                        // 所以，如果我们超过 3 秒 (3000ms) 还没收到任何数据，
+                        // 那肯定是因为服务器挂了，或者是网络断了。
+                        if (System.currentTimeMillis() - lastReceiveTime > 3000) {
+
+                            // 为了避免瞬间闪烁，再次确认时间差
+                            lastReceiveTime = System.currentTimeMillis(); // 重置计时，避免疯狂触发
+
+                            runOnUiThread(() -> {
+                                com.limelight.ui.CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
+                                if (cursorOverlay != null) {
+                                    // 只有真的断连了，才会变回默认光标
+                                    cursorOverlay.resetToDefault();
+                                    LimeLog.warning("CursorNet:" + "Server timed out, resetting cursor.");
+                                }
+                            });
+                        }
+                    } catch (Exception e) {
+                        android.util.Log.e("CursorNet", "Error: " + e.getMessage());
+                    }
+                }
+            } catch (Exception e) {
+                LimeLog.warning("CursorNet:" + "Fatal Error: " + e.getMessage());
+            } finally {
+                if (cursorSocket != null) {
+                    cursorSocket.close();
+                    cursorSocket = null;
+                }
+            }
+        });
+        cursorNetworkThread.start();
+    }
+
+    private void stopCursorService() {
+        isCursorNetworking = false; // 退出循环标志
+
+        // 关闭 Socket
+        if (cursorSocket != null) {
+            try {
+                cursorSocket.close();
+            } catch (Exception e) {}
+            cursorSocket = null;
+        }
+
+        // 清空画布 UI
+        runOnUiThread(() -> {
+            com.limelight.ui.CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
+            if (cursorOverlay != null) {
+                cursorOverlay.resetToDefault();
+            }
+        });
+    }
+
+    /**
+     * 根据当前配置和运行状态，决定是启动还是停止光标服务
+     */
+    public void updateCursorServiceState() {
+        boolean shouldRun = prefConfig.enableLocalCursorRendering;
+
+        if (shouldRun) {
+            if (!isCursorNetworking && currentHostAddress != null) {
+                // 如果没在运行，且有IP，就开始运行
+                LimeLog.info("CursorNet: Enabling cursor service during stream");
+                startCursorService(currentHostAddress);
+            }
+        } else {
+            if (isCursorNetworking) {
+                // 如果正在运行，就停止它
+                LimeLog.info("CursorNet: Disabling cursor service during stream");
+                stopCursorService();
+            }
+        }
     }
 
     @Override

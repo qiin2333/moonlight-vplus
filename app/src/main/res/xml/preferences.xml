@@ -234,6 +234,11 @@
             android:summary="双击并按住后可拖动选择"
             android:defaultValue="false" />
         <CheckBoxPreference
+            android:key="pref_enable_local_cursor_rendering"
+            android:title="显示一个本地光标"
+            android:summary="显示一个本地光标，可通过触摸板模式控制光标"
+            android:defaultValue="false" />
+        <CheckBoxPreference
             android:key="checkbox_sync_touch_event_with_display"
             android:title="@string/title_checkbox_sync_touch_event_with_display"
             android:summary="@string/summary_checkbox_sync_touch_event_with_display"

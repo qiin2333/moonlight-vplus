@@ -385,17 +385,8 @@ public class GameMenu {
                             false,
                             () -> {
                                 game.prefConfig.enableLocalCursorRendering = !game.prefConfig.enableLocalCursorRendering;
-                                
-                                // 同步更新所有相对触摸上下文的光标渲染器状态
-                                RelativeTouchContext[] relativeTouchContexts = game.getRelativeTouchContextMap();
-                                if (relativeTouchContexts != null) {
-                                    for (RelativeTouchContext context : relativeTouchContexts) {
-                                        if (context != null) {
-                                            context.setEnableLocalCursorRendering(game.prefConfig.enableLocalCursorRendering);
-                                        }
-                                    }
-                                }
-                                
+                                game.refreshLocalCursorState(game.prefConfig.enableLocalCursorRendering);
+                                game.updateCursorServiceState();
                                 String message = game.prefConfig.enableLocalCursorRendering ? 
                                     "本地光标渲染已开启" : "本地光标渲染已关闭";
                                 Toast.makeText(game, message, Toast.LENGTH_SHORT).show();
