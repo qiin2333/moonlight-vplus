@@ -8,6 +8,7 @@ import com.limelight.binding.input.ControllerHandler;
 import com.limelight.binding.input.GameInputDevice;
 import com.limelight.binding.input.KeyboardTranslator;
 import com.limelight.binding.input.advance_setting.ControllerManager;
+import com.limelight.binding.input.advance_setting.TouchController;
 import com.limelight.binding.input.capture.InputCaptureManager;
 import com.limelight.binding.input.capture.InputCaptureProvider;
 import com.limelight.binding.input.touch.AbsoluteTouchContext;
@@ -78,6 +79,7 @@ import android.view.InputDevice;
 import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
+import android.view.PointerIcon;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.View;
@@ -368,14 +370,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         
         // Read the stream preferences
         prefConfig = PreferenceConfiguration.readPreferences(this);
-        
-        // 对于没有触摸屏的设备，强制启用本地鼠标指针
-        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)) {
-            prefConfig.enableNativeMousePointer = true;
-            prefConfig.enableEnhancedTouch = false;
-            prefConfig.touchscreenTrackpad = false;
-        }
-        
         tombstonePrefs = Game.this.getSharedPreferences("DecoderTombstone", 0);
         
         // Initialize app settings manager
@@ -1992,6 +1986,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
      * true : RelativeTouchContext
      */
     public void setTouchMode(boolean enableRelativeTouch){
+
         for (int i = 0; i < touchContextMap.length; i++) {
             if (enableRelativeTouch) {
                 prefConfig.touchscreenTrackpad = true;
@@ -2055,8 +2050,18 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 inputCaptureProvider.hideCursor();
             }
             
-                setInputGrabState(true);
+            setInputGrabState(true);
+        }
+
+        // 切换 CursorView 的可见性
+        CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
+        if (cursorOverlay != null) {
+            if (enable) {
+                cursorOverlay.hide();
+            } else {
+                cursorOverlay.show();
             }
+        }
     }
 
     private byte getLiTouchTypeFromEvent(MotionEvent event) {
@@ -2930,7 +2935,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         if (externalDisplayManager != null && externalDisplayManager.isUsingExternalDisplay()) {
             int streamViewWidth = activeStreamView.getWidth();
             int streamViewHeight = activeStreamView.getHeight();
-        
+
             // 获取设备的分辨率
             Point size = new Point();
             Display display = getWindowManager().getDefaultDisplay();
@@ -2956,6 +2961,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
 
         conn.sendMousePosition((short)eventX, (short)eventY, (short)activeStreamView.getWidth(), (short)activeStreamView.getHeight());
+
+        // 当鼠标移动时，同步更新本地光标的位置
+        CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
+        if (cursorOverlay != null && prefConfig.enableLocalCursorRendering) {
+            cursorOverlay.updateCursorPosition(eventX, eventY);
+        }
     }
 
     @Override
@@ -3680,9 +3691,16 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                             if (targetBitmap != null) {
                                 final android.graphics.Bitmap finalBmp = targetBitmap;
                                 runOnUiThread(() -> {
-                                    com.limelight.ui.CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
-                                    if (cursorOverlay != null) {
-                                        cursorOverlay.setCursorBitmap(finalBmp, hotX, hotY);
+                                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N && prefConfig.enableNativeMousePointer) {
+                                        // 方案B：当启用了原生指针且API版本符合时，使用 PointerIcon
+                                        PointerIcon pointerIcon = PointerIcon.create(finalBmp, hotX, hotY);
+                                        streamView.setPointerIcon(pointerIcon);
+                                    } else {
+                                        // 方案A：使用自定义View绘制
+                                        com.limelight.ui.CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
+                                        if (cursorOverlay != null) {
+                                            cursorOverlay.setCursorBitmap(finalBmp, hotX, hotY);
+                                        }
                                     }
                                 });
                             }
@@ -3697,11 +3715,16 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                             lastReceiveTime = System.currentTimeMillis(); // 重置计时，避免疯狂触发
 
                             runOnUiThread(() -> {
-                                com.limelight.ui.CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
-                                if (cursorOverlay != null) {
-                                    // 只有真的断连了，才会变回默认光标
-                                    cursorOverlay.resetToDefault();
-                                    LimeLog.warning("CursorNet:" + "Server timed out, resetting cursor.");
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N && prefConfig.enableNativeMousePointer) {
+                                    // 恢复为默认箭头
+                                    streamView.setPointerIcon(PointerIcon.getSystemIcon(Game.this, PointerIcon.TYPE_ARROW));
+                                } else {
+                                    com.limelight.ui.CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
+                                    if (cursorOverlay != null) {
+                                        // 只有真的断连了，才会变回默认光标
+                                        cursorOverlay.resetToDefault();
+                                        LimeLog.warning("CursorNet:" + "Server timed out, resetting cursor.");
+                                    }
                                 }
                             });
                         }
@@ -3734,9 +3757,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // 清空画布 UI
         runOnUiThread(() -> {
-            com.limelight.ui.CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
-            if (cursorOverlay != null) {
-                cursorOverlay.resetToDefault();
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N && prefConfig.enableNativeMousePointer) {
+                 streamView.setPointerIcon(PointerIcon.getSystemIcon(Game.this, PointerIcon.TYPE_ARROW));
+            } else {
+                CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
+                if (cursorOverlay != null) {
+                    cursorOverlay.resetToDefault();
+                }
             }
         });
     }
@@ -3745,7 +3772,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
      * 根据当前配置和运行状态，决定是启动还是停止光标服务
      */
     public void updateCursorServiceState() {
-        boolean shouldRun = prefConfig.enableLocalCursorRendering;
+        boolean shouldRun = prefConfig.enableLocalCursorRendering | prefConfig.enableNativeMousePointer;
 
         if (shouldRun) {
             if (!isCursorNetworking && currentHostAddress != null) {
