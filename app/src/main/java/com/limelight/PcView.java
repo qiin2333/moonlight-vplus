@@ -627,7 +627,11 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
             }
         };
         IntentFilter filter = new IntentFilter("com.limelight.REFRESH_BACKGROUND_IMAGE");
-        registerReceiver(backgroundImageRefreshReceiver, filter);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(backgroundImageRefreshReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(backgroundImageRefreshReceiver, filter);
+        }
 
         initializeViews();
     }
