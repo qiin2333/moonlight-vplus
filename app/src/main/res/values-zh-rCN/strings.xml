@@ -245,6 +245,8 @@
     <string name="summary_language_list"> 选择Moonlight显示的语言 </string>
     <string name="title_checkbox_small_icon_mode"> 使用小图标 </string>
     <string name="summary_checkbox_small_icon_mode"> 使用小图标以在屏幕上显示更多项目 </string>
+    <string name="title_checkbox_resume_stream">自动恢复串流</string>
+    <string name="summary_checkbox_resume_stream">当从后台切回Moonlight时，自动恢复串流会话</string>
     <string name="category_host_settings">🖥️ 主机设置</string>
     <string name="title_checkbox_enable_sops"> 自动优化主机设置 </string>
     <string name="summary_checkbox_enable_sops"> 允许主机自动更改为与客户端最佳匹配的显示设置 </string>

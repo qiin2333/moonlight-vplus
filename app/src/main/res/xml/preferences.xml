@@ -467,6 +467,11 @@
             android:title="@string/title_enable_analytics"
             android:summary="@string/summary_enable_analytics"
             android:defaultValue="true" />
+        <CheckBoxPreference
+            android:key="checkbox_resume_stream"
+            android:title="@string/title_checkbox_resume_stream"
+            android:summary="@string/summary_checkbox_resume_stream"
+            android:defaultValue="true" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_advanced_settings"
         android:key="category_advanced_settings"

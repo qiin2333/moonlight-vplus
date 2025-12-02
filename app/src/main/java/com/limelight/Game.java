@@ -3602,7 +3602,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private String computerIpAddress;
 
 
-    private android.util.LruCache<Long, android.graphics.Bitmap> cursorCache = new android.util.LruCache<>(20);
+    private android.util.LruCache<Long, android.graphics.Bitmap> cursorCache = new android.util.LruCache<>(100);
 
     private void startCursorService(String hostIp) {
         if (isCursorNetworking) return;
@@ -3629,7 +3629,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 byte[] receiveBuffer = new byte[64 * 1024];
                 java.net.DatagramPacket receivePacket = new java.net.DatagramPacket(receiveBuffer, receiveBuffer.length);
 
-                LimeLog.info("CursorNet:" + "Starting handshake with " + computerIpAddress);
+                LimeLog.info("CursorNet:" + "握手开始于 " + computerIpAddress);
 
                 long lastHelloTime = 0;
                 // 初始化为当前时间，避免刚启动就触发超时重置
@@ -3641,9 +3641,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     if (now - lastHelloTime > 2000) {
                         try {
                             cursorSocket.send(helloPacket);
+                            LimeLog.info("CursorNet: 已向发送握手数据包 " + computerIpAddress);
                             lastHelloTime = now;
                         } catch (Exception e) {
-                            // ignore
+                            LimeLog.warning("CursorNet: 发送握手数据包失败： " + e.getMessage());
                         }
                     }
 
@@ -3676,6 +3677,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                             if (type == 1) {
                                 // === 缓存命中 ===
                                 targetBitmap = cursorCache.get(hash);
+                                LimeLog.info("CursorNet: 收到带有哈希的缓存游标 " + hash);
                             } else if (type == 0) {
                                 // === 全量数据 ===
                                 int imageOffset = 17;
@@ -3684,6 +3686,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                                     targetBitmap = android.graphics.BitmapFactory.decodeByteArray(data, imageOffset, imageLen);
                                     if (targetBitmap != null) {
                                         cursorCache.put(hash, targetBitmap); // 存入缓存
+                                        LimeLog.info("CursorNet: 收到带有哈希值的新游标 " + hash + ", size: " + imageLen + " bytes");
                                     }
                                 }
                             }
@@ -3703,13 +3706,18 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                                         }
                                     }
                                 });
+                            } else {
+                                LimeLog.warning("CursorNet: 无法解码光标位图, type: " + type + ", hash: " + hash);
                             }
+                        } else {
+                            LimeLog.warning("CursorNet: 收到的数据包太小: " + length + " bytes");
                         }
                     }catch (java.net.SocketTimeoutException e) {
                         // 因为 Python 端现在每 1 秒会发一次心跳包。
                         // 所以，如果我们超过 3 秒 (3000ms) 还没收到任何数据，
                         // 那肯定是因为服务器挂了，或者是网络断了。
                         if (System.currentTimeMillis() - lastReceiveTime > 3000) {
+                            LimeLog.warning("CursorNet: 与游标服务器的连接超时");
 
                             // 为了避免瞬间闪烁，再次确认时间差
                             lastReceiveTime = System.currentTimeMillis(); // 重置计时，避免疯狂触发
@@ -3723,21 +3731,22 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                                     if (cursorOverlay != null) {
                                         // 只有真的断连了，才会变回默认光标
                                         cursorOverlay.resetToDefault();
-                                        LimeLog.warning("CursorNet:" + "Server timed out, resetting cursor.");
+                                        LimeLog.warning("CursorNet:" + "服务器超时，正在重置光标。");
                                     }
                                 }
                             });
                         }
                     } catch (Exception e) {
-                        android.util.Log.e("CursorNet", "Error: " + e.getMessage());
+                        LimeLog.warning("CursorNet: 接收数据包时出错： " + e.getMessage());
                     }
                 }
             } catch (Exception e) {
-                LimeLog.warning("CursorNet:" + "Fatal Error: " + e.getMessage());
+                LimeLog.warning("CursorNet:" + "严重错误： " + e.getMessage());
             } finally {
                 if (cursorSocket != null) {
                     cursorSocket.close();
                     cursorSocket = null;
+                    LimeLog.info("CursorNet: 套接字已关闭");
                 }
             }
         });

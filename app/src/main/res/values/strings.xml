@@ -332,6 +332,8 @@
     <string name="summary_language_list">Language to use for Moonlight</string>
     <string name="title_checkbox_small_icon_mode">Use small box art</string>
     <string name="summary_checkbox_small_icon_mode">Smaller box art in the app grid allows more apps to be visible on screen</string>
+    <string name="title_checkbox_resume_stream">Resume stream automatically</string>
+    <string name="summary_checkbox_resume_stream">Automatically resume the stream when returning to Moonlight from the background</string>
 
     <string name="category_host_settings">🖥️ Host Settings</string>
     <string name="title_checkbox_enable_sops">Optimize game settings</string>
