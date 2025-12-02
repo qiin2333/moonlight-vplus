@@ -387,7 +387,6 @@ public class GameMenu {
                             () -> {
                                 game.prefConfig.enableLocalCursorRendering = !game.prefConfig.enableLocalCursorRendering;
                                 game.refreshLocalCursorState(game.prefConfig.enableLocalCursorRendering);
-                                game.updateCursorServiceState();
                                 String message = game.prefConfig.enableLocalCursorRendering ? 
                                     "本地光标渲染已开启" : "本地光标渲染已关闭";
                                 Toast.makeText(game, message, Toast.LENGTH_SHORT).show();
@@ -414,26 +413,23 @@ public class GameMenu {
                         false
                 ));
 
-        if (game.prefConfig.enableNativeMousePointer || isTouchscreenTrackpad) {
-            touchModeOptionsList.add(
-                    new MenuOption(
-                            getString(R.string.game_menu_toggle_remote_mouse),
-                            false,
-                            () -> {
-                                sendKeys(new short[]{
-                                        KeyboardTranslator.VK_LCONTROL,
-                                        KeyboardTranslator.VK_MENU,
-                                        KeyboardTranslator.VK_LSHIFT,
-                                        KeyboardTranslator.VK_N
-                                });
-                                Toast.makeText(game, getString(R.string.toast_remote_mouse_toast), Toast.LENGTH_SHORT).show();
-                            },
-                            null,
-                            false
-                    )
-            );
-
-        }
+        touchModeOptionsList.add(
+                new MenuOption(
+                        getString(R.string.game_menu_toggle_remote_mouse),
+                        false,
+                        () -> {
+                            sendKeys(new short[]{
+                                    KeyboardTranslator.VK_LCONTROL,
+                                    KeyboardTranslator.VK_MENU,
+                                    KeyboardTranslator.VK_LSHIFT,
+                                    KeyboardTranslator.VK_N
+                            });
+                            Toast.makeText(game, getString(R.string.toast_remote_mouse_toast), Toast.LENGTH_SHORT).show();
+                        },
+                        null,
+                        false
+                )
+        );
 
         // 将列表转换为数组
         MenuOption[] touchModeOptions = touchModeOptionsList.toArray(new MenuOption[0]);

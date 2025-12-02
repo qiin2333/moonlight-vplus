@@ -1992,10 +1992,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 prefConfig.touchscreenTrackpad = true;
                 prefConfig.enableNativeMousePointer = false;
                 touchContextMap = relativeTouchContextMap;
+                refreshLocalCursorState(prefConfig.enableLocalCursorRendering); //如果本地光标处于开启状态，则开启本地光标
             }
             else {
                 prefConfig.touchscreenTrackpad = false;
                 touchContextMap = absoluteTouchContextMap;
+                refreshLocalCursorState(false); //关闭本地光标
             }
         }
     }
@@ -2041,6 +2043,14 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             setMetaKeyCaptureState(true);
             
             // 注意：我们不设置 grabbedInput = false，这样按键事件仍能正常处理
+
+            refreshLocalCursorState(true);//开启本地光标服务
+
+            // 切换 CursorView 的可见性
+            CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
+            if (cursorOverlay != null) {
+                cursorOverlay.hide();
+            }
         } else {
             // 禁用本地鼠标指针：恢复正常的输入捕获状态
             cursorVisible = false;
@@ -2053,15 +2063,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             setInputGrabState(true);
         }
 
-        // 切换 CursorView 的可见性
-        CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
-        if (cursorOverlay != null) {
-            if (enable) {
-                cursorOverlay.hide();
-            } else {
-                cursorOverlay.show();
-            }
-        }
     }
 
     private byte getLiTouchTypeFromEvent(MotionEvent event) {
@@ -2962,11 +2963,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         conn.sendMousePosition((short)eventX, (short)eventY, (short)activeStreamView.getWidth(), (short)activeStreamView.getHeight());
 
-        // 当鼠标移动时，同步更新本地光标的位置
-        CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
-        if (cursorOverlay != null && prefConfig.enableLocalCursorRendering) {
-            cursorOverlay.updateCursorPosition(eventX, eventY);
-        }
+//        // 当鼠标移动时，同步更新本地光标的位置
+//        CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
+//        if (cursorOverlay != null && prefConfig.enableLocalCursorRendering) {
+//            cursorOverlay.updateCursorPosition(eventX, eventY);
+//        }
     }
 
     @Override
@@ -3309,8 +3310,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // 1. 获取并保存 IP (存到全局变量)
         this.currentHostAddress = getIntent().getStringExtra(EXTRA_HOST);
 
-        // 2. 调用统一的状态管理方法 (代替原来的直接启动逻辑)
-        updateCursorServiceState();
+        // 2. 调用统一的状态管理方法
+        updateCursorServiceState(prefConfig.enableLocalCursorRendering);
     }
 
     @Override
@@ -3534,14 +3535,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         if (relativeTouchContextMap != null) {
             for (TouchContext context : relativeTouchContextMap) {
                 if (context instanceof RelativeTouchContext) {
-                    // 动态判断是否应该显示
-                    boolean shouldShow = prefConfig.touchscreenTrackpad && enabled;
-
                     ((RelativeTouchContext) context)
-                            .setEnableLocalCursorRendering(shouldShow);
+                            .setEnableLocalCursorRendering(enabled);
                 }
             }
         }
+        updateCursorServiceState(enabled);
     }
 
     /**
@@ -3780,8 +3779,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     /**
      * 根据当前配置和运行状态，决定是启动还是停止光标服务
      */
-    public void updateCursorServiceState() {
-        boolean shouldRun = prefConfig.enableLocalCursorRendering | prefConfig.enableNativeMousePointer;
+    public void updateCursorServiceState(boolean shouldRun) {
 
         if (shouldRun) {
             if (!isCursorNetworking && currentHostAddress != null) {
