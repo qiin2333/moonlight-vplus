@@ -230,7 +230,6 @@ public class GameMenu {
      */
     private void disconnectAndQuit() {
         try {
-            AppView.MANUAL_DISCONNECT = true;
             game.disconnect();
             conn.doStopAndQuit();
         } catch (IOException | XmlPullParserException e) {
@@ -1727,10 +1726,7 @@ public class GameMenu {
         // normalOptions.add(new MenuOption("震动测试", false, this::testLocalRumbleAll, "game_menu_test_local_rumble", true));
 
         normalOptions.add(new MenuOption(getString(R.string.game_menu_disconnect), true,
-                () -> {
-                    AppView.MANUAL_DISCONNECT = true;
-                    game.disconnect();
-                }, "game_menu_disconnect", true));
+                game::disconnect, "game_menu_disconnect", true));
 
         normalOptions.add(new MenuOption(getString(R.string.game_menu_disconnect_and_quit), true,
                 () -> {

@@ -73,6 +73,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.preference.PreferenceManager;
 import android.util.Rational;
 import android.view.Display;
 import android.view.InputDevice;
@@ -206,7 +207,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private WifiManager.WifiLock highPerfWifiLock;
     private WifiManager.WifiLock lowLatencyWifiLock;
     private Map<Integer, NativeTouchContext.Pointer> nativeTouchPointerMap = new HashMap<>();
-    private String currentHostAddress; // 新增：保存当前连接的IP
+    private String currentHostAddress; // 保存当前连接的IP
+    private boolean shouldResumeSession = false;
 
     public enum BackKeyMenuMode {
         GAME_MENU,     // 游戏菜单模式
@@ -830,6 +832,328 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         externalDisplayManager.initialize();
     }
 
+    private void prepareConnection() {
+        // 1. 清理旧的光标资源
+        destroyLocalCursorRenderers();
+        runOnUiThread(() -> {
+            CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
+            if (cursorOverlay != null) {
+                cursorOverlay.resetToDefault();
+                cursorOverlay.hide();
+            }
+
+            // 清理可能残留的网络质量提示
+            if (notificationOverlayView != null) {
+                notificationOverlayView.setVisibility(View.GONE);
+            }
+        });
+        // 重置状态变量
+        requestedNotificationOverlayVisibility = View.GONE;
+
+        // 2. 获取 Intent 参数
+        String host = Game.this.getIntent().getStringExtra(EXTRA_HOST);
+        int port = Game.this.getIntent().getIntExtra(EXTRA_PORT, NvHTTP.DEFAULT_HTTP_PORT);
+        int httpsPort = Game.this.getIntent().getIntExtra(EXTRA_HTTPS_PORT, 0);
+        String uniqueId = Game.this.getIntent().getStringExtra(EXTRA_UNIQUEID);
+        String pairName = Game.this.getIntent().getStringExtra(EXTRA_PAIR_NAME);
+        boolean pcUseVdd = Game.this.getIntent().getBooleanExtra(EXTRA_PC_USEVDD, false);
+        byte[] derCertData = Game.this.getIntent().getByteArrayExtra(EXTRA_SERVER_CERT);
+
+        X509Certificate serverCert = null;
+        try {
+            if (derCertData != null) {
+                serverCert = (X509Certificate) CertificateFactory.getInstance("X.509")
+                        .generateCertificate(new ByteArrayInputStream(derCertData));
+            }
+        } catch (CertificateException e) {
+            e.printStackTrace();
+        }
+
+        // 3. 重新初始化解码器环境
+        // 我们必须重新读取首选项和网络状态，因为这些可能在后台发生了变化
+        GlPreferences glPrefs = GlPreferences.readPreferences(this);
+        ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        // Check if the user has enabled HDR
+        boolean willStreamHdr = false;
+        if (prefConfig.enableHdr) {
+            // Start our HDR checklist
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                Display display = externalDisplayManager != null ?
+                        externalDisplayManager.getTargetDisplay() : getWindowManager().getDefaultDisplay();
+                Display.HdrCapabilities hdrCaps = display.getHdrCapabilities();
+
+                // We must now ensure our display is compatible with HDR10
+                if (hdrCaps != null) {
+                    // getHdrCapabilities() returns null on Lenovo Lenovo Mirage Solo (vega), Android 8.0
+                    for (int hdrType : hdrCaps.getSupportedHdrTypes()) {
+                        if (hdrType == Display.HdrCapabilities.HDR_TYPE_HDR10) {
+                            willStreamHdr = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!willStreamHdr) {
+                    // Nope, no HDR for us :(
+                    Toast.makeText(this, "Display does not support HDR10", Toast.LENGTH_LONG).show();
+                }
+            }
+            else {
+                Toast.makeText(this, "HDR requires Android 7.0 or later", Toast.LENGTH_LONG).show();
+            }
+        }
+
+        // 销毁旧的解码器（如果存在）并创建新的实例
+        // 旧的 renderer 内部的 MediaCodec 可能处于 Released 状态，无法复用
+        if (decoderRenderer != null) {
+            // 确保旧的资源被清理 (虽然 onStop 可能已经清理过，但双重保险)
+            try { decoderRenderer.prepareForStop(); } catch (Exception ignored) {}
+        }
+
+        // 创建全新的渲染器实例
+        decoderRenderer = new MediaCodecDecoderRenderer(
+                this,
+                prefConfig,
+                new CrashListener() {
+                    @Override
+                    public void notifyCrash(Exception e) {
+                        // The MediaCodec instance is going down due to a crash
+                        // let's tell the user something when they open the app again
+
+                        // We must use commit because the app will crash when we return from this function
+                        tombstonePrefs.edit().putInt("CrashCount", tombstonePrefs.getInt("CrashCount", 0) + 1).commit();
+                        reportedCrash = true;
+                    }
+                },
+                tombstonePrefs.getInt("CrashCount", 0),
+                connMgr.isActiveNetworkMetered(),
+                willStreamHdr,
+                glPrefs.glRenderer,
+                this);
+
+        // Don't stream HDR if the decoder can't support it
+        if (willStreamHdr && !decoderRenderer.isHevcMain10Supported() && !decoderRenderer.isAv1Main10Supported()) {
+            willStreamHdr = false;
+            Toast.makeText(this, "Decoder does not support HDR10 profile", Toast.LENGTH_LONG).show();
+        }
+
+        // Display a message to the user if HEVC was forced on but we still didn't find a decoder
+        if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_HEVC && !decoderRenderer.isHevcSupported()) {
+            Toast.makeText(this, "No HEVC decoder found", Toast.LENGTH_LONG).show();
+        }
+
+        // Display a message to the user if AV1 was forced on but we still didn't find a decoder
+        if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_AV1 && !decoderRenderer.isAv1Supported()) {
+            Toast.makeText(this, "No AV1 decoder found", Toast.LENGTH_LONG).show();
+        }
+
+        // H.264 is always supported
+        int supportedVideoFormats = MoonBridge.VIDEO_FORMAT_H264;
+        if (decoderRenderer.isHevcSupported()) {
+            supportedVideoFormats |= MoonBridge.VIDEO_FORMAT_H265;
+            if (willStreamHdr && decoderRenderer.isHevcMain10Supported()) {
+                supportedVideoFormats |= MoonBridge.VIDEO_FORMAT_H265_MAIN10;
+            }
+        }
+        if (decoderRenderer.isAv1Supported()) {
+            supportedVideoFormats |= MoonBridge.VIDEO_FORMAT_AV1_MAIN8;
+            if (willStreamHdr && decoderRenderer.isAv1Main10Supported()) {
+                supportedVideoFormats |= MoonBridge.VIDEO_FORMAT_AV1_MAIN10;
+            }
+        }
+
+        int gamepadMask = ControllerHandler.getAttachedControllerMask(this);
+        if (!prefConfig.multiController) {
+            // Always set gamepad 1 present for when multi-controller is
+            // disabled for games that don't properly support detection
+            // of gamepads removed and replugged at runtime.
+            gamepadMask = 1;
+        }
+        if (prefConfig.onscreenController) {
+            // If we're using OSC, always set at least gamepad 1.
+            gamepadMask |= 1;
+        }
+
+        // Set to the optimal mode for streaming
+        float displayRefreshRate = prepareDisplayForRendering();
+        LimeLog.info("Display refresh rate: "+displayRefreshRate);
+
+        // If the user requested frame pacing using a capped FPS, we will need to change our
+        // desired FPS setting here in accordance with the active display refresh rate.
+        int roundedRefreshRate = Math.round(displayRefreshRate);
+        int chosenFrameRate = prefConfig.fps; //将此处chosenFrameRate赋值为5时， 视频刷新率降低到5，但直接观察远端桌面可知，触控刷新率并未下降，窗口仍可流畅拖动。
+        if (prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_CAP_FPS) {
+            if (prefConfig.fps >= roundedRefreshRate) {
+                if (prefConfig.fps > roundedRefreshRate + 3) {
+                    // Use frame drops when rendering above the screen frame rate
+                    prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
+                    LimeLog.info("Using drop mode for FPS > Hz");
+                } else if (roundedRefreshRate <= 49) {
+                    // Let's avoid clearly bogus refresh rates and fall back to legacy rendering
+                    prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
+                    LimeLog.info("Bogus refresh rate: " + roundedRefreshRate);
+                }
+                else {
+                    chosenFrameRate = roundedRefreshRate - 1;
+                    LimeLog.info("Adjusting FPS target for screen to " + chosenFrameRate);
+                }
+            }
+        }
+
+        StreamConfiguration config = new StreamConfiguration.Builder()
+                .setResolution(prefConfig.width, prefConfig.height)
+                .setLaunchRefreshRate(prefConfig.fps)
+                .setRefreshRate(chosenFrameRate)  //将此处chosenFrameRate替换为5时， 视频刷新率降低到5，但直接观察远端桌面可知，触控刷新率并未下降，窗口仍可流畅拖动。
+                .setApp(app)
+                .setBitrate(prefConfig.bitrate)
+                .setResolutionScale(prefConfig.resolutionScale)
+                .setEnableSops(prefConfig.enableSops)
+                .enableLocalAudioPlayback(prefConfig.playHostAudio)
+                .setMaxPacketSize(1392)
+                .setRemoteConfiguration(StreamConfiguration.STREAM_CFG_AUTO) // NvConnection will perform LAN and VPN detection
+                .setSupportedVideoFormats(supportedVideoFormats)
+                .setAttachedGamepadMask(gamepadMask)
+                .setClientRefreshRateX100((int)(displayRefreshRate * 100))
+                .setAudioConfiguration(prefConfig.audioConfiguration)
+                .setColorSpace(decoderRenderer.getPreferredColorSpace())
+                .setColorRange(decoderRenderer.getPreferredColorRange())
+                .setPersistGamepadsAfterDisconnect(!prefConfig.multiController)
+                .setUseVdd(pcUseVdd)
+                .setEnableMic(prefConfig.enableMic)
+                .build();
+
+        // Initialize the connection
+        conn = new NvConnection(getApplicationContext(),
+                new ComputerDetails.AddressTuple(host, port),
+                httpsPort, uniqueId, pairName, config,
+                PlatformBinding.getCryptoProvider(this), serverCert);
+        controllerHandler = new ControllerHandler(this, conn, this, prefConfig);
+
+        // 重新创建 ControllerHandler
+        if (controllerHandler != null) controllerHandler.stop();
+        controllerHandler = new ControllerHandler(this, conn, this, prefConfig);
+
+        //  重新绑定 USB 驱动服务
+        // 因为 stopConnection 时解绑了，这里必须重新 bind，而不是直接 setListener
+        if (prefConfig.usbDriver) {
+            // 如果旧的连接还没断开（理论上 stopConnection 已断开），先断开以防万一
+            stopAndUnbindUsbDriverService();
+
+            // 重新绑定服务
+            bindService(new Intent(this, UsbDriverService.class),
+                    usbDriverServiceConnection, Service.BIND_AUTO_CREATE);
+        }
+
+        if (connectedToUsbDriverService && usbDriverBinder != null) {
+            usbDriverBinder.setListener(controllerHandler);
+        }
+
+        // 重新初始化触控
+        // 必须在 ControllerManager 初始化之前完成，因为 ControllerManager 会调用它来设置灵敏度
+        // Initialize touch contexts
+        for (int i = 0; i < TOUCH_CONTEXT_LENGTH; i++) {
+            absoluteTouchContextMap[i] = new AbsoluteTouchContext(conn, i, streamView);
+            relativeTouchContextMap[i] = new RelativeTouchContext(conn, i,
+                    streamView, prefConfig);
+        }
+        if (!prefConfig.touchscreenTrackpad) {
+            touchContextMap = absoluteTouchContextMap;
+        }
+        else {
+            touchContextMap = relativeTouchContextMap;
+        }
+
+        //  重建虚拟手柄和屏幕键盘管理器
+        // 必须这样做，因为它们需要绑定新的 controllerHandler 和 conn
+        if (virtualController != null) {
+            if (prefConfig.onscreenController) {
+                // 这里调用 refreshLayout 确保位置正确
+                virtualController.refreshLayout();
+                virtualController.show();
+                virtualController.setGyroEnabled(true);
+            }
+        }
+
+        if(controllerManager != null) {
+            // 处理王冠模式/虚拟键盘
+            if (prefConfig.onscreenKeyboard) {
+                controllerManager.refreshLayout();
+            } else {
+                // 如果配置变成了关闭，确保变量被清空
+                controllerManager = null;
+            }
+        }
+
+        // 重建麦克风管理器 (绑定新连接)
+        if (microphoneManager != null) {
+            microphoneManager.stopMicrophoneStream();
+        }
+        microphoneManager = new MicrophoneManager(this, conn, prefConfig.enableMic);
+        microphoneManager.setStateListener(new MicrophoneManager.MicrophoneStateListener() {
+            @Override
+            public void onMicrophoneStateChanged(boolean isActive) {
+                LimeLog.info("麦克风状态改变: " + (isActive ? "激活" : "暂停"));
+            }
+            @Override
+            public void onPermissionRequested() {
+                LimeLog.info("麦克风权限请求已发送");
+            }
+        });
+
+        // 初始化外接显示器管理器
+        externalDisplayManager = new ExternalDisplayManager(this, prefConfig, conn, decoderRenderer, pcName, appName);
+        externalDisplayManager.setCallback(new ExternalDisplayManager.ExternalDisplayCallback() {
+            @Override
+            public void onExternalDisplayConnected(Display display) {
+                // 外接显示器连接时的处理
+                LimeLog.info("External display connected, reinitializing input capture provider");
+
+                // 重新初始化输入捕获提供者以支持外接显示器
+                if (inputCaptureProvider != null) {
+                    inputCaptureProvider.disableCapture();
+                }
+                inputCaptureProvider = InputCaptureManager.getInputCaptureProviderForExternalDisplay(Game.this, Game.this);
+            }
+
+            @Override
+            public void onExternalDisplayDisconnected() {
+                // 外接显示器断开时的处理
+                externalStreamView = null;
+                LimeLog.info("External display disconnected, cleared externalStreamView");
+
+                // 重新初始化输入捕获提供者回到标准模式
+                if (inputCaptureProvider != null) {
+                    inputCaptureProvider.disableCapture();
+                }
+                inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(Game.this, Game.this);
+            }
+
+            @Override
+            public void onStreamViewReady(StreamView streamView) {
+                // 保存外接显示器的StreamView引用
+                externalStreamView = streamView;
+
+                // 外接显示器StreamView准备就绪时的处理
+                streamView.setOnGenericMotionListener(Game.this);
+                streamView.setOnKeyListener(Game.this);
+                streamView.setInputCallbacks(Game.this);
+
+                // 设置触摸监听
+                View backgroundTouchView = findViewById(R.id.backgroundTouchView);
+                if (backgroundTouchView != null) {
+                    backgroundTouchView.setOnTouchListener(Game.this);
+                }
+
+                // 设置Surface回调
+                streamView.getHolder().addCallback(Game.this);
+
+                LimeLog.info("External display StreamView ready: " + streamView.getWidth() + "x" + streamView.getHeight());
+            }
+        });
+        externalDisplayManager.initialize();
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -1077,6 +1401,22 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     @Override
     public void onUserLeaveHint() {
         super.onUserLeaveHint();
+
+        // 获取用户设置，判断是否启用“快速恢复串流”
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean isResumeEnabled = prefs.getBoolean("checkbox_resume_stream", false);
+
+        // 只有在开关开启时，才允许标记 resume
+        if (isResumeEnabled) {
+            // 如果没有进入画中画模式，则标记为需要在回来时恢复会话
+            if (!autoEnterPip && Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                shouldResumeSession = true;
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // Android 12+ 自动 PiP，如果系统没有触发 PiP，我们假设是后台
+                // 注意：如果 Android 12 自动进入了 PiP，Activity 不会 Stop，也就不会触发恢复逻辑，这是符合预期的
+                shouldResumeSession = true;
+            }
+        }
 
         // PiP is only supported on Oreo and later, and we don't need to manually enter PiP on
         // Android S and later. On Android R, we will use onPictureInPictureRequested() instead.
@@ -1462,6 +1802,22 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     protected void onStop() {
         super.onStop();
 
+        // 检查是否是因为锁屏导致的应用停止
+        // 如果是锁屏，且开启了快速恢复功能，我们需要强制标记 shouldResumeSession = true
+        if (!shouldResumeSession) { // 如果 onUserLeaveHint 还没标记过
+            android.os.PowerManager pm = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm != null && !pm.isInteractive()) {
+                // isInteractive() 为 false 表示屏幕关闭（锁屏状态）
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+                boolean isResumeEnabled = prefs.getBoolean("checkbox_resume_stream", true);
+
+                if (isResumeEnabled) {
+                    shouldResumeSession = true;
+                    LimeLog.info("检测到锁屏，已标记为待恢复会话");
+                }
+            }
+        }
+
         if (progressOverlay != null) {
             progressOverlay.dismiss();
             progressOverlay = null;
@@ -1569,7 +1925,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 averageEndToEndLatency, averageDecoderLatency);
         }
 
-        finish();
+        if (shouldResumeSession) {
+            LimeLog.info("应用进入后台，保持 Activity 存活以备快速恢复。连接已断开。");
+        } else {
+            finish();
+        }
     }
 
     private void setInputGrabState(boolean grab) {
@@ -3007,6 +3367,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     private void stopConnection() {
+        // 重置尝试连接标志。
+        // 这确保了当 Activity 驻留在后台未销毁，再次回到前台触发 surfaceChanged 时，
+        // 代码会认为这是一个新的开始，从而再次执行 conn.start()。
+        attemptedConnection = false;
+
         if (connecting || connected) {
             connecting = connected = false;
             updatePipAutoEnter();
@@ -3311,7 +3676,42 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         this.currentHostAddress = getIntent().getStringExtra(EXTRA_HOST);
 
         // 2. 调用统一的状态管理方法
-        updateCursorServiceState(prefConfig.enableLocalCursorRendering);
+        updateCursorServiceState(prefConfig.enableLocalCursorRendering && prefConfig.touchscreenTrackpad);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        if (shouldResumeSession) {
+            LimeLog.info("从后台恢复，正在快速重连...");
+
+            // 强制关闭所有残留的 Dialog
+            // 即使之前的 connectionTerminated 漏网弹出了对话框，现在也把它关掉
+            Dialog.closeDialogs();
+
+            // 重置状态，准备迎接新的连接
+            // 只有回到前台准备重连了，我们才再次关心连接失败的弹窗
+            shouldResumeSession = false;
+            displayedFailureDialog = false;
+
+            // 重新显示加载遮罩
+            progressOverlay = new FullscreenProgressOverlay(this, app);
+            ComputerDetails computer = new ComputerDetails();
+            computer.name = pcName;
+            computer.uuid = getIntent().getStringExtra(EXTRA_PC_UUID);
+            progressOverlay.setComputer(computer);
+            progressOverlay.show(getResources().getString(R.string.conn_establishing_title),
+                    getResources().getString(R.string.conn_establishing_msg));
+
+            // 重新准备连接对象
+            prepareConnection();
+
+            // 重置连接状态标志
+            attemptedConnection = false;
+            connecting = false;
+            connected = false;
+        }
     }
 
     @Override
@@ -3416,7 +3816,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
 
         if (!attemptedConnection) {
-            attemptedConnection = true;
+            attemptedConnection = true; // 标记已尝试连接
 
             // Update GameManager state to indicate we're "loading" while connecting
             UiHelper.notifyStreamConnecting(Game.this);
