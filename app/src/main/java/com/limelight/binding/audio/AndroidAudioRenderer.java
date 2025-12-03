@@ -270,4 +270,37 @@ public class AndroidAudioRenderer implements AudioRenderer {
 
         track.release();
     }
+
+    // 保存当前的静音状态
+    private boolean isMuted = false;
+
+    // 保存目标音量增益。默认 1.0f (100%)，即完全由系统音量控制。
+    private float mTargetVolume = 1.0f;
+
+    /**
+     * 设置是否静音
+     * @param muted true=静音 (增益设为0), false=恢复 (恢复到 mTargetVolume)
+     */
+    public void setMuted(boolean muted) {
+        if (this.isMuted == muted) return; // 状态未变，无需操作
+        this.isMuted = muted;
+
+        if (track != null) {
+            try {
+                // 如果静音，增益设为 0.0；
+                // 如果取消静音，恢复为之前保存的目标音量 (默认是 1.0)
+                float vol = muted ? 0.0f : mTargetVolume;
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    track.setVolume(vol);
+                } else {
+                    track.setStereoVolume(vol, vol);
+                }
+            } catch (Exception e) {
+                // 忽略播放器状态异常 (如未初始化等)
+                LimeLog.warning("Failed to set volume: " + e.getMessage());
+            }
+        }
+    }
+
 }

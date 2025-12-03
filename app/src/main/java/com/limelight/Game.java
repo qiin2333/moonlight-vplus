@@ -223,13 +223,16 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private final Map<Integer, NativeTouchContext.Pointer> nativeTouchPointerMap = new HashMap<>();
     private String currentHostAddress; // 保存当前连接的IP
     private boolean shouldResumeSession = false;
-    
+
     // 记录上次的旋转角度，用于检测旋转变化
     private int lastRotation = -1;
-    
+
     // 标记当前是否是服务端主动旋转导致的客户端方向切换
     // 如果是，则不应该再通知服务端旋转，避免死循环
     private boolean isServerInitiatedRotation = false;
+    // 极端恢复模式开关：进入后台时保持连接不断开
+    private boolean isExtremeResumeEnabled = false;
+    private AndroidAudioRenderer audioRenderer;
 
     public enum BackKeyMenuMode {
         GAME_MENU,     // 游戏菜单模式
@@ -370,7 +373,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+// 这一行告诉 Android 系统，这个窗口需要硬件加速，并且不要在后台进行不必要的缓冲
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            getWindow().setDecorFitsSystemWindows(false);
+        }
         UiHelper.setLocale(this);
 
         // We don't want a title bar
@@ -403,7 +409,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // Read the stream preferences
         prefConfig = PreferenceConfiguration.readPreferences(this);
         tombstonePrefs = Game.this.getSharedPreferences("解码器墓碑", 0);
-
+// 读取极端恢复模式配置
+        SharedPreferences globalPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+        isExtremeResumeEnabled = globalPrefs.getBoolean("checkbox_extreme_resume", false) && globalPrefs.getBoolean("checkbox_resume_stream", false);
         // Initialize app settings manager
         appSettingsManager = new AppSettingsManager(this);
 
@@ -925,7 +933,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         });
         // 重置状态变量
         requestedNotificationOverlayVisibility = View.GONE;
-        
+
         // 重置旋转状态，以便重新检测初始方向
         lastRotation = -1;
         isServerInitiatedRotation = false;
@@ -1285,7 +1293,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // Re-apply display position
         refreshDisplayPosition();
-        
+
         // 检测旋转变化并通知服务端（仅在自动旋转模式下）
         // 但如果当前旋转是由服务端主动旋转导致的，则不应该再通知服务端，避免死循环
         if (prefConfig.rotableScreen && conn != null && !isServerInitiatedRotation) {
@@ -1304,18 +1312,18 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             LimeLog.warning("checkAndSyncOrientation: display is null");
             return;
         }
-        
+
         android.graphics.Point size = new android.graphics.Point();
         display.getRealSize(size);
-        
+
         boolean clientIsLandscape = size.x > size.y;
         boolean serverIsLandscape = width > height;
-        
-        LimeLog.info("checkAndSyncOrientation: client=" + size.x + "x" + size.y + 
+
+        LimeLog.info("checkAndSyncOrientation: client=" + size.x + "x" + size.y +
                 " (" + (clientIsLandscape ? "landscape" : "portrait") + ")" +
-                ", server=" + width + "x" + height + 
+                ", server=" + width + "x" + height +
                 " (" + (serverIsLandscape ? "landscape" : "portrait") + ")");
-        
+
         if (clientIsLandscape != serverIsLandscape) {
             LimeLog.info("checkAndSyncOrientation: mismatch detected, notifying server");
             handleRotationChange();
@@ -1326,26 +1334,26 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             }
         }
     }
-    
+
     /**
      * 处理旋转变化，通知服务端同步修改分辨率
      */
     private final Handler rotationHandler = new Handler(Looper.getMainLooper());
     private Runnable pendingRotationRunnable = null;
     private static final long ROTATION_DEBOUNCE_MS = 3000;
-    
+
     private void handleRotationChange() {
         int orientation = getResources().getConfiguration().orientation;
         boolean isLandscape = (orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE);
         int currentOrientation = isLandscape ? 1 : 0;
-        
+
         LimeLog.info("处理旋转变化：isLandscape=" + isLandscape + ", 最后旋转=" + lastRotation);
-        
+
         if (conn == null || !connected) {
             LimeLog.warning("handleRotationChange：连接未准备好");
             return;
         }
-        
+
         if (lastRotation == -1) {
             lastRotation = currentOrientation;
             LimeLog.info("handleRotationChange：第一次调用，orientation=" + currentOrientation);
@@ -1354,13 +1362,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         } else {
             lastRotation = currentOrientation;
         }
-        
+
         int angle = isLandscape ? 0 : 90;
-        
+
         if (pendingRotationRunnable != null) {
             rotationHandler.removeCallbacks(pendingRotationRunnable);
         }
-        
+
         pendingRotationRunnable = () -> {
             LimeLog.info("handleRotationChange：通知服务器，angle=" + angle);
             conn.rotateDisplay(angle, new NvConnection.DisplayRotationCallback() {
@@ -1376,7 +1384,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             });
             pendingRotationRunnable = null;
         };
-        
+
         rotationHandler.postDelayed(pendingRotationRunnable, ROTATION_DEBOUNCE_MS);
     }
 
@@ -1775,6 +1783,17 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     protected void onDestroy() {
         super.onDestroy();
 
+        // 在 App 彻底关闭时，清理替身线程
+        if (mDummyHolder != null) {
+            mDummyHolder.release();
+            mDummyHolder = null;
+        }
+
+        // 确保在 Activity 彻底销毁时停止连接（因为 onStop 可能跳过了它）
+        if (conn != null && connected) {
+            stopConnection();
+        }
+
         if (controllerHandler != null) {
             controllerHandler.destroy();
         }
@@ -1966,9 +1985,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             analyticsManager.logGameStreamEnd(pcName, appName, effectiveStreamDuration,
                     decoderMessage, resolutionWidth, resolutionHeight,
                     averageEndToEndLatency, averageDecoderLatency);
-            
+
             LimeLog.info("串流统计 - 有效时长: " + (effectiveStreamDuration / 1000) + "秒, 总耗时: " + (totalElapsedTime / 1000) + "秒");
-            
+
             // 重置统计状态
             streamStartTime = 0;
             accumulatedStreamTime = 0;
@@ -3987,7 +4006,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         accumulatedStreamTime = 0;
         lastActiveTime = streamStartTime;
         isStreamingActive = true;
-        
+
         // 记录游戏流媒体开始事件
         if (analyticsManager != null && pcName != null) {
             analyticsManager.logGameStreamStart(pcName, appName);
@@ -4011,6 +4030,19 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             LimeLog.info("串流时长计时恢复，之前累计: " + (accumulatedStreamTime / 1000) + " 秒");
         }
 
+        // 如果处于极端恢复模式且连接仍然活跃
+        if (isExtremeResumeEnabled && connected) {
+            LimeLog.info("Extreme Resume: Returning to foreground with active connection.");
+            // 确保加载遮罩是隐藏的
+            if (progressOverlay != null) {
+                progressOverlay.dismiss();
+                progressOverlay = null;
+            }
+            // 恢复系统 UI 隐藏状态
+            hideSystemUi(500);
+            return;
+        }
+
         if (shouldResumeSession) {
             LimeLog.info("从后台恢复，正在快速重连...");
 
@@ -4032,13 +4064,28 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             progressOverlay.show(getResources().getString(R.string.conn_establishing_title),
                     getResources().getString(R.string.conn_establishing_msg));
 
-            // 重新准备连接对象
-            prepareConnection();
+
+            try {
+                // 这个方法内部涉及 InputManager 和 Service 绑定，必须在主线程
+                prepareConnection();
+            } catch (Exception e) {
+                LimeLog.severe("Failed to prepare connection: " + e.getMessage());
+                // 如果准备失败，最好结束 Activity 防止状态错乱
+                finish();
+                return;
+            }
 
             // 重置连接状态标志
             attemptedConnection = false;
             connecting = false;
             connected = false;
+
+            // 通知 SurfaceView 刷新，这会尽快触发 surfaceChanged
+            // 从而触发 conn.start()
+            if (streamView != null) {
+                streamView.requestLayout();
+                streamView.invalidate();
+            }
         }
     }
 
@@ -4129,15 +4176,15 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // 确保输入是偶数
         final int alignedWidth = width & ~1;
         final int alignedHeight = height & ~1;
-        
+
         // 计算基础分辨率（如果有缩放）
         final int baseWidth;
         final int baseHeight;
-        
+
         if (prefConfig.resolutionScale != 100) {
             baseWidth = (alignedWidth * 100 / prefConfig.resolutionScale) & ~1;
             baseHeight = (alignedHeight * 100 / prefConfig.resolutionScale) & ~1;
-            LimeLog.info("Resolution scale conversion: actual=" + alignedWidth + "x" + alignedHeight + 
+            LimeLog.info("Resolution scale conversion: actual=" + alignedWidth + "x" + alignedHeight +
                     ", base=" + baseWidth + "x" + baseHeight + ", scale=" + prefConfig.resolutionScale + "%");
         } else {
             baseWidth = alignedWidth;
@@ -4149,35 +4196,35 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             LimeLog.info("onResolutionChanged: First resolution received, checking orientation " + baseWidth + "x" + baseHeight);
             checkAndSyncOrientation(baseWidth, baseHeight);
         }
-        
+
         // 跳过相同分辨率的重复通知
         if (prefConfig.width == baseWidth && prefConfig.height == baseHeight) {
             return;
         }
 
-        LimeLog.info("Resolution changed: " + prefConfig.width + "x" + prefConfig.height + 
+        LimeLog.info("Resolution changed: " + prefConfig.width + "x" + prefConfig.height +
                 " -> " + baseWidth + "x" + baseHeight);
 
         // 更新内存中的串流基础分辨率
         prefConfig.width = baseWidth;
         prefConfig.height = baseHeight;
-        
+
         // 通知解码器分辨率变更
         if (connected && decoderRenderer != null) {
             decoderRenderer.onResolutionChanged(baseWidth, baseHeight);
         }
-        
+
         final boolean isLandscape = baseWidth > baseHeight;
-        
+
         runOnUiThread(() -> {
-            Toast.makeText(this, getString(R.string.host_resolution_changed, baseWidth, baseHeight), 
+            Toast.makeText(this, getString(R.string.host_resolution_changed, baseWidth, baseHeight),
                     Toast.LENGTH_SHORT).show();
 
             // rotableScreen 模式下强制切换方向以匹配主机分辨率
             if (prefConfig.rotableScreen) {
                 isServerInitiatedRotation = true;
-                setRequestedOrientation(isLandscape 
-                        ? ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE 
+                setRequestedOrientation(isLandscape
+                        ? ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
                         : ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT);
                 rotationHandler.postDelayed(() -> isServerInitiatedRotation = false, 1000);
             } else {
@@ -4187,10 +4234,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             updateStreamViewSize(baseWidth, baseHeight);
         });
     }
-    
+
     /**
      * 设置视频 Surface 的尺寸和缩放模式
-     * 
+     *
      * @param width 视频宽度（像素）
      * @param height 视频高度（像素）
      * @param forceFixedSize 是否强制使用固定尺寸（用于 Android M 以下且宽高比匹配的情况）
@@ -4199,34 +4246,34 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         if (streamView == null) {
             return;
         }
-        
+
         // 获取屏幕真实物理尺寸（像素），使用 getRealSize 而不是 getSize
         // getSize 返回的是可用区域（去掉了状态栏和导航栏），getRealSize 返回真实屏幕尺寸
         Display display = externalDisplayManager != null ?
                 externalDisplayManager.getTargetDisplay() : getWindowManager().getDefaultDisplay();
         Point screenSize = new Point();
         display.getRealSize(screenSize);
-        
+
         // 检查主机分辨率是否超过屏幕物理尺寸
         boolean exceedsScreenSize = width > screenSize.x || height > screenSize.y;
-        
+
         // 决定使用固定尺寸还是按比例缩放：
         // 1. stretchVideo 开启且不超过屏幕尺寸 -> 固定尺寸
         // 2. forceFixedSize (Android M 以下且宽高比匹配) -> 固定尺寸
         // 3. 其他情况 -> 按比例缩放
         boolean useFixedSize = (prefConfig.stretchVideo && !exceedsScreenSize) || forceFixedSize;
-        
+
         if (useFixedSize) {
             // Surface 固定为视频尺寸
             streamView.setDesiredAspectRatio(0);
             streamView.getHolder().setFixedSize(width, height);
-            LimeLog.info("Set fixed surface size: " + width + "x" + height + 
+            LimeLog.info("Set fixed surface size: " + width + "x" + height +
                     " (screen: " + screenSize.x + "x" + screenSize.y + ")");
         } else {
             // 保持比例显示，或分辨率超过屏幕时让系统自动缩放
             if (exceedsScreenSize) {
-                LimeLog.info("Host resolution " + width + "x" + height + 
-                        " exceeds screen size " + screenSize.x + "x" + screenSize.y + 
+                LimeLog.info("Host resolution " + width + "x" + height +
+                        " exceeds screen size " + screenSize.x + "x" + screenSize.y +
                         ", using aspect ratio scaling");
             }
             // 清除之前的固定尺寸设置，确保宽高比缩放正常工作
@@ -4235,7 +4282,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             streamView.requestLayout();
         }
     }
-    
+
     /**
      * 设置视频 Surface 尺寸（默认不强制固定尺寸）
      */
@@ -4254,20 +4301,46 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             throw new IllegalStateException("Surface changed before creation!");
         }
 
+
+        if (decoderRenderer != null) {
+            // 1. 设置回真正的屏幕 Holder
+            decoderRenderer.setRenderTarget(holder);
+        }
+
+        // 强制断开替身连接
+        if (mDummyHolder != null) {
+            mDummyHolder.release();
+            mDummyHolder = null; // 销毁引用，迫使下次切后台重新创建
+        }
+
         if (!attemptedConnection) {
             attemptedConnection = true; // 标记已尝试连接
 
             // Update GameManager state to indicate we're "loading" while connecting
             UiHelper.notifyStreamConnecting(Game.this);
 
-            decoderRenderer.setRenderTarget(holder);
 
-            conn.start(new AndroidAudioRenderer(Game.this, prefConfig.enableAudioFx, prefConfig.enableSpatializer),
-                    decoderRenderer, Game.this);
+
+            // 实例化并保存到成员变量
+            this.audioRenderer = new AndroidAudioRenderer(Game.this, prefConfig.enableAudioFx, prefConfig.enableSpatializer);
+
+            // 使用成员变量启动连接
+            conn.start(this.audioRenderer, decoderRenderer, Game.this);
 
             if (streamView != null) {
                 streamView.post(this::syncCursorWithStream);
             }
+        } else if (connected && isExtremeResumeEnabled) {
+            // 恢复时强制同步一次光标位置，防止错位
+            if (streamView != null) {
+                streamView.post(this::syncCursorWithStream);
+            }
+
+            // 回到前台，恢复音量
+            if (audioRenderer != null) {
+                audioRenderer.setMuted(false);
+            }
+
         }
 
         // 处理缩放手势
@@ -4318,11 +4391,40 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         destroyLocalCursorRenderers();
 
         if (attemptedConnection) {
-            // Let the decoder know immediately that the surface is gone
-            decoderRenderer.prepareForStop();
+            if (isExtremeResumeEnabled && !isFinishing()) {
 
-            if (connected) {
-                stopConnection();
+                // 如果为true，则静音
+                SharedPreferences globalPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+                if (!globalPrefs.getBoolean("checkbox_background_audio", false)) {
+                    if (audioRenderer != null) {
+                        audioRenderer.setMuted(true);
+                        LimeLog.info("Extreme Resume: Audio muted for background.");
+                    }
+                }
+
+                LimeLog.info("Extreme Resume: Switching to Dummy Surface.");
+
+                // 1. 创建替身
+                if (mDummyHolder == null) {
+                    mDummyHolder = new DummySurfaceHolder();
+                }
+
+                // 2. 将解码器目标指向替身
+                // 解码器会以为这还是个有效的屏幕，继续工作，不会 NPE，也不会 crash
+                if (decoderRenderer != null) {
+                    try {
+                        decoderRenderer.setRenderTarget(mDummyHolder);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+                return; // 安全返回，后台继续解码
+            } else {
+                // 正常退出
+                decoderRenderer.prepareForStop();
+                if (connected) {
+                    stopConnection();
+                }
             }
         }
     }
@@ -5026,4 +5128,80 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // Apply background color without animation
         notificationOverlayView.setCardBackgroundColor(backgroundColor);
     }
+
+    // =======================================================
+    // 替身 SurfaceHolder，用于后台保活解码器
+    // =======================================================
+    private class DummySurfaceHolder implements SurfaceHolder, android.graphics.SurfaceTexture.OnFrameAvailableListener {
+        private final android.graphics.SurfaceTexture mSurfaceTexture;
+        private final Surface mSurface;
+        private final android.os.HandlerThread mDrainThread; // 专门用于“倒垃圾”的后台线程
+        private final android.os.Handler mDrainHandler;
+
+        public DummySurfaceHolder() {
+            // 1. 启动一个后台线程，专门处理帧消耗，避免阻塞主线程
+            mDrainThread = new android.os.HandlerThread("DummySurfaceDrainer");
+            mDrainThread.start();
+            mDrainHandler = new android.os.Handler(mDrainThread.getLooper());
+
+            // 2. 创建 SurfaceTexture (0 表示不绑定任何 GL 纹理 ID)
+            mSurfaceTexture = new android.graphics.SurfaceTexture(0);
+
+            // 关键：将它从当前 GL 上下文解绑 (防止 updateTexImage 报错)
+            mSurfaceTexture.detachFromGLContext();
+
+            // 3. 设置监听器：每当有新的一帧数据进来，就在后台线程调用 onFrameAvailable
+            mSurfaceTexture.setOnFrameAvailableListener(this, mDrainHandler);
+
+            mSurface = new Surface(mSurfaceTexture);
+        }
+
+        // [核心逻辑] 当解码器把一帧画面渲染过来时，这个方法会被调用
+        @Override
+        public void onFrameAvailable(android.graphics.SurfaceTexture surfaceTexture) {
+            try {
+                // 这一步至关重要！
+                // updateTexImage() 会将最新的一帧从队列中取出来。
+                // 这相当于“消费”了这一帧，从而腾出了缓冲区的一个空位。
+                // 这样解码器就可以继续渲染下一帧，永远不会因为缓冲区满而卡死。
+                surfaceTexture.updateTexImage();
+            } catch (Exception e) {
+                // 忽略可能的异常（比如在释放过程中收到了帧）
+            }
+        }
+
+        public void release() {
+            // 停止监听
+            mSurfaceTexture.setOnFrameAvailableListener(null);
+
+            // 释放资源
+            mSurface.release();
+            mSurfaceTexture.release();
+
+            // 停止后台线程
+            mDrainThread.quitSafely();
+        }
+
+        @Override
+        public Surface getSurface() {
+            return mSurface;
+        }
+
+        // 下面是接口必须实现的方法，全部留空即可
+        @Override public void addCallback(Callback callback) {}
+        @Override public void removeCallback(Callback callback) {}
+        @Override public boolean isCreating() { return false; }
+        @Override public void setType(int type) {}
+        @Override public void setFixedSize(int width, int height) {}
+        @Override public void setSizeFromLayout() {}
+        @Override public void setFormat(int format) {}
+        @Override public void setKeepScreenOn(boolean screenOn) {}
+        @Override public android.graphics.Canvas lockCanvas() { return null; }
+        @Override public android.graphics.Canvas lockCanvas(android.graphics.Rect dirty) { return null; }
+        @Override public void unlockCanvasAndPost(android.graphics.Canvas canvas) {}
+        @Override public android.graphics.Rect getSurfaceFrame() { return new android.graphics.Rect(0,0,1,1); }
+    }
+
+    private DummySurfaceHolder mDummyHolder;
+
 }
