@@ -4527,205 +4527,117 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         LimeLog.info("CursorFix:" + "Sync executed: W=" + w + " H=" + h + " X=" + x);
     }
 
+    private Thread cursorNetworkThread;
     private boolean isCursorNetworking = false;
-    private java.net.DatagramSocket cursorSocket;
+    private java.net.Socket cursorSocket;
     private static final int CURSOR_PORT = 5005;
-
     private String computerIpAddress;
 
-
-    private final android.util.LruCache<Long, android.graphics.Bitmap> cursorCache = new android.util.LruCache<>(100);
-
+    // 启动光标服务
     private void startCursorService(String hostIp) {
         if (isCursorNetworking) return;
         this.computerIpAddress = hostIp;
         this.isCursorNetworking = true;
 
-        // 每次启动服务时清空缓存，防止上次残留的数据导致错乱
-        cursorCache.evictAll();
+        cursorNetworkThread = new Thread(() -> {
+            LimeLog.info("CursorNet: 服务线程启动，目标: " + computerIpAddress);
 
-        // 1. 初始化 Socket
-        // 1秒超时
-        // 增大缓冲区，防止 4K 屏大光标被截断
-        // 初始化为当前时间，避免刚启动就触发超时重置
-        // 发送握手包 (每2秒一次)
-        // 接收数据
-        // 重置 packet 长度
-        // 阻塞接收
-        // 只有成功接收到数据后，才更新时间！
-        // 最小包长检测
-        // 0=全量, 1=缓存
-        // CRC32
-        // === 缓存命中 ===
-        // === 全量数据 ===
-        // 存入缓存
-        // 方案B：当启用了原生指针且API版本符合时，使用 PointerIcon
-        // 方案A：使用自定义View绘制
-        // 因为 Python 端现在每 1 秒会发一次心跳包。
-        // 所以，如果我们超过 3 秒 (3000ms) 还没收到任何数据，
-        // 那肯定是因为服务器挂了，或者是网络断了。
-        // 为了避免瞬间闪烁，再次确认时间差
-        // 重置计时，避免疯狂触发
-        // 恢复为默认箭头
-        // 只有真的断连了，才会变回默认光标
-        // UDP 相关变量
-        Thread cursorNetworkThread = new Thread(() -> {
-            try {
-                // 1. 初始化 Socket
-                cursorSocket = new java.net.DatagramSocket();
-                cursorSocket.setSoTimeout(1000); // 1秒超时
+            // === 外层循环：负责断线重连 ===
+            while (isCursorNetworking) {
+                try {
+                    LimeLog.info("CursorNet: 正在尝试连接 TCP " + computerIpAddress);
+                    cursorSocket = new java.net.Socket();
 
-                java.net.InetAddress serverAddr = java.net.InetAddress.getByName(computerIpAddress);
-                byte[] helloData = "CURSOR_HELLO".getBytes(StandardCharsets.UTF_8);
-                java.net.DatagramPacket helloPacket = new java.net.DatagramPacket(
-                        helloData, helloData.length, serverAddr, CURSOR_PORT);
+                    // 连接超时设置为 3秒
+                    cursorSocket.connect(new java.net.InetSocketAddress(computerIpAddress, CURSOR_PORT), 3000);
+                    cursorSocket.setTcpNoDelay(true);
 
-                // 增大缓冲区，防止 4K 屏大光标被截断
-                byte[] receiveBuffer = new byte[64 * 1024];
-                java.net.DatagramPacket receivePacket = new java.net.DatagramPacket(receiveBuffer, receiveBuffer.length);
+                    java.io.DataInputStream dis = new java.io.DataInputStream(cursorSocket.getInputStream());
+                    LimeLog.info("CursorNet: TCP 连接成功");
 
-                LimeLog.info("CursorNet:" + "握手开始于 " + computerIpAddress);
+                    // === 内层循环：负责数据接收 ===
+                    while (isCursorNetworking) {
+                        // 1. 读取长度
+                        byte[] lenBytes = new byte[4];
+                        dis.readFully(lenBytes); // 阻塞读取，如果断开会抛 EOFException
 
-                long lastHelloTime = 0;
-                // 初始化为当前时间，避免刚启动就触发超时重置
-                long lastReceiveTime = System.currentTimeMillis();
+                        int packetLen = (lenBytes[0] & 0xFF) |
+                                ((lenBytes[1] & 0xFF) << 8) |
+                                ((lenBytes[2] & 0xFF) << 16) |
+                                ((lenBytes[3] & 0xFF) << 24);
 
-                while (isCursorNetworking) {
-                    // 发送握手包 (每2秒一次)
-                    long now = System.currentTimeMillis();
-                    if (now - lastHelloTime > 2000) {
-                        try {
-                            cursorSocket.send(helloPacket);
-                            LimeLog.info("CursorNet: 已向发送握手数据包 " + computerIpAddress);
-                            lastHelloTime = now;
-                        } catch (Exception e) {
-                            LimeLog.warning("CursorNet: 发送握手数据包失败： " + e.getMessage());
-                        }
-                    }
+                        // 2. 读取包体
+                        byte[] bodyData = new byte[packetLen];
+                        dis.readFully(bodyData);
 
-                    // 接收数据
-                    try {
-                        // 重置 packet 长度
-                        receivePacket.setLength(receiveBuffer.length);
+                        // 3. 解析
+                        java.nio.ByteBuffer wrapped = java.nio.ByteBuffer.wrap(bodyData);
+                        wrapped.order(java.nio.ByteOrder.LITTLE_ENDIAN);
 
-                        // 阻塞接收
-                        cursorSocket.receive(receivePacket);
+                        int hotX = wrapped.getInt();
+                        int hotY = wrapped.getInt();
+                        int pngSize = packetLen - 8;
 
-                        // 只有成功接收到数据后，才更新时间！
-                        lastReceiveTime = System.currentTimeMillis();
-
-                        byte[] data = receivePacket.getData();
-                        int length = receivePacket.getLength();
-
-                        // 最小包长检测
-                        if (length >= 17) {
-                            java.nio.ByteBuffer wrapped = java.nio.ByteBuffer.wrap(data);
-                            wrapped.order(java.nio.ByteOrder.LITTLE_ENDIAN);
-
-                            byte type = wrapped.get();      // 0=全量, 1=缓存
-                            long hash = wrapped.getLong();  // CRC32
-                            int hotX = wrapped.getInt();
-                            int hotY = wrapped.getInt();
-
-                            android.graphics.Bitmap targetBitmap = null;
-
-                            if (type == 1) {
-                                // === 缓存命中 ===
-                                targetBitmap = cursorCache.get(hash);
-                                LimeLog.info("CursorNet: 收到带有哈希的缓存游标 " + hash);
-                            } else if (type == 0) {
-                                // === 全量数据 ===
-                                int imageOffset = 17;
-                                int imageLen = length - imageOffset;
-                                if (imageLen > 0) {
-                                    targetBitmap = android.graphics.BitmapFactory.decodeByteArray(data, imageOffset, imageLen);
-                                    if (targetBitmap != null) {
-                                        cursorCache.put(hash, targetBitmap); // 存入缓存
-                                        LimeLog.info("CursorNet: 收到带有哈希值的新游标 " + hash + ", size: " + imageLen + " bytes");
-                                    }
-                                }
-                            }
-
-                            if (targetBitmap != null) {
-                                final android.graphics.Bitmap finalBmp = targetBitmap;
+                        if (pngSize > 0) {
+                            android.graphics.Bitmap bmp = android.graphics.BitmapFactory.decodeByteArray(bodyData, 8, pngSize);
+                            if (bmp != null) {
+                                final android.graphics.Bitmap finalBmp = bmp;
                                 runOnUiThread(() -> {
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && prefConfig.enableNativeMousePointer) {
-                                        // 方案B：当启用了原生指针且API版本符合时，使用 PointerIcon
-                                        PointerIcon pointerIcon = PointerIcon.create(finalBmp, hotX, hotY);
-                                        streamView.setPointerIcon(pointerIcon);
+                                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N && prefConfig.enableNativeMousePointer) {
+                                        try {
+                                            PointerIcon pointerIcon = PointerIcon.create(finalBmp, hotX, hotY);
+                                            streamView.setPointerIcon(pointerIcon);
+                                        } catch (Exception ignored) {}
                                     } else {
-                                        // 方案A：使用自定义View绘制
-                                        CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
+                                        com.limelight.ui.CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
                                         if (cursorOverlay != null) {
                                             cursorOverlay.setCursorBitmap(finalBmp, hotX, hotY);
                                         }
                                     }
                                 });
-                            } else {
-                                LimeLog.warning("CursorNet: 无法解码光标位图, type: " + type + ", hash: " + hash);
                             }
-                        } else {
-                            LimeLog.warning("CursorNet: 收到的数据包太小: " + length + " bytes");
                         }
-                    } catch (java.net.SocketTimeoutException e) {
-                        // 因为 Python 端现在每 1 秒会发一次心跳包。
-                        // 所以，如果我们超过 3 秒 (3000ms) 还没收到任何数据，
-                        // 那肯定是因为服务器挂了，或者是网络断了。
-                        if (System.currentTimeMillis() - lastReceiveTime > 3000) {
-                            LimeLog.warning("CursorNet: 与游标服务器的连接超时");
+                    }
+                } catch (Exception e) {
+                    // 包含: ConnectException (连不上), EOFException (服务端断开), SocketException
+                    LimeLog.warning("CursorNet: 连接断开或失败: " + e.getMessage());
+                } finally {
+                    // 每次断开（无论是内层循环结束还是异常），都清理资源并重置光标
+                    try {
+                        if (cursorSocket != null) cursorSocket.close();
+                    } catch (Exception ignored) {}
+                    cursorSocket = null;
 
-                            // 为了避免瞬间闪烁，再次确认时间差
-                            lastReceiveTime = System.currentTimeMillis(); // 重置计时，避免疯狂触发
+                    // 只有当服务还开启时，才恢复默认图标（避免退出游戏时闪烁）
+                    if (isCursorNetworking) {
+                        restoreDefaultCursor();
 
-                            runOnUiThread(() -> {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && prefConfig.enableNativeMousePointer) {
-                                    // 恢复为默认箭头
-                                    streamView.setPointerIcon(PointerIcon.getSystemIcon(Game.this, PointerIcon.TYPE_ARROW));
-                                } else {
-                                    CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
-                                    if (cursorOverlay != null) {
-                                        // 只有真的断连了，才会变回默认光标
-                                        cursorOverlay.resetToDefault();
-                                        LimeLog.warning("CursorNet:" + "服务器超时，正在重置光标。");
-                                    }
-                                }
-                            });
+                        // === 等待重连 ===
+                        LimeLog.info("CursorNet: 2秒后重试连接...");
+                        try {
+                            Thread.sleep(2000);
+                        } catch (InterruptedException e) {
+                            // 线程被中断，可能是退出游戏，结束外层循环
+                            break;
                         }
-                    } catch (Exception e) {
-                        LimeLog.warning("CursorNet: 接收数据包时出错： " + e.getMessage());
                     }
                 }
-            } catch (Exception e) {
-                LimeLog.warning("CursorNet:" + "严重错误： " + e.getMessage());
-            } finally {
-                if (cursorSocket != null) {
-                    cursorSocket.close();
-                    cursorSocket = null;
-                    LimeLog.info("CursorNet: 套接字已关闭");
-                }
             }
+
+            LimeLog.info("CursorNet: 服务线程已退出");
         });
         cursorNetworkThread.start();
     }
 
-    private void stopCursorService() {
-        isCursorNetworking = false; // 退出循环标志
-
-        // 关闭 Socket
-        if (cursorSocket != null) {
-            try {
-                cursorSocket.close();
-            } catch (Exception e) {
-            }
-            cursorSocket = null;
-        }
-
-        // 清空画布 UI
+    // 辅助方法：恢复默认光标
+    private void restoreDefaultCursor() {
         runOnUiThread(() -> {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N && prefConfig.enableNativeMousePointer) {
-                streamView.setPointerIcon(PointerIcon.getSystemIcon(Game.this, PointerIcon.TYPE_ARROW));
+                try {
+                    streamView.setPointerIcon(PointerIcon.getSystemIcon(Game.this, PointerIcon.TYPE_ARROW));
+                } catch (Exception ignored) {}
             } else {
-                CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
+                com.limelight.ui.CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
                 if (cursorOverlay != null) {
                     cursorOverlay.resetToDefault();
                 }
@@ -4733,6 +4645,43 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         });
     }
 
+    private void stopCursorService() {
+        // 1. 设置标志位，阻止外层循环再次重连
+        isCursorNetworking = false;
+
+        // 2. 打断线程的 sleep (如果正在重连等待中)
+        if (cursorNetworkThread != null) {
+            cursorNetworkThread.interrupt();
+        }
+
+        // 3. 强制关闭 Socket (打断 readFully 阻塞)
+        if (cursorSocket != null) {
+            try {
+                cursorSocket.close();
+            } catch (Exception e) {
+                // 忽略关闭时的错误
+            }
+            cursorSocket = null;
+        }
+
+        // 4. 清理 UI：恢复默认光标
+        runOnUiThread(() -> {
+            if (isFinishing() || isDestroyed()) return;
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N && prefConfig.enableNativeMousePointer) {
+                try {
+                    streamView.setPointerIcon(PointerIcon.getSystemIcon(Game.this, PointerIcon.TYPE_ARROW));
+                } catch (Exception ignored) {}
+            } else {
+                com.limelight.ui.CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
+                if (cursorOverlay != null) {
+                    cursorOverlay.resetToDefault();
+                }
+            }
+        });
+
+        LimeLog.info("CursorNet: 服务已停止");
+    }
     /**
      * 根据当前配置和运行状态，决定是启动还是停止光标服务
      */
