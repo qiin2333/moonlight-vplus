@@ -407,6 +407,23 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
             startActivity(intent);
         });
 
+        // Setup restore session button
+        ImageButton restoreSessionButton = findViewById(R.id.app_restoreSessionButton);
+        restoreSessionButton.setOnClickListener(v -> {
+            if (lastRunningAppId != 0) {
+                // Find the running app in the list
+                for (int i = 0; i < appGridAdapter.getCount(); i++) {
+                    AppObject app = (AppObject) appGridAdapter.getItem(i);
+                    if (app.app.getAppId() == lastRunningAppId) {
+                        startStreamWithLastSettingsIfEnabled(app);
+                        break;
+                    }
+                }
+            } else {
+                Toast.makeText(AppView.this, getResources().getString(R.string.no_online_computer_with_running_game), Toast.LENGTH_SHORT).show();
+            }
+        });
+
         // Bind to the computer manager service
         bindService(new Intent(this, ComputerManagerService.class), serviceConnection,
                 Service.BIND_AUTO_CREATE);
