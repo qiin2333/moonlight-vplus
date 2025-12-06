@@ -109,6 +109,10 @@ import java.util.Map;
 import java.util.Locale;
 import java.util.Set;
 
+import android.media.Image;
+import android.media.ImageReader;
+import android.graphics.ImageFormat;
+
 import com.limelight.services.KeyboardAccessibilityService;
 
 public class Game extends Activity implements SurfaceHolder.Callback,
@@ -5081,8 +5085,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     // =======================================================
     // 替身 SurfaceHolder，用于后台保活解码器
     // =======================================================
-    private class DummySurfaceHolder implements SurfaceHolder, android.graphics.SurfaceTexture.OnFrameAvailableListener {
-        private final android.graphics.SurfaceTexture mSurfaceTexture;
+    private class DummySurfaceHolder implements SurfaceHolder {
+        private final ImageReader mImageReader;
         private final Surface mSurface;
         private final android.os.HandlerThread mDrainThread; // 专门用于“倒垃圾”的后台线程
         private final android.os.Handler mDrainHandler;
@@ -5093,39 +5097,36 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             mDrainThread.start();
             mDrainHandler = new android.os.Handler(mDrainThread.getLooper());
 
-            // 2. 创建 SurfaceTexture (0 表示不绑定任何 GL 纹理 ID)
-            mSurfaceTexture = new android.graphics.SurfaceTexture(0);
+            // 2. 创建 ImageReader，用于接收并丢弃视频帧
+            // 使用 YUV_420_888 格式，这是 MediaCodec 解码器通用的输出格式
+            // 使用配置的宽高，确保 ImageReader 缓冲区大小足够
+            mImageReader = ImageReader.newInstance(
+                    Math.max(1, prefConfig.width),
+                    Math.max(1, prefConfig.height),
+                    ImageFormat.YUV_420_888, 2);
 
-            // 关键：将它从当前 GL 上下文解绑 (防止 updateTexImage 报错)
-            mSurfaceTexture.detachFromGLContext();
+            // 3. 设置监听器：每当有新的一帧数据进来，就在后台线程调用
+            mImageReader.setOnImageAvailableListener(reader -> {
+                try {
+                    // 获取并立即关闭图片，相当于丢弃
+                    Image image = reader.acquireLatestImage();
+                    if (image != null) {
+                        image.close();
+                    }
+                } catch (Exception ignored) {
+                }
+            }, mDrainHandler);
 
-            // 3. 设置监听器：每当有新的一帧数据进来，就在后台线程调用 onFrameAvailable
-            mSurfaceTexture.setOnFrameAvailableListener(this, mDrainHandler);
-
-            mSurface = new Surface(mSurfaceTexture);
-        }
-
-        // [核心逻辑] 当解码器把一帧画面渲染过来时，这个方法会被调用
-        @Override
-        public void onFrameAvailable(android.graphics.SurfaceTexture surfaceTexture) {
-            try {
-                // 这一步至关重要！
-                // updateTexImage() 会将最新的一帧从队列中取出来。
-                // 这相当于“消费”了这一帧，从而腾出了缓冲区的一个空位。
-                // 这样解码器就可以继续渲染下一帧，永远不会因为缓冲区满而卡死。
-                surfaceTexture.updateTexImage();
-            } catch (Exception e) {
-                // 忽略可能的异常（比如在释放过程中收到了帧）
-            }
+            mSurface = mImageReader.getSurface();
         }
 
         public void release() {
             // 停止监听
-            mSurfaceTexture.setOnFrameAvailableListener(null);
+            mImageReader.setOnImageAvailableListener(null, null);
 
             // 释放资源
             mSurface.release();
-            mSurfaceTexture.release();
+            mImageReader.close();
 
             // 停止后台线程
             mDrainThread.quitSafely();
