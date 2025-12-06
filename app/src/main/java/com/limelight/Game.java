@@ -91,6 +91,17 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+
+import androidx.annotation.NonNull;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
+import android.provider.Settings;
+import androidx.core.content.ContextCompat;
+import androidx.core.app.ActivityCompat;
 
 import androidx.annotation.RequiresApi;
 
@@ -416,6 +427,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 // 读取极端恢复模式配置
         SharedPreferences globalPrefs = PreferenceManager.getDefaultSharedPreferences(this);
         isExtremeResumeEnabled = globalPrefs.getBoolean("checkbox_extreme_resume", false) && globalPrefs.getBoolean("checkbox_resume_stream", false);
+
+        if(globalPrefs.getBoolean("checkbox_resume_stream", false)) {
+            checkNotificationPermission();
+        }
+
         // Initialize app settings manager
         appSettingsManager = new AppSettingsManager(this);
 
@@ -1210,6 +1226,17 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         if (microphoneManager != null) {
             microphoneManager.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
+
+        if (requestCode == KEEP_ALIVE_NOTIFICATION_ID) {
+            // Check if the permission was granted
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission granted, show the notification
+                showKeepAliveNotification();
+            } else {
+                // Permission denied, show a toast message
+                Toast.makeText(this, "没有通知权限，后台串流可能会中断", Toast.LENGTH_LONG).show();
+            }
+        }
     }
 
     @Override
@@ -1786,6 +1813,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        cancelKeepAliveNotification();
 
         // 在 App 彻底关闭时，清理替身线程
         if (mDummyHolder != null) {
@@ -1999,6 +2027,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
 
         if (shouldResumeSession) {
+            showKeepAliveNotification();
             LimeLog.info("应用进入后台，保持 Activity 存活以备快速恢复。连接已断开。");
         } else {
             finish();
@@ -4036,6 +4065,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // 如果处于极端恢复模式且连接仍然活跃
         if (isExtremeResumeEnabled && connected) {
+            cancelKeepAliveNotification();
             LimeLog.info("Extreme Resume: Returning to foreground with active connection.");
             // 确保加载遮罩是隐藏的
             if (progressOverlay != null) {
@@ -4048,6 +4078,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
 
         if (shouldResumeSession) {
+            cancelKeepAliveNotification();
             LimeLog.info("从后台恢复，正在快速重连...");
 
             // 强制关闭所有残留的 Dialog
@@ -4482,6 +4513,59 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             }
         }
         updateCursorServiceState(enabled);
+    }
+
+    private static final String KEEP_ALIVE_CHANNEL_ID = "keep_alive_channel";
+    private static final int KEEP_ALIVE_NOTIFICATION_ID = 1001;
+
+    private void showKeepAliveNotification() {
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (notificationManager == null) return;
+
+        // Check if we have the POST_NOTIFICATIONS permission on Android 13+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                // Request the permission
+                ActivityCompat.requestPermissions(this,
+                        new String[]{android.Manifest.permission.POST_NOTIFICATIONS},
+                        KEEP_ALIVE_NOTIFICATION_ID);
+                return;
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(KEEP_ALIVE_CHANNEL_ID,
+                    "Streaming Keep Alive", NotificationManager.IMPORTANCE_LOW);
+            channel.setDescription("Keeps the streaming session alive while in background");
+            notificationManager.createNotificationChannel(channel);
+        }
+
+        Intent intent = new Intent(this, Game.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            flags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, flags);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, KEEP_ALIVE_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_play)
+                .setContentTitle("Moonlight 串流保持中")
+                .setContentText("点击返回游戏")
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setOngoing(true)
+                .setContentIntent(pendingIntent);
+
+        notificationManager.notify(KEEP_ALIVE_NOTIFICATION_ID, builder.build());
+    }
+
+    private void cancelKeepAliveNotification() {
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (notificationManager != null) {
+            notificationManager.cancel(KEEP_ALIVE_NOTIFICATION_ID);
+        }
     }
 
     /**
@@ -5154,4 +5238,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     private DummySurfaceHolder mDummyHolder;
 
+    private void checkNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
+                Toast.makeText(this, "请在设置中开启通知权限，以便在后台时保持串流连接", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
 }
