@@ -32,6 +32,7 @@ import com.limelight.nvstream.input.MouseButtonPacket;
 import com.limelight.nvstream.jni.MoonBridge;
 import com.limelight.preferences.GlPreferences;
 import com.limelight.preferences.PreferenceConfiguration;
+import com.limelight.services.StreamNotificationService;
 import com.limelight.ui.CursorView;
 import com.limelight.ui.GameGestures;
 import com.limelight.ui.StreamView;
@@ -4542,14 +4543,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private static final int KEEP_ALIVE_NOTIFICATION_ID = 1001;
 
     private void showKeepAliveNotification() {
-        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        if (notificationManager == null) return;
-
-        // Check if we have the POST_NOTIFICATIONS permission on Android 13+
+        // 1. Android 13 权限检查
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
                     != PackageManager.PERMISSION_GRANTED) {
-                // Request the permission
+                // 请求权限
                 ActivityCompat.requestPermissions(this,
                         new String[]{android.Manifest.permission.POST_NOTIFICATIONS},
                         KEEP_ALIVE_NOTIFICATION_ID);
@@ -4557,43 +4555,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             }
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(KEEP_ALIVE_CHANNEL_ID,
-                    "Streaming Keep Alive", NotificationManager.IMPORTANCE_LOW);
-            channel.setDescription("Keeps the streaming session alive while in background");
-            notificationManager.createNotificationChannel(channel);
-        }
-
-        Intent intent = new Intent(this, Game.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-
-        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            flags |= PendingIntent.FLAG_IMMUTABLE;
-        }
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, flags);
-
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, KEEP_ALIVE_CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_play)
-                .setContentTitle("Moonlight 串流保持中")
-                .setContentText("点击返回游戏")
-                .setPriority(NotificationCompat.PRIORITY_LOW)
-                .setOngoing(true)
-                .setContentIntent(pendingIntent);
-
-        notificationManager.notify(KEEP_ALIVE_NOTIFICATION_ID, builder.build());
+        // 2. 启动服务 + 通知
+        StreamNotificationService.start(this, currentHostAddress, appName);
     }
 
-private void cancelKeepAliveNotification() {
-        try {
-            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            if (notificationManager != null) {
-                notificationManager.cancel(KEEP_ALIVE_NOTIFICATION_ID);
-            }
-        } catch (Exception e) {
-            // 忽略取消通知时的错误，防止影响退出流程
-            e.printStackTrace();
-        }
+    private void cancelKeepAliveNotification() {
+        // 停止通知服务
+        StreamNotificationService.stop(this);
     }
 
     /**

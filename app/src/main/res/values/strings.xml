@@ -710,6 +710,8 @@
 
     <string name="game_menu_toggle_remote_mouse">Show/Hide Remote Mouse</string>
     <string name="toast_remote_mouse_toast">Remote mouse displayed/hidden</string>
+    <string name="notification_channel_name">Streaming backend service</string>
+    <string name="notification_channel_desc">Keep the connection active when Moonlight is running in the background</string>
 
     <!-- Output Buffer Queue Limit -->
     <string name="title_seekbar_output_buffer_queue_limit">Output Buffer Queue Limit</string>

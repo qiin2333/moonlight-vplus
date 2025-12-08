@@ -666,6 +666,8 @@
 
     <string name="game_menu_toggle_remote_mouse">显示/隐藏远程鼠标</string>
     <string name="toast_remote_mouse_toast">远程鼠标已显示/隐藏。</string>
+    <string name="notification_channel_name">串流后台服务</string>
+    <string name="notification_channel_desc">当 Moonlight 在后台运行时保持连接活跃</string>
 
     <!-- 输出缓冲区队列大小 -->
     <string name="title_seekbar_output_buffer_queue_limit">输出缓冲区队列大小</string>
