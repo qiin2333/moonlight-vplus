@@ -53,7 +53,7 @@ public class PreferenceConfiguration {
     private static final String LEGACY_RES_FPS_PREF_STRING = "list_resolution_fps";
     private static final String LEGACY_ENABLE_51_SURROUND_PREF_STRING = "checkbox_51_surround";
 
-    static final String RESOLUTION_PREF_STRING = "list_resolution";
+    public static final String RESOLUTION_PREF_STRING = "list_resolution";
     static final String FPS_PREF_STRING = "list_fps";
     static final String BITRATE_PREF_STRING = "seekbar_bitrate_kbps";
     static final String HOST_SCALE_PREF_STRING = "seekbar_resolutions_scale";
@@ -261,7 +261,7 @@ public class PreferenceConfiguration {
     private static final String VIDEO_FORMAT_HEVC = "forceh265";
     private static final String VIDEO_FORMAT_H264 = "neverh265";
 
-    private static final String[] RESOLUTIONS = {
+    public static final String[] RESOLUTIONS = {
         "640x360", "854x480", "1280x720", "1920x1080", "2560x1440", "3840x2160", "Native"
     };
 

@@ -246,7 +246,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     // 如果是，则不应该再通知服务端旋转，避免死循环
     private boolean isServerInitiatedRotation = false;
     // 极端恢复模式开关：进入后台时保持连接不断开
+    // 不断开连接模式开关：进入后台时保持连接不断开
     private boolean isExtremeResumeEnabled = false;
+    private boolean isChangingResolution = false; // 是否正在改变分辨率
     private AndroidAudioRenderer audioRenderer;
 
     public enum BackKeyMenuMode {
@@ -388,7 +390,14 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-// 这一行告诉 Android 系统，这个窗口需要硬件加速，并且不要在后台进行不必要的缓冲
+
+        // 防止上次异常退出导致通知残留，启动时先清理一次
+        cancelKeepAliveNotification();
+
+        // 重置分辨率修改标志位，恢复正常状态
+        isChangingResolution = false;
+
+        // 这一行告诉 Android 系统，这个窗口需要硬件加速，并且不要在后台进行不必要的缓冲
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             getWindow().setDecorFitsSystemWindows(false);
         }
@@ -423,8 +432,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // Read the stream preferences
         prefConfig = PreferenceConfiguration.readPreferences(this);
-        tombstonePrefs = Game.this.getSharedPreferences("解码器墓碑", 0);
-// 读取极端恢复模式配置
+        tombstonePrefs = Game.this.getSharedPreferences("DecoderTombstone", 0);
+        // 读取不断开恢复模式配置
         SharedPreferences globalPrefs = PreferenceManager.getDefaultSharedPreferences(this);
         isExtremeResumeEnabled = globalPrefs.getBoolean("checkbox_extreme_resume", false) && globalPrefs.getBoolean("checkbox_resume_stream", false);
 
@@ -1812,8 +1821,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
+        // 将取消通知提到最前面执行，确保无论后续是否崩溃，通知都能消失
         cancelKeepAliveNotification();
+        super.onDestroy();
 
         // 在 App 彻底关闭时，清理替身线程
         if (mDummyHolder != null) {
@@ -1879,6 +1889,19 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
 
         super.onPause();
+    }
+
+    /**
+     * 在不离开游戏界面的情况下修改分辨率
+     */
+    public void changeResolution() {
+        // 1. 设置标志位：告诉 onStop 不要断开连接
+        isChangingResolution = true;
+
+        // 2. 执行重启。
+        // 流程：recreate() -> onPause() -> onStop() [被拦截，连接保留] -> onDestroy()
+        // -> onCreate() -> onStart() -> surfaceChanged() [画面恢复到新尺寸]
+        this.recreate();
     }
 
     @Override
@@ -4063,7 +4086,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             LimeLog.info("串流时长计时恢复，之前累计: " + (accumulatedStreamTime / 1000) + " 秒");
         }
 
-        // 如果处于极端恢复模式且连接仍然活跃
+        // 如果处于不断开连接模式且连接仍然活跃
         if (isExtremeResumeEnabled && connected) {
             cancelKeepAliveNotification();
             LimeLog.info("Extreme Resume: Returning to foreground with active connection.");
@@ -4561,10 +4584,15 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         notificationManager.notify(KEEP_ALIVE_NOTIFICATION_ID, builder.build());
     }
 
-    private void cancelKeepAliveNotification() {
-        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        if (notificationManager != null) {
-            notificationManager.cancel(KEEP_ALIVE_NOTIFICATION_ID);
+private void cancelKeepAliveNotification() {
+        try {
+            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (notificationManager != null) {
+                notificationManager.cancel(KEEP_ALIVE_NOTIFICATION_ID);
+            }
+        } catch (Exception e) {
+            // 忽略取消通知时的错误，防止影响退出流程
+            e.printStackTrace();
         }
     }
 
