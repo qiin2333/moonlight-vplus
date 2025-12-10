@@ -11,6 +11,7 @@ import androidx.core.content.ContextCompat;
 import com.limelight.LimeLog;
 import com.limelight.R;
 import com.limelight.nvstream.NvConnection;
+import com.limelight.preferences.PreferenceConfiguration;
 
 /**
  * 麦克风管理器
@@ -276,12 +277,45 @@ public class MicrophoneManager {
 
         boolean isActive = isMicrophoneActive();
         micButton.setSelected(isActive);
-        micButton.setImageResource(isActive ? R.drawable.ic_btn_mic : R.drawable.ic_btn_mic_disabled);
+
+        // 根据配置获取图标资源
+        int iconResource = getMicIconResource(isActive);
+        micButton.setImageResource(iconResource);
+
         micButton.setContentDescription(context.getString(
                 isActive ? R.string.mic_enabled : R.string.mic_disabled));
         micButton.setEnabled(true);
     }
-    
+
+    /**
+     * 根据配置获取麦克风图标资源
+     */
+    private int getMicIconResource(boolean isActive) {
+        if (!isActive) {
+            return R.drawable.ic_btn_mic_disabled;
+        }
+        // 读取配置
+        PreferenceConfiguration prefConfig = PreferenceConfiguration.readPreferences(context);
+        String colorScheme = prefConfig.micIconColor != null ? prefConfig.micIconColor : "gradient_blue";
+
+        // 根据颜色方案返回对应的资源
+        switch (colorScheme) {
+            case "gradient_blue":
+                return R.drawable.ic_btn_mic_gradient_blue;
+            case "gradient_purple":
+                return R.drawable.ic_btn_mic_gradient_purple;
+            case "gradient_green":
+                return R.drawable.ic_btn_mic_gradient_green;
+            case "gradient_orange":
+                return R.drawable.ic_btn_mic_gradient_orange;
+            case "gradient_red":
+                return R.drawable.ic_btn_mic_gradient_red;
+            case "solid_white":
+            default:
+                return R.drawable.ic_btn_mic;
+        }
+    }
+
     /**
      * 停止麦克风流
      */

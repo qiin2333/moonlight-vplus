@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="oval">
+            <gradient
+                android:type="linear"
+                android:angle="135"
+                android:startColor="#FF2ECC71"
+                android:centerColor="#FF4ECDC4"
+                android:endColor="#FF81E6D9" />
+        </shape>
+    </item>
+    <item
+        android:drawable="@drawable/ic_btn_mic"
+        android:gravity="center" />
+</layer-list>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="mic_icon_color_entries">
+        <item>星川蓝</item>
+        <item>云锦紫</item>
+        <item>苔石绿</item>
+        <item>琥珀砂</item>
+        <item>丹霞赤</item>
+        <item>象牙白</item>
+    </string-array>
+</resources>
+
