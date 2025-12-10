@@ -364,6 +364,14 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         
         // Read the stream preferences
         prefConfig = PreferenceConfiguration.readPreferences(this);
+        
+        // 对于没有触摸屏的设备，强制启用本地鼠标指针
+        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)) {
+            prefConfig.enableNativeMousePointer = true;
+            prefConfig.enableEnhancedTouch = false;
+            prefConfig.touchscreenTrackpad = false;
+        }
+        
         tombstonePrefs = Game.this.getSharedPreferences("DecoderTombstone", 0);
         
         // Initialize app settings manager
@@ -1957,7 +1965,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
      * true : RelativeTouchContext
      */
     public void setTouchMode(boolean enableRelativeTouch){
-
         for (int i = 0; i < touchContextMap.length; i++) {
             if (enableRelativeTouch) {
                 prefConfig.touchscreenTrackpad = true;
@@ -2021,8 +2028,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 inputCaptureProvider.hideCursor();
             }
             
-            setInputGrabState(true);
-        }
+                setInputGrabState(true);
+            }
     }
 
     private byte getLiTouchTypeFromEvent(MotionEvent event) {

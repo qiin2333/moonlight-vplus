@@ -990,6 +990,81 @@ public class StreamSettings extends Activity {
                 return true;
             });
 
+            // 对于没有触摸屏的设备，只提供本地鼠标指针选项
+            ListPreference mouseModePresetPref = (ListPreference) findPreference(PreferenceConfiguration.NATIVE_MOUSE_MODE_PRESET_PREF_STRING);
+            if (!getActivity().getPackageManager().hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)) {
+                // 只显示本地鼠标指针选项
+                mouseModePresetPref.setEntries(new CharSequence[]{getString(R.string.native_mouse_mode_preset_native)});
+                mouseModePresetPref.setEntryValues(new CharSequence[]{"native"});
+                mouseModePresetPref.setValue("native");
+                
+                // 强制设置为本地鼠标指针模式
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putBoolean(PreferenceConfiguration.ENABLE_ENHANCED_TOUCH_PREF_STRING, false);
+                editor.putBoolean(PreferenceConfiguration.TOUCHSCREEN_TRACKPAD_PREF_STRING, false);
+                editor.putBoolean(PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, true);
+                editor.apply();
+            }
+
+            // 添加本地鼠标模式预设选择监听器
+            mouseModePresetPref.setOnPreferenceChangeListener((preference, newValue) -> {
+                String preset = (String) newValue;
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(SettingsFragment.this.getActivity());
+                SharedPreferences.Editor editor = prefs.edit();
+                
+                // 根据预设值自动设置相关配置
+                switch (preset) {
+                    case "enhanced":
+                        // 增强式多点触控
+                        editor.putBoolean(PreferenceConfiguration.ENABLE_ENHANCED_TOUCH_PREF_STRING, true);
+                        editor.putBoolean(PreferenceConfiguration.TOUCHSCREEN_TRACKPAD_PREF_STRING, false);
+                        editor.putBoolean(PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, false);
+                        break;
+                    case "classic":
+                        // 经典鼠标模式
+                        editor.putBoolean(PreferenceConfiguration.ENABLE_ENHANCED_TOUCH_PREF_STRING, false);
+                        editor.putBoolean(PreferenceConfiguration.TOUCHSCREEN_TRACKPAD_PREF_STRING, false);
+                        editor.putBoolean(PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, false);
+                        break;
+                    case "trackpad":
+                        // 触控板模式
+                        editor.putBoolean(PreferenceConfiguration.ENABLE_ENHANCED_TOUCH_PREF_STRING, false);
+                        editor.putBoolean(PreferenceConfiguration.TOUCHSCREEN_TRACKPAD_PREF_STRING, true);
+                        editor.putBoolean(PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, false);
+                        break;
+                    case "native":
+                        // 本地鼠标指针
+                        editor.putBoolean(PreferenceConfiguration.ENABLE_ENHANCED_TOUCH_PREF_STRING, false);
+                        editor.putBoolean(PreferenceConfiguration.TOUCHSCREEN_TRACKPAD_PREF_STRING, false);
+                        editor.putBoolean(PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, true);
+                        break;
+                }
+                editor.apply();
+                
+                // 显示提示信息
+                String presetName = "";
+                switch (preset) {
+                    case "enhanced":
+                        presetName = getString(R.string.native_mouse_mode_preset_enhanced);
+                        break;
+                    case "classic":
+                        presetName = getString(R.string.native_mouse_mode_preset_classic);
+                        break;
+                    case "trackpad":
+                        presetName = getString(R.string.native_mouse_mode_preset_trackpad);
+                        break;
+                    case "native":
+                        presetName = getString(R.string.native_mouse_mode_preset_native);
+                        break;
+                }
+                Toast.makeText(getActivity(), 
+                    getString(R.string.toast_preset_applied, presetName), 
+                    Toast.LENGTH_SHORT).show();
+                
+                return true;
+            });
+
         }
 
         @Override

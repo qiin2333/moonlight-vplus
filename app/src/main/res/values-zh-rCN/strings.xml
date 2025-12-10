@@ -495,6 +495,15 @@
     <string name="toast_touch_mode_trackpad_on">触控板模式已开启</string>
     <string name="toast_touch_mode_native_mouse_on">本地鼠标指针已开启</string>
 
+    <!-- 本地鼠标模式预设 -->
+    <string name="title_list_native_mouse_mode_preset">鼠标模式预设</string>
+    <string name="summary_list_native_mouse_mode_preset">选择鼠标/触控模式的配置</string>
+    <string name="native_mouse_mode_preset_enhanced">增强式多点触控</string>
+    <string name="native_mouse_mode_preset_classic">经典鼠标模式</string>
+    <string name="native_mouse_mode_preset_trackpad">触控板模式</string>
+    <string name="native_mouse_mode_preset_native">本地鼠标指针</string>
+    <string name="toast_preset_applied">预设已应用: %s</string>
+
     <!-- 自定义特殊按键 -->
     <!-- 菜单项 -->
     <string name="game_menu_add_custom_key">添加自定义按键…</string>

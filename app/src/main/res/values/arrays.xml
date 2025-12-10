@@ -258,4 +258,18 @@
         <item>decode_latency</item>
         <item>host_latency</item>
     </string-array>
+
+    <!-- 本地鼠标模式预设选项 -->
+    <string-array name="native_mouse_mode_preset_names">
+        <item>@string/native_mouse_mode_preset_enhanced</item>
+        <item>@string/native_mouse_mode_preset_classic</item>
+        <item>@string/native_mouse_mode_preset_trackpad</item>
+        <item>@string/native_mouse_mode_preset_native</item>
+    </string-array>
+    <string-array name="native_mouse_mode_preset_values" translatable="false">
+        <item>enhanced</item>
+        <item>classic</item>
+        <item>trackpad</item>
+        <item>native</item>
+    </string-array>
 </resources>

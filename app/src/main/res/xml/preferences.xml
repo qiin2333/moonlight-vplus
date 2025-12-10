@@ -261,6 +261,13 @@
             android:title="@string/title_checkbox_mouse_nav_buttons"
             android:summary="@string/summary_checkbox_mouse_nav_buttons"
             android:defaultValue="false" />
+        <ListPreference
+            android:key="list_native_mouse_mode_preset"
+            android:title="@string/title_list_native_mouse_mode_preset"
+            android:summary="@string/summary_list_native_mouse_mode_preset"
+            android:entries="@array/native_mouse_mode_preset_names"
+            android:entryValues="@array/native_mouse_mode_preset_values"
+            android:defaultValue="classic" />
         <CheckBoxPreference
             android:key="checkbox_absolute_mouse_mode"
             android:title="@string/title_checkbox_absolute_mouse_mode"

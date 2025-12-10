@@ -1050,8 +1050,10 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                 (Build.VERSION.SDK_INT == Build.VERSION_CODES.S &&
                         (context.vendorId == 0x054c || context.vendorId == 0x057e))) && // Sony or Nintendo
                 prefConfig.gamepadMotionSensors) {
-            if (dev.getSensorManager().getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null || dev.getSensorManager().getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null) {
-                context.sensorManager = dev.getSensorManager();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (dev.getSensorManager().getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null || dev.getSensorManager().getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null) {
+                    context.sensorManager = dev.getSensorManager();
+                }
             }
         }
 
@@ -3231,7 +3233,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             return;
         }
 
-        // 当启用“陀螺仪模拟右摇杆”时，将手柄IMU的陀螺仪数据映射为右摇杆输入
+        // 当启用"陀螺仪模拟右摇杆"时，将手柄IMU的陀螺仪数据映射为右摇杆输入
         if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO && prefConfig.gyroToRightStick) {
             applyGyroToRightStick(context.controllerNumber, x, y);
             return;
@@ -3313,7 +3315,10 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         public void toggleMouseEmulation() {
             mainThreadHandler.removeCallbacks(mouseEmulationRunnable);
             mouseEmulationActive = !mouseEmulationActive;
-            Toast.makeText(activityContext, "Mouse emulation is: " + (mouseEmulationActive ? "ON" : "OFF"), Toast.LENGTH_SHORT).show();
+            
+            int messageResId = mouseEmulationActive ? 
+                    R.string.game_menu_toggle_mouse_on : R.string.game_menu_toggle_mouse_off;
+            Toast.makeText(activityContext, messageResId, Toast.LENGTH_SHORT).show();
 
             if (mouseEmulationActive) {
                 mainThreadHandler.postDelayed(mouseEmulationRunnable, mouseEmulationReportPeriod);

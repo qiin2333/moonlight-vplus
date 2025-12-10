@@ -526,6 +526,15 @@
     <string name="toast_touch_mode_trackpad_on">Trackpad mode enabled</string>
     <string name="toast_touch_mode_native_mouse_on">Native mouse pointer enabled</string>
 
+    <!-- 本地鼠标模式预设 -->
+    <string name="title_list_native_mouse_mode_preset">Mouse Mode Preset</string>
+    <string name="summary_list_native_mouse_mode_preset">Select a preset mouse/touch mode configuration</string>
+    <string name="native_mouse_mode_preset_enhanced">Enhanced Multi Touch</string>
+    <string name="native_mouse_mode_preset_classic">Classic Mouse Mode</string>
+    <string name="native_mouse_mode_preset_trackpad">Touchpad Mode</string>
+    <string name="native_mouse_mode_preset_native">Native Mouse Pointer</string>
+    <string name="toast_preset_applied">Preset applied: %s</string>
+
     <!-- 自定义特殊按键 -->
     <!-- 菜单项 -->
     <string name="game_menu_add_custom_key">Add custom button</string>

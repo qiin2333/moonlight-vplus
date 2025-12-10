@@ -95,19 +95,20 @@ public class PreferenceConfiguration {
     private static final String VIBRATE_FALLBACK_PREF_STRING = "checkbox_vibrate_fallback";
     private static final String VIBRATE_FALLBACK_STRENGTH_PREF_STRING = "seekbar_vibrate_fallback_strength";
     private static final String FLIP_FACE_BUTTONS_PREF_STRING = "checkbox_flip_face_buttons";
-    private static final String TOUCHSCREEN_TRACKPAD_PREF_STRING = "checkbox_touchscreen_trackpad";
+    public static final String TOUCHSCREEN_TRACKPAD_PREF_STRING = "checkbox_touchscreen_trackpad";
     private static final String LATENCY_TOAST_PREF_STRING = "checkbox_enable_post_stream_toast";
     private static final String ENABLE_STUN_PREF_STRING = "checkbox_enable_stun";
     private static final String LOCK_SCREEN_AFTER_DISCONNECT_PREF_STRING = "checkbox_lock_screen_after_disconnect";
     private static final String SWAP_QUIT_AND_DISCONNECT_PERF_STRING = "checkbox_swap_quit_and_disconnect";
     private static final String FRAME_PACING_PREF_STRING = "frame_pacing";
     private static final String ABSOLUTE_MOUSE_MODE_PREF_STRING = "checkbox_absolute_mouse_mode";
-    private static final String ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING = "checkbox_enable_native_mouse_pointer";
+    public static final String ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING = "checkbox_enable_native_mouse_pointer";
+    public static final String NATIVE_MOUSE_MODE_PRESET_PREF_STRING = "list_native_mouse_mode_preset";
     // Card visibility preferences
     private static final String SHOW_BITRATE_CARD_PREF_STRING = "checkbox_show_bitrate_card";
     private static final String SHOW_GYRO_CARD_PREF_STRING = "checkbox_show_gyro_card";
 
-    private static final String ENABLE_ENHANCED_TOUCH_PREF_STRING = "checkbox_enable_enhanced_touch";
+    public static final String ENABLE_ENHANCED_TOUCH_PREF_STRING = "checkbox_enable_enhanced_touch";
     private static final String ENHANCED_TOUCH_ON_RIGHT_PREF_STRING = "checkbox_enhanced_touch_on_which_side";
     private static final String ENHANCED_TOUCH_ZONE_DIVIDER_PREF_STRING = "enhanced_touch_zone_divider";
     private static final String POINTER_VELOCITY_FACTOR_PREF_STRING = "pointer_velocity_factor";
@@ -167,6 +168,7 @@ public class PreferenceConfiguration {
     private static final boolean DEFAULT_MOUSE_EMULATION = true;
     private static final String DEFAULT_ANALOG_STICK_FOR_SCROLLING = "right";
     private static final boolean DEFAULT_MOUSE_NAV_BUTTONS = false;
+    private static final String DEFAULT_NATIVE_MOUSE_MODE_PRESET = "classic";
     private static final boolean DEFAULT_UNLOCK_FPS = false;
     private static final boolean DEFAULT_VIBRATE_OSC = true;
     private static final boolean DEFAULT_VIBRATE_FALLBACK = false;
@@ -796,7 +798,18 @@ public class PreferenceConfiguration {
         config.lockScreenAfterDisconnect = prefs.getBoolean(LOCK_SCREEN_AFTER_DISCONNECT_PREF_STRING, DEFAULT_LATENCY_TOAST);
         config.swapQuitAndDisconnect = prefs.getBoolean(SWAP_QUIT_AND_DISCONNECT_PERF_STRING, DEFAULT_LATENCY_TOAST);
         config.absoluteMouseMode = prefs.getBoolean(ABSOLUTE_MOUSE_MODE_PREF_STRING, DEFAULT_ABSOLUTE_MOUSE_MODE);
-        config.enableNativeMousePointer = prefs.getBoolean(ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, DEFAULT_ENABLE_NATIVE_MOUSE_POINTER);
+        
+        // 对于没有触摸屏的设备，默认启用本地鼠标指针
+        boolean hasTouchscreen = context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN);
+        boolean defaultNativeMouse = hasTouchscreen ? DEFAULT_ENABLE_NATIVE_MOUSE_POINTER : true;
+        config.enableNativeMousePointer = prefs.getBoolean(ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, defaultNativeMouse);
+        
+        // 如果没有触摸屏，强制设置为本地鼠标指针模式
+        if (!hasTouchscreen) {
+            config.enableNativeMousePointer = true;
+            config.enableEnhancedTouch = false;
+            config.touchscreenTrackpad = false;
+        }
         config.enableAudioFx = prefs.getBoolean(ENABLE_AUDIO_FX_PREF_STRING, DEFAULT_ENABLE_AUDIO_FX);
         config.enableSpatializer = prefs.getBoolean(ENABLE_SPATIALIZER_PREF_STRING, DEFAULT_ENABLE_SPATIALIZER);
         config.reduceRefreshRate = prefs.getBoolean(REDUCE_REFRESH_RATE_PREF_STRING, DEFAULT_REDUCE_REFRESH_RATE);
