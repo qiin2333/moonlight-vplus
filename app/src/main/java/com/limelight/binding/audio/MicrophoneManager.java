@@ -288,31 +288,48 @@ public class MicrophoneManager {
     }
 
     /**
-     * 根据配置获取麦克风图标资源
+     * 根据配置获取麦克风图标资源ID
+     * 使用资源映射表，代码更简洁
      */
     private int getMicIconResource(boolean isActive) {
-        if (!isActive) {
-            return R.drawable.ic_btn_mic_disabled;
-        }
         // 读取配置
         PreferenceConfiguration prefConfig = PreferenceConfiguration.readPreferences(context);
         String colorScheme = prefConfig.micIconColor != null ? prefConfig.micIconColor : "solid_white";
-
-        // 根据颜色方案返回对应的资源
+        
+        // 资源映射表：简化代码
+        String resourceName = isActive ? 
+                getEnabledIconResourceName(colorScheme) : 
+                getDisabledIconResourceName(colorScheme);
+        
+        return context.getResources().getIdentifier(
+                resourceName, "drawable", context.getPackageName());
+    }
+    
+    /**
+     * 获取启用状态的图标资源名称
+     */
+    private String getEnabledIconResourceName(String colorScheme) {
         switch (colorScheme) {
-            case "gradient_blue":
-                return R.drawable.ic_btn_mic_gradient_blue;
-            case "gradient_purple":
-                return R.drawable.ic_btn_mic_gradient_purple;
-            case "gradient_green":
-                return R.drawable.ic_btn_mic_gradient_green;
-            case "gradient_orange":
-                return R.drawable.ic_btn_mic_gradient_orange;
-            case "gradient_red":
-                return R.drawable.ic_btn_mic_gradient_red;
-            case "solid_white":
-            default:
-                return R.drawable.ic_btn_mic;
+            case "gradient_blue": return "ic_btn_mic_gradient_blue";
+            case "gradient_purple": return "ic_btn_mic_gradient_purple";
+            case "gradient_green": return "ic_btn_mic_gradient_green";
+            case "gradient_orange": return "ic_btn_mic_gradient_orange";
+            case "gradient_red": return "ic_btn_mic_gradient_red";
+            default: return "ic_btn_mic";
+        }
+    }
+    
+    /**
+     * 获取禁用状态的图标资源名称
+     */
+    private String getDisabledIconResourceName(String colorScheme) {
+        switch (colorScheme) {
+            case "gradient_blue": return "ic_btn_mic_gradient_blue_disabled";
+            case "gradient_purple": return "ic_btn_mic_gradient_purple_disabled";
+            case "gradient_green": return "ic_btn_mic_gradient_green_disabled";
+            case "gradient_orange": return "ic_btn_mic_gradient_orange_disabled";
+            case "gradient_red": return "ic_btn_mic_gradient_red_disabled";
+            default: return "ic_btn_mic_disabled";
         }
     }
 

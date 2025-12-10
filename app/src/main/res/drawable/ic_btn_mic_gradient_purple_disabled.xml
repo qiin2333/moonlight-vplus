@@ -11,9 +11,23 @@
             <gradient
                 android:type="linear"
                 android:angle="135"
-                android:startColor="#FF2ECC71"
-                android:centerColor="#FF4ECDC4"
-                android:endColor="#FF81E6D9" />
+                android:startColor="#FF9B59B6"
+                android:centerColor="#FFBB86FC"
+                android:endColor="#FFE1BEE7" />
+        </aapt:attr>
+    </path>
+    <path
+        android:strokeWidth="80"
+        android:strokeLineCap="round"
+        android:pathData="M200 824 L824 200">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:angle="135"
+                android:startColor="#FF9B59B6"
+                android:centerColor="#FFBB86FC"
+                android:endColor="#FFE1BEE7" />
         </aapt:attr>
     </path>
 </vector>
+
