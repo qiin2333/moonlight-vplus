@@ -107,7 +107,7 @@ android {
 
     buildTypes {
         debug {
-            applicationIdSuffix ".debug"
+            applicationIdSuffix ".vplus_debug"
             resValue "string", "app_label", "月光-威力加强版"
             resValue "string", "app_label_root", "月光-威力加强版"
 
