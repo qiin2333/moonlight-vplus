@@ -153,7 +153,7 @@
             android:summary="@string/summary_list_mic_icon_color"
             android:entries="@array/mic_icon_color_entries"
             android:entryValues="@array/mic_icon_color_values"
-            android:defaultValue="gradient_blue" />
+            android:defaultValue="solid_white" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_gamepad_settings"
         android:key="category_gamepad_settings"

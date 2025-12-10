@@ -296,7 +296,7 @@ public class MicrophoneManager {
         }
         // 读取配置
         PreferenceConfiguration prefConfig = PreferenceConfiguration.readPreferences(context);
-        String colorScheme = prefConfig.micIconColor != null ? prefConfig.micIconColor : "gradient_blue";
+        String colorScheme = prefConfig.micIconColor != null ? prefConfig.micIconColor : "solid_white";
 
         // 根据颜色方案返回对应的资源
         switch (colorScheme) {

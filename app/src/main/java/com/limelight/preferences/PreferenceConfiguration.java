@@ -199,6 +199,7 @@ public class PreferenceConfiguration {
     // 麦克风设置默认值
     private static final boolean DEFAULT_ENABLE_MIC = false;
     private static final int DEFAULT_MIC_BITRATE = 96; // 默认128 kbps
+    private static final String DEFAULT_MIC_ICON_COLOR = "solid_white"; // 默认白
     private static final boolean DEFAULT_ENABLE_ESC_MENU = true; // 默认启用ESC菜单
 
     private static final boolean DEFAULT_ENABLE_DOUBLE_CLICK_DRAG = false;
