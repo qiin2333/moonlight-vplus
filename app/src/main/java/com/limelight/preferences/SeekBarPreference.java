@@ -161,10 +161,13 @@ public class SeekBarPreference extends DialogPreference
             minusButton = new Button(context);
             minusButton.setText("−");
             minusButton.setTextSize(24);
+            minusButton.setGravity(Gravity.CENTER);
+            minusButton.setPadding(0, 0, 0, 0);
             LinearLayout.LayoutParams minusParams = new LinearLayout.LayoutParams(
                     dpToPx(48),
                     dpToPx(48));
             minusParams.rightMargin = dpToPx(8);
+            minusParams.gravity = Gravity.CENTER_VERTICAL;
             minusButton.setLayoutParams(minusParams);
             setupLongPressButton(minusButton, -1);
 
@@ -172,9 +175,12 @@ public class SeekBarPreference extends DialogPreference
             plusButton = new Button(context);
             plusButton.setText("+");
             plusButton.setTextSize(24);
+            plusButton.setGravity(Gravity.CENTER);
+            plusButton.setPadding(0, 0, 0, 0);
             LinearLayout.LayoutParams plusParams = new LinearLayout.LayoutParams(
                     dpToPx(48),
                     dpToPx(48));
+            plusParams.gravity = Gravity.CENTER_VERTICAL;
             plusButton.setLayoutParams(plusParams);
             setupLongPressButton(plusButton, 1);
             
