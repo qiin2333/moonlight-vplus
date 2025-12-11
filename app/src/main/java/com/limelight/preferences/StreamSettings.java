@@ -40,6 +40,9 @@ import android.preference.PreferenceGroup;
 import android.widget.HorizontalScrollView;
 import android.widget.ScrollView;
 import com.google.android.flexbox.FlexboxLayout;
+import com.google.android.flexbox.FlexWrap;
+import com.google.android.flexbox.FlexDirection;
+import com.google.android.flexbox.JustifyContent;
 
 import androidx.annotation.NonNull;
 
@@ -414,19 +417,25 @@ public class StreamSettings extends Activity {
                 return;
             }
 
+            // 1. 获取视图组件
             LinearLayout navContainer = activity.findViewById(R.id.settings_nav_container);
             FlexboxLayout navGridContainer = activity.findViewById(R.id.settings_nav_grid_container);
             HorizontalScrollView navScroll = activity.findViewById(R.id.settings_nav_scroll);
             ScrollView navGridScroll = activity.findViewById(R.id.settings_nav_grid_scroll);
             ImageView toggleButton = activity.findViewById(R.id.settings_nav_toggle);
-            ImageView collapseButton = activity.findViewById(R.id.settings_nav_collapse);
 
+            // 2. 安全检查
             if (navContainer == null || navGridContainer == null || navScroll == null || 
-                navGridScroll == null || toggleButton == null || collapseButton == null) {
+                navGridScroll == null || toggleButton == null) {
                 return;
             }
 
-            // 清空旧导航
+            // 强制 Flexbox 自动换行
+            navGridContainer.setFlexWrap(FlexWrap.WRAP);
+            navGridContainer.setFlexDirection(FlexDirection.ROW);
+            navGridContainer.setJustifyContent(JustifyContent.FLEX_START);
+
+            // 3. 清空旧视图
             navContainer.removeAllViews();
             navGridContainer.removeAllViews();
 
@@ -435,7 +444,7 @@ public class StreamSettings extends Activity {
                 return;
             }
 
-            // 构建分类列表并生成导航按钮
+            // 4. 构建 Tab 循环
             for (int i = 0; i < screen.getPreferenceCount(); i++) {
                 Preference pref = screen.getPreference(i);
                 if (pref instanceof PreferenceCategory) {
@@ -444,7 +453,7 @@ public class StreamSettings extends Activity {
                         continue;
                     }
 
-                    // 创建水平滚动模式的Tab View
+                    // --- 创建水平模式 Tab ---
                     final TextView tabHorizontal = new TextView(activity);
                     tabHorizontal.setText(category.getTitle());
                     tabHorizontal.setTextColor(Color.WHITE);
@@ -464,24 +473,10 @@ public class StreamSettings extends Activity {
                     lpHorizontal.rightMargin = dpToPx(12);
                     tabHorizontal.setLayoutParams(lpHorizontal);
 
-                    tabHorizontal.setOnClickListener(v -> {
-                        int position = findAdapterPositionForPreference(category);
-                        if (position >= 0) {
-							ListView listView = null;
-							View fragmentView = getView();
-							if (fragmentView != null) {
-								listView = fragmentView.findViewById(android.R.id.list);
-							}
-							else {
-								listView = activity.findViewById(android.R.id.list);
-							}
-							if (listView != null) {
-                                listView.smoothScrollToPositionFromTop(position, dpToPx(8));
-                            }
-                        }
-                    });
+                    // 水平点击事件
+                    tabHorizontal.setOnClickListener(v -> scrollToCategory(category));
 
-                    // 创建网格模式的Tab View（独立实例，不复用）
+                    // --- 创建网格模式 Tab (Flexbox) ---
                     final TextView tabGrid = new TextView(activity);
                     tabGrid.setText(category.getTitle());
                     tabGrid.setTextColor(Color.WHITE);
@@ -489,66 +484,66 @@ public class StreamSettings extends Activity {
                     tabGrid.setSingleLine(true);
                     tabGrid.setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6));
 
+                    // 复用相同的背景样式
                     GradientDrawable bgGrid = new GradientDrawable();
                     bgGrid.setColor(Color.parseColor("#33FFFFFF"));
                     bgGrid.setCornerRadius(dpToPx(16));
                     tabGrid.setBackground(bgGrid);
 
+                    // 使用 Flexbox 布局参数
                     FlexboxLayout.LayoutParams lpFlex = new FlexboxLayout.LayoutParams(
                             FlexboxLayout.LayoutParams.WRAP_CONTENT,
                             FlexboxLayout.LayoutParams.WRAP_CONTENT
                     );
-                    int marginPx = dpToPx(8);
+                    int marginPx = dpToPx(6); // 稍微调小一点间距，更紧凑
                     lpFlex.setMargins(marginPx, marginPx, marginPx, marginPx);
                     tabGrid.setLayoutParams(lpFlex);
 
-                    tabGrid.setOnClickListener(v -> {
-                        int position = findAdapterPositionForPreference(category);
-                        if (position >= 0) {
-							ListView listView = null;
-							View fragmentView = getView();
-							if (fragmentView != null) {
-								listView = fragmentView.findViewById(android.R.id.list);
-							}
-							else {
-								listView = activity.findViewById(android.R.id.list);
-							}
-							if (listView != null) {
-                                listView.smoothScrollToPositionFromTop(position, dpToPx(8));
-                            }
-                        }
-                    });
+                    // 网格点击事件
+                    tabGrid.setOnClickListener(v -> scrollToCategory(category));
 
-                    // 分别添加到两个容器
+                    // 添加到各自容器
                     navContainer.addView(tabHorizontal);
                     navGridContainer.addView(tabGrid);
                 }
             }
 
-            // 实现切换按钮的点击事件
+            // 5. 切换按钮逻辑 (单个按钮控制开关)
             toggleButton.setOnClickListener(v -> {
                 if (navScroll.getVisibility() == View.VISIBLE) {
-                    // 切换到流式布局模式
+                    // -> 切换到 网格模式 (展开)
                     navScroll.setVisibility(View.GONE);
                     navGridScroll.setVisibility(View.VISIBLE);
-                    collapseButton.setVisibility(View.VISIBLE);
-                    // 更新图标为展开状态（可选，如果需要）
-                    toggleButton.setImageResource(android.R.drawable.ic_menu_view);
+                    // 切换图标为"向上收起" (使用系统自带图标或您自己的)
+                    toggleButton.setImageResource(android.R.drawable.arrow_up_float);
                 } else {
-                    // 切换到水平滚动模式
+                    // -> 切换回 水平模式 (收起)
                     navScroll.setVisibility(View.VISIBLE);
                     navGridScroll.setVisibility(View.GONE);
-                    collapseButton.setVisibility(View.GONE);
+                    // 切换图标为"菜单/列表"
+                    toggleButton.setImageResource(android.R.drawable.ic_menu_view);
                 }
             });
+        }
 
-            // 实现收缩按钮的点击事件（在顶部）
-            collapseButton.setOnClickListener(v -> {
-                // 切换回水平滚动模式
-                navScroll.setVisibility(View.VISIBLE);
-                navGridScroll.setVisibility(View.GONE);
-                collapseButton.setVisibility(View.GONE);
-            });
+        // 辅助方法：提取点击跳转逻辑，减少重复代码
+        private void scrollToCategory(PreferenceCategory category) {
+            int position = findAdapterPositionForPreference(category);
+            if (position >= 0) {
+                ListView listView = null;
+                View fragmentView = getView();
+                if (fragmentView != null) {
+                    listView = fragmentView.findViewById(android.R.id.list);
+                } else {
+                    Activity act = getActivity();
+                    if (act != null) {
+                        listView = act.findViewById(android.R.id.list);
+                    }
+                }
+                if (listView != null) {
+                    listView.smoothScrollToPositionFromTop(position, dpToPx(8));
+                }
+            }
         }
 
         private int dpToPx(int dp) {

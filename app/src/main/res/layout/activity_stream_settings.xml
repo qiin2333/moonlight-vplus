@@ -74,36 +74,17 @@
                 android:scrollbars="none"
                 android:visibility="gone">
 
-                <LinearLayout
+                <com.google.android.flexbox.FlexboxLayout
+                    android:id="@+id/settings_nav_grid_container"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <ImageView
-                        android:id="@+id/settings_nav_collapse"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:layout_marginLeft="12dp"
-                        android:layout_marginTop="8dp"
-                        android:layout_marginBottom="4dp"
-                        android:src="@android:drawable/ic_menu_close_clear_cancel"
-                        android:background="@drawable/toggle_button_background"
-                        android:scaleType="centerInside"
-                        android:padding="10dp"
-                        android:visibility="gone" />
-
-                    <com.google.android.flexbox.FlexboxLayout
-                        android:id="@+id/settings_nav_grid_container"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:paddingLeft="12dp"
-                        android:paddingRight="12dp"
-                        android:paddingBottom="8dp"
-                        app:flexWrap="wrap"
-                        app:flexDirection="row"
-                        app:alignItems="center" />
-                </LinearLayout>
+                    android:layout_marginTop="8dp"
+                    android:paddingLeft="12dp"
+                    android:paddingRight="12dp"
+                    android:paddingBottom="8dp"
+                    app:flexWrap="wrap"
+                    app:flexDirection="row"
+                    app:alignItems="center" />
             </ScrollView>
         </FrameLayout>
     </LinearLayout>
