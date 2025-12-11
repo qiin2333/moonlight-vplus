@@ -38,6 +38,7 @@ import android.util.TypedValue;
 import android.widget.ListView;
 import android.preference.PreferenceGroup;
 import android.widget.GridLayout;
+import android.widget.HorizontalScrollView;
 import android.widget.ScrollView;
 
 import androidx.annotation.NonNull;
