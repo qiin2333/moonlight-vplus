@@ -37,9 +37,9 @@ import android.graphics.drawable.GradientDrawable;
 import android.util.TypedValue;
 import android.widget.ListView;
 import android.preference.PreferenceGroup;
-import android.widget.GridLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.ScrollView;
+import com.google.android.flexbox.FlexboxLayout;
 
 import androidx.annotation.NonNull;
 
@@ -415,13 +415,14 @@ public class StreamSettings extends Activity {
             }
 
             LinearLayout navContainer = activity.findViewById(R.id.settings_nav_container);
-            GridLayout navGridContainer = activity.findViewById(R.id.settings_nav_grid_container);
+            FlexboxLayout navGridContainer = activity.findViewById(R.id.settings_nav_grid_container);
             HorizontalScrollView navScroll = activity.findViewById(R.id.settings_nav_scroll);
             ScrollView navGridScroll = activity.findViewById(R.id.settings_nav_grid_scroll);
             ImageView toggleButton = activity.findViewById(R.id.settings_nav_toggle);
+            ImageView collapseButton = activity.findViewById(R.id.settings_nav_collapse);
 
             if (navContainer == null || navGridContainer == null || navScroll == null || 
-                navGridScroll == null || toggleButton == null) {
+                navGridScroll == null || toggleButton == null || collapseButton == null) {
                 return;
             }
 
@@ -493,14 +494,13 @@ public class StreamSettings extends Activity {
                     bgGrid.setCornerRadius(dpToPx(16));
                     tabGrid.setBackground(bgGrid);
 
-                    GridLayout.LayoutParams lpGrid = new GridLayout.LayoutParams(
-                            GridLayout.spec(GridLayout.UNDEFINED),
-                            GridLayout.spec(GridLayout.UNDEFINED)
+                    FlexboxLayout.LayoutParams lpFlex = new FlexboxLayout.LayoutParams(
+                            FlexboxLayout.LayoutParams.WRAP_CONTENT,
+                            FlexboxLayout.LayoutParams.WRAP_CONTENT
                     );
-                    lpGrid.width = GridLayout.LayoutParams.WRAP_CONTENT;
-                    lpGrid.height = GridLayout.LayoutParams.WRAP_CONTENT;
-                    lpGrid.setMargins(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4));
-                    tabGrid.setLayoutParams(lpGrid);
+                    int marginPx = dpToPx(8);
+                    lpFlex.setMargins(marginPx, marginPx, marginPx, marginPx);
+                    tabGrid.setLayoutParams(lpFlex);
 
                     tabGrid.setOnClickListener(v -> {
                         int position = findAdapterPositionForPreference(category);
@@ -528,14 +528,26 @@ public class StreamSettings extends Activity {
             // 实现切换按钮的点击事件
             toggleButton.setOnClickListener(v -> {
                 if (navScroll.getVisibility() == View.VISIBLE) {
-                    // 切换到网格模式
+                    // 切换到流式布局模式
                     navScroll.setVisibility(View.GONE);
                     navGridScroll.setVisibility(View.VISIBLE);
+                    collapseButton.setVisibility(View.VISIBLE);
+                    // 更新图标为展开状态（可选，如果需要）
+                    toggleButton.setImageResource(android.R.drawable.ic_menu_view);
                 } else {
                     // 切换到水平滚动模式
                     navScroll.setVisibility(View.VISIBLE);
                     navGridScroll.setVisibility(View.GONE);
+                    collapseButton.setVisibility(View.GONE);
                 }
+            });
+
+            // 实现收缩按钮的点击事件（在顶部）
+            collapseButton.setOnClickListener(v -> {
+                // 切换回水平滚动模式
+                navScroll.setVisibility(View.VISIBLE);
+                navGridScroll.setVisibility(View.GONE);
+                collapseButton.setVisibility(View.GONE);
             });
         }
 
