@@ -29,13 +29,17 @@ import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
 import com.limelight.utils.ColorPickerDialog;
 
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class SimplifyPerformance extends Element {
     //总延迟 ≈ (网络延迟 + 排队延迟) + 解码延迟 + 渲染延迟
-    private static final String SIMPLIFY_PERFORMANCE_TEXT_DEFAULT = "  带宽: ##带宽##    主机/网络/解码: ##主机延时## / ##网络延时## / ##解码时间##    帧率: ##帧率##    丢帧: ##丢帧率##    渲染:##渲染延迟##";
+    private static final String SIMPLIFY_PERFORMANCE_TEXT_DEFAULT = "  带宽: ##带宽##    主机/网络/解码: ##主机延时## / ##网络延时## / ##解码时间##    帧率: ##帧率##    丢帧: ##丢帧率##    渲染:##渲染延迟##    时间:HH:MM:SS";
     private static final String COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_SIZE = COLUMN_INT_ELEMENT_THICK;
     private static final String COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_COLOR = COLUMN_INT_ELEMENT_NORMAL_COLOR;
     private static final String COLUMN_INT_SIMPLIFY_PERFORMANCE_PRE_PARSE_TEXT = COLUMN_STRING_ELEMENT_TEXT;
@@ -54,6 +58,12 @@ public class SimplifyPerformance extends Element {
     private int textSize;
     private int layer;
     private int backgroundColor;
+
+    // 添加时钟相关字段
+    private boolean showClock = false;
+    private SimpleDateFormat hourFormat = new SimpleDateFormat("HH", Locale.getDefault());
+    private SimpleDateFormat minuteFormat = new SimpleDateFormat("mm", Locale.getDefault());
+    private SimpleDateFormat secondFormat = new SimpleDateFormat("ss", Locale.getDefault());
 
     private SuperPageLayout simplifyPerformancePage;
     private NumberSeekbar centralXNumberSeekbar;
@@ -101,9 +111,16 @@ public class SimplifyPerformance extends Element {
         textColor = ((Long) attributesMap.get(COLUMN_INT_SIMPLIFY_PERFORMANCE_TEXT_COLOR)).intValue();
         backgroundColor = ((Long) attributesMap.get(COLUMN_INT_ELEMENT_BACKGROUND_COLOR)).intValue();
 
+        // 检查是否包含时钟占位符
+        checkForClockPlaceholder();
+
         // 1. 创建监听器并持有其引用
         performanceInfoDisplayListener = performanceAttrs -> {
-            Matcher matcher = pattern.matcher(preParseText);
+            // 先复制原始文本
+            String tempText = preParseText;
+
+            // 处理性能数据占位符
+            Matcher matcher = pattern.matcher(tempText);
             StringBuffer sb = new StringBuffer();
             try {
                 while (matcher.find()) {
@@ -112,10 +129,26 @@ public class SimplifyPerformance extends Element {
                     matcher.appendReplacement(sb, replacement);
                 }
                 matcher.appendTail(sb);
-                afterParseText = sb.toString();
+                tempText = sb.toString();
             } catch (Exception e) {
-                afterParseText = "error";
+                // 如果处理出错，保留原始文本
+                tempText = preParseText;
             }
+
+            // 处理时钟占位符
+            if (showClock) {
+                Calendar calendar = Calendar.getInstance();
+                String hour = hourFormat.format(calendar.getTime());
+                String minute = minuteFormat.format(calendar.getTime());
+                String second = secondFormat.format(calendar.getTime());
+
+                tempText = tempText.replace("HH", hour);
+                tempText = tempText.replace("MM", minute);
+                tempText = tempText.replace("SS", second);
+            }
+
+            afterParseText = tempText;
+
             // 数据更新后，立即重算尺寸
             changeSize();
         };
@@ -130,8 +163,29 @@ public class SimplifyPerformance extends Element {
 
     private void initializeHeartbeat() {
         heartbeatRunnable = () -> {
-            if (isHeartbeatActive) {
-                invalidate(); // 周期性地请求重绘
+            if (isHeartbeatActive) {// 如果显示时钟，则每秒更新一次
+                if (showClock) {
+                    // 更新时间显示
+                    if (!"null".equals(afterParseText) && !afterParseText.isEmpty()) {
+                        Calendar calendar = Calendar.getInstance();
+                        String hour = hourFormat.format(calendar.getTime());
+                        String minute = minuteFormat.format(calendar.getTime());
+                        String second = secondFormat.format(calendar.getTime());
+
+                        // 先复制当前文本
+                        String tempText = afterParseText;
+
+                        // 更新时间占位符
+                        tempText = tempText.replace("HH", hour);
+                        tempText = tempText.replace("MM", minute);
+                        tempText = tempText.replace("SS", second);
+
+                        afterParseText = tempText;
+                    }
+                    invalidate();
+                } else {
+                    invalidate(); // 周期性地请求重绘
+                }
                 heartbeatHandler.postDelayed(heartbeatRunnable, HEARTBEAT_INTERVAL_MS);
             }
         };
@@ -425,6 +479,7 @@ public class SimplifyPerformance extends Element {
 
     public void setElementPreParseText(String preParseText) {
         this.preParseText = preParseText.isEmpty() ? " " : preParseText;
+        checkForClockPlaceholder(); // 检查是否包含时钟占位符
     }
 
     public void setElementRadius(int radius) {
@@ -472,6 +527,11 @@ public class SimplifyPerformance extends Element {
         return contentValues;
 
 
+    }
+
+    // 添加检查时钟占位符的方法
+    private void checkForClockPlaceholder() {
+        showClock = preParseText.contains("HH") || preParseText.contains("MM") || preParseText.contains("SS");
     }
 
     private interface IntSupplier {

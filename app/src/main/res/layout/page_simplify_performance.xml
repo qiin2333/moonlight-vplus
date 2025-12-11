@@ -160,7 +160,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="解码器:      ##解码器## \n分辨率:      ##分辨率## \n丢帧率:      ##丢帧率##\n主机延时:  ##主机延时##\n网络延时:  ##网络延时##\n解码时间:  ##解码时间##\n带宽:         ##带宽## \n帧率:         ##帧率## \n渲染:         ##渲染延迟## \n" />
+                        android:text="解码器:      ##解码器## \n分辨率:      ##分辨率## \n丢帧率:      ##丢帧率##\n主机延时:  ##主机延时##\n网络延时:  ##网络延时##\n解码时间:  ##解码时间##\n带宽:         ##带宽## \n帧率:         ##帧率## \n渲染:         ##渲染延迟## \n时间:         HH:MM:SS \n" />
                 </LinearLayout>
                 <LinearLayout
                     android:orientation="horizontal"
