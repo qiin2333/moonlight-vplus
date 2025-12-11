@@ -258,6 +258,22 @@
         <item>decode_latency</item>
         <item>host_latency</item>
     </string-array>
+    <string-array name="mic_icon_color_entries">
+        <item>Gradient Blue</item>
+        <item>Gradient Purple</item>
+        <item>Gradient Green</item>
+        <item>Gradient Orange</item>
+        <item>Gradient Red</item>
+        <item>Solid White</item>
+    </string-array>
+    <string-array name="mic_icon_color_values" translatable="false">
+        <item>gradient_blue</item>
+        <item>gradient_purple</item>
+        <item>gradient_green</item>
+        <item>gradient_orange</item>
+        <item>gradient_red</item>
+        <item>solid_white</item>
+    </string-array>
 
     <!-- 本地鼠标模式预设选项 -->
     <string-array name="native_mouse_mode_preset_names">

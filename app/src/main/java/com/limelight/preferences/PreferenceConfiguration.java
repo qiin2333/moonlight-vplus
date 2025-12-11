@@ -132,6 +132,7 @@ public class PreferenceConfiguration {
     // 麦克风设置
     private static final String ENABLE_MIC_PREF_STRING = "checkbox_enable_mic";
     private static final String MIC_BITRATE_PREF_STRING = "seekbar_mic_bitrate_kbps";
+    private static final String MIC_ICON_COLOR_PREF_STRING = "list_mic_icon_color";
     private static final String ENABLE_ESC_MENU_PREF_STRING = "checkbox_enable_esc_menu";
 
     //wg
@@ -198,6 +199,7 @@ public class PreferenceConfiguration {
     // 麦克风设置默认值
     private static final boolean DEFAULT_ENABLE_MIC = false;
     private static final int DEFAULT_MIC_BITRATE = 96; // 默认128 kbps
+    private static final String DEFAULT_MIC_ICON_COLOR = "solid_white"; // 默认白
     private static final boolean DEFAULT_ENABLE_ESC_MENU = true; // 默认启用ESC菜单
 
     private static final boolean DEFAULT_ENABLE_DOUBLE_CLICK_DRAG = false;
@@ -331,6 +333,7 @@ public class PreferenceConfiguration {
     // 麦克风设置
     public boolean enableMic;
     public int micBitrate;
+    public String micIconColor;
     
     // ESC菜单设置
     public boolean enableEscMenu;
@@ -832,6 +835,7 @@ public class PreferenceConfiguration {
         // 读取麦克风设置
         config.enableMic = prefs.getBoolean(ENABLE_MIC_PREF_STRING, DEFAULT_ENABLE_MIC);
         config.micBitrate = prefs.getInt(MIC_BITRATE_PREF_STRING, DEFAULT_MIC_BITRATE);
+        config.micIconColor = prefs.getString(MIC_ICON_COLOR_PREF_STRING, DEFAULT_MIC_ICON_COLOR);
         
         // 读取ESC菜单设置
         config.enableEscMenu = prefs.getBoolean(ENABLE_ESC_MENU_PREF_STRING, DEFAULT_ENABLE_ESC_MENU);
@@ -958,6 +962,7 @@ public class PreferenceConfiguration {
                     .putBoolean("use_external_display", useExternalDisplay)
                     .putBoolean(ENABLE_MIC_PREF_STRING, enableMic)
                     .putInt(MIC_BITRATE_PREF_STRING, micBitrate)
+                    .putString(MIC_ICON_COLOR_PREF_STRING, micIconColor)
                     .putBoolean(ENABLE_ESC_MENU_PREF_STRING, enableEscMenu)
                     .putBoolean(ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, enableNativeMousePointer)
                     .putFloat(GYRO_SENSITIVITY_MULTIPLIER_PREF_STRING, gyroSensitivityMultiplier)
@@ -997,6 +1002,7 @@ public class PreferenceConfiguration {
         copy.useExternalDisplay = this.useExternalDisplay;
         copy.enableMic = this.enableMic;
         copy.micBitrate = this.micBitrate;
+        copy.micIconColor = this.micIconColor;
         copy.enableEscMenu = this.enableEscMenu;
         copy.enableNativeMousePointer = this.enableNativeMousePointer;
         copy.gyroToRightStick = this.gyroToRightStick;

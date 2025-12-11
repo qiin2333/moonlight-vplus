@@ -368,6 +368,8 @@
     <string name="title_seekbar_mic_bitrate">麦克风传输音质</string>
     <string name="summary_seekbar_mic_bitrate">调整麦克风重定向的音频质量。更高的比特率提供更好的音频质量，但会使用更多带宽。</string>
     <string name="suffix_seekbar_mic_bitrate_kbps">kbps</string>
+    <string name="title_list_mic_icon_color">麦克风图标颜色</string>
+    <string name="summary_list_mic_icon_color">选择麦克风按钮图标的颜色</string>
     <string name="title_checkbox_reduce_refresh_rate">允许降低刷新率</string>
     <string name="summary_checkbox_reduce_refresh_rate">较低的屏幕刷新率可以在增加一些视频延迟的情况下省电</string>
     <string name="frame_conversion_error">主机 PC 报告了致命的视频编码错误。

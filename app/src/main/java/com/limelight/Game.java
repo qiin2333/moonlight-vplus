@@ -830,6 +830,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             LimeLog.warning("KeyboardAccessibilityService is not running.");
         }
         // END: ACCESSIBILITY SERVICE INTEGRATION
+
+        // 刷新麦克风按钮图标（以便应用最新的颜色配置）
+        if (microphoneManager != null && micButton != null) {
+            microphoneManager.updateMicrophoneButtonState();
+        }
     }
 
     /**

@@ -146,6 +146,14 @@
             android:summary="@string/summary_seekbar_mic_bitrate"
             android:text="@string/suffix_seekbar_mic_bitrate_kbps"
             android:title="@string/title_seekbar_mic_bitrate" />
+        <ListPreference
+            android:key="list_mic_icon_color"
+            android:dependency="checkbox_enable_mic"
+            android:title="@string/title_list_mic_icon_color"
+            android:summary="@string/summary_list_mic_icon_color"
+            android:entries="@array/mic_icon_color_entries"
+            android:entryValues="@array/mic_icon_color_values"
+            android:defaultValue="solid_white" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_gamepad_settings"
         android:key="category_gamepad_settings"

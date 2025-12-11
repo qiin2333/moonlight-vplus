@@ -233,6 +233,8 @@
     <string name="title_seekbar_mic_bitrate">Microphone bitrate</string>
     <string name="summary_seekbar_mic_bitrate">Adjust the audio quality of microphone redirection. Higher bitrates provide better audio quality but use more bandwidth.</string>
     <string name="suffix_seekbar_mic_bitrate_kbps">kbps</string>
+    <string name="title_list_mic_icon_color">Microphone icon color</string>
+    <string name="summary_list_mic_icon_color">Choose the color scheme for the microphone button icon</string>
     <string name="title_checkbox_reduce_refresh_rate">Allow refresh rate reduction</string>
     <string name="summary_checkbox_reduce_refresh_rate">Lower display refresh rates can save power at the expense of some additional video latency</string>
 
