@@ -3895,11 +3895,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
      * 通过 findViewById 找到 XML 中的 CursorView
      */
     private void initializeLocalCursorRenderers(int width, int height) {
-        // 新增字段保存引用
         CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
 
         if (cursorOverlay == null) {
-            // 如果 XML 没更新，这里会返回 null，防止崩溃
             return;
         }
 
@@ -3907,9 +3905,14 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             for (TouchContext context : relativeTouchContextMap) {
                 if (context instanceof RelativeTouchContext) {
                     RelativeTouchContext relativeContext = (RelativeTouchContext) context;
-                    // 传入 View 而不是 Holder
                     relativeContext.initializeLocalCursorRenderer(cursorOverlay, width, height);
-                    boolean shouldShow = prefConfig.enableLocalCursorRendering;
+                    // 1. 开关必须开启
+                    // 2. 必须处于触控板模式 (touchscreenTrackpad == true)
+                    // 3. 必须没开启原生鼠标 (防止冲突)
+                    boolean shouldShow = prefConfig.enableLocalCursorRendering
+                            && prefConfig.touchscreenTrackpad
+                            && !prefConfig.enableNativeMousePointer;
+
                     relativeContext.setEnableLocalCursorRendering(shouldShow);
                 }
             }
@@ -3931,12 +3934,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
     }
 
-    public void refreshLocalCursorState(boolean  enabled) {
+    public void refreshLocalCursorState(boolean enabled) {
+        boolean shouldRender = enabled && !prefConfig.enableNativeMousePointer;
+
         if (relativeTouchContextMap != null) {
             for (TouchContext context : relativeTouchContextMap) {
                 if (context instanceof RelativeTouchContext) {
-                    ((RelativeTouchContext) context)
-                            .setEnableLocalCursorRendering(enabled);
+                    ((RelativeTouchContext) context).setEnableLocalCursorRendering(shouldRender);
                 }
             }
         }
