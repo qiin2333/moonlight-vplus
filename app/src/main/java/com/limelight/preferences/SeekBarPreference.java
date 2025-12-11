@@ -36,9 +36,6 @@ public class SeekBarPreference extends DialogPreference
     private final int keyStepSize;
     private final int divisor;
     private int currentValue;
-    
-    // 对数变换参数
-    private static final double LOG_BASE = 10.0;
     private boolean isLogarithmic = false;
 
     public SeekBarPreference(Context context, AttributeSet attrs) {
@@ -82,30 +79,35 @@ public class SeekBarPreference extends DialogPreference
     private int linearToLog(int linearValue) {
         if (linearValue <= minValue) return minValue;
         
-        // 计算对数比例尺
-        double minLog = Math.log10(minValue);
-        double maxLog = Math.log10(maxValue);
+        double minLog = Math.log(minValue);
+        double maxLog = Math.log(maxValue);
         double normalizedValue = (linearValue - minValue) / (double)(maxValue - minValue);
-        double logValue = Math.pow(LOG_BASE, minLog + normalizedValue * (maxLog - minLog));
-        
-        // 确保结果在范围内并按步长取整
+        double logValue = Math.exp(minLog + normalizedValue * (maxLog - minLog));
         int result = (int) Math.round(logValue);
         result = Math.max(minValue, Math.min(maxValue, result));
-        return ((result + (stepSize - 1))/stepSize)*stepSize;
+        
+        // 使用四舍五入取整到步长倍数（避免向上取整导致累积增加）
+        return Math.round((float)result / stepSize) * stepSize;
     }
     
     // 将对数刻度值转换回线性滑块值
     private int logToLinear(int logValue) {
         if (logValue <= minValue) return minValue;
-        
-        // 计算线性比例尺
-        double minLog = Math.log10(minValue);
-        double maxLog = Math.log10(maxValue);
-        double normalizedValue = (Math.log10(logValue) - minLog) / (maxLog - minLog);
+        double minLog = Math.log(minValue);
+        double maxLog = Math.log(maxValue);
+        double normalizedValue = (Math.log(logValue) - minLog) / (maxLog - minLog);
         double linearValue = minValue + normalizedValue * (maxValue - minValue);
-        
-        // 确保结果在范围内
         return (int) Math.round(linearValue);
+    }
+    
+    // 格式化显示值
+    private String formatDisplayValue(int value) {
+        if (divisor != 1) {
+            double displayValue = value / (double)divisor;
+            return String.format((Locale)null, "%.1f", displayValue);
+        } else {
+            return String.valueOf(value);
+        }
     }
 
     @Override
@@ -142,7 +144,10 @@ public class SeekBarPreference extends DialogPreference
                     return;
                 }
 
-                int roundedValue = ((value + (stepSize - 1))/stepSize)*stepSize;
+                // 四舍五入到最近的步长倍数（而非向上取整）
+                int roundedValue = Math.round((float)value / stepSize) * stepSize;
+                // 确保不小于最小值
+                roundedValue = Math.max(minValue, roundedValue);
                 if (roundedValue != value) {
                     seekBar.setProgress(roundedValue);
                     return;
@@ -154,14 +159,8 @@ public class SeekBarPreference extends DialogPreference
                     displayValue = linearToLog(value);
                 }
 
-                String t;
-                if (divisor != 1) {
-                    float floatValue = displayValue / (float)divisor;
-                    t = String.format((Locale)null, "%.1f", floatValue);
-                }
-                else {
-                    t = String.valueOf(displayValue);
-                }
+                // 使用优化的格式化方法
+                String t = formatDisplayValue(displayValue);
                 valueText.setText(suffix == null ? t : t.concat(suffix.length() > 1 ? " "+suffix : suffix));
             }
 
