@@ -1802,19 +1802,15 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     protected void onStop() {
         super.onStop();
 
-        // 检查是否是因为锁屏导致的应用停止
-        // 如果是锁屏，且开启了快速恢复功能，我们需要强制标记 shouldResumeSession = true
-        if (!shouldResumeSession) { // 如果 onUserLeaveHint 还没标记过
-            android.os.PowerManager pm = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
-            if (pm != null && !pm.isInteractive()) {
-                // isInteractive() 为 false 表示屏幕关闭（锁屏状态）
-                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-                boolean isResumeEnabled = prefs.getBoolean("checkbox_resume_stream", true);
+        // 检查是否是因为进入后台（包括锁屏、滑到任务栏、Home键）导致的应用停止
+        // 只要 Activity 不是正在 Finishing（即不是用户点了退出或崩溃），且开启了快速恢复，就标记为需要恢复
+        if (!shouldResumeSession && !isFinishing()) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+            boolean isResumeEnabled = prefs.getBoolean("checkbox_resume_stream", false);
 
-                if (isResumeEnabled) {
-                    shouldResumeSession = true;
-                    LimeLog.info("检测到锁屏，已标记为待恢复会话");
-                }
+            if (isResumeEnabled) {
+                shouldResumeSession = true;
+                LimeLog.info("检测到应用进入后台（非主动退出），已标记为待恢复会话");
             }
         }
 
