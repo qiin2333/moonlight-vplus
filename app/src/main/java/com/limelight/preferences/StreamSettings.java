@@ -448,6 +448,7 @@ public class StreamSettings extends Activity {
             collapseBtn.setImageResource(R.drawable.ic_list_view);
             collapseBtn.setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6));
             collapseBtn.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            collapseBtn.setMinimumHeight(dpToPx(28));
 
             GradientDrawable bgCollapse = new GradientDrawable();
             bgCollapse.setColor(Color.parseColor("#33FFFFFF"));
