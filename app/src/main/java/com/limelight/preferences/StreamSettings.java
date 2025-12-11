@@ -422,7 +422,7 @@ public class StreamSettings extends Activity {
             FlexboxLayout navGridContainer = activity.findViewById(R.id.settings_nav_grid_container);
             HorizontalScrollView navScroll = activity.findViewById(R.id.settings_nav_scroll);
             ScrollView navGridScroll = activity.findViewById(R.id.settings_nav_grid_scroll);
-            TextView toggleButton = activity.findViewById(R.id.settings_nav_toggle);
+            ImageView toggleButton = activity.findViewById(R.id.settings_nav_toggle);
 
             // 2. 安全检查
             if (navContainer == null || navGridContainer == null || navScroll == null || 
@@ -444,13 +444,10 @@ public class StreamSettings extends Activity {
                 return;
             }
 
-            final TextView collapseBtn = new TextView(activity);
-            collapseBtn.setText(" < ");
-            collapseBtn.setTextColor(Color.WHITE);
-            collapseBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
-            collapseBtn.setTypeface(null, android.graphics.Typeface.BOLD);
-            collapseBtn.setPadding(dpToPx(16), dpToPx(6), dpToPx(16), dpToPx(6));
-            collapseBtn.setGravity(android.view.Gravity.CENTER);
+            final ImageView collapseBtn = new ImageView(activity);
+            collapseBtn.setImageResource(R.drawable.ic_list_view);
+            collapseBtn.setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6));
+            collapseBtn.setScaleType(ImageView.ScaleType.FIT_CENTER);
 
             GradientDrawable bgCollapse = new GradientDrawable();
             bgCollapse.setColor(Color.parseColor("#33FFFFFF"));

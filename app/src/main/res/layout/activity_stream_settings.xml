@@ -29,20 +29,17 @@
         android:gravity="center_vertical"
         android:fitsSystemWindows="false">
 
-        <TextView
+        <ImageView
             android:id="@+id/settings_nav_toggle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="8dp"
             android:layout_marginRight="4dp"
             android:layout_gravity="center_vertical"
-            android:text=" > "
-            android:textSize="18sp"
-            android:textColor="#FFFFFF"
-            android:textStyle="bold"
-            android:gravity="center"
+            android:src="@drawable/ic_grid_view"
+            android:background="@drawable/toggle_button_background"
+            android:scaleType="fitCenter"
             android:padding="8dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
             android:visibility="visible" />
 
         <FrameLayout
