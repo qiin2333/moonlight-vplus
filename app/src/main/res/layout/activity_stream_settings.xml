@@ -16,35 +16,84 @@
         android:layout_height="match_parent"
         android:background="#B3333333" />
     
-    <HorizontalScrollView
-        android:id="@+id/settings_nav_scroll"
+    <LinearLayout
+        android:id="@+id/settings_nav_root"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:fillViewport="true"
-        android:scrollbars="none"
         android:layout_alignParentTop="true"
+        android:orientation="horizontal"
         android:paddingTop="@dimen/activity_safearea_top"
         android:paddingBottom="8dp"
         android:paddingLeft="0dp"
-        android:paddingRight="0dp"
         android:fitsSystemWindows="false">
 
-        <LinearLayout
-            android:id="@+id/settings_nav_container"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+        <ImageView
+            android:id="@+id/settings_nav_toggle"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginLeft="8dp"
+            android:layout_marginRight="8dp"
             android:layout_marginTop="8dp"
-            android:layout_marginLeft="12dp"
-            android:layout_marginRight="12dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical" />
-    </HorizontalScrollView>
+            android:layout_gravity="center_vertical"
+            android:src="@android:drawable/ic_menu_view"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/app_name"
+            android:scaleType="centerInside"
+            android:padding="8dp" />
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1">
+
+            <HorizontalScrollView
+                android:id="@+id/settings_nav_scroll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fillViewport="true"
+                android:scrollbars="none"
+                android:paddingLeft="0dp"
+                android:paddingRight="0dp"
+                android:visibility="visible">
+
+                <LinearLayout
+                    android:id="@+id/settings_nav_container"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginLeft="0dp"
+                    android:layout_marginRight="12dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical" />
+            </HorizontalScrollView>
+
+            <ScrollView
+                android:id="@+id/settings_nav_grid_scroll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                android:visibility="gone">
+
+                <GridLayout
+                    android:id="@+id/settings_nav_grid_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginLeft="0dp"
+                    android:layout_marginRight="12dp"
+                    android:columnCount="3"
+                    android:rowCount="0"
+                    android:alignmentMode="alignMargins"
+                    android:useDefaultMargins="false" />
+            </ScrollView>
+        </FrameLayout>
+    </LinearLayout>
 
     <FrameLayout
         android:id="@+id/preference_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@android:color/transparent"
-        android:layout_below="@id/settings_nav_scroll"/>
+        android:layout_below="@id/settings_nav_root"/>
         
 </RelativeLayout>

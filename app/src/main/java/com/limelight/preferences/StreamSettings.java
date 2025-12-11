@@ -37,6 +37,8 @@ import android.graphics.drawable.GradientDrawable;
 import android.util.TypedValue;
 import android.widget.ListView;
 import android.preference.PreferenceGroup;
+import android.widget.GridLayout;
+import android.widget.ScrollView;
 
 import androidx.annotation.NonNull;
 
@@ -412,12 +414,19 @@ public class StreamSettings extends Activity {
             }
 
             LinearLayout navContainer = activity.findViewById(R.id.settings_nav_container);
-            if (navContainer == null) {
+            GridLayout navGridContainer = activity.findViewById(R.id.settings_nav_grid_container);
+            HorizontalScrollView navScroll = activity.findViewById(R.id.settings_nav_scroll);
+            ScrollView navGridScroll = activity.findViewById(R.id.settings_nav_grid_scroll);
+            ImageView toggleButton = activity.findViewById(R.id.settings_nav_toggle);
+
+            if (navContainer == null || navGridContainer == null || navScroll == null || 
+                navGridScroll == null || toggleButton == null) {
                 return;
             }
 
             // 清空旧导航
             navContainer.removeAllViews();
+            navGridContainer.removeAllViews();
 
             PreferenceScreen screen = getPreferenceScreen();
             if (screen == null) {
@@ -433,26 +442,27 @@ public class StreamSettings extends Activity {
                         continue;
                     }
 
-                    final TextView tab = new TextView(activity);
-                    tab.setText(category.getTitle());
-                    tab.setTextColor(Color.WHITE);
-                    tab.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-                    tab.setSingleLine(true);
-                    tab.setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6));
+                    // 创建水平滚动模式的Tab View
+                    final TextView tabHorizontal = new TextView(activity);
+                    tabHorizontal.setText(category.getTitle());
+                    tabHorizontal.setTextColor(Color.WHITE);
+                    tabHorizontal.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+                    tabHorizontal.setSingleLine(true);
+                    tabHorizontal.setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6));
 
-                    GradientDrawable bg = new GradientDrawable();
-                    bg.setColor(Color.parseColor("#33FFFFFF"));
-                    bg.setCornerRadius(dpToPx(16));
-                    tab.setBackground(bg);
+                    GradientDrawable bgHorizontal = new GradientDrawable();
+                    bgHorizontal.setColor(Color.parseColor("#33FFFFFF"));
+                    bgHorizontal.setCornerRadius(dpToPx(16));
+                    tabHorizontal.setBackground(bgHorizontal);
 
-                    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams lpHorizontal = new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.WRAP_CONTENT,
                             LinearLayout.LayoutParams.WRAP_CONTENT
                     );
-                    lp.rightMargin = dpToPx(12);
-                    tab.setLayoutParams(lp);
+                    lpHorizontal.rightMargin = dpToPx(12);
+                    tabHorizontal.setLayoutParams(lpHorizontal);
 
-                    tab.setOnClickListener(v -> {
+                    tabHorizontal.setOnClickListener(v -> {
                         int position = findAdapterPositionForPreference(category);
                         if (position >= 0) {
 							ListView listView = null;
@@ -469,9 +479,61 @@ public class StreamSettings extends Activity {
                         }
                     });
 
-                    navContainer.addView(tab);
+                    // 创建网格模式的Tab View（独立实例，不复用）
+                    final TextView tabGrid = new TextView(activity);
+                    tabGrid.setText(category.getTitle());
+                    tabGrid.setTextColor(Color.WHITE);
+                    tabGrid.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+                    tabGrid.setSingleLine(true);
+                    tabGrid.setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6));
+
+                    GradientDrawable bgGrid = new GradientDrawable();
+                    bgGrid.setColor(Color.parseColor("#33FFFFFF"));
+                    bgGrid.setCornerRadius(dpToPx(16));
+                    tabGrid.setBackground(bgGrid);
+
+                    GridLayout.LayoutParams lpGrid = new GridLayout.LayoutParams();
+                    lpGrid.width = 0;
+                    lpGrid.height = GridLayout.LayoutParams.WRAP_CONTENT;
+                    lpGrid.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1);
+                    lpGrid.setMargins(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4));
+                    tabGrid.setLayoutParams(lpGrid);
+
+                    tabGrid.setOnClickListener(v -> {
+                        int position = findAdapterPositionForPreference(category);
+                        if (position >= 0) {
+							ListView listView = null;
+							View fragmentView = getView();
+							if (fragmentView != null) {
+								listView = fragmentView.findViewById(android.R.id.list);
+							}
+							else {
+								listView = activity.findViewById(android.R.id.list);
+							}
+							if (listView != null) {
+                                listView.smoothScrollToPositionFromTop(position, dpToPx(8));
+                            }
+                        }
+                    });
+
+                    // 分别添加到两个容器
+                    navContainer.addView(tabHorizontal);
+                    navGridContainer.addView(tabGrid);
                 }
             }
+
+            // 实现切换按钮的点击事件
+            toggleButton.setOnClickListener(v -> {
+                if (navScroll.getVisibility() == View.VISIBLE) {
+                    // 切换到网格模式
+                    navScroll.setVisibility(View.GONE);
+                    navGridScroll.setVisibility(View.VISIBLE);
+                } else {
+                    // 切换到水平滚动模式
+                    navScroll.setVisibility(View.VISIBLE);
+                    navGridScroll.setVisibility(View.GONE);
+                }
+            });
         }
 
         private int dpToPx(int dp) {
@@ -1183,3 +1245,4 @@ public class StreamSettings extends Activity {
             .into(imageView));
     }
 }
+
