@@ -26,20 +26,24 @@
         android:paddingTop="@dimen/activity_safearea_top"
         android:paddingBottom="8dp"
         android:paddingLeft="0dp"
+        android:gravity="center_vertical"
         android:fitsSystemWindows="false">
 
-        <ImageView
+        <TextView
             android:id="@+id/settings_nav_toggle"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginLeft="12dp"
-            android:layout_marginRight="8dp"
-            android:layout_marginTop="8dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="8dp"
+            android:layout_marginRight="4dp"
             android:layout_gravity="center_vertical"
-            android:src="@android:drawable/ic_menu_view"
-            android:background="@drawable/toggle_button_background"
-            android:scaleType="centerInside"
-            android:padding="10dp" />
+            android:text=" > "
+            android:textSize="18sp"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:padding="8dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:visibility="visible" />
 
         <FrameLayout
             android:layout_width="0dp"

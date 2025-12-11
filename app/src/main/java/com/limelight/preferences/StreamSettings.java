@@ -422,7 +422,7 @@ public class StreamSettings extends Activity {
             FlexboxLayout navGridContainer = activity.findViewById(R.id.settings_nav_grid_container);
             HorizontalScrollView navScroll = activity.findViewById(R.id.settings_nav_scroll);
             ScrollView navGridScroll = activity.findViewById(R.id.settings_nav_grid_scroll);
-            ImageView toggleButton = activity.findViewById(R.id.settings_nav_toggle);
+            TextView toggleButton = activity.findViewById(R.id.settings_nav_toggle);
 
             // 2. 安全检查
             if (navContainer == null || navGridContainer == null || navScroll == null || 
@@ -430,12 +430,12 @@ public class StreamSettings extends Activity {
                 return;
             }
 
-            // 强制 Flexbox 自动换行
+            // 3. 配置 Flexbox 自动换行
             navGridContainer.setFlexWrap(FlexWrap.WRAP);
             navGridContainer.setFlexDirection(FlexDirection.ROW);
             navGridContainer.setJustifyContent(JustifyContent.FLEX_START);
 
-            // 3. 清空旧视图
+            // 4. 清空视图
             navContainer.removeAllViews();
             navGridContainer.removeAllViews();
 
@@ -444,7 +444,38 @@ public class StreamSettings extends Activity {
                 return;
             }
 
-            // 4. 构建 Tab 循环
+            final TextView collapseBtn = new TextView(activity);
+            collapseBtn.setText(" < ");
+            collapseBtn.setTextColor(Color.WHITE);
+            collapseBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+            collapseBtn.setTypeface(null, android.graphics.Typeface.BOLD);
+            collapseBtn.setPadding(dpToPx(16), dpToPx(6), dpToPx(16), dpToPx(6));
+            collapseBtn.setGravity(android.view.Gravity.CENTER);
+
+            GradientDrawable bgCollapse = new GradientDrawable();
+            bgCollapse.setColor(Color.parseColor("#33FFFFFF"));
+            bgCollapse.setCornerRadius(dpToPx(16));
+            collapseBtn.setBackground(bgCollapse);
+
+            FlexboxLayout.LayoutParams lpCollapse = new FlexboxLayout.LayoutParams(
+                    FlexboxLayout.LayoutParams.WRAP_CONTENT,
+                    FlexboxLayout.LayoutParams.WRAP_CONTENT
+            );
+            int margin = dpToPx(6);
+            lpCollapse.setMargins(margin, margin, margin, margin);
+            collapseBtn.setLayoutParams(lpCollapse);
+
+            // 点击内部收起按钮 -> 切换回水平模式
+            collapseBtn.setOnClickListener(v -> {
+                navScroll.setVisibility(View.VISIBLE);
+                toggleButton.setVisibility(View.VISIBLE);
+                navGridScroll.setVisibility(View.GONE);
+            });
+
+            // 添加到网格的第一个位置
+            navGridContainer.addView(collapseBtn);
+
+            // 5. 循环添加普通分类按钮
             for (int i = 0; i < screen.getPreferenceCount(); i++) {
                 Preference pref = screen.getPreference(i);
                 if (pref instanceof PreferenceCategory) {
@@ -453,80 +484,56 @@ public class StreamSettings extends Activity {
                         continue;
                     }
 
-                    // --- 创建水平模式 Tab ---
-                    final TextView tabHorizontal = new TextView(activity);
-                    tabHorizontal.setText(category.getTitle());
-                    tabHorizontal.setTextColor(Color.WHITE);
-                    tabHorizontal.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-                    tabHorizontal.setSingleLine(true);
-                    tabHorizontal.setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6));
-
-                    GradientDrawable bgHorizontal = new GradientDrawable();
-                    bgHorizontal.setColor(Color.parseColor("#33FFFFFF"));
-                    bgHorizontal.setCornerRadius(dpToPx(16));
-                    tabHorizontal.setBackground(bgHorizontal);
-
+                    // --- 水平模式 Tab ---
+                    final TextView tabHorizontal = createTab(activity, category.getTitle().toString());
                     LinearLayout.LayoutParams lpHorizontal = new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.WRAP_CONTENT,
                             LinearLayout.LayoutParams.WRAP_CONTENT
                     );
                     lpHorizontal.rightMargin = dpToPx(12);
                     tabHorizontal.setLayoutParams(lpHorizontal);
-
-                    // 水平点击事件
                     tabHorizontal.setOnClickListener(v -> scrollToCategory(category));
+                    navContainer.addView(tabHorizontal);
 
-                    // --- 创建网格模式 Tab (Flexbox) ---
-                    final TextView tabGrid = new TextView(activity);
-                    tabGrid.setText(category.getTitle());
-                    tabGrid.setTextColor(Color.WHITE);
-                    tabGrid.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-                    tabGrid.setSingleLine(true);
-                    tabGrid.setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6));
-
-                    // 复用相同的背景样式
-                    GradientDrawable bgGrid = new GradientDrawable();
-                    bgGrid.setColor(Color.parseColor("#33FFFFFF"));
-                    bgGrid.setCornerRadius(dpToPx(16));
-                    tabGrid.setBackground(bgGrid);
-
-                    // 使用 Flexbox 布局参数
+                    // --- 网格模式 Tab ---
+                    final TextView tabGrid = createTab(activity, category.getTitle().toString());
                     FlexboxLayout.LayoutParams lpFlex = new FlexboxLayout.LayoutParams(
                             FlexboxLayout.LayoutParams.WRAP_CONTENT,
                             FlexboxLayout.LayoutParams.WRAP_CONTENT
                     );
-                    int marginPx = dpToPx(6); // 稍微调小一点间距，更紧凑
-                    lpFlex.setMargins(marginPx, marginPx, marginPx, marginPx);
+                    lpFlex.setMargins(margin, margin, margin, margin);
                     tabGrid.setLayoutParams(lpFlex);
-
-                    // 网格点击事件
                     tabGrid.setOnClickListener(v -> scrollToCategory(category));
-
-                    // 添加到各自容器
-                    navContainer.addView(tabHorizontal);
                     navGridContainer.addView(tabGrid);
                 }
             }
 
-            // 5. 切换按钮逻辑 (单个按钮控制开关)
+            // 6. 左侧固定按钮点击事件（只负责展开）
             toggleButton.setOnClickListener(v -> {
-                if (navScroll.getVisibility() == View.VISIBLE) {
-                    // -> 切换到 网格模式 (展开)
-                    navScroll.setVisibility(View.GONE);
-                    navGridScroll.setVisibility(View.VISIBLE);
-                    // 切换图标为"向上收起" (使用系统自带图标或您自己的)
-                    toggleButton.setImageResource(android.R.drawable.arrow_up_float);
-                } else {
-                    // -> 切换回 水平模式 (收起)
-                    navScroll.setVisibility(View.VISIBLE);
-                    navGridScroll.setVisibility(View.GONE);
-                    // 切换图标为"菜单/列表"
-                    toggleButton.setImageResource(android.R.drawable.ic_menu_view);
-                }
+                // 切换到网格模式
+                navScroll.setVisibility(View.GONE);
+                toggleButton.setVisibility(View.GONE);
+                navGridScroll.setVisibility(View.VISIBLE);
             });
         }
 
-        // 辅助方法：提取点击跳转逻辑，减少重复代码
+        // 辅助方法：创建统一样式的 Tab (避免代码重复)
+        private TextView createTab(Activity activity, String text) {
+            TextView tab = new TextView(activity);
+            tab.setText(text);
+            tab.setTextColor(Color.WHITE);
+            tab.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+            tab.setSingleLine(true);
+            tab.setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6));
+
+            GradientDrawable bg = new GradientDrawable();
+            bg.setColor(Color.parseColor("#33FFFFFF"));
+            bg.setCornerRadius(dpToPx(16));
+            tab.setBackground(bg);
+            return tab;
+        }
+
+        // 辅助方法：跳转
         private void scrollToCategory(PreferenceCategory category) {
             int position = findAdapterPositionForPreference(category);
             if (position >= 0) {
@@ -1255,4 +1262,5 @@ public class StreamSettings extends Activity {
             .into(imageView));
     }
 }
+
 
