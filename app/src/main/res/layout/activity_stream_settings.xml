@@ -37,7 +37,6 @@
             android:layout_gravity="center_vertical"
             android:src="@android:drawable/ic_menu_view"
             android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Toggle layout"
             android:scaleType="centerInside"
             android:padding="8dp" />
 
@@ -82,7 +81,6 @@
                     android:layout_marginLeft="0dp"
                     android:layout_marginRight="12dp"
                     android:columnCount="3"
-                    android:rowCount="0"
                     android:alignmentMode="alignMargins"
                     android:useDefaultMargins="false" />
             </ScrollView>

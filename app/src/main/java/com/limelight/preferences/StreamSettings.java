@@ -493,10 +493,12 @@ public class StreamSettings extends Activity {
                     bgGrid.setCornerRadius(dpToPx(16));
                     tabGrid.setBackground(bgGrid);
 
-                    GridLayout.LayoutParams lpGrid = new GridLayout.LayoutParams();
-                    lpGrid.width = 0;
+                    GridLayout.LayoutParams lpGrid = new GridLayout.LayoutParams(
+                            GridLayout.spec(GridLayout.UNDEFINED),
+                            GridLayout.spec(GridLayout.UNDEFINED)
+                    );
+                    lpGrid.width = GridLayout.LayoutParams.WRAP_CONTENT;
                     lpGrid.height = GridLayout.LayoutParams.WRAP_CONTENT;
-                    lpGrid.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1);
                     lpGrid.setMargins(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4));
                     tabGrid.setLayoutParams(lpGrid);
 
