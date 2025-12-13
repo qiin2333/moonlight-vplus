@@ -4617,100 +4617,177 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private static final int CURSOR_PORT = 5005;
     private String computerIpAddress;
 
-    // 启动光标服务
+    // 定义全局变量，用于管理当前正在播放的动画，防止多个动画叠加
+    private Runnable currentAnimationTask = null;
+    private final android.os.Handler animationHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+
+    // 使用 Android LruCache 进行内存管理 (最大缓存 100 张光标)
+    private android.util.LruCache<Integer, android.graphics.Bitmap> cursorCache = new android.util.LruCache<>(100);
+
     private void startCursorService(String hostIp) {
         if (isCursorNetworking) return;
         this.computerIpAddress = hostIp;
         this.isCursorNetworking = true;
 
         cursorNetworkThread = new Thread(() -> {
-            LimeLog.info("CursorNet: 服务线程启动，目标: " + computerIpAddress);
-
-            // === 外层循环：负责断线重连 ===
             while (isCursorNetworking) {
                 try {
-                    LimeLog.info("CursorNet: 正在尝试连接 TCP " + computerIpAddress);
                     cursorSocket = new java.net.Socket();
-
-                    // 连接超时设置为 3秒
                     cursorSocket.connect(new java.net.InetSocketAddress(computerIpAddress, CURSOR_PORT), 3000);
                     cursorSocket.setTcpNoDelay(true);
-
                     java.io.DataInputStream dis = new java.io.DataInputStream(cursorSocket.getInputStream());
-                    LimeLog.info("CursorNet: TCP 连接成功");
 
-                    // === 内层循环：负责数据接收 ===
+                    // 连接成功时清空缓存，因为服务端重连后状态重置了
+                    cursorCache.evictAll();
+
                     while (isCursorNetworking) {
-                        // 1. 读取长度
+                        // 1. 读取总长度
                         byte[] lenBytes = new byte[4];
-                        dis.readFully(lenBytes); // 阻塞读取，如果断开会抛 EOFException
-
-                        int packetLen = (lenBytes[0] & 0xFF) |
-                                ((lenBytes[1] & 0xFF) << 8) |
-                                ((lenBytes[2] & 0xFF) << 16) |
-                                ((lenBytes[3] & 0xFF) << 24);
+                        dis.readFully(lenBytes);
+                        int packetLen = (lenBytes[0] & 0xFF) | ((lenBytes[1] & 0xFF) << 8) | ((lenBytes[2] & 0xFF) << 16) | ((lenBytes[3] & 0xFF) << 24);
 
                         // 2. 读取包体
                         byte[] bodyData = new byte[packetLen];
                         dis.readFully(bodyData);
 
-                        // 3. 解析
+                        // 3. 解析协议 (新协议头 20 字节)
+                        // [Hash(4)] [HotX(4)] [HotY(4)] [Frames(4)] [Delay(4)] [PNG...]
                         java.nio.ByteBuffer wrapped = java.nio.ByteBuffer.wrap(bodyData);
                         wrapped.order(java.nio.ByteOrder.LITTLE_ENDIAN);
 
+                        int cursorHash = wrapped.getInt(); // 新增 Hash 字段
                         int hotX = wrapped.getInt();
                         int hotY = wrapped.getInt();
-                        int pngSize = packetLen - 8;
+                        int frameCount = wrapped.getInt();
+                        int frameDelay = wrapped.getInt();
+
+                        int headerSize = 20;
+                        int pngSize = packetLen - headerSize;
+
+                        android.graphics.Bitmap targetBitmap = null;
 
                         if (pngSize > 0) {
-                            android.graphics.Bitmap bmp = android.graphics.BitmapFactory.decodeByteArray(bodyData, 8, pngSize);
-                            if (bmp != null) {
-                                final android.graphics.Bitmap finalBmp = bmp;
-                                runOnUiThread(() -> {
-                                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N && prefConfig.enableNativeMousePointer) {
-                                        try {
-                                            PointerIcon pointerIcon = PointerIcon.create(finalBmp, hotX, hotY);
-                                            streamView.setPointerIcon(pointerIcon);
-                                        } catch (Exception ignored) {}
-                                    } else {
-                                        com.limelight.ui.CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
-                                        if (cursorOverlay != null) {
-                                            cursorOverlay.setCursorBitmap(finalBmp, hotX, hotY);
-                                        }
-                                    }
-                                });
+                            // === 情况 A: 服务端发送了完整图片 ===
+                            targetBitmap = android.graphics.BitmapFactory.decodeByteArray(bodyData, headerSize, pngSize);
+                            if (targetBitmap != null) {
+                                // 存入本地缓存
+                                cursorCache.put(cursorHash, targetBitmap);
                             }
+                        } else {
+                            // === 情况 B: 服务端只发了 Hash (pngSize == 0) ===
+                            targetBitmap = cursorCache.get(cursorHash);
+                            if (targetBitmap == null) {
+                                LimeLog.warning("CursorNet: 缓存未命中! Hash: " + cursorHash);
+                                // 理论上不应发生，如果发生，可能是服务端重启了但客户端没断
+                                // 这里可以考虑断开重连，或者暂时忽略
+                                continue;
+                            }
+                        }
+
+                        if (targetBitmap != null) {
+                            final android.graphics.Bitmap finalBmp = targetBitmap;
+                            runOnUiThread(() -> handleCursorUpdate(finalBmp, hotX, hotY, frameCount, frameDelay));
                         }
                     }
                 } catch (Exception e) {
-                    // 包含: ConnectException (连不上), EOFException (服务端断开), SocketException
                     LimeLog.warning("CursorNet: 连接断开或失败: " + e.getMessage());
                 } finally {
-                    // 每次断开（无论是内层循环结束还是异常），都清理资源并重置光标
-                    try {
-                        if (cursorSocket != null) cursorSocket.close();
-                    } catch (Exception ignored) {}
+                    try { if (cursorSocket != null) cursorSocket.close(); } catch (Exception ignored) {}
                     cursorSocket = null;
 
-                    // 只有当服务还开启时，才恢复默认图标（避免退出游戏时闪烁）
                     if (isCursorNetworking) {
+                        // 停止任何正在进行的动画
+                        stopCurrentAnimation();
                         restoreDefaultCursor();
 
-                        // === 等待重连 ===
                         LimeLog.info("CursorNet: 2秒后重试连接...");
-                        try {
-                            Thread.sleep(2000);
-                        } catch (InterruptedException e) {
-                            // 线程被中断，可能是退出游戏，结束外层循环
-                            break;
-                        }
+                        try { Thread.sleep(2000); } catch (InterruptedException e) { break; }
                     }
                 }
             }
-
             LimeLog.info("CursorNet: 服务线程已退出");
         });
         cursorNetworkThread.start();
+    }
+
+    /**
+     * 停止当前正在运行的光标动画
+     */
+    private void stopCurrentAnimation() {
+        animationHandler.removeCallbacksAndMessages(null);
+        currentAnimationTask = null;
+    }
+
+    /**
+     * 处理光标更新逻辑 (运行在 UI 线程)
+     */
+    private void handleCursorUpdate(android.graphics.Bitmap spriteSheet, int hotX, int hotY, int frameCount, int frameDelay) {
+        // 1. 先停止旧的动画
+        stopCurrentAnimation();
+
+        // 2. 如果是静态光标 (帧数 <= 1)，直接设置
+        if (frameCount <= 1) {
+            setSystemOrOverlayCursor(spriteSheet, hotX, hotY);
+            return;
+        }
+
+        // 3. 如果是动态光标，进行切割和播放
+        try {
+            int singleFrameW = spriteSheet.getWidth();
+            int singleFrameH = spriteSheet.getHeight() / frameCount; // 垂直切割
+
+            // 切割 Sprite Sheet 为帧数组
+            // 注意：这里可以加一个简单的 LRU 缓存避免重复切割，但为了代码简洁先直接切
+            final android.graphics.Bitmap[] frames = new android.graphics.Bitmap[frameCount];
+            for (int i = 0; i < frameCount; i++) {
+                frames[i] = android.graphics.Bitmap.createBitmap(spriteSheet, 0, i * singleFrameH, singleFrameW, singleFrameH);
+            }
+
+            // 定义动画任务
+            currentAnimationTask = new Runnable() {
+                int index = 0;
+                @Override
+                public void run() {
+                    if (!isCursorNetworking) return;
+
+                    // 设置当前帧
+                    setSystemOrOverlayCursor(frames[index], hotX, hotY);
+
+                    // 计算下一帧
+                    index = (index + 1) % frameCount;
+
+                    // 调度下一次更新
+                    animationHandler.postDelayed(this, frameDelay > 0 ? frameDelay : 33);
+                }
+            };
+
+            // 立即开始播放
+            currentAnimationTask.run();
+
+        } catch (Exception e) {
+            LimeLog.warning("CursorNet: 动画处理失败: " + e.getMessage());
+            // 降级处理：只显示第一帧
+            setSystemOrOverlayCursor(spriteSheet, hotX, hotY);
+        }
+    }
+
+    /**
+     * 设置系统指针或 Overlay 指针的底层方法
+     */
+    private void setSystemOrOverlayCursor(android.graphics.Bitmap bitmap, int hotX, int hotY) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N && prefConfig.enableNativeMousePointer) {
+            try {
+                // Android 7.0+ 原生鼠标指针
+                PointerIcon pointerIcon = PointerIcon.create(bitmap, hotX, hotY);
+                streamView.setPointerIcon(pointerIcon);
+            } catch (Exception ignored) {}
+        } else {
+            // 旧版/自定义 Overlay
+            com.limelight.ui.CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
+            if (cursorOverlay != null) {
+                cursorOverlay.setCursorBitmap(bitmap, hotX, hotY);
+            }
+        }
     }
 
     // 辅助方法：恢复默认光标
