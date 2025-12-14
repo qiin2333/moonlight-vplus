@@ -11,8 +11,13 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallback {
     
@@ -29,6 +34,10 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
     private LinkedBlockingQueue<byte[]> packetQueue;
     private int sequenceNumber = 0;
     private int micPort;
+    
+    private Cipher microphoneCipher;
+    private SecretKeySpec secretKey;
+    private byte[] baseIv;
     
     public MicrophoneStream(NvConnection conn) {
         this.conn = conn;
@@ -57,6 +66,19 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
                 // 如果主机已经请求麦克风，立即启动麦克风捕获
                 if (MoonBridge.isMicrophoneRequested()) {
                     LimeLog.info("主机请求麦克风，开始捕获");
+                    
+                    // 尝试获取加密密钥
+                    byte[] keys = MoonBridge.getMicrophoneEncryptionKeys();
+                    if (keys != null) {
+                        try {
+                            setupEncryption(keys);
+                            LimeLog.info("麦克风加密已启用");
+                        } catch (Exception e) {
+                            LimeLog.severe("麦克风加密初始化失败: " + e.getMessage());
+                            return false;
+                        }
+                    }
+                    
                     hostRequested.set(true);
                     return startMicrophoneCapture();
                 } else {
@@ -103,6 +125,18 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
                 if (isRequested && !hostRequested.get()) {
                     hostRequested.set(true);
                     LimeLog.info("检测到主机请求麦克风，开始捕获");
+                    
+                    // 尝试获取加密密钥
+                    byte[] keys = MoonBridge.getMicrophoneEncryptionKeys();
+                    if (keys != null) {
+                        try {
+                            setupEncryption(keys);
+                            LimeLog.info("麦克风加密已启用");
+                        } catch (Exception e) {
+                            LimeLog.severe("麦克风加密初始化失败: " + e.getMessage());
+                        }
+                    }
+
                     try {
                         startMicrophoneCapture();
                     } catch (Exception e) {
@@ -301,6 +335,19 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
         
         packetQueue.clear();
     }
+
+    private void setupEncryption(byte[] keys) throws Exception {
+        if (keys.length != 32) {
+            throw new IllegalArgumentException("Invalid key length: " + keys.length);
+        }
+
+        byte[] keyBytes = Arrays.copyOfRange(keys, 0, 16);
+        byte[] ivBytes = Arrays.copyOfRange(keys, 16, 32);
+
+        secretKey = new SecretKeySpec(keyBytes, "AES");
+        baseIv = ivBytes;
+        microphoneCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+    }
     
     private InetAddress getCurrentHost() {
         try {
@@ -410,7 +457,8 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
                 maxLatency = Math.max(maxLatency, sendLatency);
 
                 // 构建正确的麦克风数据包头部（12字节）
-                ByteBuffer packetBuf = ByteBuffer.allocate(encoded.length + 12);
+                // 分配足够的空间：编码数据 + 头部(12) + 加密填充/开销(预留32字节)
+                ByteBuffer packetBuf = ByteBuffer.allocate(encoded.length + 12 + 32);
                 packetBuf.order(ByteOrder.LITTLE_ENDIAN); // 使用小端字节序
 
                 // flags (1字节)
@@ -425,11 +473,49 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
                 packetBuf.putInt(0x12345678); // 使用固定SSRC
 
                 // 添加opus编码数据
-                packetBuf.put(encoded);
-
-                DatagramPacket packet = new DatagramPacket(
-                        packetBuf.array(), packetBuf.capacity(),
-                        currentHost, micPort);
+                if (microphoneCipher != null) {
+                    // 计算IV: baseIv (前4字节作为big endian int) + sequenceNumber
+                    // 构造新的IV
+                    byte[] iv = new byte[16];
+                    
+                    // 取baseIv的前4字节作为int (Big Endian)
+                    int baseIvVal = ((baseIv[0] & 0xFF) << 24) |
+                                    ((baseIv[1] & 0xFF) << 16) |
+                                    ((baseIv[2] & 0xFF) << 8) |
+                                    (baseIv[3] & 0xFF);
+                    
+                    // sequenceNumber is tracked in 'sequenceNumber' variable locally.
+                    // packetBuf.putShort((short) (sequenceNumber++ & 0xFFFF)); was done above.
+                    // Note: sequenceNumber was incremented already. We need the value put in the packet.
+                    // Let's use the local sequenceNumber - 1 because it was post-incremented.
+                    int ivSeq = baseIvVal + ((sequenceNumber - 1) & 0xFFFF);
+                    
+                    iv[0] = (byte) ((ivSeq >> 24) & 0xFF);
+                    iv[1] = (byte) ((ivSeq >> 16) & 0xFF);
+                    iv[2] = (byte) ((ivSeq >> 8) & 0xFF);
+                    iv[3] = (byte) (ivSeq & 0xFF);
+                    // 剩余字节为0 (Java数组初始化默认为0)
+                    
+                    IvParameterSpec ivSpec = new IvParameterSpec(iv);
+                    microphoneCipher.init(Cipher.ENCRYPT_MODE, secretKey, ivSpec);
+                    
+                    byte[] encrypted = microphoneCipher.doFinal(encoded);
+                    packetBuf.put(encrypted);
+                    
+                    // 此时packetBuf包含header + encrypted data
+                    // 需要重新调整packet长度，因为PKCS5Padding会增加长度
+                    int totalLength = 12 + encrypted.length;
+                    packet = new DatagramPacket(
+                            packetBuf.array(), totalLength,
+                            currentHost, micPort);
+                } else {
+                    packetBuf.put(encoded);
+                    int totalLength = 12 + encoded.length;
+                    packet = new DatagramPacket(
+                            packetBuf.array(), totalLength,
+                            currentHost, micPort);
+                }
+                
                 socket.send(packet);
                 
                 lastSendTime = currentTime;

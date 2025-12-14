@@ -11,8 +11,11 @@
 #include "controller_list.h"
 
 // 外部变量声明
+#define SS_ENC_MICROPHONE 0x08
+
 extern uint16_t MicPortNumber;
 extern STREAM_CONFIGURATION StreamConfig;
+extern uint32_t EncryptionFeaturesEnabled;
 
 JNIEXPORT void JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_sendMouseMove(JNIEnv *env, jclass clazz, jshort deltaX, jshort deltaY) {
@@ -279,4 +282,16 @@ Java_com_limelight_nvstream_jni_MoonBridge_isMicrophoneRequested(JNIEnv *env, jc
     // 如果麦克风端口号已经协商好并且StreamConfig.enableMic为true，说明主机需要麦克风
     // 这表示主机已经通过RTSP协商请求了麦克风流
     return (MicPortNumber != 0 && StreamConfig.enableMic) ? JNI_TRUE : JNI_FALSE;
-} 
+}
+
+JNIEXPORT jbyteArray JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_getMicrophoneEncryptionKeys(JNIEnv *env, jclass clazz) {
+    if ((EncryptionFeaturesEnabled & SS_ENC_MICROPHONE) == 0) {
+        return NULL;
+    }
+
+    jbyteArray ret = (*env)->NewByteArray(env, 32);
+    (*env)->SetByteArrayRegion(env, ret, 0, 16, (jbyte*)StreamConfig.remoteInputAesKey);
+    (*env)->SetByteArrayRegion(env, ret, 16, 16, (jbyte*)StreamConfig.remoteInputAesIv);
+    return ret;
+}
