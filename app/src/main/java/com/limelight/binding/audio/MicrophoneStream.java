@@ -473,6 +473,7 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
                 packetBuf.putInt(0x12345678); // 使用固定SSRC
 
                 // 添加opus编码数据
+                DatagramPacket packet;
                 if (microphoneCipher != null) {
                     // 计算IV: baseIv (前4字节作为big endian int) + sequenceNumber
                     // 构造新的IV
