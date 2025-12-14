@@ -426,4 +426,7 @@ public class MoonBridge {
     
     // 检查主机是否请求麦克风输入
     public static native boolean isMicrophoneRequested();
+    
+    // 获取麦克风加密密钥
+    public static native byte[] getMicrophoneEncryptionKeys();
 }
