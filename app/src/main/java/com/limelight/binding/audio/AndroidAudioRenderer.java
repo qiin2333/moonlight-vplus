@@ -23,6 +23,18 @@ public class AndroidAudioRenderer implements AudioRenderer {
     private AudioTrack track;
     private Spatializer spatializer;
 
+    // 保存当前的静音状态
+    private boolean isMuted = false;
+    // 保存目标音量增益。默认 1.0f (100%)
+    private float mTargetVolume = 1.0f;
+    // 标记是否处于暂停丢包状态
+    private volatile boolean isProcessingPaused = false;
+
+    // 保存初始化的配置参数，用于重建
+    private MoonBridge.AudioConfiguration savedAudioConfig;
+    private int savedSampleRate;
+    private int savedSamplesPerFrame;
+
     public AndroidAudioRenderer(Context context, boolean enableAudioFx, boolean enableSpatializer) {
         this.context = context;
         this.enableAudioFx = enableAudioFx;
@@ -74,8 +86,8 @@ public class AndroidAudioRenderer implements AudioRenderer {
         }
     }
 
-    @Override
-    public int setup(MoonBridge.AudioConfiguration audioConfiguration, int sampleRate, int samplesPerFrame) {
+
+    private int initializeAudioTrackInternal(MoonBridge.AudioConfiguration audioConfiguration, int sampleRate, int samplesPerFrame) {
         int channelConfig;
         int bytesPerFrame;
 
@@ -226,8 +238,105 @@ public class AndroidAudioRenderer implements AudioRenderer {
     }
 
     @Override
+    public int setup(MoonBridge.AudioConfiguration audioConfiguration, int sampleRate, int samplesPerFrame) {
+        // 保存配置，供 resume 时使用
+        this.savedAudioConfig = audioConfiguration;
+        this.savedSampleRate = sampleRate;
+        this.savedSamplesPerFrame = samplesPerFrame;
+
+        return initializeAudioTrackInternal(audioConfiguration, sampleRate, samplesPerFrame);
+    }
+
+    // --- 暂停处理 ---
+    public void pauseProcessing() {
+        LimeLog.info("Audio: Pausing processing (releasing AudioTrack)");
+        isProcessingPaused = true;
+
+        // 释放 Spatializer
+        spatializer = null;
+
+        // 释放 AudioTrack
+        if (track != null) {
+            try {
+                // 如果开启了 AudioFx，先关闭 session
+                if (enableAudioFx) {
+                    Intent i = new Intent(AudioEffect.ACTION_CLOSE_AUDIO_EFFECT_CONTROL_SESSION);
+                    i.putExtra(AudioEffect.EXTRA_AUDIO_SESSION, track.getAudioSessionId());
+                    i.putExtra(AudioEffect.EXTRA_PACKAGE_NAME, context.getPackageName());
+                    context.sendBroadcast(i);
+                }
+
+                track.pause();
+                track.flush();
+                track.release();
+            } catch (Exception e) {
+                LimeLog.warning("Error releasing audio track: " + e.getMessage());
+            }
+            track = null;
+        }
+    }
+
+    // --- 恢复处理 ---
+    public void resumeProcessing() {
+        if (savedAudioConfig == null) {
+            LimeLog.warning("Cannot resume audio: no saved configuration");
+            return;
+        }
+
+        LimeLog.info("Audio: Resuming processing...");
+
+        // 1. 重建 AudioTrack
+        // 如果之前 initializeAudioTrackInternal 是 private 的，确保它现在能被访问
+        int res = initializeAudioTrackInternal(savedAudioConfig, savedSampleRate, savedSamplesPerFrame);
+        if (res != 0) {
+            LimeLog.severe("Failed to recreate AudioTrack: " + res);
+            return; // 重建失败就没法继续了
+        }
+
+        // 2. 恢复 AudioFx (如果开启)
+        if (track != null && enableAudioFx) {
+            try {
+                Intent i = new Intent(AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION);
+                i.putExtra(AudioEffect.EXTRA_AUDIO_SESSION, track.getAudioSessionId());
+                i.putExtra(AudioEffect.EXTRA_PACKAGE_NAME, context.getPackageName());
+                i.putExtra(AudioEffect.EXTRA_CONTENT_TYPE, AudioEffect.CONTENT_TYPE_GAME);
+                context.sendBroadcast(i);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        // 3. 恢复音量
+        // 注意：这里强制确保 track 处于播放状态
+        if (track != null) {
+            try {
+                track.play(); // 确保开始播放
+
+                // 恢复之前的音量设置
+                float vol = isMuted ? 0.0f : mTargetVolume;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    track.setVolume(vol);
+                } else {
+                    track.setStereoVolume(vol, vol);
+                }
+            } catch (Exception e) {
+                LimeLog.warning("Error restoring audio state: " + e.getMessage());
+            }
+        }
+
+        // 4. 最后一步：解除暂停标志，允许数据写入
+        isProcessingPaused = false;
+    }
+
+    @Override
     public void playDecodedAudio(short[] audioData) {
-        // Only queue up to 40 ms of pending audio data in addition to what AudioTrack is buffering for us.
+
+        if (isProcessingPaused) {
+            return; // 丢弃数据
+        }
+
+        if (track == null) return; // 防止未初始化导致的空指针
+
         if (MoonBridge.getPendingAudioDuration() < 40) {
             // This will block until the write is completed. That can cause a backlog
             // of pending audio data, so we do the above check to be able to bound
@@ -241,8 +350,7 @@ public class AndroidAudioRenderer implements AudioRenderer {
 
     @Override
     public void start() {
-        if (enableAudioFx) {
-            // Open an audio effect control session to allow equalizers to apply audio effects
+        if (track != null && enableAudioFx) {
             Intent i = new Intent(AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION);
             i.putExtra(AudioEffect.EXTRA_AUDIO_SESSION, track.getAudioSessionId());
             i.putExtra(AudioEffect.EXTRA_PACKAGE_NAME, context.getPackageName());
@@ -253,8 +361,7 @@ public class AndroidAudioRenderer implements AudioRenderer {
 
     @Override
     public void stop() {
-        if (enableAudioFx) {
-            // Close our audio effect control session when we're stopping
+        if (track != null && enableAudioFx) {
             Intent i = new Intent(AudioEffect.ACTION_CLOSE_AUDIO_EFFECT_CONTROL_SESSION);
             i.putExtra(AudioEffect.EXTRA_AUDIO_SESSION, track.getAudioSessionId());
             i.putExtra(AudioEffect.EXTRA_PACKAGE_NAME, context.getPackageName());
@@ -264,43 +371,35 @@ public class AndroidAudioRenderer implements AudioRenderer {
 
     @Override
     public void cleanup() {
-        // Immediately drop all pending data
-        track.pause();
-        track.flush();
-
-        track.release();
+        if (track != null) {
+            track.pause();
+            track.flush();
+            track.release();
+        }
     }
-
-    // 保存当前的静音状态
-    private boolean isMuted = false;
-
-    // 保存目标音量增益。默认 1.0f (100%)，即完全由系统音量控制。
-    private float mTargetVolume = 1.0f;
 
     /**
      * 设置是否静音
      * @param muted true=静音 (增益设为0), false=恢复 (恢复到 mTargetVolume)
      */
     public void setMuted(boolean muted) {
-        if (this.isMuted == muted) return; // 状态未变，无需操作
+        if (this.isMuted == muted) return; // 状态未变
         this.isMuted = muted;
 
-        if (track != null) {
-            try {
-                // 如果静音，增益设为 0.0；
-                // 如果取消静音，恢复为之前保存的目标音量 (默认是 1.0)
-                float vol = muted ? 0.0f : mTargetVolume;
+        // 如果正处于暂停状态，只更新标记，不操作 AudioTrack（因为它不存在）
+        if (isProcessingPaused || track == null) {
+            return;
+        }
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    track.setVolume(vol);
-                } else {
-                    track.setStereoVolume(vol, vol);
-                }
-            } catch (Exception e) {
-                // 忽略播放器状态异常 (如未初始化等)
-                LimeLog.warning("Failed to set volume: " + e.getMessage());
+        try {
+            float vol = muted ? 0.0f : mTargetVolume;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                track.setVolume(vol);
+            } else {
+                track.setStereoVolume(vol, vol);
             }
+        } catch (Exception e) {
+            LimeLog.warning("Failed to set volume: " + e.getMessage());
         }
     }
-
 }

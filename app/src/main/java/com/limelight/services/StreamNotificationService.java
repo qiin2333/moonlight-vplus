@@ -18,11 +18,6 @@ import com.limelight.Game;
 import com.limelight.LimeLog;
 import com.limelight.R;
 
-
-/**
- * 这是一个 "All-in-One" 的通知服务类。
- * 既负责构建通知 UI，也负责前台服务的生命周期（保活）。
- */
 public class StreamNotificationService extends Service {
 
     private static final String CHANNEL_ID = "stream_keep_alive";
@@ -32,22 +27,12 @@ public class StreamNotificationService extends Service {
     private static final String EXTRA_HOST_NAME = "extra_host_name";
     private static final String EXTRA_APP_NAME = "extra_app_name";
 
-    // ==========================================
-    // 静态辅助方法 (供 Game.java 调用)
-    // ==========================================
-
-    /**
-     * 启动保活服务并显示通知
-     */
     public static void start(Context context, String hostName, String appName) {
         Intent intent = new Intent(context, StreamNotificationService.class);
         intent.putExtra(EXTRA_HOST_NAME, hostName);
         intent.putExtra(EXTRA_APP_NAME, appName);
-
-        // 使用 ContextCompat 自动处理 Android 8.0+ 的启动差异
         try {
             ContextCompat.startForegroundService(context, intent);
-            LimeLog.info("StreamNotificationService: 启动请求已发送");
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -58,13 +43,14 @@ public class StreamNotificationService extends Service {
      */
     public static void stop(Context context) {
         Intent intent = new Intent(context, StreamNotificationService.class);
-        context.stopService(intent);
-        LimeLog.info("StreamNotificationService: 停止请求已发送");
-    }
+        intent.setAction("ACTION_STOP");
 
-    // ==========================================
-    // Service 生命周期方法
-    // ==========================================
+        try {
+            context.startService(intent);
+        } catch (Exception e) {
+            // 如果服务本来就没跑，或者不允许后台启动，那正好不需要停了
+        }
+    }
 
     @Override
     public void onCreate() {
@@ -74,43 +60,56 @@ public class StreamNotificationService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        // 如果系统重启了服务但没传 Intent，直接停止，防止空指针
-        if (intent == null) {
-            stopSelf();
-            return START_NOT_STICKY;
+        // 构建默认通知 (防御性，防止 intent 为空)
+        String hostName = "Unknown";
+        String appName = "Moonlight";
+        if (intent != null) {
+            hostName = intent.getStringExtra(EXTRA_HOST_NAME);
+            appName = intent.getStringExtra(EXTRA_APP_NAME);
         }
-
-        String hostName = intent.getStringExtra(EXTRA_HOST_NAME);
-        String appName = intent.getStringExtra(EXTRA_APP_NAME);
-
-        // 1. 构建通知对象
         Notification notification = buildNotification(hostName, appName);
 
-        // 2. 核心保活代码：提升为前台服务
+        // =========================================================
+        // 无论 intent 是否为空，无论是否要停止，
+        // 只要进来了，必须先 startForeground，给系统一个交代！
+        // =========================================================
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // Android 14 强制要求指定类型，这里用 dataSync 表示数据同步/传输
-                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
             } else {
                 startForeground(NOTIFICATION_ID, notification);
             }
         } catch (Exception e) {
-            LimeLog.warning("启动前台服务失败: " + e.getMessage());
-            // 如果前台启动失败，尝试做普通服务运行（虽然大概率会被杀）
+            e.printStackTrace();
+            // 如果连 startForeground 都挂了，那就没救了，直接停
+            stopSelf();
+            return START_NOT_STICKY;
         }
 
-        return START_STICKY; // 如果被杀，尝试重启
+
+        if (intent != null && "ACTION_STOP".equals(intent.getAction())) {
+            stopForeground(true);
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
+        // 正常保活逻辑
+        if (intent == null) {
+            // 异常重启，没有数据，那就停止吧，反正 startForeground 已经交代过了
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
+        return START_STICKY;
     }
 
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        return null; // 不需要绑定
+        return null;
     }
-
-    // ==========================================
-    // 内部私有方法 (通知构建逻辑)
-    // ==========================================
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -139,7 +138,7 @@ public class StreamNotificationService extends Service {
         }
         PendingIntent contentIntent = PendingIntent.getActivity(this, 0, intent, flags);
 
-        String title = "Moonlight-V+ 正在运行";
+        String title = "Moonlight-V+";
         String content = String.format("正在串流: %s (%s)",
                 appName != null ? appName : "Desktop",
                 hostName != null ? hostName : "Unknown");
