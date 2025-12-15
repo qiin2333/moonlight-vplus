@@ -31,6 +31,7 @@ public class StreamConfiguration {
     private boolean persistGamepadsAfterDisconnect;
     private boolean enableMic;
     private boolean useVdd;
+    private boolean controlOnly;
 
     public static class Builder {
         private StreamConfiguration config = new StreamConfiguration();
@@ -146,6 +147,11 @@ public class StreamConfiguration {
             return this;
         }
 
+        public StreamConfiguration.Builder setControlOnly(boolean controlOnly) {
+            config.controlOnly = controlOnly;
+            return this;
+        }
+
         public StreamConfiguration build() {
             return config;
         }
@@ -169,6 +175,7 @@ public class StreamConfiguration {
         this.attachedGamepadMask = 0;
         this.enableMic = false;
         this.useVdd = false;
+        this.controlOnly = false;
     }
     public int getWidth() {
         return width;
@@ -263,4 +270,6 @@ public class StreamConfiguration {
     }
 
     public boolean getUseVdd() { return useVdd; }
+
+    public boolean getControlOnly() { return controlOnly; }
 }

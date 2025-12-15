@@ -1919,7 +1919,8 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             // Count time from first packet received to enqueue time as receive time
             // We will count DU queue time as part of decoding, because it is directly
             // caused by a slow decoder.
-            activeWindowVideoStats.totalTimeMs += enqueueTimeMs - receiveTimeMs;
+            // Note: receiveTimeMs and enqueueTimeMs are now in microseconds, convert to milliseconds
+            activeWindowVideoStats.totalTimeMs += (enqueueTimeMs - receiveTimeMs) / 1000;
         }
 
         if (!fetchNextInputBuffer()) {
@@ -1945,7 +1946,8 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             }
         }
 
-        long timestampUs = enqueueTimeMs * 1000;
+        // Note: enqueueTimeMs is now in microseconds, use it directly
+        long timestampUs = enqueueTimeMs;
         if (timestampUs <= lastTimestampUs) {
             // We can't submit multiple buffers with the same timestamp
             // so bump it up by one before queuing

@@ -228,6 +228,8 @@
     <string name="summary_checkbox_enable_audiofx">Allow audio effects to work during streaming, may increase audio latency</string>
     <string name="title_checkbox_enable_spatializer">Enable spatial audio (Android 13+)</string>
     <string name="summary_checkbox_enable_spatializer">Enable immersive 3D audio experience using Android Spatializer. Requires Android 13+ and compatible audio output device. Best experience with 5.1 or 7.1 surround sound configuration</string>
+    <string name="title_checkbox_control_only">Control-only mode</string>
+    <string name="summary_checkbox_control_only">Only establish control stream connection without video and audio streams. Useful for remote input control only. Requires Sunshine server with control-only mode support.</string>
     <string name="title_checkbox_enable_mic">Enable microphone redirection</string>
     <string name="summary_checkbox_enable_mic">Redirect device microphone to the host computer for voice chat and communication, requires Sunshine-Foundation version 20250720 or higher on the host.</string>
     <string name="title_seekbar_mic_bitrate">Microphone bitrate</string>

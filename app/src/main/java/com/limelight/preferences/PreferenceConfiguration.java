@@ -134,6 +134,9 @@ public class PreferenceConfiguration {
     private static final String MIC_BITRATE_PREF_STRING = "seekbar_mic_bitrate_kbps";
     private static final String MIC_ICON_COLOR_PREF_STRING = "list_mic_icon_color";
     private static final String ENABLE_ESC_MENU_PREF_STRING = "checkbox_enable_esc_menu";
+    
+    // 控制流only模式设置
+    private static final String CONTROL_ONLY_PREF_STRING = "checkbox_control_only";
 
     //wg
     private static final String ONSCREEN_CONTROLLER_PREF_STRING = "checkbox_show_onscreen_controls";
@@ -201,6 +204,9 @@ public class PreferenceConfiguration {
     private static final int DEFAULT_MIC_BITRATE = 96; // 默认128 kbps
     private static final String DEFAULT_MIC_ICON_COLOR = "solid_white"; // 默认白
     private static final boolean DEFAULT_ENABLE_ESC_MENU = true; // 默认启用ESC菜单
+    
+    // 控制流only模式默认值
+    private static final boolean DEFAULT_CONTROL_ONLY = false;
 
     private static final boolean DEFAULT_ENABLE_DOUBLE_CLICK_DRAG = false;
     public boolean enableDoubleClickDrag;
@@ -337,6 +343,9 @@ public class PreferenceConfiguration {
     
     // ESC菜单设置
     public boolean enableEscMenu;
+    
+    // 控制流only模式设置
+    public boolean controlOnly;
 
     public ScreenPosition screenPosition;
     public int screenOffsetX;
@@ -839,6 +848,9 @@ public class PreferenceConfiguration {
         
         // 读取ESC菜单设置
         config.enableEscMenu = prefs.getBoolean(ENABLE_ESC_MENU_PREF_STRING, DEFAULT_ENABLE_ESC_MENU);
+        
+        // 读取控制流only模式设置
+        config.controlOnly = prefs.getBoolean(CONTROL_ONLY_PREF_STRING, DEFAULT_CONTROL_ONLY);
 
         config.reverseResolution = prefs.getBoolean(REVERSE_RESOLUTION_PREF_STRING, DEFAULT_REVERSE_RESOLUTION);
         config.rotableScreen = prefs.getBoolean(ROTABLE_SCREEN_PREF_STRING, DEFAULT_ROTABLE_SCREEN);
@@ -964,6 +976,7 @@ public class PreferenceConfiguration {
                     .putInt(MIC_BITRATE_PREF_STRING, micBitrate)
                     .putString(MIC_ICON_COLOR_PREF_STRING, micIconColor)
                     .putBoolean(ENABLE_ESC_MENU_PREF_STRING, enableEscMenu)
+                    .putBoolean(CONTROL_ONLY_PREF_STRING, controlOnly)
                     .putBoolean(ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, enableNativeMousePointer)
                     .putFloat(GYRO_SENSITIVITY_MULTIPLIER_PREF_STRING, gyroSensitivityMultiplier)
                     .putBoolean(GYRO_INVERT_X_AXIS_PREF_STRING, gyroInvertXAxis)
@@ -1001,6 +1014,7 @@ public class PreferenceConfiguration {
         copy.screenOffsetY = this.screenOffsetY;
         copy.useExternalDisplay = this.useExternalDisplay;
         copy.enableMic = this.enableMic;
+        copy.controlOnly = this.controlOnly;
         copy.micBitrate = this.micBitrate;
         copy.micIconColor = this.micIconColor;
         copy.enableEscMenu = this.enableEscMenu;
