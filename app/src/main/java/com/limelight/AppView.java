@@ -654,12 +654,14 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                 // 需要更新布局
                 GridLayoutManager newGlm = new GridLayoutManager(this, optimalSpanCount, GridLayoutManager.HORIZONTAL, false);
                 recyclerView.setLayoutManager(newGlm);
-
-                // 重新计算选中框位置
-                if (selectionAnimator != null && selectedPosition >= 0) {
-                    selectionAnimator.moveToPosition(selectedPosition, false);
-                }
             }
+        }
+
+        // 屏幕旋转后，延迟重新计算选中框位置，等待布局完成
+        if (selectionAnimator != null && selectedPosition >= 0) {
+            recyclerView.post(() -> {
+                selectionAnimator.moveToPosition(selectedPosition, false);
+            });
         }
     }
 
