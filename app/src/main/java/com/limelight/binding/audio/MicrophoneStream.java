@@ -475,40 +475,47 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
                 // 添加opus编码数据
                 DatagramPacket packet;
                 if (microphoneCipher != null) {
-                    // 计算IV: baseIv (前4字节作为big endian int) + sequenceNumber
-                    // 构造新的IV
-                    byte[] iv = new byte[16];
-                    
-                    // 取baseIv的前4字节作为int (Big Endian)
-                    int baseIvVal = ((baseIv[0] & 0xFF) << 24) |
-                                    ((baseIv[1] & 0xFF) << 16) |
-                                    ((baseIv[2] & 0xFF) << 8) |
-                                    (baseIv[3] & 0xFF);
-                    
-                    // sequenceNumber is tracked in 'sequenceNumber' variable locally.
-                    // packetBuf.putShort((short) (sequenceNumber++ & 0xFFFF)); was done above.
-                    // Note: sequenceNumber was incremented already. We need the value put in the packet.
-                    // Let's use the local sequenceNumber - 1 because it was post-incremented.
-                    int ivSeq = baseIvVal + ((sequenceNumber - 1) & 0xFFFF);
-                    
-                    iv[0] = (byte) ((ivSeq >> 24) & 0xFF);
-                    iv[1] = (byte) ((ivSeq >> 16) & 0xFF);
-                    iv[2] = (byte) ((ivSeq >> 8) & 0xFF);
-                    iv[3] = (byte) (ivSeq & 0xFF);
-                    // 剩余字节为0 (Java数组初始化默认为0)
-                    
-                    IvParameterSpec ivSpec = new IvParameterSpec(iv);
-                    microphoneCipher.init(Cipher.ENCRYPT_MODE, secretKey, ivSpec);
-                    
-                    byte[] encrypted = microphoneCipher.doFinal(encoded);
-                    packetBuf.put(encrypted);
-                    
-                    // 此时packetBuf包含header + encrypted data
-                    // 需要重新调整packet长度，因为PKCS5Padding会增加长度
-                    int totalLength = 12 + encrypted.length;
-                    packet = new DatagramPacket(
-                            packetBuf.array(), totalLength,
-                            currentHost, micPort);
+                    try {
+                        // 计算IV: baseIv (前4字节作为big endian int) + sequenceNumber
+                        // 构造新的IV
+                        byte[] iv = new byte[16];
+                        
+                        // 取baseIv的前4字节作为int (Big Endian)
+                        int baseIvVal = ((baseIv[0] & 0xFF) << 24) |
+                                        ((baseIv[1] & 0xFF) << 16) |
+                                        ((baseIv[2] & 0xFF) << 8) |
+                                        (baseIv[3] & 0xFF);
+                        
+                        // sequenceNumber is tracked in 'sequenceNumber' variable locally.
+                        // packetBuf.putShort((short) (sequenceNumber++ & 0xFFFF)); was done above.
+                        // Note: sequenceNumber was incremented already. We need the value put in the packet.
+                        // Let's use the local sequenceNumber - 1 because it was post-incremented.
+                        int ivSeq = baseIvVal + ((sequenceNumber - 1) & 0xFFFF);
+                        
+                        iv[0] = (byte) ((ivSeq >> 24) & 0xFF);
+                        iv[1] = (byte) ((ivSeq >> 16) & 0xFF);
+                        iv[2] = (byte) ((ivSeq >> 8) & 0xFF);
+                        iv[3] = (byte) (ivSeq & 0xFF);
+                        // 剩余字节为0 (Java数组初始化默认为0)
+                        
+                        IvParameterSpec ivSpec = new IvParameterSpec(iv);
+                        microphoneCipher.init(Cipher.ENCRYPT_MODE, secretKey, ivSpec);
+                        
+                        byte[] encrypted = microphoneCipher.doFinal(encoded);
+                        packetBuf.put(encrypted);
+                        
+                        // 此时packetBuf包含header + encrypted data
+                        // 需要重新调整packet长度，因为PKCS5Padding会增加长度
+                        int totalLength = 12 + encrypted.length;
+                        packet = new DatagramPacket(
+                                packetBuf.array(), totalLength,
+                                currentHost, micPort);
+                    } catch (Exception e) {
+                        // 加密失败，记录错误并跳过此包
+                        AudioDiagnostics.recordEncodingError();
+                        LimeLog.warning("麦克风加密错误: " + e.getMessage());
+                        continue;
+                    }
                 } else {
                     packetBuf.put(encoded);
                     int totalLength = 12 + encoded.length;
