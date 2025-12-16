@@ -135,6 +135,18 @@
             android:includeFontPadding="false"
             android:gravity="center_vertical" />
 
+        <TextView
+            android:id="@+id/perfBattery"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:textColor="#FFA500"
+            android:textSize="10sp"
+            android:fontFamily="sans-serif"
+            android:letterSpacing="0.01"
+            android:includeFontPadding="false"
+            android:gravity="center_vertical" />
+
     </LinearLayout>
 
     <androidx.cardview.widget.CardView
