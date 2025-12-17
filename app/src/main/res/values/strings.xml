@@ -607,6 +607,14 @@
     <string name="perf_host_latency_title">🖥️ Host Latency Information</string>
     <string name="perf_host_latency_info">Host latency represents the time for the game host to process frames.\n\nLatency Range:\n• &lt;5ms: Strong host performance\n• 5-10ms: Good host performance\n• 10-20ms: Fair host performance\n• &gt;20ms: Weak host performance\n\nInfluencing Factors:\n• Host hardware performance\n• Game load\n• Background program usage\n\nVer.V+:\n• Indicates version information\n• Displayed when no host latency data available</string>
 
+
+    <!-- Performance Overlay Info Dialogs - Battery Information -->
+    <string name="perf_battery_info_title">🔋 Battery Information</string>
+    <string name="perf_battery_status_sufficient">Battery level is sufficient</string>
+    <string name="perf_battery_status_low">Battery level is low, charging recommended</string>
+    <string name="perf_battery_status_critical">Battery level is critically low, please charge soon</string>
+    <string name="perf_battery_info_content">Current Battery: %1$d%%\nStatus: %2$s\n\nTip: Low battery may affect gaming experience, recommend connecting charger</string>
+
     <!-- App Last Settings strings -->
     <string name="app_last_settings_title">Last Settings</string>
     <string name="app_last_settings_none">No last settings</string>

@@ -564,6 +564,12 @@
     <string name="perf_decode_latency_info">解码延迟表示解码视频帧所需的时间。\n\n延迟范围：\n• &lt;5ms：极佳解码器性能\n• 5–10ms：良好解码器性能\n• 10–20ms：一般解码器性能\n• &gt;20ms：较差解码器性能\n\n影响因素：\n• 硬件解码器性能\n• 视频编码复杂度\n• 设备CPU/GPU负载\n• 当解码延迟低于10ms时更应关注设备的其他性能(比如帧率、分辨率、画质等)</string>
     <string name="perf_host_latency_title">🖥 主机延迟信息</string>
     <string name="perf_host_latency_info">主机延迟表示主机处理帧所需的时间。\n\n延迟范围：\n• &lt;5ms：极佳主机性能\n• 5–10ms：良好主机性能\n• 10–20ms：一般主机性能\n• &gt;20ms：较差主机性能\n\n影响因素：\n• 主机硬件性能\n• 游戏负载\n• 后台程序使用\n\nVer.V+：\n• 表示版本信息\n• 当没有主机延迟数据时显示</string>
+    <!-- Performance Overlay Info Dialogs - Battery Information -->
+    <string name="perf_battery_info_title">🔋 电池信息</string>
+    <string name="perf_battery_status_sufficient">电池电量充足</string>
+    <string name="perf_battery_status_low">电池电量偏低，建议充电</string>
+    <string name="perf_battery_status_critical">电池电量严重不足，请尽快充电</string>
+    <string name="perf_battery_info_content">当前电量：%1$d%%\n状态：%2$s\n\n提示：低电量可能影响游戏体验，建议连接充电器</string>
 
     <!-- App Last Settings strings -->
     <string name="app_last_settings_title">上一次设置</string>

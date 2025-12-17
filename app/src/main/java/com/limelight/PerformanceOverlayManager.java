@@ -595,20 +595,21 @@ public class PerformanceOverlayManager {
     private void showBatteryInfo() {
         int batteryLevel = UiHelper.getBatteryLevel(activity);
         String batteryStatus;
-        
+        int statusResId;
+
         if (batteryLevel > 50) {
-            batteryStatus = "电池电量充足";
+            statusResId = R.string.perf_battery_status_sufficient;
         } else if (batteryLevel > 20) {
-            batteryStatus = "电池电量偏低，建议充电";
+            statusResId = R.string.perf_battery_status_low;
         } else {
-            batteryStatus = "电池电量严重不足，请尽快充电";
+            statusResId = R.string.perf_battery_status_critical;
         }
-        
-        String batteryInfo = "当前电量: " + batteryLevel + "%\n" +
-                             "状态: " + batteryStatus + "\n\n" +
-                             "提示: 低电量可能影响游戏体验，建议连接充电器";
-        
-        showInfoDialog("🔋 Battery Information", batteryInfo);
+
+        batteryStatus = activity.getString(statusResId);
+
+        String batteryInfo = activity.getString(R.string.perf_battery_info_content, batteryLevel, batteryStatus);
+
+        showInfoDialog(activity.getString(R.string.perf_battery_info_title), batteryInfo);
     }
 
     /**
