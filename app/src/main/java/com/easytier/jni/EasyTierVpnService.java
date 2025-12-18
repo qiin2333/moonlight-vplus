@@ -92,6 +92,14 @@ public class EasyTierVpnService extends VpnService {
             builder.setSession("EasyTier VPN")
                     .addAddress(addressInfo.ip, addressInfo.networkLength)
                     .addDnsServer("223.5.5.5");
+
+            try {
+                builder.addAddress("fd00::1", 128);
+                Log.i(TAG, "已激活 VPN 接口 IPv6 协议栈 (fd00::1/128) 以支持双栈通信");
+            } catch (Exception e) {
+                Log.w(TAG, "添加 IPv6 地址失败", e);
+            }
+
             Log.i(TAG, "为虚拟网络添加了VPN路由：" + addressInfo.ip + "/" + addressInfo.networkLength);
 
             for (String cidr : proxyCidrs) {

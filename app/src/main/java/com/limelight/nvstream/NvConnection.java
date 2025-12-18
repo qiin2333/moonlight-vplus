@@ -52,6 +52,11 @@ public class NvConnection {
 
     public NvConnection(Context appContext, ComputerDetails.AddressTuple host, int httpsPort, String uniqueId, String pairName, StreamConfiguration config, LimelightCryptoProvider cryptoProvider, X509Certificate serverCert)
     {
+        this(appContext, host, httpsPort, uniqueId, pairName, config, cryptoProvider, serverCert, null);
+    }
+    
+    public NvConnection(Context appContext, ComputerDetails.AddressTuple host, int httpsPort, String uniqueId, String pairName, StreamConfiguration config, LimelightCryptoProvider cryptoProvider, X509Certificate serverCert, String displayName)
+    {
         this.appContext = appContext;
         this.host = host;
         this.cryptoProvider = cryptoProvider;
@@ -63,6 +68,7 @@ public class NvConnection {
         this.context.httpsPort = httpsPort;
         this.context.streamConfig = config;
         this.context.serverCert = serverCert;
+        this.context.displayName = displayName;
 
         // This is unique per connection
         this.context.riKey = generateRiAesKey();

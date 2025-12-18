@@ -14,6 +14,8 @@ import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.nvstream.http.NvApp;
 import com.limelight.nvstream.http.NvHTTP;
 import com.limelight.nvstream.http.PairingManager;
+import com.limelight.nvstream.http.NvHTTP.DisplayInfo;
+import com.limelight.binding.PlatformBinding;
 import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.ui.AdapterFragment;
 import com.limelight.ui.AdapterFragmentCallbacks;
@@ -27,6 +29,9 @@ import com.limelight.utils.ShortcutHelper;
 import com.limelight.utils.SpinnerDialog;
 import com.limelight.utils.UiHelper;
 import com.limelight.utils.AppSettingsManager;
+import com.limelight.LimeLog;
+import com.limelight.Game;
+import com.limelight.binding.PlatformBinding;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -101,6 +106,11 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
     private LinearLayout lastSettingsInfo;
     private TextView lastSettingsText;
     private CheckBox useLastSettingsCheckbox;
+    
+    // 显示器选择相关
+    private LinearLayout displaySelectionInfo;
+    private android.widget.RadioGroup displayRadioGroup;
+    private List<DisplayInfo> availableDisplays;
 
     private final static int START_OR_RESUME_ID = 1;
     private final static int QUIT_ID = 2;
@@ -355,6 +365,10 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         lastSettingsText = findViewById(R.id.lastSettingsText);
         useLastSettingsCheckbox = findViewById(R.id.useLastSettingsCheckbox);
 
+        // Initialize display selection UI components
+        displaySelectionInfo = findViewById(R.id.displaySelectionInfo);
+        displayRadioGroup = findViewById(R.id.displayRadioGroup);
+
         // Set up event listeners
         useLastSettingsCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
             appSettingsManager.setUseLastSettingsEnabled(isChecked);
@@ -401,6 +415,11 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         // Bind to the computer manager service
         bindService(new Intent(this, ComputerManagerService.class), serviceConnection,
                 Service.BIND_AUTO_CREATE);
+
+        // Delay checking displays to allow service connection to complete
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            checkDisplaysAndUpdateUI();
+        }, 500);
     }
 
     private void updateHiddenApps(boolean hideImmediately) {
@@ -551,7 +570,6 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
             isFirstFocus = false; // 第一次后设置为false
         }
 
-        // 更新上一次设置信息显示
         updateLastSettingsInfo(app);
     }
 
@@ -591,14 +609,115 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
      * @param app 应用对象
      */
     private void startStreamWithLastSettingsIfEnabled(AppObject app) {
+        String displayGuid = null;
+        if (displaySelectionInfo.getVisibility() == View.VISIBLE 
+                && availableDisplays != null) {
+            int selectedId = displayRadioGroup.getCheckedRadioButtonId();
+            if (selectedId >= 0 && selectedId < availableDisplays.size()) {
+                DisplayInfo selectedDisplay = availableDisplays.get(selectedId);
+                displayGuid = selectedDisplay.guid != null && !selectedDisplay.guid.isEmpty() 
+                        ? selectedDisplay.guid : selectedDisplay.name;
+            }
+        }
+        
+        doStartStream(app, displayGuid);
+    }
+    
+    /**
+     * 检查显示器并更新UI
+     */
+    private void checkDisplaysAndUpdateUI() {
+        if (computer == null || computer.activeAddress == null || managerBinder == null) {
+            displaySelectionInfo.setVisibility(View.GONE);
+            return;
+        }
+        
+        new Thread(() -> {
+            try {
+                NvHTTP httpConn = new NvHTTP(computer.activeAddress, computer.httpsPort,
+                        managerBinder.getUniqueId(), "", computer.serverCert,
+                        PlatformBinding.getCryptoProvider(this));
+                
+                List<DisplayInfo> displays = httpConn.getDisplays();
+                
+                runOnUiThread(() -> {
+                    if (displays != null && displays.size() > 1) {
+                        updateDisplaySelectionUI(displays);
+                    } else {
+                        displaySelectionInfo.setVisibility(View.GONE);
+                    }
+                });
+            } catch (Exception e) {
+                LimeLog.warning("Failed to get displays: " + e.getMessage());
+                runOnUiThread(() -> displaySelectionInfo.setVisibility(View.GONE));
+            }
+        }).start();
+    }
+    
+    /**
+     * 更新显示器选择UI
+     *
+     * @param displays 显示器列表
+     */
+    private void updateDisplaySelectionUI(List<DisplayInfo> displays) {
+        availableDisplays = displays;
+        
+        // 清除之前的单选按钮
+        displayRadioGroup.removeAllViews();
+        
+        LimeLog.info("Displays: " + displays.size());
+        for (int i = 0; i < displays.size(); i++) {
+            DisplayInfo display = displays.get(i);
+            // 使用友好名字显示
+            String displayName = display.name != null && !display.name.isEmpty() 
+                    ? display.name : "Display " + (display.index + 1);
+            LimeLog.info("Display " + (display.index + 1) + ": " + display.name + " (guid: " + display.guid + ")");
+            
+            // 创建单选按钮
+            android.widget.RadioButton radioButton = new android.widget.RadioButton(this);
+            radioButton.setId(i);
+            radioButton.setText(displayName);
+            radioButton.setTextColor(0xCCFFFFFF);
+            radioButton.setTextSize(12);
+            radioButton.setTypeface(android.graphics.Typeface.create("sans-serif-light", android.graphics.Typeface.NORMAL));
+            radioButton.setButtonTintList(android.content.res.ColorStateList.valueOf(0xFFFFFFFF));
+            radioButton.setPadding(0, 0, 20, 0); // 右边距
+            
+            displayRadioGroup.addView(radioButton);
+        }
+        
+        // 默认不选择任何显示器
+        displayRadioGroup.clearCheck();
+        
+        displaySelectionInfo.setVisibility(View.VISIBLE);
+    }
+    
+    /**
+     * 执行启动串流
+     *
+     * @param app 应用对象
+     * @param displayName 选择的显示器名称，如果为null则不指定显示器
+     */
+    private void doStartStream(AppObject app, String displayName) {
         if (appSettingsManager != null && computer != null) {
             // 使用AppSettingsManager统一管理启动逻辑
             Intent startIntent = appSettingsManager.createStartIntentWithLastSettingsIfEnabled(
                     this, app.app, computer, managerBinder);
+            if (displayName != null) {
+                startIntent.putExtra(Game.EXTRA_DISPLAY_NAME, displayName);
+            }
             startActivity(startIntent);
         } else {
             // 回退到默认方式启动
-            ServerHelper.doStart(this, app.app, computer, managerBinder);
+            if (displayName != null) {
+                Intent startIntent = ServerHelper.createStartIntent(this, app.app, computer, managerBinder);
+                startIntent.putExtra(Game.EXTRA_DISPLAY_NAME, displayName);
+                startActivity(startIntent);
+            } else {
+                if (computer != null) {
+                    ServerHelper.doStart(this, app.app, computer, managerBinder);
+                }
+            }
         }
     }
 

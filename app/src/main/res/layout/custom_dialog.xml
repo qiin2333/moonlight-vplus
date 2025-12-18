@@ -172,6 +172,34 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
+                <!-- 特殊按键卡片 -->
+                <LinearLayout
+                    android:id="@+id/customKeysCardContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:background="@drawable/game_menu_bitrate_bg"
+                    android:layout_marginBottom="8dp">
+                    <TextView
+                        android:text="特殊按键 Shortcuht"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/game_menu_text_primary"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingLeft="16dp"
+                        android:paddingTop="8dp" />
+
+                    <!-- 列表容器 -->
+                    <LinearLayout
+                        android:id="@+id/customKeysListLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+
+                </LinearLayout>
+
                 <!-- 码率调整区域 -->
                 <LinearLayout
                     android:id="@+id/bitrateAdjustmentContainer"
@@ -458,6 +486,8 @@
                             android:textSize="10sp" />
                     </LinearLayout>
                 </LinearLayout>
+
+
 
                 <!-- 超级菜单列表 -->
                 <com.limelight.utils.NonScrollableListView

@@ -48,6 +48,7 @@ public class PreferenceConfiguration {
 
     private static final String ENABLE_DOUBLE_CLICK_DRAG_PREF_STRING = "pref_enable_double_click_drag";
     private static final String DOUBLE_TAP_TIME_THRESHOLD_PREF_STRING = "seekbar_double_tap_time_threshold";
+    private static final String ENABLE_LOCAL_CURSOR_RENDERING_PREF_STRING = "pref_enable_local_cursor_rendering";
 
     private static final String LEGACY_RES_FPS_PREF_STRING = "list_resolution_fps";
     private static final String LEGACY_ENABLE_51_SURROUND_PREF_STRING = "checkbox_51_surround";
@@ -101,6 +102,7 @@ public class PreferenceConfiguration {
     private static final String ENABLE_STUN_PREF_STRING = "checkbox_enable_stun";
     private static final String LOCK_SCREEN_AFTER_DISCONNECT_PREF_STRING = "checkbox_lock_screen_after_disconnect";
     private static final String SWAP_QUIT_AND_DISCONNECT_PERF_STRING = "checkbox_swap_quit_and_disconnect";
+    private static final String SCREEN_COMBINATION_MODE_PREF_STRING = "list_screen_combination_mode";
     private static final String FRAME_PACING_PREF_STRING = "frame_pacing";
     private static final String ABSOLUTE_MOUSE_MODE_PREF_STRING = "checkbox_absolute_mouse_mode";
     public static final String ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING = "checkbox_enable_native_mouse_pointer";
@@ -108,6 +110,7 @@ public class PreferenceConfiguration {
     // Card visibility preferences
     private static final String SHOW_BITRATE_CARD_PREF_STRING = "checkbox_show_bitrate_card";
     private static final String SHOW_GYRO_CARD_PREF_STRING = "checkbox_show_gyro_card";
+    private static final String SHOW_QuickKeyCard = "checkbox_show_QuickKeyCard";
 
     public static final String ENABLE_ENHANCED_TOUCH_PREF_STRING = "checkbox_enable_enhanced_touch";
     private static final String ENHANCED_TOUCH_ON_RIGHT_PREF_STRING = "checkbox_enhanced_touch_on_which_side";
@@ -183,6 +186,7 @@ public class PreferenceConfiguration {
     private static final String DEFAULT_AUDIO_CONFIG = "2"; // Stereo
     private static final boolean DEFAULT_LATENCY_TOAST = false;
     private static final boolean DEFAULT_ENABLE_STUN = false;
+    private static final String DEFAULT_SCREEN_COMBINATION_MODE = "-1";
     private static final String DEFAULT_FRAME_PACING = "latency";
     private static final boolean DEFAULT_ABSOLUTE_MOUSE_MODE = false;
     private static final boolean DEFAULT_ENABLE_NATIVE_MOUSE_POINTER = false;
@@ -213,6 +217,9 @@ public class PreferenceConfiguration {
     private static final int DEFAULT_DOUBLE_TAP_TIME_THRESHOLD = 300; // 默认300ms
     public boolean enableDoubleClickDrag;
     public int doubleTapTimeThreshold;
+    
+    private static final boolean DEFAULT_ENABLE_LOCAL_CURSOR_RENDERING = true;
+    public boolean enableLocalCursorRendering;
     public static final int FRAME_PACING_MIN_LATENCY = 0;
     public static final int FRAME_PACING_BALANCED = 1;
     public static final int FRAME_PACING_CAP_FPS = 2;
@@ -299,6 +306,7 @@ public class PreferenceConfiguration {
     public boolean enableSimplifyPerfOverlay;
     public boolean enableLatencyToast;
     public boolean enableStun;
+    public int screenCombinationMode;
     public boolean lockScreenAfterDisconnect;
     public boolean swapQuitAndDisconnect;
     public boolean bindAllUsb;
@@ -338,6 +346,7 @@ public class PreferenceConfiguration {
     // Card visibility
     public boolean showBitrateCard;
     public boolean showGyroCard;
+    public boolean showQuickKeyCard;
 
     // 麦克风设置
     public boolean enableMic;
@@ -754,6 +763,7 @@ public class PreferenceConfiguration {
         config.disableWarnings = prefs.getBoolean(DISABLE_TOASTS_PREF_STRING, DEFAULT_DISABLE_TOASTS);
         config.enableDoubleClickDrag = prefs.getBoolean(ENABLE_DOUBLE_CLICK_DRAG_PREF_STRING, DEFAULT_ENABLE_DOUBLE_CLICK_DRAG);
         config.doubleTapTimeThreshold = prefs.getInt(DOUBLE_TAP_TIME_THRESHOLD_PREF_STRING, DEFAULT_DOUBLE_TAP_TIME_THRESHOLD);
+        config.enableLocalCursorRendering = prefs.getBoolean(ENABLE_LOCAL_CURSOR_RENDERING_PREF_STRING, DEFAULT_ENABLE_LOCAL_CURSOR_RENDERING);
         config.enableSops = prefs.getBoolean(SOPS_PREF_STRING, DEFAULT_SOPS);
         config.stretchVideo = prefs.getBoolean(STRETCH_PREF_STRING, DEFAULT_STRETCH);
         config.playHostAudio = prefs.getBoolean(HOST_AUDIO_PREF_STRING, DEFAULT_HOST_AUDIO);
@@ -811,6 +821,14 @@ public class PreferenceConfiguration {
         config.touchscreenTrackpad = prefs.getBoolean(TOUCHSCREEN_TRACKPAD_PREF_STRING, DEFAULT_TOUCHSCREEN_TRACKPAD);
         config.enableLatencyToast = prefs.getBoolean(LATENCY_TOAST_PREF_STRING, DEFAULT_LATENCY_TOAST);
         config.enableStun = prefs.getBoolean(ENABLE_STUN_PREF_STRING, DEFAULT_ENABLE_STUN);
+
+        String screenModeString = prefs.getString(SCREEN_COMBINATION_MODE_PREF_STRING, DEFAULT_SCREEN_COMBINATION_MODE);
+        try {
+            config.screenCombinationMode = Integer.parseInt(screenModeString);
+        } catch (NumberFormatException e) {
+            config.screenCombinationMode = -1;
+        }
+
         config.lockScreenAfterDisconnect = prefs.getBoolean(LOCK_SCREEN_AFTER_DISCONNECT_PREF_STRING, DEFAULT_LATENCY_TOAST);
         config.swapQuitAndDisconnect = prefs.getBoolean(SWAP_QUIT_AND_DISCONNECT_PERF_STRING, DEFAULT_LATENCY_TOAST);
         config.absoluteMouseMode = prefs.getBoolean(ABSOLUTE_MOUSE_MODE_PREF_STRING, DEFAULT_ABSOLUTE_MOUSE_MODE);
@@ -844,6 +862,7 @@ public class PreferenceConfiguration {
         // Cards visibility (defaults to true)
         config.showBitrateCard = prefs.getBoolean(SHOW_BITRATE_CARD_PREF_STRING, true);
         config.showGyroCard = prefs.getBoolean(SHOW_GYRO_CARD_PREF_STRING, true);
+        config.showQuickKeyCard = prefs.getBoolean(SHOW_QuickKeyCard, true);
 
         // 读取麦克风设置
         config.enableMic = prefs.getBoolean(ENABLE_MIC_PREF_STRING, DEFAULT_ENABLE_MIC);
@@ -972,6 +991,7 @@ public class PreferenceConfiguration {
                     .putBoolean(ROTABLE_SCREEN_PREF_STRING, rotableScreen)
                     .putBoolean(SHOW_BITRATE_CARD_PREF_STRING, showBitrateCard)
                     .putBoolean(SHOW_GYRO_CARD_PREF_STRING, showGyroCard)
+                    .putBoolean(SHOW_QuickKeyCard, showQuickKeyCard)
                     .putString(SCREEN_POSITION_PREF_STRING, positionString)
                     .putInt(SCREEN_OFFSET_X_PREF_STRING, screenOffsetX)
                     .putInt(SCREEN_OFFSET_Y_PREF_STRING, screenOffsetY)
@@ -982,6 +1002,8 @@ public class PreferenceConfiguration {
                     .putBoolean(ENABLE_ESC_MENU_PREF_STRING, enableEscMenu)
                     .putBoolean(CONTROL_ONLY_PREF_STRING, controlOnly)
                     .putBoolean(ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, enableNativeMousePointer)
+                    .putBoolean(ENABLE_DOUBLE_CLICK_DRAG_PREF_STRING, enableDoubleClickDrag)
+                    .putBoolean(ENABLE_LOCAL_CURSOR_RENDERING_PREF_STRING, enableLocalCursorRendering)
                     .putFloat(GYRO_SENSITIVITY_MULTIPLIER_PREF_STRING, gyroSensitivityMultiplier)
                     .putBoolean(GYRO_INVERT_X_AXIS_PREF_STRING, gyroInvertXAxis)
                     .putBoolean(GYRO_INVERT_Y_AXIS_PREF_STRING, gyroInvertYAxis)
@@ -1023,6 +1045,8 @@ public class PreferenceConfiguration {
         copy.micIconColor = this.micIconColor;
         copy.enableEscMenu = this.enableEscMenu;
         copy.enableNativeMousePointer = this.enableNativeMousePointer;
+        copy.enableDoubleClickDrag = this.enableDoubleClickDrag;
+        copy.enableLocalCursorRendering = this.enableLocalCursorRendering;
         copy.gyroToRightStick = this.gyroToRightStick;
         copy.gyroFullDeflectionDps = this.gyroFullDeflectionDps;
         copy.gyroSensitivityMultiplier = this.gyroSensitivityMultiplier;
@@ -1031,6 +1055,7 @@ public class PreferenceConfiguration {
         copy.gyroInvertYAxis = this.gyroInvertYAxis;
         copy.showBitrateCard = this.showBitrateCard;
         copy.showGyroCard = this.showGyroCard;
+        copy.showQuickKeyCard = this.showQuickKeyCard;
         return copy;
     }
 }

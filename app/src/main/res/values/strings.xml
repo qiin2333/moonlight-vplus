@@ -336,12 +336,21 @@
     <string name="summary_language_list">Language to use for Moonlight</string>
     <string name="title_checkbox_small_icon_mode">Use small box art</string>
     <string name="summary_checkbox_small_icon_mode">Smaller box art in the app grid allows more apps to be visible on screen</string>
+    <string name="title_checkbox_resume_stream">Resume stream automatically</string>
+    <string name="summary_checkbox_resume_stream">Automatically resume the stream when returning to Moonlight from the background</string>
 
     <string name="category_host_settings">🖥️ Host Settings</string>
     <string name="title_checkbox_enable_sops">Optimize game settings</string>
     <string name="summary_checkbox_enable_sops">Allow GFE to modify game settings for optimal streaming</string>
     <string name="title_checkbox_host_audio">Play audio on PC</string>
     <string name="summary_checkbox_host_audio">Play audio from the computer and this device</string>
+    <string name="title_screen_combination_mode">Screen combination mode (Sunshine Foundation)</string>
+    <string name="summary_screen_combination_mode">Control how Sunshine manages your monitors when starting a stream, this configuration will override the host configuration.</string>
+    <string name="screen_mode_host_default">Use Sunshine host configuration (default)</string>
+    <string name="screen_mode_no_operation">Do not change monitor configuration</string>
+    <string name="screen_mode_ensure_active">Ensure streaming display is active</string>
+    <string name="screen_mode_ensure_primary">Ensure streaming display is primary</string>
+    <string name="screen_mode_ensure_only_display">Use streaming display only (turn off other displays)</string>
 
     <string name="category_advanced_settings">🔧 Advanced Settings</string>
     <string name="title_unlock_fps">Unlock all possible frame rates</string>
@@ -489,6 +498,10 @@
     <string name="dialog_title_background_image_api">Background Image API</string>
     <string name="dialog_message_background_image_api">Please enter the complete image API</string>
     
+    <!-- Local image picker -->
+    <string name="title_local_image_picker">Select Local Image</string>
+    <string name="summary_local_image_picker">Choose an image from your gallery as the background</string>
+    
     <!-- Reverse resolution -->
     <string name="title_checkbox_reverse_resolution">Reverse Resolution</string>
     <string name="summary_checkbox_reverse_resolution">Swap width and height values for special display requirements</string>
@@ -524,6 +537,7 @@
     <string name="game_menu_touch_mode_enhanced">Enhanced Multi Touch</string>
     <string name="game_menu_touch_mode_classic">Classic Mouse Mode</string>
     <string name="game_menu_touch_mode_trackpad">Touchpad mode</string>
+    <string name="game_menu_local_cursor_rendering">Local cursor rendering</string>
     <string name="game_menu_touch_mode_native_mouse">Native mouse pointer</string>
     <string name="toast_touch_mode_enhanced_on">Enhanced multi touch enabled</string>
     <string name="toast_touch_mode_classic_on">Classic mouse mode enabled</string>
@@ -634,6 +648,7 @@
     <string name="setting_gyro_sensitivity">Gyroscope: %1$.1fx</string>
     <string name="setting_bitrate_card_enabled">Bitrate Card: Enabled</string>
     <string name="setting_gyro_card_enabled">Gyro Card: Enabled</string>
+    <string name="setting_QuickKey_card_enabled">Special key card: Activate</string>
 
     <!-- Time format strings -->
     <string name="time_just_now">Just now</string>

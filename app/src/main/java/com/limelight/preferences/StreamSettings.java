@@ -606,6 +606,12 @@ public class StreamSettings extends Activity {
             
             addPreferencesFromResource(R.xml.preferences);
             PreferenceScreen screen = getPreferenceScreen();
+            
+            // 为 LocalImagePickerPreference 设置 Fragment 实例，确保 onActivityResult 回调正确
+            LocalImagePickerPreference localImagePicker = (LocalImagePickerPreference) findPreference("local_image_picker");
+            if (localImagePicker != null) {
+                localImagePicker.setFragment(this);
+            }
 
             // hide on-screen controls category on non touch screen devices
             if (!getActivity().getPackageManager().hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)) {
@@ -1243,6 +1249,14 @@ public class StreamSettings extends Activity {
                     } catch (IOException e) {
                         Toast.makeText(getContext(),"读取配置文件失败",Toast.LENGTH_SHORT).show();
                     }
+                }
+            }
+
+            // 处理本地图片选择
+            if (requestCode == LocalImagePickerPreference.PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK) {
+                LocalImagePickerPreference pickerPreference = LocalImagePickerPreference.getInstance();
+                if (pickerPreference != null) {
+                    pickerPreference.handleImagePickerResult(data);
                 }
             }
 

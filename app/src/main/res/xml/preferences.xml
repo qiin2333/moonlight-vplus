@@ -260,6 +260,11 @@
             android:text="ms"
             android:title="双击时间阈值" />
         <CheckBoxPreference
+            android:key="pref_enable_local_cursor_rendering"
+            android:title="显示一个本地光标"
+            android:summary="显示一个本地光标，可通过触摸板模式控制光标"
+            android:defaultValue="false" />
+        <CheckBoxPreference
             android:key="checkbox_sync_touch_event_with_display"
             android:title="@string/title_checkbox_sync_touch_event_with_display"
             android:summary="@string/summary_checkbox_sync_touch_event_with_display"
@@ -442,6 +447,13 @@
             android:title="@string/title_checkbox_enable_sops"
             android:summary="@string/summary_checkbox_enable_sops"
             android:defaultValue="true" />
+        <ListPreference
+            android:key="list_screen_combination_mode"
+            android:title="@string/title_screen_combination_mode"
+            android:summary="@string/summary_screen_combination_mode"
+            android:entries="@array/screen_combination_mode_names"
+            android:entryValues="@array/screen_combination_mode_values"
+            android:defaultValue="-1" />
         <CheckBoxPreference
             android:key="checkbox_host_audio"
             android:title="@string/title_checkbox_host_audio"
@@ -479,11 +491,20 @@
             android:dialogTitle="@string/dialog_title_background_image_api"
             android:dialogMessage="@string/dialog_message_background_image_api"
             android:defaultValue="" />
+        <com.limelight.preferences.LocalImagePickerPreference
+            android:key="local_image_picker"
+            android:title="@string/title_local_image_picker"
+            android:summary="@string/summary_local_image_picker" />
         <CheckBoxPreference
             android:key="checkbox_enable_analytics"
             android:title="@string/title_enable_analytics"
             android:summary="@string/summary_enable_analytics"
             android:defaultValue="true" />
+        <CheckBoxPreference
+            android:key="checkbox_resume_stream"
+            android:title="@string/title_checkbox_resume_stream"
+            android:summary="@string/summary_checkbox_resume_stream"
+            android:defaultValue="false" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_advanced_settings"
         android:key="category_advanced_settings"

@@ -1,5 +1,6 @@
 package com.limelight.nvstream.http;
 
+import android.os.Build;
 import android.provider.Settings;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -21,12 +22,17 @@ import java.security.SecureRandom;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.ListIterator;
 import java.util.Objects;
 import java.util.Stack;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -780,6 +786,59 @@ public class NvHTTP {
         return resp.byteStream();
     }
     
+    /**
+     * 获取主机可用的显示器列表
+     * @return 显示器列表，每个显示器包含 index 和 name
+     * @throws IOException 如果请求失败
+     * @throws InterruptedException 如果请求被中断
+     */
+    public static class DisplayInfo {
+        public int index;
+        public String name;  // 友好名字，用于显示
+        public String guid;  // GUID，用于传递给服务端
+        
+        public DisplayInfo(int index, String name, String guid) {
+            this.index = index;
+            this.name = name;
+            this.guid = guid;
+        }
+    }
+    
+    public List<DisplayInfo> getDisplays() throws IOException, InterruptedException {
+        try {
+            String jsonStr = openHttpConnectionToString(httpClientLongConnectTimeout, getHttpsUrl(true), "displays");
+            JSONObject json = new JSONObject(jsonStr);
+            
+            int statusCode = json.optInt("status_code", 0);
+            if (statusCode != 200) {
+                throw new IOException("Failed to get displays: " + json.optString("status_message", "Unknown error"));
+            }
+            
+            JSONArray displaysArray = json.optJSONArray("displays");
+            if (displaysArray == null) {
+                return new ArrayList<>();
+            }
+            
+            List<DisplayInfo> displays = new ArrayList<>(displaysArray.length());
+            for (int i = 0; i < displaysArray.length(); i++) {
+                JSONObject displayObj = displaysArray.getJSONObject(i);
+                
+                String friendlyName = displayObj.optString("friendly_name", "");
+                if (friendlyName.isEmpty()) {
+                    friendlyName = displayObj.optString("display_name", "Display " + (i + 1));
+                }
+                
+                String guid = displayObj.optString("device_id", "");
+                
+                displays.add(new DisplayInfo(i, friendlyName, guid));
+            }
+            
+            return displays;
+        } catch (org.json.JSONException e) {
+            throw new IOException("Failed to parse displays response: " + e.getMessage(), e);
+        }
+    }
+    
     public int getServerMajorVersion(String serverInfo) throws XmlPullParserException, IOException {
         return getServerAppVersionQuad(serverInfo)[0];
     }
@@ -834,8 +893,7 @@ public class NvHTTP {
             }
         }
 
-        String xmlStr = openHttpConnectionToString(httpClientLongConnectNoReadTimeout, getHttpsUrl(true), verb,
-            "appid=" + appId +
+        String queryParams = "appid=" + appId +
             "&mode=" + context.streamConfig.getReqWidth() + "x" + context.streamConfig.getReqHeight() + "x" + fps +
             "&additionalStates=1&sops=" + (enableSops ? 1 : 0) +
             "&resolutionScale=" + context.streamConfig.getResolutionScale() +
@@ -849,8 +907,21 @@ public class NvHTTP {
             "&gcpersist=" + (context.streamConfig.getPersistGamepadsAfterDisconnect() ? 1 : 0) + "&useVdd="+(context.streamConfig.getUseVdd() ? 1 : 0) +
             "&minBrightness=" + context.minBrightness +
             "&maxBrightness=" + context.maxBrightness +
-            "&maxAverageBrightness=" + context.maxAverageBrightness +
-            MoonBridge.getLaunchUrlQueryParameters());
+            "&maxAverageBrightness=" + context.maxAverageBrightness;
+
+        int customScreenMode = context.streamConfig.getCustomScreenMode();
+        if (customScreenMode != -1) {
+            queryParams += "&customScreenMode=" + customScreenMode;
+        }
+        
+        // 如果指定了显示器GUID，添加到查询参数中
+        if (context.displayName != null && !context.displayName.isEmpty()) {
+            queryParams += "&display_name=" + context.displayName;
+        }
+        
+        queryParams += MoonBridge.getLaunchUrlQueryParameters();
+        
+        String xmlStr = openHttpConnectionToString(httpClientLongConnectNoReadTimeout, getHttpsUrl(true), verb, queryParams);
         if ((verb.equals("launch") && !getXmlString(xmlStr, "gamesession", true).equals("0") ||
                 (verb.equals("resume") && !getXmlString(xmlStr, "resume", true).equals("0")))) {
             // sessionUrl0 will be missing for older GFE versions

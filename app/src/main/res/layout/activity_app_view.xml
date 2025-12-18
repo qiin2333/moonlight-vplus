@@ -85,51 +85,84 @@
         android:breakStrategy="balanced"
         android:hyphenationFrequency="normal" />
 
-    <!-- 上一次设置信息显示区域 - 放在应用列表下方 -->
+    <!-- 显示器选择信息显示区域 - 位于appListText下方 -->
     <LinearLayout
-        android:id="@+id/lastSettingsInfo"
+        android:id="@+id/displaySelectionInfo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/appFragmentContainer"
+        android:layout_marginLeft="8dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginTop="8dp"
+        android:orientation="vertical"
+        android:gravity="start"
+        android:visibility="gone">
+
+        <RadioGroup
+            android:id="@+id/displayRadioGroup"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="start"
+            android:layout_gravity="start" />
+
+    </LinearLayout>
+
+    <!-- 底部信息容器 - 包含上一次设置信息 -->
+    <LinearLayout
+        android:id="@+id/bottomInfoContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_marginTop="20dp"
         android:layout_marginLeft="20dp"
         android:layout_marginRight="20dp"
         android:layout_marginEnd="20dp"
-        android:layout_marginBottom="20dp"
+        android:layout_marginBottom="10dp"
         android:orientation="vertical"
-        android:gravity="end"
-        android:visibility="gone">
+        android:gravity="end">
 
-        <CheckBox
-            android:id="@+id/useLastSettingsCheckbox"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="5dp"
-            android:focusable="true"
-            android:text="@string/app_last_settings_use_checkbox"
-            android:textColor="#CCFFFFFF"
-            android:textSize="12sp"
-            android:fontFamily="sans-serif-light"
-            android:buttonTint="#FFFFFF"
-            android:checked="false" />
-
-        <TextView
-            android:id="@+id/lastSettingsText"
+        <!-- 上一次设置信息显示区域 -->
+        <LinearLayout
+            android:id="@+id/lastSettingsInfo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="13sp"
-            android:textColor="#CCFFFFFF"
-            android:shadowColor="#80000000"
-            android:shadowDx="1"
-            android:shadowDy="1"
-            android:shadowRadius="2"
-            android:fontFamily="sans-serif-light"
-            android:background="@drawable/settings_info_background"
-            android:padding="8dp"
-            android:maxLines="3"
-            android:ellipsize="end"
-            android:lineSpacingExtra="2dp"
-            android:text="@string/app_last_settings_title" />
+            android:orientation="vertical"
+            android:gravity="end"
+            android:visibility="gone">
+
+            <CheckBox
+                android:id="@+id/useLastSettingsCheckbox"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:focusable="true"
+                android:text="@string/app_last_settings_use_checkbox"
+                android:textColor="#CCFFFFFF"
+                android:textSize="12sp"
+                android:fontFamily="sans-serif-light"
+                android:buttonTint="#FFFFFF"
+                android:checked="false" />
+
+            <TextView
+                android:id="@+id/lastSettingsText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="13sp"
+                android:textColor="#CCFFFFFF"
+                android:shadowColor="#80000000"
+                android:shadowDx="1"
+                android:shadowDy="1"
+                android:shadowRadius="2"
+                android:fontFamily="sans-serif-light"
+                android:background="@drawable/settings_info_background"
+                android:padding="8dp"
+                android:maxLines="3"
+                android:ellipsize="end"
+                android:lineSpacingExtra="2dp"
+                android:text="@string/app_last_settings_title" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
