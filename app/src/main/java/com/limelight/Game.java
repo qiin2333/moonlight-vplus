@@ -125,6 +125,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private final TouchContext[] relativeTouchContextMap = new TouchContext[TOUCH_CONTEXT_LENGTH];
     private long multiFingerDownTime = 0;
     
+    // 双指右键检测
+    private long twoFingerDownTime = 0;
+    private long firstFingerUpTime = 0;
+    private boolean twoFingerTapPending = false;
+    private boolean twoFingerMoved = false;
+    private static final int TWO_FINGER_TAP_THRESHOLD = 100;
+    
     public static final int REFERENCE_HORIZ_RES = 1280;
     public static final int REFERENCE_VERT_RES = 720;
 
@@ -3170,6 +3177,14 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                         for (TouchContext touchContext : touchContextMap) {
                             touchContext.setPointerCount(event.getPointerCount());
                         }
+                        
+                        // 双指右键检测：当第二个手指按下时记录时间（仅触控板模式）
+                        if (event.getPointerCount() == 2 && prefConfig.touchscreenTrackpad) {
+                            twoFingerDownTime = event.getEventTime();
+                            twoFingerMoved = false;
+                            twoFingerTapPending = false;
+                        }
+                        
                         context.touchDownEvent((int) normalizedCoords[0], (int) normalizedCoords[1], event.getEventTime(), true);
                         break;
                     }
@@ -3177,12 +3192,44 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     case MotionEvent.ACTION_UP: {
                         // 对主触摸点进行转换
                         float[] normalizedCoords = getNormalizedCoordinates(streamView, event.getX(actionIndex), event.getY(actionIndex));
+                        
+                        // 双指右键检测（仅触控板模式）
+                        if (event.getPointerCount() == 2 && !twoFingerMoved && prefConfig.touchscreenTrackpad) {
+                            if (event.getEventTime() - twoFingerDownTime < TWO_FINGER_TAP_THRESHOLD) {
+                                // 第二根手指抬起，立即触发右键
+                                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT);
+                                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT);
+                                twoFingerTapPending = false;
+                                twoFingerMoved = true;
+                                for (TouchContext touchContext : touchContextMap) {
+                                    touchContext.setPointerCount(event.getPointerCount() - 1);
+                                }
+                                return true;
+                            } else {
+                                firstFingerUpTime = event.getEventTime();
+                                twoFingerTapPending = true;
+                            }
+                        }
+                        
                         if (event.getPointerCount() == 1 &&
                                 (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || (event.getFlags() & MotionEvent.FLAG_CANCELED) == 0)) {
-                            // All fingers up
+                            // 双指点击检测：两个手指都抬起时
+                            if (twoFingerTapPending && !twoFingerMoved && prefConfig.touchscreenTrackpad) {
+                                if (event.getEventTime() - firstFingerUpTime < TWO_FINGER_TAP_THRESHOLD) {
+                                    conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT);
+                                    conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT);
+                                    twoFingerTapPending = false;
+                                    for (TouchContext touchContext : touchContextMap) {
+                                        touchContext.cancelTouch();
+                                        touchContext.setPointerCount(0);
+                                    }
+                                    return true;
+                                }
+                            }
+                            twoFingerTapPending = false;
+                            
+                            // 三指点击：弹出键盘
                             if (event.getEventTime() - multiFingerDownTime < MULTI_FINGER_TAP_THRESHOLD) {
-                                // This is a 3 finger tap to bring up the keyboard
-                                // multiFingerDownTime, previously threeFingerDowntime, is also used in native-touch for keyboard toggle.
                                 toggleKeyboard();
                                 return true;
                             }
@@ -3208,6 +3255,14 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                         break;
                     }
                 case MotionEvent.ACTION_MOVE:
+                    // 双指移动检测：如果双指期间发生移动，标记为已移动（用于排除滚动时触发右键）
+                    if (event.getPointerCount() == 2 && !twoFingerMoved) {
+                        // 使用一个简单的移动阈值来判断是否是真正的移动
+                        // 这里我们信任 TouchContext 的 confirmedMove 逻辑
+                        // 只要有 MOVE 事件就标记（可以根据需要添加阈值判断）
+                        twoFingerMoved = true;
+                    }
+                    
                     // ACTION_MOVE 的处理需要更仔细，因为它有历史事件
                     // 首先处理历史事件
                     for (int i = 0; i < event.getHistorySize(); i++) {
