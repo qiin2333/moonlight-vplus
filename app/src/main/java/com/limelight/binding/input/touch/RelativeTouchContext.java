@@ -28,12 +28,6 @@ public class RelativeTouchContext implements TouchContext {
     private int pointerCount;
     private int maxPointerCountInGesture;
 
-    // 检测双指同时点击
-    private static long firstFingerDownTime = 0;
-    private static boolean isSimultaneousTwoFingerTap = false;
-    // 双指同时点击的时间阈值：按下第二个手指视为同时点击
-    private static final int SIMULTANEOUS_TAP_THRESHOLD = 100;
-
     private long lastTapUpTime = 0;
     /** 记录上一次成功单击的结束位置X */
     private int lastTapUpX = 0;
@@ -168,18 +162,11 @@ public class RelativeTouchContext implements TouchContext {
             return false;
         }
 
-        // 特殊处理：同时双指点击时，只有第二个手指（右键）发送点击事件
-        if (isSimultaneousTwoFingerTap) {
-            if (actionIndex != 1) { // 不是第二个手指，不发送点击
-                return false;
-            }
-        } else {
-            // If this input wasn't the last finger down, do not report
-            // a tap. This ensures we don't report duplicate taps for each
-            // finger on a multi-finger tap gesture
-            if (actionIndex + 1 != maxPointerCountInGesture) {
-                return false;
-            }
+        // If this input wasn't the last finger down, do not report
+        // a tap. This ensures we don't report duplicate taps for each
+        // finger on a multi-finger tap gesture
+        if (actionIndex + 1 != maxPointerCountInGesture) {
+            return false;
         }
 
         long timeDelta = eventTime - originalTouchTime;
@@ -212,25 +199,6 @@ public class RelativeTouchContext implements TouchContext {
             distanceMoved = 0;
 
             isPotentialDoubleClick = false; // 重置双击待定状态
-
-            // 检测双指同时点击（用于右键）
-            if (actionIndex == 0) {
-                firstFingerDownTime = eventTime;
-                isSimultaneousTwoFingerTap = false;
-            } else if (actionIndex == 1) {
-                long timeSinceFirstFinger = eventTime - firstFingerDownTime;
-                if (timeSinceFirstFinger <= SIMULTANEOUS_TAP_THRESHOLD) {
-                    isSimultaneousTwoFingerTap = true;
-                    // 如果是同时双指点击，取消第一个手指可能的延迟单击
-                    cancelSingleTapTimer();
-                    cancelDragTimer();
-                    // 重置上次点击时间，避免双击检测机制影响右键响应
-                    lastTapUpTime = 0;
-                }
-            } else if (actionIndex >= 2) {
-                // 第三个或更多手指按下时，取消双指同时点击标志、防止三指及以上手势意外触发右键
-                isSimultaneousTwoFingerTap = false;
-            }
 
             if (prefConfig.enableDoubleClickDrag) {
                 long timeSinceLastTap = eventTime - lastTapUpTime;
@@ -448,7 +416,6 @@ public class RelativeTouchContext implements TouchContext {
 
         lastTapUpTime = 0;
         isPotentialDoubleClick = false;
-        isSimultaneousTwoFingerTap = false;
     }
 
     //  启动“按住确认拖拽”计时器的方法
@@ -518,12 +485,6 @@ public class RelativeTouchContext implements TouchContext {
 
         if (pointerCount > maxPointerCountInGesture) {
             maxPointerCountInGesture = pointerCount;
-        }
-        
-        // 当所有手指抬起后，重置同时点击标志
-        if (pointerCount == 0) {
-            isSimultaneousTwoFingerTap = false;
-            firstFingerDownTime = 0;
         }
     }
 
