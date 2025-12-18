@@ -130,7 +130,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private long firstFingerUpTime = 0;
     private boolean twoFingerTapPending = false;
     private boolean twoFingerMoved = false;
+    private float twoFingerStartX = 0, twoFingerStartY = 0;
     private static final int TWO_FINGER_TAP_THRESHOLD = 100;
+    private static final float TWO_FINGER_MOVE_THRESHOLD = 30f;
     
     public static final int REFERENCE_HORIZ_RES = 1280;
     public static final int REFERENCE_VERT_RES = 720;
@@ -3178,9 +3180,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                             touchContext.setPointerCount(event.getPointerCount());
                         }
                         
-                        // 双指右键检测：当第二个手指按下时记录时间（仅触控板模式）
+                        // 双指右键检测
                         if (event.getPointerCount() == 2 && prefConfig.touchscreenTrackpad) {
                             twoFingerDownTime = event.getEventTime();
+                            twoFingerStartX = event.getX(0);
+                            twoFingerStartY = event.getY(0);
                             twoFingerMoved = false;
                             twoFingerTapPending = false;
                         }
@@ -3255,12 +3259,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                         break;
                     }
                 case MotionEvent.ACTION_MOVE:
-                    // 双指移动检测：如果双指期间发生移动，标记为已移动（用于排除滚动时触发右键）
-                    if (event.getPointerCount() == 2 && !twoFingerMoved) {
-                        // 使用一个简单的移动阈值来判断是否是真正的移动
-                        // 这里我们信任 TouchContext 的 confirmedMove 逻辑
-                        // 只要有 MOVE 事件就标记（可以根据需要添加阈值判断）
-                        twoFingerMoved = true;
+                    // 双指移动检测
+                    if (event.getPointerCount() == 2 && !twoFingerMoved && prefConfig.touchscreenTrackpad) {
+                        float dx = event.getX(0) - twoFingerStartX;
+                        float dy = event.getY(0) - twoFingerStartY;
+                        if (Math.sqrt(dx * dx + dy * dy) > TWO_FINGER_MOVE_THRESHOLD) {
+                            twoFingerMoved = true;
+                        }
                     }
                     
                     // ACTION_MOVE 的处理需要更仔细，因为它有历史事件
