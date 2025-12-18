@@ -255,7 +255,7 @@
             seekbar:step="25"
             seekbar:keyStep="50"
             seekbar:divisor="1"
-            android:defaultValue="300"
+            android:defaultValue="125"
             android:summary="调整双击识别的时间间隔"
             android:text="ms"
             android:title="双击时间阈值" />
