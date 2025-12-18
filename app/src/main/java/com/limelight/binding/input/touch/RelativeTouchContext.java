@@ -260,6 +260,8 @@ public class RelativeTouchContext implements TouchContext {
 
         if (confirmedDrag) {
             conn.sendMouseButtonUp(buttonIndex);
+            // 拖动结束后重置点击时间，避免影响后续的双指右键
+            lastTapUpTime = 0;
         }
         else if (isTap(eventTime))
         {
