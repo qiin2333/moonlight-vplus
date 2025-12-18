@@ -29,7 +29,8 @@ public class RelativeTouchContext implements TouchContext {
     // 检测双指同时点击
     private long firstFingerDownTime = 0;
     private boolean isSimultaneousTwoFingerTap = false;
-    private static final int SIMULTANEOUS_TAP_THRESHOLD = 50;
+    // 双指同时点击的时间阈值：150ms内按下第二个手指视为同时点击
+    private static final int SIMULTANEOUS_TAP_THRESHOLD = 250;
 
     private long lastTapUpTime = 0;
     /** 记录上一次成功单击的结束位置X */
