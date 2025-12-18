@@ -347,7 +347,7 @@ public class RelativeTouchContext implements TouchContext {
                     }
                 } else if (confirmedMove || isDoubleClickDrag || confirmedDrag) {
 
-                    if (localCursorRenderer != null) {
+                    if (prefConfig.enableLocalCursorRendering) {
                         // 1. 本地模式：更新本地光标
                         localCursorRenderer.updateCursorPosition(deltaX, deltaY);
                         // 2. 获取绝对坐标并发送给服务器 (保持同步)
