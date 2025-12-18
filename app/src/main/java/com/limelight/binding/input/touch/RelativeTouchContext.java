@@ -28,7 +28,7 @@ public class RelativeTouchContext implements TouchContext {
     private int pointerCount;
     private int maxPointerCountInGesture;
 
-    // 检测双指同时点击 - 使用 static 让所有 TouchContext 实例共享状态
+    // 检测双指同时点击
     private static long firstFingerDownTime = 0;
     private static boolean isSimultaneousTwoFingerTap = false;
     // 双指同时点击的时间阈值：按下第二个手指视为同时点击
