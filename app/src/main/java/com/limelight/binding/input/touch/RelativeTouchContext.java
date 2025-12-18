@@ -208,10 +208,14 @@ public class RelativeTouchContext implements TouchContext {
 
             maxPointerCountInGesture = pointerCount;
             originalTouchTime = eventTime;
-            cancelled = confirmedDrag = confirmedMove = confirmedScroll = isDoubleClickDrag = false;
             distanceMoved = 0;
 
-            isPotentialDoubleClick = false; // 重置双击待定状态
+            // 只有第一根手指按下时才重置移动/拖动状态
+            // 避免第二根手指按下时清除第一根手指已确认的移动状态
+            if (actionIndex == 0) {
+                cancelled = confirmedDrag = confirmedMove = confirmedScroll = isDoubleClickDrag = false;
+                isPotentialDoubleClick = false; // 重置双击待定状态
+            }
 
             // 检测双指同时点击（用于右键）
             if (actionIndex == 0) {
@@ -385,7 +389,7 @@ public class RelativeTouchContext implements TouchContext {
                     }
                 } else if (confirmedMove || isDoubleClickDrag || confirmedDrag) {
 
-                    if (localCursorRenderer != null) {
+                    if (localCursorRenderer != null && this.enableLocalCursorRendering) {
                         // 1. 本地模式：更新本地光标
                         localCursorRenderer.updateCursorPosition(deltaX, deltaY);
                         // 2. 获取绝对坐标并发送给服务器 (保持同步)
