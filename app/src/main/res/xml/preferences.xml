@@ -246,6 +246,19 @@
             android:title="启用触控板双击拖动"
             android:summary="双击并按住后可拖动选择"
             android:defaultValue="false" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_double_tap_time_threshold"
+            android:dependency="pref_enable_double_click_drag"
+            android:dialogMessage="调整双击识别的时间间隔，数值越大越容易触发双击"
+            seekbar:min="25"
+            android:max="1000"
+            seekbar:step="25"
+            seekbar:keyStep="50"
+            seekbar:divisor="1"
+            android:defaultValue="300"
+            android:summary="调整双击识别的时间间隔"
+            android:text="ms"
+            android:title="双击时间阈值" />
         <CheckBoxPreference
             android:key="checkbox_sync_touch_event_with_display"
             android:title="@string/title_checkbox_sync_touch_event_with_display"

@@ -74,7 +74,7 @@ public class RelativeTouchContext implements TouchContext {
     private static final int DRAG_TIME_THRESHOLD = 650;
     private static final int DRAG_START_THRESHOLD = 10;
     // 定义2次点击的间隔小于多久才为双击按住
-    private static final int DOUBLE_TAP_TIME_THRESHOLD = 100;
+    private final int DOUBLE_TAP_TIME_THRESHOLD;
     //  定义双击后按住多久确认为拖拽
     private static final int DOUBLE_TAP_HOLD_TO_DRAG_THRESHOLD = 200;
     /** 定义双击时，两次点击位置的最大允许偏差 */
@@ -90,6 +90,10 @@ public class RelativeTouchContext implements TouchContext {
         this.targetView = view;
         this.prefConfig = prefConfig;
         this.handler = new Handler(Looper.getMainLooper());
+        
+        // 从配置中读取双击时间阈值
+        this.DOUBLE_TAP_TIME_THRESHOLD = prefConfig.doubleTapTimeThreshold;
+        
         this.buttonUpRunnables = new Runnable[] {
                 () -> conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT),
                 () -> conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE),
