@@ -214,7 +214,7 @@ public class PreferenceConfiguration {
     private static final boolean DEFAULT_CONTROL_ONLY = false;
 
     private static final boolean DEFAULT_ENABLE_DOUBLE_CLICK_DRAG = false;
-    private static final int DEFAULT_DOUBLE_TAP_TIME_THRESHOLD = 300; // 默认300ms
+    private static final int DEFAULT_DOUBLE_TAP_TIME_THRESHOLD = 125; // 默认125ms
     public boolean enableDoubleClickDrag;
     public int doubleTapTimeThreshold;
     

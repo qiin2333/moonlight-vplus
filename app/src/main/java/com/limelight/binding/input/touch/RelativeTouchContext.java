@@ -31,17 +31,19 @@ public class RelativeTouchContext implements TouchContext {
     // 检测双指同时点击
     private long firstFingerDownTime = 0;
     private boolean isSimultaneousTwoFingerTap = false;
-    // 双指同时点击的时间阈值：150ms内按下第二个手指视为同时点击
-    private static final int SIMULTANEOUS_TAP_THRESHOLD = 250;
+    // 双指同时点击的时间阈值：按下第二个手指视为同时点击
+    private static final int SIMULTANEOUS_TAP_THRESHOLD = 100;
 
     private long lastTapUpTime = 0;
     /** 记录上一次成功单击的结束位置X */
     private int lastTapUpX = 0;
     /** 记录上一次成功单击的结束位置Y */
     private int lastTapUpY = 0;
-    /** 标志位，表示当前是否处于“双击并按住”触发的拖拽模式 */
+    /** 标志位，表示当前是否处于"双击并按住"触发的拖拽模式 */
     private boolean isDoubleClickDrag = false;
-    /** 标志位，表示当前手势可能是双击的第二次点击，处于“待定”状态 */
+    /** 标志位，表示当前是否处于"双指点击并拖动"模式（右键拖拽） */
+    private boolean isTwoFingerDrag = false;
+    /** 标志位，表示当前手势可能是双击的第二次点击，处于"待定"状态 */
     private boolean isPotentialDoubleClick = false;
 
     private final NvConnection conn;
