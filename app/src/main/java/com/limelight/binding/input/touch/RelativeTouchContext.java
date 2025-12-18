@@ -181,6 +181,8 @@ public class RelativeTouchContext implements TouchContext {
                     // 如果是同时双指点击，取消第一个手指可能的延迟单击
                     cancelSingleTapTimer();
                     cancelDragTimer();
+                    // 重置上次点击时间，避免双击检测机制影响右键响应
+                    lastTapUpTime = 0;
                 }
             } else if (actionIndex >= 2) {
                 // 第三个或更多手指按下时，取消双指同时点击标志、防止三指及以上手势意外触发右键
