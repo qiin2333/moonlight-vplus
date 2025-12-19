@@ -11,7 +11,8 @@ body:
         感谢您花时间提出新功能建议！
         Thank you for taking the time to suggest a new feature!
         
-        在此之前，您需要知道此项目的名称为 基地版Moonlight 威力加强版/V+/Vplus，后续交流可能会使用其中任一名称。 / Before you submit, you need to know that the name of this project is Foundation Moonlight Power Plus/V+/Vplus, and we may use any of these names in our future communication.
+        在此之前，您需要知道此项目的名称为 基地版Moonlight 威力加强版 / V+ / Vplus，后续交流可能会使用其中任一名称。
+        Before you submit, you need to know that the name of this project is Foundation Moonlight / V+ / Vplus, and we may use any of these names in our future communication.
         
         **提交前请检查 / Please check before submitting：**
         - [ ] 我已搜索现有 issues，避免重复 / I have searched existing issues and feature requests to avoid duplicates
@@ -24,13 +25,13 @@ body:
       label: "🏷️ 功能类别 / Feature Category"
       description: "这是什么类型的功能？ / What type of feature is this?"
       options:
-        - "🎮 手柄控制器 / Gamepad/Controller"
+        - "🎮 手柄控制器 / Gamepad Controller"
         - "📱 触控操作 / Touch Controls"
-        - "📺 视频显示 / Video/Display"
+        - "📺 视频显示 / Video Display"
         - "🔊 音频 / Audio"
-        - "⚙️ 设置配置 / Settings/Configuration"
-        - "🎨 界面体验 / UI/UX Design"
-        - "🌐 网络连接 / Network/Connection"
+        - "⚙️ 设置配置 / Settings"
+        - "🎨 界面体验 / UI Design"
+        - "🌐 网络连接 / Network Connection"
         - "🔋 性能优化 / Performance"
         - "🔧 无障碍功能 / Accessibility"
         - "❓ 其他 / Other"

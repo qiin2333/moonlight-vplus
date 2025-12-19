@@ -11,7 +11,8 @@ body:
         感谢您花时间报告这个问题！
         Thank you for taking the time to report this issue!
         
-        在此之前，您需要知道此项目的名称为 基地版Moonlight 威力加强版/V+/Vplus，后续交流可能会使用其中任一名称。 / Before you submit, you need to know that the name of this project is Foundation Moonlight Power Plus/V+/Vplus, and we may use any of these names in our future communication.
+        在此之前，您需要知道此项目的名称为 基地版Moonlight 威力加强版/V+/Vplus，后续交流可能会使用其中任一名称。
+        Before you submit, you need to know that the name of this project is Foundation Moonlight Power Plus/V+/Vplus, and we may use any of these names in our future communication.
         
         **提交前请检查 / Please check before submitting：**
         - [ ] 我已搜索现有 issues，避免重复提交 / I have searched existing issues to avoid duplicates
@@ -24,13 +25,13 @@ body:
       label: "🏷️ 问题类型 / Bug Category"
       description: "这是什么类型的问题？ / What type of bug is this?"
       options:
-        - "🎮 手柄控制器问题 / Gamepad/Controller issues"
-        - "📺 视频显示问题 / Video/Display issues"
+        - "🎮 手柄控制器问题 / Gamepad Controller issues"
+        - "📺 视频显示问题 / Video Display issues"
         - "🔊 音频问题 / Audio issues"
-        - "🌐 连接网络问题 / Connection/Network issues"
-        - "📱 触控输入问题 / Touch/Input issues"
-        - "⚙️ 设置配置问题 / Settings/Configuration issues"
-        - "💥 崩溃卡死 / Crash/Freeze"
+        - "🌐 连接网络问题 / Network Connection issues"
+        - "📱 触控输入问题 / Touch Input issues"
+        - "⚙️ 设置配置问题 / Settings issues"
+        - "💥 崩溃卡死 / Crash Freeze"
         - "🔋 性能问题 / Performance issues"
         - "❓ 其他 / Other"
     validations:
