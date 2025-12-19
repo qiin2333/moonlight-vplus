@@ -1,176 +1,261 @@
-name: Bug report
-description: Follow the troubleshooting guide before reporting a bug
-title: "[Issue]: "
-labels: bug
+name: "🐛 问题报告 / Bug Report"
+description: "报告问题帮助我们改进 / Report a bug to help us improve"
+title: "[Bug]: "
+labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thank you for taking the time to fill out this bug form!
+        ## 📋 提交前请注意 / Before You Submit
         
-        **READ ME FIRST!**
-        If you're here because something basic is not working (like gamepad input, video, or similar), it's probably something specific to your setup, so make sure you've gone through the Troubleshooting Guide first: https://github.com/moonlight-stream/moonlight-docs/wiki/Troubleshooting
+        感谢您花时间报告这个问题！
+        Thank you for taking the time to report this issue!
         
-        If you still have trouble with basic functionality after following the guide, join our Discord server where there are many other volunteers who can help (or direct you back here if it looks like a Moonlight bug after all). https://moonlight-stream.org/discord
+        在此之前，您需要知道此项目的名称为 基地版Moonlight 威力加强版/V+/Vplus，后续交流可能会使用其中任一名称。 / Before you submit, you need to know that the name of this project is Foundation Moonlight Power Plus/V+/Vplus, and we may use any of these names in our future communication.
+        
+        **提交前请检查 / Please check before submitting：**
+        - [ ] 我已搜索现有 issues，避免重复提交 / I have searched existing issues to avoid duplicates
+        - [ ] 此问题针对 **基地 Moonlight 威力加强版/V+/Vplus**，而非原版 Moonlight 或其他版本 / This issue is specific to **Moonlight Vplus**, not the original Moonlight or other versions
+        ---
+
+  - type: dropdown
+    id: bug-type
+    attributes:
+      label: "🏷️ 问题类型 / Bug Category"
+      description: "这是什么类型的问题？ / What type of bug is this?"
+      options:
+        - "🎮 手柄控制器问题 / Gamepad/Controller issues"
+        - "📺 视频显示问题 / Video/Display issues"
+        - "🔊 音频问题 / Audio issues"
+        - "🌐 连接网络问题 / Connection/Network issues"
+        - "📱 触控输入问题 / Touch/Input issues"
+        - "⚙️ 设置配置问题 / Settings/Configuration issues"
+        - "💥 崩溃卡死 / Crash/Freeze"
+        - "🔋 性能问题 / Performance issues"
+        - "❓ 其他 / Other"
+    validations:
+      required: true
+
   - type: textarea
     id: describe-bug
     attributes:
-      label: Describe the bug
-      description: A clear and concise description of what the bug is.
+      label: "📝 问题描述 / Bug Description"
+      description: |
+        清晰简洁地描述问题。发生了什么？您期望发生什么？
+        Describe the bug clearly and concisely. What happened? What did you expect to happen?
+      placeholder: |
+        示例 / Example:
+        当我在触摸板模式中双击时，无法触发拖动功能，原因是检测时延间隔过短。我期望增加时延间隔，或者增加配置让用户可以自定义。
+        
+        When I double-click on the touchpad, the drag function does not trigger. The reason is that the detection delay interval is too short. I expect to increase the delay interval, or add a configuration option for users to customize.
     validations:
       required: true
+
   - type: textarea
     id: steps-reproduce
     attributes:
-      label: Steps to reproduce
-      description: Any special steps that are required for the bug to appear.
+      label: "🔄 复现步骤 / Steps to Reproduce"
+      description: |
+        提供详细的复现步骤。
+        Provide detailed steps to reproduce the issue.
+      placeholder: |
+        1. 打开 Moonlight V+ / Open Moonlight V+
+        2. 连接到主机 / Connect to host PC
+        3. 开始串流游戏 XXX / Start streaming game XXX
+        4. 在触摸板模式下单根手指双击并拖拽 / Double-click on the touchpad with one finger and drag
+        5. 问题出现 / Bug occurs
     validations:
       required: true
+
   - type: textarea
     id: affected-games
     attributes:
-      label: Affected games
-      description: List the games you've tried that exhibit the issue. To see if the issue is game-specific, try streaming Steam Big Picture with Moonlight and see if the issue persists there.
-    validations:
-      required: true   
-  - type: dropdown
-    id: other-clients
-    attributes:
-      label: Other Moonlight clients
-      description: Does the issue occur when using Moonlight on PC or iOS?
-      options:
-        - "PC"
-        - "iOS"
-    validations:
-      required: true
-  - type: dropdown
-    id: settings-adjusted
-    attributes:
-      label: Moonlight adjusted settings
-      description: Have any settings been adjusted from defaults?
-      options:
-        - "Yes"
-        - "No"
-    validations:
-      required: true
-  - type: textarea
-    id: settings-adjusted-settings
-    attributes:
-      label: Moonlight adjusted settings (please complete the following information)
-      description: If the settings have been adjusted, which settings have been changed?
-    validations:
-      required: true
-  - type: dropdown
-    id: settings-default
-    attributes:
-      label: Moonlight default settings
-      description: Does the problem still occur after reverting settings back to default?
-      options:
-        - "Yes"
-        - "No"
-    validations:
-      required: true
-  - type: dropdown
-    id: gamepad-connected
-    attributes:
-      label: Gamepad-related connection issue
-      description: Do you have any gamepads connected to your host PC directly?
-      options:
-        - "Yes"
-        - "No"
-    validations:
-      required: true
-  - type: dropdown
-    id: gamepad-on-screen
-    attributes:
-      label: Gamepad-related input issue
-      description: If gamepad input is not working, does it work if you use Moonlight's on-screen controls?
-      options:
-        - "Yes"
-        - "No"
-    validations:
-      required: true
-  - type: dropdown
-    id: gamepad-test
-    attributes:
-      label: Gamepad-related streaming issue
+      label: "🎯 受影响的游戏/应用 / Affected Games/Apps"
       description: |
-        Does the problem still remain if you stream the desktop and use https://html5gamepad.com to test your gamepad? 
-        Instructions for streaming the desktop can be found here: https://github.com/moonlight-stream/moonlight-docs/wiki/Setup-Guide
-      options:
-        - "Yes"
-        - "No"
+        哪些游戏或应用受到影响？是所有游戏都有问题还是特定游戏？
+        Which games or applications are affected? Does it happen in all games or specific ones?
+      placeholder: |
+        - 所有游戏 / All games
+        - 特定游戏 / Specific games
+        - Desktop / Desktop
     validations:
       required: true
-  - type: input
-    id: android
+
+  - type: dropdown
+    id: reproducibility
     attributes:
-      label: Android version
-      description: What is the Android version?
-      placeholder: e.g. Android 10
+      label: "🔁 可复现性 / Reproducibility"
+      description: "多久能复现一次此问题？ / How often can you reproduce this issue?"
+      options:
+        - "总是发生 (100%) / Always"
+        - "经常发生 (>50%) / Often"
+        - "有时发生 (<50%) / Sometimes"
+        - "很少发生 (<10%) / Rarely"
+        - "只发生过一次 / Only once"
     validations:
-      required: true      
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 📱 客户端设备信息 / Client Device Information
+
   - type: input
     id: device
     attributes:
-      label: Device model
-      description: What is the device model?
-      placeholder: e.g. Samsung Galaxy S21
+      label: "📱 设备型号 / Device Model"
+      description: "您的 Android 设备型号 / Your Android device model"
+      placeholder: "例如 / e.g. Samsung Galaxy S23 / OnePlus 12"
     validations:
       required: true
+
+  - type: input
+    id: android
+    attributes:
+      label: "🤖 安卓版本 / Android Version"
+      description: "您的 Android 系统版本 / Your Android OS version"
+      placeholder: "例如 / e.g. Android 14 / Android 13"
+    validations:
+      required: true
+
+  - type: input
+    id: moonlight-version
+    attributes:
+      label: "🌙 Moonlight V+ 版本 / Moonlight V+ Version"
+      description: "应用版本（设置 → 关于） / Your Moonlight V+ app version (Settings → About)"
+      placeholder: "例如 / e.g. v12.5.1"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 🖥️ 主机信息 / Host PC Information
+
   - type: input
     id: server-os
     attributes:
-      label: Server PC OS version
-      description: What is the PC OS version?
-      placeholder: e.g. Windows 10 1809
+      label: "💻 主机操作系统 / Host OS"
+      description: "串流主机的操作系统 / Operating system of your streaming host"
+      placeholder: "例如 / e.g. Windows 11 23H2 / Windows 10 22H2"
     validations:
       required: true
-  - type: input
-    id: server-geforce
+
+  - type: dropdown
+    id: streaming-software
     attributes:
-      label: Server PC GeForce Experience version
-      description: What is the GeForce Experience version?
-      placeholder: e.g. 3.16.0.140
+      label: "📡 串流软件 / Streaming Software"
+      description: "您的主机运行什么串流软件？ / Which software is running on your host?"
+      options:
+        - "Sunshine"
+        - "GeForce Experience (GFE)"
+        - "Nvidia GameStream"
+        - "其他 / Other"
     validations:
       required: true
+
   - type: input
-    id: server-driver
+    id: streaming-software-version
     attributes:
-      label: Server PC Nvidia GPU driver version
-      description: What is the Nvidia GPU driver version?
-      placeholder: e.g. 417.35
+      label: "📦 串流软件版本 / Streaming Software Version"
+      description: "串流软件的版本号 / Version of the streaming software"
+      placeholder: "例如 / e.g. Sunshine v0.23.1 / GFE 3.28.0.417"
     validations:
       required: true
+
   - type: input
-    id: server-antivirus
+    id: server-gpu
     attributes:
-      label: Server PC antivirus and firewall software
-      description: Which antivirus and firewall software are installed on the Server PC?
-      placeholder: e.g. Windows Defender and Windows Firewall
+      label: "🎨 显卡及驱动版本 / GPU & Driver Version"
+      description: "显卡型号和驱动版本 / Your GPU model and driver version"
+      placeholder: "例如 / e.g. RTX 4090 / 驱动 Driver 545.92"
     validations:
-      required: true      
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 🔧 故障排除 / Troubleshooting
+
+  - type: dropdown
+    id: settings-default
+    attributes:
+      label: "⚙️ 是否修改过设置？ / Settings Modified?"
+      description: "您是否修改过默认设置？ / Have you changed any Moonlight settings from default?"
+      options:
+        - "否，使用默认设置 / No, using default settings"
+        - "是，已修改设置 / Yes, settings modified"
+    validations:
+      required: true
+
+  - type: textarea
+    id: settings-adjusted-settings
+    attributes:
+      label: "📋 已修改的设置 / Modified Settings"
+      description: |
+        如果修改了设置，请列出。
+        If you modified settings, list them here.
+      placeholder: |
+        - 分辨率 / Resolution: 1080p → 4K
+        - 帧率 / Frame rate: 60fps → 120fps
+        - 码率 / Bitrate: 自动 Auto → 50 Mbps
+        - 视频编码 / Video codec: 自动 Auto → HEVC
+    validations:
+      required: false
+
+  - type: dropdown
+    id: issue-with-original
+    attributes:
+      label: "🔍 原版 Moonlight 是否有此问题？ / Issue on Original Moonlight?"
+      description: "这个问题在官方 Moonlight 应用上是否也存在？ / Does this issue also occur on the official Moonlight app?"
+      options:
+        - "未测试 / Not tested"
+        - "是，同样问题存在 / Yes, same issue exists"
+        - "否，仅在 V+ 上出现 / No, only on Moonlight V+"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 📎 附加信息 / Additional Information
+
   - type: textarea
     id: screenshots
     attributes:
-      label: Screenshots
-      description: If applicable, add screenshots to help explain your problem. If the issue is related to video glitching or poor quality, please include screenshots.
+      label: "📸 截图/视频 / Screenshots/Videos"
+      description: |
+        如有必要，请添加截图或录屏来帮助说明问题。
+        If applicable, add screenshots or screen recordings to help explain the problem.
+      placeholder: "在此处拖放图片/视频或粘贴图片链接 / Drag and drop images/videos here or paste image links"
     validations:
       required: false
+
   - type: textarea
     id: logs
     attributes:
-      label: Relevant log output
+      label: "📜 日志输出 / Log Output"
       description: |
-        Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
-      render: Shell
+        如有相关日志输出，请粘贴在此。对于连接或崩溃问题特别有帮助。
+        If you have relevant log output, paste it here. This is especially helpful for connection or crash issues.
+      render: shell
     validations:
-      required: false      
+      required: false
+
   - type: textarea
     id: additional
     attributes:
-      label: Additional context
-      description: Anything else you think may be relevant to the issue or special about your specific setup.
+      label: "💬 其他补充 / Additional Context"
+      description: |
+        其他相关信息？特殊网络设置？是否使用 VPN？手柄型号？
+        Any other relevant information? Special network setup? VPN usage? Gamepad model?
+      placeholder: |
+        - 网络类型 / Network type: WiFi 6 / 5GHz / 有线 Ethernet
+        - 手柄 / Controller: Xbox Series X 手柄 / PS5 DualSense
+        - 连接方式 / Connection method: 本地 Local / 外网 Internet / VPN
     validations:
       required: false
-      
