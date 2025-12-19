@@ -21,11 +21,11 @@ body:
       label: "🏷️ Bug Category"
       description: "What type of bug is this?"
       options:
-        - "🎮 Gamepad Controller issues"
         - "📺 Video Display issues"
         - "🔊 Audio issues"
         - "🌐 Network Connection issues"
         - "📱 Touch Input issues"
+        - "🎮 Gamepad Controller issues"
         - "⚙️ Settings issues"
         - "💥 Crash Freeze"
         - "🔋 Performance issues"
