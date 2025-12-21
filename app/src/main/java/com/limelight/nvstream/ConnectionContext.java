@@ -36,4 +36,7 @@ public class ConnectionContext {
     public int minBrightness;
     public int maxBrightness;
     public int maxAverageBrightness;
+    
+    // 选择的显示器名称
+    public String displayName;
 }

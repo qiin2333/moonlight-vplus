@@ -41,6 +41,7 @@ public class AppSettingsManager {
     private static final String INTENT_LAST_SETTINGS_GYRO_ACTIVATION_KEY = "LastSettingsGyroActivationKey";
     private static final String INTENT_LAST_SETTINGS_SHOW_BITRATE_CARD = "LastSettingsShowBitrateCard";
     private static final String INTENT_LAST_SETTINGS_SHOW_GYRO_CARD = "LastSettingsShowGyroCard";
+    private static final String INTENT_LAST_SETTINGS_SHOW_QuickKeyCard = "LastSettingsshowQuickKeyCard";
 
     private final Context context;
     private final SharedPreferences preferences;
@@ -244,6 +245,9 @@ public class AppSettingsManager {
         if (settings.showGyroCard) {
             summary.append(" | ").append(context.getString(R.string.setting_gyro_card_enabled));
         }
+        if (settings.showQuickKeyCard) {
+            summary.append(" | ").append(context.getString(R.string.setting_QuickKey_card_enabled));
+        }
 
         // Add time information
         summary.append(" (").append(timeStr).append(")");
@@ -340,6 +344,7 @@ public class AppSettingsManager {
         settingsJson.put("gyroActivationKeyCode", settings.gyroActivationKeyCode);
         settingsJson.put("showBitrateCard", settings.showBitrateCard);
         settingsJson.put("showGyroCard", settings.showGyroCard);
+        settingsJson.put("showQuickKeyCard", settings.showQuickKeyCard);
         settingsJson.put("timestamp", System.currentTimeMillis());
         return settingsJson;
     }
@@ -360,6 +365,7 @@ public class AppSettingsManager {
         settings.rotableScreen = false;
         settings.showBitrateCard = false;
         settings.showGyroCard = false;
+        settings.showQuickKeyCard = false;
 
         // Parse resolution string format "1920x1080"
         String resolutionStr = settingsJson.optString("resolution", "1920x1080");
@@ -387,6 +393,7 @@ public class AppSettingsManager {
         settings.gyroActivationKeyCode = settingsJson.optInt("gyroActivationKeyCode", android.view.KeyEvent.KEYCODE_BUTTON_L2);
         settings.showBitrateCard = settingsJson.optBoolean("showBitrateCard", true);
         settings.showGyroCard = settingsJson.optBoolean("showGyroCard", true);
+        settings.showQuickKeyCard = settingsJson.optBoolean("showQuickKeyCard", true);
         
         return settings;
     }
@@ -447,6 +454,7 @@ public class AppSettingsManager {
         intent.putExtra(INTENT_LAST_SETTINGS_GYRO_ACTIVATION_KEY, lastSettings.gyroActivationKeyCode);
         intent.putExtra(INTENT_LAST_SETTINGS_SHOW_BITRATE_CARD, lastSettings.showBitrateCard);
         intent.putExtra(INTENT_LAST_SETTINGS_SHOW_GYRO_CARD, lastSettings.showGyroCard);
+        intent.putExtra(INTENT_LAST_SETTINGS_SHOW_QuickKeyCard, lastSettings.showQuickKeyCard);
     }
     
     /**
@@ -484,6 +492,7 @@ public class AppSettingsManager {
             prefConfig.gyroActivationKeyCode = intent.getIntExtra(INTENT_LAST_SETTINGS_GYRO_ACTIVATION_KEY, prefConfig.gyroActivationKeyCode);
             prefConfig.showBitrateCard = intent.getBooleanExtra(INTENT_LAST_SETTINGS_SHOW_BITRATE_CARD, prefConfig.showBitrateCard);
             prefConfig.showGyroCard = intent.getBooleanExtra(INTENT_LAST_SETTINGS_SHOW_GYRO_CARD, prefConfig.showGyroCard);
+            prefConfig.showQuickKeyCard = intent.getBooleanExtra(INTENT_LAST_SETTINGS_SHOW_QuickKeyCard, prefConfig.showQuickKeyCard);
             
             // Parse video format
             String videoFormatStr = intent.getStringExtra(INTENT_LAST_SETTINGS_VIDEO_FORMAT);

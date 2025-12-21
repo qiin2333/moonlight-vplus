@@ -100,7 +100,8 @@ public class PerformanceOverlayManager {
         PACKET_LOSS(R.id.perfPacketLoss, "packet_loss", "packetLossView"),
         NETWORK_LATENCY(R.id.perfNetworkLatency, "network_latency", "networkLatencyView"),
         DECODE_LATENCY(R.id.perfDecodeLatency, "decode_latency", "decodeLatencyView"),
-        HOST_LATENCY(R.id.perfHostLatency, "host_latency", "hostLatencyView");
+        HOST_LATENCY(R.id.perfHostLatency, "host_latency", "hostLatencyView"),
+        BATTERY(R.id.perfBattery, "battery", "perfBatteryView");
 
         final int viewId;
         final String preferenceKey;
@@ -221,6 +222,7 @@ public class PerformanceOverlayManager {
             case NETWORK_LATENCY: return this::showNetworkLatencyInfo;
             case DECODE_LATENCY: return this::showDecodeLatencyInfo;
             case HOST_LATENCY: return this::showHostLatencyInfo;
+            case BATTERY: return this::showBatteryInfo;
             default: return this::showMoonPhaseInfo;
         }
     }
@@ -341,7 +343,19 @@ public class PerformanceOverlayManager {
         activity.runOnUiThread(() -> {
             showOverlayIfNeeded();
             updatePerformanceViewsWithStyledText(performanceInfo);
+            // 单独更新电量信息（不需要performanceInfo参数）
+            updateBatteryDisplay();
         });
+    }
+
+    /**
+     * 更新电量显示（定时调用）
+     */
+    private void updateBatteryDisplay() {
+        TextView batteryView = getPerformanceItemView(PerformanceItem.BATTERY);
+        if (batteryView != null && batteryView.getVisibility() == View.VISIBLE) {
+            updateBatteryText(batteryView);
+        }
     }
 
     /**
@@ -499,6 +513,9 @@ public class PerformanceOverlayManager {
             case HOST_LATENCY:
                 updateHostLatencyText(itemInfo.view, performanceInfo);
                 break;
+            case BATTERY:
+                updateBatteryText(itemInfo.view);
+                break;
         }
     }
 
@@ -551,6 +568,48 @@ public class PerformanceOverlayManager {
         } else {
             view.setText(createStyledText("🧋", "Ver.V+", "", 0xFF009688));
         }
+    }
+
+    private void updateBatteryText(TextView view) {
+        int batteryLevel = UiHelper.getBatteryLevel(activity);
+        String batteryText;
+        int batteryColor;
+        
+        if (batteryLevel > 50) {
+            batteryText = String.valueOf(batteryLevel);
+            batteryColor = 0xFF90EE90; // 浅绿色 - 电量充足
+        } else if (batteryLevel > 20) {
+            batteryText = String.valueOf(batteryLevel);
+            batteryColor = 0xFFFFA500; // 橙色 - 电量偏低
+        } else {
+            batteryText = String.valueOf(batteryLevel);
+            batteryColor = 0xFFFF6B6B; // 红色 - 电量严重不足
+        }
+        
+        view.setText(createStyledText("🔋", batteryText, "%", batteryColor));
+    }
+
+    /**
+     * 显示电池信息对话框
+     */
+    private void showBatteryInfo() {
+        int batteryLevel = UiHelper.getBatteryLevel(activity);
+        String batteryStatus;
+        int statusResId;
+
+        if (batteryLevel > 50) {
+            statusResId = R.string.perf_battery_status_sufficient;
+        } else if (batteryLevel > 20) {
+            statusResId = R.string.perf_battery_status_low;
+        } else {
+            statusResId = R.string.perf_battery_status_critical;
+        }
+
+        batteryStatus = activity.getString(statusResId);
+
+        String batteryInfo = activity.getString(R.string.perf_battery_info_content, batteryLevel, batteryStatus);
+
+        showInfoDialog(activity.getString(R.string.perf_battery_info_title), batteryInfo);
     }
 
     /**
@@ -726,6 +785,9 @@ public class PerformanceOverlayManager {
             textView.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
             textView.setTextSize(10);
         } else if (viewId == R.id.perfHostLatency) {
+            textView.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+            textView.setTextSize(10);
+        } else if (viewId == R.id.perfBattery) {
             textView.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
             textView.setTextSize(10);
         }

@@ -204,6 +204,12 @@ public class UsbDriverService extends Service implements UsbDriverListener {
             else if (SwitchProController.canClaimDevice(device)) {
                 controller = new SwitchProController(device, connection, nextDeviceId++, this);
             }
+            else if (DualSenseController.canClaimDevice(device)) {
+                controller = new DualSenseController(device, connection, nextDeviceId++, this);
+            }
+            else if (Dualshock4Controller.canClaimDevice(device)) {
+                controller = new Dualshock4Controller(device, connection, nextDeviceId++, this);
+            }
             else {
                 // Unreachable
                 return;
@@ -290,7 +296,10 @@ public class UsbDriverService extends Service implements UsbDriverListener {
                 // We must not call isRecognizedInputDevice() because wireless controllers don't share the same product ID as the dongle
                 ((!kernelSupportsXbox360W() || claimAllAvailable) && Xbox360WirelessDongle.canClaimDevice(device)) ||
                 // Switch Pro: 只在 claimAllAvailable 或系统未识别为输入设备时接管，避免冲突
-                ((!isRecognizedInputDevice(device) || claimAllAvailable) && SwitchProController.canClaimDevice(device));
+                ((!isRecognizedInputDevice(device) || claimAllAvailable) && SwitchProController.canClaimDevice(device)) ||
+                // DS4/DS5: 只在 claimAllAvailable 或系统未识别为输入设备时接管，避免冲突
+                ((!isRecognizedInputDevice(device) || claimAllAvailable) && DualSenseController.canClaimDevice(device)) ||
+                ((!isRecognizedInputDevice(device) || claimAllAvailable) && Dualshock4Controller.canClaimDevice(device));
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")

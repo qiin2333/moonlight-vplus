@@ -1,0 +1,242 @@
+name: "🐛 Bug Report (English)"
+description: "Report a bug to help us improve"
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 📋 Before You Submit
+        Thank you for taking the time to report this issue!
+        The name of this project is **Foundation Moonlight Power Plus / V+ / Vplus**, and we may use any of these names in our future communication.
+
+        **Please check before submitting:**
+        - [ ] I have searched existing issues to avoid duplicates
+        - [ ] This issue is specific to **Moonlight V+**, not the original Moonlight or other versions
+        ---
+
+  - type: dropdown
+    id: bug-type
+    attributes:
+      label: "🏷️ Bug Category"
+      description: "What type of bug is this?"
+      options:
+        - "📺 Video Display issues"
+        - "🔊 Audio issues"
+        - "🌐 Network Connection issues"
+        - "📱 Touch Input issues"
+        - "🎮 Gamepad Controller issues"
+        - "⚙️ Settings issues"
+        - "💥 Crash Freeze"
+        - "🔋 Performance issues"
+        - "❓ Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: describe-bug
+    attributes:
+      label: "📝 Bug Description"
+      description: "Describe the bug clearly and concisely. What happened? What did you expect to happen?"
+      placeholder: |
+        Example:
+        When I double-click on the touchpad, the drag function does not trigger. The reason is that the detection delay interval is too short. I expect to increase the delay interval, or add a configuration option for users to customize.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-reproduce
+    attributes:
+      label: "🔄 Steps to Reproduce"
+      description: "Provide detailed steps to reproduce the issue"
+      placeholder: |
+        1. Open Moonlight V+
+        2. Connect to host PC
+        3. Start streaming game
+        4. Double-click on the touchpad with one finger and drag
+        5. Bug occurs
+    validations:
+      required: true
+
+  - type: textarea
+    id: affected-games
+    attributes:
+      label: "🎯 Affected Games/Apps"
+      description: "Which games or applications are affected? Does it happen in all games or specific ones?"
+      placeholder: |
+        - All games
+        - Specific games
+        - Desktop
+    validations:
+      required: false
+
+  - type: dropdown
+    id: reproducibility
+    attributes:
+      label: "🔁 Reproducibility"
+      description: "How often can you reproduce this issue?"
+      options:
+        - "Always (100%)"
+        - "Often (>50%)"
+        - "Sometimes (<50%)"
+        - "Rarely (<10%)"
+        - "Only once"
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 📱 Client Device Information
+
+  - type: input
+    id: device
+    attributes:
+      label: "📱 Device Model"
+      description: "Your Android device model"
+      placeholder: "e.g. Samsung Galaxy S23 / OnePlus 12"
+    validations:
+      required: false
+
+  - type: input
+    id: android
+    attributes:
+      label: "🤖 Android Version"
+      description: "Your Android OS version"
+      placeholder: "e.g. Android 14"
+    validations:
+      required: false
+
+  - type: input
+    id: moonlight-version
+    attributes:
+      label: "🌙 Moonlight V+ Version"
+      description: "App version (Settings → About)"
+      placeholder: "e.g. v12.5.1"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 🖥️ Host PC Information
+
+  - type: input
+    id: server-os
+    attributes:
+      label: "💻 Host OS"
+      description: "Operating system of your streaming host"
+      placeholder: "e.g. Windows 11 23H2"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: streaming-software
+    attributes:
+      label: "📡 Streaming Software"
+      description: "Which software is running on your host?"
+      options:
+        - "Sunshine"
+        - "GeForce Experience (GFE)"
+        - "Nvidia GameStream"
+        - "Other"
+    validations:
+      required: false
+
+  - type: input
+    id: streaming-software-version
+    attributes:
+      label: "📦 Streaming Software Version"
+      description: "Version of the streaming software"
+      placeholder: "e.g. Sunshine v0.23.1 / GFE 3.28.0.417"
+    validations:
+      required: false
+
+  - type: input
+    id: server-gpu
+    attributes:
+      label: "🎨 GPU & Driver Version"
+      description: "Your GPU model and driver version"
+      placeholder: "e.g. RTX 4090 / Driver 545.92"
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 🔧 Troubleshooting
+
+  - type: dropdown
+    id: settings-default
+    attributes:
+      label: "⚙️ Settings Modified?"
+      description: "Have you changed any Moonlight settings from default?"
+      options:
+        - "No, using default settings"
+        - "Yes, settings modified"
+    validations:
+      required: false
+
+  - type: textarea
+    id: settings-adjusted-settings
+    attributes:
+      label: "📋 Modified Settings"
+      description: "If you modified settings, list them here"
+      placeholder: |
+        - Resolution: 1080p → 4K
+        - Frame rate: 60fps → 120fps
+        - Bitrate: Auto → 50 Mbps
+        - Video codec: Auto → HEVC
+    validations:
+      required: false
+
+  - type: dropdown
+    id: issue-with-original
+    attributes:
+      label: "🔍 Issue on Original Moonlight?"
+      description: "Does this issue also occur on the official Moonlight app?"
+      options:
+        - "Not tested"
+        - "Yes, same issue exists"
+        - "No, only on Moonlight V+"
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 📎 Additional Information
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: "📸 Screenshots/Videos"
+      description: "If applicable, add screenshots or screen recordings to help explain the problem"
+      placeholder: "Drag and drop images/videos here"
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: "📜 Log Output"
+      description: "If you have relevant log output, paste it here. Especially helpful for connection or crash issues"
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: "💬 Additional Context"
+      description: "Any other relevant information? Special network setup? VPN usage? Gamepad model?"
+      placeholder: |
+        - Network type: WiFi 6 / 5GHz / Ethernet
+        - Controller: Xbox Series X / PS5 DualSense
+        - Connection method: Local / Internet / VPN
+    validations:
+      required: false

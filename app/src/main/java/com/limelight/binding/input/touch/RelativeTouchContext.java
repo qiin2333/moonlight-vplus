@@ -3,11 +3,13 @@ package com.limelight.binding.input.touch;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.view.SurfaceHolder;
 
 import com.limelight.Game;
 import com.limelight.nvstream.NvConnection;
 import com.limelight.nvstream.input.MouseButtonPacket;
 import com.limelight.preferences.PreferenceConfiguration;
+import com.limelight.ui.CursorView;
 
 public class RelativeTouchContext implements TouchContext {
     private int lastTouchX = 0;
@@ -31,9 +33,9 @@ public class RelativeTouchContext implements TouchContext {
     private int lastTapUpX = 0;
     /** 记录上一次成功单击的结束位置Y */
     private int lastTapUpY = 0;
-    /** 标志位，表示当前是否处于“双击并按住”触发的拖拽模式 */
+    /** 标志位，表示当前是否处于"双击并按住"触发的拖拽模式 */
     private boolean isDoubleClickDrag = false;
-    /** 标志位，表示当前手势可能是双击的第二次点击，处于“待定”状态 */
+    /** 标志位，表示当前手势可能是双击的第二次点击，处于"待定"状态 */
     private boolean isPotentialDoubleClick = false;
 
     private final NvConnection conn;
@@ -48,6 +50,11 @@ public class RelativeTouchContext implements TouchContext {
     private Runnable singleTapRunnable;
     //  用于处理“双击并按住”的计时器
     private Runnable doubleTapHoldRunnable;
+
+    // 本地光标渲染器 - 用于显示虚拟鼠标光标
+    private LocalCursorRenderer localCursorRenderer;
+    // 是否启用本地光标渲染
+    private boolean enableLocalCursorRendering = true;
 
     private final Runnable dragTimerRunnable = new Runnable() {
         @Override
@@ -74,7 +81,7 @@ public class RelativeTouchContext implements TouchContext {
     private static final int DRAG_TIME_THRESHOLD = 650;
     private static final int DRAG_START_THRESHOLD = 10;
     // 定义2次点击的间隔小于多久才为双击按住
-    private static final int DOUBLE_TAP_TIME_THRESHOLD = 100;
+    private final int DOUBLE_TAP_TIME_THRESHOLD;
     //  定义双击后按住多久确认为拖拽
     private static final int DOUBLE_TAP_HOLD_TO_DRAG_THRESHOLD = 200;
     /** 定义双击时，两次点击位置的最大允许偏差 */
@@ -90,6 +97,10 @@ public class RelativeTouchContext implements TouchContext {
         this.targetView = view;
         this.prefConfig = prefConfig;
         this.handler = new Handler(Looper.getMainLooper());
+        
+        // 从配置中读取双击时间阈值
+        this.DOUBLE_TAP_TIME_THRESHOLD = prefConfig.doubleTapTimeThreshold;
+        
         this.buttonUpRunnables = new Runnable[] {
                 () -> conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT),
                 () -> conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE),
@@ -98,6 +109,41 @@ public class RelativeTouchContext implements TouchContext {
                 () -> conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X2)
         };
 
+    }
+
+    /**
+     * 初始化本地光标渲染器
+     */
+    public void initializeLocalCursorRenderer(CursorView cursorOverlay, int width, int height) {
+        if (localCursorRenderer != null) {
+            localCursorRenderer.destroy();
+        }
+        localCursorRenderer = new LocalCursorRenderer(cursorOverlay, width, height);
+    }
+
+    /**
+     * 销毁本地光标渲染器
+     */
+    public void destroyLocalCursorRenderer() {
+        if (localCursorRenderer != null) {
+            localCursorRenderer.hide();
+            localCursorRenderer.destroy();
+            localCursorRenderer = null;
+        }
+    }
+
+    /**
+     * 设置是否启用本地光标渲染
+     */
+    public void setEnableLocalCursorRendering(boolean enable) {
+        this.enableLocalCursorRendering = enable;
+        if (localCursorRenderer != null) {
+            if (enable) {
+                localCursorRenderer.show();
+            } else {
+                localCursorRenderer.hide();
+            }
+        }
     }
 
     @Override
@@ -225,6 +271,8 @@ public class RelativeTouchContext implements TouchContext {
 
         if (confirmedDrag) {
             conn.sendMouseButtonUp(buttonIndex);
+            // 拖动结束后重置点击时间，避免影响后续的双指右键
+            lastTapUpTime = 0;
         }
         else if (isTap(eventTime))
         {
@@ -303,8 +351,20 @@ public class RelativeTouchContext implements TouchContext {
                     if (confirmedScroll) {
                         conn.sendMouseHighResScroll((short)(deltaY * SCROLL_SPEED_FACTOR));
                     }
-                } else if (confirmedMove || isDoubleClickDrag || confirmedDrag) { // 只在确认移动/拖拽时发送
-                    if (prefConfig.absoluteMouseMode) {
+                } else if (confirmedMove || isDoubleClickDrag || confirmedDrag) {
+
+                    if (localCursorRenderer != null && this.enableLocalCursorRendering) {
+                        // 1. 本地模式：更新本地光标
+                        localCursorRenderer.updateCursorPosition(deltaX, deltaY);
+                        // 2. 获取绝对坐标并发送给服务器 (保持同步)
+                        float[] absPos = localCursorRenderer.getCursorAbsolutePosition();
+                        conn.sendMousePosition(
+                                (short) absPos[0],
+                                (short) absPos[1],
+                                (short) targetView.getWidth(),
+                                (short) targetView.getHeight());
+                    } else if (prefConfig.absoluteMouseMode) {
+                        // 3. 旧版绝对模式
                         conn.sendMouseMoveAsMousePosition(
                                 (short) deltaX,
                                 (short) deltaY,

@@ -1,0 +1,242 @@
+name: "🐛 问题报告（中文）"
+description: "报告问题帮助我们改进"
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 📋 提交前请注意
+        感谢您花时间报告这个问题！
+        此项目的名称为 **基地版Moonlight 威力加强版 / V+ / Vplus**，后续交流可能会使用其中任一名称。
+
+        **提交前请检查**
+        - [ ] 我已搜索现有 issues，避免重复提交
+        - [ ] 此问题针对 **基地版 Moonlight V+**，而非原版 Moonlight 或其他版本
+        ---
+
+  - type: dropdown
+    id: bug-type
+    attributes:
+      label: "🏷️ 问题类型"
+      description: "这是什么类型的问题？"
+      options:
+        - "📺 视频显示问题"
+        - "🔊 音频问题"
+        - "🌐 连接网络问题"
+        - "📱 触控输入问题"
+        - "🎮 手柄控制器问题"
+        - "⚙️ 设置配置问题"
+        - "💥 崩溃卡死"
+        - "🔋 性能问题"
+        - "❓ 其他"
+    validations:
+      required: true
+
+  - type: textarea
+    id: describe-bug
+    attributes:
+      label: "📝 问题描述"
+      description: "清晰简洁地描述问题。发生了什么？您期望发生什么？"
+      placeholder: |
+        示例:
+        当我在触摸板模式中双击时，无法触发拖动功能，原因是检测时延间隔过短。我期望增加时延间隔，或者增加配置让用户可以自定义。
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-reproduce
+    attributes:
+      label: "🔄 复现步骤"
+      description: "提供详细的复现步骤"
+      placeholder: |
+        1. 打开 Moonlight V+
+        2. 连接到主机
+        3. 开始串流游戏
+        4. 在触摸板模式下单根手指双击并拖拽
+        5. 问题出现
+    validations:
+      required: true
+
+  - type: textarea
+    id: affected-games
+    attributes:
+      label: "🎯 受影响的游戏/应用"
+      description: "哪些游戏或应用受到影响？是所有游戏都有问题还是特定游戏？"
+      placeholder: |
+        - 所有游戏
+        - 特定游戏
+        - Desktop
+    validations:
+      required: false
+
+  - type: dropdown
+    id: reproducibility
+    attributes:
+      label: "🔁 可复现性"
+      description: "多久能复现一次此问题？"
+      options:
+        - "总是发生 (100%)"
+        - "经常发生 (>50%)"
+        - "有时发生 (<50%)"
+        - "很少发生 (<10%)"
+        - "只发生过一次"
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 📱 客户端设备信息
+
+  - type: input
+    id: device
+    attributes:
+      label: "📱 设备型号"
+      description: "您的 Android 设备型号"
+      placeholder: "例如: Samsung Galaxy S23 / OnePlus 12"
+    validations:
+      required: false
+
+  - type: input
+    id: android
+    attributes:
+      label: "🤖 安卓版本"
+      description: "您的 Android 系统版本"
+      placeholder: "例如: Android 14"
+    validations:
+      required: false
+
+  - type: input
+    id: moonlight-version
+    attributes:
+      label: "🌙 Moonlight V+ 版本"
+      description: "应用版本（设置 → 关于）"
+      placeholder: "例如: v12.5.1"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 🖥️ 主机信息
+
+  - type: input
+    id: server-os
+    attributes:
+      label: "💻 主机操作系统"
+      description: "串流主机的操作系统"
+      placeholder: "例如: Windows 11 23H2"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: streaming-software
+    attributes:
+      label: "📡 串流软件"
+      description: "您的主机运行什么串流软件？"
+      options:
+        - "Sunshine"
+        - "GeForce Experience (GFE)"
+        - "Nvidia GameStream"
+        - "其他"
+    validations:
+      required: false
+
+  - type: input
+    id: streaming-software-version
+    attributes:
+      label: "📦 串流软件版本"
+      description: "串流软件的版本号"
+      placeholder: "例如: Sunshine v0.23.1 / GFE 3.28.0.417"
+    validations:
+      required: false
+
+  - type: input
+    id: server-gpu
+    attributes:
+      label: "🎨 显卡及驱动版本"
+      description: "显卡型号和驱动版本"
+      placeholder: "例如: RTX 4090 / 驱动 545.92"
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 🔧 故障排除
+
+  - type: dropdown
+    id: settings-default
+    attributes:
+      label: "⚙️ 是否修改过设置？"
+      description: "您是否修改过默认设置？"
+      options:
+        - "否，使用默认设置"
+        - "是，已修改设置"
+    validations:
+      required: false
+
+  - type: textarea
+    id: settings-adjusted-settings
+    attributes:
+      label: "📋 已修改的设置"
+      description: "如果修改了设置，请列出"
+      placeholder: |
+        - 分辨率: 1080p → 4K
+        - 帧率: 60fps → 120fps
+        - 码率: 自动 → 50 Mbps
+        - 视频编码: 自动 → HEVC
+    validations:
+      required: false
+
+  - type: dropdown
+    id: issue-with-original
+    attributes:
+      label: "🔍 原版 Moonlight 是否有此问题？"
+      description: "这个问题在官方 Moonlight 应用上是否也存在？"
+      options:
+        - "未测试"
+        - "是，同样问题存在"
+        - "否，仅在 V+ 上出现"
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 📎 附加信息
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: "📸 截图/视频"
+      description: "如有必要，请添加截图或录屏来帮助说明问题"
+      placeholder: "在此处拖放图片/视频"
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: "📜 日志输出"
+      description: "如有相关日志输出，请粘贴在此。对于连接或崩溃问题特别有帮助"
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: "💬 其他补充"
+      description: "其他相关信息？特殊网络设置？是否使用 VPN？手柄型号？"
+      placeholder: |
+        - 网络类型: WiFi 6 / 5GHz / 有线
+        - 手柄: Xbox Series X 手柄 / PS5 DualSense
+        - 连接方式: 本地 / 外网 / VPN
+    validations:
+      required: false

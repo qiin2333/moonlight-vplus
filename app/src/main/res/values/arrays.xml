@@ -205,6 +205,22 @@
         <item>@drawable/ic_position_bottom_right</item>
     </array>
 
+    <!-- 屏幕组合模式（Sunshine 自定义屏幕模式） -->
+    <string-array name="screen_combination_mode_names">
+        <item>@string/screen_mode_host_default</item>
+        <item>@string/screen_mode_no_operation</item>
+        <item>@string/screen_mode_ensure_active</item>
+        <item>@string/screen_mode_ensure_primary</item>
+        <item>@string/screen_mode_ensure_only_display</item>
+    </string-array>
+    <string-array name="screen_combination_mode_values" translatable="false">
+        <item>-1</item>
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+    </string-array>
+
     <!-- 性能覆盖层方向选项 -->
     <string-array name="perf_overlay_orientation_names">
         <item>水平显示</item>
@@ -248,6 +264,7 @@
         <item>🌐 带宽与网络延迟</item>
         <item>⏱️/🥵 解码延迟(15ms以下为正常)</item>
         <item>🖥 主机延迟</item>
+        <item>🔋 电池电量</item>
     </string-array>
     <string-array name="perf_overlay_display_items_values" translatable="false">
         <item>resolution</item>
@@ -257,6 +274,7 @@
         <item>network_latency</item>
         <item>decode_latency</item>
         <item>host_latency</item>
+        <item>battery</item>
     </string-array>
     <string-array name="mic_icon_color_entries">
         <item>Gradient Blue</item>

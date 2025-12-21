@@ -606,6 +606,47 @@ public class StreamSettings extends Activity {
             
             addPreferencesFromResource(R.xml.preferences);
             PreferenceScreen screen = getPreferenceScreen();
+            
+            // 为 LocalImagePickerPreference 设置 Fragment 实例，确保 onActivityResult 回调正确
+            LocalImagePickerPreference localImagePicker = (LocalImagePickerPreference) findPreference("local_image_picker");
+            if (localImagePicker != null) {
+                localImagePicker.setFragment(this);
+            }
+            
+            // 为背景图片API URL设置监听器，保存时设置类型为"api"
+            android.preference.EditTextPreference backgroundImageUrlPref = 
+                (android.preference.EditTextPreference) findPreference("background_image_url");
+            if (backgroundImageUrlPref != null) {
+                backgroundImageUrlPref.setOnPreferenceChangeListener((preference, newValue) -> {
+                    String url = (String) newValue;
+                    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+                    
+                    if (url != null && !url.trim().isEmpty()) {
+                        // 设置为API类型，并清除本地文件配置
+                        prefs.edit()
+                            .putString("background_image_type", "api")
+                            .putString("background_image_url", url.trim())
+                            .remove("background_image_local_path")
+                            .apply();
+                        
+                        // 发送广播通知 PcView 更新背景图片
+                        Intent broadcastIntent = new Intent("com.limelight.REFRESH_BACKGROUND_IMAGE");
+                        getActivity().sendBroadcast(broadcastIntent);
+                    } else {
+                        // 恢复默认
+                        prefs.edit()
+                            .putString("background_image_type", "default")
+                            .remove("background_image_url")
+                            .apply();
+                        
+                        // 发送广播通知 PcView 更新背景图片
+                        Intent broadcastIntent = new Intent("com.limelight.REFRESH_BACKGROUND_IMAGE");
+                        getActivity().sendBroadcast(broadcastIntent);
+                    }
+                    
+                    return true; // 允许保存
+                });
+            }
 
             // hide on-screen controls category on non touch screen devices
             if (!getActivity().getPackageManager().hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)) {
@@ -1243,6 +1284,14 @@ public class StreamSettings extends Activity {
                     } catch (IOException e) {
                         Toast.makeText(getContext(),"读取配置文件失败",Toast.LENGTH_SHORT).show();
                     }
+                }
+            }
+
+            // 处理本地图片选择
+            if (requestCode == LocalImagePickerPreference.PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK) {
+                LocalImagePickerPreference pickerPreference = LocalImagePickerPreference.getInstance();
+                if (pickerPreference != null) {
+                    pickerPreference.handleImagePickerResult(data);
                 }
             }
 

@@ -1,0 +1,138 @@
+name: "✨ 功能建议（中文）"
+description: "建议新功能或改进"
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 💡 功能建议
+        感谢您花时间提出新功能建议！
+        此项目的名称为 **基地版Moonlight 威力加强版 / V+ / Vplus**，后续交流可能会使用其中任一名称。
+
+        **提交前请检查**
+        - [ ] 我已搜索现有 issues，避免重复
+        - [ ] 此功能在最新版本中尚不可用
+        ---
+
+  - type: dropdown
+    id: feature-type
+    attributes:
+      label: "🏷️ 功能类别"
+      description: "这是什么类型的功能？"
+      options:
+        - "� 界面体验"
+        - "📺 视频显示"
+        - "🔊 音频"
+        - "📱 触控操作"
+        - "🎮 手柄控制器"
+        - "⚙️ 设置配置"
+        - "🎨 界面体验"
+        - "🌐 网络连接"
+        - "🔋 性能优化"
+        - "🔧 无障碍功能"
+        - "❓ 其他"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "📊 优先级"
+      description: "这个功能对您有多重要？"
+      options:
+        - "🔴 关键 - 没有它无法使用"
+        - "🟠 高 - 显著改善体验"
+        - "🟡 中 - 有了更好"
+        - "🟢 低 - 小改进"
+    validations:
+      required: false
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: "😤 问题描述"
+      description: "您的功能请求是否与某个问题相关？请描述您遇到的困扰"
+      placeholder: |
+        示例:
+        当我无法在游戏过程中调整屏幕按钮大小时，我总是很沮丧。我必须退出游戏，更改设置，然后重新开始串流。
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: "💡 建议的解决方案"
+      description: "描述您希望的解决方案。请尽可能具体"
+      placeholder: |
+        示例:
+        允许在游戏过程中通过快捷手势（如双指缩放）调整屏幕按钮大小，无需退出游戏。
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "🔄 替代方案"
+      description: "您是否考虑过任何替代解决方案或变通办法？"
+      placeholder: |
+        示例:
+        1. 一个浮动设置按钮，可以打开快捷设置菜单
+        2. 预设按钮大小，可以快速切换
+    validations:
+      required: false
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: "🎯 使用场景"
+      description: "描述一个这个功能会很有用的具体场景"
+      placeholder: |
+        示例:
+        当玩《艾尔登法环》等动作游戏时，我经常需要更大的攻击按钮但更小的移动控制。能够即时调整大小会节省很多时间。
+    validations:
+      required: false
+
+  - type: dropdown
+    id: willing-to-test
+    attributes:
+      label: "🧪 愿意测试吗？"
+      description: "如果实现了此功能，您愿意帮忙测试吗？"
+      options:
+        - "是，我可以测试并提供反馈"
+        - "也许，取决于时间"
+        - "否"
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 📎 附加信息
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: "📸 效果图/参考"
+      description: "添加效果图、草图，或其他有类似功能的应用的参考截图"
+      placeholder: "在此处拖放图片"
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: "💬 其他补充"
+      description: "关于此功能请求的任何其他上下文？相关问题？实现建议？"
+    validations:
+      required: false
+
+  - type: input
+    id: device
+    attributes:
+      label: "📱 您的设备"
+      description: "您的设备型号（帮助我们理解使用场景）"
+      placeholder: "例如: Samsung Galaxy S23 / OnePlus 12"
+    validations:
+      required: false

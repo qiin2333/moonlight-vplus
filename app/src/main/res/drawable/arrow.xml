@@ -1,0 +1,20 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+  <!-- 黑色描边 (作为背景绘制，稍微大一点，形成轮廓效果) -->
+  <path
+      android:pathData="M6,3 L6,20 L10.5,15.5 L13.5,22 L16.5,20.5 L13.5,14 L19,14 L6,3 Z"
+      android:strokeWidth="2"
+      android:strokeColor="#000000"
+      android:strokeLineJoin="round"
+      android:strokeLineCap="round"
+      android:fillColor="#000000"/>
+
+  <!-- 白色填充 (覆盖在黑色上面，略小一点) -->
+  <path
+      android:pathData="M6,3 L6,20 L10.5,15.5 L13.5,22 L16.5,20.5 L13.5,14 L19,14 L6,3 Z"
+      android:fillColor="#FFFFFF"/>
+</vector>

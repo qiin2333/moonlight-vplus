@@ -14,7 +14,7 @@ import java.util.Set;
 
 public class PerfOverlayDisplayItemsPreference extends MultiSelectListPreference {
     
-    private static final String DEFAULT_ITEMS = "resolution,decoder,render_fps,network_latency,decode_latency,host_latency,packet_loss";
+    private static final String DEFAULT_ITEMS = "resolution,decoder,render_fps,network_latency,decode_latency,host_latency,packet_loss,battery";
     
     public PerfOverlayDisplayItemsPreference(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);

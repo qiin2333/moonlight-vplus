@@ -5,7 +5,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -116,6 +118,11 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     private int lastFrameNumber;
     private int refreshRate;
     private PreferenceConfiguration prefs;
+    
+    // Map to track enqueue time for each timestamp
+    // Key: timestamp in microseconds (from enqueueTimeUs)
+    // Value: enqueue time in milliseconds (from SystemClock.uptimeMillis())
+    private final Map<Long, Long> timestampToEnqueueTime = new HashMap<>();
 
     private LinkedBlockingQueue<Integer> outputBufferQueue = new LinkedBlockingQueue<>();
     private static final int OUTPUT_BUFFER_QUEUE_LIMIT = 2;
@@ -607,6 +614,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         vpsBuffers.clear();
         spsBuffers.clear();
         ppsBuffers.clear();
+        timestampToEnqueueTime.clear();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             // This will contain the actual accepted input format attributes
@@ -1425,6 +1433,9 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     public void prepareForStop() {
         // Let the decoding code know to ignore codec exceptions now
         stopping = true;
+        
+        // Clear timestamp tracking map
+        timestampToEnqueueTime.clear();
 
         // Halt the rendering thread
         if (rendererThread != null) {
@@ -1507,6 +1518,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     @Override
     public void cleanup() {
         videoDecoder.release();
+        timestampToEnqueueTime.clear();
     }
 
     @Override
@@ -1543,6 +1555,9 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         boolean codecRecovered;
 
         try {
+            // Record the enqueue time for this timestamp
+            timestampToEnqueueTime.put(timestampUs, SystemClock.uptimeMillis());
+            
             videoDecoder.queueInputBuffer(nextInputBufferIndex,
                     0, nextInputBuffer.position(),
                     timestampUs, codecFlags);
@@ -1604,7 +1619,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     @Override
     public int submitDecodeUnit(byte[] decodeUnitData, int decodeUnitLength, int decodeUnitType,
                                 int frameNumber, int frameType, char frameHostProcessingLatency,
-                                long receiveTimeMs, long enqueueTimeMs) {
+                                long receiveTimeUs, long enqueueTimeUs) {
         if (stopping) {
             // Don't bother if we're stopping
             return MoonBridge.DR_OK;
@@ -1919,7 +1934,8 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             // Count time from first packet received to enqueue time as receive time
             // We will count DU queue time as part of decoding, because it is directly
             // caused by a slow decoder.
-            activeWindowVideoStats.totalTimeMs += enqueueTimeMs - receiveTimeMs;
+            // receiveTimeUs and enqueueTimeUs are in microseconds, convert to milliseconds
+            activeWindowVideoStats.totalTimeMs += (enqueueTimeUs - receiveTimeUs) / 1000;
         }
 
         if (!fetchNextInputBuffer()) {
@@ -1945,7 +1961,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             }
         }
 
-        long timestampUs = enqueueTimeMs * 1000;
+        long timestampUs = enqueueTimeUs;
         if (timestampUs <= lastTimestampUs) {
             // We can't submit multiple buffers with the same timestamp
             // so bump it up by one before queuing
@@ -2219,8 +2235,17 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         }
     }
 
+    // Calculate decoder time using the enqueue time we recorded
+    // presentationTimeUs: presentation timestamp in microseconds (from MediaCodec)
+    // Returns: decoder time in milliseconds
     private long calculateDecoderTime(long presentationTimeUs) {
-        long delta = SystemClock.uptimeMillis() - (presentationTimeUs / 1000);
-        return delta > 0 && delta < 1000 ? delta : 0;
+        // Look up the enqueue time for this timestamp (stored in milliseconds)
+        Long enqueueTimeMs = timestampToEnqueueTime.remove(presentationTimeUs);
+        if (enqueueTimeMs != null) {
+            long delta = SystemClock.uptimeMillis() - enqueueTimeMs;
+            return delta > 0 && delta < 1000 ? delta : 0;
+        }
+        // If we can't find the enqueue time, return 0
+        return 0;
     }
 }

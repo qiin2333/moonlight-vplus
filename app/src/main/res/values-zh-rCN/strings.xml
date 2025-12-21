@@ -245,6 +245,8 @@
     <string name="summary_language_list"> 选择Moonlight显示的语言 </string>
     <string name="title_checkbox_small_icon_mode"> 使用小图标 </string>
     <string name="summary_checkbox_small_icon_mode"> 使用小图标以在屏幕上显示更多项目 </string>
+    <string name="title_checkbox_resume_stream">自动恢复串流</string>
+    <string name="summary_checkbox_resume_stream">当从后台切回Moonlight时，自动恢复串流会话</string>
     <string name="category_host_settings">🖥️ 主机设置</string>
     <string name="title_checkbox_enable_sops"> 自动优化主机设置 </string>
     <string name="summary_checkbox_enable_sops"> 允许主机自动更改为与客户端最佳匹配的显示设置 </string>
@@ -407,7 +409,7 @@
     <string name="mic_enabled">麦克风已启用</string>
     <string name="mic_disabled">麦克风已禁用</string>
     <string name="mic_permission_required">需要麦克风权限</string>
-    
+
     <!-- Screen position settings -->
     <string name="category_screen_position_settings">📱 显示设置</string>
     <string name="title_screen_position">画面位置</string>
@@ -416,7 +418,7 @@
     <string name="summary_screen_offset_x">画面水平方向的偏移量</string>
     <string name="title_screen_offset_y">垂直偏移</string>
     <string name="summary_screen_offset_y">画面垂直方向的偏移量</string>
-    
+
     <!-- Crown feature area -->
     <string name="category_crown_features">👑 王冠的功能区</string>
     <string name="title_crown_super_features">王冠的超级功能</string>
@@ -429,7 +431,7 @@
     <string name="summary_merge_super_config">将新的配置的按键合并到现有配置中</string>
     <string name="title_about_author">这是 V+ X 皇家版本</string>
     <string name="summary_about_author">王冠的B站:西瓜hub，请关注TA， github: https://github.com/WACrown/moonlight-android</string>
-    
+
     <!-- 王冠功能切换 -->
     <string name="crown_toggle_button">王冠</string>
     <string name="crown_mode_normal">普通模式</string>
@@ -449,21 +451,29 @@
     <!-- External display -->
     <string name="title_use_external_display">使用外接显示器</string>
     <string name="summary_use_external_display">如果连接了外接显示器，则在外接显示器上显示串流画面</string>
-    
+
     <!-- Analytics settings -->
     <string name="title_enable_analytics">启用统计分析</string>
     <string name="summary_enable_analytics">通过分享匿名使用统计数据来帮助改进应用</string>
-    
+
     <!-- Background image API -->
     <string name="title_background_image_api">背景图片API</string>
     <string name="summary_background_image_api">输入自定义背景图片的API，也可以是单张图片地址哦，留空就是看随机涩图</string>
     <string name="dialog_title_background_image_api">背景图片API</string>
     <string name="dialog_message_background_image_api">请输入完整的图片API</string>
+  
+    <!-- Local image picker -->
+    <string name="title_local_image_picker">选择本地图片</string>
+    <string name="summary_local_image_picker">从本地相册中选择一张图片作为背景</string>
+    
+    <!-- Reset background image -->
+    <string name="title_reset_background_image">恢复默认背景</string>
+    <string name="summary_reset_background_image">清除自定义设置，恢复为默认的随机背景图片</string>
     
     <!-- Reverse resolution -->
     <string name="title_checkbox_reverse_resolution">反转分辨率</string>
     <string name="summary_checkbox_reverse_resolution">交换宽度和高度值，用于特殊显示需求</string>
-    
+
     <!-- Moonlight V+ PC download -->
     <string name="title_moonlight_vplus_pc_download">Moonlight V+ PC版下载</string>
 
@@ -491,6 +501,7 @@
     <string name="game_menu_touch_mode_enhanced">增强式多点触控</string>
     <string name="game_menu_touch_mode_classic">经典鼠标模式</string>
     <string name="game_menu_touch_mode_trackpad">触控板模式</string>
+    <string name="game_menu_local_cursor_rendering">本地光标渲染</string>
     <string name="game_menu_touch_mode_native_mouse">本地鼠标指针</string>
     <string name="toast_touch_mode_enhanced_on">增强式多点触控已开启</string>
     <string name="toast_touch_mode_classic_on">经典鼠标模式已开启</string>
@@ -533,7 +544,7 @@
     <string name="toast_delete_failed">删除失败了，试试看再来一次？</string>
     <string name="toast_load_key_list_failed">加载按键列表失败了喵~</string>
     <string name="toast_load_custom_keys_corrupted">加载自定义按键失败了，抱歉抱歉~</string>
-    
+
     <!-- 陀螺仪相关字符串 -->
     <string name="gyro_activation_method">激活方式</string>
     <string name="gyro_invert_x_axis">X 轴反转</string>
@@ -564,6 +575,12 @@
     <string name="perf_decode_latency_info">解码延迟表示解码视频帧所需的时间。\n\n延迟范围：\n• &lt;5ms：极佳解码器性能\n• 5–10ms：良好解码器性能\n• 10–20ms：一般解码器性能\n• &gt;20ms：较差解码器性能\n\n影响因素：\n• 硬件解码器性能\n• 视频编码复杂度\n• 设备CPU/GPU负载\n• 当解码延迟低于10ms时更应关注设备的其他性能(比如帧率、分辨率、画质等)</string>
     <string name="perf_host_latency_title">🖥 主机延迟信息</string>
     <string name="perf_host_latency_info">主机延迟表示主机处理帧所需的时间。\n\n延迟范围：\n• &lt;5ms：极佳主机性能\n• 5–10ms：良好主机性能\n• 10–20ms：一般主机性能\n• &gt;20ms：较差主机性能\n\n影响因素：\n• 主机硬件性能\n• 游戏负载\n• 后台程序使用\n\nVer.V+：\n• 表示版本信息\n• 当没有主机延迟数据时显示</string>
+    <!-- Performance Overlay Info Dialogs - Battery Information -->
+    <string name="perf_battery_info_title">🔋 电池信息</string>
+    <string name="perf_battery_status_sufficient">电池电量充足</string>
+    <string name="perf_battery_status_low">电池电量偏低，建议充电</string>
+    <string name="perf_battery_status_critical">电池电量严重不足，请尽快充电</string>
+    <string name="perf_battery_info_content">当前电量：%1$d%%\n状态：%2$s\n\n提示：低电量可能影响游戏体验，建议连接充电器</string>
 
     <!-- App Last Settings strings -->
     <string name="app_last_settings_title">上一次设置</string>
@@ -584,6 +601,7 @@
     <string name="setting_gyro_sensitivity">陀螺仪：%1$.1fx</string>
     <string name="setting_bitrate_card_enabled">码率卡片：开启</string>
     <string name="setting_gyro_card_enabled">陀螺仪卡片：开启</string>
+    <string name="setting_QuickKey_card_enabled">特殊按键卡片：开启</string>
 
     <!-- Time format strings -->
     <string name="time_just_now">刚刚</string>
@@ -623,5 +641,12 @@
     <string name="game_menu_toggle_remote_mouse">显示/隐藏远程鼠标</string>
     <string name="toast_remote_mouse_toast">远程鼠标已显示/隐藏。</string>
 
-
+    <!-- 屏幕组合模式 -->
+    <string name="title_screen_combination_mode">屏幕组合模式 (Sunshine 基地适用)</string>
+    <string name="summary_screen_combination_mode">控制主机在启动串流时如何管理屏幕组合，此处配置将覆盖主机端配置。</string>
+    <string name="screen_mode_host_default">使用 Sunshine 主机端配置（默认）</string>
+    <string name="screen_mode_no_operation">不修改屏幕组合配置</string>
+    <string name="screen_mode_ensure_active">确保串流屏幕已开启</string>
+    <string name="screen_mode_ensure_primary">确保串流屏幕为主屏幕</string>
+    <string name="screen_mode_ensure_only_display">仅启用串流屏幕（关闭其他屏幕）</string>
 </resources>
