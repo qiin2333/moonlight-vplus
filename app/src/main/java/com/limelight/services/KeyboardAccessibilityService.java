@@ -78,8 +78,34 @@ public class KeyboardAccessibilityService extends AccessibilityService {
      */
     @Override
     protected boolean onKeyEvent(KeyEvent event) {
-        // 在进行任何拦截之前，我们首先检查这个按键是否是手机导航所必需的。
-        // 如果是，我们必须立即返回 false，将事件交还给系统正常处理。
+        // 小米平板将物理 ESC 键（ScanCode=1）映射为 Android 的 BACK 键（Code=4）。
+        // 必须在下方的 switch-case 过滤之前进行拦截，否则会被当作普通返回键忽略。
+        if (event.getScanCode() == 1) {
+            if (interceptingEnabled) {
+                if (keyEventCallback != null) {
+                    // 我们创建一个新的 KeyEvent，强制将其 KeyCode 修正为 ESCAPE
+                    KeyEvent fixedEvent = new KeyEvent(
+                            event.getDownTime(),
+                            event.getEventTime(),
+                            event.getAction(),
+                            KeyEvent.KEYCODE_ESCAPE,
+                            event.getRepeatCount(),
+                            event.getMetaState(),
+                            event.getDeviceId(),
+                            event.getScanCode(),
+                            event.getFlags(),
+                            event.getSource()
+                    );
+                    // 将修正后的事件发送给 Game Activity
+                    keyEventCallback.onKeyEvent(fixedEvent);
+                }
+                // 告诉系统：这个按键由于是 ESC，我们已经处理了，请不要执行返回操作
+                return true;
+            }
+        }
+        // ---------------------------------------------------------------------
+
+        // 正常的系统按键过滤逻辑
         switch (event.getKeyCode()) {
             case KeyEvent.KEYCODE_BACK:
             case KeyEvent.KEYCODE_HOME:
@@ -88,6 +114,7 @@ public class KeyboardAccessibilityService extends AccessibilityService {
             case KeyEvent.KEYCODE_VOLUME_DOWN:
             case KeyEvent.KEYCODE_VOLUME_MUTE:
             case KeyEvent.KEYCODE_POWER:
+                // 如果是这些键（且 ScanCode 不是 1），则不拦截，交给系统处理
                 // 这些是系统级的关键按键，我们永远不应该拦截它们。
                 // 返回 false 意味着：“这个事件我不处理，请系统继续执行默认操作”。
                 return false;
@@ -118,12 +145,6 @@ public class KeyboardAccessibilityService extends AccessibilityService {
         Log.w(TAG, "Accessibility Service interrupted.");
         // 当服务被系统打断时调用（例如，弹出一个需要更高权限的窗口时）。
     }
-
-    public KeyEventCallback getKeyEventCallback() {
-        return this.keyEventCallback;
-    }
-
-
 
     @Override
     public void onDestroy() {
