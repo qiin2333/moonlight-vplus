@@ -357,8 +357,10 @@
     <string name="summary_seekbar_deadzone">注意：有些游戏可以执行一个比Moonlight摇杆配置的更大的盲区。</string>
     <string name="title_checkbox_absolute_mouse_mode">适合远程桌面的鼠标模式</string>
     <string name="summary_checkbox_absolute_mouse_mode">这可以使得鼠标加速在远程桌面使用中表现得更自然，但它与许多游戏不兼容。</string>
-    <string name="title_checkbox_enable_esc_menu">允许ESC键打开返回菜单</string>
-    <string name="summary_checkbox_enable_esc_menu">启用后，双击ESC键可以打开串流返回菜单，单次按ESC键会透传给主机</string>
+    <string name="title_checkbox_enable_esc_menu">允许自定义键打开返回菜单</string>
+    <string name="summary_checkbox_enable_esc_menu">启用后，双击所选按键可以打开串流返回菜单，单次按键会透传给主机</string>
+    <string name="title_list_esc_menu_key">返回菜单激活按键</string>
+    <string name="summary_list_esc_menu_key">选择双击哪个按键来打开返回菜单</string>
     <string name="resolution_prefix_native_landscape">（横向）</string>
     <string name="resolution_prefix_native_portrait">（纵向）</string>
     <string name="title_checkbox_enable_audiofx">启用对系统均衡器的支持</string>

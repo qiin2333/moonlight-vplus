@@ -306,4 +306,35 @@
         <item>trackpad</item>
         <item>native</item>
     </string-array>
+
+    <string-array name="esc_menu_key_names">
+        <item>ESC</item>
+        <item>F1</item>
+        <item>F2</item>
+        <item>F3</item>
+        <item>F4</item>
+        <item>F5</item>
+        <item>F6</item>
+        <item>F7</item>
+        <item>F8</item>
+        <item>F9</item>
+        <item>F10</item>
+        <item>F11</item>
+        <item>F12</item>
+    </string-array>
+    <string-array name="esc_menu_key_values" translatable="false">
+        <item>111</item> <!-- KEYCODE_ESCAPE -->
+        <item>131</item> <!-- KEYCODE_F1 -->
+        <item>132</item> <!-- KEYCODE_F2 -->
+        <item>133</item> <!-- KEYCODE_F3 -->
+        <item>134</item> <!-- KEYCODE_F4 -->
+        <item>135</item> <!-- KEYCODE_F5 -->
+        <item>136</item> <!-- KEYCODE_F6 -->
+        <item>137</item> <!-- KEYCODE_F7 -->
+        <item>138</item> <!-- KEYCODE_F8 -->
+        <item>139</item> <!-- KEYCODE_F9 -->
+        <item>140</item> <!-- KEYCODE_F10 -->
+        <item>141</item> <!-- KEYCODE_F11 -->
+        <item>142</item> <!-- KEYCODE_F12 -->
+    </string-array>
 </resources>

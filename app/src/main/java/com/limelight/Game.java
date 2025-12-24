@@ -2237,7 +2237,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         if (isPhysicalKeyboardConnected()) {
             // ESC键双击逻辑
-            if (event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE && prefConfig.enableEscMenu) {
+            if (event.getKeyCode() == prefConfig.escMenuKey && prefConfig.enableEscMenu) {
                 long currentTime = System.currentTimeMillis();
                 
                 if (currentTime - lastEscPressTime <= ESC_DOUBLE_PRESS_INTERVAL && hasShownEscHint) {
@@ -2248,7 +2248,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     return true; // 消费事件，不发送给主机
                 } else {
                     // 第一次按ESC，显示提示但透传给主机
-                    Toast.makeText(this, "再次按 ESC 键打开串流菜单", Toast.LENGTH_SHORT).show();
+                    String keyName = KeyEvent.keyCodeToString(prefConfig.escMenuKey);
+                    if (keyName.startsWith("KEYCODE_")) {
+                        keyName = keyName.substring("KEYCODE_".length());
+                    }
+                    Toast.makeText(this, "再次按 " + keyName + " 键打开串流菜单", Toast.LENGTH_SHORT).show();
                     lastEscPressTime = currentTime;
                     hasShownEscHint = true;
                 }

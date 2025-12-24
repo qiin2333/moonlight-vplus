@@ -309,6 +309,14 @@
             android:title="@string/title_checkbox_enable_esc_menu"
             android:summary="@string/summary_checkbox_enable_esc_menu"
             android:defaultValue="true" />
+        <ListPreference
+            android:key="list_esc_menu_key"
+            android:dependency="checkbox_enable_esc_menu"
+            android:title="@string/title_list_esc_menu_key"
+            android:summary="@string/summary_list_esc_menu_key"
+            android:entries="@array/esc_menu_key_names"
+            android:entryValues="@array/esc_menu_key_values"
+            android:defaultValue="111" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_enhanced_touch_settings"
         android:key="category_enhanced_touch"
