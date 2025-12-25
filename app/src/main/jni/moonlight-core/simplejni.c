@@ -1,4 +1,5 @@
 #include <Limelight.h>
+#include "Limelight-internal.h"
 
 #include <jni.h>
 #include <android/log.h>
