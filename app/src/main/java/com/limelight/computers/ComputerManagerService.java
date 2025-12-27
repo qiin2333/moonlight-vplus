@@ -52,6 +52,7 @@ public class ComputerManagerService extends Service {
     private static final int INITIAL_POLL_TRIES = 2;
     private static final int EMPTY_LIST_THRESHOLD = 3;
     private static final int POLL_DATA_TTL_MS = 30000;
+    private static final long COLLECTION_TIMEOUT_MS = 2000; // 收集其他地址的超时时间（2秒）
 
     private final ComputerManagerBinder binder = new ComputerManagerBinder();
 
@@ -166,7 +167,6 @@ public class ComputerManagerService extends Service {
         Thread t = new Thread() {
             @Override
             public void run() {
-
                 int offlineCount = 0;
                 while (!isInterrupted() && pollingActive && tuple.thread == this) {
                     try {
@@ -209,7 +209,7 @@ public class ComputerManagerService extends Service {
                 for (PollingTuple tuple : pollingTuples) {
                     // Enforce the poll data TTL
                     if (SystemClock.elapsedRealtime() - tuple.lastSuccessfulPollMs > POLL_DATA_TTL_MS) {
-                        LimeLog.info("Timing out polled state for "+tuple.computer.name);
+                        LimeLog.info("Timing out polled state for " + tuple.computer.name);
                         tuple.computer.state = ComputerDetails.State.UNKNOWN;
                     }
 
@@ -287,7 +287,6 @@ public class ComputerManagerService extends Service {
                     }
                 }
             }
-
             return null;
         }
 
@@ -333,8 +332,10 @@ public class ComputerManagerService extends Service {
 
     private void populateExternalAddress(ComputerDetails details) {
         PreferenceConfiguration prefConfig = PreferenceConfiguration.readPreferences(this);
-        if (!prefConfig.enableStun)
+        if (!prefConfig.enableStun) {
             return;
+        }
+
         boolean boundToNetwork = false;
         boolean activeNetworkIsVpn = NetHelper.isActiveNetworkVpn(this);
         ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -351,20 +352,19 @@ public class ComputerManagerService extends Service {
             Network[] networks = connMgr.getAllNetworks();
             for (Network net : networks) {
                 NetworkCapabilities netCaps = connMgr.getNetworkCapabilities(net);
-                if (netCaps != null) {
-                    if (!netCaps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) &&
-                            !netCaps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) {
-                        // This network looks like an underlying multicast-capable transport,
-                        // so let's guess that it's probably where our mDNS response came from.
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            if (connMgr.bindProcessToNetwork(net)) {
-                                boundToNetwork = true;
-                                break;
-                            }
-                        } else if (ConnectivityManager.setProcessDefaultNetwork(net)) {
+                if (netCaps != null &&
+                        !netCaps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) &&
+                        !netCaps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) {
+                    // This network looks like an underlying multicast-capable transport,
+                    // so let's guess that it's probably where our mDNS response came from.
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        if (connMgr.bindProcessToNetwork(net)) {
                             boundToNetwork = true;
                             break;
                         }
+                    } else if (ConnectivityManager.setProcessDefaultNetwork(net)) {
+                        boundToNetwork = true;
+                        break;
                     }
                 }
             }
@@ -389,9 +389,7 @@ public class ComputerManagerService extends Service {
             }
 
             // Unlock the network state
-            if (activeNetworkIsVpn) {
-                defaultNetworkLock.unlock();
-            }
+            defaultNetworkLock.unlock();
         }
     }
 
@@ -419,7 +417,7 @@ public class ComputerManagerService extends Service {
                 try {
                     // Kick off a blocking serverinfo poll on this machine
                     if (!addComputerBlocking(details)) {
-                        LimeLog.warning("Auto-discovered PC failed to respond: "+details);
+                        LimeLog.warning("Auto-discovered PC failed to respond: " + details);
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -493,15 +491,13 @@ public class ComputerManagerService extends Service {
 
         // If the machine is reachable, it was successful
         if (fakeDetails.state == ComputerDetails.State.ONLINE) {
-            LimeLog.info("New PC ("+fakeDetails.name+") is UUID "+fakeDetails.uuid);
+            LimeLog.info("New PC (" + fakeDetails.name + ") is UUID " + fakeDetails.uuid);
 
             // Start a polling thread for this machine
             addTuple(fakeDetails);
             return true;
         }
-        else {
-            return false;
-        }
+        return false;
     }
 
     public void removeComputer(ComputerDetails computer) {
@@ -567,7 +563,7 @@ public class ComputerManagerService extends Service {
                 return null;
             }
             // details.uuid can be null on initial PC add
-            else if (details.uuid != null && !details.uuid.equals(newDetails.uuid)) {
+            if (details.uuid != null && !details.uuid.equals(newDetails.uuid)) {
                 // We got the wrong PC!
                 LimeLog.info("Polling returned the wrong PC!");
                 return null;
@@ -588,10 +584,10 @@ public class ComputerManagerService extends Service {
     }
 
     private static class ParallelPollTuple {
-        public ComputerDetails.AddressTuple address;
-        public ComputerDetails existingDetails;
+        public final ComputerDetails.AddressTuple address;
+        public final ComputerDetails existingDetails;
 
-        public boolean complete;
+        public volatile boolean complete;
         public Thread pollingThread;
         public ComputerDetails returnedDetails;
 
@@ -607,12 +603,114 @@ public class ComputerManagerService extends Service {
         }
     }
 
-    private void startParallelPollThread(ParallelPollTuple tuple, HashSet<ComputerDetails.AddressTuple> uniqueAddresses) {
+    private ComputerDetails parallelPollPc(ComputerDetails details) throws InterruptedException {
+        ParallelPollTuple[] tuples = {
+            new ParallelPollTuple(details.localAddress, details),
+            new ParallelPollTuple(details.manualAddress, details),
+            new ParallelPollTuple(details.remoteAddress, details),
+            new ParallelPollTuple(details.ipv6Address, details)
+        };
+
+        // 使用共享锁来通知任何一个地址响应
+        final Object sharedLock = new Object();
+        
+        // These must be started in order of precedence for the deduplication algorithm
+        // to result in the correct behavior.
+        HashSet<ComputerDetails.AddressTuple> uniqueAddresses = new HashSet<>();
+        for (ParallelPollTuple tuple : tuples) {
+            startParallelPollThreadFast(tuple, uniqueAddresses, sharedLock);
+        }
+
+        ComputerDetails result = null;
+        ComputerDetails.AddressTuple primaryAddress = null;
+        long firstResponseTime = 0;
+
+        try {
+            // 等待第一个成功响应或所有轮询完成
+            synchronized (sharedLock) {
+                while (true) {
+                    // 检查是否有任何成功的响应
+                    if (result == null) {
+                        for (ParallelPollTuple tuple : tuples) {
+                            if (tuple.complete && tuple.returnedDetails != null) {
+                                result = tuple.returnedDetails;
+                                primaryAddress = tuple.address;
+                                result.activeAddress = primaryAddress;
+                                result.addAvailableAddress(primaryAddress);
+                                firstResponseTime = SystemClock.elapsedRealtime();
+                                LimeLog.info("Fast poll: got first response from address " + tuple.address);
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // 如果已经找到第一个响应，继续收集其他成功的地址
+                    if (result != null && primaryAddress != null) {
+                        // 检查其他地址是否也成功了（确保是同一个计算机，且地址不同）
+                        for (ParallelPollTuple tuple : tuples) {
+                            if (tuple.complete && tuple.returnedDetails != null && 
+                                tuple.address != null && !tuple.address.equals(primaryAddress) &&
+                                result.uuid != null && tuple.returnedDetails.uuid != null &&
+                                result.uuid.equals(tuple.returnedDetails.uuid)) {
+                                // 检查地址是否还未添加到列表中
+                                if (!result.getAvailableAddresses().contains(tuple.address)) {
+                                    result.addAvailableAddress(tuple.address);
+                                    LimeLog.info("Fast poll: also got response from address " + tuple.address);
+                                }
+                            }
+                        }
+                        
+                        // 如果已经收集了足够长时间，或者所有地址都完成了，就退出
+                        long elapsed = SystemClock.elapsedRealtime() - firstResponseTime;
+                        boolean allComplete = areAllComplete(tuples);
+                        
+                        if (elapsed >= COLLECTION_TIMEOUT_MS || allComplete) {
+                            LimeLog.info("Fast poll: collected " + result.getAvailableAddresses().size() + 
+                                       " available addresses (timeout: " + (elapsed >= COLLECTION_TIMEOUT_MS) + 
+                                       ", all complete: " + allComplete + ")");
+                            break;
+                        }
+                    }
+                    
+                    // 检查是否所有轮询都已完成（全部失败）
+                    if (result == null && areAllComplete(tuples)) {
+                        LimeLog.info("Fast poll: all addresses failed");
+                        break;
+                    }
+                    
+                    // 等待任何一个线程完成
+                    sharedLock.wait();
+                }
+            }
+        } finally {
+            // 停止所有仍在运行的轮询线程
+            for (ParallelPollTuple tuple : tuples) {
+                tuple.interrupt();
+            }
+        }
+
+        return result;
+    }
+
+    private boolean areAllComplete(ParallelPollTuple[] tuples) {
+        for (ParallelPollTuple tuple : tuples) {
+            if (!tuple.complete) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    private void startParallelPollThreadFast(ParallelPollTuple tuple, HashSet<ComputerDetails.AddressTuple> uniqueAddresses, Object sharedLock) {
         // Don't bother starting a polling thread for an address that doesn't exist
         // or if the address has already been polled with an earlier tuple
         if (tuple.address == null || !uniqueAddresses.add(tuple.address)) {
             tuple.complete = true;
             tuple.returnedDetails = null;
+            // 通知共享锁，即使这个地址被跳过
+            synchronized (sharedLock) {
+                sharedLock.notifyAll();
+            }
             return;
         }
 
@@ -622,115 +720,32 @@ public class ComputerManagerService extends Service {
                 ComputerDetails details = tryPollIp(tuple.existingDetails, tuple.address);
 
                 synchronized (tuple) {
-                    tuple.complete = true; // Done
-                    tuple.returnedDetails = details; // Polling result
-
+                    tuple.complete = true;
+                    tuple.returnedDetails = details;
                     tuple.notify();
+                }
+                
+                // 通知共享锁，让主线程可以检查结果
+                synchronized (sharedLock) {
+                    sharedLock.notifyAll();
                 }
             }
         };
-        tuple.pollingThread.setName("Parallel Poll - "+tuple.address+" - "+tuple.existingDetails.name);
+        tuple.pollingThread.setName("Parallel Poll - " + tuple.address + " - " + tuple.existingDetails.name);
         tuple.pollingThread.start();
-    }
-
-    private ComputerDetails parallelPollPc(ComputerDetails details) throws InterruptedException {
-        ParallelPollTuple localInfo = new ParallelPollTuple(details.localAddress, details);
-        ParallelPollTuple manualInfo = new ParallelPollTuple(details.manualAddress, details);
-        ParallelPollTuple remoteInfo = new ParallelPollTuple(details.remoteAddress, details);
-        ParallelPollTuple ipv6Info = new ParallelPollTuple(details.ipv6Address, details);
-
-        // These must be started in order of precedence for the deduplication algorithm
-        // to result in the correct behavior.
-        HashSet<ComputerDetails.AddressTuple> uniqueAddresses = new HashSet<>();
-        startParallelPollThread(localInfo, uniqueAddresses);
-        startParallelPollThread(manualInfo, uniqueAddresses);
-        startParallelPollThread(remoteInfo, uniqueAddresses);
-        startParallelPollThread(ipv6Info, uniqueAddresses);
-
-        ComputerDetails result = null;
-        ComputerDetails.AddressTuple primaryAddress = null;
-
-        try {
-            // 等待所有轮询完成
-            synchronized (localInfo) {
-                while (!localInfo.complete) {
-                    localInfo.wait();
-                }
-            }
-            synchronized (manualInfo) {
-                while (!manualInfo.complete) {
-                    manualInfo.wait();
-                }
-            }
-            synchronized (remoteInfo) {
-                while (!remoteInfo.complete) {
-                    remoteInfo.wait();
-                }
-            }
-            synchronized (ipv6Info) {
-                while (!ipv6Info.complete) {
-                    ipv6Info.wait();
-                }
-            }
-
-            // 按优先级收集所有成功的地址
-            if (localInfo.returnedDetails != null) {
-                result = localInfo.returnedDetails;
-                primaryAddress = localInfo.address;
-                result.addAvailableAddress(localInfo.address);
-            }
-            if (manualInfo.returnedDetails != null) {
-                if (result == null) {
-                    result = manualInfo.returnedDetails;
-                    primaryAddress = manualInfo.address;
-                }
-                result.addAvailableAddress(manualInfo.address);
-            }
-            if (remoteInfo.returnedDetails != null) {
-                if (result == null) {
-                    result = remoteInfo.returnedDetails;
-                    primaryAddress = remoteInfo.address;
-                }
-                result.addAvailableAddress(remoteInfo.address);
-            }
-            if (ipv6Info.returnedDetails != null) {
-                if (result == null) {
-                    result = ipv6Info.returnedDetails;
-                    primaryAddress = ipv6Info.address;
-                }
-                result.addAvailableAddress(ipv6Info.address);
-            }
-
-            // 设置主要活跃地址
-            if (result != null && primaryAddress != null) {
-                result.activeAddress = primaryAddress;
-            }
-
-        } finally {
-            // Stop any further polling if we've found a working address or we've been
-            // interrupted by an attempt to stop polling.
-            localInfo.interrupt();
-            manualInfo.interrupt();
-            remoteInfo.interrupt();
-            ipv6Info.interrupt();
-        }
-
-        return result;
     }
 
     private boolean pollComputer(ComputerDetails details) throws InterruptedException {
         // Poll all addresses in parallel to speed up the process
-        LimeLog.info("Starting parallel poll for "+details.name+" ("+details.localAddress +", "+details.remoteAddress +", "+details.manualAddress+", "+details.ipv6Address+")");
+        LimeLog.info("Starting parallel poll for " + details.name + " (" + details.localAddress + ", " + details.remoteAddress + ", " + details.manualAddress + ", " + details.ipv6Address + ")");
         ComputerDetails polledDetails = parallelPollPc(details);
-        LimeLog.info("Parallel poll for "+details.name+" returned address: "+details.activeAddress);
+        LimeLog.info("Parallel poll for " + details.name + " returned address: " + details.activeAddress);
 
         if (polledDetails != null) {
             details.update(polledDetails);
             return true;
         }
-        else {
-            return false;
-        }
+        return false;
     }
 
     @Override
@@ -860,7 +875,6 @@ public class ComputerManagerService extends Service {
                     }
                 }
             }
-
             return null;
         }
 
@@ -906,7 +920,7 @@ public class ComputerManagerService extends Service {
 
                             List<NvApp> list = NvHTTP.getAppListByReader(new StringReader(appList));
                             if (list.isEmpty()) {
-                                LimeLog.warning("Empty app list received from "+computer.uuid);
+                                LimeLog.warning("Empty app list received from " + computer.uuid);
 
                                 // The app list might actually be empty, so if we get an empty response a few times
                                 // in a row, we'll go ahead and believe it.
@@ -939,7 +953,7 @@ public class ComputerManagerService extends Service {
                                 }
                             }
                             else if (appList.isEmpty()) {
-                                LimeLog.warning("Null app list received from "+computer.uuid);
+                                LimeLog.warning("Null app list received from " + computer.uuid);
                             }
                         } catch (IOException e) {
                             e.printStackTrace();
