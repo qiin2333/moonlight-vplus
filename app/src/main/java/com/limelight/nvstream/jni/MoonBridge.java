@@ -426,8 +426,6 @@ public class MoonBridge {
     
     public static native boolean isMicrophoneRequested();
     
-    public static native byte[] getMicrophoneEncryptionKeys();
-    
     public static native int sendMicrophoneOpusData(byte[] opusData);
     
     public static native boolean isMicrophoneEncryptionEnabled();

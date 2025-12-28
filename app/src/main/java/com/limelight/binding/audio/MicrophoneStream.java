@@ -4,7 +4,6 @@ import com.limelight.LimeLog;
 import com.limelight.nvstream.NvConnection;
 import com.limelight.nvstream.jni.MoonBridge;
 
-import java.io.IOException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -14,7 +13,6 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
     private MicrophoneCapture capture;
     private OpusEncoder encoder;
     private Thread senderThread;
-    private Thread checkHostRequestThread;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicBoolean micActive = new AtomicBoolean(false);
     private final AtomicBoolean hostRequested = new AtomicBoolean(false);
@@ -33,9 +31,6 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
             
             // 如果还没有初始化，先初始化
             if (!running.get()) {
-                // 启动请求检查线程
-                // startHostRequestCheck();
-                
                 // 如果主机已经请求麦克风，立即启动麦克风捕获
                 if (MoonBridge.isMicrophoneRequested()) {
                     LimeLog.info("主机请求麦克风，开始捕获");
@@ -70,60 +65,6 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
     
     public boolean isMicrophoneAvailable() {
         return MoonBridge.isMicrophoneRequested();
-    }
-    
-    private void startHostRequestCheck() {
-        if (checkHostRequestThread != null && checkHostRequestThread.isAlive()) {
-            return;
-        }
-        
-        // 创建一个新状态变量，表示线程应该继续运行
-        final AtomicBoolean checkThreadRunning = new AtomicBoolean(true);
-        
-        // 启动一个线程定期检查主机是否请求麦克风
-        checkHostRequestThread = new Thread(() -> {
-            LimeLog.info("麦克风请求检查线程已启动");
-            
-            while (checkThreadRunning.get()) {
-                boolean isRequested = MoonBridge.isMicrophoneRequested();
-                
-                // 主机刚刚开始请求麦克风
-                if (isRequested && !hostRequested.get()) {
-                    hostRequested.set(true);
-                    LimeLog.info("检测到主机请求麦克风，开始捕获");
-                    
-                    // 检查加密状态
-                    if (MoonBridge.isMicrophoneEncryptionEnabled()) {
-                        LimeLog.info("麦克风加密启用");
-                    }
-
-                    try {
-                        startMicrophoneCapture();
-                    } catch (Exception e) {
-                        LimeLog.severe("请求后启动麦克风失败: " + e.getMessage());
-                    }
-                } 
-                // 主机刚刚停止请求麦克风
-                else if (!isRequested && hostRequested.get()) {
-                    hostRequested.set(false);
-                    LimeLog.info("主机停止请求麦克风，暂停捕获");
-                    stopMicrophoneCapture();
-                }
-                
-                try {
-                    Thread.sleep(MicrophoneConfig.HOST_REQUEST_CHECK_INTERVAL_MS);
-                } catch (InterruptedException e) {
-                    checkThreadRunning.set(false);
-                    break;
-                }
-            }
-            
-            LimeLog.info("麦克风请求检查线程已结束");
-        }, "MicRequestChecker");
-        
-        // 设置中等优先级
-        checkHostRequestThread.setPriority(Thread.NORM_PRIORITY);
-        checkHostRequestThread.start();
     }
     
     private void stopMicrophoneCapture() {
@@ -196,11 +137,6 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
     }
     
     public void stop() {
-        if (checkHostRequestThread != null) {
-            checkHostRequestThread.interrupt();
-            checkHostRequestThread = null;
-        }
-        
         running.set(false);
         micActive.set(false);
         hostRequested.set(false);
@@ -372,7 +308,7 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
                 // 发送 Opus 数据
                 int result = MoonBridge.sendMicrophoneOpusData(encoded);
                 if (result < 0) {
-                    AudioDiagnostics.recordEncodingError();
+                    AudioDiagnostics.recordSendingError();
                     LimeLog.warning("麦克风数据发送失败: " + result);
                     continue;
                 }
@@ -400,21 +336,6 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
                 
             } catch (InterruptedException e) {
                 break;
-            } catch (IOException e) {
-                AudioDiagnostics.recordSendingError();
-                LimeLog.warning("发送麦克风数据错误: " + e.getMessage());
-                
-                // 如果是网络错误，检查连接状态
-                if (isNetworkError(e)) {
-                    LimeLog.warning("检测到网络错误，停止麦克风发送");
-                    break;
-                }
-                
-                try {
-                    Thread.sleep(MicrophoneConfig.SENDER_ERROR_RETRY_MS);
-                } catch (InterruptedException ex) {
-                    break;
-                }
             }
         }
         
@@ -432,19 +353,5 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
         } catch (Exception e) {
             return false;
         }
-    }
-    
-    /**
-     * 检查是否为网络错误
-     */
-    private boolean isNetworkError(IOException e) {
-        String message = e.getMessage();
-        return message != null && (
-            message.contains("Network is unreachable") ||
-            message.contains("No route to host") ||
-            message.contains("Connection refused") ||
-            message.contains("Connection reset") ||
-            message.contains("Broken pipe")
-        );
     }
 }
