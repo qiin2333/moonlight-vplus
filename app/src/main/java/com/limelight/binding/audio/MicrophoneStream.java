@@ -5,19 +5,8 @@ import com.limelight.nvstream.NvConnection;
 import com.limelight.nvstream.jni.MoonBridge;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.SocketException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.Arrays;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import javax.crypto.Cipher;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 
 public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallback {
     
@@ -26,31 +15,15 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
     private OpusEncoder encoder;
     private Thread senderThread;
     private Thread checkHostRequestThread;
-    private DatagramSocket socket;
-    private InetAddress host;
-    private final AtomicBoolean running = new AtomicBoolean(false); // 麦克风流是否运行
-    private final AtomicBoolean micActive = new AtomicBoolean(false); // 麦克风是否实际在捕获
-    private final AtomicBoolean hostRequested = new AtomicBoolean(false); // 主机是否请求麦克风
+    private final AtomicBoolean running = new AtomicBoolean(false);
+    private final AtomicBoolean micActive = new AtomicBoolean(false);
+    private final AtomicBoolean hostRequested = new AtomicBoolean(false);
     private LinkedBlockingQueue<byte[]> packetQueue;
-    private int sequenceNumber = 0;
-    private int micPort;
-    
-    private Cipher microphoneCipher;
-    private SecretKeySpec secretKey;
-    private byte[] baseIv;
     
     public MicrophoneStream(NvConnection conn) {
         this.conn = conn;
         this.packetQueue = new LinkedBlockingQueue<>(MicrophoneConfig.MAX_QUEUE_SIZE);
-        
-        String hostAddress = conn.getHost();
-        try {
-            this.host = InetAddress.getByName(hostAddress);
-            LimeLog.info("初始化麦克风流 - 主机地址: " + hostAddress);
-        } catch (Exception e) {
-            LimeLog.severe("初始化麦克风流 - 主机地址解析失败: " + e.getMessage());
-            this.host = null;
-        }
+        LimeLog.info("初始化麦克风流");
     }
     
     public boolean start() {
@@ -67,16 +40,9 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
                 if (MoonBridge.isMicrophoneRequested()) {
                     LimeLog.info("主机请求麦克风，开始捕获");
                     
-                    // 尝试获取加密密钥
-                    byte[] keys = MoonBridge.getMicrophoneEncryptionKeys();
-                    if (keys != null) {
-                        try {
-                            setupEncryption(keys);
-                            LimeLog.info("麦克风加密已启用");
-                        } catch (Exception e) {
-                            LimeLog.severe("麦克风加密初始化失败: " + e.getMessage());
-                            return false;
-                        }
+                    // 检查加密状态（仅用于日志）
+                    if (MoonBridge.isMicrophoneEncryptionEnabled()) {
+                        LimeLog.info("麦克风加密已启用");
                     }
                     
                     hostRequested.set(true);
@@ -126,15 +92,9 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
                     hostRequested.set(true);
                     LimeLog.info("检测到主机请求麦克风，开始捕获");
                     
-                    // 尝试获取加密密钥
-                    byte[] keys = MoonBridge.getMicrophoneEncryptionKeys();
-                    if (keys != null) {
-                        try {
-                            setupEncryption(keys);
-                            LimeLog.info("麦克风加密已启用");
-                        } catch (Exception e) {
-                            LimeLog.severe("麦克风加密初始化失败: " + e.getMessage());
-                        }
+                    // 检查加密状态
+                    if (MoonBridge.isMicrophoneEncryptionEnabled()) {
+                        LimeLog.info("麦克风加密启用");
                     }
 
                     try {
@@ -183,11 +143,6 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
             encoder = null;
         }
         
-        if (socket != null) {
-            socket.close();
-            socket = null;
-        }
-        
         packetQueue.clear();
         
         // 不停止发送线程，因为我们将来可能需要重新启动麦克风
@@ -199,17 +154,13 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
         }
         
         try {
-            // 获取RTSP协商的麦克风端口
-            micPort = MoonBridge.getMicPortNumber();
+            // 记录协商的麦克风端口（仅用于日志）
+            int micPort = MoonBridge.getMicPortNumber();
             if (micPort == 0) {
-                micPort = MicrophoneConfig.DEFAULT_MIC_PORT;
-                LimeLog.warning("未获取到协商的麦克风端口，使用默认端口: " + MicrophoneConfig.DEFAULT_MIC_PORT);
+                LimeLog.warning("未获取到协商的麦克风端口");
             } else {
                 LimeLog.info("使用协商的麦克风端口: " + micPort);
             }
-            
-            // 创建发送socket
-            socket = new DatagramSocket();
             
             // 创建编码器
             encoder = new OpusEncoder(MicrophoneConfig.SAMPLE_RATE, MicrophoneConfig.CHANNELS, MicrophoneConfig.getOpusBitrate());
@@ -328,37 +279,7 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
             encoder = null;
         }
         
-        if (socket != null) {
-            socket.close();
-            socket = null;
-        }
-        
         packetQueue.clear();
-    }
-
-    private void setupEncryption(byte[] keys) throws Exception {
-        if (keys.length != 32) {
-            throw new IllegalArgumentException("Invalid key length: " + keys.length);
-        }
-
-        byte[] keyBytes = Arrays.copyOfRange(keys, 0, 16);
-        byte[] ivBytes = Arrays.copyOfRange(keys, 16, 32);
-
-        secretKey = new SecretKeySpec(keyBytes, "AES");
-        baseIv = ivBytes;
-        microphoneCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-    }
-    
-    private InetAddress getCurrentHost() {
-        try {
-            String hostAddress = conn.getHost();
-            if (hostAddress != null && !hostAddress.isEmpty()) {
-                return InetAddress.getByName(hostAddress);
-            }
-        } catch (Exception e) {
-            LimeLog.warning("动态获取主机地址失败: " + e.getMessage());
-        }
-        return host;
     }
 
     @Override
@@ -443,88 +364,18 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
                     continue;
                 }
 
-                // 动态获取当前主机地址
-                InetAddress currentHost = getCurrentHost();
-                if (currentHost == null) {
-                    LimeLog.warning("无法获取主机地址，跳过数据包发送");
-                    Thread.sleep(1);
-                    continue;
-                }
-
                 // 计算发送延迟
                 long sendLatency = currentTime - lastSendTime;
                 totalLatency += sendLatency;
                 maxLatency = Math.max(maxLatency, sendLatency);
 
-                // 构建正确的麦克风数据包头部（12字节）
-                // 分配足够的空间：编码数据 + 头部(12) + 加密填充/开销(预留32字节)
-                ByteBuffer packetBuf = ByteBuffer.allocate(encoded.length + 12 + 32);
-                packetBuf.order(ByteOrder.LITTLE_ENDIAN); // 使用小端字节序
-
-                // flags (1字节)
-                packetBuf.put((byte) 0x00);
-                // packetType (1字节) - OPUS编码类型
-                packetBuf.put((byte) 0x61); // MIC_PACKET_TYPE_OPUS
-                // sequenceNumber (2字节)
-                packetBuf.putShort((short) (sequenceNumber++ & 0xFFFF));
-                // timestamp (4字节)
-                packetBuf.putInt((int)(currentTime & 0xFFFFFFFF));
-                // ssrc (4字节) - 同步源标识符
-                packetBuf.putInt(0x12345678); // 使用固定SSRC
-
-                // 添加opus编码数据
-                DatagramPacket packet;
-                if (microphoneCipher != null) {
-                    try {
-                        // 计算IV: baseIv (前4字节作为big endian int) + sequenceNumber
-                        // 构造新的IV
-                        byte[] iv = new byte[16];
-                        
-                        // 取baseIv的前4字节作为int (Big Endian)
-                        int baseIvVal = ((baseIv[0] & 0xFF) << 24) |
-                                        ((baseIv[1] & 0xFF) << 16) |
-                                        ((baseIv[2] & 0xFF) << 8) |
-                                        (baseIv[3] & 0xFF);
-                        
-                        // sequenceNumber is tracked in 'sequenceNumber' variable locally.
-                        // packetBuf.putShort((short) (sequenceNumber++ & 0xFFFF)); was done above.
-                        // Note: sequenceNumber was incremented already. We need the value put in the packet.
-                        // Let's use the local sequenceNumber - 1 because it was post-incremented.
-                        int ivSeq = baseIvVal + ((sequenceNumber - 1) & 0xFFFF);
-                        
-                        iv[0] = (byte) ((ivSeq >> 24) & 0xFF);
-                        iv[1] = (byte) ((ivSeq >> 16) & 0xFF);
-                        iv[2] = (byte) ((ivSeq >> 8) & 0xFF);
-                        iv[3] = (byte) (ivSeq & 0xFF);
-                        // 剩余字节为0 (Java数组初始化默认为0)
-                        
-                        IvParameterSpec ivSpec = new IvParameterSpec(iv);
-                        microphoneCipher.init(Cipher.ENCRYPT_MODE, secretKey, ivSpec);
-                        
-                        byte[] encrypted = microphoneCipher.doFinal(encoded);
-                        packetBuf.put(encrypted);
-                        
-                        // 此时packetBuf包含header + encrypted data
-                        // 需要重新调整packet长度，因为PKCS5Padding会增加长度
-                        int totalLength = 12 + encrypted.length;
-                        packet = new DatagramPacket(
-                                packetBuf.array(), totalLength,
-                                currentHost, micPort);
-                    } catch (Exception e) {
-                        // 加密失败，记录错误并跳过此包
-                        AudioDiagnostics.recordEncodingError();
-                        LimeLog.warning("麦克风加密错误: " + e.getMessage());
-                        continue;
-                    }
-                } else {
-                    packetBuf.put(encoded);
-                    int totalLength = 12 + encoded.length;
-                    packet = new DatagramPacket(
-                            packetBuf.array(), totalLength,
-                            currentHost, micPort);
+                // 发送 Opus 数据
+                int result = MoonBridge.sendMicrophoneOpusData(encoded);
+                if (result < 0) {
+                    AudioDiagnostics.recordEncodingError();
+                    LimeLog.warning("麦克风数据发送失败: " + result);
+                    continue;
                 }
-                
-                socket.send(packet);
                 
                 lastSendTime = currentTime;
                 sendCount++;

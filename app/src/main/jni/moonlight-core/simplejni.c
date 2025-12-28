@@ -11,7 +11,6 @@
 #include "controller_type.h"
 #include "controller_list.h"
 
-// 外部变量声明
 extern uint16_t MicPortNumber;
 extern STREAM_CONFIGURATION StreamConfig;
 extern uint32_t EncryptionFeaturesEnabled;
@@ -278,8 +277,7 @@ Java_com_limelight_nvstream_jni_MoonBridge_getMicPortNumber(JNIEnv *env, jclass 
 
 JNIEXPORT jboolean JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_isMicrophoneRequested(JNIEnv *env, jclass clazz) {
-    // 如果麦克风端口号已经协商好并且StreamConfig.enableMic为true，说明主机需要麦克风
-    // 这表示主机已经通过RTSP协商请求了麦克风流
+    // Microphone is requested if port is negotiated and enableMic is set
     return (MicPortNumber != 0 && StreamConfig.enableMic) ? JNI_TRUE : JNI_FALSE;
 }
 
@@ -293,4 +291,32 @@ Java_com_limelight_nvstream_jni_MoonBridge_getMicrophoneEncryptionKeys(JNIEnv *e
     (*env)->SetByteArrayRegion(env, ret, 0, 16, (jbyte*)StreamConfig.remoteInputAesKey);
     (*env)->SetByteArrayRegion(env, ret, 16, 16, (jbyte*)StreamConfig.remoteInputAesIv);
     return ret;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_sendMicrophoneOpusData(JNIEnv *env, jclass clazz, jbyteArray opusData) {
+    if (opusData == NULL) {
+        return -1;
+    }
+    
+    jsize length = (*env)->GetArrayLength(env, opusData);
+    if (length <= 0) {
+        return -1;
+    }
+    
+    jbyte* data = (*env)->GetByteArrayElements(env, opusData, NULL);
+    if (data == NULL) {
+        return -1;
+    }
+    
+    int result = sendMicrophoneOpusData((const unsigned char*)data, (int)length);
+    
+    (*env)->ReleaseByteArrayElements(env, opusData, data, JNI_ABORT);
+    
+    return result;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_isMicrophoneEncryptionEnabled(JNIEnv *env, jclass clazz) {
+    return isMicrophoneEncryptionEnabled() ? JNI_TRUE : JNI_FALSE;
 }
