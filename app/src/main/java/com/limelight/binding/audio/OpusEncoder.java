@@ -31,7 +31,7 @@ public class OpusEncoder {
         return nativeEncode(nativePtr, pcmData, offset, length);
     }
     
-    public void release() {
+    public synchronized void release() {
         if (nativePtr != 0) {
             nativeDestroy(nativePtr);
             nativePtr = 0;
@@ -40,8 +40,11 @@ public class OpusEncoder {
     
     @Override
     protected void finalize() throws Throwable {
-        release();
-        super.finalize();
+        try {
+            release();
+        } finally {
+            super.finalize();
+        }
     }
     
     // 这些方法需要在原生代码中实现

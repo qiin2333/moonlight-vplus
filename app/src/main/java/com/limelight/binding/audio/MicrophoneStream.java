@@ -12,6 +12,7 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
     private final NvConnection conn;
     private MicrophoneCapture capture;
     private OpusEncoder encoder;
+    private final Object encoderLock = new Object();
     private Thread senderThread;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicBoolean micActive = new AtomicBoolean(false);
@@ -210,9 +211,11 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
     }
     
     private void cleanup() {
-        if (encoder != null) {
-            encoder.release();
-            encoder = null;
+        synchronized (encoderLock) {
+            if (encoder != null) {
+                encoder.release();
+                encoder = null;
+            }
         }
         
         packetQueue.clear();
@@ -220,13 +223,20 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
 
     @Override
     public void onMicrophoneData(byte[] data, int offset, int length) {
-        if (!running.get() || !micActive.get() || encoder == null) {
+        if (!running.get() || !micActive.get()) {
             return;
         }
         
         try {
-            // 编码音频数据
-            byte[] encoded = encoder.encode(data, offset, length);
+            byte[] encoded = null;
+            
+            // Synchronized access to encoder
+            synchronized (encoderLock) {
+                if (encoder != null) {
+                    encoded = encoder.encode(data, offset, length);
+                }
+            }
+            
             if (encoded != null) {
                 // 记录编码成功
                 AudioDiagnostics.recordFrameEncoded();
