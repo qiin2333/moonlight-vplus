@@ -343,6 +343,15 @@
     <string name="summary_privacy_policy">查看 Moonlight 隐私政策</string>
     <string name="title_about_mode">关于 月光威力加强版</string>
     <string name="summary_about_mode">请前往GitHub查看，喜欢的话点个Star支持一下我们吧</string>
+    
+    <!-- About dialog strings -->
+    <string name="about_dialog_description">Moonlight V+ 是专为 Foundation Sunshine 打造的增强客户端，为您带来极致的游戏串流体验。</string>
+    <string name="about_dialog_project_info">基于 Moonlight-Android 开源项目，由基地社区倾力打造</string>
+    <string name="about_dialog_thanks">感谢您选择 Moonlight V+！如果觉得好用，欢迎在 GitHub 上点个 Star 支持我们 ⭐</string>
+    <string name="about_dialog_github">GitHub</string>
+    <string name="about_dialog_star">Star 项目</string>
+    <string name="about_dialog_qq">加入QQ群</string>
+    <string name="about_dialog_close">关闭</string>
     <string name="check_for_updates">检查更新</string>
     <string name="summary_check_for_updates">检查是否有新版本可用</string>
     <string name="category_help">❓ 帮助</string>

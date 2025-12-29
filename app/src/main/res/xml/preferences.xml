@@ -609,9 +609,6 @@
             android:key="check_for_updates"
             android:title="检查更新"
             android:summary="检查应用是否有新版本可用" />
-        <com.limelight.preferences.AboutDialogPreference
-            android:title="@string/title_about_mode"
-            android:summary="@string/summary_about_mode" />
         <com.limelight.preferences.WebLauncherPreference
             android:title="@string/title_moonlight_vplus_pc_download"
             url="https://github.com/qiin2333/moonlight-qt"/>

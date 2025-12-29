@@ -4,19 +4,26 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-
+    
+    <!-- 外圈圆形 -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#ffffff"
+        android:strokeColor="#FFFFFF"
         android:strokeWidth="2"
-        android:strokeLineJoin="round"
         android:strokeLineCap="round"
-        android:pathData="M12 2.99988C16.9706 2.99988 21 7.02931 21 11.9999C21 16.9704 16.9706 20.9999 12 20.9999C7.02944 20.9999 3 16.9704 3 11.9999C3 9.17261 4.30367 6.64983 6.34267 4.99988" />
+        android:pathData="M12,3 C16.9706,3 21,7.02944 21,12 C21,16.9706 16.9706,21 12,21 C7.02944,21 3,16.9706 3,12 C3,7.02944 7.02944,3 12,3 Z" />
+    
+    <!-- 内圈装饰 -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#ffffff"
-        android:strokeWidth="2"
-        android:strokeLineJoin="round"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5"
         android:strokeLineCap="round"
-        android:pathData="M3 4.49988H7V8.49988" />
+        android:pathData="M12,6 C15.3137,6 18,8.68629 18,12 C18,15.3137 15.3137,18 12,18 C8.68629,18 6,15.3137 6,12 C6,8.68629 8.68629,6 12,6 Z" />
+    
+    <!-- 启动三角形 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M10,8 L10,16 L16,12 Z" />
+    
 </vector>

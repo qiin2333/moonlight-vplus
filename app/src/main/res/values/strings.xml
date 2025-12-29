@@ -396,11 +396,12 @@
     <string name="summary_about_mode">View app information and project details</string>
     
     <!-- About dialog strings -->
-    <string name="about_dialog_description">Moonlight V+ is an enhanced version of Moonlight Android client, providing better streaming experience with additional features.</string>
-    <string name="about_dialog_project_info">Based on Moonlight-Android project, enhanced by V+ team</string>
-    <string name="about_dialog_thanks">Thank you for using Moonlight V+! If you like it, please give us a star on GitHub.</string>
+    <string name="about_dialog_description">Moonlight V+ is an enhanced client built for Foundation Sunshine, delivering the ultimate game streaming experience.</string>
+    <string name="about_dialog_project_info">Based on Moonlight-Android open source project, crafted by the Foundation community</string>
+    <string name="about_dialog_thanks">Thank you for choosing Moonlight V+! If you find it useful, please give us a star on GitHub ⭐</string>
     <string name="about_dialog_github">GitHub</string>
     <string name="about_dialog_star">Star Project</string>
+    <string name="about_dialog_qq">Join QQ Group</string>
     <string name="about_dialog_close">Close</string>
     <string name="check_for_updates">Check for updates</string>
     <string name="summary_check_for_updates">Check if there is a new version available</string>

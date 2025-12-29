@@ -293,6 +293,7 @@
     <string name="about_dialog_github">GitHub</string>
     <string name="about_dialog_project_info">Basado en el proyecto Moonlight-Android, mejorado por el equipo V+</string>
     <string name="about_dialog_star">Destacar Proyecto</string>
+    <string name="about_dialog_qq">Unirse al Grupo QQ</string>
     <string name="about_dialog_thanks">¡Gracias por usar Moonlight V+! Si te gusta, por favor danos una estrella en GitHub.</string>
     <string name="accessibility_service_label">Servicio de Teclado Moonlight</string>
     <string name="accessibility_service_description">Para proporcionar una experiencia completa de juegos de PC con tu teclado externo, este servicio necesita capturar todas las teclas del teclado.\n\nUna vez habilitado, podrás usar todos los atajos del sistema como las teclas Win/Command, Alt+Tab, etc., igual que en tu computadora.\n\nTen la seguridad de que este servicio solo se usa para enviar operaciones de teclas directamente a tu computadora, y no grabaremos ni subiremos ningún contenido de tu entrada.</string>
