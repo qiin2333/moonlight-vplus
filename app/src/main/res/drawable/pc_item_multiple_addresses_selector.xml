@@ -11,7 +11,7 @@
                         android:centerColor="#C0F06292"
                         android:endColor="#80F8BBD9"
                         android:angle="-45" />
-                    <corners android:radius="8dp" />
+                    <corners android:radius="12dp" />
                 </shape>
             </item>
             
@@ -23,7 +23,7 @@
                         android:centerColor="#A0F48FB1"
                         android:endColor="#80F8BBD9"
                         android:angle="-45" />
-                    <corners android:radius="6dp" />
+                    <corners android:radius="12dp" />
                 </shape>
             </item>
             
@@ -35,7 +35,7 @@
                         android:centerColor="#E6FCE4EC"
                         android:endColor="#80F3E5F5"
                         android:angle="-45" />
-                    <corners android:radius="4dp" />
+                    <corners android:radius="12dp" />
                     <stroke android:width="2dp" android:color="#3CA4E0" />
                 </shape>
             </item>
@@ -53,7 +53,7 @@
                         android:centerColor="#B0F06292"
                         android:endColor="#80F8BBD9"
                         android:angle="-45" />
-                    <corners android:radius="8dp" />
+                    <corners android:radius="12dp" />
                 </shape>
             </item>
             
@@ -65,7 +65,7 @@
                         android:centerColor="#90F48FB1"
                         android:endColor="#80F8BBD9"
                         android:angle="-45" />
-                    <corners android:radius="6dp" />
+                    <corners android:radius="12dp" />
                 </shape>
             </item>
             
@@ -77,17 +77,8 @@
                         android:centerColor="#E6FCE4EC"
                         android:endColor="#80F3E5F5"
                         android:angle="-45" />
-                    <corners android:radius="4dp" />
+                    <corners android:radius="12dp" />
                     <stroke android:width="2dp" android:color="#3CA4E0" />
-                </shape>
-            </item>
-            
-            <!-- 额外的聚焦光晕效果 -->
-            <item android:top="-2dp" android:bottom="-2dp" android:left="-2dp" android:right="-2dp">
-                <shape android:shape="rectangle">
-                    <solid android:color="@android:color/transparent" />
-                    <corners android:radius="6dp" />
-                    <stroke android:width="1dp" android:color="#66FFFFFF" />
                 </shape>
             </item>
         </layer-list>
@@ -104,7 +95,7 @@
                         android:centerColor="#B0F06292"
                         android:endColor="#80F8BBD9"
                         android:angle="-45" />
-                    <corners android:radius="8dp" />
+                    <corners android:radius="12dp" />
                 </shape>
             </item>
             
@@ -116,7 +107,7 @@
                         android:centerColor="#90F48FB1"
                         android:endColor="#80F8BBD9"
                         android:angle="-45" />
-                    <corners android:radius="6dp" />
+                    <corners android:radius="12dp" />
                 </shape>
             </item>
             
@@ -128,17 +119,8 @@
                         android:centerColor="#E6FCE4EC"
                         android:endColor="#80F3E5F5"
                         android:angle="-45" />
-                    <corners android:radius="4dp" />
+                    <corners android:radius="12dp" />
                     <stroke android:width="2dp" android:color="#3CA4E0" />
-                </shape>
-            </item>
-            
-            <!-- 额外的聚焦光晕效果 -->
-            <item android:top="-2dp" android:bottom="-2dp" android:left="-2dp" android:right="-2dp">
-                <shape android:shape="rectangle">
-                    <solid android:color="@android:color/transparent" />
-                    <corners android:radius="6dp" />
-                    <stroke android:width="1dp" android:color="#66FFFFFF" />
                 </shape>
             </item>
         </layer-list>
@@ -155,7 +137,7 @@
                         android:centerColor="#80F06292"
                         android:endColor="#40F8BBD9"
                         android:angle="-45" />
-                    <corners android:radius="8dp" />
+                    <corners android:radius="12dp" />
                 </shape>
             </item>
             
@@ -167,7 +149,7 @@
                         android:centerColor="#60F48FB1"
                         android:endColor="#40F8BBD9"
                         android:angle="-45" />
-                    <corners android:radius="6dp" />
+                    <corners android:radius="12dp" />
                 </shape>
             </item>
             
@@ -179,7 +161,7 @@
                         android:centerColor="#99FCE4EC"
                         android:endColor="#40F3E5F5"
                         android:angle="-45" />
-                    <corners android:radius="4dp" />
+                    <corners android:radius="12dp" />
                 </shape>
             </item>
         </layer-list>

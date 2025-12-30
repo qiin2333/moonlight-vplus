@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <!-- 透明背景，仅用于提供圆角轮廓 -->
+    <solid android:color="@android:color/transparent" />
+    <!-- 圆角半径与 pc_item_selector 保持一致 -->
+    <corners android:radius="12dp" />
+</shape>

@@ -3,36 +3,49 @@
     <!-- 按下状态 -->
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
-            <solid android:color="#CCEDE7F6"/> <!-- 稍深的背景颜色 -->
-            <corners android:radius="4dp"/> <!-- 圆角半径 -->
-            <stroke android:width="2dp" android:color="#3CA4E0"/> <!-- Gura蓝色边框 -->
+            <gradient
+                android:startColor="#E6FFE3F2"
+                android:centerColor="#CCFF8FA3"
+                android:endColor="#B3FF6B9D"
+                android:angle="135" />
+            <corners android:radius="12dp"/>
+            <stroke android:width="2dp" android:color="#FF3CA4E0"/>
         </shape>
     </item>
     
     <!-- 焦点状态 -->
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="#CCEDE7F6"/> <!-- 稍深的背景颜色 -->
-            <corners android:radius="4dp"/> <!-- 圆角半径 -->
-            <stroke android:width="2dp" android:color="#3CA4E0"/> <!-- Gura蓝色边框 -->
+            <gradient
+                android:startColor="#F0FFE3F2"
+                android:centerColor="#D9FF8FA3"
+                android:endColor="#CCFF6B9D"
+                android:angle="135" />
+            <corners android:radius="12dp"/>
         </shape>
     </item>
 
     <!-- 选中状态 -->
     <item android:state_selected="true">
         <shape android:shape="rectangle">
-            <solid android:color="#CCEDE7F6"/> <!-- 稍深的背景颜色 -->
-            <corners android:radius="4dp"/> <!-- 圆角半径 -->
-            <stroke android:width="2dp" android:color="#3CA4E0"/> <!-- Gura蓝色边框 -->
+            <gradient
+                android:startColor="#F0FFE3F2"
+                android:centerColor="#D9FF8FA3"
+                android:endColor="#CCFF6B9D"
+                android:angle="135" />
+            <corners android:radius="12dp"/>
         </shape>
     </item>
     
     <!-- 默认状态 -->
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#99EDE7F6"/> <!-- 原背景颜色 -->
-            <corners android:radius="4dp"/> <!-- 圆角半径 -->
-            <stroke android:width="2dp" android:color="#00000000"/> <!-- 透明边框 -->
+            <gradient
+                android:startColor="#F5FFFFFF"
+                android:centerColor="#E6FFE3F2"
+                android:endColor="#CCF8F8F8"
+                android:angle="135" />
+            <corners android:radius="12dp"/>
         </shape>
     </item>
-</selector> 
+</selector>

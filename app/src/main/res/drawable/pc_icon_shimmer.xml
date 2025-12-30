@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <!-- 闪烁光效层 - 柔和高光 -->
+    <gradient
+        android:startColor="#60FFFFFF"
+        android:centerColor="#30FFFFFF"
+        android:endColor="#00FFFFFF"
+        android:angle="45"
+        android:type="sweep"
+        android:centerX="0.5"
+        android:centerY="0.5" />
+</shape>

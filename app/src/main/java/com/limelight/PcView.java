@@ -75,6 +75,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.widget.AbsListView;
+import android.widget.GridView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
@@ -1356,6 +1357,8 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         }
         else if (view instanceof AbsListView) {
             AbsListView listView = (AbsListView) view;
+            // 移除系统默认的选择背景，使用自定义的 selector
+            listView.setSelector(android.R.color.transparent);
             listView.setAdapter(pcGridAdapter);
             listView.setOnItemClickListener((arg0, arg1, pos, id) -> {
                 ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(pos);
@@ -1375,9 +1378,39 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
                     }
                 }
             });
+            
+            // 如果是GridView，动态计算列宽以保持固定间距
+            if (view instanceof GridView) {
+                calculateDynamicColumnWidth((GridView) view);
+            }
+            
             UiHelper.applyStatusBarPadding(listView);
             registerForContextMenu(listView);
         }
+    }
+    
+    /**
+     * 动态计算GridView的列宽，确保卡片间距保持不变
+     * 根据屏幕宽度和固定间距自动调整列宽
+     */
+    private void calculateDynamicColumnWidth(GridView gridView) {
+        float density = getResources().getDisplayMetrics().density;
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        
+        // 获取可用宽度（扣除左右padding）
+        int availableWidth = screenWidth - gridView.getPaddingStart() - gridView.getPaddingEnd();
+        
+        // 固定参数（dp转px）
+        int horizontalSpacingPx = (int) (15f * density);
+        int minColumnWidthPx = (int) (180f * density);
+        
+        // 计算列数: numColumns = (availableWidth + spacing) / (minWidth + spacing)
+        int numColumns = Math.max(1, (availableWidth + horizontalSpacingPx) / (minColumnWidthPx + horizontalSpacingPx));
+        
+        // 计算实际列宽: columnWidth = (availableWidth - (numColumns - 1) * spacing) / numColumns
+        int columnWidth = (availableWidth - (numColumns - 1) * horizontalSpacingPx) / numColumns;
+        
+        gridView.setColumnWidth(columnWidth);
     }
 
     public static class ComputerObject {

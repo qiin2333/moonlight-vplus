@@ -1,44 +1,113 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:background="@drawable/pc_item_selector">
-    <TextView
-        android:id="@+id/grid_text"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="8dp"
-        android:layout_marginRight="24dp"
-        android:gravity="left"
-        android:textSize="18sp"
-        tools:ignore="RtlHardcoded">
-    </TextView>
+    android:layout_height="104dp"
+    android:background="@drawable/pc_item_selector"
+    android:clipChildren="true"
+    android:clipToPadding="true">
+    
     <RelativeLayout
-        android:id="@+id/grid_image_layout"
-        android:layout_width="wrap_content"
-        android:layout_height="150dp">
-        <ImageView
-            android:id="@+id/grid_image"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipChildren="true"
+        android:clipToPadding="true"
+        android:clipToOutline="true"
+        android:background="@drawable/pc_grid_item_clip_bg"
+        android:outlineProvider="background">
+        
+        <!-- 图标容器 - 右侧（先定义，在底层） -->
+        <RelativeLayout
+            android:id="@+id/grid_image_layout"
+            android:layout_width="140dp"
+            android:layout_height="140dp"
             android:layout_alignParentEnd="true"
-            android:layout_alignParentBottom="true"
-            android:layout_width="100dp"
-            android:layout_height="100dp">
-        </ImageView>
-        <ImageView
-            android:id="@+id/grid_overlay"
-            android:layout_centerHorizontal="true"
-            android:layout_marginTop="28dp"
-            android:layout_width="50dp"
-            android:layout_height="50dp">
-        </ImageView>
-        <ImageView
-            android:id="@+id/grid_spinner"
-            android:layout_centerHorizontal="true"
-            android:layout_marginTop="28dp"
-            android:layout_width="60dp"
-            android:layout_height="20dp"
-            android:src="@drawable/white_dots_animation">
-        </ImageView>
+            android:layout_alignParentTop="true"
+            android:layout_marginEnd="-18dp"
+            android:layout_marginTop="-18dp"
+            android:layout_marginBottom="-18dp">
+            
+            <!-- 外层光晕效果 -->
+            <View
+                android:layout_width="180dp"
+                android:layout_height="180dp"
+                android:layout_centerInParent="true"
+                android:background="@drawable/pc_icon_glow"
+                android:alpha="0.5" />
+            
+            <!-- 图标背景装饰 -->
+            <View
+                android:layout_width="160dp"
+                android:layout_height="160dp"
+                android:layout_centerInParent="true"
+                android:background="@drawable/pc_item_icon_bg"
+                android:alpha="0.75" />
+            
+            <!-- 闪烁光效层 -->
+            <View
+                android:layout_width="150dp"
+                android:layout_height="150dp"
+                android:layout_centerInParent="true"
+                android:background="@drawable/pc_icon_shimmer"
+                android:alpha="0.25" />
+            
+            <!-- 主图标 -->
+            <ImageView
+                android:id="@+id/grid_image"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:layout_centerInParent="true"
+                android:scaleType="fitCenter"
+                android:background="@drawable/pc_icon_clip_bg"
+                android:clipToOutline="true"
+                android:elevation="2dp"
+                android:contentDescription="PC Icon" />
+            
+            <!-- 状态覆盖图标 -->
+            <ImageView
+                android:id="@+id/grid_overlay"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_centerInParent="true"
+                android:scaleType="fitCenter"
+                android:contentDescription="Status Overlay" />
+            
+            <!-- 加载动画 -->
+            <ImageView
+                android:id="@+id/grid_spinner"
+                android:layout_width="48dp"
+                android:layout_height="16dp"
+                android:layout_centerInParent="true"
+                android:src="@drawable/white_dots_animation"
+                android:scaleType="fitCenter"
+                android:contentDescription="Loading" />
+        </RelativeLayout>
+        
+        <!-- 文本区域 -->
+        <TextView
+            android:id="@+id/grid_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentTop="true"
+            android:layout_marginEnd="76dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:gravity="start|center_vertical"
+            android:textSize="14sp"
+            android:textStyle="normal"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="#1C1C1E"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:lineSpacingExtra="4dp"
+            android:letterSpacing="0.02"
+            android:breakStrategy="high_quality"
+            android:hyphenationFrequency="none"
+            android:elevation="1dp"
+            tools:ignore="RtlHardcoded"
+            tools:text="我的电脑" />
     </RelativeLayout>
-</RelativeLayout>
+</FrameLayout>
