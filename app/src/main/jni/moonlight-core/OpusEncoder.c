@@ -53,7 +53,15 @@ JNIEXPORT jbyteArray
 Java_com_limelight_binding_audio_OpusEncoder_nativeEncode(JNIEnv* env, jclass clazz,
                                                         jlong handle, jbyteArray pcmData,
                                                         jint offset, jint length) {
+    if (handle == 0) {
+        return NULL;
+    }
+    
     OpusContext* ctx = (OpusContext*)handle;
+    if (ctx->encoder == NULL) {
+        return NULL;
+    }
+    
     jbyte* pcm;
     jbyteArray result = NULL;
     
