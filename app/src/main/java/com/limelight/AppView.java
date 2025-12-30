@@ -63,6 +63,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
 import android.os.Handler;
 import android.os.Looper;
 
@@ -111,6 +112,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
     private LinearLayout displaySelectionInfo;
     private android.widget.RadioGroup displayRadioGroup;
     private List<DisplayInfo> availableDisplays;
+    private static final int VIRTUAL_DISPLAY_ID = 212333;
 
     private final static int START_OR_RESUME_ID = 1;
     private final static int QUIT_ID = 2;
@@ -610,14 +612,22 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
      */
     private void startStreamWithLastSettingsIfEnabled(AppObject app) {
         String displayGuid = null;
-        if (displaySelectionInfo.getVisibility() == View.VISIBLE 
-                && availableDisplays != null) {
+        boolean useVdd = false;
+        
+        if (displaySelectionInfo.getVisibility() == View.VISIBLE && availableDisplays != null) {
             int selectedId = displayRadioGroup.getCheckedRadioButtonId();
-            if (selectedId >= 0 && selectedId < availableDisplays.size()) {
+            if (selectedId == VIRTUAL_DISPLAY_ID) {
+                useVdd = true;
+            } else if (selectedId >= 0 && selectedId < availableDisplays.size()) {
                 DisplayInfo selectedDisplay = availableDisplays.get(selectedId);
-                displayGuid = selectedDisplay.guid != null && !selectedDisplay.guid.isEmpty() 
+                displayGuid = (selectedDisplay.guid != null && !selectedDisplay.guid.isEmpty())
                         ? selectedDisplay.guid : selectedDisplay.name;
             }
+        }
+        
+        // 设置useVdd标志
+        if (computer != null) {
+            computer.useVdd = useVdd;
         }
         
         doStartStream(app, displayGuid);
@@ -641,7 +651,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                 List<DisplayInfo> displays = httpConn.getDisplays();
                 
                 runOnUiThread(() -> {
-                    if (displays != null && displays.size() > 1) {
+                    if (displays != null && displays.size() > 0) {
                         updateDisplaySelectionUI(displays);
                     } else {
                         displaySelectionInfo.setVisibility(View.GONE);
@@ -661,35 +671,45 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
      */
     private void updateDisplaySelectionUI(List<DisplayInfo> displays) {
         availableDisplays = displays;
-        
-        // 清除之前的单选按钮
         displayRadioGroup.removeAllViews();
         
         LimeLog.info("Displays: " + displays.size());
+        
+        // 添加所有物理显示器选项
         for (int i = 0; i < displays.size(); i++) {
             DisplayInfo display = displays.get(i);
-            // 使用友好名字显示
-            String displayName = display.name != null && !display.name.isEmpty() 
+            String displayName = (display.name != null && !display.name.isEmpty())
                     ? display.name : "Display " + (display.index + 1);
             LimeLog.info("Display " + (display.index + 1) + ": " + display.name + " (guid: " + display.guid + ")");
             
-            // 创建单选按钮
-            android.widget.RadioButton radioButton = new android.widget.RadioButton(this);
-            radioButton.setId(i);
-            radioButton.setText(displayName);
-            radioButton.setTextColor(0xCCFFFFFF);
-            radioButton.setTextSize(12);
-            radioButton.setTypeface(android.graphics.Typeface.create("sans-serif-light", android.graphics.Typeface.NORMAL));
-            radioButton.setButtonTintList(android.content.res.ColorStateList.valueOf(0xFFFFFFFF));
-            radioButton.setPadding(0, 0, 20, 0); // 右边距
-            
-            displayRadioGroup.addView(radioButton);
+            displayRadioGroup.addView(createDisplayRadioButton(i, displayName));
         }
         
-        // 默认不选择任何显示器
-        displayRadioGroup.clearCheck();
+        displayRadioGroup.addView(createDisplayRadioButton(
+                VIRTUAL_DISPLAY_ID, 
+                getResources().getString(R.string.applist_menu_start_with_vdd)));
         
+        displayRadioGroup.clearCheck();
         displaySelectionInfo.setVisibility(View.VISIBLE);
+    }
+    
+    /**
+     * 创建显示器选择单选按钮
+     *
+     * @param id 按钮ID
+     * @param text 按钮文本
+     * @return 配置好的单选按钮
+     */
+    private RadioButton createDisplayRadioButton(int id, String text) {
+        RadioButton radioButton = new RadioButton(this);
+        radioButton.setId(id);
+        radioButton.setText(text);
+        radioButton.setTextColor(0xCCFFFFFF);
+        radioButton.setTextSize(12);
+        radioButton.setTypeface(android.graphics.Typeface.create("sans-serif-light", android.graphics.Typeface.NORMAL));
+        radioButton.setButtonTintList(android.content.res.ColorStateList.valueOf(0xFFFFFFFF));
+        radioButton.setPadding(0, 0, 20, 0);
+        return radioButton;
     }
     
     /**
@@ -907,13 +927,12 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
         // Only show the hide checkbox if this is not the currently running app or it's already hidden
         if (lastRunningAppId != selectedApp.app.getAppId() || selectedApp.isHidden) {
-            menu.add(Menu.NONE, START_WITH_VDD, 1, getResources().getString(R.string.applist_menu_start_with_vdd));
             // Add "Start with Last Settings" option if last settings exist
             if (appSettingsManager != null && appSettingsManager.hasLastSettings(computer.uuid, selectedApp.app)) {
-                menu.add(Menu.NONE, START_WITH_LAST_SETTINGS_ID, 2, getResources().getString(R.string.applist_menu_start_with_last_settings));
+                menu.add(Menu.NONE, START_WITH_LAST_SETTINGS_ID, 1, getResources().getString(R.string.applist_menu_start_with_last_settings));
             }
             
-            MenuItem hideAppItem = menu.add(Menu.NONE, HIDE_APP_ID, 3, getResources().getString(R.string.applist_menu_hide_app));
+            MenuItem hideAppItem = menu.add(Menu.NONE, HIDE_APP_ID, 2, getResources().getString(R.string.applist_menu_hide_app));
             hideAppItem.setCheckable(true);
             hideAppItem.setChecked(selectedApp.isHidden);
         }
@@ -970,11 +989,6 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
             case START_OR_RESUME_ID:
                 // Resume is the same as start for us
-                startStreamWithLastSettingsIfEnabled(app);
-                return true;
-
-            case START_WITH_VDD:
-                computer.useVdd = true;
                 startStreamWithLastSettingsIfEnabled(app);
                 return true;
 

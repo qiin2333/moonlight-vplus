@@ -3,16 +3,23 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="24dp"
-    android:gravity="center_horizontal">
+    android:padding="28dp"
+    android:gravity="center_horizontal"
+    android:background="@drawable/dialog_about_bg">
 
-    <!-- 应用图标 -->
-    <ImageView
-        android:layout_width="64dp"
-        android:layout_height="64dp"
-        android:src="@drawable/vplus"
-        android:contentDescription="@string/app_label"
-        android:layout_marginBottom="16dp" />
+    <!-- 应用图标容器 -->
+    <FrameLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp">
+        
+        <ImageView
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:src="@drawable/vplus"
+            android:contentDescription="@string/app_label"
+            android:scaleType="fitCenter" />
+    </FrameLayout>
 
     <!-- 应用名称 -->
     <TextView
@@ -20,10 +27,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Moonlight V+"
-        android:textSize="24sp"
+        android:textSize="26sp"
         android:textStyle="bold"
-        android:textColor="@android:color/black"
-        android:layout_marginBottom="8dp" />
+        android:textColor="@color/app_dialog_title_color"
+        android:layout_marginBottom="6dp" />
 
     <!-- 版本信息 -->
     <TextView
@@ -31,16 +38,17 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Version 0.0.0 (Build 0)"
-        android:textSize="16sp"
-        android:textColor="@android:color/darker_gray"
-        android:layout_marginBottom="16dp" />
+        android:textSize="13sp"
+        android:textColor="@color/app_dialog_subtitle_color"
+        android:layout_marginBottom="24dp" />
 
-    <!-- 分隔线 -->
+    <!-- 优雅的分隔线 -->
     <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@android:color/darker_gray"
-        android:layout_marginBottom="16dp" />
+        android:layout_width="60dp"
+        android:layout_height="2dp"
+        android:background="@color/app_dialog_accent_color"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="20dp" />
 
     <!-- 描述信息 -->
     <TextView
@@ -48,9 +56,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/about_dialog_description"
-        android:textSize="14sp"
-        android:textColor="@android:color/black"
+        android:textSize="15sp"
+        android:textColor="@color/app_dialog_title_color"
         android:gravity="center"
+        android:lineSpacingExtra="4dp"
         android:layout_marginBottom="16dp" />
 
     <!-- 项目信息 -->
@@ -58,18 +67,19 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/about_dialog_project_info"
-        android:textSize="12sp"
-        android:textColor="@android:color/darker_gray"
+        android:textSize="13sp"
+        android:textColor="@color/app_dialog_subtitle_color"
         android:gravity="center"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginBottom="12dp" />
 
     <!-- 感谢信息 -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/about_dialog_thanks"
-        android:textSize="12sp"
-        android:textColor="@android:color/darker_gray"
-        android:gravity="center" />
+        android:textSize="13sp"
+        android:textColor="@color/app_dialog_subtitle_color"
+        android:gravity="center"
+        android:lineSpacingExtra="2dp" />
 
 </LinearLayout>

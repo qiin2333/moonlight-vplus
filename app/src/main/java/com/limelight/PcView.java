@@ -79,7 +79,11 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
+import android.widget.TextView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
+import android.view.LayoutInflater;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 
 import androidx.annotation.NonNull;
 
@@ -280,8 +284,8 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         // Setup the list view
         ImageButton settingsButton = findViewById(R.id.settingsButton);
         ImageButton addComputerButton = findViewById(R.id.manuallyAddPc);
-        ImageButton helpButton = findViewById(R.id.helpButton);
         ImageButton restoreSessionButton = findViewById(R.id.restoreSessionButton);
+        ImageButton aboutButton = findViewById(R.id.aboutButton);
 
         ImageButton easyTierButton = findViewById(R.id.easyTierControlButton);
         if (easyTierButton != null) {
@@ -293,17 +297,9 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
             Intent i = new Intent(PcView.this, AddComputerManually.class);
             startActivity(i);
         });
-        helpButton.setOnClickListener(v -> {
-//                HelpLauncher.launchSetupGuide(PcView.this);
-            joinQQGroup("LlbLDIF_YolaM4HZyLx0xAXXo04ZmoBM");
-        });
         restoreSessionButton.setOnClickListener(v -> restoreLastSession());
-
-        // Amazon review didn't like the help button because the wiki was not entirely
-        // navigable via the Fire TV remote (though the relevant parts were). Let's hide
-        // it on Fire TV.
-        if (getPackageManager().hasSystemFeature("amazon.hardware.fire_tv")) {
-            helpButton.setVisibility(View.GONE);
+        if (aboutButton != null) {
+            aboutButton.setOnClickListener(v -> showAboutDialog());
         }
 
         getFragmentManager().beginTransaction()
@@ -1595,6 +1591,80 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         }
     }
 
+    private void showAboutDialog() {
+        // 创建自定义布局
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_about, null);
+        
+        // 设置版本信息
+        TextView versionText = dialogView.findViewById(R.id.text_version);
+        String versionInfo = getVersionInfo();
+        versionText.setText(versionInfo);
+        
+        // 设置应用名称
+        TextView appNameText = dialogView.findViewById(R.id.text_app_name);
+        String appName = getAppName();
+        appNameText.setText(appName);
+        
+        // 设置描述信息
+        TextView descriptionText = dialogView.findViewById(R.id.text_description);
+        descriptionText.setText(R.string.about_dialog_description);
+        
+        // 创建对话框，使用优雅的样式
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.AppDialogStyle);
+        builder.setView(dialogView);
+        
+        // 设置按钮
+        builder.setPositiveButton(R.string.about_dialog_github, (dialog, which) -> {
+            // 打开项目仓库
+            openUrl("https://github.com/qiin2333/moonlight-vplus");
+        });
+        
+        builder.setNeutralButton(R.string.about_dialog_qq, (dialog, which) -> {
+            // 加入QQ群
+            joinQQGroup("LlbLDIF_YolaM4HZyLx0xAXXo04ZmoBM");
+        });
+        
+        builder.setNegativeButton(R.string.about_dialog_close, (dialog, which) -> {
+            dialog.dismiss();
+        });
+        
+        // 显示对话框
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+    
+    @SuppressLint("DefaultLocale")
+    private String getVersionInfo() {
+        try {
+            PackageInfo packageInfo = getPackageManager()
+                    .getPackageInfo(getPackageName(), 0);
+            return String.format("Version %s (Build %d)", 
+                    packageInfo.versionName, 
+                    packageInfo.versionCode);
+        } catch (PackageManager.NameNotFoundException e) {
+            return "Version Unknown";
+        }
+    }
+    
+    private String getAppName() {
+        try {
+            PackageInfo packageInfo = getPackageManager()
+                    .getPackageInfo(getPackageName(), 0);
+            return packageInfo.applicationInfo.loadLabel(getPackageManager()).toString();
+        } catch (PackageManager.NameNotFoundException e) {
+            return "Moonlight V+";
+        }
+    }
+    
+    private void openUrl(String url) {
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+        } catch (Exception e) {
+            // 如果无法打开链接，忽略错误
+        }
+    }
 
     //  VPN 权限请求和结果处理逻辑
     /**

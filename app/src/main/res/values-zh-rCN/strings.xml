@@ -86,7 +86,7 @@
     <string name="perf_overlay_dectime">平均解码时间： %1$.2f ms</string>
     <!-- AppList activity -->
     <string name="applist_connect_msg"> 正在连接电脑…… </string>
-    <string name="applist_menu_start_with_vdd"> 使用虚拟显示器开始串流 </string>
+    <string name="applist_menu_start_with_vdd"> 就是要用虚拟显示器～ </string>
     <string name="applist_menu_start_with_last_settings">使用上一次设置启动</string>
     <string name="applist_menu_resume"> 恢复串流 </string>
     <string name="applist_menu_quit"> 退出串流 </string>
@@ -343,6 +343,15 @@
     <string name="summary_privacy_policy">查看 Moonlight 隐私政策</string>
     <string name="title_about_mode">关于 月光威力加强版</string>
     <string name="summary_about_mode">请前往GitHub查看，喜欢的话点个Star支持一下我们吧</string>
+    
+    <!-- About dialog strings -->
+    <string name="about_dialog_description">Moonlight V+ 是专为 Foundation Sunshine 打造的增强客户端，为您带来极致的游戏串流体验。</string>
+    <string name="about_dialog_project_info">基于 Moonlight-Android 开源项目，由基地社区倾力打造</string>
+    <string name="about_dialog_thanks">感谢您选择 Moonlight V+！如果觉得好用，欢迎在 GitHub 上点个 Star 支持我们 ⭐</string>
+    <string name="about_dialog_github">GitHub</string>
+    <string name="about_dialog_star">Star 项目</string>
+    <string name="about_dialog_qq">加入QQ群</string>
+    <string name="about_dialog_close">关闭</string>
     <string name="check_for_updates">检查更新</string>
     <string name="summary_check_for_updates">检查是否有新版本可用</string>
     <string name="category_help">❓ 帮助</string>
@@ -357,8 +366,10 @@
     <string name="summary_seekbar_deadzone">注意：有些游戏可以执行一个比Moonlight摇杆配置的更大的盲区。</string>
     <string name="title_checkbox_absolute_mouse_mode">适合远程桌面的鼠标模式</string>
     <string name="summary_checkbox_absolute_mouse_mode">这可以使得鼠标加速在远程桌面使用中表现得更自然，但它与许多游戏不兼容。</string>
-    <string name="title_checkbox_enable_esc_menu">允许ESC键打开返回菜单</string>
-    <string name="summary_checkbox_enable_esc_menu">启用后，双击ESC键可以打开串流返回菜单，单次按ESC键会透传给主机</string>
+    <string name="title_checkbox_enable_esc_menu">允许自定义键打开返回菜单</string>
+    <string name="summary_checkbox_enable_esc_menu">启用后，双击所选按键可以打开串流返回菜单，单次按键会透传给主机</string>
+    <string name="title_list_esc_menu_key">返回菜单激活按键</string>
+    <string name="summary_list_esc_menu_key">选择双击哪个按键来打开返回菜单</string>
     <string name="resolution_prefix_native_landscape">（横向）</string>
     <string name="resolution_prefix_native_portrait">（纵向）</string>
     <string name="title_checkbox_enable_audiofx">启用对系统均衡器的支持</string>

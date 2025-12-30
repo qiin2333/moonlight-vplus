@@ -53,7 +53,7 @@
         android:layout_height="65dp"
         android:cropToPadding="false"
         android:scaleType="fitXY"
-        android:nextFocusForward="@id/helpButton"
+        android:nextFocusForward="@id/aboutButton"
         android:layout_marginTop="@dimen/activity_horizontal_margin"
         android:layout_alignParentStart="true"
         android:layout_alignParentLeft="true"
@@ -62,18 +62,16 @@
         style="?android:attr/borderlessButtonStyle"/>
 
     <ImageButton
-        android:id="@+id/helpButton"
+        android:id="@+id/aboutButton"
         android:layout_width="70dp"
         android:layout_height="65dp"
         android:cropToPadding="false"
-        android:scaleType="fitCenter"
-        android:scaleX="0.8"
-        android:scaleY="0.8"
+        android:scaleType="fitXY"
         android:nextFocusForward="@id/easyTierControlButton"
         android:layout_alignParentStart="true"
         android:layout_alignParentLeft="true"
         android:layout_below="@id/settingsButton"
-        android:src="@drawable/ic_qq"
+        android:src="@drawable/ic_info"
         style="?android:attr/borderlessButtonStyle"/>
 
     <!-- EasyTier 控制按钮 -->
@@ -86,7 +84,7 @@
         android:nextFocusForward="@id/manuallyAddPc"
         android:layout_alignParentStart="true"
         android:layout_alignParentLeft="true"
-        android:layout_below="@id/helpButton"
+        android:layout_below="@id/aboutButton"
         android:src="@drawable/ic_network_control"
         style="?android:attr/borderlessButtonStyle"/>
 

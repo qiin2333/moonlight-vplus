@@ -18,19 +18,29 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Enhanced USB Nintendo Switch Pro Controller driver.
+ * Enhanced USB Nintendo Switch Pro Controller and Joy-Con driver.
  *
  * Supports:
+ * - Switch Pro Controller (PID 0x2009)
+ * - Joy-Con Left (PID 0x2006)
+ * - Joy-Con Right (PID 0x2007)
+ * - Joy-Con Pair (PID 0x2008)
+ *
+ * Features:
  * - Full input report parsing (0x30)
  * - IMU data (gyroscope and accelerometer)
- * - Rumble feedback
+ * - Rumble feedback (may not be supported on all Joy-Con variants)
  * - Stick calibration (factory and user calibration)
- * - Complete initialization sequence
+ * - Complete initialization sequence with device-specific adaptations
+ * - Single stick support for individual Joy-Con controllers
  */
 public class SwitchProController extends AbstractController {
 
     private static final int NINTENDO_VID = 0x057e;
     private static final int PRO_PID = 0x2009;
+    private static final int JOYCON_LEFT_PID = 0x2006;
+    private static final int JOYCON_RIGHT_PID = 0x2007;
+    private static final int JOYCON_PAIR_PID = 0x2008;
     private static final int PACKET_SIZE = 64;
     private static final int COMMAND_RETRIES = 10;
 
@@ -65,11 +75,46 @@ public class SwitchProController extends AbstractController {
     private final float[][][] stickExtends = new float[2][2][2];
     private List<UsbInterface> ifaces = new ArrayList<>();
 
+    /**
+     * 检测设备是否为 Joy-Con（单个或配对）
+     */
+    private boolean isJoyCon() {
+        int pid = device.getProductId();
+        return pid == JOYCON_LEFT_PID || pid == JOYCON_RIGHT_PID || pid == JOYCON_PAIR_PID;
+    }
+
+    /**
+     * 检测设备是否为单个 Joy-Con（左或右）
+     */
+    private boolean isSingleJoyCon() {
+        int pid = device.getProductId();
+        return pid == JOYCON_LEFT_PID || pid == JOYCON_RIGHT_PID;
+    }
+
+    /**
+     * 检测设备是否为 Joy-Con Left
+     */
+    private boolean isJoyConLeft() {
+        return device.getProductId() == JOYCON_LEFT_PID;
+    }
+
+    /**
+     * 检测设备是否为 Joy-Con Right
+     */
+    private boolean isJoyConRight() {
+        return device.getProductId() == JOYCON_RIGHT_PID;
+    }
+
     public static boolean canClaimDevice(UsbDevice device) {
         if (device == null) {
             return false;
         }
-        if (device.getVendorId() != NINTENDO_VID || device.getProductId() != PRO_PID) {
+        if (device.getVendorId() != NINTENDO_VID) {
+            return false;
+        }
+        int pid = device.getProductId();
+        // 支持 Switch Pro Controller 和所有 Joy-Con 变体
+        if (pid != PRO_PID && pid != JOYCON_LEFT_PID && pid != JOYCON_RIGHT_PID && pid != JOYCON_PAIR_PID) {
             return false;
         }
         if (device.getInterfaceCount() < 1) {
@@ -243,6 +288,8 @@ public class SwitchProController extends AbstractController {
 
     private boolean loadStickCalibration() {
         byte[] buffer = new byte[PACKET_SIZE];
+        boolean isJoyCon = isJoyCon();
+        boolean isLeft = isJoyConLeft();
 
         int ls_addr = FACTORY_LS_CALIBRATION_OFFSET;
         int rs_addr = FACTORY_RS_CALIBRATION_OFFSET;
@@ -256,8 +303,12 @@ public class SwitchProController extends AbstractController {
             LimeLog.info("SwitchPro: RS has user calibration!");
         }
 
+        // Joy-Con Left 只有左摇杆，Joy-Con Right 只有右摇杆，Joy-Con Pair 和 Pro Controller 都有两个
+        boolean needLeftStick = !isJoyCon || isLeft || device.getProductId() == JOYCON_PAIR_PID;
+        boolean needRightStick = !isJoyCon || !isLeft || device.getProductId() == JOYCON_PAIR_PID;
+
         boolean ls_calibrated = false;
-        if (spiFlashRead(ls_addr, STICK_CALIBRATION_LENGTH, buffer)) {
+        if (needLeftStick && spiFlashRead(ls_addr, STICK_CALIBRATION_LENGTH, buffer)) {
             // read offset 20
             int x_max = (buffer[20] & 0xFF) | ((buffer[21] & 0x0F) << 8);
             int y_max = ((buffer[21] & 0xF0) >> 4) | ((buffer[22] & 0xFF) << 4);
@@ -279,12 +330,15 @@ public class SwitchProController extends AbstractController {
             ls_calibrated = true;
         }
 
-        if (!ls_calibrated) {
+        if (!ls_calibrated && needLeftStick) {
+            applyDefaultCalibration(0);
+        } else if (!needLeftStick) {
+            // Joy-Con Right 不需要左摇杆，设置为默认值但不使用
             applyDefaultCalibration(0);
         }
 
         boolean rs_calibrated = false;
-        if (spiFlashRead(rs_addr, STICK_CALIBRATION_LENGTH, buffer)) {
+        if (needRightStick && spiFlashRead(rs_addr, STICK_CALIBRATION_LENGTH, buffer)) {
             // read offset 20
             int x_center = (buffer[20] & 0xFF) | ((buffer[21] & 0x0F) << 8);
             int y_center = ((buffer[21] & 0xF0) >> 4) | ((buffer[22] & 0xFF) << 4);
@@ -306,7 +360,10 @@ public class SwitchProController extends AbstractController {
             rs_calibrated = true;
         }
 
-        if (!rs_calibrated) {
+        if (!rs_calibrated && needRightStick) {
+            applyDefaultCalibration(1);
+        } else if (!needRightStick) {
+            // Joy-Con Left 不需要右摇杆，设置为默认值但不使用
             applyDefaultCalibration(1);
         }
 
@@ -373,17 +430,45 @@ public class SwitchProController extends AbstractController {
                 return;
             }
 
-            LimeLog.info("SwitchPro: handshake " + handshakeSuccess);
-            LimeLog.info("SwitchPro: highspeed " + highSpeed());
-            LimeLog.info("SwitchPro: handshake " + handshake());
-            LimeLog.info("SwitchPro: loadstickcalibration " + loadStickCalibration());
-            LimeLog.info("SwitchPro: enablevibration " + enableVibration(true));
-            LimeLog.info("SwitchPro: setinutreportmode " + setInputReportMode((byte)0x30));
-            LimeLog.info("SwitchPro: forceusb " + forceUSB());
-            LimeLog.info("SwitchPro: setplayerled " + setPlayerLED(getControllerId() + 1));
-            LimeLog.info("SwitchPro: enableimu " + enableIMU(true));
+            boolean isJoyCon = isJoyCon();
+            String deviceType = isJoyCon ? "Joy-Con" : "Switch Pro";
+            
+            LimeLog.info(deviceType + ": handshake " + handshakeSuccess);
+            LimeLog.info(deviceType + ": highspeed " + highSpeed());
+            LimeLog.info(deviceType + ": handshake " + handshake());
+            
+            // 加载摇杆校准（Joy-Con 可能只有一个摇杆，但校准流程相同）
+            boolean calibrationLoaded = loadStickCalibration();
+            LimeLog.info(deviceType + ": loadstickcalibration " + calibrationLoaded);
+            
+            // 设置输入报告模式（所有设备都需要）
+            boolean reportModeSet = setInputReportMode((byte)0x30);
+            LimeLog.info(deviceType + ": setinputreportmode " + reportModeSet);
+            
+            // 强制 USB 模式（所有设备都需要）
+            boolean usbForced = forceUSB();
+            LimeLog.info(deviceType + ": forceusb " + usbForced);
+            
+            // 根据设备类型调整特性启用
+            if (!isJoyCon) {
+                // Switch Pro Controller 支持所有特性
+                LimeLog.info(deviceType + ": enablevibration " + enableVibration(true));
+                LimeLog.info(deviceType + ": setplayerled " + setPlayerLED(getControllerId() + 1));
+            } else {
+                // Joy-Con 可能不支持某些特性，尝试启用但不强制要求成功
+                boolean vibrationEnabled = enableVibration(true);
+                LimeLog.info(deviceType + ": enablevibration " + vibrationEnabled + " (may not be supported)");
+                
+                // Joy-Con 可能不支持 LED，尝试但不强制
+                boolean ledSet = setPlayerLED(getControllerId() + 1);
+                LimeLog.info(deviceType + ": setplayerled " + ledSet + " (may not be supported)");
+            }
+            
+            // IMU 所有设备都支持，启用
+            boolean imuEnabled = enableIMU(true);
+            LimeLog.info(deviceType + ": enableimu " + imuEnabled);
 
-            LimeLog.info("SwitchPro: initialized!");
+            LimeLog.info(deviceType + ": initialized!");
 
             notifyDeviceAdded();
 
@@ -619,6 +704,11 @@ public class SwitchProController extends AbstractController {
             return false;
         }
         
+        boolean isJoyCon = isJoyCon();
+        boolean isLeft = isJoyConLeft();
+        boolean needLeftStick = !isJoyCon || isLeft || device.getProductId() == JOYCON_PAIR_PID;
+        boolean needRightStick = !isJoyCon || !isLeft || device.getProductId() == JOYCON_PAIR_PID;
+        
         int _leftStickX = (buf.get(6) & 0xFF) | ((buf.get(7) & 0x0F) << 8);
         // 注意：buf.get(8) 可能返回负数，需要转换为无符号
         int _leftStickY = ((buf.get(7) & 0xF0) >> 4) | ((buf.get(8) & 0xFF) << 4);
@@ -628,10 +718,23 @@ public class SwitchProController extends AbstractController {
 
         // Apply stick calibration
         // 注意：Y轴需要反转，但要防止溢出
-        leftStickX = applyStickCalibration(_leftStickX, 0, 0);
-        leftStickY = applyStickCalibration((-_leftStickY) & 0xFFF, 0, 1); // 使用 & 0xFFF 防止负数溢出
-        rightStickX = applyStickCalibration(_rightStickX, 1, 0);
-        rightStickY = applyStickCalibration((-_rightStickY) & 0xFFF, 1, 1); // 使用 & 0xFFF 防止负数溢出
+        if (needLeftStick) {
+            leftStickX = applyStickCalibration(_leftStickX, 0, 0);
+            leftStickY = applyStickCalibration((-_leftStickY) & 0xFFF, 0, 1); // 使用 & 0xFFF 防止负数溢出
+        } else {
+            // Joy-Con Right 没有左摇杆
+            leftStickX = 0;
+            leftStickY = 0;
+        }
+        
+        if (needRightStick) {
+            rightStickX = applyStickCalibration(_rightStickX, 1, 0);
+            rightStickY = applyStickCalibration((-_rightStickY) & 0xFFF, 1, 1); // 使用 & 0xFFF 防止负数溢出
+        } else {
+            // Joy-Con Left 没有右摇杆
+            rightStickX = 0;
+            rightStickY = 0;
+        }
 
         // IMU data (if available in report 0x30)
         // Note: Full IMU data may require report mode 0x31, but 0x30 also contains some IMU data

@@ -138,6 +138,7 @@ public class PreferenceConfiguration {
     private static final String MIC_BITRATE_PREF_STRING = "seekbar_mic_bitrate_kbps";
     private static final String MIC_ICON_COLOR_PREF_STRING = "list_mic_icon_color";
     private static final String ENABLE_ESC_MENU_PREF_STRING = "checkbox_enable_esc_menu";
+    private static final String ESC_MENU_KEY_PREF_STRING = "list_esc_menu_key";
     
     // 控制流only模式设置
     private static final String CONTROL_ONLY_PREF_STRING = "checkbox_control_only";
@@ -209,6 +210,7 @@ public class PreferenceConfiguration {
     private static final int DEFAULT_MIC_BITRATE = 96; // 默认128 kbps
     private static final String DEFAULT_MIC_ICON_COLOR = "solid_white"; // 默认白
     private static final boolean DEFAULT_ENABLE_ESC_MENU = true; // 默认启用ESC菜单
+    private static final int DEFAULT_ESC_MENU_KEY = KeyEvent.KEYCODE_ESCAPE;
     
     // 控制流only模式默认值
     private static final boolean DEFAULT_CONTROL_ONLY = false;
@@ -355,6 +357,7 @@ public class PreferenceConfiguration {
     
     // ESC菜单设置
     public boolean enableEscMenu;
+    public int escMenuKey;
     
     // 控制流only模式设置
     public boolean controlOnly;
@@ -872,6 +875,13 @@ public class PreferenceConfiguration {
         // 读取ESC菜单设置
         config.enableEscMenu = prefs.getBoolean(ENABLE_ESC_MENU_PREF_STRING, DEFAULT_ENABLE_ESC_MENU);
         
+        String escMenuKeyStr = prefs.getString(ESC_MENU_KEY_PREF_STRING, String.valueOf(DEFAULT_ESC_MENU_KEY));
+        try {
+            config.escMenuKey = Integer.parseInt(escMenuKeyStr);
+        } catch (NumberFormatException e) {
+            config.escMenuKey = DEFAULT_ESC_MENU_KEY;
+        }
+        
         // 读取控制流only模式设置
         config.controlOnly = prefs.getBoolean(CONTROL_ONLY_PREF_STRING, DEFAULT_CONTROL_ONLY);
 
@@ -1000,6 +1010,7 @@ public class PreferenceConfiguration {
                     .putInt(MIC_BITRATE_PREF_STRING, micBitrate)
                     .putString(MIC_ICON_COLOR_PREF_STRING, micIconColor)
                     .putBoolean(ENABLE_ESC_MENU_PREF_STRING, enableEscMenu)
+                    .putString(ESC_MENU_KEY_PREF_STRING, String.valueOf(escMenuKey))
                     .putBoolean(CONTROL_ONLY_PREF_STRING, controlOnly)
                     .putBoolean(ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, enableNativeMousePointer)
                     .putBoolean(ENABLE_DOUBLE_CLICK_DRAG_PREF_STRING, enableDoubleClickDrag)
@@ -1044,6 +1055,7 @@ public class PreferenceConfiguration {
         copy.micBitrate = this.micBitrate;
         copy.micIconColor = this.micIconColor;
         copy.enableEscMenu = this.enableEscMenu;
+        copy.escMenuKey = this.escMenuKey;
         copy.enableNativeMousePointer = this.enableNativeMousePointer;
         copy.enableDoubleClickDrag = this.enableDoubleClickDrag;
         copy.enableLocalCursorRendering = this.enableLocalCursorRendering;
