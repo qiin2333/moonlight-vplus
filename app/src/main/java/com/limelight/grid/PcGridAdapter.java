@@ -32,6 +32,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
 
+    // 添加卡片的特殊标识UUID
+    public static final String ADD_COMPUTER_UUID = "__ADD_COMPUTER__";
+    
     private static final int TARGET_SIZE = 128;
     private static final float ONLINE_ALPHA = 0.85f;
     private static final float OFFLINE_ALPHA = 0.45f;
@@ -188,8 +191,23 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
     }
 
     private void sortList() {
-        Collections.sort(itemList, (lhs, rhs) ->
-                lhs.details.name.toLowerCase().compareTo(rhs.details.name.toLowerCase()));
+        Collections.sort(itemList, (lhs, rhs) -> {
+            // 添加卡片始终排在最后
+            boolean lhsIsAdd = isAddComputerCard(lhs);
+            boolean rhsIsAdd = isAddComputerCard(rhs);
+            if (lhsIsAdd && !rhsIsAdd) return 1;
+            if (!lhsIsAdd && rhsIsAdd) return -1;
+            if (lhsIsAdd && rhsIsAdd) return 0;
+            // 普通卡片按名称排序
+            return lhs.details.name.toLowerCase().compareTo(rhs.details.name.toLowerCase());
+        });
+    }
+    
+    /**
+     * 检查是否是添加卡片
+     */
+    public static boolean isAddComputerCard(PcView.ComputerObject obj) {
+        return obj != null && obj.details != null && ADD_COMPUTER_UUID.equals(obj.details.uuid);
     }
 
     public boolean removeComputer(PcView.ComputerObject computer) {
@@ -199,6 +217,29 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
     @SuppressLint("SetTextI18n")
     @Override
     public void populateView(View parentView, ImageView imgView, View spinnerView, TextView txtView, ImageView overlayView, PcView.ComputerObject obj) {
+        if (isAddComputerCard(obj)) {
+            imgView.setImageResource(R.drawable.ic_add);
+            imgView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            imgView.setAlpha(0.7f);
+            
+            // 设置背景
+            parentView.setBackgroundResource(R.drawable.pc_item_selector);
+            
+            // 隐藏加载动画和覆盖图标
+            spinnerView.setVisibility(View.INVISIBLE);
+            overlayView.setVisibility(View.GONE);
+            
+            // 设置文本
+            try {
+                txtView.setText(context.getString(R.string.title_add_pc));
+            } catch (Exception e) {
+                txtView.setText("添加电脑");
+            }
+            txtView.setAlpha(0.7f);
+            txtView.setTextColor(ONLINE_TEXT_COLOR);
+            return;
+        }
+        
         ComputerDetails details = obj.details;
         boolean isOnline = details.state == ComputerDetails.State.ONLINE;
         boolean isUnknown = details.state == ComputerDetails.State.UNKNOWN;

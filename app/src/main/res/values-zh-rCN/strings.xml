@@ -136,7 +136,7 @@
     <string name="game_menu_bitrate_range_value">0.5 - 200 Mbps</string>
     <string name="game_menu_bitrate_tip">拖动滑动条实时调整码率, 需要更高的码率请到设置菜单操作。</string>
     <!-- Add computer manually activity -->
-    <string name="title_add_pc"> 手动添加电脑 </string>
+    <string name="title_add_pc"> new\nDianLao () </string>
     <string name="msg_add_pc"> 正在连接电脑…… </string>
     <string name="addpc_fail">无法连接至指定电脑。请确保所需端口没有被防火墙阻止。</string>
     <string name="addpc_success"> 成功添加电脑 </string>

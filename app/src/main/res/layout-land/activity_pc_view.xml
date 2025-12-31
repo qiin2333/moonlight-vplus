@@ -25,24 +25,40 @@
             android:id="@+id/no_pc_found_layout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:paddingLeft="32dp"
+            android:paddingRight="32dp"
+            android:paddingTop="32dp"
+            android:paddingBottom="32dp"
             android:layout_centerVertical="true"
             android:layout_centerHorizontal="true">
-            <ProgressBar
-                android:id="@+id/pcs_loading"
-                android:layout_width="75dp"
-                android:layout_height="75dp"
-                android:indeterminate="true"/>
             <TextView
+                android:id="@+id/searching_pc_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_toRightOf="@+id/pcs_loading"
-                android:layout_toEndOf="@+id/pcs_loading"
-                android:layout_marginLeft="10dp"
-                android:layout_marginStart="10dp"
-                android:layout_centerVertical="true"
-                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:layout_centerHorizontal="true"
+                android:layout_marginBottom="28dp"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF"
+                android:letterSpacing="0.02"
+                android:lineSpacingExtra="4dp"
                 android:gravity="center"
+                android:shadowColor="#80000000"
+                android:shadowDx="0"
+                android:shadowDy="2"
+                android:shadowRadius="4"
                 android:text="@string/searching_pc"/>
+            <ProgressBar
+                android:id="@+id/pcs_loading"
+                android:layout_width="320dp"
+                android:layout_height="4dp"
+                android:layout_below="@+id/searching_pc_text"
+                android:layout_centerHorizontal="true"
+                android:layout_marginTop="8dp"
+                android:indeterminate="true"
+                android:indeterminateTint="#FFFFFF"
+                android:progressTint="#FFFFFF"
+                style="?android:attr/progressBarStyleHorizontal"/>
         </RelativeLayout>
 
     </RelativeLayout>
@@ -81,24 +97,12 @@
         android:layout_height="65dp"
         android:cropToPadding="false"
         android:scaleType="fitXY"
-        android:nextFocusForward="@id/manuallyAddPc"
+        android:nextFocusForward="@id/restoreSessionButton"
         android:layout_alignParentStart="true"
         android:layout_alignParentLeft="true"
         android:layout_below="@id/aboutButton"
         android:src="@drawable/ic_network_control"
         style="?android:attr/borderlessButtonStyle"/>
-
-    <ImageButton
-        android:id="@+id/manuallyAddPc"
-        style="?android:attr/borderlessButtonStyle"
-        android:layout_width="70dp"
-        android:layout_height="65dp"
-        android:layout_below="@id/easyTierControlButton"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentLeft="true"
-        android:cropToPadding="false"
-        android:scaleType="fitXY"
-        android:src="@drawable/ic_add" />
 
     <ImageButton
         android:id="@+id/restoreSessionButton"
@@ -108,7 +112,7 @@
         android:scaleType="fitXY"
         android:layout_alignParentStart="true"
         android:layout_alignParentLeft="true"
-        android:layout_below="@id/manuallyAddPc"
+        android:layout_below="@id/easyTierControlButton"
         android:src="@drawable/ic_restore"
         style="?android:attr/borderlessButtonStyle"/>
 
@@ -130,7 +134,7 @@
             android:contentDescription="场景1"
             android:background="@drawable/btn_pressed_bg"
             android:src="@drawable/ic_triangle_left"
-            android:tint="@color/scene_color_1"
+            android:tint="#80FFFFFF"
             style="?android:attr/borderlessButtonStyle"/>
 
         <!-- 场景2 -->
@@ -141,7 +145,7 @@
             android:contentDescription="场景2"
             android:background="@drawable/btn_pressed_bg"
             android:src="@drawable/ic_triangle_left"
-            android:tint="@color/scene_color_2"
+            android:tint="#80FFFFFF"
             style="?android:attr/borderlessButtonStyle"/>
 
         <!-- 场景3 -->
@@ -152,7 +156,7 @@
             android:contentDescription="场景3"
             android:background="@drawable/btn_pressed_bg"
             android:src="@drawable/ic_triangle_left"
-            android:tint="@color/scene_color_3"
+            android:tint="#80FFFFFF"
             style="?android:attr/borderlessButtonStyle"/>
 
         <!-- 场景4 -->
@@ -163,7 +167,7 @@
             android:contentDescription="场景4"
             android:background="@drawable/btn_pressed_bg"
             android:src="@drawable/ic_triangle_left"
-            android:tint="@color/scene_color_4"
+            android:tint="#80FFFFFF"
             style="?android:attr/borderlessButtonStyle"/>
 
         <!-- 场景5 -->
@@ -174,7 +178,7 @@
             android:contentDescription="场景5"
             android:background="@drawable/btn_pressed_bg"
             android:src="@drawable/ic_triangle_left"
-            android:tint="@color/scene_color_5"
+            android:tint="#80FFFFFF"
             style="?android:attr/borderlessButtonStyle"/>
     </LinearLayout>
 
