@@ -865,7 +865,9 @@ public class PreferenceConfiguration {
         // Cards visibility (defaults to true)
         config.showBitrateCard = prefs.getBoolean(SHOW_BITRATE_CARD_PREF_STRING, true);
         config.showGyroCard = prefs.getBoolean(SHOW_GYRO_CARD_PREF_STRING, true);
-        config.showQuickKeyCard = prefs.getBoolean(SHOW_QuickKeyCard, true);
+        // 横屏时快捷卡片默认不开启
+        boolean defaultQuickKeyCard = config.width > config.height ? false : true;
+        config.showQuickKeyCard = prefs.getBoolean(SHOW_QuickKeyCard, defaultQuickKeyCard);
 
         // 读取麦克风设置
         config.enableMic = prefs.getBoolean(ENABLE_MIC_PREF_STRING, DEFAULT_ENABLE_MIC);
