@@ -318,11 +318,6 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
                         ? getString(R.string.unpaired_devices_shown)
                         : getString(R.string.unpaired_devices_hidden);
                 Toast.makeText(PcView.this, message, Toast.LENGTH_SHORT).show();
-                
-                // 触发动画
-                if (pcListView != null && !isFirstLoad) {
-                    pcListView.scheduleLayoutAnimation();
-                }
             });
         }
  
@@ -1487,11 +1482,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
             // Replace the information in the existing entry
             existingEntry.details = details;
             // 重新排序，因为状态可能改变（如从未配对变为已配对）
-            // 只有在排序顺序真的改变时才触发动画
-            boolean orderChanged = pcGridAdapter.resort();
-            if (orderChanged && pcListView != null && !isFirstLoad) {
-                pcListView.scheduleLayoutAnimation();
-            }
+            pcGridAdapter.resort();
         }
         else {
             // Add a new entry

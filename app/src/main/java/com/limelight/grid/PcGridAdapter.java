@@ -250,11 +250,19 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
             if (!lhsIsAdd && rhsIsAdd) return -1;
             if (lhsIsAdd && rhsIsAdd) return 0;
             
-            // 未配对设备排在添加卡片之前，但在已配对设备之后
-            boolean lhsUnpaired = isUnpairedComputer(lhs);
-            boolean rhsUnpaired = isUnpairedComputer(rhs);
-            if (lhsUnpaired && !rhsUnpaired) return 1;
-            if (!lhsUnpaired && rhsUnpaired) return -1;
+            // 在线设备排在离线设备前面
+            boolean lhsOnline = lhs.details != null && lhs.details.state == ComputerDetails.State.ONLINE;
+            boolean rhsOnline = rhs.details != null && rhs.details.state == ComputerDetails.State.ONLINE;
+            if (lhsOnline && !rhsOnline) return -1;
+            if (!lhsOnline && rhsOnline) return 1;
+            
+            // 在在线设备中，已配对设备排在未配对设备前面
+            if (lhsOnline && rhsOnline) {
+                boolean lhsUnpaired = isUnpairedComputer(lhs);
+                boolean rhsUnpaired = isUnpairedComputer(rhs);
+                if (lhsUnpaired && !rhsUnpaired) return 1;
+                if (!lhsUnpaired && rhsUnpaired) return -1;
+            }
             
             // 同组内按名称排序
             return lhs.details.name.toLowerCase().compareTo(rhs.details.name.toLowerCase());
@@ -404,7 +412,7 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
             imgView.setImageResource(R.drawable.ic_computer);
             imgView.setScaleType(ImageView.ScaleType.FIT_CENTER);
         }
-        imgView.setAlpha(isOffline ? OFFLINE_ALPHA : ONLINE_ALPHA);
+        imgView.setAlpha(isOnline ? ONLINE_ALPHA : OFFLINE_ALPHA);
 
         // 设置背景
         int bgRes = (isOnline && details.hasMultipleAddresses())

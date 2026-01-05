@@ -1,7 +1,7 @@
 <div align="center">
   <img src="./app/src/main/res/drawable/vplus.webp" width="100" alt="Moonlight V+ Logo">
   
-  # Moonlight V+ 威力加强版
+  # Moonlight V+
   
   [![Version](https://img.shields.io/badge/version-12.6.0-blue.svg)](https://github.com/qiin2333/moonlight-android/releases/tag/shortcut)
   [![Android](https://img.shields.io/badge/Android-5.0+-green.svg)](https://developer.android.com/about/versions)
