@@ -2,10 +2,12 @@ package com.limelight.grid;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.AnimatedVectorDrawable;
 import android.os.AsyncTask;
+import android.preference.PreferenceManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -38,6 +40,9 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
     // 添加卡片的特殊标识UUID
     public static final String ADD_COMPUTER_UUID = "__ADD_COMPUTER__";
     
+    // SharedPreferences key for show unpaired devices setting
+    private static final String PREF_SHOW_UNPAIRED_DEVICES = "show_unpaired_devices";
+    
     private static final int TARGET_SIZE = 128;
     private static final float ONLINE_ALPHA = 0.95f;
     private static final float OFFLINE_ALPHA = 0.45f;
@@ -46,16 +51,19 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
 
     private final Context context;
     private final LayoutInflater inflater;
+    private final SharedPreferences sharedPreferences;
     private final Map<String, Bitmap> boxArtCache = new ConcurrentHashMap<>();
     private final Set<String> loadingUuids = Collections.synchronizedSet(new HashSet<>());
     
-    // 控制是否显示未配对设备
+    // 控制是否显示未配对设备（默认显示）
     private boolean showUnpairedDevices = true;
 
     public PcGridAdapter(Context context, PreferenceConfiguration prefs) {
         super(context, R.layout.pc_grid_item);
         this.context = context;
         this.inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        this.sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
+        this.showUnpairedDevices = sharedPreferences.getBoolean(PREF_SHOW_UNPAIRED_DEVICES, true);
     }
 
     public void updateLayoutWithPreferences(Context context, PreferenceConfiguration prefs) {
@@ -300,6 +308,9 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
     public void setShowUnpairedDevices(boolean show) {
         if (showUnpairedDevices != show) {
             showUnpairedDevices = show;
+            sharedPreferences.edit()
+                    .putBoolean(PREF_SHOW_UNPAIRED_DEVICES, show)
+                    .apply();
             notifyDataSetChanged();
         }
     }
