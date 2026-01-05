@@ -1495,7 +1495,26 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         }
         else {
             // Add a new entry
-            pcGridAdapter.addComputer(new ComputerObject(details));
+            ComputerObject newComputer = new ComputerObject(details);
+            pcGridAdapter.addComputer(newComputer);
+
+            // 检查新添加的设备是否是未配对的
+            boolean isUnpaired = details.state == ComputerDetails.State.ONLINE 
+                    && details.pairState == PairingManager.PairState.NOT_PAIRED;
+            
+            // 如果当前隐藏了未配对设备，且新设备是未配对的，自动显示未配对设备
+            if (isUnpaired && !pcGridAdapter.isShowUnpairedDevices()) {
+                pcGridAdapter.setShowUnpairedDevices(true);
+                
+                // 更新按钮图标
+                ImageButton toggleUnpairedButton = findViewById(R.id.toggleUnpairedButton);
+                if (toggleUnpairedButton != null) {
+                    updateToggleUnpairedButtonIcon(toggleUnpairedButton);
+                }
+                
+                // 显示提示信息
+                Toast.makeText(this, getString(R.string.new_unpaired_device_shown), Toast.LENGTH_LONG).show();
+            }
 
             // Remove the "Discovery in progress" view
             noPcFoundLayout.setVisibility(View.INVISIBLE);

@@ -667,4 +667,5 @@
     <string name="screen_mode_ensure_only_display">仅启用串流屏幕（关闭其他屏幕）</string>
     <string name="unpaired_devices_shown">已显示未配对设备</string>
     <string name="unpaired_devices_hidden">已隐藏未配对设备</string>
+    <string name="new_unpaired_device_shown">检测到新的未配对设备，已自动显示未配对设备</string>
 </resources>
