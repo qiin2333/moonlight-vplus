@@ -85,6 +85,10 @@ import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.view.LayoutInflater;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.view.animation.AnimationUtils;
+import android.view.animation.LayoutAnimationController;
+import android.os.Handler;
+import android.os.Looper;
 
 import androidx.annotation.NonNull;
 
@@ -107,7 +111,14 @@ import com.easytier.jni.EasyTierManager;
 public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeDetector.Listener, EasyTierController.VpnPermissionCallback {
     private RelativeLayout noPcFoundLayout;
     private PcGridAdapter pcGridAdapter;
+    private AbsListView pcListView;
+    private boolean isFirstLoad = true;
     private ShortcutHelper shortcutHelper;
+    
+    // 防抖机制：合并短时间内的多次刷新请求
+    private final Handler refreshHandler = new Handler(Looper.getMainLooper());
+    private Runnable pendingRefreshRunnable;
+    private static final long REFRESH_DEBOUNCE_DELAY = 150; // 150ms 防抖延迟
     private int selectedPosition = -1;
     private ComputerManagerService.ComputerManagerBinder managerBinder;
     private boolean freezeUpdates, runningPolling, inForeground, completeOnCreateCalled;
@@ -291,7 +302,30 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         if (easyTierButton != null) {
             easyTierButton.setOnClickListener(v -> showEasyTierControlDialog());
         }
-
+        
+        // 眼睛图标按钮：控制是否显示未配对设备
+        ImageButton toggleUnpairedButton = findViewById(R.id.toggleUnpairedButton);
+        if (toggleUnpairedButton != null) {
+            // 初始化图标状态
+            updateToggleUnpairedButtonIcon(toggleUnpairedButton);
+            toggleUnpairedButton.setOnClickListener(v -> {
+                boolean newState = !pcGridAdapter.isShowUnpairedDevices();
+                pcGridAdapter.setShowUnpairedDevices(newState);
+                updateToggleUnpairedButtonIcon(toggleUnpairedButton);
+                
+                // 显示提示
+                String message = newState 
+                        ? getString(R.string.unpaired_devices_shown)
+                        : getString(R.string.unpaired_devices_hidden);
+                Toast.makeText(PcView.this, message, Toast.LENGTH_SHORT).show();
+                
+                // 触发动画
+                if (pcListView != null && !isFirstLoad) {
+                    pcListView.scheduleLayoutAnimation();
+                }
+            });
+        }
+ 
         settingsButton.setOnClickListener(v -> startActivity(new Intent(PcView.this, StreamSettings.class)));
         restoreSessionButton.setOnClickListener(v -> restoreLastSession());
         if (aboutButton != null) {
@@ -314,7 +348,36 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         else {
             noPcFoundLayout.setVisibility(View.INVISIBLE);
         }
-        pcGridAdapter.notifyDataSetChanged();
+        
+        // 刷新数据（首次加载时不使用防抖）
+        if (isFirstLoad) {
+            // 取消任何待处理的防抖刷新
+            if (pendingRefreshRunnable != null) {
+                refreshHandler.removeCallbacks(pendingRefreshRunnable);
+                pendingRefreshRunnable = null;
+            }
+            // 首次加载时不直接刷新，等 receiveAdapterView 设置好 adapter 后再统一触发动画
+            // 如果 pcListView 已经存在（配置变化重建），则直接刷新
+            if (pcListView != null) {
+                pcGridAdapter.notifyDataSetChanged();
+            }
+        } else {
+            // 非首次加载，使用防抖刷新
+            debouncedNotifyDataSetChanged();
+        }
+    }
+    
+    /**
+     * 更新眼睛图标按钮图标
+     */
+    private void updateToggleUnpairedButtonIcon(ImageButton button) {
+        if (button == null || pcGridAdapter == null) return;
+        
+        if (pcGridAdapter.isShowUnpairedDevices()) {
+            button.setImageResource(R.drawable.ic_visibility);
+        } else {
+            button.setImageResource(R.drawable.ic_visibility_off);
+        }
     }
 
     /**
@@ -739,6 +802,12 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         // 清理统计分析资源
         if (analyticsManager != null) {
             analyticsManager.cleanup();
+        }
+        
+        // 清理防抖刷新 Handler
+        if (pendingRefreshRunnable != null) {
+            refreshHandler.removeCallbacks(pendingRefreshRunnable);
+            pendingRefreshRunnable = null;
         }
     }
 
@@ -1227,10 +1296,10 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
             return;
         }
 
-        // 持续查找有运行游戏的在线主机
+        // 持续查找有运行游戏的在线主机（使用原始列表，查找所有主机）
         ComputerDetails targetComputer = null;
-        for (int i = 0; i < pcGridAdapter.getCount(); i++) {
-            ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(i);
+        for (int i = 0; i < pcGridAdapter.getRawCount(); i++) {
+            ComputerObject computer = pcGridAdapter.getRawItem(i);
             if (computer.details.state == ComputerDetails.State.ONLINE && 
                 computer.details.pairState == PairState.PAIRED &&
                 computer.details.runningGameId != 0) {
@@ -1305,8 +1374,9 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
                 .remove(details.uuid)
                 .apply();
 
-        for (int i = 0; i < pcGridAdapter.getCount(); i++) {
-            ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(i);
+        // 使用原始列表查找要删除的电脑（不管是否隐藏）
+        for (int i = 0; i < pcGridAdapter.getRawCount(); i++) {
+            ComputerObject computer = pcGridAdapter.getRawItem(i);
             
             // 跳过添加卡片
             if (PcGridAdapter.isAddComputerCard(computer)) {
@@ -1321,10 +1391,10 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
                 pcGridAdapter.removeComputer(computer);
                 pcGridAdapter.notifyDataSetChanged();
 
-                // 检查是否只剩下添加卡片
+                // 检查是否只剩下添加卡片（使用原始列表）
                 int realCount = 0;
-                for (int j = 0; j < pcGridAdapter.getCount(); j++) {
-                    if (!PcGridAdapter.isAddComputerCard((ComputerObject) pcGridAdapter.getItem(j))) {
+                for (int j = 0; j < pcGridAdapter.getRawCount(); j++) {
+                    if (!PcGridAdapter.isAddComputerCard(pcGridAdapter.getRawItem(j))) {
                         realCount++;
                     }
                 }
@@ -1342,9 +1412,9 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
      * 创建并添加"添加电脑"卡片
      */
     private void addAddComputerCard() {
-        // 检查是否已经存在添加卡片
-        for (int i = 0; i < pcGridAdapter.getCount(); i++) {
-            ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(i);
+        // 检查是否已经存在添加卡片（使用原始列表，避免过滤问题）
+        for (int i = 0; i < pcGridAdapter.getRawCount(); i++) {
+            ComputerObject computer = pcGridAdapter.getRawItem(i);
             if (PcGridAdapter.isAddComputerCard(computer)) {
                 // 已经存在，不需要重复添加
                 return;
@@ -1370,6 +1440,25 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         }
     }
     
+    /**
+     * 防抖刷新：合并短时间内的多次刷新请求
+     */
+    private void debouncedNotifyDataSetChanged() {
+        // 取消之前的刷新请求
+        if (pendingRefreshRunnable != null) {
+            refreshHandler.removeCallbacks(pendingRefreshRunnable);
+        }
+        
+        // 创建新的刷新请求
+        pendingRefreshRunnable = () -> {
+            pcGridAdapter.notifyDataSetChanged();
+            pendingRefreshRunnable = null;
+        };
+        
+        // 延迟执行刷新
+        refreshHandler.postDelayed(pendingRefreshRunnable, REFRESH_DEBOUNCE_DELAY);
+    }
+    
     private void updateComputer(ComputerDetails details) {
         // 忽略添加卡片
         if (PcGridAdapter.ADD_COMPUTER_UUID.equals(details.uuid)) {
@@ -1378,8 +1467,9 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         
         ComputerObject existingEntry = null;
 
-        for (int i = 0; i < pcGridAdapter.getCount(); i++) {
-            ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(i);
+        // 使用原始列表查找，避免过滤导致的重复添加问题
+        for (int i = 0; i < pcGridAdapter.getRawCount(); i++) {
+            ComputerObject computer = pcGridAdapter.getRawItem(i);
             
             // 跳过添加卡片
             if (PcGridAdapter.isAddComputerCard(computer)) {
@@ -1396,6 +1486,12 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         if (existingEntry != null) {
             // Replace the information in the existing entry
             existingEntry.details = details;
+            // 重新排序，因为状态可能改变（如从未配对变为已配对）
+            // 只有在排序顺序真的改变时才触发动画
+            boolean orderChanged = pcGridAdapter.resort();
+            if (orderChanged && pcListView != null && !isFirstLoad) {
+                pcListView.scheduleLayoutAnimation();
+            }
         }
         else {
             // Add a new entry
@@ -1403,10 +1499,14 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
 
             // Remove the "Discovery in progress" view
             noPcFoundLayout.setVisibility(View.INVISIBLE);
+            // 添加新条目时触发动画（但第一次加载时不触发，避免重复）
+            if (pcListView != null && !isFirstLoad) {
+                pcListView.scheduleLayoutAnimation();
+            }
         }
 
-        // Notify the view that the data has changed
-        pcGridAdapter.notifyDataSetChanged();
+        // 使用防抖刷新，避免频繁刷新
+        debouncedNotifyDataSetChanged();
     }
 
     @Override
@@ -1426,9 +1526,37 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         }
         else if (view instanceof AbsListView) {
             AbsListView listView = (AbsListView) view;
+            // 保存引用以便后续触发动画
+            pcListView = listView;
             // 移除系统默认的选择背景，使用自定义的 selector
             listView.setSelector(android.R.color.transparent);
             listView.setAdapter(pcGridAdapter);
+            
+            // 设置排序动画
+            android.view.animation.Animation animation = AnimationUtils.loadAnimation(this, R.anim.pc_grid_item_sort);
+            LayoutAnimationController controller = new LayoutAnimationController(animation, 0.12f);
+            controller.setOrder(LayoutAnimationController.ORDER_NORMAL);
+            listView.setLayoutAnimation(controller);
+            
+            // 第一次进入时，先隐藏列表，然后延迟触发动画
+            if (isFirstLoad) {
+                listView.setAlpha(0f);
+                // 延迟触发动画，等待数据准备完成
+                listView.postDelayed(() -> {
+                    if (isFirstLoad && pcListView != null && pcListView.getAlpha() == 0f) {
+                        // 确保数据已刷新
+                        pcGridAdapter.notifyDataSetChanged();
+                        // 触发动画
+                        pcListView.scheduleLayoutAnimation();
+                        pcListView.animate()
+                                .alpha(1f)
+                                .setDuration(200)
+                                .start();
+                        isFirstLoad = false;
+                    }
+                }, 250); // 延迟250ms，确保数据已准备好
+            }
+            
             listView.setOnItemClickListener((arg0, arg1, pos, id) -> {
                 ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(pos);
                 

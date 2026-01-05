@@ -16,7 +16,7 @@
     <string name="pcview_menu_send_wol"> 发送 Wake-On-LAN 请求 </string>
     <string name="pcview_menu_delete_pc"> 删除电脑 </string>
     <string name="pcview_menu_details"> 查看详情 </string>
-    <string name="pcview_menu_sleep_success"> 连接主机已睡眠 </string>
+    <string name="pcview_menu_sleep_success"> 已催促主机睡眠 </string>
     <string name="pcview_menu_sleep_fail"> 连接主机睡眠失败 </string>
     <!-- Pair messages -->
     <string name="pairing"> 配对中…… </string>
@@ -665,4 +665,6 @@
     <string name="screen_mode_ensure_active">确保串流屏幕已开启</string>
     <string name="screen_mode_ensure_primary">确保串流屏幕为主屏幕</string>
     <string name="screen_mode_ensure_only_display">仅启用串流屏幕（关闭其他屏幕）</string>
+    <string name="unpaired_devices_shown">已显示未配对设备</string>
+    <string name="unpaired_devices_hidden">已隐藏未配对设备</string>
 </resources>
