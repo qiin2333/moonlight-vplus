@@ -557,7 +557,7 @@
     <string name="toast_load_custom_keys_corrupted">加载自定义按键失败了，抱歉抱歉~</string>
 
     <!-- 陀螺仪相关字符串 -->
-    <string name="gyro_activation_method">激活方式</string>
+    <string name="gyro_activation_method">激活按键</string>
     <string name="gyro_invert_x_axis">X 轴反转</string>
     <string name="gyro_invert_y_axis">Y 轴反转</string>
     <string name="gyro_sensitivity">灵敏度</string>
