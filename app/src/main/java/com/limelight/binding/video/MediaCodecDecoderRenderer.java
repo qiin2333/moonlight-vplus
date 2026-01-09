@@ -1442,6 +1442,10 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                 Choreographer.getInstance().removeFrameCallback(MediaCodecDecoderRenderer.this);
             });
         }
+
+        // Unblock any threads waiting on the output buffer queue
+        // We add a dummy value to ensure take() returns if it's blocked
+        outputBufferQueue.add(-1);
     }
 
     @Override
@@ -1492,7 +1496,14 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
     @Override
     public void cleanup() {
-        videoDecoder.release();
+        if (videoDecoder != null) {
+            try {
+                videoDecoder.release();
+            } catch (Exception e) {
+                // Ignore exceptions during shutdown
+                LimeLog.warning("Exception during decoder release: " + e.getMessage());
+            }
+        }
         timestampToEnqueueTime.clear();
     }
 

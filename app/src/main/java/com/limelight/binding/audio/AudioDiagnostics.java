@@ -97,16 +97,10 @@ public class AudioDiagnostics {
         double encodeToSendRatio = encoded > 0 ? (double) sent / encoded : 0;
         double overallContinuity = captured > 0 ? (double) sent / captured : 0;
         
-        LimeLog.info("=== 音频诊断报告 ===");
-        LimeLog.info("捕获帧数: " + captured);
-        LimeLog.info("编码帧数: " + encoded);
-        LimeLog.info("发送帧数: " + sent);
-        LimeLog.info("丢弃帧数: " + dropped);
-        LimeLog.info("编码错误: " + encErrors);
-        LimeLog.info("发送错误: " + sendErrors);
-        LimeLog.info("捕获到编码比例: " + String.format("%.2f%%", captureToEncodeRatio * 100));
-        LimeLog.info("编码到发送比例: " + String.format("%.2f%%", encodeToSendRatio * 100));
-        LimeLog.info("整体连续性: " + String.format("%.2f%%", overallContinuity * 100));
+        // 使用单行详细日志
+        LimeLog.info(String.format("[音频诊断] 捕获:%d 编码:%d 发送:%d 丢弃:%d 编错:%d 发错:%d (捕编比:%.2f%% 编发比:%.2f%% 连续性:%.2f%%)",
+                captured, encoded, sent, dropped, encErrors, sendErrors,
+                captureToEncodeRatio * 100, encodeToSendRatio * 100, overallContinuity * 100));
         
         // 分析问题
         if (captureToEncodeRatio < 0.95) {

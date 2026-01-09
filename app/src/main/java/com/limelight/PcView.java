@@ -256,6 +256,19 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
                             .transform(new ColorFilterTransformation(Color.argb(120, 0, 0, 0)))
                             .into(imageView));
                 }
+            } catch (java.util.concurrent.ExecutionException e) {
+                // Glide error wrapping
+                Throwable cause = e.getCause();
+                if (cause != null) {
+                   String msg = cause.getMessage();
+                   if (msg != null && (msg.contains("HttpException") || msg.contains("SocketException") || msg.contains("MiediaMetadataRetriever"))) {
+                       LimeLog.warning("Background image download failed: " + msg);
+                   } else {
+                       e.printStackTrace();
+                   }
+                } else {
+                    e.printStackTrace();
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
