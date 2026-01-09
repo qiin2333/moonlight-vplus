@@ -1586,13 +1586,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             }
         }
 
-        if (prefConfig.stretchVideo || aspectRatioMatch) {
-            // Set the surface to the size of the video
-            streamView.getHolder().setFixedSize(prefConfig.width, prefConfig.height);
-        } else {
-            // Set the surface to scale based on the aspect ratio of the stream
-            streamView.setDesiredAspectRatio((double) prefConfig.width / (double) prefConfig.height);
-        }
+        updateStreamViewSize(prefConfig.width, prefConfig.height, aspectRatioMatch);
 
         // Set the desired refresh rate that will get passed into setFrameRate() later
         desiredRefreshRate = displayRefreshRate;
@@ -3739,6 +3733,94 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     @Override
     public void setMotionEventState(short controllerNumber, byte motionType, short reportRateHz) {
         controllerHandler.handleSetMotionEventState(controllerNumber, motionType, reportRateHz);
+    }
+
+    @Override
+    public void onResolutionChanged(int width, int height) {
+        // 跳过相同分辨率的重复通知
+        if (prefConfig.width == width && prefConfig.height == height) {
+            return;
+        }
+        
+        LimeLog.info("Resolution changed from " + prefConfig.width + "x" + prefConfig.height + " to " + width + "x" + height);
+
+        // 更新内存中的串流分辨率（不写入持久化配置，避免影响下次连接）
+        prefConfig.width = width;
+        prefConfig.height = height;
+        
+        // 通知解码器分辨率变更（在UI更新之前，确保解码器准备好）
+        if (connected && decoderRenderer != null) {
+            decoderRenderer.onResolutionChanged(width, height);
+        }
+        
+        // 在UI线程更新界面
+        runOnUiThread(() -> {
+            Toast.makeText(this, getString(R.string.host_resolution_changed, width, height), 
+                    Toast.LENGTH_SHORT).show();
+
+            // 根据新的宽高比重新决定横竖屏
+            setPreferredOrientationForCurrentDisplay();
+
+            // rotableScreen 模式下强制切换方向以匹配主机分辨率
+            if (prefConfig.rotableScreen) {
+                setRequestedOrientation(width > height ?
+                        ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE :
+                        ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT);
+            }
+
+            // 刷新视频视图的比例/尺寸
+            updateStreamViewSize(width, height);
+        });
+    }
+    
+    /**
+     * 设置视频 Surface 的尺寸和缩放模式
+     * 
+     * @param width 视频宽度（像素）
+     * @param height 视频高度（像素）
+     * @param forceFixedSize 是否强制使用固定尺寸（用于 Android M 以下且宽高比匹配的情况）
+     */
+    private void updateStreamViewSize(int width, int height, boolean forceFixedSize) {
+        if (streamView == null) {
+            return;
+        }
+        
+        // 获取屏幕物理尺寸（像素）
+        Point screenSize = new Point();
+        getWindowManager().getDefaultDisplay().getSize(screenSize);
+        
+        // 检查主机分辨率是否超过屏幕物理尺寸
+        boolean exceedsScreenSize = width > screenSize.x || height > screenSize.y;
+        
+        // 决定使用固定尺寸还是按比例缩放：
+        // 1. stretchVideo 开启且不超过屏幕尺寸 -> 固定尺寸
+        // 2. forceFixedSize (Android M 以下且宽高比匹配) -> 固定尺寸
+        // 3. 其他情况 -> 按比例缩放
+        boolean useFixedSize = (prefConfig.stretchVideo && !exceedsScreenSize) || forceFixedSize;
+        
+        if (useFixedSize) {
+            // Surface 固定为视频尺寸
+            streamView.setDesiredAspectRatio(0);
+            streamView.getHolder().setFixedSize(width, height);
+            LimeLog.info("Set fixed surface size: " + width + "x" + height + 
+                    " (screen: " + screenSize.x + "x" + screenSize.y + ")");
+        } else {
+            // 保持比例显示，或分辨率超过屏幕时让系统自动缩放
+            if (exceedsScreenSize) {
+                LimeLog.info("Host resolution " + width + "x" + height + 
+                        " exceeds screen size " + screenSize.x + "x" + screenSize.y + 
+                        ", using aspect ratio scaling");
+            }
+            streamView.setDesiredAspectRatio((double) width / height);
+            streamView.requestLayout();
+        }
+    }
+    
+    /**
+     * 设置视频 Surface 尺寸（默认不强制固定尺寸）
+     */
+    private void updateStreamViewSize(int width, int height) {
+        updateStreamViewSize(width, height, false);
     }
 
     @Override

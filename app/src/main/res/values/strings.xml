@@ -702,5 +702,6 @@
     <string name="unpaired_devices_shown">Unpaired devices shown</string>
     <string name="unpaired_devices_hidden">Unpaired devices hidden</string>
     <string name="new_unpaired_device_shown">New unpaired device detected, showing unpaired devices</string>
+    <string name="host_resolution_changed">Host resolution changed to %1$dx%2$d</string>
 
 </resources>

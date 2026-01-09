@@ -326,6 +326,12 @@ public class MoonBridge {
         }
     }
 
+    public static void bridgeClResolutionChanged(int width, int height) {
+        if (connectionListener != null) {
+            connectionListener.onResolutionChanged(width, height);
+        }
+    }
+
     public static void setupBridge(VideoDecoderRenderer videoRenderer, AudioRenderer audioRenderer, NvConnectionListener connectionListener) {
         MoonBridge.videoRenderer = videoRenderer;
         MoonBridge.audioRenderer = audioRenderer;

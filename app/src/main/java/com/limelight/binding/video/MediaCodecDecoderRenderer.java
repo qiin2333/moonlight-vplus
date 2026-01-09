@@ -1525,6 +1525,35 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         }
     }
 
+    @Override
+    public void onResolutionChanged(int width, int height) {
+        // Skip if resolution hasn't actually changed
+        if (width == initialWidth && height == initialHeight) {
+            return;
+        }
+        
+        LimeLog.info("Decoder notified of resolution change: " + initialWidth + "x" + initialHeight + " -> " + width + "x" + height);
+        
+        // Check if new resolution exceeds current decoder configuration
+        boolean needsRestart = width > initialWidth || height > initialHeight;
+        
+        // Update tracked resolution
+        initialWidth = width;
+        initialHeight = height;
+        
+        if (needsRestart) {
+            LimeLog.info("New resolution exceeds decoder config, triggering codec restart");
+            
+            // Reset recovery counter since this is an expected restart
+            codecRecoveryAttempts = 0;
+            
+            // Promote to restart: None->Restart or Flush->Restart
+            if (!codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_NONE, CR_RECOVERY_TYPE_RESTART)) {
+                codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_FLUSH, CR_RECOVERY_TYPE_RESTART);
+            }
+        }
+    }
+
     private boolean queueNextInputBuffer(long timestampUs, int codecFlags) {
         boolean codecRecovered;
 

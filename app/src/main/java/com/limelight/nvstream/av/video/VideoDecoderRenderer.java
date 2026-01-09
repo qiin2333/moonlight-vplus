@@ -18,4 +18,10 @@ public abstract class VideoDecoderRenderer {
     public abstract int getCapabilities();
 
     public abstract void setHdrMode(boolean enabled, byte[] hdrMetadata);
+
+    // Called when the host resolution changes (e.g., screen rotation)
+    public void onResolutionChanged(int width, int height) {
+        // Default implementation does nothing
+        // Subclasses can override to handle resolution changes
+    }
 }

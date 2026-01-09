@@ -668,4 +668,5 @@
     <string name="unpaired_devices_shown">已显示未配对设备</string>
     <string name="unpaired_devices_hidden">已隐藏未配对设备</string>
     <string name="new_unpaired_device_shown">检测到新的未配对设备，已自动显示未配对设备</string>
+    <string name="host_resolution_changed">主机分辨率已变更为 %1$dx%2$d</string>
 </resources>
