@@ -107,8 +107,15 @@ public class LegacyDatabaseReader3 {
     }
 
     public static List<ComputerDetails> migrateAllComputers(Context c) {
+        java.io.File dbFile = c.getDatabasePath(COMPUTER_DB_NAME);
+        
+        // Check if database file exists before trying to open it
+        if (!dbFile.exists()) {
+            return new LinkedList<ComputerDetails>();
+        }
+        
         try (final SQLiteDatabase computerDb = SQLiteDatabase.openDatabase(
-                c.getDatabasePath(COMPUTER_DB_NAME).getPath(),
+                dbFile.getPath(),
                 null, SQLiteDatabase.OPEN_READONLY)
         ) {
             // Open the existing database

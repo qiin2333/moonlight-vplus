@@ -34,6 +34,11 @@ public class AdapterRecyclerBridge extends RecyclerView.Adapter<AdapterRecyclerB
     @NonNull
     @Override
     public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        if (baseAdapter == null) {
+            // Return an empty placeholder view
+            View placeholder = new View(parent.getContext());
+            return new VH(placeholder);
+        }
         // Let baseAdapter create a view by calling getView with null convertView to inflate layout
         View v = baseAdapter.getView(0, null, parent);
         return new VH(v);
@@ -41,6 +46,10 @@ public class AdapterRecyclerBridge extends RecyclerView.Adapter<AdapterRecyclerB
 
     @Override
     public void onBindViewHolder(@NonNull VH holder, int position) {
+        if (baseAdapter == null) {
+            return;
+        }
+        
         // 优化：避免重复设置相同的监听器
         boolean needsListenerSetup = holder.container.getTag() == null;
         
@@ -153,7 +162,7 @@ public class AdapterRecyclerBridge extends RecyclerView.Adapter<AdapterRecyclerB
 
     @Override
     public int getItemCount() {
-        return baseAdapter.getCount();
+        return baseAdapter != null ? baseAdapter.getCount() : 0;
     }
     
     /**
