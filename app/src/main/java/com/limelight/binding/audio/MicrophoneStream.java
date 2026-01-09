@@ -329,8 +329,8 @@ public class MicrophoneStream implements MicrophoneCapture.MicrophoneDataCallbac
                 // 记录发送成功
                 AudioDiagnostics.recordFrameSent();
                 
-                // 每100个包记录一次详细统计信息
-                if (sendCount % 100 == 0) {
+                // 每12000个包记录一次详细统计信息
+                if (sendCount % 12000 == 0) {
                     long currentStatsTime = System.currentTimeMillis();
                     long statsInterval = currentStatsTime - lastStatsTime;
                     double avgLatency = sendCount > 0 ? (double) totalLatency / sendCount : 0;

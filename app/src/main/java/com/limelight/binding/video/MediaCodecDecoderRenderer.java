@@ -1172,7 +1172,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             long timeUntilDeadline = nextVsyncNs - presentationDeadlineNs - currentTime;
             if (timeUntilDeadline < 0) {
                 // 已经错过 deadline，使用 0 让系统尽快渲染
-                LimeLog.warning("错过 presentation deadline，使用立即渲染");
+                // LimeLog.warning("错过 presentation deadline，使用立即渲染");
                 return 0;
             }
         }
@@ -1199,10 +1199,9 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         surfaceFlingerFrameCount++;
         activeWindowVideoStats.totalFramesRendered++;
 
-        if (surfaceFlingerFrameCount % 100 == 0) {
+        if (surfaceFlingerFrameCount % 12000 == 0) {
             float avgError = surfaceFlingerTimingError / 1000000.0f / surfaceFlingerFrameCount;
-            LimeLog.info(String.format("精确同步: %d帧, 跳帧: %d, 平均误差: %.3fms",
-                    surfaceFlingerFrameCount, surfaceFlingerSkippedFrames, avgError));
+            LimeLog.info(String.format("精确同步: %d帧, 跳帧: %d, 平均误差: %.3fms", surfaceFlingerFrameCount, surfaceFlingerSkippedFrames, avgError));
         }
     }
 

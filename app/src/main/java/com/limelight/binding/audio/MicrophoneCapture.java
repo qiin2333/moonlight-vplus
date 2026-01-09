@@ -188,10 +188,9 @@ public class MicrophoneCapture {
                 // 记录诊断信息
                 AudioDiagnostics.recordFrameCaptured();
                 
-                // 每100帧记录一次统计信息
-                if (frameCount % 100 == 0) {
-                    LimeLog.info("麦克风帧统计: " + frameCount + " 帧, 平均间隔: " + 
-                               (timeDiff / 1000000) + "ms");
+                // 每12000帧记录一次统计信息
+                if (frameCount % 12000 == 0) {
+                    LimeLog.info("麦克风帧统计: " + frameCount + " 帧, 平均间隔: " + (timeDiff / 1000000) + "ms");
                 }
             }
         }
