@@ -32,6 +32,7 @@ public class AppSettingsManager {
     private static final String INTENT_LAST_SETTINGS_RESOLUTION_SCALE = "LastSettingsResolutionScale";
     private static final String INTENT_LAST_SETTINGS_VIDEO_FORMAT = "LastSettingsVideoFormat";
     private static final String INTENT_LAST_SETTINGS_ENABLE_HDR = "LastSettingsEnableHdr";
+    private static final String INTENT_LAST_SETTINGS_ENABLE_HDR_HIGH_BRIGHTNESS = "LastSettingsEnableHdrHighBrightness";
     private static final String INTENT_LAST_SETTINGS_ENABLE_MIC = "LastSettingsEnableMic";
     private static final String INTENT_LAST_SETTINGS_MIC_BITRATE = "LastSettingsMicBitrate";
     private static final String INTENT_LAST_SETTINGS_ENABLE_NATIVE_MOUSE = "LastSettingsEnableNativeMouse";
@@ -335,6 +336,7 @@ public class AppSettingsManager {
         settingsJson.put("resolutionScale", settings.resolutionScale);
         settingsJson.put("videoFormat", getVideoFormatPreferenceString(settings.videoFormat));
         settingsJson.put("enableHdr", settings.enableHdr);
+        settingsJson.put("enableHdrHighBrightness", settings.enableHdrHighBrightness);
         settingsJson.put("enableMic", settings.enableMic);
         settingsJson.put("micBitrate", settings.micBitrate);
         settingsJson.put("enableNativeMousePointer", settings.enableNativeMousePointer);
@@ -384,6 +386,7 @@ public class AppSettingsManager {
         settings.videoFormat = parseVideoFormat(settingsJson.optString("videoFormat", "auto"));
 
         settings.enableHdr = settingsJson.optBoolean("enableHdr", false);
+        settings.enableHdrHighBrightness = settingsJson.optBoolean("enableHdrHighBrightness", false);
         settings.enableMic = settingsJson.optBoolean("enableMic", false);
         settings.micBitrate = settingsJson.optInt("micBitrate", 96);
         settings.enableNativeMousePointer = settingsJson.optBoolean("enableNativeMousePointer", false);
@@ -445,6 +448,7 @@ public class AppSettingsManager {
         intent.putExtra(INTENT_LAST_SETTINGS_RESOLUTION_SCALE, lastSettings.resolutionScale);
         intent.putExtra(INTENT_LAST_SETTINGS_VIDEO_FORMAT, lastSettings.videoFormat.toString());
         intent.putExtra(INTENT_LAST_SETTINGS_ENABLE_HDR, lastSettings.enableHdr);
+        intent.putExtra(INTENT_LAST_SETTINGS_ENABLE_HDR_HIGH_BRIGHTNESS, lastSettings.enableHdrHighBrightness);
         intent.putExtra(INTENT_LAST_SETTINGS_ENABLE_MIC, lastSettings.enableMic);
         intent.putExtra(INTENT_LAST_SETTINGS_MIC_BITRATE, lastSettings.micBitrate);
         intent.putExtra(INTENT_LAST_SETTINGS_ENABLE_NATIVE_MOUSE, lastSettings.enableNativeMousePointer);
@@ -483,6 +487,7 @@ public class AppSettingsManager {
             prefConfig.bitrate = intent.getIntExtra(INTENT_LAST_SETTINGS_BITRATE, prefConfig.bitrate);
             prefConfig.resolutionScale = intent.getIntExtra(INTENT_LAST_SETTINGS_RESOLUTION_SCALE, prefConfig.resolutionScale);
             prefConfig.enableHdr = intent.getBooleanExtra(INTENT_LAST_SETTINGS_ENABLE_HDR, prefConfig.enableHdr);
+            prefConfig.enableHdrHighBrightness = intent.getBooleanExtra(INTENT_LAST_SETTINGS_ENABLE_HDR_HIGH_BRIGHTNESS, prefConfig.enableHdrHighBrightness);
             prefConfig.enableMic = intent.getBooleanExtra(INTENT_LAST_SETTINGS_ENABLE_MIC, prefConfig.enableMic);
             prefConfig.micBitrate = intent.getIntExtra(INTENT_LAST_SETTINGS_MIC_BITRATE, prefConfig.micBitrate);
             prefConfig.enableNativeMousePointer = intent.getBooleanExtra(INTENT_LAST_SETTINGS_ENABLE_NATIVE_MOUSE, prefConfig.enableNativeMousePointer);

@@ -83,6 +83,7 @@ public class PreferenceConfiguration {
     private static final String HALF_HEIGHT_OSC_PORTRAIT_PREF_STRING = "checkbox_half_height_osc_portrait";
     private static final String LEGACY_DISABLE_FRAME_DROP_PREF_STRING = "checkbox_disable_frame_drop";
     private static final String ENABLE_HDR_PREF_STRING = "checkbox_enable_hdr";
+    private static final String ENABLE_HDR_HIGH_BRIGHTNESS_PREF_STRING = "checkbox_enable_hdr_high_brightness";
     private static final String ENABLE_PIP_PREF_STRING = "checkbox_enable_pip";
     private static final String ENABLE_PERF_OVERLAY_STRING = "checkbox_enable_perf_overlay";
     private static final String PERF_OVERLAY_LOCKED_STRING = "perf_overlay_locked";
@@ -171,6 +172,7 @@ public class PreferenceConfiguration {
     private static final boolean SHOW_GUIDE_BUTTON_DEFAULT = true;
     private static final boolean HALF_HEIGHT_OSC_PORTRAIT_DEFAULT = true;
     private static final boolean DEFAULT_ENABLE_HDR = false;
+    private static final boolean DEFAULT_ENABLE_HDR_HIGH_BRIGHTNESS = false;
     private static final boolean DEFAULT_ENABLE_PIP = false;
     private static final boolean DEFAULT_ENABLE_PERF_OVERLAY = false;
     private static final boolean DEFAULT_PERF_OVERLAY_LOCKED = false;
@@ -306,6 +308,7 @@ public class PreferenceConfiguration {
     public boolean showGuideButton;
     public boolean halfHeightOscPortrait;
     public boolean enableHdr;
+    public boolean enableHdrHighBrightness;
     public boolean enablePip;
     public boolean enablePerfOverlay;
     public boolean perfOverlayLocked;
@@ -646,6 +649,7 @@ public class PreferenceConfiguration {
                 .remove(FPS_PREF_STRING)
                 .remove(VIDEO_FORMAT_PREF_STRING)
                 .remove(ENABLE_HDR_PREF_STRING)
+                .remove(ENABLE_HDR_HIGH_BRIGHTNESS_PREF_STRING)
                 .remove(UNLOCK_FPS_STRING)
                 .remove(FULL_RANGE_PREF_STRING)
                 .apply();
@@ -788,6 +792,7 @@ public class PreferenceConfiguration {
         config.showGuideButton = prefs.getBoolean(SHOW_GUIDE_BUTTON_PREF_STRING, SHOW_GUIDE_BUTTON_DEFAULT);
         config.halfHeightOscPortrait = prefs.getBoolean(HALF_HEIGHT_OSC_PORTRAIT_PREF_STRING, HALF_HEIGHT_OSC_PORTRAIT_DEFAULT);
         config.enableHdr = prefs.getBoolean(ENABLE_HDR_PREF_STRING, DEFAULT_ENABLE_HDR) && !isShieldAtvFirmwareWithBrokenHdr();
+        config.enableHdrHighBrightness = prefs.getBoolean(ENABLE_HDR_HIGH_BRIGHTNESS_PREF_STRING, DEFAULT_ENABLE_HDR_HIGH_BRIGHTNESS);
         config.enablePip = prefs.getBoolean(ENABLE_PIP_PREF_STRING, DEFAULT_ENABLE_PIP);
         config.enablePerfOverlay = prefs.getBoolean(ENABLE_PERF_OVERLAY_STRING, DEFAULT_ENABLE_PERF_OVERLAY);
         config.perfOverlayLocked = prefs.getBoolean(PERF_OVERLAY_LOCKED_STRING, DEFAULT_PERF_OVERLAY_LOCKED);
@@ -1015,6 +1020,7 @@ public class PreferenceConfiguration {
                     .putInt(BITRATE_PREF_STRING, bitrate)
                     .putString(VIDEO_FORMAT_PREF_STRING, getVideoFormatPreferenceString(videoFormat))
                     .putBoolean(ENABLE_HDR_PREF_STRING, enableHdr)
+                    .putBoolean(ENABLE_HDR_HIGH_BRIGHTNESS_PREF_STRING, enableHdrHighBrightness)
                     .putBoolean(ENABLE_PERF_OVERLAY_STRING, enablePerfOverlay)
                     .putBoolean(PERF_OVERLAY_LOCKED_STRING, perfOverlayLocked)
                     .putBoolean(REVERSE_RESOLUTION_PREF_STRING, reverseResolution)
@@ -1060,6 +1066,7 @@ public class PreferenceConfiguration {
         copy.bitrate = this.bitrate;
         copy.videoFormat = this.videoFormat;
         copy.enableHdr = this.enableHdr;
+        copy.enableHdrHighBrightness = this.enableHdrHighBrightness;
         copy.enablePerfOverlay = this.enablePerfOverlay;
         copy.perfOverlayLocked = this.perfOverlayLocked;
         copy.perfOverlayOrientation = this.perfOverlayOrientation;

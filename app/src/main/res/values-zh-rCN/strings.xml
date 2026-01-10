@@ -259,6 +259,8 @@
     <string name="summary_video_format">如果您的设备支持较新的编解码器，则可以降低视频带宽要求。如果主机软件或显卡不支持编解码器选择，则可能会忽略编解码器选择。</string>
     <string name="title_enable_hdr">启用 HDR </string>
     <string name="summary_enable_hdr">当游戏和显卡支持时以HDR模式串流，HDR需要显卡支持 HEVC/AV1 Main 10 编码。⚠注意：串流返回菜单中的HDR开关是切换windows的HDR。</string>
+    <string name="title_enable_hdr_high_brightness">启用 HDR 串流高亮度</string>
+    <string name="summary_enable_hdr_high_brightness">启用 HDR 串流时强制使用最高屏幕亮度</string>
     <string name="title_enable_perf_overlay">性能监控图层</string>
     <string name="summary_enable_perf_overlay">显示实时的串流监控数据，盯帧必备！</string>
     <string name="title_perf_overlay_orientation">性能图层方向</string>

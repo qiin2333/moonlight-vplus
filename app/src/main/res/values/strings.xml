@@ -365,6 +365,8 @@
     <string name="summary_video_format">Newer codecs can lower video bandwidth requirements if your device supports them. Codec selections may be ignored if not supported by the host software or GPU.</string>
     <string name="title_enable_hdr">Enable HDR (Experimental)</string>
     <string name="summary_enable_hdr">Stream HDR when the game and PC GPU support it. HDR requires a GPU with HEVC Main 10 encoding support.</string>
+    <string name="title_enable_hdr_high_brightness">Enable HDR High Brightness</string>
+    <string name="summary_enable_hdr_high_brightness">Force maximum screen brightness when HDR streaming is enabled</string>
     <string name="title_full_range">Force full range video (Experimental)</string>
     <string name="summary_full_range">This will cause loss of detail in light and dark areas if your device doesn\'t properly display full range video content.</string>
     <string name="title_enable_perf_overlay">Show performance stats while streaming</string>
