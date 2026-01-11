@@ -23,7 +23,6 @@ import android.media.MediaFormat;
 import android.os.Build;
 
 import com.limelight.LimeLog;
-import com.limelight.preferences.PreferenceConfiguration;
 
 public class MediaCodecHelper {
     
@@ -896,7 +895,6 @@ public class MediaCodecHelper {
         return true;
     }
 
-    @SuppressWarnings("deprecation")
     @SuppressLint("NewApi")
     private static LinkedList<MediaCodecInfo> getMediaCodecList() {
         LinkedList<MediaCodecInfo> infoList = new LinkedList<>();
@@ -909,24 +907,24 @@ public class MediaCodecHelper {
     
     @SuppressWarnings("RedundantThrows")
     public static String dumpDecoders() throws Exception {
-        String str = "";
+        StringBuilder str = new StringBuilder();
         for (MediaCodecInfo codecInfo : getMediaCodecList()) {
             // Skip encoders
             if (codecInfo.isEncoder()) {
                 continue;
             }
             
-            str += "Decoder: "+codecInfo.getName()+"\n";
+            str.append("Decoder: ").append(codecInfo.getName()).append("\n");
             for (String type : codecInfo.getSupportedTypes()) {
-                str += "\t"+type+"\n";
+                str.append("\t").append(type).append("\n");
                 CodecCapabilities caps = codecInfo.getCapabilitiesForType(type);
                 
                 for (CodecProfileLevel profile : caps.profileLevels) {
-                    str += "\t\t"+profile.profile+" "+profile.level+"\n";
+                    str.append("\t\t").append(profile.profile).append(" ").append(profile.level).append("\n");
                 }
             }
         }
-        return str;
+        return str.toString();
     }
     
     private static MediaCodecInfo findPreferredDecoder() {

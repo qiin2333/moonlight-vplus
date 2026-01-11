@@ -6,7 +6,6 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.os.Build;
 import android.os.Handler;
-import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -18,8 +17,6 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.ScrollView;
-import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.text.Html;
@@ -31,7 +28,6 @@ import com.limelight.binding.input.KeyboardTranslator;
 import com.limelight.binding.input.advance_setting.ControllerManager;
 import com.limelight.binding.input.advance_setting.config.PageConfigController;
 import com.limelight.binding.input.advance_setting.element.ElementController;
-import com.limelight.binding.input.touch.RelativeTouchContext;
 import com.limelight.nvstream.NvConnection;
 import com.limelight.nvstream.http.NvApp;
 import com.limelight.nvstream.input.KeyboardPacket;
@@ -54,6 +50,7 @@ import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Objects;
 
 /**
  * 提供游戏流媒体进行中的选项菜单
@@ -292,15 +289,6 @@ public class GameMenu {
         } else {
             option.getRunnable().run();
         }
-    }
-
-    /**
-     * 切换增强触摸模式
-     */
-    private void toggleEnhancedTouch() {
-        game.prefConfig.enableEnhancedTouch = !game.prefConfig.enableEnhancedTouch;
-        String message = game.prefConfig.enableEnhancedTouch ? "增强式多点触控已开启" : "经典鼠标模式已开启";
-        Toast.makeText(game, message, Toast.LENGTH_SHORT).show();
     }
 
     /**
@@ -657,56 +645,6 @@ public class GameMenu {
     }
 
 
-
-    /**
-     * 调整码率
-     */
-    private void adjustBitrate(int bitrateKbps) {
-        try {
-            // 显示正在调整的提示
-            Toast.makeText(game, "正在调整码率...", Toast.LENGTH_SHORT).show();
-            
-            // 调用码率调整，使用回调等待API真正返回结果
-            conn.setBitrate(bitrateKbps, new NvConnection.BitrateAdjustmentCallback() {
-                @Override
-                public void onSuccess(int newBitrate) {
-                    // API成功返回，在主线程显示成功消息
-                    game.runOnUiThread(() -> {
-                        try {
-                            String successMessage = String.format(getString(R.string.game_menu_bitrate_adjustment_success), newBitrate / 1000);
-                            Toast.makeText(game, successMessage, Toast.LENGTH_SHORT).show();
-                        } catch (Exception e) {
-                            LimeLog.warning("Failed to show success toast: " + e.getMessage());
-                        }
-                    });
-                }
-
-                @Override
-                public void onFailure(String errorMessage) {
-                    // API失败返回，在主线程显示错误消息
-                    game.runOnUiThread(() -> {
-                        try {
-                            String errorMsg = getString(R.string.game_menu_bitrate_adjustment_failed) + ": " + errorMessage;
-                            Toast.makeText(game, errorMsg, Toast.LENGTH_SHORT).show();
-                        } catch (Exception e) {
-                            LimeLog.warning("Failed to show error toast: " + e.getMessage());
-                        }
-                    });
-                }
-            });
-            
-        } catch (Exception e) {
-            // 调用setBitrate时发生异常（如参数错误等）
-            game.runOnUiThread(() -> {
-                try {
-                    Toast.makeText(game, getString(R.string.game_menu_bitrate_adjustment_failed) + ": " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                } catch (Exception toastException) {
-                    LimeLog.warning("Failed to show error toast: " + toastException.getMessage());
-                }
-            });
-        }
-    }
-
     /**
      * 显示菜单对话框
      */
@@ -808,9 +746,7 @@ public class GameMenu {
 
         new AlertDialog.Builder(game, R.style.AppDialogStyle)
                 .setTitle("卡片配置 Visible cards")
-                .setMultiChoiceItems(items, checked, (d, which, isChecked) -> {
-                    checked[which] = isChecked;
-                })
+                .setMultiChoiceItems(items, checked, (d, which, isChecked) -> checked[which] = isChecked)
                 .setPositiveButton("OK", (d, w) -> {
                     game.prefConfig.showBitrateCard = checked[0];
                     game.prefConfig.showGyroCard = checked[1];
@@ -821,7 +757,7 @@ public class GameMenu {
 
                     // Update UI within current dialog (刷新界面)
                     View root = activeCustomView != null ? activeCustomView :
-                            d instanceof AlertDialog ? ((AlertDialog) d).getOwnerActivity().findViewById(android.R.id.content) : null;
+                            d instanceof AlertDialog ? Objects.requireNonNull(((AlertDialog) d).getOwnerActivity()).findViewById(android.R.id.content) : null;
 
                     if (root != null) {
                         View bitrate = root.findViewById(R.id.bitrateAdjustmentContainer);
@@ -901,15 +837,13 @@ public class GameMenu {
                     String name = keyObject.optString("name");
                     JSONArray codesArray = keyObject.getJSONArray("data");
 
-                    if (codesArray != null) {
-                        short[] datas = new short[codesArray.length()];
-                        for (int j = 0; j < codesArray.length(); j++) {
-                            String code = codesArray.getString(j);
-                            // 解析 "0xXX" 格式的十六进制字符串
-                            datas[j] = (short) Integer.parseInt(code.substring(2), 16);
-                        }
-                        resultList.add(new CustomKeyData(name, datas));
+                    short[] datas = new short[codesArray.length()];
+                    for (int j = 0; j < codesArray.length(); j++) {
+                        String code = codesArray.getString(j);
+                        // 解析 "0xXX" 格式的十六进制字符串
+                        datas[j] = (short) Integer.parseInt(code.substring(2), 16);
                     }
+                    resultList.add(new CustomKeyData(name, datas));
                 }
             }
         } catch (Exception e) {
@@ -923,6 +857,7 @@ public class GameMenu {
     /**
      * 设置自定义按键卡片
      */
+    @SuppressLint("UseCompatLoadingForDrawables")
     private void setupCustomKeysCard(View customView) {
         View cardContainer = customView.findViewById(R.id.customKeysCardContainer);
         LinearLayout listLayout = customView.findViewById(R.id.customKeysListLayout);
@@ -1034,6 +969,7 @@ public class GameMenu {
     /**
      * 设置当前串流应用信息 (名字、HDR支持)
      */
+    @SuppressLint("SetTextI18n")
     private void setupAppNameDisplay(View customView) {
         try {
             // 获取当前串流应用的名字
@@ -1508,7 +1444,7 @@ public class GameMenu {
         });
 
         // 递归设置键盘监听器
-        setupCompactKeyboardListeners((ViewGroup) dialogView.findViewById(R.id.keyboard_drawing), keysDisplay);
+        setupCompactKeyboardListeners(dialogView.findViewById(R.id.keyboard_drawing), keysDisplay);
 
         // 保存按钮事件
         if (saveButton != null) {

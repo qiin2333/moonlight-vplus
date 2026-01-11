@@ -1,5 +1,6 @@
 package com.limelight.preferences;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -81,6 +82,7 @@ public class StreamSettings extends Activity {
     // HACK for Android 9
     static DisplayCutout displayCutoutP;
 
+    @SuppressLint("SuspiciousIndentation")
     void reloadSettings() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Display.Mode mode = getWindowManager().getDefaultDisplay().getMode();
@@ -194,8 +196,8 @@ public class StreamSettings extends Activity {
         private String exportConfigString = null;
         
         // 保存分类和对应的 Tab TextView 的映射
-        private Map<PreferenceCategory, TextView> categoryTabMap = new HashMap<>();
-        private Map<PreferenceCategory, TextView> categoryGridTabMap = new HashMap<>();
+        private final Map<PreferenceCategory, TextView> categoryTabMap = new HashMap<>();
+        private final Map<PreferenceCategory, TextView> categoryGridTabMap = new HashMap<>();
         private PreferenceCategory currentVisibleCategory = null;
         // 保存导航滚动视图的引用
         private HorizontalScrollView navScrollView = null;
