@@ -945,7 +945,15 @@ public class StreamSettings extends Activity {
                 LimeLog.info("Excluding HDR toggle based on OS");
                 PreferenceCategory category =
                         (PreferenceCategory) findPreference("category_advanced_settings");
-                category.removePreference(findPreference("checkbox_enable_hdr"));
+                // 必须先移除依赖项，再移除被依赖的项，否则会崩溃
+                Preference hdrHighBrightnessPref = findPreference("checkbox_enable_hdr_high_brightness");
+                if (hdrHighBrightnessPref != null) {
+                    category.removePreference(hdrHighBrightnessPref);
+                }
+                Preference hdrPref = findPreference("checkbox_enable_hdr");
+                if (hdrPref != null) {
+                    category.removePreference(hdrPref);
+                }
             }
             else {
                 // 获取目标显示器的 HDR 能力（优先使用外接显示器）
@@ -964,20 +972,33 @@ public class StreamSettings extends Activity {
                     }
                 }
 
+                PreferenceCategory category =
+                        (PreferenceCategory) findPreference("category_advanced_settings");
+                CheckBoxPreference hdrPref = (CheckBoxPreference) findPreference("checkbox_enable_hdr");
+                CheckBoxPreference hdrHighBrightnessPref = (CheckBoxPreference) findPreference("checkbox_enable_hdr_high_brightness");
+
                 if (!foundHdr10) {
                     LimeLog.info("Excluding HDR toggle based on display capabilities");
-                    PreferenceCategory category =
-                            (PreferenceCategory) findPreference("category_advanced_settings");
-                    category.removePreference(findPreference("checkbox_enable_hdr"));
+                    // 必须先移除依赖项，再移除被依赖的项，否则会崩溃
+                    if (hdrHighBrightnessPref != null) {
+                        category.removePreference(hdrHighBrightnessPref);
+                    }
+                    if (hdrPref != null) {
+                        category.removePreference(hdrPref);
+                    }
                 }
                 else if (PreferenceConfiguration.isShieldAtvFirmwareWithBrokenHdr()) {
                     LimeLog.info("Disabling HDR toggle on old broken SHIELD TV firmware");
-                    PreferenceCategory category =
-                            (PreferenceCategory) findPreference("category_advanced_settings");
-                    CheckBoxPreference hdrPref = (CheckBoxPreference) category.findPreference("checkbox_enable_hdr");
-                    hdrPref.setEnabled(false);
-                    hdrPref.setChecked(false);
-                    hdrPref.setSummary("Update the firmware on your NVIDIA SHIELD Android TV to enable HDR");
+                    if (hdrPref != null) {
+                        hdrPref.setEnabled(false);
+                        hdrPref.setChecked(false);
+                        hdrPref.setSummary("Update the firmware on your NVIDIA SHIELD Android TV to enable HDR");
+                    }
+                    // 同时禁用 HDR 高亮度选项
+                    if (hdrHighBrightnessPref != null) {
+                        hdrHighBrightnessPref.setEnabled(false);
+                        hdrHighBrightnessPref.setChecked(false);
+                    }
                 }
             }
 
