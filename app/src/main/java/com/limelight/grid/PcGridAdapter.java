@@ -57,6 +57,13 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
     
     // 控制是否显示未配对设备（默认显示）
     private boolean showUnpairedDevices = true;
+    
+    // 头像点击回调接口
+    public interface AvatarClickListener {
+        void onAvatarClick(ComputerDetails computer);
+    }
+    
+    private AvatarClickListener avatarClickListener;
 
     public PcGridAdapter(Context context, PreferenceConfiguration prefs) {
         super(context, R.layout.pc_grid_item);
@@ -64,6 +71,13 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
         this.inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         this.sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
         this.showUnpairedDevices = sharedPreferences.getBoolean(PREF_SHOW_UNPAIRED_DEVICES, true);
+    }
+    
+    /**
+     * 设置头像点击监听器
+     */
+    public void setAvatarClickListener(AvatarClickListener listener) {
+        this.avatarClickListener = listener;
     }
 
     public void updateLayoutWithPreferences(Context context, PreferenceConfiguration prefs) {
@@ -371,7 +385,23 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
         View spinnerView = convertView.findViewById(R.id.grid_spinner);
 
         List<PcView.ComputerObject> filtered = getFilteredItems();
-        populateView(convertView, imgView, spinnerView, txtView, overlayView, filtered.get(i));
+        PcView.ComputerObject computer = filtered.get(i);
+        populateView(convertView, imgView, spinnerView, txtView, overlayView, computer);
+        
+        // 为头像容器设置点击监听器（仅对非添加卡片）
+        View imageLayout = convertView.findViewById(R.id.grid_image_layout);
+        if (!isAddComputerCard(computer) && avatarClickListener != null && imageLayout != null) {
+            imageLayout.setOnClickListener(v -> {
+                if (computer.details != null) {
+                    avatarClickListener.onAvatarClick(computer.details);
+                }
+            });
+            imageLayout.setClickable(true);
+            imageLayout.setFocusable(false);
+        } else if (imageLayout != null) {
+            imageLayout.setOnClickListener(null);
+            imageLayout.setClickable(false);
+        }
 
         return convertView;
     }
