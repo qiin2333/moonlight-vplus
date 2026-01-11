@@ -3,11 +3,12 @@ package com.limelight.nvstream.http;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-
 
 public class ComputerDetails {
     public enum State {
@@ -42,25 +43,22 @@ public class ComputerDetails {
 
         @Override
         public boolean equals(Object obj) {
-            if (!(obj instanceof AddressTuple)) {
-                return false;
-            }
+            if (this == obj) return true;
+            if (!(obj instanceof AddressTuple)) return false;
 
             AddressTuple that = (AddressTuple) obj;
-            return address.equals(that.address) && port == that.port;
+            return port == that.port && address.equals(that.address);
         }
 
+        @Override
         public String toString() {
-            if (address.contains(":")) {
-                // IPv6
-                return "[" + address + "]:" + port;
-            }
-            else {
-                // IPv4 and hostnames
-                return address + ":" + port;
-            }
+            return address.contains(":") 
+                    ? "[" + address + "]:" + port 
+                    : address + ":" + port;
         }
     }
+
+    private static final String ZERO_MAC = "00:00:00:00:00:00";
 
     // Persistent attributes
     public String uuid;
@@ -75,7 +73,7 @@ public class ComputerDetails {
     // Transient attributes
     public State state;
     public AddressTuple activeAddress;
-    public List<AddressTuple> availableAddresses; // 存储所有可用的地址
+    public List<AddressTuple> availableAddresses;
     public int httpsPort;
     public int externalPort;
     public PairingManager.PairState pairState;
@@ -85,13 +83,12 @@ public class ComputerDetails {
     public boolean useVdd;
 
     public ComputerDetails() {
-        // Use defaults
         state = State.UNKNOWN;
         availableAddresses = new ArrayList<>();
     }
 
     public ComputerDetails(ComputerDetails details) {
-        // Copy details from the other computer
+        this();
         update(details);
     }
 
@@ -99,27 +96,26 @@ public class ComputerDetails {
         if (externalPort != 0) {
             return externalPort;
         }
-        else if (remoteAddress != null) {
+        if (remoteAddress != null) {
             return remoteAddress.port;
         }
-        else if (activeAddress != null) {
+        if (activeAddress != null) {
             return activeAddress.port;
         }
-        else if (ipv6Address != null) {
+        if (ipv6Address != null) {
             return ipv6Address.port;
         }
-        else if (localAddress != null) {
+        if (localAddress != null) {
             return localAddress.port;
         }
-        else {
-            return NvHTTP.DEFAULT_HTTP_PORT;
-        }
+        return NvHTTP.DEFAULT_HTTP_PORT;
     }
 
     public void update(ComputerDetails details) {
         this.state = details.state;
         this.name = details.name;
         this.uuid = details.uuid;
+        
         if (details.activeAddress != null) {
             this.activeAddress = details.activeAddress;
         }
@@ -129,11 +125,8 @@ public class ComputerDetails {
         }
         if (details.remoteAddress != null) {
             this.remoteAddress = details.remoteAddress;
-        }
-        else if (this.remoteAddress != null && details.externalPort != 0) {
-            // If we have a remote address already (perhaps via STUN) but our updated details
-            // don't have a new one (because GFE doesn't send one), propagate the external
-            // port to the current remote address. We may have tried to guess it previously.
+        } else if (this.remoteAddress != null && details.externalPort != 0) {
+            // Propagate external port to existing remote address
             this.remoteAddress.port = details.externalPort;
         }
         if (details.manualAddress != null) {
@@ -142,12 +135,13 @@ public class ComputerDetails {
         if (details.ipv6Address != null) {
             this.ipv6Address = details.ipv6Address;
         }
-        if (details.macAddress != null && !details.macAddress.equals("00:00:00:00:00:00")) {
+        if (details.macAddress != null && !ZERO_MAC.equals(details.macAddress)) {
             this.macAddress = details.macAddress;
         }
         if (details.serverCert != null) {
             this.serverCert = details.serverCert;
         }
+        
         this.externalPort = details.externalPort;
         this.httpsPort = details.httpsPort;
         this.pairState = details.pairState;
@@ -155,26 +149,23 @@ public class ComputerDetails {
         this.nvidiaServer = details.nvidiaServer;
         this.useVdd = details.useVdd;
         this.rawAppList = details.rawAppList;
+        
         if (details.availableAddresses != null) {
             this.availableAddresses = new ArrayList<>(details.availableAddresses);
         }
     }
 
-    /**
-     * 添加可用地址到列表中
-     */
     public void addAvailableAddress(AddressTuple address) {
+        if (address == null) return;
+        
         if (availableAddresses == null) {
             availableAddresses = new ArrayList<>();
         }
-        if (address != null && !availableAddresses.contains(address)) {
+        if (!availableAddresses.contains(address)) {
             availableAddresses.add(address);
         }
     }
 
-    /**
-     * 获取所有可用地址
-     */
     public List<AddressTuple> getAvailableAddresses() {
         if (availableAddresses == null) {
             availableAddresses = new ArrayList<>();
@@ -182,52 +173,164 @@ public class ComputerDetails {
         return availableAddresses;
     }
 
-    /**
-     * 检查是否有多个可用地址
-     */
     public boolean hasMultipleAddresses() {
         return availableAddresses != null && availableAddresses.size() > 1;
     }
 
-    /**
-     * 获取地址类型描述
-     */
     public String getAddressTypeDescription(AddressTuple address) {
         if (address == null) return "";
         
         if (address.equals(localAddress)) {
             return "本地网络";
-        } else if (address.equals(remoteAddress)) {
+        }
+        if (address.equals(remoteAddress)) {
             return "远程网络";
-        } else if (address.equals(manualAddress)) {
+        }
+        if (address.equals(manualAddress)) {
             return "手动配置";
-        } else if (address.equals(ipv6Address)) {
+        }
+        if (address.equals(ipv6Address)) {
             return "IPv6网络";
-        } else {
-            return "其他网络";
+        }
+        return "其他网络";
+    }
+
+    public static boolean isLanIpv4Address(AddressTuple address) {
+        if (address == null || address.address == null) {
+            return false;
+        }
+        
+        try {
+            InetAddress inetAddress = InetAddress.getByName(address.address);
+            if (!(inetAddress instanceof Inet4Address)) {
+                return false;
+            }
+            
+            if (inetAddress.isSiteLocalAddress() || inetAddress.isLinkLocalAddress()) {
+                return true;
+            }
+            
+            return isPrivateIpv4(address.address);
+        } catch (Exception e) {
+            return false;
         }
     }
 
+    private static boolean isPrivateIpv4(String addr) {
+        if (addr.startsWith("10.") || addr.startsWith("192.168.")) {
+            return true;
+        }
+        
+        if (addr.startsWith("172.")) {
+            String[] parts = addr.split("\\.");
+            if (parts.length >= 2) {
+                try {
+                    int secondOctet = Integer.parseInt(parts[1]);
+                    return secondOctet >= 16 && secondOctet <= 31;
+                } catch (NumberFormatException e) {
+                    return false;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static boolean isIpv6Address(AddressTuple address) {
+        return address != null && address.address != null && address.address.contains(":");
+    }
+
+    public static boolean isPublicAddress(AddressTuple address) {
+        if (address == null || address.address == null) {
+            return false;
+        }
+        return !isLanIpv4Address(address) && !isIpv6Address(address);
+    }
+
+    public List<AddressTuple> getLanIpv4Addresses() {
+        List<AddressTuple> lanAddresses = new ArrayList<>();
+        if (availableAddresses == null) {
+            return lanAddresses;
+        }
+        
+        for (AddressTuple address : availableAddresses) {
+            if (isLanIpv4Address(address)) {
+                lanAddresses.add(address);
+            }
+        }
+        return lanAddresses;
+    }
+
+    public boolean hasMultipleLanAddresses() {
+        return getLanIpv4Addresses().size() > 1;
+    }
+
+    public AddressTuple selectBestAddress() {
+        if (availableAddresses == null || availableAddresses.isEmpty()) {
+            return selectBestAddressFromFields();
+        }
+        
+        // 优先选择LAN IPv4地址
+        List<AddressTuple> lanAddresses = getLanIpv4Addresses();
+        if (!lanAddresses.isEmpty()) {
+            return selectFromLanAddresses(lanAddresses);
+        }
+        
+        // 其次选择IPv6地址
+        if (ipv6Address != null && availableAddresses.contains(ipv6Address)) {
+            return ipv6Address;
+        }
+        
+        // 最后选择公网地址
+        if (remoteAddress != null && availableAddresses.contains(remoteAddress)) {
+            return remoteAddress;
+        }
+        
+        return availableAddresses.get(0);
+    }
+
+    private AddressTuple selectBestAddressFromFields() {
+        if (localAddress != null && isLanIpv4Address(localAddress)) {
+            return localAddress;
+        }
+        if (ipv6Address != null) {
+            return ipv6Address;
+        }
+        if (remoteAddress != null) {
+            return remoteAddress;
+        }
+        return localAddress;
+    }
+
+    private AddressTuple selectFromLanAddresses(List<AddressTuple> lanAddresses) {
+        if (localAddress != null && lanAddresses.contains(localAddress)) {
+            return localAddress;
+        }
+        if (manualAddress != null && lanAddresses.contains(manualAddress)) {
+            return manualAddress;
+        }
+        return lanAddresses.get(0);
+    }
+
     public String getPairName(Context context) {
-        SharedPreferences sharedPreferences = context.getSharedPreferences("pair_name_map", context.MODE_PRIVATE);
-        return sharedPreferences.getString(uuid, "");
+        SharedPreferences prefs = context.getSharedPreferences("pair_name_map", Context.MODE_PRIVATE);
+        return prefs.getString(uuid, "");
     }
 
     @Override
     public String toString() {
-        StringBuilder str = new StringBuilder();
-        str.append("Name: ").append(name).append("\n");
-        str.append("State: ").append(state).append("\n");
-        str.append("Active Address: ").append(activeAddress).append("\n");
-        str.append("UUID: ").append(uuid).append("\n");
-        str.append("Local Address: ").append(localAddress).append("\n");
-        str.append("Remote Address: ").append(remoteAddress).append("\n");
-        str.append("IPv6 Address: ").append(ipv6Address).append("\n");
-        str.append("Manual Address: ").append(manualAddress).append("\n");
-        str.append("MAC Address: ").append(macAddress).append("\n");
-        str.append("Pair State: ").append(pairState).append("\n");
-        str.append("Running Game ID: ").append(runningGameId).append("\n");
-        str.append("HTTPS Port: ").append(httpsPort).append("\n");
-        return str.toString();
+        return "ComputerDetails{" +
+                "name='" + name + '\'' +
+                ", state=" + state +
+                ", activeAddress=" + activeAddress +
+                ", uuid='" + uuid + '\'' +
+                ", localAddress=" + localAddress +
+                ", remoteAddress=" + remoteAddress +
+                ", ipv6Address=" + ipv6Address +
+                ", manualAddress=" + manualAddress +
+                ", macAddress='" + macAddress + '\'' +
+                ", pairState=" + pairState +
+                ", runningGameId=" + runningGameId +
+                ", httpsPort=" + httpsPort +
+                '}';
     }
 }

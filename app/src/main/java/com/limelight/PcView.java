@@ -1597,11 +1597,18 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
                     // Pair an unpaired machine by default
                     doPair(computer.details);
                 } else {
-                    // 检查是否有多个可用地址
-                    if (computer.details.hasMultipleAddresses()) {
+                    // 检查是否有多个LAN地址（组网环境）
+                    if (computer.details.hasMultipleLanAddresses()) {
+                        // 只有在组网环境下有多个LAN地址时才让用户选择
                         showAddressSelectionDialog(computer.details);
                     } else {
-                        doAppList(computer.details, false, false);
+                        // 自动选择最佳地址：优先LAN IPv4，其次IPv6，最后公网
+                        ComputerDetails tempComputer = new ComputerDetails(computer.details);
+                        ComputerDetails.AddressTuple bestAddress = tempComputer.selectBestAddress();
+                        if (bestAddress != null) {
+                            tempComputer.activeAddress = bestAddress;
+                        }
+                        doAppList(tempComputer, false, false);
                     }
                 }
             });
