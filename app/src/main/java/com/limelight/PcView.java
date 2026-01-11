@@ -106,7 +106,6 @@ import android.content.SharedPreferences;
 import android.hardware.SensorManager;
 
 import com.squareup.seismic.ShakeDetector;
-import com.easytier.jni.EasyTierManager;
 
 public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeDetector.Listener, EasyTierController.VpnPermissionCallback {
     private RelativeLayout noPcFoundLayout;
@@ -119,7 +118,6 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
     private final Handler refreshHandler = new Handler(Looper.getMainLooper());
     private Runnable pendingRefreshRunnable;
     private static final long REFRESH_DEBOUNCE_DELAY = 150; // 150ms 防抖延迟
-    private int selectedPosition = -1;
     private ComputerManagerService.ComputerManagerBinder managerBinder;
     private boolean freezeUpdates, runningPolling, inForeground, completeOnCreateCalled;
 
@@ -198,10 +196,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
     public String clientName;
     private LruCache<String, Bitmap> bitmapLruCache;
     private AnalyticsManager analyticsManager;
-    private EasyTierManager easyTierManager;
     private static final int VPN_PERMISSION_REQUEST_CODE = 101;
-    private static final String EASYTIER_PREFS = "easytier_preferences";
-    private static final String KEY_TOML_CONFIG = "toml_config_string";
 
     // 添加场景配置相关常量
     private static final String SCENE_PREF_NAME = "SceneConfigs";
@@ -894,8 +889,6 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
             position = ((AdapterContextMenuInfo) menuInfo).position;
         } else if (v != null && v.getTag() instanceof Integer) {
             position = (Integer) v.getTag();
-        } else if (selectedPosition >= 0) {
-            position = selectedPosition;
         }
 
         if (position < 0) return;
@@ -1179,11 +1172,14 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
     /**
      * 处理头像点击事件
      * 当PC状态稳定后，直接启动第一个app的串流
+     * 当PC未就绪时，显示context menu
      */
-    private void handleAvatarClick(ComputerDetails computer) {
+    private void handleAvatarClick(ComputerDetails computer, View itemView) {
         // 检查PC状态是否稳定（ONLINE + PAIRED）
         if (computer.state != ComputerDetails.State.ONLINE ||
                 computer.pairState != PairState.PAIRED) {
+            // PC未就绪，显示context menu
+            openContextMenu(itemView);
             return;
         }
 
@@ -1227,7 +1223,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
             String rawAppList = CacheHelper.readInputStreamToString(
                     CacheHelper.openCacheFileForInput(getCacheDir(), "applist", uuid));
 
-            if (rawAppList == null || rawAppList.isEmpty()) {
+            if (rawAppList.isEmpty()) {
                 return null;
             }
 
@@ -1277,7 +1273,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         }
 
         if (position < 0) {
-            position = this.selectedPosition;
+            position = -1;
         }
 
         if (position < 0) return super.onContextItemSelected(item);
@@ -1631,6 +1627,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         receiveAdapterView(view);
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     public void receiveAdapterView(View view) {
         if (view instanceof androidx.recyclerview.widget.RecyclerView) {
             // Update selectionAnimator's RecyclerView and Adapter references
@@ -1706,6 +1703,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
             }
 
             // 使用GestureDetector检测GridView空白区域的长按
+            // 注意：只在空白区域处理，不影响项目上的context menu
             android.view.GestureDetector gestureDetector = new android.view.GestureDetector(this, 
                 new android.view.GestureDetector.SimpleOnGestureListener() {
                     @Override
@@ -1716,10 +1714,17 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
                             // 空白区域，触发下载
                             saveImageWithPermissionCheck();
                         }
+                        // 如果点击在项目上，不处理，让原有的context menu正常工作
                     }
                 });
             listView.setOnTouchListener((v, event) -> {
-                gestureDetector.onTouchEvent(event);
+                // 先检查是否点击在项目上
+                int position = listView.pointToPosition((int) event.getX(), (int) event.getY());
+                if (position == android.widget.AdapterView.INVALID_POSITION) {
+                    // 空白区域，使用GestureDetector处理
+                    gestureDetector.onTouchEvent(event);
+                }
+                // 如果点击在项目上，不处理，让GridView正常处理（触发context menu）
                 return false; // 不拦截，让GridView正常处理
             });
 
@@ -1935,23 +1940,20 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
     }
 
     /****************
-     *
+     * <p>
      * 发起添加群流程。群号：第四串流基地(460965258) 的 key 为： JfhuyTDZFsHrOXaWEEX6YGH9FHh3xGzR
      * 调用 joinQQGroup(JfhuyTDZFsHrOXaWEEX6YGH9FHh3xGzR) 即可发起手Q客户端申请加群 第四串流基地(460965258)
      *
      * @param key 由官网生成的key
-     * @return 返回true表示呼起手Q成功，返回false表示呼起失败
      ******************/
-    public boolean joinQQGroup(String key) {
+    public void joinQQGroup(String key) {
         Intent intent = new Intent();
         intent.setData(Uri.parse("mqqopensdkapi://bizAgent/qm/qr?url=http%3A%2F%2Fqm.qq.com%2Fcgi-bin%2Fqm%2Fqr%3Ffrom%3Dapp%26p%3Dandroid%26jump_from%3Dwebapi%26k%3D" + key));
         // 此Flag可根据具体产品需要自定义，如设置，则在加群界面按返回，返回手Q主界面，不设置，按返回会返回到呼起产品界面    //intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         try {
             startActivity(intent);
-            return true;
         } catch (Exception e) {
             // 未安装手Q或安装的版本不支持
-            return false;
         }
     }
 
@@ -1997,9 +1999,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
             joinQQGroup("LlbLDIF_YolaM4HZyLx0xAXXo04ZmoBM");
         });
 
-        builder.setNegativeButton(R.string.about_dialog_close, (dialog, which) -> {
-            dialog.dismiss();
-        });
+        builder.setNegativeButton(R.string.about_dialog_close, (dialog, which) -> dialog.dismiss());
 
         // 显示对话框
         AlertDialog dialog = builder.create();
