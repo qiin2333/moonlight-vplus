@@ -16,6 +16,9 @@ import android.media.tv.TvContract;
 import android.net.Uri;
 import android.os.Build;
 
+import androidx.core.content.ContextCompat;
+import androidx.tvprovider.media.tv.TvContractCompat;
+
 import com.limelight.LimeLog;
 import com.limelight.PosterContentProvider;
 import com.limelight.R;
@@ -52,7 +55,7 @@ public class TvChannelHelper {
             Intent intent = new Intent(TvContract.ACTION_REQUEST_CHANNEL_BROWSABLE);
             intent.putExtra(TvContract.EXTRA_CHANNEL_ID, getChannelId(computer.uuid));
             try {
-                context.startActivityForResult(intent, 0);
+                context.startActivity(intent);
             } catch (Exception ignored) {
                 // ActivityNotFoundException is the only officially documented
                 // exception that can result from this call. However some buggy
@@ -102,7 +105,11 @@ public class TvChannelHelper {
 
     @TargetApi(Build.VERSION_CODES.O)
     private void updateChannelIcon(long channelId) {
-        Bitmap logo = drawableToBitmap(context.getResources().getDrawable(R.drawable.ic_channel));
+        Drawable drawable = ContextCompat.getDrawable(context, R.drawable.ic_channel);
+        if (drawable == null) {
+            return;
+        }
+        Bitmap logo = drawableToBitmap(drawable);
         try {
             Uri localUri = TvContract.buildChannelLogoUri(channelId);
             try (OutputStream outputStream = context.getContentResolver().openOutputStream(localUri)) {
@@ -168,7 +175,7 @@ public class TvChannelHelper {
                 return;
             }
 
-            TvContract.requestChannelBrowsable(context, channelId);
+            TvContractCompat.requestChannelBrowsable(context, channelId);
         }
     }
 

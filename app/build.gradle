@@ -187,6 +187,7 @@ dependencies {
     annotationProcessor 'com.github.bumptech.glide:compiler:5.0.5'
     implementation 'com.squareup:seismic:1.0.3'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
+    implementation 'androidx.tvprovider:tvprovider:1.1.0'
 
     // Firebase Analytics
     implementation platform('com.google.firebase:firebase-bom:32.7.0')
