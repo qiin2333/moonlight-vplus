@@ -1,5 +1,6 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/pcViewRootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".PcView" >
@@ -19,7 +20,9 @@
         android:layout_alignParentBottom="true"
         android:layout_alignParentTop="true"
         android:layout_toRightOf="@+id/settingsButton"
-        android:layout_toEndOf="@+id/settingsButton">
+        android:layout_toEndOf="@+id/settingsButton"
+        android:clickable="false"
+        android:focusable="false">
 
         <RelativeLayout
             android:id="@+id/no_pc_found_layout"
@@ -65,10 +68,10 @@
 
     <ImageButton
         android:id="@+id/settingsButton"
-        android:layout_width="70dp"
-        android:layout_height="65dp"
+        android:layout_width="@dimen/pc_toolbar_button_size"
+        android:layout_height="@dimen/pc_toolbar_button_size"
         android:cropToPadding="false"
-        android:scaleType="fitXY"
+        android:scaleType="fitCenter"
         android:nextFocusForward="@id/aboutButton"
         android:layout_marginTop="@dimen/activity_horizontal_margin"
         android:layout_alignParentStart="true"
@@ -79,10 +82,10 @@
 
     <ImageButton
         android:id="@+id/aboutButton"
-        android:layout_width="70dp"
-        android:layout_height="65dp"
+        android:layout_width="@dimen/pc_toolbar_button_size"
+        android:layout_height="@dimen/pc_toolbar_button_size"
         android:cropToPadding="false"
-        android:scaleType="fitXY"
+        android:scaleType="fitCenter"
         android:nextFocusForward="@id/easyTierControlButton"
         android:layout_alignParentStart="true"
         android:layout_alignParentLeft="true"
@@ -93,10 +96,10 @@
     <!-- EasyTier 控制按钮 -->
     <ImageButton
         android:id="@+id/easyTierControlButton"
-        android:layout_width="70dp"
-        android:layout_height="65dp"
+        android:layout_width="@dimen/pc_toolbar_button_size"
+        android:layout_height="@dimen/pc_toolbar_button_size"
         android:cropToPadding="false"
-        android:scaleType="fitXY"
+        android:scaleType="fitCenter"
         android:nextFocusForward="@id/toggleUnpairedButton"
         android:layout_alignParentStart="true"
         android:layout_alignParentLeft="true"
@@ -106,10 +109,10 @@
 
     <ImageButton
         android:id="@+id/toggleUnpairedButton"
-        android:layout_width="70dp"
-        android:layout_height="65dp"
+        android:layout_width="@dimen/pc_toolbar_button_size"
+        android:layout_height="@dimen/pc_toolbar_button_size"
         android:cropToPadding="false"
-        android:scaleType="fitXY"
+        android:scaleType="fitCenter"
         android:nextFocusForward="@id/restoreSessionButton"
         android:layout_alignParentStart="true"
         android:layout_alignParentLeft="true"
@@ -119,10 +122,10 @@
 
     <ImageButton
         android:id="@+id/restoreSessionButton"
-        android:layout_width="70dp"
-        android:layout_height="65dp"
+        android:layout_width="@dimen/pc_toolbar_button_size"
+        android:layout_height="@dimen/pc_toolbar_button_size"
         android:cropToPadding="false"
-        android:scaleType="fitXY"
+        android:scaleType="fitCenter"
         android:layout_alignParentStart="true"
         android:layout_alignParentLeft="true"
         android:layout_below="@id/toggleUnpairedButton"

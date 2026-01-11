@@ -3,9 +3,9 @@
     android:shape="oval">
     <!-- 梦幻渐变背景 - 柔和过渡 -->
     <gradient
-        android:startColor="#60FF6B9D"
-        android:centerColor="#40FF8FA3"
-        android:endColor="#20FFA3C7"
+        android:startColor="#80FF6B9D"
+        android:centerColor="#60FF8FA3"
+        android:endColor="#40FFA3C7"
         android:angle="135"
         android:type="radial"
         android:centerX="0.5"
@@ -14,5 +14,5 @@
     <!-- 柔和边框 -->
     <stroke
         android:width="1dp"
-        android:color="#30FFFFFF" />
+        android:color="#50FFFFFF" />
 </shape>

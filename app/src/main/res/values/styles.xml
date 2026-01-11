@@ -117,6 +117,11 @@
         <item name="android:textViewStyle">@style/PreferenceTextWithShadow</item>
         <item name="android:titleTextAppearance">@style/PreferenceTitleWithShadow</item>
         <item name="android:subtitleTextAppearance">@style/PreferenceSummaryWithShadow</item>
+        <!-- Preference 的 summary 在 AOSP 默认布局里通常使用 ?android:attr/textAppearanceSmall -->
+        <item name="android:textAppearanceSmall">@style/PreferenceSummaryWithShadow</item>
+        <!-- 某些系统的 Preference 列表项 summary 会走 list item 的 secondary textAppearance -->
+        <item name="android:textAppearanceListItemSecondary">@style/PreferenceSummaryWithShadow</item>
+        <item name="android:textAppearanceListItemSmall">@style/PreferenceSummaryWithShadow</item>
         <item name="android:colorAccent">@color/theme_pink_secondary</item>
         <item name="android:textColorPrimary">@color/theme_pink_secondary</item>
         <item name="android:listDivider">@color/theme_pink_secondary</item>
@@ -137,9 +142,10 @@
         <item name="android:textColor">@android:color/white</item>
     </style>
 
-    <style name="PreferenceSummaryWithShadow" parent="PreferenceTextWithShadow">
-        <item name="android:textSize">14sp</item>
-        <item name="android:textColor">@color/theme_pink_light</item> <!-- 柔和的浅蓝色 -->
+    <style name="PreferenceSummaryWithShadow">
+        <item name="android:textSize">11sp</item>
+        <item name="android:textColor">?android:attr/textColorSecondary</item>
+        <!-- 使用系统默认的次要文字颜色 -->
     </style>
 
     <style name="PreferenceCategoryWithShadow" parent="PreferenceTextWithShadow">

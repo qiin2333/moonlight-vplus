@@ -10,4 +10,7 @@
     <dimen name="keyboard_top_view_seek_bar_min_width">60dp</dimen>
     <dimen name="game_menu_dialog_width">576dp</dimen>
 
+    <!-- PC View toolbar buttons -->
+    <dimen name="pc_toolbar_button_size">64dp</dimen>
+
 </resources>

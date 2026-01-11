@@ -274,30 +274,13 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
             }
         }).start();
 
-        // 设置长按监听
-        imageView.setOnLongClickListener(v -> {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                // Android 11及以上需要检查MANAGE_EXTERNAL_STORAGE权限
-                if (Environment.isExternalStorageManager()) {
-                    saveImage();
-                } else {
-                    // 请求权限
-                    Toast.makeText(this, getResources().getString(R.string.storage_permission_required), Toast.LENGTH_LONG).show();
-                    try {
-                        Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-                        intent.setData(Uri.parse("package:" + getPackageName()));
-                        startActivity(intent);
-                    } catch (Exception e) {
-                        Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-                        startActivity(intent);
-                    }
-                }
-            } else {
-                // Android 10及以下直接保存
-                saveImage();
-            }
-            return true;
-        });
+        // 在背景图片上设置长按监听器
+        if (imageView != null) {
+            imageView.setOnLongClickListener(v -> {
+                saveImageWithPermissionCheck();
+                return true;
+            });
+        }
 
         if (getWindow().getDecorView().getRootView() != null) {
             initSceneButtons();
@@ -433,6 +416,29 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         return deviceRotation == Configuration.ORIENTATION_PORTRAIT ?
                 "https://img-api.pipw.top" :
                 "https://img-api.pipw.top/?phone=true";
+    }
+
+    /**
+     * 带权限检查的保存图片方法
+     */
+    private void saveImageWithPermissionCheck() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (Environment.isExternalStorageManager()) {
+                saveImage();
+            } else {
+                Toast.makeText(this, getResources().getString(R.string.storage_permission_required), Toast.LENGTH_LONG).show();
+                try {
+                    Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                    intent.setData(Uri.parse("package:" + getPackageName()));
+                    startActivity(intent);
+                } catch (Exception e) {
+                    Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                    startActivity(intent);
+                }
+            }
+        } else {
+            saveImage();
+        }
     }
 
     private void saveImage() {
@@ -1698,6 +1704,24 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
             if (view instanceof GridView) {
                 calculateDynamicColumnWidth((GridView) view);
             }
+
+            // 使用GestureDetector检测GridView空白区域的长按
+            android.view.GestureDetector gestureDetector = new android.view.GestureDetector(this, 
+                new android.view.GestureDetector.SimpleOnGestureListener() {
+                    @Override
+                    public void onLongPress(android.view.MotionEvent e) {
+                        // 检查是否点击在项目上
+                        int position = listView.pointToPosition((int) e.getX(), (int) e.getY());
+                        if (position == android.widget.AdapterView.INVALID_POSITION) {
+                            // 空白区域，触发下载
+                            saveImageWithPermissionCheck();
+                        }
+                    }
+                });
+            listView.setOnTouchListener((v, event) -> {
+                gestureDetector.onTouchEvent(event);
+                return false; // 不拦截，让GridView正常处理
+            });
 
             UiHelper.applyStatusBarPadding(listView);
             registerForContextMenu(listView);

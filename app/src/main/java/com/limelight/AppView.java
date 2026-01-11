@@ -1281,6 +1281,26 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         // 应用UI配置
         UiHelper.applyStatusBarPadding(rv);
         registerForContextMenu(rv);
+
+        // 延迟聚焦到第一个应用，避免默认聚焦到设置按钮
+        focusFirstApp(rv);
+    }
+
+    /**
+     * 将焦点设置到第一个应用上
+     */
+    private void focusFirstApp(RecyclerView rv) {
+        rv.post(() -> {
+            if (appGridAdapter != null && appGridAdapter.getCount() > 0) {
+                RecyclerView.ViewHolder holder = rv.findViewHolderForAdapterPosition(0);
+                if (holder != null && holder.itemView != null) {
+                    holder.itemView.requestFocus();
+                    // 触发选中状态变化
+                    AppObject app = (AppObject) appGridAdapter.getItem(0);
+                    handleSelectionChange(0, app);
+                }
+            }
+        });
     }
 
     private void setupBridgeAdapter(RecyclerView rv) {

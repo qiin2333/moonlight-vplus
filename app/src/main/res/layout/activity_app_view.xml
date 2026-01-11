@@ -49,6 +49,8 @@
         android:layout_alignParentTop="true"
         android:src="@drawable/ic_settings"
         android:preferKeepClear="true"
+        android:focusable="true"
+        android:focusableInTouchMode="false"
         style="?android:attr/borderlessButtonStyle"/>
 
     <TextView
