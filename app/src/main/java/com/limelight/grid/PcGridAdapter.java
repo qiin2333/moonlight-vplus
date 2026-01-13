@@ -371,11 +371,20 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
 
     @Override
     public Object getItem(int i) {
-        return getFilteredItems().get(i);
+        List<PcView.ComputerObject> filtered = getFilteredItems();
+        if (i < 0 || i >= filtered.size()) {
+            return null;
+        }
+        return filtered.get(i);
     }
     
     @Override
     public View getView(int i, View convertView, ViewGroup viewGroup) {
+        List<PcView.ComputerObject> filtered = getFilteredItems();
+        if (i < 0 || i >= filtered.size()) {
+            return convertView != null ? convertView : inflater.inflate(R.layout.pc_grid_item, viewGroup, false);
+        }
+
         if (convertView == null) {
             convertView = inflater.inflate(R.layout.pc_grid_item, viewGroup, false);
         }
@@ -385,25 +394,21 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
         TextView txtView = convertView.findViewById(R.id.grid_text);
         View spinnerView = convertView.findViewById(R.id.grid_spinner);
 
-        List<PcView.ComputerObject> filtered = getFilteredItems();
         PcView.ComputerObject computer = filtered.get(i);
         populateView(convertView, imgView, spinnerView, txtView, overlayView, computer);
         
         // 为头像容器设置点击监听器（仅对非添加卡片）
-        final View itemView = convertView;
         View imageLayout = convertView.findViewById(R.id.grid_image_layout);
-        if (!isAddComputerCard(computer) && avatarClickListener != null && imageLayout != null) {
-            imageLayout.setOnClickListener(v -> {
-                if (computer.details != null) {
-                    // 传递整个item view，以便显示context menu
-                    avatarClickListener.onAvatarClick(computer.details, itemView);
-                }
-            });
-            imageLayout.setClickable(true);
-            imageLayout.setFocusable(false);
-        } else if (imageLayout != null) {
-            imageLayout.setOnClickListener(null);
-            imageLayout.setClickable(false);
+        if (imageLayout != null) {
+            if (!isAddComputerCard(computer) && avatarClickListener != null && computer.details != null) {
+                final View itemView = convertView;
+                imageLayout.setOnClickListener(v -> avatarClickListener.onAvatarClick(computer.details, itemView));
+                imageLayout.setClickable(true);
+                imageLayout.setFocusable(false);
+            } else {
+                imageLayout.setOnClickListener(null);
+                imageLayout.setClickable(false);
+            }
         }
 
         return convertView;
