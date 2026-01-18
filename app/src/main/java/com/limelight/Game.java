@@ -2824,7 +2824,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     // Returns true if the event was consumed
     // NB: View is only present if called from a view callback
-    @RequiresApi(api = Build.VERSION_CODES.O)
     private boolean handleMotionEvent(View view, MotionEvent event) {
         // Pass through mouse/touch/joystick input if we're not grabbing
         if (!grabbedInput) {
@@ -3269,11 +3268,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public boolean onGenericMotionEvent(MotionEvent event) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            return handleMotionEvent(null, event) || super.onGenericMotionEvent(event);
-        }
-
-        return false;
+        return handleMotionEvent(null, event) || super.onGenericMotionEvent(event);
     }
 
     private void updateMousePosition(View touchedView, MotionEvent event) {
@@ -3359,10 +3354,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public boolean onGenericMotion(View view, MotionEvent event) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            return handleMotionEvent(view, event);
-        }
-        return false;
+        return handleMotionEvent(view, event);
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -3373,14 +3365,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             //
             // NB: This is still needed even when we call the newer requestUnbufferedDispatch()!
             // Add a configuration to allow view.requestUnbufferedDispatch to be disabled.
-            if (!prefConfig.syncTouchEventWithDisplay) {
+            // requestUnbufferedDispatch(MotionEvent) requires API 30 (Android 11)
+            if (!prefConfig.syncTouchEventWithDisplay && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 view.requestUnbufferedDispatch(event);
             }
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            return handleMotionEvent(view, event); //Y700平板上, onTouch的调用频率为120Hz
-        }
-        return false;
+        return handleMotionEvent(view, event); //Y700平板上, onTouch的调用频率为120Hz
     }
 
     @Override
@@ -4663,10 +4653,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         return streamView;
     }
 
-    public void getHandleMotionEvent(StreamView streamView, MotionEvent event) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            handleMotionEvent(streamView, event);
-        }
+    public boolean getHandleMotionEvent(StreamView streamView, MotionEvent event) {
+        return handleMotionEvent(streamView, event);
     }
 
     /**
