@@ -163,9 +163,40 @@ public class UpdateManager {
 			if (isNewVersionAvailable(currentVersion, updateInfo.version)) {
 				showUpdateDialog(context, updateInfo);
 			} else if (showToast) {
-				Toast.makeText(context, "已是最新版本", Toast.LENGTH_SHORT).show();
+				// 已是最新版本，显示更新公告对话框
+				showLatestVersionDialog(context, currentVersion, updateInfo.releaseNotes);
 			}
 		}
+	}
+	
+	/**
+	 * 显示"已是最新版本"对话框，包含当前版本的更新公告
+	 */
+	private static void showLatestVersionDialog(Context context, String currentVersion, String releaseNotes) {
+		if (!(context instanceof Activity)) {
+			Toast.makeText(context, "已是最新版本 v" + currentVersion, Toast.LENGTH_SHORT).show();
+			return;
+		}
+
+		Activity activity = (Activity) context;
+		activity.runOnUiThread(() -> {
+			AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+			builder.setTitle("✨ 已是最新版本 v" + currentVersion);
+
+			String message;
+			if (releaseNotes != null && !releaseNotes.trim().isEmpty()) {
+				message = "当前版本更新内容：\n\n" + releaseNotes;
+			} else {
+				message = "当前版本暂无更新日志";
+			}
+
+			builder.setMessage(message);
+			builder.setPositiveButton("知道了", null);
+			builder.setCancelable(true);
+
+			AlertDialog dialog = builder.create();
+			dialog.show();
+		});
 	}
 
 	private static String getCurrentVersion(Context context) {
