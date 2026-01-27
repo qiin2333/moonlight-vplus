@@ -86,17 +86,37 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
         setLayoutId(R.layout.pc_grid_item);
     }
 
-    private boolean loadFirstAppBoxArt(ImageView imgView, ComputerDetails computer) {
+    /**
+     * 加载主机的第一个应用封面作为头像
+     * @param imgView 图像视图
+     * @param computer 主机信息
+     * @param allowAsyncLoad 是否允许异步加载（离线主机只使用缓存，不触发新加载）
+     * @return 是否成功加载封面
+     */
+    private boolean loadFirstAppBoxArt(ImageView imgView, ComputerDetails computer, boolean allowAsyncLoad) {
         if (computer.uuid == null) {
             return false;
         }
 
+        // 首先检查内存缓存
         Bitmap cachedBitmap = boxArtCache.get(computer.uuid);
         if (cachedBitmap != null && !cachedBitmap.isRecycled()) {
             applyBoxArt(imgView, cachedBitmap);
             return true;
         }
 
+        // 离线主机：尝试从磁盘缓存加载（同步加载，因为不想触发网络请求）
+        if (!allowAsyncLoad) {
+            Bitmap diskCachedBitmap = loadBoxArtFromDiskCache(computer);
+            if (diskCachedBitmap != null) {
+                boxArtCache.put(computer.uuid, diskCachedBitmap);
+                applyBoxArt(imgView, diskCachedBitmap);
+                return true;
+            }
+            return false;
+        }
+
+        // 在线主机：如果正在加载中，返回 false
         if (loadingUuids.contains(computer.uuid)) {
             return false;
         }
@@ -104,6 +124,88 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
         loadingUuids.add(computer.uuid);
         new LoadBoxArtTask(imgView, computer, context, this).execute();
         return false;
+    }
+    
+    /**
+     * 从磁盘缓存同步加载封面（用于离线主机）
+     */
+    private Bitmap loadBoxArtFromDiskCache(ComputerDetails computer) {
+        if (computer.uuid == null) {
+            return null;
+        }
+        return loadBoxArtFromDisk(context, computer.uuid, false);
+    }
+    
+    /**
+     * 从磁盘加载封面的通用方法
+     * @param ctx 上下文
+     * @param uuid 主机UUID
+     * @param useAdaptiveSampleSize 是否使用自适应采样大小（异步加载时使用，更精确但稍慢）
+     * @return 封面位图，失败返回null
+     */
+    private static Bitmap loadBoxArtFromDisk(Context ctx, String uuid, boolean useAdaptiveSampleSize) {
+        if (ctx == null || uuid == null) {
+            return null;
+        }
+        
+        try {
+            String rawAppList = CacheHelper.readInputStreamToString(
+                    CacheHelper.openCacheFileForInput(ctx.getCacheDir(), "applist", uuid));
+
+            if (rawAppList.isEmpty()) {
+                return null;
+            }
+
+            List<NvApp> appList = NvHTTP.getAppListByReader(new StringReader(rawAppList));
+            if (appList.isEmpty()) {
+                return null;
+            }
+
+            File cacheDir = ctx.getCacheDir();
+            for (NvApp app : appList) {
+                File boxArtFile = CacheHelper.openPath(false, cacheDir, "boxart", uuid, app.getAppId() + ".png");
+                if (!boxArtFile.exists() || boxArtFile.length() == 0) {
+                    continue;
+                }
+                
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                if (useAdaptiveSampleSize) {
+                    // 先获取图片尺寸
+                    options.inJustDecodeBounds = true;
+                    BitmapFactory.decodeFile(boxArtFile.getAbsolutePath(), options);
+                    options.inSampleSize = calculateSampleSize(options.outWidth, options.outHeight);
+                    options.inJustDecodeBounds = false;
+                } else {
+                    // 固定采样大小，更快
+                    options.inSampleSize = 2;
+                }
+                
+                Bitmap bitmap = BitmapFactory.decodeFile(boxArtFile.getAbsolutePath(), options);
+                if (bitmap != null) {
+                    LimeLog.info("Loaded box art from disk: " + app.getAppName());
+                    return bitmap;
+                }
+            }
+        } catch (Exception e) {
+            LimeLog.warning("Failed to load disk cached box art: " + e.getMessage());
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 计算合适的采样大小
+     */
+    private static int calculateSampleSize(int width, int height) {
+        int sampleSize = 1;
+        if (height > TARGET_SIZE || width > TARGET_SIZE) {
+            int halfHeight = height / 2;
+            int halfWidth = width / 2;
+            while ((halfHeight / sampleSize) >= TARGET_SIZE && (halfWidth / sampleSize) >= TARGET_SIZE) {
+                sampleSize *= 2;
+            }
+        }
+        return sampleSize;
     }
 
     private static void applyBoxArt(ImageView imgView, Bitmap bitmap) {
@@ -139,64 +241,8 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
         @Override
         protected Bitmap doInBackground(Void... voids) {
             Context ctx = contextRef.get();
-            if (ctx == null || computer.uuid == null) {
-                return null;
-            }
-
-            try {
-                String rawAppList = CacheHelper.readInputStreamToString(
-                        CacheHelper.openCacheFileForInput(ctx.getCacheDir(), "applist", computer.uuid));
-
-                if (rawAppList.isEmpty()) {
-                    return null;
-                }
-
-                List<NvApp> appList = NvHTTP.getAppListByReader(new StringReader(rawAppList));
-                if (appList.isEmpty()) {
-                    return null;
-                }
-
-                File cacheDir = ctx.getCacheDir();
-                for (NvApp app : appList) {
-                    Bitmap bitmap = loadBoxArtForApp(cacheDir, computer.uuid, app);
-                    if (bitmap != null) {
-                        LimeLog.info("Loaded box art for PC card: " + app.getAppName());
-                        return bitmap;
-                    }
-                }
-            } catch (Exception e) {
-                LimeLog.warning("Failed to load first app box art: " + e.getMessage());
-            }
-
-            return null;
-        }
-
-        private Bitmap loadBoxArtForApp(File cacheDir, String uuid, NvApp app) {
-            File boxArtFile = CacheHelper.openPath(false, cacheDir, "boxart", uuid, app.getAppId() + ".png");
-            if (!boxArtFile.exists() || boxArtFile.length() == 0) {
-                return null;
-            }
-
-            BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inJustDecodeBounds = true;
-            BitmapFactory.decodeFile(boxArtFile.getAbsolutePath(), options);
-
-            options.inSampleSize = calculateSampleSize(options.outWidth, options.outHeight);
-            options.inJustDecodeBounds = false;
-
-            return BitmapFactory.decodeFile(boxArtFile.getAbsolutePath(), options);
-        }
-
-        private int calculateSampleSize(int width, int height) {
-            int sampleSize = 1;
-            if (height > TARGET_SIZE || width > TARGET_SIZE) {
-                int halfHeight = height / 2;
-                int halfWidth = width / 2;
-                while ((halfHeight / sampleSize) >= TARGET_SIZE && (halfWidth / sampleSize) >= TARGET_SIZE) {
-                    sampleSize *= 2;
-                }
-            }
-            return sampleSize;
+            // 使用自适应采样大小，异步加载时可以更精确地控制质量
+            return loadBoxArtFromDisk(ctx, computer.uuid, true);
         }
 
         @Override
@@ -466,8 +512,8 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
         boolean isUnknown = details.state == ComputerDetails.State.UNKNOWN;
         boolean isOffline = details.state == ComputerDetails.State.OFFLINE;
 
-        // 加载头像
-        boolean hasBoxArt = isOnline && details.uuid != null && loadFirstAppBoxArt(imgView, details);
+        // 加载头像 - 无论在线还是离线都尝试使用缓存的封面
+        boolean hasBoxArt = details.uuid != null && loadFirstAppBoxArt(imgView, details, isOnline);
         if (!hasBoxArt) {
             imgView.setImageResource(R.drawable.ic_computer);
             imgView.setScaleType(ImageView.ScaleType.FIT_CENTER);

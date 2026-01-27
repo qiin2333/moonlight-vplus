@@ -387,7 +387,11 @@ public class StreamSettings extends Activity {
             
             int oldIndex = selectedCategoryIndex;
             selectedCategoryIndex = position;
-            notifyItemChanged(oldIndex);
+            
+            // 确保 oldIndex 有效再通知更新
+            if (oldIndex >= 0 && oldIndex < categories.size()) {
+                notifyItemChanged(oldIndex);
+            }
             notifyItemChanged(selectedCategoryIndex);
             
             // 滚动到对应分类
@@ -422,6 +426,12 @@ public class StreamSettings extends Activity {
     void onCategoriesLoaded(List<CategoryItem> loadedCategories) {
         this.categories.clear();
         this.categories.addAll(loadedCategories);
+        
+        // 验证并校正 selectedCategoryIndex（屏幕旋转后恢复时可能越界）
+        if (selectedCategoryIndex >= categories.size()) {
+            selectedCategoryIndex = Math.max(0, categories.size() - 1);
+        }
+        
         if (categoryAdapter != null) {
             categoryAdapter.notifyDataSetChanged();
         }
@@ -435,7 +445,10 @@ public class StreamSettings extends Activity {
             int oldIndex = selectedCategoryIndex;
             selectedCategoryIndex = index;
             if (categoryAdapter != null) {
-                categoryAdapter.notifyItemChanged(oldIndex);
+                // 确保 oldIndex 有效再通知更新
+                if (oldIndex >= 0 && oldIndex < categories.size()) {
+                    categoryAdapter.notifyItemChanged(oldIndex);
+                }
                 categoryAdapter.notifyItemChanged(selectedCategoryIndex);
             }
         }

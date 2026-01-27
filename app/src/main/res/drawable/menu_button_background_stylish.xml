@@ -1,39 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 精致的菜单按钮背景，玻璃拟态风格 -->
+<!-- 精致的菜单按钮背景，玻璃拟态风格 + 柔光效果 -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- 按下状态 -->
+    <!-- 按下状态 - 明显按压反馈 -->
     <item android:state_pressed="true">
         <layer-list>
-            <item>
-                <shape android:shape="rectangle">
-                    <corners android:radius="12dp"/>
-                    <solid android:color="#55FF6B9D"/>
+            <!-- 外发光 -->
+            <item android:top="1dp" android:left="1dp" android:right="1dp" android:bottom="1dp">
+                <shape android:shape="oval">
+                    <solid android:color="#66FF6B9D"/>
+                </shape>
+            </item>
+            <!-- 主体 -->
+            <item android:top="2dp" android:left="2dp" android:right="2dp" android:bottom="2dp">
+                <shape android:shape="oval">
+                    <solid android:color="#44FF6B9D"/>
+                    <stroke android:width="1.5dp" android:color="#99FF6B9D"/>
                 </shape>
             </item>
         </layer-list>
     </item>
     
-    <!-- 聚焦状态（手柄选中） -->
+    <!-- 聚焦状态（手柄选中）- 呼吸光环 -->
     <item android:state_focused="true">
         <layer-list>
+            <!-- 外圈光晕 -->
             <item>
-                <shape android:shape="rectangle">
-                    <corners android:radius="12dp"/>
-                    <solid android:color="#33FF6B9D"/>
-                    <stroke android:width="1.5dp" android:color="#88FF6B9D"/>
+                <shape android:shape="oval">
+                    <solid android:color="#22FF6B9D"/>
+                    <stroke android:width="2dp" android:color="#55FF6B9D"/>
+                </shape>
+            </item>
+            <!-- 内圈高光 -->
+            <item android:top="3dp" android:left="3dp" android:right="3dp" android:bottom="3dp">
+                <shape android:shape="oval">
+                    <solid android:color="#33FFFFFF"/>
+                    <stroke android:width="1dp" android:color="#66FF6B9D"/>
                 </shape>
             </item>
         </layer-list>
     </item>
     
-    <!-- 默认状态 - 玻璃效果 -->
+    <!-- 默认状态 - 精致玻璃拟态 -->
     <item>
         <layer-list>
-            <item>
-                <shape android:shape="rectangle">
-                    <corners android:radius="12dp"/>
-                    <solid android:color="#22FFFFFF"/>
-                    <stroke android:width="0.5dp" android:color="#33FFFFFF"/>
+            <!-- 微弱阴影 -->
+            <item android:top="1dp" android:left="1dp">
+                <shape android:shape="oval">
+                    <solid android:color="#11000000"/>
+                </shape>
+            </item>
+            <!-- 玻璃主体 -->
+            <item android:bottom="1dp" android:right="1dp">
+                <shape android:shape="oval">
+                    <gradient
+                        android:type="linear"
+                        android:angle="135"
+                        android:startColor="#28FFFFFF"
+                        android:endColor="#15FFFFFF"/>
+                    <stroke android:width="0.5dp" android:color="#30FFFFFF"/>
+                </shape>
+            </item>
+            <!-- 顶部高光 -->
+            <item android:top="4dp" android:left="8dp" android:right="8dp" android:bottom="28dp">
+                <shape android:shape="oval">
+                    <solid android:color="#18FFFFFF"/>
                 </shape>
             </item>
         </layer-list>
