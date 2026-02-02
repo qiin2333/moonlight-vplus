@@ -586,6 +586,14 @@
             android:title="@string/title_enable_hdr_high_brightness"
             android:summary="@string/summary_enable_hdr_high_brightness"
             android:defaultValue="false" />
+        <ListPreference
+            android:key="list_hdr_mode"
+            android:dependency="checkbox_enable_hdr"
+            android:title="@string/title_hdr_mode"
+            android:summary="@string/summary_hdr_mode"
+            android:entries="@array/hdr_mode_entries"
+            android:entryValues="@array/hdr_mode_values"
+            android:defaultValue="1" />
         <CheckBoxPreference
             android:key="checkbox_full_range"
             android:title="@string/title_full_range"

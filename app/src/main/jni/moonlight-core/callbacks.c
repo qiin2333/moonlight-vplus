@@ -474,8 +474,8 @@ Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass c
                                                            jint clientRefreshRateX100,
                                                            jbyteArray riAesKey, jbyteArray riAesIv,
                                                            jint videoCapabilities,
-                                                           jint colorSpace, jint colorRange, jboolean enableMic,
-                                                           jboolean controlOnly) {
+                                                           jint colorSpace, jint colorRange, jint hdrMode,
+                                                           jboolean enableMic, jboolean controlOnly) {
     SERVER_INFORMATION serverInfo = {
             .address = (*env)->GetStringUTFChars(env, address, 0),
             .serverInfoAppVersion = (*env)->GetStringUTFChars(env, appVersion, 0),
@@ -496,6 +496,7 @@ Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass c
             .encryptionFlags = ENCFLG_AUDIO | ENCFLG_MICROPHONE,
             .colorSpace = colorSpace,
             .colorRange = colorRange,
+            .hdrMode = hdrMode,  // 0=SDR, 1=HDR10/PQ, 2=HLG
             .enableMic = enableMic,
             .controlOnly = controlOnly
     };

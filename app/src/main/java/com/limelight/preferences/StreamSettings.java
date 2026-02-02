@@ -1138,14 +1138,29 @@ public class StreamSettings extends Activity {
                     }
                 }
 
+                // Check for HLG support as well
+                boolean foundHlg = false;
+                if (hdrCaps != null) {
+                    for (int hdrType : hdrCaps.getSupportedHdrTypes()) {
+                        if (hdrType == Display.HdrCapabilities.HDR_TYPE_HLG) {
+                            foundHlg = true;
+                            break;
+                        }
+                    }
+                }
+
                 PreferenceCategory category =
                         (PreferenceCategory) findPreference("category_advanced_settings");
                 CheckBoxPreference hdrPref = (CheckBoxPreference) findPreference("checkbox_enable_hdr");
                 CheckBoxPreference hdrHighBrightnessPref = (CheckBoxPreference) findPreference("checkbox_enable_hdr_high_brightness");
+                ListPreference hdrModePref = (ListPreference) findPreference("list_hdr_mode");
 
                 if (!foundHdr10) {
                     LimeLog.info("Excluding HDR toggle based on display capabilities");
                     // 必须先移除依赖项，再移除被依赖的项，否则会崩溃
+                    if (hdrModePref != null) {
+                        category.removePreference(hdrModePref);
+                    }
                     if (hdrHighBrightnessPref != null) {
                         category.removePreference(hdrHighBrightnessPref);
                     }
@@ -1164,6 +1179,40 @@ public class StreamSettings extends Activity {
                     if (hdrHighBrightnessPref != null) {
                         hdrHighBrightnessPref.setEnabled(false);
                         hdrHighBrightnessPref.setChecked(false);
+                    }
+                    // 同时禁用 HDR 模式选项
+                    if (hdrModePref != null) {
+                        hdrModePref.setEnabled(false);
+                    }
+                }
+                else {
+                    // HDR is supported, configure the HDR mode preference
+                    if (hdrModePref != null) {
+                        // If HLG is not supported, remove it from the options
+                        if (!foundHlg) {
+                            LimeLog.info("Display does not support HLG, limiting to HDR10 only");
+                            // Keep only HDR10 option
+                            hdrModePref.setEntries(new CharSequence[]{getString(R.string.hdr_mode_hdr10)});
+                            hdrModePref.setEntryValues(new CharSequence[]{"1"});
+                            hdrModePref.setValue("1");
+                        }
+                        
+                        // Update summary to show current selection
+                        hdrModePref.setOnPreferenceChangeListener((preference, newValue) -> {
+                            String value = (String) newValue;
+                            ListPreference listPref = (ListPreference) preference;
+                            int index = listPref.findIndexOfValue(value);
+                            if (index >= 0) {
+                                preference.setSummary(listPref.getEntries()[index]);
+                            }
+                            return true;
+                        });
+                        
+                        // Set initial summary
+                        int index = hdrModePref.findIndexOfValue(hdrModePref.getValue());
+                        if (index >= 0) {
+                            hdrModePref.setSummary(hdrModePref.getEntries()[index]);
+                        }
                     }
                 }
             }

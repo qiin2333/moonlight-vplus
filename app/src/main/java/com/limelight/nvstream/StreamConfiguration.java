@@ -28,6 +28,7 @@ public class StreamConfiguration {
     private int encryptionFlags;
     private int colorRange;
     private int colorSpace;
+    private int hdrMode; // 0=SDR, 1=HDR10/PQ, 2=HLG
     private boolean persistGamepadsAfterDisconnect;
     private boolean enableMic;
     private boolean useVdd;
@@ -135,6 +136,15 @@ public class StreamConfiguration {
 
         public StreamConfiguration.Builder setColorSpace(int colorSpace) {
             config.colorSpace = colorSpace;
+            return this;
+        }
+
+        /**
+         * Sets the HDR mode for the video stream.
+         * @param hdrMode 0 = SDR (default), 1 = HDR10/PQ (SMPTE ST 2084), 2 = HLG (Hybrid Log-Gamma, ARIB STD-B67)
+         */
+        public StreamConfiguration.Builder setHdrMode(int hdrMode) {
+            config.hdrMode = hdrMode;
             return this;
         }
 
@@ -270,6 +280,14 @@ public class StreamConfiguration {
 
     public int getColorSpace() {
         return colorSpace;
+    }
+
+    /**
+     * Gets the HDR mode for the video stream.
+     * @return 0 = SDR (default), 1 = HDR10/PQ, 2 = HLG
+     */
+    public int getHdrMode() {
+        return hdrMode;
     }
 
     public boolean getEnableMic() {

@@ -139,6 +139,16 @@
         <item>neverh265</item>
     </string-array>
 
+    <!-- HDR Mode options: 1=HDR10/PQ, 2=HLG -->
+    <string-array name="hdr_mode_entries">
+        <item>@string/hdr_mode_hdr10</item>
+        <item>@string/hdr_mode_hlg</item>
+    </string-array>
+    <string-array name="hdr_mode_values" translatable="false">
+        <item>1</item>
+        <item>2</item>
+    </string-array>
+
     <string-array name="video_frame_pacing_names">
         <item>@string/pacing_latency</item>
         <item>@string/pacing_balanced</item>

@@ -37,6 +37,11 @@ public class MoonBridge {
     public static final int COLOR_RANGE_LIMITED = 0;
     public static final int COLOR_RANGE_FULL = 1;
 
+    // HDR mode values for dynamicRangeMode parameter
+    public static final int HDR_MODE_SDR = 0;      // SDR (default)
+    public static final int HDR_MODE_HDR10 = 1;    // HDR10/PQ (SMPTE ST 2084)
+    public static final int HDR_MODE_HLG = 2;      // HLG (Hybrid Log-Gamma, ARIB STD-B67)
+
     public static final int CAPABILITY_DIRECT_SUBMIT = 1;
     public static final int CAPABILITY_REFERENCE_FRAME_INVALIDATION_AVC = 2;
     public static final int CAPABILITY_REFERENCE_FRAME_INVALIDATION_HEVC = 4;
@@ -352,8 +357,8 @@ public class MoonBridge {
                                               int clientRefreshRateX100,
                                               byte[] riAesKey, byte[] riAesIv,
                                               int videoCapabilities,
-                                              int colorSpace, int colorRange, boolean enableMic,
-                                              boolean controlOnly);
+                                              int colorSpace, int colorRange, int hdrMode,
+                                              boolean enableMic, boolean controlOnly);
 
     public static native void stopConnection();
 

@@ -879,6 +879,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 .setAudioConfiguration(prefConfig.audioConfiguration)
                 .setColorSpace(decoderRenderer.getPreferredColorSpace())
                 .setColorRange(decoderRenderer.getPreferredColorRange())
+                .setHdrMode(willStreamHdr ? prefConfig.hdrMode : MoonBridge.HDR_MODE_SDR)
                 .setPersistGamepadsAfterDisconnect(!prefConfig.multiController)
                 .setUseVdd(pcUseVdd)
                 .setEnableMic(prefConfig.enableMic)
