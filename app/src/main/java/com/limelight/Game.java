@@ -57,6 +57,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Point;
 import android.graphics.Rect;
@@ -1241,7 +1242,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             // Check if the permission was granted
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 // 用户给了权限，立即启动服务
-                StreamNotificationService.start(this, currentHostAddress, appName);
+                StreamNotificationService.start(this, pcName, appName);
             } else {
                 // Permission denied, show a toast message
                 Toast.makeText(this, "没有通知权限，后台串流可能会中断", Toast.LENGTH_LONG).show();
@@ -1908,6 +1909,15 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     @Override
     protected void onStop() {
         super.onStop();
+
+        if ((isExtremeResumeEnabled || isChangingResolution) && !isFinishing()) {
+            LimeLog.info("Extreme Resume: onStop intercepted.");
+            // 只有在不是修改分辨率的情况下（即真的是切到后台了），才发通知
+            if (!isChangingResolution) {
+                showKeepAliveNotification();
+            }
+            return;
+        }
 
         // 暂停串流时长计时（进入后台时串流实际上是暂停的）
         if (isStreamingActive && lastActiveTime > 0) {
@@ -4011,7 +4021,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 // 此时 App 在前台，可以合法启动 Foreground Service
                 showKeepAliveNotification();
             }
-        });
+        );
 
         // Report this shortcut being used (off the main thread to prevent ANRs)
         ComputerDetails computer = new ComputerDetails();
@@ -4479,7 +4489,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     try {
                         decoderRenderer.setRenderTarget(mDummyHolder);
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        LimeLog.warning("Failed to set render target to dummy holder: "+e.getMessage());
                     }
                 }
                 return; // 安全返回，后台继续解码
@@ -4561,7 +4571,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
 
         // 2. 启动服务 + 通知
-        StreamNotificationService.start(this, currentHostAddress, appName);
+        StreamNotificationService.start(this, pcName, appName);
     }
 
     private void cancelKeepAliveNotification() {
@@ -4695,7 +4705,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                         }
                     }
                 } catch (Exception e) {
-                    LimeLog.warning("CursorNet: 连接断开或失败: " + e.getMessage());
+                    LimeLog.warning("CursorNet: Connection disconnected or failed: " + e.getMessage());
                 } finally {
                     try { if (cursorSocket != null) cursorSocket.close(); } catch (Exception ignored) {}
                     cursorSocket = null;
@@ -5275,7 +5285,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     if (image != null) {
                         image.close();
                     }
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    LimeLog.warning("DummySurfaceHolder: Exception while acquiring/closing image: " + e.getMessage());
                 }
             }, mDrainHandler);
 

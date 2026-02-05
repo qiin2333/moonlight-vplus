@@ -725,5 +725,7 @@
     <!-- Drawer Menu -->
     <string name="menu">Menu</string>
     <string name="title_settings">Settings</string>
+    <string name="game_menu_change_resolution">Change resolution</string>
+    <string name="notification_content_streaming">Streaming in progress: %s (%s)</string>
 
 </resources>

@@ -1801,7 +1801,7 @@ public class GameMenu {
         ));
 
         normalOptions.add(new MenuOption(
-                "更改分辨率 Change Resolution",
+                getString(R.string.game_menu_change_resolution),
                 false,
                 this::showResolutionMenu,
                 "game_menu_change_resolution",

@@ -24,17 +24,17 @@ public class StreamNotificationService extends Service {
     private static final int NOTIFICATION_ID = 1001;
 
     // Intent 参数键名
-    private static final String EXTRA_HOST_NAME = "extra_host_name";
+    private static final String EXTRA_PC_NAME = "extra_pc_name";
     private static final String EXTRA_APP_NAME = "extra_app_name";
 
-    public static void start(Context context, String hostName, String appName) {
+    public static void start(Context context, String pcName, String appName) {
         Intent intent = new Intent(context, StreamNotificationService.class);
-        intent.putExtra(EXTRA_HOST_NAME, hostName);
+        intent.putExtra(EXTRA_PC_NAME, pcName);
         intent.putExtra(EXTRA_APP_NAME, appName);
         try {
             ContextCompat.startForegroundService(context, intent);
         } catch (Exception e) {
-            e.printStackTrace();
+            LimeLog.severe("Failed to start foreground service: " + e.getMessage());
         }
     }
 
@@ -61,13 +61,13 @@ public class StreamNotificationService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         // 构建默认通知 (防御性，防止 intent 为空)
-        String hostName = "Unknown";
-        String appName = "Moonlight";
+        String pcName = "Unknown";
+        String appName = "Desktop";
         if (intent != null) {
-            hostName = intent.getStringExtra(EXTRA_HOST_NAME);
+            pcName = intent.getStringExtra(EXTRA_PC_NAME);
             appName = intent.getStringExtra(EXTRA_APP_NAME);
         }
-        Notification notification = buildNotification(hostName, appName);
+        Notification notification = buildNotification(pcName, appName);
 
         // =========================================================
         // 无论 intent 是否为空，无论是否要停止，
@@ -127,7 +127,7 @@ public class StreamNotificationService extends Service {
         }
     }
 
-    private Notification buildNotification(String hostName, String appName) {
+    private Notification buildNotification(String pcName, String appName) {
         // 点击通知跳转回 Game Activity
         Intent intent = new Intent(this, Game.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
@@ -139,9 +139,9 @@ public class StreamNotificationService extends Service {
         PendingIntent contentIntent = PendingIntent.getActivity(this, 0, intent, flags);
 
         String title = "Moonlight-V+";
-        String content = String.format("正在串流: %s (%s)",
+        String content = getString(R.string.notification_content_streaming,
                 appName != null ? appName : "Desktop",
-                hostName != null ? hostName : "Unknown");
+                pcName != null ? pcName : "Unknown");
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_play) // 确保图标资源存在

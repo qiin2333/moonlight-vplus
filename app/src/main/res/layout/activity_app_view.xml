@@ -55,8 +55,8 @@
 
     <ImageButton
         android:id="@+id/app_restoreSessionButton"
-        android:layout_width="70dp"
-        android:layout_height="65dp"
+        android:layout_width="50dp"
+        android:layout_height="45dp"
         android:cropToPadding="false"
         android:scaleType="fitXY"
         android:layout_below="@+id/settingsButton"

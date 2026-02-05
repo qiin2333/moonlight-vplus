@@ -686,4 +686,7 @@
     <string name="unpaired_devices_hidden">已隐藏未配对设备</string>
     <string name="new_unpaired_device_shown">检测到新的未配对设备，已自动显示未配对设备</string>
     <string name="host_resolution_changed">主机分辨率已变更为 %1$dx%2$d</string>
+
+    <string name="game_menu_change_resolution">更改分辨率</string>
+    <string name="notification_content_streaming">正在串流： %s (%s)</string>
 </resources>
