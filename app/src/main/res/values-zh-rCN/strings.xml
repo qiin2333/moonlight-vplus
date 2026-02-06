@@ -11,6 +11,7 @@
     <string name="help_loading_msg"> 正在加载帮助页面…… </string>
     <!-- PC view menu entries -->
     <string name="pcview_menu_app_list"> 浏览游戏列表 </string>
+    <string name="pcview_menu_app_list_shortcut">创建应用列表快捷方式</string>
     <string name="pcview_menu_pair_pc"> 和电脑配对 </string>
     <string name="pcview_menu_unpair_pc"> 取消配对 </string>
     <string name="pcview_menu_send_wol"> 发送 Wake-On-LAN 请求 </string>
