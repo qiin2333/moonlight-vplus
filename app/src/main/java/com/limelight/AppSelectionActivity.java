@@ -122,6 +122,7 @@ public class AppSelectionActivity extends Activity implements ComputerManagerLis
         }
         if (connectingDialog != null) {
             connectingDialog.dismiss();
+            connectingDialog = null;
         }
     }
 
@@ -187,7 +188,7 @@ public class AppSelectionActivity extends Activity implements ComputerManagerLis
                             // Invalidate again to force a re-poll after WoL
                             managerBinder.invalidateStateForComputer(pcUuid);
                         } catch (IOException e) {
-                            e.printStackTrace();
+                            LimeLog.warning("Failed to send WoL packet:" + e);
                         }
                     }
                 }).start();
