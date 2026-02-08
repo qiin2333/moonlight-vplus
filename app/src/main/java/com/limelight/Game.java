@@ -3537,6 +3537,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 switch (event.getActionMasked()) {
                     case MotionEvent.ACTION_POINTER_DOWN:
                     case MotionEvent.ACTION_DOWN: {
+                        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                            multiFingerDownTime = 0;
+                        }
                         float[] normalizedCoords = getNormalizedCoordinates(streamView, event.getX(actionIndex), event.getY(actionIndex));
                         for (TouchContext touchContext : touchContextMap) {
                             touchContext.setPointerCount(event.getPointerCount());
@@ -3560,7 +3563,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                         float[] normalizedCoords = getNormalizedCoordinates(streamView, event.getX(actionIndex), event.getY(actionIndex));
 
                         // 双指右键检测（仅触控板模式）
-                        if (event.getPointerCount() == 2 && !twoFingerMoved && prefConfig.touchscreenTrackpad) {
+                        if (multiFingerDownTime == 0 && event.getPointerCount() == 2 && !twoFingerMoved && prefConfig.touchscreenTrackpad) {
                             if (event.getEventTime() - twoFingerDownTime < TWO_FINGER_TAP_THRESHOLD) {
                                 // 第二根手指抬起，立即触发右键
                                 conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT);
