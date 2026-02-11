@@ -71,6 +71,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.preference.PreferenceManager;
 import android.util.Rational;
 import android.view.Display;
@@ -1910,10 +1911,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     protected void onStop() {
         super.onStop();
 
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean isResumeEnabled = prefs.getBoolean("checkbox_resume_stream", false);
         if ((isExtremeResumeEnabled || isChangingResolution) && !isFinishing()) {
             LimeLog.info("Extreme Resume: onStop intercepted.");
             // 只有在不是修改分辨率的情况下（即真的是切到后台了），才发通知
-            if (!isChangingResolution) {
+            if (!isChangingResolution && isResumeEnabled) {
                 showKeepAliveNotification();
             }
             return;
@@ -1929,9 +1932,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // 检查是否是因为进入后台（包括锁屏、滑到任务栏、Home键）导致的应用停止
         // 只要 Activity 不是正在 Finishing（即不是用户点了退出或崩溃），且开启了快速恢复，就标记为需要恢复
         if (!shouldResumeSession && !isFinishing()) {
-            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-            boolean isResumeEnabled = prefs.getBoolean("checkbox_resume_stream", false);
-
             if (isResumeEnabled) {
                 shouldResumeSession = true;
                 LimeLog.info("检测到应用进入后台（非主动退出），已标记为待恢复会话");
@@ -2060,7 +2060,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             isStreamingActive = false;
         }
 
-        if (shouldResumeSession) {
+        if (shouldResumeSession && isResumeEnabled) {
             showKeepAliveNotification();
             LimeLog.info("应用进入后台，保持 Activity 存活以备快速恢复。连接已断开。");
         } else {
@@ -4019,11 +4019,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             // Update GameManager state to indicate we're in game
             UiHelper.notifyStreamConnected(Game.this);
 
-                hideSystemUi(1000);
+            hideSystemUi(1000);
 
-                // 连接一开始就启动保活服务
-                // 此时 App 在前台，可以合法启动 Foreground Service
-                showKeepAliveNotification();
+            // 连接一开始就启动保活服务
+            // 此时 App 在前台，可以合法启动 Foreground Service
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+            boolean isResumeEnabled = prefs.getBoolean("checkbox_resume_stream", false);
+            if (isResumeEnabled) showKeepAliveNotification();
             }
         );
 
@@ -4574,7 +4576,28 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             }
         }
 
-        // 2. 启动服务 + 通知
+        // 2. 请求电池优化白名单（防止被 Doze 模式杀死）
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (ContextCompat.checkSelfPermission(this, "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS")
+                        == PackageManager.PERMISSION_GRANTED) {
+                    PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+                    if (pm != null && !pm.isIgnoringBatteryOptimizations(this.getPackageName())) {
+                        Intent intent = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                        intent.setData(android.net.Uri.parse("package:" + this.getPackageName()));
+                        try {
+                            startActivity(intent);
+                        } catch (Exception e) {
+                            LimeLog.warning("Cannot open battery optimization settings: " + e.getMessage());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // 忽略电池优化白名单请求的异常
+        }
+
+        // 3. 启动服务 + 通知
         StreamNotificationService.start(this, pcName, appName);
     }
 
