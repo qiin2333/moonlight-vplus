@@ -370,6 +370,12 @@
     <string name="screen_mode_ensure_primary">Ensure streaming display is primary</string>
     <string name="screen_mode_ensure_only_display">Use streaming display only (turn off other displays)</string>
 
+    <string name="vdd_screen_mode_host_default">Use Sunshine host configuration (default)</string>
+    <string name="vdd_screen_mode_no_operation">Keep current layout</string>
+    <string name="vdd_screen_mode_vdd_as_primary">VDD primary + Physical extended</string>
+    <string name="vdd_screen_mode_vdd_as_secondary">Physical primary + VDD extended</string>
+    <string name="vdd_screen_mode_display_off">VDD only (disable physical displays)</string>
+
     <string name="category_advanced_settings">Advanced Settings</string>
     <string name="title_unlock_fps">Unlock all possible frame rates</string>
     <string name="summary_unlock_fps">Streaming at 90 or 120 FPS may reduce latency on high-end devices but can cause lag or instability on devices that can\'t support it</string>

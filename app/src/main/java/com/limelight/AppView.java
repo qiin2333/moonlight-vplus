@@ -52,9 +52,12 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.widget.AbsListView;
+import android.widget.AdapterView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
+import android.widget.ArrayAdapter;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.CheckBox;
@@ -107,6 +110,8 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
     // 显示器选择相关
     private LinearLayout displaySelectionInfo;
     private android.widget.RadioGroup displayRadioGroup;
+    private Spinner screenCombinationModeSpinner;
+    private int selectedScreenCombinationMode = -1;
     private List<DisplayInfo> availableDisplays;
     private static final int VIRTUAL_DISPLAY_ID = 212333;
 
@@ -365,6 +370,50 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         // Initialize display selection UI components
         displaySelectionInfo = findViewById(R.id.displaySelectionInfo);
         displayRadioGroup = findViewById(R.id.displayRadioGroup);
+        screenCombinationModeSpinner = findViewById(R.id.screenCombinationModeSpinner);
+
+        // 监听 RadioGroup 选中变化，动态切换 Spinner 选项
+        displayRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == -1) {
+                // 没有选中任何显示器，隐藏 Spinner
+                screenCombinationModeSpinner.setVisibility(View.GONE);
+                selectedScreenCombinationMode = -1;
+                return;
+            }
+
+            // 根据选中类型切换 Spinner
+            boolean isVdd = (checkedId == VIRTUAL_DISPLAY_ID);
+            int namesArrayId = isVdd ? R.array.vdd_screen_combination_mode_names : R.array.screen_combination_mode_names;
+            int valuesArrayId = isVdd ? R.array.vdd_screen_combination_mode_values : R.array.screen_combination_mode_values;
+
+            String[] names = getResources().getStringArray(namesArrayId);
+            String[] values = getResources().getStringArray(valuesArrayId);
+
+            ArrayAdapter<String> adapter = new ArrayAdapter<>(AppView.this,
+                    R.layout.spinner_item_display_mode, names);
+            adapter.setDropDownViewResource(R.layout.spinner_dropdown_item_display_mode);
+            screenCombinationModeSpinner.setAdapter(adapter);
+            screenCombinationModeSpinner.setSelection(0); // 默认：使用主机配置
+            selectedScreenCombinationMode = -1;
+
+            screenCombinationModeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                    try {
+                        selectedScreenCombinationMode = Integer.parseInt(values[position]);
+                    } catch (NumberFormatException e) {
+                        selectedScreenCombinationMode = -1;
+                    }
+                }
+
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {
+                    selectedScreenCombinationMode = -1;
+                }
+            });
+
+            screenCombinationModeSpinner.setVisibility(View.VISIBLE);
+        });
 
         // Set up event listeners
         useLastSettingsCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> appSettingsManager.setUseLastSettingsEnabled(isChecked));
@@ -642,7 +691,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
             computer.useVdd = useVdd;
         }
         
-        doStartStream(app, displayGuid);
+        doStartStream(app, displayGuid, useVdd);
     }
     
     /**
@@ -730,7 +779,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
      * @param app 应用对象
      * @param displayName 选择的显示器名称，如果为null则不指定显示器
      */
-    private void doStartStream(AppObject app, String displayName) {
+    private void doStartStream(AppObject app, String displayName, boolean useVdd) {
         if (appSettingsManager != null && computer != null) {
             // 使用AppSettingsManager统一管理启动逻辑
             Intent startIntent = appSettingsManager.createStartIntentWithLastSettingsIfEnabled(
@@ -738,17 +787,34 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
             if (displayName != null) {
                 startIntent.putExtra(Game.EXTRA_DISPLAY_NAME, displayName);
             }
+            // 传递屏幕组合模式
+            addScreenCombinationModeToIntent(startIntent, useVdd);
             startActivity(startIntent);
         } else {
             // 回退到默认方式启动
             if (displayName != null) {
                 Intent startIntent = ServerHelper.createStartIntent(this, app.app, computer, managerBinder);
                 startIntent.putExtra(Game.EXTRA_DISPLAY_NAME, displayName);
+                addScreenCombinationModeToIntent(startIntent, useVdd);
                 startActivity(startIntent);
             } else {
                 if (computer != null) {
                     ServerHelper.doStart(this, app.app, computer, managerBinder);
                 }
+            }
+        }
+    }
+
+    /**
+     * 将屏幕组合模式添加到 Intent
+     * 根据 useVdd 决定使用 EXTRA_VDD_SCREEN_COMBINATION_MODE 还是 EXTRA_SCREEN_COMBINATION_MODE
+     */
+    private void addScreenCombinationModeToIntent(Intent intent, boolean useVdd) {
+        if (selectedScreenCombinationMode != -1) {
+            if (useVdd) {
+                intent.putExtra(Game.EXTRA_VDD_SCREEN_COMBINATION_MODE, selectedScreenCombinationMode);
+            } else {
+                intent.putExtra(Game.EXTRA_SCREEN_COMBINATION_MODE, selectedScreenCombinationMode);
             }
         }
     }

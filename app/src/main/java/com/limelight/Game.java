@@ -381,6 +381,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     public static final String EXTRA_APP_CMD = "CmdList";
     public static final String EXTRA_DISPLAY_NAME = "DisplayName";
     public static final String EXTRA_SCREEN_COMBINATION_MODE = "Screen combination mode";
+    public static final String EXTRA_VDD_SCREEN_COMBINATION_MODE = "VDD screen combination mode";
 
     private ExternalDisplayManager externalDisplayManager;
 
@@ -459,6 +460,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         int customScreenMode = getIntent().getIntExtra(EXTRA_SCREEN_COMBINATION_MODE, -1);
         if (customScreenMode != -1) {
             prefConfig.screenCombinationMode = customScreenMode;
+        }
+
+        int customVddScreenMode = getIntent().getIntExtra(EXTRA_VDD_SCREEN_COMBINATION_MODE, -1);
+        if (customVddScreenMode != -1) {
+            prefConfig.vddScreenCombinationMode = customVddScreenMode;
         }
 
         // Set flat region size for long press jitter elimination.
@@ -946,6 +952,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 .setEnableMic(prefConfig.enableMic)
                 .setControlOnly(prefConfig.controlOnly)
                 .setCustomScreenMode(prefConfig.screenCombinationMode)
+                .setCustomVddScreenMode(prefConfig.vddScreenCombinationMode)
                 .build();
 
         return new StreamConfigResult(config, displayRefreshRate, clientRefreshRateX100);

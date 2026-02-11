@@ -231,6 +231,22 @@
         <item>3</item>
     </string-array>
 
+    <!-- VDD 屏幕组合模式 -->
+    <string-array name="vdd_screen_combination_mode_names">
+        <item>@string/vdd_screen_mode_host_default</item>
+        <item>@string/vdd_screen_mode_no_operation</item>
+        <item>@string/vdd_screen_mode_vdd_as_primary</item>
+        <item>@string/vdd_screen_mode_vdd_as_secondary</item>
+        <item>@string/vdd_screen_mode_display_off</item>
+    </string-array>
+    <string-array name="vdd_screen_combination_mode_values" translatable="false">
+        <item>-1</item>
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+    </string-array>
+
     <!-- 性能覆盖层方向选项 -->
     <string-array name="perf_overlay_orientation_names">
         <item>水平显示</item>

@@ -110,8 +110,8 @@
         android:layout_marginRight="8dp"
         android:layout_marginEnd="8dp"
         android:layout_marginTop="8dp"
-        android:orientation="vertical"
-        android:gravity="start"
+        android:orientation="horizontal"
+        android:gravity="start|center_vertical"
         android:visibility="gone">
 
         <RadioGroup
@@ -121,6 +121,16 @@
             android:orientation="vertical"
             android:gravity="start"
             android:layout_gravity="start" />
+
+        <Spinner
+            android:id="@+id/screenCombinationModeSpinner"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginLeft="8dp"
+            android:layout_marginStart="8dp"
+            android:spinnerMode="dropdown"
+            android:visibility="gone" />
 
     </LinearLayout>
 

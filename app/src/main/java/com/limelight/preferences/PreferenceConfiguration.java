@@ -338,6 +338,7 @@ public class PreferenceConfiguration {
     public boolean enableLatencyToast;
     public boolean enableStun;
     public int screenCombinationMode;
+    public int vddScreenCombinationMode;
     public boolean lockScreenAfterDisconnect;
     public boolean swapQuitAndDisconnect;
     public boolean bindAllUsb;
@@ -885,6 +886,10 @@ public class PreferenceConfiguration {
         } catch (NumberFormatException e) {
             config.screenCombinationMode = -1;
         }
+
+        // VDD screen combination mode defaults to -1 (use host config)
+        // This is set dynamically from AppView based on display selection
+        config.vddScreenCombinationMode = -1;
 
         config.lockScreenAfterDisconnect = prefs.getBoolean(LOCK_SCREEN_AFTER_DISCONNECT_PREF_STRING, DEFAULT_LATENCY_TOAST);
         config.swapQuitAndDisconnect = prefs.getBoolean(SWAP_QUIT_AND_DISCONNECT_PERF_STRING, DEFAULT_LATENCY_TOAST);
