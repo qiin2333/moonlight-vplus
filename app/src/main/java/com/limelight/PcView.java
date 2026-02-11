@@ -1859,6 +1859,8 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == VPN_PERMISSION_REQUEST_CODE && easyTierController != null) {
             easyTierController.handleVpnPermissionResult(resultCode);
+        } else if (requestCode == UpdateManager.INSTALL_PERMISSION_REQUEST_CODE) {
+            UpdateManager.onInstallPermissionResult(this);
         }
     }
 

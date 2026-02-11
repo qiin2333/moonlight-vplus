@@ -8,6 +8,9 @@ import android.util.Log;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.limelight.BuildConfig;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -18,7 +21,15 @@ import java.util.concurrent.TimeUnit;
  */
 public class AnalyticsManager {
     private static final String TAG = "AnalyticsManager";
-    
+    /** 留存分析：首次打开日期（用于 GA4 按获客日期分群） */
+    private static final String PREF_FIRST_OPEN_DATE = "analytics_first_open_date";
+    /** 留存分析：是否已完成首次串流（用于「已激活用户」留存分群） */
+    private static final String PREF_FIRST_STREAM_DONE = "analytics_first_stream_done";
+    /** 用户属性：首次打开日期，格式 yyyy-MM-dd，便于在 Firebase 中按获客日/周看留存 */
+    private static final String USER_PROP_FIRST_OPEN_DATE = "first_open_date";
+    /** 用户属性：是否已完成首次游戏串流，用于区分「仅打开过应用」与「真正用过串流」的留存 */
+    private static final String USER_PROP_FIRST_STREAM_DONE = "has_completed_first_stream";
+
     private static AnalyticsManager instance;
     private FirebaseAnalytics firebaseAnalytics;
     private Context applicationContext;
@@ -166,8 +177,27 @@ public class AnalyticsManager {
         bundle.putLong("stream_duration_ms", durationMs);
         bundle.putLong("stream_duration_minutes", durationMs / (1000 * 60));
         firebaseAnalytics.logEvent("game_stream_end", bundle);
-        
+        markFirstStreamCompletedIfNeeded();
         Log.d(TAG, "Game stream ended for: " + computerName + ", app: " + appName + ", duration: " + (durationMs / 1000) + " seconds");
+    }
+
+    /**
+     * 若用户首次完成游戏串流，则设置用户属性 has_completed_first_stream，便于在 Firebase 中看「已激活用户」的留存。
+     */
+    private void markFirstStreamCompletedIfNeeded() {
+        if (!canExecuteAnalytics() || applicationContext == null) {
+            return;
+        }
+        try {
+            android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(applicationContext);
+            if (!prefs.getBoolean(PREF_FIRST_STREAM_DONE, false)) {
+                prefs.edit().putBoolean(PREF_FIRST_STREAM_DONE, true).apply();
+                setUserProperty(USER_PROP_FIRST_STREAM_DONE, "true");
+                Log.d(TAG, "Retention: has_completed_first_stream set");
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to mark first stream completed: " + e.getMessage());
+        }
     }
     
     /**
@@ -212,23 +242,43 @@ public class AnalyticsManager {
         bundle.putInt("average_decoder_latency_ms", averageDecoderLatency);
             
         firebaseAnalytics.logEvent("game_stream_end", bundle);
-        
+        markFirstStreamCompletedIfNeeded();
         Log.d(TAG, "Game stream ended for: " + computerName + ", app: " + appName + 
                 ", effective duration: " + (effectiveDurationMs / 1000) + " seconds");
     }
     
     /**
-     * 记录应用启动事件
+     * 更新留存分析相关的用户属性（首次打开日期等），便于在 Firebase/GA4 中按获客日看留存。
+     */
+    private void updateRetentionUserProperties() {
+        if (applicationContext == null || firebaseAnalytics == null) {
+            return;
+        }
+        try {
+            android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(applicationContext);
+            String dateStr = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+            String firstOpen = prefs.getString(PREF_FIRST_OPEN_DATE, null);
+            if (firstOpen == null) {
+                prefs.edit().putString(PREF_FIRST_OPEN_DATE, dateStr).apply();
+                setUserProperty(USER_PROP_FIRST_OPEN_DATE, dateStr);
+                Log.d(TAG, "Retention: first_open_date set to " + dateStr);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to update retention user properties: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 记录应用启动事件，并更新留存相关用户属性（如首次打开日期）。
      */
     public void logAppLaunch() {
         if (!canExecuteAnalytics()) {
             Log.d(TAG, "App launch disabled");
             return;
         }
-        
+        updateRetentionUserProperties();
         Bundle bundle = new Bundle();
         firebaseAnalytics.logEvent(FirebaseAnalytics.Event.APP_OPEN, bundle);
-        
         Log.d(TAG, "App launch logged");
     }
     

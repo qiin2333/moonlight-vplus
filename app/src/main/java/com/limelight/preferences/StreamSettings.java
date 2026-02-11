@@ -239,6 +239,14 @@ public class StreamSettings extends Activity {
         }
     }
     
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == UpdateManager.INSTALL_PERMISSION_REQUEST_CODE) {
+            UpdateManager.onInstallPermissionResult(this);
+        }
+    }
+
     /**
      * 聚焦到设置列表
      */
