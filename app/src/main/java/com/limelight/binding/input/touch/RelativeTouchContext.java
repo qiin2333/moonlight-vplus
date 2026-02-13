@@ -414,6 +414,9 @@ public class RelativeTouchContext implements TouchContext {
             conn.sendMouseButtonUp(getMouseButtonIndex());
         }
 
+        confirmedMove = false;
+        confirmedDrag = false;
+        confirmedScroll = false;
         lastTapUpTime = 0;
         isPotentialDoubleClick = false;
     }
