@@ -83,6 +83,8 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     private final int consecutiveCrashCount;
     private final String glRenderer;
     private boolean foreground = true;
+    private volatile boolean isProcessingPaused = false;
+    private boolean needsIdrOnResume = false;
     private final PerfOverlayListener perfListener;
 
     private static final int CR_MAX_TRIES = 10;
@@ -505,6 +507,51 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
     public int getActiveVideoFormat() {
         return this.videoFormat;
+    }
+
+    public void pauseProcessing() {
+        if (isProcessingPaused) {
+            return;
+        }
+
+        LimeLog.info("Pausing video processing and releasing decoder");
+        isProcessingPaused = true;
+
+        // 停止渲染线程和相关的 handle
+        prepareForStop();
+
+        // 释放 MediaCodec 资源
+        cleanup();
+
+        // 标记下次恢复时需要 IDR 帧
+        needsIdrOnResume = true;
+    }
+
+    public void resumeProcessing() {
+        if (!isProcessingPaused) {
+            return;
+        }
+
+        LimeLog.info("Resuming video processing");
+
+        // 重置停止标志，允许渲染线程运行
+        stopping = false;
+
+        // 清理输出缓冲区队列，移除 prepareForStop 放入的 -1 信号
+        outputBufferQueue.clear();
+
+        // 重置输入缓冲区索引，避免使用已释放解码器的旧索引
+        nextInputBufferIndex = -1;
+        nextInputBuffer = null;
+
+        // 重新初始化解码器
+        // 注意：initialWidth, initialHeight 等变量依然保留着
+        initializeDecoder(false);
+
+        // 重新启动渲染线程等
+        start();
+
+        isProcessingPaused = false;
     }
 
     private MediaFormat createBaseMediaFormat(String mimeType) {
@@ -1624,9 +1671,18 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     public int submitDecodeUnit(byte[] decodeUnitData, int decodeUnitLength, int decodeUnitType,
                                 int frameNumber, int frameType, char frameHostProcessingLatency,
                                 long receiveTimeUs, long enqueueTimeUs) {
-        if (stopping) {
-            // Don't bother if we're stopping
+        if (stopping || isProcessingPaused) {
+            // Don't bother if we're stopping or paused
             return MoonBridge.DR_OK;
+        }
+
+        if (needsIdrOnResume) {
+            if (frameType != MoonBridge.FRAME_TYPE_IDR) {
+                // Request an IDR frame to recover after resume
+                return MoonBridge.DR_NEED_IDR;
+            }
+            // We got our IDR frame
+            needsIdrOnResume = false;
         }
 
         if (lastFrameNumber == 0) {

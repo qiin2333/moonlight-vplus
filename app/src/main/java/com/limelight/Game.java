@@ -1828,12 +1828,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         cancelKeepAliveNotification();
         super.onDestroy();
 
-        // 在 App 彻底关闭时，清理替身线程
-        if (mDummyHolder != null) {
-            mDummyHolder.release();
-            mDummyHolder = null;
-        }
-
         // 确保在 Activity 彻底销毁时停止连接（因为 onStop 可能跳过了它）
         if (conn != null && connected) {
             stopConnection();
@@ -4387,12 +4381,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             decoderRenderer.setRenderTarget(holder);
         }
 
-        // 强制断开替身连接
-        if (mDummyHolder != null) {
-            mDummyHolder.release();
-            mDummyHolder = null; // 销毁引用，迫使下次切后台重新创建
-        }
-
         if (!attemptedConnection) {
             attemptedConnection = true; // 标记已尝试连接
 
@@ -4421,6 +4409,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 audioRenderer.resumeProcessing();
             }
 
+            // 回到前台，恢复视频渲染器
+            if (decoderRenderer != null) {
+                decoderRenderer.resumeProcessing();
+            }
         }
 
         // 处理缩放手势
@@ -4482,23 +4474,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     }
                 }
 
-                LimeLog.info("Extreme Resume: Switching to Dummy Surface.");
-
-                // 1. 创建替身
-                if (mDummyHolder == null) {
-                    mDummyHolder = new DummySurfaceHolder();
-                }
-
-                // 2. 将解码器目标指向替身
-                // 解码器会以为这还是个有效的屏幕，继续工作，不会 NPE，也不会 crash
+                // 2. 暂停视频解码器并释放硬件资源
                 if (decoderRenderer != null) {
-                    try {
-                        decoderRenderer.setRenderTarget(mDummyHolder);
-                    } catch (Exception e) {
-                        LimeLog.warning("Failed to set render target to dummy holder: "+e.getMessage());
-                    }
+                    decoderRenderer.pauseProcessing();
                 }
-                return; // 安全返回，后台继续解码
+                return; // 安全返回，后台停止处理
             } else {
                 // 正常退出
                 decoderRenderer.prepareForStop();
@@ -5280,79 +5260,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // Apply background color without animation
         notificationOverlayView.setCardBackgroundColor(backgroundColor);
     }
-
-    // =======================================================
-    // 替身 SurfaceHolder，用于后台保活解码器
-    // =======================================================
-    private class DummySurfaceHolder implements SurfaceHolder {
-        private final ImageReader mImageReader;
-        private final Surface mSurface;
-        private final android.os.HandlerThread mDrainThread; // 专门用于“倒垃圾”的后台线程
-        private final android.os.Handler mDrainHandler;
-
-        public DummySurfaceHolder() {
-            // 1. 启动一个后台线程，专门处理帧消耗，避免阻塞主线程
-            mDrainThread = new android.os.HandlerThread("DummySurfaceDrainer");
-            mDrainThread.start();
-            mDrainHandler = new android.os.Handler(mDrainThread.getLooper());
-
-            // 2. 创建 ImageReader，用于接收并丢弃视频帧
-            // 使用 YUV_420_888 格式，这是 MediaCodec 解码器通用的输出格式
-            // 使用配置的宽高，确保 ImageReader 缓冲区大小足够
-            mImageReader = ImageReader.newInstance(
-                    Math.max(1, prefConfig.width),
-                    Math.max(1, prefConfig.height),
-                    ImageFormat.YUV_420_888, 2);
-
-            // 3. 设置监听器：每当有新的一帧数据进来，就在后台线程调用
-            mImageReader.setOnImageAvailableListener(reader -> {
-                try {
-                    // 获取并立即关闭图片，相当于丢弃
-                    Image image = reader.acquireLatestImage();
-                    if (image != null) {
-                        image.close();
-                    }
-                } catch (Exception e) {
-                    LimeLog.warning("DummySurfaceHolder: Exception while acquiring/closing image: " + e.getMessage());
-                }
-            }, mDrainHandler);
-
-            mSurface = mImageReader.getSurface();
-        }
-
-        public void release() {
-            // 停止监听
-            mImageReader.setOnImageAvailableListener(null, null);
-
-            // 释放资源
-            mSurface.release();
-            mImageReader.close();
-
-            // 停止后台线程
-            mDrainThread.quitSafely();
-        }
-
-        @Override
-        public Surface getSurface() {
-            return mSurface;
-        }
-
-        // 下面是接口必须实现的方法，全部留空即可
-        @Override public void addCallback(Callback callback) {}
-        @Override public void removeCallback(Callback callback) {}
-        @Override public boolean isCreating() { return false; }
-        @Override public void setType(int type) {}
-        @Override public void setFixedSize(int width, int height) {}
-        @Override public void setSizeFromLayout() {}
-        @Override public void setFormat(int format) {}
-        @Override public void setKeepScreenOn(boolean screenOn) {}
-        @Override public android.graphics.Canvas lockCanvas() { return null; }
-        @Override public android.graphics.Canvas lockCanvas(android.graphics.Rect dirty) { return null; }
-        @Override public void unlockCanvasAndPost(android.graphics.Canvas canvas) {}
-        @Override public android.graphics.Rect getSurfaceFrame() { return new android.graphics.Rect(0,0,1,1); }
-    }
-
-    private DummySurfaceHolder mDummyHolder;
 
     private void checkNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
