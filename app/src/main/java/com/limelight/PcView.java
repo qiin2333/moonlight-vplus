@@ -138,7 +138,6 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
     private static final int IPERF3_TEST_ID = 13;
     private static final int SECONDARY_SCREEN_ID = 14;
     private static final int DISABLE_IPV6_ID = 15;
-    private static final int CREATE_APP_LIST_SHORTCUT_ID = 16;
 
     // UI Components
     private RelativeLayout noPcFoundLayout;
@@ -1473,9 +1472,6 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
             menu.add(Menu.NONE, FULL_APP_LIST_ID, 4, R.string.pcview_menu_app_list);
             menu.add(Menu.NONE, SECONDARY_SCREEN_ID, 5, R.string.pcview_menu_secondary_screen);
             menu.add(Menu.NONE, SLEEP_ID, 8, R.string.send_sleep_command);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                menu.add(Menu.NONE, CREATE_APP_LIST_SHORTCUT_ID, 9, R.string.pcview_menu_app_list_shortcut);
-            }
         }
 
         menu.add(Menu.NONE, TEST_NETWORK_ID, 5, R.string.pcview_menu_test_network);
@@ -1552,9 +1548,6 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
                 return true;
             case DISABLE_IPV6_ID:
                 handleToggleIpv6Disabled(details);
-                return true;
-            case CREATE_APP_LIST_SHORTCUT_ID:
-                handleCreateAppListShortcut(details);
                 return true;
             default:
                 return false;
@@ -1657,12 +1650,6 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         }
         // 刷新列表
         startComputerUpdates();
-    }
-
-    private void handleCreateAppListShortcut(ComputerDetails details) {
-        if (!shortcutHelper.createAppListShortcut(details)) {
-            showToast(getString(R.string.unable_to_pin_shortcut));
-        }
     }
 
     // Adapter Fragment Callbacks

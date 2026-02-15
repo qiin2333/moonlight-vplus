@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.content.Intent;
 import android.widget.Toast;
 
-import com.limelight.AppSelectionActivity;
 import com.limelight.AppView;
 import com.limelight.Game;
 import com.limelight.R;
@@ -50,14 +49,6 @@ public class ServerHelper {
         i.putExtra(Game.EXTRA_APP_NAME, app.getAppName());
         i.putExtra(Game.EXTRA_APP_ID, ""+app.getAppId());
         i.putExtra(Game.EXTRA_APP_HDR, app.isHdrSupported());
-        i.setAction(Intent.ACTION_DEFAULT);
-        return i;
-    }
-
-    public static Intent createAppListShortcutIntent(Activity parent, ComputerDetails computer) {
-        Intent i = new Intent(parent, AppSelectionActivity.class);
-        i.putExtra(AppView.NAME_EXTRA, computer.name);
-        i.putExtra(AppView.UUID_EXTRA, computer.uuid);
         i.setAction(Intent.ACTION_DEFAULT);
         return i;
     }

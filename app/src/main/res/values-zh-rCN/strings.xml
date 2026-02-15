@@ -11,7 +11,6 @@
     <string name="help_loading_msg"> 正在加载帮助页面…… </string>
     <!-- PC view menu entries -->
     <string name="pcview_menu_app_list"> 浏览游戏列表 </string>
-    <string name="pcview_menu_app_list_shortcut">创建应用列表快捷方式</string>
     <string name="pcview_menu_pair_pc"> 和电脑配对 </string>
     <string name="pcview_menu_unpair_pc"> 取消配对 </string>
     <string name="pcview_menu_send_wol"> 发送 Wake-On-LAN 请求 </string>
@@ -24,6 +23,12 @@
     <string name="pcview_menu_enable_ipv6">启用 IPv6</string>
     <string name="pcview_ipv6_disabled">已禁用此电脑的 IPv6 连接</string>
     <string name="pcview_ipv6_enabled">已启用此电脑的 IPv6 连接</string>
+    <!-- Widget strings -->
+    <string name="widget_name">应用列表</string>
+    <string name="widget_configure_title">选择主机</string>
+    <string name="widget_no_apps">未找到应用程序</string>
+    <string name="widget_tap_to_refresh">点击刷新</string>
+    <string name="widget_configure_prompt">选择一台主机来显示它的应用：</string>
     <!-- Pair messages -->
     <string name="pairing"> 配对中…… </string>
     <string name="pair_pc_offline"> 电脑离线中 </string>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:configure="com.limelight.widget.WidgetConfigurationActivity"
+    android:initialLayout="@layout/widget_initial_layout"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:previewImage="@drawable/vplus"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen" />

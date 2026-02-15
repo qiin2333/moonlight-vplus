@@ -156,46 +156,26 @@ public class ShortcutHelper {
 
     @TargetApi(Build.VERSION_CODES.O)
     public boolean createPinnedGameShortcut(ComputerDetails computer, NvApp app, Bitmap iconBits) {
-        if (sm == null || !sm.isRequestPinShortcutSupported()) {
-            return false;
-        }
+        if (sm.isRequestPinShortcutSupported()) {
+            Icon appIcon;
 
-        Icon appIcon;
+            if (iconBits != null) {
+                Bitmap adaptiveSquare = prepareAdaptiveSquareBitmap(iconBits);
+                appIcon = Icon.createWithAdaptiveBitmap(adaptiveSquare);
+            } else {
+                appIcon = Icon.createWithResource(context, R.mipmap.ic_pc_scut);
+            }
 
-        if (iconBits != null) {
-            Bitmap adaptiveSquare = prepareAdaptiveSquareBitmap(iconBits);
-            appIcon = Icon.createWithAdaptiveBitmap(adaptiveSquare);
-        } else {
-            appIcon = Icon.createWithResource(context, R.mipmap.ic_pc_scut);
-        }
-
-        ShortcutInfo sInfo = new ShortcutInfo.Builder(context, getShortcutIdForGame(computer, app))
+            ShortcutInfo sInfo = new ShortcutInfo.Builder(context, getShortcutIdForGame(computer, app))
                 .setIntent(ServerHelper.createAppShortcutIntent(context, computer, app))
                 .setShortLabel(app.getAppName() + " (" + computer.name + ")")
                 .setIcon(appIcon)
                 .build();
 
-        return sm.requestPinShortcut(sInfo, null);
-    }
-
-    private String getShortcutIdForPcAppList(ComputerDetails computer) {
-        return computer.uuid + "_applist";
-    }
-
-    @TargetApi(Build.VERSION_CODES.O)
-    public boolean createAppListShortcut(ComputerDetails computer) {
-        if (sm == null || !sm.isRequestPinShortcutSupported()) {
+            return sm.requestPinShortcut(sInfo, null);
+        } else {
             return false;
         }
-
-        ShortcutInfo sInfo = new ShortcutInfo.Builder(context, getShortcutIdForPcAppList(computer))
-                .setIntent(ServerHelper.createAppListShortcutIntent(context, computer))
-                .setShortLabel(computer.name)
-                .setLongLabel(computer.name + " (" + context.getString(R.string.pcview_menu_app_list) + ")")
-                .setIcon(Icon.createWithResource(context, R.mipmap.ic_pc_scut))
-                .build();
-
-        return sm.requestPinShortcut(sInfo, null);
     }
 
     private static Bitmap prepareAdaptiveSquareBitmap(Bitmap source) {

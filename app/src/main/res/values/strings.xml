@@ -18,7 +18,14 @@
     <string name="pcview_menu_header_offline">Offline</string>
     <string name="pcview_menu_header_unknown">Refreshing</string>
     <string name="pcview_menu_app_list">View All Apps</string>
-    <string name="pcview_menu_app_list_shortcut">Create App List Shortcut</string>
+
+    <!-- Widget strings -->
+    <string name="widget_name">Game List</string>
+    <string name="widget_configure_title">Select Computer</string>
+    <string name="widget_no_apps">No apps found</string>
+    <string name="widget_tap_to_refresh">Tap to refresh</string>
+    <string name="widget_configure_prompt">Choose a computer to display games from:</string>
+
     <string name="pcview_menu_pair_pc">Pair with PC</string>
     <string name="pcview_menu_unpair_pc">Unpair</string>
     <string name="pcview_menu_send_wol">Send Wake-On-LAN request</string>

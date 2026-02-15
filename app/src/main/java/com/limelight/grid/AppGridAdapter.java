@@ -214,12 +214,10 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
             overlayView.setImageResource(R.drawable.ic_play_cute);
             overlayView.setVisibility(View.VISIBLE);
             // 使用更平滑的背景图片加载
-            if (appBackgroundImage != null) {
-                loader.populateImageView(obj, appBackgroundImage, txtView, true);
-            }
+            loader.populateImageView(obj, appBackgroundImage, txtView, true);
         }
         else {
-            if (obj.app.getAppName().equalsIgnoreCase("desktop") && appBackgroundImage != null && appBackgroundImage.getDrawable() == null) {
+            if (obj.app.getAppName().equalsIgnoreCase("desktop") && appBackgroundImage.getDrawable() == null) {
                 // 使用更平滑的背景图片加载
                 loader.populateImageView(obj, appBackgroundImage, txtView, true);
             }

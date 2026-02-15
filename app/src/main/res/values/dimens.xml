@@ -16,4 +16,7 @@
     <!-- Drawer width -->
     <dimen name="drawer_width">280dp</dimen>
 
+    <!-- Widget -->
+    <dimen name="widget_margin">8dp</dimen>
+
 </resources>
