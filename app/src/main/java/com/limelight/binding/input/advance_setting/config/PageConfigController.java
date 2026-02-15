@@ -105,41 +105,7 @@ public class PageConfigController {
         pageConfig.findViewById(R.id.rename_config_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                SuperPageLayout pageWindow = (SuperPageLayout) LayoutInflater.from(context).inflate(R.layout.page_window,null);
-                TextView title = pageWindow.findViewById(R.id.window_title);
-                title.setText("配置名称");
-                EditText editText = pageWindow.findViewById(R.id.window_edittext);
-                editText.setText((String)configSelectSpinner.getSelectedItem());
-                //窗口确认按钮
-                pageWindow.findViewById(R.id.window_confirm).setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        if (currentConfigId.equals(0L)){
-                            returnPrePage(pageWindow.getLastPage());
-                            return;
-                        }
-                        String configNewName = editText.getText().toString();
-                        if (!configNewName.matches("^.{1,10}$")){
-                            Toast.makeText(context,"名称只能由1-20个字符组成",Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-                        ContentValues contentValues = new ContentValues();
-                        contentValues.put(COLUMN_STRING_CONFIG_NAME,configNewName);
-                        //保存到数据库中
-                        controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId,contentValues);
-                        returnPrePage(pageWindow.getLastPage());
-                        loadAllConfigToSpinner();
-                        loadCurrentConfig();
-                    }
-                });
-                //窗口取消按钮
-                pageWindow.findViewById(R.id.window_cancel).setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        returnPrePage(pageWindow.getLastPage());
-                    }
-                });
-                controllerManager.getSuperPagesController().openNewPage(pageWindow);
+                openRenameDialog();
             }
         });
         //删除布局按钮
@@ -450,6 +416,54 @@ public class PageConfigController {
 
     public Long getCurrentConfigId(){
         return currentConfigId;
+    }
+
+    /**
+     * 打开重命名当前配置的对话框
+     */
+    public void openRenameDialog() {
+        SuperPageLayout pageWindow = (SuperPageLayout) LayoutInflater.from(context).inflate(R.layout.page_window,null);
+        TextView title = pageWindow.findViewById(R.id.window_title);
+        title.setText("配置名称");
+        EditText editText = pageWindow.findViewById(R.id.window_edittext);
+        
+        // 获取当前选中的配置名称
+        String currentName = "";
+        if (configSelectSpinner != null && configSelectSpinner.getSelectedItem() != null) {
+            currentName = (String)configSelectSpinner.getSelectedItem();
+        }
+        editText.setText(currentName);
+        
+        //窗口确认按钮
+        pageWindow.findViewById(R.id.window_confirm).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (currentConfigId.equals(0L)){
+                    returnPrePage(pageWindow.getLastPage());
+                    return;
+                }
+                String configNewName = editText.getText().toString();
+                if (!configNewName.matches("^.{1,10}$")){
+                    Toast.makeText(context,"名称只能由1-20个字符组成",Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                ContentValues contentValues = new ContentValues();
+                contentValues.put(COLUMN_STRING_CONFIG_NAME,configNewName);
+                //保存到数据库中
+                controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId,contentValues);
+                returnPrePage(pageWindow.getLastPage());
+                loadAllConfigToSpinner();
+                loadCurrentConfig();
+            }
+        });
+        //窗口取消按钮
+        pageWindow.findViewById(R.id.window_cancel).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                returnPrePage(pageWindow.getLastPage());
+            }
+        });
+        controllerManager.getSuperPagesController().openNewPage(pageWindow);
     }
 
     public void open(){

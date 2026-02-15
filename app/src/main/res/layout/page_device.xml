@@ -106,7 +106,13 @@
                         android:tag="OGM"
                         style="@style/KeyboardKeyStyle"
                         android:text="打开GAME MENU"/>
-
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        android:layout_marginVertical="5dp"
+                        android:tag="EMS"
+                        style="@style/KeyboardKeyStyle"
+                        android:text="编辑模式"/>
                 </LinearLayout>
             </ScrollView>
 

@@ -65,6 +65,7 @@ public class ElementController {
     private static final String SPECIAL_KEY_CONFIG_SWITCH = "CSW";
     private static final String SPECIAL_KEY_PAN_ZOOM_MODE = "PZM";
     private static final String SPECIAL_KEY_OPEN_GAME_MENU = "OGM";
+    private static final String SPECIAL_KEY_EDIT_MODE_SWITCH = "EMS"; // 编辑模式
 
 
 
@@ -1052,6 +1053,22 @@ public class ElementController {
                 public void sendEvent(boolean down) {
                     if (down) {
                         game.showGameMenu( null);
+                    }
+                }
+                @Override
+                public void sendEvent(int analog1, int analog2) {
+
+                }
+            };
+        } else if (key.equals(SPECIAL_KEY_EDIT_MODE_SWITCH)) {
+            return new SendEventHandler() {
+                @Override
+                public void sendEvent(boolean down) {
+                    if (down) {
+                        buttonVibrator();
+                        game.toggleBackKeyMenuType();
+                        changeMode(Mode.Edit);
+                        open();
                     }
                 }
                 @Override
