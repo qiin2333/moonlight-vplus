@@ -9,6 +9,11 @@ import android.os.Build;
 import android.annotation.SuppressLint;
 
 import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.List;
 
 public class NetHelper {
     
@@ -99,6 +104,33 @@ public class NetHelper {
 
         return false;
     }
+
+    /**
+     * 检查当前活动网络是否为以太网
+     */
+    public static boolean isActiveNetworkEthernet(Context context) {
+        ConnectivityManager connMgr = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (connMgr == null) {
+            return false;
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Network activeNetwork = connMgr.getActiveNetwork();
+            if (activeNetwork != null) {
+                NetworkCapabilities netCaps = connMgr.getNetworkCapabilities(activeNetwork);
+                if (netCaps != null) {
+                    return netCaps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET);
+                }
+            }
+        } else {
+            NetworkInfo activeNetworkInfo = connMgr.getActiveNetworkInfo();
+            if (activeNetworkInfo != null) {
+                return activeNetworkInfo.getType() == ConnectivityManager.TYPE_ETHERNET;
+            }
+        }
+
+        return false;
+    }
     
     /**
      * 获取网络下行带宽 (Kbps)
@@ -133,6 +165,48 @@ public class NetHelper {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /**
+     * 判断是否存在活跃的本地网络接口（如移动热点、USB共享、以太网、WiFi等）
+     * 用于在移动数据开启时判断是否应该保留局域网访问能力
+     */
+    public static boolean isLocalNetworkInterfaceAvailable() {
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            if (interfaces == null) return false;
+            
+            for (NetworkInterface nif : Collections.list(interfaces)) {
+                // 忽略未启动、回环接口
+                if (!nif.isUp() || nif.isLoopback()) {
+                    continue;
+                }
+                
+                String name = nif.getName().toLowerCase();
+                // 忽略典型的移动数据接口和虚拟VPN接口
+                // 常见移动接口前缀: rmnet, pdp, wwan, tun, ppp
+                if (name.startsWith("rmnet") || name.startsWith("pdp") || 
+                    name.startsWith("wwan") || name.startsWith("tun") || 
+                    name.startsWith("ppp")) {
+                    continue;
+                }
+                
+                // 检查接口是否有私有 IPv4 地址
+                Enumeration<InetAddress> addresses = nif.getInetAddresses();
+                for (InetAddress addr : Collections.list(addresses)) {
+                    if (addr.isLoopbackAddress()) continue;
+                    
+                    // 如果存在私有的 IPv4 地址，且不是上述忽略的接口，则认为存在本地网络（如热点、以太网、WiFi）
+                    // 热点通常在 wlan0, ap0, rndis0 等接口上会有私有地址
+                    if (addr.getAddress().length == 4 && isPrivateAddress(addr)) {
+                        return true;
+                    }
+                }
+            }
+        } catch (SocketException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
     
     /**

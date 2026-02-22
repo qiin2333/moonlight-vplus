@@ -112,9 +112,10 @@ public class NetworkDiagnostics {
             boolean isVpn = NetHelper.isActiveNetworkVpn(context);
             boolean isMobile = NetHelper.isActiveNetworkMobile(context);
             boolean isWifi = NetHelper.isActiveNetworkWifi(context);
+            boolean isEthernet = NetHelper.isActiveNetworkEthernet(context);
             
-            NetworkType type = detectNetworkType(isVpn, isMobile, isWifi);
-            NetworkQuality quality = estimateNetworkQuality(isMobile, isWifi);
+            NetworkType type = detectNetworkType(isVpn, isMobile, isWifi, isEthernet);
+            NetworkQuality quality = estimateNetworkQuality(isMobile, isWifi || isEthernet);
             boolean isStable = isConnectionStable(quality);
             
             NetworkDiagnosticsSnapshot snapshot = new NetworkDiagnosticsSnapshot(
@@ -134,14 +135,22 @@ public class NetworkDiagnostics {
     /**
      * 检测网络类型
      */
-    private NetworkType detectNetworkType(boolean isVpn, boolean isMobile, boolean isWifi) {
+    private NetworkType detectNetworkType(boolean isVpn, boolean isMobile, boolean isWifi, boolean isEthernet) {
         if (isVpn) {
             return NetworkType.VPN;
         }
+        
+        // 即使是移动网络，如果存在本地网络接口（如热点开启），也应视为 LAN 以保证本地连接可用
         if (isMobile) {
-            return NetworkType.MOBILE;
+            if (NetHelper.isLocalNetworkInterfaceAvailable()) {
+                // 发现本地活跃接口（如热点），退回到 LAN/UNKNOWN
+                LimeLog.info("Mobile data active but local interface found (Hotspot?), using LAN type");
+                return NetworkType.LAN;
+            }
+            return NetworkType.WAN;
         }
-        if (isWifi) {
+        
+        if (isWifi || isEthernet) {
             return NetworkType.LAN;
         }
         return NetworkType.UNKNOWN;

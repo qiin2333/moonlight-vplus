@@ -872,8 +872,9 @@ public class ComputerManagerService extends Service {
                     // 对于LAN地址，如果网络类型是WAN或移动网络，快速失败
                     // 因为LAN地址不应该从公网访问
                     if (isLanAddress && diagnostics != null && 
-                        diagnostics.networkType == NetworkDiagnostics.NetworkType.WAN) {
-                        LimeLog.info("Skipping LAN address " + tuple.address + " on WAN network");
+                        (diagnostics.networkType == NetworkDiagnostics.NetworkType.WAN ||
+                         diagnostics.networkType == NetworkDiagnostics.NetworkType.MOBILE)) {
+                        LimeLog.info("Skipping LAN address " + tuple.address + " on WAN/MOBILE network");
                         details = null;
                     } else {
                         // 对于其他情况，执行正常轮询
