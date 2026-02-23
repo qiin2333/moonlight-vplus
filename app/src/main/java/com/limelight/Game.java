@@ -4557,18 +4557,27 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
 
         // 2. 请求电池优化白名单（防止被 Doze 模式杀死）
+        // 优化方案：仅在用户开启“自动恢复串流”且尚未请求过电池优化时才提示
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (ContextCompat.checkSelfPermission(this, "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS")
-                        == PackageManager.PERMISSION_GRANTED) {
-                    PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-                    if (pm != null && !pm.isIgnoringBatteryOptimizations(this.getPackageName())) {
-                        Intent intent = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
-                        intent.setData(android.net.Uri.parse("package:" + this.getPackageName()));
-                        try {
-                            startActivity(intent);
-                        } catch (Exception e) {
-                            LimeLog.warning("Cannot open battery optimization settings: " + e.getMessage());
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+                boolean isResumeEnabled = prefs.getBoolean("checkbox_resume_stream", false);
+                boolean hasRequestedOptimization = prefs.getBoolean("pref_battery_optimization_requested", false);
+
+                if (isResumeEnabled && !hasRequestedOptimization) {
+                    if (ContextCompat.checkSelfPermission(this, "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS")
+                            == PackageManager.PERMISSION_GRANTED) {
+                        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+                        if (pm != null && !pm.isIgnoringBatteryOptimizations(this.getPackageName())) {
+                            Intent intent = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                            intent.setData(android.net.Uri.parse("package:" + this.getPackageName()));
+                            try {
+                                startActivity(intent);
+                                // 记录已请求过，避免下次再弹
+                                prefs.edit().putBoolean("pref_battery_optimization_requested", true).apply();
+                            } catch (Exception e) {
+                                LimeLog.warning("Cannot open battery optimization settings: " + e.getMessage());
+                            }
                         }
                     }
                 }

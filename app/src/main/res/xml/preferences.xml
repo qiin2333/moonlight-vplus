@@ -543,9 +543,9 @@
             android:defaultValue="false" />
         <CheckBoxPreference
             android:key="checkbox_extreme_resume"
-            android:title="不断开连接(实验性)"
+            android:title="不断开连接"
             android:dependency="checkbox_resume_stream"
-            android:summary="切换应用或锁屏时保持连接不断开，回到moonlight时可瞬间恢复。注意：后台挂起时仍会消耗流量和电量。(这是一个实验性功能，启用后可能会产生什么问题)"
+            android:summary="切换应用或锁屏时保持连接不断开，回到moonlight时可瞬间恢复。注意：后台挂起时仍会消耗流量和电量。"
             android:defaultValue="false" />
         <CheckBoxPreference
             android:key="checkbox_background_audio"
