@@ -29,7 +29,7 @@ import java.util.List;
 public class GameListRemoteViewsFactory implements RemoteViewsService.RemoteViewsFactory {
     private final Context context;
     private final int appWidgetId;
-    private List<NvApp> appList = new LinkedList<>();
+    private List<NvApp> appList = new java.util.ArrayList<>();
     private String computerUuid;
     private String computerName;
 
