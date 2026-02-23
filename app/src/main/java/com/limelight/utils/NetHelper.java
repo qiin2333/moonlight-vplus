@@ -8,6 +8,8 @@ import android.net.NetworkInfo;
 import android.os.Build;
 import android.annotation.SuppressLint;
 
+import com.limelight.LimeLog;
+
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -204,7 +206,7 @@ public class NetHelper {
                 }
             }
         } catch (SocketException e) {
-            e.printStackTrace();
+            LimeLog.warning("Error checking local network interfaces: " + e.getMessage());
         }
         return false;
     }
