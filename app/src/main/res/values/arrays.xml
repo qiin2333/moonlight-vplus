@@ -347,4 +347,30 @@
         <item>141</item> <!-- KEYCODE_F11 -->
         <item>142</item> <!-- KEYCODE_F12 -->
     </string-array>
+
+    <!-- Audio Vibration Mode -->
+    <string-array name="audio_vibration_mode_names">
+        <item>Auto</item>
+        <item>Device only</item>
+        <item>Gamepad only</item>
+        <item>Both</item>
+    </string-array>
+    <string-array name="audio_vibration_mode_values" translatable="false">
+        <item>auto</item>
+        <item>device</item>
+        <item>gamepad</item>
+        <item>both</item>
+    </string-array>
+
+    <!-- Audio Vibration Scene -->
+    <string-array name="audio_vibration_scene_names">
+        <item>Game / Movie</item>
+        <item>Music</item>
+        <item>Auto</item>
+    </string-array>
+    <string-array name="audio_vibration_scene_values" translatable="false">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+    </string-array>
 </resources>

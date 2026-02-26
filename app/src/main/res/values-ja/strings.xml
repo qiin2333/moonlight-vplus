@@ -140,4 +140,15 @@
     <string name="title_enable_post_stream_toast">ストリーミング後にレイテンシーメッセージを表示</string>
     <string name="summary_enable_post_stream_toast">ストリーム終了後にレイテンシー情報メッセージを表示</string>
     <string name="mic_stats_continuity">音声連続性: %.1f%% (キャプチャ:%d エンコード:%d 送信:%d ドロップ:%d)</string>
+
+    <!-- オーディオ振動設定 -->
+    <string name="title_checkbox_audio_vibration">オーディオ連動振動を有効にする</string>
+    <string name="summary_checkbox_audio_vibration">ゲーム内の低音や音声イベントに応じてデバイスを振動させる</string>
+    <string name="title_seekbar_audio_vibration_strength">振動の強さ</string>
+    <string name="summary_seekbar_audio_vibration_strength">オーディオ連動振動の強度を調整</string>
+    <string name="suffix_seekbar_audio_vibration_strength">%</string>
+    <string name="title_list_audio_vibration_mode">振動ルーティング</string>
+    <string name="summary_list_audio_vibration_mode">振動の伝達方法を選択</string>
+    <string name="title_list_audio_vibration_scene">シーンモード</string>
+    <string name="summary_list_audio_vibration_scene">コンテンツタイプに合わせて振動パターンを最適化</string>
 </resources>

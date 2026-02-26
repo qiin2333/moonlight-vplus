@@ -98,6 +98,10 @@ public class PreferenceConfiguration {
     private static final String VIBRATE_OSC_PREF_STRING = "checkbox_vibrate_osc";
     private static final String VIBRATE_FALLBACK_PREF_STRING = "checkbox_vibrate_fallback";
     private static final String VIBRATE_FALLBACK_STRENGTH_PREF_STRING = "seekbar_vibrate_fallback_strength";
+    private static final String AUDIO_VIBRATION_ENABLE_PREF_STRING = "checkbox_audio_vibration";
+    private static final String AUDIO_VIBRATION_STRENGTH_PREF_STRING = "seekbar_audio_vibration_strength";
+    private static final String AUDIO_VIBRATION_MODE_PREF_STRING = "list_audio_vibration_mode";
+    private static final String AUDIO_VIBRATION_SCENE_PREF_STRING = "list_audio_vibration_scene";
     private static final String FLIP_FACE_BUTTONS_PREF_STRING = "checkbox_flip_face_buttons";
     public static final String TOUCHSCREEN_TRACKPAD_PREF_STRING = "checkbox_touchscreen_trackpad";
     private static final String LATENCY_TOAST_PREF_STRING = "checkbox_enable_post_stream_toast";
@@ -191,6 +195,10 @@ public class PreferenceConfiguration {
     private static final boolean DEFAULT_VIBRATE_OSC = true;
     private static final boolean DEFAULT_VIBRATE_FALLBACK = false;
     private static final int DEFAULT_VIBRATE_FALLBACK_STRENGTH = 100;
+    private static final boolean DEFAULT_AUDIO_VIBRATION = false;
+    private static final int DEFAULT_AUDIO_VIBRATION_STRENGTH = 80;
+    private static final String DEFAULT_AUDIO_VIBRATION_MODE = "auto";
+    private static final int DEFAULT_AUDIO_VIBRATION_SCENE = 0; // Game/Movie
     private static final boolean DEFAULT_FLIP_FACE_BUTTONS = false;
     private static final boolean DEFAULT_TOUCHSCREEN_TRACKPAD = true;
     private static final String DEFAULT_AUDIO_CONFIG = "2"; // Stereo
@@ -340,6 +348,10 @@ public class PreferenceConfiguration {
     public boolean vibrateOsc;
     public boolean vibrateFallbackToDevice;
     public int vibrateFallbackToDeviceStrength;
+    public boolean enableAudioVibration;
+    public int audioVibrationStrength;
+    public String audioVibrationMode;
+    public int audioVibrationScene;
     public boolean touchscreenTrackpad;
     public MoonBridge.AudioConfiguration audioConfiguration;
     public int framePacing;
@@ -858,6 +870,10 @@ public class PreferenceConfiguration {
         config.vibrateOsc = prefs.getBoolean(VIBRATE_OSC_PREF_STRING, DEFAULT_VIBRATE_OSC);
         config.vibrateFallbackToDevice = prefs.getBoolean(VIBRATE_FALLBACK_PREF_STRING, DEFAULT_VIBRATE_FALLBACK);
         config.vibrateFallbackToDeviceStrength = prefs.getInt(VIBRATE_FALLBACK_STRENGTH_PREF_STRING, DEFAULT_VIBRATE_FALLBACK_STRENGTH);
+        config.enableAudioVibration = prefs.getBoolean(AUDIO_VIBRATION_ENABLE_PREF_STRING, DEFAULT_AUDIO_VIBRATION);
+        config.audioVibrationStrength = prefs.getInt(AUDIO_VIBRATION_STRENGTH_PREF_STRING, DEFAULT_AUDIO_VIBRATION_STRENGTH);
+        config.audioVibrationMode = prefs.getString(AUDIO_VIBRATION_MODE_PREF_STRING, DEFAULT_AUDIO_VIBRATION_MODE);
+        config.audioVibrationScene = Integer.parseInt(prefs.getString(AUDIO_VIBRATION_SCENE_PREF_STRING, String.valueOf(DEFAULT_AUDIO_VIBRATION_SCENE)));
         config.flipFaceButtons = prefs.getBoolean(FLIP_FACE_BUTTONS_PREF_STRING, DEFAULT_FLIP_FACE_BUTTONS);
         config.touchscreenTrackpad = prefs.getBoolean(TOUCHSCREEN_TRACKPAD_PREF_STRING, DEFAULT_TOUCHSCREEN_TRACKPAD);
         config.enableLatencyToast = prefs.getBoolean(LATENCY_TOAST_PREF_STRING, DEFAULT_LATENCY_TOAST);

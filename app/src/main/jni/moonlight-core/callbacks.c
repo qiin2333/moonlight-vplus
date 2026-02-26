@@ -10,6 +10,8 @@
 
 #include <cpu-features.h>
 
+#include "bass_energy_bridge.h"
+
 static OpusMSDecoder* Decoder;
 static OPUS_MULTISTREAM_CONFIGURATION OpusConfig;
 
@@ -39,6 +41,7 @@ static jmethodID BridgeClRumbleTriggersMethod;
 static jmethodID BridgeClSetMotionEventStateMethod;
 static jmethodID BridgeClSetControllerLEDMethod;
 static jmethodID BridgeClResolutionChangedMethod;
+static jmethodID BridgeBassEnergyMethod;
 static jbyteArray DecodedFrameBuffer;
 static jshortArray DecodedAudioBuffer;
 
@@ -104,6 +107,7 @@ Java_com_limelight_nvstream_jni_MoonBridge_init(JNIEnv *env, jclass clazz) {
     BridgeClSetMotionEventStateMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClSetMotionEventState", "(SBS)V");
     BridgeClSetControllerLEDMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClSetControllerLED", "(SBBB)V");
     BridgeClResolutionChangedMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClResolutionChanged", "(II)V");
+    BridgeBassEnergyMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeBassEnergy", "(I)V");
 }
 
 int BridgeDrSetup(int videoFormat, int width, int height, int redrawRate, void* context, int drFlags) {
@@ -226,6 +230,9 @@ int BridgeArInit(int audioConfiguration, POPUS_MULTISTREAM_CONFIGURATION opusCon
 
         // We know ahead of time what the buffer size will be for decoded audio, so pre-allocate it
         DecodedAudioBuffer = (*env)->NewGlobalRef(env, (*env)->NewShortArray(env, opusConfig->channelCount * opusConfig->samplesPerFrame));
+
+        // Initialize bass energy analyzer for audio-driven vibration
+        bass_energy_init(opusConfig->sampleRate, opusConfig->channelCount);
     }
 
     return err;
@@ -265,6 +272,11 @@ void BridgeArDecodeAndPlaySample(char* sampleData, int sampleLength) {
                                             OpusConfig.samplesPerFrame,
                                             0);
     if (decodeLen > 0) {
+        // Bass energy analysis: process PCM data BEFORE releasing the critical section.
+        // This is pure C++ computation with no JNI calls, safe in critical region.
+        int bassIntensity = 0;
+        int bassReady = bass_energy_process_frame((const int16_t*)decodedData, decodeLen, &bassIntensity);
+
         // We must release the array elements before making further JNI calls
         (*env)->ReleasePrimitiveArrayCritical(env, DecodedAudioBuffer, decodedData, 0);
 
@@ -272,6 +284,14 @@ void BridgeArDecodeAndPlaySample(char* sampleData, int sampleLength) {
         if ((*env)->ExceptionCheck(env)) {
             // We will crash here
             (*JVM)->DetachCurrentThread(JVM);
+        }
+
+        // Report bass energy to Java (outside critical section)
+        if (bassReady && BridgeBassEnergyMethod != NULL) {
+            (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeBassEnergyMethod, bassIntensity);
+            if ((*env)->ExceptionCheck(env)) {
+                (*env)->ExceptionClear(env);
+            }
         }
     }
     else {

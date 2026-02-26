@@ -161,6 +161,35 @@
             android:entries="@array/mic_icon_color_entries"
             android:entryValues="@array/mic_icon_color_values"
             android:defaultValue="solid_white" />
+        <CheckBoxPreference
+            android:key="checkbox_audio_vibration"
+            android:title="@string/title_checkbox_audio_vibration"
+            android:summary="@string/summary_checkbox_audio_vibration"
+            android:defaultValue="false" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_audio_vibration_strength"
+            android:dependency="checkbox_audio_vibration"
+            android:defaultValue="80"
+            android:max="200"
+            android:summary="@string/summary_seekbar_audio_vibration_strength"
+            android:text="@string/suffix_seekbar_audio_vibration_strength"
+            android:title="@string/title_seekbar_audio_vibration_strength"/>
+        <ListPreference
+            android:key="list_audio_vibration_mode"
+            android:dependency="checkbox_audio_vibration"
+            android:title="@string/title_list_audio_vibration_mode"
+            android:summary="@string/summary_list_audio_vibration_mode"
+            android:entries="@array/audio_vibration_mode_names"
+            android:entryValues="@array/audio_vibration_mode_values"
+            android:defaultValue="auto" />
+        <ListPreference
+            android:key="list_audio_vibration_scene"
+            android:dependency="checkbox_audio_vibration"
+            android:title="@string/title_list_audio_vibration_scene"
+            android:summary="@string/summary_list_audio_vibration_scene"
+            android:entries="@array/audio_vibration_scene_names"
+            android:entryValues="@array/audio_vibration_scene_values"
+            android:defaultValue="0" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_gamepad_settings"
         android:key="category_gamepad_settings"

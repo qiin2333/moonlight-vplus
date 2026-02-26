@@ -43,6 +43,7 @@ LOCAL_SRC_FILES := moonlight-common-c/src/AudioStream.c \
                    callbacks.c \
                    minisdl.c \
                    OpusEncoder.c \
+                   bass_energy_bridge.cpp \
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/moonlight-common-c/enet/include \
                     $(LOCAL_PATH)/moonlight-common-c/reedsolomon \

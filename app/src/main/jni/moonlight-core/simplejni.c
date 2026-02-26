@@ -308,3 +308,22 @@ JNIEXPORT jboolean JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_isMicrophoneEncryptionEnabled(JNIEnv *env, jclass clazz) {
     return isMicrophoneEncryptionEnabled() ? JNI_TRUE : JNI_FALSE;
 }
+
+// ==================== Bass Energy Analyzer Control ====================
+
+#include "bass_energy_bridge.h"
+
+JNIEXPORT void JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_setBassEnergyEnabled(JNIEnv *env, jclass clazz, jboolean enabled) {
+    bass_energy_set_enabled(enabled ? 1 : 0);
+}
+
+JNIEXPORT void JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_setBassEnergySensitivity(JNIEnv *env, jclass clazz, jfloat sensitivity) {
+    bass_energy_set_sensitivity(sensitivity);
+}
+
+JNIEXPORT void JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_setBassEnergySceneMode(JNIEnv *env, jclass clazz, jint mode) {
+    bass_energy_set_scene_mode(mode);
+}

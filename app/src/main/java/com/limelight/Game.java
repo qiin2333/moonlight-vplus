@@ -3,6 +3,7 @@ package com.limelight;
 import com.limelight.binding.PlatformBinding;
 import com.limelight.binding.audio.AndroidAudioRenderer;
 import com.limelight.binding.audio.AudioDiagnostics;
+import com.limelight.binding.audio.AudioVibrationService;
 import com.limelight.binding.audio.MicrophoneManager;
 import com.limelight.binding.input.ControllerHandler;
 import com.limelight.binding.input.GameInputDevice;
@@ -168,6 +169,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private KeyboardTranslator keyboardTranslator;
     private VirtualController virtualController;
     private PanZoomHandler panZoomHandler;
+    private AudioVibrationService audioVibrationService;
 
     public interface PerformanceInfoDisplay {
         void display(Map<String, String> performanceAttrs);
@@ -645,6 +647,22 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         controllerHandler = new ControllerHandler(this, conn, this, prefConfig);
         keyboardTranslator = new KeyboardTranslator();
 
+        // Initialize audio-driven vibration service
+        audioVibrationService = new AudioVibrationService(this);
+        audioVibrationService.setControllerHandler(controllerHandler);
+        audioVibrationService.setSettings(
+                prefConfig.enableAudioVibration,
+                prefConfig.audioVibrationStrength,
+                prefConfig.audioVibrationMode,
+                prefConfig.audioVibrationScene
+        );
+        MoonBridge.setBassEnergyListener(intensity -> {
+            audioVibrationService.handleBassEnergy(intensity);
+        });
+        // Configure native bass energy analyzer
+        MoonBridge.setBassEnergyEnabled(prefConfig.enableAudioVibration);
+        MoonBridge.setBassEnergySceneMode(prefConfig.audioVibrationScene);
+
         InputManager inputManager = (InputManager) getSystemService(Context.INPUT_SERVICE);
         inputManager.registerInputDeviceListener(keyboardTranslator, null);
 
@@ -1022,6 +1040,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // 重新创建 ControllerHandler
         controllerHandler.stop();
         controllerHandler = new ControllerHandler(this, conn, this, prefConfig);
+
+        // 更新音频振动服务的 controllerHandler 引用
+        if (audioVibrationService != null) {
+            audioVibrationService.setControllerHandler(controllerHandler);
+        }
 
         //  重新绑定 USB 驱动服务
         // 因为 stopConnection 时解绑了，这里必须重新 bind，而不是直接 setListener
@@ -1835,6 +1858,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         if (controllerHandler != null) {
             controllerHandler.destroy();
+        }
+        if (audioVibrationService != null) {
+            audioVibrationService.stop();
+            MoonBridge.setBassEnergyEnabled(false);
+            MoonBridge.setBassEnergyListener(null);
         }
         if (keyboardTranslator != null) {
             InputManager inputManager = (InputManager) getSystemService(Context.INPUT_SERVICE);

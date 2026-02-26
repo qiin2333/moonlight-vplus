@@ -695,4 +695,15 @@
 
     <string name="game_menu_change_resolution">更改分辨率</string>
     <string name="notification_content_streaming">正在串流： %s (%s)</string>
+
+    <!-- 音频振动设置 -->
+    <string name="title_checkbox_audio_vibration">启用音频驱动振动</string>
+    <string name="summary_checkbox_audio_vibration">根据游戏内低音和音频事件振动设备</string>
+    <string name="title_seekbar_audio_vibration_strength">振动强度</string>
+    <string name="summary_seekbar_audio_vibration_strength">调整音频驱动振动的强度</string>
+    <string name="suffix_seekbar_audio_vibration_strength">%</string>
+    <string name="title_list_audio_vibration_mode">振动路由</string>
+    <string name="summary_list_audio_vibration_mode">选择振动的传递方式</string>
+    <string name="title_list_audio_vibration_scene">场景模式</string>
+    <string name="summary_list_audio_vibration_scene">根据内容类型优化振动模式</string>
 </resources>

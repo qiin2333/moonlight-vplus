@@ -736,4 +736,15 @@
     <string name="game_menu_change_resolution">Change resolution</string>
     <string name="notification_content_streaming">Streaming in progress: %s (%s)</string>
 
+    <!-- Audio Vibration Settings -->
+    <string name="title_checkbox_audio_vibration">Enable audio-driven vibration</string>
+    <string name="summary_checkbox_audio_vibration">Vibrate device based on in-game bass and audio events</string>
+    <string name="title_seekbar_audio_vibration_strength">Vibration strength</string>
+    <string name="summary_seekbar_audio_vibration_strength">Adjust the intensity of audio-driven vibration</string>
+    <string name="suffix_seekbar_audio_vibration_strength">%</string>
+    <string name="title_list_audio_vibration_mode">Vibration routing</string>
+    <string name="summary_list_audio_vibration_mode">Choose how vibration is delivered</string>
+    <string name="title_list_audio_vibration_scene">Scene mode</string>
+    <string name="summary_list_audio_vibration_scene">Optimize vibration pattern for content type</string>
+
 </resources>

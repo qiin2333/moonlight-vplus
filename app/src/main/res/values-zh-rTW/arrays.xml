@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 音訊振動路由模式 -->
+    <string-array name="audio_vibration_mode_names">
+        <item>自動</item>
+        <item>僅裝置振動</item>
+        <item>僅手把振動</item>
+        <item>同時振動</item>
+    </string-array>
+
+    <!-- 音訊振動場景模式 -->
+    <string-array name="audio_vibration_scene_names">
+        <item>遊戲 / 影視</item>
+        <item>音樂</item>
+        <item>自動</item>
+    </string-array>
+</resources>

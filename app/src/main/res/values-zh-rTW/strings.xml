@@ -274,4 +274,15 @@
     <string name="summary_checkbox_gamepad_motion_fallback">如果您連線的手把或 Android 版本不支援手把感測器，請使用裝置內建的動態感測器。
 \n注意：啟用此選項可能會導致您的手把在主機被辨識為 PlayStation 控制器。</string>
     <string name="title_checkbox_gamepad_motion_fallback">模擬手把動態感測器支援</string>
+
+    <!-- 音訊振動設定 -->
+    <string name="title_checkbox_audio_vibration">啟用音訊驅動振動</string>
+    <string name="summary_checkbox_audio_vibration">根據遊戲內低音和音訊事件振動裝置</string>
+    <string name="title_seekbar_audio_vibration_strength">振動強度</string>
+    <string name="summary_seekbar_audio_vibration_strength">調整音訊驅動振動的強度</string>
+    <string name="suffix_seekbar_audio_vibration_strength">%</string>
+    <string name="title_list_audio_vibration_mode">振動路由</string>
+    <string name="summary_list_audio_vibration_mode">選擇振動的傳遞方式</string>
+    <string name="title_list_audio_vibration_scene">場景模式</string>
+    <string name="summary_list_audio_vibration_scene">根據內容類型最佳化振動模式</string>
 </resources>
