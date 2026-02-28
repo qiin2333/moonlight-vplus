@@ -375,6 +375,7 @@
     <string name="vdd_screen_mode_vdd_as_primary">VDD primary + Physical extended</string>
     <string name="vdd_screen_mode_vdd_as_secondary">Physical primary + VDD extended</string>
     <string name="vdd_screen_mode_display_off">VDD only (disable physical displays)</string>
+    <string name="screen_combination_mode_label">Mode: %1$s ▼</string>
 
     <string name="category_advanced_settings">Advanced Settings</string>
     <string name="title_unlock_fps">Unlock all possible frame rates</string>
