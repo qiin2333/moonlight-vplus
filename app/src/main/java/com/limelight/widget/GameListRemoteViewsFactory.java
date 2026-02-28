@@ -13,6 +13,7 @@ import com.limelight.LimeLog;
 import com.limelight.R;
 import com.limelight.nvstream.http.NvApp;
 import com.limelight.nvstream.http.NvHTTP;
+import com.limelight.utils.AppCacheManager;
 import com.limelight.utils.CacheHelper;
 import com.limelight.utils.ServerHelper;
 
@@ -112,6 +113,15 @@ public class GameListRemoteViewsFactory implements RemoteViewsService.RemoteView
         extras.putString("UUID", computerUuid);
         extras.putString("AppId", String.valueOf(app.getAppId()));
         extras.putString("AppName", app.getAppName());
+        extras.putBoolean("HDR", app.isHdrSupported());
+        
+        // 保存完整的应用信息到缓存中，以便 ShortcutTrampoline 可以恢复
+        try {
+            AppCacheManager cacheManager = new AppCacheManager(context);
+            cacheManager.saveAppInfo(computerUuid, app);
+        } catch (Exception e) {
+            LimeLog.warning("Failed to save app info to cache: " + e.getMessage());
+        }
         
         Intent fillInIntent = new Intent();
         fillInIntent.putExtras(extras);

@@ -371,6 +371,12 @@ public class ShortcutTrampoline extends Activity {
             app = new NvApp(getIntent().getStringExtra(Game.EXTRA_APP_NAME),
                     Integer.parseInt(appIdString),
                     getIntent().getBooleanExtra(Game.EXTRA_APP_HDR, false));
+            
+            // 恢复缓存中的完整应用信息（包括超级指令列表）
+            NvApp cachedApp = getLastNvAppFromPreferences(app.getAppId(), uuidString);
+            if (cachedApp != null && cachedApp.getCmdList() != null) {
+                app.setCmdList(cachedApp.getCmdList().toString());
+            }
         }
         else if (appNameString != null && !appNameString.isEmpty()) {
             // Use appNameString to find the corresponding AppId
@@ -405,6 +411,12 @@ public class ShortcutTrampoline extends Activity {
                         appNameString,
                         appId,
                         getIntent().getBooleanExtra(Game.EXTRA_APP_HDR, false));
+                
+                // 恢复缓存中的完整应用信息（包括超级指令列表）
+                NvApp cachedApp = getLastNvAppFromPreferences(appId, uuidString);
+                if (cachedApp != null && cachedApp.getCmdList() != null) {
+                    app.setCmdList(cachedApp.getCmdList().toString());
+                }
             } catch (IOException | XmlPullParserException e) {
                 Dialog.displayDialog(ShortcutTrampoline.this,
                         getResources().getString(R.string.conn_error_title),
