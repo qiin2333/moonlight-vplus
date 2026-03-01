@@ -5,12 +5,14 @@ import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.res.Configuration;
 import android.hardware.display.DisplayManager;
 import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
 import android.media.MediaFormat;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.view.Display;
 import android.view.View;
@@ -127,16 +129,6 @@ public class CapabilityDiagnosticActivity extends Activity {
                 boolean isWideColorGamut = display.isWideColorGamut();
                 report.append("  广色域: ").append(isWideColorGamut ? "✅ 支持" : "❌ 不支持").append("\n");
             }
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                // API 34+ has isHdr()
-                try {
-                    boolean isHdr = display.isHdr();
-                    report.append("  HDR 显示: ").append(isHdr ? "✅ 当前处于 HDR 模式" : "⬜ 非 HDR 模式").append("\n");
-                } catch (NoSuchMethodError e) {
-                    // isHdr() may not exist on all API 34 devices
-                }
-            }
         } catch (Exception e) {
             report.append("  获取屏幕信息失败: ").append(e.getMessage()).append("\n");
         }
@@ -159,6 +151,25 @@ public class CapabilityDiagnosticActivity extends Activity {
                 return;
             }
 
+            // Configuration HDR check (API 26+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Configuration config = getResources().getConfiguration();
+                boolean isScreenHdr = config.isScreenHdr();
+                report.append("  Configuration.isScreenHdr(): ").append(isScreenHdr ? "✅ true" : "❌ false").append("\n");
+            }
+
+            // Window color mode (API 26+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                int colorMode = getWindow().getColorMode();
+                String modeName;
+                switch (colorMode) {
+                    case 1: modeName = "WIDE_COLOR_GAMUT"; break;
+                    case 2: modeName = "HDR"; break;
+                    default: modeName = "DEFAULT"; break;
+                }
+                report.append("  Window.colorMode: ").append(modeName).append(" (").append(colorMode).append(")\n");
+            }
+
             Display.HdrCapabilities hdrCaps = display.getHdrCapabilities();
             if (hdrCaps == null) {
                 report.append("  设备未报告 HDR 能力\n\n");
@@ -169,7 +180,7 @@ public class CapabilityDiagnosticActivity extends Activity {
             if (types.length == 0) {
                 report.append("  ❌ 设备不支持任何 HDR 类型\n");
             } else {
-                report.append("  支持的 HDR 类型:\n");
+                report.append("\n  支持的 HDR 类型:\n");
                 boolean hasHlg = false, hasPq = false, hasHdr10Plus = false, hasDv = false;
                 for (int type : types) {
                     switch (type) {
@@ -200,26 +211,81 @@ public class CapabilityDiagnosticActivity extends Activity {
                 report.append("    HDR10+ 动态元数据: ").append(hasHdr10Plus ? "✅ 设备支持" : "⬜ 不支持").append("\n");
             }
 
+            // Luminance from HdrCapabilities (EDID-based, may be inaccurate)
             float maxLum = hdrCaps.getDesiredMaxLuminance();
             float minLum = hdrCaps.getDesiredMinLuminance();
             float maxAvgLum = hdrCaps.getDesiredMaxAverageLuminance();
-            report.append("\n  亮度范围:\n");
-            report.append("    最大亮度: ").append(String.format("%.1f nits", maxLum)).append("\n");
+            report.append("\n  亮度范围 (Display.HdrCapabilities 报告):\n");
+            report.append("    最大亮度: ").append(String.format("%.1f nits", maxLum));
+            if (maxLum <= 0) {
+                report.append(" ⚠️ 设备未报告有效值");
+            }
+            report.append("\n");
             report.append("    最小亮度: ").append(String.format("%.4f nits", minLum)).append("\n");
             report.append("    最大平均亮度: ").append(String.format("%.1f nits", maxAvgLum)).append("\n");
 
-            // Check if display reports reasonable HDR luminance
-            if (maxLum > 0 && maxLum < 400) {
+            // Brightness assessment
+            if (maxLum <= 0) {
+                report.append("    ⚠️ 亮度值无效 (=0)，设备驱动可能未正确报告 EDID 亮度\n");
+                report.append("    💡 这不代表设备不支持 HDR，仅说明亮度信息不可用\n");
+            } else if (maxLum < 400) {
                 report.append("    ⚠️ 最大亮度较低 (<400 nits)，HDR 效果可能有限\n");
             } else if (maxLum >= 1000) {
                 report.append("    ✅ 高亮度面板 (≥1000 nits)，HDR 效果优秀\n");
             } else if (maxLum >= 600) {
                 report.append("    ✅ 中等 HDR 面板 (600-1000 nits)\n");
             }
+
+            // System brightness info
+            appendSystemBrightnessInfo();
+
+            // Display.isHdr() (API 34+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                try {
+                    boolean isHdr = display.isHdr();
+                    report.append("\n  Display.isHdr(): ").append(isHdr ? "✅ 当前 HDR 模式" : "⬜ 非 HDR 模式").append("\n");
+                } catch (NoSuchMethodError e) {
+                    // ignore
+                }
+            }
+
         } catch (Exception e) {
             report.append("  获取 HDR 能力失败: ").append(e.getMessage()).append("\n");
         }
         report.append("\n");
+    }
+
+    /**
+     * 获取系统亮度信息作为参考
+     */
+    @SuppressLint("NewApi")
+    private void appendSystemBrightnessInfo() {
+        report.append("\n  系统亮度参考信息:\n");
+        try {
+            // Current system brightness (0-255 scale)
+            int brightness = Settings.System.getInt(getContentResolver(), Settings.System.SCREEN_BRIGHTNESS, -1);
+            if (brightness >= 0) {
+                float pct = brightness / 255f * 100;
+                report.append("    当前系统亮度: ").append(brightness).append("/255")
+                        .append(" (").append(String.format("%.0f%%", pct)).append(")\n");
+            }
+
+            // Auto brightness
+            int autoBrightness = Settings.System.getInt(getContentResolver(), Settings.System.SCREEN_BRIGHTNESS_MODE, -1);
+            if (autoBrightness >= 0) {
+                report.append("    自动亮度: ").append(autoBrightness == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC ? "✅ 开启" : "⬜ 关闭").append("\n");
+            }
+
+            // Window brightness
+            float windowBrightness = getWindow().getAttributes().screenBrightness;
+            if (windowBrightness >= 0) {
+                report.append("    当前窗口亮度: ").append(String.format("%.0f%%", windowBrightness * 100)).append("\n");
+            } else {
+                report.append("    当前窗口亮度: 跟随系统\n");
+            }
+        } catch (Exception e) {
+            report.append("    获取系统亮度失败: ").append(e.getMessage()).append("\n");
+        }
     }
 
     @SuppressLint("NewApi")
