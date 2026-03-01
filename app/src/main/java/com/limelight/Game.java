@@ -3592,8 +3592,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                                 conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT);
                                 twoFingerTapPending = false;
                                 twoFingerMoved = true;
+                                // 只对抬起的那个手指调用 cancelTouch，让其他手指继续工作
+                                if (context != null) {
+                                    context.cancelTouch();
+                                }
+                                // 所有 context 都需要更新 pointerCount
                                 for (TouchContext touchContext : touchContextMap) {
-                                    touchContext.cancelTouch();
                                     touchContext.setPointerCount(event.getPointerCount() - 1);
                                 }
                                 return true;
@@ -3611,6 +3615,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                                     conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT);
                                     conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT);
                                     twoFingerTapPending = false;
+                                    // 两个手指都要抬起了，对所有 context 清理状态
                                     for (TouchContext touchContext : touchContextMap) {
                                         touchContext.cancelTouch();
                                         touchContext.setPointerCount(0);
