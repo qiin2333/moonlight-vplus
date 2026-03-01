@@ -574,10 +574,20 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                     getPreferredColorRange() == MoonBridge.COLOR_RANGE_FULL ?
                             MediaFormat.COLOR_RANGE_FULL : MediaFormat.COLOR_RANGE_LIMITED);
 
-            // If the stream is HDR-capable, the decoder will detect transitions in color standards
-            // rather than us hardcoding them into the MediaFormat.
-            if ((getActiveVideoFormat() & MoonBridge.VIDEO_FORMAT_MASK_10BIT) == 0) {
-                // Set color format keys when not in HDR mode, since we know they won't change
+            if ((getActiveVideoFormat() & MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0) {
+                // HDR 10-bit mode: explicitly set transfer function and color standard
+                // Many decoders fail to auto-detect the transfer function from VUI/SEI,
+                // especially for HLG streams, which causes dark/crushed colors.
+                videoFormat.setInteger(MediaFormat.KEY_COLOR_STANDARD, MediaFormat.COLOR_STANDARD_BT2020);
+                if (prefs.hdrMode == MoonBridge.HDR_MODE_HLG) {
+                    videoFormat.setInteger(MediaFormat.KEY_COLOR_TRANSFER, MediaFormat.COLOR_TRANSFER_HLG);
+                    LimeLog.info("Setting HLG transfer function for decoder");
+                } else {
+                    videoFormat.setInteger(MediaFormat.KEY_COLOR_TRANSFER, MediaFormat.COLOR_TRANSFER_ST2084);
+                    LimeLog.info("Setting PQ/ST2084 transfer function for decoder");
+                }
+            } else {
+                // SDR mode: set color format keys since they won't change
                 videoFormat.setInteger(MediaFormat.KEY_COLOR_TRANSFER, MediaFormat.COLOR_TRANSFER_SDR_VIDEO);
                 switch (getPreferredColorSpace()) {
                     case MoonBridge.COLORSPACE_REC_601:
