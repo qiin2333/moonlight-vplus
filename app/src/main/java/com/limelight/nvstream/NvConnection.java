@@ -76,79 +76,13 @@ public class NvConnection {
         this.context.riKey = generateRiAesKey();
         this.context.riKeyId = generateRiKeyId();
         
-        // 获取设备亮度范围（min, max, maxAverage）
-        int[] brightnessRange = getBrightnessRange(appContext);
+        // 获取设备亮度范围（min, max, maxAverage）- 使用统一的 HdrCapabilityHelper
+        int[] brightnessRange = com.limelight.utils.HdrCapabilityHelper.getBrightnessRangeAsInts(appContext);
         this.context.minBrightness = brightnessRange[0];
         this.context.maxBrightness = brightnessRange[1];
         this.context.maxAverageBrightness = brightnessRange[2];
 
         this.isMonkey = ActivityManager.isUserAMonkey();
-    }
-    
-    /**
-      * 获取设备屏幕亮度的最小值、最大值与最大平均亮度（以 nits 为单位）
-      * @param context 应用上下文
-      * @return 数组，[0]=最小亮度 nits, [1]=最大亮度 nits, [2]=最大平均亮度 nits (用于 HDR 平均亮度参考)
-     */
-    private static int[] getBrightnessRange(Context context) {
-        int minBrightness = 2; // 大多数设备最低亮度约2 nits
-        int maxBrightness = 500; // 默认SDR最大亮度约500 nits
-        int maxAverageBrightness = 200; // 默认最大平均亮度
-        // Try to obtain a Display regardless of whether we have an Activity.
-        // Some callers pass the application context, so relying on instanceof Activity
-        // causes us to always fall back to defaults.
-        if (context == null) {
-            LimeLog.info("Device brightness range: " + minBrightness + " - " + maxBrightness + " nits (default, null context)");
-            return new int[]{minBrightness, maxBrightness};
-        }
-
-        try {
-            Object wmObj = context.getSystemService(Context.WINDOW_SERVICE);
-            if (wmObj == null) {
-                LimeLog.info("WindowManager unavailable, using default brightness range");
-                return new int[]{minBrightness, maxBrightness};
-            }
-
-            android.view.WindowManager wm = (android.view.WindowManager) wmObj;
-            android.view.Display display = wm.getDefaultDisplay();
-            if (display == null) {
-                LimeLog.info("Display unavailable, using default brightness range");
-                return new int[]{minBrightness, maxBrightness};
-            }
-
-            // Android 7.0+ 可以获取 HDR 信息（以 nits 为单位）
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-                android.view.Display.HdrCapabilities hdrCaps = display.getHdrCapabilities();
-                if (hdrCaps != null) {
-                    float maxLuminance = hdrCaps.getDesiredMaxLuminance();
-                    float minLuminance = hdrCaps.getDesiredMinLuminance();
-                    float maxAvgLuminance = hdrCaps.getDesiredMaxAverageLuminance();
-
-                    // 有些设备/实现可能返回 0 或 NaN，当值合理时才使用
-                    if (Float.isFinite(maxLuminance) && maxLuminance > 0.1f) {
-                        // 向上取整以避免过小
-                        maxBrightness = Math.max(maxBrightness, (int) Math.ceil(maxLuminance));
-                    }
-                    if (Float.isFinite(maxAvgLuminance) && maxAvgLuminance > 0.1f) {
-                        maxAverageBrightness = Math.max(maxAverageBrightness, (int) Math.ceil(maxAvgLuminance));
-                    }
-                    if (Float.isFinite(minLuminance) && minLuminance >= 0f) {
-                        minBrightness = Math.max(1, (int) Math.floor(minLuminance));
-                    }
-
-                    LimeLog.info("HDR capabilities - Max: " + maxLuminance + " nits, Min: " + minLuminance + " nits, MaxAvg: " + maxAvgLuminance + " nits");
-                }
-            }
-
-            LimeLog.info("Device brightness range: " + minBrightness + " - " + maxBrightness + " nits");
-        } catch (Exception e) {
-            LimeLog.warning("Failed to get brightness range, using defaults: " + e.getMessage());
-            minBrightness = 2;
-            maxBrightness = 500;
-            maxAverageBrightness = 200;
-        }
-
-        return new int[]{minBrightness, maxBrightness, maxAverageBrightness};
     }
     
     private static SecretKey generateRiAesKey() {
