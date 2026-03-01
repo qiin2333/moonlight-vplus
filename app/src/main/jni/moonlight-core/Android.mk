@@ -55,7 +55,7 @@ ifeq ($(NDK_DEBUG),1)
 LOCAL_CFLAGS += -DLC_DEBUG
 endif
 
-LOCAL_LDLIBS := -llog
+LOCAL_LDLIBS := -llog -landroid
 
 LOCAL_STATIC_LIBRARIES := libopus libssl libcrypto cpufeatures
 LOCAL_LDFLAGS += -Wl,--exclude-libs,ALL

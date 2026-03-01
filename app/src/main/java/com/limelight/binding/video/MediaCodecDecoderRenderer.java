@@ -639,6 +639,28 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
         videoDecoder.configure(format, renderTarget.getSurface(), null, 0);
 
+        // Explicitly set the DataSpace on the output Surface for HDR content.
+        // This is the Android equivalent of HarmonyOS OH_NativeWindow_SetColorSpace().
+        // Without this, many decoders output with wrong DataSpace (e.g., treating HLG as PQ),
+        // causing dark/blue-tinted colors on screen.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
+                (getActiveVideoFormat() & MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0) {
+            int dataSpace;
+            boolean isFullRange = (getPreferredColorRange() == MoonBridge.COLOR_RANGE_FULL);
+            if (prefs.hdrMode == MoonBridge.HDR_MODE_HLG) {
+                dataSpace = isFullRange ?
+                        MoonBridge.DATASPACE_BT2020_HLG_FULL :
+                        MoonBridge.DATASPACE_BT2020_HLG_LIMITED;
+            } else {
+                dataSpace = isFullRange ?
+                        MoonBridge.DATASPACE_BT2020_PQ_FULL :
+                        MoonBridge.DATASPACE_BT2020_PQ_LIMITED;
+            }
+            int result = MoonBridge.nativeSetSurfaceDataSpace(renderTarget.getSurface(), dataSpace);
+            LimeLog.info("Set Surface DataSpace: 0x" + Integer.toHexString(dataSpace) +
+                    " (hdrMode=" + prefs.hdrMode + ", fullRange=" + isFullRange + ") result=" + result);
+        }
+
         configuredFormat = format;
 
         // After reconfiguration, we must resubmit CSD buffers
