@@ -1669,6 +1669,13 @@ public class StreamSettings extends Activity {
                 return true;
             });
 
+            // 编解码与屏幕能力检测
+            findPreference("capability_diagnostic").setOnPreferenceClickListener(preference -> {
+                Intent capIntent = new Intent(getActivity(), CapabilityDiagnosticActivity.class);
+                startActivity(capIntent);
+                return true;
+            });
+
             // 对于没有触摸屏的设备，只提供本地鼠标指针选项
             ListPreference mouseModePresetPref = (ListPreference) findPreference(PreferenceConfiguration.NATIVE_MOUSE_MODE_PRESET_PREF_STRING);
             if (!getActivity().getPackageManager().hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)) {
