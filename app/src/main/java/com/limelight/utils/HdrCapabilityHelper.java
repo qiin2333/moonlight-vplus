@@ -28,6 +28,17 @@ public class HdrCapabilityHelper {
         public boolean isFromHdrCaps;    // 是否从 HdrCapabilities 获取（真实 EDID 数据）
         public boolean isDefault;        // 是否为 fallback 默认值
 
+        // HDR/SDR 比率信息（Android 14+ / API 34+）
+        // 等价于鸿蒙 display.getBrightnessInfo(0) 的 currentHeadroom / maxHeadroom
+        public float hdrSdrRatio;               // 当前 HDR/SDR 比率 (= targetHdrPeakNits / targetSdrWhiteNits)
+        public float highestHdrSdrRatio;        // 最高 HDR/SDR 比率（最大余量）
+        public boolean isHdrSdrRatioAvailable;  // 设备是否支持 HDR/SDR ratio 查询
+
+        // 通过 HDR/SDR ratio 计算的峰值亮度
+        // 计算方式同鸿蒙：peakBrightness = sdrNits * maxHeadroom
+        public float computedPeakBrightness;      // 通过 ratio 计算的峰值亮度（-1 表示不可用）
+        public boolean isComputedFromRatio;        // 是否由 HDR/SDR ratio 计算得出
+
         // 默认值常量
         public static final float DEFAULT_MAX = 500f;
         public static final float DEFAULT_MIN = 2f;
@@ -68,6 +79,11 @@ public class HdrCapabilityHelper {
         info.maxAvgLuminance = BrightnessInfo.DEFAULT_AVG;
         info.isFromHdrCaps = false;
         info.isDefault = true;
+        info.hdrSdrRatio = 1.0f;
+        info.highestHdrSdrRatio = 1.0f;
+        info.isHdrSdrRatioAvailable = false;
+        info.computedPeakBrightness = -1f;
+        info.isComputedFromRatio = false;
 
         if (context == null) {
             return info;
@@ -78,7 +94,7 @@ public class HdrCapabilityHelper {
             return info;
         }
 
-        // Android 7.0+ 从 Display.HdrCapabilities 获取（EDID 数据）
+        // 第一步：从 EDID (HdrCapabilities) 获取基础亮度值 (Android 7.0+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             Display.HdrCapabilities hdrCaps = display.getHdrCapabilities();
             if (hdrCaps != null) {
@@ -101,6 +117,67 @@ public class HdrCapabilityHelper {
                     info.minLuminance = Math.max(0.001f, minLum);
                     info.isDefault = false;
                 }
+            }
+        }
+
+        // 第二步：使用 HDR/SDR ratio 获取更精确的峰值亮度 (Android 14+ / API 34+)
+        // 等价于鸿蒙的 display.getBrightnessInfo(0)
+        //   hdrSdrRatio     ≈ currentHeadroom (当前 HDR/SDR 比率)
+        //   highestHdrSdrRatio ≈ maxHeadroom (最大 HDR/SDR 比率)
+        //   peakBrightness   = sdrNits * maxHeadroom
+        if (Build.VERSION.SDK_INT >= 34) { // Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+            try {
+                info.isHdrSdrRatioAvailable = display.isHdrSdrRatioAvailable();
+                if (info.isHdrSdrRatioAvailable) {
+                    info.hdrSdrRatio = display.getHdrSdrRatio();
+                    LimeLog.info("HDR/SDR ratio: current=" + info.hdrSdrRatio
+                            + ", available=" + info.isHdrSdrRatioAvailable);
+
+                    // getHighestHdrSdrRatio() requires API 36 (Build.VERSION_CODES.BAKLAVA)
+                    if (Build.VERSION.SDK_INT >= 36) {
+                        try {
+                            info.highestHdrSdrRatio = display.getHighestHdrSdrRatio();
+                            LimeLog.info("Highest HDR/SDR ratio: " + info.highestHdrSdrRatio);
+                        } catch (NoSuchMethodError e) {
+                            // API 36 方法不存在，忽略
+                            info.highestHdrSdrRatio = info.hdrSdrRatio;
+                        }
+                    } else {
+                        // API 34-35: 没有 getHighestHdrSdrRatio()，用当前值作参考
+                        info.highestHdrSdrRatio = info.hdrSdrRatio;
+                    }
+
+                    // 利用 EDID maxLuminance 和 ratio 计算更准确的峰值亮度
+                    // 原理：maxLuminance(EDID) / highestRatio ≈ SDR 白点亮度
+                    //       峰值亮度 = SDR白点 * highestRatio
+                    // 但如果 EDID maxLuminance 就是峰值，ratio 可以帮助验证
+                    if (info.hdrSdrRatio > 1.0f && info.isFromHdrCaps) {
+                        // 有 EDID 数据 + 有 ratio: 取 max(EDID, 计算值) 作为更可靠的估算
+                        // 估算 SDR 白点 = EDID峰值 / 最高ratio
+                        float estimatedSdrNits = info.maxLuminance / Math.max(info.highestHdrSdrRatio, info.hdrSdrRatio);
+                        float computedPeak = estimatedSdrNits * Math.max(info.highestHdrSdrRatio, info.hdrSdrRatio);
+                        info.computedPeakBrightness = computedPeak;
+                        info.isComputedFromRatio = true;
+                        LimeLog.info("Computed peak brightness: " + computedPeak + " nits"
+                                + " (estimatedSdr=" + estimatedSdrNits + ")");
+                    } else if (info.hdrSdrRatio > 1.0f) {
+                        // 无 EDID 但有 ratio: 使用默认 SDR 亮度 (约200-350 nits) * ratio 估算
+                        float assumedSdrNits = 300f; // 典型移动设备 SDR 亮度
+                        float computedPeak = assumedSdrNits * Math.max(info.highestHdrSdrRatio, info.hdrSdrRatio);
+                        info.computedPeakBrightness = computedPeak;
+                        info.isComputedFromRatio = true;
+
+                        // 如果计算出的峰值比默认值大，使用计算值
+                        if (computedPeak > info.maxLuminance) {
+                            info.maxLuminance = computedPeak;
+                            info.isDefault = false;
+                        }
+                        LimeLog.info("Computed peak brightness (no EDID): " + computedPeak + " nits"
+                                + " (assumedSdr=" + assumedSdrNits + ", ratio=" + info.hdrSdrRatio + ")");
+                    }
+                }
+            } catch (Exception e) {
+                LimeLog.warning("Failed to get HDR/SDR ratio: " + e.getMessage());
             }
         }
 
@@ -197,12 +274,20 @@ public class HdrCapabilityHelper {
 
     /**
      * 获取 int[] 格式的亮度范围，兼容 NvConnection 使用
+     * 优先使用 HDR/SDR ratio 计算的峰值亮度（更准确）
      * @return [minBrightness, maxBrightness, maxAverageBrightness] 单位 nits，整型
      */
     public static int[] getBrightnessRangeAsInts(Context context) {
         BrightnessInfo info = getBrightnessInfo(context);
         int min = Math.max(1, (int) Math.floor(info.minLuminance));
-        int max = Math.max(min + 1, (int) Math.ceil(info.maxLuminance));
+
+        // 优先使用 HDR/SDR ratio 计算的峰值亮度（类似鸿蒙 sdrNits * maxHeadroom）
+        float effectiveMax = info.maxLuminance;
+        if (info.isComputedFromRatio && info.computedPeakBrightness > effectiveMax) {
+            effectiveMax = info.computedPeakBrightness;
+        }
+
+        int max = Math.max(min + 1, (int) Math.ceil(effectiveMax));
         int avg = Math.max(min, (int) Math.ceil(info.maxAvgLuminance));
         return new int[]{min, max, avg};
     }

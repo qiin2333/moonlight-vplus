@@ -192,6 +192,28 @@ public class CapabilityDiagnosticActivity extends Activity {
         report.append("    最小亮度: ").append(String.format("%.4f nits", brightness.minLuminance)).append("\n");
         report.append("    最大平均亮度: ").append(String.format("%.1f nits", brightness.maxAvgLuminance)).append("\n");
 
+        // HDR/SDR Ratio 信息（Android 14+ / API 34+）— 等价于鸿蒙 getBrightnessInfo()
+        report.append("\n  HDR/SDR 动态比率 (API 34+):\n");
+        if (Build.VERSION.SDK_INT < 34) {
+            report.append("    ⬜ 需要 Android 14+ (API 34)\n");
+        } else if (!brightness.isHdrSdrRatioAvailable) {
+            report.append("    ❌ 设备不支持 HDR/SDR ratio 查询\n");
+        } else {
+            report.append("    当前 HDR/SDR 比率: ").append(String.format("%.2f", brightness.hdrSdrRatio));
+            report.append(" (≈鸿蒙 currentHeadroom)\n");
+            report.append("    最高 HDR/SDR 比率: ").append(String.format("%.2f", brightness.highestHdrSdrRatio));
+            if (Build.VERSION.SDK_INT >= 36) {
+                report.append(" (≈鸿蒙 maxHeadroom)\n");
+            } else {
+                report.append(" (≈当前值, API 36+ 可获取真实 maxHeadroom)\n");
+            }
+
+            if (brightness.isComputedFromRatio && brightness.computedPeakBrightness > 0) {
+                report.append("    🔬 Ratio 计算峰值: ").append(String.format("%.0f nits", brightness.computedPeakBrightness));
+                report.append(" (sdrNits×maxRatio)\n");
+            }
+        }
+
         // 亮度评估
         if (brightness.isDefault) {
             report.append("    ⚠️ 设备驱动未报告 EDID 亮度，使用默认值 (max=500, min=2, avg=200)\n");
