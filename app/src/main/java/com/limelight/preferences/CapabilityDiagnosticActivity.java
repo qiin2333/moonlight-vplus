@@ -17,6 +17,7 @@ import android.util.TypedValue;
 import android.view.Display;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
@@ -160,7 +161,7 @@ public class CapabilityDiagnosticActivity extends Activity {
                 if (modes.length > 1) {
                     addDivider(card);
                     addSectionLabel(card, "显示模式");
-                    LinearLayout flow = createTagFlow();
+                    ViewGroup flow = createTagFlow();
                     for (Display.Mode mode : modes) {
                         String m = mode.getPhysicalWidth() + "×" + mode.getPhysicalHeight()
                                 + " " + String.format("%.0fHz", mode.getRefreshRate());
@@ -392,7 +393,7 @@ public class CapabilityDiagnosticActivity extends Activity {
 
                 // Profile tags
                 boolean main10 = false, hdr10 = false, hdr10p = false;
-                LinearLayout tagFlow = createTagFlow();
+                ViewGroup tagFlow = createTagFlow();
                 for (MediaCodecInfo.CodecProfileLevel pl : caps.profileLevels) {
                     String pn = getProfileName(mime, pl.profile);
                     if (pn != null && isInterestingProfile(mime, pl.profile)) {
@@ -730,9 +731,8 @@ public class CapabilityDiagnosticActivity extends Activity {
         parent.addView(b);
     }
 
-    private LinearLayout createTagFlow() {
-        LinearLayout flow = new LinearLayout(this);
-        flow.setOrientation(LinearLayout.HORIZONTAL);
+    private ViewGroup createTagFlow() {
+        FlowLayout flow = new FlowLayout(this, dp(6), dp(6));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -741,19 +741,86 @@ public class CapabilityDiagnosticActivity extends Activity {
         return flow;
     }
 
-    private void addTagToFlow(LinearLayout flow, String text) {
+    private void addTagToFlow(ViewGroup flow, String text) {
         TextView tag = new TextView(this);
         tag.setText(text);
         tag.setTextColor(COLOR_TEXT_SECONDARY);
         tag.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
         tag.setBackgroundResource(R.drawable.diag_tag_background);
-        tag.setPadding(dp(6), dp(2), dp(6), dp(2));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.rightMargin = dp(4);
-        tag.setLayoutParams(lp);
+        tag.setPadding(dp(8), dp(3), dp(8), dp(3));
         flow.addView(tag);
+    }
+
+    /**
+     * 自动换行的流式布局
+     */
+    private static class FlowLayout extends ViewGroup {
+        private final int hGap;
+        private final int vGap;
+
+        FlowLayout(Context context, int horizontalGap, int verticalGap) {
+            super(context);
+            this.hGap = horizontalGap;
+            this.vGap = verticalGap;
+        }
+
+        @Override
+        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+            int widthSize = MeasureSpec.getSize(widthMeasureSpec);
+            int widthMode = MeasureSpec.getMode(widthMeasureSpec);
+            int maxWidth = widthMode == MeasureSpec.UNSPECIFIED ? Integer.MAX_VALUE : widthSize;
+
+            int x = getPaddingLeft();
+            int y = getPaddingTop();
+            int rowHeight = 0;
+
+            for (int i = 0; i < getChildCount(); i++) {
+                View child = getChildAt(i);
+                if (child.getVisibility() == GONE) continue;
+                child.measure(
+                        MeasureSpec.makeMeasureSpec(maxWidth - getPaddingLeft() - getPaddingRight(), MeasureSpec.AT_MOST),
+                        MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+                int cw = child.getMeasuredWidth();
+                int ch = child.getMeasuredHeight();
+
+                if (x + cw + getPaddingRight() > maxWidth && x > getPaddingLeft()) {
+                    x = getPaddingLeft();
+                    y += rowHeight + vGap;
+                    rowHeight = 0;
+                }
+                x += cw + hGap;
+                rowHeight = Math.max(rowHeight, ch);
+            }
+
+            int totalHeight = y + rowHeight + getPaddingBottom();
+            setMeasuredDimension(
+                    widthMode == MeasureSpec.EXACTLY ? widthSize : maxWidth,
+                    resolveSize(totalHeight, heightMeasureSpec));
+        }
+
+        @Override
+        protected void onLayout(boolean changed, int l, int t, int r, int b) {
+            int maxWidth = r - l;
+            int x = getPaddingLeft();
+            int y = getPaddingTop();
+            int rowHeight = 0;
+
+            for (int i = 0; i < getChildCount(); i++) {
+                View child = getChildAt(i);
+                if (child.getVisibility() == GONE) continue;
+                int cw = child.getMeasuredWidth();
+                int ch = child.getMeasuredHeight();
+
+                if (x + cw + getPaddingRight() > maxWidth && x > getPaddingLeft()) {
+                    x = getPaddingLeft();
+                    y += rowHeight + vGap;
+                    rowHeight = 0;
+                }
+                child.layout(x, y, x + cw, y + ch);
+                x += cw + hGap;
+                rowHeight = Math.max(rowHeight, ch);
+            }
+        }
     }
 
     private void addMiniStatus(LinearLayout parent, String label, boolean ok) {
