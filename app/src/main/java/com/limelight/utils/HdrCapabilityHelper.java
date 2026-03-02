@@ -121,10 +121,14 @@ public class HdrCapabilityHelper {
         }
 
         // 第二步：使用 HDR/SDR ratio 获取更精确的峰值亮度 (Android 14+ / API 34+)
-        // 等价于鸿蒙的 display.getBrightnessInfo(0)
+        // 等价于鸿蒙的 display.getBrightnessInfo(0):
         //   hdrSdrRatio     ≈ currentHeadroom (当前 HDR/SDR 比率)
         //   highestHdrSdrRatio ≈ maxHeadroom (最大 HDR/SDR 比率)
-        //   peakBrightness   = sdrNits * maxHeadroom
+        //
+        // 鸿蒙公式: peakBrightness = sdrNits * maxHeadroom
+        // 但 Android 没有公开 sdrNits (实际 SDR 亮度值，BrightnessInfo 是 @SystemApi)
+        // 因此当 EDID 存在时，ratio 不能改善峰值估算（循环计算）
+        // 当 EDID 缺失时，ratio 配合假设的 SDR 亮度可以比默认 500 nits 更准确
         if (Build.VERSION.SDK_INT >= 34) { // Build.VERSION_CODES.UPSIDE_DOWN_CAKE
             try {
                 info.isHdrSdrRatioAvailable = display.isHdrSdrRatioAvailable();
@@ -139,7 +143,6 @@ public class HdrCapabilityHelper {
                             info.highestHdrSdrRatio = display.getHighestHdrSdrRatio();
                             LimeLog.info("Highest HDR/SDR ratio: " + info.highestHdrSdrRatio);
                         } catch (NoSuchMethodError e) {
-                            // API 36 方法不存在，忽略
                             info.highestHdrSdrRatio = info.hdrSdrRatio;
                         }
                     } else {
@@ -147,33 +150,46 @@ public class HdrCapabilityHelper {
                         info.highestHdrSdrRatio = info.hdrSdrRatio;
                     }
 
-                    // 利用 EDID maxLuminance 和 ratio 计算更准确的峰值亮度
-                    // 原理：maxLuminance(EDID) / highestRatio ≈ SDR 白点亮度
-                    //       峰值亮度 = SDR白点 * highestRatio
-                    // 但如果 EDID maxLuminance 就是峰值，ratio 可以帮助验证
-                    if (info.hdrSdrRatio > 1.0f && info.isFromHdrCaps) {
-                        // 有 EDID 数据 + 有 ratio: 取 max(EDID, 计算值) 作为更可靠的估算
-                        // 估算 SDR 白点 = EDID峰值 / 最高ratio
-                        float estimatedSdrNits = info.maxLuminance / Math.max(info.highestHdrSdrRatio, info.hdrSdrRatio);
-                        float computedPeak = estimatedSdrNits * Math.max(info.highestHdrSdrRatio, info.hdrSdrRatio);
-                        info.computedPeakBrightness = computedPeak;
-                        info.isComputedFromRatio = true;
-                        LimeLog.info("Computed peak brightness: " + computedPeak + " nits"
-                                + " (estimatedSdr=" + estimatedSdrNits + ")");
-                    } else if (info.hdrSdrRatio > 1.0f) {
-                        // 无 EDID 但有 ratio: 使用默认 SDR 亮度 (约200-350 nits) * ratio 估算
-                        float assumedSdrNits = 300f; // 典型移动设备 SDR 亮度
-                        float computedPeak = assumedSdrNits * Math.max(info.highestHdrSdrRatio, info.hdrSdrRatio);
+                    float bestRatio = Math.max(info.highestHdrSdrRatio, info.hdrSdrRatio);
+
+                    if (bestRatio > 1.0f && !info.isFromHdrCaps) {
+                        // 场景：无 EDID 数据 + 有 ratio → ratio 是唯一的面板能力线索
+                        // 使用典型移动设备 SDR 亮度 (~300 nits) 作为基准估算峰值
+                        // 这比硬编码 500 nits 默认值更接近真实面板能力
+                        float assumedSdrNits = 300f;
+                        float computedPeak = assumedSdrNits * bestRatio;
                         info.computedPeakBrightness = computedPeak;
                         info.isComputedFromRatio = true;
 
-                        // 如果计算出的峰值比默认值大，使用计算值
                         if (computedPeak > info.maxLuminance) {
                             info.maxLuminance = computedPeak;
                             info.isDefault = false;
                         }
                         LimeLog.info("Computed peak brightness (no EDID): " + computedPeak + " nits"
-                                + " (assumedSdr=" + assumedSdrNits + ", ratio=" + info.hdrSdrRatio + ")");
+                                + " (assumedSdr=" + assumedSdrNits + ", ratio=" + bestRatio + ")");
+                    } else if (bestRatio > 1.0f && info.isFromHdrCaps) {
+                        // 场景：有 EDID + 有 ratio
+                        // EDID maxLuminance 可能偏低（驱动报告的 EDID 数据不准确）
+                        // ratio 来自 display compositor，是更权威的面板能力指标
+                        // 用 ratio 反推：如果 EDID 报告的峰值 / ratio 得到的 SDR 亮度不合理
+                        // （<100 或 >600），说明 EDID 可能不可靠
+                        float impliedSdrNits = info.maxLuminance / bestRatio;
+                        info.computedPeakBrightness = info.maxLuminance; // 默认信任 EDID
+                        info.isComputedFromRatio = true;
+
+                        if (impliedSdrNits < 100f) {
+                            // EDID 峰值 / ratio 得到的 SDR < 100 nits → EDID 可能偏低
+                            // 用合理的 SDR 估算重新计算
+                            float correctedPeak = 300f * bestRatio;
+                            if (correctedPeak > info.maxLuminance) {
+                                info.computedPeakBrightness = correctedPeak;
+                                info.maxLuminance = correctedPeak;
+                                LimeLog.info("EDID likely underreporting: corrected peak=" + correctedPeak
+                                        + " nits (impliedSdr=" + impliedSdrNits + " was too low)");
+                            }
+                        }
+                        LimeLog.info("Peak brightness with EDID+ratio: peak=" + info.computedPeakBrightness
+                                + ", edidMax=" + info.maxLuminance + ", impliedSdr=" + impliedSdrNits);
                     }
                 }
             } catch (Exception e) {

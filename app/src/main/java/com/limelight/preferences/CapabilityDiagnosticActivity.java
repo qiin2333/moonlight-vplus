@@ -210,8 +210,14 @@ public class CapabilityDiagnosticActivity extends Activity {
 
             if (brightness.isComputedFromRatio && brightness.computedPeakBrightness > 0) {
                 report.append("    🔬 Ratio 计算峰值: ").append(String.format("%.0f nits", brightness.computedPeakBrightness));
-                report.append(" (sdrNits×maxRatio)\n");
+                if (brightness.isFromHdrCaps) {
+                    report.append(" (EDID+Ratio 交叉验证)\n");
+                } else {
+                    report.append(" (假设SDR=300nits × ratio)\n");
+                }
             }
+
+            report.append("    ℹ️ Android 不公开 sdrNits，无法像鸿蒙一样精确计算\n");
         }
 
         // 亮度评估
