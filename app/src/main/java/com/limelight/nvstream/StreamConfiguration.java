@@ -34,6 +34,7 @@ public class StreamConfiguration {
     private boolean useVdd;
     private boolean controlOnly;
     private int customScreenMode;
+    private int customVddScreenMode;
 
     public static class Builder {
         private StreamConfiguration config = new StreamConfiguration();
@@ -168,6 +169,11 @@ public class StreamConfiguration {
             return this;
         }
 
+        public StreamConfiguration.Builder setCustomVddScreenMode(int customVddScreenMode) {
+            config.customVddScreenMode = customVddScreenMode;
+            return this;
+        }
+
         public StreamConfiguration build() {
             return config;
         }
@@ -299,4 +305,6 @@ public class StreamConfiguration {
     public boolean getControlOnly() { return controlOnly; }
 
     public int getCustomScreenMode() { return customScreenMode; }
+
+    public int getCustomVddScreenMode() { return customVddScreenMode; }
 }

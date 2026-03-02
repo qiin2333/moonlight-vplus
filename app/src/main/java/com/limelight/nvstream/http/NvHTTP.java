@@ -962,7 +962,12 @@ public class NvHTTP {
         if (customScreenMode != -1) {
             queryParams += "&customScreenMode=" + customScreenMode;
         }
-        
+
+        int customVddScreenMode = context.streamConfig.getCustomVddScreenMode();
+        if (customVddScreenMode != -1) {
+            queryParams += "&customVddScreenMode=" + customVddScreenMode;
+        }
+
         // 如果指定了显示器GUID，添加到查询参数中
         if (context.displayName != null && !context.displayName.isEmpty()) {
             queryParams += "&display_name=" + context.displayName;

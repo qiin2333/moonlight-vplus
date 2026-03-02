@@ -122,6 +122,24 @@
             android:gravity="start"
             android:layout_gravity="start" />
 
+        <TextView
+            android:id="@+id/screenCombinationModeLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#CCFFFFFF"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-light"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:paddingStart="4dp"
+            android:paddingEnd="8dp"
+            android:drawableEnd="@android:drawable/arrow_down_float"
+            android:drawablePadding="4dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="gone" />
+
     </LinearLayout>
 
     <!-- 底部信息容器 - 包含上一次设置信息 -->

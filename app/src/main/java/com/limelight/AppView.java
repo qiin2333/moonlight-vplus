@@ -32,6 +32,7 @@ import com.limelight.utils.AppSettingsManager;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.Intent;
@@ -107,6 +108,10 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
     // 显示器选择相关
     private LinearLayout displaySelectionInfo;
     private android.widget.RadioGroup displayRadioGroup;
+    private TextView screenCombinationModeLabel;
+    private int selectedScreenCombinationMode = -1;
+    private String[] currentModeNames;
+    private String[] currentModeValues;
     private List<DisplayInfo> availableDisplays;
     private static final int VIRTUAL_DISPLAY_ID = 212333;
 
@@ -365,6 +370,29 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         // Initialize display selection UI components
         displaySelectionInfo = findViewById(R.id.displaySelectionInfo);
         displayRadioGroup = findViewById(R.id.displayRadioGroup);
+        screenCombinationModeLabel = findViewById(R.id.screenCombinationModeLabel);
+
+        // 点击组合模式标签时弹出选择对话框
+        screenCombinationModeLabel.setOnClickListener(v -> showScreenCombinationModeDialog());
+
+        // 监听 RadioGroup 选中变化，动态更新组合模式选项
+        displayRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == -1) {
+                screenCombinationModeLabel.setVisibility(View.GONE);
+                selectedScreenCombinationMode = -1;
+                return;
+            }
+
+            boolean isVdd = (checkedId == VIRTUAL_DISPLAY_ID);
+            int namesArrayId = isVdd ? R.array.vdd_screen_combination_mode_names : R.array.screen_combination_mode_names;
+            int valuesArrayId = isVdd ? R.array.vdd_screen_combination_mode_values : R.array.screen_combination_mode_values;
+
+            currentModeNames = getResources().getStringArray(namesArrayId);
+            currentModeValues = getResources().getStringArray(valuesArrayId);
+            selectedScreenCombinationMode = -1;
+            updateScreenCombinationModeLabel();
+            screenCombinationModeLabel.setVisibility(View.VISIBLE);
+        });
 
         // Set up event listeners
         useLastSettingsCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> appSettingsManager.setUseLastSettingsEnabled(isChecked));
@@ -642,7 +670,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
             computer.useVdd = useVdd;
         }
         
-        doStartStream(app, displayGuid);
+        doStartStream(app, displayGuid, useVdd);
     }
     
     /**
@@ -729,8 +757,9 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
      *
      * @param app 应用对象
      * @param displayName 选择的显示器名称，如果为null则不指定显示器
+     * @param useVdd 是否使用VDD虚拟显示器
      */
-    private void doStartStream(AppObject app, String displayName) {
+    private void doStartStream(AppObject app, String displayName, boolean useVdd) {
         if (appSettingsManager != null && computer != null) {
             // 使用AppSettingsManager统一管理启动逻辑
             Intent startIntent = appSettingsManager.createStartIntentWithLastSettingsIfEnabled(
@@ -738,12 +767,15 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
             if (displayName != null) {
                 startIntent.putExtra(Game.EXTRA_DISPLAY_NAME, displayName);
             }
+            // 传递屏幕组合模式
+            addScreenCombinationModeToIntent(startIntent, useVdd);
             startActivity(startIntent);
         } else {
             // 回退到默认方式启动
             if (displayName != null) {
                 Intent startIntent = ServerHelper.createStartIntent(this, app.app, computer, managerBinder);
                 startIntent.putExtra(Game.EXTRA_DISPLAY_NAME, displayName);
+                addScreenCombinationModeToIntent(startIntent, useVdd);
                 startActivity(startIntent);
             } else {
                 if (computer != null) {
@@ -751,6 +783,74 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                 }
             }
         }
+    }
+
+    /**
+     * 将屏幕组合模式添加到 Intent
+     * 根据 useVdd 决定使用 EXTRA_VDD_SCREEN_COMBINATION_MODE 还是 EXTRA_SCREEN_COMBINATION_MODE
+     */
+    private void addScreenCombinationModeToIntent(Intent intent, boolean useVdd) {
+        if (selectedScreenCombinationMode != -1) {
+            if (useVdd) {
+                intent.putExtra(Game.EXTRA_VDD_SCREEN_COMBINATION_MODE, selectedScreenCombinationMode);
+            } else {
+                intent.putExtra(Game.EXTRA_SCREEN_COMBINATION_MODE, selectedScreenCombinationMode);
+            }
+        }
+    }
+
+    /**
+     * 更新屏幕组合模式标签显示文本
+     */
+    private void updateScreenCombinationModeLabel() {
+        if (currentModeNames == null || currentModeNames.length == 0) {
+            return;
+        }
+        // 找到当前选中值对应的名称
+        String currentName = currentModeNames[0]; // 默认第一项
+        if (currentModeValues != null) {
+            String targetValue = String.valueOf(selectedScreenCombinationMode);
+            for (int i = 0; i < currentModeValues.length; i++) {
+                if (currentModeValues[i].equals(targetValue)) {
+                    currentName = currentModeNames[i];
+                    break;
+                }
+            }
+        }
+        screenCombinationModeLabel.setText(getString(R.string.screen_combination_mode_label, currentName));
+    }
+
+    /**
+     * 弹出屏幕组合模式选择对话框
+     */
+    private void showScreenCombinationModeDialog() {
+        if (currentModeNames == null || currentModeValues == null) {
+            return;
+        }
+
+        // 找到当前选中项的索引
+        int checkedIndex = 0;
+        String targetValue = String.valueOf(selectedScreenCombinationMode);
+        for (int i = 0; i < currentModeValues.length; i++) {
+            if (currentModeValues[i].equals(targetValue)) {
+                checkedIndex = i;
+                break;
+            }
+        }
+
+        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog)
+                .setTitle(R.string.title_screen_combination_mode)
+                .setSingleChoiceItems(currentModeNames, checkedIndex, (dialog, which) -> {
+                    try {
+                        selectedScreenCombinationMode = Integer.parseInt(currentModeValues[which]);
+                    } catch (NumberFormatException e) {
+                        selectedScreenCombinationMode = -1;
+                    }
+                    updateScreenCombinationModeLabel();
+                    dialog.dismiss();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     /**
