@@ -19,4 +19,13 @@
     <!-- Widget -->
     <dimen name="widget_margin">8dp</dimen>
 
+    <!-- AppView -->
+    <dimen name="appview_edge_margin">8dp</dimen>
+    <dimen name="appview_content_margin">20dp</dimen>
+    <dimen name="appview_content_padding">15dp</dimen>
+    <dimen name="appview_bottom_margin">10dp</dimen>
+    <dimen name="appview_icon_button_size">48dp</dimen>
+    <dimen name="appview_panel_padding">12dp</dimen>
+    <dimen name="appview_panel_elevation">12dp</dimen>
+
 </resources>

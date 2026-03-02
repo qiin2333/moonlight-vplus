@@ -6,30 +6,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
-import com.limelight.computers.ComputerManagerService;
-import com.limelight.grid.AppGridAdapter;
-import com.limelight.grid.assets.CachedAppAssetLoader;
-import com.limelight.grid.assets.ScaledBitmap;
-import com.limelight.nvstream.http.ComputerDetails;
-import com.limelight.nvstream.http.NvApp;
-import com.limelight.nvstream.http.NvHTTP;
-import com.limelight.nvstream.http.PairingManager;
-import com.limelight.nvstream.http.NvHTTP.DisplayInfo;
-import com.limelight.binding.PlatformBinding;
-import com.limelight.preferences.PreferenceConfiguration;
-import com.limelight.ui.AdapterFragment;
-import com.limelight.ui.AdapterFragmentCallbacks;
-import com.limelight.ui.AdapterRecyclerBridge;
-import com.limelight.ui.SelectionIndicatorAnimator;
-import com.limelight.utils.BackgroundImageManager;
-import com.limelight.utils.CacheHelper;
-import com.limelight.utils.Dialog;
-import com.limelight.utils.ServerHelper;
-import com.limelight.utils.ShortcutHelper;
-import com.limelight.utils.SpinnerDialog;
-import com.limelight.utils.UiHelper;
-import com.limelight.utils.AppSettingsManager;
-
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -40,72 +16,126 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
+import android.graphics.Paint;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.RelativeSizeSpan;
 import android.view.ContextMenu;
+import android.view.ContextMenu.ContextMenuInfo;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ContextMenu.ContextMenuInfo;
 import android.widget.AbsListView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
-import android.widget.ImageButton;
-import android.widget.ImageView;
-import android.widget.TextView;
-import android.widget.Toast;
 import android.widget.CheckBox;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
-import android.os.Handler;
-import android.os.Looper;
+import android.widget.TextView;
+import android.widget.Toast;
 
-import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import org.xmlpull.v1.XmlPullParserException;
 
+import com.limelight.binding.PlatformBinding;
+import com.limelight.computers.ComputerManagerService;
+import com.limelight.grid.AppGridAdapter;
+import com.limelight.grid.assets.CachedAppAssetLoader;
+import com.limelight.grid.assets.ScaledBitmap;
+import com.limelight.nvstream.http.ComputerDetails;
+import com.limelight.nvstream.http.NvApp;
+import com.limelight.nvstream.http.NvHTTP;
+import com.limelight.nvstream.http.NvHTTP.DisplayInfo;
+import com.limelight.nvstream.http.PairingManager;
+import com.limelight.preferences.PreferenceConfiguration;
+import com.limelight.ui.AdapterFragment;
+import com.limelight.ui.AdapterFragmentCallbacks;
+import com.limelight.ui.AdapterRecyclerBridge;
+import com.limelight.ui.SelectionIndicatorAnimator;
+import com.limelight.utils.AppSettingsManager;
+import com.limelight.utils.BackgroundImageManager;
+import com.limelight.utils.CacheHelper;
+import com.limelight.utils.Dialog;
+import com.limelight.utils.ServerHelper;
+import com.limelight.utils.ShortcutHelper;
+import com.limelight.utils.SpinnerDialog;
+import com.limelight.utils.UiHelper;
+
 public class AppView extends Activity implements AdapterFragmentCallbacks {
+
+    // ==================== 上下文菜单 ID ====================
+    private static final int START_OR_RESUME_ID = 1;
+    private static final int QUIT_ID = 2;
+    private static final int START_WITH_QUIT = 4;
+    private static final int VIEW_DETAILS_ID = 5;
+    private static final int CREATE_SHORTCUT_ID = 6;
+    private static final int HIDE_APP_ID = 7;
+    private static final int START_WITH_LAST_SETTINGS_ID = 8;
+
+    // ==================== Intent Extras & 偏好键 ====================
+    public static final String HIDDEN_APPS_PREF_FILENAME = "HiddenApps";
+    public static final String NAME_EXTRA = "Name";
+    public static final String UUID_EXTRA = "UUID";
+    public static final String NEW_PAIR_EXTRA = "NewPair";
+    public static final String SHOW_HIDDEN_APPS_EXTRA = "ShowHiddenApps";
+    public static final String SELECTED_ADDRESS_EXTRA = "SelectedAddress";
+    public static final String SELECTED_PORT_EXTRA = "SelectedPort";
+
+    // ==================== 布局常量 ====================
+    private static final int DEFAULT_VERTICAL_SPAN_COUNT = 2;
+    private static final int DEFAULT_HORIZONTAL_SPAN_COUNT = 1;
+    private static final int VERTICAL_SINGLE_ROW_THRESHOLD = 5;
+    private static final int BACKGROUND_CHANGE_DELAY = 300; // ms
+    private static final int VIRTUAL_DISPLAY_ID = 212333;
+
+    // ==================== 核心数据 ====================
     private AppGridAdapter appGridAdapter;
     private String uuidString;
-    private ShortcutHelper shortcutHelper;
-
     private ComputerDetails computer;
-    private ComputerManagerService.ApplistPoller poller;
-    private SpinnerDialog blockingLoadSpinner;
+    private String computerName;
     private String lastRawApplist;
     private int lastRunningAppId;
     private boolean suspendGridUpdates;
     private boolean inForeground;
     private boolean showHiddenApps;
     private final HashSet<Integer> hiddenAppIds = new HashSet<>();
+
+    // ==================== 服务 & 工具 ====================
+    private ComputerManagerService.ComputerManagerBinder managerBinder;
+    private ComputerManagerService.ApplistPoller poller;
+    private ShortcutHelper shortcutHelper;
+    private SpinnerDialog blockingLoadSpinner;
+
+    // ==================== UI 组件 - 背景 ====================
     private ImageView appBackgroundImage;
     private BackgroundImageManager backgroundImageManager;
-    private int selectedPosition = -1; // 跟踪当前选中的位置
-    private String computerName; // 存储计算机名称
+    private final Handler backgroundChangeHandler = new Handler(Looper.getMainLooper());
+    private Runnable backgroundChangeRunnable;
 
-    // 选中框动画相关
+    // ==================== UI 组件 - 选中框 & 列表 ====================
     private SelectionIndicatorAnimator selectionAnimator;
     private RecyclerView currentRecyclerView;
     private AdapterRecyclerBridge currentAdapterBridge;
-    private boolean isFirstFocus = true; // 跟踪是否是第一次获得焦点
+    private int selectedPosition = -1;
+    private boolean isFirstFocus = true;
 
-    // 防抖相关变量
-    private final Handler backgroundChangeHandler = new Handler(Looper.getMainLooper());
-    private Runnable backgroundChangeRunnable;
-    private static final int BACKGROUND_CHANGE_DELAY = 300; // 300ms防抖延迟
-
-    // 上一次设置相关
+    // ==================== UI 组件 - 上一次设置 ====================
     private AppSettingsManager appSettingsManager;
     private LinearLayout lastSettingsInfo;
     private TextView lastSettingsText;
     private CheckBox useLastSettingsCheckbox;
-    
-    // 显示器选择相关
+
+    // ==================== UI 组件 - 顶部下拉面板 & 显示器选择 ====================
+    private LinearLayout topDropdownPanel;
+    private boolean isPanelOpen = false;
     private LinearLayout displaySelectionInfo;
     private android.widget.RadioGroup displayRadioGroup;
     private TextView screenCombinationModeLabel;
@@ -113,30 +143,9 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
     private String[] currentModeNames;
     private String[] currentModeValues;
     private List<DisplayInfo> availableDisplays;
-    private static final int VIRTUAL_DISPLAY_ID = 212333;
 
-    private final static int START_OR_RESUME_ID = 1;
-    private final static int QUIT_ID = 2;
-    private final static int START_WITH_QUIT = 4;
-    private final static int VIEW_DETAILS_ID = 5;
-    private final static int CREATE_SHORTCUT_ID = 6;
-    private final static int HIDE_APP_ID = 7;
-    private final static int START_WITH_LAST_SETTINGS_ID = 8;
+    // ==================== 服务连接 ====================
 
-    public final static String HIDDEN_APPS_PREF_FILENAME = "HiddenApps";
-
-    public final static String NAME_EXTRA = "Name";
-    public final static String UUID_EXTRA = "UUID";
-    public final static String NEW_PAIR_EXTRA = "NewPair";
-    public final static String SHOW_HIDDEN_APPS_EXTRA = "ShowHiddenApps";
-    public final static String SELECTED_ADDRESS_EXTRA = "SelectedAddress";
-    public final static String SELECTED_PORT_EXTRA = "SelectedPort";
-
-    private final static int DEFAULT_VERTICAL_SPAN_COUNT = 2;
-    private final static int DEFAULT_HORIZONTAL_SPAN_COUNT = 1;
-    private final static int VERTICAL_SINGLE_ROW_THRESHOLD = 5; // 竖屏时，app数量小于等于4个时使用1行
-
-    private ComputerManagerService.ComputerManagerBinder managerBinder;
     private final ServiceConnection serviceConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className, IBinder binder) {
             final ComputerManagerService.ComputerManagerBinder localBinder =
@@ -246,6 +255,8 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
             }
         }
     }
+
+    // ==================== 计算机轮询管理 ====================
 
     private void startComputerUpdates() {
         // Don't start polling if we're not bound or in the foreground
@@ -367,13 +378,19 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         lastSettingsText = findViewById(R.id.lastSettingsText);
         useLastSettingsCheckbox = findViewById(R.id.useLastSettingsCheckbox);
 
+        // Initialize top dropdown panel
+        topDropdownPanel = findViewById(R.id.topDropdownPanel);
+
         // Initialize display selection UI components
         displaySelectionInfo = findViewById(R.id.displaySelectionInfo);
         displayRadioGroup = findViewById(R.id.displayRadioGroup);
         screenCombinationModeLabel = findViewById(R.id.screenCombinationModeLabel);
+        if (screenCombinationModeLabel != null) {
+            screenCombinationModeLabel.setPaintFlags(screenCombinationModeLabel.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
 
-        // 点击组合模式标签时弹出选择对话框
-        screenCombinationModeLabel.setOnClickListener(v -> showScreenCombinationModeDialog());
+            // 点击组合模式标签时弹出选择对话框
+            screenCombinationModeLabel.setOnClickListener(v -> showScreenCombinationModeDialog());
+        }
 
         // 监听 RadioGroup 选中变化，动态更新组合模式选项
         displayRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
@@ -428,18 +445,10 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         setTitle(computerName);
         label.setText(computerName);
 
-        // Setup settings button
-        ImageButton settingsButton = findViewById(R.id.settingsButton);
-        settingsButton.setOnClickListener(v -> {
-            Intent intent = new Intent(AppView.this, com.limelight.preferences.StreamSettings.class);
-            startActivity(intent);
-        });
-
-        // Setup restore session button
-        ImageButton restoreSessionButton = findViewById(R.id.app_restoreSessionButton);
-        restoreSessionButton.setOnClickListener(v -> {
-            if (lastRunningAppId != 0) {
-                // Find the running app in the list
+        // 点击标题恢复串流
+        label.setOnClickListener(v -> {
+            LimeLog.info("Title clicked, lastRunningAppId=" + lastRunningAppId);
+            if (lastRunningAppId != 0 && appGridAdapter != null) {
                 for (int i = 0; i < appGridAdapter.getCount(); i++) {
                     AppObject app = (AppObject) appGridAdapter.getItem(i);
                     if (app.app.getAppId() == lastRunningAppId) {
@@ -447,9 +456,28 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                         break;
                     }
                 }
-            } else {
-                Toast.makeText(AppView.this, getResources().getString(R.string.no_online_computer_with_running_game), Toast.LENGTH_SHORT).show();
             }
+        });
+
+        // Setup top panel toggle handle
+        View topPanelToggle = findViewById(R.id.topPanelToggle);
+        topPanelToggle.setOnClickListener(v -> toggleTopPanel());
+
+        // 动态设置手柄 margin 使其精确贴合状态栏底部
+        topPanelToggle.setOnApplyWindowInsetsListener((v, insets) -> {
+            int statusBarHeight = insets.getSystemWindowInsetTop();
+            android.widget.RelativeLayout.LayoutParams params = (android.widget.RelativeLayout.LayoutParams) v.getLayoutParams();
+            params.topMargin = statusBarHeight;
+            v.setLayoutParams(params);
+            return insets;
+        });
+
+        // Setup settings entry in panel
+        TextView settingsEntry = findViewById(R.id.settingsEntry);
+        settingsEntry.setOnClickListener(v -> {
+            closeTopPanel();
+            Intent intent = new Intent(AppView.this, com.limelight.preferences.StreamSettings.class);
+            startActivity(intent);
         });
 
         // Bind to the computer manager service
@@ -459,6 +487,8 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         // Delay checking displays to allow service connection to complete
         new Handler(Looper.getMainLooper()).postDelayed(this::checkDisplaysAndUpdateUI, 500);
     }
+
+    // ==================== UI 更新 ====================
 
     private void updateHiddenApps(boolean hideImmediately) {
         HashSet<String> hiddenAppIdStringSet = new HashSet<>();
@@ -477,21 +507,42 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         }
     }
 
+    /**
+     * 更新标题中恢复箭头的显示
+     */
+    private void updateRestoreButtonVisibility(boolean hasRunningApp) {
+        // 找到当前选中的应用名，或运行中的应用名
+        String appName = null;
+        if (selectedPosition >= 0 && appGridAdapter != null && selectedPosition < appGridAdapter.getCount()) {
+            AppObject app = (AppObject) appGridAdapter.getItem(selectedPosition);
+            appName = app.app.getAppName();
+        } else if (hasRunningApp && appGridAdapter != null) {
+            // 没有选中项时，尝试显示运行中应用的名称
+            for (int i = 0; i < appGridAdapter.getCount(); i++) {
+                AppObject app = (AppObject) appGridAdapter.getItem(i);
+                if (app.app.getAppId() == lastRunningAppId) {
+                    appName = app.app.getAppName();
+                    break;
+                }
+            }
+        }
+        updateTitle(appName);
+    }
+
     @SuppressLint("SetTextI18n")
     private void updateTitle(String appName) {
         TextView label = findViewById(R.id.appListText);
-        if (appName != null && !appName.isEmpty()) {
-            // 检查当前是否为横屏
-            boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+        boolean hasRunningApp = lastRunningAppId != 0;
+        String arrow = hasRunningApp ? " ▸" : "";
 
-            // 根据屏幕方向选择分隔符
+        if (appName != null && !appName.isEmpty()) {
+            boolean isLandscape = getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
             String separator = isLandscape ? " - " : "\n";
-            String text = computerName + separator + appName;
+            String text = computerName + separator + appName + arrow;
 
             SpannableString spannableString = new SpannableString(text);
-            int appNameStart = computerName.length() + 1; // +1 是分隔符
+            int appNameStart = computerName.length() + separator.length();
 
-            // 设置应用名称的字体大小
             spannableString.setSpan(
                     new RelativeSizeSpan(0.85f),
                     appNameStart,
@@ -501,7 +552,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
             label.setText(spannableString);
         } else {
-            label.setText(computerName);
+            label.setText(computerName + arrow);
         }
     }
 
@@ -673,6 +724,78 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         doStartStream(app, displayGuid, useVdd);
     }
     
+    // ==================== 顶部下拉面板 ====================
+
+    /**
+     * 切换顶部下拉面板的显示/隐藏
+     */
+    private void toggleTopPanel() {
+        if (isPanelOpen) {
+            closeTopPanel();
+        } else {
+            openTopPanel();
+        }
+    }
+
+    /**
+     * 打开顶部面板 (带动画)
+     */
+    private void openTopPanel() {
+        if (isPanelOpen) return;
+        isPanelOpen = true;
+
+        // 更新手柄箭头方向 ▴
+        TextView toggle = (TextView) findViewById(R.id.topPanelToggle);
+        if (toggle != null) toggle.setText("\u2699 \u25B4");
+
+        topDropdownPanel.setAlpha(0f);
+        topDropdownPanel.setTranslationY(-20f);
+        topDropdownPanel.setVisibility(View.VISIBLE);
+        topDropdownPanel.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(200)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                .withEndAction(() -> {
+                    // 面板打开后将焦点移入第一个可聚焦元素（控制器友好）
+                    View settingsEntry = findViewById(R.id.settingsEntry);
+                    if (settingsEntry != null) {
+                        settingsEntry.requestFocus();
+                    }
+                })
+                .start();
+    }
+
+    /**
+     * 关闭顶部面板 (带动画)
+     */
+    private void closeTopPanel() {
+        if (!isPanelOpen) return;
+        isPanelOpen = false;
+
+        // 恢复手柄箭头方向 ▾
+        TextView toggle = (TextView) findViewById(R.id.topPanelToggle);
+        if (toggle != null) toggle.setText("\u2699 \u25BE");
+
+        topDropdownPanel.animate()
+                .alpha(0f)
+                .translationY(-20f)
+                .setDuration(150)
+                .setInterpolator(new android.view.animation.AccelerateInterpolator())
+                .withEndAction(() -> {
+                    topDropdownPanel.setVisibility(View.GONE);
+                    topDropdownPanel.setTranslationY(0f);
+                    // 关闭后将焦点还给触发手柄
+                    View toggleView = findViewById(R.id.topPanelToggle);
+                    if (toggleView != null) {
+                        toggleView.requestFocus();
+                    }
+                })
+                .start();
+    }
+
+    // ==================== 显示器选择 ====================
+
     /**
      * 检查显示器并更新UI
      */
@@ -981,8 +1104,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         inForeground = true;
         startComputerUpdates();
 
-        // 重置焦点状态
-        // resetFocusState();
+
     }
 
     @Override
@@ -992,6 +1114,8 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         inForeground = false;
         stopComputerUpdates();
     }
+
+    // ==================== 上下文菜单 ====================
 
     @Override
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
@@ -1191,6 +1315,8 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                     if (existingApp.isRunning &&
                             existingApp.app.getAppId() == details.runningGameId) {
                         // This app was running and still is, so we're done now
+                        // 但仍需要确保箭头可见
+                        updateRestoreButtonVisibility(details.runningGameId != 0);
                         return;
                     }
                     else if (existingApp.app.getAppId() == details.runningGameId) {
@@ -1209,16 +1335,16 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                     }
                 }
 
-                // if (!hasRunningApp) loadDefaultImage();
-
                 if (updated) {
                     appGridAdapter.notifyDataSetChanged();
                     // Also refresh RecyclerView if it exists - use more efficient update
                     if (currentRecyclerView != null && currentRecyclerView.getAdapter() != null) {
-                        // 使用更精确的更新方式，只更新可见的项目
                         currentRecyclerView.getAdapter().notifyItemRangeChanged(0, appGridAdapter.getCount());
                     }
                 }
+
+                // 根据是否有运行中的应用来显示/隐藏恢复按钮
+                updateRestoreButtonVisibility(details.runningGameId != 0);
         });
     }
 
@@ -1363,6 +1489,8 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
             setupAbsListView((AbsListView) view);
         }
     }
+
+    // ==================== RecyclerView 设置 ====================
 
     private void setupRecyclerView(RecyclerView rv) {
         currentRecyclerView = rv;
@@ -1530,8 +1658,6 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
     private RecyclerView.OnScrollListener createScrollListener() {
         return new RecyclerView.OnScrollListener() {
-            // 约60fps
-
             @Override
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
                 super.onScrollStateChanged(recyclerView, newState);
@@ -1546,12 +1672,6 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                         selectionAnimator.hideIndicator();
                     }
                 }
-            }
-
-            @Override
-            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
-                super.onScrolled(recyclerView, dx, dy);
-                long lastUpdateTime = System.currentTimeMillis();
             }
         };
     }
@@ -1582,6 +1702,8 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
             }
         };
     }
+
+    // ==================== 事件处理 ====================
 
     private void handleItemClick(int position, Object item) {
         AppObject app = (AppObject) item;
@@ -1655,6 +1777,46 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         UiHelper.applyStatusBarPadding(listView);
         registerForContextMenu(listView);
     }
+
+    // ==================== 顶部面板 - 事件处理 ====================
+
+    @Override
+    public boolean dispatchTouchEvent(android.view.MotionEvent ev) {
+        // 面板打开时点击外部自动关闭
+        if (isPanelOpen && ev.getAction() == android.view.MotionEvent.ACTION_DOWN) {
+            float x = ev.getRawX();
+            float y = ev.getRawY();
+            if (!isTouchInsideView(topDropdownPanel, x, y)
+                    && !isTouchInsideView(findViewById(R.id.topPanelToggle), x, y)) {
+                closeTopPanel();
+            }
+        }
+        return super.dispatchTouchEvent(ev);
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, android.view.KeyEvent event) {
+        // 面板打开时按返回键/B键关闭面板而非退出界面
+        if (isPanelOpen && (keyCode == android.view.KeyEvent.KEYCODE_BACK
+                || keyCode == android.view.KeyEvent.KEYCODE_BUTTON_B)) {
+            closeTopPanel();
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+    /**
+     * 判断触摸点是否在指定 View 的范围内
+     */
+    private boolean isTouchInsideView(View view, float x, float y) {
+        if (view == null) return false;
+        int[] location = new int[2];
+        view.getLocationOnScreen(location);
+        return x >= location[0] && x <= location[0] + view.getWidth()
+                && y >= location[1] && y <= location[1] + view.getHeight();
+    }
+
+    // ==================== 内部类 ====================
 
     public static class AppObject {
         public final NvApp app;

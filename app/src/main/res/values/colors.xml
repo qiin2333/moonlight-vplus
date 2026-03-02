@@ -12,4 +12,9 @@
 
     <color name="overlay_background_vertical">#00000000</color>
     <color name="overlay_background_horizontal">#80161616</color>
+
+    <!-- AppView 文字颜色 -->
+    <color name="appview_text_primary">#FFFFFF</color>
+    <color name="appview_text_secondary">#CCFFFFFF</color>
+    <color name="appview_text_shadow">#80000000</color>
 </resources>

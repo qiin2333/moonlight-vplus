@@ -693,7 +693,7 @@
     <string name="vdd_screen_mode_vdd_as_primary">VDD主屏 + 物理副屏</string>
     <string name="vdd_screen_mode_vdd_as_secondary">物理主屏 + VDD副屏</string>
     <string name="vdd_screen_mode_display_off">仅VDD（关闭物理显示器）</string>
-    <string name="screen_combination_mode_label">组合模式: %1$s ▼</string>
+    <string name="screen_combination_mode_label">组合模式: %1$s</string>
     <string name="unpaired_devices_shown">已显示未配对设备</string>
     <string name="unpaired_devices_hidden">已隐藏未配对设备</string>
     <string name="new_unpaired_device_shown">检测到新的未配对设备，已自动显示未配对设备</string>
@@ -712,4 +712,7 @@
     <string name="summary_list_audio_vibration_mode">选择振动的传递方式</string>
     <string name="title_list_audio_vibration_scene">场景模式</string>
     <string name="summary_list_audio_vibration_scene">根据内容类型优化振动模式</string>
+
+    <!-- AppView Top Panel -->
+    <string name="appview_display_selection_title">显示器选择</string>
 </resources>

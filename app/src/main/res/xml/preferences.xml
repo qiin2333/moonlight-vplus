@@ -108,7 +108,34 @@
             android:summary="@string/summary_screen_offset_y"
             android:defaultValue="0"
             android:max="100" />
-        
+        <CheckBoxPreference
+            android:key="checkbox_enable_hdr"
+            android:title="@string/title_enable_hdr"
+            android:summary="@string/summary_enable_hdr"
+            android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_enable_hdr_high_brightness"
+            android:dependency="checkbox_enable_hdr"
+            android:title="@string/title_enable_hdr_high_brightness"
+            android:summary="@string/summary_enable_hdr_high_brightness"
+            android:defaultValue="false" />
+        <ListPreference
+            android:key="list_hdr_mode"
+            android:dependency="checkbox_enable_hdr"
+            android:title="@string/title_hdr_mode"
+            android:summary="@string/summary_hdr_mode"
+            android:entries="@array/hdr_mode_entries"
+            android:entryValues="@array/hdr_mode_values"
+            android:defaultValue="1" />
+        <CheckBoxPreference
+            android:key="checkbox_full_range"
+            android:title="@string/title_full_range"
+            android:summary="@string/summary_full_range"
+            android:defaultValue="false" />
+        <Preference
+            android:key="capability_diagnostic"
+            android:title="编解码与屏幕能力检测"
+            android:summary="检测设备的 HDR 支持、解码器能力等信息" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_audio_settings"
         android:key="category_audio_settings"
@@ -621,30 +648,6 @@
             android:text="@string/suffix_seekbar_output_buffer_queue_limit"
             android:title="@string/title_seekbar_output_buffer_queue_limit" />
         <CheckBoxPreference
-            android:key="checkbox_enable_hdr"
-            android:title="@string/title_enable_hdr"
-            android:summary="@string/summary_enable_hdr"
-            android:defaultValue="false" />
-        <CheckBoxPreference
-            android:key="checkbox_enable_hdr_high_brightness"
-            android:dependency="checkbox_enable_hdr"
-            android:title="@string/title_enable_hdr_high_brightness"
-            android:summary="@string/summary_enable_hdr_high_brightness"
-            android:defaultValue="false" />
-        <ListPreference
-            android:key="list_hdr_mode"
-            android:dependency="checkbox_enable_hdr"
-            android:title="@string/title_hdr_mode"
-            android:summary="@string/summary_hdr_mode"
-            android:entries="@array/hdr_mode_entries"
-            android:entryValues="@array/hdr_mode_values"
-            android:defaultValue="1" />
-        <CheckBoxPreference
-            android:key="checkbox_full_range"
-            android:title="@string/title_full_range"
-            android:summary="@string/summary_full_range"
-            android:defaultValue="false" />
-        <CheckBoxPreference
             android:key="checkbox_enable_perf_overlay"
             android:title="@string/title_enable_perf_overlay"
             android:summary="@string/summary_enable_perf_overlay"
@@ -683,11 +686,6 @@
             android:title="获取公网 IP"
             android:summary="这会尝试利用 STUN 服务器获取被控端的公网访问方式，以便在离开局域网环境后继续连接。但此功能可能会导致无公网 IP 用户扫描变慢"
             android:defaultValue="false"/>
-
-        <Preference
-            android:key="capability_diagnostic"
-            android:title="编解码与屏幕能力检测"
-            android:summary="检测设备的 HDR 支持、解码器能力等信息" />
 
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_help"
