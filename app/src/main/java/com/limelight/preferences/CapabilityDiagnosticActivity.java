@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.graphics.Typeface;
 import android.hardware.display.DisplayManager;
 import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
@@ -12,10 +13,11 @@ import android.media.MediaFormat;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
+import android.util.TypedValue;
 import android.view.Display;
+import android.view.Gravity;
 import android.view.View;
-import android.view.WindowManager;
-import android.widget.ScrollView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -28,12 +30,23 @@ import java.util.List;
 
 /**
  * 编解码与屏幕能力检测页面
- * 显示设备的视频解码器能力、HDR 支持信息、屏幕参数等
+ * 使用卡片式 UI 展示设备的视频解码器能力、HDR 支持信息、屏幕参数等
  */
 public class CapabilityDiagnosticActivity extends Activity {
 
-    private TextView reportTextView;
-    private StringBuilder report;
+    private LinearLayout container;
+    private StringBuilder plainTextReport; // 用于剪贴板复制
+
+    // 颜色常量
+    private static final int COLOR_TEXT_PRIMARY = 0xFFEEEEEE;
+    private static final int COLOR_TEXT_SECONDARY = 0xAAFFFFFF;
+    private static final int COLOR_TEXT_MUTED = 0x66FFFFFF;
+    private static final int COLOR_ACCENT = 0xFFFF6B9D;
+    private static final int COLOR_SUCCESS = 0xFF4CAF50;
+    private static final int COLOR_WARNING = 0xFFFF9800;
+    private static final int COLOR_ERROR = 0xFFE53935;
+    private static final int COLOR_INFO = 0xFF42A5F5;
+    private static final int COLOR_DIVIDER = 0x1AFFFFFF;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,18 +56,17 @@ public class CapabilityDiagnosticActivity extends Activity {
         UiHelper.setLocale(this);
         UiHelper.notifyNewRootView(this);
 
-        reportTextView = findViewById(R.id.diagnostic_report);
+        container = findViewById(R.id.report_container);
         View copyButton = findViewById(R.id.btn_copy_report);
         View backButton = findViewById(R.id.btn_back);
 
-        report = new StringBuilder();
+        plainTextReport = new StringBuilder();
         generateReport();
-        reportTextView.setText(report.toString());
 
         copyButton.setOnClickListener(v -> {
             ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
             if (clipboard != null) {
-                clipboard.setPrimaryClip(ClipData.newPlainText("Capability Report", report.toString()));
+                clipboard.setPrimaryClip(ClipData.newPlainText("Capability Report", plainTextReport.toString()));
                 Toast.makeText(this, "已复制到剪贴板", Toast.LENGTH_SHORT).show();
             }
         });
@@ -63,429 +75,745 @@ public class CapabilityDiagnosticActivity extends Activity {
     }
 
     private void generateReport() {
-        report.append("═══════════════════════════════════\n");
-        report.append("  设备能力检测报告\n");
-        report.append("═══════════════════════════════════\n\n");
+        plainTextReport.append("═══════════════════════════════════\n");
+        plainTextReport.append("  设备能力检测报告\n");
+        plainTextReport.append("═══════════════════════════════════\n\n");
 
-        appendDeviceInfo();
-        appendDisplayInfo();
-        appendHdrCapabilities();
-        appendVideoDecoderInfo();
+        buildDeviceCard();
+        buildDisplayCard();
+        buildHdrCard();
+        buildDecoderCards();
 
-        report.append("\n═══════════════════════════════════\n");
-        report.append("  报告生成完毕\n");
-        report.append("═══════════════════════════════════\n");
+        plainTextReport.append("\n═══════════════════════════════════\n");
+        plainTextReport.append("  报告生成完毕\n");
+        plainTextReport.append("═══════════════════════════════════\n");
     }
 
-    private void appendDeviceInfo() {
-        report.append("【设备信息】\n");
-        report.append("  品牌: ").append(Build.BRAND).append("\n");
-        report.append("  型号: ").append(Build.MODEL).append("\n");
-        report.append("  设备: ").append(Build.DEVICE).append("\n");
-        report.append("  芯片: ").append(Build.HARDWARE).append("\n");
-        report.append("  Android: ").append(Build.VERSION.RELEASE)
+    // ========================== 卡片构建 ==========================
+
+    private void buildDeviceCard() {
+        LinearLayout card = createCard("📱", "设备信息");
+        plainTextReport.append("【设备信息】\n");
+
+        addKeyValue(card, "品牌", Build.BRAND);
+        addKeyValue(card, "型号", Build.MODEL);
+        addKeyValue(card, "芯片", Build.HARDWARE);
+        addKeyValue(card, "Android",
+                Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")");
+
+        plainTextReport.append("  品牌: ").append(Build.BRAND).append("\n");
+        plainTextReport.append("  型号: ").append(Build.MODEL).append("\n");
+        plainTextReport.append("  芯片: ").append(Build.HARDWARE).append("\n");
+        plainTextReport.append("  Android: ").append(Build.VERSION.RELEASE)
                 .append(" (API ").append(Build.VERSION.SDK_INT).append(")\n");
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            report.append("  SOC 厂商: ").append(Build.SOC_MANUFACTURER).append("\n");
-            report.append("  SOC 型号: ").append(Build.SOC_MODEL).append("\n");
+            addKeyValue(card, "SOC", Build.SOC_MANUFACTURER + " " + Build.SOC_MODEL);
+            plainTextReport.append("  SOC: ").append(Build.SOC_MANUFACTURER)
+                    .append(" ").append(Build.SOC_MODEL).append("\n");
         }
-        report.append("\n");
+
+        plainTextReport.append("\n");
+        container.addView(card);
     }
 
     @SuppressLint("NewApi")
-    private void appendDisplayInfo() {
-        report.append("【屏幕信息】\n");
+    private void buildDisplayCard() {
+        LinearLayout card = createCard("🖥", "屏幕信息");
+        plainTextReport.append("【屏幕信息】\n");
+
         try {
             DisplayManager dm = (DisplayManager) getSystemService(Context.DISPLAY_SERVICE);
             Display display = dm != null ? dm.getDisplay(Display.DEFAULT_DISPLAY) : null;
             if (display == null) {
-                report.append("  无法获取 Display 信息\n\n");
+                addBadge(card, "无法获取 Display 信息", COLOR_ERROR);
+                plainTextReport.append("  无法获取\n\n");
+                container.addView(card);
                 return;
             }
 
             DisplayMetrics metrics = new DisplayMetrics();
             display.getRealMetrics(metrics);
-            report.append("  分辨率: ").append(metrics.widthPixels).append(" × ").append(metrics.heightPixels).append("\n");
-            report.append("  密度: ").append(metrics.densityDpi).append(" dpi\n");
+            String res = metrics.widthPixels + " × " + metrics.heightPixels;
+            addKeyValue(card, "分辨率", res);
+            addKeyValue(card, "密度", metrics.densityDpi + " dpi");
+            plainTextReport.append("  分辨率: ").append(res).append("\n");
+            plainTextReport.append("  密度: ").append(metrics.densityDpi).append(" dpi\n");
 
-            float refreshRate = display.getRefreshRate();
-            report.append("  刷新率: ").append(String.format("%.1f Hz", refreshRate)).append("\n");
+            float rr = display.getRefreshRate();
+            addKeyValue(card, "刷新率", String.format("%.1f Hz", rr));
+            plainTextReport.append("  刷新率: ").append(String.format("%.1f Hz", rr)).append("\n");
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 Display.Mode[] modes = display.getSupportedModes();
                 if (modes.length > 1) {
-                    report.append("  支持的显示模式:\n");
+                    addDivider(card);
+                    addSectionLabel(card, "显示模式");
+                    LinearLayout flow = createTagFlow();
                     for (Display.Mode mode : modes) {
-                        report.append("    ").append(mode.getPhysicalWidth()).append("×")
-                                .append(mode.getPhysicalHeight()).append(" @ ")
-                                .append(String.format("%.1f Hz", mode.getRefreshRate())).append("\n");
+                        String m = mode.getPhysicalWidth() + "×" + mode.getPhysicalHeight()
+                                + " " + String.format("%.0fHz", mode.getRefreshRate());
+                        addTagToFlow(flow, m);
                     }
+                    card.addView(flow);
                 }
             }
-
         } catch (Exception e) {
-            report.append("  获取屏幕信息失败: ").append(e.getMessage()).append("\n");
+            addBadge(card, "获取失败: " + e.getMessage(), COLOR_ERROR);
         }
-        report.append("\n");
+
+        plainTextReport.append("\n");
+        container.addView(card);
     }
 
     @SuppressLint("NewApi")
-    private void appendHdrCapabilities() {
-        report.append("【HDR 能力】\n");
+    private void buildHdrCard() {
+        LinearLayout card = createCard("🌈", "HDR 能力");
+        plainTextReport.append("【HDR 能力】\n");
+
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
-            report.append("  需要 Android 7.0+ (API 24) 支持\n\n");
+            addBadge(card, "需要 Android 7.0+", COLOR_WARNING);
+            plainTextReport.append("  需要 Android 7.0+\n\n");
+            container.addView(card);
             return;
         }
 
-        // 使用统一的 HdrCapabilityHelper
-        HdrCapabilityHelper.HdrCapabilityInfo capInfo = HdrCapabilityHelper.getFullCapabilityInfo(this);
+        HdrCapabilityHelper.HdrCapabilityInfo capInfo =
+                HdrCapabilityHelper.getFullCapabilityInfo(this);
         HdrCapabilityHelper.BrightnessInfo brightness = capInfo.brightness;
-        HdrCapabilityHelper.HdrTypeSupport typeSupport = capInfo.typeSupport;
+        HdrCapabilityHelper.HdrTypeSupport ts = capInfo.typeSupport;
 
-        // Configuration.isScreenHdr()
+        // 系统检测
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            report.append("  Configuration.isScreenHdr(): ").append(capInfo.isScreenHdr ? "✅ true" : "❌ false").append("\n");
-        }
-
-        // Window color mode (API 26+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            int colorMode = getWindow().getColorMode();
-            String modeName;
-            switch (colorMode) {
-                case 1: modeName = "WIDE_COLOR_GAMUT"; break;
-                case 2: modeName = "HDR"; break;
-                default: modeName = "DEFAULT"; break;
-            }
-            report.append("  Window.colorMode: ").append(modeName).append(" (").append(colorMode).append(")\n");
-        }
-
-        // 广色域
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            report.append("  广色域: ").append(capInfo.isWideColorGamut ? "✅ 支持" : "❌ 不支持").append("\n");
+            addStatusRow(card, "屏幕 HDR", capInfo.isScreenHdr, "isScreenHdr()");
+            addStatusRow(card, "广色域", capInfo.isWideColorGamut, null);
+            plainTextReport.append("  isScreenHdr: ").append(capInfo.isScreenHdr).append("\n");
+            plainTextReport.append("  广色域: ").append(capInfo.isWideColorGamut).append("\n");
         }
 
         // HDR 类型
-        if (typeSupport.rawTypes.length == 0) {
-            report.append("\n  ❌ 设备不支持任何 HDR 类型\n");
-        } else {
-            report.append("\n  支持的 HDR 类型:\n");
-            if (typeSupport.hasDolbyVision) report.append("    ✅ Dolby Vision\n");
-            if (typeSupport.hasHdr10) report.append("    ✅ HDR10 / PQ\n");
-            if (typeSupport.hasHlg) report.append("    ✅ HLG\n");
-            if (typeSupport.hasHdr10Plus) report.append("    ✅ HDR10+\n");
+        addDivider(card);
+        addSectionLabel(card, "HDR 类型");
 
-            report.append("\n  串流兼容性:\n");
-            report.append("    HLG 直通: ").append(typeSupport.hasHlg ? "✅ 设备支持" : "⚠️ 设备未声明支持，可能需要 tone-mapping").append("\n");
-            report.append("    HDR10/PQ 直通: ").append(typeSupport.hasHdr10 ? "✅ 设备支持" : "⚠️ 设备未声明支持").append("\n");
-            report.append("    HDR10+ 动态元数据: ").append(typeSupport.hasHdr10Plus ? "✅ 设备支持" : "⬜ 不支持").append("\n");
+        if (ts.rawTypes.length == 0) {
+            addBadge(card, "设备不支持任何 HDR 类型", COLOR_WARNING);
+            plainTextReport.append("  ❌ 无 HDR 类型\n");
+        } else {
+            addHdrTypeBadge(card, "Dolby Vision", ts.hasDolbyVision);
+            addHdrTypeBadge(card, "HDR10 / PQ", ts.hasHdr10);
+            addHdrTypeBadge(card, "HLG", ts.hasHlg);
+            addHdrTypeBadge(card, "HDR10+", ts.hasHdr10Plus);
+
+            plainTextReport.append("  DV: ").append(ts.hasDolbyVision ? "✅" : "❌")
+                    .append("  HDR10: ").append(ts.hasHdr10 ? "✅" : "❌")
+                    .append("  HLG: ").append(ts.hasHlg ? "✅" : "❌")
+                    .append("  HDR10+: ").append(ts.hasHdr10Plus ? "✅" : "❌").append("\n");
+
+            // 串流兼容性
+            addDivider(card);
+            addSectionLabel(card, "串流兼容性");
+            addCompatRow(card, "HLG 直通", ts.hasHlg, "设备支持", "设备未声明");
+            addCompatRow(card, "HDR10/PQ 直通", ts.hasHdr10, "设备支持", "设备未声明");
         }
 
-        // 亮度范围（统一方法获取）
-        report.append("\n  亮度范围 (HdrCapabilityHelper):\n");
-        report.append("    最大亮度: ").append(String.format("%.1f nits", brightness.maxLuminance));
+        // 亮度
+        addDivider(card);
+        addSectionLabel(card, "屏幕亮度");
+
+        String maxDesc = String.format("%.0f nits", brightness.maxLuminance);
+        if (brightness.isDefault) maxDesc += " (默认)";
+        else if (brightness.isFromHdrCaps) maxDesc += " (EDID)";
+        addKeyValue(card, "峰值亮度", maxDesc);
+        addKeyValue(card, "最小亮度", String.format("%.4f nits", brightness.minLuminance));
+        addKeyValue(card, "平均亮度", String.format("%.0f nits", brightness.maxAvgLuminance));
+
+        plainTextReport.append("  峰值: ").append(maxDesc).append("\n");
+        plainTextReport.append("  最小: ").append(String.format("%.4f", brightness.minLuminance)).append("\n");
+        plainTextReport.append("  平均: ").append(String.format("%.0f", brightness.maxAvgLuminance)).append("\n");
+
+        // 亮度评级
         if (brightness.isDefault) {
-            report.append(" ⚠️ 使用默认值");
-        } else if (brightness.isFromHdrCaps) {
-            report.append(" (来自 EDID)");
+            addBadge(card, "⚠ 驱动未报告 EDID 亮度", COLOR_WARNING);
+        } else if (brightness.maxLuminance >= 1000) {
+            addBadge(card, "✦ 高阶 HDR 面板 ≥1000 nits", COLOR_SUCCESS);
+        } else if (brightness.maxLuminance >= 600) {
+            addBadge(card, "✦ 中等 HDR 面板", COLOR_SUCCESS);
+        } else if (brightness.maxLuminance < 400) {
+            addBadge(card, "⚠ 峰值亮度偏低 <400 nits", COLOR_WARNING);
         }
-        report.append("\n");
-        report.append("    最小亮度: ").append(String.format("%.4f nits", brightness.minLuminance)).append("\n");
-        report.append("    最大平均亮度: ").append(String.format("%.1f nits", brightness.maxAvgLuminance)).append("\n");
 
-        // HDR/SDR Ratio 信息（Android 14+ / API 34+）— 等价于鸿蒙 getBrightnessInfo()
-        report.append("\n  HDR/SDR 动态比率 (API 34+):\n");
+        // HDR/SDR Ratio
+        addDivider(card);
+        addSectionLabel(card, "HDR/SDR 动态比率");
+
         if (Build.VERSION.SDK_INT < 34) {
-            report.append("    ⬜ 需要 Android 14+ (API 34)\n");
+            addBadge(card, "需要 Android 14+ (API 34)", COLOR_TEXT_MUTED);
+            plainTextReport.append("  HDR/SDR Ratio: 需要 API 34+\n");
         } else if (!brightness.isHdrSdrRatioAvailable) {
-            report.append("    ❌ 设备不支持 HDR/SDR ratio 查询\n");
+            addBadge(card, "设备不支持 ratio 查询", COLOR_WARNING);
+            plainTextReport.append("  HDR/SDR Ratio: 不支持\n");
         } else {
-            report.append("    当前 HDR/SDR 比率: ").append(String.format("%.2f", brightness.hdrSdrRatio));
-            report.append(" (≈鸿蒙 currentHeadroom)\n");
-            report.append("    最高 HDR/SDR 比率: ").append(String.format("%.2f", brightness.highestHdrSdrRatio));
-            if (Build.VERSION.SDK_INT >= 36) {
-                report.append(" (≈鸿蒙 maxHeadroom)\n");
-            } else {
-                report.append(" (≈当前值, API 36+ 可获取真实 maxHeadroom)\n");
-            }
+            addKeyValue(card, "当前比率", String.format("%.2f×", brightness.hdrSdrRatio));
+            addKeyValue(card, "最高比率",
+                    String.format("%.2f×", brightness.highestHdrSdrRatio)
+                            + (Build.VERSION.SDK_INT >= 36 ? "" : " (≈当前)"));
+            plainTextReport.append("  当前 ratio: ").append(String.format("%.2f", brightness.hdrSdrRatio)).append("\n");
+            plainTextReport.append("  最高 ratio: ").append(String.format("%.2f", brightness.highestHdrSdrRatio)).append("\n");
 
             if (brightness.isComputedFromRatio && brightness.computedPeakBrightness > 0) {
-                report.append("    🔬 Ratio 计算峰值: ").append(String.format("%.0f nits", brightness.computedPeakBrightness));
-                if (brightness.isFromHdrCaps) {
-                    report.append(" (EDID+Ratio 交叉验证)\n");
-                } else {
-                    report.append(" (假设SDR=300nits × ratio)\n");
-                }
+                addKeyValue(card, "Ratio 峰值",
+                        String.format("%.0f nits", brightness.computedPeakBrightness));
+                plainTextReport.append("  Ratio 峰值: ").append(
+                        String.format("%.0f", brightness.computedPeakBrightness)).append("\n");
             }
-
-            report.append("    ℹ️ Android 不公开 sdrNits，无法像鸿蒙一样精确计算\n");
+            addBadge(card, "ℹ Android 未公开 sdrNits，精度受限", COLOR_INFO);
         }
 
-        // 亮度评估
-        if (brightness.isDefault) {
-            report.append("    ⚠️ 设备驱动未报告 EDID 亮度，使用默认值 (max=500, min=2, avg=200)\n");
-            report.append("    💡 这不代表设备不支持 HDR，仅说明亮度信息不可用\n");
-        } else if (brightness.maxLuminance < 400) {
-            report.append("    ⚠️ 最大亮度较低 (<400 nits)，HDR 效果可能有限\n");
-        } else if (brightness.maxLuminance >= 1000) {
-            report.append("    ✅ 高亮度面板 (≥1000 nits)，HDR 效果优秀\n");
-        } else if (brightness.maxLuminance >= 600) {
-            report.append("    ✅ 中等 HDR 面板 (600-1000 nits)\n");
+        // 上报服务端
+        addDivider(card);
+        addSectionLabel(card, "上报服务端");
+
+        int[] sv = HdrCapabilityHelper.getBrightnessRangeAsInts(this);
+        addKeyValue(card, "minBrightness", sv[0] + " nits");
+        addKeyValue(card, "maxBrightness", sv[1] + " nits");
+        addKeyValue(card, "maxAvgBrightness", sv[2] + " nits");
+        plainTextReport.append("  上报: min=").append(sv[0]).append(" max=").append(sv[1])
+                .append(" avg=").append(sv[2]).append("\n");
+
+        // 系统亮度
+        addDivider(card);
+        addSectionLabel(card, "系统亮度");
+
+        int sysBr = HdrCapabilityHelper.getSystemBrightness(this);
+        if (sysBr >= 0) {
+            addKeyValue(card, "当前亮度",
+                    sysBr + "/255 (" + String.format("%.0f%%", sysBr / 255f * 100) + ")");
+            plainTextReport.append("  系统亮度: ").append(sysBr).append("/255\n");
         }
+        boolean autoBr = HdrCapabilityHelper.isAutoBrightnessEnabled(this);
+        addKeyValue(card, "自动亮度", autoBr ? "开启" : "关闭");
+        plainTextReport.append("  自动亮度: ").append(autoBr).append("\n\n");
 
-        // 上报给服务端的亮度值
-        int[] serverValues = HdrCapabilityHelper.getBrightnessRangeAsInts(this);
-        report.append("\n  上报服务端的亮度值:\n");
-        report.append("    minBrightness: ").append(serverValues[0]).append(" nits\n");
-        report.append("    maxBrightness: ").append(serverValues[1]).append(" nits\n");
-        report.append("    maxAvgBrightness: ").append(serverValues[2]).append(" nits\n");
-
-        // 系统亮度参考
-        appendSystemBrightnessInfo();
-
-        // Display.isHdr() (API 34+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            report.append("\n  Display.isHdr(): ").append(capInfo.displayReportsHdr ? "✅ 当前 HDR 模式" : "⬜ 非 HDR 模式").append("\n");
-        }
-
-        report.append("\n");
-    }
-
-    /**
-     * 获取系统亮度信息作为参考
-     */
-    private void appendSystemBrightnessInfo() {
-        report.append("\n  系统亮度参考信息:\n");
-        try {
-            int brightness = HdrCapabilityHelper.getSystemBrightness(this);
-            if (brightness >= 0) {
-                float pct = brightness / 255f * 100;
-                report.append("    当前系统亮度: ").append(brightness).append("/255")
-                        .append(" (").append(String.format("%.0f%%", pct)).append(")\n");
-            }
-
-            boolean autoBrightness = HdrCapabilityHelper.isAutoBrightnessEnabled(this);
-            report.append("    自动亮度: ").append(autoBrightness ? "✅ 开启" : "⬜ 关闭").append("\n");
-
-            float windowBrightness = getWindow().getAttributes().screenBrightness;
-            if (windowBrightness >= 0) {
-                report.append("    当前窗口亮度: ").append(String.format("%.0f%%", windowBrightness * 100)).append("\n");
-            } else {
-                report.append("    当前窗口亮度: 跟随系统\n");
-            }
-        } catch (Exception e) {
-            report.append("    获取系统亮度失败: ").append(e.getMessage()).append("\n");
-        }
+        container.addView(card);
     }
 
     @SuppressLint("NewApi")
-    private void appendVideoDecoderInfo() {
-        report.append("【视频解码器】\n");
+    private void buildDecoderCards() {
+        plainTextReport.append("【视频解码器】\n");
 
         MediaCodecList codecList = new MediaCodecList(MediaCodecList.ALL_CODECS);
         MediaCodecInfo[] codecInfos = codecList.getCodecInfos();
 
-        List<MediaCodecInfo> hevcDecoders = new ArrayList<>();
-        List<MediaCodecInfo> avcDecoders = new ArrayList<>();
-        List<MediaCodecInfo> av1Decoders = new ArrayList<>();
-
+        List<MediaCodecInfo> hevc = new ArrayList<>(), avc = new ArrayList<>(), av1 = new ArrayList<>();
         for (MediaCodecInfo info : codecInfos) {
             if (info.isEncoder()) continue;
-            String[] types = info.getSupportedTypes();
-            for (String type : types) {
-                if (type.equalsIgnoreCase("video/hevc")) {
-                    hevcDecoders.add(info);
-                } else if (type.equalsIgnoreCase("video/avc")) {
-                    avcDecoders.add(info);
-                } else if (type.equalsIgnoreCase("video/av01")) {
-                    av1Decoders.add(info);
-                }
+            for (String type : info.getSupportedTypes()) {
+                if (type.equalsIgnoreCase("video/hevc")) hevc.add(info);
+                else if (type.equalsIgnoreCase("video/avc")) avc.add(info);
+                else if (type.equalsIgnoreCase("video/av01")) av1.add(info);
             }
         }
 
-        appendCodecSection("HEVC (H.265)", hevcDecoders, "video/hevc");
-        appendCodecSection("AVC (H.264)", avcDecoders, "video/avc");
-        appendCodecSection("AV1", av1Decoders, "video/av01");
+        buildOneCodecCard("🎬", "HEVC (H.265)", hevc, "video/hevc");
+        buildOneCodecCard("🎞", "AVC (H.264)", avc, "video/avc");
+        buildOneCodecCard("🔮", "AV1", av1, "video/av01");
     }
 
     @SuppressLint("NewApi")
-    private void appendCodecSection(String codecName, List<MediaCodecInfo> decoders, String mimeType) {
-        report.append("\n  ").append(codecName).append(" 解码器 (").append(decoders.size()).append("个):\n");
+    private void buildOneCodecCard(String icon, String codecName,
+                                   List<MediaCodecInfo> decoders, String mime) {
+        LinearLayout card = createCard(icon, codecName + "  (" + decoders.size() + ")");
+        plainTextReport.append("\n  ").append(codecName).append(" (").append(decoders.size()).append("):\n");
+
         if (decoders.isEmpty()) {
-            report.append("    ❌ 无可用解码器\n");
+            addBadge(card, "无可用解码器", COLOR_ERROR);
+            plainTextReport.append("    ❌ 无\n");
+            container.addView(card);
             return;
         }
 
+        boolean first = true;
         for (MediaCodecInfo info : decoders) {
-            boolean isHardware = true;
+            if (!first) addDivider(card);
+            first = false;
+
+            boolean isHw = true;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                isHardware = info.isHardwareAccelerated();
+                isHw = info.isHardwareAccelerated();
             } else {
-                String name = info.getName().toLowerCase();
-                isHardware = !name.contains("omx.google") && !name.contains("c2.android");
+                String n = info.getName().toLowerCase();
+                isHw = !n.contains("omx.google") && !n.contains("c2.android");
             }
 
-            report.append("    ─────────────────────\n");
-            report.append("    名称: ").append(info.getName()).append("\n");
-            report.append("    类型: ").append(isHardware ? "🔧 硬件" : "💻 软件").append("\n");
+            // 名称 + 硬件/软件标签
+            LinearLayout nameRow = new LinearLayout(this);
+            nameRow.setOrientation(LinearLayout.HORIZONTAL);
+            nameRow.setGravity(Gravity.CENTER_VERTICAL);
+            LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT);
+            np.topMargin = dp(4);
+            nameRow.setLayoutParams(np);
+
+            TextView nameView = new TextView(this);
+            nameView.setText(info.getName());
+            nameView.setTextColor(COLOR_TEXT_PRIMARY);
+            nameView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            nameView.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+            nameView.setLayoutParams(new LinearLayout.LayoutParams(
+                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+            nameRow.addView(nameView);
+
+            TextView hwTag = new TextView(this);
+            hwTag.setText(isHw ? "硬件" : "软件");
+            hwTag.setTextColor(isHw ? COLOR_SUCCESS : COLOR_TEXT_SECONDARY);
+            hwTag.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            hwTag.setBackgroundResource(R.drawable.diag_tag_background);
+            hwTag.setPadding(dp(8), dp(2), dp(8), dp(2));
+            nameRow.addView(hwTag);
+            card.addView(nameRow);
+
+            plainTextReport.append("    ").append(info.getName())
+                    .append(isHw ? " [硬件]" : " [软件]").append("\n");
 
             try {
-                MediaCodecInfo.CodecCapabilities caps = info.getCapabilitiesForType(mimeType);
+                MediaCodecInfo.CodecCapabilities caps = info.getCapabilitiesForType(mime);
 
-                // Profile/Level support
-                report.append("    配置文件:\n");
-                boolean supportsMain10 = false;
-                boolean supportsMain10Hdr10 = false;
-                boolean supportsMain10Hdr10Plus = false;
-
+                // Profile tags
+                boolean main10 = false, hdr10 = false, hdr10p = false;
+                LinearLayout tagFlow = createTagFlow();
                 for (MediaCodecInfo.CodecProfileLevel pl : caps.profileLevels) {
-                    String profileName = getProfileName(mimeType, pl.profile);
-                    if (profileName != null) {
-                        // Only show interesting profiles
-                        if (isInterestingProfile(mimeType, pl.profile)) {
-                            report.append("      ").append(profileName).append("\n");
-                        }
-                        if (mimeType.equals("video/hevc")) {
-                            if (pl.profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10)
-                                supportsMain10 = true;
-                            if (pl.profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10)
-                                supportsMain10Hdr10 = true;
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-                                    pl.profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10Plus)
-                                supportsMain10Hdr10Plus = true;
-                        }
+                    String pn = getProfileName(mime, pl.profile);
+                    if (pn != null && isInterestingProfile(mime, pl.profile)) {
+                        addTagToFlow(tagFlow, pn);
+                        plainTextReport.append("      ").append(pn).append("\n");
+                    }
+                    if (mime.equals("video/hevc")) {
+                        if (pl.profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10) main10 = true;
+                        if (pl.profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10) hdr10 = true;
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                                pl.profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10Plus) hdr10p = true;
                     }
                 }
+                card.addView(tagFlow);
 
-                // HDR decoding support summary
-                if (mimeType.equals("video/hevc")) {
-                    report.append("    HDR 解码:\n");
-                    report.append("      10-bit (Main10): ").append(supportsMain10 ? "✅" : "❌").append("\n");
-                    report.append("      HDR10 (PQ): ").append(supportsMain10Hdr10 ? "✅" : "❌").append("\n");
-                    report.append("      HDR10+: ").append(supportsMain10Hdr10Plus ? "✅" : "❌").append("\n");
-                    // HLG uses Main10 profile - no separate HLG profile in Android
-                    report.append("      HLG: ").append(supportsMain10 ? "✅ (通过 Main10)" : "❌").append("\n");
+                // HDR grid for HEVC
+                if (mime.equals("video/hevc")) {
+                    LinearLayout hdrRow = new LinearLayout(this);
+                    hdrRow.setOrientation(LinearLayout.HORIZONTAL);
+                    LinearLayout.LayoutParams hrp = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT);
+                    hrp.topMargin = dp(6);
+                    hdrRow.setLayoutParams(hrp);
+
+                    addMiniStatus(hdrRow, "10bit", main10);
+                    addMiniStatus(hdrRow, "HDR10", hdr10);
+                    addMiniStatus(hdrRow, "HDR10+", hdr10p);
+                    addMiniStatus(hdrRow, "HLG", main10);
+                    card.addView(hdrRow);
+
+                    plainTextReport.append("      10bit=").append(main10 ? "✅" : "❌")
+                            .append(" HDR10=").append(hdr10 ? "✅" : "❌")
+                            .append(" HDR10+=").append(hdr10p ? "✅" : "❌")
+                            .append(" HLG=").append(main10 ? "✅" : "❌").append("\n");
                 }
 
-                // Color format support
-                boolean supportsP010 = false;
-                for (int colorFormat : caps.colorFormats) {
-                    // COLOR_FormatYUVP010 = 54 (or vendor-specific)
-                    if (colorFormat == 54) supportsP010 = true;
-                }
-                if (mimeType.equals("video/hevc") || mimeType.equals("video/av01")) {
-                    report.append("    10-bit 输出 (P010): ").append(supportsP010 ? "✅" : "⚠️ 未检测到").append("\n");
-                }
+                // Capabilities row: 4K, P010, resolution
+                boolean p010 = false;
+                for (int cf : caps.colorFormats) { if (cf == 54) p010 = true; }
 
-                // Max resolution
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    MediaCodecInfo.VideoCapabilities videoCaps = caps.getVideoCapabilities();
-                    if (videoCaps != null) {
-                        int maxW = videoCaps.getSupportedWidths().getUpper();
-                        int maxH = videoCaps.getSupportedHeights().getUpper();
-                        report.append("    最大分辨率: ").append(maxW).append(" × ").append(maxH).append("\n");
+                    MediaCodecInfo.VideoCapabilities vc = caps.getVideoCapabilities();
+                    if (vc != null) {
+                        int mw = vc.getSupportedWidths().getUpper();
+                        int mh = vc.getSupportedHeights().getUpper();
+                        boolean is4k = false;
+                        try { is4k = vc.isSizeSupported(3840, 2160); } catch (Exception e) {}
 
-                        // Check 4K support
-                        try {
-                            boolean supports4K = videoCaps.isSizeSupported(3840, 2160);
-                            report.append("    4K (3840×2160): ").append(supports4K ? "✅" : "❌").append("\n");
-                        } catch (Exception e) {
-                            // ignore
+                        LinearLayout capRow = new LinearLayout(this);
+                        capRow.setOrientation(LinearLayout.HORIZONTAL);
+                        capRow.setGravity(Gravity.CENTER_VERTICAL);
+                        LinearLayout.LayoutParams crp = new LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT);
+                        crp.topMargin = dp(6);
+                        capRow.setLayoutParams(crp);
+
+                        addMiniStatus(capRow, "4K", is4k);
+                        if (mime.equals("video/hevc") || mime.equals("video/av01")) {
+                            addMiniStatus(capRow, "P010", p010);
                         }
+
+                        TextView resTag = new TextView(this);
+                        resTag.setText("Max " + mw + "×" + mh);
+                        resTag.setTextColor(COLOR_TEXT_MUTED);
+                        resTag.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+                        resTag.setPadding(dp(8), 0, 0, 0);
+                        capRow.addView(resTag);
+                        card.addView(capRow);
+
+                        plainTextReport.append("      4K=").append(is4k ? "✅" : "❌")
+                                .append(" P010=").append(p010 ? "✅" : "❌")
+                                .append(" Max=").append(mw).append("×").append(mh).append("\n");
                     }
                 }
 
-                // KEY_COLOR_TRANSFER_REQUEST support check (API 31+)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && mimeType.equals("video/hevc") && isHardware) {
-                    appendColorTransferRequestCheck(info, mimeType, supportsMain10);
+                // COLOR_TRANSFER_REQUEST check
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                        && mime.equals("video/hevc") && isHw && main10) {
+                    buildTransferRequestCheck(card, info, mime);
                 }
 
             } catch (Exception e) {
-                report.append("    获取能力信息失败: ").append(e.getMessage()).append("\n");
+                addBadge(card, "能力查询失败", COLOR_ERROR);
+                plainTextReport.append("      失败: ").append(e.getMessage()).append("\n");
             }
         }
+        container.addView(card);
     }
 
     @SuppressLint("NewApi")
-    private void appendColorTransferRequestCheck(MediaCodecInfo info, String mimeType, boolean supportsMain10) {
-        if (!supportsMain10) return;
-        report.append("    传递函数请求 (API 31+):\n");
+    private void buildTransferRequestCheck(LinearLayout card, MediaCodecInfo info, String mime) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = dp(6);
+        row.setLayoutParams(lp);
 
         try {
-            android.media.MediaCodec codec = android.media.MediaCodec.createByCodecName(info.getName());
+            android.media.MediaCodec codec =
+                    android.media.MediaCodec.createByCodecName(info.getName());
             try {
-                // Test HLG
-                MediaFormat testFormat = MediaFormat.createVideoFormat(mimeType, 1920, 1080);
-                testFormat.setInteger(MediaFormat.KEY_COLOR_TRANSFER, MediaFormat.COLOR_TRANSFER_HLG);
-                testFormat.setInteger(MediaFormat.KEY_COLOR_STANDARD, MediaFormat.COLOR_STANDARD_BT2020);
-                testFormat.setInteger("color-transfer-request", MediaFormat.COLOR_TRANSFER_HLG);
+                MediaFormat f1 = MediaFormat.createVideoFormat(mime, 1920, 1080);
+                f1.setInteger(MediaFormat.KEY_COLOR_TRANSFER, MediaFormat.COLOR_TRANSFER_HLG);
+                f1.setInteger(MediaFormat.KEY_COLOR_STANDARD, MediaFormat.COLOR_STANDARD_BT2020);
+                f1.setInteger("color-transfer-request", MediaFormat.COLOR_TRANSFER_HLG);
+                codec.configure(f1, null, null, 0);
+                boolean hlgOk = codec.getInputFormat()
+                        .getInteger("color-transfer-request", 0) == MediaFormat.COLOR_TRANSFER_HLG;
+                codec.stop(); codec.reset();
 
-                codec.configure(testFormat, null, null, 0);
-                MediaFormat inputFormat = codec.getInputFormat();
-                int hlgResult = inputFormat.getInteger("color-transfer-request", 0);
-                report.append("      HLG: ").append(hlgResult == MediaFormat.COLOR_TRANSFER_HLG ? "✅ 支持" : "❌ 不支持 (返回 " + hlgResult + ")").append("\n");
+                MediaFormat f2 = MediaFormat.createVideoFormat(mime, 1920, 1080);
+                f2.setInteger(MediaFormat.KEY_COLOR_TRANSFER, MediaFormat.COLOR_TRANSFER_ST2084);
+                f2.setInteger(MediaFormat.KEY_COLOR_STANDARD, MediaFormat.COLOR_STANDARD_BT2020);
+                f2.setInteger("color-transfer-request", MediaFormat.COLOR_TRANSFER_ST2084);
+                codec.configure(f2, null, null, 0);
+                boolean pqOk = codec.getInputFormat()
+                        .getInteger("color-transfer-request", 0) == MediaFormat.COLOR_TRANSFER_ST2084;
                 codec.stop();
-                codec.reset();
 
-                // Test PQ
-                MediaFormat testFormat2 = MediaFormat.createVideoFormat(mimeType, 1920, 1080);
-                testFormat2.setInteger(MediaFormat.KEY_COLOR_TRANSFER, MediaFormat.COLOR_TRANSFER_ST2084);
-                testFormat2.setInteger(MediaFormat.KEY_COLOR_STANDARD, MediaFormat.COLOR_STANDARD_BT2020);
-                testFormat2.setInteger("color-transfer-request", MediaFormat.COLOR_TRANSFER_ST2084);
-
-                codec.configure(testFormat2, null, null, 0);
-                MediaFormat inputFormat2 = codec.getInputFormat();
-                int pqResult = inputFormat2.getInteger("color-transfer-request", 0);
-                report.append("      PQ/ST2084: ").append(pqResult == MediaFormat.COLOR_TRANSFER_ST2084 ? "✅ 支持" : "❌ 不支持 (返回 " + pqResult + ")").append("\n");
-                codec.stop();
+                addMiniStatus(row, "HLG透传", hlgOk);
+                addMiniStatus(row, "PQ透传", pqOk);
+                plainTextReport.append("      HLG透传=").append(hlgOk ? "✅" : "❌")
+                        .append(" PQ透传=").append(pqOk ? "✅" : "❌").append("\n");
             } finally {
                 codec.release();
             }
         } catch (Exception e) {
-            report.append("      检测失败: ").append(e.getMessage()).append("\n");
+            addBadge(card, "传递函数检测失败", COLOR_WARNING);
+            plainTextReport.append("      传递函数检测失败\n");
         }
+        card.addView(row);
     }
 
-    private String getProfileName(String mimeType, int profile) {
-        if (mimeType.equals("video/hevc")) {
+    // ========================== UI 工具方法 ==========================
+
+    private LinearLayout createCard(String icon, String title) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackgroundResource(R.drawable.diag_card_background);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dp(12);
+        card.setLayoutParams(lp);
+        card.setPadding(dp(16), dp(14), dp(16), dp(14));
+
+        // 标题行
+        LinearLayout titleRow = new LinearLayout(this);
+        titleRow.setOrientation(LinearLayout.HORIZONTAL);
+        titleRow.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        tp.bottomMargin = dp(10);
+        titleRow.setLayoutParams(tp);
+
+        TextView iconView = new TextView(this);
+        iconView.setText(icon);
+        iconView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
+        iconView.setPadding(0, 0, dp(10), 0);
+        titleRow.addView(iconView);
+
+        TextView titleView = new TextView(this);
+        titleView.setText(title);
+        titleView.setTextColor(COLOR_TEXT_PRIMARY);
+        titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        titleView.setTypeface(null, Typeface.BOLD);
+        titleRow.addView(titleView);
+
+        card.addView(titleRow);
+        return card;
+    }
+
+    private void addKeyValue(LinearLayout parent, String key, String value) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dp(3);
+        row.setLayoutParams(lp);
+
+        TextView k = new TextView(this);
+        k.setText(key);
+        k.setTextColor(COLOR_TEXT_SECONDARY);
+        k.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        k.setLayoutParams(new LinearLayout.LayoutParams(
+                dp(110), LinearLayout.LayoutParams.WRAP_CONTENT));
+        row.addView(k);
+
+        TextView v = new TextView(this);
+        v.setText(value);
+        v.setTextColor(COLOR_TEXT_PRIMARY);
+        v.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        v.setLayoutParams(new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+        row.addView(v);
+
+        parent.addView(row);
+    }
+
+    private void addDivider(LinearLayout parent) {
+        View d = new View(this);
+        d.setBackgroundColor(COLOR_DIVIDER);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(1));
+        lp.topMargin = dp(10);
+        lp.bottomMargin = dp(10);
+        d.setLayoutParams(lp);
+        parent.addView(d);
+    }
+
+    private void addSectionLabel(LinearLayout parent, String text) {
+        TextView l = new TextView(this);
+        l.setText(text);
+        l.setTextColor(COLOR_ACCENT);
+        l.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        l.setTypeface(null, Typeface.BOLD);
+        l.setAllCaps(true);
+        l.setLetterSpacing(0.08f);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dp(6);
+        l.setLayoutParams(lp);
+        parent.addView(l);
+    }
+
+    private void addStatusRow(LinearLayout parent, String label, boolean ok, String note) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dp(3);
+        row.setLayoutParams(lp);
+
+        TextView dot = new TextView(this);
+        dot.setText(ok ? "●" : "○");
+        dot.setTextColor(ok ? COLOR_SUCCESS : COLOR_TEXT_MUTED);
+        dot.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+        dot.setPadding(0, 0, dp(8), 0);
+        row.addView(dot);
+
+        TextView lbl = new TextView(this);
+        lbl.setText(note != null ? label + "  " + note : label);
+        lbl.setTextColor(ok ? COLOR_TEXT_PRIMARY : COLOR_TEXT_SECONDARY);
+        lbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        row.addView(lbl);
+
+        parent.addView(row);
+    }
+
+    private void addHdrTypeBadge(LinearLayout parent, String name, boolean ok) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dp(3);
+        row.setLayoutParams(lp);
+
+        TextView icon = new TextView(this);
+        icon.setText(ok ? "✓" : "✗");
+        icon.setTextColor(ok ? COLOR_SUCCESS : COLOR_TEXT_MUTED);
+        icon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        icon.setTypeface(null, Typeface.BOLD);
+        icon.setPadding(dp(4), 0, dp(10), 0);
+        row.addView(icon);
+
+        TextView n = new TextView(this);
+        n.setText(name);
+        n.setTextColor(ok ? COLOR_TEXT_PRIMARY : COLOR_TEXT_MUTED);
+        n.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        row.addView(n);
+
+        parent.addView(row);
+    }
+
+    private void addCompatRow(LinearLayout parent, String feature, boolean ok,
+                              String okMsg, String failMsg) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dp(3);
+        row.setLayoutParams(lp);
+
+        TextView feat = new TextView(this);
+        feat.setText(feature);
+        feat.setTextColor(COLOR_TEXT_SECONDARY);
+        feat.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        feat.setLayoutParams(new LinearLayout.LayoutParams(
+                dp(100), LinearLayout.LayoutParams.WRAP_CONTENT));
+        row.addView(feat);
+
+        TextView st = new TextView(this);
+        st.setText(ok ? "✓ " + okMsg : "⚠ " + failMsg);
+        st.setTextColor(ok ? COLOR_SUCCESS : COLOR_WARNING);
+        st.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        row.addView(st);
+
+        parent.addView(row);
+        plainTextReport.append("  ").append(feature).append(": ")
+                .append(ok ? "✅ " + okMsg : "⚠️ " + failMsg).append("\n");
+    }
+
+    private void addBadge(LinearLayout parent, String msg, int color) {
+        TextView b = new TextView(this);
+        b.setText(msg);
+        b.setTextColor(color);
+        b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        int bg;
+        if (color == COLOR_SUCCESS) bg = R.drawable.diag_badge_success;
+        else if (color == COLOR_WARNING) bg = R.drawable.diag_badge_warning;
+        else if (color == COLOR_ERROR) bg = R.drawable.diag_badge_error;
+        else bg = R.drawable.diag_badge_info;
+        b.setBackgroundResource(bg);
+        b.setPadding(dp(10), dp(6), dp(10), dp(6));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = dp(4);
+        lp.bottomMargin = dp(4);
+        b.setLayoutParams(lp);
+        parent.addView(b);
+    }
+
+    private LinearLayout createTagFlow() {
+        LinearLayout flow = new LinearLayout(this);
+        flow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = dp(4);
+        flow.setLayoutParams(lp);
+        return flow;
+    }
+
+    private void addTagToFlow(LinearLayout flow, String text) {
+        TextView tag = new TextView(this);
+        tag.setText(text);
+        tag.setTextColor(COLOR_TEXT_SECONDARY);
+        tag.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+        tag.setBackgroundResource(R.drawable.diag_tag_background);
+        tag.setPadding(dp(6), dp(2), dp(6), dp(2));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.rightMargin = dp(4);
+        tag.setLayoutParams(lp);
+        flow.addView(tag);
+    }
+
+    private void addMiniStatus(LinearLayout parent, String label, boolean ok) {
+        LinearLayout item = new LinearLayout(this);
+        item.setOrientation(LinearLayout.HORIZONTAL);
+        item.setGravity(Gravity.CENTER_VERTICAL);
+        item.setPadding(0, 0, dp(12), 0);
+
+        TextView dot = new TextView(this);
+        dot.setText(ok ? "●" : "○");
+        dot.setTextColor(ok ? COLOR_SUCCESS : 0x44FFFFFF);
+        dot.setTextSize(TypedValue.COMPLEX_UNIT_SP, 8);
+        dot.setPadding(0, 0, dp(4), 0);
+        item.addView(dot);
+
+        TextView txt = new TextView(this);
+        txt.setText(label);
+        txt.setTextColor(ok ? COLOR_TEXT_PRIMARY : COLOR_TEXT_MUTED);
+        txt.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        item.addView(txt);
+
+        parent.addView(item);
+    }
+
+    private int dp(float dp) {
+        return (int) TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP, dp, getResources().getDisplayMetrics());
+    }
+
+    // ========================== Profile 工具 ==========================
+
+    private String getProfileName(String mime, int profile) {
+        if (mime.equals("video/hevc")) {
             switch (profile) {
                 case MediaCodecInfo.CodecProfileLevel.HEVCProfileMain: return "Main";
-                case MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10: return "Main 10";
-                case MediaCodecInfo.CodecProfileLevel.HEVCProfileMainStill: return "Main Still";
-                case MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10: return "Main 10 HDR10";
+                case MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10: return "Main10";
+                case MediaCodecInfo.CodecProfileLevel.HEVCProfileMainStill: return "Still";
+                case MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10: return "HDR10";
                 default:
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        if (profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10Plus)
-                            return "Main 10 HDR10+";
-                    }
-                    return "Profile(" + profile + ")";
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                            profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10Plus)
+                        return "HDR10+";
+                    return null;
             }
-        } else if (mimeType.equals("video/avc")) {
+        } else if (mime.equals("video/avc")) {
             switch (profile) {
                 case MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline: return "Baseline";
                 case MediaCodecInfo.CodecProfileLevel.AVCProfileMain: return "Main";
                 case MediaCodecInfo.CodecProfileLevel.AVCProfileHigh: return "High";
-                case MediaCodecInfo.CodecProfileLevel.AVCProfileHigh10: return "High 10";
-                default: return "Profile(" + profile + ")";
+                case MediaCodecInfo.CodecProfileLevel.AVCProfileHigh10: return "High10";
+                default: return null;
             }
-        } else if (mimeType.equals("video/av01")) {
+        } else if (mime.equals("video/av01")) {
             switch (profile) {
                 case 1: return "Main";
                 case 2: return "High";
-                case 4: return "Professional";
-                default: return "Profile(" + profile + ")";
+                case 4: return "Pro";
+                default: return null;
             }
         }
-        return "Profile(" + profile + ")";
+        return null;
     }
 
-    private boolean isInterestingProfile(String mimeType, int profile) {
-        if (mimeType.equals("video/hevc")) {
+    private boolean isInterestingProfile(String mime, int profile) {
+        if (mime.equals("video/hevc")) {
             return profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain
                     || profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10
                     || profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10
                     || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
                     profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10Plus);
-        } else if (mimeType.equals("video/avc")) {
+        } else if (mime.equals("video/avc")) {
             return profile == MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline
                     || profile == MediaCodecInfo.CodecProfileLevel.AVCProfileMain
                     || profile == MediaCodecInfo.CodecProfileLevel.AVCProfileHigh
