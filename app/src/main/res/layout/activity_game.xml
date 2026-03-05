@@ -231,5 +231,12 @@
         android:scaleType="centerInside"
         android:padding="8dp" />
 
+    <!-- 虚拟全键盘占位容器：全屏承载范围，供代码中动态加载或包裹实体键盘组件 -->
+    <FrameLayout
+        android:id="@+id/virtual_full_keyboard_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:elevation="20dp" />
 
 </merge>

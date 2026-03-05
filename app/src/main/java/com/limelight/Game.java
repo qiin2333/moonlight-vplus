@@ -118,6 +118,7 @@ import java.util.Set;
 
 
 import com.limelight.services.KeyboardAccessibilityService;
+import com.limelight.ui.FloatBallManager;
 
 public class Game extends Activity implements SurfaceHolder.Callback,
         OnGenericMotionListener, OnTouchListener, NvConnectionListener, EvdevListener,
@@ -226,6 +227,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     // 光标服务管理器
     private CursorServiceManager cursorServiceManager;
+
+    // 悬浮球管理器
+    private FloatBallManager floatBallManager;
 
     private MediaCodecDecoderRenderer decoderRenderer;
     private boolean reportedCrash;
@@ -789,6 +793,16 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             }
         });
         externalDisplayManager.initialize();
+
+        // 创建浮球管理器
+        floatBallManager = new FloatBallManager(this);
+        floatBallManager.setOnFloatBallClickListener(new FloatBallManager.OnFloatBallClickListener() {
+            @Override
+            public void onFloatBallClick() {
+                // 呼出游戏菜单，复用按返回键时的逻辑体系（兼容普通游戏菜单与王冠模式选项）
+                showGameMenu(null);
+            }
+        });
     }
 
     /**
@@ -1203,6 +1217,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // 刷新麦克风按钮图标（以便应用最新的颜色配置）
         if (microphoneManager != null && micButton != null) {
             microphoneManager.updateMicrophoneButtonState();
+        }
+
+        // 显示浮球
+        if (floatBallManager != null) {
+            floatBallManager.showFloatBall();
         }
     }
 
@@ -1685,6 +1704,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     protected void onDestroy() {
         // 将取消通知提到最前面执行，确保无论后续是否崩溃，通知都能消失
         cancelKeepAliveNotification();
+        
+        // 隐藏并释放悬浮球
+        if (floatBallManager != null) {
+            floatBallManager.release();
+            floatBallManager = null;
+        }
+
         super.onDestroy();
 
         // 确保在 Activity 彻底销毁时停止连接（因为 onStop 可能跳过了它）
@@ -1730,6 +1756,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     protected void onPause() {
+        // 隐藏浮球
+        if (floatBallManager != null) {
+            floatBallManager.hideFloatBall();
+        }
+
         // 当 Activity 进入后台时，必须停止拦截，否则会影响手机的正常使用！
         KeyboardAccessibilityService.setIntercepting(false);
 

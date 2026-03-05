@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <!-- 40% 的黑色，模拟暗色玻璃 -->
+    <solid android:color="#66000000" />
+    <!-- 极细的半透明白边，模拟玻璃反光，这是提升质感的关键 -->
+    <stroke android:width="0.5dp" android:color="#4DFFFFFF" />
+</shape>
