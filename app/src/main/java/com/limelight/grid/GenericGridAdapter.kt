@@ -1,0 +1,67 @@
+package com.limelight.grid
+
+import android.content.Context
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.BaseAdapter
+import android.widget.ImageView
+import android.widget.TextView
+
+import com.limelight.R
+
+abstract class GenericGridAdapter<T>(
+    @JvmField
+    protected val context: Context,
+    private var layoutId: Int
+) : BaseAdapter() {
+
+    @JvmField
+    val itemList = ArrayList<T>()
+    private val inflater: LayoutInflater = context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
+
+    // Track a selected position for UI updates (some activities call setSelectedPosition)
+    @JvmField
+    protected var selectedPosition = -1
+
+    fun setSelectedPosition(pos: Int) {
+        this.selectedPosition = pos
+        // Let views refresh to reflect selection change if they care
+        notifyDataSetChanged()
+    }
+
+    fun getSelectedPosition(): Int = selectedPosition
+
+    fun setLayoutId(layoutId: Int) {
+        if (layoutId != this.layoutId) {
+            this.layoutId = layoutId
+            // Force the view to be redrawn with the new layout
+            notifyDataSetInvalidated()
+        }
+    }
+
+    open fun clear() {
+        itemList.clear()
+    }
+
+    override fun getCount(): Int = itemList.size
+
+    override fun getItem(i: Int): Any = itemList[i] as Any
+
+    override fun getItemId(i: Int): Long = i.toLong()
+
+    abstract fun populateView(parentView: View, imgView: ImageView, spinnerView: View, txtView: TextView, overlayView: ImageView, obj: T)
+
+    override fun getView(i: Int, convertView: View?, viewGroup: ViewGroup): View {
+        val view = convertView ?: inflater.inflate(layoutId, viewGroup, false)
+
+        val imgView = view.findViewById<ImageView>(R.id.grid_image)
+        val overlayView = view.findViewById<ImageView>(R.id.grid_overlay)
+        val txtView = view.findViewById<TextView>(R.id.grid_text)
+        val spinnerView = view.findViewById<View>(R.id.grid_spinner)
+
+        populateView(view, imgView, spinnerView, txtView, overlayView, itemList[i])
+
+        return view
+    }
+}
