@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <!-- 95% 的纯白，不会刺眼 -->
+    <solid android:color="#F2FFFFFF" />
+</shape>
