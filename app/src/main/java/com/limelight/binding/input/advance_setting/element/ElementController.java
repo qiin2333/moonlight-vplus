@@ -956,7 +956,7 @@ public class ElementController {
                 @Override
                 public void sendEvent(boolean down) {
                     if (down) {
-                        controllerManager.getKeyboardUIController().toggle();
+                        game.toggleVirtualKeyboard();
                     }
                 }
 
@@ -1234,7 +1234,7 @@ public class ElementController {
     }
 
 
-    private void rumbleSingleVibrator(short lowFreqMotor, short highFreqMotor, int vibratorTime) {
+    public void rumbleSingleVibrator(short lowFreqMotor, short highFreqMotor, int vibratorTime) {
         // Since we can only use a single amplitude value, compute the desired amplitude
         // by taking 80% of the big motor and 33% of the small motor, then capping to 255.
         // NB: This value is now 0-255 as required by VibrationEffect.

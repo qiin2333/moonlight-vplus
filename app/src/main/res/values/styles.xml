@@ -39,52 +39,67 @@
         <item name="android:windowNoTitle">true</item>
     </style>
     
-    <!-- 虚拟键盘样式 -->
+    <!-- 虚拟键盘基础样式 -->
     <style name="VirtualKeyboardStyle">
-        <item name="android:background">@drawable/keyboard_background</item>
+        <item name="android:background">@drawable/keyboard_refined_bg</item>
         <item name="android:padding">4dp</item>
-        <item name="android:elevation">4dp</item>
+        <item name="android:elevation">8dp</item>
     </style>
 
-    <!-- 普通按键样式 -->
-    <style name="KeyboardKeyStyle">
-        <item name="android:background">@drawable/keyboard_key_selector</item>
+    <!-- 精细化按键样式 -->
+    <style name="KeyboardKeyRefined">
+        <item name="android:background">@drawable/keyboard_key_refined_selector</item>
         <item name="android:textSize">15sp</item>
         <item name="android:textColor">#FFFFFF</item>
-        <item name="android:textStyle">bold</item>
         <item name="android:gravity">center</item>
-        <item name="android:layout_margin">1dp</item>
-        <item name="android:elevation">3dp</item>
-        <item name="android:shadowColor">#66000000</item>
-        <item name="android:shadowDx">0</item>
-        <item name="android:shadowDy">2</item>
-        <item name="android:shadowRadius">4</item>
-        <item name="android:letterSpacing">0.05</item>
-        <item name="android:typeface">monospace</item>
+        <item name="android:layout_margin">2dp</item>
+        <item name="android:padding">0dp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_width">0dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
     </style>
 
-    <!-- 功能键样式 -->
-    <style name="KeyboardFunctionKeyStyle">
-        <item name="android:background">@drawable/keyboard_function_key_selector</item>
-        <item name="android:textSize">11sp</item>
-        <item name="android:textColor">#FFFFFF</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:gravity">center</item>
-        <item name="android:layout_margin">1dp</item>
-        <item name="android:elevation">3dp</item>
-        <item name="android:shadowColor">#66000000</item>
-        <item name="android:shadowDx">0</item>
-        <item name="android:shadowDy">2</item>
-        <item name="android:shadowRadius">4</item>
-        <item name="android:letterSpacing">0.03</item>
-        <item name="android:typeface">monospace</item>
+
+    <style name="KeyboardKeyRefined.Normal">
+        <item name="android:layout_weight">1.0</item>
     </style>
 
-    <!-- 空格键特殊样式 -->
-    <style name="KeyboardSpaceKeyStyle" parent="KeyboardKeyStyle">
-        <item name="android:textSize">16sp</item>
-        <item name="android:letterSpacing">0.2</item>
-        <item name="android:elevation">4dp</item>
+    <style name="KeyboardKeyRefined.Modifier">
+        <item name="android:background">@drawable/keyboard_modifier_refined_selector</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <!-- 精准权重支持 -->
+    <style name="KeyboardKeyRefined.W15"> <item name="android:layout_weight">1.5</item> </style>
+    <style name="KeyboardKeyRefined.W18"> <item name="android:layout_weight">1.8</item> </style>
+    <style name="KeyboardKeyRefined.W20"> <item name="android:layout_weight">2.0</item> </style>
+    <style name="KeyboardKeyRefined.W22"> <item name="android:layout_weight">2.2</item> </style>
+    <style name="KeyboardKeyRefined.W61"> <item name="android:layout_weight">6.1</item> </style>
+
+    <!-- 组合样式：Modifier + Weights -->
+    <style name="KeyboardKeyRefined.Modifier.W15" parent="KeyboardKeyRefined.Modifier"> <item name="android:layout_weight">1.5</item> </style>
+    <style name="KeyboardKeyRefined.Modifier.W18" parent="KeyboardKeyRefined.Modifier"> <item name="android:layout_weight">1.8</item> </style>
+    <style name="KeyboardKeyRefined.Modifier.W20" parent="KeyboardKeyRefined.Modifier"> <item name="android:layout_weight">2.0</item> </style>
+    <style name="KeyboardKeyRefined.Modifier.W22" parent="KeyboardKeyRefined.Modifier"> <item name="android:layout_weight">2.2</item> </style>
+
+    <!-- 组合样式：Normal + Weights -->
+    <style name="KeyboardKeyRefined.Normal.W15" parent="KeyboardKeyRefined.Normal"> <item name="android:layout_weight">1.5</item> </style>
+    <style name="KeyboardKeyRefined.Normal.W61" parent="KeyboardKeyRefined.Normal"> <item name="android:layout_weight">6.1</item> </style>
+
+    <!-- 兼容性别名 -->
+    <style name="KeyboardKeyStyle" parent="KeyboardKeyRefined.Normal">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">match_parent</item>
+    </style>
+    <style name="KeyboardFunctionKeyStyle" parent="KeyboardKeyRefined.Modifier">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">match_parent</item>
+    </style>
+    <style name="KeyboardSpaceKeyStyle" parent="KeyboardKeyRefined.Normal.W61">
+        <item name="android:layout_width">0dp</item>
     </style>
 
     <!-- 虚拟键盘对话框样式 - 全屏透明 -->

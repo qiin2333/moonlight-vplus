@@ -87,9 +87,15 @@ public class ControllerManager {
     public KeyboardUIController getKeyboardUIController(){
         if (keyboardUIController == null){
             FrameLayout layoutKeyboard = advanceSettingView.findViewById(R.id.layer_6_keyboard);
-            keyboardUIController = new KeyboardUIController(layoutKeyboard,this,context);
+            if (layoutKeyboard != null) {
+                keyboardUIController = new KeyboardUIController(advanceSettingView, this, context);
+            }
         }
         return keyboardUIController;
+    }
+
+    public void setKeyboardUIController(KeyboardUIController controller) {
+        this.keyboardUIController = controller;
     }
 
     public void refreshLayout(){
