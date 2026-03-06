@@ -227,31 +227,11 @@ public class KeyboardUIController implements KeyboardGestureDetector.GestureList
         }
     }
 
-    @Override
-    public void onSwipeUp(int keyCode) {
-        // Handle shortcuts like Ctrl+C, Ctrl+V
-        if (keyCode == 31) { // 'C'
-            sendShortcut((short) 113, (short) 31); // Ctrl+C
-        } else if (keyCode == 50) { // 'V'
-            sendShortcut((short) 113, (short) 50); // Ctrl+V
-        } else if (keyCode == 54) { // 'Z'
-            sendShortcut((short) 113, (short) 54); // Ctrl+Z
-        } else if (keyCode == 52) { // 'X'
-            sendShortcut((short) 113, (short) 52); // Ctrl+X
-        }
-    }
-
     private void sendShortcut(short modCode, short keyCode) {
         controllerManager.getElementController().sendKeyEvent(true, modCode);
         controllerManager.getElementController().sendKeyEvent(true, keyCode);
         controllerManager.getElementController().sendKeyEvent(false, keyCode);
         controllerManager.getElementController().sendKeyEvent(false, modCode);
-    }
-
-    @Override
-    public void onCursorMove(float dx, float dy) {
-        // Move mouse relative via MoonBridge
-        MoonBridge.sendMouseMove((short) dx, (short) dy);
     }
 
     @Override
