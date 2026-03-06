@@ -562,6 +562,8 @@ public class FloatBallManager {
         mWindowManager = null;
         mFloatBall = null;
         mHandler = null;
+        mListener = null;
+        mGestureDetector = null;
         Log.d(TAG, "资源已释放");
     }
 
