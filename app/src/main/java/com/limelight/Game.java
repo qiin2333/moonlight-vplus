@@ -837,11 +837,43 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // 创建浮球管理器
         floatBallManager = new FloatBallManager(this);
-        floatBallManager.setOnFloatBallClickListener(new FloatBallManager.OnFloatBallClickListener() {
+        // 注册交互监听器
+        floatBallManager.setOnFloatBallInteractListener(new FloatBallManager.OnFloatBallInteractListener() {
             @Override
-            public void onFloatBallClick() {
+            public void onSingleClick() {
+                // 单击：打开虚拟键盘
                 toggleVirtualKeyboard();
-                    }
+                LimeLog.info("FloatBall: 单击被触发");
+            }
+            @Override
+            public void onDoubleClick() {
+                // 双击：打开GAMEMENU
+                showGameMenu(null);
+                LimeLog.info("FloatBall: 双击被触发");
+            }
+            @Override
+            public void onLongClick() {
+                // 长按：例如隐藏悬浮球、弹出设置等
+                LimeLog.info("FloatBall: 长按被触发");
+            }
+            @Override
+            public void onSwipe(FloatBallManager.SwipeDirection direction) {
+                // 滑动：可根据方向做不同操作
+                switch (direction) {
+                    case UP:
+                        LimeLog.info("FloatBall: 向上滑动");
+                        break;
+                    case DOWN:
+                        LimeLog.info("FloatBall: 向下滑动");
+                        break;
+                    case LEFT:
+                        LimeLog.info("FloatBall: 向左滑动");
+                        break;
+                    case RIGHT:
+                        LimeLog.info("FloatBall: 向右滑动");
+                        break;
+                }
+            }
         });
     }
 
