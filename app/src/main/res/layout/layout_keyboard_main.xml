@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent"
+    android:padding="2dp">
+
+    <!-- Row 1: Numbers -->
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k68" android:text="` ~"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k8" android:text="1 !"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k9" android:text="2 @"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k10" android:text="3 #"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k11" android:text="4 $"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k12" android:text="5 %"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k13" android:text="6 ^"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k14" android:text="7 &amp;"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k15" android:text="8 *"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k16" android:text="9 ("/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k7" android:text="0 )"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k69" android:text="- _"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k70" android:text="= +"/>
+        <TextView style="@style/KeyboardKeyRefined.Modifier.W20" android:tag="k67" android:text="⌫"/>
+    </LinearLayout>
+
+    <!-- Row 2: QWERTY -->
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <TextView style="@style/KeyboardKeyRefined.Modifier.W15" android:tag="k61" android:text="Tab ⇥"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k45" android:text="Q"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k51" android:text="W"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k33" android:text="E"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k46" android:text="R"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k48" android:text="T"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k53" android:text="Y"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k49" android:text="U"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k37" android:text="I"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k43" android:text="O"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k44" android:text="P"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k71" android:text="[ {"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k72" android:text="] }"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal.W15" android:tag="k73" android:text="\\ |"/>
+    </LinearLayout>
+
+    <!-- Row 3: ASDFG -->
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <TextView style="@style/KeyboardKeyRefined.Modifier.W18" android:tag="k115" android:text="Caps"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k29" android:text="A"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k47" android:text="S"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k32" android:text="D"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k34" android:text="F"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k35" android:text="G"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k36" android:text="H"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k38" android:text="J"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k39" android:text="K"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k40" android:text="L"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k74" android:text="; :"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k75" android:text="' "/>
+        <TextView style="@style/KeyboardKeyRefined.Modifier.W22" android:tag="k66" android:text="Enter ↵"/>
+    </LinearLayout>
+
+    <!-- Row 4: ZXCVB -->
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <TextView style="@style/KeyboardKeyRefined.Modifier.W22" android:tag="k59" android:text="⇧ Shift"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k54" android:text="Z"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k52" android:text="X"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k31" android:text="C"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k50" android:text="V"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k30" android:text="B"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k42" android:text="N"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k41" android:text="M"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k55" android:text=", &lt;"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k56" android:text=". &gt;"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k76" android:text="/ ?"/>
+        <TextView style="@style/KeyboardKeyRefined.Modifier.W18" android:tag="k60" android:text="Shift"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k19" android:text="↑"/>
+    </LinearLayout>
+
+    <!-- Row 5: Bottom row -->
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <TextView style="@style/KeyboardKeyRefined.Modifier.W15" android:tag="k113" android:text="Ctrl"/>
+        <TextView style="@style/KeyboardKeyRefined.Modifier.W15" android:tag="k117" android:text="Win"/>
+        <TextView style="@style/KeyboardKeyRefined.Modifier.W15" android:tag="k57" android:text="Alt"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal.W61" android:tag="k62" android:text="Space"/>
+        <TextView style="@style/KeyboardKeyRefined.Modifier.W15" android:tag="k58" android:text="Alt"/>
+        <TextView style="@style/KeyboardKeyRefined.Modifier.W15" android:tag="k114" android:text="Ctrl"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k21" android:text="←"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k20" android:text="↓"/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k22" android:text="→"/>
+    </LinearLayout>
+
+</LinearLayout>

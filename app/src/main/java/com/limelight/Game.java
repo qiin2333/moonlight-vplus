@@ -9,6 +9,7 @@ import com.limelight.binding.input.ControllerHandler;
 import com.limelight.binding.input.GameInputDevice;
 import com.limelight.binding.input.KeyboardTranslator;
 import com.limelight.binding.input.advance_setting.ControllerManager;
+import com.limelight.binding.input.advance_setting.KeyboardUIController;
 import com.limelight.binding.input.capture.InputCaptureManager;
 import com.limelight.binding.input.capture.InputCaptureProvider;
 import com.limelight.binding.input.touch.AbsoluteTouchContext;
@@ -166,6 +167,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     private ControllerManager controllerManager;
+    private KeyboardUIController standaloneKeyboardUI;
     private final List<PerformanceInfoDisplay> performanceInfoDisplays = new ArrayList<>();
 
     private MicrophoneManager microphoneManager;
@@ -230,6 +232,38 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     // 悬浮球管理器
     private FloatBallManager floatBallManager;
+
+    /**
+     * 获取或创建虚拟键盘控制器
+     */
+    private KeyboardUIController getOrCreateKeyboardUIController() {
+        if (controllerManager != null) {
+            KeyboardUIController kUI = controllerManager.getKeyboardUIController();
+            if (kUI != null) return kUI;
+        }
+        if (standaloneKeyboardUI == null) {
+            FrameLayout keyboardContainer = findViewById(R.id.virtual_full_keyboard_container);
+            if (keyboardContainer != null) {
+                // 独立模式下也需要一个 ControllerManager 来发送按键事件
+                if (controllerManager == null) {
+                    controllerManager = new ControllerManager((FrameLayout) streamView.getParent(), this);
+                    controllerManager.refreshLayout();
+                }
+                standaloneKeyboardUI = new KeyboardUIController(keyboardContainer, controllerManager, this);
+                controllerManager.setKeyboardUIController(standaloneKeyboardUI);
+            }
+        }
+        return standaloneKeyboardUI;
+    }
+    /**
+     * 切换虚拟全键盘显示状态
+     */
+    public void toggleVirtualKeyboard() {
+        KeyboardUIController kUI = getOrCreateKeyboardUIController();
+        if (kUI != null) {
+            kUI.toggle();
+        }
+    }
 
     private MediaCodecDecoderRenderer decoderRenderer;
     private boolean reportedCrash;
@@ -709,6 +743,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         if (prefConfig.onscreenKeyboard) {
             // create virtual onscreen keyboard
             controllerManager = new ControllerManager((FrameLayout) streamView.getParent(), this);
+            
+            FrameLayout keyboardContainer = findViewById(R.id.virtual_full_keyboard_container);
+            if (keyboardContainer != null) {
+                KeyboardUIController kUI = new KeyboardUIController(keyboardContainer, controllerManager, this);
+                controllerManager.setKeyboardUIController(kUI);
+            }
+            
             controllerManager.refreshLayout();
         }
 
@@ -799,9 +840,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         floatBallManager.setOnFloatBallClickListener(new FloatBallManager.OnFloatBallClickListener() {
             @Override
             public void onFloatBallClick() {
-                // 呼出游戏菜单，复用按返回键时的逻辑体系（兼容普通游戏菜单与王冠模式选项）
-                showGameMenu(null);
-            }
+                toggleVirtualKeyboard();
+                    }
         });
     }
 
@@ -1633,7 +1673,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // 应用显示模式结果
         WindowManager.LayoutParams windowLayoutParams = getWindow().getAttributes();
         if (result.preferredModeId >= 0) {
-            windowLayoutParams.preferredDisplayModeId = result.preferredModeId;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                windowLayoutParams.preferredDisplayModeId = result.preferredModeId;
+            }
             getWindow().setAttributes(windowLayoutParams);
         } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             // Pre-M: 通过 preferredRefreshRate 设置

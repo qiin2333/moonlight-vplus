@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent"
+    android:gravity="center"
+    android:padding="4dp">
+
+    <!-- Left Block: 3x4 Number Grid with Row Operators -->
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp">
+
+        <LinearLayout android:orientation="horizontal" android:layout_width="wrap_content" android:layout_height="60dp">
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:layout_width="60dp" android:tag="k151" android:text="7"/>
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:layout_width="60dp" android:tag="k152" android:text="8"/>
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:layout_width="60dp" android:tag="k153" android:text="9"/>
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:layout_width="60dp" android:tag="k154" android:text="/"/>
+        </LinearLayout>
+
+        <LinearLayout android:orientation="horizontal" android:layout_width="wrap_content" android:layout_height="60dp">
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:layout_width="60dp" android:tag="k148" android:text="4"/>
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:layout_width="60dp" android:tag="k149" android:text="5"/>
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:layout_width="60dp" android:tag="k150" android:text="6"/>
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:layout_width="60dp" android:tag="k155" android:text="*"/>
+        </LinearLayout>
+
+        <LinearLayout android:orientation="horizontal" android:layout_width="wrap_content" android:layout_height="60dp">
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:layout_width="60dp" android:tag="k145" android:text="1"/>
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:layout_width="60dp" android:tag="k146" android:text="2"/>
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:layout_width="60dp" android:tag="k147" android:text="3"/>
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:layout_width="60dp" android:tag="k156" android:text="-"/>
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Right Block: Special Keys -->
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
+
+        <LinearLayout android:orientation="horizontal" android:layout_width="wrap_content" android:layout_height="60dp">
+            <TextView style="@style/KeyboardKeyRefined.Modifier" android:layout_width="60dp" android:tag="k143" android:text="Num" android:textSize="12sp"/>
+            <TextView style="@style/KeyboardKeyRefined.Modifier" android:layout_width="60dp" android:tag="k157" android:text="+"/>
+        </LinearLayout>
+
+        <LinearLayout android:orientation="horizontal" android:layout_width="wrap_content" android:layout_height="60dp">
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:layout_width="60dp" android:tag="k144" android:text="0"/>
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:layout_width="60dp" android:tag="k158" android:text="."/>
+        </LinearLayout>
+
+        <TextView style="@style/KeyboardKeyRefined.Modifier" android:layout_width="120dp" android:layout_height="60dp" android:tag="k66" android:text="Enter" android:textSize="13sp"/>
+
+    </LinearLayout>
+
+</LinearLayout>

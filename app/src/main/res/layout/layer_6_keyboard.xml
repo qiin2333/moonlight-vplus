@@ -6,32 +6,93 @@
     android:layout_height="match_parent"
     android:visibility="gone">
     <LinearLayout
+        style="@style/VirtualKeyboardStyle"
         android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom">
+        android:layout_height="220dp"
+        android:layout_gravity="bottom"
+        android:padding="4dp">
+
         <LinearLayout
             android:orientation="horizontal"
             android:layout_width="match_parent"
-            android:layout_height="37dp">
-            <SeekBar
-                android:id="@+id/float_keyboard_seekbar"
-                android:alpha="1"
+            android:layout_height="match_parent">
+
+            <!-- Left Sidebar (Panel Switch Buttons) -->
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="56dp"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:padding="2dp">
+                <TextView android:id="@+id/btn_key_page_main" style="@style/KeyboardKeyRefined.Modifier" android:layout_width="52dp" android:layout_height="0dp" android:layout_weight="1" android:text="Main" android:textSize="11sp"/>
+                <TextView android:id="@+id/btn_key_page_nav" style="@style/KeyboardKeyRefined.Modifier" android:layout_width="52dp" android:layout_height="0dp" android:layout_weight="1" android:text="Nav" android:textSize="11sp"/>
+                <TextView android:id="@+id/btn_key_page_num" style="@style/KeyboardKeyRefined.Modifier" android:layout_width="52dp" android:layout_height="0dp" android:layout_weight="1" android:text="Num" android:textSize="11sp"/>
+            </LinearLayout>
+
+            <!-- Keyboard Page Container & Functional Strip -->
+            <LinearLayout
+                android:orientation="vertical"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:progress="10"
-                android:min="1"
-                android:max="10" />
-        </LinearLayout>
+                android:paddingLeft="2dp"
+                android:paddingRight="2dp">
 
-        <LinearLayout
-            android:id="@+id/float_keyboard"
-            android:orientation="vertical"
-            android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:alpha="1">
-            <include layout="@layout/layout_keyboard"/>
+                <FrameLayout
+                    android:layout_weight="1"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp">
+                    <include layout="@layout/layout_keyboard_main" android:id="@+id/layout_main" />
+                    <include layout="@layout/layout_keyboard_nav" android:id="@+id/layout_nav" android:visibility="gone" />
+                    <include layout="@layout/layout_keyboard_numpad" android:id="@+id/layout_num" android:visibility="gone" />
+                </FrameLayout>
+            </LinearLayout>
+
+            <!-- Right Sidebar (Opacity only) -->
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="56dp"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:padding="2dp">
+                
+                <TextView 
+                    android:id="@+id/btn_keyboard_collapse"
+                    style="@style/KeyboardKeyRefined.Modifier"
+                    android:layout_width="52dp"
+                    android:layout_height="36dp"
+                    android:text="Hide"
+                    android:textSize="11sp"
+                    android:layout_marginBottom="4dp"/>
+                <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Opacity" android:textColor="#88FFFFFF" android:textSize="8sp" android:gravity="center" android:layout_marginBottom="8dp"/>
+                <SeekBar
+                    android:id="@+id/float_keyboard_seekbar"
+                    android:layout_width="160dp"
+                    android:layout_height="wrap_content"
+                    android:max="10"
+                    android:progress="10"
+                    android:rotation="270"
+                    android:thumbOffset="0dp"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:layout_marginBottom="40dp"/>
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
+    <!-- iOS Style Key Popup Overlay -->
+    <TextView
+        android:id="@+id/keyboard_key_popup"
+        android:layout_width="50dp"
+        android:layout_height="64dp"
+        android:background="@drawable/keyboard_popup_bg"
+        android:textColor="@android:color/black"
+        android:gravity="top|center_horizontal"
+        android:paddingTop="12dp"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        android:elevation="30dp"
+        android:translationZ="30dp" />
 </FrameLayout>

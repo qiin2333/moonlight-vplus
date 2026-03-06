@@ -39,7 +39,6 @@
         android:layout_height="match_parent">
         <include layout="@layout/layer_1_reserve"/>
         <include layout="@layout/layer_2_element"/>
-        <include layout="@layout/layer_6_keyboard"/>
         <include layout="@layout/super_pages_box"/>
     </FrameLayout>
 
