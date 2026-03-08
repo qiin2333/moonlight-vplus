@@ -501,6 +501,53 @@
             />
     </PreferenceCategory>
     <PreferenceCategory 
+        android:key="category_float_ball"
+        android:title="@string/category_float_ball_settings"
+        android:layout="@layout/preference_category_material">
+        <CheckBoxPreference
+            android:key="checkbox_enable_float_ball"
+            android:title="@string/title_checkbox_enable_float_ball"
+            android:summary="@string/summary_checkbox_enable_float_ball"
+            android:defaultValue="true" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_float_ball_auto_hide_delay"
+            android:dependency="checkbox_enable_float_ball"
+            android:dialogMessage="@string/summary_seekbar_float_ball_auto_hide_delay"
+            seekbar:min="0"
+            android:max="5000"
+            seekbar:step="500"
+            seekbar:keyStep="500"
+            seekbar:divisor="1"
+            android:defaultValue="2000"
+            android:summary="@string/summary_seekbar_float_ball_auto_hide_delay"
+            android:text="@string/suffix_seekbar_float_ball_auto_hide_delay_ms"
+            android:title="@string/title_seekbar_float_ball_auto_hide_delay" />
+        <ListPreference
+            android:key="list_float_ball_single_click_action"
+            android:dependency="checkbox_enable_float_ball"
+            android:title="@string/title_float_ball_single_click_action"
+            android:summary="@string/summary_float_ball_single_click_action"
+            android:entries="@array/float_ball_action_names"
+            android:entryValues="@array/float_ball_action_values"
+            android:defaultValue="open_keyboard" />
+        <ListPreference
+            android:key="list_float_ball_double_click_action"
+            android:dependency="checkbox_enable_float_ball"
+            android:title="@string/title_float_ball_double_click_action"
+            android:summary="@string/summary_float_ball_double_click_action"
+            android:entries="@array/float_ball_action_names"
+            android:entryValues="@array/float_ball_action_values"
+            android:defaultValue="open_menu" />
+        <ListPreference
+            android:key="list_float_ball_long_click_action"
+            android:dependency="checkbox_enable_float_ball"
+            android:title="@string/title_float_ball_long_click_action"
+            android:summary="@string/summary_float_ball_long_click_action"
+            android:entries="@array/float_ball_action_names"
+            android:entryValues="@array/float_ball_action_values"
+            android:defaultValue="toggle_visibility" />
+    </PreferenceCategory>
+    <PreferenceCategory 
         android:key="category_crown_features"
         android:title="@string/category_crown_features"
         android:icon="@drawable/ic_enhance"

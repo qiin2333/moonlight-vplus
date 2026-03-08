@@ -148,6 +148,19 @@ public class PreferenceConfiguration {
     private static final String ESC_MENU_KEY_PREF_STRING = "list_esc_menu_key";
     private static final String ENABLE_START_KEY_MENU_PREF_STRING = "checkbox_enable_start_key_menu";
     
+    // 悬浮球设置
+    private static final String ENABLE_FLOAT_BALL_PREF_STRING = "checkbox_enable_float_ball";
+    private static final String FLOAT_BALL_AUTO_HIDE_DELAY_PREF_STRING = "seekbar_float_ball_auto_hide_delay";
+    
+    // 悬浮球交互监听器设置
+    private static final String FLOAT_BALL_SINGLE_CLICK_ACTION_PREF_STRING = "list_float_ball_single_click_action";
+    private static final String FLOAT_BALL_DOUBLE_CLICK_ACTION_PREF_STRING = "list_float_ball_double_click_action";
+    private static final String FLOAT_BALL_LONG_CLICK_ACTION_PREF_STRING = "list_float_ball_long_click_action";
+    private static final String FLOAT_BALL_SWIPE_UP_ACTION_PREF_STRING = "list_float_ball_swipe_up_action";
+    private static final String FLOAT_BALL_SWIPE_DOWN_ACTION_PREF_STRING = "list_float_ball_swipe_down_action";
+    private static final String FLOAT_BALL_SWIPE_LEFT_ACTION_PREF_STRING = "list_float_ball_swipe_left_action";
+    private static final String FLOAT_BALL_SWIPE_RIGHT_ACTION_PREF_STRING = "list_float_ball_swipe_right_action";
+    
     // 控制流only模式设置
     private static final String CONTROL_ONLY_PREF_STRING = "checkbox_control_only";
 
@@ -229,6 +242,19 @@ public class PreferenceConfiguration {
     private static final boolean DEFAULT_ENABLE_ESC_MENU = true; // 默认启用ESC菜单
     private static final int DEFAULT_ESC_MENU_KEY = KeyEvent.KEYCODE_ESCAPE;
     private static final boolean DEFAULT_ENABLE_START_KEY_MENU = true; // 默认启用长按start键菜单
+    
+    // 悬浮球设置默认值
+    private static final boolean DEFAULT_ENABLE_FLOAT_BALL = true; // 默认启用悬浮球
+    private static final int DEFAULT_FLOAT_BALL_AUTO_HIDE_DELAY = 2000; // 默认2000ms
+    
+    // 悬浮球交互监听器默认值
+    private static final String DEFAULT_FLOAT_BALL_SINGLE_CLICK_ACTION = "open_keyboard"; // 单击打开键盘
+    private static final String DEFAULT_FLOAT_BALL_DOUBLE_CLICK_ACTION = "open_menu"; // 双击打开菜单
+    private static final String DEFAULT_FLOAT_BALL_LONG_CLICK_ACTION = "toggle_visibility"; // 长按切换可见性
+    private static final String DEFAULT_FLOAT_BALL_SWIPE_UP_ACTION = "none"; // 向上滑动无操作
+    private static final String DEFAULT_FLOAT_BALL_SWIPE_DOWN_ACTION = "none"; // 向下滑动无操作
+    private static final String DEFAULT_FLOAT_BALL_SWIPE_LEFT_ACTION = "none"; // 向左滑动无操作
+    private static final String DEFAULT_FLOAT_BALL_SWIPE_RIGHT_ACTION = "none"; // 向右滑动无操作
     
     // 控制流only模式默认值
     private static final boolean DEFAULT_CONTROL_ONLY = false;
@@ -407,6 +433,19 @@ public class PreferenceConfiguration {
     public int screenOffsetY;
     
     public boolean useExternalDisplay;
+    
+    // 悬浮球设置
+    public boolean enableFloatBall;
+    public int floatBallAutoHideDelay;
+    
+    // 悬浮球交互监听器设置
+    public String floatBallSingleClickAction;
+    public String floatBallDoubleClickAction;
+    public String floatBallLongClickAction;
+    public String floatBallSwipeUpAction;
+    public String floatBallSwipeDownAction;
+    public String floatBallSwipeLeftAction;
+    public String floatBallSwipeRightAction;
 
     public static boolean isNativeResolution(int width, int height) {
         // 使用集合检查是否为原生分辨率
@@ -1005,6 +1044,19 @@ public class PreferenceConfiguration {
         config.screenOffsetY = prefs.getInt(SCREEN_OFFSET_Y_PREF_STRING, DEFAULT_SCREEN_OFFSET_Y);
         
         config.useExternalDisplay = prefs.getBoolean("use_external_display", false);
+
+        // 读取悬浮球设置
+        config.enableFloatBall = prefs.getBoolean(ENABLE_FLOAT_BALL_PREF_STRING, DEFAULT_ENABLE_FLOAT_BALL);
+        config.floatBallAutoHideDelay = prefs.getInt(FLOAT_BALL_AUTO_HIDE_DELAY_PREF_STRING, DEFAULT_FLOAT_BALL_AUTO_HIDE_DELAY);
+        
+        // 读取悬浮球交互监听器设置
+        config.floatBallSingleClickAction = prefs.getString(FLOAT_BALL_SINGLE_CLICK_ACTION_PREF_STRING, DEFAULT_FLOAT_BALL_SINGLE_CLICK_ACTION);
+        config.floatBallDoubleClickAction = prefs.getString(FLOAT_BALL_DOUBLE_CLICK_ACTION_PREF_STRING, DEFAULT_FLOAT_BALL_DOUBLE_CLICK_ACTION);
+        config.floatBallLongClickAction = prefs.getString(FLOAT_BALL_LONG_CLICK_ACTION_PREF_STRING, DEFAULT_FLOAT_BALL_LONG_CLICK_ACTION);
+        config.floatBallSwipeUpAction = prefs.getString(FLOAT_BALL_SWIPE_UP_ACTION_PREF_STRING, DEFAULT_FLOAT_BALL_SWIPE_UP_ACTION);
+        config.floatBallSwipeDownAction = prefs.getString(FLOAT_BALL_SWIPE_DOWN_ACTION_PREF_STRING, DEFAULT_FLOAT_BALL_SWIPE_DOWN_ACTION);
+        config.floatBallSwipeLeftAction = prefs.getString(FLOAT_BALL_SWIPE_LEFT_ACTION_PREF_STRING, DEFAULT_FLOAT_BALL_SWIPE_LEFT_ACTION);
+        config.floatBallSwipeRightAction = prefs.getString(FLOAT_BALL_SWIPE_RIGHT_ACTION_PREF_STRING, DEFAULT_FLOAT_BALL_SWIPE_RIGHT_ACTION);
 
         // Runtime-only defaults; controlled via in-stream GameMenu
         config.gyroToRightStick = false;

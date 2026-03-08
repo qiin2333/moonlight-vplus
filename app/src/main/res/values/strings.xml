@@ -345,6 +345,37 @@
     <string name="dialog_title_osc_opacity">Change opacity</string>
     <string name="suffix_osc_opacity">%</string>
 
+    <string name="category_float_ball_settings">Float Ball Settings</string>
+    <string name="title_checkbox_enable_float_ball">Enable Float Ball</string>
+    <string name="summary_checkbox_enable_float_ball">Show an interactive floating ball for quick actions</string>
+    <string name="title_seekbar_float_ball_auto_hide_delay">Auto-hide Delay</string>
+    <string name="summary_seekbar_float_ball_auto_hide_delay">Time before the float ball automatically hides to the screen edge</string>
+    <string name="suffix_seekbar_float_ball_auto_hide_delay_ms">ms</string>
+
+    <!-- Float Ball Gesture Actions -->
+    <string name="title_float_ball_single_click_action">Single Click Action</string>
+    <string name="summary_float_ball_single_click_action">Action performed when float ball is tapped once</string>
+    <string name="title_float_ball_double_click_action">Double Click Action</string>
+    <string name="summary_float_ball_double_click_action">Action performed when float ball is double-tapped</string>
+    <string name="title_float_ball_long_click_action">Long Press Action</string>
+    <string name="summary_float_ball_long_click_action">Action performed when float ball is long-pressed</string>
+    <string name="title_float_ball_swipe_up_action">Swipe Up Action</string>
+    <string name="summary_float_ball_swipe_up_action">Action performed when swiping float ball upward</string>
+    <string name="title_float_ball_swipe_down_action">Swipe Down Action</string>
+    <string name="summary_float_ball_swipe_down_action">Action performed when swiping float ball downward</string>
+    <string name="title_float_ball_swipe_left_action">Swipe Left Action</string>
+    <string name="summary_float_ball_swipe_left_action">Action performed when swiping float ball leftward</string>
+    <string name="title_float_ball_swipe_right_action">Swipe Right Action</string>
+    <string name="summary_float_ball_swipe_right_action">Action performed when swiping float ball rightward</string>
+
+    <!-- Float Ball Action Options -->
+    <string name="float_ball_action_none">No Action</string>
+    <string name="float_ball_action_open_keyboard">Show Virtual Keyboard</string>
+    <string name="float_ball_action_open_menu">Show Game Menu</string>
+    <string name="float_ball_action_toggle_visibility">Toggle Float Ball Visibility</string>
+    <string name="float_ball_action_screenshot">Take Screenshot</string>
+    <string name="float_ball_action_lock_screen">Lock Screen</string>
+
     <string name="category_ui_settings">UI Settings</string>
     <string name="title_checkbox_enable_pip">Enable Picture-in-Picture observer mode</string>
     <string name="summary_checkbox_enable_pip">Allows the stream to be viewed (but not controlled) while multitasking</string>

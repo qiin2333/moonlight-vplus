@@ -285,4 +285,25 @@
     <string name="summary_list_audio_vibration_mode">選擇振動的傳遞方式</string>
     <string name="title_list_audio_vibration_scene">場景模式</string>
     <string name="summary_list_audio_vibration_scene">根據內容類型最佳化振動模式</string>
+
+    <!-- 懸浮球手勢動作 -->
+    <string name="title_float_ball_single_click_action">單擊動作</string>
+    <string name="summary_float_ball_single_click_action">輕點懸浮球一次時執行的動作</string>
+    <string name="title_float_ball_double_click_action">雙擊動作</string>
+    <string name="summary_float_ball_double_click_action">雙擊懸浮球時執行的動作</string>
+    <string name="title_float_ball_long_click_action">長按動作</string>
+    <string name="summary_float_ball_long_click_action">長按懸浮球時執行的動作</string>
+    <string name="title_float_ball_swipe_up_action">向上滑動動作</string>
+    <string name="summary_float_ball_swipe_up_action">向上滑動懸浮球時執行的動作</string>
+    <string name="title_float_ball_swipe_down_action">向下滑動動作</string>
+    <string name="summary_float_ball_swipe_down_action">向下滑動懸浮球時執行的動作</string>
+    <string name="title_float_ball_swipe_left_action">向左滑動動作</string>
+    <string name="summary_float_ball_swipe_left_action">向左滑動懸浮球時執行的動作</string>
+    <string name="title_float_ball_swipe_right_action">向右滑動動作</string>
+    <string name="summary_float_ball_swipe_right_action">向右滑動懸浮球時執行的動作</string>
+
+    <!-- 懸浮球動作選項 -->
+    <string name="float_ball_action_none">無動作</string>
+    <string name="float_ball_action_open_keyboard">顯示虛擬鍵盤</string>
+    <string name="float_ball_action_open_menu">顯示遊戲選單</string>
 </resources>

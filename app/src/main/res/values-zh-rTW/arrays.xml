@@ -14,4 +14,11 @@
         <item>音樂</item>
         <item>自動</item>
     </string-array>
+
+    <!-- 浮球手勢動作 -->
+    <string-array name="float_ball_action_names">
+        <item>無動作</item>
+        <item>打開虛擬鍵盤</item>
+        <item>打開選單</item>
+    </string-array>
 </resources>
