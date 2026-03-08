@@ -836,45 +836,92 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         externalDisplayManager.initialize();
 
         // 创建浮球管理器
-        floatBallManager = new FloatBallManager(this);
+        // 大小固定为50dp，透明度固定为100%
+        // 根据自动隐藏延迟判断是否启用边缘吸附：延迟为0时不启用，此时用户可自由放置
+        boolean enableEdgeSnap = prefConfig.floatBallAutoHideDelay > 0;
+        floatBallManager = new FloatBallManager(this, 
+                50,  // 固定大小50dp
+                100, // 固定透明度100%
+                prefConfig.floatBallAutoHideDelay,
+                enableEdgeSnap);
+        
+        // 根据settings中的启用开关决定是否显示悬浮球
+        if (prefConfig.enableFloatBall) {
+            floatBallManager.showFloatBall();
+        } else {
+            floatBallManager.hideFloatBall();
+        }
+        
         // 注册交互监听器
         floatBallManager.setOnFloatBallInteractListener(new FloatBallManager.OnFloatBallInteractListener() {
             @Override
             public void onSingleClick() {
-                // 单击：打开虚拟键盘
-                toggleVirtualKeyboard();
-                LimeLog.info("FloatBall: 单击被触发");
+                // 单击：执行配置的动作
+                executeFloatBallAction(prefConfig.floatBallSingleClickAction);
+                LimeLog.info("FloatBall: 单击被触发，执行动作: " + prefConfig.floatBallSingleClickAction);
             }
             @Override
             public void onDoubleClick() {
-                // 双击：打开GAMEMENU
-                showGameMenu(null);
-                LimeLog.info("FloatBall: 双击被触发");
+                // 双击：执行配置的动作
+                executeFloatBallAction(prefConfig.floatBallDoubleClickAction);
+                LimeLog.info("FloatBall: 双击被触发，执行动作: " + prefConfig.floatBallDoubleClickAction);
             }
             @Override
             public void onLongClick() {
-                // 长按：例如隐藏悬浮球、弹出设置等
-                LimeLog.info("FloatBall: 长按被触发");
+                // 长按：执行配置的动作
+                executeFloatBallAction(prefConfig.floatBallLongClickAction);
+                LimeLog.info("FloatBall: 长按被触发，执行动作: " + prefConfig.floatBallLongClickAction);
             }
             @Override
             public void onSwipe(FloatBallManager.SwipeDirection direction) {
-                // 滑动：可根据方向做不同操作
+                // 滑动：可根据方向和配置做不同操作
+                String actionToExecute = null;
                 switch (direction) {
                     case UP:
-                        LimeLog.info("FloatBall: 向上滑动");
+                        actionToExecute = prefConfig.floatBallSwipeUpAction;
+                        LimeLog.info("FloatBall: 向上滑动，执行动作: " + actionToExecute);
                         break;
                     case DOWN:
-                        LimeLog.info("FloatBall: 向下滑动");
+                        actionToExecute = prefConfig.floatBallSwipeDownAction;
+                        LimeLog.info("FloatBall: 向下滑动，执行动作: " + actionToExecute);
                         break;
                     case LEFT:
-                        LimeLog.info("FloatBall: 向左滑动");
+                        actionToExecute = prefConfig.floatBallSwipeLeftAction;
+                        LimeLog.info("FloatBall: 向左滑动，执行动作: " + actionToExecute);
                         break;
                     case RIGHT:
-                        LimeLog.info("FloatBall: 向右滑动");
+                        actionToExecute = prefConfig.floatBallSwipeRightAction;
+                        LimeLog.info("FloatBall: 向右滑动，执行动作: " + actionToExecute);
                         break;
+                }
+                if (actionToExecute != null && !actionToExecute.equals("none")) {
+                    executeFloatBallAction(actionToExecute);
                 }
             }
         });
+    }
+
+    /**
+     * 执行悬浮球手势动作
+     * @param actionType 要执行的动作类型("open_keyboard", "open_menu", "toggle_visibility", etc.)
+     */
+    private void executeFloatBallAction(String actionType) {
+        if (actionType == null || actionType.equals("none")) {
+            return;
+        }
+        switch (actionType) {
+            case "open_keyboard":
+                // 打开虚拟键盘
+                toggleVirtualKeyboard();
+                break;
+            case "open_menu":
+                // 打开游戏菜单
+                showGameMenu(null);
+                break;
+            default:
+                LimeLog.warning("Unknown float ball action: " + actionType);
+                break;
+        }
     }
 
     /**

@@ -1,11 +1,15 @@
 package com.limelight.ui;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
+import android.content.ComponentCallbacks;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.content.ComponentCallbacks;
 import android.content.res.Configuration;
 import android.graphics.PixelFormat;
+import android.graphics.Point;
 import android.os.Handler;
 import android.util.Log;
 import android.view.GestureDetector;
@@ -14,21 +18,14 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.animation.OvershootInterpolator;
 
 import com.limelight.R;
 
 import java.lang.ref.WeakReference;
 
-import android.animation.ValueAnimator;
-import android.view.animation.OvershootInterpolator;
-
 /**
  * 悬浮球管理器核心类
- * 功能特点：
- * 1. 支持上下左右四边缘吸附
- * 2. 位置记忆功能
- * 3. 2秒无操作自动半隐藏
- * 4. 丰富交互：拖动、单击、双击、长按、滑动
  */
 public class FloatBallManager {
     private static final String TAG = "FloatBallManager";
@@ -36,7 +33,11 @@ public class FloatBallManager {
     private static final String KEY_LAST_X = "lastX";
     private static final String KEY_LAST_Y = "lastY";
     private static final String KEY_IS_HALF_SHOW = "isHalfShow";
-    private static final long AUTO_HIDE_DELAY = 2000;
+
+    // 默认配置
+    private static final long DEFAULT_AUTO_HIDE_DELAY = 2000;
+    private static final int DEFAULT_BALL_SIZE = 50;
+    private static final int DEFAULT_OPACITY = 100;
 
     private WeakReference<Context> mContextRef;
     private WindowManager mWindowManager;
@@ -47,6 +48,9 @@ public class FloatBallManager {
     private int screenWidth;
     private int screenHeight;
     private int ballSize;
+    private int ballOpacity;
+    private long autoHideDelay;
+    private boolean enableEdgeSnap; // 是否启用边缘吸附
 
     private OnFloatBallInteractListener mListener;
 
@@ -55,6 +59,8 @@ public class FloatBallManager {
     private boolean isHalfShow = false;
     private float downX, downY;
     private float originalX, originalY;
+
+    // 核心锚点：永远记录球体完全显示时的安全坐标
     private int lastSavedX, lastSavedY;
 
     private AutoHideRunnable mAutoHideRunnable;
@@ -66,12 +72,13 @@ public class FloatBallManager {
 
     private enum Side { LEFT, RIGHT, TOP, BOTTOM }
     private Side currentSide = Side.RIGHT;
-    private float relativePos = 0.5f;
 
-    // 滑动方向枚举
+    // 相对位置比例，用于屏幕旋转和非吸附模式下的位置记忆
+    private float relativeX = 1.0f;
+    private float relativeY = 0.5f;
+
     public enum SwipeDirection { UP, DOWN, LEFT, RIGHT }
 
-    // ====== 扩展的交互接口 ======
     public interface OnFloatBallInteractListener {
         void onSingleClick();
         void onDoubleClick();
@@ -80,14 +87,19 @@ public class FloatBallManager {
     }
 
     public FloatBallManager(Context context) {
+        this(context, DEFAULT_BALL_SIZE, DEFAULT_OPACITY, DEFAULT_AUTO_HIDE_DELAY, true);
+    }
+
+    public FloatBallManager(Context context, int sizeInDp, int opacityPercent, long autoHideDelayMs, boolean enableEdgeSnap) {
         mContextRef = new WeakReference<>(context);
         Context cxt = mContextRef.get();
-        if (cxt == null) {
-            Log.e(TAG, "上下文为空，无法初始化悬浮球");
-            return;
-        }
+        if (cxt == null) return;
 
-        this.ballSize = dip2px(50f);
+        this.ballSize = dip2px(sizeInDp);
+        this.ballOpacity = opacityPercent;
+        this.autoHideDelay = autoHideDelayMs;
+        this.enableEdgeSnap = enableEdgeSnap;
+
         mWindowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
         mSharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         mHandler = new Handler(context.getMainLooper());
@@ -109,6 +121,8 @@ public class FloatBallManager {
         updateScreenSize();
         initFloatBallView();
         initLayoutParams();
+
+        // 放在最后一步，确保所有参数初始化完毕后再恢复位置
         restoreLastPosition();
     }
 
@@ -123,45 +137,26 @@ public class FloatBallManager {
         mGestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
             @Override
             public boolean onSingleTapConfirmed(MotionEvent e) {
-                if (mListener != null) {
-                    mListener.onSingleClick();
-                }
-                Log.i(TAG, "判断为点击");
-                return super.onSingleTapConfirmed(e);
+                if (mListener != null) mListener.onSingleClick();
+                return true;
             }
 
             @Override
             public boolean onDoubleTap(MotionEvent e) {
-                if (mListener != null) {
-                    mListener.onDoubleClick();
-                }
-                Log.i(TAG, "判断为双击");
-                return super.onDoubleTap(e);
+                if (mListener != null) mListener.onDoubleClick();
+                return true;
             }
 
             @Override
             public void onLongPress(MotionEvent e) {
-                if (!isDragging && mListener != null) {
-                    mListener.onLongClick();
-                }
-                Log.i(TAG, "判断为长按");
-                super.onLongPress(e);
+                if (!isDragging && mListener != null) mListener.onLongClick();
             }
 
             @Override
             public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-                // 安全校验
                 if (e1 == null || e2 == null) return false;
+                if (Math.abs(e2.getEventTime() - e1.getEventTime()) > 300) return false;
 
-                // 1.限制滑动时间
-                // 如果从按下到抬起的时间超过 300 毫秒，说明用户是在“思考并拖拽”，拒绝识别为快速滑动
-                long duration = e2.getEventTime() - e1.getEventTime();
-                if (duration > 300) {
-                    return false;
-                }
-
-                // 2.限制最短滑动距离
-                // 使用 getRawX/Y 获取屏幕绝对坐标，防止悬浮球自身移动导致坐标系混乱
                 float deltaX = e2.getRawX() - e1.getRawX();
                 float deltaY = e2.getRawY() - e1.getRawY();
                 float distance = (float) Math.sqrt(deltaX * deltaX + deltaY * deltaY);
@@ -172,19 +167,15 @@ public class FloatBallManager {
                 }
 
                 isFlinging = true;
-
                 if (mListener != null) {
                     // 判断是横向还是纵向为主
                     if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                        if (deltaX > 0) mListener.onSwipe(SwipeDirection.RIGHT);
-                        else mListener.onSwipe(SwipeDirection.LEFT);
+                        mListener.onSwipe(deltaX > 0 ? SwipeDirection.RIGHT : SwipeDirection.LEFT);
                     } else {
-                        if (deltaY > 0) mListener.onSwipe(SwipeDirection.DOWN);
-                        else mListener.onSwipe(SwipeDirection.UP);
+                        mListener.onSwipe(deltaY > 0 ? SwipeDirection.DOWN : SwipeDirection.UP);
                     }
-                    Log.d(TAG, "判定为快速滑动指令，方向触发");
                 }
-                return super.onFling(e1, e2, velocityX, velocityY);
+                return true;
             }
         });
     }
@@ -199,63 +190,70 @@ public class FloatBallManager {
                         updateScreenSize();
                         if (!isDragging) {
                             boolean wasHalfShow = isHalfShow;
+
+                            // 1. 先强制恢复到完全显示，根据 relativeX/Y 计算新坐标
                             isHalfShow = false;
                             applyRelativePosition();
+
+                            // 2. 立即保存这个新的安全坐标
+                            savePosition(mLayoutParams.x, mLayoutParams.y, wasHalfShow);
+
+                            // 3. 如果之前是半隐藏，重新应用半隐藏
                             if (wasHalfShow) {
                                 applyHalfShowPosition();
                             }
-                            saveCurrentPosition();
                         }
                     }
                 });
     }
 
     /**
-     * 计算当前球在边缘的相对比例
+     * 计算当前坐标在屏幕中的相对比例 (0.0 - 1.0)
+     * 同时也负责更新 currentSide
      */
-    private void calculateRelativePosition() {
+    private void calculateRelativePosition(int x, int y) {
         if (screenWidth <= 0 || screenHeight <= 0) return;
-        if (mLayoutParams.x <= 0) currentSide = Side.LEFT;
-        else if (mLayoutParams.x >= screenWidth - ballSize) currentSide = Side.RIGHT;
-        else if (mLayoutParams.y <= 0) currentSide = Side.TOP;
-        else if (mLayoutParams.y >= screenHeight - ballSize) currentSide = Side.BOTTOM;
 
-        if (currentSide == Side.LEFT || currentSide == Side.RIGHT) {
-            relativePos = (float) mLayoutParams.y / (screenHeight - ballSize);
-        } else {
-            relativePos = (float) mLayoutParams.x / (screenWidth - ballSize);
-        }
-        relativePos = Math.max(0f, Math.min(1f, relativePos));
+        // 更新 Side
+        if (x <= 0) currentSide = Side.LEFT;
+        else if (x >= screenWidth - ballSize) currentSide = Side.RIGHT;
+        else if (y <= 0) currentSide = Side.TOP;
+        else if (y >= screenHeight - ballSize) currentSide = Side.BOTTOM;
+
+        // 计算相对比例
+        relativeX = (float) x / (screenWidth - ballSize);
+        relativeY = (float) y / (screenHeight - ballSize);
+
+        // 限制范围防止溢出
+        relativeX = Math.max(0f, Math.min(1f, relativeX));
+        relativeY = Math.max(0f, Math.min(1f, relativeY));
     }
 
     /**
-     * 根据记录的侧边和比例，在新的屏幕尺寸下重新定位
+     * 根据 relativeX/Y 和 屏幕尺寸，将球放到正确的位置
      */
     private void applyRelativePosition() {
-        switch (currentSide) {
-            case LEFT:
-                mLayoutParams.x = 0;
-                mLayoutParams.y = (int) (relativePos * (screenHeight - ballSize));
-                break;
-            case RIGHT:
-                mLayoutParams.x = screenWidth - ballSize;
-                mLayoutParams.y = (int) (relativePos * (screenHeight - ballSize));
-                break;
-            case TOP:
-                mLayoutParams.y = 0;
-                mLayoutParams.x = (int) (relativePos * (screenWidth - ballSize));
-                break;
-            case BOTTOM:
-                mLayoutParams.y = screenHeight - ballSize;
-                mLayoutParams.x = (int) (relativePos * (screenWidth - ballSize));
-                break;
+        if (enableEdgeSnap) {
+            // 启用吸附：强制贴边
+            switch (currentSide) {
+                case LEFT: mLayoutParams.x = 0; mLayoutParams.y = (int) (relativeY * (screenHeight - ballSize)); break;
+                case RIGHT: mLayoutParams.x = screenWidth - ballSize; mLayoutParams.y = (int) (relativeY * (screenHeight - ballSize)); break;
+                case TOP: mLayoutParams.y = 0; mLayoutParams.x = (int) (relativeX * (screenWidth - ballSize)); break;
+                case BOTTOM: mLayoutParams.y = screenHeight - ballSize; mLayoutParams.x = (int) (relativeX * (screenWidth - ballSize)); break;
+            }
+        } else {
+            // 不启用吸附：根据比例自由恢复
+            mLayoutParams.x = (int) (relativeX * (screenWidth - ballSize));
+            mLayoutParams.y = (int) (relativeY * (screenHeight - ballSize));
         }
-        checkAndFixBounds();
+
+        checkAndFixBounds(); // 再次确保不越界
         updateViewPosition();
     }
 
     private void checkAndFixBounds() {
         if (screenWidth <= 0 || screenHeight <= 0) return;
+        // 如果不是半隐藏状态，必须限制在屏幕内
         if (mLayoutParams.x > screenWidth - ballSize) mLayoutParams.x = screenWidth - ballSize;
         if (mLayoutParams.y > screenHeight - ballSize) mLayoutParams.y = screenHeight - ballSize;
         if (mLayoutParams.x < 0 && !isHalfShow) mLayoutParams.x = 0;
@@ -268,62 +266,39 @@ public class FloatBallManager {
     private void updateScreenSize() {
         Context context = getContext();
         if (context == null) return;
-
-        // 使用 getRealSize 获取物理屏幕真实尺寸，覆盖刘海屏和导航栏区域
-        android.graphics.Point size = new android.graphics.Point();
+        Point size = new Point();
         mWindowManager.getDefaultDisplay().getRealSize(size);
         screenWidth = size.x;
         screenHeight = size.y;
-
-        // 判定横竖屏：完全遵循系统 Configuration，解决分屏/多窗口下的逻辑错误
-        int orientation = context.getResources().getConfiguration().orientation;
-        boolean isLandscape = (orientation == Configuration.ORIENTATION_LANDSCAPE);
-
-        Log.d(TAG, "屏幕尺寸更新: width=" + screenWidth + ", height=" + screenHeight + ", 橫屏模式=" + isLandscape);
     }
 
-    /**
-     * 丝滑滚动到指定坐标（支持回弹效果）
-     */
-    private void smoothScrollTo(int targetX, int targetY) {
+    private void smoothScrollTo(int targetX, int targetY, final Runnable onComplete) {
         int startX = mLayoutParams.x;
         int startY = mLayoutParams.y;
-
         ValueAnimator animator = ValueAnimator.ofFloat(0, 1);
-        animator.setDuration(300); // 300毫秒动画
+        animator.setDuration(300);
         animator.setInterpolator(new OvershootInterpolator(1.0f));
-
-        animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+        animator.addUpdateListener(animation -> {
+            float fraction = (float) animation.getAnimatedValue();
+            mLayoutParams.x = (int) (startX + (targetX - startX) * fraction);
+            mLayoutParams.y = (int) (startY + (targetY - startY) * fraction);
+            updateViewPosition();
+        });
+        animator.addListener(new AnimatorListenerAdapter() {
             @Override
-            public void onAnimationUpdate(ValueAnimator animation) {
-                float fraction = (float) animation.getAnimatedValue();
-                mLayoutParams.x = (int) (startX + (targetX - startX) * fraction);
-                mLayoutParams.y = (int) (startY + (targetY - startY) * fraction);
-                updateViewPosition();
+            public void onAnimationEnd(Animator animation) {
+                if (onComplete != null) onComplete.run();
             }
         });
         animator.start();
     }
 
-    /**
-     * 初始化悬浮球视图
-     * 通过 LayoutInflater 加载预设的优雅 XML 布局
-     */
     @SuppressLint("ClickableViewAccessibility")
     private void initFloatBallView() {
         Context context = getContext();
         if (context == null) return;
-        
-        // 从 XML 加载悬浮球 UI
         mFloatBall = LayoutInflater.from(context).inflate(R.layout.float_ball_layout, null);
-
-        // 设置触摸事件监听
-        mFloatBall.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                return handleTouchEvent(event);
-            }
-        });
+        mFloatBall.setOnTouchListener((v, event) -> handleTouchEvent(event));
     }
 
     /**
@@ -356,47 +331,50 @@ public class FloatBallManager {
     }
 
     /**
-     * 从SharedPreferences恢复上次保存的位置
-     * 如果没有保存的位置，默认显示在屏幕右下角
+     * 核心：恢复上次位置
      */
     private void restoreLastPosition() {
+        // 1. 读取保存的“锚点”坐标（完全显示时的坐标）
         lastSavedX = mSharedPreferences.getInt(KEY_LAST_X, screenWidth - ballSize);
         lastSavedY = mSharedPreferences.getInt(KEY_LAST_Y, screenHeight / 2);
         isHalfShow = mSharedPreferences.getBoolean(KEY_IS_HALF_SHOW, false);
 
+        // 2. 赋值给 LayoutParams
         mLayoutParams.x = lastSavedX;
         mLayoutParams.y = lastSavedY;
 
-        // 如果上次是半显示状态，直接应用半显示位置
+        // 3. 关键：确保读取的坐标在当前屏幕范围内（防止屏幕尺寸变化导致的越界）
+        checkAndFixBounds();
+
+        // 4. 关键：根据恢复的坐标，更新 relativeX/Y，保证下次旋转屏幕时位置正确
+        // 如果不更新，relativeX 可能是默认的 0.5，一旋转球就跑中间去了
+        calculateRelativePosition(mLayoutParams.x, mLayoutParams.y);
+
+        // 5. 如果是半隐藏，推到屏幕外
         if (isHalfShow) {
             applyHalfShowPosition();
         }
-        
-        // 关键：初始化锚点和比例，确保启动后立即旋转也能正确适配
-        calculateRelativePosition();
 
-        Log.d(TAG, "恢复上次位置: x=" + lastSavedX + ", y=" + lastSavedY + ", 半显示状态=" + isHalfShow);
+        updateViewPosition();
+        Log.d(TAG, "恢复位置: x=" + mLayoutParams.x + ", y=" + mLayoutParams.y + ", isHalf=" + isHalfShow);
     }
 
     private boolean handleTouchEvent(MotionEvent event) {
-        // 1. 优先将事件交给 GestureDetector 处理单击、双击、长按和滑动
         mGestureDetector.onTouchEvent(event);
 
-        // 2. 处理拖动逻辑和生命周期
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 isDragging = false;
-                isFlinging = false; // 重置滑动标记
-
+                isFlinging = false;
                 downX = event.getRawX();
                 downY = event.getRawY();
-                originalX = mLayoutParams.x;
-                originalY = mLayoutParams.y;
 
                 mHandler.removeCallbacks(mAutoHideRunnable);
                 if (isHalfShow) {
                     restoreFullShowPosition();
                 }
+                originalX = mLayoutParams.x;
+                originalY = mLayoutParams.y;
                 break;
 
             case MotionEvent.ACTION_MOVE:
@@ -414,16 +392,24 @@ public class FloatBallManager {
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
                 if (isFlinging) {
-                    //如果是快速滑动，触发平滑回弹到原始位置
-                    smoothScrollTo((int)originalX, (int)originalY);
+                    // 快速滑动：回弹原位
+                    savePosition((int) originalX, (int) originalY, false);
+                    smoothScrollTo((int) originalX, (int) originalY, () -> startAutoHideTimer());
                 } else if (isDragging) {
-                    // 如果是慢速拖动，就近吸附到屏幕边缘
-                    attachToNearestEdge();
-                    calculateRelativePosition();
-                    saveCurrentPosition();
+                    if (enableEdgeSnap) {
+                        // 吸附模式：吸附并保存目标位置
+                        attachToNearestEdge();
+                    } else {
+                        // 自由模式：保存当前位置，并同步更新相对比例
+                        checkAndFixBounds(); // 确保拖出屏幕外时被拉回
+                        savePosition(mLayoutParams.x, mLayoutParams.y, false);
+                        calculateRelativePosition(mLayoutParams.x, mLayoutParams.y); // 必须更新比例
+                        startAutoHideTimer();
+                    }
+                } else {
+                    // 单纯点击
+                    startAutoHideTimer();
                 }
-
-                mHandler.postDelayed(mAutoHideRunnable, AUTO_HIDE_DELAY);
                 isDragging = false;
                 isFlinging = false;
                 break;
@@ -445,18 +431,16 @@ public class FloatBallManager {
         int targetX = mLayoutParams.x;
         int targetY = mLayoutParams.y;
 
-        if (minDistance == distanceToLeft) {
-            targetX = 0;
-        } else if (minDistance == distanceToRight) {
-            targetX = screenWidth - ballSize;
-        } else if (minDistance == distanceToTop) {
-            targetY = 0;
-        } else {
-            targetY = screenHeight - ballSize;
-        }
+        if (minDistance == distanceToLeft) targetX = 0;
+        else if (minDistance == distanceToRight) targetX = screenWidth - ballSize;
+        else if (minDistance == distanceToTop) targetY = 0;
+        else targetY = screenHeight - ballSize;
 
-        smoothScrollTo(targetX, targetY);
-        Log.d(TAG, "吸附到最近边缘: x=" + mLayoutParams.x + ", y=" + mLayoutParams.y);
+        // 关键：动画开始前立即保存目标坐标，确保数据安全
+        savePosition(targetX, targetY, false);
+        calculateRelativePosition(targetX, targetY);
+
+        smoothScrollTo(targetX, targetY, () -> startAutoHideTimer());
     }
 
     /**
@@ -464,14 +448,21 @@ public class FloatBallManager {
      * 根据当前吸附的边缘，将悬浮球一半隐藏到屏幕外
      */
     private void applyHalfShowPosition() {
+        // 根据当前位置计算半隐藏坐标，但不保存到SharedPreferences
         if (mLayoutParams.x <= 0) mLayoutParams.x = -ballSize / 2;
         else if (mLayoutParams.x >= screenWidth - ballSize) mLayoutParams.x = screenWidth - ballSize / 2;
         else if (mLayoutParams.y <= 0) mLayoutParams.y = -ballSize / 2;
         else if (mLayoutParams.y >= screenHeight - ballSize) mLayoutParams.y = screenHeight - ballSize / 2;
 
+        if (mFloatBall != null) {
+            mFloatBall.setAlpha((ballOpacity / 100.0f) * 0.5f);
+        }
+
         isHalfShow = true;
         updateViewPosition();
-        Log.d(TAG, "应用半显示位置: x=" + mLayoutParams.x + ", y=" + mLayoutParams.y);
+
+        // 只更新状态标记，不更新坐标！
+        mSharedPreferences.edit().putBoolean(KEY_IS_HALF_SHOW, true).apply();
     }
 
     /**
@@ -480,20 +471,20 @@ public class FloatBallManager {
      */
     private void restoreFullShowPosition() {
         if (!isHalfShow) return;
-        if (mLayoutParams.x <= -ballSize / 2) mLayoutParams.x = 0;
-        else if (mLayoutParams.x >= screenWidth - ballSize / 2) mLayoutParams.x = screenWidth - ballSize;
-        else if (mLayoutParams.y <= -ballSize / 2) mLayoutParams.y = 0;
-        else if (mLayoutParams.y >= screenHeight - ballSize / 2) mLayoutParams.y = screenHeight - ballSize;
+
+        // 恢复到锚点坐标
+        mLayoutParams.x = lastSavedX;
+        mLayoutParams.y = lastSavedY;
+
+        if (mFloatBall != null) {
+            mFloatBall.setAlpha(ballOpacity / 100.0f);
+        }
 
         isHalfShow = false;
+        mSharedPreferences.edit().putBoolean(KEY_IS_HALF_SHOW, false).apply();
         updateViewPosition();
-        Log.d(TAG, "恢复完全显示位置: x=" + mLayoutParams.x + ", y=" + mLayoutParams.y);
     }
 
-    /**
-     * 更新悬浮球视图位置
-     * 调用WindowManager更新布局参数
-     */
     private void updateViewPosition() {
         Context context = getContext();
         if (mWindowManager == null || mFloatBall == null || context == null) return;
@@ -504,67 +495,57 @@ public class FloatBallManager {
                 mWindowManager.updateViewLayout(mFloatBall, mLayoutParams);
             }
         } catch (Exception e) {
-            Log.e(TAG, "更新悬浮球位置失败: " + e.getMessage());
+            Log.e(TAG, "Update view failed: " + e.getMessage());
         }
     }
 
-    private void saveCurrentPosition() {
-        int actualX = mLayoutParams.x;
-        int actualY = mLayoutParams.y;
+    /**
+     * 保存位置的唯一入口
+     * 只有在完全显示（Anchor）状态下才允许调用此方法更新坐标
+     */
+    private void savePosition(int x, int y, boolean isHalf) {
         SharedPreferences.Editor editor = mSharedPreferences.edit();
-        editor.putInt(KEY_LAST_X, actualX);
-        editor.putInt(KEY_LAST_Y, actualY);
-        editor.putBoolean(KEY_IS_HALF_SHOW, isHalfShow);
+        editor.putInt(KEY_LAST_X, x);
+        editor.putInt(KEY_LAST_Y, y);
+        editor.putBoolean(KEY_IS_HALF_SHOW, isHalf);
         editor.apply();
-        lastSavedX = actualX;
-        lastSavedY = actualY;
+
+        // 同步内存数据
+        lastSavedX = x;
+        lastSavedY = y;
+        isHalfShow = isHalf;
     }
 
-    /**
-     * 显示悬浮球
-     */
+    private void startAutoHideTimer() {
+        mHandler.removeCallbacks(mAutoHideRunnable);
+        if (autoHideDelay > 0) {
+            mHandler.postDelayed(mAutoHideRunnable, autoHideDelay);
+        }
+    }
+
     public void showFloatBall() {
         updateViewPosition();
-        // 显示后立即启动自动隐藏任务
-        mHandler.postDelayed(mAutoHideRunnable, AUTO_HIDE_DELAY);
-        Log.d(TAG, "显示悬浮球");
+        startAutoHideTimer();
     }
 
-    /**
-     * 隐藏悬浮球
-     */
     public void hideFloatBall() {
         try {
-            if (mHandler != null) mHandler.removeCallbacksAndMessages(null);
-            if (mFloatBall != null && mFloatBall.getParent() != null && mWindowManager != null) {
+            mHandler.removeCallbacksAndMessages(null);
+            if (mFloatBall != null && mFloatBall.getParent() != null) {
                 mWindowManager.removeView(mFloatBall);
             }
-            Log.d(TAG, "悬浮球已彻底移除");
         } catch (Exception e) {
-            Log.e(TAG, "隐藏悬浮球失败: " + e.getMessage());
+            Log.e(TAG, "Hide failed: " + e.getMessage());
         }
     }
 
-    /**
-     * 释放资源
-     */
     public void release() {
         Context context = getContext();
-        if (context != null && mComponentCallbacks != null) {
-            context.unregisterComponentCallbacks(mComponentCallbacks);
-        }
-
-        // 3. 释放所有引用（包括弱引用本身）
-        if (mContextRef != null) {
-            mContextRef.clear();
-            mContextRef = null;
-        }
+        if (context != null) context.unregisterComponentCallbacks(mComponentCallbacks);
+        if (mContextRef != null) mContextRef.clear();
         mWindowManager = null;
         mFloatBall = null;
-        mHandler = null;
-        mListener = null;
-        mGestureDetector = null;
-        Log.d(TAG, "资源已释放");
+        mHandler.removeCallbacksAndMessages(null);
     }
 
     public void setOnFloatBallInteractListener(OnFloatBallInteractListener listener) {
@@ -574,16 +555,14 @@ public class FloatBallManager {
     private class AutoHideRunnable implements Runnable {
         @Override
         public void run() {
-            if (isDragging || isHalfShow) return;
+            if (isDragging || isHalfShow || isFlinging) return;
             applyHalfShowPosition();
-            saveCurrentPosition();
         }
     }
 
     private int dip2px(float dpValue) {
         Context context = getContext();
         if (context == null) return 0;
-        final float scale = context.getResources().getDisplayMetrics().density;
-        return (int) (dpValue * scale + 0.5f);
+        return (int) (dpValue * context.getResources().getDisplayMetrics().density + 0.5f);
     }
 }

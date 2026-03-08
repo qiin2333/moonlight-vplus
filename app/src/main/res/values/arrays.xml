@@ -389,4 +389,16 @@
         <item>1</item>
         <item>2</item>
     </string-array>
+
+    <!-- Float Ball Gesture Actions -->
+    <string-array name="float_ball_action_names">
+        <item>@string/float_ball_action_none</item>
+        <item>@string/float_ball_action_open_keyboard</item>
+        <item>@string/float_ball_action_open_menu</item>
+    </string-array>
+    <string-array name="float_ball_action_values" translatable="false">
+        <item>none</item>
+        <item>open_keyboard</item>
+        <item>open_menu</item>
+    </string-array>
 </resources>

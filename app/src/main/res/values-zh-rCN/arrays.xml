@@ -23,5 +23,11 @@
         <item>音乐</item>
         <item>自动</item>
     </string-array>
-</resources>
 
+    <!-- 浮球手势动作 -->
+    <string-array name="float_ball_action_names">
+        <item>无动作</item>
+        <item>打开虚拟键盘</item>
+        <item>打开菜单</item>
+    </string-array>
+</resources>
