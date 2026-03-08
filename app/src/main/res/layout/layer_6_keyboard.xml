@@ -6,6 +6,7 @@
     android:layout_height="match_parent"
     android:visibility="gone">
     <LinearLayout
+        android:id="@+id/keyboard_content"
         style="@style/VirtualKeyboardStyle"
         android:orientation="vertical"
         android:layout_width="match_parent"
@@ -16,7 +17,8 @@
         <LinearLayout
             android:orientation="horizontal"
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="0dp"
+            android:layout_weight="1">
 
             <!-- Left Sidebar (Panel Switch Buttons) -->
             <LinearLayout
@@ -57,12 +59,20 @@
                 android:gravity="center"
                 android:padding="2dp">
                 
-                <TextView 
+                <TextView
                     android:id="@+id/btn_keyboard_collapse"
                     style="@style/KeyboardKeyRefined.Modifier"
                     android:layout_width="42dp"
                     android:layout_height="36dp"
                     android:text="Hide"
+                    android:textSize="11sp"
+                    android:layout_marginBottom="4dp"/>
+                <TextView
+                    android:id="@+id/btn_keyboard_resize"
+                    style="@style/KeyboardKeyRefined.Modifier"
+                    android:layout_width="42dp"
+                    android:layout_height="36dp"
+                    android:text="Size"
                     android:textSize="11sp"
                     android:layout_marginBottom="4dp"/>
                 <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
@@ -81,6 +91,15 @@
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>
+    <View
+        android:id="@+id/keyboard_resize_handle"
+        android:layout_width="match_parent"
+        android:layout_height="20dp"
+        android:layout_gravity="bottom"
+        android:layout_marginBottom="210dp"
+        android:background="#40FFFFFF"
+        android:visibility="gone" />
+
     <!-- iOS Style Key Popup Overlay -->
     <TextView
         android:id="@+id/keyboard_key_popup"

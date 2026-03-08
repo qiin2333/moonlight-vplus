@@ -1,6 +1,7 @@
 package com.limelight.binding.input.advance_setting;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -19,9 +20,15 @@ import java.util.Set;
 public class KeyboardUIController implements KeyboardGestureDetector.GestureListener {
 
     private final FrameLayout keyboardLayout;
+    private final View keyboardContent;
     private final FrameLayout parentContainer;
     private final ControllerManager controllerManager;
     private final SeekBar opacitySeekbar;
+    private final SharedPreferences prefs;
+
+    private static final String PREF_NAME = "keyboard_settings";
+    private static final String KEY_HEIGHT = "keyboard_height";
+    private static final String KEY_OPACITY = "keyboard_opacity";
     
     private View layoutMain, layoutNav, layoutNum;
     private TextView btnMain, btnNav, btnNum;
@@ -48,6 +55,7 @@ public class KeyboardUIController implements KeyboardGestureDetector.GestureList
     public KeyboardUIController(FrameLayout container, ControllerManager controllerManager, Context context){
         this.parentContainer = container;
         this.controllerManager = controllerManager;
+        this.prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         
         // Inflate the keyboard layout into the container if it doesn't already have it
         View view = container.findViewById(R.id.layer_6_keyboard);
@@ -57,10 +65,13 @@ public class KeyboardUIController implements KeyboardGestureDetector.GestureList
         } else {
             this.keyboardLayout = (FrameLayout) view;
         }
-        
+
+        keyboardContent = keyboardLayout.findViewById(R.id.keyboard_content);
         opacitySeekbar = keyboardLayout.findViewById(R.id.float_keyboard_seekbar);
         keyPopup = keyboardLayout.findViewById(R.id.keyboard_key_popup);
         
+        loadSettings();
+
         layoutMain = keyboardLayout.findViewById(R.id.layout_main);
         layoutNav = keyboardLayout.findViewById(R.id.layout_nav);
         layoutNum = keyboardLayout.findViewById(R.id.layout_num);
@@ -94,10 +105,26 @@ public class KeyboardUIController implements KeyboardGestureDetector.GestureList
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 float alpha = (float) (progress * 0.1);
                 keyboardLayout.setAlpha(alpha);
+                if (fromUser) {
+                    prefs.edit().putInt(KEY_OPACITY, progress).apply();
+                }
             }
             @Override public void onStartTrackingTouch(SeekBar seekBar) {}
             @Override public void onStopTrackingTouch(SeekBar seekBar) {}
         });
+    }
+
+    private void loadSettings() {
+        int savedHeight = prefs.getInt(KEY_HEIGHT, -1);
+        if (savedHeight > 0) {
+            ViewGroup.LayoutParams params = keyboardContent.getLayoutParams();
+            params.height = savedHeight;
+            keyboardContent.setLayoutParams(params);
+        }
+
+        int savedOpacity = prefs.getInt(KEY_OPACITY, 10);
+        opacitySeekbar.setProgress(savedOpacity);
+        keyboardLayout.setAlpha((float) (savedOpacity * 0.1));
     }
 
     private void initTabs() {
@@ -121,6 +148,64 @@ public class KeyboardUIController implements KeyboardGestureDetector.GestureList
         TextView btnCollapse = keyboardLayout.findViewById(R.id.btn_keyboard_collapse);
         if (btnCollapse != null) {
             btnCollapse.setOnClickListener(v -> hide());
+        }
+
+        TextView btnResize = keyboardLayout.findViewById(R.id.btn_keyboard_resize);
+        View resizeHandle = keyboardLayout.findViewById(R.id.keyboard_resize_handle);
+        if (btnResize != null && resizeHandle != null) {
+            btnResize.setOnClickListener(v -> {
+                boolean isVisible = resizeHandle.getVisibility() == View.VISIBLE;
+                resizeHandle.setVisibility(isVisible ? View.GONE : View.VISIBLE);
+                updateTabStyle(btnResize, !isVisible);
+
+                if (!isVisible) {
+                    // Initialize handle position to current keyboard top
+                    FrameLayout.LayoutParams handleParams = (FrameLayout.LayoutParams) resizeHandle.getLayoutParams();
+                    handleParams.bottomMargin = keyboardContent.getHeight() - (resizeHandle.getLayoutParams().height / 2);
+                    resizeHandle.setLayoutParams(handleParams);
+                }
+            });
+
+            resizeHandle.setOnTouchListener(new View.OnTouchListener() {
+                private float initialTouchY;
+                private int initialHeight;
+
+                @Override
+                public boolean onTouch(View v, MotionEvent event) {
+                    switch (event.getAction()) {
+                        case MotionEvent.ACTION_DOWN:
+                            initialTouchY = event.getRawY();
+                            initialHeight = keyboardContent.getHeight();
+                            v.setPressed(true);
+                            return true;
+                        case MotionEvent.ACTION_MOVE:
+                            float currentTouchY = event.getRawY();
+                            float deltaY = initialTouchY - currentTouchY;
+                            int newHeight = (int) (initialHeight + deltaY);
+                            // Set some reasonable limits (e.g., 1/5 to 4/5 of screen height)
+                            int minHeight = v.getContext().getResources().getDisplayMetrics().heightPixels / 5;
+                            int maxHeight = v.getContext().getResources().getDisplayMetrics().heightPixels * 4 / 5;
+                            if (newHeight > minHeight && newHeight < maxHeight) {
+                                // Update keyboard height
+                                ViewGroup.LayoutParams params = keyboardContent.getLayoutParams();
+                                params.height = newHeight;
+                                keyboardContent.setLayoutParams(params);
+
+                                // Sync handle position
+                                FrameLayout.LayoutParams handleParams = (FrameLayout.LayoutParams) resizeHandle.getLayoutParams();
+                                handleParams.bottomMargin = newHeight - (resizeHandle.getLayoutParams().height / 2);
+                                resizeHandle.setLayoutParams(handleParams);
+                            }
+                            return true;
+                        case MotionEvent.ACTION_UP:
+                            prefs.edit().putInt(KEY_HEIGHT, keyboardContent.getHeight()).apply();
+                        case MotionEvent.ACTION_CANCEL:
+                            v.setPressed(false);
+                            return true;
+                    }
+                    return false;
+                }
+            });
         }
     }
 
