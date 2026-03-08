@@ -67,7 +67,7 @@
         <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k39" android:text="K"/>
         <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k40" android:text="L"/>
         <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k74" android:text="; :"/>
-        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k75" android:text="' "/>
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k75" android:text="' &quot;"/>
         <TextView style="@style/KeyboardKeyRefined.Modifier.W22" android:tag="k66" android:text="Enter ↵"/>
     </LinearLayout>
 
