@@ -16,7 +16,7 @@ class PageSuperMenuController(
     private val context: Context,
     private val controllerManager: ControllerManager
 ) {
-    private val superPagesController: SuperPagesController = controllerManager.superPagesController
+    private val superPagesController: SuperPagesController = controllerManager.superPagesController!!
     private val pageNull: SuperPageLayout = superPagesController.pageNull
     private val superMenuPage: SuperPageLayout =
         LayoutInflater.from(context).inflate(R.layout.page_super_menu, null) as SuperPageLayout
@@ -39,11 +39,11 @@ class PageSuperMenuController(
             }
         })
         superMenuPage.findViewById<View>(R.id.page_super_menu_config_page).setOnClickListener {
-            controllerManager.pageConfigController.open()
+            controllerManager.pageConfigController?.open()
         }
         superMenuPage.findViewById<View>(R.id.page_super_menu_edit_mode).setOnClickListener {
-            controllerManager.elementController.changeMode(ElementController.Mode.Edit)
-            controllerManager.elementController.open()
+            controllerManager.elementController?.changeMode(ElementController.Mode.Edit)
+            controllerManager.elementController?.open()
         }
         superMenuPage.findViewById<View>(R.id.page_super_menu_disconnect).setOnClickListener {
             (context as Game).disconnect()

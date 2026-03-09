@@ -196,7 +196,7 @@ public class ElementController {
             @Override
             public void onClick(View v) {
                 changeMode(Mode.Normal);
-                controllerManager.getPageSuperMenuController().open();
+                controllerManager.pageSuperMenuController.open();
                 // 1. 通过公共方法通知 Game Activity 切换回普通菜单模式
                 ((Game) context).setcurrentBackKeyMenu(Game.BackKeyMenuMode.GAME_MENU);
 

@@ -46,7 +46,7 @@ class PageDeviceController(
         keyboardDrawing.visibility = keyboardVisible
         mouseDrawing.visibility = mouseVisible
         gamepadDrawing.visibility = gamepadVisible
-        controllerManager.superPagesController.openNewPage(devicePage)
+        controllerManager.superPagesController?.openNewPage(devicePage)
     }
 
     private fun setListenersForDevice(viewGroup: ViewGroup, listener: View.OnClickListener) {
@@ -85,6 +85,6 @@ class PageDeviceController(
     }
 
     fun close() {
-        controllerManager.superPagesController.openNewPage(devicePage.lastPage)
+        controllerManager.superPagesController?.openNewPage(devicePage.lastPage)
     }
 }

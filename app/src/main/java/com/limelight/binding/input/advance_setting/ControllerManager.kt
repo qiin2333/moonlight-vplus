@@ -3,7 +3,6 @@ package com.limelight.binding.input.advance_setting
 import android.content.Context
 import android.view.View
 import android.widget.FrameLayout
-
 import com.limelight.Game
 import com.limelight.R
 import com.limelight.binding.input.advance_setting.config.PageConfigController
@@ -11,96 +10,109 @@ import com.limelight.binding.input.advance_setting.element.ElementController
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper
 import com.limelight.binding.input.advance_setting.superpage.SuperPagesController
 
-class ControllerManager(layout: FrameLayout, private val context: Context) {
-
-    private val advanceSettingView: FrameLayout = layout.findViewById(R.id.advance_setting_view)
-    private val fatherLayout: FrameLayout = layout
-
-    private var _pageConfigController: PageConfigController? = null
-    private var _touchController: TouchController? = null
-    private var _superPagesController: SuperPagesController? = null
-    private var _pageDeviceController: PageDeviceController? = null
-    private var _superConfigDatabaseHelper: SuperConfigDatabaseHelper? = null
-    private var _elementController: ElementController? = null
-    private var _keyboardUIController: KeyboardUIController? = null
-
-    val pageSuperMenuController: PageSuperMenuController = PageSuperMenuController(context, this)
-
-    val pageConfigController: PageConfigController
+class ControllerManager(layout: FrameLayout, context: Context) {
+    private val advanceSettingView: FrameLayout?
+    private val fatherLayout: FrameLayout?
+    var pageConfigController: PageConfigController? = null
         get() {
-            if (_pageConfigController == null) {
-                _pageConfigController = PageConfigController(this, context)
+            if (field == null) {
+                field = PageConfigController(this, context)
             }
-            return _pageConfigController!!
+            return field
         }
-
-    val touchController: TouchController
+        private set
+    var touchController: TouchController? = null
         get() {
-            if (_touchController == null) {
-                val layerElement: FrameLayout = advanceSettingView.findViewById(R.id.layer_2_element)
-                _touchController = TouchController(context as Game, this, layerElement.findViewById(R.id.element_touch_view))
+            if (field == null) {
+                val layerElement =
+                    advanceSettingView!!.findViewById<FrameLayout>(R.id.layer_2_element)
+                field = TouchController(
+                    (context as Game?)!!,
+                    this,
+                    layerElement.findViewById<View?>(R.id.element_touch_view)
+                )
             }
-            return _touchController!!
+            return field
         }
-
-    val superPagesController: SuperPagesController
+        private set
+    var superPagesController: SuperPagesController? = null
         get() {
-            if (_superPagesController == null) {
-                val superPagesBox: FrameLayout = advanceSettingView.findViewById(R.id.super_pages_box)
-                _superPagesController = SuperPagesController(superPagesBox, context)
+            if (field == null) {
+                val superPagesBox =
+                    advanceSettingView!!.findViewById<FrameLayout?>(R.id.super_pages_box)
+                field = SuperPagesController(superPagesBox, context)
             }
-            return _superPagesController!!
+            return field
         }
-
-    val pageDeviceController: PageDeviceController
+        private set
+    var pageDeviceController: PageDeviceController? = null
         get() {
-            if (_pageDeviceController == null) {
-                _pageDeviceController = PageDeviceController(context, this)
+            if (field == null) {
+                field = PageDeviceController(context, this)
             }
-            return _pageDeviceController!!
+            return field
         }
-
-    val superConfigDatabaseHelper: SuperConfigDatabaseHelper
+        private set
+    var superConfigDatabaseHelper: SuperConfigDatabaseHelper? = null
         get() {
-            if (_superConfigDatabaseHelper == null) {
-                _superConfigDatabaseHelper = SuperConfigDatabaseHelper(context)
+            if (field == null) {
+                field = SuperConfigDatabaseHelper(context)
             }
-            return _superConfigDatabaseHelper!!
+            return field
         }
-
-    val elementController: ElementController
+        private set
+    var elementController: ElementController? = null
         get() {
-            if (_elementController == null) {
-                val layerElement: FrameLayout = advanceSettingView.findViewById(R.id.layer_2_element)
-                _elementController = ElementController(this, layerElement, context)
+            if (field == null) {
+                val layerElement =
+                    advanceSettingView!!.findViewById<FrameLayout?>(R.id.layer_2_element)
+                field = ElementController(this, layerElement, context)
             }
-            return _elementController!!
+            return field
         }
-
-    val keyboardUIController: KeyboardUIController
+        private set
+    @JvmField
+    val pageSuperMenuController: PageSuperMenuController?
+    var keyboardUIController: KeyboardUIController? = null
         get() {
-            if (_keyboardUIController == null) {
-                val layoutKeyboard: FrameLayout = advanceSettingView.findViewById(R.id.layer_6_keyboard)
-                _keyboardUIController = KeyboardUIController(layoutKeyboard, this, context)
+            if (field == null) {
+                val layoutKeyboard =
+                    advanceSettingView!!.findViewById<FrameLayout?>(R.id.layer_6_keyboard)
+                if (layoutKeyboard != null) {
+                    field = KeyboardUIController(advanceSettingView, this, context)
+                }
             }
-            return _keyboardUIController!!
+            return field
         }
+    private val context: Context
+
+    init {
+        advanceSettingView = layout.findViewById<FrameLayout?>(R.id.advance_setting_view)
+        this.fatherLayout = layout
+        this.context = context
+        pageSuperMenuController = PageSuperMenuController(context, this)
+    }
+
 
     fun refreshLayout() {
-        pageConfigController.initConfig()
+        this.pageConfigController!!.initConfig()
     }
 
     /**
      * 隐藏王冠功能界面
      */
     fun hide() {
-        advanceSettingView.visibility = View.GONE
+        if (advanceSettingView != null) {
+            advanceSettingView.setVisibility(View.GONE)
+        }
     }
 
     /**
      * 显示王冠功能界面
      */
     fun show() {
-        advanceSettingView.visibility = View.VISIBLE
+        if (advanceSettingView != null) {
+            advanceSettingView.setVisibility(View.VISIBLE)
+        }
     }
 }
