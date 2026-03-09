@@ -336,22 +336,69 @@ Java_com_limelight_nvstream_jni_MoonBridge_setBassEnergySceneMode(JNIEnv *env, j
 // Uses ANativeWindow_setBuffersDataSpace() (API 28+) via dlsym
 
 typedef int32_t (*pfn_ANativeWindow_setBuffersDataSpace)(ANativeWindow*, int32_t);
+typedef int32_t (*pfn_ANativeWindow_getBuffersDataSpace)(ANativeWindow*);
+
+// Resolve native window DataSpace functions. Try RTLD_DEFAULT first (already loaded),
+// then explicitly dlopen libnativewindow.so (required on some OEM ROMs like ColorOS).
+static pfn_ANativeWindow_setBuffersDataSpace setDataSpaceFunc = NULL;
+static pfn_ANativeWindow_getBuffersDataSpace getDataSpaceFunc = NULL;
+static int dataspace_resolved = 0;
+
+static void resolveDataSpaceFuncs() {
+    if (dataspace_resolved) return;
+    dataspace_resolved = 1;
+
+    setDataSpaceFunc = (pfn_ANativeWindow_setBuffersDataSpace)
+        dlsym(RTLD_DEFAULT, "ANativeWindow_setBuffersDataSpace");
+    getDataSpaceFunc = (pfn_ANativeWindow_getBuffersDataSpace)
+        dlsym(RTLD_DEFAULT, "ANativeWindow_getBuffersDataSpace");
+
+    if (!setDataSpaceFunc || !getDataSpaceFunc) {
+        // Explicitly load libnativewindow.so - on some OEMs it's not in the default search
+        void *nwLib = dlopen("libnativewindow.so", RTLD_NOW);
+        if (nwLib) {
+            if (!setDataSpaceFunc) {
+                setDataSpaceFunc = (pfn_ANativeWindow_setBuffersDataSpace)
+                    dlsym(nwLib, "ANativeWindow_setBuffersDataSpace");
+            }
+            if (!getDataSpaceFunc) {
+                getDataSpaceFunc = (pfn_ANativeWindow_getBuffersDataSpace)
+                    dlsym(nwLib, "ANativeWindow_getBuffersDataSpace");
+            }
+            // Don't dlclose - keep the library loaded
+        }
+    }
+
+    __android_log_print(ANDROID_LOG_INFO, "MoonBridge",
+        "DataSpace API resolve: set=%s, get=%s",
+        setDataSpaceFunc ? "OK" : "UNAVAILABLE",
+        getDataSpaceFunc ? "OK" : "UNAVAILABLE");
+}
+
+JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_nativeGetSurfaceDataSpace(JNIEnv *env, jclass clazz,
+                                                                      jobject surface) {
+    resolveDataSpaceFuncs();
+
+    if (!getDataSpaceFunc) {
+        return -1;
+    }
+
+    ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
+    if (!window) {
+        return -2;
+    }
+
+    int32_t dataSpace = getDataSpaceFunc(window);
+
+    ANativeWindow_release(window);
+    return dataSpace;
+}
 
 JNIEXPORT jint JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_nativeSetSurfaceDataSpace(JNIEnv *env, jclass clazz,
                                                                       jobject surface, jint dataSpace) {
-    // Dynamically resolve ANativeWindow_setBuffersDataSpace (available since API 28)
-    static pfn_ANativeWindow_setBuffersDataSpace setDataSpaceFunc = NULL;
-    static int resolved = 0;
-    if (!resolved) {
-        resolved = 1;
-        setDataSpaceFunc = (pfn_ANativeWindow_setBuffersDataSpace)
-            dlsym(RTLD_DEFAULT, "ANativeWindow_setBuffersDataSpace");
-        if (!setDataSpaceFunc) {
-            __android_log_print(ANDROID_LOG_WARN, "MoonBridge",
-                "ANativeWindow_setBuffersDataSpace not available (requires API 28+)");
-        }
-    }
+    resolveDataSpaceFuncs();
 
     if (!setDataSpaceFunc) {
         return -1; // Not available on this API level

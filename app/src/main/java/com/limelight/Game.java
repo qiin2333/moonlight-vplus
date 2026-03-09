@@ -951,7 +951,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 .setClientRefreshRateX100(clientRefreshRateX100)
                 .setAudioConfiguration(prefConfig.audioConfiguration)
                 .setColorSpace(decoderRenderer.getPreferredColorSpace())
-                .setColorRange(decoderRenderer.getPreferredColorRange())
+                // HLG requires FULL range for correct OETF/EOTF. Override user preference.
+                .setColorRange(willStreamHdr && prefConfig.hdrMode == MoonBridge.HDR_MODE_HLG ?
+                        MoonBridge.COLOR_RANGE_FULL : decoderRenderer.getPreferredColorRange())
                 .setHdrMode(willStreamHdr ? prefConfig.hdrMode : MoonBridge.HDR_MODE_SDR)
                 .setPersistGamepadsAfterDisconnect(!prefConfig.multiController)
                 .setUseVdd(pcUseVdd)
@@ -960,6 +962,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 .setCustomScreenMode(prefConfig.screenCombinationMode)
                 .setCustomVddScreenMode(prefConfig.vddScreenCombinationMode)
                 .build();
+
+        LimeLog.info("Stream config: hdr=" + willStreamHdr +
+                " hdrMode=" + prefConfig.hdrMode + " fullRange=" + prefConfig.fullRange);
 
         return new StreamConfigResult(config, displayRefreshRate, clientRefreshRateX100);
     }

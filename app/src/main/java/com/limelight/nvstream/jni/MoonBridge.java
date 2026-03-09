@@ -471,27 +471,19 @@ public class MoonBridge {
     public static native void setBassEnergySensitivity(float sensitivity);
     public static native void setBassEnergySceneMode(int mode);
 
-    // Surface DataSpace control (HDR color space configuration)
-    // Equivalent to HarmonyOS OH_NativeWindow_SetColorSpace()
+    // Surface DataSpace control for HDR color space
     // Uses ANativeWindow_setBuffersDataSpace() via JNI (API 28+)
 
-    // DataSpace constants (from android/data_space.h)
-    // STANDARD_BT2020 (6 << 16) | TRANSFER_HLG (7 << 22) | RANGE_FULL (1 << 27)
-    public static final int DATASPACE_BT2020_HLG_FULL = 163971072;      // 0x09C60000
-    // STANDARD_BT2020 (6 << 16) | TRANSFER_HLG (7 << 22) | RANGE_LIMITED (2 << 27)
-    public static final int DATASPACE_BT2020_HLG_LIMITED = 298188800;    // 0x11C60000
-    // STANDARD_BT2020 (6 << 16) | TRANSFER_ST2084 (6 << 22) | RANGE_FULL (1 << 27)
-    public static final int DATASPACE_BT2020_PQ_FULL = 159776768;       // 0x09860000
-    // STANDARD_BT2020 (6 << 16) | TRANSFER_ST2084 (6 << 22) | RANGE_LIMITED (2 << 27)
-    public static final int DATASPACE_BT2020_PQ_LIMITED = 293994496;     // 0x11860000
+    // DataSpace constants: STANDARD_BT2020 | TRANSFER | RANGE
+    public static final int DATASPACE_BT2020_HLG_FULL = 0x09C60000;
+    public static final int DATASPACE_BT2020_HLG_LIMITED = 0x11C60000;
+    public static final int DATASPACE_BT2020_PQ_FULL = 0x09860000;
+    public static final int DATASPACE_BT2020_PQ_LIMITED = 0x11860000;
 
     /**
-     * Set the DataSpace on a Surface to tell the display pipeline
-     * the correct HDR transfer function and color space.
-     *
-     * @param surface The Surface to configure (from SurfaceHolder.getSurface())
-     * @param dataSpace One of the DATASPACE_BT2020_* constants
-     * @return 0 on success, negative on failure (-1 = API not available, -2 = invalid surface)
+     * Set the DataSpace on a Surface for HDR content.
+     * @return 0 on success, -1 if API unavailable, -2 if surface invalid
      */
     public static native int nativeSetSurfaceDataSpace(android.view.Surface surface, int dataSpace);
+    public static native int nativeGetSurfaceDataSpace(android.view.Surface surface);
 }
