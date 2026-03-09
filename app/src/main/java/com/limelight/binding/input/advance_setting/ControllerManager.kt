@@ -1,123 +1,118 @@
-package com.limelight.binding.input.advance_setting;
+package com.limelight.binding.input.advance_setting
 
-import android.content.Context;
-import android.view.LayoutInflater;
-import android.widget.FrameLayout;
+import android.content.Context
+import android.view.View
+import android.widget.FrameLayout
+import com.limelight.Game
+import com.limelight.R
+import com.limelight.binding.input.advance_setting.config.PageConfigController
+import com.limelight.binding.input.advance_setting.element.ElementController
+import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper
+import com.limelight.binding.input.advance_setting.superpage.SuperPagesController
 
-import com.limelight.Game;
-import com.limelight.R;
-import com.limelight.binding.input.advance_setting.config.PageConfigController;
-import com.limelight.binding.input.advance_setting.element.ElementController;
-import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper;
-import com.limelight.binding.input.advance_setting.superpage.SuperPagesController;
-
-public class ControllerManager {
-
-    private FrameLayout advanceSettingView;
-    private FrameLayout fatherLayout;
-    private PageConfigController pageConfigController;
-    private TouchController touchController;
-    private SuperPagesController superPagesController;
-    private PageDeviceController pageDeviceController;
-    private SuperConfigDatabaseHelper superConfigDatabaseHelper;
-    private ElementController elementController;
-    private PageSuperMenuController pageSuperMenuController;
-    private KeyboardUIController keyboardUIController;
-    private Context context;
-
-    public ControllerManager(FrameLayout layout, Context context){
-        advanceSettingView = layout.findViewById(R.id.advance_setting_view);
-        this.fatherLayout = layout;
-        this.context = context;
-        pageSuperMenuController = new PageSuperMenuController(context,this);
-    }
-
-
-    public PageConfigController getPageConfigController() {
-        if (pageConfigController == null){
-            pageConfigController = new PageConfigController(this,context);
-        }
-        return pageConfigController;
-    }
-
-
-    public TouchController getTouchController() {
-        if (touchController == null){
-            FrameLayout layerElement = advanceSettingView.findViewById(R.id.layer_2_element);
-            touchController = new TouchController((Game) context,this,layerElement.findViewById(R.id.element_touch_view));
-        }
-        return touchController;
-    }
-
-
-    public SuperPagesController getSuperPagesController() {
-        if (superPagesController == null){
-            FrameLayout superPagesBox = advanceSettingView.findViewById(R.id.super_pages_box);
-            superPagesController = new SuperPagesController(superPagesBox,context);
-        }
-        return superPagesController;
-    }
-
-    public PageDeviceController getPageDeviceController() {
-        if (pageDeviceController == null){
-            pageDeviceController = new PageDeviceController(context,this);
-        }
-        return pageDeviceController;
-    }
-
-    public SuperConfigDatabaseHelper getSuperConfigDatabaseHelper() {
-        if (superConfigDatabaseHelper == null){
-            superConfigDatabaseHelper = new SuperConfigDatabaseHelper(context);
-        }
-        return superConfigDatabaseHelper;
-    }
-
-    public ElementController getElementController() {
-        if (elementController == null){
-            FrameLayout layerElement = advanceSettingView.findViewById(R.id.layer_2_element);
-            elementController = new ElementController(this,layerElement,context);
-        }
-        return elementController;
-    }
-
-    public PageSuperMenuController getPageSuperMenuController() {
-        return pageSuperMenuController;
-    }
-
-    public KeyboardUIController getKeyboardUIController(){
-        if (keyboardUIController == null){
-            FrameLayout layoutKeyboard = advanceSettingView.findViewById(R.id.layer_6_keyboard);
-            if (layoutKeyboard != null) {
-                keyboardUIController = new KeyboardUIController(advanceSettingView, this, context);
+class ControllerManager(layout: FrameLayout, context: Context) {
+    private val advanceSettingView: FrameLayout?
+    private val fatherLayout: FrameLayout?
+    var pageConfigController: PageConfigController? = null
+        get() {
+            if (field == null) {
+                field = PageConfigController(this, context)
             }
+            return field
         }
-        return keyboardUIController;
+        private set
+    var touchController: TouchController? = null
+        get() {
+            if (field == null) {
+                val layerElement =
+                    advanceSettingView!!.findViewById<FrameLayout>(R.id.layer_2_element)
+                field = TouchController(
+                    (context as Game?)!!,
+                    this,
+                    layerElement.findViewById<View?>(R.id.element_touch_view)
+                )
+            }
+            return field
+        }
+        private set
+    var superPagesController: SuperPagesController? = null
+        get() {
+            if (field == null) {
+                val superPagesBox =
+                    advanceSettingView!!.findViewById<FrameLayout?>(R.id.super_pages_box)
+                field = SuperPagesController(superPagesBox, context)
+            }
+            return field
+        }
+        private set
+    var pageDeviceController: PageDeviceController? = null
+        get() {
+            if (field == null) {
+                field = PageDeviceController(context, this)
+            }
+            return field
+        }
+        private set
+    var superConfigDatabaseHelper: SuperConfigDatabaseHelper? = null
+        get() {
+            if (field == null) {
+                field = SuperConfigDatabaseHelper(context)
+            }
+            return field
+        }
+        private set
+    var elementController: ElementController? = null
+        get() {
+            if (field == null) {
+                val layerElement =
+                    advanceSettingView!!.findViewById<FrameLayout?>(R.id.layer_2_element)
+                field = ElementController(this, layerElement, context)
+            }
+            return field
+        }
+        private set
+    @JvmField
+    val pageSuperMenuController: PageSuperMenuController?
+    var keyboardUIController: KeyboardUIController? = null
+        get() {
+            if (field == null) {
+                val layoutKeyboard =
+                    advanceSettingView!!.findViewById<FrameLayout?>(R.id.layer_6_keyboard)
+                if (layoutKeyboard != null) {
+                    field = KeyboardUIController(advanceSettingView, this, context)
+                }
+            }
+            return field
+        }
+    private val context: Context
+
+    init {
+        advanceSettingView = layout.findViewById<FrameLayout?>(R.id.advance_setting_view)
+        this.fatherLayout = layout
+        this.context = context
+        pageSuperMenuController = PageSuperMenuController(context, this)
     }
 
-    public void setKeyboardUIController(KeyboardUIController controller) {
-        this.keyboardUIController = controller;
-    }
 
-    public void refreshLayout(){
-        getPageConfigController().initConfig();
+    fun refreshLayout() {
+        this.pageConfigController!!.initConfig()
     }
 
     /**
      * 隐藏王冠功能界面
      */
-    public void hide() {
+    fun hide() {
         if (advanceSettingView != null) {
-            advanceSettingView.setVisibility(android.view.View.GONE);
+            advanceSettingView.setVisibility(View.GONE)
         }
     }
 
     /**
      * 显示王冠功能界面
      */
-    public void show() {
+    fun show() {
         if (advanceSettingView != null) {
-            advanceSettingView.setVisibility(android.view.View.VISIBLE);
+            advanceSettingView.setVisibility(View.VISIBLE)
         }
     }
-
 }

@@ -835,70 +835,69 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         });
         externalDisplayManager.initialize();
 
-        // 创建浮球管理器
-        // 大小固定为50dp，透明度固定为100%
-        // 根据自动隐藏延迟判断是否启用边缘吸附：延迟为0时不启用，此时用户可自由放置
-        boolean enableEdgeSnap = prefConfig.floatBallAutoHideDelay > 0;
-        floatBallManager = new FloatBallManager(this, 
-                50,  // 固定大小50dp
-                100, // 固定透明度100%
-                prefConfig.floatBallAutoHideDelay,
-                enableEdgeSnap);
-        
-        // 根据settings中的启用开关决定是否显示悬浮球
+        // 根据settings中的启用开关决定是否创建悬浮球
         if (prefConfig.enableFloatBall) {
-            floatBallManager.showFloatBall();
-        } else {
-            floatBallManager.hideFloatBall();
+            // 创建浮球管理器
+            // 大小固定为50dp，透明度固定为100%
+            // 根据自动隐藏延迟判断是否启用边缘吸附：延迟为0时不启用，此时用户可自由放置
+            boolean enableEdgeSnap = prefConfig.floatBallAutoHideDelay > 0;
+            floatBallManager = new FloatBallManager(this,
+                    50,  // 固定大小50dp
+                    100, // 固定透明度100%
+                    prefConfig.floatBallAutoHideDelay,
+                    enableEdgeSnap);
+
+            // 注册交互监听器
+            floatBallManager.setOnFloatBallInteractListener(new FloatBallManager.OnFloatBallInteractListener() {
+                @Override
+                public void onSingleClick() {
+                    // 单击：执行配置的动作
+                    executeFloatBallAction(prefConfig.floatBallSingleClickAction);
+                    LimeLog.info("FloatBall: 单击被触发，执行动作: " + prefConfig.floatBallSingleClickAction);
+                }
+
+                @Override
+                public void onDoubleClick() {
+                    // 双击：执行配置的动作
+                    executeFloatBallAction(prefConfig.floatBallDoubleClickAction);
+                    LimeLog.info("FloatBall: 双击被触发，执行动作: " + prefConfig.floatBallDoubleClickAction);
+                }
+
+                @Override
+                public void onLongClick() {
+                    // 长按：执行配置的动作
+                    executeFloatBallAction(prefConfig.floatBallLongClickAction);
+                    LimeLog.info("FloatBall: 长按被触发，执行动作: " + prefConfig.floatBallLongClickAction);
+                }
+
+                @Override
+                public void onSwipe(FloatBallManager.SwipeDirection direction) {
+                    // 滑动：可根据方向和配置做不同操作
+                    String actionToExecute = null;
+                    switch (direction) {
+                        case UP:
+                            actionToExecute = prefConfig.floatBallSwipeUpAction;
+                            LimeLog.info("FloatBall: 向上滑动，执行动作: " + actionToExecute);
+                            break;
+                        case DOWN:
+                            actionToExecute = prefConfig.floatBallSwipeDownAction;
+                            LimeLog.info("FloatBall: 向下滑动，执行动作: " + actionToExecute);
+                            break;
+                        case LEFT:
+                            actionToExecute = prefConfig.floatBallSwipeLeftAction;
+                            LimeLog.info("FloatBall: 向左滑动，执行动作: " + actionToExecute);
+                            break;
+                        case RIGHT:
+                            actionToExecute = prefConfig.floatBallSwipeRightAction;
+                            LimeLog.info("FloatBall: 向右滑动，执行动作: " + actionToExecute);
+                            break;
+                    }
+                    if (actionToExecute != null && !actionToExecute.equals("none")) {
+                        executeFloatBallAction(actionToExecute);
+                    }
+                }
+            });
         }
-        
-        // 注册交互监听器
-        floatBallManager.setOnFloatBallInteractListener(new FloatBallManager.OnFloatBallInteractListener() {
-            @Override
-            public void onSingleClick() {
-                // 单击：执行配置的动作
-                executeFloatBallAction(prefConfig.floatBallSingleClickAction);
-                LimeLog.info("FloatBall: 单击被触发，执行动作: " + prefConfig.floatBallSingleClickAction);
-            }
-            @Override
-            public void onDoubleClick() {
-                // 双击：执行配置的动作
-                executeFloatBallAction(prefConfig.floatBallDoubleClickAction);
-                LimeLog.info("FloatBall: 双击被触发，执行动作: " + prefConfig.floatBallDoubleClickAction);
-            }
-            @Override
-            public void onLongClick() {
-                // 长按：执行配置的动作
-                executeFloatBallAction(prefConfig.floatBallLongClickAction);
-                LimeLog.info("FloatBall: 长按被触发，执行动作: " + prefConfig.floatBallLongClickAction);
-            }
-            @Override
-            public void onSwipe(FloatBallManager.SwipeDirection direction) {
-                // 滑动：可根据方向和配置做不同操作
-                String actionToExecute = null;
-                switch (direction) {
-                    case UP:
-                        actionToExecute = prefConfig.floatBallSwipeUpAction;
-                        LimeLog.info("FloatBall: 向上滑动，执行动作: " + actionToExecute);
-                        break;
-                    case DOWN:
-                        actionToExecute = prefConfig.floatBallSwipeDownAction;
-                        LimeLog.info("FloatBall: 向下滑动，执行动作: " + actionToExecute);
-                        break;
-                    case LEFT:
-                        actionToExecute = prefConfig.floatBallSwipeLeftAction;
-                        LimeLog.info("FloatBall: 向左滑动，执行动作: " + actionToExecute);
-                        break;
-                    case RIGHT:
-                        actionToExecute = prefConfig.floatBallSwipeRightAction;
-                        LimeLog.info("FloatBall: 向右滑动，执行动作: " + actionToExecute);
-                        break;
-                }
-                if (actionToExecute != null && !actionToExecute.equals("none")) {
-                    executeFloatBallAction(actionToExecute);
-                }
-            }
-        });
     }
 
     /**
