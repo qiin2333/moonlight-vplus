@@ -50,10 +50,16 @@ abstract class GenericGridAdapter<T>(
 
     override fun getItemId(i: Int): Long = i.toLong()
 
-    abstract fun populateView(parentView: View, imgView: ImageView, spinnerView: View, txtView: TextView, overlayView: ImageView, obj: T)
+    abstract fun populateView(parentView: View, imgView: ImageView?, spinnerView: View?, txtView: TextView?, overlayView: ImageView?, obj: T)
 
-    override fun getView(i: Int, convertView: View?, viewGroup: ViewGroup): View {
+    override fun getView(i: Int, convertView: View?, viewGroup: ViewGroup?): View {
         val view = convertView ?: inflater.inflate(layoutId, viewGroup, false)
+
+        // onCreateViewHolder may call getView(0) when itemList is empty just to inflate a layout.
+        // Guard against out-of-bounds access to avoid NPE/IndexOutOfBoundsException.
+        if (i < 0 || i >= itemList.size) {
+            return view
+        }
 
         val imgView = view.findViewById<ImageView>(R.id.grid_image)
         val overlayView = view.findViewById<ImageView>(R.id.grid_overlay)
