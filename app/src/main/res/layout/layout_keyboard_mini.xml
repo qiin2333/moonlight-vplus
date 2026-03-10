@@ -6,23 +6,67 @@
     android:background="@android:color/transparent"
     android:padding="2dp">
 
-    <!-- Drag Handle for Mini Mode -->
-    <FrameLayout
-        android:id="@+id/mini_drag_handle"
+    <!-- Drag Handle and Modifiers for Mini Mode -->
+    <LinearLayout
+        android:id="@+id/mini_modifier_container"
         android:layout_width="match_parent"
-        android:layout_height="20dp"
+        android:layout_height="35dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:background="@android:color/transparent"
         android:clickable="true"
         android:focusable="true"
         android:layout_marginTop="2dp"
         android:layout_marginBottom="4dp">
-        <View
-            android:layout_width="60dp"
-            android:layout_height="6dp"
-            android:layout_gravity="center"
-            android:background="@drawable/keyboard_popup_bg" />
 
-    </FrameLayout>
+        <!-- 左侧按键 -->
+        <TextView
+            style="@style/KeyboardKeyRefined.Modifier"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:tag="k59"
+            android:text="Shift" />
+
+        <TextView
+            style="@style/KeyboardKeyRefined.Modifier"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:tag="k113"
+            android:text="Ctrl" />
+
+        <!-- 中间的拖动条指示器区域 (给予稍微大一点的 weight 确保空间足够) -->
+        <FrameLayout
+            android:id="@+id/mini_drag_handle"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1.2">
+
+            <View
+                android:layout_width="60dp"
+                android:layout_height="6dp"
+                android:layout_gravity="center"
+                android:background="@drawable/keyboard_popup_bg" />
+        </FrameLayout>
+
+        <!-- 右侧按键 -->
+        <TextView
+            style="@style/KeyboardKeyRefined.Modifier"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:tag="k117"
+            android:text="Win" />
+
+        <TextView
+            style="@style/KeyboardKeyRefined.Modifier"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:tag="k57"
+            android:text="Alt" />
+    </LinearLayout>
 
     <!-- Panel Alpha -->
     <LinearLayout
@@ -132,13 +176,14 @@
 
         <LinearLayout android:orientation="horizontal" android:layout_width="match_parent"
             android:layout_height="0dp" android:layout_weight="1">
-            <TextView style="@style/KeyboardKeyRefined.Modifier" android:layout_width="0dp"
-                android:layout_weight="1.5" android:tag="k59" android:text="⇧" />
-            <TextView style="@style/KeyboardKeyRefined.Modifier" android:layout_width="0dp"
-                android:layout_weight="1.5" android:tag="k113" android:text="Ctrl" />
-            <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k29" android:text="A" />
-            <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k31" android:text="C" />
-            <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k50" android:text="V" />
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k131" android:text="F1" />
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k132" android:text="F2" />
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k133" android:text="F3" />
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k134" android:text="F4" />
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k135" android:text="F5" />
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k136" android:text="F6" />
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k137" android:text="F7" />
+            <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k138" android:text="F8" />
             <TextView style="@style/KeyboardKeyRefined.Modifier" android:layout_width="0dp"
                 android:layout_weight="1.5" android:tag="k67" android:text="⌫" />
         </LinearLayout>
@@ -191,29 +236,29 @@
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:tag="k113"
-                android:text="Ctrl" />
-            <TextView
-                style="@style/KeyboardKeyRefined.Modifier"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:tag="k117"
-                android:text="Win" />
-            <TextView
-                style="@style/KeyboardKeyRefined.Modifier"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:tag="k57"
-                android:text="Alt" />
-            <TextView
-                style="@style/KeyboardKeyRefined.Modifier"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
                 android:tag="k61"
                 android:text="Tab" />
+            <TextView
+                style="@style/KeyboardKeyRefined.Modifier"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:tag="k122"
+                android:text="Home" />
+            <TextView
+                style="@style/KeyboardKeyRefined.Modifier"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:tag="k123"
+                android:text="End" />
+            <TextView
+                style="@style/KeyboardKeyRefined.Modifier"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:tag="k120"
+                android:text="PrtSc" />
         </LinearLayout>
 
         <LinearLayout

@@ -508,7 +508,7 @@
             android:key="checkbox_enable_float_ball"
             android:title="@string/title_checkbox_enable_float_ball"
             android:summary="@string/summary_checkbox_enable_float_ball"
-            android:defaultValue="true" />
+            android:defaultValue="false" />
         <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_float_ball_auto_hide_delay"
             android:dependency="checkbox_enable_float_ball"
@@ -529,7 +529,7 @@
             android:summary="@string/summary_float_ball_single_click_action"
             android:entries="@array/float_ball_action_names"
             android:entryValues="@array/float_ball_action_values"
-            android:defaultValue="open_keyboard" />
+            android:defaultValue="open_menu" />
         <ListPreference
             android:key="list_float_ball_double_click_action"
             android:dependency="checkbox_enable_float_ball"
@@ -537,7 +537,7 @@
             android:summary="@string/summary_float_ball_double_click_action"
             android:entries="@array/float_ball_action_names"
             android:entryValues="@array/float_ball_action_values"
-            android:defaultValue="open_menu" />
+            android:defaultValue="open_keyboard" />
         <ListPreference
             android:key="list_float_ball_long_click_action"
             android:dependency="checkbox_enable_float_ball"
@@ -545,7 +545,7 @@
             android:summary="@string/summary_float_ball_long_click_action"
             android:entries="@array/float_ball_action_names"
             android:entryValues="@array/float_ball_action_values"
-            android:defaultValue="toggle_visibility" />
+            android:defaultValue="none" />
     </PreferenceCategory>
     <PreferenceCategory 
         android:key="category_crown_features"

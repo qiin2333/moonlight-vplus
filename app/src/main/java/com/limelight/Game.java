@@ -244,13 +244,24 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         if (standaloneKeyboardUI == null) {
             FrameLayout keyboardContainer = findViewById(R.id.virtual_full_keyboard_container);
             if (keyboardContainer != null) {
-                // 独立模式下也需要一个 ControllerManager 来发送按键事件
-                if (controllerManager == null) {
-                    controllerManager = new ControllerManager((FrameLayout) streamView.getParent(), this);
-                    controllerManager.refreshLayout();
-                }
-                standaloneKeyboardUI = new KeyboardUIController(keyboardContainer, controllerManager, this);
-                controllerManager.setKeyboardUIController(standaloneKeyboardUI);
+                standaloneKeyboardUI = new KeyboardUIController(keyboardContainer, new KeyboardUIController.OnKeyboardEventListener() {
+                    @Override
+                    public void sendKeyEvent(boolean down, short keyCode) {
+                        if (controllerManager != null && controllerManager.getElementController() != null) {
+                            controllerManager.getElementController().sendKeyEvent(down, keyCode);
+                        } else {
+                            // 直接调用 Game 类的键盘事件发送方法
+                            keyboardEvent(down, keyCode);
+                        }
+                    }
+
+                    @Override
+                    public void rumbleSingleVibrator(short lowFreq, short highFreq, int duration) {
+                        if (controllerManager != null && controllerManager.getElementController() != null) {
+                            controllerManager.getElementController().rumbleSingleVibrator(lowFreq, highFreq, duration);
+                        }
+                    }
+                }, this);
             }
         }
         return standaloneKeyboardUI;
@@ -746,7 +757,23 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             
             FrameLayout keyboardContainer = findViewById(R.id.virtual_full_keyboard_container);
             if (keyboardContainer != null) {
-                KeyboardUIController kUI = new KeyboardUIController(keyboardContainer, controllerManager, this);
+                KeyboardUIController kUI = new KeyboardUIController(keyboardContainer, new KeyboardUIController.OnKeyboardEventListener() {
+                    @Override
+                    public void sendKeyEvent(boolean down, short keyCode) {
+                        if (controllerManager != null && controllerManager.getElementController() != null) {
+                            controllerManager.getElementController().sendKeyEvent(down, keyCode);
+                        } else {
+                            keyboardEvent(down, keyCode);
+                        }
+                    }
+
+                    @Override
+                    public void rumbleSingleVibrator(short lowFreq, short highFreq, int duration) {
+                        if (controllerManager != null && controllerManager.getElementController() != null) {
+                            controllerManager.getElementController().rumbleSingleVibrator(lowFreq, highFreq, duration);
+                        }
+                    }
+                }, this);
                 controllerManager.setKeyboardUIController(kUI);
             }
             

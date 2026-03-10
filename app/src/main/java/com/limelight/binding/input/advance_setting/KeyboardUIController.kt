@@ -16,9 +16,14 @@ import com.limelight.R
 
 class KeyboardUIController(
     private val parentContainer: FrameLayout,
-    private val controllerManager: ControllerManager,
+    private val listener: OnKeyboardEventListener,
     context: Context
 ) : KeyboardGestureDetector.GestureListener {
+
+    interface OnKeyboardEventListener {
+        fun sendKeyEvent(down: Boolean, keyCode: Short)
+        fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int)
+    }
     private val keyboardLayout: FrameLayout
     private val keyboardContent: View
     private val opacitySeekbar: SeekBar
@@ -37,15 +42,18 @@ class KeyboardUIController(
     // Sticky Modifiers state: 0=Neutral, 1=Single, 2=Locked
     private val modifierStates: MutableMap<Int?, Int?> = HashMap<Int?, Int?>()
 
-    // 追踪哪些修饰键正被手指物理按住（ACTION_DOWN 已触发，ACTION_UP 未到达）
+    // 追踪哪些修饰键正被手指物理按住
     private val physicallyHeldModifiers: MutableSet<Int?> = HashSet<Int?>()
     private val panelAlpha: View?
     private val panelNumMini: View?
     private val panelPcMini: View?
 
+    //拖拽条中心区域（负责拖动）和修饰键容器（负责按键变色）
+    private val miniDragHandle: View?
+    private val miniModifierContainer: View?
+
     init {
         this.prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-
 
         // Inflate the keyboard layout into the container if it doesn't already have it
         var view = parentContainer.findViewById<View?>(R.id.layer_6_keyboard)
@@ -77,6 +85,10 @@ class KeyboardUIController(
         panelAlpha = keyboardLayout.findViewById<View?>(R.id.panel_alpha)
         panelNumMini = keyboardLayout.findViewById<View?>(R.id.panel_num_mini)
         panelPcMini = keyboardLayout.findViewById<View?>(R.id.panel_pc_mini)
+
+        // 初始化拖动区域和修饰键容器
+        miniDragHandle = keyboardLayout.findViewById<View?>(R.id.mini_drag_handle)
+        miniModifierContainer = keyboardLayout.findViewById<View?>(R.id.mini_modifier_container)
 
         initModifiers()
         initSeekbars()
@@ -209,7 +221,6 @@ class KeyboardUIController(
         btnNum.setOnClickListener(tabListener)
         btnMini.setOnClickListener(tabListener)
 
-        // Mini keyboard internal switches
         val panelAlpha = keyboardLayout.findViewById<View>(R.id.panel_alpha)
         val panelNumMini = keyboardLayout.findViewById<View>(R.id.panel_num_mini)
         val panelPcMini = keyboardLayout.findViewById<View>(R.id.panel_pc_mini)
@@ -263,7 +274,6 @@ class KeyboardUIController(
 
         val btnResize = keyboardLayout.findViewById<TextView?>(R.id.btn_keyboard_resize)
         val resizeHandle = keyboardLayout.findViewById<View?>(R.id.keyboard_resize_handle)
-        val miniDragHandle = keyboardLayout.findViewById<View?>(R.id.mini_drag_handle)
 
         val dragListener: OnTouchListener = object : OnTouchListener {
             private var initialTouchX = 0f
@@ -312,6 +322,7 @@ class KeyboardUIController(
             }
         }
 
+        // 绑定拖动事件给指定的 FrameLayout (而不再是整个修饰键的一行)
         if (miniDragHandle != null) miniDragHandle.setOnTouchListener(dragListener)
 
         val resizeToggleListener = View.OnClickListener { v: View? ->
@@ -401,7 +412,6 @@ class KeyboardUIController(
         var v: View? = null
         val tag = "k" + keyCode
 
-        // 优先从当前可见的布局中查找
         if (layoutMini != null && layoutMini.getVisibility() == View.VISIBLE) {
             v = layoutMini.findViewWithTag<View?>(tag)
         } else if (layoutNum != null && layoutNum.getVisibility() == View.VISIBLE) {
@@ -409,13 +419,11 @@ class KeyboardUIController(
         } else if (layoutNav != null && layoutNav.getVisibility() == View.VISIBLE) {
             v = layoutNav.findViewWithTag<View?>(tag)
         } else {
-            // 默认为 Main，或者从整个 content 找
             if (layoutMain != null) {
                 v = layoutMain.findViewWithTag<View?>(tag)
             }
         }
 
-        // 双重保险：如果特定布局没找到，再从全局找（防止某些特殊按键不在标准区域）
         if (v == null) {
             v = keyboardLayout.findViewWithTag<View?>(tag)
         }
@@ -426,15 +434,14 @@ class KeyboardUIController(
             if (currentState == MOD_NEUTRAL) {
                 modifierStates.put(keyCode, MOD_SINGLE)
                 physicallyHeldModifiers.add(keyCode)
-                controllerManager.elementController?.sendKeyEvent(true, keyCode.toShort())
+                listener.sendKeyEvent(true, keyCode.toShort())
                 updateModifierUI(keyCode, MOD_SINGLE)
             } else {
                 handleModifierDown(v, keyCode)
             }
         } else {
             triggerHaptic("normal")
-            controllerManager.elementController?.sendKeyEvent(true, keyCode.toShort())
-            // 只有当找到了 View 且 View 是可见的时候才显示气泡
+            listener.sendKeyEvent(true, keyCode.toShort())
             if (v != null && v.isShown()) {
                 showPopup(v)
             }
@@ -444,7 +451,7 @@ class KeyboardUIController(
     private fun triggerHaptic(type: String) {
         var duration = 10
         if (type == "toggle" || type == "heavy") duration = 20
-        controllerManager.elementController?.rumbleSingleVibrator(
+        listener.rumbleSingleVibrator(
             1000.toShort(),
             1000.toShort(),
             duration
@@ -454,37 +461,25 @@ class KeyboardUIController(
     private fun showPopup(v: View?) {
         if (v is TextView && keyPopup != null) {
             val text = v.getText().toString().trim { it <= ' ' }
-
-            // 确保有内容才显示
             if (text.length == 1 || text.contains(" ")) {
                 val display: String? =
                     text.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0]
                 keyPopup.setText(display)
 
-                // 1. 获取屏幕密度和 Popup 尺寸
                 val density = v.getContext().getResources().getDisplayMetrics().density
-                val popupWidth = 50 * density // 与 XML 对应
-                val popupHeight = 64 * density // 与 XML 对应
+                val popupWidth = 50 * density
+                val popupHeight = 64 * density
 
-                // 2. 获取按键(v)在整个屏幕上的绝对坐标 [x, y]
-                // 无论是否是小键盘模式、是否被拖动、是否有 Margin，这个坐标都是最终显示的真实位置
                 val keyScreenLoc = IntArray(2)
                 v.getLocationOnScreen(keyScreenLoc)
 
-                // 3. 获取 Popup 父容器(keyboardLayout)在整个屏幕上的绝对坐标 [x, y]
                 val parentScreenLoc = IntArray(2)
                 keyboardLayout.getLocationOnScreen(parentScreenLoc)
 
-                // 4. 计算相对坐标： (按键绝对位置 - 父容器绝对位置)
-                // 这样得出的就是 Popup 相对于父容器应该摆放的 X, Y
                 val relativeX = (keyScreenLoc[0] - parentScreenLoc[0]).toFloat()
                 val relativeY = (keyScreenLoc[1] - parentScreenLoc[1]).toFloat()
 
-                // 5. 应用位置并居中校正
-                // X轴：相对位置 + (按键宽的一半) - (Popup宽的一半)
                 keyPopup.setX(relativeX + (v.getWidth() / 2f) - (popupWidth / 2f))
-
-                // Y轴：相对位置 - Popup高度
                 keyPopup.setY(relativeY - popupHeight)
 
                 keyPopup.setVisibility(View.VISIBLE)
@@ -494,7 +489,7 @@ class KeyboardUIController(
 
     override fun onKeyRelease(keyCode: Int) {
         if (!modifierStates.containsKey(keyCode)) {
-            controllerManager.elementController?.sendKeyEvent(false, keyCode.toShort())
+            listener.sendKeyEvent(false, keyCode.toShort())
             resetSingleModifiers()
             if (keyPopup != null) keyPopup.setVisibility(View.GONE)
         } else {
@@ -511,11 +506,11 @@ class KeyboardUIController(
             )!!
             if (currentState == MOD_SINGLE) {
                 modifierStates.put(keyCode, MOD_NEUTRAL)
-                controllerManager.elementController?.sendKeyEvent(false, keyCode.toShort())
+                listener.sendKeyEvent(false, keyCode.toShort())
                 updateModifierUI(keyCode, MOD_NEUTRAL)
             }
         } else {
-            controllerManager.elementController?.sendKeyEvent(false, keyCode.toShort())
+            listener.sendKeyEvent(false, keyCode.toShort())
             resetSingleModifiers()
             if (keyPopup != null) keyPopup.setVisibility(View.GONE)
         }
@@ -529,7 +524,7 @@ class KeyboardUIController(
             modifierStates.put(keyCode, MOD_NEUTRAL)
             physicallyHeldModifiers.remove(keyCode)
             updateModifierUI(keyCode, MOD_NEUTRAL)
-            controllerManager.elementController?.sendKeyEvent(false, keyCode.toShort())
+            listener.sendKeyEvent(false, keyCode.toShort())
         } else {
             onKeyPress(keyCode)
         }
@@ -540,12 +535,12 @@ class KeyboardUIController(
         val newState = (currentState + 1) % 3
         modifierStates.put(keyCode, newState)
         when (newState) {
-            MOD_NEUTRAL -> controllerManager.elementController?.sendKeyEvent(
+            MOD_NEUTRAL -> listener.sendKeyEvent(
                 false,
                 keyCode.toShort()
             )
 
-            MOD_SINGLE -> controllerManager.elementController?.sendKeyEvent(true, keyCode.toShort())
+            MOD_SINGLE -> listener.sendKeyEvent(true, keyCode.toShort())
             MOD_LOCKED -> {}
         }
         updateModifierUI(keyCode, newState)
@@ -557,14 +552,13 @@ class KeyboardUIController(
                 val keyCode: Int = entry.key!!
                 if (physicallyHeldModifiers.contains(keyCode)) continue
                 modifierStates.put(keyCode, MOD_NEUTRAL)
-                controllerManager.elementController?.sendKeyEvent(false, keyCode.toShort())
+                listener.sendKeyEvent(false, keyCode.toShort())
                 updateModifierUI(keyCode, MOD_NEUTRAL)
             }
         }
     }
 
     private fun updateModifierUI(keyCode: Int, state: Int) {
-        // 1. 确定背景资源
         val backgroundResId: Int
         when (state) {
             MOD_SINGLE -> backgroundResId = R.drawable.keyboard_modifier_single_selector
@@ -575,30 +569,24 @@ class KeyboardUIController(
 
         val tag = "k" + keyCode
 
-        // 2. 更新全键盘 (layoutMain)
         updateKeyInContainer(layoutMain, tag, backgroundResId)
 
-        // 3. 更新小键盘的所有子面板 (关键修改！)
-        // 不要直接查 layoutMini，而是分别查它的子面板
-        updateKeyInContainer(panelAlpha, tag, backgroundResId) // 更新字母板的 Shift/Del/Enter
-        updateKeyInContainer(panelNumMini, tag, backgroundResId) // 更新数字板的 Shift/Del/Enter
-        updateKeyInContainer(panelPcMini, tag, backgroundResId) // 更新PC板的修饰键
+        updateKeyInContainer(panelAlpha, tag, backgroundResId)
+        updateKeyInContainer(panelNumMini, tag, backgroundResId)
+        updateKeyInContainer(panelPcMini, tag, backgroundResId)
 
-        // 4. 更新其他键盘模式
+        // 使用新加的容器去寻找并更新顶部那四个修饰键的状态
+        updateKeyInContainer(miniModifierContainer, tag, backgroundResId)
+
         updateKeyInContainer(layoutNav, tag, backgroundResId)
         updateKeyInContainer(layoutNum, tag, backgroundResId)
     }
 
-    /**
-     * 辅助方法：在指定的容器内查找 Tag 并更新背景
-     */
     private fun updateKeyInContainer(container: View?, tag: String?, resId: Int) {
         if (container != null) {
             val v = container.findViewWithTag<View?>(tag)
             if (v != null) {
                 v.setBackgroundResource(resId)
-                // 如果需要立即重绘，可以强制刷新，但在setBackgroundResource中通常不需要
-                // v.invalidate();
             }
         }
     }
@@ -633,7 +621,6 @@ class KeyboardUIController(
         private const val MOD_SINGLE = 1
         private const val MOD_LOCKED = 2
 
-        // KeyCodes for modifiers (based on tags)
         private const val KEY_LCTRL = 113
         private const val KEY_RCTRL = 114
         private const val KEY_LSHIFT = 59

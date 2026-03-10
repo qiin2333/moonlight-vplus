@@ -79,7 +79,15 @@ class ControllerManager(layout: FrameLayout, context: Context) {
                 val layoutKeyboard =
                     advanceSettingView!!.findViewById<FrameLayout?>(R.id.layer_6_keyboard)
                 if (layoutKeyboard != null) {
-                    field = KeyboardUIController(advanceSettingView, this, context)
+                    field = KeyboardUIController(advanceSettingView, object : KeyboardUIController.OnKeyboardEventListener {
+                        override fun sendKeyEvent(down: Boolean, keyCode: Short) {
+                            elementController?.sendKeyEvent(down, keyCode)
+                        }
+
+                        override fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int) {
+                            elementController?.rumbleSingleVibrator(lowFreq, highFreq, duration)
+                        }
+                    }, context)
                 }
             }
             return field
