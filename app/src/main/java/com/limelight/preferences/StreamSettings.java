@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
 import android.media.MediaCodecInfo;
 import android.net.Uri;
 import android.os.Build;
@@ -1867,15 +1868,40 @@ public class StreamSettings extends Activity {
 
     }
 
+    private static final String SETTINGS_BG_URL = "https://raw.githubusercontent.com/qiin2333/qiin.github.io/assets/img/moonlight-bg2.webp";
+
     private void loadBackgroundImage() {
         ImageView imageView = findViewById(R.id.settingsBackgroundImage);
 
-        runOnUiThread(() -> Glide.with(this)
-            .load("https://raw.gitmirror.com/qiin2333/qiin.github.io/assets/img/moonlight-bg2.webp")
-            .apply(RequestOptions.bitmapTransform(new BlurTransformation(2, 3)))
-            .transform(new ColorFilterTransformation(Color.argb(120, 0, 0, 0)))
-            .into(imageView));
+        // Limit decoded bitmap size to screen dimensions to avoid
+        // "Canvas: trying to draw too large bitmap" on older devices
+        int width = Math.max(getResources().getDisplayMetrics().widthPixels, 1);
+        int height = Math.max(getResources().getDisplayMetrics().heightPixels, 1);
+
+        new Thread(() -> {
+            UpdateManager.ensureProxyListUpdated(this);
+            List<String> candidates = UpdateManager.buildProxiedUrls(SETTINGS_BG_URL);
+            for (String url : candidates) {
+                try {
+                    Bitmap bitmap = Glide.with(this)
+                        .asBitmap()
+                        .load(url)
+                        .override(width, height)
+                        .submit()
+                        .get();
+                    if (bitmap != null) {
+                        runOnUiThread(() -> Glide.with(this)
+                            .load(bitmap)
+                            .apply(RequestOptions.bitmapTransform(new BlurTransformation(2, 3)))
+                            .transform(new ColorFilterTransformation(Color.argb(120, 0, 0, 0)))
+                            .into(imageView));
+                        return;
+                    }
+                } catch (Exception e) {
+                    // Try next proxy
+                }
+            }
+        }).start();
     }
 }
-
 

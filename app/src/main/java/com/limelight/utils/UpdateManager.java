@@ -902,11 +902,7 @@ public class UpdateManager {
 	}
 
 	private static String httpGetWithProxies(String url) {
-		List<String> tries = new ArrayList<>();
-		tries.add(url); // 先尝试直连
-		for (String p : PROXY_PREFIXES) {
-			tries.add(p + url);
-		}
+		List<String> tries = buildProxiedUrls(url);
 
 		int maxTries = Math.min(tries.size(), 3);
 		for (int i = 0; i < maxTries; i++) {
@@ -933,6 +929,24 @@ public class UpdateManager {
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Build a list of candidate URLs: original first, then proxied variants.
+	 */
+	public static List<String> buildProxiedUrls(String url) {
+		List<String> tries = new ArrayList<>();
+		tries.add(url);
+		for (String p : PROXY_PREFIXES) {
+			tries.add(p + url);
+		}
+		return tries;
+	}
+
+	public static void ensureProxyListUpdated(Context context) {
+		if (shouldUpdateProxyList(context)) {
+			updateProxyList(context);
+		}
 	}
 
 	// ------------------------------------------------------------------
