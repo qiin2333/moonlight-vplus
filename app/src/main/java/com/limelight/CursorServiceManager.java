@@ -167,9 +167,8 @@ public class CursorServiceManager {
     /**
      * 启动光标网络服务
      */
-    public void startService(String hostIp) {
+    public void startService() {
         if (isCursorNetworking) return;
-        this.computerIpAddress = hostIp;
         this.isCursorNetworking = true;
 
         cursorNetworkThread = new Thread(() -> {
@@ -287,11 +286,14 @@ public class CursorServiceManager {
      * @param hostAddress   主机地址（可为 null，使用上次的地址）
      */
     public void updateServiceState(boolean shouldRun, String hostAddress) {
+        if (hostAddress != null) {
+            this.computerIpAddress = hostAddress;
+        }
+
         if (shouldRun) {
-            String ip = hostAddress != null ? hostAddress : computerIpAddress;
-            if (!isCursorNetworking && ip != null) {
-                LimeLog.info("CursorNet: Enabling cursor service during stream");
-                startService(ip);
+            if (!isCursorNetworking && this.computerIpAddress != null) {
+                LimeLog.info("CursorNet: Enabling cursor service during stream with host: " + this.computerIpAddress);
+                startService();
             }
         } else {
             if (isCursorNetworking) {
