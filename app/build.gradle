@@ -10,7 +10,7 @@ if (hasGoogleServicesJson && (project.hasProperty('enableAnalytics') || gradle.s
 }
 
 android {
-    ndkVersion "27.0.12077973"
+    ndkVersion "28.2.13676358"
 
     compileSdkVersion 36
 
@@ -197,6 +197,7 @@ dependencies {
     implementation 'com.squareup:seismic:1.0.3'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
     implementation 'androidx.tvprovider:tvprovider:1.1.0'
+    implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
 
     // Firebase Analytics
     // BOM 版本说明: https://firebase.google.com/support/release-notes/android
