@@ -821,7 +821,10 @@ public class PreferenceConfiguration {
         // config.pointerFixedXVelocity = prefs.getInt(POINTER_FIXED_X_VELOCITY_PREF_STRING,0);
 
         String audioConfig = prefs.getString(AUDIO_CONFIG_PREF_STRING, DEFAULT_AUDIO_CONFIG);
-        if (audioConfig.equals("71")) {
+        if (audioConfig.equals("714")) {
+            config.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_714_SURROUND;
+        }
+        else if (audioConfig.equals("71")) {
             config.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_71_SURROUND;
         }
         else if (audioConfig.equals("51")) {

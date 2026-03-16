@@ -67,11 +67,13 @@
         <item>@string/audioconf_stereo</item>
         <item>@string/audioconf_51surround</item>
         <item>@string/audioconf_71surround</item>
+        <item>@string/audioconf_714surround</item>
     </string-array>
     <string-array name="audio_config_values" translatable="false">
         <item>2</item>
         <item>51</item>
         <item>71</item>
+        <item>714</item>
     </string-array>
 
     <!-- Don't forget to update locales_config.xml when you modify this! -->
