@@ -28,91 +28,91 @@
                         android:layout_marginVertical="5dp"
                         android:textColor="#B3FFFFFF"
                         style="@style/KeyboardKeyStyle"
-                        android:text="返回"/>
+                        android:text="@string/layout_page_device_text_5f411"/>
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="50dp"
                         android:layout_marginVertical="5dp"
                         android:tag="null"
                         style="@style/KeyboardKeyStyle"
-                        android:text="无"/>
+                        android:text="@string/layout_page_device_text_d81bb"/>
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="50dp"
                         android:layout_marginVertical="5dp"
                         android:tag="MMS"
                         style="@style/KeyboardKeyStyle"
-                        android:text="触控模式"/>
+                        android:text="@string/layout_page_device_text_01e77"/>
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="50dp"
                         android:layout_marginVertical="5dp"
                         android:tag="CMS"
                         style="@style/KeyboardKeyStyle"
-                        android:text="经典鼠标"/>
+                        android:text="@string/layout_page_device_text_03cbf"/>
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="50dp"
                         android:layout_marginVertical="5dp"
                         android:tag="TPM"
                         style="@style/KeyboardKeyStyle"
-                        android:text="触控板"/>
+                        android:text="@string/layout_page_device_text_dd502"/>
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="50dp"
                         android:layout_marginVertical="5dp"
                         android:tag="MTM"
                         style="@style/KeyboardKeyStyle"
-                        android:text="多点触控"/>
+                        android:text="@string/layout_page_device_text_d4ab3"/>
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="50dp"
                         android:layout_marginVertical="5dp"
                         android:tag="MES"
                         style="@style/KeyboardKeyStyle"
-                        android:text="触控开关"/>
+                        android:text="@string/layout_page_device_text_1a70f"/>
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="50dp"
                         android:layout_marginVertical="5dp"
                         android:tag="PKS"
                         style="@style/KeyboardKeyStyle"
-                        android:text="电脑键盘"/>
+                        android:text="@string/layout_page_device_text_1e243"/>
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="50dp"
                         android:layout_marginVertical="5dp"
                         android:tag="AKS"
                         style="@style/KeyboardKeyStyle"
-                        android:text="安卓键盘"/>
+                        android:text="@string/layout_page_device_text_42968"/>
 					<TextView
 						android:layout_width="match_parent"
 						android:layout_height="50dp"
 						android:layout_marginVertical="5dp"
 						android:tag="CSW"
 						style="@style/KeyboardKeyStyle"
-						android:text="切换配置"/>
+						android:text="@string/layout_page_device_text_34842"/>
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="50dp"
                         android:layout_marginVertical="5dp"
                         android:tag="PZM"
                         style="@style/KeyboardKeyStyle"
-                        android:text="平移/缩放"/>
+                        android:text="@string/layout_page_device_text_6c15c"/>
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="50dp"
                         android:layout_marginVertical="5dp"
                         android:tag="OGM"
                         style="@style/KeyboardKeyStyle"
-                        android:text="打开GAME MENU"/>
+                        android:text="@string/layout_page_device_text_104a1"/>
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="50dp"
                         android:layout_marginVertical="5dp"
                         android:tag="EMS"
                         style="@style/KeyboardKeyStyle"
-                        android:text="编辑模式"/>
+                        android:text="@string/layout_item_page_super_menu_text_ce0e8"/>
                 </LinearLayout>
             </ScrollView>
 

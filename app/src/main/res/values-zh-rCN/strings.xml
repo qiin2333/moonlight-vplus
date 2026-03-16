@@ -144,7 +144,6 @@
     <string name="game_menu_bitrate_adjustment_failed">码率调整失败</string>
     <string name="game_menu_ok">确定</string>
     <string name="game_menu_bitrate_range">码率范围:</string>
-    <string name="game_menu_bitrate_range_value">0.5 - 200 Mbps</string>
     <string name="game_menu_bitrate_tip">拖动滑动条实时调整码率, 需要更高的码率请到设置菜单操作。</string>
     <!-- Add computer manually activity -->
     <string name="title_add_pc"> new\nDianLao () </string>
@@ -191,7 +190,7 @@
     <string name="summary_checkbox_enable_pip">允许多任务时观看串流画面（但不操作）</string>
     <string name="category_audio_settings">音频设置</string>
     <string name="title_audio_config_list"> 环绕声设置 </string>
-    <string name="summary_audio_config_list"> 为家庭影院系统启用5.1或7.1环绕声 </string>
+    <string name="summary_audio_config_list">为家庭影院系统启用5.1、7.1或7.1.4环绕声。7.1.4需要Android 12+</string>
     <string name="category_input_settings">输入设置</string>
     <string name="title_checkbox_touchscreen_trackpad">将触控屏作为触控板使用</string>
     <string name="summary_checkbox_touchscreen_trackpad">如果启用，则将触控屏作为触控板使用。如果禁用，则启用多点触控模式</string>
@@ -204,17 +203,14 @@
     <string name="summary_checkbox_sync_touch_event_with_display">打开后触控事件上报率与显示刷新率同步，比如显示为60Hz，那么触控与之同步。不一定有用，习惯哪个用哪个。Moonlight原版相当于禁用该项。</string>
 
     <string name="title_checkbox_enable_keyboard_toggle_in_native_touch">多点触控模式下打开本地键盘切换</string>
-    <string name="summary_checkbox_enable_keyboard_toggle_in_native_touch">\t</string>
     <string name="title_seekbar_keyboard_toggle_fingers_native_touch">轻敲手指数量</string>
     <string name="summary_seekbar_keyboard_toggle_fingers_native_touch">轻敲切换本地键盘的最少手指数量。\n仅在多点触控模式生效，触摸板模式3指即可切换本地键盘(不受此配置影响)。</string>
-    <string name="suffix_seekbar_keyboard_toggle_fingers_native_touch"></string>
 
     <string name="title_checkbox_multi_controller"> 自动检测手柄 </string>
     <string name="summary_checkbox_multi_controller"> 禁用此项所有手柄将视为一个手柄 </string>
     <string name="title_checkbox_vibrate_fallback"> 用设备震动模拟游戏震动效果 </string>
     <string name="summary_checkbox_vibrate_fallback"> 如果你的手柄不支持震动，则震动设备以模拟游戏震动效果 </string>
     <string name="title_seekbar_deadzone"> 调整摇杆死区 </string>
-    <string name="suffix_seekbar_deadzone">%</string>
     <string name="title_checkbox_xb1_driver">Xbox 360/One 手柄驱动 </string>
     <string name="summary_checkbox_xb1_driver"> 为缺少原生Xbox手柄支持的设备启用内置USB驱动 </string>
     <string name="title_checkbox_usb_bind_all"> 覆盖安卓手柄支持 </string>
@@ -234,11 +230,9 @@
     <string name="title_enhanced_touch_zone_divider">触点灵敏度分区调控</string>
     <string name="summary_enhanced_touch_zone_divider">增强型触控与原生触控的分区位置，小于50%代表在屏幕左边的某个位置分区，大于50%代表分割线在右边</string>
     <string name="dialog_title_enhanced_touch_zone_divider">增强型触控与原生触控的分区位置，小于50%代表在屏幕左边的某个位置分区，大于50%代表分割线在右边</string>
-    <string name="suffix_enhanced_touch_zone_divider">%</string>
     <string name="title_pointer_velocity_factor">触点灵敏度</string>
     <string name="summary_pointer_velocity_factor">设置增强型触控区内的触点移速比例。100% = 禁用，小于100%为缩小，大于100%为放大</string>
     <string name="dialog_title_pointer_velocity_factor">增强型触控区内的触点移速比例</string>
-    <string name="suffix_pointer_velocity_factor">%</string>
     <string name="title_fixed_x_velocity">设置增强型触控区内触点的水平方向固定移速</string>
     <string name="summary_fixed_x_velocity">设置增强型触控区内触点的水平方向固定移速. 0像素 = 禁用，大于0将禁用水平方向的移速比例，改为固定移速</string>
     <string name="dialog_title_fixed_x_velocity">触点水平方向固定移速</string>
@@ -265,7 +259,6 @@
     <string name="summary_checkbox_enable_float_ball">显示一个可交互的悬浮球，用于快速操作</string>
     <string name="title_seekbar_float_ball_auto_hide_delay">自动隐藏延迟</string>
     <string name="summary_seekbar_float_ball_auto_hide_delay">悬浮球自动隐藏到屏幕边缘的时间</string>
-    <string name="suffix_seekbar_float_ball_auto_hide_delay_ms">ms</string>
 
     <!-- 悬浮球手势动作 -->
     <string name="title_float_ball_single_click_action">单击动作</string>
@@ -311,7 +304,6 @@
     <string name="summary_enable_hdr_high_brightness">启用 HDR 串流时强制使用最高屏幕亮度</string>
     <string name="title_hdr_mode">HDR 模式</string>
     <string name="summary_hdr_mode">选择 HDR 传输函数：HDR10 (PQ) 适用于大多数显示器，HLG 适用于广播内容</string>
-    <string name="hdr_mode_hdr10">HDR10 (PQ)</string>
     <string name="hdr_mode_hlg">HLG (混合对数伽马)</string>
     <string name="title_enable_perf_overlay">性能监控图层</string>
     <string name="summary_enable_perf_overlay">显示实时的串流监控数据，盯帧必备！</string>
@@ -332,7 +324,6 @@
     <string name="mic_stats_continuity">音频连续性: %.1f%% (捕获:%d 编码:%d 发送:%d 丢弃:%d)</string>
     <string name="title_osc_opacity">更改屏幕按钮透明度</string>
     <string name="dialog_title_osc_opacity">透明度</string>
-    <string name="suffix_osc_opacity">%</string>
     <string name="summary_osc_opacity">令屏幕按钮变得更透明/更不透明</string>
     <string name="nettest_text_failure">您设备的当前网络似乎正在阻止Moonlight。连接到该网络时，可能无法通过互联网串流。
 \n
@@ -352,7 +343,6 @@
     <string name="pcview_menu_header_offline">离线</string>
     <string name="pcview_menu_header_online">在线</string>
     <string name="resolution_prefix_native">本地</string>
-    <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
     <string name="text_native_res_dialog">流媒体服务器可能不支持原始分辨率或者 FPS。您可能需要手动为主机配置匹配的自定义显示模式。
 \n
 \n如果您选择在 NVIDIA 控制面板中创建与屏幕设置相匹配的自定义分辨率，请确保您已阅读并理解 NVIDIA 关于显示器可能损坏、电脑不稳定和其他潜在问题的警告。
@@ -377,19 +367,10 @@
     <string name="audioconf_stereo">立体声</string>
     <string name="audioconf_51surround">5.1环绕声</string>
     <string name="audioconf_71surround">7.1环绕声</string>
+    <string name="audioconf_714surround">7.1.4 环绕声 (Atmos)</string>
     <string name="videoformat_auto">自动（推荐）</string>
     <string name="videoformat_hevcalways">首选 HEVC</string>
     <string name="title_frame_pacing">视频帧速调节</string>
-    <string name="resolution_360p">360p</string>
-    <string name="resolution_480p">480p</string>
-    <string name="resolution_1440p">1440p</string>
-    <string name="resolution_4k">4K</string>
-    <string name="fps_30">30 FPS</string>
-    <string name="fps_60">60 FPS</string>
-    <string name="fps_90">90 FPS</string>
-    <string name="fps_120">120 FPS</string>
-    <string name="resolution_1080p">1080p</string>
-    <string name="resolution_720p">720p</string>
     <string name="pacing_balanced">平衡</string>
     <string name="pacing_smoothness">优先视频流畅度（可能会显著增大延迟）</string>
     <string name="summary_setup_guide">查看有关如何设置游戏电脑以进行流传输的说明</string>
@@ -402,13 +383,15 @@
     <string name="about_dialog_description">Moonlight V+ 是专为 Foundation Sunshine 打造的增强客户端，为您带来极致的游戏串流体验。</string>
     <string name="about_dialog_project_info">基于 Moonlight-Android 开源项目，由基地社区倾力打造</string>
     <string name="about_dialog_thanks">感谢您选择 Moonlight V+！如果觉得好用，欢迎在 GitHub 上点个 Star 支持我们 ⭐</string>
-    <string name="about_dialog_github">GitHub</string>
     <string name="about_dialog_star">Star 项目</string>
     <string name="about_dialog_qq">加入QQ群</string>
     <string name="about_dialog_close">关闭</string>
     <string name="check_for_updates">检查更新</string>
     <string name="summary_check_for_updates">检查是否有新版本可用</string>
     <string name="category_help">帮助</string>
+    <string name="category_mic_settings">麦克风设置</string>
+    <string name="category_audio_vibration_settings">音频振动</string>
+    <string name="category_connection_settings">连接设置</string>
     <string name="title_setup_guide">安装向导</string>
     <string name="title_troubleshooting">解决方案向导</string>
     <string name="summary_troubleshooting">查看有关诊断和修复常见流传输问题的提示</string>
@@ -434,7 +417,6 @@
     <string name="summary_checkbox_enable_mic">将设备麦克风串流到主机，需Sunshine基地版本在20250720以上的主机。</string>
     <string name="title_seekbar_mic_bitrate">麦克风传输音质</string>
     <string name="summary_seekbar_mic_bitrate">调整麦克风重定向的音频质量。更高的比特率提供更好的音频质量，但会使用更多带宽。</string>
-    <string name="suffix_seekbar_mic_bitrate_kbps">kbps</string>
     <string name="title_list_mic_icon_color">麦克风图标颜色</string>
     <string name="summary_list_mic_icon_color">选择麦克风按钮图标的颜色</string>
     <string name="title_checkbox_reduce_refresh_rate">允许降低刷新率</string>
@@ -447,7 +429,6 @@
     <string name="pair_pairing_help">如果你的主机运行的是 Sunshine，那请前往Sunshine的网页界面输入PIN码。</string>
     <string name="pcview_menu_eol">NVIDIA GameStream 终止服务</string>
     <string name="perf_overlay_hostprocessinglatency">主机处理延迟最小值/最大值/平均值: %1$.1f/%2$.1f/%3$.1f ms</string>
-    <string name="fps_suffix_fps">FPS</string>
     <string name="title_native_fps_dialog">原生 FPS 警告</string>
     <string name="category_gamepad_settings">手柄设置</string>
     <string name="title_checkbox_gamepad_touchpad_as_mouse">始终使用触摸板控制鼠标</string>
@@ -742,12 +723,260 @@
     <string name="summary_checkbox_audio_vibration">根据游戏内低音和音频事件振动设备</string>
     <string name="title_seekbar_audio_vibration_strength">振动强度</string>
     <string name="summary_seekbar_audio_vibration_strength">调整音频驱动振动的强度</string>
-    <string name="suffix_seekbar_audio_vibration_strength">%</string>
     <string name="title_list_audio_vibration_mode">振动路由</string>
     <string name="summary_list_audio_vibration_mode">选择振动的传递方式</string>
     <string name="title_list_audio_vibration_scene">场景模式</string>
     <string name="summary_list_audio_vibration_scene">根据内容类型优化振动模式</string>
 
+    <!-- 编解码与屏幕能力检测 -->
+    <string name="title_capability_diagnostic">编解码与屏幕能力检测</string>
+    <string name="summary_capability_diagnostic">检测设备的 HDR 支持、解码器能力等信息</string>
+
+    <!-- 双击拖动 -->
+    <string name="title_enable_double_click_drag">启用触控板双击拖动</string>
+    <string name="summary_enable_double_click_drag">双击并按住后可拖动选择</string>
+
+    <!-- 双击时间阈值 -->
+    <string name="title_seekbar_double_tap_time_threshold">双击时间阈值</string>
+    <string name="summary_seekbar_double_tap_time_threshold">调整双击识别的时间间隔</string>
+    <string name="dialog_seekbar_double_tap_time_threshold">调整双击识别的时间间隔，数值越大越容易触发双击</string>
+
+    <!-- 本地光标 -->
+    <string name="title_local_cursor_rendering">显示一个本地光标</string>
+    <string name="summary_local_cursor_rendering">显示一个本地光标，可通过触摸板模式控制光标</string>
+
+    <!-- 特殊按键映射 -->
+    <string name="title_special_key_map">特殊按键映射</string>
+    <string name="summary_special_key_map">键盘Home键映射Esc键，Esc+数字键/符号映射F1到F12，Esc+Q键映射串流菜单，安卓截图键映射Windows截图，安卓上一首/播放暂停/下一首分别映射到F5/F10/F11。</string>
+
+    <!-- 修复鼠标中键 -->
+    <string name="title_fix_mouse_middle">修复鼠标中键</string>
+    <string name="summary_fix_mouse_middle">在一些设备上鼠标中键可能被识别为返回键，选中尝试修复此问题。</string>
+
+    <!-- 修复鼠标滚轮 -->
+    <string name="title_fix_mouse_wheel">修复本地鼠标滚轮</string>
+    <string name="summary_fix_mouse_wheel">在一些设备上使用本地鼠标滚轮可能产生触屏滑动事件，选中尝试修复此问题。</string>
+
+    <!-- 竖屏半高 -->
+    <string name="title_half_height_osc_portrait">竖屏模式半高</string>
+    <string name="summary_half_height_osc_portrait">竖屏下控制按钮将显示于下半屏</string>
+
+    <!-- 不断开连接 -->
+    <string name="title_extreme_resume">不断开连接</string>
+    <string name="summary_extreme_resume">切换应用或锁屏时保持连接不断开，回到moonlight时可瞬间恢复。注意：后台挂起时仍会消耗流量和电量。</string>
+
+    <!-- 后台音频 -->
+    <string name="title_background_audio">后台播放音频</string>
+    <string name="summary_background_audio">启用不断开连接后，切换到后台时是否需要播放音频</string>
+
+    <!-- STUN 公网 IP -->
+    <string name="title_enable_stun">获取公网 IP</string>
+    <string name="summary_enable_stun">这会尝试利用 STUN 服务器获取被控端的公网访问方式，以便在离开局域网环境后继续连接。但此功能可能会导致无公网 IP 用户扫描变慢</string>
+
     <!-- AppView Top Panel -->
     <string name="appview_display_selection_title">显示器选择</string>
+
+    <!-- Layout hardcoded Chinese strings (auto-extracted) -->
+    <string name="layout_capability_diagnostic_text_a5e80">能力检测</string>
+    <string name="layout_capability_diagnostic_text_41b60">HDR · 解码器 · 屏幕</string>
+    <string name="layout_capability_diagnostic_text_79d3a">复制</string>
+    <string name="layout_pc_view_cd_1daed">场景1</string>
+    <string name="layout_pc_view_cd_f2a94">场景2</string>
+    <string name="layout_pc_view_cd_0a468">场景3</string>
+    <string name="layout_pc_view_cd_94f3b">场景4</string>
+    <string name="layout_pc_view_cd_4b18b">场景5</string>
+    <string name="layout_address_list_item_text_12b27">本地网络</string>
+    <string name="layout_address_list_item_cd_30f7d">连接</string>
+    <string name="layout_config_item_text_c8ce4">重命名</string>
+    <string name="layout_config_item_text_2f4aa">删除</string>
+    <string name="layout_custom_dialog_text_c9831">启用王冠菜单</string>
+    <string name="layout_custom_dialog_text_6d521">睡眠</string>
+    <string name="layout_custom_dialog_text_c3992">退出</string>
+    <string name="layout_custom_dialog_text_f090a">特殊按键 Shortcuht</string>
+    <string name="layout_custom_dialog_text_cf458">码率调整</string>
+    <string name="layout_custom_dialog_cd_99c74">提示信息</string>
+    <string name="layout_custom_dialog_text_6b362">当前: 10 Mbps</string>
+    <string name="layout_custom_dialog_text_90bba">体感助手 · Gyro Control</string>
+    <string name="layout_details_dialog_text_4bcc9">详细信息</string>
+    <string name="layout_dlg_easytier_panel_text_7ae64">网络状态</string>
+    <string name="layout_dlg_easytier_panel_text_5117b">编辑配置</string>
+    <string name="layout_dlg_easytier_panel_cd_4f8d4">刷新状态</string>
+    <string name="layout_dlg_easytier_panel_text_7095b">网络名称 (Network Name)</string>
+    <string name="layout_dlg_easytier_panel_hint_99c30">例如: easytier</string>
+    <string name="layout_dlg_easytier_panel_text_89d10">网络密钥 (Network Secret)</string>
+    <string name="layout_dlg_easytier_panel_text_4af73">本机虚拟 IPv4 地址 (掩码默认为 /24)</string>
+    <string name="layout_dlg_easytier_panel_hint_8913a">例如: 10.0.0.6</string>
+    <string name="layout_dlg_easytier_panel_text_ed11e">监听器 (Listeners, 每行一个)</string>
+    <string name="layout_dlg_easytier_panel_hint_388a0">例如: udp://0.0.0.0:11010</string>
+    <string name="layout_dlg_easytier_panel_text_89168">对等节点 (Peers, 每行一个)</string>
+    <string name="layout_dlg_easytier_panel_hint_eabff">例如: tcp://1.2.3.4:11010</string>
+    <string name="layout_dlg_easytier_panel_text_537e0">高级功能标志 (Flags)</string>
+    <string name="layout_dlg_easytier_panel_text_e7e21">核心网络行为</string>
+    <string name="layout_dlg_easytier_panel_text_4ad29">使用 Smoltcp</string>
+    <string name="layout_dlg_easytier_panel_text_6785a">延迟优先</string>
+    <string name="layout_dlg_easytier_panel_text_faebe">禁用 P2P (强制中继)</string>
+    <string name="layout_dlg_easytier_panel_text_fd3ab">私有模式</string>
+    <string name="layout_dlg_easytier_panel_text_c2266">禁用 IPv6</string>
+    <string name="layout_dlg_easytier_panel_text_416db">代理与协议</string>
+    <string name="layout_dlg_easytier_panel_text_93070">启用 KCP 代理</string>
+    <string name="layout_dlg_easytier_panel_text_6ea99">禁用 KCP 输入</string>
+    <string name="layout_dlg_easytier_panel_text_6618e">启用 QUIC 代理</string>
+    <string name="layout_dlg_easytier_panel_text_02eb9">禁用 QUIC 输入</string>
+    <string name="layout_dlg_easytier_panel_text_4b503">使用系统代理转发</string>
+    <string name="layout_dlg_easytier_panel_text_9c403">安全与连接</string>
+    <string name="layout_dlg_easytier_panel_text_e7fa3">禁用加密</string>
+    <string name="layout_dlg_easytier_panel_text_c5d9c">禁用 UDP 打洞</string>
+    <string name="layout_dlg_easytier_panel_text_8ccac">禁用对称 NAT 打洞</string>
+    <string name="layout_dlg_iperf3_test_text_b6031">服务器IP/主机名</string>
+    <string name="layout_dlg_iperf3_test_text_2f727">测试参数</string>
+    <string name="layout_dlg_iperf3_test_text_3226b">方向:</string>
+    <string name="layout_dlg_iperf3_test_text_d5a73">上传</string>
+    <string name="layout_dlg_iperf3_test_text_f26ef">下载</string>
+    <string name="layout_dlg_iperf3_test_text_c19e7">持续时间(s):</string>
+    <string name="layout_dlg_iperf3_test_text_9da95">端口:</string>
+    <string name="layout_dlg_iperf3_test_text_c7731">带宽:</string>
+    <string name="layout_dlg_iperf3_test_hint_2c7ff">例如100M、1G</string>
+    <string name="layout_dlg_iperf3_test_text_f2f61">附加iPerf3参数（可选）</string>
+    <string name="layout_dlg_iperf3_test_hint_9a865">例如，-f M</string>
+    <string name="layout_dlg_peer_info_item_text_f5873">虚拟 IP:</string>
+    <string name="layout_dlg_peer_info_item_text_e960e">NAT 类型:</string>
+    <string name="layout_dlg_peer_info_item_text_9d9a3">延迟:</string>
+    <string name="layout_dlg_peer_info_item_text_681b4">流量 (收/发):</string>
+    <string name="layout_game_menu_super_empty_text_a7970">还没有炒鸡指令哦</string>
+    <string name="layout_game_menu_super_empty_text_fac9d">快去用 Sunshine 基地版 为应用添加超级指令吧~ (๑•̀ㅂ•́)و✧</string>
+    <string name="layout_item_key_value_text_0952a">分区 1</string>
+    <string name="layout_item_key_value_hint_dd44f">分区名称，为空时为键值名</string>
+    <string name="layout_item_page_super_menu_text_ce0e8">编辑模式</string>
+    <string name="layout_keyboard_mini_text_3ae7b">返回键盘</string>
+    <string name="layout_number_seekbar_text_e12e7">鼠标透传灵敏度</string>
+    <string name="layout_page_analog_stick_text_dedb8">类型 : 手柄摇杆</string>
+    <string name="layout_page_analog_stick_text_34170">摇杆</string>
+    <string name="layout_page_analog_stick_text_4e6d6">左摇杆</string>
+    <string name="layout_page_analog_stick_text_faf56">右摇杆</string>
+    <string name="layout_page_analog_stick_text_fb050">摇杆中键</string>
+    <string name="layout_page_analog_stick_text_53e58">相对移动模式</string>
+    <string name="layout_page_analog_stick_text_9b4ba">边框颜色</string>
+    <string name="layout_page_analog_stick_text_3142e">边框按下颜色</string>
+    <string name="layout_page_analog_stick_text_4573a">背景颜色</string>
+    <string name="layout_page_analog_stick_text_69066">字体颜色</string>
+    <string name="layout_page_analog_stick_text_4b292">字体按下颜色</string>
+    <string name="layout_page_config_text_9eba2">当前配置</string>
+    <string name="layout_page_config_text_83a23">开启触摸</string>
+    <string name="layout_page_config_text_f4b7c">触控板模式</string>
+    <string name="layout_page_config_text_8ea81">多点触控模式</string>
+    <string name="layout_page_config_text_cd2c1">游戏震动</string>
+    <string name="layout_page_config_text_f4651">按键震动</string>
+    <string name="layout_page_config_text_66ab5">新增</string>
+    <string name="layout_page_config_text_df603">退出王冠配置</string>
+    <string name="layout_page_device_text_5f411">返回</string>
+    <string name="layout_page_device_text_d81bb">无</string>
+    <string name="layout_page_device_text_01e77">触控模式</string>
+    <string name="layout_page_device_text_03cbf">经典鼠标</string>
+    <string name="layout_page_device_text_dd502">触控板</string>
+    <string name="layout_page_device_text_d4ab3">多点触控</string>
+    <string name="layout_page_device_text_1a70f">触控开关</string>
+    <string name="layout_page_device_text_1e243">电脑键盘</string>
+    <string name="layout_page_device_text_42968">安卓键盘</string>
+    <string name="layout_page_device_text_34842">切换配置</string>
+    <string name="layout_page_device_text_6c15c">平移/缩放</string>
+    <string name="layout_page_device_text_104a1">打开GAME MENU</string>
+    <string name="layout_page_digital_combine_button_text_3bb27">类型 : 组合键</string>
+    <string name="layout_page_digital_combine_button_text_bab9f">显示文本</string>
+    <string name="layout_page_digital_combine_button_text_499ef">一二三四五</string>
+    <string name="layout_page_digital_combine_button_text_0c4af">键值1</string>
+    <string name="layout_page_digital_combine_button_text_ec25a">键值2</string>
+    <string name="layout_page_digital_combine_button_text_001d1">键值3</string>
+    <string name="layout_page_digital_combine_button_text_2c072">键值4</string>
+    <string name="layout_page_digital_combine_button_text_a388b">键值5</string>
+    <string name="layout_page_digital_common_button_text_02c2a">类型 : 普通按键</string>
+    <string name="layout_page_digital_common_button_text_577e6">键值</string>
+    <string name="layout_page_digital_movable_button_text_e279e">类型 : 可移动按键</string>
+    <string name="layout_page_digital_movable_button_text_3d9c9">从屏幕中心传输触摸事件\n否则传输鼠标移动事件</string>
+    <string name="layout_page_digital_pad_text_3c1b5">类型 : 十字键</string>
+    <string name="layout_page_digital_stick_text_23611">类型 : 按键摇杆</string>
+    <string name="layout_page_digital_stick_text_6c35d">摇杆键值</string>
+    <string name="layout_page_digital_switch_button_text_a96b6">类型 : 开关按键</string>
+    <string name="layout_page_edit_text_b8a5e">退出编辑模式</string>
+    <string name="layout_page_edit_text_e8341">长按移动按键</string>
+    <string name="layout_page_edit_text_2c372">新增普通按钮</string>
+    <string name="layout_page_edit_text_c0c18">新增开关按钮</string>
+    <string name="layout_page_edit_text_5817f">新增可移动按钮</string>
+    <string name="layout_page_edit_text_061fc">新增十字键</string>
+    <string name="layout_page_edit_text_e0cc1">新增手柄摇杆</string>
+    <string name="layout_page_edit_text_6d757">新增键盘摇杆</string>
+    <string name="layout_page_edit_text_9851e">新增隐藏手柄摇杆</string>
+    <string name="layout_page_edit_text_b4881">新增隐藏键盘摇杆</string>
+    <string name="layout_page_edit_text_e19e5">新增简化信息</string>
+    <string name="layout_page_edit_text_ed364">新增组合键</string>
+    <string name="layout_page_edit_text_1483c">新增轮盘按键</string>
+    <string name="layout_page_edit_text_bd823">新增组按键</string>
+    <string name="layout_page_group_button_text_6db87">类型 : 组按键</string>
+    <string name="layout_page_group_button_text_b19b4">隐藏按钮 (轮盘使用下)</string>
+    <string name="layout_page_group_button_text_f57fc">按住可移动按键</string>
+    <string name="layout_page_group_button_text_7bc0a">独立运作(不受父按键显隐影响子按键)</string>
+    <string name="layout_page_group_button_text_1eb1a">显示子按键</string>
+    <string name="layout_page_group_button_text_42edc">位置属性跟随</string>
+    <string name="layout_page_group_button_text_63921">其他属性跟随</string>
+    <string name="layout_page_group_button_text_fd8c4">选择子按键</string>
+    <string name="layout_page_group_button_text_e1a27">删除请输入 : DELETE\n注意 : 该操作将删除所有子按键</string>
+    <string name="layout_page_invisible_analog_stick_text_5e3cb">类型 : 隐藏式手柄摇杆</string>
+    <string name="layout_page_invisible_digital_stick_text_e60ec">类型 : 隐藏式按键摇杆</string>
+    <string name="layout_page_simplify_performance_text_58923">类型 : 串流信息</string>
+    <string name="layout_page_simplify_performance_text_7ec90">文字颜色</string>
+    <string name="layout_page_simplify_performance_text_1673c">显示文本(可换行)</string>
+    <string name="layout_page_simplify_performance_text_4b9c3">重置</string>
+    <string name="layout_page_simplify_performance_text_e83a2">确认</string>
+    <string name="layout_page_simplify_performance_text_98e2e">解码器:      ##解码器## \n分辨率:      ##分辨率## \n丢帧率:      ##丢帧率##\n主机延时:  ##主机延时##\n网络延时:  ##网络延时##\n解码时间:  ##解码时间##\n带宽:         ##带宽## \n帧率:         ##帧率## \n渲染:         ##渲染延迟## \n时间:         HH:MM:SS \n</string>
+    <string name="layout_page_super_menu_text_899a4">配置设置</string>
+    <string name="layout_page_super_menu_text_e2f14">退出串流</string>
+    <string name="layout_page_wheel_pad_text_57047">类型 : 轮盘按键</string>
+    <string name="layout_page_wheel_pad_text_c814c">弹出标签</string>
+    <string name="layout_page_wheel_pad_hint_84265">留空则为直接模式</string>
+    <string name="layout_page_wheel_pad_text_43868">屏幕中心显示轮盘</string>
+    <string name="layout_page_wheel_pad_text_91286">悬停时预览组按键</string>
+    <string name="layout_page_wheel_pad_text_cfb46">键值(从上顺时针开始)</string>
+    <string name="layout_page_wheel_pad_text_97f5a">按下颜色</string>
+    <string name="layout_page_wheel_pad_text_3ed82">分区文字颜色</string>
+    <string name="layout_page_wheel_pad_text_58796">中心文字颜色</string>
+    <string name="layout_page_window_text_625fb">取消</string>
+
+
+    <!-- app:text Chinese strings (auto-extracted) -->
+    <string name="apptext_pg_analog_stick_4b26d">摇杆死区百分比</string>
+    <string name="apptext_pg_analog_stick_b7e19">摇杆半径</string>
+    <string name="apptext_pg_analog_stick_ae177">边框厚度</string>
+    <string name="apptext_pg_analog_stick_6896d">层级</string>
+    <string name="apptext_pg_analog_stick_5f15e">字体大小</string>
+    <string name="apptext_pg_config_835d4">触控板灵敏度</string>
+    <string name="apptext_pg_config_3f729">虚拟鼠标滚轮速度</string>
+    <string name="apptext_pg_digital_combine_button_ea5a1">宽</string>
+    <string name="apptext_pg_digital_combine_button_4296d">高</string>
+    <string name="apptext_pg_digital_combine_button_3ebb3">边框圆角</string>
+    <string name="apptext_pg_digital_movable_button_e12e7">鼠标透传灵敏度</string>
+    <string name="apptext_pg_edit_458a8">网格宽度</string>
+    <string name="apptext_pg_simplify_performance_0103e">圆角</string>
+    <string name="apptext_pg_wheel_pad_163a1">分区数量</string>
+    <string name="apptext_pg_wheel_pad_4b2d6">大小 (直径)</string>
+    <string name="apptext_pg_wheel_pad_881da">中心半径(%)</string>
+    <string name="apptext_pg_wheel_pad_a0e87">分区文字大小 (%)</string>
+    <string name="apptext_pg_wheel_pad_6c613">触发器文字大小 (%)</string>
+    <string name="apptext_pg_wheel_pad_ea2ce">中心预览文字大小 (%)</string>
+
+    <!-- 缺失的翻译补全 -->
+    <string name="dialog_virtual_keyboard_hint">点击按键来创建组合键</string>
+    <string name="error_interrupted">操作已中断</string>
+    <string name="float_ball_action_lock_screen">锁屏</string>
+    <string name="float_ball_action_screenshot">截图</string>
+    <string name="float_ball_action_toggle_visibility">切换悬浮球显隐</string>
+    <string name="game_menu_toggle_all_keyboard">切换电脑键盘</string>
+    <string name="menu">菜单</string>
+    <string name="no_app_found_for_streaming">未找到可串流的应用</string>
+    <string name="notification_icon">通知图标</string>
+    <string name="pacing_precise_sync">精确同步</string>
+    <string name="summary_checkbox_control_only">仅建立控制流连接，不传输音视频流。适用于远程输入控制场景。需要 Sunshine 服务端支持仅控制模式。</string>
+    <string name="summary_checkbox_enable_background_audio">隐藏整个窗口并在后台播放音频，可一边使用其他应用一边收听</string>
+    <string name="title_checkbox_control_only">仅控制模式</string>
+    <string name="title_checkbox_enable_background_audio">后台音频模式</string>
+    <string name="title_settings">设置</string>
+
 </resources>

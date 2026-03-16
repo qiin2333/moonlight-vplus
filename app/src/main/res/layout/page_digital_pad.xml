@@ -28,7 +28,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="类型 : 十字键"/>
+                    android:text="@string/layout_page_digital_pad_text_3c1b5"/>
             </LinearLayout>
             <LinearLayout
                 android:orientation="vertical"
@@ -42,7 +42,7 @@
                     android:layout_weight="1"
                     android:gravity="center_vertical"
                     android:layout_marginBottom="5dp"
-                    android:text="键值" />
+                    android:text="@string/layout_page_digital_common_button_text_577e6" />
                 <LinearLayout
                     android:orientation="vertical"
                     android:layout_width="match_parent"
@@ -113,7 +113,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="宽"
+                app:text="@string/apptext_pg_digital_combine_button_ea5a1"
                 app:max="100"
                 app:min="0"
                 app:progress="100" />
@@ -122,7 +122,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="高"
+                app:text="@string/apptext_pg_digital_combine_button_4296d"
                 app:max="100"
                 app:min="0"
                 app:progress="100" />
@@ -131,7 +131,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="边框厚度"
+                app:text="@string/apptext_pg_analog_stick_ae177"
                 app:max="10"
                 app:min="0"
                 app:progress="3"/>
@@ -140,7 +140,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="层级"
+                app:text="@string/apptext_pg_analog_stick_6896d"
                 app:max="140"
                 app:min="40" />
             <LinearLayout
@@ -153,7 +153,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="边框颜色" />
+                    android:text="@string/layout_page_analog_stick_text_9b4ba" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_digital_pad_normal_color"
                     android:layout_width="100dp"
@@ -173,7 +173,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="边框按下颜色" />
+                    android:text="@string/layout_page_analog_stick_text_3142e" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_digital_pad_pressed_color"
                     android:layout_width="100dp"
@@ -193,7 +193,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="背景颜色" />
+                    android:text="@string/layout_page_analog_stick_text_4573a" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_digital_pad_background_color"
                     android:layout_width="100dp"
@@ -213,13 +213,13 @@
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:text="复制"/>
+                    android:text="@string/layout_capability_diagnostic_text_79d3a"/>
                 <Button
                     android:id="@+id/page_digital_pad_delete"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:text="删除"/>
+                    android:text="@string/layout_config_item_text_2f4aa"/>
             </LinearLayout>
         </LinearLayout>
     </ScrollView>

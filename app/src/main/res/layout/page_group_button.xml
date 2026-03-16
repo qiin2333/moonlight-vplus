@@ -27,7 +27,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="类型 : 组按键"/>
+                    android:text="@string/layout_page_group_button_text_6db87"/>
             </LinearLayout>
             <LinearLayout
                 android:layout_width="match_parent"
@@ -41,7 +41,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="隐藏按钮 (轮盘使用下)"
+                    android:text="@string/layout_page_group_button_text_b19b4"
                     android:textSize="16sp" />
 
                 <Switch
@@ -62,7 +62,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="按住可移动按键"
+                    android:text="@string/layout_page_group_button_text_f57fc"
                     android:textSize="16sp" />
 
                 <Switch
@@ -83,7 +83,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="独立运作(不受父按键显隐影响子按键)"
+                    android:text="@string/layout_page_group_button_text_7bc0a"
                     android:textSize="16sp" />
 
                 <Switch
@@ -101,7 +101,7 @@
                     android:id="@+id/page_group_button_child_visible"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:text="显示子按键"
+                    android:text="@string/layout_page_group_button_text_1eb1a"
                     android:textColor="#B3FFFFFF"/>
             </LinearLayout>
             <LinearLayout
@@ -114,13 +114,13 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="显示文本" />
+                    android:text="@string/layout_page_digital_combine_button_text_bab9f" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_group_button_text"
                     android:layout_width="100dp"
                     android:layout_height="match_parent"
                     android:gravity="center"
-                    android:text="一二三四五"
+                    android:text="@string/layout_page_digital_combine_button_text_499ef"
                     android:background="@drawable/enabled_square"
                     android:textSize="15dp" />
             </LinearLayout>
@@ -133,7 +133,7 @@
                     android:id="@+id/page_group_button_child_position_attribute_follow"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:text="位置属性跟随"
+                    android:text="@string/layout_page_group_button_text_42edc"
                     android:textColor="#B3FFFFFF"/>
             </LinearLayout>
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
@@ -163,7 +163,7 @@
                     android:id="@+id/page_group_button_child_other_attribute_follow"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:text="其他属性跟随"
+                    android:text="@string/layout_page_group_button_text_63921"
                     android:textColor="#B3FFFFFF"/>
             </LinearLayout>
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
@@ -171,7 +171,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="宽"
+                app:text="@string/apptext_pg_digital_combine_button_ea5a1"
                 app:max="100"
                 app:min="0"
                 app:progress="100" />
@@ -180,7 +180,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="高"
+                app:text="@string/apptext_pg_digital_combine_button_4296d"
                 app:max="100"
                 app:min="0"
                 app:progress="100" />
@@ -189,7 +189,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="边框圆角"
+                app:text="@string/apptext_pg_digital_combine_button_3ebb3"
                 app:max="100"
                 app:min="0"
                 app:progress="0"/>
@@ -198,7 +198,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="边框厚度"
+                app:text="@string/apptext_pg_analog_stick_ae177"
                 app:max="10"
                 app:min="0"
                 app:progress="3"/>
@@ -207,7 +207,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="层级"
+                app:text="@string/apptext_pg_analog_stick_6896d"
                 app:max="140"
                 app:min="40" />
             <LinearLayout
@@ -229,7 +229,7 @@
                             android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:gravity="center_vertical"
-                            android:text="选择子按键"/>
+                            android:text="@string/layout_page_group_button_text_fd8c4"/>
                         <View
                             android:layout_width="30dp"
                             android:layout_height="30dp"
@@ -248,7 +248,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="边框颜色" />
+                    android:text="@string/layout_page_analog_stick_text_9b4ba" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_group_button_normal_color"
                     android:layout_width="100dp"
@@ -268,7 +268,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="边框按下颜色" />
+                    android:text="@string/layout_page_analog_stick_text_3142e" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_group_button_pressed_color"
                     android:layout_width="100dp"
@@ -288,7 +288,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="背景颜色" />
+                    android:text="@string/layout_page_analog_stick_text_4573a" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_group_button_background_color"
                     android:layout_width="100dp"
@@ -305,7 +305,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="字体大小"
+                app:text="@string/apptext_pg_analog_stick_5f15e"
                 app:max="150"
                 app:min="10"
                 app:progress="63"/>
@@ -319,7 +319,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="字体颜色" />
+                    android:text="@string/layout_page_analog_stick_text_69066" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_group_button_normal_text_color"
                     android:layout_width="100dp"
@@ -339,7 +339,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="字体按下颜色" />
+                    android:text="@string/layout_page_analog_stick_text_4b292" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_group_button_pressed_text_color"
                     android:layout_width="100dp"
@@ -370,12 +370,12 @@
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="4"
-                        android:text="删除"/>
+                        android:text="@string/layout_config_item_text_2f4aa"/>
                 </LinearLayout>
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="50dp"
-                    android:text="删除请输入 : DELETE\n注意 : 该操作将删除所有子按键"/>
+                    android:text="@string/layout_page_group_button_text_e1a27"/>
             </LinearLayout>
         </LinearLayout>
     </ScrollView>

@@ -16,7 +16,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="网络状态" />
+            android:text="@string/layout_dlg_easytier_panel_text_7ae64" />
 
         <Button
             android:id="@+id/tab_button_config"
@@ -24,7 +24,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="编辑配置" />
+            android:text="@string/layout_dlg_easytier_panel_text_5117b" />
     </LinearLayout>
 
     <!-- 2. 内容容器 -->
@@ -62,7 +62,7 @@
                     android:layout_height="48dp"
                     android:layout_gravity="top|end"
                     android:background="?android:attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="刷新状态"
+                    android:contentDescription="@string/layout_dlg_easytier_panel_cd_4f8d4"
                     android:src="@android:drawable/ic_menu_rotate" />
 
             </FrameLayout>
@@ -84,16 +84,16 @@
 
                 <TextView
                     style="@style/ConfigLabel"
-                    android:text="网络名称 (Network Name)" />
+                    android:text="@string/layout_dlg_easytier_panel_text_7095b" />
 
                 <EditText
                     android:id="@+id/edit_network_name"
                     style="@style/ConfigEditText"
-                    android:hint="例如: easytier" />
+                    android:hint="@string/layout_dlg_easytier_panel_hint_99c30" />
 
                 <TextView
                     style="@style/ConfigLabel"
-                    android:text="网络密钥 (Network Secret)" />
+                    android:text="@string/layout_dlg_easytier_panel_text_89d10" />
 
                 <EditText
                     android:id="@+id/edit_network_secret"
@@ -101,31 +101,31 @@
 
                 <TextView
                     style="@style/ConfigLabel"
-                    android:text="本机虚拟 IPv4 地址 (掩码默认为 /24)" />
+                    android:text="@string/layout_dlg_easytier_panel_text_4af73" />
 
                 <EditText
                     android:id="@+id/edit_ipv4"
                     style="@style/ConfigEditText"
-                    android:hint="例如: 10.0.0.6"
+                    android:hint="@string/layout_dlg_easytier_panel_hint_8913a"
                     android:inputType="phone" />
 
                 <TextView
                     style="@style/ConfigLabel"
-                    android:text="监听器 (Listeners, 每行一个)" />
+                    android:text="@string/layout_dlg_easytier_panel_text_ed11e" />
 
                 <EditText
                     android:id="@+id/edit_listeners"
                     style="@style/ConfigEditText.MultiLine"
-                    android:hint="例如: udp://0.0.0.0:11010" />
+                    android:hint="@string/layout_dlg_easytier_panel_hint_388a0" />
 
                 <TextView
                     style="@style/ConfigLabel"
-                    android:text="对等节点 (Peers, 每行一个)" />
+                    android:text="@string/layout_dlg_easytier_panel_text_89168" />
 
                 <EditText
                     android:id="@+id/edit_peers"
                     style="@style/ConfigEditText.MultiLine"
-                    android:hint="例如: tcp://1.2.3.4:11010" />
+                    android:hint="@string/layout_dlg_easytier_panel_hint_eabff" />
 
                 <!-- ================== 高级功能标志 ================== -->
                 <RelativeLayout
@@ -143,7 +143,7 @@
                         android:layout_height="wrap_content"
                         android:layout_alignParentStart="true"
                         android:layout_centerVertical="true"
-                        android:text="高级功能标志 (Flags)" />
+                        android:text="@string/layout_dlg_easytier_panel_text_537e0" />
 
                     <ImageView
                         android:id="@+id/advanced_flags_arrow"
@@ -165,82 +165,82 @@
                     <!-- 核心网络行为 -->
                     <TextView
                         style="@style/ConfigSubLabel"
-                        android:text="核心网络行为" />
+                        android:text="@string/layout_dlg_easytier_panel_text_e7e21" />
 
                     <Switch
                         android:id="@+id/flag_use_smoltcp"
                         style="@style/ConfigSwitch"
-                        android:text="使用 Smoltcp" />
+                        android:text="@string/layout_dlg_easytier_panel_text_4ad29" />
 
                     <Switch
                         android:id="@+id/flag_latency_first"
                         style="@style/ConfigSwitch"
-                        android:text="延迟优先" />
+                        android:text="@string/layout_dlg_easytier_panel_text_6785a" />
 
                     <Switch
                         android:id="@+id/flag_disable_p2p"
                         style="@style/ConfigSwitch"
-                        android:text="禁用 P2P (强制中继)" />
+                        android:text="@string/layout_dlg_easytier_panel_text_faebe" />
 
                     <Switch
                         android:id="@+id/flag_private_mode"
                         style="@style/ConfigSwitch"
-                        android:text="私有模式" />
+                        android:text="@string/layout_dlg_easytier_panel_text_fd3ab" />
 
                     <Switch
                         android:id="@+id/flag_enable_ipv6"
                         style="@style/ConfigSwitch"
-                        android:text="禁用 IPv6" />
+                        android:text="@string/layout_dlg_easytier_panel_text_c2266" />
 
                     <!-- 代理与协议 -->
                     <TextView
                         style="@style/ConfigSubLabel"
-                        android:text="代理与协议" />
+                        android:text="@string/layout_dlg_easytier_panel_text_416db" />
 
                     <Switch
                         android:id="@+id/flag_enable_kcp_proxy"
                         style="@style/ConfigSwitch"
-                        android:text="启用 KCP 代理" />
+                        android:text="@string/layout_dlg_easytier_panel_text_93070" />
 
                     <Switch
                         android:id="@+id/flag_disable_kcp_input"
                         style="@style/ConfigSwitch"
-                        android:text="禁用 KCP 输入" />
+                        android:text="@string/layout_dlg_easytier_panel_text_6ea99" />
 
                     <Switch
                         android:id="@+id/flag_enable_quic_proxy"
                         style="@style/ConfigSwitch"
-                        android:text="启用 QUIC 代理" />
+                        android:text="@string/layout_dlg_easytier_panel_text_6618e" />
 
                     <Switch
                         android:id="@+id/flag_disable_quic_input"
                         style="@style/ConfigSwitch"
-                        android:text="禁用 QUIC 输入" />
+                        android:text="@string/layout_dlg_easytier_panel_text_02eb9" />
 
                     <Switch
                         android:id="@+id/flag_proxy_forward_by_system"
                         style="@style/ConfigSwitch"
-                        android:text="使用系统代理转发" />
+                        android:text="@string/layout_dlg_easytier_panel_text_4b503" />
 
                     <!-- 安全与连接 -->
                     <TextView
                         style="@style/ConfigSubLabel"
-                        android:text="安全与连接" />
+                        android:text="@string/layout_dlg_easytier_panel_text_9c403" />
 
                     <Switch
                         android:id="@+id/flag_enable_encryption"
                         style="@style/ConfigSwitch"
-                        android:text="禁用加密" />
+                        android:text="@string/layout_dlg_easytier_panel_text_e7fa3" />
 
                     <Switch
                         android:id="@+id/flag_disable_udp_hole_punching"
                         style="@style/ConfigSwitch"
-                        android:text="禁用 UDP 打洞" />
+                        android:text="@string/layout_dlg_easytier_panel_text_c5d9c" />
 
                     <Switch
                         android:id="@+id/flag_disable_sym_hole_punching"
                         style="@style/ConfigSwitch"
-                        android:text="禁用对称 NAT 打洞" />
+                        android:text="@string/layout_dlg_easytier_panel_text_8ccac" />
                 </LinearLayout>
             </LinearLayout>
         </ScrollView>

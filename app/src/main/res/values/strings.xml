@@ -244,7 +244,7 @@
 
     <string name="category_audio_settings">Audio Settings</string>
     <string name="title_audio_config_list">Surround sound configurationItem</string>
-    <string name="summary_audio_config_list">Enable 5.1 or 7.1 surround sound for home-theater systems</string>
+    <string name="summary_audio_config_list">Enable 5.1, 7.1, or 7.1.4 surround sound for home-theater systems. 7.1.4 requires Android 12+</string>
     <string name="title_checkbox_enable_audiofx">Enable system equalizer support</string>
     <string name="summary_checkbox_enable_audiofx">Allow audio effects to work during streaming, may increase audio latency</string>
     <string name="title_checkbox_enable_spatializer">Enable spatial audio (Android 13+)</string>
@@ -453,6 +453,9 @@
     <string name="mic_stats_continuity">Audio continuity: %.1f%% (Captured:%d Encoded:%d Sent:%d Dropped:%d)</string>
 
     <string name="category_help">Help</string>
+    <string name="category_mic_settings">Microphone Settings</string>
+    <string name="category_audio_vibration_settings">Audio Vibration</string>
+    <string name="category_connection_settings">Connection Settings</string>
     <string name="title_setup_guide">Setup guide</string>
     <string name="summary_setup_guide">View instructions on how to set up your gaming PC for streaming</string>
     <string name="title_troubleshooting">Troubleshooting guide</string>
@@ -494,6 +497,7 @@
     <string name="audioconf_stereo">Stereo</string>
     <string name="audioconf_51surround">5.1 Surround Sound</string>
     <string name="audioconf_71surround">7.1 Surround Sound</string>
+    <string name="audioconf_714surround">7.1.4 Surround Sound (Atmos)</string>
 
     <string name="videoformat_auto">Automatic (Recommended)</string>
     <string name="videoformat_av1always">Prefer AV1 (Experimental)</string>
@@ -792,7 +796,239 @@
     <string name="title_list_audio_vibration_scene">Scene mode</string>
     <string name="summary_list_audio_vibration_scene">Optimize vibration pattern for content type</string>
 
+    <!-- Capability diagnostic -->
+    <string name="title_capability_diagnostic">Codec &amp; Display Capability Detection</string>
+    <string name="summary_capability_diagnostic">Detect device HDR support, decoder capabilities, and other information</string>
+
+    <!-- Double-click drag -->
+    <string name="title_enable_double_click_drag">Enable touchpad double-tap drag</string>
+    <string name="summary_enable_double_click_drag">Double-tap and hold to drag selection</string>
+
+    <!-- Double-tap time threshold -->
+    <string name="title_seekbar_double_tap_time_threshold">Double-tap time threshold</string>
+    <string name="summary_seekbar_double_tap_time_threshold">Adjust the double-tap recognition interval</string>
+    <string name="dialog_seekbar_double_tap_time_threshold">Adjust the time interval for double-tap recognition. Larger values make double-tap easier to trigger.</string>
+
+    <!-- Local cursor rendering -->
+    <string name="title_local_cursor_rendering">Show local cursor</string>
+    <string name="summary_local_cursor_rendering">Display a local cursor that can be controlled via touchpad mode</string>
+
+    <!-- Special key mapping -->
+    <string name="title_special_key_map">Special key mapping</string>
+    <string name="summary_special_key_map">Maps Home to Esc, Esc+number/symbol to F1-F12, Esc+Q to stream menu, Android screenshot to Windows screenshot, Android prev/play-pause/next to F5/F10/F11.</string>
+
+    <!-- Fix mouse middle button -->
+    <string name="title_fix_mouse_middle">Fix mouse middle button</string>
+    <string name="summary_fix_mouse_middle">On some devices the mouse middle button may be recognized as the back key. Enable this to try to fix the issue.</string>
+
+    <!-- Fix mouse scroll wheel -->
+    <string name="title_fix_mouse_wheel">Fix local mouse scroll wheel</string>
+    <string name="summary_fix_mouse_wheel">On some devices the local mouse scroll wheel may produce touch scroll events. Enable this to try to fix the issue.</string>
+
+    <!-- Half-height OSC portrait -->
+    <string name="title_half_height_osc_portrait">Half-height portrait mode</string>
+    <string name="summary_half_height_osc_portrait">Controls will be displayed in the lower half of the screen in portrait mode</string>
+
+    <!-- Keep connection alive -->
+    <string name="title_extreme_resume">Keep connection alive</string>
+    <string name="summary_extreme_resume">Keep the connection active when switching apps or locking screen for instant resume. Note: this still consumes data and battery while in background.</string>
+
+    <!-- Background audio -->
+    <string name="title_background_audio">Background audio playback</string>
+    <string name="summary_background_audio">Play audio in background when keep connection alive is enabled</string>
+
+    <!-- STUN public IP -->
+    <string name="title_enable_stun">Obtain public IP</string>
+    <string name="summary_enable_stun">Attempt to obtain the host\'s public IP via STUN servers for connecting outside the local network. This may slow down scanning for users without a public IP.</string>
+
     <!-- AppView Top Panel -->
     <string name="appview_display_selection_title">Display Selection</string>
+
+
+    <!-- Layout hardcoded Chinese strings (auto-extracted) -->
+    <string name="layout_capability_diagnostic_text_a5e80">Capability Detection</string>
+    <string name="layout_capability_diagnostic_text_41b60">HDR · Decoder · Display</string>
+    <string name="layout_capability_diagnostic_text_79d3a">Copy</string>
+    <string name="layout_pc_view_cd_1daed">Scene 1</string>
+    <string name="layout_pc_view_cd_f2a94">Scene 2</string>
+    <string name="layout_pc_view_cd_0a468">Scene 3</string>
+    <string name="layout_pc_view_cd_94f3b">Scene 4</string>
+    <string name="layout_pc_view_cd_4b18b">Scene 5</string>
+    <string name="layout_address_list_item_text_12b27">Local Network</string>
+    <string name="layout_address_list_item_cd_30f7d">Connect</string>
+    <string name="layout_config_item_text_c8ce4">Rename</string>
+    <string name="layout_config_item_text_2f4aa">Delete</string>
+    <string name="layout_custom_dialog_text_c9831">Enable Crown Menu</string>
+    <string name="layout_custom_dialog_text_6d521">Sleep</string>
+    <string name="layout_custom_dialog_text_c3992">Exit</string>
+    <string name="layout_custom_dialog_text_f090a">Special Keys Shortcut</string>
+    <string name="layout_custom_dialog_text_cf458">Bitrate Adjustment</string>
+    <string name="layout_custom_dialog_cd_99c74">Tooltip</string>
+    <string name="layout_custom_dialog_text_6b362">Current: 10 Mbps</string>
+    <string name="layout_custom_dialog_text_90bba">Gyro Assistant · Gyro Control</string>
+    <string name="layout_details_dialog_text_4bcc9">Details</string>
+    <string name="layout_dlg_easytier_panel_text_7ae64">Network Status</string>
+    <string name="layout_dlg_easytier_panel_text_5117b">Edit Configuration</string>
+    <string name="layout_dlg_easytier_panel_cd_4f8d4">Refresh Status</string>
+    <string name="layout_dlg_easytier_panel_text_7095b">Network Name</string>
+    <string name="layout_dlg_easytier_panel_hint_99c30">e.g. easytier</string>
+    <string name="layout_dlg_easytier_panel_text_89d10">Network Secret</string>
+    <string name="layout_dlg_easytier_panel_text_4af73">Local Virtual IPv4 Address (mask default /24)</string>
+    <string name="layout_dlg_easytier_panel_hint_8913a">e.g. 10.0.0.6</string>
+    <string name="layout_dlg_easytier_panel_text_ed11e">Listeners (one per line)</string>
+    <string name="layout_dlg_easytier_panel_hint_388a0">e.g. udp://0.0.0.0:11010</string>
+    <string name="layout_dlg_easytier_panel_text_89168">Peers (one per line)</string>
+    <string name="layout_dlg_easytier_panel_hint_eabff">e.g. tcp://1.2.3.4:11010</string>
+    <string name="layout_dlg_easytier_panel_text_537e0">Advanced Feature Flags</string>
+    <string name="layout_dlg_easytier_panel_text_e7e21">Core Network Behavior</string>
+    <string name="layout_dlg_easytier_panel_text_4ad29">Use Smoltcp</string>
+    <string name="layout_dlg_easytier_panel_text_6785a">Latency Priority</string>
+    <string name="layout_dlg_easytier_panel_text_faebe">Disable P2P (Force Relay)</string>
+    <string name="layout_dlg_easytier_panel_text_fd3ab">Private Mode</string>
+    <string name="layout_dlg_easytier_panel_text_c2266">Disable IPv6</string>
+    <string name="layout_dlg_easytier_panel_text_416db">Proxy &amp; Protocol</string>
+    <string name="layout_dlg_easytier_panel_text_93070">Enable KCP Proxy</string>
+    <string name="layout_dlg_easytier_panel_text_6ea99">Disable KCP Input</string>
+    <string name="layout_dlg_easytier_panel_text_6618e">Enable QUIC Proxy</string>
+    <string name="layout_dlg_easytier_panel_text_02eb9">Disable QUIC Input</string>
+    <string name="layout_dlg_easytier_panel_text_4b503">Use System Proxy Forwarding</string>
+    <string name="layout_dlg_easytier_panel_text_9c403">Security &amp; Connection</string>
+    <string name="layout_dlg_easytier_panel_text_e7fa3">Disable Encryption</string>
+    <string name="layout_dlg_easytier_panel_text_c5d9c">Disable UDP Hole Punching</string>
+    <string name="layout_dlg_easytier_panel_text_8ccac">Disable Symmetric NAT Hole Punching</string>
+    <string name="layout_dlg_iperf3_test_text_b6031">Server IP/Hostname</string>
+    <string name="layout_dlg_iperf3_test_text_2f727">Test Parameters</string>
+    <string name="layout_dlg_iperf3_test_text_3226b">Direction:</string>
+    <string name="layout_dlg_iperf3_test_text_d5a73">Upload</string>
+    <string name="layout_dlg_iperf3_test_text_f26ef">Download</string>
+    <string name="layout_dlg_iperf3_test_text_c19e7">Duration (s):</string>
+    <string name="layout_dlg_iperf3_test_text_9da95">Port:</string>
+    <string name="layout_dlg_iperf3_test_text_c7731">Bandwidth:</string>
+    <string name="layout_dlg_iperf3_test_hint_2c7ff">e.g. 100M, 1G</string>
+    <string name="layout_dlg_iperf3_test_text_f2f61">Additional iPerf3 Parameters (Optional)</string>
+    <string name="layout_dlg_iperf3_test_hint_9a865">e.g. -f M</string>
+    <string name="layout_dlg_peer_info_item_text_f5873">Virtual IP:</string>
+    <string name="layout_dlg_peer_info_item_text_e960e">NAT Type:</string>
+    <string name="layout_dlg_peer_info_item_text_9d9a3">Latency:</string>
+    <string name="layout_dlg_peer_info_item_text_681b4">Traffic (Rx/Tx):</string>
+    <string name="layout_game_menu_super_empty_text_a7970">No super commands yet</string>
+    <string name="layout_game_menu_super_empty_text_fac9d">Add super commands using Sunshine Foundation edition~</string>
+    <string name="layout_item_key_value_text_0952a">Section 1</string>
+    <string name="layout_item_key_value_hint_dd44f">Section name, defaults to key name if empty</string>
+    <string name="layout_item_page_super_menu_text_ce0e8">Edit Mode</string>
+    <string name="layout_keyboard_mini_text_3ae7b">Back to Keyboard</string>
+    <string name="layout_number_seekbar_text_e12e7">Mouse Passthrough Sensitivity</string>
+    <string name="layout_page_analog_stick_text_dedb8">Type: Analog Stick</string>
+    <string name="layout_page_analog_stick_text_34170">Stick</string>
+    <string name="layout_page_analog_stick_text_4e6d6">Left Stick</string>
+    <string name="layout_page_analog_stick_text_faf56">Right Stick</string>
+    <string name="layout_page_analog_stick_text_fb050">Stick Center Button</string>
+    <string name="layout_page_analog_stick_text_53e58">Relative Movement Mode</string>
+    <string name="layout_page_analog_stick_text_9b4ba">Border Color</string>
+    <string name="layout_page_analog_stick_text_3142e">Border Pressed Color</string>
+    <string name="layout_page_analog_stick_text_4573a">Background Color</string>
+    <string name="layout_page_analog_stick_text_69066">Font Color</string>
+    <string name="layout_page_analog_stick_text_4b292">Font Pressed Color</string>
+    <string name="layout_page_config_text_9eba2">Current Configuration</string>
+    <string name="layout_page_config_text_83a23">Enable Touch</string>
+    <string name="layout_page_config_text_f4b7c">Touchpad Mode</string>
+    <string name="layout_page_config_text_8ea81">Multi-Touch Mode</string>
+    <string name="layout_page_config_text_cd2c1">Game Vibration</string>
+    <string name="layout_page_config_text_f4651">Button Vibration</string>
+    <string name="layout_page_config_text_66ab5">Add</string>
+    <string name="layout_page_config_text_df603">Exit Crown Configuration</string>
+    <string name="layout_page_device_text_5f411">Back</string>
+    <string name="layout_page_device_text_d81bb">None</string>
+    <string name="layout_page_device_text_01e77">Touch Mode</string>
+    <string name="layout_page_device_text_03cbf">Classic Mouse</string>
+    <string name="layout_page_device_text_dd502">Touchpad</string>
+    <string name="layout_page_device_text_d4ab3">Multi-Touch</string>
+    <string name="layout_page_device_text_1a70f">Touch Toggle</string>
+    <string name="layout_page_device_text_1e243">PC Keyboard</string>
+    <string name="layout_page_device_text_42968">Android Keyboard</string>
+    <string name="layout_page_device_text_34842">Switch Config</string>
+    <string name="layout_page_device_text_6c15c">Pan/Zoom</string>
+    <string name="layout_page_device_text_104a1">Open GAME MENU</string>
+    <string name="layout_page_digital_combine_button_text_3bb27">Type: Combo Key</string>
+    <string name="layout_page_digital_combine_button_text_bab9f">Display Text</string>
+    <string name="layout_page_digital_combine_button_text_499ef">12345</string>
+    <string name="layout_page_digital_combine_button_text_0c4af">Key 1</string>
+    <string name="layout_page_digital_combine_button_text_ec25a">Key 2</string>
+    <string name="layout_page_digital_combine_button_text_001d1">Key 3</string>
+    <string name="layout_page_digital_combine_button_text_2c072">Key 4</string>
+    <string name="layout_page_digital_combine_button_text_a388b">Key 5</string>
+    <string name="layout_page_digital_common_button_text_02c2a">Type: Normal Button</string>
+    <string name="layout_page_digital_common_button_text_577e6">Key Value</string>
+    <string name="layout_page_digital_movable_button_text_e279e">Type: Movable Button</string>
+    <string name="layout_page_digital_movable_button_text_3d9c9">Send touch events from screen center\notherwise send mouse move events</string>
+    <string name="layout_page_digital_pad_text_3c1b5">Type: D-Pad</string>
+    <string name="layout_page_digital_stick_text_23611">Type: Digital Stick</string>
+    <string name="layout_page_digital_stick_text_6c35d">Stick Key Value</string>
+    <string name="layout_page_digital_switch_button_text_a96b6">Type: Toggle Button</string>
+    <string name="layout_page_edit_text_b8a5e">Exit Edit Mode</string>
+    <string name="layout_page_edit_text_e8341">Long press to move button</string>
+    <string name="layout_page_edit_text_2c372">Add Normal Button</string>
+    <string name="layout_page_edit_text_c0c18">Add Toggle Button</string>
+    <string name="layout_page_edit_text_5817f">Add Movable Button</string>
+    <string name="layout_page_edit_text_061fc">Add D-Pad</string>
+    <string name="layout_page_edit_text_e0cc1">Add Analog Stick</string>
+    <string name="layout_page_edit_text_6d757">Add Digital Stick</string>
+    <string name="layout_page_edit_text_9851e">Add Hidden Analog Stick</string>
+    <string name="layout_page_edit_text_b4881">Add Hidden Digital Stick</string>
+    <string name="layout_page_edit_text_e19e5">Add Simplified Info</string>
+    <string name="layout_page_edit_text_ed364">Add Combo Key</string>
+    <string name="layout_page_edit_text_1483c">Add Wheel Button</string>
+    <string name="layout_page_edit_text_bd823">Add Group Button</string>
+    <string name="layout_page_group_button_text_6db87">Type: Group Button</string>
+    <string name="layout_page_group_button_text_b19b4">Hide Button (for wheel use)</string>
+    <string name="layout_page_group_button_text_f57fc">Hold to move button</string>
+    <string name="layout_page_group_button_text_7bc0a">Independent (child buttons unaffected by parent visibility)</string>
+    <string name="layout_page_group_button_text_1eb1a">Show Child Buttons</string>
+    <string name="layout_page_group_button_text_42edc">Follow Position Properties</string>
+    <string name="layout_page_group_button_text_63921">Follow Other Properties</string>
+    <string name="layout_page_group_button_text_fd8c4">Select Child Button</string>
+    <string name="layout_page_group_button_text_e1a27">To delete, enter: DELETE\nNote: this will delete all child buttons</string>
+    <string name="layout_page_invisible_analog_stick_text_5e3cb">Type: Hidden Analog Stick</string>
+    <string name="layout_page_invisible_digital_stick_text_e60ec">Type: Hidden Digital Stick</string>
+    <string name="layout_page_simplify_performance_text_58923">Type: Stream Info</string>
+    <string name="layout_page_simplify_performance_text_7ec90">Text Color</string>
+    <string name="layout_page_simplify_performance_text_1673c">Display Text (supports line breaks)</string>
+    <string name="layout_page_simplify_performance_text_4b9c3">Reset</string>
+    <string name="layout_page_simplify_performance_text_e83a2">Confirm</string>
+    <string name="layout_page_simplify_performance_text_98e2e">Decoder:      ##Decoder## \nResolution:   ##Resolution## \nDrop Rate:    ##Drop Rate##\nHost Latency: ##Host Latency##\nNet Latency:  ##Net Latency##\nDecode Time:  ##Decode Time##\nBandwidth:    ##Bandwidth## \nFPS:          ##FPS## \nRender:       ##Render Latency## \nTime:         HH:MM:SS \n</string>
+    <string name="layout_page_super_menu_text_899a4">Configuration Settings</string>
+    <string name="layout_page_super_menu_text_e2f14">Exit Stream</string>
+    <string name="layout_page_wheel_pad_text_57047">Type: Wheel Button</string>
+    <string name="layout_page_wheel_pad_text_c814c">Popup Label</string>
+    <string name="layout_page_wheel_pad_hint_84265">Leave empty for direct mode</string>
+    <string name="layout_page_wheel_pad_text_43868">Show wheel at screen center</string>
+    <string name="layout_page_wheel_pad_text_91286">Preview group buttons on hover</string>
+    <string name="layout_page_wheel_pad_text_cfb46">Key values (clockwise from top)</string>
+    <string name="layout_page_wheel_pad_text_97f5a">Pressed Color</string>
+    <string name="layout_page_wheel_pad_text_3ed82">Section Text Color</string>
+    <string name="layout_page_wheel_pad_text_58796">Center Text Color</string>
+    <string name="layout_page_window_text_625fb">Cancel</string>
+
+
+    <!-- app:text Chinese strings (auto-extracted) -->
+    <string name="apptext_pg_analog_stick_4b26d">Stick Deadzone %</string>
+    <string name="apptext_pg_analog_stick_b7e19">Stick Radius</string>
+    <string name="apptext_pg_analog_stick_ae177">Border Thickness</string>
+    <string name="apptext_pg_analog_stick_6896d">Z-Order</string>
+    <string name="apptext_pg_analog_stick_5f15e">Font Size</string>
+    <string name="apptext_pg_config_835d4">Touchpad Sensitivity</string>
+    <string name="apptext_pg_config_3f729">Virtual Mouse Scroll Speed</string>
+    <string name="apptext_pg_digital_combine_button_ea5a1">Width</string>
+    <string name="apptext_pg_digital_combine_button_4296d">Height</string>
+    <string name="apptext_pg_digital_combine_button_3ebb3">Border Radius</string>
+    <string name="apptext_pg_digital_movable_button_e12e7">Mouse Passthrough Sensitivity</string>
+    <string name="apptext_pg_edit_458a8">Grid Width</string>
+    <string name="apptext_pg_simplify_performance_0103e">Corner Radius</string>
+    <string name="apptext_pg_wheel_pad_163a1">Section Count</string>
+    <string name="apptext_pg_wheel_pad_4b2d6">Size (Diameter)</string>
+    <string name="apptext_pg_wheel_pad_881da">Center Radius (%)</string>
+    <string name="apptext_pg_wheel_pad_a0e87">Section Text Size (%)</string>
+    <string name="apptext_pg_wheel_pad_6c613">Trigger Text Size (%)</string>
+    <string name="apptext_pg_wheel_pad_ea2ce">Center Preview Text Size (%)</string>
 
 </resources>

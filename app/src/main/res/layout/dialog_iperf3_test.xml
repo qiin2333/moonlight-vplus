@@ -10,7 +10,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="服务器IP/主机名"
+        android:text="@string/layout_dlg_iperf3_test_text_b6031"
         android:textColor="#BBBBBB"
         android:textSize="12sp"
         android:layout_marginStart="4dp"/>
@@ -32,7 +32,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="测试参数"
+        android:text="@string/layout_dlg_iperf3_test_text_2f727"
         android:textColor="@android:color/white"
         android:textSize="16sp"
         android:textStyle="bold"
@@ -49,7 +49,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="方向:"
+            android:text="@string/layout_dlg_iperf3_test_text_3226b"
             android:textColor="#DDDDDD"
             android:textSize="14sp"
             android:layout_marginEnd="8dp"/>
@@ -63,7 +63,7 @@
                 android:id="@+id/radio_upload"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="上传"
+                android:text="@string/layout_dlg_iperf3_test_text_d5a73"
                 android:textColor="@android:color/white"
                 android:buttonTint="#007AFF"
                 android:layout_marginEnd="16dp"
@@ -72,7 +72,7 @@
                 android:id="@+id/radio_download"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="下载"
+                android:text="@string/layout_dlg_iperf3_test_text_f26ef"
                 android:textColor="@android:color/white"
                 android:buttonTint="#007AFF"/>
         </RadioGroup>
@@ -88,7 +88,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="持续时间(s):"
+            android:text="@string/layout_dlg_iperf3_test_text_c19e7"
             android:textColor="#DDDDDD"
             android:textSize="14sp"
             android:layout_marginEnd="8dp"/>
@@ -124,7 +124,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="端口:"
+            android:text="@string/layout_dlg_iperf3_test_text_9da95"
             android:textColor="#DDDDDD"
             android:textSize="14sp"
             android:layout_marginEnd="8dp"/>
@@ -163,7 +163,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="带宽:"
+            android:text="@string/layout_dlg_iperf3_test_text_c7731"
             android:textColor="#DDDDDD"
             android:textSize="14sp"
             android:layout_marginEnd="8dp"/>
@@ -179,7 +179,7 @@
             android:padding="8dp"
             android:textColor="@android:color/white"
             android:textCursorDrawable="@null"
-            android:hint="例如100M、1G"
+            android:hint="@string/layout_dlg_iperf3_test_hint_2c7ff"
             android:textColorHint="#888888"/>
     </LinearLayout>
 
@@ -187,7 +187,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="附加iPerf3参数（可选）"
+        android:text="@string/layout_dlg_iperf3_test_text_f2f61"
         android:textColor="#BBBBBB"
         android:textSize="12sp"
         android:layout_marginStart="4dp"
@@ -200,7 +200,7 @@
         android:layout_marginBottom="16dp"
         android:background="@drawable/edit_text_background"
         android:gravity="top"
-        android:hint="例如，-f M"
+        android:hint="@string/layout_dlg_iperf3_test_hint_9a865"
         android:inputType="textMultiLine"
         android:minLines="1"
         android:padding="12dp"

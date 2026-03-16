@@ -31,7 +31,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="详细信息"
+                android:text="@string/layout_details_dialog_text_4bcc9"
                 android:textColor="@color/theme_pink_primary"
                 android:textSize="18sp"
                 android:textStyle="bold" />

@@ -19,13 +19,13 @@
             android:layout_height="match_parent"
             android:layout_weight="0.5"
             android:textSize="10dp"
-            android:text="重命名"/>
+            android:text="@string/layout_config_item_text_c8ce4"/>
         <Button
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="0.5"
             android:textSize="10dp"
-            android:text="删除"/>
+            android:text="@string/layout_config_item_text_2f4aa"/>
     </LinearLayout>
 
 </LinearLayout>

@@ -27,7 +27,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="类型 : 按键摇杆"/>
+                    android:text="@string/layout_page_digital_stick_text_23611"/>
             </LinearLayout>
             <LinearLayout
                 android:orientation="vertical"
@@ -41,7 +41,7 @@
                     android:layout_weight="1"
                     android:gravity="center_vertical"
                     android:layout_marginBottom="5dp"
-                    android:text="摇杆键值" />
+                    android:text="@string/layout_page_digital_stick_text_6c35d" />
                 <LinearLayout
                     android:orientation="vertical"
                     android:layout_width="match_parent"
@@ -99,7 +99,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="摇杆中键" />
+                    android:text="@string/layout_page_analog_stick_text_fb050" />
                 <TextView
                     android:id="@+id/page_digital_stick_middle_value"
                     android:layout_width="100dp"
@@ -131,7 +131,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="摇杆死区百分比"
+                app:text="@string/apptext_pg_analog_stick_4b26d"
                 app:max="100"
                 app:min="0"
                 app:progress="30" />
@@ -140,7 +140,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="摇杆半径"
+                app:text="@string/apptext_pg_analog_stick_b7e19"
                 app:max="100"
                 app:min="0"
                 app:progress="0"/>
@@ -149,7 +149,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="边框厚度"
+                app:text="@string/apptext_pg_analog_stick_ae177"
                 app:max="10"
                 app:min="0"
                 app:progress="3"/>
@@ -158,7 +158,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="层级"
+                app:text="@string/apptext_pg_analog_stick_6896d"
                 app:max="140"
                 app:min="40" />
             <LinearLayout
@@ -171,7 +171,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="边框颜色" />
+                    android:text="@string/layout_page_analog_stick_text_9b4ba" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_digital_stick_normal_color"
                     android:layout_width="100dp"
@@ -191,7 +191,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="边框按下颜色" />
+                    android:text="@string/layout_page_analog_stick_text_3142e" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_digital_stick_pressed_color"
                     android:layout_width="100dp"
@@ -211,7 +211,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="背景颜色" />
+                    android:text="@string/layout_page_analog_stick_text_4573a" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_digital_stick_background_color"
                     android:layout_width="100dp"
@@ -231,13 +231,13 @@
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:text="复制"/>
+                    android:text="@string/layout_capability_diagnostic_text_79d3a"/>
                 <Button
                     android:id="@+id/page_digital_stick_delete"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:text="删除"/>
+                    android:text="@string/layout_config_item_text_2f4aa"/>
             </LinearLayout>
         </LinearLayout>
     </ScrollView>

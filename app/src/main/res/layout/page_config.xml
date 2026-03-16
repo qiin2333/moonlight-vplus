@@ -31,7 +31,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="match_parent"
                         android:gravity="center_vertical"
-                        android:text="当前配置"/>
+                        android:text="@string/layout_page_config_text_9eba2"/>
                 </FrameLayout>
                 <Spinner
                     android:id="@+id/config_select_spinner"
@@ -51,7 +51,7 @@
                     android:layout_height="match_parent"
                     android:gravity="center_vertical"
                     android:layout_weight="1"
-                    android:text="开启触摸"/>
+                    android:text="@string/layout_page_config_text_83a23"/>
                 <Switch
                     android:id="@+id/mouse_enable_switch"
                     android:layout_width="50dp"
@@ -69,7 +69,7 @@
                     android:layout_height="match_parent"
                     android:gravity="center_vertical"
                     android:layout_weight="1"
-                    android:text="触控板模式"/>
+                    android:text="@string/layout_page_config_text_f4b7c"/>
                 <Switch
                     android:id="@+id/trackpad_enable_switch"
                     android:layout_width="50dp"
@@ -88,7 +88,7 @@
                     android:layout_height="match_parent"
                     android:gravity="center_vertical"
                     android:layout_weight="1"
-                    android:text="多点触控模式"/>
+                    android:text="@string/layout_page_config_text_8ea81"/>
                 <Switch
                     android:id="@+id/enhanced_touch_switch"
                     android:layout_width="50dp"
@@ -101,7 +101,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="触控板灵敏度"
+                app:text="@string/apptext_pg_config_835d4"
                 app:max="500"
                 app:min="1"
                 app:progress="100" />
@@ -114,7 +114,7 @@
                 app:max="100"
                 app:min="1"
                 app:progress="20"
-                app:text="虚拟鼠标滚轮速度" />
+                app:text="@string/apptext_pg_config_3f729" />
 
             <LinearLayout
                 android:orientation="horizontal"
@@ -126,7 +126,7 @@
                     android:layout_height="match_parent"
                     android:gravity="center_vertical"
                     android:layout_weight="1"
-                    android:text="游戏震动"/>
+                    android:text="@string/layout_page_config_text_cd2c1"/>
                 <Switch
                     android:id="@+id/game_vibrator_enable_switch"
                     android:layout_width="50dp"
@@ -143,7 +143,7 @@
                     android:layout_height="match_parent"
                     android:gravity="center_vertical"
                     android:layout_weight="1"
-                    android:text="按键震动"/>
+                    android:text="@string/layout_page_config_text_f4651"/>
                 <Switch
                     android:id="@+id/button_vibrator_enable_switch"
                     android:layout_width="50dp"
@@ -160,19 +160,19 @@
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:text="新增"/>
+                    android:text="@string/layout_page_config_text_66ab5"/>
                 <Button
                     android:id="@+id/rename_config_button"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:text="重命名"/>
+                    android:text="@string/layout_config_item_text_c8ce4"/>
                 <Button
                     android:id="@+id/delete_config_button"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:text="删除"/>
+                    android:text="@string/layout_config_item_text_2f4aa"/>
             </LinearLayout>
 
             <Button
@@ -180,7 +180,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="50dp"
                 android:layout_marginVertical="5dp"
-                android:text="退出王冠配置" />
+                android:text="@string/layout_page_config_text_df603" />
 
         </LinearLayout>
     </ScrollView>

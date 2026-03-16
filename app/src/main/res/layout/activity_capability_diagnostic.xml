@@ -37,7 +37,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="能力检测"
+                android:text="@string/layout_capability_diagnostic_text_a5e80"
                 android:textColor="#FFFFFFFF"
                 android:textSize="17sp"
                 android:textStyle="bold"
@@ -47,7 +47,7 @@
                 android:id="@+id/subtitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="HDR · 解码器 · 屏幕"
+                android:text="@string/layout_capability_diagnostic_text_41b60"
                 android:textColor="#80FFFFFF"
                 android:textSize="11sp"
                 android:layout_marginTop="1dp" />
@@ -62,7 +62,7 @@
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:background="@drawable/diag_copy_button_bg"
-            android:text="复制"
+            android:text="@string/layout_capability_diagnostic_text_79d3a"
             android:textColor="#FFFFFFFF"
             android:textSize="13sp"
             android:gravity="center"

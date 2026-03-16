@@ -27,7 +27,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="类型 : 普通按键"/>
+                    android:text="@string/layout_page_digital_common_button_text_02c2a"/>
             </LinearLayout>
             <LinearLayout
                 android:orientation="horizontal"
@@ -39,13 +39,13 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="显示文本" />
+                    android:text="@string/layout_page_digital_combine_button_text_bab9f" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_digital_common_button_text"
                     android:layout_width="100dp"
                     android:layout_height="match_parent"
                     android:gravity="center"
-                    android:text="一二三四五"
+                    android:text="@string/layout_page_digital_combine_button_text_499ef"
                     android:background="@drawable/enabled_square"
                     android:textSize="15dp" />
             </LinearLayout>
@@ -59,7 +59,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="键值" />
+                    android:text="@string/layout_page_digital_common_button_text_577e6" />
                 <TextView
                     android:id="@+id/page_digital_common_button_value"
                     android:layout_width="100dp"
@@ -91,7 +91,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="宽"
+                app:text="@string/apptext_pg_digital_combine_button_ea5a1"
                 app:max="100"
                 app:min="0"
                 app:progress="100" />
@@ -100,7 +100,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="高"
+                app:text="@string/apptext_pg_digital_combine_button_4296d"
                 app:max="100"
                 app:min="0"
                 app:progress="100" />
@@ -109,7 +109,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="边框圆角"
+                app:text="@string/apptext_pg_digital_combine_button_3ebb3"
                 app:max="100"
                 app:min="0"
                 app:progress="0"/>
@@ -118,7 +118,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="边框厚度"
+                app:text="@string/apptext_pg_analog_stick_ae177"
                 app:max="10"
                 app:min="0"
                 app:progress="3"/>
@@ -127,7 +127,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="层级"
+                app:text="@string/apptext_pg_analog_stick_6896d"
                 app:max="140"
                 app:min="40" />
             <LinearLayout
@@ -140,7 +140,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="边框颜色" />
+                    android:text="@string/layout_page_analog_stick_text_9b4ba" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_digital_common_button_normal_color"
                     android:layout_width="100dp"
@@ -160,7 +160,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="边框按下颜色" />
+                    android:text="@string/layout_page_analog_stick_text_3142e" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_digital_common_button_pressed_color"
                     android:layout_width="100dp"
@@ -180,7 +180,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="背景颜色" />
+                    android:text="@string/layout_page_analog_stick_text_4573a" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_digital_common_button_background_color"
                     android:layout_width="100dp"
@@ -196,7 +196,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="字体大小"
+                app:text="@string/apptext_pg_analog_stick_5f15e"
                 app:max="150"
                 app:min="10"
                 app:progress="63"/>
@@ -210,7 +210,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="字体颜色" />
+                    android:text="@string/layout_page_analog_stick_text_69066" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_digital_common_button_normal_text_color"
                     android:layout_width="100dp"
@@ -230,7 +230,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="字体按下颜色" />
+                    android:text="@string/layout_page_analog_stick_text_4b292" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_digital_common_button_pressed_text_color"
                     android:layout_width="100dp"
@@ -251,13 +251,13 @@
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:text="复制"/>
+                    android:text="@string/layout_capability_diagnostic_text_79d3a"/>
                 <Button
                     android:id="@+id/page_digital_common_button_delete"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:text="删除"/>
+                    android:text="@string/layout_config_item_text_2f4aa"/>
             </LinearLayout>
         </LinearLayout>
     </ScrollView>

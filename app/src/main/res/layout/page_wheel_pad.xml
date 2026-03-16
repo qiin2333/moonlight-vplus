@@ -24,7 +24,7 @@
                 android:layout_height="40dp"
                 android:layout_marginVertical="5dp"
                 android:gravity="center_vertical"
-                android:text="类型 : 轮盘按键"/>
+                android:text="@string/layout_page_wheel_pad_text_57047"/>
 
             <LinearLayout
                 android:orientation="horizontal"
@@ -36,7 +36,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="弹出标签"
+                    android:text="@string/layout_page_wheel_pad_text_c814c"
                     android:layout_marginEnd="10dp"/>
 
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
@@ -45,7 +45,7 @@
                     android:layout_height="40dp"
                     android:layout_weight="1"
                     android:gravity="center"
-                    android:hint="留空则为直接模式"
+                    android:hint="@string/layout_page_wheel_pad_hint_84265"
                     android:textSize="14sp"
                     android:background="@drawable/enabled_square"/>
             </LinearLayout>
@@ -69,7 +69,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="10dp"
                         android:layout_weight="1"
-                        android:text="屏幕中心显示轮盘" />
+                        android:text="@string/layout_page_wheel_pad_text_43868" />
 
                     <Switch
                         android:id="@+id/page_wheel_pad_popup_at_center_switch"
@@ -90,7 +90,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="10dp"
                         android:layout_weight="1"
-                        android:text="悬停时预览组按键" />
+                        android:text="@string/layout_page_wheel_pad_text_91286" />
 
                     <Switch
                         android:id="@+id/page_wheel_pad_preview_group_switch"
@@ -108,7 +108,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="分区数量"
+                app:text="@string/apptext_pg_wheel_pad_163a1"
                 app:max="16"
                 app:min="2"
                 app:progress="8" />
@@ -119,14 +119,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="大小 (直径)" />
+                app:text="@string/apptext_pg_wheel_pad_4b2d6" />
 
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                 android:id="@+id/page_wheel_pad_inner_radius"
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="中心半径(%)"
+                app:text="@string/apptext_pg_wheel_pad_881da"
                 app:max="90"
                 app:min="0"
                 app:progress="30"/>
@@ -137,7 +137,7 @@
                 android:layout_height="30dp"
                 android:layout_marginTop="10dp"
                 android:gravity="center_vertical"
-                android:text="键值(从上顺时针开始)" />
+                android:text="@string/layout_page_wheel_pad_text_cfb46" />
             <LinearLayout
                 android:id="@+id/page_wheel_pad_values_container"
                 android:orientation="vertical"
@@ -165,7 +165,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="边框厚度"
+                app:text="@string/apptext_pg_analog_stick_ae177"
                 app:max="20"
                 app:min="0"
                 app:progress="5"/>
@@ -174,7 +174,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="层级"
+                app:text="@string/apptext_pg_analog_stick_6896d"
                 app:max="140"
                 app:min="40"
                 app:progress="40"/>
@@ -190,7 +190,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="边框颜色" />
+                    android:text="@string/layout_page_analog_stick_text_9b4ba" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_wheel_pad_normal_color"
                     android:layout_width="100dp"
@@ -209,7 +209,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="按下颜色" />
+                    android:text="@string/layout_page_wheel_pad_text_97f5a" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_wheel_pad_pressed_color"
                     android:layout_width="100dp"
@@ -228,7 +228,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="背景颜色" />
+                    android:text="@string/layout_page_analog_stick_text_4573a" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_wheel_pad_background_color"
                     android:layout_width="100dp"
@@ -243,7 +243,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="分区文字大小 (%)"/>
+                app:text="@string/apptext_pg_wheel_pad_a0e87"/>
 
             <LinearLayout
                 android:orientation="horizontal"
@@ -255,7 +255,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="分区文字颜色" />
+                    android:text="@string/layout_page_wheel_pad_text_3ed82" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_wheel_pad_normal_text_color"
                     android:layout_width="100dp"
@@ -270,7 +270,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="触发器文字大小 (%)"/>
+                app:text="@string/apptext_pg_wheel_pad_6c613"/>
 
             <!-- 中心文字大小 -->
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
@@ -278,7 +278,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="中心预览文字大小 (%)"/>
+                app:text="@string/apptext_pg_wheel_pad_ea2ce"/>
             <LinearLayout
                 android:orientation="horizontal"
                 android:layout_width="match_parent"
@@ -289,7 +289,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="中心文字颜色" />
+                    android:text="@string/layout_page_wheel_pad_text_58796" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_wheel_pad_center_text_color"
                     android:layout_width="100dp"
@@ -310,13 +310,13 @@
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:text="复制"/>
+                    android:text="@string/layout_capability_diagnostic_text_79d3a"/>
                 <Button
                     android:id="@+id/page_wheel_pad_delete"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:text="删除"/>
+                    android:text="@string/layout_config_item_text_2f4aa"/>
             </LinearLayout>
         </LinearLayout>
     </ScrollView>

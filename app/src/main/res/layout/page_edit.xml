@@ -31,7 +31,7 @@
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:gravity="center_vertical"
-                        android:text="退出编辑模式" />
+                        android:text="@string/layout_page_edit_text_b8a5e" />
                     <View
                         android:layout_width="30dp"
                         android:layout_height="30dp"
@@ -51,7 +51,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="10dp"
                     android:layout_weight="1"
-                    android:text="长按移动按键" />
+                    android:text="@string/layout_page_edit_text_e8341" />
 
                 <Switch
                     android:id="@+id/page_edit_drag_edit_switch"
@@ -66,7 +66,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="网格宽度"
+                app:text="@string/apptext_pg_edit_458a8"
                 app:max="100"
                 app:min="1"
                 app:progress="1" />
@@ -85,7 +85,7 @@
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:gravity="center_vertical"
-                        android:text="新增普通按钮"/>
+                        android:text="@string/layout_page_edit_text_2c372"/>
                     <View
                         android:layout_width="30dp"
                         android:layout_height="30dp"
@@ -108,7 +108,7 @@
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:gravity="center_vertical"
-                        android:text="新增开关按钮"/>
+                        android:text="@string/layout_page_edit_text_c0c18"/>
                     <View
                         android:layout_width="30dp"
                         android:layout_height="30dp"
@@ -131,7 +131,7 @@
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:gravity="center_vertical"
-                        android:text="新增可移动按钮"/>
+                        android:text="@string/layout_page_edit_text_5817f"/>
                     <View
                         android:layout_width="30dp"
                         android:layout_height="30dp"
@@ -154,7 +154,7 @@
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:gravity="center_vertical"
-                        android:text="新增十字键"/>
+                        android:text="@string/layout_page_edit_text_061fc"/>
                     <View
                         android:layout_width="30dp"
                         android:layout_height="30dp"
@@ -177,7 +177,7 @@
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:gravity="center_vertical"
-                        android:text="新增手柄摇杆"/>
+                        android:text="@string/layout_page_edit_text_e0cc1"/>
                     <View
                         android:layout_width="30dp"
                         android:layout_height="30dp"
@@ -200,7 +200,7 @@
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:gravity="center_vertical"
-                        android:text="新增键盘摇杆"/>
+                        android:text="@string/layout_page_edit_text_6d757"/>
                     <View
                         android:layout_width="30dp"
                         android:layout_height="30dp"
@@ -223,7 +223,7 @@
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:gravity="center_vertical"
-                        android:text="新增隐藏手柄摇杆"/>
+                        android:text="@string/layout_page_edit_text_9851e"/>
                     <View
                         android:layout_width="30dp"
                         android:layout_height="30dp"
@@ -246,7 +246,7 @@
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:gravity="center_vertical"
-                        android:text="新增隐藏键盘摇杆"/>
+                        android:text="@string/layout_page_edit_text_b4881"/>
                     <View
                         android:layout_width="30dp"
                         android:layout_height="30dp"
@@ -269,7 +269,7 @@
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:gravity="center_vertical"
-                        android:text="新增简化信息"/>
+                        android:text="@string/layout_page_edit_text_e19e5"/>
                     <View
                         android:layout_width="30dp"
                         android:layout_height="30dp"
@@ -292,7 +292,7 @@
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:gravity="center_vertical"
-                        android:text="新增组合键"/>
+                        android:text="@string/layout_page_edit_text_ed364"/>
                     <View
                         android:layout_width="30dp"
                         android:layout_height="30dp"
@@ -315,7 +315,7 @@
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:gravity="center_vertical"
-                        android:text="新增轮盘按键"/>
+                        android:text="@string/layout_page_edit_text_1483c"/>
                     <View
                         android:layout_width="30dp"
                         android:layout_height="30dp"
@@ -338,7 +338,7 @@
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:gravity="center_vertical"
-                        android:text="新增组按键"/>
+                        android:text="@string/layout_page_edit_text_bd823"/>
                     <View
                         android:layout_width="30dp"
                         android:layout_height="30dp"

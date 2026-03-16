@@ -18,7 +18,7 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:gravity="center_vertical"
-                android:text="编辑模式" />
+                android:text="@string/layout_item_page_super_menu_text_ce0e8" />
             <View
                 android:layout_width="30dp"
                 android:layout_height="30dp"

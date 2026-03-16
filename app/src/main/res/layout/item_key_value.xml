@@ -18,14 +18,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"
-            android:text="分区 1" />
+            android:text="@string/layout_item_key_value_text_0952a" />
 
         <com.limelight.binding.input.advance_setting.superpage.ElementEditText
             android:id="@+id/item_key_value_name"
             android:layout_width="70dp"
             android:layout_height="wrap_content"
             android:background="@null"
-            android:hint="分区名称，为空时为键值名"
+            android:hint="@string/layout_item_key_value_hint_dd44f"
             android:inputType="text"
             android:maxLines="1"
             android:textSize="14sp" />

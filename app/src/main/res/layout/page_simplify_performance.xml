@@ -27,7 +27,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="类型 : 串流信息"/>
+                    android:text="@string/layout_page_simplify_performance_text_58923"/>
             </LinearLayout>
             <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                 android:id="@+id/page_simplify_performance_central_x"
@@ -52,7 +52,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="字体大小"
+                app:text="@string/apptext_pg_analog_stick_5f15e"
                 app:max="100"
                 app:min="0"
                 app:progress="100" />
@@ -61,7 +61,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="圆角"
+                app:text="@string/apptext_pg_simplify_performance_0103e"
                 app:max="100"
                 app:min="0"
                 app:progress="100" />
@@ -70,7 +70,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginVertical="5dp"
-                app:text="层级"
+                app:text="@string/apptext_pg_analog_stick_6896d"
                 app:max="140"
                 app:min="40" />
             <LinearLayout
@@ -83,7 +83,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="文字颜色" />
+                    android:text="@string/layout_page_simplify_performance_text_7ec90" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_simplify_performance_text_color"
                     android:layout_width="100dp"
@@ -103,7 +103,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="背景颜色" />
+                    android:text="@string/layout_page_analog_stick_text_4573a" />
                 <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                     android:id="@+id/page_simplify_performance_background_color"
                     android:layout_width="100dp"
@@ -127,7 +127,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="match_parent"
                         android:gravity="center_vertical"
-                        android:text="显示文本(可换行)"/>
+                        android:text="@string/layout_page_simplify_performance_text_1673c"/>
                 </FrameLayout>
                 <EditText
                     android:id="@+id/page_simplify_performance_text"
@@ -143,13 +143,13 @@
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1"
-                        android:text="重置"/>
+                        android:text="@string/layout_page_simplify_performance_text_4b9c3"/>
                     <Button
                         android:id="@+id/page_simplify_performance_text_ensure"
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1"
-                        android:text="确认"/>
+                        android:text="@string/layout_page_simplify_performance_text_e83a2"/>
                 </LinearLayout>
                 <LinearLayout
                     android:orientation="vertical"
@@ -160,7 +160,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="解码器:      ##解码器## \n分辨率:      ##分辨率## \n丢帧率:      ##丢帧率##\n主机延时:  ##主机延时##\n网络延时:  ##网络延时##\n解码时间:  ##解码时间##\n带宽:         ##带宽## \n帧率:         ##帧率## \n渲染:         ##渲染延迟## \n时间:         HH:MM:SS \n" />
+                        android:text="@string/layout_page_simplify_performance_text_98e2e" />
                 </LinearLayout>
                 <LinearLayout
                     android:orientation="horizontal"
@@ -172,13 +172,13 @@
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1"
-                        android:text="复制"/>
+                        android:text="@string/layout_capability_diagnostic_text_79d3a"/>
                     <Button
                         android:id="@+id/page_simplify_performance_delete"
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1"
-                        android:text="删除"/>
+                        android:text="@string/layout_config_item_text_2f4aa"/>
                 </LinearLayout>
 
             </LinearLayout>

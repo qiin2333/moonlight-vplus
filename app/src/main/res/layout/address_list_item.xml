@@ -25,7 +25,7 @@
             android:id="@+id/address_type"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="本地网络"
+            android:text="@string/layout_address_list_item_text_12b27"
             android:textSize="14sp"
             android:textColor="@android:color/darker_gray"
             android:layout_marginTop="2dp" />
@@ -39,6 +39,6 @@
         android:layout_gravity="center_vertical"
         android:src="@drawable/ic_play"
         android:tint="@color/theme_pink_primary"
-        android:contentDescription="连接" />
+        android:contentDescription="@string/layout_address_list_item_cd_30f7d" />
 
 </LinearLayout>

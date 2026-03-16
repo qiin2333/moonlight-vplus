@@ -279,7 +279,7 @@
                     style="@style/KeyboardKeyRefined.Modifier"
                     android:layout_width="100dp"
                     android:layout_height="40dp"
-                    android:text="返回键盘"
+                    android:text="@string/layout_keyboard_mini_text_3ae7b"
                     android:gravity="center"
                     android:textSize="12sp" />
                 <TextView

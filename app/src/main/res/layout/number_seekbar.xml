@@ -13,7 +13,7 @@
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:gravity="center_vertical"
-            android:text="鼠标透传灵敏度"/>
+            android:text="@string/layout_number_seekbar_text_e12e7"/>
         <LinearLayout
             android:orientation="horizontal"
             android:layout_width="wrap_content"
