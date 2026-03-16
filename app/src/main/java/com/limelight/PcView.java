@@ -48,6 +48,9 @@ import com.limelight.utils.UiHelper;
 import com.limelight.utils.UpdateManager;
 import com.squareup.seismic.ShakeDetector;
 
+import com.google.zxing.integration.android.IntentIntegrator;
+import com.google.zxing.integration.android.IntentResult;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.xmlpull.v1.XmlPullParserException;
@@ -116,6 +119,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
     private static final long SHAKE_DEBOUNCE_INTERVAL = 3000;
     private static final int MAX_DAILY_REFRESH = 7;
     private static final int VPN_PERMISSION_REQUEST_CODE = 101;
+    private static final int QR_SCAN_REQUEST_CODE = 102;
 
     private static final String REFRESH_PREF_NAME = "RefreshLimit";
     private static final String REFRESH_COUNT_KEY = "refresh_count";
@@ -1126,6 +1130,152 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
         }).start();
     }
 
+    private void showAddComputerDialog() {
+        String[] items = {
+            getString(R.string.addpc_manual),
+            getString(R.string.addpc_qr_scan)
+        };
+        new AlertDialog.Builder(this)
+            .setTitle(getString(R.string.title_add_pc_choose))
+            .setItems(items, (dialog, which) -> {
+                if (which == 0) {
+                    startActivity(new Intent(this, AddComputerManually.class));
+                } else {
+                    startQrScan();
+                }
+            })
+            .show();
+    }
+
+    private void startQrScan() {
+        IntentIntegrator integrator = new IntentIntegrator(this);
+        integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE);
+        integrator.setPrompt(getString(R.string.qr_scan_prompt));
+        integrator.setBeepEnabled(false);
+        integrator.setOrientationLocked(false);
+        integrator.initiateScan();
+    }
+
+    private void handleQrPairResult(String url) {
+        Uri uri = Uri.parse(url);
+        if (!"moonlight".equals(uri.getScheme()) || !"pair".equals(uri.getHost())) {
+            showToast(getString(R.string.qr_invalid_code));
+            return;
+        }
+
+        String host = uri.getQueryParameter("host");
+        String portStr = uri.getQueryParameter("port");
+        String pin = uri.getQueryParameter("pin");
+
+        if (host == null || pin == null) {
+            showToast(getString(R.string.qr_invalid_code));
+            return;
+        }
+
+        int port = NvHTTP.DEFAULT_HTTP_PORT;
+        if (portStr != null) {
+            try { port = Integer.parseInt(portStr); } catch (NumberFormatException ignored) {}
+        }
+
+        showToast(getString(R.string.qr_pairing));
+        int finalPort = port;
+        new Thread(() -> {
+            String message = null;
+            boolean success = false;
+            ComputerDetails pairedComputer = null;
+
+            try {
+                stopComputerUpdates(true);
+
+                // Add the computer first
+                ComputerDetails addDetails = new ComputerDetails();
+                addDetails.manualAddress = new ComputerDetails.AddressTuple(host, finalPort);
+                boolean added = managerBinder != null && managerBinder.addComputerBlocking(addDetails);
+                if (!added) {
+                    message = getString(R.string.addpc_fail);
+                } else {
+                    // Find the added computer to get its httpsPort and serverCert
+                    ComputerDetails computer = findComputerByAddress(host);
+                    if (computer == null) {
+                        message = getString(R.string.addpc_fail);
+                    } else {
+                        NvHTTP httpConn = new NvHTTP(
+                            ServerHelper.getCurrentAddressFromComputer(computer),
+                            computer.httpsPort,
+                            managerBinder.getUniqueId(),
+                            clientName,
+                            computer.serverCert,
+                            PlatformBinding.getCryptoProvider(this)
+                        );
+
+                        if (httpConn.getPairState() == PairState.PAIRED) {
+                            success = true;
+                            pairedComputer = computer;
+                        } else {
+                            PairingManager pm = httpConn.getPairingManager();
+                            PairResult result = pm.pair(httpConn.getServerInfo(true), pin);
+                            switch (result.state) {
+                                case PIN_WRONG:
+                                    message = getString(R.string.pair_incorrect_pin);
+                                    break;
+                                case FAILED:
+                                    message = getString(R.string.pair_fail);
+                                    break;
+                                case ALREADY_IN_PROGRESS:
+                                    message = getString(R.string.pair_already_in_progress);
+                                    break;
+                                case PAIRED:
+                                    success = true;
+                                    pairedComputer = computer;
+                                    managerBinder.getComputer(computer.uuid).serverCert = pm.getPairedCert();
+                                    getSharedPreferences("pair_name_map", MODE_PRIVATE)
+                                        .edit()
+                                        .putString(computer.uuid, result.pairName)
+                                        .apply();
+                                    managerBinder.invalidateStateForComputer(computer.uuid);
+                                    break;
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                message = e.getMessage();
+            }
+
+            String finalMessage = message;
+            boolean finalSuccess = success;
+            ComputerDetails finalComputer = pairedComputer;
+            runOnUiThread(() -> {
+                if (finalMessage != null) {
+                    showToast(finalMessage);
+                }
+                if (finalSuccess) {
+                    showToast(getString(R.string.qr_pair_success));
+                    if (finalComputer != null) {
+                        doAppList(finalComputer, true, false);
+                    } else {
+                        startComputerUpdates();
+                    }
+                } else {
+                    startComputerUpdates();
+                }
+            });
+        }).start();
+    }
+
+    private ComputerDetails findComputerByAddress(String host) {
+        if (managerBinder == null) return null;
+        for (int i = 0; i < pcGridAdapter.getCount(); i++) {
+            ComputerObject obj = (ComputerObject) pcGridAdapter.getItem(i);
+            if (PcGridAdapter.isAddComputerCard(obj)) continue;
+            ComputerDetails d = obj.details;
+            if (d.manualAddress != null && host.equals(d.manualAddress.address)) return d;
+            if (d.localAddress != null && host.equals(d.localAddress.address)) return d;
+            if (d.remoteAddress != null && host.equals(d.remoteAddress.address)) return d;
+        }
+        return null;
+    }
+
     private void doWakeOnLan(ComputerDetails computer) {
         if (computer.state == ComputerDetails.State.ONLINE) {
             showToast(getString(R.string.wol_pc_online));
@@ -1709,7 +1859,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
             ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(pos);
 
             if (PcGridAdapter.isAddComputerCard(computer)) {
-                startActivity(new Intent(this, AddComputerManually.class));
+                showAddComputerDialog();
                 return;
             }
 
@@ -1860,6 +2010,15 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        // Handle ZXing scan result
+        IntentResult scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, data);
+        if (scanResult != null) {
+            if (scanResult.getContents() != null) {
+                handleQrPairResult(scanResult.getContents().trim());
+            }
+            return;
+        }
+
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == VPN_PERMISSION_REQUEST_CODE && easyTierController != null) {
             easyTierController.handleVpnPermissionResult(resultCode);
