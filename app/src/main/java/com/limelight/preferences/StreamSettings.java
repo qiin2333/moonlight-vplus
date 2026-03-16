@@ -288,14 +288,18 @@ public class StreamSettings extends Activity {
             case "category_basic_settings": return "⚙️";      // 基本设置
             case "category_screen_position": return "📐";     // 屏幕位置
             case "category_audio_settings": return "🔊";      // 音频
+            case "category_mic_settings": return "🎤";        // 麦克风
+            case "category_audio_vibration": return "📳";     // 音频振动
             case "category_gamepad_settings": return "🎮";    // 手柄
             case "category_input_settings": return "⌨️";      // 输入
             case "category_enhanced_touch": return "👆";      // 触摸增强
             case "category_onscreen_controls": return "🎛️";   // 屏幕控制
+            case "category_float_ball": return "⚽";           // 悬浮球
             case "category_crown_features": return "👑";      // 皇冠功能
             case "category_host_settings": return "🖥️";       // 主机
+            case "category_connection_settings": return "🔗";  // 连接
             case "category_ui_settings": return "🎨";         // 界面
-            case "category_advanced_settings": return "🔧";   // 高级
+            case "category_advanced_settings": return "🔧";   // 高级(legacy)
             case "category_help": return "❓";                // 帮助
             default: return "📋";
         }
@@ -1186,7 +1190,7 @@ public class StreamSettings extends Activity {
                     !getActivity().getPackageManager().hasSystemFeature("android.software.picture_in_picture") ||
                     getActivity().getPackageManager().hasSystemFeature("com.amazon.software.fireos")) {
                 PreferenceCategory category =
-                        (PreferenceCategory) findPreference("category_ui_settings");
+                        (PreferenceCategory) findPreference("category_screen_position");
                 category.removePreference(findPreference("checkbox_enable_pip"));
             }
 
@@ -1436,7 +1440,7 @@ public class StreamSettings extends Activity {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
                 LimeLog.info("Excluding HDR toggle based on OS");
                 PreferenceCategory category =
-                        (PreferenceCategory) findPreference("category_advanced_settings");
+                        (PreferenceCategory) findPreference("category_screen_position");
                 // 必须先移除依赖项，再移除被依赖的项，否则会崩溃
                 Preference hdrHighBrightnessPref = findPreference("checkbox_enable_hdr_high_brightness");
                 if (hdrHighBrightnessPref != null) {
@@ -1476,7 +1480,7 @@ public class StreamSettings extends Activity {
                 }
 
                 PreferenceCategory category =
-                        (PreferenceCategory) findPreference("category_advanced_settings");
+                        (PreferenceCategory) findPreference("category_screen_position");
                 CheckBoxPreference hdrPref = (CheckBoxPreference) findPreference("checkbox_enable_hdr");
                 CheckBoxPreference hdrHighBrightnessPref = (CheckBoxPreference) findPreference("checkbox_enable_hdr_high_brightness");
                 ListPreference hdrModePref = (ListPreference) findPreference("list_hdr_mode");

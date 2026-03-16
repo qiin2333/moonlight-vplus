@@ -56,6 +56,46 @@
                 android:key="custom_resolutions"
                 android:summary="@string/summary_custom_resolutions"
                 android:title="@string/title_custom_resolutions" />
+        <ListPreference
+            android:key="video_format"
+            android:title="@string/title_video_format"
+            android:entries="@array/video_format_names"
+            android:entryValues="@array/video_format_values"
+            android:summary="@string/summary_video_format"
+            android:defaultValue="auto" />
+        <CheckBoxPreference
+            android:key="checkbox_unlock_fps"
+            android:title="@string/title_unlock_fps"
+            android:summary="@string/summary_unlock_fps"
+            android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_reduce_refresh_rate"
+            android:title="@string/title_checkbox_reduce_refresh_rate"
+            android:summary="@string/summary_checkbox_reduce_refresh_rate"
+            android:defaultValue="false" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_output_buffer_queue_limit"
+            android:dialogMessage="@string/summary_seekbar_output_buffer_queue_limit"
+            seekbar:min="1"
+            android:max="5"
+            seekbar:step="1"
+            seekbar:keyStep="1"
+            seekbar:divisor="1"
+            android:defaultValue="2"
+            android:summary="@string/summary_seekbar_output_buffer_queue_limit"
+            android:text="@string/suffix_seekbar_output_buffer_queue_limit"
+            android:title="@string/title_seekbar_output_buffer_queue_limit" />
+    </PreferenceCategory>
+    <PreferenceCategory
+        android:key="category_screen_position"
+        android:title="@string/category_screen_position_settings"
+        android:icon="@drawable/ic_screen_position"
+        android:layout="@layout/preference_category_material">
+        <CheckBoxPreference
+            android:key="checkbox_enable_pip"
+            android:title="@string/title_checkbox_enable_pip"
+            android:summary="@string/summary_checkbox_enable_pip"
+            android:defaultValue="false" />
         <CheckBoxPreference
             android:key="checkbox_stretch_video"
             android:title="@string/title_checkbox_stretch_video"
@@ -69,17 +109,6 @@
             android:key="checkbox_rotable_screen"
             android:title="@string/title_checkbox_rotable_screen"
             android:summary="@string/summary_checkbox_rotable_screen"
-            android:defaultValue="false" />
-    </PreferenceCategory>
-    <PreferenceCategory
-        android:key="category_screen_position"
-        android:title="@string/category_screen_position_settings"
-        android:icon="@drawable/ic_screen_position"
-        android:layout="@layout/preference_category_material">
-        <CheckBoxPreference
-            android:key="checkbox_enable_pip"
-            android:title="@string/title_checkbox_enable_pip"
-            android:summary="@string/summary_checkbox_enable_pip"
             android:defaultValue="false" />
         <com.limelight.preferences.ExternalDisplayPreference
             android:key="use_external_display"
@@ -134,8 +163,8 @@
             android:defaultValue="false" />
         <Preference
             android:key="capability_diagnostic"
-            android:title="编解码与屏幕能力检测"
-            android:summary="检测设备的 HDR 支持、解码器能力等信息" />
+            android:title="@string/title_capability_diagnostic"
+            android:summary="@string/summary_capability_diagnostic" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_audio_settings"
         android:key="category_audio_settings"
@@ -157,11 +186,10 @@
             android:title="@string/title_checkbox_enable_spatializer"
             android:summary="@string/summary_checkbox_enable_spatializer"
             android:defaultValue="false" />
-        <CheckBoxPreference
-            android:key="checkbox_control_only"
-            android:title="@string/title_checkbox_control_only"
-            android:summary="@string/summary_checkbox_control_only"
-            android:defaultValue="false" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="@string/category_mic_settings"
+        android:key="category_mic_settings"
+        android:layout="@layout/preference_category_material">
         <CheckBoxPreference
             android:key="checkbox_enable_mic"
             android:title="@string/title_checkbox_enable_mic"
@@ -188,6 +216,10 @@
             android:entries="@array/mic_icon_color_entries"
             android:entryValues="@array/mic_icon_color_values"
             android:defaultValue="solid_white" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="@string/category_audio_vibration_settings"
+        android:key="category_audio_vibration"
+        android:layout="@layout/preference_category_material">
         <CheckBoxPreference
             android:key="checkbox_audio_vibration"
             android:title="@string/title_checkbox_audio_vibration"
@@ -306,41 +338,41 @@
             android:defaultValue="false" />
         <CheckBoxPreference
             android:key="pref_enable_double_click_drag"
-            android:title="启用触控板双击拖动"
-            android:summary="双击并按住后可拖动选择"
+            android:title="@string/title_enable_double_click_drag"
+            android:summary="@string/summary_enable_double_click_drag"
             android:defaultValue="false" />
         <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_double_tap_time_threshold"
             android:dependency="pref_enable_double_click_drag"
-            android:dialogMessage="调整双击识别的时间间隔，数值越大越容易触发双击"
+            android:dialogMessage="@string/dialog_seekbar_double_tap_time_threshold"
             seekbar:min="25"
             android:max="1000"
             seekbar:step="25"
             seekbar:keyStep="50"
             seekbar:divisor="1"
             android:defaultValue="125"
-            android:summary="调整双击识别的时间间隔"
+            android:summary="@string/summary_seekbar_double_tap_time_threshold"
             android:text="ms"
-            android:title="双击时间阈值" />
+            android:title="@string/title_seekbar_double_tap_time_threshold" />
         <CheckBoxPreference
             android:key="pref_enable_local_cursor_rendering"
-            android:title="显示一个本地光标"
-            android:summary="显示一个本地光标，可通过触摸板模式控制光标"
+            android:title="@string/title_local_cursor_rendering"
+            android:summary="@string/summary_local_cursor_rendering"
             android:defaultValue="false" />
         <CheckBoxPreference
             android:key="checkbox_special_key_map"
-            android:title="特殊按键映射"
-            android:summary="键盘Home键映射Esc键，Esc+数字键/符号映射F1到F12,Esc+Q键映射串流菜单,安卓截图键映射Windows截图,安卓上一首/播放暂停/下一首分别映射到F5/F10/F11。"
+            android:title="@string/title_special_key_map"
+            android:summary="@string/summary_special_key_map"
             android:defaultValue="false" />
         <CheckBoxPreference
             android:key="checkbox_mouse_middle"
-            android:title="修复鼠标中键"
-            android:summary="在一些设备上鼠标中键可能被识别为返回键，选中尝试修复此问题。"
+            android:title="@string/title_fix_mouse_middle"
+            android:summary="@string/summary_fix_mouse_middle"
             android:defaultValue="true" />
         <CheckBoxPreference
             android:key="checkbox_mouse_wheel"
-            android:title="修复本地鼠标滚轮"
-            android:summary="在一些设备上使用本地鼠标滚轮可能产生触屏滑动事件，选中尝试修复此问题。"
+            android:title="@string/title_fix_mouse_wheel"
+            android:summary="@string/summary_fix_mouse_wheel"
             android:defaultValue="true" />
         <CheckBoxPreference
             android:key="checkbox_sync_touch_event_with_display"
@@ -477,8 +509,8 @@
         <CheckBoxPreference
             android:key="checkbox_half_height_osc_portrait"
             android:dependency="checkbox_show_onscreen_controls"
-            android:title="竖屏模式半高"
-            android:summary="竖屏下控制按钮将显示于下半屏"
+            android:title="@string/title_half_height_osc_portrait"
+            android:summary="@string/summary_half_height_osc_portrait"
             android:defaultValue="true" />
         <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_osc_opacity"
@@ -604,6 +636,11 @@
             android:key="checkbox_swap_quit_and_disconnect"
             android:summary="@string/summary_checkbox_swap_quit_and_disconnect"
             android:title="@string/title_checkbox_swap_quit_and_disconnect" />
+        <CheckBoxPreference
+            android:key="checkbox_control_only"
+            android:title="@string/title_checkbox_control_only"
+            android:summary="@string/summary_checkbox_control_only"
+            android:defaultValue="false" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_ui_settings"
         android:key="category_ui_settings"
@@ -640,66 +677,16 @@
             android:summary="@string/summary_enable_analytics"
             android:defaultValue="true" />
         <CheckBoxPreference
-            android:key="checkbox_resume_stream"
-            android:title="@string/title_checkbox_resume_stream"
-            android:summary="@string/summary_checkbox_resume_stream"
-            android:defaultValue="false" />
-        <CheckBoxPreference
-            android:key="checkbox_extreme_resume"
-            android:title="不断开连接"
-            android:dependency="checkbox_resume_stream"
-            android:summary="切换应用或锁屏时保持连接不断开，回到moonlight时可瞬间恢复。注意：后台挂起时仍会消耗流量和电量。"
-            android:defaultValue="false" />
-        <CheckBoxPreference
-            android:key="checkbox_background_audio"
-            android:title="后台播放音频"
-            android:dependency="checkbox_extreme_resume"
-            android:summary="启用不断开连接后，切换到后台时是否需要播放音频"
-            android:defaultValue="false" />
-    </PreferenceCategory>
-    <PreferenceCategory android:title="@string/category_advanced_settings"
-        android:key="category_advanced_settings"
-        android:layout="@layout/preference_category_material">
-        <CheckBoxPreference
-            android:key="checkbox_unlock_fps"
-            android:title="@string/title_unlock_fps"
-            android:summary="@string/summary_unlock_fps"
-            android:defaultValue="false" />
-        <CheckBoxPreference
-            android:key="checkbox_reduce_refresh_rate"
-            android:title="@string/title_checkbox_reduce_refresh_rate"
-            android:summary="@string/summary_checkbox_reduce_refresh_rate"
-            android:defaultValue="false" />
-        <CheckBoxPreference
             android:key="checkbox_disable_warnings"
             android:title="@string/title_checkbox_disable_warnings"
             android:summary="@string/summary_checkbox_disable_warnings"
             android:defaultValue="false" />
-        <ListPreference
-            android:key="video_format"
-            android:title="@string/title_video_format"
-            android:entries="@array/video_format_names"
-            android:entryValues="@array/video_format_values"
-            android:summary="@string/summary_video_format"
-            android:defaultValue="auto" />
-        <com.limelight.preferences.SeekBarPreference
-            android:key="seekbar_output_buffer_queue_limit"
-            android:dialogMessage="@string/summary_seekbar_output_buffer_queue_limit"
-            seekbar:min="1"
-            android:max="5"
-            seekbar:step="1"
-            seekbar:keyStep="1"
-            seekbar:divisor="1"
-            android:defaultValue="2"
-            android:summary="@string/summary_seekbar_output_buffer_queue_limit"
-            android:text="@string/suffix_seekbar_output_buffer_queue_limit"
-            android:title="@string/title_seekbar_output_buffer_queue_limit" />
         <CheckBoxPreference
             android:key="checkbox_enable_perf_overlay"
             android:title="@string/title_enable_perf_overlay"
             android:summary="@string/summary_enable_perf_overlay"
             android:defaultValue="false"/>
-                 <com.limelight.preferences.PerfOverlayOrientationPreference
+        <com.limelight.preferences.PerfOverlayOrientationPreference
             android:key="list_perf_overlay_orientation"
             android:title="@string/title_perf_overlay_orientation"
             android:summary="@string/summary_perf_overlay_orientation"
@@ -713,11 +700,6 @@
             android:summary="@string/summary_perf_overlay_position"
             android:defaultValue="top"
             android:dependency="checkbox_enable_perf_overlay"/>
-        <!-- <com.limelight.preferences.ResetPerfOverlayPositionPreference
-            android:key="reset_perf_overlay_position"
-            android:title="@string/title_reset_perf_overlay_position"
-            android:summary="@string/summary_reset_perf_overlay_position"
-            android:dependency="checkbox_enable_perf_overlay"/> -->
         <com.limelight.preferences.PerfOverlayDisplayItemsPreference
             android:key="perf_overlay_display_items"
             android:title="@string/title_perf_overlay_display_items"
@@ -728,12 +710,32 @@
             android:title="@string/title_enable_post_stream_toast"
             android:summary="@string/summary_enable_post_stream_toast"
             android:defaultValue="false"/>
+    </PreferenceCategory>
+    <PreferenceCategory android:title="@string/category_connection_settings"
+        android:key="category_connection_settings"
+        android:layout="@layout/preference_category_material">
+        <CheckBoxPreference
+            android:key="checkbox_resume_stream"
+            android:title="@string/title_checkbox_resume_stream"
+            android:summary="@string/summary_checkbox_resume_stream"
+            android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_extreme_resume"
+            android:title="@string/title_extreme_resume"
+            android:dependency="checkbox_resume_stream"
+            android:summary="@string/summary_extreme_resume"
+            android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_background_audio"
+            android:title="@string/title_background_audio"
+            android:dependency="checkbox_extreme_resume"
+            android:summary="@string/summary_background_audio"
+            android:defaultValue="false" />
         <CheckBoxPreference
             android:key="checkbox_enable_stun"
-            android:title="获取公网 IP"
-            android:summary="这会尝试利用 STUN 服务器获取被控端的公网访问方式，以便在离开局域网环境后继续连接。但此功能可能会导致无公网 IP 用户扫描变慢"
+            android:title="@string/title_enable_stun"
+            android:summary="@string/summary_enable_stun"
             android:defaultValue="false"/>
-
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_help"
         android:key="category_help"
@@ -748,8 +750,8 @@
             url="https://github.com/moonlight-stream/moonlight-docs/wiki/Troubleshooting"/> -->
         <Preference
             android:key="check_for_updates"
-            android:title="检查更新"
-            android:summary="检查应用是否有新版本可用" />
+            android:title="@string/check_for_updates"
+            android:summary="@string/summary_check_for_updates" />
         <com.limelight.preferences.WebLauncherPreference
             android:title="@string/title_moonlight_vplus_pc_download"
             url="https://github.com/qiin2333/moonlight-qt"/>
