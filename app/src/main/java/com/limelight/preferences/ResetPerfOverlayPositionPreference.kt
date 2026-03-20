@@ -2,7 +2,7 @@ package com.limelight.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.preference.Preference
+import androidx.preference.Preference
 import android.util.AttributeSet
 import android.widget.Toast
 

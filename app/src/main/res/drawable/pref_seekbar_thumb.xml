@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 外部阴影效果 -->
+    <item
+        android:bottom="1dp"
+        android:left="1dp"
+        android:right="1dp"
+        android:top="1dp">
+        <shape android:shape="oval">
+            <solid android:color="#30000000" />
+            <size android:width="22dp" android:height="22dp" />
+        </shape>
+    </item>
+    <!-- 白色外圈 -->
+    <item
+        android:bottom="2dp"
+        android:left="2dp"
+        android:right="2dp"
+        android:top="2dp">
+        <shape android:shape="oval">
+            <solid android:color="#FFFFFF" />
+            <size android:width="20dp" android:height="20dp" />
+        </shape>
+    </item>
+    <!-- 主题色内圈 -->
+    <item
+        android:bottom="4dp"
+        android:left="4dp"
+        android:right="4dp"
+        android:top="4dp">
+        <shape android:shape="oval">
+            <solid android:color="@color/theme_pink_primary" />
+            <size android:width="16dp" android:height="16dp" />
+        </shape>
+    </item>
+</layer-list>

@@ -128,7 +128,17 @@
         <item name="android:windowExitAnimation">@anim/background_fadeout</item>
     </style>
 
-    <style name="PreferenceThemeWithShadow" parent="AppTheme">
+    <!-- StreamSettings Activity 的 AppCompat 主题（AndroidX PreferenceFragmentCompat 需要） -->
+    <style name="SettingsThemeCompat" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/advance_setting_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
+    </style>
+
+    <style name="PreferenceThemeWithShadow" parent="SettingsThemeCompat">
         <item name="android:textViewStyle">@style/PreferenceTextWithShadow</item>
         <item name="android:titleTextAppearance">@style/PreferenceTitleWithShadow</item>
         <item name="android:subtitleTextAppearance">@style/PreferenceSummaryWithShadow</item>

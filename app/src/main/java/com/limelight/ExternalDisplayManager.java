@@ -9,6 +9,7 @@ import android.hardware.display.DisplayManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.util.TypedValue;
 import android.view.Display;
 import android.view.Gravity;
@@ -333,7 +334,7 @@ public class ExternalDisplayManager {
             }
 
             // 创建定时更新任务
-            final Handler handler = new Handler();
+            final Handler handler = new Handler(Looper.getMainLooper());
             final Runnable updateBatteryTask = new Runnable() {
                 private final int[] gravityOptions = {
                     Gravity.CENTER,

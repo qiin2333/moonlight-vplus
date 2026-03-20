@@ -2,14 +2,15 @@ package com.limelight.preferences;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.preference.DialogPreference;
-import android.text.Editable;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.*;
+
+import androidx.preference.DialogPreference;
+
 import com.limelight.R;
 
 import java.util.*;
@@ -104,8 +105,8 @@ class ResolutionValidator {
  * 自定义分辨率偏好设置类
  */
 public class CustomResolutionsPreference extends DialogPreference {
-    private final Context context;
-    private final CustomResolutionsAdapter adapter;
+    final Context context;
+    final CustomResolutionsAdapter adapter;
 
     public CustomResolutionsPreference(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -258,15 +259,14 @@ public class CustomResolutionsPreference extends DialogPreference {
     }
 
     @Override
-    protected void onBindDialogView(View view) {
-        loadStoredResolutions();
-        super.onBindDialogView(view);
+    protected void onSetInitialValue(Object defaultValue) {
+        // No persisted value needed; resolutions are stored in a separate SharedPreferences file
     }
 
     /**
      * 加载存储的分辨率
      */
-    private void loadStoredResolutions() {
+    void loadStoredResolutions() {
         SharedPreferences prefs = context.getSharedPreferences(CustomResolutionsConsts.CUSTOM_RESOLUTIONS_FILE, Context.MODE_PRIVATE);
         Set<String> stored = prefs.getStringSet(CustomResolutionsConsts.CUSTOM_RESOLUTIONS_KEY, null);
 
@@ -282,110 +282,6 @@ public class CustomResolutionsPreference extends DialogPreference {
     private ArrayList<String> sortResolutions(ArrayList<String> resolutions) {
         Collections.sort(resolutions, new ResolutionComparator());
         return resolutions;
-    }
-
-    @Override
-    protected View onCreateDialogView() {
-        LinearLayout body = createMainLayout();
-        ListView list = createListView();
-        View inputRow = createInputRow();
-
-        body.addView(list);
-        body.addView(inputRow);
-
-        return body;
-    }
-
-    /**
-     * 创建主布局
-     */
-    private LinearLayout createMainLayout() {
-        LinearLayout body = new LinearLayout(context);
-        
-        // 设置弹窗宽度为屏幕宽度的80%，最小宽度400dp
-        int screenWidth = context.getResources().getDisplayMetrics().widthPixels;
-        int dialogWidth = Math.min((int) (screenWidth * 0.8), dpToPx(400));
-        
-        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
-                dialogWidth,
-                AbsListView.LayoutParams.WRAP_CONTENT
-        );
-        layoutParams.gravity = Gravity.CENTER;
-        body.setLayoutParams(layoutParams);
-        body.setOrientation(LinearLayout.VERTICAL);
-        body.setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16));
-        
-        return body;
-    }
-    
-    /**
-     * 将dp转换为px
-     */
-    private int dpToPx(int value) {
-        float density = context.getResources().getDisplayMetrics().density;
-        return (int) (value * density + 0.5f);
-    }
-
-    /**
-     * 创建列表视图
-     */
-    private ListView createListView() {
-        ListView list = new ListView(context);
-        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT
-        );
-        list.setLayoutParams(layoutParams);
-        list.setAdapter(adapter);
-        list.setDividerHeight(dpToPx(1));
-        list.setDivider(context.getResources().getDrawable(android.R.color.darker_gray));
-        return list;
-    }
-
-    /**
-     * 创建输入行
-     */
-    private View createInputRow() {
-        LayoutInflater inflater = LayoutInflater.from(context);
-        View inputRow = inflater.inflate(R.layout.custom_resolutions_form, null);
-
-        EditText widthField = inputRow.findViewById(R.id.custom_resolution_width_field);
-        EditText heightField = inputRow.findViewById(R.id.custom_resolution_height_field);
-        Button addButton = inputRow.findViewById(R.id.add_resolution_button);
-
-        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                AbsListView.LayoutParams.WRAP_CONTENT
-        );
-        layoutParams.topMargin = dpToPx(16);
-        inputRow.setLayoutParams(layoutParams);
-
-        setupInputListeners(widthField, heightField, addButton);
-
-        return inputRow;
-    }
-
-    /**
-     * 设置输入监听器
-     */
-    private void setupInputListeners(EditText widthField, EditText heightField, Button addButton) {
-        // 设置按钮点击事件
-        addButton.setOnClickListener(view -> onSubmitResolution(widthField, heightField));
-
-        // 设置回车键监听
-        heightField.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
-                onSubmitResolution(widthField, heightField);
-                return true;
-            }
-            return false;
-        });
-    }
-
-    @Override
-    protected void onDialogClosed(boolean positiveResult) {
-        StreamSettings settingsActivity = (StreamSettings) getContext();
-        settingsActivity.reloadSettings();
     }
 
     /**

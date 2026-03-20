@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.preference.ListPreference
+import androidx.preference.ListPreference
 import android.provider.Settings
 import android.util.AttributeSet
 

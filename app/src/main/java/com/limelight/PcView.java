@@ -82,7 +82,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.preference.PreferenceManager;
+import androidx.preference.PreferenceManager;
 import android.provider.Settings;
 import android.util.LruCache;
 import android.view.ContextMenu;
@@ -1194,47 +1194,48 @@ public class PcView extends Activity implements AdapterFragmentCallbacks, ShakeD
                 if (!added) {
                     message = getString(R.string.addpc_fail);
                 } else {
-                    // Find the added computer to get its httpsPort and serverCert
-                    ComputerDetails computer = findComputerByAddress(host);
+                    // addComputerBlocking fills addDetails in-place (uuid, httpsPort, etc.)
+                    // Use getComputer to get the latest state from pollingTuples
+                    ComputerDetails computer = managerBinder.getComputer(addDetails.uuid);
                     if (computer == null) {
-                        message = getString(R.string.addpc_fail);
-                    } else {
-                        NvHTTP httpConn = new NvHTTP(
-                            ServerHelper.getCurrentAddressFromComputer(computer),
-                            computer.httpsPort,
-                            managerBinder.getUniqueId(),
-                            clientName,
-                            computer.serverCert,
-                            PlatformBinding.getCryptoProvider(this)
-                        );
+                        computer = addDetails;
+                    }
 
-                        if (httpConn.getPairState() == PairState.PAIRED) {
-                            success = true;
-                            pairedComputer = computer;
-                        } else {
-                            PairingManager pm = httpConn.getPairingManager();
-                            PairResult result = pm.pair(httpConn.getServerInfo(true), pin);
-                            switch (result.state) {
-                                case PIN_WRONG:
-                                    message = getString(R.string.pair_incorrect_pin);
-                                    break;
-                                case FAILED:
-                                    message = getString(R.string.pair_fail);
-                                    break;
-                                case ALREADY_IN_PROGRESS:
-                                    message = getString(R.string.pair_already_in_progress);
-                                    break;
-                                case PAIRED:
-                                    success = true;
-                                    pairedComputer = computer;
-                                    managerBinder.getComputer(computer.uuid).serverCert = pm.getPairedCert();
-                                    getSharedPreferences("pair_name_map", MODE_PRIVATE)
-                                        .edit()
-                                        .putString(computer.uuid, result.pairName)
-                                        .apply();
-                                    managerBinder.invalidateStateForComputer(computer.uuid);
-                                    break;
-                            }
+                    NvHTTP httpConn = new NvHTTP(
+                        ServerHelper.getCurrentAddressFromComputer(computer),
+                        computer.httpsPort,
+                        managerBinder.getUniqueId(),
+                        clientName,
+                        computer.serverCert,
+                        PlatformBinding.getCryptoProvider(this)
+                    );
+
+                    if (httpConn.getPairState() == PairState.PAIRED) {
+                        success = true;
+                        pairedComputer = computer;
+                    } else {
+                        PairingManager pm = httpConn.getPairingManager();
+                        PairResult result = pm.pair(httpConn.getServerInfo(true), pin);
+                        switch (result.state) {
+                            case PIN_WRONG:
+                                message = getString(R.string.pair_incorrect_pin);
+                                break;
+                            case FAILED:
+                                message = getString(R.string.pair_fail);
+                                break;
+                            case ALREADY_IN_PROGRESS:
+                                message = getString(R.string.pair_already_in_progress);
+                                break;
+                            case PAIRED:
+                                success = true;
+                                pairedComputer = computer;
+                                managerBinder.getComputer(computer.uuid).serverCert = pm.getPairedCert();
+                                getSharedPreferences("pair_name_map", MODE_PRIVATE)
+                                    .edit()
+                                    .putString(computer.uuid, result.pairName)
+                                    .apply();
+                                managerBinder.invalidateStateForComputer(computer.uuid);
+                                break;
                         }
                     }
                 }

@@ -74,7 +74,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
-import android.preference.PreferenceManager;
+import androidx.preference.PreferenceManager;
 import android.util.Rational;
 import android.view.Display;
 import android.view.InputDevice;
@@ -4044,7 +4044,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             // when the spinner gets displayed. On Android Q, even now
             // is too early to capture. We will delay a second to allow
             // the spinner to dismiss before capturing.
-            Handler h = new Handler();
+            Handler h = new Handler(Looper.getMainLooper());
             h.postDelayed(() -> {
                 // 根据配置决定是否启用原生鼠标指针
                 if (prefConfig.enableNativeMousePointer) {

@@ -2,7 +2,7 @@ package com.limelight.preferences
 
 import android.content.Context
 import android.content.res.TypedArray
-import android.preference.CheckBoxPreference
+import androidx.preference.CheckBoxPreference
 import android.util.AttributeSet
 
 class SmallIconCheckboxPreference @JvmOverloads constructor(

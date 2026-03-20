@@ -6,8 +6,9 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.AnimatedVectorDrawable;
-import android.os.AsyncTask;
-import android.preference.PreferenceManager;
+import android.os.Handler;
+import android.os.Looper;
+import androidx.preference.PreferenceManager;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -36,6 +37,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 
 public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
 
@@ -122,7 +125,7 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
         }
 
         loadingUuids.add(computer.uuid);
-        new LoadBoxArtTask(imgView, computer, context, this).execute();
+        LoadBoxArtTask.execute(imgView, computer, context, this);
         return false;
     }
     
@@ -225,41 +228,35 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
         loadingUuids.remove(uuid);
     }
 
-    private static class LoadBoxArtTask extends AsyncTask<Void, Void, Bitmap> {
-        private final WeakReference<ImageView> imageViewRef;
-        private final ComputerDetails computer;
-        private final WeakReference<Context> contextRef;
-        private final WeakReference<PcGridAdapter> adapterRef;
+    private static class LoadBoxArtTask {
+        private static final ExecutorService executor = Executors.newSingleThreadExecutor();
+        private static final Handler mainHandler = new Handler(Looper.getMainLooper());
 
-        LoadBoxArtTask(ImageView imageView, ComputerDetails computer, Context context, PcGridAdapter adapter) {
-            this.imageViewRef = new WeakReference<>(imageView);
-            this.computer = computer;
-            this.contextRef = new WeakReference<>(context);
-            this.adapterRef = new WeakReference<>(adapter);
-        }
+        static void execute(ImageView imageView, ComputerDetails computer, Context context, PcGridAdapter adapter) {
+            final WeakReference<ImageView> imageViewRef = new WeakReference<>(imageView);
+            final WeakReference<Context> contextRef = new WeakReference<>(context);
+            final WeakReference<PcGridAdapter> adapterRef = new WeakReference<>(adapter);
 
-        @Override
-        protected Bitmap doInBackground(Void... voids) {
-            Context ctx = contextRef.get();
-            // 使用自适应采样大小，异步加载时可以更精确地控制质量
-            return loadBoxArtFromDisk(ctx, computer.uuid, true);
-        }
+            executor.execute(() -> {
+                Context ctx = contextRef.get();
+                Bitmap bitmap = loadBoxArtFromDisk(ctx, computer.uuid, true);
 
-        @Override
-        protected void onPostExecute(Bitmap bitmap) {
-            PcGridAdapter adapter = adapterRef.get();
-            if (adapter != null) {
-                if (bitmap != null) {
-                    adapter.cacheBoxArt(computer.uuid, bitmap);
-                } else {
-                    adapter.markLoadingComplete(computer.uuid);
-                }
-            }
+                mainHandler.post(() -> {
+                    PcGridAdapter a = adapterRef.get();
+                    if (a != null) {
+                        if (bitmap != null) {
+                            a.cacheBoxArt(computer.uuid, bitmap);
+                        } else {
+                            a.markLoadingComplete(computer.uuid);
+                        }
+                    }
 
-            ImageView imageView = imageViewRef.get();
-            if (imageView != null && bitmap != null) {
-                applyBoxArt(imageView, bitmap);
-            }
+                    ImageView iv = imageViewRef.get();
+                    if (iv != null && bitmap != null) {
+                        applyBoxArt(iv, bitmap);
+                    }
+                });
+            });
         }
     }
 

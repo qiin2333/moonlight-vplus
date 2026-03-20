@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.hardware.input.InputManager;
 import android.os.Build;
 import android.os.Handler;
+import android.os.Looper;
 import android.view.InputDevice;
 import android.view.MotionEvent;
 import android.view.View;
@@ -98,7 +99,7 @@ public class AndroidNativePointerCaptureProvider extends AndroidPointerIconCaptu
         // we have to delay a bit before requesting capture because otherwise
         // we'll hit the "requestPointerCapture called for a window that has no focus"
         // error and it will not actually capture the cursor.
-        Handler h = new Handler();
+        Handler h = new Handler(Looper.getMainLooper());
         h.postDelayed(new Runnable() {
             @Override
             public void run() {

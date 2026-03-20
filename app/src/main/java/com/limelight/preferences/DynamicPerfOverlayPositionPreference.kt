@@ -2,8 +2,8 @@ package com.limelight.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.preference.ListPreference
-import android.preference.PreferenceManager
+import androidx.preference.ListPreference
+import androidx.preference.PreferenceManager
 import android.util.AttributeSet
 
 import com.limelight.R
@@ -11,14 +11,22 @@ import com.limelight.R
 class DynamicPerfOverlayPositionPreference : ListPreference {
 
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int, defStyleRes: Int)
-            : super(context, attrs, defStyleAttr, defStyleRes) { updateEntries() }
+            : super(context, attrs, defStyleAttr, defStyleRes) { init() }
 
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int)
-            : super(context, attrs, defStyleAttr) { updateEntries() }
+            : super(context, attrs, defStyleAttr) { init() }
 
-    constructor(context: Context, attrs: AttributeSet?) : super(context, attrs) { updateEntries() }
+    constructor(context: Context, attrs: AttributeSet?) : super(context, attrs) { init() }
 
-    constructor(context: Context) : super(context) { updateEntries() }
+    constructor(context: Context) : super(context) { init() }
+
+    private fun init() {
+        updateEntries()
+        onPreferenceChangeListener = OnPreferenceChangeListener { _, _ ->
+            clearCustomPosition()
+            true
+        }
+    }
 
     override fun onAttachedToHierarchy(preferenceManager: PreferenceManager) {
         super.onAttachedToHierarchy(preferenceManager)
@@ -63,15 +71,6 @@ class DynamicPerfOverlayPositionPreference : ListPreference {
 
     fun refreshEntries() {
         updateEntries()
-    }
-
-    override fun onDialogClosed(positiveResult: Boolean) {
-        super.onDialogClosed(positiveResult)
-
-        if (positiveResult) {
-            // 当位置改变时，清除自定义拖动位置
-            clearCustomPosition()
-        }
     }
 
     private fun clearCustomPosition() {

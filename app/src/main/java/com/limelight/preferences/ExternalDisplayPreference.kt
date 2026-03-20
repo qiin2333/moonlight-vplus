@@ -3,7 +3,7 @@ package com.limelight.preferences
 import android.content.Context
 import android.hardware.display.DisplayManager
 import android.os.Build
-import android.preference.CheckBoxPreference
+import androidx.preference.CheckBoxPreference
 import android.util.AttributeSet
 import android.view.Display
 
@@ -30,8 +30,8 @@ class ExternalDisplayPreference : CheckBoxPreference {
         updateSummary()
     }
 
-    override fun onAttachedToActivity() {
-        super.onAttachedToActivity()
+    override fun onAttachedToHierarchy(preferenceManager: androidx.preference.PreferenceManager) {
+        super.onAttachedToHierarchy(preferenceManager)
         updateSummary()
     }
 

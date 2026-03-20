@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="20dp"
+    android:paddingEnd="20dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
+
+    <!-- 版本号 -->
+    <TextView
+        android:id="@+id/update_version"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:textColor="@color/theme_pink_primary"
+        android:textStyle="bold"
+        android:shadowRadius="0"
+        android:paddingBottom="8dp" />
+
+    <!-- 更新日志 -->
+    <ScrollView
+        android:id="@+id/update_notes_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/update_notes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="@color/app_dialog_subtitle_color"
+            android:lineSpacingMultiplier="1.3"
+            android:shadowRadius="0" />
+
+    </ScrollView>
+
+    <!-- 文件名 -->
+    <TextView
+        android:id="@+id/update_file_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:textColor="#AAAAAA"
+        android:shadowRadius="0"
+        android:paddingTop="8dp"
+        android:visibility="gone" />
+
+</LinearLayout>

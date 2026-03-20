@@ -124,19 +124,33 @@
             android:defaultValue="center"
             app:entryIcons="@array/screen_position_icons" />
         
-        <SeekBarPreference
+        <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_screen_offset_x"
             android:title="@string/title_screen_offset_x"
             android:summary="@string/summary_screen_offset_x"
             android:defaultValue="0"
-            android:max="100" />
+            seekbar:min="0"
+            android:max="100"
+            seekbar:step="5"
+            seekbar:keyStep="10"
+            seekbar:divisor="1"
+            seekbar:tickMarks="true"
+            android:text="%"
+            android:dialogMessage="@string/summary_screen_offset_x" />
         
-        <SeekBarPreference
+        <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_screen_offset_y"
             android:title="@string/title_screen_offset_y"
             android:summary="@string/summary_screen_offset_y"
             android:defaultValue="0"
-            android:max="100" />
+            seekbar:min="0"
+            android:max="100"
+            seekbar:step="5"
+            seekbar:keyStep="10"
+            seekbar:divisor="1"
+            seekbar:tickMarks="true"
+            android:text="%"
+            android:dialogMessage="@string/summary_screen_offset_y" />
         <CheckBoxPreference
             android:key="checkbox_enable_hdr"
             android:title="@string/title_enable_hdr"

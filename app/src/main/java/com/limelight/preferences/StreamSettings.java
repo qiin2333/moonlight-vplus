@@ -1,6 +1,7 @@
 package com.limelight.preferences;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -11,16 +12,9 @@ import android.media.MediaCodecInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.app.Activity;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Vibrator;
-import android.preference.CheckBoxPreference;
-import android.preference.ListPreference;
-import android.preference.Preference;
-import android.preference.PreferenceCategory;
-import android.preference.PreferenceFragment;
-import android.preference.PreferenceManager;
-import android.preference.PreferenceScreen;
 import android.util.DisplayMetrics;
 import android.util.Range;
 import android.view.Display;
@@ -34,11 +28,20 @@ import android.widget.Toast;
 import android.graphics.Color;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.ListView;
-import android.preference.PreferenceGroup;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.preference.CheckBoxPreference;
+import androidx.preference.EditTextPreference;
+import androidx.preference.ListPreference;
+import androidx.preference.Preference;
+import androidx.preference.PreferenceCategory;
+import androidx.preference.PreferenceFragmentCompat;
+import androidx.preference.PreferenceGroup;
+import androidx.preference.PreferenceGroupAdapter;
+import androidx.preference.PreferenceManager;
+import androidx.preference.PreferenceScreen;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -66,7 +69,7 @@ import com.bumptech.glide.request.RequestOptions;
 import jp.wasabeef.glide.transformations.BlurTransformation;
 import jp.wasabeef.glide.transformations.ColorFilterTransformation;
 
-public class StreamSettings extends Activity {
+public class StreamSettings extends AppCompatActivity {
 
     private PreferenceConfiguration previousPrefs;
     private int previousDisplayPixelCount;
@@ -91,7 +94,7 @@ public class StreamSettings extends Activity {
             Display.Mode mode = getWindowManager().getDefaultDisplay().getMode();
             previousDisplayPixelCount = mode.getPhysicalWidth() * mode.getPhysicalHeight();
         }
-		getFragmentManager().beginTransaction().replace(
+		getSupportFragmentManager().beginTransaction().replace(
 				R.id.preference_container, new SettingsFragment()
 		).commitAllowingStateLoss();
     }
@@ -426,7 +429,7 @@ public class StreamSettings extends Activity {
      * 滚动到指定分类
      */
     void scrollToCategory(String categoryKey) {
-        SettingsFragment fragment = (SettingsFragment) getFragmentManager()
+        SettingsFragment fragment = (SettingsFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.preference_container);
         if (fragment != null) {
             fragment.scrollToCategoryByKey(categoryKey);
@@ -685,7 +688,7 @@ public class StreamSettings extends Activity {
         }
     }
 
-    public static class SettingsFragment extends PreferenceFragment {
+    public static class SettingsFragment extends PreferenceFragmentCompat {
 
         private int nativeResolutionStartIndex = Integer.MAX_VALUE;
         private boolean nativeFramerateShown = false;
@@ -946,13 +949,10 @@ public class StreamSettings extends Activity {
             settingsActivity.onCategoriesLoaded(items);
             
             // 添加滚动监听
-            new Handler().post(() -> {
-                View fragmentView = getView();
-                if (fragmentView != null) {
-                    ListView listView = fragmentView.findViewById(android.R.id.list);
-                    if (listView != null) {
-                        setupScrollListener(listView, settingsActivity);
-                    }
+            new Handler(Looper.getMainLooper()).post(() -> {
+                RecyclerView recyclerView = getListView();
+                if (recyclerView != null) {
+                    setupScrollListener(recyclerView, settingsActivity);
                 }
             });
         }
@@ -983,13 +983,12 @@ public class StreamSettings extends Activity {
                 isManualScrolling = true;
                 currentCategoryIndex = index;
                 
-                ListView listView = null;
-                View fragmentView = getView();
-                if (fragmentView != null) {
-                    listView = fragmentView.findViewById(android.R.id.list);
-                }
-                if (listView != null) {
-                    listView.smoothScrollToPositionFromTop(position, dpToPx(2));
+                RecyclerView recyclerView = getListView();
+                if (recyclerView != null) {
+                    RecyclerView.LayoutManager lm = recyclerView.getLayoutManager();
+                    if (lm instanceof LinearLayoutManager) {
+                        ((LinearLayoutManager) lm).scrollToPositionWithOffset(position, dpToPx(2));
+                    }
                 }
             }
         }
@@ -997,35 +996,38 @@ public class StreamSettings extends Activity {
         /**
          * 设置滚动监听
          */
-        private void setupScrollListener(ListView listView, StreamSettings settingsActivity) {
-            listView.setOnScrollListener(new android.widget.AbsListView.OnScrollListener() {
+        private void setupScrollListener(RecyclerView recyclerView, StreamSettings settingsActivity) {
+            recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
                 @Override
-                public void onScrollStateChanged(android.widget.AbsListView view, int scrollState) {
-                    if (scrollState == android.widget.AbsListView.OnScrollListener.SCROLL_STATE_IDLE) {
+                public void onScrollStateChanged(@NonNull RecyclerView rv, int newState) {
+                    if (newState == RecyclerView.SCROLL_STATE_IDLE) {
                         isManualScrolling = false;
-                        updateVisibleCategory((ListView) view, settingsActivity);
+                        updateVisibleCategory(rv, settingsActivity);
                     }
                 }
                 
                 @Override
-                public void onScroll(android.widget.AbsListView view, int firstVisibleItem, 
-                                    int visibleItemCount, int totalItemCount) {
+                public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
                     if (!isManualScrolling) {
-                        updateVisibleCategory((ListView) view, settingsActivity);
+                        updateVisibleCategory(rv, settingsActivity);
                     }
                 }
             });
-            updateVisibleCategory(listView, settingsActivity);
+            updateVisibleCategory(recyclerView, settingsActivity);
         }
 
         /**
          * 更新当前可见分类
          */
-        private void updateVisibleCategory(ListView listView, StreamSettings settingsActivity) {
-            if (listView == null || categoryList.isEmpty()) return;
+        private void updateVisibleCategory(RecyclerView recyclerView, StreamSettings settingsActivity) {
+            if (recyclerView == null || categoryList.isEmpty()) return;
             
-            int firstVisiblePosition = listView.getFirstVisiblePosition();
-            int lastVisiblePosition = firstVisiblePosition + listView.getChildCount() - 1;
+            RecyclerView.LayoutManager lm = recyclerView.getLayoutManager();
+            if (!(lm instanceof LinearLayoutManager)) return;
+            LinearLayoutManager layoutManager = (LinearLayoutManager) lm;
+            
+            int firstVisiblePosition = layoutManager.findFirstVisibleItemPosition();
+            int lastVisiblePosition = layoutManager.findLastVisibleItemPosition();
             
             int newCategoryIndex = -1;
             int categoryPosition = -1;
@@ -1052,55 +1054,25 @@ public class StreamSettings extends Activity {
             return Math.round(dp * density);
         }
 
-        private static class PositionCounter {
-            int position = 0;
-            boolean found = false;
-        }
-
         private int findAdapterPositionForPreference(Preference target) {
-            PreferenceScreen screen = getPreferenceScreen();
-            if (screen == null || target == null) {
-                return -1;
-            }
-
-            PositionCounter counter = new PositionCounter();
-            computePosition(screen, target, counter, true);
-            return counter.found ? counter.position : -1;
-        }
-
-        private void computePosition(PreferenceGroup group, Preference target, PositionCounter counter, boolean isRoot) {
-            if (counter.found) {
-                return;
-            }
-
-            final int count = group.getPreferenceCount();
-            for (int i = 0; i < count; i++) {
-                Preference pref = group.getPreference(i);
-
-                // 适配器包含每个 Preference 自身
-                counter.position++;
-                if (pref == target) {
-                    counter.found = true;
-                    return;
-                }
-
-                if (pref instanceof PreferenceGroup) {
-                    computePosition((PreferenceGroup) pref, target, counter, false);
-                    if (counter.found) {
-                        return;
-                    }
+            RecyclerView recyclerView = getListView();
+            if (recyclerView == null || target == null) return -1;
+            RecyclerView.Adapter<?> adapter = recyclerView.getAdapter();
+            if (adapter instanceof PreferenceGroupAdapter) {
+                PreferenceGroupAdapter prefAdapter = (PreferenceGroupAdapter) adapter;
+                for (int i = 0; i < prefAdapter.getItemCount(); i++) {
+                    if (prefAdapter.getItem(i) == target) return i;
                 }
             }
+            return -1;
         }
 
         @Override
-        public void onCreate(Bundle savedInstanceState) {
-            super.onCreate(savedInstanceState);
-            
+        public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
             // 添加阴影主题
             getActivity().getTheme().applyStyle(R.style.PreferenceThemeWithShadow, true);
             
-            addPreferencesFromResource(R.xml.preferences);
+            setPreferencesFromResource(R.xml.preferences, rootKey);
             PreferenceScreen screen = getPreferenceScreen();
             
             // 为 LocalImagePickerPreference 设置 Fragment 实例，确保 onActivityResult 回调正确
@@ -1110,8 +1082,8 @@ public class StreamSettings extends Activity {
             }
             
             // 为背景图片API URL设置监听器，保存时设置类型为"api"
-            android.preference.EditTextPreference backgroundImageUrlPref = 
-                (android.preference.EditTextPreference) findPreference("background_image_url");
+            EditTextPreference backgroundImageUrlPref = 
+                (EditTextPreference) findPreference("background_image_url");
             if (backgroundImageUrlPref != null) {
                 backgroundImageUrlPref.setOnPreferenceChangeListener((preference, newValue) -> {
                     String url = (String) newValue;
@@ -1423,7 +1395,7 @@ public class StreamSettings extends Activity {
             findPreference(PreferenceConfiguration.UNLOCK_FPS_STRING).setOnPreferenceChangeListener((preference, newValue) -> {
                 // HACK: We need to let the preference change succeed before reinitializing to ensure
                 // it's reflected in the new layout.
-                final Handler h = new Handler();
+                final Handler h = new Handler(Looper.getMainLooper());
                 h.postDelayed(() -> {
                     // Ensure the activity is still open when this timeout expires
                     StreamSettings settingsActivity = (StreamSettings) SettingsFragment.this.getActivity();
@@ -1756,6 +1728,29 @@ public class StreamSettings extends Activity {
                 return true;
             });
 
+        }
+
+        @Override
+        public void onDisplayPreferenceDialog(@NonNull Preference preference) {
+            if (preference instanceof SeekBarPreference) {
+                SeekBarPreferenceDialogFragment f = SeekBarPreferenceDialogFragment.newInstance(preference.getKey());
+                f.setTargetFragment(this, 0);
+                f.show(getParentFragmentManager(), "SeekBarPreference");
+            } else if (preference instanceof CustomResolutionsPreference) {
+                CustomResolutionsPreferenceDialogFragment f = CustomResolutionsPreferenceDialogFragment.newInstance(preference.getKey());
+                f.setTargetFragment(this, 0);
+                f.show(getParentFragmentManager(), "CustomResolutionsPreference");
+            } else if (preference instanceof ConfirmDeleteOscPreference) {
+                ConfirmDeleteOscDialogFragment f = ConfirmDeleteOscDialogFragment.newInstance(preference.getKey());
+                f.setTargetFragment(this, 0);
+                f.show(getParentFragmentManager(), "ConfirmDeleteOscPreference");
+            } else if (preference instanceof IconListPreference) {
+                IconListPreferenceDialogFragment f = IconListPreferenceDialogFragment.newInstance(preference.getKey());
+                f.setTargetFragment(this, 0);
+                f.show(getParentFragmentManager(), "IconListPreference");
+            } else {
+                super.onDisplayPreferenceDialog(preference);
+            }
         }
 
         @Override

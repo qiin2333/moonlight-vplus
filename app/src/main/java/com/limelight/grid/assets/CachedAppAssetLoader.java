@@ -4,7 +4,8 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
-import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
@@ -190,14 +191,17 @@ public class CachedAppAssetLoader {
         return null;
     }
 
-    private class LoaderTask extends AsyncTask<LoaderTuple, Void, ScaledBitmap> {
-        private final WeakReference<ImageView> imageViewRef;
+    private class LoaderTask implements Runnable {
+        final WeakReference<ImageView> imageViewRef;
         private final WeakReference<TextView> textViewRef;
         private final boolean diskOnly;
         private final boolean isBackground;
         private final Runnable onLoadComplete;
+        private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
-        private LoaderTuple tuple;
+        private volatile boolean cancelled;
+        private volatile Thread runningThread;
+        volatile LoaderTuple tuple;
 
         public LoaderTask(ImageView imageView, TextView textView, boolean diskOnly) {
             this(imageView, textView, diskOnly, false, null);
@@ -215,37 +219,55 @@ public class CachedAppAssetLoader {
             this.onLoadComplete = onLoadComplete;
         }
 
-        @Override
-        protected ScaledBitmap doInBackground(LoaderTuple... params) {
-            tuple = params[0];
+        public boolean isCancelled() {
+            return cancelled;
+        }
 
-            // Check whether it has been cancelled or the views are gone
-            if (isCancelled() || imageViewRef.get() == null || textViewRef.get() == null) {
+        public void cancel(boolean mayInterruptIfRunning) {
+            cancelled = true;
+            if (mayInterruptIfRunning && runningThread != null) {
+                runningThread.interrupt();
+            }
+        }
+
+        public void executeOnExecutor(ThreadPoolExecutor executor, LoaderTuple tuple) {
+            this.tuple = tuple;
+            executor.execute(this);
+        }
+
+        @Override
+        public void run() {
+            runningThread = Thread.currentThread();
+            ScaledBitmap result = doInBackground();
+            if (!cancelled) {
+                mainHandler.post(() -> onPostExecute(result));
+            }
+        }
+
+        private ScaledBitmap doInBackground() {
+            if (cancelled || imageViewRef.get() == null || textViewRef.get() == null) {
                 return null;
             }
 
             ScaledBitmap bmp = diskLoader.loadBitmapFromCache(tuple, (int) scalingDivider);
             if (bmp == null) {
                 if (!diskOnly) {
-                    // Try to load the asset from the network
                     bmp = doNetworkAssetLoad(tuple, this);
                 } else {
-                    // Report progress to display the placeholder and spin
-                    // off the network-capable task
-                    publishProgress();
+                    // Post progress update to main thread to display placeholder
+                    // and spin off the network-capable task
+                    if (!cancelled) {
+                        mainHandler.post(this::onProgressUpdate);
+                    }
                 }
             }
 
-            // Cache the bitmap
             if (bmp != null) {
-                // 压缩过大的Bitmap
                 Bitmap compressedBitmap = compressLargeBitmap(bmp.bitmap);
                 if (compressedBitmap != bmp.bitmap) {
-                    // 如果压缩了，创建新的ScaledBitmap
                     ScaledBitmap compressedScaledBitmap = new ScaledBitmap(bmp.originalWidth, bmp.originalHeight, compressedBitmap);
                     memoryLoader.populateCache(tuple, compressedScaledBitmap);
                 } else {
-                    // 如果没有压缩，使用原始Bitmap
                     memoryLoader.populateCache(tuple, bmp);
                 }
             }
@@ -253,23 +275,17 @@ public class CachedAppAssetLoader {
             return bmp;
         }
 
-        @Override
-        protected void onProgressUpdate(Void... nothing) {
-            // Do nothing if cancelled
-            if (isCancelled()) {
+        private void onProgressUpdate() {
+            if (cancelled) {
                 return;
             }
 
-            // If the current loader task for this view isn't us, do nothing
             final ImageView imageView = imageViewRef.get();
             final TextView textView = textViewRef.get();
             if (getLoaderTask(imageView) == this) {
-                // Set off another loader task on the network executor. This time our AsyncDrawable
-                // will use the app image placeholder bitmap, rather than an empty bitmap.
                 LoaderTask task = new LoaderTask(imageView, textView, false, isBackground);
                 AsyncDrawable asyncDrawable = new AsyncDrawable(imageView.getResources(), noAppImageBitmap, task);
                 imageView.setImageDrawable(asyncDrawable);
-                // Use different animation for background images
                 int animationRes = isBackground ? R.anim.background_fadein : R.anim.boxart_fadein;
                 imageView.startAnimation(AnimationUtils.loadAnimation(imageView.getContext(), animationRes));
                 imageView.setVisibility(View.VISIBLE);
@@ -280,25 +296,20 @@ public class CachedAppAssetLoader {
             }
         }
 
-        @Override
-        protected void onPostExecute(final ScaledBitmap bitmap) {
-            // Do nothing if cancelled
-            if (isCancelled()) {
+        private void onPostExecute(final ScaledBitmap bitmap) {
+            if (cancelled) {
                 return;
             }
 
             final ImageView imageView = imageViewRef.get();
             final TextView textView = textViewRef.get();
             if (getLoaderTask(imageView) == this) {
-                // Fade in the box art
                 if (bitmap != null) {
-                    // Show the text if it's a placeholder
                     if (textView != null) {
                         textView.setVisibility(isBitmapPlaceholder(bitmap) ? View.VISIBLE : View.GONE);
                     }
 
                     if (imageView.getVisibility() == View.VISIBLE) {
-                        // Fade out the placeholder first
                         int fadeOutAnimRes = isBackground ? R.anim.background_fadeout : R.anim.boxart_fadeout;
                         Animation fadeOutAnimation = AnimationUtils.loadAnimation(imageView.getContext(), fadeOutAnimRes);
                         fadeOutAnimation.setAnimationListener(new Animation.AnimationListener() {
@@ -307,7 +318,6 @@ public class CachedAppAssetLoader {
 
                             @Override
                             public void onAnimationEnd(Animation animation) {
-                                // Fade in the new box art
                                 imageView.setImageBitmap(bitmap.bitmap);
                                 int fadeInAnimRes = isBackground ? R.anim.background_fadein : R.anim.boxart_fadein;
                                 imageView.startAnimation(AnimationUtils.loadAnimation(imageView.getContext(), fadeInAnimRes));
@@ -319,7 +329,6 @@ public class CachedAppAssetLoader {
                         imageView.startAnimation(fadeOutAnimation);
                     }
                     else {
-                        // View is invisible already, so just fade in the new art
                         imageView.setImageBitmap(bitmap.bitmap);
                         int fadeInAnimRes = isBackground ? R.anim.background_fadein : R.anim.boxart_fadein;
                         imageView.startAnimation(AnimationUtils.loadAnimation(imageView.getContext(), fadeInAnimRes));
@@ -327,7 +336,6 @@ public class CachedAppAssetLoader {
                     }
                 }
                 
-                // 如果提供了回调，执行它
                 if (onLoadComplete != null) {
                     onLoadComplete.run();
                 }

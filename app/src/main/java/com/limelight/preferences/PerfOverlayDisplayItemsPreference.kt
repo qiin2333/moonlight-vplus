@@ -2,8 +2,8 @@ package com.limelight.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.preference.MultiSelectListPreference
-import android.preference.PreferenceManager
+import androidx.preference.MultiSelectListPreference
+import androidx.preference.PreferenceManager
 import android.util.AttributeSet
 
 import com.limelight.R

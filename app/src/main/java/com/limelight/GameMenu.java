@@ -6,6 +6,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.os.Build;
 import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -167,7 +168,7 @@ public class GameMenu {
         this.app = app;
         this.conn = conn;
         this.device = device;
-        this.handler = new Handler();
+        this.handler = new Handler(Looper.getMainLooper());
 
         showMenu();
     }

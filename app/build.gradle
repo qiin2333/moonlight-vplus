@@ -1,5 +1,7 @@
-apply plugin: 'com.android.application'
-apply plugin: 'kotlin-android'
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+}
 
 // 仅在存在 google-services.json 且满足条件时应用 Google Services 插件
 def hasGoogleServicesJson = file('google-services.json').exists()
@@ -20,8 +22,8 @@ android {
         minSdk 22
         targetSdk 35
 
-        versionName "12.7.1"
-        versionCode = 367
+        versionName "12.7.4"
+        versionCode = 369
 
         // Generate native debug symbols to allow Google Play to symbolicate our native crashes
         ndk.debugSymbolLevel = 'FULL'
@@ -177,34 +179,35 @@ android {
 
 dependencies {
     // Desugaring 支持，用于在旧版 Android 上使用 Java 8+ API
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+    coreLibraryDesugaring libs.desugar.jdk.libs
     
-    implementation 'org.bouncycastle:bcprov-jdk18on:1.83'
-    implementation 'org.bouncycastle:bcpkix-jdk18on:1.83'
-    implementation 'org.jcodec:jcodec:0.2.5'
-    implementation 'com.squareup.okhttp3:okhttp:5.3.2'
-    implementation 'org.jmdns:jmdns:3.6.3'
-    implementation 'com.github.cgutman:ShieldControllerExtensions:1.0.1'
-    implementation 'androidx.appcompat:appcompat:1.7.1'
-    implementation 'com.github.ZeyuKeithFu:KeyboardHeaderLayout:v1.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
-    implementation 'com.google.code.gson:gson:2.13.2'
-    implementation 'com.github.bumptech.glide:glide:5.0.5'
-    implementation 'jp.wasabeef:glide-transformations:4.3.0'
-    implementation 'androidx.cardview:cardview:1.0.0'
-    implementation 'androidx.recyclerview:recyclerview:1.4.0'
-    annotationProcessor 'com.github.bumptech.glide:compiler:5.0.5'
-    implementation 'com.squareup:seismic:1.0.3'
-    implementation 'com.google.android.flexbox:flexbox:3.0.0'
-    implementation 'androidx.tvprovider:tvprovider:1.1.0'
-    implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
+    implementation libs.bouncycastle.prov
+    implementation libs.bouncycastle.pkix
+    implementation libs.jcodec
+    implementation libs.okhttp
+    implementation libs.jmdns
+    implementation libs.shield.controller
+    implementation libs.appcompat
+    implementation libs.preference
+    implementation libs.keyboard.header
+    implementation libs.constraintlayout
+    implementation libs.gson
+    implementation libs.glide
+    implementation libs.glide.transformations
+    implementation libs.cardview
+    implementation libs.recyclerview
+    annotationProcessor libs.glide.compiler
+    implementation libs.seismic
+    implementation libs.flexbox
+    implementation libs.tvprovider
+    implementation libs.zxing.embedded
 
     // Firebase Analytics
     // BOM 版本说明: https://firebase.google.com/support/release-notes/android
     // 注意: Firebase 33.0.0+ 需要 minSdk 23，我们使用 32.8.1 保持 API 22 兼容
-    implementation platform('com.google.firebase:firebase-bom:32.8.1')
-    implementation 'com.google.firebase:firebase-analytics'
+    implementation platform(libs.firebase.bom)
+    implementation libs.firebase.analytics
 
     // Kotlin
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation libs.kotlin.stdlib
 }

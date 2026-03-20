@@ -16,9 +16,10 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
-import android.view.Gravity;
-import android.widget.LinearLayout;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.widget.ProgressBar;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -26,6 +27,8 @@ import androidx.annotation.RequiresApi;
 import androidx.core.content.FileProvider;
 
 import com.limelight.BuildConfig;
+import com.limelight.R;
+import com.limelight.utils.SimpleMarkdownRenderer;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -282,22 +285,26 @@ public class UpdateManager {
 
 		Activity activity = (Activity) context;
 		activity.runOnUiThread(() -> {
-			AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-			builder.setTitle("✨ 已是最新版本 v" + currentVersion);
+			AlertDialog.Builder builder = new AlertDialog.Builder(activity, R.style.AppDialogStyle);
+			builder.setTitle("已是最新版本");
 
-			String message;
+			View view = LayoutInflater.from(activity).inflate(R.layout.dialog_update, null);
+
+			TextView version = view.findViewById(R.id.update_version);
+			version.setText("v" + currentVersion);
+
 			if (releaseNotes != null && !releaseNotes.trim().isEmpty()) {
-				message = "当前版本更新内容：\n\n" + releaseNotes;
-			} else {
-				message = "当前版本暂无更新日志";
+				int accentColor = activity.getResources().getColor(R.color.theme_pink_primary);
+				ScrollView notesScroll = view.findViewById(R.id.update_notes_scroll);
+				notesScroll.setVisibility(View.VISIBLE);
+				TextView notes = view.findViewById(R.id.update_notes);
+				notes.setText(SimpleMarkdownRenderer.render(releaseNotes, accentColor));
 			}
 
-			builder.setMessage(message);
+			builder.setView(view);
 			builder.setPositiveButton("知道了", null);
 			builder.setCancelable(true);
-
-			AlertDialog dialog = builder.create();
-			dialog.show();
+			builder.show();
 		});
 	}
 
@@ -308,28 +315,35 @@ public class UpdateManager {
 
 		Activity activity = (Activity) context;
 		activity.runOnUiThread(() -> {
-			AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-			builder.setTitle("发现新版本: " + updateInfo.version);
+			View view = LayoutInflater.from(activity).inflate(R.layout.dialog_update, null);
 
-			String message = "有新版本可用！\n\n";
+			String curVer = getCurrentVersion(context);
+			TextView version = view.findViewById(R.id.update_version);
+			version.setText("v" + curVer + " → v" + updateInfo.version);
+
 			if (updateInfo.releaseNotes != null && !updateInfo.releaseNotes.isEmpty()) {
-				String notes = updateInfo.releaseNotes;
-				if (notes.length() > 300) {
-					notes = notes.substring(0, 300) + "...";
-				}
-				message += "更新内容：\n" + notes + "\n\n";
+				int accentColor = activity.getResources().getColor(R.color.theme_pink_primary);
+				ScrollView notesScroll = view.findViewById(R.id.update_notes_scroll);
+				notesScroll.setVisibility(View.VISIBLE);
+				TextView notesView = view.findViewById(R.id.update_notes);
+				notesView.setText(SimpleMarkdownRenderer.render(updateInfo.releaseNotes, accentColor));
 			}
+
 			if (updateInfo.apkName != null) {
-				message += "文件: " + updateInfo.apkName + "\n\n";
+				TextView fileName = view.findViewById(R.id.update_file_name);
+				fileName.setText(updateInfo.apkName);
+				fileName.setVisibility(View.VISIBLE);
 			}
-			message += "请选择下载方式";
 
-			builder.setMessage(message);
+			AlertDialog.Builder builder = new AlertDialog.Builder(activity, R.style.AppDialogStyle);
+			builder.setTitle("发现新版本");
+			builder.setView(view);
 
-			builder.setPositiveButton("打开浏览器更新", (dialog, which) -> {
+			builder.setPositiveButton("浏览器下载", (dialog, which) -> {
 				Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(GITHUB_RELEASE_PAGE));
 				context.startActivity(intent);
 			});
+
 			if (updateInfo.apkDownloadUrl != null) {
 				builder.setNeutralButton("直接下载", (dialog, which) -> {
 					if (!canInstallApk(context)) {
@@ -343,11 +357,10 @@ public class UpdateManager {
 					}
 				});
 			}
+
 			builder.setNegativeButton("稍后", null);
 			builder.setCancelable(true);
-
-			AlertDialog dialog = builder.create();
-			dialog.show();
+			builder.show();
 		});
 	}
 
@@ -466,33 +479,20 @@ public class UpdateManager {
 	private static void showDownloadProgressDialog(Activity activity, long downloadId,
 												   DownloadManager dm,
 												   List<String> candidates, String fileName) {
-		// 构建进度视图
-		LinearLayout layout = new LinearLayout(activity);
-		layout.setOrientation(LinearLayout.VERTICAL);
-		int pad = dpToPx(activity, 24);
-		layout.setPadding(pad, dpToPx(activity, 16), pad, dpToPx(activity, 8));
+		View view = LayoutInflater.from(activity).inflate(R.layout.dialog_download_progress, null);
 
-		ProgressBar progressBar = new ProgressBar(activity, null, android.R.attr.progressBarStyleHorizontal);
-		progressBar.setMax(100);
-		progressBar.setProgress(0);
-		progressBar.setLayoutParams(new LinearLayout.LayoutParams(
-				LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-		layout.addView(progressBar);
+		ProgressBar progressBar = view.findViewById(R.id.download_progress_bar);
+		TextView progressText = view.findViewById(R.id.download_progress_text);
 
-		TextView progressText = new TextView(activity);
-		progressText.setText("准备下载...");
-		progressText.setPadding(0, dpToPx(activity, 8), 0, 0);
-		progressText.setGravity(Gravity.CENTER);
-		layout.addView(progressText);
-
-		AlertDialog dialog = new AlertDialog.Builder(activity)
+		AlertDialog dialog = new AlertDialog.Builder(activity, R.style.AppDialogStyle)
 				.setTitle("正在下载更新")
-				.setView(layout)
+				.setView(view)
 				.setNegativeButton("后台下载", (d, w) -> {
 					Toast.makeText(activity, "下载将在后台继续，完成后会通知您", Toast.LENGTH_SHORT).show();
 				})
 				.setCancelable(false)
 				.create();
+
 		dialog.show();
 		currentProgressDialog = dialog;
 

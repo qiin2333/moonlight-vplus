@@ -1,28 +1,27 @@
 package com.limelight.preferences
 
 import android.content.Context
-import android.preference.ListPreference
+import androidx.preference.ListPreference
+import androidx.preference.Preference
 import android.util.AttributeSet
 
 class PerfOverlayOrientationPreference : ListPreference {
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int, defStyleRes: Int) :
-        super(context, attrs, defStyleAttr, defStyleRes)
+        super(context, attrs, defStyleAttr, defStyleRes) { init() }
 
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) :
-        super(context, attrs, defStyleAttr)
+        super(context, attrs, defStyleAttr) { init() }
 
     constructor(context: Context, attrs: AttributeSet?) :
-        super(context, attrs)
+        super(context, attrs) { init() }
 
     constructor(context: Context) :
-        super(context)
+        super(context) { init() }
 
-    override fun onDialogClosed(positiveResult: Boolean) {
-        super.onDialogClosed(positiveResult)
-
-        if (positiveResult) {
-            // 当方向改变时，通知位置Preference更新选项
+    private fun init() {
+        onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, _ ->
             updatePositionPreference()
+            true
         }
     }
 

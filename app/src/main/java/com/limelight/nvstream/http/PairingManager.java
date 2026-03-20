@@ -68,7 +68,12 @@ public class PairingManager {
     private X509Certificate extractPlainCert(String text) throws XmlPullParserException, IOException
     {
         // Plaincert may be null if another client is already trying to pair
-        String certText = NvHTTP.getXmlString(text, "plaincert", false);
+        String certText;
+        try {
+            certText = NvHTTP.getXmlString(text, "plaincert", false);
+        } catch (HostHttpResponseException e) {
+            certText = extractXmlValue(text, "plaincert");
+        }
         if (certText != null) {
             byte[] certBytes = hexToBytes(certText);
 
@@ -213,12 +218,26 @@ public class PairingManager {
         String getCert = http.executePairingCommand("phrase=getservercert&salt=" +
                 bytesToHex(salt) + "&clientcert=" + bytesToHex(pemCertBytes),
                 false);
-        if (!NvHTTP.getXmlString(getCert, "paired", true).equals("1")) {
+        // Tolerate non-200 status from getservercert (Sunshine QR pairing may return 400
+        // due to a server-side fall-through bug while still including paired=1 in response)
+        String pairedValue;
+        try {
+            pairedValue = NvHTTP.getXmlString(getCert, "paired", true);
+        } catch (HostHttpResponseException e) {
+            LimeLog.warning("getservercert returned status " + e.getErrorCode() + ", checking paired value anyway");
+            pairedValue = extractXmlValue(getCert, "paired");
+        }
+        if (pairedValue == null || !pairedValue.equals("1")) {
             return new PairResult(PairState.FAILED, null);
         }
 
         // 获取配对名（pairname），兼容服务端未返回pairname的情况
-        String pairName = NvHTTP.getXmlString(getCert, "pairname", false);
+        String pairName;
+        try {
+            pairName = NvHTTP.getXmlString(getCert, "pairname", false);
+        } catch (HostHttpResponseException e) {
+            pairName = extractXmlValue(getCert, "pairname");
+        }
 
         // 保存证书以便后续检索
         serverCert = extractPlainCert(getCert);
@@ -349,5 +368,15 @@ public class PairingManager {
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    // Simple regex-based XML value extraction that doesn't check status_code
+    private static String extractXmlValue(String xml, String tagName) {
+        int start = xml.indexOf("<" + tagName + ">");
+        if (start < 0) return null;
+        start += tagName.length() + 2;
+        int end = xml.indexOf("</" + tagName + ">", start);
+        if (end < 0) return null;
+        return xml.substring(start, end);
     }
 }

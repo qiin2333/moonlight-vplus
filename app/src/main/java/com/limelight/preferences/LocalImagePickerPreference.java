@@ -4,12 +4,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
-import android.preference.Preference;
-import android.preference.PreferenceFragment;
-import android.preference.PreferenceManager;
-import android.provider.MediaStore;
 import android.util.AttributeSet;
 import android.widget.Toast;
+
+import androidx.preference.Preference;
+import androidx.preference.PreferenceFragmentCompat;
+import androidx.preference.PreferenceManager;
 
 import com.limelight.LimeLog;
 import com.limelight.preferences.StreamSettings;
@@ -26,7 +26,7 @@ import java.io.OutputStream;
 public class LocalImagePickerPreference extends Preference {
     public static final int PICK_IMAGE_REQUEST = 1001;
     private StreamSettings activity;
-    private PreferenceFragment fragment;
+    private PreferenceFragmentCompat fragment;
     private static LocalImagePickerPreference instance;
 
     // 自定义背景图片的文件名
@@ -52,7 +52,7 @@ public class LocalImagePickerPreference extends Preference {
         return instance;
     }
 
-    public void setFragment(PreferenceFragment fragment) {
+    public void setFragment(PreferenceFragmentCompat fragment) {
         this.fragment = fragment;
     }
 

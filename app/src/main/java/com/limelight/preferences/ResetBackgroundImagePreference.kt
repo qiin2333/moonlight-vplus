@@ -2,8 +2,8 @@ package com.limelight.preferences
 
 import android.content.Context
 import android.content.Intent
-import android.preference.Preference
-import android.preference.PreferenceManager
+import androidx.preference.Preference
+import androidx.preference.PreferenceManager
 import android.util.AttributeSet
 import android.widget.Toast
 
