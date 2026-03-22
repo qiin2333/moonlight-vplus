@@ -310,7 +310,7 @@ public class DigitalSwitchButton extends Element {
     @Override
     protected SuperPageLayout getInfoPage() {
         if (digitalSwitchButtonPage == null) {
-            digitalSwitchButtonPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_digital_switch_button, null);
+            digitalSwitchButtonPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_digital_switch_button_clean, null);
             centralXNumberSeekbar = digitalSwitchButtonPage.findViewById(R.id.page_digital_switch_button_central_x);
             centralYNumberSeekbar = digitalSwitchButtonPage.findViewById(R.id.page_digital_switch_button_central_y);
 

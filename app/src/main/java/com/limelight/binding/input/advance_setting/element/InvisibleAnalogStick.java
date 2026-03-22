@@ -301,7 +301,7 @@ public class InvisibleAnalogStick extends Element {
     @Override
     protected SuperPageLayout getInfoPage() {
         if (invisibleAnalogStickPage == null) {
-            invisibleAnalogStickPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_invisible_analog_stick, null);
+            invisibleAnalogStickPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_invisible_analog_stick_clean, null);
             centralXNumberSeekbar = invisibleAnalogStickPage.findViewById(R.id.page_invisible_analog_stick_central_x);
             centralYNumberSeekbar = invisibleAnalogStickPage.findViewById(R.id.page_invisible_analog_stick_central_y);
 

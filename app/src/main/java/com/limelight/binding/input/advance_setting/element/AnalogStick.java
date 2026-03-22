@@ -472,7 +472,7 @@ public class AnalogStick extends Element {
     @Override
     protected SuperPageLayout getInfoPage() {
         if (analogStickPage == null) {
-            analogStickPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_analog_stick, null);
+            analogStickPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_analog_stick_clean, null);
             centralXNumberSeekbar = analogStickPage.findViewById(R.id.page_analog_stick_central_x);
             centralYNumberSeekbar = analogStickPage.findViewById(R.id.page_analog_stick_central_y);
 

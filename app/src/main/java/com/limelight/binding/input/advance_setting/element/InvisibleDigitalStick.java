@@ -339,7 +339,7 @@ public class InvisibleDigitalStick extends Element {
     @Override
     protected SuperPageLayout getInfoPage() {
         if (invisibleDigitalStickPage == null) {
-            invisibleDigitalStickPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_invisible_digital_stick, null);
+            invisibleDigitalStickPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_invisible_digital_stick_clean, null);
             centralXNumberSeekbar = invisibleDigitalStickPage.findViewById(R.id.page_invisible_digital_stick_central_x);
             centralYNumberSeekbar = invisibleDigitalStickPage.findViewById(R.id.page_invisible_digital_stick_central_y);
 

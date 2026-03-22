@@ -476,7 +476,7 @@ public class DigitalStick extends Element {
     @Override
     protected SuperPageLayout getInfoPage() {
         if (digitalStickPage == null) {
-            digitalStickPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_digital_stick, null);
+            digitalStickPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_digital_stick_clean, null);
             centralXNumberSeekbar = digitalStickPage.findViewById(R.id.page_digital_stick_central_x);
             centralYNumberSeekbar = digitalStickPage.findViewById(R.id.page_digital_stick_central_y);
 

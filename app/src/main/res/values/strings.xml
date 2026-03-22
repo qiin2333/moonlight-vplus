@@ -1010,6 +1010,35 @@
     <string name="layout_page_window_text_625fb">Cancel</string>
 
 
+    <!-- Clean page section headers (auto-extracted from _clean layouts) -->
+    <string name="page_section_basic_info">🕹️ Basic Info</string>
+    <string name="page_section_basic_settings">⚙️ Basic Settings</string>
+    <string name="page_section_position_size">📐 Position &amp; Size</string>
+    <string name="page_section_outer_ring_style">🎨 Outer Ring Style</string>
+    <string name="page_section_appearance">🎨 Appearance</string>
+    <string name="page_section_color_config">🎨 Color Config</string>
+    <string name="page_section_style_settings">🎨 Style Settings</string>
+    <string name="page_section_border_color">🎨 Border Color</string>
+    <string name="page_section_appearance_settings">🎨 Appearance Settings</string>
+    <string name="page_section_stick_style">🕹️ Stick Style</string>
+    <string name="page_section_operations">🔧 Operations</string>
+    <string name="page_section_child_management">🔧 Child Management</string>
+    <string name="page_section_dpad_config">🎮 D-Pad Config</string>
+    <string name="page_section_dpad_settings">🎮 D-Pad Settings</string>
+    <string name="page_section_stick_config">🕹️ Stick Config</string>
+    <string name="page_section_group_settings">📦 Group Settings</string>
+    <string name="page_section_child_settings">👥 Child Settings</string>
+    <string name="page_section_delete_operation">⚠️ Delete Operation</string>
+    <string name="page_section_text_settings">✏️ Text Settings</string>
+    <string name="page_section_text_config">✏️ Text Config</string>
+    <string name="page_section_wheel_basic">🎡 Basic Settings</string>
+    <string name="page_section_wheel_config">🎯 Wheel Config</string>
+    <string name="page_section_key_values">🔑 Key Values</string>
+    <string name="page_label_combo_keys">Combo Keys</string>
+    <string name="page_label_coord_x">X Coord</string>
+    <string name="page_label_coord_y">Y Coord</string>
+    <string name="page_hint_confirm_delete">Type to confirm</string>
+
     <!-- app:text Chinese strings (auto-extracted) -->
     <string name="apptext_pg_analog_stick_4b26d">Stick Deadzone %</string>
     <string name="apptext_pg_analog_stick_b7e19">Stick Radius</string>

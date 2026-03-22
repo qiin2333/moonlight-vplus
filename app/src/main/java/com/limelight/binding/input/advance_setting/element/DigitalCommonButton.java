@@ -366,7 +366,7 @@ public class DigitalCommonButton extends Element {
     @Override
     protected SuperPageLayout getInfoPage() {
         if (digitalButtonPage == null) {
-            digitalButtonPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_digital_common_button, null);
+            digitalButtonPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_digital_common_button_clean, null);
             centralXNumberSeekbar = digitalButtonPage.findViewById(R.id.page_digital_common_button_central_x);
             centralYNumberSeekbar = digitalButtonPage.findViewById(R.id.page_digital_common_button_central_y);
 

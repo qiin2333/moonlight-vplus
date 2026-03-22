@@ -962,6 +962,35 @@
     <string name="apptext_pg_wheel_pad_6c613">触发器文字大小 (%)</string>
     <string name="apptext_pg_wheel_pad_ea2ce">中心预览文字大小 (%)</string>
 
+    <!-- Clean page section headers (auto-extracted from _clean layouts) -->
+    <string name="page_section_basic_info">🕹️ 基本信息</string>
+    <string name="page_section_basic_settings">⚙️ 基础信息</string>
+    <string name="page_section_position_size">📐 位置和尺寸</string>
+    <string name="page_section_outer_ring_style">🎨 外圈样式</string>
+    <string name="page_section_appearance">🎨 外观样式</string>
+    <string name="page_section_color_config">🎨 颜色配置</string>
+    <string name="page_section_style_settings">🎨 样式设置</string>
+    <string name="page_section_border_color">🎨 边框颜色</string>
+    <string name="page_section_appearance_settings">🎨 外观设置</string>
+    <string name="page_section_stick_style">🕹️ 摇杆样式</string>
+    <string name="page_section_operations">🔧 操作</string>
+    <string name="page_section_child_management">🔧 子元素管理</string>
+    <string name="page_section_dpad_config">🎮 方向键配置</string>
+    <string name="page_section_dpad_settings">🎮 方向键设置</string>
+    <string name="page_section_stick_config">🕹️ 摇杆配置</string>
+    <string name="page_section_group_settings">📦 组合设置</string>
+    <string name="page_section_child_settings">👥 子元素设置</string>
+    <string name="page_section_delete_operation">⚠️ 删除操作</string>
+    <string name="page_section_text_settings">✏️ 文字设置</string>
+    <string name="page_section_text_config">✏️ 文本设置</string>
+    <string name="page_section_wheel_basic">🎡 基本设置</string>
+    <string name="page_section_wheel_config">🎯 轮盘设置</string>
+    <string name="page_section_key_values">🔑 按键值设置</string>
+    <string name="page_label_combo_keys">组合按键</string>
+    <string name="page_label_coord_x">X 坐标</string>
+    <string name="page_label_coord_y">Y 坐标</string>
+    <string name="page_hint_confirm_delete">输入确认</string>
+
     <!-- 缺失的翻译补全 -->
     <string name="dialog_virtual_keyboard_hint">点击按键来创建组合键</string>
     <string name="error_interrupted">操作已中断</string>

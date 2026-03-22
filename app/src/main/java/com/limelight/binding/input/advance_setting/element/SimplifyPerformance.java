@@ -300,7 +300,7 @@ public class SimplifyPerformance extends Element {
     @Override
     protected SuperPageLayout getInfoPage() {
         if (simplifyPerformancePage == null) {
-            simplifyPerformancePage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_simplify_performance, null);
+            simplifyPerformancePage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_simplify_performance_clean, null);
             centralXNumberSeekbar = simplifyPerformancePage.findViewById(R.id.page_simplify_performance_central_x);
             centralYNumberSeekbar = simplifyPerformancePage.findViewById(R.id.page_simplify_performance_central_y);
 

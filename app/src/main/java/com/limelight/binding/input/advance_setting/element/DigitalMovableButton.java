@@ -499,7 +499,7 @@ public class DigitalMovableButton extends Element {
     @Override
     protected SuperPageLayout getInfoPage() {
         if (digitalMovableButtonPage == null) {
-            digitalMovableButtonPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_digital_movable_button, null);
+            digitalMovableButtonPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_digital_movable_button_clean, null);
             centralXNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_central_x);
             centralYNumberSeekbar = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_central_y);
         }
