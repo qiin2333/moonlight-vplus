@@ -749,6 +749,15 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             virtualController.show();
 
             virtualController.setGyroEnabled(true);
+
+            // When gyro-mouse mode is active, ControllerHandler registers its own sensor listener
+            // (with screen-rotation correction). Suspend VirtualController's listener to avoid
+            // double-registration on the same sensor which causes erratic mouse movement.
+            final VirtualController vc = virtualController;
+            controllerHandler.setVirtualControllerGyroCallbacks(
+                    () -> vc.setGyroEnabled(false),
+                    () -> vc.setGyroEnabled(true)
+            );
         }
 
         if (prefConfig.onscreenKeyboard) {
@@ -1259,7 +1268,15 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 // 这里调用 refreshLayout 确保位置正确
                 virtualController.refreshLayout();
                 virtualController.show();
-                virtualController.setGyroEnabled(true);
+                // 鼠标模式下 ControllerHandler 自己管理传感器，不启用 VirtualController 的监听
+                if (!prefConfig.gyroToMouse) {
+                    virtualController.setGyroEnabled(true);
+                }
+                final VirtualController vc = virtualController;
+                controllerHandler.setVirtualControllerGyroCallbacks(
+                        () -> vc.setGyroEnabled(false),
+                        () -> vc.setGyroEnabled(true)
+                );
             }
         }
 

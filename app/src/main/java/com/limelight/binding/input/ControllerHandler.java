@@ -331,6 +331,13 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                     return;
                 }
             }
+            // 同样检查 USB 手柄
+            for (int i = 0; i < usbDeviceContexts.size(); i++) {
+                if (usbDeviceContexts.valueAt(i).controllerNumber == 0) {
+                    LimeLog.info("USB controller present, skipping defaultContext gyro registration");
+                    return;
+                }
+            }
             if (defaultContext.sensorManager == null) {
                 if (deviceSensorManager == null) {
                     LimeLog.warning("deviceSensorManager is null, cannot register gyro on defaultContext");
@@ -360,9 +367,21 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                 defaultContext.sensorManager.unregisterListener(defaultContext.gyroListener);
                 defaultContext.gyroListener = null;
                 defaultContext.gyroReportRateHz = 0;
+                // 清除我们设置的 sensorManager，避免泄漏给右摇杆模式
+                defaultContext.sensorManager = null;
                 LimeLog.info("Gyro unregistered from defaultContext");
             }
         }
+    }
+
+    // Callback to notify VirtualController to pause/resume its own gyro listener
+    // to avoid double-registration on the same sensor when mouse mode is active.
+    private Runnable virtualControllerGyroSuspendCallback;
+    private Runnable virtualControllerGyroResumeCallback;
+
+    public void setVirtualControllerGyroCallbacks(Runnable suspend, Runnable resume) {
+        virtualControllerGyroSuspendCallback = suspend;
+        virtualControllerGyroResumeCallback = resume;
     }
 
     public void setGyroToMouseEnabled(boolean enabled) {
@@ -374,7 +393,11 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             gyroMouseRemainX = 0f;
             gyroMouseRemainY = 0f;
             gyroMouseLastTimestamp = 0;
-            // 直接在 defaultContext 上注册手机陀螺仪
+            // 暂停 VirtualController 自己的传感器监听，避免与 defaultContext 双重注册
+            if (virtualControllerGyroSuspendCallback != null) {
+                virtualControllerGyroSuspendCallback.run();
+            }
+            // 直接在 defaultContext 上注册手机陀螺仪（含屏幕旋转修正）
             registerDeviceGyroForDefaultContext(true);
             // 重新计算所有 context 的 hold 状态（含 ALWAYS 情况）
             recomputeGyroHoldForAllContexts();
@@ -384,6 +407,10 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             gyroMouseLastTimestamp = 0;
             registerDeviceGyroForDefaultContext(false);
             clearAllGyroStates();
+            // 恢复 VirtualController 自己的传感器监听
+            if (virtualControllerGyroResumeCallback != null) {
+                virtualControllerGyroResumeCallback.run();
+            }
         }
     }
 
@@ -477,7 +504,11 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         if (!prefConfig.gyroToRightStick) {
             return;
         }
-        
+
+        if (!defaultContext.gyroHoldActive) {
+            return;
+        }
+
         // 使用控制器0（虚拟控制器的默认控制器编号）
         applyGyroToRightStick((short) 0, gx, gy);
         
@@ -2700,7 +2731,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                         return;
                     }
 
-                    if (prefConfig.gyroToRightStick) {
+                    if (prefConfig.gyroToRightStick && isGyroHoldActiveFor(controllerNumber)) {
                         // Map device/controller gyro to right stick
                         applyGyroToRightStick(controllerNumber, gz, gx);
                         return;
@@ -3447,7 +3478,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                 applyGyroToMouse(z / 57.2957795f, x / 57.2957795f, System.nanoTime());
                 return;
             }
-            if (prefConfig.gyroToRightStick) {
+            if (prefConfig.gyroToRightStick && context.gyroHoldActive) {
                 // x=pitch, y=roll, z=yaw — pass yaw as X and pitch as Y to match
                 // the same axis convention used in the device sensor listener (gz, gx)
                 applyGyroToRightStick(context.controllerNumber, z, x);
