@@ -395,6 +395,8 @@ public class PreferenceConfiguration {
     public boolean rotableScreen;
     // Runtime-only: enable mapping gyroscope motion to right analog stick
     public boolean gyroToRightStick;
+    // Runtime-only: enable mapping gyroscope motion to relative mouse movement
+    public boolean gyroToMouse;
     // Runtime-only: sensitivity in deg/s for full stick deflection
     public float gyroFullDeflectionDps;
     // Persistent: sensitivity multiplier (higher -> faster)
@@ -1063,6 +1065,7 @@ public class PreferenceConfiguration {
 
         // Runtime-only defaults; controlled via in-stream GameMenu
         config.gyroToRightStick = false;
+        config.gyroToMouse = false;
         config.gyroFullDeflectionDps = 180.0f;
 
         return config;
@@ -1194,6 +1197,7 @@ public class PreferenceConfiguration {
         copy.enableDoubleClickDrag = this.enableDoubleClickDrag;
         copy.enableLocalCursorRendering = this.enableLocalCursorRendering;
         copy.gyroToRightStick = this.gyroToRightStick;
+        copy.gyroToMouse = this.gyroToMouse;
         copy.gyroFullDeflectionDps = this.gyroFullDeflectionDps;
         copy.gyroSensitivityMultiplier = this.gyroSensitivityMultiplier;
         copy.gyroActivationKeyCode = this.gyroActivationKeyCode;

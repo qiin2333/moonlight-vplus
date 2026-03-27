@@ -600,6 +600,7 @@
     <string name="gyro_sensitivity">灵敏度</string>
     <string name="gyro_sensitivity_format">灵敏度 %.1fx</string>
     <string name="gyro_activation_always">常开</string>
+    <string name="gyro_mouse_mode_label">鼠标模式</string>
 
     <!-- Accessibility service -->
     <string name="accessibility_service_label">Moonlight 键盘服务</string>

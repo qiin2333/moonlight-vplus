@@ -1889,11 +1889,15 @@ public class StreamSettings extends AppCompatActivity {
                         .submit()
                         .get();
                     if (bitmap != null) {
-                        runOnUiThread(() -> Glide.with(this)
-                            .load(bitmap)
-                            .apply(RequestOptions.bitmapTransform(new BlurTransformation(2, 3)))
-                            .transform(new ColorFilterTransformation(Color.argb(120, 0, 0, 0)))
-                            .into(imageView));
+                        runOnUiThread(() -> {
+                            if (!isDestroyed() && !isFinishing()) {
+                                Glide.with(this)
+                                    .load(bitmap)
+                                    .apply(RequestOptions.bitmapTransform(new BlurTransformation(2, 3)))
+                                    .transform(new ColorFilterTransformation(Color.argb(120, 0, 0, 0)))
+                                    .into(imageView);
+                            }
+                        });
                         return;
                     }
                 } catch (Exception e) {

@@ -669,6 +669,7 @@
     <string name="gyro_sensitivity">Sensitivity</string>
     <string name="gyro_sensitivity_format">Sensitivity %.1fx</string>
     <string name="gyro_activation_always">Always On</string>
+    <string name="gyro_mouse_mode_label">Mouse Mode</string>
 
     <!-- Accessibility service -->
     <string name="accessibility_service_label">Moonlight Keyboard Service</string>

@@ -352,6 +352,31 @@
                              android:textOff=""/>
                     </LinearLayout>
 
+                    <!-- 模式选择：右摇杆 / 鼠标 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="4dp"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/gyro_mouse_mode_label"
+                            android:textColor="@color/game_menu_text_primary"
+                            android:textSize="11sp" />
+
+                        <Switch
+                            android:id="@+id/gyroMouseModeSwitch"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:textOn=""
+                            android:textOff=""/>
+                    </LinearLayout>
+
                     <!-- 详细设置 -->
                     <LinearLayout
                         android:layout_width="match_parent"
