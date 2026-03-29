@@ -1,5 +1,8 @@
 package com.limelight.nvstream.input;
 
+import android.view.InputDevice;
+import android.view.MotionEvent;
+
 public final class TouchpadScrollSupport {
     public static final int HIGH_RES_SCROLL_UNITS = 120;
     public static final int LI_FF_TOUCHPAD_SCROLL_EVENTS = 0x04;
@@ -25,8 +28,40 @@ public final class TouchpadScrollSupport {
         return (hostFeatureFlags & LI_FF_TOUCHPAD_SCROLL_EVENTS) != 0;
     }
 
+    public static boolean isTouchpadSource(int eventSource) {
+        return eventSource == InputDevice.SOURCE_TOUCHPAD ||
+                (eventSource & InputDevice.SOURCE_CLASS_POSITION) != 0;
+    }
+
+    public static boolean shouldUseClassificationTouchpadScroll(boolean nativeMousePointerEnabled,
+                                                                int eventSource,
+                                                                int classification) {
+        return nativeMousePointerEnabled &&
+                isTouchpadSource(eventSource) &&
+                classification == MotionEvent.CLASSIFICATION_TWO_FINGER_SWIPE;
+    }
+
+    public static boolean shouldUseLegacyMultiPointerScroll(boolean nativeMousePointerEnabled,
+                                                            int eventSource,
+                                                            int pointerCount) {
+        return nativeMousePointerEnabled &&
+                isTouchpadSource(eventSource) &&
+                pointerCount >= 2;
+    }
+
     public static short scaleAxisValue(float axisValue) {
         return (short) Math.round(axisValue * HIGH_RES_SCROLL_UNITS);
+    }
+
+    public static short scaleGestureDistance(float distance) {
+        long roundedDistance = Math.round(distance);
+        if (roundedDistance > Short.MAX_VALUE) {
+            return Short.MAX_VALUE;
+        }
+        if (roundedDistance < Short.MIN_VALUE) {
+            return Short.MIN_VALUE;
+        }
+        return (short) roundedDistance;
     }
 
     public static byte phaseForDelta(boolean gestureActive) {

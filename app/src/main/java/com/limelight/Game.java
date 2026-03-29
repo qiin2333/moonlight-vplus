@@ -77,6 +77,7 @@ import android.os.Looper;
 import android.os.PowerManager;
 import androidx.preference.PreferenceManager;
 import android.util.Rational;
+import android.util.SparseArray;
 import android.view.Display;
 import android.view.InputDevice;
 import android.view.KeyCharacterMap;
@@ -214,6 +215,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private float lastAbsTouchDownX, lastAbsTouchDownY;
     private long previousTimeMillis = 0;
     private long previousRxBytes = 0;
+    private final SparseArray<float[]> externalTouchpadPointerCache = new SparseArray<>();
 
     // ESC键双击相关变量
     private static final long ESC_DOUBLE_PRESS_INTERVAL = 500; // 500毫秒内按第二次ESC才有效
@@ -3270,6 +3272,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         int deviceSources = event.getDevice() != null ? event.getDevice().getSources() : 0;
 
+        if (tryHandleNativeTouchpadEvent(event)) {
+            return true;
+        }
+
         // 本地鼠标指针模式的特殊处理
         if (prefConfig.enableNativeMousePointer && (eventSource & InputDevice.SOURCE_CLASS_POINTER) != 0) {
             // 检查是否为真正的鼠标设备（而不是触摸屏）
@@ -3711,6 +3717,203 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // Unknown class
         return false;
+    }
+
+    private boolean tryHandleNativeTouchpadEvent(MotionEvent event) {
+        if (!prefConfig.enableNativeMousePointer) {
+            clearExternalTouchpadPointerCache();
+            return false;
+        }
+
+        final int eventSource = event.getSource();
+        if (!TouchpadScrollSupport.isTouchpadSource(eventSource)) {
+            clearExternalTouchpadPointerCache();
+            return false;
+        }
+
+        final int action = event.getActionMasked();
+        final boolean isClassifiedTwoFingerSwipe =
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+                        TouchpadScrollSupport.shouldUseClassificationTouchpadScroll(
+                                true,
+                                eventSource,
+                                event.getClassification());
+        final boolean isLegacyMultiPointerScroll =
+                TouchpadScrollSupport.shouldUseLegacyMultiPointerScroll(
+                        true,
+                        eventSource,
+                        event.getPointerCount());
+
+        if (action == MotionEvent.ACTION_CANCEL) {
+            conn.cancelTouchpadScrollGesture();
+            clearExternalTouchpadPointerCache();
+            return isClassifiedTwoFingerSwipe || isLegacyMultiPointerScroll;
+        }
+
+        if (isClassifiedTwoFingerSwipe) {
+            boolean sentScroll = sendClassifiedTouchpadScroll(event);
+            if (isTouchpadPointerLifecycleAction(action)) {
+                conn.finishTouchpadScrollGesture();
+                clearExternalTouchpadPointerCache();
+                return true;
+            }
+            updateExternalTouchpadPointerCache(event);
+            return sentScroll || isTouchpadPointerMotionAction(action);
+        }
+
+        if (isLegacyMultiPointerScroll) {
+            float[] averageDelta = getAverageExternalTouchpadDelta(event);
+            updateExternalTouchpadPointerCache(event);
+            if (averageDelta != null && isTouchpadContinuousMotionAction(action)) {
+                sendTouchpadScrollDelta(averageDelta[0], averageDelta[1]);
+            }
+            if (isTouchpadPointerLifecycleAction(action)) {
+                conn.finishTouchpadScrollGesture();
+                clearExternalTouchpadPointerCache();
+            }
+            return true;
+        }
+
+        conn.finishTouchpadScrollGesture();
+
+        if (event.getPointerCount() == 1 && isTouchpadPointerCacheSeedAction(action)) {
+            updateExternalTouchpadPointerCache(event);
+            return false;
+        }
+
+        if (event.getPointerCount() == 1 && isTouchpadPointerMotionAction(action)) {
+            float[] averageDelta = getAverageExternalTouchpadDelta(event);
+            updateExternalTouchpadPointerCache(event);
+            if (averageDelta != null && isTouchpadContinuousMotionAction(action)) {
+                sendTouchpadPointerDelta(averageDelta[0], averageDelta[1]);
+            }
+            return true;
+        }
+
+        if (isTouchpadPointerLifecycleAction(action)) {
+            clearExternalTouchpadPointerCache();
+            return false;
+        }
+
+        clearExternalTouchpadPointerCache();
+        return false;
+    }
+
+    private boolean sendClassifiedTouchpadScroll(MotionEvent event) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            return false;
+        }
+
+        float scrollDistanceX = accumulateGestureScrollDistance(event, MotionEvent.AXIS_GESTURE_SCROLL_X_DISTANCE);
+        float scrollDistanceY = accumulateGestureScrollDistance(event, MotionEvent.AXIS_GESTURE_SCROLL_Y_DISTANCE);
+        if (scrollDistanceX == 0f && scrollDistanceY == 0f) {
+            return false;
+        }
+
+        conn.sendTouchpadScroll(
+                TouchpadScrollSupport.scaleGestureDistance(scrollDistanceX),
+                TouchpadScrollSupport.scaleGestureDistance(scrollDistanceY));
+        return true;
+    }
+
+    private float accumulateGestureScrollDistance(MotionEvent event, int axis) {
+        float distance = 0f;
+        for (int i = 0; i < event.getHistorySize(); i++) {
+            distance += event.getHistoricalAxisValue(axis, i);
+        }
+        distance += event.getAxisValue(axis);
+        return distance;
+    }
+
+    private float[] getAverageExternalTouchpadDelta(MotionEvent event) {
+        if (externalTouchpadPointerCache.size() == 0) {
+            return null;
+        }
+
+        float totalDeltaX = 0f;
+        float totalDeltaY = 0f;
+        int matchedPointers = 0;
+
+        for (int i = 0; i < event.getPointerCount(); i++) {
+            int pointerId = event.getPointerId(i);
+            float[] lastCoordinates = externalTouchpadPointerCache.get(pointerId);
+            if (lastCoordinates == null) {
+                continue;
+            }
+
+            totalDeltaX += event.getX(i) - lastCoordinates[0];
+            totalDeltaY += event.getY(i) - lastCoordinates[1];
+            matchedPointers++;
+        }
+
+        if (matchedPointers == 0) {
+            return null;
+        }
+
+        return new float[] { totalDeltaX / matchedPointers, totalDeltaY / matchedPointers };
+    }
+
+    private void updateExternalTouchpadPointerCache(MotionEvent event) {
+        externalTouchpadPointerCache.clear();
+        for (int i = 0; i < event.getPointerCount(); i++) {
+            externalTouchpadPointerCache.put(event.getPointerId(i), new float[] { event.getX(i), event.getY(i) });
+        }
+    }
+
+    private void clearExternalTouchpadPointerCache() {
+        externalTouchpadPointerCache.clear();
+    }
+
+    private void sendTouchpadScrollDelta(float deltaX, float deltaY) {
+        short packetDeltaX = TouchpadScrollSupport.scaleGestureDistance(deltaX);
+        short packetDeltaY = TouchpadScrollSupport.scaleGestureDistance(deltaY);
+        if (packetDeltaX == 0 && packetDeltaY == 0) {
+            return;
+        }
+
+        conn.sendTouchpadScroll(packetDeltaX, packetDeltaY);
+    }
+
+    private void sendTouchpadPointerDelta(float deltaX, float deltaY) {
+        short packetDeltaX = TouchpadScrollSupport.scaleGestureDistance(deltaX);
+        short packetDeltaY = TouchpadScrollSupport.scaleGestureDistance(deltaY);
+        if (packetDeltaX == 0 && packetDeltaY == 0) {
+            return;
+        }
+
+        if (prefConfig.absoluteMouseMode) {
+            StreamView activeStreamView = getActiveStreamView();
+            conn.sendMouseMoveAsMousePosition(packetDeltaX, packetDeltaY,
+                    (short) activeStreamView.getWidth(),
+                    (short) activeStreamView.getHeight());
+        }
+        else {
+            conn.sendMouseMove(packetDeltaX, packetDeltaY);
+        }
+    }
+
+    private boolean isTouchpadPointerMotionAction(int action) {
+        return action == MotionEvent.ACTION_HOVER_ENTER ||
+                action == MotionEvent.ACTION_HOVER_MOVE ||
+                action == MotionEvent.ACTION_MOVE;
+    }
+
+    private boolean isTouchpadPointerCacheSeedAction(int action) {
+        return action == MotionEvent.ACTION_DOWN ||
+                action == MotionEvent.ACTION_POINTER_DOWN;
+    }
+
+    private boolean isTouchpadContinuousMotionAction(int action) {
+        return action == MotionEvent.ACTION_HOVER_MOVE ||
+                action == MotionEvent.ACTION_MOVE;
+    }
+
+    private boolean isTouchpadPointerLifecycleAction(int action) {
+        return action == MotionEvent.ACTION_HOVER_EXIT ||
+                action == MotionEvent.ACTION_UP ||
+                action == MotionEvent.ACTION_POINTER_UP ||
+                action == MotionEvent.ACTION_BUTTON_PRESS ||
+                action == MotionEvent.ACTION_BUTTON_RELEASE;
     }
 
     @Override

@@ -4,6 +4,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import android.view.InputDevice;
+import android.view.MotionEvent;
+
 import org.junit.Test;
 
 public class TouchpadScrollSupportTest {
@@ -29,5 +32,57 @@ public class TouchpadScrollSupportTest {
                 TouchpadScrollSupport.phaseForDelta(false));
         assertEquals(TouchpadScrollSupport.LI_TOUCHPAD_SCROLL_PHASE_CHANGED,
                 TouchpadScrollSupport.phaseForDelta(true));
+    }
+
+    @Test
+    public void onlyTreatsNativeTouchpadTwoFingerSwipeClassificationAsExplicitScroll() {
+        assertTrue(TouchpadScrollSupport.shouldUseClassificationTouchpadScroll(
+                true,
+                InputDevice.SOURCE_TOUCHPAD,
+                MotionEvent.CLASSIFICATION_TWO_FINGER_SWIPE));
+        assertTrue(TouchpadScrollSupport.shouldUseClassificationTouchpadScroll(
+                true,
+                InputDevice.SOURCE_CLASS_POSITION,
+                MotionEvent.CLASSIFICATION_TWO_FINGER_SWIPE));
+        assertFalse(TouchpadScrollSupport.shouldUseClassificationTouchpadScroll(
+                false,
+                InputDevice.SOURCE_TOUCHPAD,
+                MotionEvent.CLASSIFICATION_TWO_FINGER_SWIPE));
+        assertFalse(TouchpadScrollSupport.shouldUseClassificationTouchpadScroll(
+                true,
+                InputDevice.SOURCE_MOUSE,
+                MotionEvent.CLASSIFICATION_TWO_FINGER_SWIPE));
+        assertFalse(TouchpadScrollSupport.shouldUseClassificationTouchpadScroll(
+                true,
+                InputDevice.SOURCE_TOUCHPAD,
+                MotionEvent.CLASSIFICATION_NONE));
+    }
+
+    @Test
+    public void onlyUsesLegacyFallbackForMultiPointerTouchpadMotion() {
+        assertTrue(TouchpadScrollSupport.shouldUseLegacyMultiPointerScroll(
+                true,
+                InputDevice.SOURCE_TOUCHPAD,
+                2));
+        assertTrue(TouchpadScrollSupport.shouldUseLegacyMultiPointerScroll(
+                true,
+                InputDevice.SOURCE_CLASS_POSITION,
+                3));
+        assertFalse(TouchpadScrollSupport.shouldUseLegacyMultiPointerScroll(
+                true,
+                InputDevice.SOURCE_TOUCHPAD,
+                1));
+        assertFalse(TouchpadScrollSupport.shouldUseLegacyMultiPointerScroll(
+                true,
+                InputDevice.SOURCE_MOUSE,
+                2));
+    }
+
+    @Test
+    public void convertsGestureDistanceToPacketDeltaWithoutWheelTickScaling() {
+        assertEquals((short) 24, TouchpadScrollSupport.scaleGestureDistance(24.4f));
+        assertEquals((short) -13, TouchpadScrollSupport.scaleGestureDistance(-12.6f));
+        assertEquals(Short.MAX_VALUE, TouchpadScrollSupport.scaleGestureDistance(Short.MAX_VALUE + 1000f));
+        assertEquals(Short.MIN_VALUE, TouchpadScrollSupport.scaleGestureDistance(Short.MIN_VALUE - 1000f));
     }
 }
