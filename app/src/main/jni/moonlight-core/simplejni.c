@@ -131,11 +131,6 @@ Java_com_limelight_nvstream_jni_MoonBridge_sendTouchpadScroll(JNIEnv *env, jclas
                                      (uint8_t) momentumPhase);
 }
 
-JNIEXPORT jint JNICALL
-Java_com_limelight_nvstream_jni_MoonBridge_getHostFeatureFlags(JNIEnv *env, jclass clazz) {
-    return (jint) LiGetHostFeatureFlags();
-}
-
 JNIEXPORT void JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_sendUtf8Text(JNIEnv *env, jclass clazz, jstring text) {
     const char* utf8Text = (*env)->GetStringUTFChars(env, text, NULL);
