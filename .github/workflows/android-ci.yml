@@ -113,9 +113,23 @@ jobs:
           path: |
             app/build/outputs/apk/nonRoot/debug/*.apk
 
+      - name: Detect release signing secrets
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ] && \
+             [ -n "${{ secrets.KEYSTORE_PASSWORD }}" ] && \
+             [ -n "${{ secrets.KEY_ALIAS }}" ] && \
+             [ -n "${{ secrets.KEY_PASSWORD }}" ]; then
+            echo "HAS_RELEASE_SIGNING=true" >> "$GITHUB_ENV"
+          else
+            echo "HAS_RELEASE_SIGNING=false" >> "$GITHUB_ENV"
+            echo "Release signing secrets are not configured; skipping signed release steps."
+          fi
+
       # ===== Release (Signed) Build (tags only) =====
       - name: Decode keystore for Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') && env.HAS_RELEASE_SIGNING == 'true'
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -124,7 +138,7 @@ jobs:
           ls -l my-release.keystore
 
       - name: Build signed NonRoot Release APK
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') && env.HAS_RELEASE_SIGNING == 'true'
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/my-release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -133,7 +147,7 @@ jobs:
         run: ./gradlew :app:assembleNonRootRelease --no-daemon --stacktrace
 
       - name: Rename Release APK to Moonlight.V+.<version>.apk
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') && env.HAS_RELEASE_SIGNING == 'true'
         shell: bash
         run: |
           set -e
@@ -153,7 +167,7 @@ jobs:
           echo "REL_APK=$DEST" >> $GITHUB_ENV
 
       - name: Generate cute release notes
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') && env.HAS_RELEASE_SIGNING == 'true'
         shell: bash
         run: |
           set -e
@@ -185,7 +199,7 @@ jobs:
           EOF
 
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') && env.HAS_RELEASE_SIGNING == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
@@ -200,7 +214,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Release APK and mapping
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') && env.HAS_RELEASE_SIGNING == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: app-nonroot-release-signed
