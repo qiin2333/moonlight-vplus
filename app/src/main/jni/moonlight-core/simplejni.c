@@ -120,6 +120,17 @@ Java_com_limelight_nvstream_jni_MoonBridge_sendMouseHighResHScroll(JNIEnv *env, 
     LiSendHighResHScrollEvent(scrollAmount);
 }
 
+JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_sendTouchpadScroll(JNIEnv *env, jclass clazz,
+                                                              jshort scrollAmountX,
+                                                              jshort scrollAmountY,
+                                                              jbyte scrollPhase,
+                                                              jbyte momentumPhase) {
+    return LiSendTouchpadScrollEvent(scrollAmountX, scrollAmountY,
+                                     (uint8_t) scrollPhase,
+                                     (uint8_t) momentumPhase);
+}
+
 JNIEXPORT void JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_sendUtf8Text(JNIEnv *env, jclass clazz, jstring text) {
     const char* utf8Text = (*env)->GetStringUTFChars(env, text, NULL);

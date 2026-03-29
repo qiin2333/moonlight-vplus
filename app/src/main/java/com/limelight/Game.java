@@ -31,6 +31,7 @@ import com.limelight.nvstream.http.NvApp;
 import com.limelight.nvstream.http.NvHTTP;
 import com.limelight.nvstream.input.KeyboardPacket;
 import com.limelight.nvstream.input.MouseButtonPacket;
+import com.limelight.nvstream.input.TouchpadScrollSupport;
 import com.limelight.nvstream.jni.MoonBridge;
 import com.limelight.preferences.GlPreferences;
 import com.limelight.preferences.PreferenceConfiguration;
@@ -3202,13 +3203,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     scrollTotal = scrollTotal + deltaY;
                     if (scrollTotal > 127.99){
                         scrollTotal = scrollTotal - 128;
-//                        Log.d("debug", "send: up");
-                        conn.sendMouseHighResScroll((short) 120);
+                        conn.sendTouchpadScroll((short) 0, (short) 120);
                     }
                     else if (scrollTotal < -127.99){
                         scrollTotal = scrollTotal + 128;
-//                        Log.d("debug", "send: down");
-                        conn.sendMouseHighResScroll((short) -120);
+                        conn.sendTouchpadScroll((short) 0, (short) -120);
                     }
 
                     // 拦截事件，不再向下传递，避免触发点击或UI滑动
@@ -3220,23 +3219,23 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 //                        Log.d("debug", "滚轮还未发完");
                         if (scrollTotal > 127.99){
                             scrollTotal = scrollTotal - 128;
-//                            Log.d("debug", "send: up");
-                            conn.sendMouseHighResScroll((short) 120);
+                            conn.sendTouchpadScroll((short) 0, (short) 120);
                         }
                         else {
                             scrollTotal = scrollTotal + 128;
-//                            Log.d("debug", "send: down");
-                            conn.sendMouseHighResScroll((short) -120);
+                            conn.sendTouchpadScroll((short) 0, (short) -120);
                         }
                     }
                     if (!waitRelease) {
                         detectScrolling = false;
                     }
+                    conn.finishTouchpadScrollGesture();
                     fakeScrollInitialY = -1;
                     scrollTotal = 0;
                     return true;
                 }
                 else {
+                    conn.cancelTouchpadScrollGesture();
                     detectScrolling = false;
                     waitRelease = false;
                     scrollTotal = 0;
@@ -3317,8 +3316,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
                 // 处理滚轮事件
                 if (event.getActionMasked() == MotionEvent.ACTION_SCROLL) {
-                    conn.sendMouseHighResScroll((short) (event.getAxisValue(MotionEvent.AXIS_VSCROLL) * 120));
-                    conn.sendMouseHighResHScroll((short) (event.getAxisValue(MotionEvent.AXIS_HSCROLL) * 120));
+                    conn.sendTouchpadScroll(
+                            TouchpadScrollSupport.scaleAxisValue(event.getAxisValue(MotionEvent.AXIS_HSCROLL)),
+                            TouchpadScrollSupport.scaleAxisValue(event.getAxisValue(MotionEvent.AXIS_VSCROLL)));
                 }
 
                 lastButtonState = buttonState;
@@ -3423,9 +3423,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 }
 
                 if (event.getActionMasked() == MotionEvent.ACTION_SCROLL) {
-                    // Send the vertical scroll packet
-                    conn.sendMouseHighResScroll((short) (event.getAxisValue(MotionEvent.AXIS_VSCROLL) * 120));
-                    conn.sendMouseHighResHScroll((short) (event.getAxisValue(MotionEvent.AXIS_HSCROLL) * 120));
+                    conn.sendTouchpadScroll(
+                            TouchpadScrollSupport.scaleAxisValue(event.getAxisValue(MotionEvent.AXIS_HSCROLL)),
+                            TouchpadScrollSupport.scaleAxisValue(event.getAxisValue(MotionEvent.AXIS_VSCROLL)));
                 }
 
                 if ((changedButtons & MotionEvent.BUTTON_PRIMARY) != 0) {

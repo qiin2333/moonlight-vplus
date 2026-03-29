@@ -259,6 +259,10 @@ public class RelativeTouchContext implements TouchContext {
         }
 
         if (isDoubleClickDrag) {
+            if (confirmedScroll) {
+                conn.finishTouchpadScrollGesture();
+                confirmedScroll = false;
+            }
             conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT);
             isDoubleClickDrag = false;
             lastTapUpTime = 0;
@@ -307,6 +311,11 @@ public class RelativeTouchContext implements TouchContext {
             // 无效点击，重置
             lastTapUpTime = 0;
         }
+
+        if (confirmedScroll) {
+            conn.finishTouchpadScrollGesture();
+            confirmedScroll = false;
+        }
     }
 
     @Override
@@ -349,7 +358,7 @@ public class RelativeTouchContext implements TouchContext {
 
                 if (pointerCount == 2) {
                     if (confirmedScroll) {
-                        conn.sendMouseHighResScroll((short)(deltaY * SCROLL_SPEED_FACTOR));
+                        conn.sendTouchpadScroll((short) 0, (short) (deltaY * SCROLL_SPEED_FACTOR));
                     }
                 } else if (confirmedMove || isDoubleClickDrag || confirmedDrag) {
 
@@ -412,6 +421,10 @@ public class RelativeTouchContext implements TouchContext {
 
         if (confirmedDrag) {
             conn.sendMouseButtonUp(getMouseButtonIndex());
+        }
+
+        if (confirmedScroll) {
+            conn.cancelTouchpadScrollGesture();
         }
 
         confirmedMove = false;
@@ -484,6 +497,11 @@ public class RelativeTouchContext implements TouchContext {
 
     @Override
     public void setPointerCount(int pointerCount) {
+        if (confirmedScroll && pointerCount < 2) {
+            conn.finishTouchpadScrollGesture();
+            confirmedScroll = false;
+        }
+
         this.pointerCount = pointerCount;
 
         if (pointerCount > maxPointerCountInGesture) {

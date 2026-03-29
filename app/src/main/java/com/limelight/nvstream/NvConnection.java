@@ -10,6 +10,8 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.net.RouteInfo;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 
 import com.limelight.utils.NetHelper;
@@ -38,6 +40,7 @@ import com.limelight.nvstream.http.LimelightCryptoProvider;
 import com.limelight.nvstream.http.NvApp;
 import com.limelight.nvstream.http.NvHTTP;
 import com.limelight.nvstream.http.PairingManager;
+import com.limelight.nvstream.input.TouchpadScrollSupport;
 import com.limelight.nvstream.input.MouseButtonPacket;
 import com.limelight.nvstream.jni.MoonBridge;
 
@@ -51,6 +54,14 @@ public class NvConnection {
     private final boolean isMonkey;
     private final Context appContext;
     private ComputerDetails.AddressTuple host;
+    private final Handler touchpadScrollHandler = new Handler(Looper.getMainLooper());
+    private boolean touchpadScrollGestureActive;
+    private final Runnable touchpadScrollEndRunnable = new Runnable() {
+        @Override
+        public void run() {
+            finishTouchpadScrollGestureInternal(TouchpadScrollSupport.LI_TOUCHPAD_SCROLL_PHASE_ENDED);
+        }
+    };
 
     public NvConnection(Context appContext, ComputerDetails.AddressTuple host, int httpsPort, String uniqueId, String pairName, StreamConfiguration config, LimelightCryptoProvider cryptoProvider, X509Certificate serverCert)
     {
@@ -104,6 +115,9 @@ public class NvConnection {
     }
 
     public void stop() {
+        touchpadScrollHandler.removeCallbacks(touchpadScrollEndRunnable);
+        touchpadScrollGestureActive = false;
+
         // Interrupt any pending connection. This is thread-safe.
         MoonBridge.interruptConnection();
 
@@ -543,6 +557,42 @@ public class NvConnection {
         if (!isMonkey) {
             MoonBridge.sendMouseHighResHScroll(scrollAmount);
         }
+    }
+
+    public void sendTouchpadScroll(final short scrollAmountX, final short scrollAmountY) {
+        if (isMonkey || (scrollAmountX == 0 && scrollAmountY == 0)) {
+            return;
+        }
+
+        touchpadScrollHandler.removeCallbacks(touchpadScrollEndRunnable);
+
+        MoonBridge.sendTouchpadScroll(scrollAmountX, scrollAmountY,
+                TouchpadScrollSupport.phaseForDelta(touchpadScrollGestureActive),
+                TouchpadScrollSupport.LI_TOUCHPAD_SCROLL_MOMENTUM_PHASE_NONE);
+
+        touchpadScrollGestureActive = true;
+        touchpadScrollHandler.postDelayed(touchpadScrollEndRunnable, TouchpadScrollSupport.GESTURE_END_DELAY_MS);
+    }
+
+    public void finishTouchpadScrollGesture() {
+        finishTouchpadScrollGestureInternal(TouchpadScrollSupport.LI_TOUCHPAD_SCROLL_PHASE_ENDED);
+    }
+
+    public void cancelTouchpadScrollGesture() {
+        finishTouchpadScrollGestureInternal(TouchpadScrollSupport.LI_TOUCHPAD_SCROLL_PHASE_CANCELLED);
+    }
+
+    private void finishTouchpadScrollGestureInternal(byte phase) {
+        touchpadScrollHandler.removeCallbacks(touchpadScrollEndRunnable);
+
+        if (isMonkey || !touchpadScrollGestureActive) {
+            touchpadScrollGestureActive = false;
+            return;
+        }
+
+        MoonBridge.sendTouchpadScroll((short) 0, (short) 0, phase,
+                TouchpadScrollSupport.LI_TOUCHPAD_SCROLL_MOMENTUM_PHASE_NONE);
+        touchpadScrollGestureActive = false;
     }
 
     public int sendTouchEvent(byte eventType, int pointerId, float x, float y, float pressureOrDistance,

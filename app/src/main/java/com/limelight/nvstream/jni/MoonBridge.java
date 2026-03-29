@@ -3,6 +3,7 @@ package com.limelight.nvstream.jni;
 import com.limelight.nvstream.NvConnectionListener;
 import com.limelight.nvstream.av.audio.AudioRenderer;
 import com.limelight.nvstream.av.video.VideoDecoderRenderer;
+import com.limelight.nvstream.input.TouchpadScrollSupport;
 
 public class MoonBridge {
     /* See documentation in Limelight.h for information about these functions and constants */
@@ -83,6 +84,19 @@ public class MoonBridge {
     public static final byte SS_KBE_FLAG_NON_NORMALIZED = 0x01;
 
     public static final int LI_ERR_UNSUPPORTED = -5501;
+    public static final int LI_FF_TOUCHPAD_SCROLL_EVENTS = TouchpadScrollSupport.LI_FF_TOUCHPAD_SCROLL_EVENTS;
+
+    public static final byte LI_TOUCHPAD_SCROLL_PHASE_NONE = TouchpadScrollSupport.LI_TOUCHPAD_SCROLL_PHASE_NONE;
+    public static final byte LI_TOUCHPAD_SCROLL_PHASE_BEGAN = TouchpadScrollSupport.LI_TOUCHPAD_SCROLL_PHASE_BEGAN;
+    public static final byte LI_TOUCHPAD_SCROLL_PHASE_CHANGED = TouchpadScrollSupport.LI_TOUCHPAD_SCROLL_PHASE_CHANGED;
+    public static final byte LI_TOUCHPAD_SCROLL_PHASE_ENDED = TouchpadScrollSupport.LI_TOUCHPAD_SCROLL_PHASE_ENDED;
+    public static final byte LI_TOUCHPAD_SCROLL_PHASE_CANCELLED = TouchpadScrollSupport.LI_TOUCHPAD_SCROLL_PHASE_CANCELLED;
+    public static final byte LI_TOUCHPAD_SCROLL_PHASE_MAY_BEGIN = TouchpadScrollSupport.LI_TOUCHPAD_SCROLL_PHASE_MAY_BEGIN;
+
+    public static final byte LI_TOUCHPAD_SCROLL_MOMENTUM_PHASE_NONE = TouchpadScrollSupport.LI_TOUCHPAD_SCROLL_MOMENTUM_PHASE_NONE;
+    public static final byte LI_TOUCHPAD_SCROLL_MOMENTUM_PHASE_BEGIN = TouchpadScrollSupport.LI_TOUCHPAD_SCROLL_MOMENTUM_PHASE_BEGIN;
+    public static final byte LI_TOUCHPAD_SCROLL_MOMENTUM_PHASE_CONTINUE = TouchpadScrollSupport.LI_TOUCHPAD_SCROLL_MOMENTUM_PHASE_CONTINUE;
+    public static final byte LI_TOUCHPAD_SCROLL_MOMENTUM_PHASE_END = TouchpadScrollSupport.LI_TOUCHPAD_SCROLL_MOMENTUM_PHASE_END;
 
     public static final byte LI_TOUCH_EVENT_HOVER       = 0x00;
     public static final byte LI_TOUCH_EVENT_DOWN        = 0x01;
@@ -424,6 +438,9 @@ public class MoonBridge {
     public static native void sendMouseHighResScroll(short scrollAmount);
 
     public static native void sendMouseHighResHScroll(short scrollAmount);
+
+    public static native int sendTouchpadScroll(short scrollAmountX, short scrollAmountY,
+                                                byte scrollPhase, byte momentumPhase);
 
     public static native void sendUtf8Text(String text);
 

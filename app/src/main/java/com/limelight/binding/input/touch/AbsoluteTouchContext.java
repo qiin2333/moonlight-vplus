@@ -147,6 +147,9 @@ public class AbsoluteTouchContext implements TouchContext {
                 handler.postDelayed(leftButtonUpRunnable, 100);
             }
         }
+        else if (actionIndex == 1) {
+            conn.finishTouchpadScrollGesture();
+        }
 
         lastTouchLocationX = lastTouchUpX = eventX;
         lastTouchLocationY = lastTouchUpY = eventY;
@@ -206,7 +209,7 @@ public class AbsoluteTouchContext implements TouchContext {
             }
         }
         else if (actionIndex == 1) {
-            conn.sendMouseHighResScroll((short)((eventY - lastTouchLocationY) * SCROLL_SPEED_FACTOR));
+            conn.sendTouchpadScroll((short) 0, (short) ((eventY - lastTouchLocationY) * SCROLL_SPEED_FACTOR));
         }
 
         lastTouchLocationX = eventX;
@@ -229,6 +232,9 @@ public class AbsoluteTouchContext implements TouchContext {
         }
         else if (confirmedTap) {
             conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT);
+        }
+        else if (actionIndex == 1) {
+            conn.cancelTouchpadScrollGesture();
         }
     }
 

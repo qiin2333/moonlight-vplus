@@ -180,6 +180,8 @@ android {
 dependencies {
     // Desugaring 支持，用于在旧版 Android 上使用 Java 8+ API
     coreLibraryDesugaring libs.desugar.jdk.libs
+
+    testImplementation 'junit:junit:4.13.2'
     
     implementation libs.bouncycastle.prov
     implementation libs.bouncycastle.pkix
