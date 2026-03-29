@@ -152,9 +152,9 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     }
 
     // Gyro-to-mouse accumulator (sub-pixel remainder)
-    private float gyroMouseRemainX = 0f;
-    private float gyroMouseRemainY = 0f;
-    private long gyroMouseLastTimestamp = 0;
+    private volatile float gyroMouseRemainX = 0f;
+    private volatile float gyroMouseRemainY = 0f;
+    private volatile long gyroMouseLastTimestamp = 0;
 
     private void applyGyroToMouse(float wx, float wy, long timestamp) {
         if (gyroMouseLastTimestamp == 0) {
@@ -1520,9 +1520,10 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
         // 如果陀螺仪鼠标模式开着，且新手柄会占用 controllerNumber=0，
         // 需要清理 defaultContext 上的手机传感器，避免双重输入。
-        // controllerNumber 在 assignControllerNumberIfNeeded 时才确定，
-        // 这里用 external 判断：内置设备或首个外部手柄都会拿到 0。
-        if (prefConfig.gyroToMouse && defaultContext.gyroListener != null) {
+        // Only unregister if this device is likely to become controller 0.
+        // Internal devices and the first external controller will get controllerNumber=0.
+        boolean likelyController0 = !context.external || (prefConfig.multiController && currentControllers == 0);
+        if (prefConfig.gyroToMouse && defaultContext.gyroListener != null && likelyController0) {
             registerDeviceGyroForDefaultContext(false);
             LimeLog.info("Physical controller connected, released defaultContext gyro");
         }

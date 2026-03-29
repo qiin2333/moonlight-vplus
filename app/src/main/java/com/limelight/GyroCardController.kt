@@ -54,13 +54,19 @@ class GyroCardController(private val game: Game) {
             }
         }
 
-        mouseModeSwitch?.setOnCheckedChangeListener { _, isChecked ->
-            val ch = game.controllerHandler ?: return@setOnCheckedChangeListener
+        mouseModeSwitch?.setOnCheckedChangeListener { buttonView, isChecked ->
             val gyroOn = toggleSwitch?.isChecked ?: false
-            if (gyroOn) {
-                if (isChecked) ch.setGyroToMouseEnabled(true)
-                else ch.setGyroToRightStickEnabled(true)
+            if (!gyroOn) return@setOnCheckedChangeListener
+
+            val ch = game.controllerHandler
+            if (ch == null) {
+                Toast.makeText(game, "Failed to access controller", Toast.LENGTH_SHORT).show()
+                buttonView.isChecked = !isChecked
+                return@setOnCheckedChangeListener
             }
+
+            if (isChecked) ch.setGyroToMouseEnabled(true)
+            else ch.setGyroToRightStickEnabled(true)
         }
 
         // 更新显示

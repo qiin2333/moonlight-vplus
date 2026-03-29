@@ -755,8 +755,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             // double-registration on the same sensor which causes erratic mouse movement.
             final VirtualController vc = virtualController;
             controllerHandler.setVirtualControllerGyroCallbacks(
-                    () -> vc.setGyroEnabled(!prefConfig.gyroToMouse),
-                    () -> vc.setGyroEnabled(prefConfig.gyroToMouse)
+                    () -> vc.setGyroEnabled(false),
+                    () -> vc.setGyroEnabled(true)
             );
         }
 
@@ -1272,8 +1272,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 virtualController.setGyroEnabled(!prefConfig.gyroToMouse);
                 final VirtualController vc = virtualController;
                 controllerHandler.setVirtualControllerGyroCallbacks(
-                        () -> vc.setGyroEnabled(!prefConfig.gyroToMouse),
-                        () -> vc.setGyroEnabled(prefConfig.gyroToMouse)
+                        () -> vc.setGyroEnabled(false),
+                        () -> vc.setGyroEnabled(true)
                 );
             }
         }
