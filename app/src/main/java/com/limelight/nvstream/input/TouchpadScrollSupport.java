@@ -68,6 +68,10 @@ public final class TouchpadScrollSupport {
         return (short) roundedDistance;
     }
 
+    public static short scaleVerticalGestureDistance(float distance) {
+        return scaleGestureDistance(-distance);
+    }
+
     public static byte phaseForDelta(boolean gestureActive) {
         return gestureActive ? LI_TOUCHPAD_SCROLL_PHASE_CHANGED : LI_TOUCHPAD_SCROLL_PHASE_BEGAN;
     }

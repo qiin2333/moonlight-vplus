@@ -100,4 +100,12 @@ public class TouchpadScrollSupportTest {
         assertEquals(Short.MAX_VALUE, TouchpadScrollSupport.scaleGestureDistance(Short.MAX_VALUE + 1000f));
         assertEquals(Short.MIN_VALUE, TouchpadScrollSupport.scaleGestureDistance(Short.MIN_VALUE - 1000f));
     }
+
+    @Test
+    public void invertsVerticalTouchpadScrollToMatchAndroidSwipeDirection() {
+        assertEquals((short) -24, TouchpadScrollSupport.scaleVerticalGestureDistance(24.4f));
+        assertEquals((short) 13, TouchpadScrollSupport.scaleVerticalGestureDistance(-12.6f));
+        assertEquals(Short.MIN_VALUE, TouchpadScrollSupport.scaleVerticalGestureDistance(Short.MAX_VALUE + 1000f));
+        assertEquals(Short.MAX_VALUE, TouchpadScrollSupport.scaleVerticalGestureDistance(Short.MIN_VALUE - 1000f));
+    }
 }

@@ -105,6 +105,7 @@ android {
     def keystorePassword = System.getenv("KEYSTORE_PASSWORD")
     def envKeyAlias = System.getenv("KEY_ALIAS")
     def envKeyPassword = System.getenv("KEY_PASSWORD")
+    def keystoreType = System.getenv("KEYSTORE_TYPE")
     def hasSigningConfig = keystorePath != null && keystorePassword != null && envKeyAlias != null && envKeyPassword != null && new File(keystorePath).exists()
 
     signingConfigs {
@@ -114,6 +115,9 @@ android {
                 storePassword keystorePassword
                 keyAlias envKeyAlias
                 keyPassword envKeyPassword
+                if (keystoreType != null && !keystoreType.isBlank()) {
+                    storeType keystoreType
+                }
             }
         }
     }
