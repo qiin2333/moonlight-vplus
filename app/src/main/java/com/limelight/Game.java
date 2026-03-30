@@ -3727,11 +3727,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         final int eventSource = event.getSource();
         final int action = event.getActionMasked();
+        final int primaryToolType = event.getPointerCount() > 0 ? event.getToolType(0) : MotionEvent.TOOL_TYPE_UNKNOWN;
         final boolean isClassifiedTwoFingerSwipe =
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
                         TouchpadScrollSupport.shouldUseClassificationTouchpadScroll(
                                 true,
                                 eventSource,
+                                primaryToolType,
                                 event.getClassification());
 
         if (!isClassifiedTwoFingerSwipe && !TouchpadScrollSupport.isTouchpadSource(eventSource)) {
