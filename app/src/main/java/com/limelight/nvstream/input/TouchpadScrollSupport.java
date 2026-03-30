@@ -6,6 +6,15 @@ import android.view.MotionEvent;
 public final class TouchpadScrollSupport {
     public static final int HIGH_RES_SCROLL_UNITS = 120;
     public static final int LI_FF_TOUCHPAD_SCROLL_EVENTS = 0x04;
+    private static final float TOUCHPAD_AXIS_SCROLL_SCALE = 16.0f;
+    private static final float TOUCHPAD_AXIS_SCROLL_COMPRESSION = 6.0f;
+    private static final short TOUCHPAD_AXIS_SCROLL_MAX_DELTA = 6;
+    private static final float TOUCHPAD_GESTURE_SCROLL_SCALE = 0.30f;
+    private static final float TOUCHPAD_GESTURE_SCROLL_COMPRESSION = 8.0f;
+    private static final short TOUCHPAD_GESTURE_SCROLL_MAX_DELTA = 8;
+    private static final float TOUCHPAD_LEGACY_SCROLL_SCALE = 0.60f;
+    private static final float TOUCHPAD_LEGACY_SCROLL_COMPRESSION = 8.0f;
+    private static final short TOUCHPAD_LEGACY_SCROLL_MAX_DELTA = 8;
 
     public static final byte LI_TOUCHPAD_SCROLL_PHASE_NONE = 0x00;
     public static final byte LI_TOUCHPAD_SCROLL_PHASE_BEGAN = 0x01;
@@ -61,6 +70,17 @@ public final class TouchpadScrollSupport {
         return scaleAxisValue(-axisValue);
     }
 
+    public static short scaleTouchpadAxisScroll(float axisValue) {
+        return compressTouchpadScroll(axisValue,
+                TOUCHPAD_AXIS_SCROLL_SCALE,
+                TOUCHPAD_AXIS_SCROLL_COMPRESSION,
+                TOUCHPAD_AXIS_SCROLL_MAX_DELTA);
+    }
+
+    public static short scaleVerticalTouchpadAxisScroll(float axisValue) {
+        return scaleTouchpadAxisScroll(-axisValue);
+    }
+
     public static short scaleGestureDistance(float distance) {
         long roundedDistance = Math.round(distance);
         if (roundedDistance > Short.MAX_VALUE) {
@@ -76,7 +96,44 @@ public final class TouchpadScrollSupport {
         return scaleGestureDistance(-distance);
     }
 
+    public static short scaleTouchpadGestureScrollDistance(float distance) {
+        return compressTouchpadScroll(distance,
+                TOUCHPAD_GESTURE_SCROLL_SCALE,
+                TOUCHPAD_GESTURE_SCROLL_COMPRESSION,
+                TOUCHPAD_GESTURE_SCROLL_MAX_DELTA);
+    }
+
+    public static short scaleVerticalTouchpadGestureScrollDistance(float distance) {
+        return scaleTouchpadGestureScrollDistance(-distance);
+    }
+
+    public static short scaleTouchpadLegacyScrollDelta(float delta) {
+        return compressTouchpadScroll(delta,
+                TOUCHPAD_LEGACY_SCROLL_SCALE,
+                TOUCHPAD_LEGACY_SCROLL_COMPRESSION,
+                TOUCHPAD_LEGACY_SCROLL_MAX_DELTA);
+    }
+
+    public static short scaleVerticalTouchpadLegacyScrollDelta(float delta) {
+        return scaleTouchpadLegacyScrollDelta(-delta);
+    }
+
     public static byte phaseForDelta(boolean gestureActive) {
         return gestureActive ? LI_TOUCHPAD_SCROLL_PHASE_CHANGED : LI_TOUCHPAD_SCROLL_PHASE_BEGAN;
+    }
+
+    private static short compressTouchpadScroll(float rawValue,
+                                                float linearScale,
+                                                float compressionThreshold,
+                                                short maxDelta) {
+        if (rawValue == 0f) {
+            return 0;
+        }
+
+        float scaledValue = rawValue * linearScale;
+        float compressedValue = scaledValue / (1.0f + (Math.abs(scaledValue) / compressionThreshold));
+        long roundedValue = Math.round(compressedValue);
+        long clampedValue = Math.max(-maxDelta, Math.min(maxDelta, roundedValue));
+        return (short) clampedValue;
     }
 }

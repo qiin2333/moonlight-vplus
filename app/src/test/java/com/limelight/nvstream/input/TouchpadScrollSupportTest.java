@@ -34,6 +34,14 @@ public class TouchpadScrollSupportTest {
     }
 
     @Test
+    public void compressesAndClampsTouchpadAxisScrollBursts() {
+        assertEquals((short) 4, TouchpadScrollSupport.scaleTouchpadAxisScroll(1.0f));
+        assertEquals((short) -4, TouchpadScrollSupport.scaleVerticalTouchpadAxisScroll(1.0f));
+        assertEquals((short) 2, TouchpadScrollSupport.scaleTouchpadAxisScroll(0.25f));
+        assertEquals((short) 6, TouchpadScrollSupport.scaleTouchpadAxisScroll(5.0f));
+    }
+
+    @Test
     public void beginsThenChangesGesturePhases() {
         assertEquals(TouchpadScrollSupport.LI_TOUCHPAD_SCROLL_PHASE_BEGAN,
                 TouchpadScrollSupport.phaseForDelta(false));
@@ -114,5 +122,23 @@ public class TouchpadScrollSupportTest {
         assertEquals((short) 13, TouchpadScrollSupport.scaleVerticalGestureDistance(-12.6f));
         assertEquals(Short.MIN_VALUE, TouchpadScrollSupport.scaleVerticalGestureDistance(Short.MAX_VALUE + 1000f));
         assertEquals(Short.MAX_VALUE, TouchpadScrollSupport.scaleVerticalGestureDistance(Short.MIN_VALUE - 1000f));
+    }
+
+    @Test
+    public void normalizesClassifiedTouchpadGestureDistance() {
+        assertEquals((short) 1, TouchpadScrollSupport.scaleTouchpadGestureScrollDistance(5.0f));
+        assertEquals((short) 4, TouchpadScrollSupport.scaleTouchpadGestureScrollDistance(24.4f));
+        assertEquals((short) 6, TouchpadScrollSupport.scaleTouchpadGestureScrollDistance(74.0f));
+        assertEquals((short) -4, TouchpadScrollSupport.scaleVerticalTouchpadGestureScrollDistance(24.4f));
+        assertEquals((short) 8, TouchpadScrollSupport.scaleTouchpadGestureScrollDistance(5000.0f));
+    }
+
+    @Test
+    public void normalizesLegacyTouchpadDeltaWithoutAffectingPointerScaling() {
+        assertEquals((short) 3, TouchpadScrollSupport.scaleTouchpadLegacyScrollDelta(10.0f));
+        assertEquals((short) 5, TouchpadScrollSupport.scaleTouchpadLegacyScrollDelta(20.0f));
+        assertEquals((short) -5, TouchpadScrollSupport.scaleVerticalTouchpadLegacyScrollDelta(20.0f));
+        assertEquals((short) 8, TouchpadScrollSupport.scaleTouchpadLegacyScrollDelta(5000.0f));
+        assertEquals((short) 24, TouchpadScrollSupport.scaleGestureDistance(24.4f));
     }
 }

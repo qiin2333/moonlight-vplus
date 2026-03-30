@@ -3323,8 +3323,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 // 处理滚轮事件
                 if (event.getActionMasked() == MotionEvent.ACTION_SCROLL) {
                     conn.sendTouchpadScroll(
-                            TouchpadScrollSupport.scaleAxisValue(event.getAxisValue(MotionEvent.AXIS_HSCROLL)),
-                            TouchpadScrollSupport.scaleVerticalAxisValue(event.getAxisValue(MotionEvent.AXIS_VSCROLL)));
+                            TouchpadScrollSupport.scaleTouchpadAxisScroll(event.getAxisValue(MotionEvent.AXIS_HSCROLL)),
+                            TouchpadScrollSupport.scaleVerticalTouchpadAxisScroll(event.getAxisValue(MotionEvent.AXIS_VSCROLL)));
                 }
 
                 lastButtonState = buttonState;
@@ -3430,8 +3430,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
                 if (event.getActionMasked() == MotionEvent.ACTION_SCROLL) {
                     conn.sendTouchpadScroll(
-                            TouchpadScrollSupport.scaleAxisValue(event.getAxisValue(MotionEvent.AXIS_HSCROLL)),
-                            TouchpadScrollSupport.scaleVerticalAxisValue(event.getAxisValue(MotionEvent.AXIS_VSCROLL)));
+                            TouchpadScrollSupport.scaleTouchpadAxisScroll(event.getAxisValue(MotionEvent.AXIS_HSCROLL)),
+                            TouchpadScrollSupport.scaleVerticalTouchpadAxisScroll(event.getAxisValue(MotionEvent.AXIS_VSCROLL)));
                 }
 
                 if ((changedButtons & MotionEvent.BUTTON_PRIMARY) != 0) {
@@ -3814,8 +3814,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
 
         conn.sendTouchpadScroll(
-                TouchpadScrollSupport.scaleGestureDistance(scrollDistanceX),
-                TouchpadScrollSupport.scaleVerticalGestureDistance(scrollDistanceY));
+                TouchpadScrollSupport.scaleTouchpadGestureScrollDistance(scrollDistanceX),
+                TouchpadScrollSupport.scaleVerticalTouchpadGestureScrollDistance(scrollDistanceY));
         return true;
     }
 
@@ -3868,8 +3868,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     private void sendTouchpadScrollDelta(float deltaX, float deltaY) {
-        short packetDeltaX = TouchpadScrollSupport.scaleGestureDistance(deltaX);
-        short packetDeltaY = TouchpadScrollSupport.scaleVerticalGestureDistance(deltaY);
+        short packetDeltaX = TouchpadScrollSupport.scaleTouchpadLegacyScrollDelta(deltaX);
+        short packetDeltaY = TouchpadScrollSupport.scaleVerticalTouchpadLegacyScrollDelta(deltaY);
         if (packetDeltaX == 0 && packetDeltaY == 0) {
             return;
         }
