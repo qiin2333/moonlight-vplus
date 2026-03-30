@@ -95,6 +95,7 @@ class BackgroundImageManager(
         /**
          * StackBlur 算法 - 对缩小后的图片进行模糊处理以提升性能
          */
+        @JvmStatic
         fun stackBlur(original: Bitmap, radius: Int): Bitmap {
             // 先缩小图片以提升模糊性能（1/4缩放保留更多轮廓）
             val scaleFactor = 4
