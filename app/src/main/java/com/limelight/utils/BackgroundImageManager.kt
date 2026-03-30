@@ -101,12 +101,25 @@ class BackgroundImageManager(
          */
         @JvmStatic
         fun applyAlpha(original: Bitmap, alpha: Int): Bitmap {
-            val result = Bitmap.createBitmap(original.width, original.height, Bitmap.Config.ARGB_8888)
-            val canvas = android.graphics.Canvas(result)
-            val paint = android.graphics.Paint()
-            paint.alpha = alpha
-            canvas.drawBitmap(original, 0f, 0f, paint)
-            return result
+            if (original.isRecycled) return original
+            return try {
+                // Hardware bitmaps cannot be drawn on a software canvas,
+                // copy to software config first if needed.
+                val src = if (android.os.Build.VERSION.SDK_INT >= 26 &&
+                    original.config == Bitmap.Config.HARDWARE) {
+                    original.copy(Bitmap.Config.ARGB_8888, false)
+                } else {
+                    original
+                }
+                val result = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
+                val canvas = android.graphics.Canvas(result)
+                val paint = android.graphics.Paint()
+                paint.alpha = alpha
+                canvas.drawBitmap(src, 0f, 0f, paint)
+                result
+            } catch (e: Throwable) {
+                original
+            }
         }
 
         /**
@@ -114,12 +127,20 @@ class BackgroundImageManager(
          */
         @JvmStatic
         fun stackBlur(original: Bitmap, radius: Int): Bitmap {
+            if (original.isRecycled) return original
             try {
+                // Hardware bitmaps need to be copied to software config first
+                val src = if (android.os.Build.VERSION.SDK_INT >= 26 &&
+                    original.config == Bitmap.Config.HARDWARE) {
+                    original.copy(Bitmap.Config.ARGB_8888, false)
+                } else {
+                    original
+                }
                 // 缩小图片后模糊（1/3缩放保留较多细节）
                 val scaleFactor = 3
-                val smallWidth = (original.width / scaleFactor).coerceAtLeast(1)
-                val smallHeight = (original.height / scaleFactor).coerceAtLeast(1)
-                val small = Bitmap.createScaledBitmap(original, smallWidth, smallHeight, true)
+                val smallWidth = (src.width / scaleFactor).coerceAtLeast(1)
+                val smallHeight = (src.height / scaleFactor).coerceAtLeast(1)
+                val small = Bitmap.createScaledBitmap(src, smallWidth, smallHeight, true)
 
             val bitmap = small.copy(Bitmap.Config.ARGB_8888, true)
             val w = bitmap.width
@@ -249,7 +270,7 @@ class BackgroundImageManager(
 
             bitmap.setPixels(pix, 0, w, 0, 0, w, h)
             return bitmap
-            } catch (e: OutOfMemoryError) {
+            } catch (e: Throwable) {
                 return original
             }
         }
