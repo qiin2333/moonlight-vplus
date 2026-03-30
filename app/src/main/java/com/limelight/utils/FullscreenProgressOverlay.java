@@ -140,7 +140,7 @@ public class FullscreenProgressOverlay {
 
         activity.runOnUiThread(() -> {
             if (poster != null) {
-                appPosterBackgroundBlur.setImageBitmap(BackgroundImageManager.stackBlur(poster, 12));
+                appPosterBackgroundBlur.setImageBitmap(BackgroundImageManager.stackBlur(poster, 25));
                 appPosterBackgroundClear.setImageBitmap(poster);
             } else {
                 // 设置默认背景
@@ -162,7 +162,7 @@ public class FullscreenProgressOverlay {
                 if (poster instanceof android.graphics.drawable.BitmapDrawable) {
                     Bitmap bmp = ((android.graphics.drawable.BitmapDrawable) poster).getBitmap();
                     if (bmp != null) {
-                        appPosterBackgroundBlur.setImageBitmap(BackgroundImageManager.stackBlur(bmp, 12));
+                        appPosterBackgroundBlur.setImageBitmap(BackgroundImageManager.stackBlur(bmp, 25));
                     }
                 } else {
                     appPosterBackgroundBlur.setImageDrawable(poster);
@@ -237,7 +237,7 @@ public class FullscreenProgressOverlay {
             if (appIcon != null) {
                 appPosterBackgroundBlur.setVisibility(View.VISIBLE);
                 appPosterBackgroundClear.setVisibility(View.VISIBLE);
-                appPosterBackgroundBlur.setImageBitmap(BackgroundImageManager.stackBlur(appIcon, 12));
+                appPosterBackgroundBlur.setImageBitmap(BackgroundImageManager.stackBlur(appIcon, 25));
                 appPosterBackgroundClear.setImageBitmap(appIcon);
             }
         }
