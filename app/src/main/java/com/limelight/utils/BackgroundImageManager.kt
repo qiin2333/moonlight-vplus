@@ -10,7 +10,7 @@ import com.limelight.R
 
 /**
  * 背景图片管理器，用于处理AppView背景图片的平滑切换
- * 支持高斯模糊背景 + 中间完整图片的显示模式
+ * 模糊背景填满屏幕 + 中间完整清晰图片
  */
 class BackgroundImageManager(
     private val context: Context,
@@ -25,7 +25,7 @@ class BackgroundImageManager(
      * @param newBackground 新的背景图片
      */
     fun setBackgroundSmoothly(newBackground: Bitmap?) {
-        if (newBackground == null) {
+        if (newBackground == null || newBackground.isRecycled) {
             return
         }
 
@@ -34,12 +34,12 @@ class BackgroundImageManager(
             return
         }
 
-        val blurredBitmap = stackBlur(newBackground, 10)
+        val blurred = stackBlur(newBackground, 10)
 
         // 如果当前没有背景图片，直接设置
         if (currentBackground == null) {
             currentBackground = newBackground
-            blurImageView.setImageBitmap(blurredBitmap)
+            blurImageView.setImageBitmap(blurred)
             clearImageView.setImageBitmap(newBackground)
             val fadeIn = AnimationUtils.loadAnimation(context, R.anim.background_fadein)
             blurImageView.startAnimation(fadeIn)
@@ -54,7 +54,7 @@ class BackgroundImageManager(
 
             override fun onAnimationEnd(animation: Animation) {
                 currentBackground = newBackground
-                blurImageView.setImageBitmap(blurredBitmap)
+                blurImageView.setImageBitmap(blurred)
                 clearImageView.setImageBitmap(newBackground)
                 val fadeIn = AnimationUtils.loadAnimation(context, R.anim.background_fadein)
                 blurImageView.startAnimation(fadeIn)
@@ -97,11 +97,12 @@ class BackgroundImageManager(
          */
         @JvmStatic
         fun stackBlur(original: Bitmap, radius: Int): Bitmap {
-            // 缩小图片后模糊（1/3缩放保留较多细节）
-            val scaleFactor = 3
-            val smallWidth = (original.width / scaleFactor).coerceAtLeast(1)
-            val smallHeight = (original.height / scaleFactor).coerceAtLeast(1)
-            val small = Bitmap.createScaledBitmap(original, smallWidth, smallHeight, true)
+            try {
+                // 缩小图片后模糊（1/3缩放保留较多细节）
+                val scaleFactor = 3
+                val smallWidth = (original.width / scaleFactor).coerceAtLeast(1)
+                val smallHeight = (original.height / scaleFactor).coerceAtLeast(1)
+                val small = Bitmap.createScaledBitmap(original, smallWidth, smallHeight, true)
 
             val bitmap = small.copy(Bitmap.Config.ARGB_8888, true)
             val w = bitmap.width
@@ -231,6 +232,9 @@ class BackgroundImageManager(
 
             bitmap.setPixels(pix, 0, w, 0, 0, w, h)
             return bitmap
+            } catch (e: OutOfMemoryError) {
+                return original
+            }
         }
     }
 }

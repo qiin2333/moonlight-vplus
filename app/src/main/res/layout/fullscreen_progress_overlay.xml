@@ -14,7 +14,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:scaleType="centerCrop"
-            android:alpha="0.7" />
+            android:alpha="0.5" />
 
         <!-- 中间完整图片 -->
         <ImageView
@@ -22,7 +22,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:scaleType="fitCenter"
-            android:alpha="0.85" />
+            android:alpha="0.5" />
 
     </FrameLayout>
 
