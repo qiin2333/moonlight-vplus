@@ -35,12 +35,13 @@ class BackgroundImageManager(
         }
 
         val blurred = stackBlur(newBackground, 10)
+        val clearWithAlpha = applyAlpha(newBackground, CLEAR_IMAGE_ALPHA)
 
         // 如果当前没有背景图片，直接设置
         if (currentBackground == null) {
             currentBackground = newBackground
             blurImageView.setImageBitmap(blurred)
-            clearImageView.setImageBitmap(newBackground)
+            clearImageView.setImageBitmap(clearWithAlpha)
             val fadeIn = AnimationUtils.loadAnimation(context, R.anim.background_fadein)
             blurImageView.startAnimation(fadeIn)
             clearImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadein))
@@ -55,7 +56,7 @@ class BackgroundImageManager(
             override fun onAnimationEnd(animation: Animation) {
                 currentBackground = newBackground
                 blurImageView.setImageBitmap(blurred)
-                clearImageView.setImageBitmap(newBackground)
+                clearImageView.setImageBitmap(clearWithAlpha)
                 val fadeIn = AnimationUtils.loadAnimation(context, R.anim.background_fadein)
                 blurImageView.startAnimation(fadeIn)
                 clearImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadein))
@@ -92,6 +93,22 @@ class BackgroundImageManager(
     }
 
     companion object {
+        private const val CLEAR_IMAGE_ALPHA = 85 // 0.33 * 255 ≈ 85
+
+        /**
+         * 给Bitmap应用全局透明度，返回带alpha的新Bitmap
+         * 图片区域半透明，空白区域完全透明
+         */
+        @JvmStatic
+        fun applyAlpha(original: Bitmap, alpha: Int): Bitmap {
+            val result = Bitmap.createBitmap(original.width, original.height, Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(result)
+            val paint = android.graphics.Paint()
+            paint.alpha = alpha
+            canvas.drawBitmap(original, 0f, 0f, paint)
+            return result
+        }
+
         /**
          * StackBlur 算法 - 对缩小后的图片进行模糊处理以提升性能
          */
