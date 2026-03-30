@@ -58,7 +58,7 @@ public final class TouchpadScrollSupport {
     }
 
     public static short scaleVerticalAxisValue(float axisValue) {
-        return scaleAxisValue(axisValue);
+        return scaleAxisValue(-axisValue);
     }
 
     public static short scaleGestureDistance(float distance) {
@@ -73,7 +73,7 @@ public final class TouchpadScrollSupport {
     }
 
     public static short scaleVerticalGestureDistance(float distance) {
-        return scaleGestureDistance(distance);
+        return scaleGestureDistance(-distance);
     }
 
     public static byte phaseForDelta(boolean gestureActive) {

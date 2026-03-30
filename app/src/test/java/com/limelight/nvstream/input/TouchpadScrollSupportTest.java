@@ -27,9 +27,9 @@ public class TouchpadScrollSupportTest {
     }
 
     @Test
-    public void preservesVerticalAxisValuesAcrossTrackpadSendPaths() {
-        assertEquals((short) 120, TouchpadScrollSupport.scaleVerticalAxisValue(1.0f));
-        assertEquals((short) -60, TouchpadScrollSupport.scaleVerticalAxisValue(-0.5f));
+    public void invertsVerticalAxisValuesForNaturalTrackpadScrolling() {
+        assertEquals((short) -120, TouchpadScrollSupport.scaleVerticalAxisValue(1.0f));
+        assertEquals((short) 60, TouchpadScrollSupport.scaleVerticalAxisValue(-0.5f));
         assertEquals((short) 0, TouchpadScrollSupport.scaleVerticalAxisValue(0.0f));
     }
 
@@ -109,10 +109,10 @@ public class TouchpadScrollSupportTest {
     }
 
     @Test
-    public void preservesVerticalGestureDistanceAcrossTrackpadSendPaths() {
-        assertEquals((short) 24, TouchpadScrollSupport.scaleVerticalGestureDistance(24.4f));
-        assertEquals((short) -13, TouchpadScrollSupport.scaleVerticalGestureDistance(-12.6f));
-        assertEquals(Short.MAX_VALUE, TouchpadScrollSupport.scaleVerticalGestureDistance(Short.MAX_VALUE + 1000f));
-        assertEquals(Short.MIN_VALUE, TouchpadScrollSupport.scaleVerticalGestureDistance(Short.MIN_VALUE - 1000f));
+    public void invertsVerticalGestureDistanceForNaturalTrackpadScrolling() {
+        assertEquals((short) -24, TouchpadScrollSupport.scaleVerticalGestureDistance(24.4f));
+        assertEquals((short) 13, TouchpadScrollSupport.scaleVerticalGestureDistance(-12.6f));
+        assertEquals(Short.MIN_VALUE, TouchpadScrollSupport.scaleVerticalGestureDistance(Short.MAX_VALUE + 1000f));
+        assertEquals(Short.MAX_VALUE, TouchpadScrollSupport.scaleVerticalGestureDistance(Short.MIN_VALUE - 1000f));
     }
 }
