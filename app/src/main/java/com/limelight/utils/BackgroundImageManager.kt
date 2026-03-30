@@ -34,7 +34,7 @@ class BackgroundImageManager(
             return
         }
 
-        val blurredBitmap = stackBlur(newBackground, 25)
+        val blurredBitmap = stackBlur(newBackground, 10)
 
         // 如果当前没有背景图片，直接设置
         if (currentBackground == null) {
@@ -97,8 +97,8 @@ class BackgroundImageManager(
          */
         @JvmStatic
         fun stackBlur(original: Bitmap, radius: Int): Bitmap {
-            // 先缩小图片以提升模糊性能
-            val scaleFactor = 8
+            // 先缩小图片以提升模糊性能（1/4缩放保留较多细节）
+            val scaleFactor = 4
             val smallWidth = (original.width / scaleFactor).coerceAtLeast(1)
             val smallHeight = (original.height / scaleFactor).coerceAtLeast(1)
             val small = Bitmap.createScaledBitmap(original, smallWidth, smallHeight, true)
