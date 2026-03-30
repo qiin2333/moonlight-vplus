@@ -37,7 +37,8 @@ public final class TouchpadScrollSupport {
                                                                 int eventSource,
                                                                 int classification) {
         return nativeMousePointerEnabled &&
-                isTouchpadSource(eventSource) &&
+                ((eventSource & InputDevice.SOURCE_CLASS_POINTER) != 0 ||
+                        isTouchpadSource(eventSource)) &&
                 classification == MotionEvent.CLASSIFICATION_TWO_FINGER_SWIPE;
     }
 

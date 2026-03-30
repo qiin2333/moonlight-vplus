@@ -44,13 +44,13 @@ public class TouchpadScrollSupportTest {
                 true,
                 InputDevice.SOURCE_CLASS_POSITION,
                 MotionEvent.CLASSIFICATION_TWO_FINGER_SWIPE));
+        assertTrue(TouchpadScrollSupport.shouldUseClassificationTouchpadScroll(
+                true,
+                InputDevice.SOURCE_MOUSE,
+                MotionEvent.CLASSIFICATION_TWO_FINGER_SWIPE));
         assertFalse(TouchpadScrollSupport.shouldUseClassificationTouchpadScroll(
                 false,
                 InputDevice.SOURCE_TOUCHPAD,
-                MotionEvent.CLASSIFICATION_TWO_FINGER_SWIPE));
-        assertFalse(TouchpadScrollSupport.shouldUseClassificationTouchpadScroll(
-                true,
-                InputDevice.SOURCE_MOUSE,
                 MotionEvent.CLASSIFICATION_TWO_FINGER_SWIPE));
         assertFalse(TouchpadScrollSupport.shouldUseClassificationTouchpadScroll(
                 true,

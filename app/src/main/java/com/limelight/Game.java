@@ -3726,11 +3726,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
 
         final int eventSource = event.getSource();
-        if (!TouchpadScrollSupport.isTouchpadSource(eventSource)) {
-            clearExternalTouchpadPointerCache();
-            return false;
-        }
-
         final int action = event.getActionMasked();
         final boolean isClassifiedTwoFingerSwipe =
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
@@ -3738,6 +3733,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                                 true,
                                 eventSource,
                                 event.getClassification());
+
+        if (!isClassifiedTwoFingerSwipe && !TouchpadScrollSupport.isTouchpadSource(eventSource)) {
+            clearExternalTouchpadPointerCache();
+            return false;
+        }
+
         final boolean isLegacyMultiPointerScroll =
                 TouchpadScrollSupport.shouldUseLegacyMultiPointerScroll(
                         true,
