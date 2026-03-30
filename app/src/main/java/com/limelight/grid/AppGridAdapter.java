@@ -189,8 +189,6 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
 
     @Override
     public void populateView(View parentView, ImageView imgView, View spinnerView, TextView txtView, ImageView overlayView, AppView.AppObject obj) {
-        ImageView appBackgroundImage = getActivity(context).findViewById(R.id.appBackgroundImage);
-        
         // Let the cached asset loader handle it with callback
         loader.populateImageView(obj, imgView, txtView, false, () -> {
             try {
@@ -213,13 +211,15 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
             // Show the play button overlay
             overlayView.setImageResource(R.drawable.ic_play_cute);
             overlayView.setVisibility(View.VISIBLE);
-            // 使用更平滑的背景图片加载
-            loader.populateImageView(obj, appBackgroundImage, txtView, true);
+            // 通过BackgroundImageManager设置背景（带模糊效果）
+            setBackgroundViaManager(obj);
         }
         else {
-            if (obj.app.getAppName().equalsIgnoreCase("desktop") && appBackgroundImage.getDrawable() == null) {
-                // 使用更平滑的背景图片加载
-                loader.populateImageView(obj, appBackgroundImage, txtView, true);
+            Activity activity = getActivity(context);
+            ImageView blurView = activity != null ? activity.findViewById(R.id.appBackgroundImageBlur) : null;
+            if (obj.app.getAppName().equalsIgnoreCase("desktop") && blurView != null && blurView.getDrawable() == null) {
+                // 通过BackgroundImageManager设置背景（带模糊效果）
+                setBackgroundViaManager(obj);
             }
             overlayView.setVisibility(View.GONE);
         }
@@ -231,6 +231,32 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
             parentView.setAlpha(1.0f);
         }
     }
+
+    private void setBackgroundViaManager(AppView.AppObject obj) {
+        Activity activity = getActivity(context);
+        if (!(activity instanceof AppView)) return;
+        AppView appView = (AppView) activity;
+        com.limelight.utils.BackgroundImageManager bgManager = appView.getBackgroundImageManager();
+        if (bgManager == null) return;
+
+        CachedAppAssetLoader.LoaderTuple tuple = new CachedAppAssetLoader.LoaderTuple(computer, obj.app);
+        ScaledBitmap cachedBitmap = loader.getBitmapFromCache(tuple);
+        if (cachedBitmap != null && cachedBitmap.bitmap != null) {
+            bgManager.setBackgroundSmoothly(cachedBitmap.bitmap);
+        } else {
+            // 如果缓存中没有，异步加载
+            ImageView tempImageView = new ImageView(context);
+            loader.populateImageView(obj, tempImageView, null, false, () -> {
+                if (tempImageView.getDrawable() instanceof android.graphics.drawable.BitmapDrawable) {
+                    android.graphics.Bitmap bitmap = ((android.graphics.drawable.BitmapDrawable) tempImageView.getDrawable()).getBitmap();
+                    if (bitmap != null) {
+                        bgManager.setBackgroundSmoothly(bitmap);
+                    }
+                }
+            });
+        }
+    }
+
     public static Activity getActivity(Context context) {
         if (context instanceof Activity) {
             return (Activity) context;

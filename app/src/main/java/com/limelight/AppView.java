@@ -115,7 +115,8 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
     private SpinnerDialog blockingLoadSpinner;
 
     // ==================== UI 组件 - 背景 ====================
-    private ImageView appBackgroundImage;
+    private ImageView appBackgroundImageBlur;
+    private ImageView appBackgroundImageClear;
     private BackgroundImageManager backgroundImageManager;
     private final Handler backgroundChangeHandler = new Handler(Looper.getMainLooper());
     private Runnable backgroundChangeRunnable;
@@ -368,9 +369,10 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
         setContentView(R.layout.activity_app_view);
 
-        // Initialize background image view
-        appBackgroundImage = findViewById(R.id.appBackgroundImage);
-        backgroundImageManager = new BackgroundImageManager(this, appBackgroundImage);
+        // Initialize background image views
+        appBackgroundImageBlur = findViewById(R.id.appBackgroundImageBlur);
+        appBackgroundImageClear = findViewById(R.id.appBackgroundImageClear);
+        backgroundImageManager = new BackgroundImageManager(this, appBackgroundImageBlur, appBackgroundImageClear);
 
         // Initialize app settings manager and UI components
         appSettingsManager = new AppSettingsManager(this);
@@ -589,7 +591,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
             return;
         }
 
-        if (backgroundImageManager != null && appBackgroundImage != null) {
+        if (backgroundImageManager != null && appBackgroundImageBlur != null) {
             CachedAppAssetLoader loader = appGridAdapter.getLoader();
             CachedAppAssetLoader.LoaderTuple tuple = new CachedAppAssetLoader.LoaderTuple(computer, appObject.app);
 
@@ -1427,7 +1429,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         // Only set background if we don't have one already and there are apps
         if (backgroundImageManager.getCurrentBackground() == null && 
             !appObjects.isEmpty() && 
-            appBackgroundImage != null) {
+            appBackgroundImageBlur != null) {
             
             AppObject firstApp = appObjects.get(0);
             
@@ -1466,6 +1468,10 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
     public int getAdapterFragmentLayoutId() {
         return PreferenceConfiguration.readPreferences(AppView.this).smallIconMode ?
                     R.layout.app_grid_view_small : R.layout.app_grid_view;
+    }
+
+    public BackgroundImageManager getBackgroundImageManager() {
+        return backgroundImageManager;
     }
 
     public void receiveAbsListView(AbsListView listView) {
