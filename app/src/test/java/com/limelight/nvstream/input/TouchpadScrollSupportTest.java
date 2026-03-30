@@ -27,6 +27,13 @@ public class TouchpadScrollSupportTest {
     }
 
     @Test
+    public void invertsVerticalAxisValuesToMatchAndroidSwipeDirection() {
+        assertEquals((short) -120, TouchpadScrollSupport.scaleVerticalAxisValue(1.0f));
+        assertEquals((short) 60, TouchpadScrollSupport.scaleVerticalAxisValue(-0.5f));
+        assertEquals((short) 0, TouchpadScrollSupport.scaleVerticalAxisValue(0.0f));
+    }
+
+    @Test
     public void beginsThenChangesGesturePhases() {
         assertEquals(TouchpadScrollSupport.LI_TOUCHPAD_SCROLL_PHASE_BEGAN,
                 TouchpadScrollSupport.phaseForDelta(false));

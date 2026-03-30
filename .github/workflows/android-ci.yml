@@ -119,8 +119,7 @@ jobs:
         run: |
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ] && \
              [ -n "${{ secrets.KEYSTORE_PASSWORD }}" ] && \
-             [ -n "${{ secrets.KEY_ALIAS }}" ] && \
-             [ -n "${{ secrets.KEY_PASSWORD }}" ]; then
+             [ -n "${{ secrets.KEY_ALIAS }}" ]; then
             echo "HAS_RELEASE_SIGNING=true" >> "$GITHUB_ENV"
           else
             echo "HAS_RELEASE_SIGNING=false" >> "$GITHUB_ENV"
@@ -134,17 +133,17 @@ jobs:
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > my-release.keystore
-          ls -l my-release.keystore
+          echo "$KEYSTORE_BASE64" | base64 -d > my-release.p12
+          ls -l my-release.p12
 
       - name: Build signed NonRoot Release APK
         if: startsWith(github.ref, 'refs/tags/') && env.HAS_RELEASE_SIGNING == 'true'
         env:
-          KEYSTORE_PATH: ${{ github.workspace }}/my-release.keystore
+          KEYSTORE_PATH: ${{ github.workspace }}/my-release.p12
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEYSTORE_TYPE: ${{ secrets.KEYSTORE_TYPE }}
+          KEYSTORE_TYPE: PKCS12
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: ./gradlew :app:assembleNonRootRelease --no-daemon --stacktrace
 
       - name: Rename Release APK to Moonlight.V+.<version>.apk

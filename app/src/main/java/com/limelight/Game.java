@@ -3324,7 +3324,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 if (event.getActionMasked() == MotionEvent.ACTION_SCROLL) {
                     conn.sendTouchpadScroll(
                             TouchpadScrollSupport.scaleAxisValue(event.getAxisValue(MotionEvent.AXIS_HSCROLL)),
-                            TouchpadScrollSupport.scaleAxisValue(event.getAxisValue(MotionEvent.AXIS_VSCROLL)));
+                            TouchpadScrollSupport.scaleVerticalAxisValue(event.getAxisValue(MotionEvent.AXIS_VSCROLL)));
                 }
 
                 lastButtonState = buttonState;
@@ -3431,7 +3431,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 if (event.getActionMasked() == MotionEvent.ACTION_SCROLL) {
                     conn.sendTouchpadScroll(
                             TouchpadScrollSupport.scaleAxisValue(event.getAxisValue(MotionEvent.AXIS_HSCROLL)),
-                            TouchpadScrollSupport.scaleAxisValue(event.getAxisValue(MotionEvent.AXIS_VSCROLL)));
+                            TouchpadScrollSupport.scaleVerticalAxisValue(event.getAxisValue(MotionEvent.AXIS_VSCROLL)));
                 }
 
                 if ((changedButtons & MotionEvent.BUTTON_PRIMARY) != 0) {

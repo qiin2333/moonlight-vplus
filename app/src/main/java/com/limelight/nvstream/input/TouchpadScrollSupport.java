@@ -57,6 +57,10 @@ public final class TouchpadScrollSupport {
         return (short) Math.round(axisValue * HIGH_RES_SCROLL_UNITS);
     }
 
+    public static short scaleVerticalAxisValue(float axisValue) {
+        return scaleAxisValue(-axisValue);
+    }
+
     public static short scaleGestureDistance(float distance) {
         long roundedDistance = Math.round(distance);
         if (roundedDistance > Short.MAX_VALUE) {
