@@ -25,7 +25,8 @@ public class FullscreenProgressOverlay {
     private final TextView statusText;
     private final TextView progressText;
     private final TextView randomTip;
-    private final ImageView appPosterBackground;
+    private final ImageView appPosterBackgroundBlur;
+    private final ImageView appPosterBackgroundClear;
     private final ProgressBar progressBar;
     private final ViewGroup rootView;
     private final String[] tips;
@@ -72,7 +73,8 @@ public class FullscreenProgressOverlay {
         statusText = overlayView.findViewById(R.id.statusText);
         progressText = overlayView.findViewById(R.id.progressText);
         randomTip = overlayView.findViewById(R.id.randomTip);
-        appPosterBackground = overlayView.findViewById(R.id.appPosterBackground);
+        appPosterBackgroundBlur = overlayView.findViewById(R.id.appPosterBackgroundBlur);
+        appPosterBackgroundClear = overlayView.findViewById(R.id.appPosterBackgroundClear);
         progressBar = overlayView.findViewById(R.id.progressBar);
         
         // 设置初始状态
@@ -138,10 +140,12 @@ public class FullscreenProgressOverlay {
 
         activity.runOnUiThread(() -> {
             if (poster != null) {
-                appPosterBackground.setImageBitmap(poster);
+                appPosterBackgroundBlur.setImageBitmap(BackgroundImageManager.stackBlur(poster, 12));
+                appPosterBackgroundClear.setImageBitmap(poster);
             } else {
                 // 设置默认背景
-                appPosterBackground.setImageResource(R.drawable.no_app_image);
+                appPosterBackgroundBlur.setImageResource(R.drawable.no_app_image);
+                appPosterBackgroundClear.setImageBitmap(null);
             }
         });
     }
@@ -153,10 +157,20 @@ public class FullscreenProgressOverlay {
 
         activity.runOnUiThread(() -> {
             if (poster != null) {
-                appPosterBackground.setImageDrawable(poster);
+                appPosterBackgroundClear.setImageDrawable(poster);
+                // 尝试从Drawable提取Bitmap进行模糊
+                if (poster instanceof android.graphics.drawable.BitmapDrawable) {
+                    Bitmap bmp = ((android.graphics.drawable.BitmapDrawable) poster).getBitmap();
+                    if (bmp != null) {
+                        appPosterBackgroundBlur.setImageBitmap(BackgroundImageManager.stackBlur(bmp, 12));
+                    }
+                } else {
+                    appPosterBackgroundBlur.setImageDrawable(poster);
+                }
             } else {
                 // 设置默认背景
-                appPosterBackground.setImageResource(R.drawable.no_app_image);
+                appPosterBackgroundBlur.setImageResource(R.drawable.no_app_image);
+                appPosterBackgroundClear.setImageBitmap(null);
             }
         });
     }
@@ -221,8 +235,10 @@ public class FullscreenProgressOverlay {
             Bitmap appIcon = AppIconCache.getInstance().getIcon(computer, app);
             
             if (appIcon != null) {
-                appPosterBackground.setVisibility(View.VISIBLE);
-                appPosterBackground.setImageBitmap(appIcon);
+                appPosterBackgroundBlur.setVisibility(View.VISIBLE);
+                appPosterBackgroundClear.setVisibility(View.VISIBLE);
+                appPosterBackgroundBlur.setImageBitmap(BackgroundImageManager.stackBlur(appIcon, 12));
+                appPosterBackgroundClear.setImageBitmap(appIcon);
             }
         }
     }
