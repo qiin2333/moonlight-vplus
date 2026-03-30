@@ -27,9 +27,9 @@ public class TouchpadScrollSupportTest {
     }
 
     @Test
-    public void invertsVerticalAxisValuesToMatchAndroidSwipeDirection() {
-        assertEquals((short) -120, TouchpadScrollSupport.scaleVerticalAxisValue(1.0f));
-        assertEquals((short) 60, TouchpadScrollSupport.scaleVerticalAxisValue(-0.5f));
+    public void preservesVerticalAxisValuesAcrossTrackpadSendPaths() {
+        assertEquals((short) 120, TouchpadScrollSupport.scaleVerticalAxisValue(1.0f));
+        assertEquals((short) -60, TouchpadScrollSupport.scaleVerticalAxisValue(-0.5f));
         assertEquals((short) 0, TouchpadScrollSupport.scaleVerticalAxisValue(0.0f));
     }
 
@@ -81,34 +81,6 @@ public class TouchpadScrollSupportTest {
     }
 
     @Test
-    public void usesGestureScrollAxesEvenWithoutTwoFingerClassification() {
-        assertTrue(TouchpadScrollSupport.shouldUseGestureAxisTouchpadScroll(
-                true,
-                InputDevice.SOURCE_MOUSE,
-                MotionEvent.TOOL_TYPE_MOUSE,
-                0f,
-                18f));
-        assertTrue(TouchpadScrollSupport.shouldUseGestureAxisTouchpadScroll(
-                true,
-                InputDevice.SOURCE_MOUSE_RELATIVE,
-                MotionEvent.TOOL_TYPE_MOUSE,
-                3f,
-                0f));
-        assertFalse(TouchpadScrollSupport.shouldUseGestureAxisTouchpadScroll(
-                true,
-                InputDevice.SOURCE_MOUSE,
-                MotionEvent.TOOL_TYPE_MOUSE,
-                0f,
-                0f));
-        assertFalse(TouchpadScrollSupport.shouldUseGestureAxisTouchpadScroll(
-                false,
-                InputDevice.SOURCE_MOUSE,
-                MotionEvent.TOOL_TYPE_MOUSE,
-                0f,
-                18f));
-    }
-
-    @Test
     public void onlyUsesLegacyFallbackForMultiPointerTouchpadMotion() {
         assertTrue(TouchpadScrollSupport.shouldUseLegacyMultiPointerScroll(
                 true,
@@ -137,10 +109,10 @@ public class TouchpadScrollSupportTest {
     }
 
     @Test
-    public void invertsVerticalTouchpadScrollToMatchAndroidSwipeDirection() {
-        assertEquals((short) -24, TouchpadScrollSupport.scaleVerticalGestureDistance(24.4f));
-        assertEquals((short) 13, TouchpadScrollSupport.scaleVerticalGestureDistance(-12.6f));
-        assertEquals(Short.MIN_VALUE, TouchpadScrollSupport.scaleVerticalGestureDistance(Short.MAX_VALUE + 1000f));
-        assertEquals(Short.MAX_VALUE, TouchpadScrollSupport.scaleVerticalGestureDistance(Short.MIN_VALUE - 1000f));
+    public void preservesVerticalGestureDistanceAcrossTrackpadSendPaths() {
+        assertEquals((short) 24, TouchpadScrollSupport.scaleVerticalGestureDistance(24.4f));
+        assertEquals((short) -13, TouchpadScrollSupport.scaleVerticalGestureDistance(-12.6f));
+        assertEquals(Short.MAX_VALUE, TouchpadScrollSupport.scaleVerticalGestureDistance(Short.MAX_VALUE + 1000f));
+        assertEquals(Short.MIN_VALUE, TouchpadScrollSupport.scaleVerticalGestureDistance(Short.MIN_VALUE - 1000f));
     }
 }

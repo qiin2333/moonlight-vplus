@@ -45,19 +45,6 @@ public final class TouchpadScrollSupport {
                 classification == MotionEvent.CLASSIFICATION_TWO_FINGER_SWIPE;
     }
 
-    public static boolean shouldUseGestureAxisTouchpadScroll(boolean nativeMousePointerEnabled,
-                                                             int eventSource,
-                                                             int toolType,
-                                                             float scrollDistanceX,
-                                                             float scrollDistanceY) {
-        return nativeMousePointerEnabled &&
-                (toolType == MotionEvent.TOOL_TYPE_MOUSE ||
-                        eventSource == InputDevice.SOURCE_MOUSE_RELATIVE ||
-                        (eventSource & InputDevice.SOURCE_CLASS_POINTER) != 0 ||
-                        isTouchpadSource(eventSource)) &&
-                hasGestureScrollDistance(scrollDistanceX, scrollDistanceY);
-    }
-
     public static boolean shouldUseLegacyMultiPointerScroll(boolean nativeMousePointerEnabled,
                                                             int eventSource,
                                                             int pointerCount) {
@@ -71,11 +58,7 @@ public final class TouchpadScrollSupport {
     }
 
     public static short scaleVerticalAxisValue(float axisValue) {
-        return scaleAxisValue(-axisValue);
-    }
-
-    public static boolean hasGestureScrollDistance(float scrollDistanceX, float scrollDistanceY) {
-        return scrollDistanceX != 0f || scrollDistanceY != 0f;
+        return scaleAxisValue(axisValue);
     }
 
     public static short scaleGestureDistance(float distance) {
@@ -90,7 +73,7 @@ public final class TouchpadScrollSupport {
     }
 
     public static short scaleVerticalGestureDistance(float distance) {
-        return scaleGestureDistance(-distance);
+        return scaleGestureDistance(distance);
     }
 
     public static byte phaseForDelta(boolean gestureActive) {
