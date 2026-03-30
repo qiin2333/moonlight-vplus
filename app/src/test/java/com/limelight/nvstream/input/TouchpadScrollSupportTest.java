@@ -81,6 +81,34 @@ public class TouchpadScrollSupportTest {
     }
 
     @Test
+    public void usesGestureScrollAxesEvenWithoutTwoFingerClassification() {
+        assertTrue(TouchpadScrollSupport.shouldUseGestureAxisTouchpadScroll(
+                true,
+                InputDevice.SOURCE_MOUSE,
+                MotionEvent.TOOL_TYPE_MOUSE,
+                0f,
+                18f));
+        assertTrue(TouchpadScrollSupport.shouldUseGestureAxisTouchpadScroll(
+                true,
+                InputDevice.SOURCE_MOUSE_RELATIVE,
+                MotionEvent.TOOL_TYPE_MOUSE,
+                3f,
+                0f));
+        assertFalse(TouchpadScrollSupport.shouldUseGestureAxisTouchpadScroll(
+                true,
+                InputDevice.SOURCE_MOUSE,
+                MotionEvent.TOOL_TYPE_MOUSE,
+                0f,
+                0f));
+        assertFalse(TouchpadScrollSupport.shouldUseGestureAxisTouchpadScroll(
+                false,
+                InputDevice.SOURCE_MOUSE,
+                MotionEvent.TOOL_TYPE_MOUSE,
+                0f,
+                18f));
+    }
+
+    @Test
     public void onlyUsesLegacyFallbackForMultiPointerTouchpadMotion() {
         assertTrue(TouchpadScrollSupport.shouldUseLegacyMultiPointerScroll(
                 true,

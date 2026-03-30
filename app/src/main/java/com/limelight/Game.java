@@ -3728,6 +3728,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         final int eventSource = event.getSource();
         final int action = event.getActionMasked();
         final int primaryToolType = event.getPointerCount() > 0 ? event.getToolType(0) : MotionEvent.TOOL_TYPE_UNKNOWN;
+        final float gestureScrollDistanceX = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE ?
+                accumulateGestureScrollDistance(event, MotionEvent.AXIS_GESTURE_SCROLL_X_DISTANCE) : 0f;
+        final float gestureScrollDistanceY = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE ?
+                accumulateGestureScrollDistance(event, MotionEvent.AXIS_GESTURE_SCROLL_Y_DISTANCE) : 0f;
         final boolean isClassifiedTwoFingerSwipe =
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
                         TouchpadScrollSupport.shouldUseClassificationTouchpadScroll(
@@ -3735,8 +3739,17 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                                 eventSource,
                                 primaryToolType,
                                 event.getClassification());
+        final boolean hasGestureAxisScroll =
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+                        TouchpadScrollSupport.shouldUseGestureAxisTouchpadScroll(
+                                true,
+                                eventSource,
+                                primaryToolType,
+                                gestureScrollDistanceX,
+                                gestureScrollDistanceY);
+        final boolean useExplicitGestureScroll = isClassifiedTwoFingerSwipe || hasGestureAxisScroll;
 
-        if (!isClassifiedTwoFingerSwipe && !TouchpadScrollSupport.isTouchpadSource(eventSource)) {
+        if (!useExplicitGestureScroll && !TouchpadScrollSupport.isTouchpadSource(eventSource)) {
             clearExternalTouchpadPointerCache();
             return false;
         }
@@ -3750,11 +3763,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         if (action == MotionEvent.ACTION_CANCEL) {
             conn.cancelTouchpadScrollGesture();
             clearExternalTouchpadPointerCache();
-            return isClassifiedTwoFingerSwipe || isLegacyMultiPointerScroll;
+            return useExplicitGestureScroll || isLegacyMultiPointerScroll;
         }
 
-        if (isClassifiedTwoFingerSwipe) {
-            boolean sentScroll = sendClassifiedTouchpadScroll(event);
+        if (useExplicitGestureScroll) {
+            boolean sentScroll = sendGestureAxisTouchpadScroll(gestureScrollDistanceX, gestureScrollDistanceY);
             if (isTouchpadPointerLifecycleAction(action)) {
                 conn.finishTouchpadScrollGesture();
                 clearExternalTouchpadPointerCache();
@@ -3802,14 +3815,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         return false;
     }
 
-    private boolean sendClassifiedTouchpadScroll(MotionEvent event) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            return false;
-        }
-
-        float scrollDistanceX = accumulateGestureScrollDistance(event, MotionEvent.AXIS_GESTURE_SCROLL_X_DISTANCE);
-        float scrollDistanceY = accumulateGestureScrollDistance(event, MotionEvent.AXIS_GESTURE_SCROLL_Y_DISTANCE);
-        if (scrollDistanceX == 0f && scrollDistanceY == 0f) {
+    private boolean sendGestureAxisTouchpadScroll(float scrollDistanceX, float scrollDistanceY) {
+        if (!TouchpadScrollSupport.hasGestureScrollDistance(scrollDistanceX, scrollDistanceY)) {
             return false;
         }
 
