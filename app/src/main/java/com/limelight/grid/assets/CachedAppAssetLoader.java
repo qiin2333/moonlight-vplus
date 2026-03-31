@@ -17,6 +17,7 @@ import com.limelight.AppView;
 import com.limelight.LimeLog;
 import com.limelight.R;
 import com.limelight.nvstream.http.ComputerDetails;
+import com.limelight.utils.AppIconCache;
 import com.limelight.nvstream.http.NvApp;
 
 import java.io.IOException;
@@ -108,6 +109,32 @@ public class CachedAppAssetLoader {
      */
     public Bitmap getFullBitmapFromDisk(LoaderTuple tuple) {
         return diskLoader.loadFullBitmapFromCache(tuple.computer.uuid, tuple.app.getAppId());
+    }
+
+    /**
+     * 统一的全分辨率大图加载方法：内存缓存 → 异步磁盘加载 → 回调
+     * 如果内存缓存命中，直接在当前线程回调；否则异步从磁盘加载后在主线程回调。
+     */
+    public void loadFullBitmap(NvApp app, FullBitmapCallback callback) {
+        // 先查内存缓存
+        Bitmap cached = AppIconCache.getInstance().getFullIcon(computer, app);
+        if (cached != null) {
+            callback.onBitmapLoaded(cached);
+            return;
+        }
+
+        // 异步从磁盘加载
+        foregroundExecutor.execute(() -> {
+            Bitmap diskBitmap = diskLoader.loadFullBitmapFromCache(computer.uuid, app.getAppId());
+            if (diskBitmap != null) {
+                AppIconCache.getInstance().putFullIcon(computer, app, diskBitmap);
+                new Handler(Looper.getMainLooper()).post(() -> callback.onBitmapLoaded(diskBitmap));
+            }
+        });
+    }
+
+    public interface FullBitmapCallback {
+        void onBitmapLoaded(Bitmap bitmap);
     }
     
     /**

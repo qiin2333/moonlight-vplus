@@ -10,6 +10,7 @@ import com.limelight.nvstream.http.NvApp
  */
 class AppIconCache private constructor() {
     private val iconCache: LruCache<String, Bitmap>
+    private val fullIconCache: LruCache<String, Bitmap>
 
     init {
         // 获取应用可用内存的1/8作为缓存大小
@@ -19,6 +20,14 @@ class AppIconCache private constructor() {
         iconCache = object : LruCache<String, Bitmap>(cacheSize) {
             override fun sizeOf(key: String, bitmap: Bitmap): Int {
                 // 返回bitmap占用的内存大小（KB）
+                return bitmap.byteCount / 1024
+            }
+        }
+
+        // 全分辨率大图缓存（用1/16内存，最多缓存几张大图）
+        val fullCacheSize = maxMemory / 16
+        fullIconCache = object : LruCache<String, Bitmap>(fullCacheSize) {
+            override fun sizeOf(key: String, bitmap: Bitmap): Int {
                 return bitmap.byteCount / 1024
             }
         }
@@ -53,10 +62,32 @@ class AppIconCache private constructor() {
     }
 
     /**
+     * 存储全分辨率大图
+     */
+    fun putFullIcon(computer: ComputerDetails?, app: NvApp?, icon: Bitmap?) {
+        if (computer != null && app != null && icon != null) {
+            val key = generateKey(computer, app)
+            fullIconCache.put(key, icon)
+        }
+    }
+
+    /**
+     * 获取全分辨率大图
+     */
+    fun getFullIcon(computer: ComputerDetails?, app: NvApp?): Bitmap? {
+        if (computer != null && app != null) {
+            val key = generateKey(computer, app)
+            return fullIconCache.get(key)
+        }
+        return null
+    }
+
+    /**
      * 清除缓存
      */
     fun clear() {
         iconCache.evictAll()
+        fullIconCache.evictAll()
     }
 
     /**

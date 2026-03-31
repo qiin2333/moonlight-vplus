@@ -593,30 +593,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
         if (backgroundImageManager != null && appBackgroundImageBlur != null) {
             CachedAppAssetLoader loader = appGridAdapter.getLoader();
-            CachedAppAssetLoader.LoaderTuple tuple = new CachedAppAssetLoader.LoaderTuple(computer, appObject.app);
-
-            // 优先从磁盘加载原始分辨率图片（背景需要高清）
-            Bitmap fullBitmap = loader.getFullBitmapFromDisk(tuple);
-            if (fullBitmap != null) {
-                backgroundImageManager.setBackgroundSmoothly(fullBitmap);
-            } else {
-                // 降级使用缓存中的缩放版本
-                ScaledBitmap cachedBitmap = loader.getBitmapFromCache(tuple);
-                if (cachedBitmap != null && cachedBitmap.bitmap != null) {
-                    backgroundImageManager.setBackgroundSmoothly(cachedBitmap.bitmap);
-                } else {
-                    // 如果缓存中没有，异步加载
-                    ImageView tempImageView = new ImageView(this);
-                    loader.populateImageView(appObject, tempImageView, null, false, () -> {
-                        if (tempImageView.getDrawable() instanceof BitmapDrawable) {
-                            Bitmap bitmap = ((BitmapDrawable) tempImageView.getDrawable()).getBitmap();
-                            if (bitmap != null) {
-                                backgroundImageManager.setBackgroundSmoothly(bitmap);
-                            }
-                        }
-                    });
-                }
-            }
+            loader.loadFullBitmap(appObject.app, bitmap -> backgroundImageManager.setBackgroundSmoothly(bitmap));
         }
     }
 
@@ -1450,30 +1427,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
     
     private void setFirstAppBackgroundImage(AppObject firstApp) {
         CachedAppAssetLoader loader = appGridAdapter.getLoader();
-        CachedAppAssetLoader.LoaderTuple tuple = new CachedAppAssetLoader.LoaderTuple(computer, firstApp.app);
-        
-        // 优先从磁盘加载原始分辨率图片
-        Bitmap fullBitmap = loader.getFullBitmapFromDisk(tuple);
-        if (fullBitmap != null) {
-            backgroundImageManager.setBackgroundSmoothly(fullBitmap);
-        } else {
-            // 降级使用缓存中的缩放版本
-            ScaledBitmap cachedBitmap = loader.getBitmapFromCache(tuple);
-            if (cachedBitmap != null && cachedBitmap.bitmap != null) {
-                backgroundImageManager.setBackgroundSmoothly(cachedBitmap.bitmap);
-            } else {
-                // Load asynchronously if not in cache
-                ImageView tempImageView = new ImageView(this);
-                loader.populateImageView(firstApp, tempImageView, null, false, () -> {
-                    if (tempImageView.getDrawable() instanceof BitmapDrawable) {
-                        Bitmap bitmap = ((BitmapDrawable) tempImageView.getDrawable()).getBitmap();
-                        if (bitmap != null) {
-                            backgroundImageManager.setBackgroundSmoothly(bitmap);
-                        }
-                    }
-                });
-            }
-        }
+        loader.loadFullBitmap(firstApp.app, bitmap -> backgroundImageManager.setBackgroundSmoothly(bitmap));
     }
 
     @Override
