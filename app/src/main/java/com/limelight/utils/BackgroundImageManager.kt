@@ -34,7 +34,7 @@ class BackgroundImageManager(
             return
         }
 
-        val blurred = stackBlur(newBackground, 10)
+        val blurred = applyAlpha(stackBlur(newBackground, 10), BLUR_IMAGE_ALPHA)
         val clearWithAlpha = applyAlpha(newBackground, CLEAR_IMAGE_ALPHA)
 
         // 如果当前没有背景图片，直接设置
@@ -94,11 +94,12 @@ class BackgroundImageManager(
 
     companion object {
         private const val CLEAR_IMAGE_ALPHA = 85 // 0.33 * 255 ≈ 85
-        // App背景色 #4D464A
-        private const val BG_COLOR = 0xFF4D464A.toInt()
+        private const val BLUR_IMAGE_ALPHA = 85  // 模糊层透明度，与清晰层一致
+        const val OVERLAY_IMAGE_ALPHA = 180      // 连接界面透明度 (~70%)
+        private const val BG_COLOR = 0xFF4D464A.toInt() // 灰色底色（清晰层和模糊层共用）
 
         /**
-         * 给Bitmap应用全局透明度，并在下方填充纯黑背景，
+         * 给Bitmap应用全局透明度，并在下方填充浅灰色背景，
          * 使图片区域不透过底层模糊，而fitCenter的留白区域保持透明
          */
         @JvmStatic
@@ -113,11 +114,13 @@ class BackgroundImageManager(
                 }
                 val result = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
                 val canvas = android.graphics.Canvas(result)
-                // 先绘制不透明背景色（与app背景色一致）
+                // 先绘制灰色背景
                 canvas.drawColor(BG_COLOR)
                 // 再以指定透明度绘制原图
                 val paint = android.graphics.Paint()
                 paint.alpha = alpha
+                paint.isFilterBitmap = true
+                paint.isAntiAlias = true
                 canvas.drawBitmap(src, 0f, 0f, paint)
                 result
             } catch (e: Throwable) {
@@ -146,6 +149,7 @@ class BackgroundImageManager(
                 val small = Bitmap.createScaledBitmap(src, smallWidth, smallHeight, true)
 
             val bitmap = small.copy(Bitmap.Config.ARGB_8888, true)
+
             val w = bitmap.width
             val h = bitmap.height
             val pix = IntArray(w * h)

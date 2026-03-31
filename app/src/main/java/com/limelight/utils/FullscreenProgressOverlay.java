@@ -140,8 +140,8 @@ public class FullscreenProgressOverlay {
 
         activity.runOnUiThread(() -> {
             if (poster != null) {
-                appPosterBackgroundBlur.setImageBitmap(BackgroundImageManager.stackBlur(poster, 10));
-                appPosterBackgroundClear.setImageBitmap(BackgroundImageManager.applyAlpha(poster, 128));
+                appPosterBackgroundBlur.setImageBitmap(BackgroundImageManager.applyAlpha(BackgroundImageManager.stackBlur(poster, 10), BackgroundImageManager.OVERLAY_IMAGE_ALPHA));
+                appPosterBackgroundClear.setImageBitmap(BackgroundImageManager.applyAlpha(poster, BackgroundImageManager.OVERLAY_IMAGE_ALPHA));
             } else {
                 appPosterBackgroundBlur.setImageResource(R.drawable.no_app_image);
                 appPosterBackgroundClear.setImageBitmap(null);
@@ -159,8 +159,8 @@ public class FullscreenProgressOverlay {
                 if (poster instanceof android.graphics.drawable.BitmapDrawable) {
                     Bitmap bmp = ((android.graphics.drawable.BitmapDrawable) poster).getBitmap();
                     if (bmp != null) {
-                        appPosterBackgroundBlur.setImageBitmap(BackgroundImageManager.stackBlur(bmp, 10));
-                        appPosterBackgroundClear.setImageBitmap(BackgroundImageManager.applyAlpha(bmp, 128));
+                        appPosterBackgroundBlur.setImageBitmap(BackgroundImageManager.applyAlpha(BackgroundImageManager.stackBlur(bmp, 10), BackgroundImageManager.OVERLAY_IMAGE_ALPHA));
+                        appPosterBackgroundClear.setImageBitmap(BackgroundImageManager.applyAlpha(bmp, BackgroundImageManager.OVERLAY_IMAGE_ALPHA));
                         return;
                     }
                 }
@@ -235,8 +235,8 @@ public class FullscreenProgressOverlay {
             if (appIcon != null) {
                 appPosterBackgroundBlur.setVisibility(View.VISIBLE);
                 appPosterBackgroundClear.setVisibility(View.VISIBLE);
-                appPosterBackgroundBlur.setImageBitmap(BackgroundImageManager.stackBlur(appIcon, 10));
-                appPosterBackgroundClear.setImageBitmap(BackgroundImageManager.applyAlpha(appIcon, 128));
+                appPosterBackgroundBlur.setImageBitmap(BackgroundImageManager.applyAlpha(BackgroundImageManager.stackBlur(appIcon, 10), BackgroundImageManager.OVERLAY_IMAGE_ALPHA));
+                appPosterBackgroundClear.setImageBitmap(BackgroundImageManager.applyAlpha(appIcon, BackgroundImageManager.OVERLAY_IMAGE_ALPHA));
             }
         }
     }

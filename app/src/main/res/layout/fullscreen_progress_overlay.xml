@@ -13,8 +13,7 @@
             android:id="@+id/appPosterBackgroundBlur"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:scaleType="centerCrop"
-            android:alpha="0.5" />
+            android:scaleType="centerCrop" />
 
         <!-- 中间完整图片 -->
         <ImageView
