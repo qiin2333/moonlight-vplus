@@ -44,7 +44,7 @@ public class AbsoluteTouchContext implements TouchContext {
 
     private final NvConnection conn;
     private final int actionIndex;
-    private final View targetView;
+    private View targetView;
     private final Handler handler;
 
     private final Runnable leftButtonUpRunnable = new Runnable() {
@@ -71,6 +71,10 @@ public class AbsoluteTouchContext implements TouchContext {
         this.actionIndex = actionIndex;
         this.targetView = view;
         this.handler = new Handler(Looper.getMainLooper());
+    }
+
+    public void setTargetView(View view) {
+        this.targetView = view;
     }
 
     @Override
