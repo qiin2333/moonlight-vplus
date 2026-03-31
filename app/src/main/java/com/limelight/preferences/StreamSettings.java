@@ -1882,18 +1882,22 @@ public class StreamSettings extends AppCompatActivity {
             List<String> candidates = UpdateManager.buildProxiedUrls(SETTINGS_BG_URL);
             for (String url : candidates) {
                 try {
-                    Bitmap bitmap = Glide.with(this)
+                    if (isDestroyed() || isFinishing()) return;
+                    Bitmap bitmap = Glide.with(getApplicationContext())
                         .asBitmap()
                         .load(url)
                         .override(width, height)
                         .submit()
                         .get();
                     if (bitmap != null) {
-                        runOnUiThread(() -> Glide.with(this)
-                            .load(bitmap)
-                            .apply(RequestOptions.bitmapTransform(new BlurTransformation(2, 3)))
-                            .transform(new ColorFilterTransformation(Color.argb(120, 0, 0, 0)))
-                            .into(imageView));
+                        runOnUiThread(() -> {
+                            if (isDestroyed() || isFinishing()) return;
+                            Glide.with(StreamSettings.this)
+                                .load(bitmap)
+                                .apply(RequestOptions.bitmapTransform(new BlurTransformation(2, 3)))
+                                .transform(new ColorFilterTransformation(Color.argb(120, 0, 0, 0)))
+                                .into(imageView);
+                        });
                         return;
                     }
                 } catch (Exception e) {
