@@ -14,6 +14,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.limelight.R;
+import com.limelight.grid.assets.DiskAssetLoader;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.nvstream.http.NvApp;
 
@@ -228,10 +229,20 @@ public class FullscreenProgressOverlay {
 
 
     private void loadAppImage() {
-        if (app != null) {
-            // 从全局缓存获取app icon
+        if (app != null && computer != null && computer.uuid != null) {
+            // 优先从磁盘缓存加载全分辨率图片
+            DiskAssetLoader diskLoader = new DiskAssetLoader(activity);
+            Bitmap fullBitmap = diskLoader.loadFullBitmapFromCache(computer.uuid, app.getAppId());
+            if (fullBitmap != null) {
+                appPosterBackgroundBlur.setVisibility(View.VISIBLE);
+                appPosterBackgroundClear.setVisibility(View.VISIBLE);
+                appPosterBackgroundBlur.setImageBitmap(BackgroundImageManager.applyAlpha(BackgroundImageManager.stackBlur(fullBitmap, 10), BackgroundImageManager.OVERLAY_IMAGE_ALPHA));
+                appPosterBackgroundClear.setImageBitmap(BackgroundImageManager.applyAlpha(fullBitmap, BackgroundImageManager.OVERLAY_IMAGE_ALPHA));
+                return;
+            }
+
+            // 回退到缓存的小图标
             Bitmap appIcon = AppIconCache.getInstance().getIcon(computer, app);
-            
             if (appIcon != null) {
                 appPosterBackgroundBlur.setVisibility(View.VISIBLE);
                 appPosterBackgroundClear.setVisibility(View.VISIBLE);
