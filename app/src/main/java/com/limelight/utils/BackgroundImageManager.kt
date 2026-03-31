@@ -94,17 +94,17 @@ class BackgroundImageManager(
 
     companion object {
         private const val CLEAR_IMAGE_ALPHA = 85 // 0.33 * 255 ≈ 85
+        // App背景色 #4D464A
+        private const val BG_COLOR = 0xFF4D464A.toInt()
 
         /**
-         * 给Bitmap应用全局透明度，返回带alpha的新Bitmap
-         * 图片区域半透明，空白区域完全透明
+         * 给Bitmap应用全局透明度，并在下方填充纯黑背景，
+         * 使图片区域不透过底层模糊，而fitCenter的留白区域保持透明
          */
         @JvmStatic
         fun applyAlpha(original: Bitmap, alpha: Int): Bitmap {
             if (original.isRecycled) return original
             return try {
-                // Hardware bitmaps cannot be drawn on a software canvas,
-                // copy to software config first if needed.
                 val src = if (android.os.Build.VERSION.SDK_INT >= 26 &&
                     original.config == Bitmap.Config.HARDWARE) {
                     original.copy(Bitmap.Config.ARGB_8888, false)
@@ -113,6 +113,9 @@ class BackgroundImageManager(
                 }
                 val result = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
                 val canvas = android.graphics.Canvas(result)
+                // 先绘制不透明背景色（与app背景色一致）
+                canvas.drawColor(BG_COLOR)
+                // 再以指定透明度绘制原图
                 val paint = android.graphics.Paint()
                 paint.alpha = alpha
                 canvas.drawBitmap(src, 0f, 0f, paint)
