@@ -240,20 +240,26 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
         if (bgManager == null) return;
 
         CachedAppAssetLoader.LoaderTuple tuple = new CachedAppAssetLoader.LoaderTuple(computer, obj.app);
-        ScaledBitmap cachedBitmap = loader.getBitmapFromCache(tuple);
-        if (cachedBitmap != null && cachedBitmap.bitmap != null) {
-            bgManager.setBackgroundSmoothly(cachedBitmap.bitmap);
+        // 优先从磁盘加载原始分辨率图片
+        android.graphics.Bitmap fullBitmap = loader.getFullBitmapFromDisk(tuple);
+        if (fullBitmap != null) {
+            bgManager.setBackgroundSmoothly(fullBitmap);
         } else {
-            // 如果缓存中没有，异步加载
-            ImageView tempImageView = new ImageView(context);
-            loader.populateImageView(obj, tempImageView, null, false, () -> {
-                if (tempImageView.getDrawable() instanceof android.graphics.drawable.BitmapDrawable) {
-                    android.graphics.Bitmap bitmap = ((android.graphics.drawable.BitmapDrawable) tempImageView.getDrawable()).getBitmap();
-                    if (bitmap != null) {
-                        bgManager.setBackgroundSmoothly(bitmap);
+            ScaledBitmap cachedBitmap = loader.getBitmapFromCache(tuple);
+            if (cachedBitmap != null && cachedBitmap.bitmap != null) {
+                bgManager.setBackgroundSmoothly(cachedBitmap.bitmap);
+            } else {
+                // 如果缓存中没有，异步加载
+                ImageView tempImageView = new ImageView(context);
+                loader.populateImageView(obj, tempImageView, null, false, () -> {
+                    if (tempImageView.getDrawable() instanceof android.graphics.drawable.BitmapDrawable) {
+                        android.graphics.Bitmap bitmap = ((android.graphics.drawable.BitmapDrawable) tempImageView.getDrawable()).getBitmap();
+                        if (bitmap != null) {
+                            bgManager.setBackgroundSmoothly(bitmap);
+                        }
                     }
-                }
-            });
+                });
+            }
         }
     }
 

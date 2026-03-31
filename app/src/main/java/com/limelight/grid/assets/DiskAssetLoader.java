@@ -150,7 +150,34 @@ public class DiskAssetLoader {
 
         return null;
     }
-    
+
+    /**
+     * 从磁盘缓存加载原始分辨率的Bitmap（不缩放、不压缩），用于背景图显示
+     */
+    public Bitmap loadFullBitmapFromCache(String computerUuid, int appId) {
+        File file = getFile(computerUuid, appId);
+        if (!file.exists() || file.length() > MAX_ASSET_SIZE) {
+            return null;
+        }
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                return android.graphics.ImageDecoder.decodeBitmap(
+                    android.graphics.ImageDecoder.createSource(file),
+                    (decoder, info, source) -> {
+                        decoder.setAllocator(android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE);
+                    }
+                );
+            } else {
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                options.inPreferredConfig = Bitmap.Config.ARGB_8888;
+                return BitmapFactory.decodeFile(file.getAbsolutePath(), options);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     /**
      * 压缩过大的Bitmap
      */

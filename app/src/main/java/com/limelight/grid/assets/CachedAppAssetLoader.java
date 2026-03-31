@@ -102,6 +102,13 @@ public class CachedAppAssetLoader {
     public ScaledBitmap getBitmapFromCache(LoaderTuple tuple) {
         return diskLoader.loadBitmapFromCache(tuple, (int) scalingDivider);
     }
+
+    /**
+     * 从磁盘缓存加载原始分辨率图片（不缩放不压缩），用于背景图显示
+     */
+    public Bitmap getFullBitmapFromDisk(LoaderTuple tuple) {
+        return diskLoader.loadFullBitmapFromCache(tuple.computer.uuid, tuple.app.getAppId());
+    }
     
     /**
      * 压缩过大的Bitmap
