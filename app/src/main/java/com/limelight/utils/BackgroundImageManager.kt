@@ -93,8 +93,8 @@ class BackgroundImageManager(
     }
 
     companion object {
-        private const val CLEAR_IMAGE_ALPHA = 85 // 0.33 * 255 ≈ 85
-        private const val BLUR_IMAGE_ALPHA = 85  // 模糊层透明度，与清晰层一致
+        private const val CLEAR_IMAGE_ALPHA = 100 // 0.33 * 255 ≈ 85
+        private const val BLUR_IMAGE_ALPHA = 100  // 模糊层透明度，与清晰层一致
         const val OVERLAY_IMAGE_ALPHA = 180      // 连接界面透明度 (~70%)
         private const val BG_COLOR = 0xFF4D464A.toInt() // 灰色底色（清晰层和模糊层共用）
 
