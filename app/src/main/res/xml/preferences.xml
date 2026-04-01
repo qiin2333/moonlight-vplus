@@ -763,6 +763,14 @@
             android:summary="@string/summary_troubleshooting"
             url="https://github.com/moonlight-stream/moonlight-docs/wiki/Troubleshooting"/> -->
         <Preference
+            android:key="crash_logs"
+            android:title="@string/crash_logs_title"
+            android:summary="@string/crash_logs_summary" />
+<!--        <Preference-->
+<!--            android:key="test_crash"-->
+<!--            android:title="@string/test_crash_title"-->
+<!--            android:summary="@string/test_crash_summary" />-->
+        <Preference
             android:key="check_for_updates"
             android:title="@string/check_for_updates"
             android:summary="@string/summary_check_for_updates" />

@@ -2,4 +2,5 @@
 <paths>
     <external-path name="external_downloads" path="Download/" />
     <external-files-path name="app_updates" path="updates/" />
+    <external-files-path name="crash_logs" path="crash_logs/" />
 </paths>

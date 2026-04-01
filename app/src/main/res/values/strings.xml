@@ -342,6 +342,21 @@
     <string name="summary_only_l3r3">Hide all virtual buttons except L3 and R3</string>
     <string name="title_show_guide_button">Show Guide Button</string>
     <string name="summary_show_guide_button">Show the guide button on screen</string>
+    
+    <!-- Crash Log strings -->
+    <string name="crash_logs_title">Crash Logs</string>
+    <string name="crash_logs_summary">View and export crash logs</string>
+    <string name="crash_log_view">View</string>
+    <string name="crash_log_share">Share</string>
+    <string name="crash_log_copy">Copy to Clipboard</string>
+    <string name="crash_log_copied">Crash log copied to clipboard</string>
+    <string name="crash_log_delete">Delete</string>
+    <string name="crash_log_delete_confirm_title">Delete Crash Log</string>
+    <string name="crash_log_delete_confirm_message">Are you sure you want to delete %s?</string>
+    <string name="crash_log_deleted">Crash log deleted</string>
+    <string name="no_crash_logs">No crash logs found</string>
+    <string name="test_crash_title">Test Crash (Debug)</string>
+    <string name="test_crash_summary">Trigger a test crash to verify crash logging</string>
     <string name="title_reset_osc">Clear saved on-screen controls layout</string>
     <string name="summary_reset_osc">Resets all on-screen controls to their default size and position</string>
     <string name="dialog_title_reset_osc">Reset Layout</string>

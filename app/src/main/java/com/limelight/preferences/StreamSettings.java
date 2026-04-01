@@ -48,6 +48,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.limelight.LimeLog;
 import com.limelight.PcView;
 import com.limelight.R;
+import com.limelight.CrashLogActivity;
 import com.limelight.ExternalDisplayManager;
 import com.limelight.binding.input.advance_setting.config.PageConfigController;
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper;
@@ -1644,6 +1645,18 @@ public class StreamSettings extends AppCompatActivity {
             findPreference("check_for_updates").setOnPreferenceClickListener(preference -> {
                 UpdateManager.checkForUpdates(getActivity(), true);
                 return true;
+            });
+
+            // 崩溃日志
+            findPreference("crash_logs").setOnPreferenceClickListener(preference -> {
+                Intent crashLogIntent = new Intent(getActivity(), CrashLogActivity.class);
+                startActivity(crashLogIntent);
+                return true;
+            });
+
+            // 测试崩溃（仅用于调试）
+            findPreference("test_crash").setOnPreferenceClickListener(preference -> {
+                throw new RuntimeException("Test crash for debugging crash log functionality");
             });
 
             // 编解码与屏幕能力检测

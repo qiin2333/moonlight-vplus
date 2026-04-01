@@ -1008,4 +1008,19 @@
     <string name="title_checkbox_enable_background_audio">后台音频模式</string>
     <string name="title_settings">设置</string>
 
+    <!-- Crash Log strings -->
+    <string name="crash_logs_title">崩溃日志</string>
+    <string name="crash_logs_summary">查看和导出崩溃日志</string>
+    <string name="crash_log_view">查看</string>
+    <string name="crash_log_share">分享</string>
+    <string name="crash_log_copy">复制到剪贴板</string>
+    <string name="crash_log_copied">崩溃日志已复制到剪贴板</string>
+    <string name="crash_log_delete">删除</string>
+    <string name="crash_log_delete_confirm_title">删除崩溃日志</string>
+    <string name="crash_log_delete_confirm_message">确定要删除 %s 吗？</string>
+    <string name="crash_log_deleted">崩溃日志已删除</string>
+    <string name="no_crash_logs">暂无崩溃日志</string>
+    <string name="test_crash_title">测试崩溃（调试）</string>
+    <string name="test_crash_summary">触发测试崩溃以验证日志功能</string>
+
 </resources>
