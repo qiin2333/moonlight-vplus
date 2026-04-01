@@ -40,7 +40,7 @@ public class RelativeTouchContext implements TouchContext {
 
     private final NvConnection conn;
     private final int actionIndex;
-    private final View targetView;
+    private View targetView;
     private final PreferenceConfiguration prefConfig;
     private final Handler handler;
 
@@ -108,7 +108,10 @@ public class RelativeTouchContext implements TouchContext {
                 () -> conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X1),
                 () -> conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X2)
         };
+    }
 
+    public void setTargetView(View view) {
+        this.targetView = view;
     }
 
     /**

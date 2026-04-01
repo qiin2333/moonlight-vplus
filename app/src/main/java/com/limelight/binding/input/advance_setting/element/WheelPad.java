@@ -713,7 +713,7 @@ public class WheelPad extends Element {
     @Override
     protected SuperPageLayout getInfoPage() {
         if (wheelPadPage == null) {
-            wheelPadPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_wheel_pad, null);
+            wheelPadPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_wheel_pad_clean, null);
             centralXNumberSeekbar = wheelPadPage.findViewById(R.id.page_wheel_pad_central_x);
             centralYNumberSeekbar = wheelPadPage.findViewById(R.id.page_wheel_pad_central_y);
             valuesContainer = wheelPadPage.findViewById(R.id.page_wheel_pad_values_container);

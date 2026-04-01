@@ -327,7 +327,7 @@ public class DigitalPad extends Element {
     @Override
     protected SuperPageLayout getInfoPage() {
         if (digitalPadPage == null) {
-            digitalPadPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_digital_pad, null);
+            digitalPadPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_digital_pad_clean, null);
             centralXNumberSeekbar = digitalPadPage.findViewById(R.id.page_digital_pad_central_x);
             centralYNumberSeekbar = digitalPadPage.findViewById(R.id.page_digital_pad_central_y);
         }

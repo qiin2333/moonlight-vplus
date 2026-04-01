@@ -1882,7 +1882,8 @@ public class StreamSettings extends AppCompatActivity {
             List<String> candidates = UpdateManager.buildProxiedUrls(SETTINGS_BG_URL);
             for (String url : candidates) {
                 try {
-                    Bitmap bitmap = Glide.with(this)
+                    if (isDestroyed() || isFinishing()) return;
+                    Bitmap bitmap = Glide.with(getApplicationContext())
                         .asBitmap()
                         .load(url)
                         .override(width, height)
@@ -1890,13 +1891,12 @@ public class StreamSettings extends AppCompatActivity {
                         .get();
                     if (bitmap != null) {
                         runOnUiThread(() -> {
-                            if (!isDestroyed() && !isFinishing()) {
-                                Glide.with(this)
-                                    .load(bitmap)
-                                    .apply(RequestOptions.bitmapTransform(new BlurTransformation(2, 3)))
-                                    .transform(new ColorFilterTransformation(Color.argb(120, 0, 0, 0)))
-                                    .into(imageView);
-                            }
+                            if (isDestroyed() || isFinishing()) return;
+                            Glide.with(StreamSettings.this)
+                                .load(bitmap)
+                                .apply(RequestOptions.bitmapTransform(new BlurTransformation(2, 3)))
+                                .transform(new ColorFilterTransformation(Color.argb(120, 0, 0, 0)))
+                                .into(imageView);
                         });
                         return;
                     }

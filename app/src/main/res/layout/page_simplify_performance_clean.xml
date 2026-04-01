@@ -1,0 +1,263 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<com.limelight.binding.input.advance_setting.superpage.SuperPageLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="280dp"
+    android:layout_height="match_parent"
+    android:tag="280">
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="5dp"
+        android:paddingTop="3dp"
+        android:layout_gravity="center_vertical"
+        android:background="@drawable/super_content_box_background">
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="12dp">
+
+            <!-- 页面标题 -->
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="12dp">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/layout_page_simplify_performance_text_58923"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF"/>
+            </LinearLayout>
+
+            <!-- 📐 位置和尺寸 -->
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/card_background_with_border"
+                android:padding="12dp"
+                android:layout_marginBottom="8dp">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/page_section_position_size"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:paddingBottom="8dp"/>
+                
+                <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                    android:id="@+id/page_simplify_performance_central_x"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:layout_marginVertical="4dp"
+                    app:text="X"
+                    app:max="100"
+                    app:min="0"
+                    app:progress="100" />
+                <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                    android:id="@+id/page_simplify_performance_central_y"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:layout_marginVertical="4dp"
+                    app:text="Y"
+                    app:max="100"
+                    app:min="0"
+                    app:progress="100" />
+                <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                    android:id="@+id/page_simplify_performance_radius"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:layout_marginVertical="4dp"
+                    app:text="@string/apptext_pg_simplify_performance_0103e"
+                    app:max="100"
+                    app:min="0"
+                    app:progress="100" />
+                <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                    android:id="@+id/page_simplify_performance_layer"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:layout_marginVertical="4dp"
+                    app:text="@string/apptext_pg_analog_stick_6896d"
+                    app:max="140"
+                    app:min="40" />
+            </LinearLayout>
+
+            <!-- 🎨 外观设置 -->
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/card_background_with_border"
+                android:padding="12dp"
+                android:layout_marginBottom="8dp">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/page_section_appearance_settings"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:paddingBottom="8dp"/>
+                
+                <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                    android:id="@+id/page_simplify_performance_text_size"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:layout_marginVertical="4dp"
+                    app:text="@string/apptext_pg_analog_stick_5f15e"
+                    app:max="100"
+                    app:min="0"
+                    app:progress="100" />
+
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp">
+                    <LinearLayout
+                        android:orientation="vertical"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/layout_page_simplify_performance_text_7ec90"
+                            android:textSize="12sp"
+                            android:paddingBottom="4dp"/>
+                        <com.limelight.binding.input.advance_setting.superpage.ElementEditText
+                            android:id="@+id/page_simplify_performance_text_color"
+                            android:layout_width="match_parent"
+                            android:layout_height="40dp"
+                            android:gravity="center"
+                            android:text="#FFFFFF"
+                            android:textSize="13sp"
+                            android:background="@drawable/color_input_background" />
+                    </LinearLayout>
+                    <LinearLayout
+                        android:orientation="vertical"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/layout_page_analog_stick_text_4573a"
+                            android:textSize="12sp"
+                            android:paddingBottom="4dp"/>
+                        <com.limelight.binding.input.advance_setting.superpage.ElementEditText
+                            android:id="@+id/page_simplify_performance_background_color"
+                            android:layout_width="match_parent"
+                            android:layout_height="40dp"
+                            android:gravity="center"
+                            android:text="#000000"
+                            android:textSize="13sp"
+                            android:background="@drawable/color_input_background"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ✏️ 文本设置 -->
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/card_background_with_border"
+                android:padding="12dp"
+                android:layout_marginBottom="8dp">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/page_section_text_config"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:paddingBottom="8dp"/>
+                
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/layout_page_simplify_performance_text_1673c"
+                    android:textSize="12sp"
+                    android:paddingBottom="4dp"/>
+                <EditText
+                    android:id="@+id/page_simplify_performance_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:background="@drawable/input_field_background"
+                    android:padding="8dp"
+                    android:singleLine="true"/>
+                
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="8dp">
+                    <Button
+                        android:id="@+id/page_simplify_performance_text_reset"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/layout_page_simplify_performance_text_4b9c3"/>
+                    <Button
+                        android:id="@+id/page_simplify_performance_text_ensure"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/layout_page_simplify_performance_text_e83a2"/>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/layout_page_simplify_performance_text_98e2e"
+                    android:textSize="11sp"
+                    android:alpha="0.7"/>
+            </LinearLayout>
+
+            <!-- 🔧 操作 -->
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/card_background_with_border"
+                android:padding="12dp">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/page_section_operations"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:paddingBottom="8dp"/>
+                
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp">
+                    <Button
+                        android:id="@+id/page_simplify_performance_copy"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/layout_capability_diagnostic_text_79d3a"/>
+                    <Button
+                        android:id="@+id/page_simplify_performance_delete"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/layout_config_item_text_2f4aa"/>
+                </LinearLayout>
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+</com.limelight.binding.input.advance_setting.superpage.SuperPageLayout>

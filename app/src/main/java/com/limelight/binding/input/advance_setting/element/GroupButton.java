@@ -555,7 +555,7 @@ public class GroupButton extends Element {
     @Override
     protected SuperPageLayout getInfoPage() {
         if (groupButtonPage == null) {
-            groupButtonPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_group_button, null);
+            groupButtonPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_group_button_clean, null);
             centralXNumberSeekbar = groupButtonPage.findViewById(R.id.page_group_button_central_x);
             centralYNumberSeekbar = groupButtonPage.findViewById(R.id.page_group_button_central_y);
         }

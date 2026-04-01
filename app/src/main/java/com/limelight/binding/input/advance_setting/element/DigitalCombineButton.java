@@ -333,7 +333,7 @@ public class DigitalCombineButton extends Element {
     @Override
     protected SuperPageLayout getInfoPage() {
         if (digitalCombineButtonPage == null) {
-            digitalCombineButtonPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_digital_combine_button, null);
+            digitalCombineButtonPage = (SuperPageLayout) LayoutInflater.from(getContext()).inflate(R.layout.page_digital_combine_button_clean, null);
             centralXNumberSeekbar = digitalCombineButtonPage.findViewById(R.id.page_digital_combine_button_central_x);
             centralYNumberSeekbar = digitalCombineButtonPage.findViewById(R.id.page_digital_combine_button_central_y);
 
