@@ -601,6 +601,8 @@
     <string name="gyro_sensitivity_format">灵敏度 %.1fx</string>
     <string name="gyro_activation_always">常开</string>
     <string name="gyro_mouse_mode_label">鼠标模式</string>
+    <string name="gyro_controller_access_failed">无法访问控制器</string>
+    <string name="gyro_no_controller_detected">未检测到手柄，陀螺仪已禁用</string>
 
     <!-- Accessibility service -->
     <string name="accessibility_service_label">Moonlight 键盘服务</string>

@@ -38,7 +38,7 @@ class GyroCardController(private val game: Game) {
             setOnCheckedChangeListener { buttonView, isChecked ->
                 val ch = game.controllerHandler
                 if (ch == null) {
-                    Toast.makeText(game, "Failed to access controller", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(game, game.getString(R.string.gyro_controller_access_failed), Toast.LENGTH_SHORT).show()
                     buttonView.isChecked = !isChecked
                     return@setOnCheckedChangeListener
                 }
@@ -60,13 +60,28 @@ class GyroCardController(private val game: Game) {
 
             val ch = game.controllerHandler
             if (ch == null) {
-                Toast.makeText(game, "Failed to access controller", Toast.LENGTH_SHORT).show()
+                Toast.makeText(game, game.getString(R.string.gyro_controller_access_failed), Toast.LENGTH_SHORT).show()
                 buttonView.isChecked = !isChecked
                 return@setOnCheckedChangeListener
             }
 
-            if (isChecked) ch.setGyroToMouseEnabled(true)
-            else ch.setGyroToRightStickEnabled(true)
+            if (isChecked) {
+                ch.setGyroToMouseEnabled(true)
+            } else {
+                // 关闭鼠标模式时，检查是否有物理手柄或虚拟手柄
+                // 只有在有手柄的情况下才启用手柄模式，否则完全关闭陀螺仪
+                val hasController = ch.hasAnyController()
+                if (hasController) {
+                    ch.setGyroToRightStickEnabled(true)
+                } else {
+                    // 没有手柄，完全关闭陀螺仪
+                    ch.setGyroToRightStickEnabled(false)
+                    ch.setGyroToMouseEnabled(false)
+                    toggleSwitch?.isChecked = false
+                    statusText?.text = "OFF"
+                    Toast.makeText(game, game.getString(R.string.gyro_no_controller_detected), Toast.LENGTH_SHORT).show()
+                }
+            }
         }
 
         // 更新显示

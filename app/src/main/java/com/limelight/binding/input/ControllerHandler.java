@@ -433,6 +433,28 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         defaultContext.gyroHoldActive = false;
     }
 
+    /**
+     * 检查是否有任何物理手柄或虚拟手柄连接
+     * @return 如果有手柄连接返回true，否则返回false
+     */
+    public boolean hasAnyController() {
+        // 检查是否有物理手柄（InputDevice）
+        if (inputDeviceContexts.size() > 0) {
+            return true;
+        }
+        // 检查是否有USB手柄
+        if (usbDeviceContexts.size() > 0) {
+            return true;
+        }
+        // 检查虚拟手柄是否启用
+        // 虚拟手柄通常使用 defaultContext (controllerNumber=0)
+        // 如果王冠功能启用，说明虚拟手柄可用
+        if (prefConfig != null && prefConfig.onscreenController) {
+            return true;
+        }
+        return false;
+    }
+
     private void recomputeGyroHoldForAllContexts() {
         final boolean alwaysOn = prefConfig.gyroActivationKeyCode == GYRO_ACTIVATION_ALWAYS;
         final boolean useL2 = prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_L2;
