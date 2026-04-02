@@ -432,6 +432,8 @@
     <string name="summary_hdr_mode">Select HDR transfer function: HDR10 (PQ) for most displays, HLG for broadcast-style content</string>
     <string name="hdr_mode_hdr10">HDR10 (PQ)</string>
     <string name="hdr_mode_hlg">HLG (Hybrid Log-Gamma)</string>
+    <string name="title_force_c2_decoder">Force Codec2 decoder</string>
+    <string name="summary_force_c2_decoder">Skip OMX decoders and prefer Codec2 (C2) decoders. May fix HDR washed-out colors on some TV devices (e.g. Amlogic).</string>
     <string name="title_full_range">Force full range video (Experimental)</string>
     <string name="summary_full_range">This will cause loss of detail in light and dark areas if your device doesn\'t properly display full range video content.</string>
     <string name="title_enable_perf_overlay">Show performance stats while streaming</string>

@@ -323,6 +323,10 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer {
         this.globalVideoStats = new VideoStats();
 
         this.perfBoostManager = new PerformanceBoostManager(activity);
+
+        // Set Force C2 decoder preference before decoder selection
+        MediaCodecHelper.setForceC2Decoder(prefs.forceC2Decoder);
+
         this.framePacingController = new FramePacingController(new FramePacingController.Callbacks() {
             @Override
             public void onFrameRendered() {

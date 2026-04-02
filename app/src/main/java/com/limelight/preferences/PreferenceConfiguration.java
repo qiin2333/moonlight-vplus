@@ -85,6 +85,7 @@ public class PreferenceConfiguration {
     private static final String ENABLE_HDR_PREF_STRING = "checkbox_enable_hdr";
     private static final String ENABLE_HDR_HIGH_BRIGHTNESS_PREF_STRING = "checkbox_enable_hdr_high_brightness";
     private static final String HDR_MODE_PREF_STRING = "list_hdr_mode"; // 0=SDR, 1=HDR10, 2=HLG
+    private static final String FORCE_C2_DECODER_PREF_STRING = "checkbox_force_c2_decoder";
     private static final String ENABLE_PIP_PREF_STRING = "checkbox_enable_pip";
     private static final String ENABLE_PERF_OVERLAY_STRING = "checkbox_enable_perf_overlay";
     private static final String PERF_OVERLAY_LOCKED_STRING = "perf_overlay_locked";
@@ -194,6 +195,7 @@ public class PreferenceConfiguration {
     private static final boolean DEFAULT_ENABLE_HDR = false;
     private static final boolean DEFAULT_ENABLE_HDR_HIGH_BRIGHTNESS = false;
     private static final int DEFAULT_HDR_MODE = 1; // 默认 HDR10/PQ 模式 (0=禁用自动HDR切换, 1=HDR10, 2=HLG)
+    private static final boolean DEFAULT_FORCE_C2_DECODER = false;
     private static final boolean DEFAULT_ENABLE_PIP = false;
     private static final boolean DEFAULT_ENABLE_PERF_OVERLAY = false;
     private static final boolean DEFAULT_PERF_OVERLAY_LOCKED = false;
@@ -355,6 +357,7 @@ public class PreferenceConfiguration {
     public boolean enableHdr;
     public boolean enableHdrHighBrightness;
     public int hdrMode; // 0=HDR disabled, 1=HDR10/PQ, 2=HLG
+    public boolean forceC2Decoder;
     public boolean enablePip;
     public boolean enablePerfOverlay;
     public boolean perfOverlayLocked;
@@ -866,6 +869,7 @@ public class PreferenceConfiguration {
         config.halfHeightOscPortrait = prefs.getBoolean(HALF_HEIGHT_OSC_PORTRAIT_PREF_STRING, HALF_HEIGHT_OSC_PORTRAIT_DEFAULT);
         config.enableHdr = prefs.getBoolean(ENABLE_HDR_PREF_STRING, DEFAULT_ENABLE_HDR) && !isShieldAtvFirmwareWithBrokenHdr();
         config.enableHdrHighBrightness = prefs.getBoolean(ENABLE_HDR_HIGH_BRIGHTNESS_PREF_STRING, DEFAULT_ENABLE_HDR_HIGH_BRIGHTNESS);
+        config.forceC2Decoder = prefs.getBoolean(FORCE_C2_DECODER_PREF_STRING, DEFAULT_FORCE_C2_DECODER);
         // HDR mode is stored as a String from ListPreference, default to HDR10 (1)
         try {
             config.hdrMode = Integer.parseInt(prefs.getString(HDR_MODE_PREF_STRING, String.valueOf(DEFAULT_HDR_MODE)));
@@ -1172,6 +1176,7 @@ public class PreferenceConfiguration {
         copy.enableHdr = this.enableHdr;
         copy.enableHdrHighBrightness = this.enableHdrHighBrightness;
         copy.hdrMode = this.hdrMode;
+        copy.forceC2Decoder = this.forceC2Decoder;
         copy.enablePerfOverlay = this.enablePerfOverlay;
         copy.perfOverlayLocked = this.perfOverlayLocked;
         copy.perfOverlayOrientation = this.perfOverlayOrientation;

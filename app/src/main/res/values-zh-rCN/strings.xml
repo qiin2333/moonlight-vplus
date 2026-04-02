@@ -305,6 +305,8 @@
     <string name="title_hdr_mode">HDR 模式</string>
     <string name="summary_hdr_mode">选择 HDR 传输函数：HDR10 (PQ) 适用于大多数显示器，HLG 适用于广播内容</string>
     <string name="hdr_mode_hlg">HLG (混合对数伽马)</string>
+    <string name="title_force_c2_decoder">强制使用 Codec2 解码器</string>
+    <string name="summary_force_c2_decoder">跳过 OMX 解码器，优先使用 Codec2 (C2) 解码器。可能修复部分电视设备（如 Amlogic 芯片）HDR 画面发灰/泛白的问题。</string>
     <string name="title_enable_perf_overlay">性能监控图层</string>
     <string name="summary_enable_perf_overlay">显示实时的串流监控数据，盯帧必备！</string>
     <string name="title_perf_overlay_orientation">性能图层方向</string>

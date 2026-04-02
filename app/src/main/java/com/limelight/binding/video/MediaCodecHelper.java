@@ -53,6 +53,12 @@ public class MediaCodecHelper {
     private static boolean isAdreno620 = false;
     private static boolean isSnapdragonGSeries = false;
     private static boolean initialized = false;
+    private static boolean forceC2Decoder = false;
+
+    public static void setForceC2Decoder(boolean force) {
+        forceC2Decoder = force;
+        LimeLog.info("Force C2 decoder: " + force);
+    }
 
     static {
         directSubmitPrefixes = new LinkedList<>();
@@ -961,6 +967,13 @@ public class MediaCodecHelper {
                 LimeLog.info("Skipping software-only decoder: "+codecInfo.getName());
                 return true;
             }
+        }
+
+        // When Force C2 is enabled, skip OMX decoders to prefer Codec2 decoders.
+        // This can fix HDR display mode switching issues on some TV SoCs (e.g. Amlogic).
+        if (forceC2Decoder && codecInfo.getName().toLowerCase(Locale.ENGLISH).startsWith("omx.")) {
+            LimeLog.info("Skipping OMX decoder (Force C2 enabled): " + codecInfo.getName());
+            return true;
         }
 
         // Check for explicitly blacklisted decoders
