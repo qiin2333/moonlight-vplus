@@ -536,6 +536,15 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer {
         nextInputBufferIndex = -1;
         nextInputBuffer = null;
 
+        // 重新创建异步回调线程（如果需要）
+        if (asyncModeEnabled && codecCallbackThread == null) {
+            availableInputBuffers = new LinkedBlockingQueue<>();
+            codecCallbackThread = new HandlerThread("Video - Codec", Process.THREAD_PRIORITY_DISPLAY);
+            codecCallbackThread.start();
+            codecCallbackHandler = new Handler(codecCallbackThread.getLooper());
+            LimeLog.info("MediaCodec async mode re-enabled after resume");
+        }
+
         // 重新初始化解码器
         // 注意：initialWidth, initialHeight 等变量依然保留着
         initializeDecoder(false);
