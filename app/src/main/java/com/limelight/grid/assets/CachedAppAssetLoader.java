@@ -105,13 +105,6 @@ public class CachedAppAssetLoader {
     }
 
     /**
-     * 从磁盘缓存加载原始分辨率图片（不缩放不压缩），用于背景图显示
-     */
-    public Bitmap getFullBitmapFromDisk(LoaderTuple tuple) {
-        return diskLoader.loadFullBitmapFromCache(tuple.computer.uuid, tuple.app.getAppId());
-    }
-
-    /**
      * 统一的全分辨率大图加载方法：内存缓存 → 异步磁盘加载 → 回调
      * 如果内存缓存命中，直接在当前线程回调；否则异步从磁盘加载后在主线程回调。
      */
