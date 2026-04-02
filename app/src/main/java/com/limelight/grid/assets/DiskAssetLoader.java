@@ -161,10 +161,10 @@ public class DiskAssetLoader {
         }
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                return android.graphics.ImageDecoder.decodeBitmap(
-                    android.graphics.ImageDecoder.createSource(file),
+                return ImageDecoder.decodeBitmap(
+                    ImageDecoder.createSource(file),
                     (decoder, info, source) -> {
-                        decoder.setAllocator(android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE);
+                        decoder.setAllocator(ImageDecoder.ALLOCATOR_SOFTWARE);
                     }
                 );
             } else {
