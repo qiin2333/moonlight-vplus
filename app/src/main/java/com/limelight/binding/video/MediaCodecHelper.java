@@ -960,7 +960,7 @@ public class MediaCodecHelper {
         return null;
     }
 
-    private static boolean isCodecBlacklisted(MediaCodecInfo codecInfo) {
+    private static boolean isCodecBlacklisted(MediaCodecInfo codecInfo, String mimeType) {
         // Use the new isSoftwareOnly() function on Android Q
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (!SHOULD_BYPASS_SOFTWARE_BLOCK && codecInfo.isSoftwareOnly()) {
@@ -969,10 +969,12 @@ public class MediaCodecHelper {
             }
         }
 
-        // When Force C2 is enabled, skip OMX decoders to prefer Codec2 decoders.
+        // When Force C2 is enabled, skip OMX decoders for HEVC/AV1 to prefer Codec2 decoders.
+        // Only applies to HDR-capable codecs; H.264 decoders are not affected.
         // This can fix HDR display mode switching issues on some TV SoCs (e.g. Amlogic).
-        if (forceC2Decoder && codecInfo.getName().toLowerCase(Locale.ENGLISH).startsWith("omx.")) {
-            LimeLog.info("Skipping OMX decoder (Force C2 enabled): " + codecInfo.getName());
+        if (forceC2Decoder && codecInfo.getName().toLowerCase(Locale.ENGLISH).startsWith("omx.") &&
+                (mimeType.equalsIgnoreCase("video/hevc") || mimeType.equalsIgnoreCase("video/av01"))) {
+            LimeLog.info("Skipping OMX decoder for HDR codec (Force C2 enabled): " + codecInfo.getName());
             return true;
         }
 
@@ -1003,7 +1005,7 @@ public class MediaCodecHelper {
             for (String mime : codecInfo.getSupportedTypes()) {
                 if (mime.equalsIgnoreCase(mimeType)) {
                     // Skip blacklisted codecs
-                    if (isCodecBlacklisted(codecInfo)) {
+                    if (isCodecBlacklisted(codecInfo, mimeType)) {
                         continue;
                     }
 
@@ -1068,7 +1070,7 @@ public class MediaCodecHelper {
                         LimeLog.info("Examining decoder capabilities of " + codecInfo.getName() + " (round " + (i + 1) + ")");
 
                         // Skip blacklisted codecs
-                        if (isCodecBlacklisted(codecInfo)) {
+                        if (isCodecBlacklisted(codecInfo, mimeType)) {
                             continue;
                         }
 
