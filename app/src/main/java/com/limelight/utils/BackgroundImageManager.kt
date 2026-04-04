@@ -2,9 +2,13 @@ package com.limelight.utils
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.widget.ImageView
+import java.util.concurrent.Executors
 
 import com.limelight.R
 
@@ -34,14 +38,11 @@ class BackgroundImageManager(
             return
         }
 
-        val blurred = applyAlpha(stackBlur(newBackground, 10), BLUR_IMAGE_ALPHA)
-        val clearWithAlpha = applyAlpha(newBackground, CLEAR_IMAGE_ALPHA)
-
         // 如果当前没有背景图片，直接设置
         if (currentBackground == null) {
             currentBackground = newBackground
-            blurImageView.setImageBitmap(blurred)
-            clearImageView.setImageBitmap(clearWithAlpha)
+            setBlurredBitmap(blurImageView, newBackground, BLUR_IMAGE_ALPHA)
+            clearImageView.setImageBitmap(applyAlpha(newBackground, CLEAR_IMAGE_ALPHA))
             val fadeIn = AnimationUtils.loadAnimation(context, R.anim.background_fadein)
             blurImageView.startAnimation(fadeIn)
             clearImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadein))
@@ -55,8 +56,8 @@ class BackgroundImageManager(
 
             override fun onAnimationEnd(animation: Animation) {
                 currentBackground = newBackground
-                blurImageView.setImageBitmap(blurred)
-                clearImageView.setImageBitmap(clearWithAlpha)
+                setBlurredBitmap(blurImageView, newBackground, BLUR_IMAGE_ALPHA)
+                clearImageView.setImageBitmap(applyAlpha(newBackground, CLEAR_IMAGE_ALPHA))
                 val fadeIn = AnimationUtils.loadAnimation(context, R.anim.background_fadein)
                 blurImageView.startAnimation(fadeIn)
                 clearImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadein))
@@ -80,6 +81,9 @@ class BackgroundImageManager(
 
                 override fun onAnimationEnd(animation: Animation) {
                     blurImageView.setImageBitmap(null)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        blurImageView.setRenderEffect(null)
+                    }
                     clearImageView.setImageBitmap(null)
                     currentBackground = null
                 }
@@ -93,20 +97,85 @@ class BackgroundImageManager(
     }
 
     companion object {
-        private const val CLEAR_IMAGE_ALPHA = 100 // 0.33 * 255 ≈ 85
-        private const val BLUR_IMAGE_ALPHA = 100  // 模糊层透明度，与清晰层一致
-        const val OVERLAY_IMAGE_ALPHA = 180      // 连接界面透明度 (~70%)
-        private const val BG_COLOR = 0xFF4D464A.toInt() // 灰色底色（清晰层和模糊层共用）
+        private const val CLEAR_IMAGE_ALPHA = 160 // ~63%
+        private const val BLUR_IMAGE_ALPHA = 160  // ~63%
+        const val OVERLAY_IMAGE_ALPHA = 160       // ~63%
+        private const val BLUR_RADIUS = 10
+        private const val RENDER_EFFECT_RADIUS = 25f
+        private const val BG_COLOR = 0xFF4D464A.toInt()
+
+        private val blurExecutor = Executors.newSingleThreadExecutor()
+        private val mainHandler = Handler(Looper.getMainLooper())
 
         /**
-         * 给Bitmap应用全局透明度，并在下方填充浅灰色背景，
-         * 使图片区域不透过底层模糊，而fitCenter的留白区域保持透明
+         * 设置模糊图片到ImageView
+         * Android 12+: GPU加速的RenderEffect，零额外内存分配
+         * 低版本: 后台线程StackBlur
+         */
+        @JvmStatic
+        fun setBlurredBitmap(imageView: ImageView, bitmap: Bitmap, alpha: Int) {
+            if (bitmap.isRecycled) return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                imageView.setImageBitmap(bitmap)
+                imageView.setRenderEffect(
+                    android.graphics.RenderEffect.createBlurEffect(
+                        RENDER_EFFECT_RADIUS, RENDER_EFFECT_RADIUS,
+                        android.graphics.Shader.TileMode.CLAMP
+                    )
+                )
+                imageView.imageAlpha = alpha
+            } else {
+                imageView.tag = bitmap
+                blurExecutor.execute {
+                    if (bitmap.isRecycled) return@execute
+                    val blurred = stackBlur(bitmap, BLUR_RADIUS)
+                    mainHandler.post {
+                        if (imageView.tag === bitmap) {
+                            imageView.setImageBitmap(blurred)
+                            imageView.imageAlpha = alpha
+                        }
+                    }
+                }
+            }
+        }
+
+        /**
+         * 设置模糊Drawable到ImageView
+         */
+        @JvmStatic
+        fun setBlurredDrawable(imageView: ImageView, drawable: android.graphics.drawable.Drawable, alpha: Int) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                imageView.setImageDrawable(drawable)
+                imageView.setRenderEffect(
+                    android.graphics.RenderEffect.createBlurEffect(
+                        RENDER_EFFECT_RADIUS, RENDER_EFFECT_RADIUS,
+                        android.graphics.Shader.TileMode.CLAMP
+                    )
+                )
+                imageView.imageAlpha = alpha
+            } else if (drawable is android.graphics.drawable.BitmapDrawable) {
+                val bmp = drawable.bitmap
+                if (bmp != null && !bmp.isRecycled) {
+                    setBlurredBitmap(imageView, bmp, alpha)
+                    return
+                }
+                imageView.setImageDrawable(drawable)
+                imageView.imageAlpha = alpha
+            } else {
+                imageView.setImageDrawable(drawable)
+                imageView.imageAlpha = alpha
+            }
+        }
+
+        /**
+         * 给Bitmap应用全局透明度，并在下方填充背景色，
+         * 使fitCenter的图像区域不透过底层模糊层
          */
         @JvmStatic
         fun applyAlpha(original: Bitmap, alpha: Int): Bitmap {
             if (original.isRecycled) return original
             return try {
-                val src = if (android.os.Build.VERSION.SDK_INT >= 26 &&
+                val src = if (Build.VERSION.SDK_INT >= 26 &&
                     original.config == Bitmap.Config.HARDWARE) {
                     original.copy(Bitmap.Config.ARGB_8888, false)
                 } else {
@@ -114,14 +183,12 @@ class BackgroundImageManager(
                 }
                 val result = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
                 val canvas = android.graphics.Canvas(result)
-                // 先绘制灰色背景
                 canvas.drawColor(BG_COLOR)
-                // 再以指定透明度绘制原图
                 val paint = android.graphics.Paint()
                 paint.alpha = alpha
                 paint.isFilterBitmap = true
-                paint.isAntiAlias = true
                 canvas.drawBitmap(src, 0f, 0f, paint)
+                if (src !== original) src.recycle()
                 result
             } catch (e: Throwable) {
                 original
@@ -135,20 +202,21 @@ class BackgroundImageManager(
         fun stackBlur(original: Bitmap, radius: Int): Bitmap {
             if (original.isRecycled) return original
             try {
-                // Hardware bitmaps need to be copied to software config first
-                val src = if (android.os.Build.VERSION.SDK_INT >= 26 &&
+                val src = if (Build.VERSION.SDK_INT >= 26 &&
                     original.config == Bitmap.Config.HARDWARE) {
                     original.copy(Bitmap.Config.ARGB_8888, false)
                 } else {
                     original
                 }
-                // 缩小图片后模糊（1/3缩放保留较多细节）
                 val scaleFactor = 3
                 val smallWidth = (src.width / scaleFactor).coerceAtLeast(1)
                 val smallHeight = (src.height / scaleFactor).coerceAtLeast(1)
                 val small = Bitmap.createScaledBitmap(src, smallWidth, smallHeight, true)
 
             val bitmap = small.copy(Bitmap.Config.ARGB_8888, true)
+            // 回收中间Bitmap
+            if (small !== src && small !== original) small.recycle()
+            if (src !== original) src.recycle()
 
             val w = bitmap.width
             val h = bitmap.height
