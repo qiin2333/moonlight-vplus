@@ -21,4 +21,5 @@ class PerformanceInfo {
     @JvmField var bandWidth: String? = null
     @JvmField var isHdrActive: Boolean = false // 实际HDR激活状态
     @JvmField var renderingLatencyMs: Float = 0f // 渲染时间
+    @JvmField var onePercentLowFps: Float = 0f // 1% low FPS (P99帧间隔倒数)
 }

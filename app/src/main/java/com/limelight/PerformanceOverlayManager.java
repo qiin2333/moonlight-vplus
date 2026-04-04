@@ -115,7 +115,8 @@ public class PerformanceOverlayManager {
         NETWORK_LATENCY(R.id.perfNetworkLatency, "network_latency", "networkLatencyView"),
         DECODE_LATENCY(R.id.perfDecodeLatency, "decode_latency", "decodeLatencyView"),
         HOST_LATENCY(R.id.perfHostLatency, "host_latency", "hostLatencyView"),
-        BATTERY(R.id.perfBattery, "battery", "perfBatteryView");
+        BATTERY(R.id.perfBattery, "battery", "perfBatteryView"),
+        ONE_PERCENT_LOW(R.id.perfOnePercentLow, "one_percent_low", "perfOnePercentLowView");
 
         final int viewId;
         final String preferenceKey;
@@ -240,6 +241,7 @@ public class PerformanceOverlayManager {
             case DECODE_LATENCY: return this::showDecodeLatencyInfo;
             case HOST_LATENCY: return this::showHostLatencyInfo;
             case BATTERY: return this::showBatteryInfo;
+            case ONE_PERCENT_LOW: return this::showOnePercentLowInfo;
             default: return this::showMoonPhaseInfo;
         }
     }
@@ -570,6 +572,9 @@ public class PerformanceOverlayManager {
             case BATTERY:
                 updateBatteryText(itemInfo.view);
                 break;
+            case ONE_PERCENT_LOW:
+                updateOnePercentLowText(itemInfo.view, performanceInfo);
+                break;
         }
     }
 
@@ -641,6 +646,25 @@ public class PerformanceOverlayManager {
         }
 
         view.setText(createStyledText("🔋", batteryText, "%", batteryColor));
+    }
+
+    @SuppressLint("DefaultLocale")
+    private void updateOnePercentLowText(TextView view, PerformanceInfo performanceInfo) {
+        float lowFps = performanceInfo.onePercentLowFps;
+        if (lowFps <= 0) {
+            view.setText(createStyledText("📉", "—", "FPS", 0xFFFF7043));
+            return;
+        }
+        String value = String.format("%.1f", lowFps);
+        int color;
+        if (lowFps >= performanceInfo.renderedFps * 0.9f) {
+            color = 0xFF90EE90; // 绿色 - 非常平滑
+        } else if (lowFps >= performanceInfo.renderedFps * 0.7f) {
+            color = 0xFFFFD740; // 黄色 - 轻微卡顿
+        } else {
+            color = 0xFFFF7043; // 橙红 - 明显卡顿
+        }
+        view.setText(createStyledText("📉", value, "1%Low", color));
     }
 
     /**
@@ -899,6 +923,9 @@ public class PerformanceOverlayManager {
             textView.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
             textView.setTextSize(TypedValue.COMPLEX_UNIT_PX, bodySize);
         } else if (viewId == R.id.perfBattery) {
+            textView.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+            textView.setTextSize(TypedValue.COMPLEX_UNIT_PX, bodySize);
+        } else if (viewId == R.id.perfOnePercentLow) {
             textView.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
             textView.setTextSize(TypedValue.COMPLEX_UNIT_PX, bodySize);
         }
@@ -1397,6 +1424,10 @@ public class PerformanceOverlayManager {
 
     private void showHostLatencyInfo() {
         showPerformanceInfo(R.string.perf_host_latency_title, R.string.perf_host_latency_info);
+    }
+
+    private void showOnePercentLowInfo() {
+        showPerformanceInfo(R.string.perf_one_percent_low_title, R.string.perf_one_percent_low_info);
     }
 
     private void showInfoDialog(String title, String message) {

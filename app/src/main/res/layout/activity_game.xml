@@ -157,6 +157,18 @@
             android:includeFontPadding="false"
             android:gravity="center_vertical" />
 
+        <TextView
+            android:id="@+id/perfOnePercentLow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:textColor="#E1FF7043"
+            android:textSize="10sp"
+            android:fontFamily="sans-serif"
+            android:letterSpacing="0.01"
+            android:includeFontPadding="false"
+            android:gravity="center_vertical" />
+
     </LinearLayout>
 
     <androidx.cardview.widget.CardView

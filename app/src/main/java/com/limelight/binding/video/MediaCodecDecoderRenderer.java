@@ -114,6 +114,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer {
     private final VideoStats activeWindowVideoStats;
     private final VideoStats lastWindowVideoStats;
     private final VideoStats globalVideoStats;
+    private final FrameIntervalTracker frameIntervalTracker = new FrameIntervalTracker(600);
 
     private long lastTimestampUs;
     private int lastFrameNumber;
@@ -327,6 +328,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer {
             @Override
             public void onFrameRendered() {
                 activeWindowVideoStats.totalFramesRendered++;
+                frameIntervalTracker.recordFrame();
             }
 
             @Override
@@ -1718,6 +1720,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer {
             performanceInfo.decodeTimeMs = decodeTimeMs;
             performanceInfo.renderingLatencyMs = avePureRenderingLatencyMs;
             performanceInfo.totalTimeMs = aveTotalProcessingTimeMs;
+            performanceInfo.onePercentLowFps = frameIntervalTracker.getOnePercentLowFps();
 
             perfListener.onPerfUpdateV(performanceInfo);
             perfListener.onPerfUpdateWG(performanceInfo);

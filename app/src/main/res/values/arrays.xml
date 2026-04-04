@@ -293,6 +293,7 @@
         <item>⏱️/🥵 解码延迟(15ms以下为正常)</item>
         <item>🖥 主机延迟</item>
         <item>🔋 电池电量</item>
+        <item>📉 1%Low帧 (帧率平滑性)</item>
     </string-array>
     <string-array name="perf_overlay_display_items_values" translatable="false">
         <item>resolution</item>
@@ -303,6 +304,7 @@
         <item>decode_latency</item>
         <item>host_latency</item>
         <item>battery</item>
+        <item>one_percent_low</item>
     </string-array>
     <string-array name="mic_icon_color_entries">
         <item>Gradient Blue</item>

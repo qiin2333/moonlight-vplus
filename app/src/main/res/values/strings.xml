@@ -701,6 +701,10 @@
     <string name="perf_host_latency_title">🖥️ Host Latency Information</string>
     <string name="perf_host_latency_info">Host latency represents the time for the game host to process frames.\n\nLatency Range:\n• &lt;5ms: Strong host performance\n• 5-10ms: Good host performance\n• 10-20ms: Fair host performance\n• &gt;20ms: Weak host performance\n\nInfluencing Factors:\n• Host hardware performance\n• Game load\n• Background program usage\n\nVer.V+:\n• Indicates version information\n• Displayed when no host latency data available</string>
 
+    <!-- Performance Overlay Info Dialogs - 1% Low FPS -->
+    <string name="perf_one_percent_low_title">📉 1% Low Frame Rate</string>
+    <string name="perf_one_percent_low_info">1%Low FPS measures frame rate smoothness using the 99th percentile frame interval.\n\nHow it works:\n• Records intervals between rendered frames\n• Sorts to find the slowest 1%% of frame times\n• Converts to FPS: 1000 / P99 interval\n\nInterpretation:\n• Close to rendered FPS: Very smooth\n• 70-90%% of rendered FPS: Minor stuttering\n• Below 70%%: Noticeable stuttering\n\nUse this to detect micro-stuttering that average FPS cannot reveal.</string>
+
 
     <!-- Performance Overlay Info Dialogs - Battery Information -->
     <string name="perf_battery_info_title">🔋 Battery Information</string>
