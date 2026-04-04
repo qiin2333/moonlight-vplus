@@ -1,6 +1,7 @@
 package com.limelight.binding.input.capture
 
 import android.app.Activity
+import android.view.View
 import com.limelight.BuildConfig
 import com.limelight.LimeLog
 import com.limelight.R
@@ -39,18 +40,36 @@ object InputCaptureManager {
 
     /**
      * 获取支持外接显示器的输入捕获提供者
-     * 外接显示器模式下，使用更兼容的捕获方式
+     *
+     * 外接显示器模式下，主 Activity 的 surfaceView 被设为 GONE，
+     * requestPointerCapture() 对隐藏 View 会失败。
+     * 因此回退到标准捕获时，使用仍然可见的 backgroundTouchView 作为捕获目标。
      */
     @JvmStatic
     fun getInputCaptureProviderForExternalDisplay(activity: Activity, rootListener: EvdevListener): InputCaptureProvider {
         // 外接显示器模式下，优先使用Evdev捕获，因为它对多显示器支持更好
-        return if (EvdevCaptureProviderShim.isCaptureProviderSupported()) {
+        if (EvdevCaptureProviderShim.isCaptureProviderSupported()) {
             LimeLog.info("Using Evdev mouse capture for external display")
-            EvdevCaptureProviderShim.createEvdevCaptureProvider(activity, rootListener)
-        } else {
-            // 如果Evdev不可用，回退到标准方式
-            LimeLog.info("Falling back to standard capture provider for external display")
-            getInputCaptureProvider(activity, rootListener)
+            return EvdevCaptureProviderShim.createEvdevCaptureProvider(activity, rootListener)
+        }
+
+        // Evdev 不可用时，使用 backgroundTouchView（在主屏上仍然可见）作为指针捕获目标
+        val captureView: View = activity.findViewById(R.id.backgroundTouchView)
+            ?: activity.window.decorView
+
+        return when {
+            AndroidNativePointerCaptureProvider.isCaptureProviderSupported() -> {
+                LimeLog.info("Using Android O+ native mouse capture for external display (backgroundTouchView)")
+                AndroidNativePointerCaptureProvider(activity, captureView)
+            }
+            AndroidPointerIconCaptureProvider.isCaptureProviderSupported() -> {
+                LimeLog.info("Using Android N+ pointer hiding for external display")
+                AndroidPointerIconCaptureProvider(activity, captureView)
+            }
+            else -> {
+                LimeLog.info("Mouse capture not available for external display")
+                NullCaptureProvider()
+            }
         }
     }
 }
