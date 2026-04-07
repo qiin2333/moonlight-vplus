@@ -107,7 +107,7 @@ Java_com_limelight_nvstream_jni_MoonBridge_init(JNIEnv *env, jclass clazz) {
     BridgeClSetMotionEventStateMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClSetMotionEventState", "(SBS)V");
     BridgeClSetControllerLEDMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClSetControllerLED", "(SBBB)V");
     BridgeClResolutionChangedMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClResolutionChanged", "(II)V");
-    BridgeBassEnergyMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeBassEnergy", "(I)V");
+    BridgeBassEnergyMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeBassEnergy", "(II)V");
 }
 
 int BridgeDrSetup(int videoFormat, int width, int height, int redrawRate, void* context, int drFlags) {
@@ -275,7 +275,8 @@ void BridgeArDecodeAndPlaySample(char* sampleData, int sampleLength) {
         // Bass energy analysis: process PCM data BEFORE releasing the critical section.
         // This is pure C++ computation with no JNI calls, safe in critical region.
         int bassIntensity = 0;
-        int bassReady = bass_energy_process_frame((const int16_t*)decodedData, decodeLen, &bassIntensity);
+        int bassLowFreqRatio = 50;
+        int bassReady = bass_energy_process_frame((const int16_t*)decodedData, decodeLen, &bassIntensity, &bassLowFreqRatio);
 
         // We must release the array elements before making further JNI calls
         (*env)->ReleasePrimitiveArrayCritical(env, DecodedAudioBuffer, decodedData, 0);
@@ -288,7 +289,7 @@ void BridgeArDecodeAndPlaySample(char* sampleData, int sampleLength) {
 
         // Report bass energy to Java (outside critical section)
         if (bassReady && BridgeBassEnergyMethod != NULL) {
-            (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeBassEnergyMethod, bassIntensity);
+            (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeBassEnergyMethod, bassIntensity, bassLowFreqRatio);
             if ((*env)->ExceptionCheck(env)) {
                 (*env)->ExceptionClear(env);
             }

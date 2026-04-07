@@ -139,7 +139,7 @@ public class MoonBridge {
      * Listener for bass energy callbacks from native audio processing.
      */
     public interface BassEnergyListener {
-        void onBassEnergy(int intensity);
+        void onBassEnergy(int intensity, int lowFreqRatio);
     }
 
     public static void setBassEnergyListener(BassEnergyListener listener) {
@@ -283,10 +283,11 @@ public class MoonBridge {
      * produces a reportable intensity value.
      *
      * @param intensity Vibration intensity (0-100)
+     * @param lowFreqRatio Low-frequency energy ratio (0-100), for low/high motor allocation
      */
-    public static void bridgeBassEnergy(int intensity) {
+    public static void bridgeBassEnergy(int intensity, int lowFreqRatio) {
         if (bassEnergyListener != null) {
-            bassEnergyListener.onBassEnergy(intensity);
+            bassEnergyListener.onBassEnergy(intensity, lowFreqRatio);
         }
     }
 

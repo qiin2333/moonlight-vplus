@@ -694,8 +694,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 prefConfig.audioVibrationMode,
                 prefConfig.audioVibrationScene
         );
-        MoonBridge.setBassEnergyListener(intensity -> {
-            audioVibrationService.handleBassEnergy(intensity);
+        MoonBridge.setBassEnergyListener((intensity, lowFreqRatio) -> {
+            audioVibrationService.handleBassEnergy(intensity, lowFreqRatio);
         });
         // Configure native bass energy analyzer
         MoonBridge.setBassEnergyEnabled(prefConfig.enableAudioVibration);

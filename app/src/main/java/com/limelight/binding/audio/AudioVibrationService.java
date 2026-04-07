@@ -5,9 +5,10 @@ import android.os.Build;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.VibratorManager;
-import android.os.CombinedVibration;
 import android.os.VibrationAttributes;
 import android.view.InputDevice;
+
+import androidx.annotation.RequiresApi;
 
 import com.limelight.LimeLog;
 import com.limelight.binding.input.ControllerHandler;
@@ -15,12 +16,16 @@ import com.limelight.binding.input.ControllerHandler;
 /**
  * Audio-driven vibration service for Android.
  *
- * Receives bass energy intensity (0-100) from the native BassEnergyAnalyzer
- * (via JNI callback) and routes vibration to:
- *   - Device vibrator (phone/tablet built-in motor)
- *   - Gamepad rumble (via ControllerHandler)
+ * Receives bass energy intensity (0-100) and low-frequency ratio (0-100) from the
+ * native BassEnergyAnalyzer (via JNI callback) and routes vibration to:
+ *   - Device vibrator with tiered haptic API support
+ *   - Gamepad rumble with dynamic low/high motor allocation
  *
- * Ported from HarmonyOS AudioVibrationService.ets.
+ * Haptic capability tiers (auto-detected):
+ *   - ENVELOPE (API 36+): BasicEnvelopeBuilder — intensity + sharpness + duration envelope
+ *   - COMPOSITION (API 31+): Primitives — THUD/CLICK with scale control
+ *   - ONE_SHOT (API 26+): createOneShot — duration + amplitude
+ *   - LEGACY (pre-26): simple vibrate(ms)
  *
  * Scene modes:
  *   - Game/Movie (0): Continuous low-freq vibration for explosions/gunfire/engines
@@ -40,6 +45,12 @@ public class AudioVibrationService {
     public static final String MODE_GAMEPAD_ONLY = "gamepad";
     public static final String MODE_BOTH = "both";
 
+    // Haptic capability levels
+    private static final int HAPTIC_LEGACY = 0;
+    private static final int HAPTIC_ONE_SHOT = 1;
+    private static final int HAPTIC_COMPOSITION = 2;
+    private static final int HAPTIC_ENVELOPE = 3;
+
     private boolean enabled = false;
     private int strength = 100;       // 0-100
     private String vibrationMode = MODE_AUTO;
@@ -47,17 +58,18 @@ public class AudioVibrationService {
 
     // State
     private int lastIntensity = 0;
+    private int lastLowFreqRatio = 50;
     private boolean isDeviceVibrating = false;
     private boolean isGamepadRumbling = false;
 
-    // Debounce: minimum interval between vibration API calls
+    // Debounce: tightened intervals matching HarmonyOS
     private long lastVibrationTime = 0;
-    private static final long MIN_VIBRATION_INTERVAL_MS = 40;
-    private static final long MIN_VIBRATION_INTERVAL_MUSIC_MS = 25;
+    private static final long MIN_INTERVAL_GAME_MS = 25;
+    private static final long MIN_INTERVAL_MUSIC_MS = 15;
 
-    // Android vibrator
+    // Android vibrator & capability
     private final Vibrator deviceVibrator;
-    private final boolean hasAmplitudeControl;
+    private final int hapticLevel;
 
     // Gamepad rumble handler (optional, set externally)
     private ControllerHandler controllerHandler;
@@ -69,21 +81,57 @@ public class AudioVibrationService {
         } else {
             deviceVibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
         }
-        hasAmplitudeControl = deviceVibrator != null &&
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-                deviceVibrator.hasAmplitudeControl();
+        hapticLevel = detectHapticCapability();
+        LimeLog.info("AudioVibration: haptic level = " + hapticLevelName());
     }
 
-    /**
-     * Set the controller handler for gamepad rumble routing.
-     */
+    private int detectHapticCapability() {
+        if (deviceVibrator == null || !deviceVibrator.hasVibrator()) {
+            return HAPTIC_LEGACY;
+        }
+
+        // Tier 3: API 36+ BasicEnvelopeBuilder
+        if (Build.VERSION.SDK_INT >= 36) {
+            try {
+                if (deviceVibrator.areEnvelopeEffectsSupported()) {
+                    return HAPTIC_ENVELOPE;
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // Tier 2: API 31+ Composition with THUD & CLICK primitives
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            try {
+                boolean[] supported = deviceVibrator.arePrimitivesSupported(
+                        VibrationEffect.Composition.PRIMITIVE_THUD,
+                        VibrationEffect.Composition.PRIMITIVE_CLICK);
+                if (supported[0] && supported[1]) {
+                    return HAPTIC_COMPOSITION;
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // Tier 1: API 26+ createOneShot with amplitude control
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && deviceVibrator.hasAmplitudeControl()) {
+            return HAPTIC_ONE_SHOT;
+        }
+
+        return HAPTIC_LEGACY;
+    }
+
+    private String hapticLevelName() {
+        switch (hapticLevel) {
+            case HAPTIC_ENVELOPE: return "ENVELOPE (API 36+)";
+            case HAPTIC_COMPOSITION: return "COMPOSITION (API 31+)";
+            case HAPTIC_ONE_SHOT: return "ONE_SHOT (API 26+)";
+            default: return "LEGACY";
+        }
+    }
+
     public void setControllerHandler(ControllerHandler handler) {
         this.controllerHandler = handler;
     }
 
-    /**
-     * Update settings.
-     */
     public void setSettings(boolean enabled, int strength, String vibrationMode, int sceneMode) {
         this.enabled = enabled;
         this.strength = Math.max(0, Math.min(100, strength));
@@ -95,23 +143,19 @@ public class AudioVibrationService {
         }
     }
 
-    /**
-     * Get scene mode as integer for native layer.
-     */
     public int getSceneModeInt() {
         return sceneMode;
     }
 
     /**
-     * Handle bass energy intensity from native layer.
-     * Called from MoonBridge.bridgeBassEnergy() on the audio decode thread.
+     * Handle bass energy from native layer.
      *
      * @param intensity Bass energy intensity (0-100)
+     * @param lowFreqRatio Low-frequency energy ratio (0-100), for motor allocation
      */
-    public void handleBassEnergy(int intensity) {
+    public void handleBassEnergy(int intensity, int lowFreqRatio) {
         if (!enabled) return;
 
-        // Zero intensity → stop vibration
         if (intensity == 0) {
             if (isDeviceVibrating || isGamepadRumbling) {
                 stopAll();
@@ -119,7 +163,6 @@ public class AudioVibrationService {
             return;
         }
 
-        // Apply user strength factor
         int effectiveIntensity = intensity * strength / 100;
         if (effectiveIntensity < 5) {
             if (isDeviceVibrating || isGamepadRumbling) {
@@ -128,14 +171,14 @@ public class AudioVibrationService {
             return;
         }
 
-        // Debounce check
+        // Debounce
         long now = System.currentTimeMillis();
-        long minInterval = isMusicScene() ? MIN_VIBRATION_INTERVAL_MUSIC_MS : MIN_VIBRATION_INTERVAL_MS;
+        long minInterval = isMusicScene() ? MIN_INTERVAL_MUSIC_MS : MIN_INTERVAL_GAME_MS;
         if (now - lastVibrationTime < minInterval) {
             return;
         }
 
-        // Skip if intensity change is too small
+        // Skip if change too small
         int changeTolerance = isMusicScene() ? 3 : 8;
         if ((isDeviceVibrating || isGamepadRumbling) &&
                 Math.abs(effectiveIntensity - lastIntensity) < changeTolerance) {
@@ -143,6 +186,7 @@ public class AudioVibrationService {
         }
 
         lastIntensity = effectiveIntensity;
+        lastLowFreqRatio = lowFreqRatio;
         lastVibrationTime = now;
 
         // Route vibration
@@ -156,7 +200,7 @@ public class AudioVibrationService {
         }
 
         if (shouldGamepad) {
-            triggerGamepadRumble(effectiveIntensity);
+            triggerGamepadRumble(effectiveIntensity, lowFreqRatio);
         } else if (isGamepadRumbling) {
             stopGamepadRumble();
         }
@@ -214,13 +258,12 @@ public class AudioVibrationService {
             return;
         }
 
-        // Stop current vibration first
         if (isDeviceVibrating) {
             deviceVibrator.cancel();
         }
 
         try {
-            if (sceneMode == SCENE_MUSIC) {
+            if (isMusicScene()) {
                 triggerMusicVibration(intensity);
             } else {
                 triggerGameVibration(intensity);
@@ -231,30 +274,71 @@ public class AudioVibrationService {
         }
     }
 
-    /**
-     * Game/Movie mode: longer, deeper vibration (50-300ms)
-     */
+    // ==================== Game mode vibration (tiered) ====================
+
     private void triggerGameVibration(int intensity) {
-        int duration = 50 + intensity * 250 / 100; // 50-300ms
-
-        if (hasAmplitudeControl && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // Amplitude-controlled vibration: 1-255 mapped from intensity 0-100
-            int amplitude = Math.max(1, intensity * 255 / 100);
-            VibrationEffect effect = VibrationEffect.createOneShot(duration, amplitude);
-            vibrateWithAttributes(effect);
-        } else {
-            // Fallback: simple on/off vibration
-            vibrateSimple(duration);
+        switch (hapticLevel) {
+            case HAPTIC_ENVELOPE:
+                if (Build.VERSION.SDK_INT >= 36) {
+                    triggerGameEnvelope(intensity);
+                }
+                break;
+            case HAPTIC_COMPOSITION:
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    triggerGameComposition(intensity);
+                }
+                break;
+            case HAPTIC_ONE_SHOT:
+                triggerGameOneShot(intensity);
+                break;
+            default:
+                vibrateSimple(50 + intensity * 250 / 100);
         }
     }
 
     /**
-     * Music/Rhythm mode: short pulse vibration (30-80ms)
+     * Game envelope: deep sustained rumble (≈300ms).
+     * Sharpness 0.1-0.3 → low frequency, equivalent to HarmonyOS HD Haptic 30-50Hz.
      */
-    private void triggerMusicVibration(int intensity) {
-        int duration = 30 + intensity / 2; // 30-80ms
+    @RequiresApi(36)
+    private void triggerGameEnvelope(int intensity) {
+        float amp = intensity / 100f;
+        float sharpness = 0.1f + amp * 0.2f; // 0.1-0.3: deep rumble
+        try {
+            VibrationEffect effect = new VibrationEffect.BasicEnvelopeBuilder()
+                    .setInitialSharpness(sharpness)
+                    .addControlPoint(amp, sharpness, 20)          // attack: 20ms ramp up
+                    .addControlPoint(amp * 0.6f, sharpness, 200)  // sustain+decay: 200ms
+                    .addControlPoint(0f, sharpness, 80)           // release: 80ms fade out
+                    .build();
+            vibrateWithAttributes(effect);
+        } catch (Exception e) {
+            triggerGameOneShot(intensity);
+        }
+    }
 
-        if (hasAmplitudeControl && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+    /**
+     * Game composition: PRIMITIVE_THUD for heavy impact feel.
+     */
+    @RequiresApi(Build.VERSION_CODES.S)
+    private void triggerGameComposition(int intensity) {
+        float scale = Math.max(0.1f, intensity / 100f);
+        try {
+            VibrationEffect effect = VibrationEffect.startComposition()
+                    .addPrimitive(VibrationEffect.Composition.PRIMITIVE_THUD, scale)
+                    .compose();
+            vibrateWithAttributes(effect);
+        } catch (Exception e) {
+            triggerGameOneShot(intensity);
+        }
+    }
+
+    /**
+     * Game one-shot: 50-300ms with amplitude control.
+     */
+    private void triggerGameOneShot(int intensity) {
+        int duration = 50 + intensity * 250 / 100;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             int amplitude = Math.max(1, intensity * 255 / 100);
             VibrationEffect effect = VibrationEffect.createOneShot(duration, amplitude);
             vibrateWithAttributes(effect);
@@ -262,6 +346,80 @@ public class AudioVibrationService {
             vibrateSimple(duration);
         }
     }
+
+    // ==================== Music mode vibration (tiered) ====================
+
+    private void triggerMusicVibration(int intensity) {
+        switch (hapticLevel) {
+            case HAPTIC_ENVELOPE:
+                if (Build.VERSION.SDK_INT >= 36) {
+                    triggerMusicEnvelope(intensity);
+                }
+                break;
+            case HAPTIC_COMPOSITION:
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    triggerMusicComposition(intensity);
+                }
+                break;
+            case HAPTIC_ONE_SHOT:
+                triggerMusicOneShot(intensity);
+                break;
+            default:
+                vibrateSimple(30 + intensity / 2);
+        }
+    }
+
+    /**
+     * Music envelope: sharp transient pulse (≈60ms).
+     * Sharpness 0.4-0.7 → crisp/snappy, equivalent to HarmonyOS HD Haptic 40-60Hz.
+     */
+    @RequiresApi(36)
+    private void triggerMusicEnvelope(int intensity) {
+        float amp = intensity / 100f;
+        float sharpness = 0.4f + amp * 0.3f; // 0.4-0.7: crisp beat
+        try {
+            VibrationEffect effect = new VibrationEffect.BasicEnvelopeBuilder()
+                    .setInitialSharpness(sharpness)
+                    .addControlPoint(amp, sharpness, 5)    // instant attack: 5ms
+                    .addControlPoint(0f, sharpness, 55)    // quick decay: 55ms
+                    .build();
+            vibrateWithAttributes(effect);
+        } catch (Exception e) {
+            triggerMusicOneShot(intensity);
+        }
+    }
+
+    /**
+     * Music composition: PRIMITIVE_CLICK for crisp beat.
+     */
+    @RequiresApi(Build.VERSION_CODES.R)
+    private void triggerMusicComposition(int intensity) {
+        float scale = Math.max(0.1f, intensity / 100f);
+        try {
+            VibrationEffect effect = VibrationEffect.startComposition()
+                    .addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, scale)
+                    .compose();
+            vibrateWithAttributes(effect);
+        } catch (Exception e) {
+            triggerMusicOneShot(intensity);
+        }
+    }
+
+    /**
+     * Music one-shot: 30-80ms with amplitude control.
+     */
+    private void triggerMusicOneShot(int intensity) {
+        int duration = 30 + intensity / 2;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            int amplitude = Math.max(1, intensity * 255 / 100);
+            VibrationEffect effect = VibrationEffect.createOneShot(duration, amplitude);
+            vibrateWithAttributes(effect);
+        } else {
+            vibrateSimple(duration);
+        }
+    }
+
+    // ==================== Vibration helpers ====================
 
     private void vibrateWithAttributes(VibrationEffect effect) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -286,23 +444,21 @@ public class AudioVibrationService {
     // ==================== Gamepad Rumble ====================
 
     /**
-     * Gamepad rumble with scene-aware low/high freq balance.
-     * Game mode: lowFreq dominant (deep rumble)
-     * Music mode: highFreq higher (60%), snappy feel
+     * Gamepad rumble with dynamic low/high motor allocation.
+     * lowFreqRatio from C++ reflects actual audio frequency content:
+     * - High ratio → explosion/bass → low-freq motor dominant
+     * - Low ratio → crisp/high-pitched → high-freq motor dominant
      */
-    private void triggerGamepadRumble(int intensity) {
+    private void triggerGamepadRumble(int intensity, int lowFreqRatio) {
         if (controllerHandler == null) return;
 
         int base = intensity * 65535 / 100;
-        short lowFreq, highFreq;
+        // Dynamic allocation: at least 15% per motor, matching HarmonyOS
+        float lowWeight = Math.max(0.15f, Math.min(0.85f, lowFreqRatio / 100f));
+        float highWeight = 1.0f - lowWeight;
 
-        if (sceneMode == SCENE_MUSIC) {
-            lowFreq = (short)(base * 0.4);
-            highFreq = (short)(base * 0.6);
-        } else {
-            lowFreq = (short)base;
-            highFreq = (short)(base * 0.25);
-        }
+        short lowFreq = (short)(base * lowWeight);
+        short highFreq = (short)(base * highWeight);
 
         controllerHandler.handleRumble((short)0, lowFreq, highFreq);
         isGamepadRumbling = true;

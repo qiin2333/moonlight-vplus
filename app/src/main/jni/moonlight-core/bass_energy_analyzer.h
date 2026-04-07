@@ -217,11 +217,14 @@ public:
      * @param pcmData PCM 数据 (int16, 交错多声道)
      * @param sampleCount 每声道采样数 (per-channel frame count)
      * @param outIntensity 输出振动强度 (0-100)
+     * @param outLowFreqRatio 输出低频占比 (0-100)，用于 low/high motor 分配
      * @return true 如果应该触发 TSFN 回调（经过节流控制）
      */
-    bool ProcessFrame(const int16_t* pcmData, int sampleCount, int& outIntensity) {
+    bool ProcessFrame(const int16_t* pcmData, int sampleCount, int& outIntensity,
+                      int& outLowFreqRatio) {
         if (!enabled_ || pcmData == nullptr || sampleCount <= 0) {
             outIntensity = 0;
+            outLowFreqRatio = 50;
             return false;
         }
 
@@ -318,6 +321,16 @@ public:
         }
 
         outIntensity = intensity;
+
+        // ---- 低频占比计算 ----
+        // frameEnergy = LPF 后的低频能量, fullBandEnergy = 全频段能量
+        // 比值表示低频在总能量中的占比，用于精确分配 low/high motor
+        if (fullBandEnergy > 1e-6f) {
+            float ratio = frameEnergy / fullBandEnergy;
+            outLowFreqRatio = std::max(0, std::min(100, static_cast<int>(ratio * 100.0f)));
+        } else {
+            outLowFreqRatio = 50; // 无信号时默认均分
+        }
 
         // ---- 节流控制 ----
         auto now = std::chrono::steady_clock::now();

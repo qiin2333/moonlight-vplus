@@ -28,11 +28,15 @@ void bass_energy_set_scene_mode(int mode) {
     g_bassAnalyzer.SetSceneMode(mode);
 }
 
-int bass_energy_process_frame(const int16_t* pcmData, int sampleCount, int* outIntensity) {
+int bass_energy_process_frame(const int16_t* pcmData, int sampleCount, int* outIntensity, int* outLowFreqRatio) {
     int intensity = 0;
-    bool shouldCallback = g_bassAnalyzer.ProcessFrame(pcmData, sampleCount, intensity);
+    int lowFreqRatio = 50;
+    bool shouldCallback = g_bassAnalyzer.ProcessFrame(pcmData, sampleCount, intensity, lowFreqRatio);
     if (outIntensity) {
         *outIntensity = intensity;
+    }
+    if (outLowFreqRatio) {
+        *outLowFreqRatio = lowFreqRatio;
     }
     return shouldCallback ? 1 : 0;
 }

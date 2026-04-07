@@ -52,9 +52,10 @@ void bass_energy_set_scene_mode(int mode);
  * @param pcmData        PCM 16-bit signed interleaved samples
  * @param sampleCount    Per-channel sample count (decodeLen from opus)
  * @param outIntensity   Output vibration intensity (0-100)
+ * @param outLowFreqRatio Output low-freq energy ratio (0-100), for low/high motor allocation
  * @return 1 if intensity should be reported (throttle-controlled), 0 otherwise
  */
-int bass_energy_process_frame(const int16_t* pcmData, int sampleCount, int* outIntensity);
+int bass_energy_process_frame(const int16_t* pcmData, int sampleCount, int* outIntensity, int* outLowFreqRatio);
 
 #ifdef __cplusplus
 }
