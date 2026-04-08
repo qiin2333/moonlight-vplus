@@ -52,88 +52,23 @@
 
         </RelativeLayout>
 
-        <!-- 快捷按钮区域 -->
-        <LinearLayout
+        <!-- 快捷按钮区域（动态生成，单行水平滚动） -->
+        <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:gravity="center"
-            android:orientation="horizontal">
+            android:scrollbars="none"
+            android:fadingEdge="horizontal"
+            android:fadingEdgeLength="16dp"
+            android:requiresFadingEdge="horizontal">
 
             <LinearLayout
-                android:layout_width="match_parent"
+                android:id="@+id/quickButtonContainer"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="2dp"
-                android:weightSum="6">
+                android:orientation="horizontal" />
 
-                <Button
-                    android:id="@+id/btnWin"
-                    style="@style/GameMenuButtonStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="2dp"
-                    android:layout_weight="1"
-                    android:drawableStart="@drawable/ic_btn_win"
-                    android:text="WIN" />
-
-                <Button
-                    android:id="@+id/btnEsc"
-                    style="@style/GameMenuButtonStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="2dp"
-                    android:layout_marginEnd="2dp"
-                    android:layout_weight="1"
-                    android:drawableStart="@drawable/ic_btn_esc"
-                    android:text="ESC" />
-
-                <Button
-                    android:id="@+id/btnHDR"
-                    style="@style/GameMenuButtonStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="2dp"
-                    android:layout_marginEnd="2dp"
-                    android:layout_weight="1"
-                    android:drawableStart="@drawable/ic_btn_hdr"
-                    android:text="HDR" />
-
-                <Button
-                    android:id="@+id/btnMic"
-                    style="@style/GameMenuButtonStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="2dp"
-                    android:layout_marginEnd="2dp"
-                    android:layout_weight="1"
-                    android:drawableStart="@drawable/ic_mic_gm"
-                    android:text="Mic" />
-
-                <Button
-                    android:id="@+id/btnSleep"
-                    style="@style/GameMenuButtonStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="2dp"
-                    android:layout_marginEnd="2dp"
-                    android:layout_weight="1"
-                    android:drawableStart="@drawable/ic_btn_sleep"
-                    android:text="睡眠" />
-
-                <Button
-                    android:id="@+id/btnQuit"
-                    style="@style/GameMenuButtonStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="2dp"
-                    android:layout_marginEnd="2dp"
-                    android:layout_weight="1"
-                    android:drawableStart="@drawable/ic_btn_quit"
-                    android:text="退出" />
-            </LinearLayout>
-
-        </LinearLayout>
+        </HorizontalScrollView>
 
         <!-- 菜单列表区域 -->
         <LinearLayout

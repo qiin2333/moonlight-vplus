@@ -1145,4 +1145,18 @@
     <string name="toast_external_display_disconnected">External display disconnected, switching to main screen</string>
     <string name="toast_switched_to_external_display">Streaming switched to external display. If landscape is not shown correctly, try rotating on host.</string>
 
+    <!-- Quick button labels -->
+    <string name="quick_btn_mic">Mic</string>
+    <string name="quick_btn_sleep">Sleep</string>
+    <string name="quick_btn_quit">Quit</string>
+    <string name="quick_btn_keyboard">KB</string>
+    <string name="quick_btn_controller">Pad</string>
+    <string name="quick_btn_perf">Perf</string>
+    <string name="game_menu_customize_quick_buttons">Customize Quick Buttons</string>
+    <string name="quick_btn_max_reached">Maximum 6 quick buttons allowed</string>
+
+    <!-- Quick button editor -->
+    <string name="quick_button_editor_title">Quick Buttons</string>
+    <string name="quick_button_reset_default">Reset</string>
+
 </resources>

@@ -1092,4 +1092,18 @@
     <string name="toast_external_display_disconnected">外接显示器已断开，切换到主屏幕</string>
     <string name="toast_switched_to_external_display">串流已切换到外接显示器, 若某些外接设备不能正常横屏显示，请翻滚主机。</string>
 
+    <!-- Quick button labels -->
+    <string name="quick_btn_mic">麦克风</string>
+    <string name="quick_btn_sleep">睡眠</string>
+    <string name="quick_btn_quit">退出</string>
+    <string name="quick_btn_keyboard">键盘</string>
+    <string name="quick_btn_controller">手柄</string>
+    <string name="quick_btn_perf">性能</string>
+    <string name="game_menu_customize_quick_buttons">自定义快捷按钮</string>
+    <string name="quick_btn_max_reached">最多只能添加 6 个快捷按钮</string>
+
+    <!-- Quick button editor -->
+    <string name="quick_button_editor_title">快捷按钮配置</string>
+    <string name="quick_button_reset_default">恢复默认</string>
+
 </resources>
