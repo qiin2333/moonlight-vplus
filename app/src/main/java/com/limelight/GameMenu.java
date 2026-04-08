@@ -235,7 +235,7 @@ public class GameMenu {
             game.disconnect();
             conn.doStopAndQuit();
         } catch (IOException | XmlPullParserException e) {
-            Toast.makeText(game, "断开连接时发生错误: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(game, game.getString(R.string.toast_disconnect_error, e.getMessage()), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -356,13 +356,13 @@ public class GameMenu {
         touchModeOptionsList.add(
                 new MenuOption(
                         getString(R.string.game_menu_touch_mode_trackpad) + " - " +
-                                (game.prefConfig.enableDoubleClickDrag ? "关闭双击按住" : "开启双击按住"),
+                                (game.prefConfig.enableDoubleClickDrag ? getString(R.string.game_menu_disable_double_click_drag) : getString(R.string.game_menu_enable_double_click_drag)),
                         false,
                         () -> {
                             game.prefConfig.enableDoubleClickDrag = !game.prefConfig.enableDoubleClickDrag;
                             // 不保存到持久化存储，只在当前会话中生效
                             Toast.makeText(game,
-                                    game.prefConfig.enableDoubleClickDrag ? "已开启双击按住功能" : "已关闭双击按住功能",
+                                    game.prefConfig.enableDoubleClickDrag ? getString(R.string.toast_double_click_drag_enabled) : getString(R.string.toast_double_click_drag_disabled),
                                     Toast.LENGTH_SHORT).show();
                         },
                         null,
@@ -374,13 +374,13 @@ public class GameMenu {
             touchModeOptionsList.add(
                     new MenuOption(
                             getString(R.string.game_menu_local_cursor_rendering) + " - " +
-                                    (game.prefConfig.enableLocalCursorRendering ? "开启" : "关闭"),
+                                    (game.prefConfig.enableLocalCursorRendering ? getString(R.string.game_menu_on) : getString(R.string.game_menu_off)),
                             false,
                             () -> {
                                 game.prefConfig.enableLocalCursorRendering = !game.prefConfig.enableLocalCursorRendering;
                                 game.refreshLocalCursorState(game.prefConfig.enableLocalCursorRendering);
                                 String message = game.prefConfig.enableLocalCursorRendering ? 
-                                    "本地光标渲染已开启" : "本地光标渲染已关闭";
+                                    getString(R.string.toast_local_cursor_enabled) : getString(R.string.toast_local_cursor_disabled);
                                 Toast.makeText(game, message, Toast.LENGTH_SHORT).show();
                             },
                             null,
@@ -553,7 +553,7 @@ public class GameMenu {
 
         // 检查 王冠功能是否开启，如果没有开启则不显示任何选项
         if (!game.isCrownFeatureEnabled()) {
-            Toast.makeText(game, "王冠功能未启用", Toast.LENGTH_SHORT).show();
+            Toast.makeText(game, getString(R.string.toast_crown_not_enabled), Toast.LENGTH_SHORT).show();
             return;
         }
         MenuOption[] crownFunctionOptions = {
@@ -566,11 +566,11 @@ public class GameMenu {
                         true
                 ),
                 new MenuOption(
-                        "开启/关闭触控",
+                        getString(R.string.game_menu_toggle_touch),
                         false,
                         () -> {
                             controllerManager.getTouchController().enableTouch(mouse_enable_switch);
-                            Toast.makeText(game, mouse_enable_switch ? "触控已开启" : "触控已关闭", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(game, mouse_enable_switch ? getString(R.string.toast_touch_enabled) : getString(R.string.toast_touch_disabled), Toast.LENGTH_SHORT).show();
                             mouse_enable_switch = !mouse_enable_switch;
                         },
                         "crown_function_menu",
@@ -625,7 +625,7 @@ public class GameMenu {
         try {
             com.limelight.binding.input.ControllerHandler ch = game.getControllerHandler();
             if (ch == null) {
-                Toast.makeText(game, "无法访问控制器", Toast.LENGTH_SHORT).show();
+                Toast.makeText(game, getString(R.string.toast_cannot_access_controller), Toast.LENGTH_SHORT).show();
                 return;
             }
 
@@ -643,9 +643,9 @@ public class GameMenu {
                 } catch (Exception ignored) {}
             }, 1000);
 
-            Toast.makeText(game, "已发送本地震动测试", Toast.LENGTH_SHORT).show();
+            Toast.makeText(game, getString(R.string.toast_vibration_test_sent), Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
-            Toast.makeText(game, "震动测试失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(game, game.getString(R.string.toast_vibration_test_failed, e.getMessage()), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -754,7 +754,7 @@ public class GameMenu {
     private void adjustBitrate(int bitrateKbps) {
         try {
             // 显示正在调整的提示
-            Toast.makeText(game, "正在调整码率...", Toast.LENGTH_SHORT).show();
+            Toast.makeText(game, getString(R.string.toast_adjusting_bitrate), Toast.LENGTH_SHORT).show();
             
             // 调用码率调整，使用回调等待API真正返回结果
             conn.setBitrate(bitrateKbps, new NvConnection.BitrateAdjustmentCallback() {
@@ -884,9 +884,9 @@ public class GameMenu {
 
     private void showCardEditorDialog() {
         final String[] items = new String[] {
-                "码率调整 Bitrate",
-                "体感助手 Gyro",
-                "特殊按键 Shortcuts"
+                getString(R.string.game_menu_tab_bitrate),
+                getString(R.string.game_menu_tab_gyro),
+                getString(R.string.game_menu_tab_shortcuts)
         };
 
         // 获取当前状态
@@ -897,7 +897,7 @@ public class GameMenu {
         };
 
         new AlertDialog.Builder(game, R.style.AppDialogStyle)
-                .setTitle("卡片配置 Visible cards")
+                .setTitle(getString(R.string.game_menu_card_config_title))
                 .setMultiChoiceItems(items, checked, (d, which, isChecked) -> checked[which] = isChecked)
                 .setPositiveButton("OK", (d, w) -> {
                     game.prefConfig.showBitrateCard = checked[0];
@@ -1175,7 +1175,7 @@ public class GameMenu {
             }
             micButton.setOnClickListener(v -> {
                 // 显示提示信息
-                Toast.makeText(game, "请在设置中开启麦克风重定向", Toast.LENGTH_SHORT).show();
+                Toast.makeText(game, getString(R.string.toast_enable_mic_redirect), Toast.LENGTH_SHORT).show();
             });
         }
 
@@ -1762,10 +1762,10 @@ public class GameMenu {
                 true, true));
 
         normalOptions.add(new MenuOption(
-                game.getisTouchOverrideEnabled()?"关闭平移/缩放":"开启平移/缩放",
+                game.getisTouchOverrideEnabled()?getString(R.string.game_menu_disable_pan_zoom):getString(R.string.game_menu_enable_pan_zoom),
                 false,
                 () -> {
-                    Toast.makeText(game, game.getisTouchOverrideEnabled()?"已关闭平移/缩放":"已开启平移/缩放", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(game, game.getisTouchOverrideEnabled()?getString(R.string.toast_pan_zoom_disabled):getString(R.string.toast_pan_zoom_enabled), Toast.LENGTH_SHORT).show();
                     game.setisTouchOverrideEnabled(!game.getisTouchOverrideEnabled());
                 },
                 "game_menu_mouse_emulation",
@@ -1895,7 +1895,7 @@ public class GameMenu {
                     try {
                         conn.sendSuperCmd(cmd.get("id").getAsString());
                     } catch (IOException | XmlPullParserException e) {
-                        Toast.makeText(game, "发送超级命令时发生错误: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(game, game.getString(R.string.toast_super_command_error, e.getMessage()), Toast.LENGTH_SHORT).show();
                     }
                 }, null, false)); // 超级指令菜单不显示图标
             }

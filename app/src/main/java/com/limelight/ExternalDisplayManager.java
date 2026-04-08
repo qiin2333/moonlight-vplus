@@ -182,7 +182,7 @@ public class ExternalDisplayManager {
                         if (surfaceView != null) {
                             surfaceView.setVisibility(View.VISIBLE);
                         }
-                        Toast.makeText(activity, "外接显示器已断开，切换到主屏幕", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(activity, activity.getString(R.string.toast_external_display_disconnected), Toast.LENGTH_SHORT).show();
                         
                         if (callback != null) {
                             callback.onExternalDisplayDisconnected();
@@ -376,6 +376,6 @@ public class ExternalDisplayManager {
             updateBatteryTask.run();
         }
 
-        Toast.makeText(activity, "串流已切换到外接显示器, 若某些外接设备不能正常横屏显示，请翻滚主机。", Toast.LENGTH_LONG).show();
+        Toast.makeText(activity, activity.getString(R.string.toast_switched_to_external_display), Toast.LENGTH_LONG).show();
     }
 }

@@ -118,7 +118,7 @@ public class UpdateManager {
 			startDirectDownload(context, info);
 		} else if (pendingUpdateInfo != null) {
 			pendingUpdateInfo = null;
-			Toast.makeText(context, "未获得安装权限，下载已取消", Toast.LENGTH_SHORT).show();
+			Toast.makeText(context, context.getString(R.string.toast_install_permission_denied), Toast.LENGTH_SHORT).show();
 		}
 	}
 
@@ -259,7 +259,7 @@ public class UpdateManager {
 
 			if (updateInfo == null) {
 				if (showToast) {
-					Toast.makeText(context, "检查更新失败，请稍后重试", Toast.LENGTH_SHORT).show();
+					Toast.makeText(context, context.getString(R.string.toast_check_update_failed), Toast.LENGTH_SHORT).show();
 				}
 				return;
 			}
@@ -279,14 +279,14 @@ public class UpdateManager {
 
 	private static void showLatestVersionDialog(Context context, String currentVersion, String releaseNotes) {
 		if (!(context instanceof Activity)) {
-			Toast.makeText(context, "已是最新版本 v" + currentVersion, Toast.LENGTH_SHORT).show();
+			Toast.makeText(context, context.getString(R.string.toast_already_latest_version, currentVersion), Toast.LENGTH_SHORT).show();
 			return;
 		}
 
 		Activity activity = (Activity) context;
 		activity.runOnUiThread(() -> {
 			AlertDialog.Builder builder = new AlertDialog.Builder(activity, R.style.AppDialogStyle);
-			builder.setTitle("已是最新版本");
+			builder.setTitle(context.getString(R.string.update_already_latest_title));
 
 			View view = LayoutInflater.from(activity).inflate(R.layout.dialog_update, null);
 
@@ -302,7 +302,7 @@ public class UpdateManager {
 			}
 
 			builder.setView(view);
-			builder.setPositiveButton("知道了", null);
+			builder.setPositiveButton(context.getString(R.string.update_btn_got_it), null);
 			builder.setCancelable(true);
 			builder.show();
 		});
@@ -336,21 +336,21 @@ public class UpdateManager {
 			}
 
 			AlertDialog.Builder builder = new AlertDialog.Builder(activity, R.style.AppDialogStyle);
-			builder.setTitle("发现新版本");
+			builder.setTitle(context.getString(R.string.update_new_version_title));
 			builder.setView(view);
 
-			builder.setPositiveButton("浏览器下载", (dialog, which) -> {
+			builder.setPositiveButton(context.getString(R.string.update_btn_browser_download), (dialog, which) -> {
 				Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(GITHUB_RELEASE_PAGE));
 				context.startActivity(intent);
 			});
 
 			if (updateInfo.apkDownloadUrl != null) {
-				builder.setNeutralButton("直接下载", (dialog, which) -> {
+				builder.setNeutralButton(context.getString(R.string.update_btn_direct_download), (dialog, which) -> {
 					if (!canInstallApk(context)) {
 						if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 							showInstallPermissionDialog(context, updateInfo);
 						} else {
-							Toast.makeText(context, "无法获得安装权限", Toast.LENGTH_SHORT).show();
+							Toast.makeText(context, context.getString(R.string.toast_cannot_get_install_permission), Toast.LENGTH_SHORT).show();
 						}
 					} else {
 						startDirectDownload(context, updateInfo);
@@ -358,7 +358,7 @@ public class UpdateManager {
 				});
 			}
 
-			builder.setNegativeButton("稍后", null);
+			builder.setNegativeButton(context.getString(R.string.update_btn_later), null);
 			builder.setCancelable(true);
 			builder.show();
 		});
@@ -381,14 +381,14 @@ public class UpdateManager {
 		pendingUpdateInfo = info;
 
 		if (!(context instanceof Activity)) {
-			Toast.makeText(context, "需要安装权限才能自动安装更新", Toast.LENGTH_LONG).show();
+			Toast.makeText(context, context.getString(R.string.toast_need_install_permission), Toast.LENGTH_LONG).show();
 			return;
 		}
 
 		Activity activity = (Activity) context;
 		AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-		builder.setTitle("需要安装权限");
-		builder.setMessage("为了自动安装更新，需要授予应用安装权限。\n\n点击确定前往设置页面开启权限，返回后将自动开始下载。");
+		builder.setTitle(context.getString(R.string.update_install_permission_title));
+		builder.setMessage(context.getString(R.string.update_install_permission_msg));
 		builder.setPositiveButton(android.R.string.ok, (dialog, which) -> {
 			try {
 				Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
@@ -400,7 +400,7 @@ public class UpdateManager {
 					activity.startActivityForResult(intent, INSTALL_PERMISSION_REQUEST_CODE);
 				} catch (Exception e2) {
 					pendingUpdateInfo = null;
-					Toast.makeText(context, "无法打开设置页面", Toast.LENGTH_SHORT).show();
+					Toast.makeText(context, context.getString(R.string.toast_cannot_open_settings), Toast.LENGTH_SHORT).show();
 				}
 			}
 		});
@@ -430,12 +430,12 @@ public class UpdateManager {
 
 			DownloadManager dm = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
 			if (dm == null) {
-				Toast.makeText(context, "系统下载服务不可用", Toast.LENGTH_SHORT).show();
+				Toast.makeText(context, context.getString(R.string.toast_download_service_unavailable), Toast.LENGTH_SHORT).show();
 				return;
 			}
 
 			DownloadManager.Request req = new DownloadManager.Request(Uri.parse(primaryUrl));
-			req.setTitle("Moonlight V+ 更新下载");
+			req.setTitle(context.getString(R.string.update_download_notification_title));
 			req.setDescription(fileName);
 			req.setMimeType("application/vnd.android.package-archive");
 			req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
@@ -464,11 +464,11 @@ public class UpdateManager {
 			if (context instanceof Activity) {
 				showDownloadProgressDialog((Activity) context, downloadId, dm, candidates, fileName);
 			} else {
-				Toast.makeText(context, "已开始下载，下载完成后点击通知栏即可安装", Toast.LENGTH_LONG).show();
+				Toast.makeText(context, context.getString(R.string.toast_download_started), Toast.LENGTH_LONG).show();
 			}
 		} catch (Exception e) {
 			Log.e(TAG, "下载失败", e);
-			Toast.makeText(context, "下载失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+			Toast.makeText(context, context.getString(R.string.toast_download_failed, e.getMessage()), Toast.LENGTH_LONG).show();
 		}
 	}
 
@@ -485,10 +485,10 @@ public class UpdateManager {
 		TextView progressText = view.findViewById(R.id.download_progress_text);
 
 		AlertDialog dialog = new AlertDialog.Builder(activity, R.style.AppDialogStyle)
-				.setTitle("正在下载更新")
+				.setTitle(activity.getString(R.string.update_downloading_title))
 				.setView(view)
-				.setNegativeButton("后台下载", (d, w) -> {
-					Toast.makeText(activity, "下载将在后台继续，完成后会通知您", Toast.LENGTH_SHORT).show();
+				.setNegativeButton(activity.getString(R.string.update_btn_background), (d, w) -> {
+					Toast.makeText(activity, activity.getString(R.string.toast_download_continue_bg), Toast.LENGTH_SHORT).show();
 				})
 				.setCancelable(false)
 				.create();
@@ -545,25 +545,25 @@ public class UpdateManager {
 							} else {
 								progressBar.setIndeterminate(true);
 								String downloadedMB = String.format("%.1f", bytesDownloaded / 1048576.0);
-								progressText.setText("已下载 " + downloadedMB + " MB");
+								progressText.setText(activity.getString(R.string.update_progress_downloaded, downloadedMB));
 							}
 							progressHandler.postDelayed(this, PROGRESS_POLL_INTERVAL_MS);
 							break;
 
 						case DownloadManager.STATUS_PENDING:
 							progressBar.setIndeterminate(true);
-							progressText.setText("等待下载...");
+							progressText.setText(activity.getString(R.string.update_progress_waiting));
 							progressHandler.postDelayed(this, PROGRESS_POLL_INTERVAL_MS);
 							break;
 
 						case DownloadManager.STATUS_PAUSED:
-							progressText.setText("下载已暂停");
+							progressText.setText(activity.getString(R.string.update_progress_paused));
 							progressHandler.postDelayed(this, 1000);
 							break;
 
 						case DownloadManager.STATUS_SUCCESSFUL:
 							progressBar.setProgress(100);
-							progressText.setText("下载完成，正在准备安装...");
+							progressText.setText(activity.getString(R.string.update_progress_installing));
 							dismissProgressDialog();
 							// 触发安装
 							onDownloadComplete(activity, currentDownloadId[0]);
@@ -579,11 +579,11 @@ public class UpdateManager {
 								dm.remove(currentDownloadId[0]);
 								String nextUrl = candidates.get(currentCandidateIndex[0]);
 								Log.d(TAG, "尝试备用下载链接: " + nextUrl);
-								progressText.setText("正在切换下载源...");
+								progressText.setText(activity.getString(R.string.update_progress_switching_source));
 
 								try {
 									DownloadManager.Request retryReq = new DownloadManager.Request(Uri.parse(nextUrl));
-									retryReq.setTitle("Moonlight V+ 更新下载");
+									retryReq.setTitle(activity.getString(R.string.update_download_notification_title));
 									retryReq.setDescription(fileName);
 									retryReq.setMimeType("application/vnd.android.package-archive");
 									retryReq.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
@@ -609,11 +609,11 @@ public class UpdateManager {
 								} catch (Exception e) {
 									Log.e(TAG, "备用下载也失败", e);
 									dismissProgressDialog();
-									Toast.makeText(activity, "所有下载源均失败，请稍后重试", Toast.LENGTH_LONG).show();
+									Toast.makeText(activity, activity.getString(R.string.toast_all_sources_failed), Toast.LENGTH_LONG).show();
 								}
 							} else {
 								dismissProgressDialog();
-								Toast.makeText(activity, "下载失败，请稍后重试或使用浏览器下载", Toast.LENGTH_LONG).show();
+								Toast.makeText(activity, activity.getString(R.string.toast_download_failed_try_browser), Toast.LENGTH_LONG).show();
 							}
 							break;
 					}
@@ -649,7 +649,7 @@ public class UpdateManager {
 			Uri downloadedUri = dm.getUriForDownloadedFile(downloadId);
 			if (downloadedUri == null) {
 				Log.w(TAG, "无法获取下载文件 URI");
-				Toast.makeText(context, "无法获取下载文件，请在下载目录中手动安装", Toast.LENGTH_LONG).show();
+				Toast.makeText(context, context.getString(R.string.toast_cannot_get_download_file), Toast.LENGTH_LONG).show();
 				return;
 			}
 
@@ -670,7 +670,7 @@ public class UpdateManager {
 			Log.d(TAG, "已启动安装界面");
 		} catch (Exception e) {
 			Log.e(TAG, "启动安装失败", e);
-			Toast.makeText(context, "启动安装失败，请在下载目录中手动安装", Toast.LENGTH_LONG).show();
+			Toast.makeText(context, context.getString(R.string.toast_install_launch_failed), Toast.LENGTH_LONG).show();
 		}
 	}
 

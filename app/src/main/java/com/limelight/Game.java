@@ -1506,7 +1506,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 StreamNotificationService.start(this, pcName, appName);
             } else {
                 // Permission denied, show a toast message
-                Toast.makeText(this, "没有通知权限，后台串流可能会中断", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, getString(R.string.toast_no_notification_permission), Toast.LENGTH_LONG).show();
             }
         }
     }
@@ -2540,7 +2540,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     if (keyName.startsWith("KEYCODE_")) {
                         keyName = keyName.substring("KEYCODE_".length());
                     }
-                    Toast.makeText(this, "再次按 " + keyName + " 键打开串流菜单", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, getString(R.string.toast_press_again_to_open_menu, keyName), Toast.LENGTH_SHORT).show();
                     lastEscPressTime = currentTime;
                     hasShownEscHint = true;
                 }
@@ -4807,15 +4807,15 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
             if (controllerManager != null && !performanceInfoDisplays.isEmpty()) {
                 Map<String, String> perfAttrs = new HashMap<>();
-                perfAttrs.put("解码器", performanceInfo.decoder);
-                perfAttrs.put("分辨率", performanceInfo.initialWidth + "x" + performanceInfo.initialHeight);
-                perfAttrs.put("帧率", String.format("%.0f", performanceInfo.totalFps));
-                perfAttrs.put("丢帧率", String.format("%.1f", performanceInfo.lostFrameRate));
-                perfAttrs.put("网络延时", String.format("%d", (int) (performanceInfo.rttInfo >> 32)));
-                perfAttrs.put("主机延时", String.format("%.2f", performanceInfo.aveHostProcessingLatency));
-                perfAttrs.put("解码时间", String.format("%.2f", performanceInfo.decodeTimeMs));
-                perfAttrs.put("带宽", performanceInfo.bandWidth);
-                perfAttrs.put("渲染延迟", String.format("%.2f", performanceInfo.renderingLatencyMs));
+                perfAttrs.put(getString(R.string.perf_decoder), performanceInfo.decoder);
+                perfAttrs.put(getString(R.string.perf_resolution), performanceInfo.initialWidth + "x" + performanceInfo.initialHeight);
+                perfAttrs.put(getString(R.string.perf_fps), String.format("%.0f", performanceInfo.totalFps));
+                perfAttrs.put(getString(R.string.perf_frame_loss), String.format("%.1f", performanceInfo.lostFrameRate));
+                perfAttrs.put(getString(R.string.perf_network_rtt), String.format("%d", (int) (performanceInfo.rttInfo >> 32)));
+                perfAttrs.put(getString(R.string.perf_host_latency), String.format("%.2f", performanceInfo.aveHostProcessingLatency));
+                perfAttrs.put(getString(R.string.perf_decode_time), String.format("%.2f", performanceInfo.decodeTimeMs));
+                perfAttrs.put(getString(R.string.perf_bandwidth), performanceInfo.bandWidth);
+                perfAttrs.put(getString(R.string.perf_render_latency), String.format("%.2f", performanceInfo.renderingLatencyMs));
                 for (PerformanceInfoDisplay performanceInfoDisplay : performanceInfoDisplays) {
                     performanceInfoDisplay.display(perfAttrs);
                 }
@@ -4937,10 +4937,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         if (micButton != null) {
             if (micButton.getVisibility() == View.VISIBLE) {
                 micButton.setVisibility(View.GONE);
-                Toast.makeText(this, "麦克风按钮已隐藏", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, getString(R.string.toast_mic_button_hidden), Toast.LENGTH_SHORT).show();
             } else {
                 micButton.setVisibility(View.VISIBLE);
-                Toast.makeText(this, "麦克风按钮已显示", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, getString(R.string.toast_mic_button_shown), Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -4955,13 +4955,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
             if (isVisible) {
                 virtualController.hide();
-                Toast.makeText(this, "虚拟手柄已隐藏", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, getString(R.string.toast_virtual_controller_hidden), Toast.LENGTH_SHORT).show();
             } else {
                 virtualController.show();
-                Toast.makeText(this, "虚拟手柄已显示", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, getString(R.string.toast_virtual_controller_shown), Toast.LENGTH_SHORT).show();
             }
         } else {
-            Toast.makeText(this, "虚拟手柄未启用", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.toast_virtual_controller_not_enabled), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -5078,7 +5078,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private void checkNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
-                Toast.makeText(this, "请在设置中开启通知权限，以便在后台时保持串流连接", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, getString(R.string.toast_enable_notification_for_bg), Toast.LENGTH_LONG).show();
             }
         }
     }

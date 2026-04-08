@@ -20,6 +20,8 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+
+import com.limelight.R;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.graphics.Canvas;
@@ -135,11 +137,11 @@ public class ColorPickerDialog extends Dialog {
         buttonLayout.setPadding(0, dpToPx(16), 0, 0);
 
         Button cancelButton = new Button(getContext());
-        cancelButton.setText("取消");
+        cancelButton.setText(R.string.game_menu_cancel);
         cancelButton.setOnClickListener(v -> dismiss());
 
         Button okButton = new Button(getContext());
-        okButton.setText("确定");
+        okButton.setText(R.string.game_menu_ok);
         okButton.setOnClickListener(v -> {
             if (listener != null) {
                 listener.onColorSelected(getColor());
