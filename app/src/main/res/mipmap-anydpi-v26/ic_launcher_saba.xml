@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+    <background>
+        <aapt:attr name="android:drawable">
+            <color android:color="#FFFFFF" />
+        </aapt:attr>
+    </background>
+    <foreground>
+        <aapt:attr name="android:drawable">
+            <inset
+                android:drawable="@drawable/saba"
+                android:inset="18%" />
+        </aapt:attr>
+    </foreground>
+    <monochrome>
+        <aapt:attr name="android:drawable">
+            <inset
+                android:drawable="@drawable/saba_monochrome"
+                android:inset="18%" />
+        </aapt:attr>
+    </monochrome>
+</adaptive-icon>
