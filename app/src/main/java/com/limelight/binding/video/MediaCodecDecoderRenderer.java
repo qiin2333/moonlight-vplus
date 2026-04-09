@@ -1165,6 +1165,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer {
                     videoDecoder.releaseOutputBuffer(bufferIndex, System.nanoTime());
                 }
                 activeWindowVideoStats.totalFramesRendered++;
+                frameIntervalTracker.recordFrame();
             } catch (IllegalStateException e) {
                 handleDecoderException(e);
             }
@@ -1288,6 +1289,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer {
                                 }
 
                                 activeWindowVideoStats.totalFramesRendered++;
+                                frameIntervalTracker.recordFrame();
                             } else {
                                 // Buffered modes: deliver to frame pacing controller
                                 framePacingController.offerOutputBuffer(lastIndex);
