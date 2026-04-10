@@ -107,6 +107,8 @@ internal class FramePacingController(
                 videoDecoder?.releaseOutputBuffer(outputBufferQueue.take(), false)
             } catch (_: InterruptedException) {
                 return
+            } catch (_: IllegalStateException) {
+                // Buffer index may be stale after codec recovery
             }
         }
         outputBufferQueue.add(bufferIndex)

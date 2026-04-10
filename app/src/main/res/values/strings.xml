@@ -779,7 +779,7 @@
 
     <!-- Output Buffer Queue Limit -->
     <string name="title_seekbar_output_buffer_queue_limit">Output Buffer Queue Limit</string>
-    <string name="summary_seekbar_output_buffer_queue_limit">Controls the maximum number of decoded frames that can be queued before rendering. Lower values reduce latency but may cause frame drops. Higher values improve smoothness but increase latency. Default: 2</string>
+    <string name="summary_seekbar_output_buffer_queue_limit">Controls the maximum number of decoded frames that can be queued before rendering. Lower values reduce latency but may cause frame drops. Higher values improve smoothness but increase latency. ⚠️ Setting to 1 may cause crashes on some devices. Default: 2</string>
     <string name="suffix_seekbar_output_buffer_queue_limit">frames</string>
     <string name="unpaired_devices_shown">Unpaired devices shown</string>
     <string name="unpaired_devices_hidden">Unpaired devices hidden</string>

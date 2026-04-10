@@ -699,7 +699,7 @@
 
     <!-- 输出缓冲区队列大小 -->
     <string name="title_seekbar_output_buffer_queue_limit">输出缓冲区队列大小</string>
-    <string name="summary_seekbar_output_buffer_queue_limit">控制渲染前可排队的解码帧数上限。较小值可降低延迟但可能导致丢帧，较大值可提升流畅度但会增加延迟。默认值：2</string>
+    <string name="summary_seekbar_output_buffer_queue_limit">控制渲染前可排队的解码帧数上限。较小值可降低延迟但可能导致丢帧，较大值可提升流畅度但会增加延迟。⚠️ 设为1帧可能在部分设备上导致崩溃。默认值：2</string>
     <string name="suffix_seekbar_output_buffer_queue_limit">帧</string>
 
     <!-- 屏幕组合模式 -->
