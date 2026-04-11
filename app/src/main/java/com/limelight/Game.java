@@ -52,11 +52,9 @@ import com.limelight.utils.AppSettingsManager;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.PictureInPictureParams;
-import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
@@ -71,7 +69,6 @@ import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
 import androidx.preference.PreferenceManager;
@@ -364,42 +361,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         this.isTouchOverrideEnabled = isTouchOverrideEnabled;
     }
 
-    private boolean connectedToUsbDriverService = false;
-    private UsbDriverService.UsbDriverBinder usbDriverBinder;
-    private final ServiceConnection usbDriverServiceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            UsbDriverService.UsbDriverBinder binder = (UsbDriverService.UsbDriverBinder) iBinder;
-            usbDriverBinder = binder;
-            binder.setListener(controllerHandler);
-            binder.setStateListener(Game.this);
-            binder.start();
-            connectedToUsbDriverService = true;
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-            connectedToUsbDriverService = false;
-            usbDriverBinder = null;
-        }
-    };
-
-    private void stopAndUnbindUsbDriverService() {
-        if (connectedToUsbDriverService) {
-            if (usbDriverBinder != null) {
-                try {
-                    usbDriverBinder.stop();
-                } catch (Exception ignored) {
-                }
-            }
-            try {
-                unbindService(usbDriverServiceConnection);
-            } catch (Exception ignored) {
-            }
-            connectedToUsbDriverService = false;
-            usbDriverBinder = null;
-        }
-    }
+    private UsbDriverServiceManager usbDriverServiceManager;
 
     // 性能覆盖层的各项视图由 PerformanceOverlayManager 管理
 
@@ -798,8 +760,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         if (prefConfig.usbDriver) {
             // Start the USB driver
-            bindService(new Intent(this, UsbDriverService.class),
-                    usbDriverServiceConnection, Service.BIND_AUTO_CREATE);
+            usbDriverServiceManager = new UsbDriverServiceManager(this, this);
+            usbDriverServiceManager.setControllerHandler(controllerHandler);
+            usbDriverServiceManager.bind();
         }
 
         if (!decoderRenderer.isAvcSupported()) {
@@ -1257,16 +1220,14 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         //  重新绑定 USB 驱动服务
         // 因为 stopConnection 时解绑了，这里必须重新 bind，而不是直接 setListener
         if (prefConfig.usbDriver) {
-            // 如果旧的连接还没断开（理论上 stopConnection 已断开），先断开以防万一
-            stopAndUnbindUsbDriverService();
-
-            // 重新绑定服务
-            bindService(new Intent(this, UsbDriverService.class),
-                    usbDriverServiceConnection, Service.BIND_AUTO_CREATE);
-        }
-
-        if (connectedToUsbDriverService && usbDriverBinder != null) {
-            usbDriverBinder.setListener(controllerHandler);
+            if (usbDriverServiceManager != null) {
+                usbDriverServiceManager.stopAndUnbind();
+            }
+            usbDriverServiceManager = new UsbDriverServiceManager(this, this);
+            usbDriverServiceManager.setControllerHandler(controllerHandler);
+            usbDriverServiceManager.bind();
+        } else if (usbDriverServiceManager != null) {
+            usbDriverServiceManager.refreshListener();
         }
 
         // 重新初始化触控
@@ -1804,7 +1765,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             highPerfWifiLock.release();
         }
 
-        stopAndUnbindUsbDriverService();
+        if (usbDriverServiceManager != null) {
+            usbDriverServiceManager.stopAndUnbind();
+        }
 
         // Destroy the capture provider
         inputCaptureProvider.destroy();
@@ -3813,7 +3776,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             }
 
             // 停止并释放 USB 控制器接管
-            stopAndUnbindUsbDriverService();
+            if (usbDriverServiceManager != null) {
+                usbDriverServiceManager.stopAndUnbind();
+            }
 
             // 停止麦克风流
             if (microphoneManager != null) {
