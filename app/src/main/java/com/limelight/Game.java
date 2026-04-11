@@ -217,10 +217,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private long lastEscPressTime = 0;
     private boolean hasShownEscHint = false;
 
-    private boolean isHidingOverlays;
-    private androidx.cardview.widget.CardView notificationOverlayView;
-    private TextView notificationTextView;
-    private int requestedNotificationOverlayVisibility = View.GONE;
+    private NotificationOverlayManager notificationOverlayManager;
 
     // 性能覆盖层管理器
     private PerformanceOverlayManager performanceOverlayManager;
@@ -541,8 +538,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             );
         }
 
-        notificationOverlayView = findViewById(R.id.notificationOverlay);
-        notificationTextView = findViewById(R.id.notificationText);
+        notificationOverlayManager = new NotificationOverlayManager(
+                findViewById(R.id.notificationOverlay),
+                findViewById(R.id.notificationText),
+                () -> prefConfig.bitrate
+        );
 
         micButton = findViewById(R.id.micButton);
 
@@ -1153,12 +1153,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             }
 
             // 清理可能残留的网络质量提示
-            if (notificationOverlayView != null) {
-                notificationOverlayView.setVisibility(View.GONE);
-            }
+            notificationOverlayManager.reset();
         });
-        // 重置状态变量
-        requestedNotificationOverlayVisibility = View.GONE;
 
         // 重置旋转状态，以便重新检测初始方向
         orientationManager.reset();
@@ -1450,7 +1446,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // Hide on-screen overlays in PiP mode
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (isInPictureInPictureMode()) {
-                isHidingOverlays = true;
 
                 if (virtualController != null) {
                     virtualController.hide();
@@ -1459,7 +1454,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 if (performanceOverlayManager != null) {
                     performanceOverlayManager.hideOverlayImmediate();
                 }
-                notificationOverlayView.setVisibility(View.GONE);
+                notificationOverlayManager.setHiding(true);
 
                 // 隐藏麦克风按钮
                 if (microphoneManager != null) {
@@ -1474,7 +1469,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 // Update GameManager state to indicate we're in PiP (still gaming, but interruptible)
                 UiHelper.notifyStreamEnteringPiP(this);
             } else {
-                isHidingOverlays = false;
 
                 // Restore overlays to previous state when leaving PiP
 
@@ -1485,11 +1479,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 if (performanceOverlayManager != null) {
                     performanceOverlayManager.applyRequestedVisibility();
                 }
-                if (requestedNotificationOverlayVisibility == View.VISIBLE) {
-                    notificationOverlayView.setVisibility(View.VISIBLE);
-                } else {
-                    notificationOverlayView.setVisibility(View.GONE);
-                }
+                notificationOverlayManager.setHiding(false);
+                notificationOverlayManager.applyVisibility();
 
                 // 恢复麦克风按钮
                 if (microphoneManager != null) {
@@ -3939,19 +3930,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     message = getResources().getString(R.string.poor_connection_msg);
                 }
 
-                updateNotificationOverlay(connectionStatus, message);
-                requestedNotificationOverlayVisibility = View.VISIBLE;
+                notificationOverlayManager.update(connectionStatus, message);
+                notificationOverlayManager.setRequestedVisible(true);
             } else if (connectionStatus == MoonBridge.CONN_STATUS_OKAY) {
-                requestedNotificationOverlayVisibility = View.GONE;
+                notificationOverlayManager.setRequestedVisible(false);
             }
 
-            if (!isHidingOverlays) {
-                if (requestedNotificationOverlayVisibility == View.VISIBLE) {
-                    notificationOverlayView.setVisibility(View.VISIBLE);
-                } else {
-                    notificationOverlayView.setVisibility(View.GONE);
-                }
-            }
+            notificationOverlayManager.applyVisibility();
         });
     }
 
@@ -4866,33 +4851,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 Toast.makeText(this, getString(R.string.app_last_settings_start_with_last), Toast.LENGTH_SHORT).show();
             }
         }
-    }
-
-    private void updateNotificationOverlay(int connectionStatus, String message) {
-        if (notificationOverlayView == null || notificationTextView == null) {
-            return;
-        }
-
-        // Set the text
-        notificationTextView.setText(message);
-
-        // Set different colors based on connection status with more transparency
-        int backgroundColor;
-        if (connectionStatus == MoonBridge.CONN_STATUS_POOR) {
-            if (prefConfig.bitrate > 5000) {
-                // Slow connection - orange warning
-                backgroundColor = 0x80FF9800; // Orange with more transparency
-            } else {
-                // Poor connection - red warning
-                backgroundColor = 0x80F44336; // Red with more transparency
-            }
-        } else {
-            // Default color
-            backgroundColor = 0x80FF5722; // Orange-red with more transparency
-        }
-
-        // Apply background color without animation
-        notificationOverlayView.setCardBackgroundColor(backgroundColor);
     }
 
     private void checkNotificationPermission() {
