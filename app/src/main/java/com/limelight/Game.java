@@ -176,6 +176,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private ImageButton micButton;
 
     PreferenceConfiguration prefConfig;
+    OrientationManager orientationManager;
     private SharedPreferences tombstonePrefs;
 
     private NvConnection conn;
@@ -285,12 +286,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private String currentHostAddress; // 保存当前连接的IP
     private boolean shouldResumeSession = false;
 
-    // 记录上次的旋转角度，用于检测旋转变化
-    private int lastRotation = -1;
 
-    // 标记当前是否是服务端主动旋转导致的客户端方向切换
-    // 如果是，则不应该再通知服务端旋转，避免死循环
-    private boolean isServerInitiatedRotation = false;
     // 极端恢复模式开关：进入后台时保持连接不断开
     // 不断开连接模式开关：进入后台时保持连接不断开
     private boolean isExtremeResumeEnabled = false;
@@ -479,6 +475,16 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // Read the stream preferences
         prefConfig = PreferenceConfiguration.readPreferences(this);
+        orientationManager = new OrientationManager(
+                this,
+                prefConfig.width,
+                prefConfig.height,
+                prefConfig.rotableScreen,
+                prefConfig.onscreenController || prefConfig.onscreenKeyboard,
+                () -> externalDisplayManager != null
+                        ? externalDisplayManager.getTargetDisplay()
+                        : getWindowManager().getDefaultDisplay()
+        );
         tombstonePrefs = Game.this.getSharedPreferences("DecoderTombstone", 0);
         // 读取不断开恢复模式配置
         SharedPreferences globalPrefs = PreferenceManager.getDefaultSharedPreferences(this);
@@ -521,7 +527,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // NativeTouchContext.POINTER_FIXED_X_VELOCITY = prefConfig.pointerFixedXVelocity;
 
         // Enter landscape unless we're on a square screen
-        setPreferredOrientationForCurrentDisplay();
+        orientationManager.setPreferredOrientation();
 
         if (prefConfig.stretchVideo || DisplayModeManager.shouldIgnoreInsetsForResolution(
                 getWindowManager().getDefaultDisplay(), prefConfig.width, prefConfig.height)) {
@@ -682,6 +688,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 new ComputerDetails.AddressTuple(host, port),
                 httpsPort, uniqueId, pairName, config,
                 PlatformBinding.getCryptoProvider(this), serverCert, displayName);
+        orientationManager.setConnection(conn);
         controllerHandler = new ControllerHandler(this, conn, this, prefConfig);
         keyboardTranslator = new KeyboardTranslator();
 
@@ -1191,13 +1198,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         requestedNotificationOverlayVisibility = View.GONE;
 
         // 重置旋转状态，以便重新检测初始方向
-        lastRotation = -1;
-        isServerInitiatedRotation = false;
-        // 取消所有待处理的旋转任务
-        if (pendingRotationRunnable != null) {
-            rotationHandler.removeCallbacks(pendingRotationRunnable);
-            pendingRotationRunnable = null;
-        }
+        orientationManager.reset();
 
         // 2. 获取 Intent 参数
         String host = Game.this.getIntent().getStringExtra(EXTRA_HOST);
@@ -1241,6 +1242,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 new ComputerDetails.AddressTuple(host, port),
                 httpsPort, uniqueId, pairName, config,
                 PlatformBinding.getCryptoProvider(this), serverCert, displayName);
+        orientationManager.setConnection(conn);
         controllerHandler = new ControllerHandler(this, conn, this, prefConfig);
 
         // 重新创建 ControllerHandler
@@ -1447,49 +1449,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         isEventFromAccessibilityService = false;
     }
 
-    private void setPreferredOrientationForCurrentDisplay() {
-        Display display = externalDisplayManager != null ?
-                externalDisplayManager.getTargetDisplay() : getWindowManager().getDefaultDisplay();
-
-        // 首先确定基于分辨率的所需方向
-        int desiredOrientation = Configuration.ORIENTATION_UNDEFINED;
-
-        // 根据配置的宽高比确定横屏或竖屏
-        if (prefConfig.width > prefConfig.height) {
-            desiredOrientation = Configuration.ORIENTATION_LANDSCAPE;
-        } else if (prefConfig.height > prefConfig.width) {
-            desiredOrientation = Configuration.ORIENTATION_PORTRAIT;
-        } else {
-            // 宽高相等的情况
-            // 如果使用屏幕控制器，默认使用横屏
-            if (prefConfig.onscreenController || prefConfig.onscreenKeyboard) {
-                desiredOrientation = Configuration.ORIENTATION_LANDSCAPE;
-            }
-        }
-
-        if (prefConfig.rotableScreen) {
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
-        } else if (PreferenceConfiguration.isSquarishScreen(display)) {
-            // 对于接近正方形的屏幕，应用更复杂的逻辑
-            if (desiredOrientation == Configuration.ORIENTATION_LANDSCAPE) {
-                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
-            } else if (desiredOrientation == Configuration.ORIENTATION_PORTRAIT) {
-                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT);
-            } else {
-                // 没有明确的理由锁定为横屏或竖屏时，允许任意方向
-                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
-            }
-        } else {
-            // 对于非方形屏幕，按照分辨率决定方向
-            if (desiredOrientation == Configuration.ORIENTATION_PORTRAIT) {
-                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT);
-            } else {
-                // 默认或横屏情况
-                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
-            }
-        }
-    }
-
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -1515,13 +1474,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
 
-        // Set requested orientation for possible new screen size
-        // 但如果当前旋转是由服务端主动旋转导致的，则跳过，避免覆盖我们设置的方向
-        if (!isServerInitiatedRotation) {
-            setPreferredOrientationForCurrentDisplay();
-        } else {
-            LimeLog.info("onConfigurationChanged: skipping setPreferredOrientationForCurrentDisplay due to server-initiated rotation");
-        }
+        // 旋转/方向管理（包括服务端旋转恢复、用户旋转通知）
+        orientationManager.onConfigurationChanged();
 
         if (virtualController != null) {
             // Refresh layout of OSC for possible new screen size
@@ -1601,99 +1555,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // Re-apply display position
         refreshDisplayPosition();
-
-        // 检测旋转变化并通知服务端（仅在自动旋转模式下）
-        // 但如果当前旋转是由服务端主动旋转导致的，则不应该再通知服务端，避免死循环
-        if (prefConfig.rotableScreen && conn != null && !isServerInitiatedRotation) {
-            handleRotationChange();
-        } else if (isServerInitiatedRotation) {
-            LimeLog.info("onConfigurationChanged: rotation is server-initiated, skipping notification to server");
-            // 重置标志，因为方向切换已经完成
-            isServerInitiatedRotation = false;
-        }
-    }
-
-    private void checkAndSyncOrientation(int width, int height) {
-        Display display = externalDisplayManager != null ?
-                externalDisplayManager.getTargetDisplay() : getWindowManager().getDefaultDisplay();
-        if (display == null) {
-            LimeLog.warning("checkAndSyncOrientation: display is null");
-            return;
-        }
-
-        android.graphics.Point size = new android.graphics.Point();
-        display.getRealSize(size);
-
-        boolean clientIsLandscape = size.x > size.y;
-        boolean serverIsLandscape = width > height;
-
-        LimeLog.info("checkAndSyncOrientation: client=" + size.x + "x" + size.y +
-                " (" + (clientIsLandscape ? "landscape" : "portrait") + ")" +
-                ", server=" + width + "x" + height +
-                " (" + (serverIsLandscape ? "landscape" : "portrait") + ")");
-
-        if (clientIsLandscape != serverIsLandscape) {
-            LimeLog.info("checkAndSyncOrientation: mismatch detected, notifying server");
-            handleRotationChange();
-        } else {
-            LimeLog.info("checkAndSyncOrientation: orientation matches");
-            if (lastRotation == -1) {
-                lastRotation = clientIsLandscape ? 1 : 0;
-            }
-        }
-    }
-
-    /**
-     * 处理旋转变化，通知服务端同步修改分辨率
-     */
-    private final Handler rotationHandler = new Handler(Looper.getMainLooper());
-    private Runnable pendingRotationRunnable = null;
-    private static final long ROTATION_DEBOUNCE_MS = 3000;
-
-    private void handleRotationChange() {
-        int orientation = getResources().getConfiguration().orientation;
-        boolean isLandscape = (orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE);
-        int currentOrientation = isLandscape ? 1 : 0;
-
-        LimeLog.info("处理旋转变化：isLandscape=" + isLandscape + ", 最后旋转=" + lastRotation);
-
-        if (conn == null || !connected) {
-            LimeLog.warning("handleRotationChange：连接未准备好");
-            return;
-        }
-
-        if (lastRotation == -1) {
-            lastRotation = currentOrientation;
-            LimeLog.info("handleRotationChange：第一次调用，orientation=" + currentOrientation);
-        } else if (currentOrientation == lastRotation) {
-            return;
-        } else {
-            lastRotation = currentOrientation;
-        }
-
-        int angle = isLandscape ? 0 : 90;
-
-        if (pendingRotationRunnable != null) {
-            rotationHandler.removeCallbacks(pendingRotationRunnable);
-        }
-
-        pendingRotationRunnable = () -> {
-            LimeLog.info("handleRotationChange：通知服务器，angle=" + angle);
-            conn.rotateDisplay(angle, new NvConnection.DisplayRotationCallback() {
-                @Override
-                public void onSuccess(int angle) {
-                    LimeLog.info("显示旋转至 " + angle + " 度数");
-                }
-
-                @Override
-                public void onFailure(String errorMessage) {
-                    LimeLog.warning("无法旋转显示： " + errorMessage);
-                }
-            });
-            pendingRotationRunnable = null;
-        };
-
-        rotationHandler.postDelayed(pendingRotationRunnable, ROTATION_DEBOUNCE_MS);
     }
 
     @androidx.annotation.RequiresApi(Build.VERSION_CODES.O)
@@ -1906,7 +1767,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     protected void onDestroy() {
         // 将取消通知提到最前面执行，确保无论后续是否崩溃，通知都能消失
         cancelKeepAliveNotification();
-        
+
+        // 清理旋转管理器的 Handler 回调
+        orientationManager.cleanup();
+
         // 隐藏并释放悬浮球
         if (floatBallManager != null) {
             floatBallManager.release();
@@ -3941,6 +3805,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         if (connecting || connected) {
             connecting = connected = false;
+            orientationManager.setConnected(false);
             updatePipAutoEnter();
 
             if (controllerHandler != null) {
@@ -4134,6 +3999,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             }
 
             connected = true;
+            orientationManager.setConnected(true);
             connecting = false;
             updatePipAutoEnter();
 
@@ -4300,6 +4166,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             attemptedConnection = false;
             connecting = false;
             connected = false;
+            orientationManager.setConnected(false);
 
             // 通知 SurfaceView 刷新，这会尽快触发 surfaceChanged
             // 从而触发 conn.start()
@@ -4412,11 +4279,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             baseHeight = alignedHeight;
         }
 
-        // 首次收到分辨率时，检查并同步方向（仅在 rotableScreen 模式下）
-        if (prefConfig.rotableScreen && lastRotation == -1 && connected && conn != null) {
-            LimeLog.info("onResolutionChanged: First resolution received, checking orientation " + baseWidth + "x" + baseHeight);
-            checkAndSyncOrientation(baseWidth, baseHeight);
-        }
+        // 首次收到分辨率时，同步方向
+        orientationManager.syncOrientationOnFirstFrame(baseWidth, baseHeight);
 
         // 跳过相同分辨率的重复通知
         if (prefConfig.width == baseWidth && prefConfig.height == baseHeight) {
@@ -4441,16 +4305,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             Toast.makeText(this, getString(R.string.host_resolution_changed, baseWidth, baseHeight),
                     Toast.LENGTH_SHORT).show();
 
-            // rotableScreen 模式下强制切换方向以匹配主机分辨率
-            if (prefConfig.rotableScreen) {
-                isServerInitiatedRotation = true;
-                setRequestedOrientation(isLandscape
-                        ? ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
-                        : ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT);
-                rotationHandler.postDelayed(() -> isServerInitiatedRotation = false, 1000);
-            } else {
-                setPreferredOrientationForCurrentDisplay();
-            }
+            orientationManager.onServerResolutionChanged(isLandscape);
 
             updateStreamViewSize(baseWidth, baseHeight);
         });
