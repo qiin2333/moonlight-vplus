@@ -269,17 +269,14 @@ class Game : Activity(), SurfaceHolder.Callback,
             prefConfig.height,
             prefConfig.rotableScreen,
             prefConfig.onscreenController || prefConfig.onscreenKeyboard
-        ) {
-            if (externalDisplayManager != null) externalDisplayManager!!.targetDisplay
-            else windowManager.defaultDisplay
-        }
+        ) { currentTargetDisplay }
         tombstonePrefs = getSharedPreferences("DecoderTombstone", 0)
 
         val globalPrefs = PreferenceManager.getDefaultSharedPreferences(this)
         isExtremeResumeEnabled = globalPrefs.getBoolean("checkbox_extreme_resume", false) &&
-                globalPrefs.getBoolean("checkbox_resume_stream", false)
+                isResumeStreamEnabled
 
-        if (globalPrefs.getBoolean("checkbox_resume_stream", false)) {
+        if (isResumeStreamEnabled) {
             checkNotificationPermission()
         }
 
@@ -379,17 +376,9 @@ class Game : Activity(), SurfaceHolder.Callback,
         pcName = intent.getStringExtra(EXTRA_PC_NAME)
         analyticsManager = AnalyticsManager.getInstance(this)
 
-        val host = intent.getStringExtra(EXTRA_HOST)
-        val port = intent.getIntExtra(EXTRA_PORT, NvHTTP.DEFAULT_HTTP_PORT)
-        val httpsPort = intent.getIntExtra(EXTRA_HTTPS_PORT, 0)
         val appId = intent.getIntExtra(EXTRA_APP_ID, StreamConfiguration.INVALID_APP_ID)
-        val uniqueId = intent.getStringExtra(EXTRA_UNIQUEID)
-        val pairName = intent.getStringExtra(EXTRA_PAIR_NAME)
         val appSupportsHdr = intent.getBooleanExtra(EXTRA_APP_HDR, false)
-        val pcUseVdd = intent.getBooleanExtra(EXTRA_PC_USEVDD, false)
-        val derCertData = intent.getByteArrayExtra(EXTRA_SERVER_CERT)
         val cmdList = intent.getStringExtra(EXTRA_APP_CMD)
-        val displayName = intent.getStringExtra(EXTRA_DISPLAY_NAME)
 
         app = NvApp(appName ?: "app", appId, appSupportsHdr)
         if (cmdList != null) {
@@ -401,25 +390,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             cacheManager.saveAppInfo(intent.getStringExtra(EXTRA_PC_UUID), app)
         }
 
-        progressOverlay = FullscreenProgressOverlay(this, app)
-        val computer = ComputerDetails()
-        computer.name = pcName
-        computer.uuid = intent.getStringExtra(EXTRA_PC_UUID)
-        progressOverlay!!.setComputer(computer)
-        progressOverlay!!.show(
-            resources.getString(R.string.conn_establishing_title),
-            resources.getString(R.string.conn_establishing_msg)
-        )
-
-        var serverCert: X509Certificate? = null
-        try {
-            if (derCertData != null) {
-                serverCert = CertificateFactory.getInstance("X.509")
-                    .generateCertificate(ByteArrayInputStream(derCertData)) as X509Certificate
-            }
-        } catch (e: CertificateException) {
-            e.printStackTrace()
-        }
+        showProgressOverlay()
 
         if (appId == StreamConfiguration.INVALID_APP_ID) {
             finish()
@@ -429,19 +400,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         val glPrefs = GlPreferences.readPreferences(this)
         MediaCodecHelper.initialize(this, glPrefs.glRenderer)
 
-        val streamConfigResult = buildStreamConfiguration(
-            host, port, httpsPort, uniqueId, pairName, pcUseVdd, serverCert, displayName
-        )
-        val config = streamConfigResult.config
-
-        conn = NvConnection(
-            applicationContext,
-            ComputerDetails.AddressTuple(host, port),
-            httpsPort, uniqueId, pairName, config,
-            PlatformBinding.getCryptoProvider(this), serverCert, displayName
-        )
-        orientationManager.connection = conn
-        controllerHandler = ControllerHandler(this, conn, this, prefConfig)
+        createConnectionAndHandler()
         keyboardInputHandler = KeyboardInputHandler(this)
         keyboardInputHandler.keyboardTranslator = KeyboardTranslator()
 
@@ -491,15 +450,7 @@ class Game : Activity(), SurfaceHolder.Callback,
                 streamView!!.parent as FrameLayout,
                 this
             )
-            virtualController!!.refreshLayout()
-            virtualController!!.show()
-            virtualController!!.setGyroEnabled(!prefConfig.gyroToMouse)
-
-            val vc = virtualController!!
-            controllerHandler!!.setVirtualControllerGyroCallbacks(
-                { vc.setGyroEnabled(false) },
-                { vc.setGyroEnabled(true) }
-            )
+            setupVirtualControllerGyro()
         }
 
         if (prefConfig.onscreenKeyboard) {
@@ -507,19 +458,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
             val keyboardContainer = findViewById<FrameLayout>(R.id.virtual_full_keyboard_container)
             if (keyboardContainer != null) {
-                val kUI = KeyboardUIController(keyboardContainer,
-                    object : KeyboardUIController.OnKeyboardEventListener {
-                        override fun sendKeyEvent(down: Boolean, keyCode: Short) {
-                            if (controllerManager?.elementController != null) {
-                                controllerManager!!.elementController!!.sendKeyEvent(down, keyCode)
-                            } else {
-                                keyboardEvent(down, keyCode)
-                            }
-                        }
-                        override fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int) {
-                            controllerManager?.elementController?.rumbleSingleVibrator(lowFreq, highFreq, duration)
-                        }
-                    }, this)
+                val kUI = KeyboardUIController(keyboardContainer, createKeyboardEventListener(), this)
                 controllerManager!!.keyboardUIController = kUI
             }
 
@@ -527,9 +466,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         }
 
         if (prefConfig.usbDriver) {
-            usbDriverServiceManager = UsbDriverServiceManager(this, this)
-            usbDriverServiceManager!!.controllerHandler = controllerHandler
-            usbDriverServiceManager!!.bind()
+            bindUsbDriverService()
         }
 
         if (!decoderRenderer!!.isAvcSupported) {
@@ -553,59 +490,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
         DisplayPositionManager(this, prefConfig, streamView!!).setupDisplayPosition()
 
-        externalDisplayManager = ExternalDisplayManager(this, prefConfig, conn, decoderRenderer, pcName, appName)
-        externalDisplayManager!!.setCallback(object : ExternalDisplayManager.ExternalDisplayCallback {
-            override fun onExternalDisplayConnected(display: Display) {
-                LimeLog.info("External display connected, reinitializing input capture provider")
-                inputCaptureProvider?.disableCapture()
-                inputCaptureProvider = InputCaptureManager.getInputCaptureProviderForExternalDisplay(this@Game, this@Game)
-            }
-
-            override fun onExternalDisplayDisconnected() {
-                externalStreamView = null
-                LimeLog.info("External display disconnected, cleared externalStreamView")
-
-                for (i in 0 until TouchInputHandler.TOUCH_CONTEXT_LENGTH) {
-                    val absCtx = touchInputHandler.absoluteTouchContextMap[i]
-                    if (absCtx is AbsoluteTouchContext) {
-                        absCtx.setTargetView(this@Game.streamView)
-                    }
-                    val relCtx = touchInputHandler.relativeTouchContextMap[i]
-                    if (relCtx is RelativeTouchContext) {
-                        relCtx.setTargetView(this@Game.streamView)
-                    }
-                }
-
-                inputCaptureProvider?.disableCapture()
-                inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(this@Game, this@Game)
-            }
-
-            override fun onStreamViewReady(streamView: StreamView) {
-                externalStreamView = streamView
-
-                for (i in 0 until TouchInputHandler.TOUCH_CONTEXT_LENGTH) {
-                    val absCtx = touchInputHandler.absoluteTouchContextMap[i]
-                    if (absCtx is AbsoluteTouchContext) {
-                        absCtx.setTargetView(streamView)
-                    }
-                    val relCtx = touchInputHandler.relativeTouchContextMap[i]
-                    if (relCtx is RelativeTouchContext) {
-                        relCtx.setTargetView(streamView)
-                    }
-                }
-
-                streamView.setOnGenericMotionListener(this@Game)
-                streamView.setOnKeyListener(this@Game)
-                streamView.setInputCallbacks(this@Game)
-
-                val bgView = findViewById<View>(R.id.backgroundTouchView)
-                bgView?.setOnTouchListener(this@Game)
-
-                streamView.holder.addCallback(this@Game)
-                LimeLog.info("External display StreamView ready: ${streamView.width}x${streamView.height}")
-            }
-        })
-        externalDisplayManager!!.initialize()
+        setupExternalDisplay()
 
         floatBallHandler = FloatBallHandler(this, prefConfig!!)
         floatBallHandler!!.initialize()
@@ -621,19 +506,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         if (standaloneKeyboardUI == null) {
             val keyboardContainer = findViewById<FrameLayout>(R.id.virtual_full_keyboard_container)
             if (keyboardContainer != null) {
-                standaloneKeyboardUI = KeyboardUIController(keyboardContainer,
-                    object : KeyboardUIController.OnKeyboardEventListener {
-                        override fun sendKeyEvent(down: Boolean, keyCode: Short) {
-                            if (controllerManager?.elementController != null) {
-                                controllerManager!!.elementController!!.sendKeyEvent(down, keyCode)
-                            } else {
-                                keyboardEvent(down, keyCode)
-                            }
-                        }
-                        override fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int) {
-                            controllerManager?.elementController?.rumbleSingleVibrator(lowFreq, highFreq, duration)
-                        }
-                    }, this)
+                standaloneKeyboardUI = KeyboardUIController(keyboardContainer, createKeyboardEventListener(), this)
             }
         }
         return standaloneKeyboardUI
@@ -642,6 +515,161 @@ class Game : Activity(), SurfaceHolder.Callback,
     fun toggleVirtualKeyboard() {
         getOrCreateKeyboardUIController()?.toggle()
     }
+
+    // region ---- Extracted helpers to reduce duplication ----
+
+    /** Resolve the display currently used for rendering (external or built-in). */
+    val currentTargetDisplay: Display
+        get() = externalDisplayManager?.targetDisplay ?: windowManager.defaultDisplay
+
+    /** Re-point all absolute/relative touch contexts at [view]. */
+    private fun retargetTouchContexts(view: StreamView?) {
+        for (i in 0 until TouchInputHandler.TOUCH_CONTEXT_LENGTH) {
+            val absCtx = touchInputHandler.absoluteTouchContextMap[i]
+            if (absCtx is AbsoluteTouchContext) absCtx.setTargetView(view)
+            val relCtx = touchInputHandler.relativeTouchContextMap[i]
+            if (relCtx is RelativeTouchContext) relCtx.setTargetView(view)
+        }
+    }
+
+    /** Wire listeners on an arbitrary StreamView (main or external). */
+    private fun setupStreamViewListeners(view: StreamView) {
+        view.setOnGenericMotionListener(this)
+        view.setOnKeyListener(this)
+        view.setInputCallbacks(this)
+        findViewById<View>(R.id.backgroundTouchView)?.setOnTouchListener(this)
+        view.holder.addCallback(this)
+    }
+
+    /** Create the ExternalDisplayManager callback (shared by onCreate & prepareConnection). */
+    private fun createExternalDisplayCallback(): ExternalDisplayManager.ExternalDisplayCallback {
+        return object : ExternalDisplayManager.ExternalDisplayCallback {
+            override fun onExternalDisplayConnected(display: Display) {
+                LimeLog.info("External display connected, reinitializing input capture provider")
+                inputCaptureProvider?.disableCapture()
+                inputCaptureProvider = InputCaptureManager.getInputCaptureProviderForExternalDisplay(this@Game, this@Game)
+            }
+
+            override fun onExternalDisplayDisconnected() {
+                externalStreamView = null
+                LimeLog.info("External display disconnected, cleared externalStreamView")
+                retargetTouchContexts(this@Game.streamView)
+                inputCaptureProvider?.disableCapture()
+                inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(this@Game, this@Game)
+            }
+
+            override fun onStreamViewReady(streamView: StreamView) {
+                externalStreamView = streamView
+                retargetTouchContexts(streamView)
+                setupStreamViewListeners(streamView)
+                LimeLog.info("External display StreamView ready: ${streamView.width}x${streamView.height}")
+            }
+        }
+    }
+
+    /** Parse the server certificate from DER bytes in the launch intent. */
+    private fun parseServerCert(): X509Certificate? {
+        val derCertData = intent.getByteArrayExtra(EXTRA_SERVER_CERT) ?: return null
+        return try {
+            CertificateFactory.getInstance("X.509")
+                .generateCertificate(ByteArrayInputStream(derCertData)) as X509Certificate
+        } catch (e: CertificateException) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /** Show the fullscreen connecting progress overlay. */
+    private fun showProgressOverlay() {
+        progressOverlay = FullscreenProgressOverlay(this, app)
+        val computer = ComputerDetails()
+        computer.name = pcName
+        computer.uuid = intent.getStringExtra(EXTRA_PC_UUID)
+        progressOverlay!!.setComputer(computer)
+        progressOverlay!!.show(
+            resources.getString(R.string.conn_establishing_title),
+            resources.getString(R.string.conn_establishing_msg)
+        )
+    }
+
+    /** Shared keyboard-event listener used by KeyboardUIController instances. */
+    private fun createKeyboardEventListener(): KeyboardUIController.OnKeyboardEventListener {
+        return object : KeyboardUIController.OnKeyboardEventListener {
+            override fun sendKeyEvent(down: Boolean, keyCode: Short) {
+                if (controllerManager?.elementController != null) {
+                    controllerManager!!.elementController!!.sendKeyEvent(down, keyCode)
+                } else {
+                    keyboardEvent(down, keyCode)
+                }
+            }
+            override fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int) {
+                controllerManager?.elementController?.rumbleSingleVibrator(lowFreq, highFreq, duration)
+            }
+        }
+    }
+
+    /** Set up gyro callbacks on the virtual controller. */
+    private fun setupVirtualControllerGyro() {
+        val vc = virtualController ?: return
+        vc.refreshLayout()
+        vc.show()
+        vc.setGyroEnabled(!prefConfig.gyroToMouse)
+        controllerHandler!!.setVirtualControllerGyroCallbacks(
+            { vc.setGyroEnabled(false) },
+            { vc.setGyroEnabled(true) }
+        )
+    }
+
+    /** Whether the resume-stream preference is enabled. */
+    private val isResumeStreamEnabled: Boolean
+        get() = PreferenceManager.getDefaultSharedPreferences(this)
+            .getBoolean("checkbox_resume_stream", false)
+
+    /**
+     * Parse intent extras, build stream config, create NvConnection + ControllerHandler.
+     * Shared by [onCreate] (first launch) and [prepareConnection] (resume reconnect).
+     */
+    private fun createConnectionAndHandler() {
+        val host = intent.getStringExtra(EXTRA_HOST)
+        val port = intent.getIntExtra(EXTRA_PORT, NvHTTP.DEFAULT_HTTP_PORT)
+        val httpsPort = intent.getIntExtra(EXTRA_HTTPS_PORT, 0)
+        val uniqueId = intent.getStringExtra(EXTRA_UNIQUEID)
+        val pairName = intent.getStringExtra(EXTRA_PAIR_NAME)
+        val pcUseVdd = intent.getBooleanExtra(EXTRA_PC_USEVDD, false)
+        val displayName = intent.getStringExtra(EXTRA_DISPLAY_NAME)
+        val serverCert = parseServerCert()
+
+        val streamConfigResult = buildStreamConfiguration(
+            host, port, httpsPort, uniqueId, pairName, pcUseVdd, serverCert, displayName
+        )
+        val config = streamConfigResult.config
+
+        conn = NvConnection(
+            applicationContext,
+            ComputerDetails.AddressTuple(host, port),
+            httpsPort, uniqueId, pairName, config,
+            PlatformBinding.getCryptoProvider(this), serverCert, displayName
+        )
+        orientationManager.connection = conn
+        controllerHandler = ControllerHandler(this, conn, this, prefConfig)
+    }
+
+    /** Create or re-create ExternalDisplayManager with the standard callback. */
+    private fun setupExternalDisplay() {
+        externalDisplayManager = ExternalDisplayManager(this, prefConfig, conn, decoderRenderer, pcName, appName)
+        externalDisplayManager!!.setCallback(createExternalDisplayCallback())
+        externalDisplayManager!!.initialize()
+    }
+
+    /** Bind or re-bind the USB driver service with the current controllerHandler. */
+    private fun bindUsbDriverService() {
+        usbDriverServiceManager?.stopAndUnbind()
+        usbDriverServiceManager = UsbDriverServiceManager(this, this)
+        usbDriverServiceManager!!.controllerHandler = controllerHandler
+        usbDriverServiceManager!!.bind()
+    }
+
+    // endregion
 
     private fun buildStreamConfiguration(
         host: String?, port: Int, httpsPort: Int,
@@ -655,10 +683,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         var willStreamHdr = false
         if (prefConfig.enableHdr) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                val display = if (externalDisplayManager != null)
-                    externalDisplayManager!!.targetDisplay
-                else windowManager.defaultDisplay
-                val hdrCaps = display.hdrCapabilities
+                val hdrCaps = currentTargetDisplay.hdrCapabilities
 
                 if (hdrCaps != null) {
                     for (hdrType in hdrCaps.supportedHdrTypes) {
@@ -801,25 +826,6 @@ class Game : Activity(), SurfaceHolder.Callback,
 
         orientationManager.reset()
 
-        val host = intent.getStringExtra(EXTRA_HOST)
-        val port = intent.getIntExtra(EXTRA_PORT, NvHTTP.DEFAULT_HTTP_PORT)
-        val httpsPort = intent.getIntExtra(EXTRA_HTTPS_PORT, 0)
-        val uniqueId = intent.getStringExtra(EXTRA_UNIQUEID)
-        val pairName = intent.getStringExtra(EXTRA_PAIR_NAME)
-        val pcUseVdd = intent.getBooleanExtra(EXTRA_PC_USEVDD, false)
-        val displayName = intent.getStringExtra(EXTRA_DISPLAY_NAME)
-        val derCertData = intent.getByteArrayExtra(EXTRA_SERVER_CERT)
-
-        var serverCert: X509Certificate? = null
-        try {
-            if (derCertData != null) {
-                serverCert = CertificateFactory.getInstance("X.509")
-                    .generateCertificate(ByteArrayInputStream(derCertData)) as X509Certificate
-            }
-        } catch (e: CertificateException) {
-            e.printStackTrace()
-        }
-
         if (decoderRenderer != null) {
             try {
                 decoderRenderer!!.prepareForStop()
@@ -827,46 +833,20 @@ class Game : Activity(), SurfaceHolder.Callback,
             decoderRenderer = null
         }
 
-        val streamConfigResult = buildStreamConfiguration(
-            host, port, httpsPort, uniqueId, pairName, pcUseVdd, serverCert, displayName
-        )
-        val config = streamConfigResult.config
-
-        conn = NvConnection(
-            applicationContext,
-            ComputerDetails.AddressTuple(host, port),
-            httpsPort, uniqueId, pairName, config,
-            PlatformBinding.getCryptoProvider(this), serverCert, displayName
-        )
-        orientationManager.connection = conn
-        controllerHandler = ControllerHandler(this, conn, this, prefConfig)
-        controllerHandler!!.stop()
-        controllerHandler = ControllerHandler(this, conn, this, prefConfig)
+        createConnectionAndHandler()
 
         audioVibrationService?.setControllerHandler(controllerHandler)
 
         if (prefConfig.usbDriver) {
-            usbDriverServiceManager?.stopAndUnbind()
-            usbDriverServiceManager = UsbDriverServiceManager(this, this)
-            usbDriverServiceManager!!.controllerHandler = controllerHandler
-            usbDriverServiceManager!!.bind()
+            bindUsbDriverService()
         } else {
             usbDriverServiceManager?.refreshListener()
         }
 
         touchInputHandler.initTouchContexts(conn!!, streamView!!, prefConfig)
 
-        if (virtualController != null) {
-            if (prefConfig.onscreenController) {
-                virtualController!!.refreshLayout()
-                virtualController!!.show()
-                virtualController!!.setGyroEnabled(!prefConfig.gyroToMouse)
-                val vc = virtualController!!
-                controllerHandler!!.setVirtualControllerGyroCallbacks(
-                    { vc.setGyroEnabled(false) },
-                    { vc.setGyroEnabled(true) }
-                )
-            }
+        if (virtualController != null && prefConfig.onscreenController) {
+            setupVirtualControllerGyro()
         }
 
         if (controllerManager != null) {
@@ -890,53 +870,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             }
         })
 
-        externalDisplayManager = ExternalDisplayManager(this, prefConfig, conn, decoderRenderer, pcName, appName)
-        externalDisplayManager!!.setCallback(object : ExternalDisplayManager.ExternalDisplayCallback {
-            override fun onExternalDisplayConnected(display: Display) {
-                LimeLog.info("External display connected, reinitializing input capture provider")
-                inputCaptureProvider?.disableCapture()
-                inputCaptureProvider = InputCaptureManager.getInputCaptureProviderForExternalDisplay(this@Game, this@Game)
-            }
-
-            override fun onExternalDisplayDisconnected() {
-                externalStreamView = null
-                LimeLog.info("External display disconnected, cleared externalStreamView")
-                for (i in 0 until TouchInputHandler.TOUCH_CONTEXT_LENGTH) {
-                    val absCtx = touchInputHandler.absoluteTouchContextMap[i]
-                    if (absCtx is AbsoluteTouchContext) {
-                        absCtx.setTargetView(this@Game.streamView)
-                    }
-                    val relCtx = touchInputHandler.relativeTouchContextMap[i]
-                    if (relCtx is RelativeTouchContext) {
-                        relCtx.setTargetView(this@Game.streamView)
-                    }
-                }
-                inputCaptureProvider?.disableCapture()
-                inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(this@Game, this@Game)
-            }
-
-            override fun onStreamViewReady(streamView: StreamView) {
-                externalStreamView = streamView
-                for (i in 0 until TouchInputHandler.TOUCH_CONTEXT_LENGTH) {
-                    val absCtx = touchInputHandler.absoluteTouchContextMap[i]
-                    if (absCtx is AbsoluteTouchContext) {
-                        absCtx.setTargetView(streamView)
-                    }
-                    val relCtx = touchInputHandler.relativeTouchContextMap[i]
-                    if (relCtx is RelativeTouchContext) {
-                        relCtx.setTargetView(streamView)
-                    }
-                }
-                streamView.setOnGenericMotionListener(this@Game)
-                streamView.setOnKeyListener(this@Game)
-                streamView.setInputCallbacks(this@Game)
-                val bgView = findViewById<View>(R.id.backgroundTouchView)
-                bgView?.setOnTouchListener(this@Game)
-                streamView.holder.addCallback(this@Game)
-                LimeLog.info("External display StreamView ready: ${streamView.width}x${streamView.height}")
-            }
-        })
-        externalDisplayManager!!.initialize()
+        setupExternalDisplay()
     }
 
     override fun onResume() {
@@ -1073,10 +1007,8 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-        val isResumeEnabled = prefs.getBoolean("checkbox_resume_stream", false)
 
-        if (isResumeEnabled) {
+        if (isResumeStreamEnabled) {
             if (!autoEnterPip && Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
                 shouldResumeSession = true
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -1110,9 +1042,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     private fun prepareDisplayForRendering(): Float {
-        val display = if (externalDisplayManager != null)
-            externalDisplayManager!!.targetDisplay
-        else windowManager.defaultDisplay
+        val display = currentTargetDisplay
 
         val result = DisplayModeManager.selectBestDisplayMode(display, prefConfig)
 
@@ -1220,11 +1150,9 @@ class Game : Activity(), SurfaceHolder.Callback,
     override fun onStop() {
         super.onStop()
 
-        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-        val isResumeEnabled = prefs.getBoolean("checkbox_resume_stream", false)
         if ((isExtremeResumeEnabled || isChangingResolution) && !isFinishing) {
             LimeLog.info("Extreme Resume: onStop intercepted.")
-            if (!isChangingResolution && isResumeEnabled) {
+            if (!isChangingResolution && isResumeStreamEnabled) {
                 showKeepAliveNotification()
             }
             return
@@ -1237,7 +1165,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         }
 
         if (!shouldResumeSession && !isFinishing) {
-            if (isResumeEnabled) {
+            if (isResumeStreamEnabled) {
                 shouldResumeSession = true
                 LimeLog.info("检测到应用进入后台（非主动退出），已标记为待恢复会话")
             }
@@ -1254,55 +1182,12 @@ class Game : Activity(), SurfaceHolder.Callback,
             virtualController!!.cleanup()
         }
 
-        var decoderMessage = "UNKNOWN"
-        if (decoderRenderer != null) {
-            val videoFormat = decoderRenderer!!.activeVideoFormat
-            decoderMessage = when {
-                (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0 -> "H.264"
-                (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H265) != 0 -> "HEVC"
-                (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_AV1) != 0 -> "AV1"
-                else -> "UNKNOWN"
-            }
-            if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0) {
-                decoderMessage += " HDR"
-            }
-        }
+        var decoderMessage = getDecoderFormatLabel()
 
         if (conn != null) {
             displayedFailureDialog = true
             connectionCallbackHandler!!.stopConnection()
-
-            if (prefConfig.enableLatencyToast) {
-                val averageEndToEndLat = decoderRenderer!!.averageEndToEndLatency
-                val averageDecoderLat = decoderRenderer!!.averageDecoderLatency
-                var message: String? = null
-                if (averageEndToEndLat > 0) {
-                    message = resources.getString(R.string.conn_client_latency) + " " + averageEndToEndLat + " ms"
-                    if (averageDecoderLat > 0) {
-                        message += " (" + resources.getString(R.string.conn_client_latency_hw) + " " + averageDecoderLat + " ms)"
-                    }
-                } else if (averageDecoderLat > 0) {
-                    message = resources.getString(R.string.conn_hardware_latency) + " " + averageDecoderLat + " ms"
-                }
-
-                if (message != null) {
-                    message += " [$decoderMessage]"
-                }
-
-                if (prefConfig.enableMic && microphoneManager != null) {
-                    val micStats = AudioDiagnostics.getCurrentStats(this)
-                    message = if (message != null) "$message [mic]$micStats" else micStats
-                }
-
-                val surfaceFlingerStats = decoderRenderer!!.surfaceFlingerStats
-                if (surfaceFlingerStats != null) {
-                    message = if (message != null) "$message\n$surfaceFlingerStats" else surfaceFlingerStats
-                }
-
-                if (message != null) {
-                    Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-                }
-            }
+            showLatencyToast(decoderMessage)
 
             if (!reportedCrash && tombstonePrefs.getInt("CrashCount", 0) != 0) {
                 tombstonePrefs.edit()
@@ -1312,41 +1197,93 @@ class Game : Activity(), SurfaceHolder.Callback,
             }
         }
 
-        if (analyticsManager != null && pcName != null && streamStartTime > 0) {
-            var effectiveStreamDuration = accumulatedStreamTime
-            if (isStreamingActive && lastActiveTime > 0) {
-                effectiveStreamDuration += System.currentTimeMillis() - lastActiveTime
-            }
-            val totalElapsedTime = System.currentTimeMillis() - streamStartTime
+        reportStreamAnalytics(decoderMessage)
 
-            var resolutionWidth = 0
-            var resolutionHeight = 0
-            var averageEndToEndLatency = 0
-            var averageDecoderLatency = 0
-            if (decoderRenderer != null) {
-                resolutionWidth = prefConfig.width
-                resolutionHeight = prefConfig.height
-                averageEndToEndLatency = decoderRenderer!!.averageEndToEndLatency
-                averageDecoderLatency = decoderRenderer!!.averageDecoderLatency
-            }
-
-            analyticsManager!!.logGameStreamEnd(
-                pcName, appName, effectiveStreamDuration,
-                decoderMessage, resolutionWidth, resolutionHeight,
-                averageEndToEndLatency, averageDecoderLatency
-            )
-            LimeLog.info("串流统计 - 有效时长: ${effectiveStreamDuration / 1000}秒, 总耗时: ${totalElapsedTime / 1000}秒")
-            streamStartTime = 0
-            accumulatedStreamTime = 0
-            isStreamingActive = false
-        }
-
-        if (shouldResumeSession && isResumeEnabled) {
+        if (shouldResumeSession && isResumeStreamEnabled) {
             showKeepAliveNotification()
             LimeLog.info("应用进入后台，保持 Activity 存活以备快速恢复。连接已断开。")
         } else {
             finish()
         }
+    }
+
+    private fun getDecoderFormatLabel(): String {
+        if (decoderRenderer == null) return "UNKNOWN"
+        val videoFormat = decoderRenderer!!.activeVideoFormat
+        var label = when {
+            (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0 -> "H.264"
+            (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H265) != 0 -> "HEVC"
+            (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_AV1) != 0 -> "AV1"
+            else -> "UNKNOWN"
+        }
+        if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0) {
+            label += " HDR"
+        }
+        return label
+    }
+
+    private fun showLatencyToast(decoderMessage: String) {
+        if (!prefConfig.enableLatencyToast) return
+        val averageEndToEndLat = decoderRenderer!!.averageEndToEndLatency
+        val averageDecoderLat = decoderRenderer!!.averageDecoderLatency
+        var message: String? = null
+        if (averageEndToEndLat > 0) {
+            message = resources.getString(R.string.conn_client_latency) + " " + averageEndToEndLat + " ms"
+            if (averageDecoderLat > 0) {
+                message += " (" + resources.getString(R.string.conn_client_latency_hw) + " " + averageDecoderLat + " ms)"
+            }
+        } else if (averageDecoderLat > 0) {
+            message = resources.getString(R.string.conn_hardware_latency) + " " + averageDecoderLat + " ms"
+        }
+
+        if (message != null) {
+            message += " [$decoderMessage]"
+        }
+
+        if (prefConfig.enableMic && microphoneManager != null) {
+            val micStats = AudioDiagnostics.getCurrentStats(this)
+            message = if (message != null) "$message [mic]$micStats" else micStats
+        }
+
+        val surfaceFlingerStats = decoderRenderer!!.surfaceFlingerStats
+        if (surfaceFlingerStats != null) {
+            message = if (message != null) "$message\n$surfaceFlingerStats" else surfaceFlingerStats
+        }
+
+        if (message != null) {
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun reportStreamAnalytics(decoderMessage: String) {
+        if (analyticsManager == null || pcName == null || streamStartTime <= 0) return
+
+        var effectiveStreamDuration = accumulatedStreamTime
+        if (isStreamingActive && lastActiveTime > 0) {
+            effectiveStreamDuration += System.currentTimeMillis() - lastActiveTime
+        }
+        val totalElapsedTime = System.currentTimeMillis() - streamStartTime
+
+        var resolutionWidth = 0
+        var resolutionHeight = 0
+        var averageEndToEndLatency = 0
+        var averageDecoderLatency = 0
+        if (decoderRenderer != null) {
+            resolutionWidth = prefConfig.width
+            resolutionHeight = prefConfig.height
+            averageEndToEndLatency = decoderRenderer!!.averageEndToEndLatency
+            averageDecoderLatency = decoderRenderer!!.averageDecoderLatency
+        }
+
+        analyticsManager!!.logGameStreamEnd(
+            pcName, appName, effectiveStreamDuration,
+            decoderMessage, resolutionWidth, resolutionHeight,
+            averageEndToEndLatency, averageDecoderLatency
+        )
+        LimeLog.info("串流统计 - 有效时长: ${effectiveStreamDuration / 1000}秒, 总耗时: ${totalElapsedTime / 1000}秒")
+        streamStartTime = 0
+        accumulatedStreamTime = 0
+        isStreamingActive = false
     }
 
     fun setInputGrabState(grab: Boolean) {
@@ -1486,15 +1423,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             shouldResumeSession = false
             displayedFailureDialog = false
 
-            progressOverlay = FullscreenProgressOverlay(this, app)
-            val computer = ComputerDetails()
-            computer.name = pcName
-            computer.uuid = intent.getStringExtra(EXTRA_PC_UUID)
-            progressOverlay!!.setComputer(computer)
-            progressOverlay!!.show(
-                resources.getString(R.string.conn_establishing_title),
-                resources.getString(R.string.conn_establishing_msg)
-            )
+            showProgressOverlay()
 
             try {
                 prepareConnection()
@@ -1519,9 +1448,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     override fun displayTransientMessage(message: String) {
-        if (!prefConfig.disableWarnings) {
-            runOnUiThread { Toast.makeText(this@Game, message, Toast.LENGTH_LONG).show() }
-        }
+        if (!prefConfig.disableWarnings) displayMessage(message)
     }
 
     override fun rumble(controllerNumber: Short, lowFreqMotor: Short, highFreqMotor: Short) {
@@ -1617,11 +1544,8 @@ class Game : Activity(), SurfaceHolder.Callback,
     private fun updateStreamViewSize(width: Int, height: Int, forceFixedSize: Boolean) {
         if (streamView == null) return
 
-        val display = if (externalDisplayManager != null)
-            externalDisplayManager!!.targetDisplay
-        else windowManager.defaultDisplay
         val screenSize = Point()
-        display.getRealSize(screenSize)
+        currentTargetDisplay.getRealSize(screenSize)
 
         val exceedsScreenSize = width > screenSize.x || height > screenSize.y
         val useFixedSize = (prefConfig.stretchVideo && !exceedsScreenSize) || forceFixedSize
