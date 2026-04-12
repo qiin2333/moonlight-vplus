@@ -91,7 +91,7 @@ class BitrateCardController(
                 .show()
         }
 
-        // Debounced apply
+        // Apply only on release (touch up or key debounce)
         val bitrateHandler = Handler(Looper.getMainLooper())
         val bitrateApplyRunnable = Runnable {
             val newBitrate = progressToBitrateKbps(bitrateSeekBar.progress)
@@ -103,18 +103,12 @@ class BitrateCardController(
                 if (fromUser) {
                     val newBitrate = progressToBitrateKbps(progress)
                     bitrateValueText.text = formatBitrateMbps(newBitrate)
-
-                    bitrateHandler.removeCallbacks(bitrateApplyRunnable)
-                    bitrateHandler.postDelayed(bitrateApplyRunnable, 500)
                 }
             }
 
-            override fun onStartTrackingTouch(seekBar: SeekBar) {
-                bitrateHandler.removeCallbacks(bitrateApplyRunnable)
-            }
+            override fun onStartTrackingTouch(seekBar: SeekBar) {}
 
             override fun onStopTrackingTouch(seekBar: SeekBar) {
-                bitrateHandler.removeCallbacks(bitrateApplyRunnable)
                 val newBitrate = progressToBitrateKbps(seekBar.progress)
                 adjustBitrate(newBitrate)
             }
