@@ -23,9 +23,9 @@ import com.limelight.binding.video.MediaCodecHelper;
 import com.limelight.binding.video.PerfOverlayListener;
 import com.limelight.binding.video.PerformanceInfo;
 import com.limelight.nvstream.NvConnection;
-import com.limelight.nvstream.NvConnectionListener;
 import com.limelight.nvstream.StreamConfiguration;
 import com.limelight.nvstream.http.ComputerDetails;
+import com.limelight.nvstream.NvConnectionListener;
 import com.limelight.nvstream.http.NvApp;
 import com.limelight.nvstream.http.NvHTTP;
 import com.limelight.nvstream.input.KeyboardPacket;
@@ -39,8 +39,6 @@ import com.limelight.ui.GameGestures;
 import com.limelight.ui.StreamView;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.PanZoomHandler;
-import com.limelight.utils.ServerHelper;
-import com.limelight.utils.ShortcutHelper;
 import com.limelight.utils.FullscreenProgressOverlay;
 import com.limelight.utils.UiHelper;
 import com.limelight.utils.NetHelper;
@@ -141,35 +139,35 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private KeyboardUIController standaloneKeyboardUI;
     private final List<PerformanceInfoDisplay> performanceInfoDisplays = new ArrayList<>();
 
-    private MicrophoneManager microphoneManager;
+    MicrophoneManager microphoneManager;
 
     // 麦克风按钮
-    private ImageButton micButton;
+    ImageButton micButton;
 
     PreferenceConfiguration prefConfig;
     OrientationManager orientationManager;
     private SharedPreferences tombstonePrefs;
 
     NvConnection conn;
-    private FullscreenProgressOverlay progressOverlay;
-    private boolean displayedFailureDialog = false;
-    private boolean connecting = false;
-    private boolean connected = false;
+    FullscreenProgressOverlay progressOverlay;
+    boolean displayedFailureDialog = false;
+    boolean connecting = false;
+    boolean connected = false;
     private boolean autoEnterPip = false;
     private boolean surfaceCreated = false;
-    private boolean attemptedConnection = false;
-    private AnalyticsManager analyticsManager;
-    private long streamStartTime;           // 串流开始的时间戳
-    private long accumulatedStreamTime;     // 累计的有效串流时间（排除后台暂停）
-    private long lastActiveTime;            // 上次活跃的时间戳（用于计算暂停时间）
-    private boolean isStreamingActive;      // 串流是否处于活跃状态
+    boolean attemptedConnection = false;
+    AnalyticsManager analyticsManager;
+    long streamStartTime;           // 串流开始的时间戳
+    long accumulatedStreamTime;     // 累计的有效串流时间（排除后台暂停）
+    long lastActiveTime;            // 上次活跃的时间戳（用于计算暂停时间）
+    boolean isStreamingActive;      // 串流是否处于活跃状态
     private int suppressPipRefCount = 0;
-    private String pcName;
-    private String appName;
-    private NvApp app;
+    String pcName;
+    String appName;
+    NvApp app;
     private float desiredRefreshRate;
-    private AppSettingsManager appSettingsManager;
-    private String computerUuid;
+    AppSettingsManager appSettingsManager;
+    String computerUuid;
 
     InputCaptureProvider inputCaptureProvider;
     private int modifierFlags = 0;
@@ -187,7 +185,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private long lastEscPressTime = 0;
     private boolean hasShownEscHint = false;
 
-    private NotificationOverlayManager notificationOverlayManager;
+    NotificationOverlayManager notificationOverlayManager;
 
     // 性能覆盖层管理器
     private PerformanceOverlayManager performanceOverlayManager;
@@ -197,6 +195,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     // 悬浮球处理器
     FloatBallHandler floatBallHandler;
+
+    // 连接回调处理器
+    ConnectionCallbackHandler connectionCallbackHandler;
 
     /**
      * 获取或创建虚拟键盘控制器
@@ -247,7 +248,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private WifiManager.WifiLock highPerfWifiLock;
     private WifiManager.WifiLock lowLatencyWifiLock;
 
-    private String currentHostAddress; // 保存当前连接的IP
+    String currentHostAddress; // 保存当前连接的IP
     private boolean shouldResumeSession = false;
 
 
@@ -328,7 +329,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         this.isTouchOverrideEnabled = isTouchOverrideEnabled;
     }
 
-    private UsbDriverServiceManager usbDriverServiceManager;
+    UsbDriverServiceManager usbDriverServiceManager;
 
     // 性能覆盖层的各项视图由 PerformanceOverlayManager 管理
 
@@ -818,6 +819,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // 初始化悬浮球
         floatBallHandler = new FloatBallHandler(this, prefConfig);
         floatBallHandler.initialize();
+
+        // 初始化连接回调处理器
+        connectionCallbackHandler = new ConnectionCallbackHandler(this);
     }
 
     /**
@@ -1545,7 +1549,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
     };
 
-    private void hideSystemUi(int delay) {
+    void hideSystemUi(int delay) {
         Handler h = getWindow().getDecorView().getHandler();
         if (h != null) {
             h.removeCallbacks(hideSystemUi);
@@ -1589,7 +1593,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // 确保在 Activity 彻底销毁时停止连接（因为 onStop 可能跳过了它）
         if (conn != null && connected) {
-            stopConnection();
+            connectionCallbackHandler.stopConnection();
         }
 
         if (controllerHandler != null) {
@@ -1729,7 +1733,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         if (conn != null) {
             displayedFailureDialog = true;
-            stopConnection();
+            connectionCallbackHandler.stopConnection();
 
             if (prefConfig.enableLatencyToast) {
                 int averageEndToEndLat = decoderRenderer.getAverageEndToEndLatency();
@@ -1831,7 +1835,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
     }
 
-    private void setInputGrabState(boolean grab) {
+    void setInputGrabState(boolean grab) {
         // Grab/ungrab the mouse cursor
         if (grab) {
             inputCaptureProvider.enableCapture();
@@ -2461,323 +2465,33 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     @Override
-    public void stageStarting(final String stage) {
-        runOnUiThread(() -> {
-            if (progressOverlay != null) {
-                progressOverlay.setMessage(getResources().getString(R.string.conn_starting) + " " + stage);
-            }
-        });
+    public void stageStarting(String stage) {
+        connectionCallbackHandler.stageStarting(stage);
     }
 
     @Override
     public void stageComplete(String stage) {
-    }
-
-    private void stopConnection() {
-        // 重置尝试连接标志。
-        // 这确保了当 Activity 驻留在后台未销毁，再次回到前台触发 surfaceChanged 时，
-        // 代码会认为这是一个新的开始，从而再次执行 conn.start()。
-        attemptedConnection = false;
-
-        cancelKeepAliveNotification();
-
-        if (connecting || connected) {
-            connecting = connected = false;
-            orientationManager.setConnected(false);
-            updatePipAutoEnter();
-
-            if (controllerHandler != null) {
-                controllerHandler.stop();
-            }
-
-            // 停止并释放 USB 控制器接管
-            if (usbDriverServiceManager != null) {
-                usbDriverServiceManager.stopAndUnbind();
-            }
-
-            // 停止麦克风流
-            if (microphoneManager != null) {
-                microphoneManager.stopMicrophoneStream();
-            }
-
-            // Update GameManager state to indicate we're no longer in game
-            UiHelper.notifyStreamEnded(this);
-
-            // Save current settings for this app before stopping connection
-            if (appSettingsManager != null && computerUuid != null && app != null) {
-                appSettingsManager.saveAppLastSettings(computerUuid, app, prefConfig);
-            }
-
-            // Stop may take a few hundred ms to do some network I/O to tell
-            // the server we're going away and clean up. Let it run in a separate
-            // thread to keep things smooth for the UI. Inside moonlight-common,
-            // we prevent another thread from starting a connection before and
-            // during the process of stopping this one.
-            new Thread() {
-                public void run() {
-                    conn.stop();
-                }
-            }.start();
-
-            cursorServiceManager.stopService();
-        }
+        connectionCallbackHandler.stageComplete(stage);
     }
 
     @Override
-    public void stageFailed(final String stage, final int portFlags, final int errorCode) {
-        // Perform a connection test if the failure could be due to a blocked port
-        // This does network I/O, so don't do it on the main thread.
-        final int portTestResult = MoonBridge.testClientConnectivity(ServerHelper.CONNECTION_TEST_SERVER, 443, portFlags);
-
-        runOnUiThread(() -> {
-            if (progressOverlay != null) {
-                progressOverlay.dismiss();
-                progressOverlay = null;
-            }
-
-            if (!displayedFailureDialog) {
-                displayedFailureDialog = true;
-                LimeLog.severe(stage + " failed: " + errorCode);
-
-                // If video initialization failed and the surface is still valid, display extra information for the user
-                if (stage.contains("video") && streamView.getHolder().getSurface().isValid()) {
-                    Toast.makeText(Game.this, getResources().getText(R.string.video_decoder_init_failed), Toast.LENGTH_LONG).show();
-                }
-
-                String dialogText = getResources().getString(R.string.conn_error_msg) + " " + stage + " (error " + errorCode + ")";
-
-                if (portFlags != 0) {
-                    dialogText += "\n\n" + getResources().getString(R.string.check_ports_msg) + "\n" +
-                            MoonBridge.stringifyPortFlags(portFlags, "\n");
-                }
-
-                if (portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE && portTestResult != 0) {
-                    dialogText += "\n\n" + getResources().getString(R.string.nettest_text_blocked);
-                }
-
-                Dialog.displayDialog(Game.this, getResources().getString(R.string.conn_error_title), dialogText, true);
-            }
-        });
+    public void stageFailed(String stage, int portFlags, int errorCode) {
+        connectionCallbackHandler.stageFailed(stage, portFlags, errorCode);
     }
 
     @Override
-    public void connectionTerminated(final int errorCode) {
-        // Perform a connection test if the failure could be due to a blocked port
-        // This does network I/O, so don't do it on the main thread.
-        final int portFlags = MoonBridge.getPortFlagsFromTerminationErrorCode(errorCode);
-        final int portTestResult = MoonBridge.testClientConnectivity(ServerHelper.CONNECTION_TEST_SERVER, 443, portFlags);
-
-        runOnUiThread(() -> {
-            // Let the display go to sleep now
-            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-
-            // Stop processing controller input
-            controllerHandler.stop();
-
-            microphoneManager.stopMicrophoneStream();
-
-            // Ungrab input
-            setInputGrabState(false);
-
-            if (!displayedFailureDialog) {
-                displayedFailureDialog = true;
-                LimeLog.severe("Connection terminated: " + errorCode);
-                stopConnection();
-
-                // Display the error dialog if it was an unexpected termination.
-                // Otherwise, just finish the activity immediately.
-                if (errorCode != MoonBridge.ML_ERROR_GRACEFUL_TERMINATION) {
-                    String message;
-
-                    if (portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE && portTestResult != 0) {
-                        // If we got a blocked result, that supersedes any other error message
-                        message = getResources().getString(R.string.nettest_text_blocked);
-                    } else {
-                        switch (errorCode) {
-                            case MoonBridge.ML_ERROR_NO_VIDEO_TRAFFIC:
-                                message = getResources().getString(R.string.no_video_received_error);
-                                break;
-
-                            case MoonBridge.ML_ERROR_NO_VIDEO_FRAME:
-                                message = getResources().getString(R.string.no_frame_received_error);
-                                break;
-
-                            case MoonBridge.ML_ERROR_UNEXPECTED_EARLY_TERMINATION:
-                            case MoonBridge.ML_ERROR_PROTECTED_CONTENT:
-                                message = getResources().getString(R.string.early_termination_error);
-                                break;
-
-                            case MoonBridge.ML_ERROR_FRAME_CONVERSION:
-                                message = getResources().getString(R.string.frame_conversion_error);
-                                break;
-
-                            default:
-                                String errorCodeString;
-                                // We'll assume large errors are hex values
-                                if (Math.abs(errorCode) > 1000) {
-                                    errorCodeString = Integer.toHexString(errorCode);
-                                } else {
-                                    errorCodeString = Integer.toString(errorCode);
-                                }
-                                message = getResources().getString(R.string.conn_terminated_msg) + "\n\n" +
-                                        getResources().getString(R.string.error_code_prefix) + " " + errorCodeString;
-                                break;
-                        }
-                    }
-
-                    if (portFlags != 0) {
-                        message += "\n\n" + getResources().getString(R.string.check_ports_msg) + "\n" +
-                                MoonBridge.stringifyPortFlags(portFlags, "\n");
-                    }
-
-                    Dialog.displayDialog(Game.this, getResources().getString(R.string.conn_terminated_title),
-                            message, true);
-                } else {
-                    finish();
-                }
-            }
-        });
+    public void connectionTerminated(int errorCode) {
+        connectionCallbackHandler.connectionTerminated(errorCode);
     }
 
     @Override
-    public void connectionStatusUpdate(final int connectionStatus) {
-        runOnUiThread(() -> {
-            if (prefConfig.disableWarnings) {
-                return;
-            }
-
-            if (connectionStatus == MoonBridge.CONN_STATUS_POOR) {
-                String message;
-                if (prefConfig.bitrate > 5000) {
-                    message = getResources().getString(R.string.slow_connection_msg);
-                } else {
-                    message = getResources().getString(R.string.poor_connection_msg);
-                }
-
-                notificationOverlayManager.update(connectionStatus, message);
-                notificationOverlayManager.setRequestedVisible(true);
-            } else if (connectionStatus == MoonBridge.CONN_STATUS_OKAY) {
-                notificationOverlayManager.setRequestedVisible(false);
-            }
-
-            notificationOverlayManager.applyVisibility();
-        });
+    public void connectionStatusUpdate(int connectionStatus) {
+        connectionCallbackHandler.connectionStatusUpdate(connectionStatus);
     }
 
     @Override
     public void connectionStarted() {
-        runOnUiThread(() -> {
-            if (progressOverlay != null) {
-                progressOverlay.dismiss();
-                progressOverlay = null;
-            }
-
-            connected = true;
-            orientationManager.setConnected(true);
-            connecting = false;
-            updatePipAutoEnter();
-
-            // Hide the mouse cursor now after a short delay.
-            // Doing it before dismissing the spinner seems to be undone
-            // when the spinner gets displayed. On Android Q, even now
-            // is too early to capture. We will delay a second to allow
-            // the spinner to dismiss before capturing.
-            Handler h = new Handler(Looper.getMainLooper());
-            h.postDelayed(() -> {
-                // 根据配置决定是否启用原生鼠标指针
-                if (prefConfig.enableNativeMousePointer) {
-                    enableNativeMousePointer(true);
-                } else {
-                    setInputGrabState(true);
-                }
-            }, 500);
-
-            // Keep the display on
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-
-            // Update GameManager state to indicate we're in game
-            UiHelper.notifyStreamConnected(Game.this);
-
-            hideSystemUi(1000);
-
-            // 连接一开始就启动保活服务
-            // 此时 App 在前台，可以合法启动 Foreground Service
-            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-            boolean isResumeEnabled = prefs.getBoolean("checkbox_resume_stream", false);
-            if (isResumeEnabled) showKeepAliveNotification();
-            }
-        );
-
-        // Report this shortcut being used (off the main thread to prevent ANRs)
-        ComputerDetails computer = new ComputerDetails();
-        computer.name = pcName;
-        computer.uuid = Game.this.getIntent().getStringExtra(EXTRA_PC_UUID);
-        ShortcutHelper shortcutHelper = new ShortcutHelper(this);
-        shortcutHelper.reportComputerShortcutUsed(computer);
-        if (appName != null) {
-            // This may be null if launched from the "Resume Session" PC context menu item
-            shortcutHelper.reportGameLaunched(computer, app);
-        }
-
-        // 检查是否启用了HDR并主动设置初始状态
-        // 这解决了首次连接时setHdrMode没有被调用的问题
-        boolean appSupportsHdr = Game.this.getIntent().getBooleanExtra(EXTRA_APP_HDR, false);
-        if (appSupportsHdr && prefConfig.enableHdr) {
-            setHdrMode(true, null);
-        }
-
-        // 初始化麦克风管理器
-        microphoneManager = new MicrophoneManager(this, conn, prefConfig.enableMic);
-        microphoneManager.setStateListener(new MicrophoneManager.MicrophoneStateListener() {
-            @Override
-            public void onMicrophoneStateChanged(boolean isActive) {
-                // 麦克风状态改变时的回调
-                LimeLog.info("麦克风状态改变: " + (isActive ? "激活" : "暂停"));
-            }
-
-            @Override
-            public void onPermissionRequested() {
-                // 权限请求时的回调
-                LimeLog.info("麦克风权限请求已发送");
-            }
-        });
-
-        // 初始化麦克风流
-        if (prefConfig.enableMic) {
-            runOnUiThread(() -> {
-                if (!microphoneManager.initializeMicrophoneStream()) {
-                    LimeLog.warning("Failed to start microphone stream");
-                } else {
-                    LimeLog.info("Microphone stream initialized successfully");
-                }
-
-                // 更新麦克风按钮状态
-                if (micButton != null) {
-                    microphoneManager.setMicrophoneButton(micButton);
-                    // 确保麦克风默认状态为关闭
-                    microphoneManager.setDefaultStateOff();
-                }
-            });
-        }
-
-        // 初始化串流时长统计
-        streamStartTime = System.currentTimeMillis();
-        accumulatedStreamTime = 0;
-        lastActiveTime = streamStartTime;
-        isStreamingActive = true;
-
-        // 记录游戏流媒体开始事件
-        if (analyticsManager != null && pcName != null) {
-            analyticsManager.logGameStreamStart(pcName, appName);
-        }
-
-        // 1. 获取并保存 IP (存到全局变量)
-        this.currentHostAddress = getIntent().getStringExtra(EXTRA_HOST);
-
-        // 2. 调用统一的状态管理方法
-        cursorServiceManager.updateServiceState(
-                prefConfig.enableLocalCursorRendering && prefConfig.touchscreenTrackpad,
-                currentHostAddress);
+        connectionCallbackHandler.connectionStarted();
     }
 
     @Override
@@ -3159,7 +2873,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 // 正常退出
                 decoderRenderer.prepareForStop();
                 if (connected) {
-                    stopConnection();
+                    connectionCallbackHandler.stopConnection();
                 }
             }
         }
@@ -3167,7 +2881,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     private static final int KEEP_ALIVE_NOTIFICATION_ID = 1001;
 
-    private void showKeepAliveNotification() {
+    void showKeepAliveNotification() {
         // 1. Android 13 权限检查
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
@@ -3214,7 +2928,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         StreamNotificationService.start(this, pcName, appName);
     }
 
-    private void cancelKeepAliveNotification() {
+    void cancelKeepAliveNotification() {
         // 停止通知服务
         StreamNotificationService.stop(this);
     }
