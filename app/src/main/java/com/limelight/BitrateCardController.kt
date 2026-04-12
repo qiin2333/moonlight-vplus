@@ -14,11 +14,50 @@ import com.limelight.nvstream.NvConnection
 
 /**
  * Encapsulates the bitrate adjustment card logic shown in the Game Menu dialog.
+ *
+ * Segmented seekbar mapping (45 positions total):
+ *   progress  0..9  → 0.5~5 Mbps,  step 0.5 Mbps  (500~5000 kbps,  step  500)
+ *   progress 10..24 → 6~20 Mbps,   step 1 Mbps     (6000~20000 kbps, step 1000)
+ *   progress 25..30 → 25~50 Mbps,  step 5 Mbps     (25000~50000 kbps, step 5000)
+ *   progress 31..45 → 60~200 Mbps, step 10 Mbps    (60000~200000 kbps, step 10000)
  */
 class BitrateCardController(
     private val game: Game,
     private val conn: NvConnection
 ) {
+
+    companion object {
+        private const val MAX_PROGRESS = 45
+
+        /** Convert seekbar progress (0..45) to bitrate in kbps. */
+        fun progressToBitrateKbps(progress: Int): Int {
+            return when {
+                progress <= 9  -> 500 + progress * 500           // 500..5000
+                progress <= 24 -> 5000 + (progress - 9) * 1000   // 6000..20000
+                progress <= 30 -> 20000 + (progress - 24) * 5000 // 25000..50000
+                else           -> 50000 + (progress - 30) * 10000 // 60000..200000
+            }
+        }
+
+        /** Convert bitrate in kbps to the nearest seekbar progress (0..45). */
+        fun bitrateToProgress(kbps: Int): Int {
+            return when {
+                kbps <= 5000   -> ((kbps - 500) / 500).coerceIn(0, 9)
+                kbps <= 20000  -> (9 + (kbps - 5000 + 500) / 1000).coerceIn(10, 24)
+                kbps <= 50000  -> (24 + (kbps - 20000 + 2500) / 5000).coerceIn(25, 30)
+                else           -> (30 + (kbps - 50000 + 5000) / 10000).coerceIn(31, MAX_PROGRESS)
+            }
+        }
+
+        /** Format bitrate kbps to a human-readable Mbps string. */
+        fun formatBitrateMbps(kbps: Int): String {
+            return if (kbps % 1000 != 0) {
+                String.format("%.1f Mbps", kbps / 1000.0)
+            } else {
+                String.format("%d Mbps", kbps / 1000)
+            }
+        }
+    }
 
     fun setup(customView: View, dialog: AlertDialog) {
         val bitrateContainer = customView.findViewById<View>(R.id.bitrateAdjustmentContainer)
@@ -34,17 +73,16 @@ class BitrateCardController(
         }
 
         val currentBitrate = conn.currentBitrate
-        val currentBitrateMbps = currentBitrate / 1000
 
         currentBitrateText.text = String.format(
-            game.resources.getString(R.string.game_menu_bitrate_current), currentBitrateMbps
+            game.resources.getString(R.string.game_menu_bitrate_current), currentBitrate / 1000
         )
 
-        // Configure seekbar range: 500 kbps .. 200000 kbps (step 100)
-        bitrateSeekBar.max = 1995
-        bitrateSeekBar.progress = (currentBitrate - 500) / 100
+        // Configure segmented seekbar: 45 positions mapping to 0.5~200 Mbps
+        bitrateSeekBar.max = MAX_PROGRESS
+        bitrateSeekBar.progress = bitrateToProgress(currentBitrate)
 
-        bitrateValueText.text = String.format("%d Mbps", currentBitrateMbps)
+        bitrateValueText.text = formatBitrateMbps(progressToBitrateKbps(bitrateSeekBar.progress))
 
         bitrateTipIcon.setOnClickListener {
             AlertDialog.Builder(game, R.style.AppDialogStyle)
@@ -56,16 +94,15 @@ class BitrateCardController(
         // Debounced apply
         val bitrateHandler = Handler(Looper.getMainLooper())
         val bitrateApplyRunnable = Runnable {
-            val newBitrate = bitrateSeekBar.progress * 100 + 500
+            val newBitrate = progressToBitrateKbps(bitrateSeekBar.progress)
             adjustBitrate(newBitrate)
         }
 
         bitrateSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                 if (fromUser) {
-                    val newBitrate = progress * 100 + 500
-                    val newBitrateMbps = newBitrate / 1000
-                    bitrateValueText.text = String.format("%d Mbps", newBitrateMbps)
+                    val newBitrate = progressToBitrateKbps(progress)
+                    bitrateValueText.text = formatBitrateMbps(newBitrate)
 
                     bitrateHandler.removeCallbacks(bitrateApplyRunnable)
                     bitrateHandler.postDelayed(bitrateApplyRunnable, 500)
@@ -78,7 +115,7 @@ class BitrateCardController(
 
             override fun onStopTrackingTouch(seekBar: SeekBar) {
                 bitrateHandler.removeCallbacks(bitrateApplyRunnable)
-                val newBitrate = seekBar.progress * 100 + 500
+                val newBitrate = progressToBitrateKbps(seekBar.progress)
                 adjustBitrate(newBitrate)
             }
         })
