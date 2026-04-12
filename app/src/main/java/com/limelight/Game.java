@@ -119,14 +119,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         OnSystemUiVisibilityChangeListener, GameGestures, StreamView.InputCallbacks,
         PerfOverlayListener, UsbDriverService.UsbDriverStateListener, View.OnKeyListener, KeyboardAccessibilityService.KeyEventCallback {
     // 这个标志位用于区分事件是来自无障碍服务还是来自UI（如StreamView）
-    private boolean isEventFromAccessibilityService = false;
+    boolean isEventFromAccessibilityService = false;
 
     public static final int REFERENCE_HORIZ_RES = 1280;
     public static final int REFERENCE_VERT_RES = 720;
 
     ControllerHandler controllerHandler;
     TouchInputHandler touchInputHandler;
-    private KeyboardTranslator keyboardTranslator;
     VirtualController virtualController;
     PanZoomHandler panZoomHandler;
     private AudioVibrationService audioVibrationService;
@@ -170,20 +169,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     String computerUuid;
 
     InputCaptureProvider inputCaptureProvider;
-    private int modifierFlags = 0;
     boolean grabbedInput = true;
     boolean cursorVisible = false;
-    private boolean waitingForAllModifiersUp = false;
-    private int specialKeyCode = KeyEvent.KEYCODE_UNKNOWN;
     StreamView streamView;
     private StreamView externalStreamView; // 外接显示器的StreamView
     private long previousTimeMillis = 0;
     private long previousRxBytes = 0;
-
-    // ESC键双击相关变量
-    private static final long ESC_DOUBLE_PRESS_INTERVAL = 500; // 500毫秒内按第二次ESC才有效
-    private long lastEscPressTime = 0;
-    private boolean hasShownEscHint = false;
 
     NotificationOverlayManager notificationOverlayManager;
 
@@ -198,6 +189,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     // 连接回调处理器
     ConnectionCallbackHandler connectionCallbackHandler;
+
+    // 键盘输入处理器
+    KeyboardInputHandler keyboardInputHandler;
 
     /**
      * 获取或创建虚拟键盘控制器
@@ -615,7 +609,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 PlatformBinding.getCryptoProvider(this), serverCert, displayName);
         orientationManager.setConnection(conn);
         controllerHandler = new ControllerHandler(this, conn, this, prefConfig);
-        keyboardTranslator = new KeyboardTranslator();
+        keyboardInputHandler = new KeyboardInputHandler(this);
+        keyboardInputHandler.keyboardTranslator = new KeyboardTranslator();
 
         // Initialize audio-driven vibration service
         audioVibrationService = new AudioVibrationService(this);
@@ -634,7 +629,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         MoonBridge.setBassEnergySceneMode(prefConfig.audioVibrationScene);
 
         InputManager inputManager = (InputManager) getSystemService(Context.INPUT_SERVICE);
-        inputManager.registerInputDeviceListener(keyboardTranslator, null);
+        inputManager.registerInputDeviceListener(keyboardInputHandler.keyboardTranslator, null);
 
 
         // Initialize touch input handler and touch contexts
@@ -1491,7 +1486,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // We can't guarantee the state of modifiers keys which may have
         // lifted while focus was not on us. Clear the modifier state.
-        this.modifierFlags = 0;
+        keyboardInputHandler.clearModifierState();
 
         // With Android native pointer capture, capture is lost when focus is lost,
         // so it must be requested again when focus is regained.
@@ -1604,9 +1599,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             MoonBridge.setBassEnergyEnabled(false);
             MoonBridge.setBassEnergyListener(null);
         }
-        if (keyboardTranslator != null) {
+        if (keyboardInputHandler.keyboardTranslator != null) {
             InputManager inputManager = (InputManager) getSystemService(Context.INPUT_SERVICE);
-            inputManager.unregisterInputDeviceListener(keyboardTranslator);
+            inputManager.unregisterInputDeviceListener(keyboardInputHandler.keyboardTranslator);
         }
 
         if (lowLatencyWifiLock != null) {
@@ -1855,526 +1850,31 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         grabbedInput = grab;
     }
 
-    private final Runnable toggleGrab = () -> setInputGrabState(!grabbedInput);
-
-    // Returns true if the key stroke was consumed
-    private boolean handleSpecialKeys(int androidKeyCode, boolean down) {
-        int modifierMask = 0;
-        int nonModifierKeyCode = KeyEvent.KEYCODE_UNKNOWN;
-
-        if (androidKeyCode == KeyEvent.KEYCODE_CTRL_LEFT ||
-                androidKeyCode == KeyEvent.KEYCODE_CTRL_RIGHT) {
-            modifierMask = KeyboardPacket.MODIFIER_CTRL;
-        } else if (androidKeyCode == KeyEvent.KEYCODE_SHIFT_LEFT ||
-                androidKeyCode == KeyEvent.KEYCODE_SHIFT_RIGHT) {
-            modifierMask = KeyboardPacket.MODIFIER_SHIFT;
-        } else if (androidKeyCode == KeyEvent.KEYCODE_ALT_LEFT ||
-                androidKeyCode == KeyEvent.KEYCODE_ALT_RIGHT) {
-            modifierMask = KeyboardPacket.MODIFIER_ALT;
-        } else if (androidKeyCode == KeyEvent.KEYCODE_META_LEFT ||
-                androidKeyCode == KeyEvent.KEYCODE_META_RIGHT) {
-            modifierMask = KeyboardPacket.MODIFIER_META;
-        } else {
-            nonModifierKeyCode = androidKeyCode;
-        }
-
-        if (down) {
-            this.modifierFlags |= modifierMask;
-        } else {
-            this.modifierFlags &= ~modifierMask;
-        }
-
-        // Handle the special combos on the key up
-        if (waitingForAllModifiersUp || specialKeyCode != KeyEvent.KEYCODE_UNKNOWN) {
-            if (specialKeyCode == androidKeyCode) {
-                // If this is a key up for the special key itself, eat that because the host never saw the original key down
-                return true;
-            } else if (modifierFlags != 0) {
-                // While we're waiting for modifiers to come up, eat all key downs and allow all key ups to pass
-                return down;
-            } else {
-                // When all modifiers are up, perform the special action
-                switch (specialKeyCode) {
-                    // Toggle input grab
-                    case KeyEvent.KEYCODE_Z:
-                        Handler h = getWindow().getDecorView().getHandler();
-                        if (h != null) {
-                            h.postDelayed(toggleGrab, 250);
-                        }
-                        break;
-
-                    // Quit
-                    case KeyEvent.KEYCODE_Q:
-                        finish();
-                        break;
-
-                    // Toggle cursor visibility
-                    case KeyEvent.KEYCODE_C:
-                        if (!grabbedInput) {
-                            inputCaptureProvider.enableCapture();
-                            grabbedInput = true;
-                        }
-                        cursorVisible = !cursorVisible;
-                        if (cursorVisible) {
-                            inputCaptureProvider.showCursor();
-                        } else {
-                            inputCaptureProvider.hideCursor();
-                        }
-                        break;
-
-                    default:
-                        break;
-                }
-
-                // Reset special key state
-                specialKeyCode = KeyEvent.KEYCODE_UNKNOWN;
-                waitingForAllModifiersUp = false;
-            }
-        }
-        // Check if Ctrl+Alt+Shift is down when a non-modifier key is pressed
-        else if ((modifierFlags & (KeyboardPacket.MODIFIER_CTRL | KeyboardPacket.MODIFIER_ALT | KeyboardPacket.MODIFIER_SHIFT)) ==
-                (KeyboardPacket.MODIFIER_CTRL | KeyboardPacket.MODIFIER_ALT | KeyboardPacket.MODIFIER_SHIFT) &&
-                (down && nonModifierKeyCode != KeyEvent.KEYCODE_UNKNOWN)) {
-            switch (androidKeyCode) {
-                case KeyEvent.KEYCODE_Z:
-                case KeyEvent.KEYCODE_Q:
-                case KeyEvent.KEYCODE_C:
-                    // Remember that a special key combo was activated, so we can consume all key
-                    // events until the modifiers come up
-                    specialKeyCode = androidKeyCode;
-                    waitingForAllModifiersUp = true;
-                    return true;
-
-                default:
-                    // This isn't a special combo that we consume on the client side
-                    return false;
-            }
-        }
-
-        // Not a special combo
-        return false;
-    }
-
-    // We cannot simply use modifierFlags for all key event processing, because
-    // some IMEs will not generate real key events for pressing Shift. Instead
-    // they will simply send key events with isShiftPressed() returning true,
-    // and we will need to send the modifier flag ourselves.
-    private byte getModifierState(KeyEvent event) {
-        // Start with the global modifier state to ensure we cover the case
-        // detailed in https://github.com/moonlight-stream/moonlight-android/issues/840
-        byte modifier = getModifierState();
-        if (event.isShiftPressed()) {
-            modifier |= KeyboardPacket.MODIFIER_SHIFT;
-        }
-        if (event.isCtrlPressed()) {
-            modifier |= KeyboardPacket.MODIFIER_CTRL;
-        }
-        if (event.isAltPressed()) {
-            modifier |= KeyboardPacket.MODIFIER_ALT;
-        }
-        if (event.isMetaPressed()) {
-            modifier |= KeyboardPacket.MODIFIER_META;
-        }
-        return modifier;
-    }
-
-    private byte getModifierState() {
-        return (byte) modifierFlags;
-    }
-
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        return handleKeyDown(event) || super.onKeyDown(keyCode, event);
-    }
-
-    private final Set<Integer> pressedKeys = new HashSet<>();
-    // 0代表未按下，1代表按下esc，2代表按下自定义组合键
-    private int escState = 0; // 0 = 空闲，1 = ESC已按下，2 = 已进入组合键
-    private Handler handler = new Handler(Looper.getMainLooper());
-    private Runnable escConfirmRunnable;
-    @Override
-    public boolean handleKeyDown(KeyEvent event) {
-        switch (event.getKeyCode()) {
-            case KeyEvent.KEYCODE_BACK:
-            case KeyEvent.KEYCODE_HOME:
-            case KeyEvent.KEYCODE_APP_SWITCH:
-                // 如果是系统导航键，则跳过我们的去重逻辑，
-                // 让事件继续被正常处理。
-            case KeyEvent.KEYCODE_VOLUME_UP:
-            case KeyEvent.KEYCODE_VOLUME_DOWN:
-            case KeyEvent.KEYCODE_VOLUME_MUTE:
-            case KeyEvent.KEYCODE_POWER:
-                break;
-            default:
-                // 只有当事件不是来自服务、服务正在运行、且事件源不是虚拟键盘（即来自物理键盘）时，
-                // 才将其判定为重复事件并忽略。
-                InputDevice device = event.getDevice();
-                if (!isEventFromAccessibilityService &&
-                        KeyboardAccessibilityService.getInstance() != null &&
-                        (device != null && !device.isVirtual())) {
-
-                    return true;
-                }
-                break;
-        }
-
-        // 自定义组合键，只能其它+esc，esc+其它时，esc抬起时其它才会down
-        int keyCode = event.getKeyCode();
-        pressedKeys.add(keyCode);
-        if (prefConfig.enableCustomKeyMap) {
-            if (keyCode == KeyEvent.KEYCODE_ESCAPE) {
-                escState = 1;
-//            Log.d("debug", "Esc: Down");
-                // 启动延迟判断是否是单独的ESC键
-                escConfirmRunnable = () -> {
-                    if (escState == 1) {
-//                    Log.d("debug", "Esc: Confirmed as Single");
-                        short translated = keyboardTranslator.translate(KeyEvent.KEYCODE_ESCAPE, event.getDeviceId());
-                        conn.sendKeyboardInput(translated, KeyboardPacket.KEY_DOWN, (byte) 0, MoonBridge.SS_KBE_FLAG_NON_NORMALIZED);
-                        escState = 0;
-                    }
-                };
-                handler.postDelayed(escConfirmRunnable, 200); // 延迟判断
-                return true;
-            }
-
-            if (escState == 1) {
-                // 若在ESC后检测到自定义键按下，取消ESC单键判断
-                handler.removeCallbacks(escConfirmRunnable);
-
-                if (keyCode == KeyEvent.KEYCODE_Q) {
-//                Log.d("debug", "Esc + Q: Down");
-                    escState = 2;
-                    return true;
-                }
-                else if (keyCode >= KeyEvent.KEYCODE_1 && keyCode <= KeyEvent.KEYCODE_9) {
-//                Log.d("debug", "Esc + num: Down");
-                    escState = 2;
-                    int fKeyCode = KeyEvent.KEYCODE_F1 + (keyCode - KeyEvent.KEYCODE_1);
-                    short translated = keyboardTranslator.translate(fKeyCode, event.getDeviceId());
-                    conn.sendKeyboardInput(translated, KeyboardPacket.KEY_DOWN, (byte) 0, MoonBridge.SS_KBE_FLAG_NON_NORMALIZED);
-                    return true;
-                }
-                else if (keyCode == KeyEvent.KEYCODE_0) {
-//                Log.d("debug", "Esc + 0: Down -> F10");
-                    escState = 2;
-                    int fKeyCode = KeyEvent.KEYCODE_F10;
-                    short translated = keyboardTranslator.translate(fKeyCode, event.getDeviceId());
-                    conn.sendKeyboardInput(translated, KeyboardPacket.KEY_DOWN, (byte) 0, MoonBridge.SS_KBE_FLAG_NON_NORMALIZED);
-                    return true;
-                }
-                else if (keyCode == KeyEvent.KEYCODE_MINUS) {
-//                Log.d("debug", "Esc + -: Down -> F11");
-                    escState = 2;
-                    int fKeyCode = KeyEvent.KEYCODE_F11;
-                    short translated = keyboardTranslator.translate(fKeyCode, event.getDeviceId());
-                    conn.sendKeyboardInput(translated, KeyboardPacket.KEY_DOWN, (byte) 0, MoonBridge.SS_KBE_FLAG_NON_NORMALIZED);
-                    return true;
-                }
-                else if (keyCode == KeyEvent.KEYCODE_EQUALS) {
-//                Log.d("debug", "Esc + =: Down -> F12");
-                    escState = 2;
-                    int fKeyCode = KeyEvent.KEYCODE_F12;
-                    short translated = keyboardTranslator.translate(fKeyCode, event.getDeviceId());
-                    conn.sendKeyboardInput(translated, KeyboardPacket.KEY_DOWN, (byte) 0, MoonBridge.SS_KBE_FLAG_NON_NORMALIZED);
-                    return true;
-                }
-                else{
-                    // 非自定义组合键，不做处理
-                    short translated = keyboardTranslator.translate(KeyEvent.KEYCODE_ESCAPE, event.getDeviceId());
-                    conn.sendKeyboardInput(translated, KeyboardPacket.KEY_DOWN, (byte) 0, MoonBridge.SS_KBE_FLAG_NON_NORMALIZED);
-                    escState = 0;
-                }
-            }
-        }
-
-        // Pass-through virtual navigation keys
-        if ((event.getFlags() & KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0) {
-            return false;
-        }
-
-        // Handle a synthetic back button event that some Android OS versions
-        // create as a result of a right-click. This event WILL repeat if
-        // the right mouse button is held down, so we ignore those.
-        int eventSource = event.getSource();
-        if ((eventSource == InputDevice.SOURCE_MOUSE ||
-                eventSource == InputDevice.SOURCE_MOUSE_RELATIVE) &&
-                event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
-
-            // Send the right mouse button event if mouse back and forward
-            // are disabled. If they are enabled, handleMotionEvent() will take
-            // care of this.
-            if (!prefConfig.mouseNavButtons) {
-                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT);
-            }
-
-            // Always return true, otherwise the back press will be propagated
-            // up to the parent and finish the activity.
-            return true;
-        }
-
-        // 鼠标中键（同时影响触摸返回）
-        if (touchInputHandler.detectMouseMiddle && eventSource == InputDevice.SOURCE_KEYBOARD &&
-                event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
-            if (android.os.SystemClock.uptimeMillis() - touchInputHandler.lastMouseHoverTime < 250) {
-                touchInputHandler.detectMouseMiddleDown = true;
-                touchInputHandler.detectMouseMiddle = false;
-                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_MIDDLE);
-                return true;
-            }
-        }
-
-        boolean handled = false;
-
-        if (ControllerHandler.isGameControllerDevice(event.getDevice())) {
-            // Always try the controller handler first, unless it's an alphanumeric keyboard device.
-            // Otherwise, controller handler will eat keyboard d-pad events.
-            handled = controllerHandler.handleButtonDown(event);
-        }
-
-        // Try the keyboard handler if it wasn't handled as a game controller
-        if (!handled) {
-            // Let this method take duplicate key down events
-            if (handleSpecialKeys(event.getKeyCode(), true)) {
-                return true;
-            }
-
-            // Pass through keyboard input if we're not grabbing
-            if (!grabbedInput) {
-                return false;
-            }
-
-            // We'll send it as a raw key event if we have a key mapping, otherwise we'll send it
-            // as UTF-8 text (if it's a printable character).
-            short translated = keyboardTranslator.translate(event.getKeyCode(), event.getDeviceId());
-            if (translated == 0) {
-                // Make sure it has a valid Unicode representation and it's not a dead character
-                // (which we don't support). If those are true, we can send it as UTF-8 text.
-                //
-                // NB: We need to be sure this happens before the getRepeatCount() check because
-                // UTF-8 events don't auto-repeat on the host side.
-                int unicodeChar = event.getUnicodeChar();
-                if ((unicodeChar & KeyCharacterMap.COMBINING_ACCENT) == 0 && (unicodeChar & KeyCharacterMap.COMBINING_ACCENT_MASK) != 0) {
-                    conn.sendUtf8Text("" + (char) unicodeChar);
-                    return true;
-                }
-
-                return false;
-            }
-
-            // Eat repeat down events
-            if (event.getRepeatCount() > 0) {
-                return true;
-            }
-
-            conn.sendKeyboardInput(translated, KeyboardPacket.KEY_DOWN, getModifierState(event),
-                    keyboardTranslator.hasNormalizedMapping(event.getKeyCode(), event.getDeviceId()) ? 0 : MoonBridge.SS_KBE_FLAG_NON_NORMALIZED);
-        }
-
-        return true;
+        return keyboardInputHandler.handleKeyDown(event) || super.onKeyDown(keyCode, event);
     }
 
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
-        return handleKeyUp(event) || super.onKeyUp(keyCode, event);
-    }
-
-    @Override
-    public boolean handleKeyUp(KeyEvent event) {
-        switch (event.getKeyCode()) {
-            case KeyEvent.KEYCODE_BACK:
-            case KeyEvent.KEYCODE_HOME:
-            case KeyEvent.KEYCODE_APP_SWITCH:
-                // 如果是系统导航键，则跳过我们的去重逻辑。
-                break;
-            default:
-                // 如果是普通游戏按键，则执行去重逻辑。
-                InputDevice device = event.getDevice();
-                if (!isEventFromAccessibilityService &&
-                        KeyboardAccessibilityService.getInstance() != null &&
-                        (device != null && !device.isVirtual())) {
-
-                    return true;
-                }
-                break;
-        }
-
-        if (isPhysicalKeyboardConnected()) {
-            // ESC键双击逻辑
-            if (event.getKeyCode() == prefConfig.escMenuKey && prefConfig.enableEscMenu) {
-                long currentTime = System.currentTimeMillis();
-
-                if (currentTime - lastEscPressTime <= ESC_DOUBLE_PRESS_INTERVAL && hasShownEscHint) {
-                    // 第二次按ESC，弹出游戏菜单
-                    onBackPressed();
-                    lastEscPressTime = 0;
-                    hasShownEscHint = false;
-                    return true; // 消费事件，不发送给主机
-                } else {
-                    // 第一次按ESC，显示提示但透传给主机
-                    String keyName = KeyEvent.keyCodeToString(prefConfig.escMenuKey);
-                    if (keyName.startsWith("KEYCODE_")) {
-                        keyName = keyName.substring("KEYCODE_".length());
-                    }
-                    Toast.makeText(this, getString(R.string.toast_press_again_to_open_menu, keyName), Toast.LENGTH_SHORT).show();
-                    lastEscPressTime = currentTime;
-                    hasShownEscHint = true;
-                }
-            }
-        }
-
-        int keyCode = event.getKeyCode();
-        pressedKeys.remove(keyCode);
-
-        if (prefConfig.enableCustomKeyMap) {
-            if (keyCode == KeyEvent.KEYCODE_ESCAPE) {
-                handler.removeCallbacks(escConfirmRunnable); // 若未执行则移除
-                if (escState == 1) {
-                    // 没有组合键，短时间内抬起
-//                Log.d("debug", "Esc: Up (no combo)");
-                    short translated = keyboardTranslator.translate(KeyEvent.KEYCODE_ESCAPE, event.getDeviceId());
-                    conn.sendKeyboardInput(translated, KeyboardPacket.KEY_DOWN, (byte) 0, MoonBridge.SS_KBE_FLAG_NON_NORMALIZED);
-                    // 延迟发送 KEY_UP，不堵塞主线程
-                    handler.postDelayed(() -> {
-                        conn.sendKeyboardInput(translated, KeyboardPacket.KEY_UP, (byte) 0, MoonBridge.SS_KBE_FLAG_NON_NORMALIZED);
-                    }, 50); // 延迟 50ms
-                    escState = 0;
-                } else if (escState == 2) {
-                    // 组合键已触发，不处理ESC
-//                Log.d("debug", "Esc: Up (combo)");
-                    escState = 0;
-                }else{
-//                Log.d("debug", "Esc: Up (no custom combo)");
-                    short translated = keyboardTranslator.translate(KeyEvent.KEYCODE_ESCAPE, event.getDeviceId());
-                    conn.sendKeyboardInput(translated, KeyboardPacket.KEY_UP, (byte) 0, MoonBridge.SS_KBE_FLAG_NON_NORMALIZED);
-                    escState = 0;
-                }
-
-                return true;
-            }
-            if(escState == 2){
-                if (keyCode == KeyEvent.KEYCODE_Q) {
-//                Log.d("debug", "Esc + Q: Up");
-                    onBackPressed();
-                    return true;
-                }
-                if (keyCode >= KeyEvent.KEYCODE_1 && keyCode <= KeyEvent.KEYCODE_9) {
-//                Log.d("debug", "Esc + num: Up");
-                    int fKeyCode = KeyEvent.KEYCODE_F1 + (keyCode - KeyEvent.KEYCODE_1);
-                    short translated = keyboardTranslator.translate(fKeyCode, event.getDeviceId());
-                    conn.sendKeyboardInput(translated, KeyboardPacket.KEY_UP, (byte) 0, MoonBridge.SS_KBE_FLAG_NON_NORMALIZED);
-                    return true;
-                }
-                if (keyCode == KeyEvent.KEYCODE_0) {
-//                Log.d("debug", "Esc + 0: Up -> F10");
-                    int fKeyCode = KeyEvent.KEYCODE_F10;
-                    short translated = keyboardTranslator.translate(fKeyCode, event.getDeviceId());
-                    conn.sendKeyboardInput(translated, KeyboardPacket.KEY_UP, (byte) 0, MoonBridge.SS_KBE_FLAG_NON_NORMALIZED);
-                    return true;
-                }
-                if (keyCode == KeyEvent.KEYCODE_MINUS) {
-//                Log.d("debug", "Esc + -: Up -> F11");
-                    int fKeyCode = KeyEvent.KEYCODE_F11;
-                    short translated = keyboardTranslator.translate(fKeyCode, event.getDeviceId());
-                    conn.sendKeyboardInput(translated, KeyboardPacket.KEY_UP, (byte) 0, MoonBridge.SS_KBE_FLAG_NON_NORMALIZED);
-                    return true;
-                }
-                if (keyCode == KeyEvent.KEYCODE_EQUALS) {
-//                Log.d("debug", "Esc + =: Up -> F12");
-                    int fKeyCode = KeyEvent.KEYCODE_F12;
-                    short translated = keyboardTranslator.translate(fKeyCode, event.getDeviceId());
-                    conn.sendKeyboardInput(translated, KeyboardPacket.KEY_UP, (byte) 0, MoonBridge.SS_KBE_FLAG_NON_NORMALIZED);
-                    return true;
-                }
-            }
-        }
-
-        // Pass-through virtual navigation keys
-        if ((event.getFlags() & KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0) {
-            return false;
-        }
-
-        // Handle a synthetic back button event that some Android OS versions
-        // create as a result of a right-click.
-        int eventSource = event.getSource();
-        if ((eventSource == InputDevice.SOURCE_MOUSE ||
-                eventSource == InputDevice.SOURCE_MOUSE_RELATIVE) &&
-                event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
-
-            // Send the right mouse button event if mouse back and forward
-            // are disabled. If they are enabled, handleMotionEvent() will take
-            // care of this.
-            if (!prefConfig.mouseNavButtons) {
-                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT);
-            }
-
-            // Always return true, otherwise the back press will be propagated
-            // up to the parent and finish the activity.
-            return true;
-        }
-
-        // 鼠标中键（同时影响触摸返回）
-        if (touchInputHandler.detectMouseMiddleDown && eventSource == InputDevice.SOURCE_KEYBOARD &&
-                event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
-            touchInputHandler.detectMouseMiddleDown = false;
-            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE);
-            return true;
-        }
-
-        boolean handled = false;
-        if (ControllerHandler.isGameControllerDevice(event.getDevice())) {
-            // Always try the controller handler first, unless it's an alphanumeric keyboard device.
-            // Otherwise, controller handler will eat keyboard d-pad events.
-            handled = controllerHandler.handleButtonUp(event);
-        }
-
-        // Try the keyboard handler if it wasn't handled as a game controller
-        if (!handled) {
-            if (handleSpecialKeys(event.getKeyCode(), false)) {
-                return true;
-            }
-
-            // Pass through keyboard input if we're not grabbing
-            if (!grabbedInput) {
-                return false;
-            }
-
-            short translated = keyboardTranslator.translate(event.getKeyCode(), event.getDeviceId());
-            if (translated == 0) {
-                // If we sent this event as UTF-8 on key down, also report that it was handled
-                // when we get the key up event for it.
-                int unicodeChar = event.getUnicodeChar();
-                return (unicodeChar & KeyCharacterMap.COMBINING_ACCENT) == 0 && (unicodeChar & KeyCharacterMap.COMBINING_ACCENT_MASK) != 0;
-            }
-
-            conn.sendKeyboardInput(translated, KeyboardPacket.KEY_UP, getModifierState(event),
-                    keyboardTranslator.hasNormalizedMapping(event.getKeyCode(), event.getDeviceId()) ? 0 : MoonBridge.SS_KBE_FLAG_NON_NORMALIZED);
-        }
-
-        return true;
+        return keyboardInputHandler.handleKeyUp(event) || super.onKeyUp(keyCode, event);
     }
 
     @Override
     public boolean onKeyMultiple(int keyCode, int repeatCount, KeyEvent event) {
-        return handleKeyMultiple(event) || super.onKeyMultiple(keyCode, repeatCount, event);
+        return keyboardInputHandler.handleKeyMultiple(event) || super.onKeyMultiple(keyCode, repeatCount, event);
     }
 
-    private boolean handleKeyMultiple(KeyEvent event) {
-        // We can receive keys from a software keyboard that don't correspond to any existing
-        // KEYCODE value. Android will give those to us as an ACTION_MULTIPLE KeyEvent.
-        //
-        // Despite the fact that the Android docs say this is unused since API level 29, these
-        // events are still sent as of Android 13 for the above case.
-        //
-        // For other cases of ACTION_MULTIPLE, we will not report those as handled so hopefully
-        // they will be passed to us again as regular singular key events.
-        if (event.getKeyCode() != KeyEvent.KEYCODE_UNKNOWN || event.getCharacters() == null) {
-            return false;
-        }
-
-        conn.sendUtf8Text(event.getCharacters());
-        return true;
+    @Override
+    public boolean handleKeyDown(KeyEvent event) {
+        return keyboardInputHandler.handleKeyDown(event);
     }
+
+    @Override
+    public boolean handleKeyUp(KeyEvent event) {
+        return keyboardInputHandler.handleKeyUp(event);
+    }
+
 
     public RelativeTouchContext[] getRelativeTouchContextMap() {
         return touchInputHandler.getRelativeTouchContextMap();
@@ -2991,19 +2491,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public void keyboardEvent(boolean buttonDown, short keyCode) {
-        short keyMap = keyboardTranslator.translate(keyCode, -1);
-        if (keyMap != 0) {
-            // handleSpecialKeys() takes the Android keycode
-            if (handleSpecialKeys(keyCode, buttonDown)) {
-                return;
-            }
-
-            if (buttonDown) {
-                conn.sendKeyboardInput(keyMap, KeyboardPacket.KEY_DOWN, getModifierState(), (byte) 0);
-            } else {
-                conn.sendKeyboardInput(keyMap, KeyboardPacket.KEY_UP, getModifierState(), (byte) 0);
-            }
-        }
+        keyboardInputHandler.keyboardEvent(buttonDown, keyCode);
     }
 
     @Override
@@ -3112,11 +2600,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     public boolean onKey(View view, int keyCode, KeyEvent keyEvent) {
         switch (keyEvent.getAction()) {
             case KeyEvent.ACTION_DOWN:
-                return handleKeyDown(keyEvent);
+                return keyboardInputHandler.handleKeyDown(keyEvent);
             case KeyEvent.ACTION_UP:
-                return handleKeyUp(keyEvent);
+                return keyboardInputHandler.handleKeyUp(keyEvent);
             case KeyEvent.ACTION_MULTIPLE:
-                return handleKeyMultiple(keyEvent);
+                return keyboardInputHandler.handleKeyMultiple(keyEvent);
             default:
                 return false;
         }
@@ -3136,10 +2624,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // ensures that Android properly handles the back key when needed and only open the game
         // menu when the activity would be closed.
         showGameMenu(null);
-    }
-
-    private boolean isPhysicalKeyboardConnected() {
-        return getResources().getConfiguration().keyboard == Configuration.KEYBOARD_QWERTY;
     }
 
     /**
