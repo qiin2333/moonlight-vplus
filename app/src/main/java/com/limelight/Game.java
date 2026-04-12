@@ -17,7 +17,6 @@ import com.limelight.binding.input.touch.NativeTouchContext;
 import com.limelight.binding.input.touch.RelativeTouchContext;
 import com.limelight.binding.input.driver.UsbDriverService;
 import com.limelight.binding.input.evdev.EvdevListener;
-import com.limelight.binding.input.touch.TouchContext;
 import com.limelight.binding.input.virtual_controller.VirtualController;
 import com.limelight.binding.video.MediaCodecDecoderRenderer;
 import com.limelight.binding.video.MediaCodecHelper;
@@ -122,41 +121,17 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         OnGenericMotionListener, OnTouchListener, NvConnectionListener, EvdevListener,
         OnSystemUiVisibilityChangeListener, GameGestures, StreamView.InputCallbacks,
         PerfOverlayListener, UsbDriverService.UsbDriverStateListener, View.OnKeyListener, KeyboardAccessibilityService.KeyEventCallback {
-    private int lastButtonState = 0;
     // 这个标志位用于区分事件是来自无障碍服务还是来自UI（如StreamView）
     private boolean isEventFromAccessibilityService = false;
-    private static final int TOUCH_CONTEXT_LENGTH = 2;
-
-    // Only 2 touches are supported
-    private TouchContext[] touchContextMap = new TouchContext[TOUCH_CONTEXT_LENGTH];
-    private final TouchContext[] absoluteTouchContextMap = new TouchContext[TOUCH_CONTEXT_LENGTH];
-    private final TouchContext[] relativeTouchContextMap = new TouchContext[TOUCH_CONTEXT_LENGTH];
-    private long multiFingerDownTime = 0;
-
-    // 双指右键检测
-    private long twoFingerDownTime = 0;
-    private long firstFingerUpTime = 0;
-    private boolean twoFingerTapPending = false;
-    private boolean twoFingerMoved = false;
-    private float twoFingerStartX = 0, twoFingerStartY = 0;
-    private static final int TWO_FINGER_TAP_THRESHOLD = 100;
-    private static final float TWO_FINGER_MOVE_THRESHOLD = 40f;
 
     public static final int REFERENCE_HORIZ_RES = 1280;
     public static final int REFERENCE_VERT_RES = 720;
 
-    private static final int STYLUS_DOWN_DEAD_ZONE_DELAY = 100;
-    private static final int STYLUS_DOWN_DEAD_ZONE_RADIUS = 20;
-
-    private static final int STYLUS_UP_DEAD_ZONE_DELAY = 150;
-    private static final int STYLUS_UP_DEAD_ZONE_RADIUS = 50;
-
-    private static final int MULTI_FINGER_TAP_THRESHOLD = 300;
-
-    private ControllerHandler controllerHandler;
+    ControllerHandler controllerHandler;
+    TouchInputHandler touchInputHandler;
     private KeyboardTranslator keyboardTranslator;
-    private VirtualController virtualController;
-    private PanZoomHandler panZoomHandler;
+    VirtualController virtualController;
+    PanZoomHandler panZoomHandler;
     private AudioVibrationService audioVibrationService;
 
     public interface PerformanceInfoDisplay {
@@ -176,7 +151,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     OrientationManager orientationManager;
     private SharedPreferences tombstonePrefs;
 
-    private NvConnection conn;
+    NvConnection conn;
     private FullscreenProgressOverlay progressOverlay;
     private boolean displayedFailureDialog = false;
     private boolean connecting = false;
@@ -197,18 +172,14 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private AppSettingsManager appSettingsManager;
     private String computerUuid;
 
-    private InputCaptureProvider inputCaptureProvider;
+    InputCaptureProvider inputCaptureProvider;
     private int modifierFlags = 0;
-    private boolean grabbedInput = true;
-    private boolean cursorVisible = false;
+    boolean grabbedInput = true;
+    boolean cursorVisible = false;
     private boolean waitingForAllModifiersUp = false;
     private int specialKeyCode = KeyEvent.KEYCODE_UNKNOWN;
-    private StreamView streamView;
+    StreamView streamView;
     private StreamView externalStreamView; // 外接显示器的StreamView
-    private long lastAbsTouchUpTime = 0;
-    private long lastAbsTouchDownTime = 0;
-    private float lastAbsTouchUpX, lastAbsTouchUpY;
-    private float lastAbsTouchDownX, lastAbsTouchDownY;
     private long previousTimeMillis = 0;
     private long previousRxBytes = 0;
 
@@ -223,7 +194,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private PerformanceOverlayManager performanceOverlayManager;
 
     // 光标服务管理器
-    private CursorServiceManager cursorServiceManager;
+    CursorServiceManager cursorServiceManager;
 
     // 悬浮球管理器
     private FloatBallManager floatBallManager;
@@ -276,7 +247,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     private WifiManager.WifiLock highPerfWifiLock;
     private WifiManager.WifiLock lowLatencyWifiLock;
-    private final Map<Integer, NativeTouchContext.Pointer> nativeTouchPointerMap = new HashMap<>();
+
     private String currentHostAddress; // 保存当前连接的IP
     private boolean shouldResumeSession = false;
 
@@ -379,15 +350,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     public static final String EXTRA_SCREEN_COMBINATION_MODE = "Screen combination mode";
     public static final String EXTRA_VDD_SCREEN_COMBINATION_MODE = "VDD screen combination mode";
 
-    private ExternalDisplayManager externalDisplayManager;
-
-    private float fakeScrollInitialY = -1;
-    private float scrollTotal = 0;
-    private long lastMouseHoverTime = 0; // 记录最后一次鼠标活跃的时间
-    private boolean waitRelease = false;
-    private boolean detectScrolling = false;
-    private boolean detectMouseMiddle = false;
-    private boolean detectMouseMiddleDown = false;
+    ExternalDisplayManager externalDisplayManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -553,7 +516,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(this, this);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            streamView.setOnCapturedPointerListener(this::handleMotionEvent);
+            streamView.setOnCapturedPointerListener(touchInputHandler::handleMotionEvent);
         }
 
         // Warn the user if they're on a metered connection
@@ -674,22 +637,14 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         inputManager.registerInputDeviceListener(keyboardTranslator, null);
 
 
-        // Initialize touch contexts
-        for (int i = 0; i < TOUCH_CONTEXT_LENGTH; i++) {
-            absoluteTouchContextMap[i] = new AbsoluteTouchContext(conn, i, streamView);
-            relativeTouchContextMap[i] = new RelativeTouchContext(conn, i,
-                    streamView, prefConfig);
-        }
-        if (!prefConfig.touchscreenTrackpad) {
-            touchContextMap = absoluteTouchContextMap;
-        } else {
-            touchContextMap = relativeTouchContextMap;
-        }
+        // Initialize touch input handler and touch contexts
+        touchInputHandler = new TouchInputHandler(this);
+        touchInputHandler.initTouchContexts(conn, streamView, prefConfig);
 
         // 初始化光标服务管理器
         CursorView cursorOverlayView = findViewById(R.id.cursorOverlay);
         cursorServiceManager = new CursorServiceManager(
-                streamView, cursorOverlayView, prefConfig, relativeTouchContextMap,
+                streamView, cursorOverlayView, prefConfig, touchInputHandler.relativeTouchContextMap,
                 new CursorServiceManager.UiCallback() {
                     @Override
                     public void runOnUi(Runnable runnable) {
@@ -811,12 +766,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 LimeLog.info("External display disconnected, cleared externalStreamView");
 
                 // 恢复触控上下文的目标视图为平板的 StreamView
-                for (int i = 0; i < TOUCH_CONTEXT_LENGTH; i++) {
-                    if (absoluteTouchContextMap[i] instanceof AbsoluteTouchContext) {
-                        ((AbsoluteTouchContext) absoluteTouchContextMap[i]).setTargetView(Game.this.streamView);
+                for (int i = 0; i < TouchInputHandler.TOUCH_CONTEXT_LENGTH; i++) {
+                    if (touchInputHandler.absoluteTouchContextMap[i] instanceof AbsoluteTouchContext) {
+                        ((AbsoluteTouchContext) touchInputHandler.absoluteTouchContextMap[i]).setTargetView(Game.this.streamView);
                     }
-                    if (relativeTouchContextMap[i] instanceof RelativeTouchContext) {
-                        ((RelativeTouchContext) relativeTouchContextMap[i]).setTargetView(Game.this.streamView);
+                    if (touchInputHandler.relativeTouchContextMap[i] instanceof RelativeTouchContext) {
+                        ((RelativeTouchContext) touchInputHandler.relativeTouchContextMap[i]).setTargetView(Game.this.streamView);
                     }
                 }
 
@@ -833,12 +788,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 externalStreamView = streamView;
 
                 // 更新触控上下文的目标视图为外接显示器的 StreamView
-                for (int i = 0; i < TOUCH_CONTEXT_LENGTH; i++) {
-                    if (absoluteTouchContextMap[i] instanceof AbsoluteTouchContext) {
-                        ((AbsoluteTouchContext) absoluteTouchContextMap[i]).setTargetView(streamView);
+                for (int i = 0; i < TouchInputHandler.TOUCH_CONTEXT_LENGTH; i++) {
+                    if (touchInputHandler.absoluteTouchContextMap[i] instanceof AbsoluteTouchContext) {
+                        ((AbsoluteTouchContext) touchInputHandler.absoluteTouchContextMap[i]).setTargetView(streamView);
                     }
-                    if (relativeTouchContextMap[i] instanceof RelativeTouchContext) {
-                        ((RelativeTouchContext) relativeTouchContextMap[i]).setTargetView(streamView);
+                    if (touchInputHandler.relativeTouchContextMap[i] instanceof RelativeTouchContext) {
+                        ((RelativeTouchContext) touchInputHandler.relativeTouchContextMap[i]).setTargetView(streamView);
                     }
                 }
 
@@ -1228,17 +1183,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // 重新初始化触控
         // 必须在 ControllerManager 初始化之前完成，因为 ControllerManager 会调用它来设置灵敏度
-        // Initialize touch contexts
-        for (int i = 0; i < TOUCH_CONTEXT_LENGTH; i++) {
-            absoluteTouchContextMap[i] = new AbsoluteTouchContext(conn, i, streamView);
-            relativeTouchContextMap[i] = new RelativeTouchContext(conn, i,
-                    streamView, prefConfig);
-        }
-        if (!prefConfig.touchscreenTrackpad) {
-            touchContextMap = absoluteTouchContextMap;
-        } else {
-            touchContextMap = relativeTouchContextMap;
-        }
+        touchInputHandler.initTouchContexts(conn, streamView, prefConfig);
 
         //  重建虚拟手柄和屏幕键盘管理器
         // 必须这样做，因为它们需要绑定新的 controllerHandler 和 conn
@@ -1306,12 +1251,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 LimeLog.info("External display disconnected, cleared externalStreamView");
 
                 // 恢复触控上下文的目标视图为平板的 StreamView
-                for (int i = 0; i < TOUCH_CONTEXT_LENGTH; i++) {
-                    if (absoluteTouchContextMap[i] instanceof AbsoluteTouchContext) {
-                        ((AbsoluteTouchContext) absoluteTouchContextMap[i]).setTargetView(Game.this.streamView);
+                for (int i = 0; i < TouchInputHandler.TOUCH_CONTEXT_LENGTH; i++) {
+                    if (touchInputHandler.absoluteTouchContextMap[i] instanceof AbsoluteTouchContext) {
+                        ((AbsoluteTouchContext) touchInputHandler.absoluteTouchContextMap[i]).setTargetView(Game.this.streamView);
                     }
-                    if (relativeTouchContextMap[i] instanceof RelativeTouchContext) {
-                        ((RelativeTouchContext) relativeTouchContextMap[i]).setTargetView(Game.this.streamView);
+                    if (touchInputHandler.relativeTouchContextMap[i] instanceof RelativeTouchContext) {
+                        ((RelativeTouchContext) touchInputHandler.relativeTouchContextMap[i]).setTargetView(Game.this.streamView);
                     }
                 }
 
@@ -1328,12 +1273,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 externalStreamView = streamView;
 
                 // 更新触控上下文的目标视图为外接显示器的 StreamView
-                for (int i = 0; i < TOUCH_CONTEXT_LENGTH; i++) {
-                    if (absoluteTouchContextMap[i] instanceof AbsoluteTouchContext) {
-                        ((AbsoluteTouchContext) absoluteTouchContextMap[i]).setTargetView(streamView);
+                for (int i = 0; i < TouchInputHandler.TOUCH_CONTEXT_LENGTH; i++) {
+                    if (touchInputHandler.absoluteTouchContextMap[i] instanceof AbsoluteTouchContext) {
+                        ((AbsoluteTouchContext) touchInputHandler.absoluteTouchContextMap[i]).setTargetView(streamView);
                     }
-                    if (relativeTouchContextMap[i] instanceof RelativeTouchContext) {
-                        ((RelativeTouchContext) relativeTouchContextMap[i]).setTargetView(streamView);
+                    if (touchInputHandler.relativeTouchContextMap[i] instanceof RelativeTouchContext) {
+                        ((RelativeTouchContext) touchInputHandler.relativeTouchContextMap[i]).setTargetView(streamView);
                     }
                 }
 
@@ -2256,11 +2201,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
 
         // 鼠标中键（同时影响触摸返回）
-        if (detectMouseMiddle && eventSource == InputDevice.SOURCE_KEYBOARD &&
+        if (touchInputHandler.detectMouseMiddle && eventSource == InputDevice.SOURCE_KEYBOARD &&
                 event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
-            if (android.os.SystemClock.uptimeMillis() - lastMouseHoverTime < 250) {
-                detectMouseMiddleDown = true;
-                detectMouseMiddle = false;
+            if (android.os.SystemClock.uptimeMillis() - touchInputHandler.lastMouseHoverTime < 250) {
+                touchInputHandler.detectMouseMiddleDown = true;
+                touchInputHandler.detectMouseMiddle = false;
                 conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_MIDDLE);
                 return true;
             }
@@ -2456,9 +2401,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
 
         // 鼠标中键（同时影响触摸返回）
-        if (detectMouseMiddleDown && eventSource == InputDevice.SOURCE_KEYBOARD &&
+        if (touchInputHandler.detectMouseMiddleDown && eventSource == InputDevice.SOURCE_KEYBOARD &&
                 event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
-            detectMouseMiddleDown = false;
+            touchInputHandler.detectMouseMiddleDown = false;
             conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE);
             return true;
         }
@@ -2518,50 +2463,16 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         return true;
     }
 
-    private TouchContext getTouchContext(int actionIndex) {
-        if (actionIndex < touchContextMap.length) {
-            return touchContextMap[actionIndex];
-        } else {
-            return null;
-        }
-    }
-
     public RelativeTouchContext[] getRelativeTouchContextMap() {
-        RelativeTouchContext[] result = new RelativeTouchContext[relativeTouchContextMap.length];
-        for (int i = 0; i < relativeTouchContextMap.length; i++) {
-            if (relativeTouchContextMap[i] instanceof RelativeTouchContext) {
-                result[i] = (RelativeTouchContext) relativeTouchContextMap[i];
-            }
-        }
-        return result;
+        return touchInputHandler.getRelativeTouchContextMap();
     }
 
-    /**
-     * false : AbsoluteTouchContext
-     * true : RelativeTouchContext
-     */
     public void setTouchMode(boolean enableRelativeTouch) {
-
-        for (int i = 0; i < touchContextMap.length; i++) {
-            if (enableRelativeTouch) {
-                prefConfig.touchscreenTrackpad = true;
-                prefConfig.enableNativeMousePointer = false;
-                touchContextMap = relativeTouchContextMap;
-                cursorServiceManager.refreshLocalCursorState(prefConfig.enableLocalCursorRendering); //如果本地光标处于开启状态，则开启本地光标
-            } else {
-                prefConfig.touchscreenTrackpad = false;
-                touchContextMap = absoluteTouchContextMap;
-                cursorServiceManager.refreshLocalCursorState(false); //关闭本地光标
-            }
-        }
+        touchInputHandler.setTouchMode(enableRelativeTouch);
     }
 
     public void setEnhancedTouch(boolean enableRelativeTouch) {
-        prefConfig.enableEnhancedTouch = enableRelativeTouch;
-        if (prefConfig.enableEnhancedTouch) {
-            prefConfig.enableNativeMousePointer = false;
-        }
-
+        touchInputHandler.setEnhancedTouch(enableRelativeTouch);
     }
 
     @Override
@@ -2619,1121 +2530,25 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     }
 
-    private byte getLiTouchTypeFromEvent(MotionEvent event) {
-        switch (event.getActionMasked()) {
-            case MotionEvent.ACTION_DOWN:
-            case MotionEvent.ACTION_POINTER_DOWN:
-                return MoonBridge.LI_TOUCH_EVENT_DOWN;
-
-            case MotionEvent.ACTION_UP:
-            case MotionEvent.ACTION_POINTER_UP:
-                if ((event.getFlags() & MotionEvent.FLAG_CANCELED) != 0) {
-                    return MoonBridge.LI_TOUCH_EVENT_CANCEL;
-                } else {
-                    return MoonBridge.LI_TOUCH_EVENT_UP;
-                }
-
-            case MotionEvent.ACTION_MOVE:
-                return MoonBridge.LI_TOUCH_EVENT_MOVE;
-
-            case MotionEvent.ACTION_CANCEL:
-                // ACTION_CANCEL applies to *all* pointers in the gesture, so it maps to CANCEL_ALL
-                // rather than CANCEL. For a single pointer cancellation, that's indicated via
-                // FLAG_CANCELED on a ACTION_POINTER_UP.
-                // https://developer.android.com/develop/ui/views/touch-and-input/gestures/multi
-                return MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL;
-
-            case MotionEvent.ACTION_HOVER_ENTER:
-            case MotionEvent.ACTION_HOVER_MOVE:
-                return MoonBridge.LI_TOUCH_EVENT_HOVER;
-
-            case MotionEvent.ACTION_HOVER_EXIT:
-                return MoonBridge.LI_TOUCH_EVENT_HOVER_LEAVE;
-
-            case MotionEvent.ACTION_BUTTON_PRESS:
-            case MotionEvent.ACTION_BUTTON_RELEASE:
-                return MoonBridge.LI_TOUCH_EVENT_BUTTON_ONLY;
-
-            default:
-                return -1;
-        }
-    }
-
-
-    /**
-     * getStreamViewRelativeNormalizedXY
-     * 正确地处理了视图的平移(Pan)和缩放(Zoom)。
-     */
-    private float[] getStreamViewRelativeNormalizedXY(View view, MotionEvent event, int pointerIndex) {
-        StreamView activeStreamView = getActiveStreamView();
-        if (activeStreamView == null) {
-            return new float[]{0.0f, 0.0f};
-        }
-
-        // --- 第一步：获取原始屏幕坐标 ---
-        float rawX = event.getX(pointerIndex);
-        float rawY = event.getY(pointerIndex);
-
-        // --- 外接显示器特殊处理 ---
-        // 触摸坐标来自平板屏幕，视频显示在外接显示器上，两者坐标空间不同
-        if (externalDisplayManager != null && externalDisplayManager.isUsingExternalDisplay()) {
-            float touchWidth, touchHeight;
-            if (view != null && view.getWidth() > 0 && view.getHeight() > 0) {
-                touchWidth = view.getWidth();
-                touchHeight = view.getHeight();
-            } else {
-                Point size = new Point();
-                getWindowManager().getDefaultDisplay().getRealSize(size);
-                touchWidth = size.x;
-                touchHeight = size.y;
-            }
-            float normalizedX = Math.max(0.0f, Math.min(1.0f, rawX / touchWidth));
-            float normalizedY = Math.max(0.0f, Math.min(1.0f, rawY / touchHeight));
-            return new float[]{normalizedX, normalizedY};
-        }
-
-        // --- 第二步：进行正确的坐标逆变换（同时处理平移和缩放）---
-        float scaleX = activeStreamView.getScaleX();
-        float scaleY = activeStreamView.getScaleY();
-
-        if (scaleX == 0 || scaleY == 0) {
-            return new float[]{0.0f, 0.0f};
-        }
-
-        // 计算出在游戏画面中的【绝对像素坐标】
-        float absoluteX = (rawX - activeStreamView.getX()) / scaleX;
-        float absoluteY = (rawY - activeStreamView.getY()) / scaleY;
-
-        // --- 第三步：将绝对像素坐标归一化为 0-1 的比例 ---
-        int streamWidth = activeStreamView.getWidth();
-        int streamHeight = activeStreamView.getHeight();
-
-        if (streamWidth == 0 || streamHeight == 0) {
-            return new float[]{0.0f, 0.0f};
-        }
-
-        float normalizedX = absoluteX / streamWidth;
-        float normalizedY = absoluteY / streamHeight;
-
-        // 确保坐标在 [0.0, 1.0] 的范围内，防止越界
-        normalizedX = Math.max(0.0f, Math.min(1.0f, normalizedX));
-        normalizedY = Math.max(0.0f, Math.min(1.0f, normalizedY));
-
-
-        return new float[]{normalizedX, normalizedY};
-    }
-
-    private static float normalizeValueInRange(float value, InputDevice.MotionRange range) {
-        return (value - range.getMin()) / range.getRange();
-    }
-
-    private static float getPressureOrDistance(MotionEvent event, int pointerIndex) {
-        InputDevice dev = event.getDevice();
-        switch (event.getActionMasked()) {
-            case MotionEvent.ACTION_HOVER_ENTER:
-            case MotionEvent.ACTION_HOVER_MOVE:
-            case MotionEvent.ACTION_HOVER_EXIT:
-                // Hover events report distance
-                if (dev != null) {
-                    InputDevice.MotionRange distanceRange = dev.getMotionRange(MotionEvent.AXIS_DISTANCE, event.getSource());
-                    if (distanceRange != null) {
-                        return normalizeValueInRange(event.getAxisValue(MotionEvent.AXIS_DISTANCE, pointerIndex), distanceRange);
-                    }
-                }
-                return 0.0f;
-
-            default:
-                // Other events report pressure
-                return event.getPressure(pointerIndex);
-        }
-    }
-
-    private static short getRotationDegrees(MotionEvent event, int pointerIndex) {
-        InputDevice dev = event.getDevice();
-        if (dev != null) {
-            if (dev.getMotionRange(MotionEvent.AXIS_ORIENTATION, event.getSource()) != null) {
-                short rotationDegrees = (short) Math.toDegrees(event.getOrientation(pointerIndex));
-                if (rotationDegrees < 0) {
-                    rotationDegrees += 360;
-                }
-                return rotationDegrees;
-            }
-        }
-        return MoonBridge.LI_ROT_UNKNOWN;
-    }
-
-    private static float[] polarToCartesian(float r, float theta) {
-        return new float[]{(float) (r * Math.cos(theta)), (float) (r * Math.sin(theta))};
-    }
-
-    private static float cartesianToR(float[] point) {
-        return (float) Math.sqrt(Math.pow(point[0], 2) + Math.pow(point[1], 2));
-    }
-
-    private float[] getStreamViewNormalizedContactArea(MotionEvent event, int pointerIndex) {
-        float orientation;
-
-        // If the orientation is unknown, we'll just assume it's at a 45 degree angle and scale it by
-        // X and Y scaling factors evenly.
-        if (event.getDevice() == null || event.getDevice().getMotionRange(MotionEvent.AXIS_ORIENTATION, event.getSource()) == null) {
-            orientation = (float) (Math.PI / 4);
-        } else {
-            orientation = event.getOrientation(pointerIndex);
-        }
-
-        float contactAreaMajor, contactAreaMinor;
-        switch (event.getActionMasked()) {
-            // Hover events report the tool size
-            case MotionEvent.ACTION_HOVER_ENTER:
-            case MotionEvent.ACTION_HOVER_MOVE:
-            case MotionEvent.ACTION_HOVER_EXIT:
-                contactAreaMajor = event.getToolMajor(pointerIndex);
-                contactAreaMinor = event.getToolMinor(pointerIndex);
-                break;
-
-            // Other events report contact area
-            default:
-                contactAreaMajor = event.getTouchMajor(pointerIndex);
-                contactAreaMinor = event.getTouchMinor(pointerIndex);
-                break;
-        }
-
-        // The contact area major axis is parallel to the orientation, so we simply convert
-        // polar to cartesian coordinates using the orientation as theta.
-        float[] contactAreaMajorCartesian = polarToCartesian(contactAreaMajor, orientation);
-
-        // The contact area minor axis is perpendicular to the contact area major axis (and thus
-        // the orientation), so rotate the orientation angle by 90 degrees.
-        float[] contactAreaMinorCartesian = polarToCartesian(contactAreaMinor, (float) (orientation + (Math.PI / 2)));
-
-        // Normalize the contact area to the stream view size
-        StreamView refView = getActiveStreamView();
-        int refWidth = (refView != null && refView.getWidth() > 0) ? refView.getWidth() : streamView.getWidth();
-        int refHeight = (refView != null && refView.getHeight() > 0) ? refView.getHeight() : streamView.getHeight();
-        if (refWidth == 0) refWidth = 1;
-        if (refHeight == 0) refHeight = 1;
-        contactAreaMajorCartesian[0] = Math.min(Math.abs(contactAreaMajorCartesian[0]), refWidth) / refWidth;
-        contactAreaMinorCartesian[0] = Math.min(Math.abs(contactAreaMinorCartesian[0]), refWidth) / refWidth;
-        contactAreaMajorCartesian[1] = Math.min(Math.abs(contactAreaMajorCartesian[1]), refHeight) / refHeight;
-        contactAreaMinorCartesian[1] = Math.min(Math.abs(contactAreaMinorCartesian[1]), refHeight) / refHeight;
-
-        // Convert the normalized values back into polar coordinates
-        return new float[]{cartesianToR(contactAreaMajorCartesian), cartesianToR(contactAreaMinorCartesian)};
-    }
-
-    private boolean sendPenEventForPointer(View view, MotionEvent event, byte eventType, byte toolType, int pointerIndex) {
-        byte penButtons = 0;
-        if ((event.getButtonState() & MotionEvent.BUTTON_STYLUS_PRIMARY) != 0) {
-            penButtons |= MoonBridge.LI_PEN_BUTTON_PRIMARY;
-        }
-        if ((event.getButtonState() & MotionEvent.BUTTON_STYLUS_SECONDARY) != 0) {
-            penButtons |= MoonBridge.LI_PEN_BUTTON_SECONDARY;
-        }
-
-        byte tiltDegrees = MoonBridge.LI_TILT_UNKNOWN;
-        InputDevice dev = event.getDevice();
-        if (dev != null) {
-            if (dev.getMotionRange(MotionEvent.AXIS_TILT, event.getSource()) != null) {
-                tiltDegrees = (byte) Math.toDegrees(event.getAxisValue(MotionEvent.AXIS_TILT, pointerIndex));
-            }
-        }
-
-        float[] normalizedCoords = getStreamViewRelativeNormalizedXY(view, event, pointerIndex);
-        float[] normalizedContactArea = getStreamViewNormalizedContactArea(event, pointerIndex);
-        return conn.sendPenEvent(eventType, toolType, penButtons,
-                normalizedCoords[0], normalizedCoords[1],
-                getPressureOrDistance(event, pointerIndex),
-                normalizedContactArea[0], normalizedContactArea[1],
-                getRotationDegrees(event, pointerIndex), tiltDegrees) != MoonBridge.LI_ERR_UNSUPPORTED;
-    }
-
-    private static byte convertToolTypeToStylusToolType(MotionEvent event, int pointerIndex) {
-        switch (event.getToolType(pointerIndex)) {
-            case MotionEvent.TOOL_TYPE_ERASER:
-                return MoonBridge.LI_TOOL_TYPE_ERASER;
-            case MotionEvent.TOOL_TYPE_STYLUS:
-                return MoonBridge.LI_TOOL_TYPE_PEN;
-            default:
-                return MoonBridge.LI_TOOL_TYPE_UNKNOWN;
-        }
-    }
-
-    private boolean trySendPenEvent(View view, MotionEvent event) {
-        byte eventType = getLiTouchTypeFromEvent(event);
-        if (eventType < 0) {
-            return false;
-        }
-
-        if (event.getActionMasked() == MotionEvent.ACTION_MOVE) {
-            // Move events may impact all active pointers
-            boolean handledStylusEvent = false;
-            for (int i = 0; i < event.getPointerCount(); i++) {
-                byte toolType = convertToolTypeToStylusToolType(event, i);
-                if (toolType == MoonBridge.LI_TOOL_TYPE_UNKNOWN) {
-                    // Not a stylus pointer, so skip it
-                    continue;
-                } else {
-                    // This pointer is a stylus, so we'll report that we handled this event
-                    handledStylusEvent = true;
-                }
-
-                // 为触控笔事件添加增强触控支持
-                if (prefConfig.enableEnhancedTouch) {
-                    NativeTouchContext.Pointer pointer = nativeTouchPointerMap.get(event.getPointerId(i));
-                    if (pointer != null) {
-                        pointer.updatePointerCoords(event, i); // 更新指针坐标
-                    }
-                }
-
-                if (!sendPenEventForPointer(view, event, eventType, toolType, i)) {
-                    // Pen events aren't supported by the host
-                    return false;
-                }
-            }
-            return handledStylusEvent;
-        } else if (event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
-            // Cancel impacts all active pointers
-            return conn.sendPenEvent(MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, MoonBridge.LI_TOOL_TYPE_UNKNOWN, (byte) 0,
-                    0, 0, 0, 0, 0,
-                    MoonBridge.LI_ROT_UNKNOWN, MoonBridge.LI_TILT_UNKNOWN) != MoonBridge.LI_ERR_UNSUPPORTED;
-        } else {
-            // Up, Down, and Hover events are specific to the action index
-            byte toolType = convertToolTypeToStylusToolType(event, event.getActionIndex());
-            if (toolType == MoonBridge.LI_TOOL_TYPE_UNKNOWN) {
-                // Not a stylus event
-                return false;
-            }
-
-            // 为触控笔事件添加增强触控支持
-            if (prefConfig.enableEnhancedTouch) {
-                int actionIndex = event.getActionIndex();
-                switch (event.getActionMasked()) {
-                    case MotionEvent.ACTION_POINTER_DOWN:
-                    case MotionEvent.ACTION_DOWN:
-                    case MotionEvent.ACTION_HOVER_ENTER:
-                        // 创建新的Pointer实例
-                        NativeTouchContext.Pointer pointer = new NativeTouchContext.Pointer(event);
-                        nativeTouchPointerMap.put(pointer.getPointerId(), pointer);
-                        break;
-                    case MotionEvent.ACTION_POINTER_UP:
-                    case MotionEvent.ACTION_UP:
-                    case MotionEvent.ACTION_HOVER_EXIT:
-                        // 移除Pointer实例
-                        nativeTouchPointerMap.remove(event.getPointerId(actionIndex));
-                        break;
-                    case MotionEvent.ACTION_HOVER_MOVE:
-                        // 更新悬空指针的坐标
-                        NativeTouchContext.Pointer hoverPointer = nativeTouchPointerMap.get(event.getPointerId(actionIndex));
-                        if (hoverPointer != null) {
-                            hoverPointer.updatePointerCoords(event, actionIndex);
-                        }
-                        break;
-                }
-            }
-
-            return sendPenEventForPointer(view, event, eventType, toolType, event.getActionIndex());
-        }
-    }
-
-    private boolean sendTouchEventForPointer(View view, MotionEvent event, byte eventType, int pointerIndex) {
-        float[] normalizedCoords = getStreamViewRelativeNormalizedXY(view, event, pointerIndex); // normalized Coords就是坐标占长或宽的比例，最小0，最大1
-        float[] normalizedContactArea = getStreamViewNormalizedContactArea(event, pointerIndex);
-        return conn.sendTouchEvent(eventType, event.getPointerId(pointerIndex),
-                normalizedCoords[0], normalizedCoords[1],
-                getPressureOrDistance(event, pointerIndex),
-                normalizedContactArea[0], normalizedContactArea[1],
-                getRotationDegrees(event, pointerIndex)) != MoonBridge.LI_ERR_UNSUPPORTED;
-    }
-
-    private boolean trySendTouchEvent(View view, MotionEvent event) {
-        byte eventType = getLiTouchTypeFromEvent(event);
-        if (eventType < 0) {
-            return false;
-        }
-
-        if (event.getActionMasked() == MotionEvent.ACTION_MOVE) {
-            // Move events may impact all active pointers
-            int pointerCount = event.getPointerCount();
-            if (prefConfig.enableEnhancedTouch) {
-                for (int i = 0; i < pointerCount; i++) {
-                    NativeTouchContext.Pointer pointer = nativeTouchPointerMap.get(event.getPointerId(i));
-                    if (pointer != null) {
-                        pointer.updatePointerCoords(event, i); // 更新指针坐标
-                    }
-                    if (!sendTouchEventForPointer(view, event, eventType, i)) {
-                        return false;
-                    }
-                }
-            } else {
-                for (int i = 0; i < pointerCount; i++) {
-                    if (!sendTouchEventForPointer(view, event, eventType, i)) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        } else if (event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
-            // Cancel impacts all active pointers
-            return conn.sendTouchEvent(MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, 0,
-                    0, 0, 0, 0, 0,
-                    MoonBridge.LI_ROT_UNKNOWN) != MoonBridge.LI_ERR_UNSUPPORTED;
-        } else {
-            int actionIndex = event.getActionIndex();
-            switch (event.getActionMasked()) {
-                case MotionEvent.ACTION_POINTER_DOWN:
-                    multiFingerTapChecker(event);
-                case MotionEvent.ACTION_DOWN: // first & following finger down.
-                    if (prefConfig.enableEnhancedTouch) {
-                        NativeTouchContext.Pointer pointer = new NativeTouchContext.Pointer(event); //create a Pointer Instance for new touch pointer, put it into the map.
-                        nativeTouchPointerMap.put(pointer.getPointerId(), pointer);
-                    }
-                    break;
-                case MotionEvent.ACTION_UP: // all fingers up
-                    // toggle keyboard when all fingers lift up, just like how it works in trackpad mode.
-                    if (event.getEventTime() - multiFingerDownTime < MULTI_FINGER_TAP_THRESHOLD) {
-                        toggleKeyboard();
-                    }
-                    break;
-                case MotionEvent.ACTION_POINTER_UP:
-                    if (prefConfig.enableEnhancedTouch) {
-                        nativeTouchPointerMap.remove(event.getPointerId(actionIndex));
-                    }
-                    break;
-            }
-            // Up, Down, and Hover events are specific to the action index
-            return sendTouchEventForPointer(view, event, eventType, actionIndex);
-        }
-    }
-
-    private void multiFingerTapChecker(MotionEvent event) {
-        if (event.getPointerCount() == prefConfig.nativeTouchFingersToToggleKeyboard) {
-            // number of fingers to tap is defined by prefConfig.nativeTouchFingersToToggleKeyboard, configurable from 3 to 10, and -1(disabled) in menu.
-
-            // Cancel the first and second touches to avoid
-            // erroneous events
-            // for (TouchContext aTouchContext : touchContextMap) {
-            //    aTouchContext.cancelTouch();
-            // }
-            multiFingerDownTime = event.getEventTime();
-        }
-    }
-
-    // 处理缩放下的经典鼠标模式
-
-    /**
-     * 核心坐标转换函数
-     * 将屏幕上的原始触摸坐标，根据 streamView 的平移和缩放状态，转换为游戏内的“真实”坐标。
-     */
-    private float[] getNormalizedCoordinates(View streamView, float rawX, float rawY) {
-        if (streamView == null) {
-            return new float[]{rawX, rawY};
-        }
-
-        // 外接显示器模式：触摸在平板，视频在外接屏
-        // 将平板触摸坐标按比例映射到外接 StreamView 的像素坐标
-        if (externalDisplayManager != null && externalDisplayManager.isUsingExternalDisplay()) {
-            StreamView active = getActiveStreamView();
-            if (active != null && active.getWidth() > 0 && active.getHeight() > 0) {
-                Point size = new Point();
-                getWindowManager().getDefaultDisplay().getRealSize(size);
-                float scaleX = (float) active.getWidth() / size.x;
-                float scaleY = (float) active.getHeight() / size.y;
-                return new float[]{rawX * scaleX, rawY * scaleY};
-            }
-            return new float[]{rawX, rawY};
-        }
-
-        float scaleX = streamView.getScaleX();
-        float scaleY = streamView.getScaleY();
-
-        // 防止除以零
-        if (scaleX == 0 || scaleY == 0) {
-            return new float[]{rawX, rawY};
-        }
-
-        float normalizedX = (rawX - streamView.getX()) / scaleX;
-        float normalizedY = (rawY - streamView.getY()) / scaleY;
-
-        return new float[]{normalizedX, normalizedY};
-    }
-
-    // Returns true if the event was consumed
-    // NB: View is only present if called from a view callback
-    private boolean handleMotionEvent(View view, MotionEvent event) {
-        // Pass through mouse/touch/joystick input if we're not grabbing
-        if (!grabbedInput) {
-            return false;
-        }
-
-        int eventSource = event.getSource();
-
-        // 支持华为平板识别原生鼠标下的滚动逻辑：一次8194鼠标滑动+五次4098屏幕滑动
-        if (prefConfig.fixMouseWheel && cursorVisible &&
-                eventSource == InputDevice.SOURCE_MOUSE &&
-                (event.getActionMasked() == MotionEvent.ACTION_HOVER_MOVE ||
-                        event.getActionMasked() == MotionEvent.ACTION_MOVE ||
-                        event.getActionMasked() == MotionEvent.ACTION_DOWN ||
-                        event.getActionMasked() == MotionEvent.ACTION_BUTTON_PRESS)){
-            lastMouseHoverTime = android.os.SystemClock.uptimeMillis();
-            detectScrolling = true;
-        }
-        else if (detectScrolling){
-            // 拦截系统通过触摸屏(Source 4098)模拟的鼠标滚轮事件
-            if (eventSource == InputDevice.SOURCE_TOUCHSCREEN && event.getPointerCount() == 1) {
-                int action = event.getActionMasked();
-                if (action == MotionEvent.ACTION_CANCEL) {
-                    waitRelease = true;
-                }
-                else if (action == MotionEvent.ACTION_DOWN) {
-                    long currentTime = android.os.SystemClock.uptimeMillis();
-                    long timeDiff = currentTime - lastMouseHoverTime;
-                    if (timeDiff <= 40 || waitRelease){
-                        fakeScrollInitialY = event.getY();
-                        // 同步发送绝对坐标给远程
-                        conn.sendMousePosition(
-                                (short)event.getX(),
-                                (short)event.getY(),
-                                (short)streamView.getWidth(),
-                                (short)streamView.getHeight()
-                        );
-                        return true;
-                    }
-                    else {
-//                        Log.d("debug", "timeDiff: " + timeDiff);
-                        detectScrolling = false;
-                        waitRelease = false;
-                        scrollTotal = 0;
-                    }
-                }
-                else if (action == MotionEvent.ACTION_MOVE) {
-                    float deltaY = event.getY() - fakeScrollInitialY;
-//                    Log.d("debug", "deltaY: " + deltaY);
-                    // 向上滑一次时deltaY=64，向下-64，滚动一格产生两次
-                    fakeScrollInitialY = event.getY();
-                    scrollTotal = scrollTotal + deltaY;
-                    if (scrollTotal > 127.99){
-                        scrollTotal = scrollTotal - 128;
-//                        Log.d("debug", "send: up");
-                        conn.sendMouseHighResScroll((short) 120);
-                    }
-                    else if (scrollTotal < -127.99){
-                        scrollTotal = scrollTotal + 128;
-//                        Log.d("debug", "send: down");
-                        conn.sendMouseHighResScroll((short) -120);
-                    }
-
-                    // 拦截事件，不再向下传递，避免触发点击或UI滑动
-                    return true;
-                }
-                else if (action == MotionEvent.ACTION_UP) {
-//                    Log.d("debug", "scrollTotal: " + scrollTotal);
-                    while(scrollTotal > 127.99 || scrollTotal < -127.99) {
-//                        Log.d("debug", "滚轮还未发完");
-                        if (scrollTotal > 127.99){
-                            scrollTotal = scrollTotal - 128;
-//                            Log.d("debug", "send: up");
-                            conn.sendMouseHighResScroll((short) 120);
-                        }
-                        else {
-                            scrollTotal = scrollTotal + 128;
-//                            Log.d("debug", "send: down");
-                            conn.sendMouseHighResScroll((short) -120);
-                        }
-                    }
-                    if (!waitRelease) {
-                        detectScrolling = false;
-                    }
-                    fakeScrollInitialY = -1;
-                    scrollTotal = 0;
-                    return true;
-                }
-                else {
-                    detectScrolling = false;
-                    waitRelease = false;
-                    scrollTotal = 0;
-                }
-            }
-            else if (waitRelease && eventSource == InputDevice.SOURCE_MOUSE && event.getActionMasked() == MotionEvent.ACTION_BUTTON_RELEASE) {
-                waitRelease = false;
-            }
-            else if (!waitRelease){
-                detectScrolling = false;
-                scrollTotal = 0;
-            }
-        }
-
-        // 支持华为鼠标中键
-        if (prefConfig.fixMouseMiddle) {
-            if (cursorVisible) {
-                // 本地模式：8194：7+7（x和y不变）
-                if (eventSource == InputDevice.SOURCE_MOUSE &&
-                        event.getActionMasked() == MotionEvent.ACTION_HOVER_MOVE) {
-                    lastMouseHoverTime = android.os.SystemClock.uptimeMillis();
-                    detectMouseMiddle = true;
-                }
-            }
-            else if (eventSource == InputDevice.SOURCE_MOUSE_RELATIVE &&
-                    event.getActionMasked() == MotionEvent.ACTION_BUTTON_RELEASE) {
-                // 远程模式：131076：2+11+12+2（x和y全0.0，中间可能夹杂2，依靠12来检测）
-                lastMouseHoverTime = android.os.SystemClock.uptimeMillis();
-                detectMouseMiddle = true;
-            }
-        }
-
-        int deviceSources = event.getDevice() != null ? event.getDevice().getSources() : 0;
-
-        // 本地鼠标指针模式的特殊处理
-        if (prefConfig.enableNativeMousePointer && (eventSource & InputDevice.SOURCE_CLASS_POINTER) != 0) {
-            // 检查是否为真正的鼠标设备（而不是触摸屏）
-            boolean isActualMouse = (eventSource == InputDevice.SOURCE_MOUSE) ||
-                    (eventSource == InputDevice.SOURCE_MOUSE_RELATIVE) ||
-                    (event.getPointerCount() >= 1 &&
-                            event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE) ||
-                    (eventSource == 12290); // Samsung DeX mode
-
-            if (isActualMouse) {
-                LimeLog.info("Native mouse event (processing): " + event.getActionMasked() +
-                        ", source: " + eventSource +
-                        ", x: " + event.getX() +
-                        ", y: " + event.getY() +
-                        ", buttons: " + event.getButtonState());
-
-                // 在本地鼠标指针模式下，直接处理鼠标事件
-                updateMousePosition(view, event);
-
-                int buttonState = event.getButtonState();
-                int changedButtons = buttonState ^ lastButtonState;
-
-                if ((changedButtons & MotionEvent.BUTTON_PRIMARY) != 0) {
-                    if ((buttonState & MotionEvent.BUTTON_PRIMARY) != 0) {
-                        conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT);
-                    } else {
-                        conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT);
-                    }
-                }
-                if ((changedButtons & MotionEvent.BUTTON_SECONDARY) != 0) {
-                    if ((buttonState & MotionEvent.BUTTON_SECONDARY) != 0) {
-                        conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT);
-                    } else {
-                        conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT);
-                    }
-                }
-                if ((changedButtons & MotionEvent.BUTTON_TERTIARY) != 0) {
-                    if ((buttonState & MotionEvent.BUTTON_TERTIARY) != 0) {
-                        conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_MIDDLE);
-                    } else {
-                        conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE);
-                    }
-                }
-
-                // 处理滚轮事件
-                if (event.getActionMasked() == MotionEvent.ACTION_SCROLL) {
-                    conn.sendMouseHighResScroll((short) (event.getAxisValue(MotionEvent.AXIS_VSCROLL) * 120));
-                    conn.sendMouseHighResHScroll((short) (event.getAxisValue(MotionEvent.AXIS_HSCROLL) * 120));
-                }
-
-                lastButtonState = buttonState;
-                return true;
-            }
-            // 如果不是真正的鼠标设备（比如触摸屏），继续让后续代码处理
-        }
-
-        if ((eventSource & InputDevice.SOURCE_CLASS_JOYSTICK) != 0) { //手柄所属条件
-            return controllerHandler.handleMotionEvent(event);
-        } else if ((deviceSources & InputDevice.SOURCE_CLASS_JOYSTICK) != 0 && controllerHandler.tryHandleTouchpadEvent(event)) {
-            return true;
-        } else if ((eventSource & InputDevice.SOURCE_CLASS_POINTER) != 0 ||
-                (eventSource & InputDevice.SOURCE_CLASS_POSITION) != 0 ||
-                eventSource == InputDevice.SOURCE_MOUSE_RELATIVE) {
-            // This case is for mice and non-finger touch devices, 非手指触控功能所属判断条件
-            if (eventSource == InputDevice.SOURCE_MOUSE ||
-                    (eventSource & InputDevice.SOURCE_CLASS_POSITION) != 0 || // SOURCE_TOUCHPAD虚拟手柄
-                    eventSource == InputDevice.SOURCE_MOUSE_RELATIVE ||
-                    (event.getPointerCount() >= 1 &&
-                            (event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE ||
-                                    event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS ||
-                                    event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER)) ||
-                    eventSource == 12290) // 12290 = Samsung DeX mode desktop mouse
-            {
-                int buttonState = event.getButtonState();
-                int changedButtons = buttonState ^ lastButtonState;
-
-                // The DeX touchpad on the Fold 4 sends proper right click events using BUTTON_SECONDARY,
-                // but doesn't send BUTTON_PRIMARY for a regular click. Instead it sends ACTION_DOWN/UP,
-                // so we need to fix that up to look like a sane input event to process it correctly.
-                if (eventSource == 12290) {
-                    if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                        buttonState |= MotionEvent.BUTTON_PRIMARY;
-                    } else if (event.getAction() == MotionEvent.ACTION_UP) {
-                        buttonState &= ~MotionEvent.BUTTON_PRIMARY;
-                    } else {
-                        // We may be faking the primary button down from a previous event,
-                        // so be sure to add that bit back into the button state.
-                        buttonState |= (lastButtonState & MotionEvent.BUTTON_PRIMARY);
-                    }
-
-                    changedButtons = buttonState ^ lastButtonState;
-                }
-
-                // Ignore mouse input if we're not capturing from our input source
-                if (!inputCaptureProvider.isCapturingActive()) {
-                    // We return true here because otherwise the events may end up causing
-                    // Android to synthesize d-pad events.
-                    return true;
-                }
-
-                // Always update the position before sending any button events. If we're
-                // dealing with a stylus without hover support, our position might be
-                // significantly different than before.
-                if (inputCaptureProvider.eventHasRelativeMouseAxes(event)) {
-                    // Send the deltas straight from the motion event
-                    short deltaX = (short) inputCaptureProvider.getRelativeAxisX(event);
-                    short deltaY = (short) inputCaptureProvider.getRelativeAxisY(event);
-
-                    if (deltaX != 0 || deltaY != 0) {
-                        if (prefConfig.absoluteMouseMode) {
-                            // NB: view may be null, but we can unconditionally use streamView because we don't need to adjust
-                            // relative axis deltas for the position of the streamView within the parent's coordinate system.
-                            StreamView activeStreamView = getActiveStreamView();
-                            conn.sendMouseMoveAsMousePosition(deltaX, deltaY, (short) activeStreamView.getWidth(), (short) activeStreamView.getHeight());
-                        } else {
-                            conn.sendMouseMove(deltaX, deltaY);
-                        }
-                    }
-                } else if ((eventSource & InputDevice.SOURCE_CLASS_POSITION) != 0) {
-                    // If this input device is not associated with the view itself (like a trackpad),
-                    // we'll convert the device-specific coordinates to use to send the cursor position.
-                    // This really isn't ideal but it's probably better than nothing.
-                    //
-                    // Trackpad on newer versions of Android (Oreo and later) should be caught by the
-                    // relative axes case above. If we get here, we're on an older version that doesn't
-                    // support pointer capture.
-                    InputDevice device = event.getDevice();
-                    if (device != null) {
-                        InputDevice.MotionRange xRange = device.getMotionRange(MotionEvent.AXIS_X, eventSource);
-                        InputDevice.MotionRange yRange = device.getMotionRange(MotionEvent.AXIS_Y, eventSource);
-
-                        // All touchpads coordinate planes should start at (0, 0)
-                        if (xRange != null && yRange != null && xRange.getMin() == 0 && yRange.getMin() == 0) {
-                            int xMax = (int) xRange.getMax();
-                            int yMax = (int) yRange.getMax();
-
-                            // Touchpads must be smaller than (65535, 65535)
-                            if (xMax <= Short.MAX_VALUE && yMax <= Short.MAX_VALUE) {
-                                conn.sendMousePosition((short) event.getX(), (short) event.getY(),
-                                        (short) xMax, (short) yMax);
-                            }
-                        }
-                    }
-                } else if (view != null && trySendPenEvent(view, event)) {
-                    // If our host supports pen events, send it directly
-                    return true;
-                } else if (view != null) {
-                    // Otherwise send absolute position based on the view for SOURCE_CLASS_POINTER
-                    updateMousePosition(view, event);
-                }
-
-                if (event.getActionMasked() == MotionEvent.ACTION_SCROLL) {
-                    // Send the vertical scroll packet
-                    conn.sendMouseHighResScroll((short) (event.getAxisValue(MotionEvent.AXIS_VSCROLL) * 120));
-                    conn.sendMouseHighResHScroll((short) (event.getAxisValue(MotionEvent.AXIS_HSCROLL) * 120));
-                }
-
-                if ((changedButtons & MotionEvent.BUTTON_PRIMARY) != 0) {
-                    if ((buttonState & MotionEvent.BUTTON_PRIMARY) != 0) {
-                        conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT);
-                    } else {
-                        conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT);
-                    }
-                }
-
-                // Mouse secondary or stylus primary is right click (stylus down is left click)
-                if ((changedButtons & (MotionEvent.BUTTON_SECONDARY | MotionEvent.BUTTON_STYLUS_PRIMARY)) != 0) {
-                    if ((buttonState & (MotionEvent.BUTTON_SECONDARY | MotionEvent.BUTTON_STYLUS_PRIMARY)) != 0) {
-                        conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT);
-                    } else {
-                        conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT);
-                    }
-                }
-
-                // Mouse tertiary or stylus secondary is middle click
-                if ((changedButtons & (MotionEvent.BUTTON_TERTIARY | MotionEvent.BUTTON_STYLUS_SECONDARY)) != 0) {
-                    if ((buttonState & (MotionEvent.BUTTON_TERTIARY | MotionEvent.BUTTON_STYLUS_SECONDARY)) != 0) {
-                        conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_MIDDLE);
-                    } else {
-                        conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE);
-                    }
-                }
-
-                if (prefConfig.mouseNavButtons) {
-                    if ((changedButtons & MotionEvent.BUTTON_BACK) != 0) {
-                        if ((buttonState & MotionEvent.BUTTON_BACK) != 0) {
-                            conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_X1);
-                        } else {
-                            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X1);
-                        }
-                    }
-
-                    if ((changedButtons & MotionEvent.BUTTON_FORWARD) != 0) {
-                        if ((buttonState & MotionEvent.BUTTON_FORWARD) != 0) {
-                            conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_X2);
-                        } else {
-                            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X2);
-                        }
-                    }
-                }
-
-                // Handle stylus presses
-                if (event.getPointerCount() == 1 && event.getActionIndex() == 0) {
-                    if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                        if (event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS) {
-                            lastAbsTouchDownTime = event.getEventTime();
-                            lastAbsTouchDownX = event.getX(0);
-                            lastAbsTouchDownY = event.getY(0);
-
-                            // Stylus is left click
-                            conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT);
-                        } else if (event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER) {
-                            lastAbsTouchDownTime = event.getEventTime();
-                            lastAbsTouchDownX = event.getX(0);
-                            lastAbsTouchDownY = event.getY(0);
-
-                            // Eraser is right click
-                            conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT);
-                        }
-                    } else if (event.getActionMasked() == MotionEvent.ACTION_UP || event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
-                        if (event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS) {
-                            lastAbsTouchUpTime = event.getEventTime();
-                            lastAbsTouchUpX = event.getX(0);
-                            lastAbsTouchUpY = event.getY(0);
-
-                            // Stylus is left click
-                            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT);
-                        } else if (event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER) {
-                            lastAbsTouchUpTime = event.getEventTime();
-                            lastAbsTouchUpX = event.getX(0);
-                            lastAbsTouchUpY = event.getY(0);
-
-                            // Eraser is right click
-                            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT);
-                        }
-                    }
-                }
-
-                lastButtonState = buttonState;
-            }
-            // This case is for fingers
-            else  //abs touch 和 屏幕虚拟手柄所属的判断条件
-            {
-                // 如果处于手势模式，则消费事件用于视图操作，然后立即返回
-                if (isTouchOverrideEnabled) {
-                    panZoomHandler.handleTouchEvent(event);
-                    return true; // 事件被完全消费，不传递给游戏
-                }
-                // TODO: Re-enable native touch when have a better solution for handling
-                // cancelled touches from Android gestures and 3 finger taps to activate
-                // the software keyboard.
-                // ---  多点触控模式 ---
-                // 检查是否启用了多点触控，并调用 trySendTouchEvent。
-                if (!prefConfig.touchscreenTrackpad && prefConfig.enableEnhancedTouch && trySendTouchEvent(view, event)) {
-                    // If this host supports touch events and absolute touch is enabled,
-                    // send it directly as a touch event.
-                    return true;
-                }
-
-                if (virtualController != null &&
-                        (virtualController.getControllerMode() == VirtualController.ControllerMode.MoveButtons ||
-                                virtualController.getControllerMode() == VirtualController.ControllerMode.ResizeButtons)) {
-                    // Ignore presses when the virtual controller is being configured
-                    return true;
-                }
-
-                // If this is the parent view, we'll offset our coordinates to appear as if they
-                // are relative to the StreamView like our StreamView touch events are.
-                int actionIndex = event.getActionIndex();
-
-                // Special handling for 3 finger gesture
-                if (event.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN &&
-                        event.getPointerCount() == 3) {
-                    // Three fingers down
-                    multiFingerDownTime = event.getEventTime();
-
-                    // Cancel the first and second touches to avoid
-                    // erroneous events
-                    for (TouchContext aTouchContext : touchContextMap) {
-                        aTouchContext.cancelTouch();
-                    }
-
-                    return true;
-                }
-
-                // TODO: Re-enable native touch when have a better solution for handling
-                // cancelled touches from Android gestures and 3 finger taps to activate
-                // the software keyboard.
-                /*if (!prefConfig.touchscreenTrackpad && trySendTouchEvent(view, event)) {
-                    // If this host supports touch events and absolute touch is enabled,
-                    // send it directly as a touch event.
-                    return true;
-                }*/
-
-                TouchContext context = getTouchContext(actionIndex);
-                if (context == null) {
-                    return false;
-                }
-
-                switch (event.getActionMasked()) {
-                    case MotionEvent.ACTION_POINTER_DOWN:
-                    case MotionEvent.ACTION_DOWN: {
-                        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                            multiFingerDownTime = 0;
-                        }
-                        float[] normalizedCoords = getNormalizedCoordinates(streamView, event.getX(actionIndex), event.getY(actionIndex));
-                        for (TouchContext touchContext : touchContextMap) {
-                            touchContext.setPointerCount(event.getPointerCount());
-                        }
-
-                        // 双指右键检测
-                        if (event.getPointerCount() == 2 && prefConfig.touchscreenTrackpad) {
-                            twoFingerDownTime = event.getEventTime();
-                            twoFingerStartX = event.getX(0);
-                            twoFingerStartY = event.getY(0);
-                            twoFingerMoved = false;
-                            twoFingerTapPending = false;
-                        }
-
-                        context.touchDownEvent((int) normalizedCoords[0], (int) normalizedCoords[1], event.getEventTime(), true);
-                        break;
-                    }
-                    case MotionEvent.ACTION_POINTER_UP:
-                    case MotionEvent.ACTION_UP: {
-                        // 对主触摸点进行转换
-                        float[] normalizedCoords = getNormalizedCoordinates(streamView, event.getX(actionIndex), event.getY(actionIndex));
-
-                        // 双指右键检测（仅触控板模式）
-                        if (multiFingerDownTime == 0 && event.getPointerCount() == 2 && !twoFingerMoved && prefConfig.touchscreenTrackpad) {
-                            if (event.getEventTime() - twoFingerDownTime < TWO_FINGER_TAP_THRESHOLD) {
-                                // 第二根手指抬起，立即触发右键
-                                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT);
-                                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT);
-                                twoFingerTapPending = false;
-                                twoFingerMoved = true;
-                                // 只对抬起的那个手指调用 cancelTouch，让其他手指继续工作
-                                if (context != null) {
-                                    context.cancelTouch();
-                                }
-                                // 所有 context 都需要更新 pointerCount
-                                for (TouchContext touchContext : touchContextMap) {
-                                    touchContext.setPointerCount(event.getPointerCount() - 1);
-                                }
-                                return true;
-                            } else {
-                                firstFingerUpTime = event.getEventTime();
-                                twoFingerTapPending = true;
-                            }
-                        }
-
-                        if (event.getPointerCount() == 1 &&
-                                (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || (event.getFlags() & MotionEvent.FLAG_CANCELED) == 0)) {
-                            // 双指点击检测：两个手指都抬起时
-                            if (twoFingerTapPending && !twoFingerMoved && prefConfig.touchscreenTrackpad) {
-                                if (event.getEventTime() - firstFingerUpTime < TWO_FINGER_TAP_THRESHOLD) {
-                                    conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT);
-                                    conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT);
-                                    twoFingerTapPending = false;
-                                    // 两个手指都要抬起了，对所有 context 清理状态
-                                    for (TouchContext touchContext : touchContextMap) {
-                                        touchContext.cancelTouch();
-                                        touchContext.setPointerCount(0);
-                                    }
-                                    return true;
-                                }
-                            }
-                            twoFingerTapPending = false;
-
-                            // 三指点击：弹出键盘
-                            if (event.getEventTime() - multiFingerDownTime < MULTI_FINGER_TAP_THRESHOLD) {
-                                toggleKeyboard();
-                                return true;
-                            }
-                        }
-
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && (event.getFlags() & MotionEvent.FLAG_CANCELED) != 0) {
-                            context.cancelTouch();
-                        } else {
-                            context.touchUpEvent((int) normalizedCoords[0], (int) normalizedCoords[1], event.getEventTime());
-                        }
-
-                        for (TouchContext touchContext : touchContextMap) {
-                            touchContext.setPointerCount(event.getPointerCount() - 1);
-                        }
-                        if (actionIndex == 0 && event.getPointerCount() > 1 && !context.isCancelled()) {
-                            // 对于多点触控的特殊情况，也需要转换第二个触摸点的坐标
-                            float[] normalizedSecondaryCoords = getNormalizedCoordinates(streamView, event.getX(1), event.getY(1));
-                            context.touchDownEvent(
-                                    (int) normalizedSecondaryCoords[0],
-                                    (int) normalizedSecondaryCoords[1],
-                                    event.getEventTime(), false);
-                        }
-                        break;
-                    }
-                    case MotionEvent.ACTION_MOVE:
-                        // 双指移动检测
-                        if (event.getPointerCount() == 2 && !twoFingerMoved && prefConfig.touchscreenTrackpad) {
-                            float dx = event.getX(0) - twoFingerStartX;
-                            float dy = event.getY(0) - twoFingerStartY;
-                            if (Math.sqrt(dx * dx + dy * dy) > TWO_FINGER_MOVE_THRESHOLD) {
-                                twoFingerMoved = true;
-                            }
-                        }
-
-                        // ACTION_MOVE 的处理需要更仔细，因为它有历史事件
-                        // 首先处理历史事件
-                        for (int i = 0; i < event.getHistorySize(); i++) {
-                            for (TouchContext aTouchContextMap : touchContextMap) {
-                                if (aTouchContextMap.getActionIndex() < event.getPointerCount()) {
-                                    float[] histCoords = getNormalizedCoordinates(streamView, event.getHistoricalX(aTouchContextMap.getActionIndex(), i), event.getHistoricalY(aTouchContextMap.getActionIndex(), i));
-                                    aTouchContextMap.touchMoveEvent((int) histCoords[0], (int) histCoords[1], event.getHistoricalEventTime(i));
-                                }
-                            }
-                        }
-
-                        // Now process the current values
-                        for (TouchContext aTouchContextMap : touchContextMap) {
-                            if (aTouchContextMap.getActionIndex() < event.getPointerCount()) {
-                                float[] currentCoords = getNormalizedCoordinates(streamView, event.getX(aTouchContextMap.getActionIndex()), event.getY(aTouchContextMap.getActionIndex()));
-                                aTouchContextMap.touchMoveEvent((int) currentCoords[0], (int) currentCoords[1], event.getEventTime());
-                            }
-                        }
-                        break;
-                    case MotionEvent.ACTION_CANCEL:
-                        for (TouchContext aTouchContext : touchContextMap) {
-                            aTouchContext.cancelTouch();
-                            aTouchContext.setPointerCount(0);
-                        }
-                        break;
-                    default:
-                        return false;
-                }
-            }
-
-            // Handled a known source
-            return true;
-        }
-
-        // Unknown class
-        return false;
-    }
-
     @Override
     public boolean onGenericMotionEvent(MotionEvent event) {
-        return handleMotionEvent(null, event) || super.onGenericMotionEvent(event);
-    }
-
-    private void updateMousePosition(View touchedView, MotionEvent event) {
-        // 获取当前活动的StreamView
-        StreamView activeStreamView = getActiveStreamView();
-
-        // X and Y are already relative to the provided view object
-        float eventX, eventY;
-
-        // For our StreamView itself, we can use the coordinates unmodified.
-        if (touchedView == activeStreamView) {
-            eventX = event.getX(0);
-            eventY = event.getY(0);
-        } else if (externalDisplayManager != null && externalDisplayManager.isUsingExternalDisplay()) {
-            // 外接显示器模式：触摸在平板，StreamView 在外接屏
-            // 使用平板原始触摸坐标，后续缩放映射会处理
-            eventX = event.getX(0);
-            eventY = event.getY(0);
-        } else {
-            // For the containing background view, we must subtract the origin
-            // of the StreamView to get video-relative coordinates.
-            eventX = event.getX(0) - activeStreamView.getX();
-            eventY = event.getY(0) - activeStreamView.getY();
-        }
-
-        if (event.getPointerCount() == 1 && event.getActionIndex() == 0 &&
-                (event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER ||
-                        event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS)) {
-            switch (event.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN:
-                case MotionEvent.ACTION_HOVER_ENTER:
-                case MotionEvent.ACTION_HOVER_EXIT:
-                case MotionEvent.ACTION_HOVER_MOVE:
-                    if (event.getEventTime() - lastAbsTouchUpTime <= STYLUS_UP_DEAD_ZONE_DELAY &&
-                            Math.sqrt(Math.pow(eventX - lastAbsTouchUpX, 2) + Math.pow(eventY - lastAbsTouchUpY, 2)) <= STYLUS_UP_DEAD_ZONE_RADIUS) {
-                        // Enforce a small deadzone between touch up and hover or touch down to allow more precise double-clicking
-                        return;
-                    }
-                    break;
-
-                case MotionEvent.ACTION_MOVE:
-                case MotionEvent.ACTION_UP:
-                    if (event.getEventTime() - lastAbsTouchDownTime <= STYLUS_DOWN_DEAD_ZONE_DELAY &&
-                            Math.sqrt(Math.pow(eventX - lastAbsTouchDownX, 2) + Math.pow(eventY - lastAbsTouchDownY, 2)) <= STYLUS_DOWN_DEAD_ZONE_RADIUS) {
-                        // Enforce a small deadzone between touch down and move or touch up to allow more precise double-clicking
-                        return;
-                    }
-                    break;
-            }
-        }
-
-        if (externalDisplayManager != null && externalDisplayManager.isUsingExternalDisplay()) {
-            int streamViewWidth = activeStreamView.getWidth();
-            int streamViewHeight = activeStreamView.getHeight();
-
-            // 获取设备的分辨率
-            Point size = new Point();
-            Display display = getWindowManager().getDefaultDisplay();
-            display.getRealSize(size);
-            int deviceWidth = size.x;
-            int deviceHeight = size.y;
-
-            float scaleX = (float) streamViewWidth / deviceWidth;
-            float scaleY = (float) streamViewHeight / deviceHeight;
-
-            float scaledX = eventX * scaleX;
-            float scaledY = eventY * scaleY;
-
-            eventX = Math.max(0, Math.min(scaledX, streamViewWidth));
-            eventY = Math.max(0, Math.min(scaledY, streamViewHeight));
-        } else {
-            // We may get values slightly outside our view region on ACTION_HOVER_ENTER and ACTION_HOVER_EXIT.
-            // Normalize these to the view size. We can't just drop them because we won't always get an event
-            // right at the boundary of the view, so dropping them would result in our cursor never really
-            // reaching the sides of the screen.
-            eventX = Math.min(Math.max(eventX, 0), activeStreamView.getWidth());
-            eventY = Math.min(Math.max(eventY, 0), activeStreamView.getHeight());
-        }
-
-        conn.sendMousePosition((short) eventX, (short) eventY, (short) activeStreamView.getWidth(), (short) activeStreamView.getHeight());
-
-//        // 当鼠标移动时，同步更新本地光标的位置
-//        CursorView cursorOverlay = findViewById(R.id.cursorOverlay);
-//        if (cursorOverlay != null && prefConfig.enableLocalCursorRendering) {
-//            cursorOverlay.updateCursorPosition(eventX, eventY);
-//        }
+        return touchInputHandler.handleMotionEvent(null, event) || super.onGenericMotionEvent(event);
     }
 
     @Override
     public boolean onGenericMotion(View view, MotionEvent event) {
-        return handleMotionEvent(view, event);
+        return touchInputHandler.handleMotionEvent(view, event);
     }
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouch(View view, MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
-            // Tell the OS not to buffer input events for us
-            //
-            // NB: This is still needed even when we call the newer requestUnbufferedDispatch()!
-            // Add a configuration to allow view.requestUnbufferedDispatch to be disabled.
-            // requestUnbufferedDispatch(MotionEvent) requires API 30 (Android 11)
             if (!prefConfig.syncTouchEventWithDisplay && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 view.requestUnbufferedDispatch(event);
             }
         }
-        return handleMotionEvent(view, event); //Y700平板上, onTouch的调用频率为120Hz
+        return touchInputHandler.handleMotionEvent(view, event);
     }
 
     @Override
@@ -4835,7 +3650,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     public boolean getHandleMotionEvent(StreamView streamView, MotionEvent event) {
-        return handleMotionEvent(streamView, event);
+        return touchInputHandler.handleMotionEvent(streamView, event);
     }
 
     /**
