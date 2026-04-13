@@ -15,11 +15,12 @@ import com.limelight.nvstream.NvConnection
 /**
  * Encapsulates the bitrate adjustment card logic shown in the Game Menu dialog.
  *
- * Segmented seekbar mapping (45 positions total):
- *   progress  0..9  → 0.5~5 Mbps,  step 0.5 Mbps  (500~5000 kbps,  step  500)
- *   progress 10..24 → 6~20 Mbps,   step 1 Mbps     (6000~20000 kbps, step 1000)
- *   progress 25..30 → 25~50 Mbps,  step 5 Mbps     (25000~50000 kbps, step 5000)
- *   progress 31..45 → 60~200 Mbps, step 10 Mbps    (60000~200000 kbps, step 10000)
+ * Segmented seekbar mapping (60 positions total):
+ *   progress  0..9  → 0.5~5 Mbps,   step 0.5 Mbps (500~5000 kbps,      step 500)
+ *   progress 10..24 → 6~20 Mbps,    step 1 Mbps   (6000~20000 kbps,    step 1000)
+ *   progress 25..39 → 22~50 Mbps,   step 2 Mbps   (22000~50000 kbps,   step 2000)
+ *   progress 40..49 → 55~100 Mbps,  step 5 Mbps   (55000~100000 kbps,  step 5000)
+ *   progress 50..59 → 110~200 Mbps, step 10 Mbps  (110000~200000 kbps, step 10000)
  */
 class BitrateCardController(
     private val game: Game,
@@ -27,25 +28,27 @@ class BitrateCardController(
 ) {
 
     companion object {
-        private const val MAX_PROGRESS = 45
+        private const val MAX_PROGRESS = 59
 
-        /** Convert seekbar progress (0..45) to bitrate in kbps. */
+        /** Convert seekbar progress (0..59) to bitrate in kbps. */
         fun progressToBitrateKbps(progress: Int): Int {
             return when {
-                progress <= 9  -> 500 + progress * 500           // 500..5000
-                progress <= 24 -> 5000 + (progress - 9) * 1000   // 6000..20000
-                progress <= 30 -> 20000 + (progress - 24) * 5000 // 25000..50000
-                else           -> 50000 + (progress - 30) * 10000 // 60000..200000
+                progress <= 9  -> 500 + progress * 500             // 500..5000
+                progress <= 24 -> 5000 + (progress - 9) * 1000     // 6000..20000
+                progress <= 39 -> 20000 + (progress - 24) * 2000   // 22000..50000
+                progress <= 49 -> 50000 + (progress - 39) * 5000   // 55000..100000
+                else           -> 100000 + (progress - 49) * 10000 // 110000..200000
             }
         }
 
-        /** Convert bitrate in kbps to the nearest seekbar progress (0..45). */
+        /** Convert bitrate in kbps to the nearest seekbar progress (0..59). */
         fun bitrateToProgress(kbps: Int): Int {
             return when {
                 kbps <= 5000   -> ((kbps - 500) / 500).coerceIn(0, 9)
                 kbps <= 20000  -> (9 + (kbps - 5000 + 500) / 1000).coerceIn(10, 24)
-                kbps <= 50000  -> (24 + (kbps - 20000 + 2500) / 5000).coerceIn(25, 30)
-                else           -> (30 + (kbps - 50000 + 5000) / 10000).coerceIn(31, MAX_PROGRESS)
+                kbps <= 50000  -> (24 + (kbps - 20000 + 1000) / 2000).coerceIn(25, 39)
+                kbps <= 100000 -> (39 + (kbps - 50000 + 2500) / 5000).coerceIn(40, 49)
+                else           -> (49 + (kbps - 100000 + 5000) / 10000).coerceIn(50, MAX_PROGRESS)
             }
         }
 
