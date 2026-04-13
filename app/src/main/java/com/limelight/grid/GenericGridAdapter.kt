@@ -11,26 +11,19 @@ import android.widget.TextView
 import com.limelight.R
 
 abstract class GenericGridAdapter<T>(
-    @JvmField
     protected val context: Context,
     private var layoutId: Int
 ) : BaseAdapter() {
 
-    @JvmField
     val itemList = ArrayList<T>()
     private val inflater: LayoutInflater = context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
 
     // Track a selected position for UI updates (some activities call setSelectedPosition)
-    @JvmField
-    protected var selectedPosition = -1
-
-    fun setSelectedPosition(pos: Int) {
-        this.selectedPosition = pos
-        // Let views refresh to reflect selection change if they care
-        notifyDataSetChanged()
-    }
-
-    fun getSelectedPosition(): Int = selectedPosition
+    var selectedPosition = -1
+        set(value) {
+            field = value
+            notifyDataSetChanged()
+        }
 
     fun setLayoutId(layoutId: Int) {
         if (layoutId != this.layoutId) {
@@ -46,7 +39,7 @@ abstract class GenericGridAdapter<T>(
 
     override fun getCount(): Int = itemList.size
 
-    override fun getItem(i: Int): Any = itemList[i] as Any
+    override fun getItem(i: Int): Any? = itemList[i] as Any
 
     override fun getItemId(i: Int): Long = i.toLong()
 

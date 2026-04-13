@@ -23,9 +23,9 @@ import kotlin.math.*
 class TouchInputHandler(private val game: Game) {
 
     // ---- 触控上下文 (Game 初始化后赋值) ----
-    @JvmField var touchContextMap = arrayOfNulls<TouchContext>(TOUCH_CONTEXT_LENGTH)
-    @JvmField val absoluteTouchContextMap = arrayOfNulls<TouchContext>(TOUCH_CONTEXT_LENGTH)
-    @JvmField val relativeTouchContextMap = arrayOfNulls<TouchContext>(TOUCH_CONTEXT_LENGTH)
+    var touchContextMap = arrayOfNulls<TouchContext>(TOUCH_CONTEXT_LENGTH)
+    val absoluteTouchContextMap = arrayOfNulls<TouchContext>(TOUCH_CONTEXT_LENGTH)
+    val relativeTouchContextMap = arrayOfNulls<TouchContext>(TOUCH_CONTEXT_LENGTH)
 
     // ---- 触控私有状态 ----
     private var lastButtonState = 0
@@ -46,16 +46,16 @@ class TouchInputHandler(private val game: Game) {
     private var lastAbsTouchDownX = 0f
     private var lastAbsTouchDownY = 0f
 
-    @JvmField val nativeTouchPointerMap = HashMap<Int, NativeTouchContext.Pointer>()
+    val nativeTouchPointerMap = HashMap<Int, NativeTouchContext.Pointer>()
 
     // 华为鼠标滚轮/中键模拟
     private var fakeScrollInitialY = -1f
     private var scrollTotal = 0f
-    @JvmField var lastMouseHoverTime = 0L          // 键盘处理也会读
+    var lastMouseHoverTime = 0L          // 键盘处理也会读
     private var waitRelease = false
     private var detectScrolling = false
-    @JvmField var detectMouseMiddle = false         // 键盘处理也会读写
-    @JvmField var detectMouseMiddleDown = false     // 键盘处理也会读写
+    var detectMouseMiddle = false         // 键盘处理也会读写
+    var detectMouseMiddleDown = false     // 键盘处理也会读写
 
     // ---- 公共入口 ----
 

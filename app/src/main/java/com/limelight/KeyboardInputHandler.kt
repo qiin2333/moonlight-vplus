@@ -21,7 +21,7 @@ import com.limelight.services.KeyboardAccessibilityService
  */
 class KeyboardInputHandler(private val game: Game) {
 
-    @JvmField var keyboardTranslator: KeyboardTranslator? = null
+    var keyboardTranslator: KeyboardTranslator? = null
 
     private var modifierFlags = 0
     private var waitingForAllModifiersUp = false

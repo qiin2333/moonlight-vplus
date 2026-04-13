@@ -85,6 +85,6 @@ class PageDeviceController(
     }
 
     fun close() {
-        controllerManager.superPagesController?.openNewPage(devicePage.lastPage)
+        devicePage.lastPage?.let { controllerManager.superPagesController?.openNewPage(it) }
     }
 }

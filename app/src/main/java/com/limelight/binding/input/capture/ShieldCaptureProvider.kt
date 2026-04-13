@@ -76,7 +76,6 @@ class ShieldCaptureProvider(private val context: Context) : InputCaptureProvider
             }
         }
 
-        @JvmStatic
         fun isCaptureProviderSupported(): Boolean = nvExtensionSupported
     }
 }

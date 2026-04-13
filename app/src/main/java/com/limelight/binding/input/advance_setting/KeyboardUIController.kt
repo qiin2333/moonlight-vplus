@@ -396,10 +396,7 @@ class KeyboardUIController(
                 if (sTag.startsWith("k")) {
                     val detector = KeyboardGestureDetector(child, this)
                     child.setOnTouchListener(OnTouchListener { v: View?, event: MotionEvent? ->
-                        detector.onTouchEvent(
-                            v,
-                            event
-                        )
+                        if (v != null && event != null) detector.onTouchEvent(v, event) else false
                     })
                 }
             } else if (child is ViewGroup) {

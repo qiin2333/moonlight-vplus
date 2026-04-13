@@ -1,11 +1,11 @@
 package com.limelight.nvstream.av
 
 class ByteBufferDescriptor(
-    @JvmField var data: ByteArray,
-    @JvmField var offset: Int,
-    @JvmField var length: Int
+    var data: ByteArray,
+    var offset: Int,
+    var length: Int
 ) {
-    @JvmField var nextDescriptor: ByteBufferDescriptor? = null
+    var nextDescriptor: ByteBufferDescriptor? = null
 
     constructor(desc: ByteBufferDescriptor) : this(desc.data, desc.offset, desc.length)
 

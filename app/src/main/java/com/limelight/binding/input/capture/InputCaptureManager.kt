@@ -8,7 +8,6 @@ import com.limelight.binding.input.evdev.EvdevCaptureProviderShim
 import com.limelight.binding.input.evdev.EvdevListener
 
 object InputCaptureManager {
-    @JvmStatic
     fun getInputCaptureProvider(activity: Activity, rootListener: EvdevListener): InputCaptureProvider {
         return when {
             AndroidNativePointerCaptureProvider.isCaptureProviderSupported() -> {
@@ -41,7 +40,6 @@ object InputCaptureManager {
      * 获取支持外接显示器的输入捕获提供者
      * 外接显示器模式下，使用更兼容的捕获方式
      */
-    @JvmStatic
     fun getInputCaptureProviderForExternalDisplay(activity: Activity, rootListener: EvdevListener): InputCaptureProvider {
         // 外接显示器模式下，优先使用Evdev捕获，因为它对多显示器支持更好
         return if (EvdevCaptureProviderShim.isCaptureProviderSupported()) {

@@ -94,7 +94,6 @@ object KeyCodeMapper {
      * @param androidKeyCode Android 的 KeyEvent 常量。
      * @return 对应的 Windows 十六进制码字符串，如果找不到则返回 null。
      */
-    @JvmStatic
     fun getWindowsKeyCode(androidKeyCode: Int): String? {
         return windowsKeyMap[androidKeyCode]
     }
@@ -104,7 +103,6 @@ object KeyCodeMapper {
      * @param androidKeyCode Android 的 KeyEvent 常量。
      * @return 对应的显示名称，如果找不到则返回 null。
      */
-    @JvmStatic
     fun getDisplayName(androidKeyCode: Int): String? {
         return displayNameMap[androidKeyCode]
     }

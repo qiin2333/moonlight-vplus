@@ -31,7 +31,7 @@ class DiscoveryService : Service() {
         }
 
         fun getComputerSet(): List<MdnsComputer> {
-            return discoveryAgent.computerSet
+            return discoveryAgent.getComputerSet()
         }
     }
 

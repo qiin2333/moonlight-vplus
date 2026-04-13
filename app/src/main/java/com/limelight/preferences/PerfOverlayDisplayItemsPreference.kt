@@ -48,7 +48,6 @@ class PerfOverlayDisplayItemsPreference : MultiSelectListPreference {
         /**
          * 获取默认的显示项目
          */
-        @JvmStatic
         fun getDefaultDisplayItems(): Set<String> {
             return HashSet(DEFAULT_ITEMS.split(","))
         }
@@ -56,7 +55,6 @@ class PerfOverlayDisplayItemsPreference : MultiSelectListPreference {
         /**
          * 检查特定项目是否被选中显示
          */
-        @JvmStatic
         fun isItemEnabled(context: Context, itemKey: String): Boolean {
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
             val selectedItems = prefs.getStringSet("perf_overlay_display_items", getDefaultDisplayItems())
@@ -66,7 +64,6 @@ class PerfOverlayDisplayItemsPreference : MultiSelectListPreference {
         /**
          * 测试用：获取当前选中的所有显示项目
          */
-        @JvmStatic
         fun getSelectedItems(context: Context): Set<String>? {
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
             return prefs.getStringSet("perf_overlay_display_items", getDefaultDisplayItems())
@@ -75,7 +72,6 @@ class PerfOverlayDisplayItemsPreference : MultiSelectListPreference {
         /**
          * 测试用：手动设置显示项目
          */
-        @JvmStatic
         fun setDisplayItems(context: Context, items: Set<String>) {
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
             prefs.edit().putStringSet("perf_overlay_display_items", items).apply()

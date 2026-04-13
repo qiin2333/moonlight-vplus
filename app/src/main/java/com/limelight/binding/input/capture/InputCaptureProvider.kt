@@ -4,8 +4,9 @@ import android.app.Activity
 import android.view.MotionEvent
 
 open class InputCaptureProvider {
-    @JvmField protected var isCapturing = false
-    @JvmField protected var isCursorVisible = false
+
+    protected var isCapturing = false
+    protected var isCursorVisible = false
 
     open fun enableCapture() {
         isCapturing = true

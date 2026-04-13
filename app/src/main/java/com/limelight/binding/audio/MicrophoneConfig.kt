@@ -49,7 +49,6 @@ object MicrophoneConfig {
      * 获取当前配置的Opus比特率
      * @return 比特率（bps）
      */
-    @JvmStatic
     fun getOpusBitrate(): Int {
         return opusBitrateValue
     }
@@ -58,7 +57,6 @@ object MicrophoneConfig {
      * 设置Opus比特率
      * @param bitrateKbps 比特率（kbps）
      */
-    @JvmStatic
     fun setOpusBitrate(bitrateKbps: Int) {
         opusBitrateValue = bitrateKbps * 1000 // 转换为bps
     }
@@ -67,7 +65,6 @@ object MicrophoneConfig {
      * 从配置中更新比特率设置
      * @param context 上下文
      */
-    @JvmStatic
     fun updateBitrateFromConfig(context: Context?) {
         if (context != null) {
             val config = PreferenceConfiguration.readPreferences(context)
@@ -80,7 +77,6 @@ object MicrophoneConfig {
     /**
      * 是否启用回声消除器(AEC)
      */
-    @JvmStatic
     fun enableAcousticEchoCanceler(): Boolean {
         return enableAEC
     }
@@ -88,7 +84,6 @@ object MicrophoneConfig {
     /**
      * 设置是否启用回声消除器(AEC)
      */
-    @JvmStatic
     fun setEnableAcousticEchoCanceler(enable: Boolean) {
         enableAEC = enable
     }
@@ -96,7 +91,6 @@ object MicrophoneConfig {
     /**
      * 是否启用自动增益控制(AGC)
      */
-    @JvmStatic
     fun enableAutomaticGainControl(): Boolean {
         return enableAGC
     }
@@ -104,7 +98,6 @@ object MicrophoneConfig {
     /**
      * 设置是否启用自动增益控制(AGC)
      */
-    @JvmStatic
     fun setEnableAutomaticGainControl(enable: Boolean) {
         enableAGC = enable
     }
@@ -112,7 +105,6 @@ object MicrophoneConfig {
     /**
      * 是否启用噪声抑制(NS)
      */
-    @JvmStatic
     fun enableNoiseSuppressor(): Boolean {
         return enableNS
     }
@@ -120,7 +112,6 @@ object MicrophoneConfig {
     /**
      * 设置是否启用噪声抑制(NS)
      */
-    @JvmStatic
     fun setEnableNoiseSuppressor(enable: Boolean) {
         enableNS = enable
     }
@@ -129,7 +120,6 @@ object MicrophoneConfig {
      * 是否使用VOICE_COMMUNICATION音频源
      * VOICE_COMMUNICATION会自动启用系统级的AEC、AGC、NS
      */
-    @JvmStatic
     fun useVoiceCommunication(): Boolean {
         return useVoiceComm
     }
@@ -137,7 +127,6 @@ object MicrophoneConfig {
     /**
      * 设置是否使用VOICE_COMMUNICATION音频源
      */
-    @JvmStatic
     fun setUseVoiceCommunication(use: Boolean) {
         useVoiceComm = use
     }
@@ -145,7 +134,6 @@ object MicrophoneConfig {
     /**
      * 获取音频处理配置的摘要信息
      */
-    @JvmStatic
     fun getAudioProcessingConfigSummary(): String {
         return buildString {
             append("音频处理配置:\n")

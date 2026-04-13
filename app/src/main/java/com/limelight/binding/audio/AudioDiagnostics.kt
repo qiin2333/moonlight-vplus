@@ -25,7 +25,6 @@ object AudioDiagnostics {
     /**
      * 记录捕获的帧
      */
-    @JvmStatic
     fun recordFrameCaptured() {
         totalFramesCaptured.incrementAndGet()
         checkAndReport()
@@ -34,7 +33,6 @@ object AudioDiagnostics {
     /**
      * 记录编码的帧
      */
-    @JvmStatic
     fun recordFrameEncoded() {
         totalFramesEncoded.incrementAndGet()
         checkAndReport()
@@ -43,7 +41,6 @@ object AudioDiagnostics {
     /**
      * 记录发送的帧
      */
-    @JvmStatic
     fun recordFrameSent() {
         totalFramesSent.incrementAndGet()
         checkAndReport()
@@ -52,7 +49,6 @@ object AudioDiagnostics {
     /**
      * 记录丢弃的帧
      */
-    @JvmStatic
     fun recordFrameDropped() {
         droppedFrames.incrementAndGet()
         checkAndReport()
@@ -61,7 +57,6 @@ object AudioDiagnostics {
     /**
      * 记录编码错误
      */
-    @JvmStatic
     fun recordEncodingError() {
         encodingErrors.incrementAndGet()
         checkAndReport()
@@ -70,7 +65,6 @@ object AudioDiagnostics {
     /**
      * 记录发送错误
      */
-    @JvmStatic
     fun recordSendingError() {
         sendingErrors.incrementAndGet()
         checkAndReport()
@@ -90,7 +84,6 @@ object AudioDiagnostics {
     /**
      * 报告统计信息
      */
-    @JvmStatic
     fun reportStatistics() {
         val captured = totalFramesCaptured.get()
         val encoded = totalFramesEncoded.get()
@@ -131,7 +124,6 @@ object AudioDiagnostics {
     /**
      * 重置统计信息
      */
-    @JvmStatic
     fun resetStatistics() {
         totalFramesCaptured.set(0)
         totalFramesEncoded.set(0)
@@ -146,7 +138,6 @@ object AudioDiagnostics {
     /**
      * 获取当前统计信息
      */
-    @JvmStatic
     fun getCurrentStats(): String {
         val captured = totalFramesCaptured.get()
         val encoded = totalFramesEncoded.get()
@@ -164,7 +155,6 @@ object AudioDiagnostics {
     /**
      * 获取当前统计信息（使用字符串资源）
      */
-    @JvmStatic
     fun getCurrentStats(context: Context?): String {
         if (context == null) {
             return getCurrentStats()

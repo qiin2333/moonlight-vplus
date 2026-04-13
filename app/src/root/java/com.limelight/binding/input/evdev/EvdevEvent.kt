@@ -1,9 +1,9 @@
 package com.limelight.binding.input.evdev
 
 class EvdevEvent(
-    @JvmField val type: Short,
-    @JvmField val code: Short,
-    @JvmField val value: Int
+    val type: Short,
+    val code: Short,
+    val value: Int
 ) {
     companion object {
         const val EVDEV_MIN_EVENT_SIZE = 16

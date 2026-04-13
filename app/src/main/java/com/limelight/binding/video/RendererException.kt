@@ -53,7 +53,6 @@ internal class RendererException(
 
     companion object {
         private const val serialVersionUID = 8985937536997012406L
-        @JvmField
         val DELIMITER: String = if (BuildConfig.DEBUG) "\n" else " | "
     }
 

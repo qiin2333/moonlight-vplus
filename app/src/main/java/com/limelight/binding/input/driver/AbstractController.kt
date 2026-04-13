@@ -6,38 +6,25 @@ abstract class AbstractController(
     private val vendorId: Int,
     private val productId: Int
 ) {
-    @JvmField
     protected var buttonFlags = 0
-    @JvmField
-    protected var supportedButtonFlags = 0
-    @JvmField
+    var supportedButtonFlags = 0
+        protected set
     protected var leftTrigger = 0f
-    @JvmField
     protected var rightTrigger = 0f
-    @JvmField
     protected var rightStickX = 0f
-    @JvmField
     protected var rightStickY = 0f
-    @JvmField
     protected var leftStickX = 0f
-    @JvmField
     protected var leftStickY = 0f
-    @JvmField
-    protected var capabilities: Short = 0
-    @JvmField
-    protected var type: Byte = 0
+    var capabilities: Short = 0
+        protected set
+    var type: Byte = 0
+        protected set
 
     fun getControllerId(): Int = deviceId
 
     fun getVendorId(): Int = vendorId
 
     fun getProductId(): Int = productId
-
-    fun getSupportedButtonFlags(): Int = supportedButtonFlags
-
-    fun getCapabilities(): Short = capabilities
-
-    fun getType(): Byte = type
 
     protected fun setButtonFlag(buttonFlag: Int, data: Int) {
         if (data != 0) {

@@ -13,18 +13,17 @@ object QuickActionRegistry {
     private const val PREF_KEY = "button_ids"
 
     /** 默认按钮配置（与旧版 6 按钮一致） */
-    @JvmField
     val DEFAULT_IDS = arrayOf(
         "send_win", "send_esc", "toggle_hdr",
         "toggle_mic", "send_sleep", "quit"
     )
 
     data class QuickAction(
-        @JvmField val id: String,
-        @JvmField val label: String,
-        @JvmField val iconRes: Int,
-        @JvmField val iconDisabledRes: Int = 0,
-        @JvmField val labelRes: Int = 0   // @StringRes, 非 0 时优先使用
+        val id: String,
+        val label: String,
+        val iconRes: Int,
+        val iconDisabledRes: Int = 0,
+        val labelRes: Int = 0   // @StringRes, 非 0 时优先使用
     )
 
     /** 所有内置动作（有序） */
@@ -49,7 +48,6 @@ object QuickActionRegistry {
      *
      * @param customKeys 自定义快捷键列表，每项 [0]=name, [1]=reserved
      */
-    @JvmStatic
     fun getAllActions(customKeys: List<Array<String>>?): LinkedHashMap<String, QuickAction> {
         val all = LinkedHashMap(BUILTIN)
         customKeys?.forEach { ck ->
@@ -60,13 +58,11 @@ object QuickActionRegistry {
     }
 
     /** 获取内置动作 */
-    @JvmStatic
     fun getBuiltin(id: String): QuickAction? = BUILTIN[id]
 
     // ── 配置持久化 ──────────────────────────────────────────────
 
     /** 读取用户配置的按钮 ID 列表，若无则返回默认 */
-    @JvmStatic
     fun loadConfig(context: Context): MutableList<String> {
         val prefs = context.getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE)
         val json = prefs.getString(PREF_KEY, null)
@@ -80,7 +76,6 @@ object QuickActionRegistry {
     }
 
     /** 保存用户配置 */
-    @JvmStatic
     fun saveConfig(context: Context, ids: List<String>) {
         val arr = JSONArray().apply { ids.forEach { put(it) } }
         context.getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE)

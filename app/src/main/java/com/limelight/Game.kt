@@ -1742,7 +1742,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     override fun isPerfOverlayVisible(): Boolean {
-        return performanceOverlayManager != null && performanceOverlayManager!!.isPerfOverlayVisible
+        return performanceOverlayManager != null && performanceOverlayManager!!.isPerfOverlayVisible()
     }
 
     override fun onPerfUpdateWG(performanceInfo: PerformanceInfo) {
