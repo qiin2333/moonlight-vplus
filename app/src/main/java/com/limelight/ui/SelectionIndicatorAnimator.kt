@@ -12,8 +12,8 @@ import com.limelight.grid.GenericGridAdapter
  */
 class SelectionIndicatorAnimator(
     private val selectionIndicator: View,
-    private var recyclerView: RecyclerView,
-    private var adapter: GenericGridAdapter<*>,
+    private var recyclerView: RecyclerView?,
+    private var adapter: GenericGridAdapter<*>?,
     private val rootView: View
 ) {
 
@@ -35,8 +35,9 @@ class SelectionIndicatorAnimator(
     @JvmOverloads
     fun moveToPosition(position: Int, isFirstFocus: Boolean = false) {
         if (!isValidPosition(position)) return
+        val rv = recyclerView ?: return
 
-        val viewHolder = recyclerView.findViewHolderForAdapterPosition(position)
+        val viewHolder = rv.findViewHolderForAdapterPosition(position)
         if (viewHolder != null) {
             if (isFirstFocus) {
                 setIndicatorPosition(viewHolder.itemView, withAnimation = false)
@@ -50,8 +51,9 @@ class SelectionIndicatorAnimator(
 
     fun updatePosition(position: Int): Boolean {
         if (!isValidPosition(position)) return false
+        val rv = recyclerView ?: return false
 
-        val viewHolder = recyclerView.findViewHolderForAdapterPosition(position)
+        val viewHolder = rv.findViewHolderForAdapterPosition(position)
         if (viewHolder != null) {
             setIndicatorPositionFast(viewHolder.itemView)
             return true
@@ -83,12 +85,13 @@ class SelectionIndicatorAnimator(
     }
 
     private fun isValidPosition(position: Int): Boolean =
-        position >= 0 && position < adapter.count
+        position >= 0 && (adapter?.let { position < it.count } ?: false)
 
     private fun animateToView(targetView: View) {
-        if (recyclerView.scrollState != RecyclerView.SCROLL_STATE_IDLE) {
-            recyclerView.postDelayed({
-                val viewHolder = recyclerView.findViewHolderForAdapterPosition(getCurrentPosition())
+        val rv = recyclerView ?: return
+        if (rv.scrollState != RecyclerView.SCROLL_STATE_IDLE) {
+            rv.postDelayed({
+                val viewHolder = rv.findViewHolderForAdapterPosition(getCurrentPosition())
                 if (viewHolder != null) {
                     animateToView(viewHolder.itemView)
                 }
@@ -99,8 +102,9 @@ class SelectionIndicatorAnimator(
     }
 
     private fun scrollToPositionAndAnimate(position: Int) {
+        val rv = recyclerView ?: return
         selectionIndicator.visibility = View.INVISIBLE
-        recyclerView.smoothScrollToPosition(position)
+        rv.smoothScrollToPosition(position)
 
         val scrollListener = object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
@@ -118,7 +122,7 @@ class SelectionIndicatorAnimator(
             }
         }
 
-        recyclerView.addOnScrollListener(scrollListener)
+        rv.addOnScrollListener(scrollListener)
     }
 
     private fun setIndicatorPosition(targetView: View, withAnimation: Boolean) {
