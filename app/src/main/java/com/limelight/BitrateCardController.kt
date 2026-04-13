@@ -1,6 +1,7 @@
 package com.limelight
 
 import android.app.AlertDialog
+import android.content.Context
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -32,11 +33,32 @@ class BitrateCardController(
     private val conn: NvConnection
 ) {
 
+    /** Haptic feedback mode for the bitrate seekbar. */
+    enum class HapticMode(val label: String) {
+        ALL("震动：每档"),
+        KEY_NODES("震动：关键节点"),
+        NONE("震动：关闭");
+
+        fun next(): HapticMode = entries[(ordinal + 1) % entries.size]
+    }
+
     companion object {
         private const val MAX_PROGRESS = 59
+        private const val PREF_HAPTIC_MODE = "bitrate_seekbar_haptic_mode"
 
-        /** Segment boundary positions where haptic feedback should fire: 0.5, 5, 50, 100, 200 Mbps. */
+        /** Key-node boundary positions: 0.5, 5, 50, 100, 200 Mbps. */
         private val SEGMENT_BOUNDARIES = setOf(0, 9, 24, 39, 49, MAX_PROGRESS)
+
+        fun getHapticMode(context: Context): HapticMode {
+            val prefs = context.getSharedPreferences("game_menu_prefs", Context.MODE_PRIVATE)
+            val ordinal = prefs.getInt(PREF_HAPTIC_MODE, HapticMode.KEY_NODES.ordinal)
+            return HapticMode.entries.getOrElse(ordinal) { HapticMode.KEY_NODES }
+        }
+
+        fun setHapticMode(context: Context, mode: HapticMode) {
+            context.getSharedPreferences("game_menu_prefs", Context.MODE_PRIVATE)
+                .edit().putInt(PREF_HAPTIC_MODE, mode.ordinal).apply()
+        }
 
         /** Convert seekbar progress (0..59) to bitrate in kbps. */
         fun progressToBitrateKbps(progress: Int): Int {
@@ -102,6 +124,15 @@ class BitrateCardController(
                 .show()
         }
 
+        // Long-press tip icon → cycle haptic mode
+        var currentHapticMode = getHapticMode(game)
+        bitrateTipIcon.setOnLongClickListener {
+            currentHapticMode = currentHapticMode.next()
+            setHapticMode(game, currentHapticMode)
+            Toast.makeText(game, currentHapticMode.label, Toast.LENGTH_SHORT).show()
+            true
+        }
+
         // Apply only on release (touch up or key debounce)
         val bitrateHandler = Handler(Looper.getMainLooper())
         val bitrateApplyRunnable = Runnable {
@@ -117,9 +148,16 @@ class BitrateCardController(
                     val newBitrate = progressToBitrateKbps(progress)
                     bitrateValueText.text = formatBitrateMbps(newBitrate)
 
-                    // Haptic feedback at segment boundaries
-                    if (progress != lastProgress && progress in SEGMENT_BOUNDARIES) {
-                        performHapticFeedback(seekBar)
+                    // Haptic feedback based on mode
+                    if (progress != lastProgress) {
+                        val shouldVibrate = when (currentHapticMode) {
+                            HapticMode.ALL -> true
+                            HapticMode.KEY_NODES -> progress in SEGMENT_BOUNDARIES
+                            HapticMode.NONE -> false
+                        }
+                        if (shouldVibrate) {
+                            performHapticFeedback(seekBar)
+                        }
                     }
                     lastProgress = progress
                 }
