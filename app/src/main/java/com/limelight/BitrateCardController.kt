@@ -151,9 +151,17 @@ class BitrateCardController(
         view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
     }
 
+    /** Reusable toast reference to dismiss previous one before showing new text. */
+    private var bitrateToast: Toast? = null
+
+    private fun showBitrateToast(message: String) {
+        bitrateToast?.cancel()
+        bitrateToast = Toast.makeText(game, message, Toast.LENGTH_SHORT).also { it.show() }
+    }
+
     private fun adjustBitrate(bitrateKbps: Int, currentBitrateText: TextView? = null) {
         try {
-            Toast.makeText(game, "正在调整码率...", Toast.LENGTH_SHORT).show()
+            showBitrateToast("正在调整码率...")
 
             conn.setBitrate(bitrateKbps, object : NvConnection.BitrateAdjustmentCallback {
                 override fun onSuccess(newBitrate: Int) {
@@ -172,7 +180,7 @@ class BitrateCardController(
                                 game.resources.getString(R.string.game_menu_bitrate_adjustment_success),
                                 newBitrate / 1000
                             )
-                            Toast.makeText(game, successMessage, Toast.LENGTH_SHORT).show()
+                            showBitrateToast(successMessage)
                         } catch (e: Exception) {
                             LimeLog.warning("Failed to show success toast: ${e.message}")
                         }
@@ -182,7 +190,6 @@ class BitrateCardController(
                 override fun onFailure(errorMessage: String) {
                     game.runOnUiThread {
                         try {
-                            // Revert display to actual current bitrate
                             val actualBitrate = conn.currentBitrate
                             currentBitrateText?.text = String.format(
                                 game.resources.getString(R.string.game_menu_bitrate_current),
@@ -190,7 +197,7 @@ class BitrateCardController(
                             )
 
                             val errorMsg = game.resources.getString(R.string.game_menu_bitrate_adjustment_failed) + ": " + errorMessage
-                            Toast.makeText(game, errorMsg, Toast.LENGTH_SHORT).show()
+                            showBitrateToast(errorMsg)
                         } catch (e: Exception) {
                             LimeLog.warning("Failed to show error toast: ${e.message}")
                         }
@@ -200,11 +207,9 @@ class BitrateCardController(
         } catch (e: Exception) {
             game.runOnUiThread {
                 try {
-                    Toast.makeText(
-                        game,
-                        game.resources.getString(R.string.game_menu_bitrate_adjustment_failed) + ": " + e.message,
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    showBitrateToast(
+                        game.resources.getString(R.string.game_menu_bitrate_adjustment_failed) + ": " + e.message
+                    )
                 } catch (toastException: Exception) {
                     LimeLog.warning("Failed to show error toast: ${toastException.message}")
                 }
