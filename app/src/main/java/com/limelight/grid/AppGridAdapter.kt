@@ -162,7 +162,7 @@ class AppGridAdapter(
 
     private fun setBackgroundViaManager(obj: AppView.AppObject) {
         val activity = getActivity(context) as? AppView ?: return
-        val bgManager = activity.backgroundImageManager ?: return
+        val bgManager = activity.backgroundImageManagerInstance ?: return
         loader?.loadFullBitmap(obj.app) { bitmap -> bgManager.setBackgroundSmoothly(bitmap) }
     }
 
