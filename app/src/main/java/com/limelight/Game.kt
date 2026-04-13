@@ -469,7 +469,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             bindUsbDriverService()
         }
 
-        if (!decoderRenderer!!.isAvcSupported) {
+        if (!decoderRenderer!!.isAvcSupported()) {
             if (progressOverlay != null) {
                 progressOverlay!!.dismiss()
                 progressOverlay = null
@@ -651,7 +651,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             PlatformBinding.getCryptoProvider(this), serverCert, displayName
         )
         orientationManager.connection = conn
-        controllerHandler = ControllerHandler(this, conn, this, prefConfig)
+        controllerHandler = ControllerHandler(this, conn!!, this, prefConfig)
     }
 
     /** Create or re-create ExternalDisplayManager with the standard callback. */
@@ -716,28 +716,28 @@ class Game : Activity(), SurfaceHolder.Callback,
             )
         }
 
-        if (willStreamHdr && !decoderRenderer!!.isHevcMain10Supported && !decoderRenderer!!.isAv1Main10Supported) {
+        if (willStreamHdr && !decoderRenderer!!.isHevcMain10Supported() && !decoderRenderer!!.isAv1Main10Supported()) {
             willStreamHdr = false
             Toast.makeText(this, "Decoder does not support HDR10 profile", Toast.LENGTH_LONG).show()
         }
 
-        if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_HEVC && !decoderRenderer!!.isHevcSupported) {
+        if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_HEVC && !decoderRenderer!!.isHevcSupported()) {
             Toast.makeText(this, "No HEVC decoder found", Toast.LENGTH_LONG).show()
         }
-        if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_AV1 && !decoderRenderer!!.isAv1Supported) {
+        if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_AV1 && !decoderRenderer!!.isAv1Supported()) {
             Toast.makeText(this, "No AV1 decoder found", Toast.LENGTH_LONG).show()
         }
 
         var supportedVideoFormats = MoonBridge.VIDEO_FORMAT_H264
-        if (decoderRenderer!!.isHevcSupported) {
+        if (decoderRenderer!!.isHevcSupported()) {
             supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_H265
-            if (willStreamHdr && decoderRenderer!!.isHevcMain10Supported) {
+            if (willStreamHdr && decoderRenderer!!.isHevcMain10Supported()) {
                 supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_H265_MAIN10
             }
         }
-        if (decoderRenderer!!.isAv1Supported) {
+        if (decoderRenderer!!.isAv1Supported()) {
             supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_AV1_MAIN8
-            if (willStreamHdr && decoderRenderer!!.isAv1Main10Supported) {
+            if (willStreamHdr && decoderRenderer!!.isAv1Main10Supported()) {
                 supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_AV1_MAIN10
             }
         }
@@ -789,11 +789,11 @@ class Game : Activity(), SurfaceHolder.Callback,
             .setAttachedGamepadMask(gamepadMask)
             .setClientRefreshRateX100(clientRefreshRateX100)
             .setAudioConfiguration(prefConfig.audioConfiguration)
-            .setColorSpace(decoderRenderer!!.preferredColorSpace)
+            .setColorSpace(decoderRenderer!!.getPreferredColorSpace())
             .setColorRange(
                 if (willStreamHdr && prefConfig.hdrMode == MoonBridge.HDR_MODE_HLG)
                     MoonBridge.COLOR_RANGE_FULL
-                else decoderRenderer!!.preferredColorRange
+                else decoderRenderer!!.getPreferredColorRange()
             )
             .setHdrMode(if (willStreamHdr) prefConfig.hdrMode else MoonBridge.HDR_MODE_SDR)
             .setPersistGamepadsAfterDisconnect(!prefConfig.multiController)
@@ -1209,7 +1209,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     private fun getDecoderFormatLabel(): String {
         if (decoderRenderer == null) return "UNKNOWN"
-        val videoFormat = decoderRenderer!!.activeVideoFormat
+        val videoFormat = decoderRenderer!!.getActiveVideoFormat()
         var label = when {
             (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0 -> "H.264"
             (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H265) != 0 -> "HEVC"
@@ -1224,8 +1224,8 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     private fun showLatencyToast(decoderMessage: String) {
         if (!prefConfig.enableLatencyToast) return
-        val averageEndToEndLat = decoderRenderer!!.averageEndToEndLatency
-        val averageDecoderLat = decoderRenderer!!.averageDecoderLatency
+        val averageEndToEndLat = decoderRenderer!!.getAverageEndToEndLatency()
+        val averageDecoderLat = decoderRenderer!!.getAverageDecoderLatency()
         var message: String? = null
         if (averageEndToEndLat > 0) {
             message = resources.getString(R.string.conn_client_latency) + " " + averageEndToEndLat + " ms"
@@ -1245,7 +1245,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             message = if (message != null) "$message [mic]$micStats" else micStats
         }
 
-        val surfaceFlingerStats = decoderRenderer!!.surfaceFlingerStats
+        val surfaceFlingerStats = decoderRenderer!!.getSurfaceFlingerStats()
         if (surfaceFlingerStats != null) {
             message = if (message != null) "$message\n$surfaceFlingerStats" else surfaceFlingerStats
         }
@@ -1271,8 +1271,8 @@ class Game : Activity(), SurfaceHolder.Callback,
         if (decoderRenderer != null) {
             resolutionWidth = prefConfig.width
             resolutionHeight = prefConfig.height
-            averageEndToEndLatency = decoderRenderer!!.averageEndToEndLatency
-            averageDecoderLatency = decoderRenderer!!.averageDecoderLatency
+            averageEndToEndLatency = decoderRenderer!!.getAverageEndToEndLatency()
+            averageDecoderLatency = decoderRenderer!!.getAverageDecoderLatency()
         }
 
         analyticsManager!!.logGameStreamEnd(
