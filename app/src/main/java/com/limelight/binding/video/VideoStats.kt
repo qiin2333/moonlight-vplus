@@ -3,19 +3,19 @@ package com.limelight.binding.video
 import android.os.SystemClock
 
 internal class VideoStats {
-    @JvmField var decoderTimeMs: Long = 0
-    @JvmField var totalTimeMs: Long = 0
-    @JvmField var totalFrames: Int = 0
-    @JvmField var totalFramesReceived: Int = 0
-    @JvmField var totalFramesRendered: Int = 0
-    @JvmField var frameLossEvents: Int = 0
-    @JvmField var framesLost: Int = 0
-    @JvmField var minHostProcessingLatency: Char = 0.toChar()
-    @JvmField var maxHostProcessingLatency: Char = 0.toChar()
-    @JvmField var totalHostProcessingLatency: Int = 0
-    @JvmField var framesWithHostProcessingLatency: Int = 0
-    @JvmField var measurementStartTimestamp: Long = 0
-    @JvmField var renderingTimeMs: Long = 0 // 渲染时间
+    var decoderTimeMs: Long = 0
+    var totalTimeMs: Long = 0
+    var totalFrames: Int = 0
+    var totalFramesReceived: Int = 0
+    var totalFramesRendered: Int = 0
+    var frameLossEvents: Int = 0
+    var framesLost: Int = 0
+    var minHostProcessingLatency: Char = 0.toChar()
+    var maxHostProcessingLatency: Char = 0.toChar()
+    var totalHostProcessingLatency: Int = 0
+    var framesWithHostProcessingLatency: Int = 0
+    var measurementStartTimestamp: Long = 0
+    var renderingTimeMs: Long = 0 // 渲染时间
 
     fun add(other: VideoStats) {
         decoderTimeMs += other.decoderTimeMs
@@ -93,7 +93,7 @@ internal class VideoStats {
 }
 
 internal class VideoStatsFps {
-    @JvmField var totalFps: Float = 0f
-    @JvmField var receivedFps: Float = 0f
-    @JvmField var renderedFps: Float = 0f
+    var totalFps: Float = 0f
+    var receivedFps: Float = 0f
+    var renderedFps: Float = 0f
 }
