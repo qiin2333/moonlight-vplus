@@ -106,7 +106,7 @@ class BitrateCardController(
         val bitrateHandler = Handler(Looper.getMainLooper())
         val bitrateApplyRunnable = Runnable {
             val newBitrate = progressToBitrateKbps(bitrateSeekBar.progress)
-            adjustBitrate(newBitrate)
+            adjustBitrate(newBitrate, currentBitrateText)
         }
 
         bitrateSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -129,7 +129,7 @@ class BitrateCardController(
 
             override fun onStopTrackingTouch(seekBar: SeekBar) {
                 val newBitrate = progressToBitrateKbps(seekBar.progress)
-                adjustBitrate(newBitrate)
+                adjustBitrate(newBitrate, currentBitrateText)
             }
         })
 
@@ -151,7 +151,7 @@ class BitrateCardController(
         view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
     }
 
-    private fun adjustBitrate(bitrateKbps: Int) {
+    private fun adjustBitrate(bitrateKbps: Int, currentBitrateText: TextView? = null) {
         try {
             Toast.makeText(game, "正在调整码率...", Toast.LENGTH_SHORT).show()
 
@@ -161,6 +161,12 @@ class BitrateCardController(
                         try {
                             // Update prefConfig with the new bitrate so it gets saved when streaming ends
                             game.prefConfig.bitrate = newBitrate
+
+                            // Update the "current bitrate" label in the dialog
+                            currentBitrateText?.text = String.format(
+                                game.resources.getString(R.string.game_menu_bitrate_current),
+                                newBitrate / 1000
+                            )
 
                             val successMessage = String.format(
                                 game.resources.getString(R.string.game_menu_bitrate_adjustment_success),
@@ -176,6 +182,13 @@ class BitrateCardController(
                 override fun onFailure(errorMessage: String) {
                     game.runOnUiThread {
                         try {
+                            // Revert display to actual current bitrate
+                            val actualBitrate = conn.currentBitrate
+                            currentBitrateText?.text = String.format(
+                                game.resources.getString(R.string.game_menu_bitrate_current),
+                                actualBitrate / 1000
+                            )
+
                             val errorMsg = game.resources.getString(R.string.game_menu_bitrate_adjustment_failed) + ": " + errorMessage
                             Toast.makeText(game, errorMsg, Toast.LENGTH_SHORT).show()
                         } catch (e: Exception) {
