@@ -1,8 +1,13 @@
 package com.limelight
 
 import android.app.AlertDialog
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.View
 import android.widget.ImageView
@@ -29,6 +34,9 @@ class BitrateCardController(
 
     companion object {
         private const val MAX_PROGRESS = 59
+
+        /** Segment boundary positions where haptic feedback should fire: 0.5, 5, 50, 100, 200 Mbps. */
+        private val SEGMENT_BOUNDARIES = setOf(0, 9, 24, 39, 49, MAX_PROGRESS)
 
         /** Convert seekbar progress (0..59) to bitrate in kbps. */
         fun progressToBitrateKbps(progress: Int): Int {
@@ -102,10 +110,18 @@ class BitrateCardController(
         }
 
         bitrateSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            private var lastProgress = bitrateSeekBar.progress
+
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                 if (fromUser) {
                     val newBitrate = progressToBitrateKbps(progress)
                     bitrateValueText.text = formatBitrateMbps(newBitrate)
+
+                    // Haptic feedback at segment boundaries
+                    if (progress != lastProgress && progress in SEGMENT_BOUNDARIES) {
+                        performHapticFeedback(seekBar)
+                    }
+                    lastProgress = progress
                 }
             }
 
@@ -129,6 +145,10 @@ class BitrateCardController(
             }
             false
         }
+    }
+
+    private fun performHapticFeedback(view: View) {
+        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
     }
 
     private fun adjustBitrate(bitrateKbps: Int) {
