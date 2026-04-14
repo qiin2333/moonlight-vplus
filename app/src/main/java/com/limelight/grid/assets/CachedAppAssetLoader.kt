@@ -207,7 +207,7 @@ class CachedAppAssetLoader(
         @Volatile
         private var runningThread: Thread? = null
         @Volatile
-        lateinit var tuple: LoaderTuple
+        var tuple: LoaderTuple? = null
 
         val isCancelled: Boolean
             get() = cancelled
@@ -275,7 +275,7 @@ class CachedAppAssetLoader(
                 imageView.startAnimation(AnimationUtils.loadAnimation(imageView.context, animationRes))
                 imageView.visibility = View.VISIBLE
                 textView?.visibility = View.VISIBLE
-                task.executeOnExecutor(networkExecutor, tuple)
+                task.executeOnExecutor(networkExecutor, tuple ?: return)
             }
         }
 
@@ -424,7 +424,7 @@ class CachedAppAssetLoader(
 
             if (loaderTask != null && !loaderTask.isCancelled) {
                 val taskTuple = loaderTask.tuple
-                if (taskTuple != tuple) {
+                if (taskTuple == null || taskTuple != tuple) {
                     loaderTask.cancel(true)
                 } else {
                     return false

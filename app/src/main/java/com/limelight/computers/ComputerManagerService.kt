@@ -561,7 +561,7 @@ class ComputerManagerService : Service() {
     ) {
         @Volatile
         var complete = false
-        lateinit var pollingThread: Thread
+        var pollingThread: Thread? = null
 
         @Volatile
         var returnedDetails: ComputerDetails? = null
@@ -710,8 +710,8 @@ class ComputerManagerService : Service() {
                 }
             }
         }
-        tuple.pollingThread.name = "Parallel Poll - ${tuple.address} - ${tuple.existingDetails.name}"
-        tuple.pollingThread.start()
+        tuple.pollingThread?.name = "Parallel Poll - ${tuple.address} - ${tuple.existingDetails.name}"
+        tuple.pollingThread?.start()
     }
 
     @Throws(InterruptedException::class)
