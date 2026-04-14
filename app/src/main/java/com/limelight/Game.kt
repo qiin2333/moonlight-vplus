@@ -405,7 +405,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         keyboardInputHandler.keyboardTranslator = KeyboardTranslator()
 
         audioVibrationService = AudioVibrationService(this)
-        audioVibrationService!!.setControllerHandler(controllerHandler)
+        audioVibrationService!!.controllerHandler = controllerHandler
         audioVibrationService!!.setSettings(
             prefConfig.enableAudioVibration,
             prefConfig.audioVibrationStrength,
@@ -526,9 +526,9 @@ class Game : Activity(), SurfaceHolder.Callback,
     private fun retargetTouchContexts(view: StreamView?) {
         for (i in 0 until TouchInputHandler.TOUCH_CONTEXT_LENGTH) {
             val absCtx = touchInputHandler.absoluteTouchContextMap[i]
-            if (absCtx is AbsoluteTouchContext) absCtx.setTargetView(view)
+            if (absCtx is AbsoluteTouchContext) absCtx.setTargetView(view!!)
             val relCtx = touchInputHandler.relativeTouchContextMap[i]
-            if (relCtx is RelativeTouchContext) relCtx.setTargetView(view)
+            if (relCtx is RelativeTouchContext) relCtx.setTargetView(view!!)
         }
     }
 
@@ -835,7 +835,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
         createConnectionAndHandler()
 
-        audioVibrationService?.setControllerHandler(controllerHandler)
+        audioVibrationService?.controllerHandler = controllerHandler
 
         if (prefConfig.usbDriver) {
             bindUsbDriverService()
