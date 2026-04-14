@@ -158,7 +158,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
                 localBinder.waitForReady()
 
                 // Get the computer object
-                computer = localBinder.getComputer(uuidString)
+                computer = localBinder.getComputer(uuidString!!)
                 if (computer == null) {
                     finish()
                     return@Thread
@@ -178,7 +178,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
                 try {
                     appGridAdapter = AppGridAdapter(this@AppView,
                             PreferenceConfiguration.readPreferences(this@AppView),
-                            computer!!, localBinder.uniqueId,
+                            computer!!, localBinder.getUniqueId(),
                             showHiddenApps)
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -332,7 +332,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         })
 
         if (poller == null) {
-            poller = managerBinder!!.createAppListPoller(computer)
+            poller = managerBinder!!.createAppListPoller(computer!!)
         }
         poller!!.start()
     }
@@ -652,7 +652,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
             return
         }
 
-        val settingsSummary = appSettingsManager!!.getSettingsSummary(computer!!.uuid, app.app)
+        val settingsSummary = appSettingsManager!!.getSettingsSummary(computer!!.uuid!!, app.app)
         val noneSettingsText = getString(R.string.app_last_settings_none)
 
         val hasValidSettings = settingsSummary != null && settingsSummary != noneSettingsText
@@ -779,11 +779,11 @@ class AppView : Activity(), AdapterFragmentCallbacks {
 
         Thread {
             try {
-                val httpConn = NvHTTP(computer!!.activeAddress, computer!!.httpsPort,
-                        managerBinder!!.uniqueId, "", computer!!.serverCert,
+                val httpConn = NvHTTP(computer!!.activeAddress!!, computer!!.httpsPort,
+                        managerBinder!!.getUniqueId(), "", computer!!.serverCert,
                         PlatformBinding.getCryptoProvider(this))
 
-                val displays = httpConn.displays
+                val displays = httpConn.getDisplays()
 
                 runOnUiThread {
                     if (displays != null && displays.size > 0) {
@@ -1128,7 +1128,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         // Only show the hide checkbox if this is not the currently running app or it's already hidden
         if (lastRunningAppId != selectedApp.app.appId || selectedApp.isHidden) {
             // Add "Start with Last Settings" option if last settings exist
-            if (appSettingsManager != null && appSettingsManager!!.hasLastSettings(computer!!.uuid, selectedApp.app)) {
+            if (appSettingsManager != null && appSettingsManager!!.hasLastSettings(computer!!.uuid!!, selectedApp.app)) {
                 menu.add(Menu.NONE, START_WITH_LAST_SETTINGS_ID, 1, resources.getString(R.string.applist_menu_start_with_last_settings))
             }
 

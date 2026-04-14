@@ -97,7 +97,7 @@ class ComputerDatabaseManager(c: Context) {
         values.put(MAC_ADDRESS_COLUMN_NAME, details.macAddress)
         try {
             if (details.serverCert != null) {
-                values.put(SERVER_CERT_COLUMN_NAME, details.serverCert.encoded)
+                values.put(SERVER_CERT_COLUMN_NAME, details.serverCert!!.encoded)
             } else {
                 values.put(SERVER_CERT_COLUMN_NAME, null as ByteArray?)
             }

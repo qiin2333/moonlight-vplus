@@ -71,23 +71,23 @@ class PcGridAdapter(
         if (!allowAsyncLoad) {
             val diskCachedBitmap = loadBoxArtFromDiskCache(computer)
             if (diskCachedBitmap != null) {
-                boxArtCache[computer.uuid] = diskCachedBitmap
+                boxArtCache[computer.uuid!!] = diskCachedBitmap
                 applyBoxArt(imgView, diskCachedBitmap)
                 return true
             }
             return false
         }
 
-        if (computer.uuid in loadingUuids) return false
+        if (computer.uuid!! in loadingUuids) return false
 
-        loadingUuids.add(computer.uuid)
+        loadingUuids.add(computer.uuid!!)
         LoadBoxArtTask.execute(imgView, computer, context, this)
         return false
     }
 
     private fun loadBoxArtFromDiskCache(computer: ComputerDetails): Bitmap? {
         if (computer.uuid == null) return null
-        return loadBoxArtFromDisk(context, computer.uuid, false)
+        return loadBoxArtFromDisk(context, computer.uuid!!, false)
     }
 
     internal fun cacheBoxArt(uuid: String?, bitmap: Bitmap?) {
@@ -175,7 +175,7 @@ class PcGridAdapter(
             }
 
             if (lhs.details != null) {
-                lhs.details.name.lowercase().compareTo(rhs.details.name.lowercase())
+                (lhs.details.name ?: "").lowercase().compareTo((rhs.details.name ?: "").lowercase())
             } else 0
         }
     }
@@ -311,7 +311,7 @@ class PcGridAdapter(
         updateSpinner(spinnerView as ImageView, isUnknown || isLoadingBoxArt)
 
         var displayName = details.name
-        if (isOnline && details.sunshineVersion != null && details.sunshineVersion.endsWith("杂鱼")) {
+        if (isOnline && details.sunshineVersion != null && details.sunshineVersion!!.endsWith("杂鱼")) {
             displayName += "⚡"
         }
         txtView.text = displayName

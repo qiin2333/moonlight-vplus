@@ -552,7 +552,7 @@ class GameMenu(
                     }
                 }
 
-                override fun onFailure(errorMessage: String?) {
+                override fun onFailure(errorMessage: String) {
                     game.runOnUiThread {
                         try {
                             val errorMsg = getString(R.string.game_menu_bitrate_adjustment_failed) + ": " + errorMessage

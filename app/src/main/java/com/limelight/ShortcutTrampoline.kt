@@ -48,7 +48,7 @@ class ShortcutTrampoline : Activity() {
                 localBinder.waitForReady()
                 managerBinder = localBinder
 
-                computer = managerBinder!!.getComputer(uuidString)
+                computer = managerBinder!!.getComputer(uuidString!!)
 
                 if (computer == null) {
                     Dialog.displayDialog(this@ShortcutTrampoline,
@@ -66,7 +66,7 @@ class ShortcutTrampoline : Activity() {
                     return@Thread
                 }
 
-                managerBinder!!.invalidateStateForComputer(computer!!.uuid)
+                managerBinder!!.invalidateStateForComputer(computer!!.uuid!!)
 
                 managerBinder!!.startPolling(object : ComputerManagerListener {
                     override fun notifyComputerUpdated(details: ComputerDetails) {
@@ -76,7 +76,7 @@ class ShortcutTrampoline : Activity() {
                             try {
                                 val comp = computer ?: return
                                 WakeOnLanSender.sendWolPacket(comp)
-                                managerBinder!!.invalidateStateForComputer(comp.uuid)
+                                managerBinder!!.invalidateStateForComputer(comp.uuid!!)
                                 return
                             } catch (e: IOException) {
                                 e.printStackTrace()

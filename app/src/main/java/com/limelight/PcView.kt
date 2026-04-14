@@ -848,7 +848,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         if (PcGridAdapter.ADD_COMPUTER_UUID == details.uuid) return
 
         managerBinder!!.removeComputer(details)
-        DiskAssetLoader(this).deleteAssetsForComputer(details.uuid)
+        DiskAssetLoader(this).deleteAssetsForComputer(details.uuid!!)
 
         getSharedPreferences(AppView.HIDDEN_APPS_PREF_FILENAME, MODE_PRIVATE)
                 .edit()
@@ -1038,13 +1038,13 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 val httpConn = NvHTTP(
                         ServerHelper.getCurrentAddressFromComputer(computer),
                         computer.httpsPort,
-                        managerBinder!!.uniqueId,
-                        clientName,
+                        managerBinder!!.getUniqueId(),
+                        clientName!!,
                         computer.serverCert,
                         PlatformBinding.getCryptoProvider(this)
                 )
 
-                if (httpConn.pairState == PairState.PAIRED) {
+                if (httpConn.getPairState() == PairState.PAIRED) {
                     success = true
                 } else {
                     val pinStr = PairingManager.generatePinString()
@@ -1065,12 +1065,12 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                             message = getString(R.string.pair_already_in_progress)
                         PairState.PAIRED -> {
                             success = true
-                            managerBinder!!.getComputer(computer.uuid).serverCert = pm.pairedCert
+                            managerBinder!!.getComputer(computer.uuid!!)!!.serverCert = pm.pairedCert
                             getSharedPreferences("pair_name_map", MODE_PRIVATE)
                                     .edit()
                                     .putString(computer.uuid, result.pairName)
                                     .apply()
-                            managerBinder!!.invalidateStateForComputer(computer.uuid)
+                            managerBinder!!.invalidateStateForComputer(computer.uuid!!)
                         }
                         else -> {}
                     }
@@ -1171,7 +1171,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 } else {
                     // addComputerBlocking fills addDetails in-place (uuid, httpsPort, etc.)
                     // Use getComputer to get the latest state from pollingTuples
-                    var computer = managerBinder!!.getComputer(addDetails.uuid)
+                    var computer = managerBinder!!.getComputer(addDetails.uuid!!)
                     if (computer == null) {
                         computer = addDetails
                     }
@@ -1179,13 +1179,13 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                     val httpConn = NvHTTP(
                         ServerHelper.getCurrentAddressFromComputer(computer),
                         computer.httpsPort,
-                        managerBinder!!.uniqueId,
-                        clientName,
+                        managerBinder!!.getUniqueId(),
+                        clientName!!,
                         computer.serverCert,
                         PlatformBinding.getCryptoProvider(this)
                     )
 
-                    if (httpConn.pairState == PairState.PAIRED) {
+                    if (httpConn.getPairState() == PairState.PAIRED) {
                         success = true
                         pairedComputer = computer
                     } else {
@@ -1201,12 +1201,12 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                             PairState.PAIRED -> {
                                 success = true
                                 pairedComputer = computer
-                                managerBinder!!.getComputer(computer.uuid).serverCert = pm.pairedCert
+                                managerBinder!!.getComputer(computer.uuid!!)!!.serverCert = pm.pairedCert
                                 getSharedPreferences("pair_name_map", MODE_PRIVATE)
                                     .edit()
                                     .putString(computer.uuid, result.pairName)
                                     .apply()
-                                managerBinder!!.invalidateStateForComputer(computer.uuid)
+                                managerBinder!!.invalidateStateForComputer(computer.uuid!!)
                             }
                             else -> {}
                         }
@@ -1243,9 +1243,9 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             val obj = pcGridAdapter.getItem(i) as ComputerObject
             if (PcGridAdapter.isAddComputerCard(obj)) continue
             val d = obj.details
-            if (d.manualAddress != null && host == d.manualAddress.address) return d
-            if (d.localAddress != null && host == d.localAddress.address) return d
-            if (d.remoteAddress != null && host == d.remoteAddress.address) return d
+            if (d.manualAddress != null && host == d.manualAddress!!.address) return d
+            if (d.localAddress != null && host == d.localAddress!!.address) return d
+            if (d.remoteAddress != null && host == d.remoteAddress!!.address) return d
         }
         return null
     }
@@ -1291,15 +1291,15 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 val httpConn = NvHTTP(
                         ServerHelper.getCurrentAddressFromComputer(computer),
                         computer.httpsPort,
-                        binder.uniqueId,
-                        clientName,
+                        binder.getUniqueId(),
+                        clientName!!,
                         computer.serverCert,
                         PlatformBinding.getCryptoProvider(this)
                 )
 
-                message = if (httpConn.pairState == PairState.PAIRED) {
+                message = if (httpConn.getPairState() == PairState.PAIRED) {
                     httpConn.unpair()
-                    if (httpConn.pairState == PairState.NOT_PAIRED)
+                    if (httpConn.getPairState() == PairState.NOT_PAIRED)
                         getString(R.string.unpair_success)
                     else
                         getString(R.string.unpair_fail)
@@ -1340,8 +1340,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         i.putExtra(AppView.SHOW_HIDDEN_APPS_EXTRA, showHiddenGames)
 
         if (computer.activeAddress != null) {
-            i.putExtra(AppView.SELECTED_ADDRESS_EXTRA, computer.activeAddress.address)
-            i.putExtra(AppView.SELECTED_PORT_EXTRA, computer.activeAddress.port)
+            i.putExtra(AppView.SELECTED_ADDRESS_EXTRA, computer.activeAddress!!.address)
+            i.putExtra(AppView.SELECTED_PORT_EXTRA, computer.activeAddress!!.port)
         }
 
         startActivity(i)
@@ -1382,9 +1382,9 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
         Thread {
             val targetApp = if (computer.runningGameId != 0)
-                getNvAppById(computer.runningGameId, computer.uuid)
+                getNvAppById(computer.runningGameId, computer.uuid!!)
             else
-                getFirstAppFromCache(computer.uuid)
+                getFirstAppFromCache(computer.uuid!!)
 
             if (targetApp == null) {
                 fallbackToAppList(computer)
@@ -1422,9 +1422,9 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
         Thread {
             val targetApp = if (computer.runningGameId != 0)
-                getNvAppById(computer.runningGameId, computer.uuid)
+                getNvAppById(computer.runningGameId, computer.uuid!!)
             else
-                getFirstAppFromCache(computer.uuid)
+                getFirstAppFromCache(computer.uuid!!)
 
             if (targetApp == null) {
                 fallbackToAppList(computer)
@@ -1521,7 +1521,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             return
         }
 
-        var app = getNvAppById(target.runningGameId, target.uuid)
+        var app = getNvAppById(target.runningGameId, target.uuid!!)
         if (app == null) {
             app = NvApp("app", target.runningGameId, false)
         }
@@ -1714,7 +1714,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             showToast(getString(R.string.error_manager_not_running))
             return
         }
-        var app = getNvAppById(details.runningGameId, details.uuid)
+        var app = getNvAppById(details.runningGameId, details.uuid!!)
         if (app == null) {
             app = NvApp("app", details.runningGameId, false)
         }
@@ -2024,7 +2024,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         }
 
         override fun toString(): String {
-            return details.name
+            return details.name!!
         }
     }
 }

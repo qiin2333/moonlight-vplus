@@ -847,7 +847,7 @@ class StreamSettings : AppCompatActivity() {
 
             prefs.edit()
                     .putInt(PreferenceConfiguration.BITRATE_PREF_STRING,
-                            PreferenceConfiguration.getDefaultBitrate(resValue, fpsValue))
+                            PreferenceConfiguration.getDefaultBitrate(resValue!!, fpsValue!!))
                     .apply()
         }
 

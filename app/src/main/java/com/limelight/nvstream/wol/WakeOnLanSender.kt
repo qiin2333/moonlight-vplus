@@ -122,7 +122,7 @@ object WakeOnLanSender {
 
     private fun createWolPayload(computer: ComputerDetails): ByteArray {
         val payload = ByteArray(102)
-        val macAddress = macStringToBytes(computer.macAddress)
+        val macAddress = macStringToBytes(computer.macAddress!!)
         var i = 0
 
         // 6 bytes of FF

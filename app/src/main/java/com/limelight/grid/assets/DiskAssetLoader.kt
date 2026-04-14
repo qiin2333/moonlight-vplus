@@ -24,11 +24,11 @@ class DiskAssetLoader(context: Context) {
     private val cacheDir: File = context.cacheDir
 
     fun checkCacheExists(tuple: CachedAppAssetLoader.LoaderTuple): Boolean {
-        return CacheHelper.cacheFileExists(cacheDir, "boxart", tuple.computer.uuid, "${tuple.app.appId}.png")
+        return CacheHelper.cacheFileExists(cacheDir, "boxart", tuple.computer.uuid!!, "${tuple.app.appId}.png")
     }
 
     fun loadBitmapFromCache(tuple: CachedAppAssetLoader.LoaderTuple, sampleSize: Int): ScaledBitmap? {
-        val file = getFile(tuple.computer.uuid, tuple.app.appId)
+        val file = getFile(tuple.computer.uuid!!, tuple.app.appId)
 
         if (!file.exists()) {
             return null
@@ -184,7 +184,7 @@ class DiskAssetLoader(context: Context) {
         var success = false
         try {
             CacheHelper.openCacheFileForOutput(
-                cacheDir, "boxart", tuple.computer.uuid, "${tuple.app.appId}.png"
+                cacheDir, "boxart", tuple.computer.uuid!!, "${tuple.app.appId}.png"
             ).use { out ->
                 CacheHelper.writeInputStreamToOutputStream(input, out, MAX_ASSET_SIZE)
                 success = true
@@ -194,7 +194,7 @@ class DiskAssetLoader(context: Context) {
         } finally {
             if (!success) {
                 LimeLog.warning("Unable to populate cache with tuple: $tuple")
-                CacheHelper.deleteCacheFile(cacheDir, "boxart", tuple.computer.uuid, "${tuple.app.appId}.png")
+                CacheHelper.deleteCacheFile(cacheDir, "boxart", tuple.computer.uuid!!, "${tuple.app.appId}.png")
             }
         }
     }

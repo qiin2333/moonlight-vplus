@@ -33,7 +33,7 @@ class TvChannelHelper(private var context: Activity) {
                 return
             }
 
-            val channelId = getChannelId(computer.uuid) ?: return
+            val channelId = getChannelId(computer.uuid!!) ?: return
 
             val intent = Intent(TvContract.ACTION_REQUEST_CHANNEL_BROWSABLE)
             intent.putExtra(TvContract.EXTRA_CHANNEL_ID, channelId)
@@ -52,11 +52,11 @@ class TvChannelHelper(private var context: Activity) {
 
             val builder = ChannelBuilder()
                 .setType(TvContract.Channels.TYPE_PREVIEW)
-                .setDisplayName(computer.name)
-                .setInternalProviderId(computer.uuid)
+                .setDisplayName(computer.name!!)
+                .setInternalProviderId(computer.uuid!!)
                 .setAppLinkIntent(ServerHelper.createPcShortcutIntent(context, computer))
 
-            val channelId = getChannelId(computer.uuid)
+            val channelId = getChannelId(computer.uuid!!)
             if (channelId != null) {
                 context.contentResolver.update(
                     TvContract.buildChannelUri(channelId),
@@ -124,14 +124,14 @@ class TvChannelHelper(private var context: Activity) {
                 return
             }
 
-            val channelId = getChannelId(computer.uuid) ?: return
+            val channelId = getChannelId(computer.uuid!!) ?: return
 
             val builder = PreviewProgramBuilder()
                 .setChannelId(channelId)
                 .setType(TYPE_GAME)
                 .setTitle(app.appName)
                 .setPosterArtAspectRatio(ASPECT_RATIO_MOVIE_POSTER)
-                .setPosterArtUri(PosterContentProvider.createBoxArtUri(computer.uuid, "" + app.appId))
+                .setPosterArtUri(PosterContentProvider.createBoxArtUri(computer.uuid!!, "" + app.appId))
                 .setIntent(ServerHelper.createAppShortcutIntent(context, computer, app))
                 .setInternalProviderId("" + app.appId)
                 .setWeight(((System.currentTimeMillis() - 1500000000000L) / 1000).toInt())
@@ -165,7 +165,7 @@ class TvChannelHelper(private var context: Activity) {
                 return
             }
 
-            val channelId = getChannelId(computer.uuid) ?: return
+            val channelId = getChannelId(computer.uuid!!) ?: return
             context.contentResolver.delete(TvContract.buildChannelUri(channelId), null, null)
         }
     }
@@ -176,7 +176,7 @@ class TvChannelHelper(private var context: Activity) {
                 return
             }
 
-            val channelId = getChannelId(computer.uuid) ?: return
+            val channelId = getChannelId(computer.uuid!!) ?: return
             val programId = getProgramId(channelId, "" + app.appId) ?: return
 
             context.contentResolver.delete(TvContract.buildPreviewProgramUri(programId), null, null)

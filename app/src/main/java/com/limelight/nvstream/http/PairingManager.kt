@@ -85,7 +85,7 @@ class PairingManager(
         }
 
         pairedCert = serverCert
-        http.setServerCert(serverCert)
+        http.serverCert = serverCert
 
         val randomChallenge = generateRandomBytes(16)
         val encryptedChallenge = encryptAes(randomChallenge, aesKey)
@@ -96,7 +96,7 @@ class PairingManager(
             return PairResult(PairState.FAILED, pairName)
         }
 
-        val encServerChallengeResponse = hexToBytes(NvHTTP.getXmlString(challengeResp, "challengeresponse", true))
+        val encServerChallengeResponse = hexToBytes(NvHTTP.getXmlString(challengeResp, "challengeresponse", true)!!)
         val decServerChallengeResponse = decryptAes(encServerChallengeResponse, aesKey)
 
         val serverResponse = decServerChallengeResponse.copyOfRange(0, hashAlgo.hashLength)
@@ -111,7 +111,7 @@ class PairingManager(
             return PairResult(PairState.FAILED, pairName)
         }
 
-        val serverSecretResp = hexToBytes(NvHTTP.getXmlString(secretResp, "pairingsecret", true))
+        val serverSecretResp = hexToBytes(NvHTTP.getXmlString(secretResp, "pairingsecret", true)!!)
         val serverSecret = serverSecretResp.copyOfRange(0, 16)
         val serverSignature = serverSecretResp.copyOfRange(16, serverSecretResp.size)
 

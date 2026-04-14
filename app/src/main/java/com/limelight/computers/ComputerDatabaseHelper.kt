@@ -171,8 +171,8 @@ class ComputerDatabaseHelper(private val context: Context) :
             ComputerDetails().apply {
                 name = c.getString(0)
                 uuid = c.getString(1)
-                localAddress = parseV1Address(c, 2, name, "local")
-                remoteAddress = parseV1Address(c, 3, name, "remote")
+                localAddress = parseV1Address(c, 2, name!!, "local")
+                remoteAddress = parseV1Address(c, 3, name!!, "remote")
                 manualAddress = remoteAddress
                 macAddress = c.getString(4)
                 state = ComputerDetails.State.UNKNOWN

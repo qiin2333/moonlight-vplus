@@ -630,11 +630,11 @@ class Game : Activity(), SurfaceHolder.Callback,
      * Shared by [onCreate] (first launch) and [prepareConnection] (resume reconnect).
      */
     private fun createConnectionAndHandler() {
-        val host = intent.getStringExtra(EXTRA_HOST)
+        val host = intent.getStringExtra(EXTRA_HOST) ?: ""
         val port = intent.getIntExtra(EXTRA_PORT, NvHTTP.DEFAULT_HTTP_PORT)
         val httpsPort = intent.getIntExtra(EXTRA_HTTPS_PORT, 0)
-        val uniqueId = intent.getStringExtra(EXTRA_UNIQUEID)
-        val pairName = intent.getStringExtra(EXTRA_PAIR_NAME)
+        val uniqueId = intent.getStringExtra(EXTRA_UNIQUEID) ?: ""
+        val pairName = intent.getStringExtra(EXTRA_PAIR_NAME) ?: ""
         val pcUseVdd = intent.getBooleanExtra(EXTRA_PC_USEVDD, false)
         val displayName = intent.getStringExtra(EXTRA_DISPLAY_NAME)
         val serverCert = parseServerCert()
@@ -1587,7 +1587,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             UiHelper.notifyStreamConnecting(this)
 
             this.audioRenderer = AndroidAudioRenderer(this, prefConfig.enableAudioFx, prefConfig.enableSpatializer)
-            conn!!.start(this.audioRenderer, decoderRenderer, this)
+            conn!!.start(this.audioRenderer!!, decoderRenderer!!, this)
 
             streamView?.post { cursorServiceManager!!.syncCursorWithStream() }
         } else if (connected && isExtremeResumeEnabled) {

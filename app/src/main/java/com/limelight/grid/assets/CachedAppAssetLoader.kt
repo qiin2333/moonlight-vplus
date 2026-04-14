@@ -100,7 +100,7 @@ class CachedAppAssetLoader(
 
         // 异步从磁盘加载
         foregroundExecutor.execute {
-            val diskBitmap = diskLoader.loadFullBitmapFromCache(computer.uuid, app.appId)
+            val diskBitmap = diskLoader.loadFullBitmapFromCache(computer.uuid!!, app.appId)
             if (diskBitmap != null) {
                 AppIconCache.instance.putFullIcon(computer, app, diskBitmap)
                 Handler(Looper.getMainLooper()).post { callback.onBitmapLoaded(diskBitmap) }

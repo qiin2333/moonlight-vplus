@@ -58,8 +58,8 @@ class ShortcutHelper(private val context: Activity) {
 
     fun reportComputerShortcutUsed(computer: ComputerDetails) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
-            if (getInfoForId(computer.uuid) != null) {
-                sm!!.reportShortcutUsed(computer.uuid)
+            if (getInfoForId(computer.uuid!!) != null) {
+                sm!!.reportShortcutUsed(computer.uuid!!)
             }
         }
     }
@@ -71,20 +71,20 @@ class ShortcutHelper(private val context: Activity) {
 
     fun createAppViewShortcut(computer: ComputerDetails, forceAdd: Boolean, newlyPaired: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
-            val sinfo = ShortcutInfo.Builder(context, computer.uuid)
+            val sinfo = ShortcutInfo.Builder(context, computer.uuid!!)
                 .setIntent(ServerHelper.createPcShortcutIntent(context, computer))
-                .setShortLabel(computer.name)
-                .setLongLabel(computer.name)
+                .setShortLabel(computer.name!!)
+                .setLongLabel(computer.name!!)
                 .setIcon(Icon.createWithResource(context, R.mipmap.ic_pc_scut))
                 .build()
 
-            val existingSinfo = getInfoForId(computer.uuid)
+            val existingSinfo = getInfoForId(computer.uuid!!)
             if (existingSinfo != null) {
                 sm!!.updateShortcuts(Collections.singletonList(sinfo))
-                sm.enableShortcuts(Collections.singletonList(computer.uuid))
+                sm.enableShortcuts(Collections.singletonList(computer.uuid!!))
             }
 
-            if (!isExistingDynamicShortcut(computer.uuid)) {
+            if (!isExistingDynamicShortcut(computer.uuid!!)) {
                 if (forceAdd) {
                     reapShortcutsForDynamicAdd()
                 }
@@ -106,7 +106,7 @@ class ShortcutHelper(private val context: Activity) {
     }
 
     private fun getShortcutIdForGame(computer: ComputerDetails, app: NvApp): String {
-        return computer.uuid + app.appId
+        return computer.uuid!! + app.appId
     }
 
     @TargetApi(Build.VERSION_CODES.O)
@@ -121,7 +121,7 @@ class ShortcutHelper(private val context: Activity) {
 
             val sInfo = ShortcutInfo.Builder(context, getShortcutIdForGame(computer, app))
                 .setIntent(ServerHelper.createAppShortcutIntent(context, computer, app))
-                .setShortLabel(app.appName + " (" + computer.name + ")")
+                .setShortLabel(app.appName + " (" + computer.name!! + ")")
                 .setIcon(appIcon)
                 .build()
 
@@ -133,14 +133,14 @@ class ShortcutHelper(private val context: Activity) {
     fun disableComputerShortcut(computer: ComputerDetails, reason: CharSequence) {
         tvChannelHelper.deleteChannel(computer)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
-            if (getInfoForId(computer.uuid) != null) {
-                sm!!.disableShortcuts(Collections.singletonList(computer.uuid), reason)
+            if (getInfoForId(computer.uuid!!) != null) {
+                sm!!.disableShortcuts(Collections.singletonList(computer.uuid!!), reason)
             }
 
             val shortcuts = getAllShortcuts()
             val appShortcutIds = LinkedList<String>()
             for (info in shortcuts) {
-                if (info.id.startsWith(computer.uuid)) {
+                if (info.id.startsWith(computer.uuid!!)) {
                     appShortcutIds.add(info.id)
                 }
             }

@@ -62,13 +62,13 @@ object ServerHelper {
         screenCombinationMode: Int = -1
     ): Intent {
         return Intent(parent, Game::class.java).apply {
-            putExtra(Game.EXTRA_HOST, computer.activeAddress.address)
-            putExtra(Game.EXTRA_PORT, computer.activeAddress.port)
+            putExtra(Game.EXTRA_HOST, computer.activeAddress!!.address)
+            putExtra(Game.EXTRA_PORT, computer.activeAddress!!.port)
             putExtra(Game.EXTRA_HTTPS_PORT, computer.httpsPort)
             putExtra(Game.EXTRA_APP_NAME, app.appName)
             putExtra(Game.EXTRA_APP_ID, app.appId)
             putExtra(Game.EXTRA_APP_HDR, app.isHdrSupported())
-            putExtra(Game.EXTRA_UNIQUEID, managerBinder.uniqueId)
+            putExtra(Game.EXTRA_UNIQUEID, managerBinder.getUniqueId())
             putExtra(Game.EXTRA_PC_UUID, computer.uuid)
             putExtra(Game.EXTRA_PC_NAME, computer.name)
             putExtra(Game.EXTRA_PAIR_NAME, computer.getPairName(parent))
@@ -145,7 +145,7 @@ object ServerHelper {
             try {
                 val httpConn = NvHTTP(
                     getCurrentAddressFromComputer(computer), computer.httpsPort,
-                    managerBinder.uniqueId, "", computer.serverCert, PlatformBinding.getCryptoProvider(parent)
+                    managerBinder.getUniqueId(), "", computer.serverCert, PlatformBinding.getCryptoProvider(parent)
                 )
                 message = if (httpConn.pcSleep()) {
                     parent.resources.getString(R.string.pcview_menu_sleep_success)
@@ -197,7 +197,7 @@ object ServerHelper {
             try {
                 val httpConn = NvHTTP(
                     getCurrentAddressFromComputer(computer), computer.httpsPort,
-                    managerBinder.uniqueId, "", computer.serverCert, PlatformBinding.getCryptoProvider(parent)
+                    managerBinder.getUniqueId(), "", computer.serverCert, PlatformBinding.getCryptoProvider(parent)
                 )
                 message = if (httpConn.quitApp()) {
                     parent.resources.getString(R.string.applist_quit_success) + " " + app.appName

@@ -52,7 +52,7 @@ class AppSelectionActivity : Activity(), ComputerManagerListener {
                 managerBinder!!.startPolling(this@AppSelectionActivity)
 
                 if (pcUuid != null) {
-                    managerBinder!!.invalidateStateForComputer(pcUuid)
+                    managerBinder!!.invalidateStateForComputer(pcUuid!!)
                 }
 
                 runOnUiThread {
@@ -105,7 +105,7 @@ class AppSelectionActivity : Activity(), ComputerManagerListener {
     }
 
     private fun loadApps() {
-        computer = managerBinder!!.getComputer(pcUuid)
+        computer = managerBinder!!.getComputer(pcUuid!!)
         if (computer == null) {
             Toast.makeText(this, R.string.scut_pc_not_found, Toast.LENGTH_SHORT).show()
             finish()
@@ -121,7 +121,7 @@ class AppSelectionActivity : Activity(), ComputerManagerListener {
 
         val prefs = PreferenceConfiguration.readPreferences(this)
         val comp = computer!!
-        appGridAdapter = AppGridAdapter(this, prefs, comp, managerBinder!!.uniqueId, false)
+        appGridAdapter = AppGridAdapter(this, prefs, comp, managerBinder!!.getUniqueId(), false)
 
         val appObjects = apps.map { AppView.AppObject(it) }
         appGridAdapter!!.rebuildAppList(appObjects)
@@ -154,12 +154,12 @@ class AppSelectionActivity : Activity(), ComputerManagerListener {
                 )
 
                 Thread {
-                    binder.invalidateStateForComputer(pcUuid)
+                    binder.invalidateStateForComputer(pcUuid!!)
 
                     if (comp.state == ComputerDetails.State.OFFLINE) {
                         try {
                             WakeOnLanSender.sendWolPacket(comp)
-                            binder.invalidateStateForComputer(pcUuid)
+                            binder.invalidateStateForComputer(pcUuid!!)
                         } catch (e: IOException) {
                             LimeLog.warning("Failed to send WoL packet:$e")
                         }

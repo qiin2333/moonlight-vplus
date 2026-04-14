@@ -292,7 +292,7 @@ class AppSettingsManager(private val context: Context) {
         val useLastSettingsEnabled = isUseLastSettingsEnabled
 
         if (useLastSettingsEnabled && computer != null) {
-            val lastSettings = getAppLastSettings(computer.uuid, app)
+            val lastSettings = getAppLastSettings(computer.uuid!!, app)
             if (lastSettings != null) {
                 return ServerHelper.createStartIntent(parent, app, computer, managerBinder, lastSettings)
             }
