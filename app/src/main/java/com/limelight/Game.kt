@@ -520,7 +520,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     /** Resolve the display currently used for rendering (external or built-in). */
     val currentTargetDisplay: Display
-        get() = externalDisplayManager?.targetDisplay ?: windowManager.defaultDisplay
+        get() = externalDisplayManager?.getTargetDisplay() ?: windowManager.defaultDisplay
 
     /** Re-point all absolute/relative touch contexts at [view]. */
     private fun retargetTouchContexts(view: StreamView?) {
@@ -585,7 +585,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         val computer = ComputerDetails()
         computer.name = pcName
         computer.uuid = intent.getStringExtra(EXTRA_PC_UUID)
-        progressOverlay!!.setComputer(computer)
+        progressOverlay!!.computer = computer
         progressOverlay!!.show(
             resources.getString(R.string.conn_establishing_title),
             resources.getString(R.string.conn_establishing_msg)
@@ -656,8 +656,8 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     /** Create or re-create ExternalDisplayManager with the standard callback. */
     private fun setupExternalDisplay() {
-        externalDisplayManager = ExternalDisplayManager(this, prefConfig, conn, decoderRenderer, pcName, appName)
-        externalDisplayManager!!.setCallback(createExternalDisplayCallback())
+        externalDisplayManager = ExternalDisplayManager(this, prefConfig, conn!!, decoderRenderer!!, pcName ?: "", appName ?: "")
+        externalDisplayManager!!.callback = createExternalDisplayCallback()
         externalDisplayManager!!.initialize()
     }
 
@@ -876,9 +876,12 @@ class Game : Activity(), SurfaceHolder.Callback,
     override fun onResume() {
         super.onResume()
         KeyboardAccessibilityService.setIntercepting(true)
-        val service = KeyboardAccessibilityService.getInstance()
-        service?.setKeyEventCallback(this)
-            ?: LimeLog.warning("KeyboardAccessibilityService is not running.")
+        val service = KeyboardAccessibilityService.instance
+        if (service != null) {
+            service.keyEventCallback = this
+        } else {
+            LimeLog.warning("KeyboardAccessibilityService is not running.")
+        }
 
         if (microphoneManager != null && micButton != null) {
             microphoneManager!!.updateMicrophoneButtonState()
@@ -1133,7 +1136,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     override fun onPause() {
         floatBallHandler!!.hide()
         KeyboardAccessibilityService.setIntercepting(false)
-        KeyboardAccessibilityService.getInstance()?.setKeyEventCallback(null)
+        KeyboardAccessibilityService.instance?.keyEventCallback = null
 
         if (isFinishing) {
             controllerHandler?.stop()
@@ -1276,7 +1279,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         }
 
         analyticsManager!!.logGameStreamEnd(
-            pcName, appName, effectiveStreamDuration,
+            pcName ?: "", appName, effectiveStreamDuration,
             decoderMessage, resolutionWidth, resolutionHeight,
             averageEndToEndLatency, averageDecoderLatency
         )
@@ -1902,7 +1905,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     val activeStreamView: StreamView?
         get() {
-            if (externalDisplayManager != null && externalDisplayManager!!.isUsingExternalDisplay && externalStreamView != null) {
+            if (externalDisplayManager != null && externalDisplayManager!!.isUsingExternalDisplay() && externalStreamView != null) {
                 return externalStreamView
             }
             return streamView

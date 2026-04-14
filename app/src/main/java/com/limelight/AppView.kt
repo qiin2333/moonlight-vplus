@@ -172,8 +172,8 @@ class AppView : Activity(), AdapterFragmentCallbacks {
                 }
 
                 // Add a launcher shortcut for this PC (forced, since this is user interaction)
-                shortcutHelper!!.createAppViewShortcut(computer, true, intent.getBooleanExtra(NEW_PAIR_EXTRA, false))
-                shortcutHelper!!.reportComputerShortcutUsed(computer)
+                shortcutHelper!!.createAppViewShortcut(computer!!, true, intent.getBooleanExtra(NEW_PAIR_EXTRA, false))
+                shortcutHelper!!.reportComputerShortcutUsed(computer!!)
 
                 try {
                     appGridAdapter = AppGridAdapter(this@AppView,
@@ -1255,7 +1255,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
 
                 // 创建快捷方式
                 if (appBitmap != null) {
-                    if (!shortcutHelper!!.createPinnedGameShortcut(computer, app.app, appBitmap)) {
+                    if (!shortcutHelper!!.createPinnedGameShortcut(computer!!, app.app, appBitmap)) {
                         Toast.makeText(this@AppView, resources.getString(R.string.unable_to_pin_shortcut), Toast.LENGTH_LONG).show()
                     }
                 } else {
@@ -1341,7 +1341,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
                     newAppObjects.add(newAppObject)
 
                     // Enable shortcuts for new apps
-                    shortcutHelper!!.enableAppShortcut(computer, app)
+                    shortcutHelper!!.enableAppShortcut(computer!!, app)
                 }
             }
 
@@ -1358,7 +1358,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
                 }
 
                 if (!stillExists) {
-                    shortcutHelper!!.disableAppShortcut(computer, existingApp.app, "App removed from PC")
+                    shortcutHelper!!.disableAppShortcut(computer!!, existingApp.app, "App removed from PC")
                 }
             }
 

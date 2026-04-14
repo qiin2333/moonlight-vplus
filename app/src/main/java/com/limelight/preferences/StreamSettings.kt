@@ -138,7 +138,7 @@ class StreamSettings : AppCompatActivity() {
 
         // 初始化外接显示器管理器
         if (previousPrefs!!.useExternalDisplay) {
-            externalDisplayManager = ExternalDisplayManager(this, previousPrefs, null, null, null, null)
+            externalDisplayManager = ExternalDisplayManager(this, previousPrefs!!, null, null, null, null)
             externalDisplayManager!!.initialize()
         }
 
@@ -660,7 +660,7 @@ class StreamSettings : AppCompatActivity() {
         private fun getTargetDisplay(): Display {
             val settingsActivity = activity as? StreamSettings
             if (settingsActivity?.externalDisplayManager != null) {
-                return settingsActivity.externalDisplayManager!!.targetDisplay
+                return settingsActivity.externalDisplayManager!!.getTargetDisplay()
             }
             return requireActivity().windowManager.defaultDisplay
         }

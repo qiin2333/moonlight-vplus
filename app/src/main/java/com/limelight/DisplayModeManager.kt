@@ -1,0 +1,178 @@
+package com.limelight
+
+import android.os.Build
+import android.view.Display
+import com.limelight.preferences.PreferenceConfiguration
+import com.limelight.utils.UiHelper
+
+/**
+ * 显示模式管理器
+ * 负责从可用的显示模式中选择最佳的刷新率和分辨率模式。
+ * 纯计算逻辑，不持有 Activity 引用。
+ */
+object DisplayModeManager {
+
+    class DisplayModeResult(
+        val refreshRate: Float,
+        val preferredModeId: Int,
+        val useSetFrameRate: Boolean,
+        val aspectRatioMatch: Boolean
+    )
+
+    @JvmStatic
+    fun isRefreshRateEqualMatch(refreshRate: Float, targetFps: Int): Boolean {
+        return refreshRate >= targetFps && refreshRate <= targetFps + 3
+    }
+
+    @JvmStatic
+    fun isRefreshRateGoodMatch(refreshRate: Float, targetFps: Int): Boolean {
+        return refreshRate >= targetFps && Math.round(refreshRate) % targetFps <= 3
+    }
+
+    @JvmStatic
+    fun mayReduceRefreshRate(prefConfig: PreferenceConfiguration): Boolean {
+        return prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_CAP_FPS ||
+                prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_MAX_SMOOTHNESS ||
+                (prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_BALANCED && prefConfig.reduceRefreshRate)
+    }
+
+    @JvmStatic
+    fun shouldIgnoreInsetsForResolution(display: Display, width: Int, height: Int): Boolean {
+        if (!PreferenceConfiguration.isNativeResolution(width, height)) {
+            return false
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            for (candidate in display.supportedModes) {
+                if ((width == candidate.physicalWidth && height == candidate.physicalHeight) ||
+                    (height == candidate.physicalWidth && width == candidate.physicalHeight)
+                ) {
+                    return true
+                }
+            }
+        }
+
+        return false
+    }
+
+    @JvmStatic
+    fun selectBestDisplayMode(display: Display, prefConfig: PreferenceConfiguration): DisplayModeResult {
+        val displayRefreshRate: Float
+        var preferredModeId = -1
+        var useSetFrameRate = false
+        var aspectRatioMatch = false
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            var bestMode = display.mode
+            val isNativeResolutionStream = PreferenceConfiguration.isNativeResolution(prefConfig.width, prefConfig.height)
+            var refreshRateIsGood = isRefreshRateGoodMatch(bestMode.refreshRate, prefConfig.fps)
+            var refreshRateIsEqual = isRefreshRateEqualMatch(bestMode.refreshRate, prefConfig.fps)
+
+            LimeLog.info("Current display mode: ${bestMode.physicalWidth}x${bestMode.physicalHeight}x${bestMode.refreshRate}")
+
+            for (candidate in display.supportedModes) {
+                val refreshRateReduced = candidate.refreshRate < bestMode.refreshRate
+                val resolutionReduced = candidate.physicalWidth < bestMode.physicalWidth ||
+                        candidate.physicalHeight < bestMode.physicalHeight
+                val resolutionFitsStream = candidate.physicalWidth >= prefConfig.width &&
+                        candidate.physicalHeight >= prefConfig.height
+
+                LimeLog.info("Examining display mode: ${candidate.physicalWidth}x${candidate.physicalHeight}x${candidate.refreshRate}")
+
+                if (candidate.physicalWidth > 4096 && prefConfig.width <= 4096) {
+                    continue
+                }
+
+                if (prefConfig.width < 3840 && prefConfig.fps <= 60 && !isNativeResolutionStream) {
+                    if (display.mode.physicalWidth != candidate.physicalWidth ||
+                        display.mode.physicalHeight != candidate.physicalHeight
+                    ) {
+                        continue
+                    }
+                }
+
+                if (resolutionReduced && !(prefConfig.fps > 60 && resolutionFitsStream)) {
+                    continue
+                }
+
+                if (mayReduceRefreshRate(prefConfig) && refreshRateIsEqual && !isRefreshRateEqualMatch(candidate.refreshRate, prefConfig.fps)) {
+                    continue
+                } else if (refreshRateIsGood) {
+                    if (!isRefreshRateGoodMatch(candidate.refreshRate, prefConfig.fps)) {
+                        continue
+                    }
+
+                    if (mayReduceRefreshRate(prefConfig)) {
+                        if (candidate.refreshRate > bestMode.refreshRate) {
+                            continue
+                        }
+                    } else {
+                        if (refreshRateReduced) {
+                            continue
+                        }
+                    }
+                } else if (!isRefreshRateGoodMatch(candidate.refreshRate, prefConfig.fps)) {
+                    if (refreshRateReduced) {
+                        continue
+                    }
+                }
+
+                bestMode = candidate
+                refreshRateIsGood = isRefreshRateGoodMatch(candidate.refreshRate, prefConfig.fps)
+                refreshRateIsEqual = isRefreshRateEqualMatch(candidate.refreshRate, prefConfig.fps)
+            }
+
+            LimeLog.info("Best display mode: ${bestMode.physicalWidth}x${bestMode.physicalHeight}x${bestMode.refreshRate}")
+
+            if (display.mode.modeId != bestMode.modeId) {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || UiHelper.isColorOS() ||
+                    display.mode.physicalWidth != bestMode.physicalWidth ||
+                    display.mode.physicalHeight != bestMode.physicalHeight
+                ) {
+                    preferredModeId = bestMode.modeId
+                } else {
+                    LimeLog.info("Using setFrameRate() instead of preferredDisplayModeId due to matching resolution")
+                    useSetFrameRate = true
+                }
+            } else {
+                LimeLog.info("Current display mode is already the best display mode")
+            }
+
+            displayRefreshRate = bestMode.refreshRate
+        } else {
+            @Suppress("DEPRECATION")
+            var bestRefreshRate = display.refreshRate
+            @Suppress("DEPRECATION")
+            for (candidate in display.supportedRefreshRates) {
+                LimeLog.info("Examining refresh rate: $candidate")
+
+                if (candidate > bestRefreshRate) {
+                    if (prefConfig.fps <= 60) {
+                        if (candidate >= 63) {
+                            continue
+                        }
+                    }
+                    bestRefreshRate = candidate
+                }
+            }
+
+            LimeLog.info("Selected refresh rate: $bestRefreshRate")
+            displayRefreshRate = bestRefreshRate
+        }
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            val screenSize = android.graphics.Point(0, 0)
+            @Suppress("DEPRECATION")
+            display.getSize(screenSize)
+
+            val screenAspectRatio = screenSize.y.toDouble() / screenSize.x
+            val streamAspectRatio = prefConfig.height.toDouble() / prefConfig.width
+            if (Math.abs(screenAspectRatio - streamAspectRatio) < 0.001) {
+                LimeLog.info("Stream has compatible aspect ratio with output display")
+                aspectRatioMatch = true
+            }
+        }
+
+        return DisplayModeResult(displayRefreshRate, preferredModeId, useSetFrameRate, aspectRatioMatch)
+    }
+}

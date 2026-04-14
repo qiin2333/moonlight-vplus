@@ -207,7 +207,7 @@ class ConnectionCallbackHandler(private val game: Game) {
         val shortcutHelper = ShortcutHelper(game)
         shortcutHelper.reportComputerShortcutUsed(computer)
         if (game.appName != null) {
-            shortcutHelper.reportGameLaunched(computer, game.app)
+            shortcutHelper.reportGameLaunched(computer, game.app!!)
         }
 
         // 检查是否启用了HDR并主动设置初始状态

@@ -512,7 +512,7 @@ class TouchInputHandler(private val game: Game) {
         if (touchedView == activeStreamView) {
             eventX = event.getX(0)
             eventY = event.getY(0)
-        } else if (game.externalDisplayManager != null && game.externalDisplayManager!!.isUsingExternalDisplay) {
+        } else if (game.externalDisplayManager != null && game.externalDisplayManager!!.isUsingExternalDisplay()) {
             eventX = event.getX(0)
             eventY = event.getY(0)
         } else {
@@ -539,7 +539,7 @@ class TouchInputHandler(private val game: Game) {
             }
         }
 
-        if (game.externalDisplayManager != null && game.externalDisplayManager!!.isUsingExternalDisplay) {
+        if (game.externalDisplayManager != null && game.externalDisplayManager!!.isUsingExternalDisplay()) {
             val streamViewWidth = activeStreamView.width
             val streamViewHeight = activeStreamView.height
             val size = Point()
@@ -576,7 +576,7 @@ class TouchInputHandler(private val game: Game) {
         val rawX = event.getX(pointerIndex)
         val rawY = event.getY(pointerIndex)
 
-        if (game.externalDisplayManager != null && game.externalDisplayManager!!.isUsingExternalDisplay) {
+        if (game.externalDisplayManager != null && game.externalDisplayManager!!.isUsingExternalDisplay()) {
             val touchWidth: Float
             val touchHeight: Float
             if (view != null && view.width > 0 && view.height > 0) {
@@ -789,7 +789,7 @@ class TouchInputHandler(private val game: Game) {
     private fun getNormalizedCoordinates(streamView: View?, rawX: Float, rawY: Float): FloatArray {
         if (streamView == null) return floatArrayOf(rawX, rawY)
 
-        if (game.externalDisplayManager != null && game.externalDisplayManager!!.isUsingExternalDisplay) {
+        if (game.externalDisplayManager != null && game.externalDisplayManager!!.isUsingExternalDisplay()) {
             val active = game.activeStreamView
             if (active != null && active.width > 0 && active.height > 0) {
                 val size = Point()

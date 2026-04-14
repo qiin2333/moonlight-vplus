@@ -138,7 +138,7 @@ class KeyboardInputHandler(private val game: Game) {
             else -> {
                 val device = event.device
                 if (!game.isEventFromAccessibilityService &&
-                    KeyboardAccessibilityService.getInstance() != null &&
+                    KeyboardAccessibilityService.instance != null &&
                     (device != null && !device.isVirtual)
                 ) {
                     return true
@@ -276,7 +276,7 @@ class KeyboardInputHandler(private val game: Game) {
             else -> {
                 val device = event.device
                 if (!game.isEventFromAccessibilityService &&
-                    KeyboardAccessibilityService.getInstance() != null &&
+                    KeyboardAccessibilityService.instance != null &&
                     (device != null && !device.isVirtual)
                 ) {
                     return true
