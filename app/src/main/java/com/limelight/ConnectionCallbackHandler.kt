@@ -47,7 +47,7 @@ class ConnectionCallbackHandler(private val game: Game) {
                 LimeLog.severe("$stage failed: $errorCode")
 
                 // If video initialization failed and the surface is still valid, display extra information
-                if (stage.contains("video") && game.streamView!!.holder.surface.isValid) {
+                if (stage.contains("video") && game.streamView?.holder?.surface?.isValid == true) {
                     Toast.makeText(
                         game, game.resources.getText(R.string.video_decoder_init_failed),
                         Toast.LENGTH_LONG
@@ -87,9 +87,9 @@ class ConnectionCallbackHandler(private val game: Game) {
             game.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
             // Stop processing controller input
-            game.controllerHandler!!.stop()
+            game.controllerHandler?.stop()
 
-            game.microphoneManager!!.stopMicrophoneStream()
+            game.microphoneManager?.stopMicrophoneStream()
 
             // Ungrab input
             game.setInputGrabState(false)
@@ -218,7 +218,7 @@ class ConnectionCallbackHandler(private val game: Game) {
 
         // 初始化麦克风管理器
         game.microphoneManager = MicrophoneManager(game, game.conn, game.prefConfig.enableMic)
-        game.microphoneManager!!.setStateListener(object : MicrophoneManager.MicrophoneStateListener {
+        game.microphoneManager?.setStateListener(object : MicrophoneManager.MicrophoneStateListener {
             override fun onMicrophoneStateChanged(isActive: Boolean) {
                 LimeLog.info("麦克风状态改变: " + if (isActive) "激活" else "暂停")
             }
@@ -231,7 +231,7 @@ class ConnectionCallbackHandler(private val game: Game) {
         // 初始化麦克风流
         if (game.prefConfig.enableMic) {
             game.runOnUiThread {
-                if (!game.microphoneManager!!.initializeMicrophoneStream()) {
+                if (game.microphoneManager?.initializeMicrophoneStream() != true) {
                     LimeLog.warning("Failed to start microphone stream")
                 } else {
                     LimeLog.info("Microphone stream initialized successfully")
@@ -239,8 +239,8 @@ class ConnectionCallbackHandler(private val game: Game) {
 
                 // 更新麦克风按钮状态
                 if (game.micButton != null) {
-                    game.microphoneManager!!.setMicrophoneButton(game.micButton)
-                    game.microphoneManager!!.setDefaultStateOff()
+                    game.microphoneManager?.setMicrophoneButton(game.micButton)
+                    game.microphoneManager?.setDefaultStateOff()
                 }
             }
         }
@@ -253,7 +253,7 @@ class ConnectionCallbackHandler(private val game: Game) {
 
         // 记录游戏流媒体开始事件
         if (game.analyticsManager != null && game.pcName != null) {
-            game.analyticsManager!!.logGameStreamStart(game.pcName!!, game.appName)
+            game.analyticsManager?.logGameStreamStart(game.pcName!!, game.appName)
         }
 
         // 1. 获取并保存 IP (存到全局变量)
@@ -294,13 +294,13 @@ class ConnectionCallbackHandler(private val game: Game) {
 
             // Save current settings for this app before stopping connection
             if (game.appSettingsManager != null && game.computerUuid != null && game.app != null) {
-                game.appSettingsManager!!.saveAppLastSettings(game.computerUuid!!, game.app!!, game.prefConfig)
+                game.appSettingsManager?.saveAppLastSettings(game.computerUuid!!, game.app!!, game.prefConfig)
             }
 
             // Stop may take a few hundred ms to do some network I/O to tell
             // the server we're going away and clean up. Let it run in a separate
             // thread to keep things smooth for the UI.
-            Thread { game.conn!!.stop() }.start()
+            Thread { game.conn?.stop() }.start()
 
             game.cursorServiceManager.stopService()
         }

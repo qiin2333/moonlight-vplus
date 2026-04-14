@@ -80,7 +80,7 @@ class AnalyticsManager private constructor(context: Context) {
 
         val bundle = Bundle()
         bundle.putString("session_type", "app_usage")
-        firebaseAnalytics!!.logEvent("session_start", bundle)
+        firebaseAnalytics?.logEvent("session_start", bundle)
 
         Log.d(TAG, "Usage tracking started")
     }
@@ -100,7 +100,7 @@ class AnalyticsManager private constructor(context: Context) {
         bundle.putString("session_type", "app_usage")
         bundle.putLong("session_duration_ms", sessionDuration)
         bundle.putLong("session_duration_minutes", sessionDuration / (1000 * 60))
-        firebaseAnalytics!!.logEvent("session_end", bundle)
+        firebaseAnalytics?.logEvent("session_end", bundle)
 
         Log.d(TAG, "Usage tracking stopped, duration: ${sessionDuration / 1000} seconds")
     }
@@ -115,7 +115,7 @@ class AnalyticsManager private constructor(context: Context) {
         bundle.putString("computer_name", computerName)
         bundle.putString("app_name", appName ?: "unknown")
         bundle.putString("stream_type", "game")
-        firebaseAnalytics!!.logEvent("game_stream_start", bundle)
+        firebaseAnalytics?.logEvent("game_stream_start", bundle)
 
         Log.d(TAG, "Game stream started for: $computerName, app: $appName")
     }
@@ -132,7 +132,7 @@ class AnalyticsManager private constructor(context: Context) {
         bundle.putString("stream_type", "game")
         bundle.putLong("stream_duration_ms", durationMs)
         bundle.putLong("stream_duration_minutes", durationMs / (1000 * 60))
-        firebaseAnalytics!!.logEvent("game_stream_end", bundle)
+        firebaseAnalytics?.logEvent("game_stream_end", bundle)
         markFirstStreamCompletedIfNeeded()
         Log.d(TAG, "Game stream ended for: $computerName, app: $appName, duration: ${durationMs / 1000} seconds")
     }
@@ -176,7 +176,7 @@ class AnalyticsManager private constructor(context: Context) {
         bundle.putInt("average_end_to_end_latency_ms", averageEndToEndLatency)
         bundle.putInt("average_decoder_latency_ms", averageDecoderLatency)
 
-        firebaseAnalytics!!.logEvent("game_stream_end", bundle)
+        firebaseAnalytics?.logEvent("game_stream_end", bundle)
         markFirstStreamCompletedIfNeeded()
         Log.d(TAG, "Game stream ended for: $computerName, app: $appName, effective duration: ${effectiveDurationMs / 1000} seconds")
     }
@@ -205,7 +205,7 @@ class AnalyticsManager private constructor(context: Context) {
         }
         updateRetentionUserProperties()
         val bundle = Bundle()
-        firebaseAnalytics!!.logEvent(FirebaseAnalytics.Event.APP_OPEN, bundle)
+        firebaseAnalytics?.logEvent(FirebaseAnalytics.Event.APP_OPEN, bundle)
         Log.d(TAG, "App launch logged")
     }
 
@@ -215,7 +215,7 @@ class AnalyticsManager private constructor(context: Context) {
             return
         }
 
-        firebaseAnalytics!!.logEvent(eventName, parameters)
+        firebaseAnalytics?.logEvent(eventName, parameters)
         Log.d(TAG, "Custom event logged: $eventName")
     }
 
@@ -225,7 +225,7 @@ class AnalyticsManager private constructor(context: Context) {
             return
         }
 
-        firebaseAnalytics!!.setUserProperty(propertyName, propertyValue)
+        firebaseAnalytics?.setUserProperty(propertyName, propertyValue)
         Log.d(TAG, "User property set: $propertyName = $propertyValue")
     }
 
@@ -237,8 +237,8 @@ class AnalyticsManager private constructor(context: Context) {
     }
 
     fun cleanup() {
-        if (scheduler != null && !scheduler!!.isShutdown) {
-            scheduler!!.shutdown()
+        if (scheduler != null && scheduler?.isShutdown != true) {
+            scheduler?.shutdown()
         }
     }
 

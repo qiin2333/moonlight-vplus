@@ -43,7 +43,7 @@ class PerformanceOverlayManager(
 ) {
 
     private var performanceOverlayView: LinearLayout? = null
-    private var streamView: StreamView? = null
+    private lateinit var streamView: StreamView
 
     private var perfResView: TextView? = null
     private var perfDecoderView: TextView? = null
@@ -344,8 +344,8 @@ class PerformanceOverlayManager(
 
     private fun showOverlayIfNeeded() {
         if (prefConfig.enablePerfOverlay && !hasShownPerfOverlay && performanceOverlayView != null) {
-            performanceOverlayView!!.visibility = View.VISIBLE
-            performanceOverlayView!!.alpha = 1.0f
+            performanceOverlayView?.visibility = View.VISIBLE
+            performanceOverlayView?.alpha = 1.0f
             hasShownPerfOverlay = true
             setupPerformanceOverlayDragging()
         }
@@ -650,7 +650,7 @@ class PerformanceOverlayManager(
             val viewDimensions = getViewDimensions(performanceOverlayView!!)
             val viewWidth = viewDimensions[0]
             val leftMargin = prefs.getInt("left_margin", 0)
-            (leftMargin + viewWidth) > (streamView!!.width * 2 / 3)
+            (leftMargin + viewWidth) > (streamView.width * 2 / 3)
         } else {
             prefConfig.perfOverlayPosition == PreferenceConfiguration.PerfOverlayPosition.TOP_RIGHT ||
                 prefConfig.perfOverlayPosition == PreferenceConfiguration.PerfOverlayPosition.BOTTOM_RIGHT
@@ -878,13 +878,13 @@ class PerformanceOverlayManager(
         for (itemInfo in performanceItems) {
             if (itemInfo.isVisible) {
                 val viewLocation = IntArray(2)
-                itemInfo.view!!.getLocationInWindow(viewLocation)
+                itemInfo.view?.getLocationInWindow(viewLocation)
 
                 val overlayLocation = IntArray(2)
-                performanceOverlayView!!.getLocationInWindow(overlayLocation)
+                performanceOverlayView?.getLocationInWindow(overlayLocation)
 
                 val viewLeft = viewLocation[0] - overlayLocation[0]
-                val viewRight = viewLeft + itemInfo.view.width
+                val viewRight = viewLeft + (itemInfo.view?.width ?: 0)
 
                 if (clickStartX >= viewLeft && clickStartX <= viewRight) {
                     return currentIndex

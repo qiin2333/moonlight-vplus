@@ -94,7 +94,7 @@ class DiskAssetLoader(context: Context) {
                 if (scaledBitmap.bitmap != null) {
                     val compressedBmp = compressLargeBitmap(scaledBitmap.bitmap)
                     if (compressedBmp !== scaledBitmap.bitmap) {
-                        scaledBitmap.bitmap!!.recycle()
+                        scaledBitmap.bitmap?.recycle()
                         scaledBitmap.bitmap = compressedBmp
                     }
                 }

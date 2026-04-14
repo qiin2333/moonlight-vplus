@@ -50,8 +50,8 @@ class EasyTierController(
         val config = getEasyTierConfig()
         val instanceName = "Default"
 
-        if (easyTierManager != null && easyTierManager!!.latestNetworkInfoJson != null) {
-            easyTierManager!!.stop()
+        if (easyTierManager != null && easyTierManager?.latestNetworkInfoJson != null) {
+            easyTierManager?.stop()
         }
         LimeLog.info("使用的easytier配置为：\n$config")
         easyTierManager = EasyTierManager(activity, instanceName, config)
@@ -60,8 +60,8 @@ class EasyTierController(
 
     fun onDestroy() {
         easyTierManager?.stop()
-        if (currentDialog != null && currentDialog!!.isShowing) {
-            currentDialog!!.dismiss()
+        if (currentDialog != null && currentDialog?.isShowing == true) {
+            currentDialog?.dismiss()
         }
     }
 
@@ -79,7 +79,7 @@ class EasyTierController(
     fun handleVpnPermissionResult(resultCode: Int) {
         if (resultCode == Activity.RESULT_OK) {
             LimeLog.info("$TAG: VPN权限已获取，启动EasyTier Manager。")
-            easyTierManager!!.start()
+            easyTierManager?.start()
             Toast.makeText(activity, "EasyTier服务正在启动...", Toast.LENGTH_SHORT).show()
         } else {
             LimeLog.warning("$TAG: VPN权限被拒绝。")
@@ -101,7 +101,7 @@ class EasyTierController(
         builder.setNegativeButton("关闭", null)
 
         currentDialog = builder.create()
-        currentDialog!!.setOnShowListener {
+        currentDialog?.setOnShowListener {
             setupDialogButtons(dialogView)
             initializeTabs(dialogView)
             loadConfigurationToUi(dialogView)
@@ -109,12 +109,12 @@ class EasyTierController(
             refreshStatus(dialogView)
         }
 
-        currentDialog!!.show()
+        currentDialog?.show()
     }
 
     private fun setupDialogButtons(dialogView: View) {
-        val positiveButton = currentDialog!!.getButton(AlertDialog.BUTTON_POSITIVE)
-        val neutralButton = currentDialog!!.getButton(AlertDialog.BUTTON_NEUTRAL)
+        val positiveButton = currentDialog?.getButton(AlertDialog.BUTTON_POSITIVE)
+        val neutralButton = currentDialog?.getButton(AlertDialog.BUTTON_NEUTRAL)
 
         // 刷新按钮
         dialogView.findViewById<View>(R.id.button_refresh_status).setOnClickListener {
@@ -123,20 +123,20 @@ class EasyTierController(
         }
 
         // 启动/停止按钮
-        positiveButton.setOnClickListener {
-            if (easyTierManager!!.latestNetworkInfoJson != null) {
+        positiveButton?.setOnClickListener {
+            if (easyTierManager?.latestNetworkInfoJson != null) {
                 Toast.makeText(activity, "Easytier服务已停止", Toast.LENGTH_SHORT).show()
-                easyTierManager!!.stop()
-                currentDialog!!.dismiss()
+                easyTierManager?.stop()
+                currentDialog?.dismiss()
             } else {
                 saveConfigurationFromUi(dialogView, false)
                 vpnCallback.requestVpnPermission()
-                currentDialog!!.dismiss()
+                currentDialog?.dismiss()
             }
         }
 
         // 保存配置按钮
-        neutralButton.setOnClickListener {
+        neutralButton?.setOnClickListener {
             saveConfigurationFromUi(dialogView, true)
         }
     }
@@ -386,9 +386,9 @@ class EasyTierController(
         val statusContainer = dialogView.findViewById<LinearLayout>(R.id.panel_status_container)
         updateStatusUi(statusContainer, json)
 
-        val positiveButton = currentDialog!!.getButton(AlertDialog.BUTTON_POSITIVE)
+        val positiveButton = currentDialog?.getButton(AlertDialog.BUTTON_POSITIVE)
         val isRunningNow = json != null && json.isNotEmpty()
-        positiveButton.text = if (isRunningNow) "停止服务" else "启动服务"
+        positiveButton?.text = if (isRunningNow) "停止服务" else "启动服务"
     }
 
     private fun updateStatusUi(container: LinearLayout, json: String?) {

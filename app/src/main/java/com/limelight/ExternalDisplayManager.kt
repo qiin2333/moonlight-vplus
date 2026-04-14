@@ -68,12 +68,12 @@ class ExternalDisplayManager(
 
     fun cleanup() {
         if (externalPresentation != null) {
-            externalPresentation!!.dismiss()
+            externalPresentation?.dismiss()
             externalPresentation = null
         }
 
         if (displayListener != null && displayManager != null) {
-            displayManager!!.unregisterDisplayListener(displayListener)
+            displayManager?.unregisterDisplayListener(displayListener)
             displayListener = null
         }
     }
@@ -103,9 +103,9 @@ class ExternalDisplayManager(
 
                 override fun onDisplayRemoved(displayId: Int) {
                     LimeLog.info("Display removed: $displayId")
-                    if (externalDisplay != null && displayId == externalDisplay!!.displayId) {
+                    if (externalDisplay != null && displayId == externalDisplay?.displayId) {
                         if (externalPresentation != null) {
-                            externalPresentation!!.dismiss()
+                            externalPresentation?.dismiss()
                             externalPresentation = null
                         }
                         externalDisplay = null
@@ -124,7 +124,7 @@ class ExternalDisplayManager(
                 }
             }
 
-            displayManager!!.registerDisplayListener(displayListener, null)
+            displayManager?.registerDisplayListener(displayListener, null)
         }
     }
 
@@ -135,9 +135,9 @@ class ExternalDisplayManager(
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            val displays = displayManager!!.displays
+            val displays = displayManager?.displays
 
-            for (display in displays) {
+            for (display in (displays ?: emptyArray<Display>())) {
                 if (display.displayId != Display.DEFAULT_DISPLAY) {
                     externalDisplay = display
                     useExternalDisplay = true
@@ -162,9 +162,9 @@ class ExternalDisplayManager(
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
 
-            window!!.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            window?.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
             @Suppress("DEPRECATION")
-            window!!.decorView.systemUiVisibility =
+            window?.decorView?.systemUiVisibility =
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
                         View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
                         View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
@@ -190,7 +190,7 @@ class ExternalDisplayManager(
         }
 
         externalPresentation = ExternalDisplayPresentation(activity, externalDisplay!!)
-        externalPresentation!!.show()
+        externalPresentation?.show()
 
         val surfaceView = activity.findViewById<View>(R.id.surfaceView)
         surfaceView?.visibility = View.GONE

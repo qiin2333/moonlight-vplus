@@ -70,7 +70,7 @@ import jp.wasabeef.glide.transformations.ColorFilterTransformation
 
 class StreamSettings : AppCompatActivity() {
 
-    private var previousPrefs: PreferenceConfiguration? = null
+    private lateinit var previousPrefs: PreferenceConfiguration
     private var previousDisplayPixelCount = 0
     private var externalDisplayManager: ExternalDisplayManager? = null
 
@@ -136,9 +136,9 @@ class StreamSettings : AppCompatActivity() {
         previousPrefs = PreferenceConfiguration.readPreferences(this)
 
         // 初始化外接显示器管理器
-        if (previousPrefs!!.useExternalDisplay) {
-            externalDisplayManager = ExternalDisplayManager(this, previousPrefs!!, null, null, null, null)
-            externalDisplayManager!!.initialize()
+        if (previousPrefs.useExternalDisplay) {
+            externalDisplayManager = ExternalDisplayManager(this, previousPrefs, null, null, null, null)
+            externalDisplayManager?.initialize()
         }
 
         UiHelper.setLocale(this)
@@ -216,11 +216,11 @@ class StreamSettings : AppCompatActivity() {
      */
     private fun setupCategoryList() {
         if (categoryList != null) {
-            categoryList!!.layoutManager = LinearLayoutManager(this)
+            categoryList?.layoutManager = LinearLayoutManager(this)
             categoryAdapter = CategoryAdapter()
-            categoryList!!.adapter = categoryAdapter
-            categoryList!!.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
-            categoryList!!.isFocusable = true
+            categoryList?.adapter = categoryAdapter
+            categoryList?.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+            categoryList?.isFocusable = true
         }
     }
 
@@ -230,7 +230,7 @@ class StreamSettings : AppCompatActivity() {
     private fun setupDrawerListener() {
         if (drawerLayout == null) return
 
-        drawerLayout!!.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
+        drawerLayout?.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
             override fun onDrawerOpened(drawerView: View) {
                 focusSelectedCategory()
             }
@@ -246,7 +246,7 @@ class StreamSettings : AppCompatActivity() {
      */
     private fun openDrawer() {
         if (drawerLayout != null) {
-            drawerLayout!!.openDrawer(findViewById(R.id.drawer_menu))
+            drawerLayout?.openDrawer(findViewById(R.id.drawer_menu))
         }
     }
 
@@ -254,9 +254,9 @@ class StreamSettings : AppCompatActivity() {
      * 聚焦到选中的分类项
      */
     private fun focusSelectedCategory() {
-        if (categoryList != null && categoryAdapter != null && categoryAdapter!!.itemCount > 0) {
-            categoryList!!.post {
-                val vh = categoryList!!.findViewHolderForAdapterPosition(selectedCategoryIndex)
+        if (categoryList != null && categoryAdapter != null && (categoryAdapter?.itemCount ?: 0) > 0) {
+            categoryList?.post {
+                val vh = categoryList?.findViewHolderForAdapterPosition(selectedCategoryIndex)
                 vh?.itemView?.requestFocus()
             }
         }
@@ -386,7 +386,7 @@ class StreamSettings : AppCompatActivity() {
 
             // 竖屏时关闭抽屉（横屏时 drawerLayout 为 null，无需处理）
             if (drawerLayout != null) {
-                drawerLayout!!.closeDrawers()
+                drawerLayout?.closeDrawers()
             }
         }
 
@@ -427,9 +427,9 @@ class StreamSettings : AppCompatActivity() {
             if (categoryAdapter != null) {
                 // 确保 oldIndex 有效再通知更新
                 if (oldIndex in 0 until categories.size) {
-                    categoryAdapter!!.notifyItemChanged(oldIndex)
+                    categoryAdapter?.notifyItemChanged(oldIndex)
                 }
-                categoryAdapter!!.notifyItemChanged(selectedCategoryIndex)
+                categoryAdapter?.notifyItemChanged(selectedCategoryIndex)
             }
         }
     }
@@ -448,12 +448,12 @@ class StreamSettings : AppCompatActivity() {
         val menuToggle = findViewById<ImageView>(R.id.settings_menu_toggle)
 
         // 竖屏：可收起抽屉
-        drawerLayout!!.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, drawerMenu)
-        drawerLayout!!.setScrimColor(0x99000000.toInt())
+        drawerLayout?.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, drawerMenu)
+        drawerLayout?.setScrimColor(0x99000000.toInt())
 
         // 关闭抽屉
-        if (drawerLayout!!.isDrawerOpen(drawerMenu)) {
-            drawerLayout!!.closeDrawer(drawerMenu, false)
+        if (drawerLayout?.isDrawerOpen(drawerMenu) == true) {
+            drawerLayout?.closeDrawer(drawerMenu, false)
         }
 
         menuToggle?.visibility = View.VISIBLE
@@ -522,13 +522,13 @@ class StreamSettings : AppCompatActivity() {
 
         // 以下代码仅在竖屏时执行
         val drawerMenu = findViewById<View>(R.id.drawer_menu)
-        val isDrawerOpen = drawerLayout!!.isDrawerOpen(drawerMenu)
+        val isDrawerOpen = drawerLayout?.isDrawerOpen(drawerMenu)
 
         // L1/L2：打开抽屉
         if (keyCode == KeyEvent.KEYCODE_BUTTON_L1 ||
                 keyCode == KeyEvent.KEYCODE_BUTTON_L2) {
-            if (!isDrawerOpen) {
-                drawerLayout!!.openDrawer(drawerMenu)
+            if (isDrawerOpen != true) {
+                drawerLayout?.openDrawer(drawerMenu)
                 return true
             }
         }
@@ -536,26 +536,26 @@ class StreamSettings : AppCompatActivity() {
         // R1/R2：关闭抽屉
         if (keyCode == KeyEvent.KEYCODE_BUTTON_R1 ||
                 keyCode == KeyEvent.KEYCODE_BUTTON_R2) {
-            if (isDrawerOpen) {
-                drawerLayout!!.closeDrawer(drawerMenu)
+            if (isDrawerOpen == true) {
+                drawerLayout?.closeDrawer(drawerMenu)
                 return true
             }
         }
 
         // D-pad 左键：打开抽屉
         if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
-            if (!isDrawerOpen) {
-                drawerLayout!!.openDrawer(drawerMenu)
+            if (isDrawerOpen != true) {
+                drawerLayout?.openDrawer(drawerMenu)
                 return true
             }
         }
 
         // D-pad 右键：关闭抽屉（从抽屉内）
         if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
-            if (isDrawerOpen) {
+            if (isDrawerOpen == true) {
                 val focusedView = currentFocus
                 if (focusedView != null && isViewInsideDrawer(focusedView)) {
-                    drawerLayout!!.closeDrawer(drawerMenu)
+                    drawerLayout?.closeDrawer(drawerMenu)
                     return true
                 }
             }
@@ -563,8 +563,8 @@ class StreamSettings : AppCompatActivity() {
 
         // B 键（手柄）：关闭抽屉
         if (keyCode == KeyEvent.KEYCODE_BUTTON_B) {
-            if (isDrawerOpen) {
-                drawerLayout!!.closeDrawer(drawerMenu)
+            if (isDrawerOpen == true) {
+                drawerLayout?.closeDrawer(drawerMenu)
                 return true
             }
         }
@@ -596,7 +596,7 @@ class StreamSettings : AppCompatActivity() {
         super.onDestroy()
 
         if (externalDisplayManager != null) {
-            externalDisplayManager!!.cleanup()
+            externalDisplayManager?.cleanup()
             externalDisplayManager = null
         }
     }
@@ -620,9 +620,9 @@ class StreamSettings : AppCompatActivity() {
 
         // 以下代码仅在竖屏时执行
         val drawerMenu = findViewById<View>(R.id.drawer_menu)
-        if (!drawerLayout!!.isDrawerOpen(drawerMenu)) return false
+        if (drawerLayout?.isDrawerOpen(drawerMenu) != true) return false
 
-        drawerLayout!!.closeDrawer(drawerMenu)
+        drawerLayout?.closeDrawer(drawerMenu)
         return true
     }
 
@@ -632,7 +632,7 @@ class StreamSettings : AppCompatActivity() {
     private fun handleLanguageChange() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             val newPrefs = PreferenceConfiguration.readPreferences(this)
-            if (newPrefs.language != previousPrefs!!.language) {
+            if (newPrefs.language != previousPrefs.language) {
                 val intent = Intent(this, PcView::class.java)
                 intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
                 startActivity(intent, null)
@@ -645,7 +645,7 @@ class StreamSettings : AppCompatActivity() {
         private var nativeResolutionStartIndex = Int.MAX_VALUE
         private var nativeFramerateShown = false
 
-        private var exportConfigString: String? = null
+        private lateinit var exportConfigString: String
 
         // 分类列表（用于抽屉菜单同步）
         private val categoryList: MutableList<PreferenceCategory> = ArrayList()
@@ -659,7 +659,7 @@ class StreamSettings : AppCompatActivity() {
         private fun getTargetDisplay(): Display {
             val settingsActivity = activity as? StreamSettings
             if (settingsActivity?.externalDisplayManager != null) {
-                return settingsActivity.externalDisplayManager!!.getTargetDisplay()
+                return settingsActivity.externalDisplayManager?.getTargetDisplay()!!
             }
             return requireActivity().windowManager.defaultDisplay
         }
@@ -1670,14 +1670,14 @@ class StreamSettings : AppCompatActivity() {
             super.onActivityResult(requestCode, resultCode, data)
             //导出配置文件
             if (requestCode == 1 && resultCode == Activity.RESULT_OK) {
-                val uri = data!!.data
+                val uri = data?.data
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     try {
                         // 将字符串写入文件
                         val outputStream = requireContext().contentResolver.openOutputStream(uri!!)
                         if (outputStream != null) {
-                            outputStream.write(exportConfigString!!.toByteArray())
+                            outputStream.write(exportConfigString.toByteArray())
                             outputStream.close()
                             Toast.makeText(context, "导出配置文件成功", Toast.LENGTH_SHORT).show()
                         }
@@ -1688,7 +1688,7 @@ class StreamSettings : AppCompatActivity() {
             }
             //导入配置文件
             if (requestCode == 2 && resultCode == Activity.RESULT_OK) {
-                val importUri = data!!.data
+                val importUri = data?.data
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     try {
@@ -1731,7 +1731,7 @@ class StreamSettings : AppCompatActivity() {
             }
 
             if (requestCode == 3 && resultCode == Activity.RESULT_OK) {
-                val importUri = data!!.data
+                val importUri = data?.data
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     try {
@@ -1744,7 +1744,7 @@ class StreamSettings : AppCompatActivity() {
                                 }
                                 val fileContent = stringBuilder.toString()
                                 val superConfigDatabaseHelper = SuperConfigDatabaseHelper(context)
-                                val errorCode = superConfigDatabaseHelper.mergeConfig(fileContent, exportConfigString!!.toLong())
+                                val errorCode = superConfigDatabaseHelper.mergeConfig(fileContent, exportConfigString.toLong())
                                 when (errorCode) {
                                     0 -> Toast.makeText(context, "合并配置文件成功", Toast.LENGTH_SHORT).show()
                                     -1, -2 -> Toast.makeText(context, "读取配置文件失败", Toast.LENGTH_SHORT).show()

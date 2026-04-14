@@ -145,9 +145,9 @@ class FloatBallManager constructor(
                 if (mListener != null) {
                     // 判断是横向还是纵向为主
                     if (abs(deltaX) > abs(deltaY)) {
-                        mListener!!.onSwipe(if (deltaX > 0) SwipeDirection.RIGHT else SwipeDirection.LEFT)
+                        mListener?.onSwipe(if (deltaX > 0) SwipeDirection.RIGHT else SwipeDirection.LEFT)
                     } else {
-                        mListener!!.onSwipe(if (deltaY > 0) SwipeDirection.DOWN else SwipeDirection.UP)
+                        mListener?.onSwipe(if (deltaY > 0) SwipeDirection.DOWN else SwipeDirection.UP)
                     }
                 }
                 return true
@@ -157,10 +157,10 @@ class FloatBallManager constructor(
 
     private fun handleConfigurationChanged() {
         if (mFloatBall == null) return
-        mFloatBall!!.viewTreeObserver.addOnGlobalLayoutListener(
+        mFloatBall?.viewTreeObserver?.addOnGlobalLayoutListener(
                 object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
                     override fun onGlobalLayout() {
-                        mFloatBall!!.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                        mFloatBall?.viewTreeObserver?.removeOnGlobalLayoutListener(this)
                         updateScreenSize()
                         if (!isDragging) {
                             val wasHalfShow = isHalfShow
@@ -244,7 +244,7 @@ class FloatBallManager constructor(
     private fun updateScreenSize() {
         val context = getContext() ?: return
         val size = Point()
-        mWindowManager!!.defaultDisplay.getRealSize(size)
+        mWindowManager?.defaultDisplay?.getRealSize(size)
         screenWidth = size.x
         screenHeight = size.y
     }
@@ -273,7 +273,7 @@ class FloatBallManager constructor(
     private fun initFloatBallView() {
         val context = getContext() ?: return
         mFloatBall = LayoutInflater.from(context).inflate(R.layout.float_ball_layout, null)
-        mFloatBall!!.setOnTouchListener { _, event -> handleTouchEvent(event) }
+        mFloatBall?.setOnTouchListener { _, event -> handleTouchEvent(event) }
     }
 
     /**
@@ -466,10 +466,10 @@ class FloatBallManager constructor(
         val context = getContext()
         if (mWindowManager == null || mFloatBall == null || context == null) return
         try {
-            if (mFloatBall!!.parent == null) {
-                mWindowManager!!.addView(mFloatBall, mLayoutParams)
+            if (mFloatBall?.parent == null) {
+                mWindowManager?.addView(mFloatBall, mLayoutParams)
             } else {
-                mWindowManager!!.updateViewLayout(mFloatBall, mLayoutParams)
+                mWindowManager?.updateViewLayout(mFloatBall, mLayoutParams)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Update view failed: ${e.message}")
@@ -508,8 +508,8 @@ class FloatBallManager constructor(
     fun hideFloatBall() {
         try {
             mHandler.removeCallbacksAndMessages(null)
-            if (mFloatBall != null && mFloatBall!!.parent != null) {
-                mWindowManager!!.removeView(mFloatBall)
+            if (mFloatBall != null && mFloatBall?.parent != null) {
+                mWindowManager?.removeView(mFloatBall)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Hide failed: ${e.message}")

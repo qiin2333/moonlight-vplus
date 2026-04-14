@@ -311,7 +311,7 @@ class PcGridAdapter(
         updateSpinner(spinnerView as ImageView, isUnknown || isLoadingBoxArt)
 
         var displayName = details.name
-        if (isOnline && details.sunshineVersion != null && details.sunshineVersion!!.endsWith("杂鱼")) {
+        if (isOnline && details.sunshineVersion != null && details.sunshineVersion?.endsWith("杂鱼") == true) {
             displayName += "⚡"
         }
         txtView.text = displayName

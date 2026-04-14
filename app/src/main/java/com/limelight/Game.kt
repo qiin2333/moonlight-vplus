@@ -115,7 +115,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     // 这个标志位用于区分事件是来自无障碍服务还是来自UI（如StreamView）
     var isEventFromAccessibilityService = false
 
-    var controllerHandler: ControllerHandler? = null
+    lateinit var controllerHandler: ControllerHandler
     lateinit var touchInputHandler: TouchInputHandler
     var virtualController: VirtualController? = null
     lateinit var panZoomHandler: PanZoomHandler
@@ -152,7 +152,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     private var suppressPipRefCount = 0
     var pcName: String? = null
     var appName: String? = null
-    var app: NvApp? = null
+    lateinit var app: NvApp
     private var desiredRefreshRate = 0f
     var appSettingsManager: AppSettingsManager? = null
     var computerUuid: String? = null
@@ -160,7 +160,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     lateinit var inputCaptureProvider: InputCaptureProvider
     var grabbedInput = true
     var cursorVisible = false
-    var streamView: StreamView? = null
+    lateinit var streamView: StreamView
     private var externalStreamView: StreamView? = null
     private var previousTimeMillis: Long = 0
     private var previousRxBytes: Long = 0
@@ -200,10 +200,10 @@ class Game : Activity(), SurfaceHolder.Callback,
         if (controllerManager != null) {
             areElementsVisible = !areElementsVisible
             if (areElementsVisible) {
-                controllerManager!!.elementController!!.showAllElementsForTest()
+                controllerManager?.elementController?.showAllElementsForTest()
                 Toast.makeText(this, getString(R.string.toast_elements_visible), Toast.LENGTH_SHORT).show()
             } else {
-                controllerManager!!.elementController!!.hideAllElementsForTest()
+                controllerManager?.elementController?.hideAllElementsForTest()
                 Toast.makeText(this, getString(R.string.toast_elements_hidden), Toast.LENGTH_SHORT).show()
             }
         }
@@ -214,7 +214,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             BackKeyMenuMode.GAME_MENU -> {
                 currentBackKeyMenu = BackKeyMenuMode.CROWN_MODE
                 areElementsVisible = true
-                controllerManager!!.elementController!!.showAllElementsForTest()
+                controllerManager?.elementController?.showAllElementsForTest()
                 Toast.makeText(this, getString(R.string.toast_back_key_menu_switch_2), Toast.LENGTH_SHORT).show()
             }
             BackKeyMenuMode.CROWN_MODE -> {
@@ -315,11 +315,11 @@ class Game : Activity(), SurfaceHolder.Callback,
         }
 
         streamView = findViewById(R.id.surfaceView)
-        streamView!!.setOnGenericMotionListener(this)
-        streamView!!.setOnKeyListener(this)
-        streamView!!.setInputCallbacks(this)
+        streamView.setOnGenericMotionListener(this)
+        streamView.setOnKeyListener(this)
+        streamView.setInputCallbacks(this)
 
-        panZoomHandler = PanZoomHandler(this, this, streamView!!, prefConfig)
+        panZoomHandler = PanZoomHandler(this, this, streamView, prefConfig)
 
         val backgroundTouchView = findViewById<View>(R.id.backgroundTouchView)
         backgroundTouchView.setOnTouchListener(this)
@@ -330,7 +330,7 @@ class Game : Activity(), SurfaceHolder.Callback,
                     InputDevice.SOURCE_CLASS_POINTER or
                     InputDevice.SOURCE_CLASS_POSITION or
                     InputDevice.SOURCE_CLASS_TRACKBALL
-            streamView!!.requestUnbufferedDispatch(sourceFlags)
+            streamView.requestUnbufferedDispatch(sourceFlags)
             backgroundTouchView.requestUnbufferedDispatch(sourceFlags)
         }
 
@@ -342,12 +342,12 @@ class Game : Activity(), SurfaceHolder.Callback,
         micButton = findViewById(R.id.micButton)
 
         performanceOverlayManager = PerformanceOverlayManager(this, prefConfig)
-        performanceOverlayManager!!.initialize()
+        performanceOverlayManager?.initialize()
 
         inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(this, this)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            streamView!!.setOnCapturedPointerListener { _, event ->
+            streamView.setOnCapturedPointerListener { _, event ->
                 touchInputHandler.handleMotionEvent(null, event)
             }
         }
@@ -360,13 +360,13 @@ class Game : Activity(), SurfaceHolder.Callback,
         val wifiMgr = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         try {
             highPerfWifiLock = wifiMgr.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "Moonlight High Perf Lock")
-            highPerfWifiLock!!.setReferenceCounted(false)
-            highPerfWifiLock!!.acquire()
+            highPerfWifiLock?.setReferenceCounted(false)
+            highPerfWifiLock?.acquire()
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 lowLatencyWifiLock = wifiMgr.createWifiLock(WifiManager.WIFI_MODE_FULL_LOW_LATENCY, "Moonlight Low Latency Lock")
-                lowLatencyWifiLock!!.setReferenceCounted(false)
-                lowLatencyWifiLock!!.acquire()
+                lowLatencyWifiLock?.setReferenceCounted(false)
+                lowLatencyWifiLock?.acquire()
             }
         } catch (e: SecurityException) {
             e.printStackTrace()
@@ -382,7 +382,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
         app = NvApp(appName ?: "app", appId, appSupportsHdr)
         if (cmdList != null) {
-            app!!.setCmdList(cmdList)
+            app.setCmdList(cmdList)
         }
 
         if (appId != StreamConfiguration.INVALID_APP_ID && appName != null && appName != "app") {
@@ -405,15 +405,15 @@ class Game : Activity(), SurfaceHolder.Callback,
         keyboardInputHandler.keyboardTranslator = KeyboardTranslator()
 
         audioVibrationService = AudioVibrationService(this)
-        audioVibrationService!!.controllerHandler = controllerHandler
-        audioVibrationService!!.setSettings(
+        audioVibrationService?.controllerHandler = controllerHandler
+        audioVibrationService?.setSettings(
             prefConfig.enableAudioVibration,
             prefConfig.audioVibrationStrength,
             prefConfig.audioVibrationMode,
             prefConfig.audioVibrationScene
         )
         MoonBridge.setBassEnergyListener { intensity, lowFreqRatio ->
-            audioVibrationService!!.handleBassEnergy(intensity, lowFreqRatio)
+            audioVibrationService?.handleBassEnergy(intensity, lowFreqRatio)
         }
         MoonBridge.setBassEnergyEnabled(prefConfig.enableAudioVibration)
         MoonBridge.setBassEnergySceneMode(prefConfig.audioVibrationScene)
@@ -422,11 +422,11 @@ class Game : Activity(), SurfaceHolder.Callback,
         inputManager.registerInputDeviceListener(keyboardInputHandler.keyboardTranslator, null)
 
         touchInputHandler = TouchInputHandler(this)
-        touchInputHandler.initTouchContexts(conn!!, streamView!!, prefConfig)
+        touchInputHandler.initTouchContexts(conn!!, streamView, prefConfig)
 
         val cursorOverlayView = findViewById<CursorView>(R.id.cursorOverlay)
         cursorServiceManager = CursorServiceManager(
-            streamView!!, cursorOverlayView, prefConfig, touchInputHandler.relativeTouchContextMap,
+            streamView, cursorOverlayView, prefConfig, touchInputHandler.relativeTouchContextMap,
             object : CursorServiceManager.UiCallback {
                 override fun runOnUi(runnable: Runnable) {
                     runOnUiThread(runnable)
@@ -437,41 +437,41 @@ class Game : Activity(), SurfaceHolder.Callback,
             }
         )
 
-        streamView!!.addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+        streamView.addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
             if (left != oldLeft || top != oldTop || right != oldRight || bottom != oldBottom) {
-                cursorServiceManager!!.syncCursorWithStream()
+                cursorServiceManager.syncCursorWithStream()
             }
         }
-        streamView!!.post { cursorServiceManager!!.syncCursorWithStream() }
+        streamView.post { cursorServiceManager.syncCursorWithStream() }
 
         if (prefConfig.onscreenController) {
             virtualController = VirtualController(
                 controllerHandler,
-                streamView!!.parent as FrameLayout,
+                streamView.parent as FrameLayout,
                 this
             )
             setupVirtualControllerGyro()
         }
 
         if (prefConfig.onscreenKeyboard) {
-            controllerManager = ControllerManager(streamView!!.parent as FrameLayout, this)
+            controllerManager = ControllerManager(streamView.parent as FrameLayout, this)
 
             val keyboardContainer = findViewById<FrameLayout>(R.id.virtual_full_keyboard_container)
             if (keyboardContainer != null) {
                 val kUI = KeyboardUIController(keyboardContainer, createKeyboardEventListener(), this)
-                controllerManager!!.keyboardUIController = kUI
+                controllerManager?.keyboardUIController = kUI
             }
 
-            controllerManager!!.refreshLayout()
+            controllerManager?.refreshLayout()
         }
 
         if (prefConfig.usbDriver) {
             bindUsbDriverService()
         }
 
-        if (!decoderRenderer!!.isAvcSupported()) {
+        if (decoderRenderer?.isAvcSupported() != true) {
             if (progressOverlay != null) {
-                progressOverlay!!.dismiss()
+                progressOverlay?.dismiss()
                 progressOverlay = null
             }
             Dialog.displayDialog(
@@ -481,26 +481,26 @@ class Game : Activity(), SurfaceHolder.Callback,
             return
         }
 
-        streamView!!.holder.addCallback(this)
+        streamView.holder.addCallback(this)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             window.attributes.layoutInDisplayCutoutMode =
                 WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
 
-        DisplayPositionManager(this, prefConfig, streamView!!).setupDisplayPosition()
+        DisplayPositionManager(this, prefConfig, streamView).setupDisplayPosition()
 
         setupExternalDisplay()
 
-        floatBallHandler = FloatBallHandler(this, prefConfig!!)
-        floatBallHandler!!.initialize()
+        floatBallHandler = FloatBallHandler(this, prefConfig)
+        floatBallHandler.initialize()
 
         connectionCallbackHandler = ConnectionCallbackHandler(this)
     }
 
     private fun getOrCreateKeyboardUIController(): KeyboardUIController? {
         if (controllerManager != null) {
-            val kUI = controllerManager!!.keyboardUIController
+            val kUI = controllerManager?.keyboardUIController
             if (kUI != null) return kUI
         }
         if (standaloneKeyboardUI == null) {
@@ -585,8 +585,8 @@ class Game : Activity(), SurfaceHolder.Callback,
         val computer = ComputerDetails()
         computer.name = pcName
         computer.uuid = intent.getStringExtra(EXTRA_PC_UUID)
-        progressOverlay!!.computer = computer
-        progressOverlay!!.show(
+        progressOverlay?.computer = computer
+        progressOverlay?.show(
             resources.getString(R.string.conn_establishing_title),
             resources.getString(R.string.conn_establishing_msg)
         )
@@ -597,7 +597,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         return object : KeyboardUIController.OnKeyboardEventListener {
             override fun sendKeyEvent(down: Boolean, keyCode: Short) {
                 if (controllerManager?.elementController != null) {
-                    controllerManager!!.elementController!!.sendKeyEvent(down, keyCode)
+                    controllerManager?.elementController?.sendKeyEvent(down, keyCode)
                 } else {
                     keyboardEvent(down, keyCode)
                 }
@@ -614,7 +614,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         vc.refreshLayout()
         vc.show()
         vc.setGyroEnabled(!prefConfig.gyroToMouse)
-        controllerHandler!!.setVirtualControllerGyroCallbacks(
+        controllerHandler.setVirtualControllerGyroCallbacks(
             { vc.setGyroEnabled(false) },
             { vc.setGyroEnabled(true) }
         )
@@ -657,16 +657,16 @@ class Game : Activity(), SurfaceHolder.Callback,
     /** Create or re-create ExternalDisplayManager with the standard callback. */
     private fun setupExternalDisplay() {
         externalDisplayManager = ExternalDisplayManager(this, prefConfig, conn!!, decoderRenderer!!, pcName ?: "", appName ?: "")
-        externalDisplayManager!!.callback = createExternalDisplayCallback()
-        externalDisplayManager!!.initialize()
+        externalDisplayManager?.callback = createExternalDisplayCallback()
+        externalDisplayManager?.initialize()
     }
 
     /** Bind or re-bind the USB driver service with the current controllerHandler. */
     private fun bindUsbDriverService() {
         usbDriverServiceManager?.stopAndUnbind()
         usbDriverServiceManager = UsbDriverServiceManager(this, this)
-        usbDriverServiceManager!!.controllerHandler = controllerHandler
-        usbDriverServiceManager!!.bind()
+        usbDriverServiceManager?.controllerHandler = controllerHandler
+        usbDriverServiceManager?.bind()
     }
 
     // endregion
@@ -716,28 +716,28 @@ class Game : Activity(), SurfaceHolder.Callback,
             )
         }
 
-        if (willStreamHdr && !decoderRenderer!!.isHevcMain10Supported() && !decoderRenderer!!.isAv1Main10Supported()) {
+        if (willStreamHdr && decoderRenderer?.isHevcMain10Supported() != true && decoderRenderer?.isAv1Main10Supported() != true) {
             willStreamHdr = false
             Toast.makeText(this, "Decoder does not support HDR10 profile", Toast.LENGTH_LONG).show()
         }
 
-        if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_HEVC && !decoderRenderer!!.isHevcSupported()) {
+        if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_HEVC && decoderRenderer?.isHevcSupported() != true) {
             Toast.makeText(this, "No HEVC decoder found", Toast.LENGTH_LONG).show()
         }
-        if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_AV1 && !decoderRenderer!!.isAv1Supported()) {
+        if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_AV1 && decoderRenderer?.isAv1Supported() != true) {
             Toast.makeText(this, "No AV1 decoder found", Toast.LENGTH_LONG).show()
         }
 
         var supportedVideoFormats = MoonBridge.VIDEO_FORMAT_H264
-        if (decoderRenderer!!.isHevcSupported()) {
+        if (decoderRenderer?.isHevcSupported() == true) {
             supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_H265
-            if (willStreamHdr && decoderRenderer!!.isHevcMain10Supported()) {
+            if (willStreamHdr && decoderRenderer?.isHevcMain10Supported() == true) {
                 supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_H265_MAIN10
             }
         }
-        if (decoderRenderer!!.isAv1Supported()) {
+        if (decoderRenderer?.isAv1Supported() == true) {
             supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_AV1_MAIN8
-            if (willStreamHdr && decoderRenderer!!.isAv1Main10Supported()) {
+            if (willStreamHdr && decoderRenderer?.isAv1Main10Supported() == true) {
                 supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_AV1_MAIN10
             }
         }
@@ -778,7 +778,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             .setResolution(prefConfig.width, prefConfig.height)
             .setLaunchRefreshRate(prefConfig.fps)
             .setRefreshRate(chosenFrameRate)
-            .setApp(app!!)
+            .setApp(app)
             .setBitrate(prefConfig.bitrate)
             .setResolutionScale(prefConfig.resolutionScale)
             .setEnableSops(prefConfig.enableSops)
@@ -789,11 +789,11 @@ class Game : Activity(), SurfaceHolder.Callback,
             .setAttachedGamepadMask(gamepadMask)
             .setClientRefreshRateX100(clientRefreshRateX100)
             .setAudioConfiguration(prefConfig.audioConfiguration)
-            .setColorSpace(decoderRenderer!!.getPreferredColorSpace())
+            .setColorSpace(decoderRenderer?.getPreferredColorSpace() ?: 0)
             .setColorRange(
                 if (willStreamHdr && prefConfig.hdrMode == MoonBridge.HDR_MODE_HLG)
                     MoonBridge.COLOR_RANGE_FULL
-                else decoderRenderer!!.getPreferredColorRange()
+                else decoderRenderer?.getPreferredColorRange() ?: 0
             )
             .setHdrMode(if (willStreamHdr) prefConfig.hdrMode else MoonBridge.HDR_MODE_SDR)
             .setPersistGamepadsAfterDisconnect(!prefConfig.multiController)
@@ -816,7 +816,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     )
 
     private fun prepareConnection() {
-        cursorServiceManager!!.destroyLocalCursorRenderers()
+        cursorServiceManager.destroyLocalCursorRenderers()
         runOnUiThread {
             val cursorOverlay = findViewById<CursorView>(R.id.cursorOverlay)
             cursorOverlay?.resetToDefault()
@@ -828,7 +828,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
         if (decoderRenderer != null) {
             try {
-                decoderRenderer!!.prepareForStop()
+                decoderRenderer?.prepareForStop()
             } catch (_: Exception) {}
             decoderRenderer = null
         }
@@ -843,7 +843,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             usbDriverServiceManager?.refreshListener()
         }
 
-        touchInputHandler.initTouchContexts(conn!!, streamView!!, prefConfig)
+        touchInputHandler.initTouchContexts(conn!!, streamView, prefConfig)
 
         if (virtualController != null && prefConfig.onscreenController) {
             setupVirtualControllerGyro()
@@ -851,17 +851,17 @@ class Game : Activity(), SurfaceHolder.Callback,
 
         if (controllerManager != null) {
             if (prefConfig.onscreenKeyboard) {
-                controllerManager!!.refreshLayout()
+                controllerManager?.refreshLayout()
             } else {
                 controllerManager = null
             }
         }
 
         if (microphoneManager != null) {
-            microphoneManager!!.stopMicrophoneStream()
+            microphoneManager?.stopMicrophoneStream()
         }
-        microphoneManager = MicrophoneManager(this, conn, prefConfig.enableMic)
-        microphoneManager!!.setStateListener(object : MicrophoneManager.MicrophoneStateListener {
+        microphoneManager = MicrophoneManager(this, conn!!, prefConfig.enableMic)
+        microphoneManager?.setStateListener(object : MicrophoneManager.MicrophoneStateListener {
             override fun onMicrophoneStateChanged(isActive: Boolean) {
                 LimeLog.info("麦克风状态改变: ${if (isActive) "激活" else "暂停"}")
             }
@@ -884,9 +884,9 @@ class Game : Activity(), SurfaceHolder.Callback,
         }
 
         if (microphoneManager != null && micButton != null) {
-            microphoneManager!!.updateMicrophoneButtonState()
+            microphoneManager?.updateMicrophoneButtonState()
         }
-        floatBallHandler!!.show()
+        floatBallHandler.show()
     }
 
     override fun onKeyEvent(event: KeyEvent) {
@@ -935,8 +935,8 @@ class Game : Activity(), SurfaceHolder.Callback,
                 notificationOverlayManager.applyVisibility()
                 microphoneManager?.setEnableMic(prefConfig.enableMic)
                 if (controllerHandler != null) {
-                    controllerHandler!!.enableSensors()
-                    controllerHandler!!.onSensorsReenabled()
+                    controllerHandler.enableSensors()
+                    controllerHandler.onSensorsReenabled()
                 }
                 UiHelper.notifyStreamExitingPiP(this)
             }
@@ -952,8 +952,8 @@ class Game : Activity(), SurfaceHolder.Callback,
             .setAspectRatio(Rational(prefConfig.width, prefConfig.height))
             .setSourceRectHint(
                 Rect(
-                    streamView!!.left, streamView!!.top,
-                    streamView!!.right, streamView!!.bottom
+                    streamView.left, streamView.top,
+                    streamView.right, streamView.bottom
                 )
             )
 
@@ -1041,7 +1041,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         keyboardInputHandler.clearModifierState()
-        inputCaptureProvider!!.onWindowFocusChanged(hasFocus)
+        inputCaptureProvider.onWindowFocusChanged(hasFocus)
     }
 
     private fun prepareDisplayForRendering(): Float {
@@ -1093,10 +1093,10 @@ class Game : Activity(), SurfaceHolder.Callback,
         super.onMultiWindowModeChanged(isInMultiWindowMode)
         if (isInMultiWindowMode) {
             window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-            decoderRenderer!!.notifyVideoBackground()
+            decoderRenderer?.notifyVideoBackground()
         } else {
             window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-            decoderRenderer!!.notifyVideoForeground()
+            decoderRenderer?.notifyVideoForeground()
         }
         hideSystemUi(50)
     }
@@ -1104,18 +1104,18 @@ class Game : Activity(), SurfaceHolder.Callback,
     override fun onDestroy() {
         cancelKeepAliveNotification()
         orientationManager.cleanup()
-        floatBallHandler!!.release()
+        floatBallHandler.release()
 
         super.onDestroy()
 
         if (conn != null && connected) {
-            connectionCallbackHandler!!.stopConnection()
+            connectionCallbackHandler.stopConnection()
         }
 
         controllerHandler?.destroy()
 
         if (audioVibrationService != null) {
-            audioVibrationService!!.stop()
+            audioVibrationService?.stop()
             MoonBridge.setBassEnergyEnabled(false)
             MoonBridge.setBassEnergyListener(null)
         }
@@ -1128,13 +1128,13 @@ class Game : Activity(), SurfaceHolder.Callback,
         lowLatencyWifiLock?.release()
         highPerfWifiLock?.release()
         usbDriverServiceManager?.stopAndUnbind()
-        inputCaptureProvider!!.destroy()
+        inputCaptureProvider.destroy()
         externalDisplayManager?.cleanup()
         microphoneManager?.stopMicrophoneStream()
     }
 
     override fun onPause() {
-        floatBallHandler!!.hide()
+        floatBallHandler.hide()
         KeyboardAccessibilityService.setIntercepting(false)
         KeyboardAccessibilityService.instance?.keyEventCallback = null
 
@@ -1175,21 +1175,21 @@ class Game : Activity(), SurfaceHolder.Callback,
         }
 
         if (progressOverlay != null) {
-            progressOverlay!!.dismiss()
+            progressOverlay?.dismiss()
             progressOverlay = null
         }
         Dialog.closeDialogs()
 
         if (virtualController != null) {
-            virtualController!!.hide()
-            virtualController!!.cleanup()
+            virtualController?.hide()
+            virtualController?.cleanup()
         }
 
         var decoderMessage = getDecoderFormatLabel()
 
         if (conn != null) {
             displayedFailureDialog = true
-            connectionCallbackHandler!!.stopConnection()
+            connectionCallbackHandler.stopConnection()
             showLatencyToast(decoderMessage)
 
             if (!reportedCrash && tombstonePrefs.getInt("CrashCount", 0) != 0) {
@@ -1212,7 +1212,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     private fun getDecoderFormatLabel(): String {
         if (decoderRenderer == null) return "UNKNOWN"
-        val videoFormat = decoderRenderer!!.getActiveVideoFormat()
+        val videoFormat = (decoderRenderer?.getActiveVideoFormat() ?: 0)
         var label = when {
             (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0 -> "H.264"
             (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H265) != 0 -> "HEVC"
@@ -1227,8 +1227,8 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     private fun showLatencyToast(decoderMessage: String) {
         if (!prefConfig.enableLatencyToast) return
-        val averageEndToEndLat = decoderRenderer!!.getAverageEndToEndLatency()
-        val averageDecoderLat = decoderRenderer!!.getAverageDecoderLatency()
+        val averageEndToEndLat = (decoderRenderer?.getAverageEndToEndLatency() ?: 0)
+        val averageDecoderLat = (decoderRenderer?.getAverageDecoderLatency() ?: 0)
         var message: String? = null
         if (averageEndToEndLat > 0) {
             message = resources.getString(R.string.conn_client_latency) + " " + averageEndToEndLat + " ms"
@@ -1248,7 +1248,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             message = if (message != null) "$message [mic]$micStats" else micStats
         }
 
-        val surfaceFlingerStats = decoderRenderer!!.getSurfaceFlingerStats()
+        val surfaceFlingerStats = (decoderRenderer?.getSurfaceFlingerStats() ?: "")
         if (surfaceFlingerStats != null) {
             message = if (message != null) "$message\n$surfaceFlingerStats" else surfaceFlingerStats
         }
@@ -1274,11 +1274,11 @@ class Game : Activity(), SurfaceHolder.Callback,
         if (decoderRenderer != null) {
             resolutionWidth = prefConfig.width
             resolutionHeight = prefConfig.height
-            averageEndToEndLatency = decoderRenderer!!.getAverageEndToEndLatency()
-            averageDecoderLatency = decoderRenderer!!.getAverageDecoderLatency()
+            averageEndToEndLatency = (decoderRenderer?.getAverageEndToEndLatency() ?: 0)
+            averageDecoderLatency = (decoderRenderer?.getAverageDecoderLatency() ?: 0)
         }
 
-        analyticsManager!!.logGameStreamEnd(
+        analyticsManager?.logGameStreamEnd(
             pcName ?: "", appName, effectiveStreamDuration,
             decoderMessage, resolutionWidth, resolutionHeight,
             averageEndToEndLatency, averageDecoderLatency
@@ -1291,12 +1291,12 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     fun setInputGrabState(grab: Boolean) {
         if (grab) {
-            inputCaptureProvider!!.enableCapture()
+            inputCaptureProvider.enableCapture()
             if (cursorVisible) {
-                inputCaptureProvider!!.showCursor()
+                inputCaptureProvider.showCursor()
             }
         } else {
-            inputCaptureProvider!!.disableCapture()
+            inputCaptureProvider.disableCapture()
         }
         setMetaKeyCaptureState(grab)
         grabbedInput = grab
@@ -1335,7 +1335,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     override fun toggleKeyboard() {
         LimeLog.info("Toggling keyboard overlay")
-        streamView!!.clearFocus()
+        streamView.clearFocus()
         val inputManager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         inputManager.toggleSoftInput(0, 0)
     }
@@ -1345,11 +1345,11 @@ class Game : Activity(), SurfaceHolder.Callback,
         prefConfig.enableNativeMousePointer = enable
 
         if (enable) {
-            inputCaptureProvider!!.disableCapture()
+            inputCaptureProvider.disableCapture()
             cursorVisible = true
             inputCaptureProvider?.showCursor()
             setMetaKeyCaptureState(true)
-            cursorServiceManager!!.refreshLocalCursorState(true)
+            cursorServiceManager.refreshLocalCursorState(true)
             val cursorOverlay = findViewById<CursorView>(R.id.cursorOverlay)
             cursorOverlay?.hide()
         } else {
@@ -1378,27 +1378,27 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     override fun stageStarting(stage: String) {
-        connectionCallbackHandler!!.stageStarting(stage)
+        connectionCallbackHandler.stageStarting(stage)
     }
 
     override fun stageComplete(stage: String) {
-        connectionCallbackHandler!!.stageComplete(stage)
+        connectionCallbackHandler.stageComplete(stage)
     }
 
     override fun stageFailed(stage: String, portFlags: Int, errorCode: Int) {
-        connectionCallbackHandler!!.stageFailed(stage, portFlags, errorCode)
+        connectionCallbackHandler.stageFailed(stage, portFlags, errorCode)
     }
 
     override fun connectionTerminated(errorCode: Int) {
-        connectionCallbackHandler!!.connectionTerminated(errorCode)
+        connectionCallbackHandler.connectionTerminated(errorCode)
     }
 
     override fun connectionStatusUpdate(connectionStatus: Int) {
-        connectionCallbackHandler!!.connectionStatusUpdate(connectionStatus)
+        connectionCallbackHandler.connectionStatusUpdate(connectionStatus)
     }
 
     override fun connectionStarted() {
-        connectionCallbackHandler!!.connectionStarted()
+        connectionCallbackHandler.connectionStarted()
     }
 
     override fun onStart() {
@@ -1413,7 +1413,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         if (isExtremeResumeEnabled && connected) {
             LimeLog.info("Extreme Resume: Returning to foreground with active connection.")
             if (progressOverlay != null) {
-                progressOverlay!!.dismiss()
+                progressOverlay?.dismiss()
                 progressOverlay = null
             }
             hideSystemUi(500)
@@ -1457,17 +1457,17 @@ class Game : Activity(), SurfaceHolder.Callback,
     override fun rumble(controllerNumber: Short, lowFreqMotor: Short, highFreqMotor: Short) {
         LimeLog.info(String.format(null as Locale?, "Rumble on gamepad %d: %04x %04x", controllerNumber, lowFreqMotor, highFreqMotor))
         controllerManager?.elementController?.gameVibrator(lowFreqMotor, highFreqMotor)
-        controllerHandler!!.handleRumble(controllerNumber, lowFreqMotor, highFreqMotor)
+        controllerHandler.handleRumble(controllerNumber, lowFreqMotor, highFreqMotor)
     }
 
     override fun rumbleTriggers(controllerNumber: Short, leftTrigger: Short, rightTrigger: Short) {
         LimeLog.info(String.format(null as Locale?, "Rumble on gamepad triggers %d: %04x %04x", controllerNumber, leftTrigger, rightTrigger))
-        controllerHandler!!.handleRumbleTriggers(controllerNumber, leftTrigger, rightTrigger)
+        controllerHandler.handleRumbleTriggers(controllerNumber, leftTrigger, rightTrigger)
     }
 
     override fun setHdrMode(enabled: Boolean, hdrMetadata: ByteArray?) {
         LimeLog.info("Display HDR mode: ${if (enabled) "enabled" else "disabled"}")
-        decoderRenderer!!.setHdrMode(enabled, hdrMetadata)
+        decoderRenderer?.setHdrMode(enabled, hdrMetadata)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             notifySystemHdrStatus(enabled)
@@ -1502,7 +1502,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     override fun setMotionEventState(controllerNumber: Short, motionType: Byte, reportRateHz: Short) {
-        controllerHandler!!.handleSetMotionEventState(controllerNumber, motionType, reportRateHz)
+        controllerHandler.handleSetMotionEventState(controllerNumber, motionType, reportRateHz)
     }
 
     override fun onResolutionChanged(width: Int, height: Int) {
@@ -1533,7 +1533,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         prefConfig.height = baseHeight
 
         if (connected && decoderRenderer != null) {
-            decoderRenderer!!.onResolutionChanged(baseWidth, baseHeight)
+            decoderRenderer?.onResolutionChanged(baseWidth, baseHeight)
         }
 
         val isLandscape = baseWidth > baseHeight
@@ -1554,16 +1554,16 @@ class Game : Activity(), SurfaceHolder.Callback,
         val useFixedSize = (prefConfig.stretchVideo && !exceedsScreenSize) || forceFixedSize
 
         if (useFixedSize) {
-            streamView!!.setDesiredAspectRatio(0.0)
-            streamView!!.holder.setFixedSize(width, height)
+            streamView.setDesiredAspectRatio(0.0)
+            streamView.holder.setFixedSize(width, height)
             LimeLog.info("Set fixed surface size: ${width}x${height} (screen: ${screenSize.x}x${screenSize.y})")
         } else {
             if (exceedsScreenSize) {
                 LimeLog.info("Host resolution ${width}x${height} exceeds screen size ${screenSize.x}x${screenSize.y}, using aspect ratio scaling")
             }
-            streamView!!.holder.setSizeFromLayout()
-            streamView!!.setDesiredAspectRatio(width.toDouble() / height)
-            streamView!!.requestLayout()
+            streamView.holder.setSizeFromLayout()
+            streamView.setDesiredAspectRatio(width.toDouble() / height)
+            streamView.requestLayout()
         }
     }
 
@@ -1572,7 +1572,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     override fun setControllerLED(controllerNumber: Short, r: Byte, g: Byte, b: Byte) {
-        controllerHandler!!.handleSetControllerLED(controllerNumber, r, g, b)
+        controllerHandler.handleSetControllerLED(controllerNumber, r, g, b)
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
@@ -1587,16 +1587,16 @@ class Game : Activity(), SurfaceHolder.Callback,
             UiHelper.notifyStreamConnecting(this)
 
             this.audioRenderer = AndroidAudioRenderer(this, prefConfig.enableAudioFx, prefConfig.enableSpatializer)
-            conn!!.start(this.audioRenderer!!, decoderRenderer!!, this)
+            conn?.start(this.audioRenderer!!, decoderRenderer!!, this)
 
-            streamView?.post { cursorServiceManager!!.syncCursorWithStream() }
+            streamView?.post { cursorServiceManager.syncCursorWithStream() }
         } else if (connected && isExtremeResumeEnabled) {
-            streamView?.post { cursorServiceManager!!.syncCursorWithStream() }
+            streamView?.post { cursorServiceManager.syncCursorWithStream() }
             audioRenderer?.resumeProcessing()
             decoderRenderer?.resumeProcessing()
         }
 
-        panZoomHandler!!.handleSurfaceChange()
+        panZoomHandler.handleSurfaceChange()
     }
 
     override fun surfaceCreated(holder: SurfaceHolder) {
@@ -1627,7 +1627,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             throw IllegalStateException("Surface destroyed before creation!")
         }
 
-        cursorServiceManager!!.destroyLocalCursorRenderers()
+        cursorServiceManager.destroyLocalCursorRenderers()
 
         if (attemptedConnection) {
             if (isExtremeResumeEnabled && !isFinishing) {
@@ -1639,9 +1639,9 @@ class Game : Activity(), SurfaceHolder.Callback,
                 decoderRenderer?.pauseProcessing()
                 return
             } else {
-                decoderRenderer!!.prepareForStop()
+                decoderRenderer?.prepareForStop()
                 if (connected) {
-                    connectionCallbackHandler!!.stopConnection()
+                    connectionCallbackHandler.stopConnection()
                 }
             }
         }
@@ -1700,7 +1700,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     override fun mouseMove(deltaX: Int, deltaY: Int) {
-        conn!!.sendMouseMove(deltaX.toShort(), deltaY.toShort())
+        conn?.sendMouseMove(deltaX.toShort(), deltaY.toShort())
     }
 
     override fun mouseButtonEvent(buttonId: Int, down: Boolean) {
@@ -1715,16 +1715,16 @@ class Game : Activity(), SurfaceHolder.Callback,
                 return
             }
         }
-        if (down) conn!!.sendMouseButtonDown(buttonIndex)
-        else conn!!.sendMouseButtonUp(buttonIndex)
+        if (down) conn?.sendMouseButtonDown(buttonIndex)
+        else conn?.sendMouseButtonUp(buttonIndex)
     }
 
     override fun mouseVScroll(amount: Byte) {
-        conn!!.sendMouseScroll(amount)
+        conn?.sendMouseScroll(amount)
     }
 
     override fun mouseHScroll(amount: Byte) {
-        conn!!.sendMouseHScroll(amount)
+        conn?.sendMouseHScroll(amount)
     }
 
     override fun keyboardEvent(buttonDown: Boolean, keyCode: Short) {
@@ -1745,7 +1745,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     override fun isPerfOverlayVisible(): Boolean {
-        return performanceOverlayManager != null && performanceOverlayManager!!.isPerfOverlayVisible()
+        return performanceOverlayManager?.isPerfOverlayVisible() == true
     }
 
     override fun onPerfUpdateWG(performanceInfo: PerformanceInfo) {
@@ -1797,12 +1797,12 @@ class Game : Activity(), SurfaceHolder.Callback,
         when (currentBackKeyMenu) {
             BackKeyMenuMode.CROWN_MODE -> {
                 if (controllerManager != null && prefConfig.onscreenKeyboard) {
-                    controllerManager!!.superPagesController?.returnOperation()
+                    controllerManager?.superPagesController?.returnOperation()
                 }
             }
             BackKeyMenuMode.NO_MENU -> {}
             BackKeyMenuMode.GAME_MENU -> {
-                GameMenu(this, app!!, conn!!, device)
+                GameMenu(this, app, conn!!, device)
             }
         }
     }
@@ -1831,37 +1831,37 @@ class Game : Activity(), SurfaceHolder.Callback,
         if (!prefConfig.enablePerfOverlay) {
             prefConfig.enablePerfOverlay = true
             prefConfig.perfOverlayLocked = false
-            performanceOverlayManager!!.applyOverlayState()
+            performanceOverlayManager?.applyOverlayState()
         } else if (!prefConfig.perfOverlayLocked) {
             prefConfig.perfOverlayLocked = true
-            performanceOverlayManager!!.applyOverlayState()
+            performanceOverlayManager?.applyOverlayState()
         } else {
             prefConfig.enablePerfOverlay = false
             prefConfig.perfOverlayLocked = false
-            performanceOverlayManager!!.applyOverlayState()
+            performanceOverlayManager?.applyOverlayState()
         }
     }
 
     fun toggleMicrophoneButton() {
         if (micButton != null) {
-            if (micButton!!.visibility == View.VISIBLE) {
-                micButton!!.visibility = View.GONE
+            if (micButton?.visibility == View.VISIBLE) {
+                micButton?.visibility = View.GONE
                 Toast.makeText(this, getString(R.string.toast_mic_button_hidden), Toast.LENGTH_SHORT).show()
             } else {
-                micButton!!.visibility = View.VISIBLE
+                micButton?.visibility = View.VISIBLE
                 Toast.makeText(this, getString(R.string.toast_mic_button_shown), Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     fun toggleVirtualController() {
-        if (virtualController != null && virtualController!!.elements.isNotEmpty()) {
-            val isVisible = virtualController!!.elements[0].visibility == View.VISIBLE
+        if (virtualController != null && virtualController?.elements?.isNotEmpty() == true) {
+            val isVisible = virtualController?.elements?.get(0)?.visibility == View.VISIBLE
             if (isVisible) {
-                virtualController!!.hide()
+                virtualController?.hide()
                 Toast.makeText(this, getString(R.string.toast_virtual_controller_hidden), Toast.LENGTH_SHORT).show()
             } else {
-                virtualController!!.show()
+                virtualController?.show()
                 Toast.makeText(this, getString(R.string.toast_virtual_controller_shown), Toast.LENGTH_SHORT).show()
             }
         } else {
@@ -1871,8 +1871,8 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     fun initializeControllerManager() {
         if (controllerManager == null) {
-            controllerManager = ControllerManager(streamView!!.parent as FrameLayout, this)
-            controllerManager!!.refreshLayout()
+            controllerManager = ControllerManager(streamView.parent as FrameLayout, this)
+            controllerManager?.refreshLayout()
         }
     }
 
@@ -1882,7 +1882,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             prefConfig.onscreenKeyboard = value
             if (value) {
                 if (controllerManager != null) {
-                    controllerManager!!.show()
+                    controllerManager?.show()
                 } else {
                     initializeControllerManager()
                 }
@@ -1896,12 +1896,12 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     fun refreshDisplayPosition() {
-        DisplayPositionManager(this, prefConfig, streamView!!).refreshDisplayPosition(surfaceCreated)
+        DisplayPositionManager(this, prefConfig, streamView).refreshDisplayPosition(surfaceCreated)
     }
 
     val activeStreamView: StreamView?
         get() {
-            if (externalDisplayManager != null && externalDisplayManager!!.isUsingExternalDisplay() && externalStreamView != null) {
+            if (externalDisplayManager?.isUsingExternalDisplay() == true && externalStreamView != null) {
                 return externalStreamView
             }
             return streamView
@@ -1913,7 +1913,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     private fun applyLastSettingsToCurrentSession() {
         if (appSettingsManager != null) {
-            val applied = appSettingsManager!!.applyLastSettingsFromIntent(intent, prefConfig)
+            val applied = appSettingsManager?.applyLastSettingsFromIntent(intent, prefConfig) == true
             if (applied) {
                 Toast.makeText(this, getString(R.string.app_last_settings_start_with_last), Toast.LENGTH_SHORT).show()
             }

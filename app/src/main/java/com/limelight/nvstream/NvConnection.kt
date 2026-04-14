@@ -81,7 +81,7 @@ class NvConnection constructor(
     }
 
     private fun resolveServerAddress(): InetAddress {
-        val serverAddress = context.serverAddress!!
+        val serverAddress = context.serverAddress
         val addrs = InetAddress.getAllByName(serverAddress.address)
         for (addr in addrs) {
             try {
@@ -173,9 +173,9 @@ class NvConnection constructor(
 
     @Throws(XmlPullParserException::class, IOException::class, InterruptedException::class)
     private fun startApp(): Boolean {
-        val h = NvHTTP(context.serverAddress!!, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider)
-        val connListener = context.connListener!!
-        val streamConfig = context.streamConfig!!
+        val h = NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider)
+        val connListener = context.connListener
+        val streamConfig = context.streamConfig
 
         val serverInfo = h.getServerInfo(true)
 
@@ -282,7 +282,7 @@ class NvConnection constructor(
 
     @Throws(IOException::class, XmlPullParserException::class, InterruptedException::class)
     protected fun quitAndLaunch(h: NvHTTP, context: ConnectionContext): Boolean {
-        val connListener = context.connListener!!
+        val connListener = context.connListener
         try {
             if (!h.quitApp()) {
                 connListener.displayMessage("Failed to quit previous session! You must quit it manually")
@@ -306,8 +306,8 @@ class NvConnection constructor(
 
     @Throws(IOException::class, XmlPullParserException::class, InterruptedException::class)
     private fun launchNotRunningApp(h: NvHTTP, context: ConnectionContext): Boolean {
-        if (!h.launchApp(context, "launch", context.streamConfig!!.app.appId, context.negotiatedHdr)) {
-            context.connListener!!.displayMessage("Failed to launch application")
+        if (!h.launchApp(context, "launch", context.streamConfig.app.appId, context.negotiatedHdr)) {
+            context.connListener.displayMessage("Failed to launch application")
             return false
         }
 
@@ -320,34 +320,34 @@ class NvConnection constructor(
             context.connListener = connectionListener
             context.videoCapabilities = videoDecoderRenderer.getCapabilities()
 
-            val appName = context.streamConfig!!.app.appName
+            val appName = context.streamConfig.app.appName
 
-            context.connListener!!.stageStarting(appName)
+            context.connListener.stageStarting(appName)
 
             try {
                 if (!startApp()) {
-                    context.connListener!!.stageFailed(appName, 0, 0)
+                    context.connListener.stageFailed(appName, 0, 0)
                     return@Thread
                 }
-                context.connListener!!.stageComplete(appName)
+                context.connListener.stageComplete(appName)
             } catch (e: HostHttpResponseException) {
                 e.printStackTrace()
-                context.connListener!!.displayMessage(e.message ?: "")
-                context.connListener!!.stageFailed(appName, 0, e.getErrorCode())
+                context.connListener.displayMessage(e.message ?: "")
+                context.connListener.stageFailed(appName, 0, e.getErrorCode())
                 return@Thread
             } catch (e: XmlPullParserException) {
                 e.printStackTrace()
-                context.connListener!!.displayMessage(e.message ?: "")
-                context.connListener!!.stageFailed(appName, MoonBridge.ML_PORT_FLAG_TCP_47984 or MoonBridge.ML_PORT_FLAG_TCP_47989, 0)
+                context.connListener.displayMessage(e.message ?: "")
+                context.connListener.stageFailed(appName, MoonBridge.ML_PORT_FLAG_TCP_47984 or MoonBridge.ML_PORT_FLAG_TCP_47989, 0)
                 return@Thread
             } catch (e: IOException) {
                 e.printStackTrace()
-                context.connListener!!.displayMessage(e.message ?: "")
-                context.connListener!!.stageFailed(appName, MoonBridge.ML_PORT_FLAG_TCP_47984 or MoonBridge.ML_PORT_FLAG_TCP_47989, 0)
+                context.connListener.displayMessage(e.message ?: "")
+                context.connListener.stageFailed(appName, MoonBridge.ML_PORT_FLAG_TCP_47984 or MoonBridge.ML_PORT_FLAG_TCP_47989, 0)
                 return@Thread
             } catch (e: InterruptedException) {
-                context.connListener!!.displayMessage("Connection interrupted")
-                context.connListener!!.stageFailed(appName, 0, 0)
+                context.connListener.displayMessage("Connection interrupted")
+                context.connListener.stageFailed(appName, 0, 0)
                 return@Thread
             }
 
@@ -357,30 +357,30 @@ class NvConnection constructor(
             try {
                 connectionAllowed.acquire()
             } catch (e: InterruptedException) {
-                context.connListener!!.displayMessage(e.message ?: "")
-                context.connListener!!.stageFailed(appName, 0, 0)
+                context.connListener.displayMessage(e.message ?: "")
+                context.connListener.stageFailed(appName, 0, 0)
                 return@Thread
             }
 
             synchronized(MoonBridge::class.java) {
                 MoonBridge.setupBridge(videoDecoderRenderer, audioRenderer, connectionListener)
                 val ret = MoonBridge.startConnection(
-                    context.serverAddress!!.address,
+                    context.serverAddress.address,
                     context.serverAppVersion, context.serverGfeVersion, context.rtspSessionUrl,
                     context.serverCodecModeSupport,
                     context.negotiatedWidth, context.negotiatedHeight,
-                    context.streamConfig!!.refreshRate, context.streamConfig!!.bitrate,
+                    context.streamConfig.refreshRate, context.streamConfig.bitrate,
                     context.negotiatedPacketSize, context.negotiatedRemoteStreaming,
-                    context.streamConfig!!.audioConfiguration.toInt(),
-                    context.streamConfig!!.supportedVideoFormats,
-                    context.streamConfig!!.clientRefreshRateX100,
-                    context.riKey!!.encoded, ib.array(),
+                    context.streamConfig.audioConfiguration.toInt(),
+                    context.streamConfig.supportedVideoFormats,
+                    context.streamConfig.clientRefreshRateX100,
+                    context.riKey.encoded, ib.array(),
                     context.videoCapabilities,
-                    context.streamConfig!!.colorSpace,
-                    context.streamConfig!!.colorRange,
-                    context.streamConfig!!.hdrMode,
-                    context.streamConfig!!.getEnableMic(),
-                    context.streamConfig!!.getControlOnly()
+                    context.streamConfig.colorSpace,
+                    context.streamConfig.colorRange,
+                    context.streamConfig.hdrMode,
+                    context.streamConfig.getEnableMic(),
+                    context.streamConfig.getControlOnly()
                 )
                 if (ret != 0) {
                     connectionAllowed.release()
@@ -532,7 +532,7 @@ class NvConnection constructor(
         Thread {
             val h: NvHTTP
             try {
-                h = NvHTTP(context.serverAddress!!, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider)
+                h = NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider)
             } catch (e: IOException) {
                 throw RuntimeException(e)
             }
@@ -553,7 +553,7 @@ class NvConnection constructor(
         Thread {
             val h: NvHTTP
             try {
-                h = NvHTTP(context.serverAddress!!, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider)
+                h = NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider)
             } catch (e: IOException) {
                 throw RuntimeException(e)
             }
@@ -574,7 +574,7 @@ class NvConnection constructor(
         Thread {
             val h: NvHTTP
             try {
-                h = NvHTTP(context.serverAddress!!, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider)
+                h = NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider)
                 LimeLog.info("NvHTTP created successfully for bitrate adjustment")
             } catch (e: IOException) {
                 LimeLog.warning("Failed to create NvHTTP for bitrate adjustment: ${e.message}")
@@ -585,7 +585,7 @@ class NvConnection constructor(
                 LimeLog.info("Sending bitrate adjustment request...")
                 val success = h.setBitrate(bitrateKbps)
                 if (success) {
-                    context.streamConfig!!.bitrate = bitrateKbps
+                    context.streamConfig.bitrate = bitrateKbps
                     LimeLog.info("Bitrate adjustment successful, updated local config to $bitrateKbps kbps")
                     callback?.onSuccess(bitrateKbps)
                 } else {
@@ -622,7 +622,7 @@ class NvConnection constructor(
         Thread {
             val h: NvHTTP
             try {
-                h = NvHTTP(context.serverAddress!!, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider)
+                h = NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider)
             } catch (e: IOException) {
                 LimeLog.warning("Failed to create NvHTTP for display rotation: ${e.message}")
                 callback?.onFailure("Failed to create HTTP connection: ${e.message}")
@@ -655,10 +655,10 @@ class NvConnection constructor(
     }
 
     val host: String
-        get() = context.serverAddress!!.address
+        get() = context.serverAddress.address
 
     val currentBitrate: Int
-        get() = context.streamConfig!!.bitrate
+        get() = context.streamConfig.bitrate
 
     companion object {
         private val connectionAllowed = Semaphore(1)

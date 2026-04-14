@@ -34,8 +34,8 @@ class AppSelectionActivity : Activity(), ComputerManagerListener {
     private var pcUuid: String? = null
     private var computer: ComputerDetails? = null
     private var managerBinder: ComputerManagerService.ComputerManagerBinder? = null
-    private var appGridAdapter: AppGridAdapter? = null
-    private var bridge: AdapterRecyclerBridge? = null
+    private lateinit var appGridAdapter: AppGridAdapter
+    private lateinit var bridge: AdapterRecyclerBridge
     private lateinit var recyclerView: RecyclerView
 
     private var pendingAppLaunch: AppView.AppObject? = null
@@ -49,10 +49,10 @@ class AppSelectionActivity : Activity(), ComputerManagerListener {
                 localBinder.waitForReady()
                 managerBinder = localBinder
 
-                managerBinder!!.startPolling(this@AppSelectionActivity)
+                managerBinder?.startPolling(this@AppSelectionActivity)
 
                 if (pcUuid != null) {
-                    managerBinder!!.invalidateStateForComputer(pcUuid!!)
+                    managerBinder?.invalidateStateForComputer(pcUuid!!)
                 }
 
                 runOnUiThread {
@@ -93,19 +93,19 @@ class AppSelectionActivity : Activity(), ComputerManagerListener {
     override fun onDestroy() {
         super.onDestroy()
         if (managerBinder != null) {
-            managerBinder!!.stopPolling()
+            managerBinder?.stopPolling()
             unbindService(serviceConnection)
         }
         appGridAdapter?.cancelQueuedOperations()
         bridge?.cleanup()
         if (connectingDialog != null) {
-            connectingDialog!!.dismiss()
+            connectingDialog?.dismiss()
             connectingDialog = null
         }
     }
 
     private fun loadApps() {
-        computer = managerBinder!!.getComputer(pcUuid!!)
+        computer = managerBinder?.getComputer(pcUuid!!)
         if (computer == null) {
             Toast.makeText(this, R.string.scut_pc_not_found, Toast.LENGTH_SHORT).show()
             finish()
@@ -121,16 +121,16 @@ class AppSelectionActivity : Activity(), ComputerManagerListener {
 
         val prefs = PreferenceConfiguration.readPreferences(this)
         val comp = computer!!
-        appGridAdapter = AppGridAdapter(this, prefs, comp, managerBinder!!.getUniqueId(), false)
+        appGridAdapter = AppGridAdapter(this, prefs, comp, (managerBinder?.getUniqueId() ?: ""), false)
 
         val appObjects = apps.map { AppView.AppObject(it) }
-        appGridAdapter!!.rebuildAppList(appObjects)
+        appGridAdapter.rebuildAppList(appObjects)
 
         bridge = AdapterRecyclerBridge(this, appGridAdapter)
         recyclerView.layoutManager = GridLayoutManager(this, 2)
         recyclerView.adapter = bridge
 
-        bridge!!.setOnItemClickListener { _, item ->
+        bridge.setOnItemClickListener { _, item ->
             val obj = item as AppView.AppObject
             val comp = computer!!
             val binder = managerBinder!!
@@ -178,7 +178,7 @@ class AppSelectionActivity : Activity(), ComputerManagerListener {
         if (details.state == ComputerDetails.State.ONLINE && details.activeAddress != null) {
             runOnUiThread {
                 if (connectingDialog != null) {
-                    connectingDialog!!.dismiss()
+                    connectingDialog?.dismiss()
                     connectingDialog = null
                 }
 

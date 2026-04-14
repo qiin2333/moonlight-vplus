@@ -82,11 +82,11 @@ class TouchInputHandler(private val game: Game) {
                         val timeDiff = android.os.SystemClock.uptimeMillis() - lastMouseHoverTime
                         if (timeDiff <= 40 || waitRelease) {
                             fakeScrollInitialY = event.y
-                            game.conn!!.sendMousePosition(
+                            game.conn?.sendMousePosition(
                                 event.x.toInt().toShort(),
                                 event.y.toInt().toShort(),
-                                game.streamView!!.width.toShort(),
-                                game.streamView!!.height.toShort()
+                                (game.streamView?.width?.toShort() ?: 0),
+                                (game.streamView?.height?.toShort() ?: 0)
                             )
                             return true
                         } else {
@@ -101,10 +101,10 @@ class TouchInputHandler(private val game: Game) {
                         scrollTotal += deltaY
                         if (scrollTotal > 127.99f) {
                             scrollTotal -= 128f
-                            game.conn!!.sendMouseHighResScroll(120)
+                            game.conn?.sendMouseHighResScroll(120)
                         } else if (scrollTotal < -127.99f) {
                             scrollTotal += 128f
-                            game.conn!!.sendMouseHighResScroll(-120)
+                            game.conn?.sendMouseHighResScroll(-120)
                         }
                         return true
                     }
@@ -112,10 +112,10 @@ class TouchInputHandler(private val game: Game) {
                         while (scrollTotal > 127.99f || scrollTotal < -127.99f) {
                             if (scrollTotal > 127.99f) {
                                 scrollTotal -= 128f
-                                game.conn!!.sendMouseHighResScroll(120)
+                                game.conn?.sendMouseHighResScroll(120)
                             } else {
                                 scrollTotal += 128f
-                                game.conn!!.sendMouseHighResScroll(-120)
+                                game.conn?.sendMouseHighResScroll(-120)
                             }
                         }
                         if (!waitRelease) detectScrolling = false
@@ -178,29 +178,29 @@ class TouchInputHandler(private val game: Game) {
 
                 if (changedButtons and MotionEvent.BUTTON_PRIMARY != 0) {
                     if (buttonState and MotionEvent.BUTTON_PRIMARY != 0) {
-                        game.conn!!.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
+                        game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
                     } else {
-                        game.conn!!.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
+                        game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
                     }
                 }
                 if (changedButtons and MotionEvent.BUTTON_SECONDARY != 0) {
                     if (buttonState and MotionEvent.BUTTON_SECONDARY != 0) {
-                        game.conn!!.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
+                        game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
                     } else {
-                        game.conn!!.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
+                        game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
                     }
                 }
                 if (changedButtons and MotionEvent.BUTTON_TERTIARY != 0) {
                     if (buttonState and MotionEvent.BUTTON_TERTIARY != 0) {
-                        game.conn!!.sendMouseButtonDown(MouseButtonPacket.BUTTON_MIDDLE)
+                        game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_MIDDLE)
                     } else {
-                        game.conn!!.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE)
+                        game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE)
                     }
                 }
 
                 if (event.actionMasked == MotionEvent.ACTION_SCROLL) {
-                    game.conn!!.sendMouseHighResScroll((event.getAxisValue(MotionEvent.AXIS_VSCROLL) * 120).toInt().toShort())
-                    game.conn!!.sendMouseHighResHScroll((event.getAxisValue(MotionEvent.AXIS_HSCROLL) * 120).toInt().toShort())
+                    game.conn?.sendMouseHighResScroll((event.getAxisValue(MotionEvent.AXIS_VSCROLL) * 120).toInt().toShort())
+                    game.conn?.sendMouseHighResHScroll((event.getAxisValue(MotionEvent.AXIS_HSCROLL) * 120).toInt().toShort())
                 }
 
                 lastButtonState = buttonState
@@ -209,9 +209,9 @@ class TouchInputHandler(private val game: Game) {
         }
 
         if (eventSource and InputDevice.SOURCE_CLASS_JOYSTICK != 0) {
-            return game.controllerHandler!!.handleMotionEvent(event)
+            return game.controllerHandler?.handleMotionEvent(event) == true
         } else if (deviceSources and InputDevice.SOURCE_CLASS_JOYSTICK != 0 &&
-            game.controllerHandler!!.tryHandleTouchpadEvent(event)
+            game.controllerHandler?.tryHandleTouchpadEvent(event) == true
         ) {
             return true
         } else if ((eventSource and InputDevice.SOURCE_CLASS_POINTER != 0) ||
@@ -249,12 +249,12 @@ class TouchInputHandler(private val game: Game) {
                     if (deltaX.toInt() != 0 || deltaY.toInt() != 0) {
                         if (game.prefConfig.absoluteMouseMode) {
                             val activeStreamView = game.activeStreamView!!
-                            game.conn!!.sendMouseMoveAsMousePosition(
+                            game.conn?.sendMouseMoveAsMousePosition(
                                 deltaX, deltaY,
                                 activeStreamView.width.toShort(), activeStreamView.height.toShort()
                             )
                         } else {
-                            game.conn!!.sendMouseMove(deltaX, deltaY)
+                            game.conn?.sendMouseMove(deltaX, deltaY)
                         }
                     }
                 } else if ((eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0) {
@@ -266,7 +266,7 @@ class TouchInputHandler(private val game: Game) {
                             val xMax = xRange.max.toInt()
                             val yMax = yRange.max.toInt()
                             if (xMax <= Short.MAX_VALUE && yMax <= Short.MAX_VALUE) {
-                                game.conn!!.sendMousePosition(
+                                game.conn?.sendMousePosition(
                                     event.x.toInt().toShort(), event.y.toInt().toShort(),
                                     xMax.toShort(), yMax.toShort()
                                 )
@@ -280,47 +280,47 @@ class TouchInputHandler(private val game: Game) {
                 }
 
                 if (event.actionMasked == MotionEvent.ACTION_SCROLL) {
-                    game.conn!!.sendMouseHighResScroll((event.getAxisValue(MotionEvent.AXIS_VSCROLL) * 120).toInt().toShort())
-                    game.conn!!.sendMouseHighResHScroll((event.getAxisValue(MotionEvent.AXIS_HSCROLL) * 120).toInt().toShort())
+                    game.conn?.sendMouseHighResScroll((event.getAxisValue(MotionEvent.AXIS_VSCROLL) * 120).toInt().toShort())
+                    game.conn?.sendMouseHighResHScroll((event.getAxisValue(MotionEvent.AXIS_HSCROLL) * 120).toInt().toShort())
                 }
 
                 if (changedButtons and MotionEvent.BUTTON_PRIMARY != 0) {
                     if (buttonState and MotionEvent.BUTTON_PRIMARY != 0) {
-                        game.conn!!.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
+                        game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
                     } else {
-                        game.conn!!.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
+                        game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
                     }
                 }
 
                 if (changedButtons and (MotionEvent.BUTTON_SECONDARY or MotionEvent.BUTTON_STYLUS_PRIMARY) != 0) {
                     if (buttonState and (MotionEvent.BUTTON_SECONDARY or MotionEvent.BUTTON_STYLUS_PRIMARY) != 0) {
-                        game.conn!!.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
+                        game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
                     } else {
-                        game.conn!!.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
+                        game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
                     }
                 }
 
                 if (changedButtons and (MotionEvent.BUTTON_TERTIARY or MotionEvent.BUTTON_STYLUS_SECONDARY) != 0) {
                     if (buttonState and (MotionEvent.BUTTON_TERTIARY or MotionEvent.BUTTON_STYLUS_SECONDARY) != 0) {
-                        game.conn!!.sendMouseButtonDown(MouseButtonPacket.BUTTON_MIDDLE)
+                        game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_MIDDLE)
                     } else {
-                        game.conn!!.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE)
+                        game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE)
                     }
                 }
 
                 if (game.prefConfig.mouseNavButtons) {
                     if (changedButtons and MotionEvent.BUTTON_BACK != 0) {
                         if (buttonState and MotionEvent.BUTTON_BACK != 0) {
-                            game.conn!!.sendMouseButtonDown(MouseButtonPacket.BUTTON_X1)
+                            game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_X1)
                         } else {
-                            game.conn!!.sendMouseButtonUp(MouseButtonPacket.BUTTON_X1)
+                            game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_X1)
                         }
                     }
                     if (changedButtons and MotionEvent.BUTTON_FORWARD != 0) {
                         if (buttonState and MotionEvent.BUTTON_FORWARD != 0) {
-                            game.conn!!.sendMouseButtonDown(MouseButtonPacket.BUTTON_X2)
+                            game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_X2)
                         } else {
-                            game.conn!!.sendMouseButtonUp(MouseButtonPacket.BUTTON_X2)
+                            game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_X2)
                         }
                     }
                 }
@@ -334,13 +334,13 @@ class TouchInputHandler(private val game: Game) {
                                     lastAbsTouchDownTime = event.eventTime
                                     lastAbsTouchDownX = event.getX(0)
                                     lastAbsTouchDownY = event.getY(0)
-                                    game.conn!!.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
+                                    game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
                                 }
                                 MotionEvent.TOOL_TYPE_ERASER -> {
                                     lastAbsTouchDownTime = event.eventTime
                                     lastAbsTouchDownX = event.getX(0)
                                     lastAbsTouchDownY = event.getY(0)
-                                    game.conn!!.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
+                                    game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
                                 }
                             }
                         }
@@ -350,13 +350,13 @@ class TouchInputHandler(private val game: Game) {
                                     lastAbsTouchUpTime = event.eventTime
                                     lastAbsTouchUpX = event.getX(0)
                                     lastAbsTouchUpY = event.getY(0)
-                                    game.conn!!.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
+                                    game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
                                 }
                                 MotionEvent.TOOL_TYPE_ERASER -> {
                                     lastAbsTouchUpTime = event.eventTime
                                     lastAbsTouchUpX = event.getX(0)
                                     lastAbsTouchUpY = event.getY(0)
-                                    game.conn!!.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
+                                    game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
                                 }
                             }
                         }
@@ -376,8 +376,8 @@ class TouchInputHandler(private val game: Game) {
                 }
 
                 if (game.virtualController != null &&
-                    (game.virtualController!!.controllerMode == VirtualController.ControllerMode.MoveButtons ||
-                        game.virtualController!!.controllerMode == VirtualController.ControllerMode.ResizeButtons)
+                    (game.virtualController?.controllerMode == VirtualController.ControllerMode.MoveButtons ||
+                        game.virtualController?.controllerMode == VirtualController.ControllerMode.ResizeButtons)
                 ) {
                     return true
                 }
@@ -413,8 +413,8 @@ class TouchInputHandler(private val game: Game) {
 
                         if (multiFingerDownTime == 0L && event.pointerCount == 2 && !twoFingerMoved && game.prefConfig.touchscreenTrackpad) {
                             if (event.eventTime - twoFingerDownTime < TWO_FINGER_TAP_THRESHOLD) {
-                                game.conn!!.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
-                                game.conn!!.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
+                                game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
+                                game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
                                 twoFingerTapPending = false
                                 twoFingerMoved = true
                                 context.cancelTouch()
@@ -432,8 +432,8 @@ class TouchInputHandler(private val game: Game) {
                         ) {
                             if (twoFingerTapPending && !twoFingerMoved && game.prefConfig.touchscreenTrackpad) {
                                 if (event.eventTime - firstFingerUpTime < TWO_FINGER_TAP_THRESHOLD) {
-                                    game.conn!!.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
-                                    game.conn!!.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
+                                    game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
+                                    game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
                                     twoFingerTapPending = false
                                     for (tc in touchContextMap) {
                                         tc?.cancelTouch()
@@ -512,7 +512,7 @@ class TouchInputHandler(private val game: Game) {
         if (touchedView == activeStreamView) {
             eventX = event.getX(0)
             eventY = event.getY(0)
-        } else if (game.externalDisplayManager != null && game.externalDisplayManager!!.isUsingExternalDisplay()) {
+        } else if (game.externalDisplayManager != null && game.externalDisplayManager?.isUsingExternalDisplay() == true) {
             eventX = event.getX(0)
             eventY = event.getY(0)
         } else {
@@ -539,7 +539,7 @@ class TouchInputHandler(private val game: Game) {
             }
         }
 
-        if (game.externalDisplayManager != null && game.externalDisplayManager!!.isUsingExternalDisplay()) {
+        if (game.externalDisplayManager != null && game.externalDisplayManager?.isUsingExternalDisplay() == true) {
             val streamViewWidth = activeStreamView.width
             val streamViewHeight = activeStreamView.height
             val size = Point()
@@ -553,7 +553,7 @@ class TouchInputHandler(private val game: Game) {
             eventY = eventY.coerceIn(0f, activeStreamView.height.toFloat())
         }
 
-        game.conn!!.sendMousePosition(eventX.toInt().toShort(), eventY.toInt().toShort(), activeStreamView.width.toShort(), activeStreamView.height.toShort())
+        game.conn?.sendMousePosition(eventX.toInt().toShort(), eventY.toInt().toShort(), activeStreamView.width.toShort(), activeStreamView.height.toShort())
     }
 
     // ---- Touch/Pen 事件发送 ----
@@ -576,7 +576,7 @@ class TouchInputHandler(private val game: Game) {
         val rawX = event.getX(pointerIndex)
         val rawY = event.getY(pointerIndex)
 
-        if (game.externalDisplayManager != null && game.externalDisplayManager!!.isUsingExternalDisplay()) {
+        if (game.externalDisplayManager != null && game.externalDisplayManager?.isUsingExternalDisplay() == true) {
             val touchWidth: Float
             val touchHeight: Float
             if (view != null && view.width > 0 && view.height > 0) {
@@ -634,8 +634,8 @@ class TouchInputHandler(private val game: Game) {
         val minorCart = polarToCartesian(contactAreaMinor, (orientation + (Math.PI / 2).toFloat()))
 
         val refView = game.activeStreamView
-        val refWidth = if (refView != null && refView.width > 0) refView.width else game.streamView!!.width.coerceAtLeast(1)
-        val refHeight = if (refView != null && refView.height > 0) refView.height else game.streamView!!.height.coerceAtLeast(1)
+        val refWidth = if (refView != null && refView.width > 0) refView.width else game.streamView?.width?.coerceAtLeast(1) ?: 1
+        val refHeight = if (refView != null && refView.height > 0) refView.height else game.streamView?.height?.coerceAtLeast(1) ?: 1
 
         majorCart[0] = abs(majorCart[0]).coerceAtMost(refWidth.toFloat()) / refWidth
         minorCart[0] = abs(minorCart[0]).coerceAtMost(refWidth.toFloat()) / refWidth
@@ -662,7 +662,7 @@ class TouchInputHandler(private val game: Game) {
 
         val normalizedCoords = getStreamViewRelativeNormalizedXY(view, event, pointerIndex)
         val normalizedContactArea = getStreamViewNormalizedContactArea(event, pointerIndex)
-        return game.conn!!.sendPenEvent(
+        return game.conn?.sendPenEvent(
             eventType, toolType, penButtons,
             normalizedCoords[0], normalizedCoords[1],
             getPressureOrDistance(event, pointerIndex),
@@ -689,7 +689,7 @@ class TouchInputHandler(private val game: Game) {
             }
             return handledStylusEvent
         } else if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
-            return game.conn!!.sendPenEvent(
+            return game.conn?.sendPenEvent(
                 MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, MoonBridge.LI_TOOL_TYPE_UNKNOWN, 0,
                 0f, 0f, 0f, 0f, 0f,
                 MoonBridge.LI_ROT_UNKNOWN, MoonBridge.LI_TILT_UNKNOWN
@@ -720,7 +720,7 @@ class TouchInputHandler(private val game: Game) {
     private fun sendTouchEventForPointer(view: View?, event: MotionEvent, eventType: Byte, pointerIndex: Int): Boolean {
         val normalizedCoords = getStreamViewRelativeNormalizedXY(view, event, pointerIndex)
         val normalizedContactArea = getStreamViewNormalizedContactArea(event, pointerIndex)
-        return game.conn!!.sendTouchEvent(
+        return game.conn?.sendTouchEvent(
             eventType, event.getPointerId(pointerIndex),
             normalizedCoords[0], normalizedCoords[1],
             getPressureOrDistance(event, pointerIndex),
@@ -742,7 +742,7 @@ class TouchInputHandler(private val game: Game) {
             }
             return true
         } else if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
-            return game.conn!!.sendTouchEvent(
+            return game.conn?.sendTouchEvent(
                 MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, 0,
                 0f, 0f, 0f, 0f, 0f,
                 MoonBridge.LI_ROT_UNKNOWN
@@ -789,7 +789,7 @@ class TouchInputHandler(private val game: Game) {
     private fun getNormalizedCoordinates(streamView: View?, rawX: Float, rawY: Float): FloatArray {
         if (streamView == null) return floatArrayOf(rawX, rawY)
 
-        if (game.externalDisplayManager != null && game.externalDisplayManager!!.isUsingExternalDisplay()) {
+        if (game.externalDisplayManager != null && game.externalDisplayManager?.isUsingExternalDisplay() == true) {
             val active = game.activeStreamView
             if (active != null && active.width > 0 && active.height > 0) {
                 val size = Point()

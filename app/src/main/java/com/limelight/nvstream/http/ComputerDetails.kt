@@ -70,10 +70,10 @@ class ComputerDetails {
 
     fun guessExternalPort(): Int {
         if (externalPort != 0) return externalPort
-        if (remoteAddress != null) return remoteAddress!!.port
-        if (activeAddress != null) return activeAddress!!.port
-        if (ipv6Address != null) return ipv6Address!!.port
-        if (localAddress != null) return localAddress!!.port
+        if (remoteAddress != null) return (remoteAddress?.port ?: 0)
+        if (activeAddress != null) return (activeAddress?.port ?: 0)
+        if (ipv6Address != null) return (ipv6Address?.port ?: 0)
+        if (localAddress != null) return (localAddress?.port ?: 0)
         return NvHTTP.DEFAULT_HTTP_PORT
     }
 
@@ -85,13 +85,13 @@ class ComputerDetails {
         if (details.activeAddress != null) {
             this.activeAddress = details.activeAddress
         }
-        if (details.localAddress != null && !details.localAddress!!.address.startsWith("127.")) {
+        if (details.localAddress != null && details.localAddress?.address?.startsWith("127.") != true) {
             this.localAddress = details.localAddress
         }
         if (details.remoteAddress != null) {
             this.remoteAddress = details.remoteAddress
         } else if (this.remoteAddress != null && details.externalPort != 0) {
-            this.remoteAddress!!.port = details.externalPort
+            this.remoteAddress?.port = details.externalPort
         }
         if (details.manualAddress != null) {
             this.manualAddress = details.manualAddress

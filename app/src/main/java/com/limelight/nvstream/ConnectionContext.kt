@@ -5,13 +5,13 @@ import java.security.cert.X509Certificate
 import javax.crypto.SecretKey
 
 class ConnectionContext {
-    var serverAddress: ComputerDetails.AddressTuple? = null
+    lateinit var serverAddress: ComputerDetails.AddressTuple
     var httpsPort: Int = 0
     var isNvidiaServerSoftware: Boolean = false
     var serverCert: X509Certificate? = null
-    var streamConfig: StreamConfiguration? = null
-    var connListener: NvConnectionListener? = null
-    var riKey: SecretKey? = null
+    lateinit var streamConfig: StreamConfiguration
+    lateinit var connListener: NvConnectionListener
+    lateinit var riKey: SecretKey
     var riKeyId: Int = 0
 
     // This is the version quad from the appversion tag of /serverinfo

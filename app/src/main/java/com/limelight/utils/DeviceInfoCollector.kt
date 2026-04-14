@@ -69,13 +69,13 @@ object DeviceInfoCollector {
 
             while (reader.readLine().also { line = it } != null) {
                 when {
-                    line!!.startsWith("processor") -> processorCount++
-                    line!!.startsWith("model name") && processorModel == null ->
-                        processorModel = line!!.split(":")[1].trim()
-                    line!!.startsWith("Hardware") && processorVendor == null ->
-                        processorVendor = line!!.split(":")[1].trim()
-                    line!!.startsWith("CPU architecture") && processorVendor == null ->
-                        processorVendor = line!!.split(":")[1].trim()
+                    line?.startsWith("processor") == true -> processorCount++
+                    line?.startsWith("model name") == true&& processorModel == null ->
+                        processorModel = line?.split(":")[1]?.trim()
+                    line?.startsWith("Hardware") == true&& processorVendor == null ->
+                        processorVendor = line?.split(":")[1]?.trim()
+                    line?.startsWith("CPU architecture") == true&& processorVendor == null ->
+                        processorVendor = line?.split(":")[1]?.trim()
                 }
             }
             reader.close()

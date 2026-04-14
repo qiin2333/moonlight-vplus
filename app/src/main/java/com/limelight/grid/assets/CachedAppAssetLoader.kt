@@ -207,7 +207,7 @@ class CachedAppAssetLoader(
         @Volatile
         private var runningThread: Thread? = null
         @Volatile
-        var tuple: LoaderTuple? = null
+        lateinit var tuple: LoaderTuple
 
         val isCancelled: Boolean
             get() = cancelled
@@ -275,7 +275,7 @@ class CachedAppAssetLoader(
                 imageView.startAnimation(AnimationUtils.loadAnimation(imageView.context, animationRes))
                 imageView.visibility = View.VISIBLE
                 textView?.visibility = View.VISIBLE
-                task.executeOnExecutor(networkExecutor, tuple!!)
+                task.executeOnExecutor(networkExecutor, tuple)
             }
         }
 
@@ -288,7 +288,7 @@ class CachedAppAssetLoader(
                 if (bitmap != null) {
                     textView?.visibility = if (isBitmapPlaceholder(bitmap)) View.VISIBLE else View.GONE
 
-                    if (imageView!!.visibility == View.VISIBLE) {
+                    if (imageView?.visibility == View.VISIBLE) {
                         val fadeOutAnimRes = if (isBackground) R.anim.background_fadeout else R.anim.boxart_fadeout
                         val fadeOutAnimation = AnimationUtils.loadAnimation(imageView.context, fadeOutAnimRes)
                         fadeOutAnimation.setAnimationListener(object : Animation.AnimationListener {
@@ -304,10 +304,10 @@ class CachedAppAssetLoader(
                         })
                         imageView.startAnimation(fadeOutAnimation)
                     } else {
-                        imageView!!.setImageBitmap(bitmap.bitmap)
+                        imageView?.setImageBitmap(bitmap.bitmap)
                         val fadeInAnimRes = if (isBackground) R.anim.background_fadein else R.anim.boxart_fadein
-                        imageView.startAnimation(AnimationUtils.loadAnimation(imageView.context, fadeInAnimRes))
-                        imageView.visibility = View.VISIBLE
+                        imageView?.startAnimation(AnimationUtils.loadAnimation(imageView.context, fadeInAnimRes))
+                        imageView?.visibility = View.VISIBLE
                     }
                 }
 

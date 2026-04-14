@@ -605,7 +605,7 @@ class NvHTTP(
 
     @Throws(IOException::class, XmlPullParserException::class, InterruptedException::class)
     fun launchApp(context: ConnectionContext, verb: String, appId: Int, enableHdr: Boolean): Boolean {
-        val streamConfig = context.streamConfig!!
+        val streamConfig = context.streamConfig
         val fps = if (context.isNvidiaServerSoftware && streamConfig.launchRefreshRate > 60)
             0 else streamConfig.launchRefreshRate
 
@@ -624,7 +624,7 @@ class NvHTTP(
             "&mode=${streamConfig.reqWidth}x${streamConfig.reqHeight}x$fps" +
             "&additionalStates=1&sops=${if (enableSops) 1 else 0}" +
             "&resolutionScale=${streamConfig.resolutionScale}" +
-            "&rikey=${bytesToHex(context.riKey!!.encoded)}" +
+            "&rikey=${bytesToHex(context.riKey.encoded)}" +
             "&rikeyid=${context.riKeyId}" +
             (if (!enableHdr) "" else "&hdrMode=1&clientHdrCapVersion=0&clientHdrCapSupportedFlagsInUint32=0&clientHdrCapMetaDataId=NV_STATIC_METADATA_TYPE_1&clientHdrCapDisplayData=0x0x0x0x0x0x0x0x0x0x0") +
             "&localAudioPlayMode=${if (streamConfig.getPlayLocalAudio()) 1 else 0}" +

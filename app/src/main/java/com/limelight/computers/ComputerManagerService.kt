@@ -55,10 +55,10 @@ class ComputerManagerService : Service() {
     private var pollingActive = false
     private val defaultNetworkLock = ReentrantLock()
 
-    private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    private lateinit var networkCallback: ConnectivityManager.NetworkCallback
 
     // 网络诊断和动态超时管理
-    private var networkDiagnostics: NetworkDiagnostics? = null
+    private lateinit var networkDiagnostics: NetworkDiagnostics
     private var timeoutManager: DynamicTimeoutManager? = null
 
     private var discoveryBinder: DiscoveryService.DiscoveryBinder? = null
@@ -118,7 +118,7 @@ class ComputerManagerService : Service() {
             } else {
                 try {
                     if (details.remoteAddress == null) {
-                        val addr = InetAddress.getByName(details.activeAddress!!.address)
+                        val addr = InetAddress.getByName(details.activeAddress?.address)
                         if (addr.isSiteLocalAddress) {
                             populateExternalAddress(details)
                         }
@@ -130,7 +130,7 @@ class ComputerManagerService : Service() {
         }
 
         if ((!newPc || details.state == ComputerDetails.State.ONLINE) && listener != null) {
-            listener!!.notifyComputerUpdated(details)
+            listener?.notifyComputerUpdated(details)
         }
 
         releaseLocalDatabaseReference()
@@ -167,7 +167,7 @@ class ComputerManagerService : Service() {
         fun startPolling(listener: ComputerManagerListener) {
             pollingActive = true
             this@ComputerManagerService.listener = listener
-            discoveryBinder!!.startDiscovery(MDNS_QUERY_PERIOD_MS)
+            discoveryBinder?.startDiscovery(MDNS_QUERY_PERIOD_MS)
 
             synchronized(pollingTuples) {
                 for (tuple in pollingTuples) {
@@ -178,7 +178,7 @@ class ComputerManagerService : Service() {
                     listener.notifyComputerUpdated(tuple.computer)
                     if (tuple.thread == null) {
                         tuple.thread = createPollingThread(tuple)
-                        tuple.thread!!.start()
+                        tuple.thread?.start()
                     }
                 }
             }
@@ -264,7 +264,7 @@ class ComputerManagerService : Service() {
         synchronized(pollingTuples) {
             for (tuple in pollingTuples) {
                 if (tuple.thread != null) {
-                    tuple.thread!!.interrupt()
+                    tuple.thread?.interrupt()
                     tuple.thread = null
                 }
             }
@@ -416,7 +416,7 @@ class ComputerManagerService : Service() {
                     tuple.computer.update(details)
                     if (pollingActive && tuple.thread == null) {
                         tuple.thread = createPollingThread(tuple)
-                        tuple.thread!!.start()
+                        tuple.thread?.start()
                     }
                     return
                 }
@@ -507,7 +507,7 @@ class ComputerManagerService : Service() {
         val startTime = System.currentTimeMillis()
         try {
             val portMatchesActiveAddress = details.state == ComputerDetails.State.ONLINE &&
-                    details.activeAddress != null && address.port == details.activeAddress!!.port
+                    details.activeAddress != null && address.port == details.activeAddress?.port
 
             val http = NvHTTP(
                 address,
@@ -561,7 +561,7 @@ class ComputerManagerService : Service() {
     ) {
         @Volatile
         var complete = false
-        var pollingThread: Thread? = null
+        lateinit var pollingThread: Thread
 
         @Volatile
         var returnedDetails: ComputerDetails? = null
@@ -599,8 +599,8 @@ class ComputerManagerService : Service() {
                             if (tuple.complete && tuple.returnedDetails != null) {
                                 result = tuple.returnedDetails
                                 primaryAddress = tuple.address
-                                result!!.activeAddress = primaryAddress
-                                result!!.addAvailableAddress(primaryAddress)
+                                result?.activeAddress = primaryAddress
+                                result?.addAvailableAddress(primaryAddress)
                                 firstResponseTime = SystemClock.elapsedRealtime()
                                 LimeLog.info("Fast poll: got first response from address ${tuple.address}")
                                 break
@@ -612,11 +612,11 @@ class ComputerManagerService : Service() {
                         for (tuple in tuples) {
                             if (tuple.complete && tuple.returnedDetails != null &&
                                 tuple.address != null && tuple.address != primaryAddress &&
-                                result!!.uuid != null && tuple.returnedDetails!!.uuid != null &&
-                                result!!.uuid == tuple.returnedDetails!!.uuid
+                                result?.uuid != null && tuple.returnedDetails?.uuid != null &&
+                                result?.uuid == tuple.returnedDetails?.uuid
                             ) {
-                                if (!result!!.availableAddresses.contains(tuple.address)) {
-                                    result!!.addAvailableAddress(tuple.address)
+                                if (result?.availableAddresses?.contains(tuple.address) != true) {
+                                    result?.addAvailableAddress(tuple.address)
                                     LimeLog.info("Fast poll: also got response from address ${tuple.address}")
                                 }
                             }
@@ -626,7 +626,7 @@ class ComputerManagerService : Service() {
                         val allComplete = areAllComplete(tuples)
 
                         if (elapsed >= COLLECTION_TIMEOUT_MS || allComplete) {
-                            LimeLog.info("Fast poll: collected ${result!!.availableAddresses.size} available addresses (timeout: ${elapsed >= COLLECTION_TIMEOUT_MS}, all complete: $allComplete)")
+                            LimeLog.info("Fast poll: collected ${result?.availableAddresses?.size} available addresses (timeout: ${elapsed >= COLLECTION_TIMEOUT_MS}, all complete: $allComplete)")
                             break
                         }
                     }
@@ -710,8 +710,8 @@ class ComputerManagerService : Service() {
                 }
             }
         }
-        tuple.pollingThread!!.name = "Parallel Poll - ${tuple.address} - ${tuple.existingDetails.name}"
-        tuple.pollingThread!!.start()
+        tuple.pollingThread.name = "Parallel Poll - ${tuple.address} - ${tuple.existingDetails.name}"
+        tuple.pollingThread.start()
     }
 
     @Throws(InterruptedException::class)
@@ -729,9 +729,9 @@ class ComputerManagerService : Service() {
 
     override fun onCreate() {
         networkDiagnostics = NetworkDiagnostics(this)
-        timeoutManager = DynamicTimeoutManager(networkDiagnostics!!)
+        timeoutManager = DynamicTimeoutManager(networkDiagnostics)
 
-        networkDiagnostics!!.diagnoseNetwork()
+        networkDiagnostics.diagnoseNetwork()
 
         bindService(
             Intent(this, DiscoveryService::class.java),
@@ -778,14 +778,14 @@ class ComputerManagerService : Service() {
             }
 
             val connMgr = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-            connMgr.registerDefaultNetworkCallback(networkCallback!!)
+            connMgr.registerDefaultNetworkCallback(networkCallback)
         }
     }
 
     override fun onDestroy() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             val connMgr = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-            connMgr.unregisterNetworkCallback(networkCallback!!)
+            connMgr.unregisterNetworkCallback(networkCallback)
         }
 
         if (discoveryBinder != null) {
@@ -822,7 +822,7 @@ class ComputerManagerService : Service() {
             } catch (e: InterruptedException) {
                 return false
             }
-            return thread != null && !thread!!.isInterrupted
+            return thread?.isInterrupted == false
         }
 
         private fun getPollingTuple(details: ComputerDetails): PollingTuple? {
@@ -897,7 +897,7 @@ class ComputerManagerService : Service() {
                                 receivedAppList = true
 
                                 if (listener != null && thread != null) {
-                                    listener!!.notifyComputerUpdated(computer)
+                                    listener?.notifyComputerUpdated(computer)
                                 }
                             } else if (appList.isEmpty()) {
                                 LimeLog.warning("Null app list received from ${computer.uuid}")
@@ -914,8 +914,8 @@ class ComputerManagerService : Service() {
                     } while (waitPollingDelay())
                 }
             }
-            thread!!.name = "App list polling thread for ${computer.name}"
-            thread!!.start()
+            thread?.name = "App list polling thread for ${computer.name}"
+            thread?.start()
         }
 
         fun stop() {

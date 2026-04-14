@@ -48,7 +48,7 @@ class ShortcutTrampoline : Activity() {
                 localBinder.waitForReady()
                 managerBinder = localBinder
 
-                computer = managerBinder!!.getComputer(uuidString!!)
+                computer = managerBinder?.getComputer(uuidString!!)
 
                 if (computer == null) {
                     Dialog.displayDialog(this@ShortcutTrampoline,
@@ -66,9 +66,9 @@ class ShortcutTrampoline : Activity() {
                     return@Thread
                 }
 
-                managerBinder!!.invalidateStateForComputer(computer!!.uuid!!)
+                managerBinder?.invalidateStateForComputer(computer?.uuid!!)
 
-                managerBinder!!.startPolling(object : ComputerManagerListener {
+                managerBinder?.startPolling(object : ComputerManagerListener {
                     override fun notifyComputerUpdated(details: ComputerDetails) {
                         if (!details.uuid.equals(uuidString, ignoreCase = true)) return
 
@@ -76,7 +76,7 @@ class ShortcutTrampoline : Activity() {
                             try {
                                 val comp = computer ?: return
                                 WakeOnLanSender.sendWolPacket(comp)
-                                managerBinder!!.invalidateStateForComputer(comp.uuid!!)
+                                managerBinder?.invalidateStateForComputer(comp.uuid!!)
                                 return
                             } catch (e: IOException) {
                                 e.printStackTrace()
@@ -95,7 +95,7 @@ class ShortcutTrampoline : Activity() {
 
                                 if (details.state == ComputerDetails.State.ONLINE && details.pairState == PairingManager.PairState.PAIRED) {
                                     if (app != null) {
-                                        if (details.runningGameId == 0 || details.runningGameId == app!!.appId) {
+                                        if (details.runningGameId == 0 || details.runningGameId == app?.appId) {
                                             intentStack.add(ServerHelper.createStartIntent(this@ShortcutTrampoline, app!!, details, managerBinder!!))
                                             finish()
                                             startActivities(intentStack.toTypedArray())
@@ -147,7 +147,7 @@ class ShortcutTrampoline : Activity() {
                                 }
 
                                 if (managerBinder != null) {
-                                    managerBinder!!.stopPolling()
+                                    managerBinder?.stopPolling()
                                     unbindService(this@ShortcutTrampoline.serviceConnection)
                                     managerBinder = null
                                 }
@@ -259,7 +259,7 @@ class ShortcutTrampoline : Activity() {
             return
         }
 
-        if (uuidString == null || uuidString!!.isEmpty()) {
+        if (uuidString == null || uuidString?.isEmpty() == true) {
             val foundComputer = dbManager.getComputerByName(nameString!!)
 
             if (foundComputer == null) {
@@ -279,9 +279,9 @@ class ShortcutTrampoline : Activity() {
                     appIdString.toInt(),
                     intent.getBooleanExtra(Game.EXTRA_APP_HDR, false))
 
-            val cachedApp = getLastNvAppFromPreferences(app!!.appId, uuidString!!)
+            val cachedApp = getLastNvAppFromPreferences((app?.appId ?: 0), uuidString!!)
             if (cachedApp?.cmdList != null) {
-                app!!.setCmdList(cachedApp.cmdList.toString())
+                app?.setCmdList(cachedApp.cmdList.toString())
             }
         } else if (appNameString != null && appNameString.isNotEmpty()) {
             try {
@@ -318,7 +318,7 @@ class ShortcutTrampoline : Activity() {
 
                 val cachedApp = getLastNvAppFromPreferences(appId, uuidString!!)
                 if (cachedApp?.cmdList != null) {
-                    app!!.setCmdList(cachedApp.cmdList.toString())
+                    app?.setCmdList(cachedApp.cmdList.toString())
                 }
             } catch (e: IOException) {
                 Dialog.displayDialog(this@ShortcutTrampoline,
@@ -351,7 +351,7 @@ class ShortcutTrampoline : Activity() {
         Dialog.closeDialogs()
 
         if (managerBinder != null) {
-            managerBinder!!.stopPolling()
+            managerBinder?.stopPolling()
             unbindService(serviceConnection)
             managerBinder = null
         }

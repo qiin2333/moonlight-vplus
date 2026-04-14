@@ -158,9 +158,9 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     private var lastShakeTime = 0L
 
     // Helpers
-    private var shortcutHelper: ShortcutHelper? = null
+    private lateinit var shortcutHelper: ShortcutHelper
     private var easyTierController: EasyTierController? = null
-    private var analyticsManager: AnalyticsManager? = null
+    private lateinit var analyticsManager: AnalyticsManager
     private var shakeDetector: ShakeDetector? = null
     private var currentAddressDialog: AddressSelectionDialog? = null
     private var backgroundImageRefreshReceiver: BroadcastReceiver? = null
@@ -173,7 +173,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     private val refreshHandler = Handler(Looper.getMainLooper())
     private var pendingRefreshRunnable: Runnable? = null
 
-    var clientName: String? = null
+    lateinit var clientName: String
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, binder: IBinder) {
@@ -271,7 +271,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             unbindService(serviceConnection)
         }
         if (currentAddressDialog != null) {
-            currentAddressDialog!!.dismiss()
+            currentAddressDialog?.dismiss()
             currentAddressDialog = null
         }
         unregisterBackgroundReceiver()
@@ -320,7 +320,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         UiHelper.setLocale(this)
 
         analyticsManager = AnalyticsManager.getInstance(this)
-        analyticsManager!!.logAppLaunch()
+        analyticsManager.logAppLaunch()
         UpdateManager.checkForUpdatesOnStartup(this)
 
         bindService(Intent(this, ComputerManagerService::class.java), serviceConnection, Service.BIND_AUTO_CREATE)
@@ -567,7 +567,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         val bitmap = bitmapLruCache.get(getBackgroundImageUrl())
 
         if (bitmap == null) {
-            if (backgroundImageView != null && backgroundImageView!!.drawable != null) {
+            if (backgroundImageView != null && backgroundImageView?.drawable != null) {
                 showToast(getString(R.string.downloading_image_please_wait))
                 downloadAndSaveImage()
             } else {
@@ -639,13 +639,13 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
     private fun initShakeDetector() {
         shakeDetector = ShakeDetector(this)
-        shakeDetector!!.setSensitivity(ShakeDetector.SENSITIVITY_MEDIUM)
+        shakeDetector?.setSensitivity(ShakeDetector.SENSITIVITY_MEDIUM)
     }
 
     private fun startShakeDetector() {
         if (shakeDetector == null) return
         try {
-            shakeDetector!!.start(getSystemService(SENSOR_SERVICE) as SensorManager)
+            shakeDetector?.start(getSystemService(SENSOR_SERVICE) as SensorManager)
         } catch (e: Exception) {
             LimeLog.warning("shakeDetector start failed: " + e.message)
         }
@@ -654,7 +654,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     private fun stopShakeDetector() {
         if (shakeDetector == null) return
         try {
-            shakeDetector!!.stop()
+            shakeDetector?.stop()
         } catch (e: Exception) {
             LimeLog.warning("shakeDetector stop failed: " + e.message)
         }
@@ -760,12 +760,12 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     private fun startComputerUpdates() {
         if (managerBinder != null && !runningPolling && inForeground) {
             freezeUpdates = false
-            managerBinder!!.startPolling(object : ComputerManagerListener {
+            managerBinder?.startPolling(object : ComputerManagerListener {
                 override fun notifyComputerUpdated(details: ComputerDetails) {
                     if (!freezeUpdates) {
                         runOnUiThread { updateComputer(details) }
                         if (details.pairState == PairState.PAIRED) {
-                            shortcutHelper!!.createAppViewShortcutForOnlineHost(details)
+                            shortcutHelper.createAppViewShortcutForOnlineHost(details)
                         }
                     }
                 }
@@ -778,10 +778,10 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         if (managerBinder == null || !runningPolling) return
 
         freezeUpdates = true
-        managerBinder!!.stopPolling()
+        managerBinder?.stopPolling()
 
         if (wait) {
-            managerBinder!!.waitForPollingStopped()
+            managerBinder?.waitForPollingStopped()
         }
         runningPolling = false
     }
@@ -840,14 +840,14 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         noPcFoundLayout?.visibility = View.INVISIBLE
 
         if (pcListView != null && !isFirstLoad) {
-            pcListView!!.scheduleLayoutAnimation()
+            pcListView?.scheduleLayoutAnimation()
         }
     }
 
     private fun removeComputer(details: ComputerDetails) {
         if (PcGridAdapter.ADD_COMPUTER_UUID == details.uuid) return
 
-        managerBinder!!.removeComputer(details)
+        managerBinder?.removeComputer(details)
         DiskAssetLoader(this).deleteAssetsForComputer(details.uuid!!)
 
         getSharedPreferences(AppView.HIDDEN_APPS_PREF_FILENAME, MODE_PRIVATE)
@@ -858,7 +858,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         for (i in 0 until pcGridAdapter.rawCount) {
             val computer = pcGridAdapter.getRawItem(i)
             if (!PcGridAdapter.isAddComputerCard(computer) && details == computer.details) {
-                shortcutHelper!!.disableComputerShortcut(details, getString(R.string.scut_deleted_pc))
+                shortcutHelper.disableComputerShortcut(details, getString(R.string.scut_deleted_pc))
                 pcGridAdapter.removeComputer(computer)
                 pcGridAdapter.notifyDataSetChanged()
 
@@ -1038,8 +1038,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 val httpConn = NvHTTP(
                         ServerHelper.getCurrentAddressFromComputer(computer),
                         computer.httpsPort,
-                        managerBinder!!.getUniqueId(),
-                        clientName!!,
+                        (managerBinder?.getUniqueId() ?: ""),
+                        clientName,
                         computer.serverCert,
                         PlatformBinding.getCryptoProvider(this)
                 )
@@ -1065,12 +1065,12 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                             message = getString(R.string.pair_already_in_progress)
                         PairState.PAIRED -> {
                             success = true
-                            managerBinder!!.getComputer(computer.uuid!!)!!.serverCert = pm.pairedCert
+                            managerBinder?.getComputer(computer.uuid!!)!!.serverCert = pm.pairedCert
                             getSharedPreferences("pair_name_map", MODE_PRIVATE)
                                     .edit()
                                     .putString(computer.uuid, result.pairName)
                                     .apply()
-                            managerBinder!!.invalidateStateForComputer(computer.uuid!!)
+                            managerBinder?.invalidateStateForComputer(computer.uuid!!)
                         }
                         else -> {}
                     }
@@ -1165,13 +1165,13 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 // Add the computer first
                 val addDetails = ComputerDetails()
                 addDetails.manualAddress = ComputerDetails.AddressTuple(host, finalPort)
-                val added = managerBinder != null && managerBinder!!.addComputerBlocking(addDetails)
+                val added = managerBinder?.addComputerBlocking(addDetails) == true
                 if (!added) {
                     message = getString(R.string.addpc_fail)
                 } else {
                     // addComputerBlocking fills addDetails in-place (uuid, httpsPort, etc.)
                     // Use getComputer to get the latest state from pollingTuples
-                    var computer = managerBinder!!.getComputer(addDetails.uuid!!)
+                    var computer = managerBinder?.getComputer(addDetails.uuid!!)
                     if (computer == null) {
                         computer = addDetails
                     }
@@ -1179,8 +1179,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                     val httpConn = NvHTTP(
                         ServerHelper.getCurrentAddressFromComputer(computer),
                         computer.httpsPort,
-                        managerBinder!!.getUniqueId(),
-                        clientName!!,
+                        (managerBinder?.getUniqueId() ?: ""),
+                        clientName,
                         computer.serverCert,
                         PlatformBinding.getCryptoProvider(this)
                     )
@@ -1201,12 +1201,12 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                             PairState.PAIRED -> {
                                 success = true
                                 pairedComputer = computer
-                                managerBinder!!.getComputer(computer.uuid!!)!!.serverCert = pm.pairedCert
+                                managerBinder?.getComputer(computer.uuid!!)!!.serverCert = pm.pairedCert
                                 getSharedPreferences("pair_name_map", MODE_PRIVATE)
                                     .edit()
                                     .putString(computer.uuid, result.pairName)
                                     .apply()
-                                managerBinder!!.invalidateStateForComputer(computer.uuid!!)
+                                managerBinder?.invalidateStateForComputer(computer.uuid!!)
                             }
                             else -> {}
                         }
@@ -1243,9 +1243,9 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             val obj = pcGridAdapter.getItem(i) as ComputerObject
             if (PcGridAdapter.isAddComputerCard(obj)) continue
             val d = obj.details
-            if (d.manualAddress != null && host == d.manualAddress!!.address) return d
-            if (d.localAddress != null && host == d.localAddress!!.address) return d
-            if (d.remoteAddress != null && host == d.remoteAddress!!.address) return d
+            if (d.manualAddress != null && host == d.manualAddress?.address) return d
+            if (d.localAddress != null && host == d.localAddress?.address) return d
+            if (d.remoteAddress != null && host == d.remoteAddress?.address) return d
         }
         return null
     }
@@ -1292,7 +1292,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                         ServerHelper.getCurrentAddressFromComputer(computer),
                         computer.httpsPort,
                         binder.getUniqueId(),
-                        clientName!!,
+                        clientName,
                         computer.serverCert,
                         PlatformBinding.getCryptoProvider(this)
                 )
@@ -1340,8 +1340,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         i.putExtra(AppView.SHOW_HIDDEN_APPS_EXTRA, showHiddenGames)
 
         if (computer.activeAddress != null) {
-            i.putExtra(AppView.SELECTED_ADDRESS_EXTRA, computer.activeAddress!!.address)
-            i.putExtra(AppView.SELECTED_PORT_EXTRA, computer.activeAddress!!.port)
+            i.putExtra(AppView.SELECTED_ADDRESS_EXTRA, computer.activeAddress?.address)
+            i.putExtra(AppView.SELECTED_PORT_EXTRA, computer.activeAddress?.port)
         }
 
         startActivity(i)
@@ -1779,7 +1779,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         }
 
         // 更新数据库
-        managerBinder!!.updateComputer(details)
+        managerBinder?.updateComputer(details)
 
         // 显示Toast提示用户当前状态
         if (details.ipv6Disabled) {
@@ -1832,10 +1832,10 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
         listView.alpha = 0f
         listView.postDelayed({
-            if (isFirstLoad && pcListView != null && pcListView!!.alpha == 0f) {
+            if (isFirstLoad && pcListView != null && pcListView?.alpha == 0f) {
                 pcGridAdapter.notifyDataSetChanged()
-                pcListView!!.scheduleLayoutAnimation()
-                pcListView!!.animate().alpha(1f).setDuration(200).start()
+                pcListView?.scheduleLayoutAnimation()
+                pcListView?.animate()?.alpha(1f)?.setDuration(200)?.start()
                 isFirstLoad = false
             }
         }, 250)
@@ -1937,7 +1937,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 .setNegativeButton(R.string.about_dialog_close) { d, _ -> d.dismiss() }
                 .create()
         if (dialog.window != null) {
-            dialog.window!!.setBackgroundDrawableResource(R.drawable.app_dialog_bg_cute)
+            dialog.window?.setBackgroundDrawableResource(R.drawable.app_dialog_bg_cute)
         }
         dialog.show()
     }
@@ -1956,7 +1956,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         try {
             val info = packageManager.getPackageInfo(packageName, 0)
             if (info.applicationInfo != null) {
-                return info.applicationInfo!!.loadLabel(packageManager).toString()
+                return info.applicationInfo?.loadLabel(packageManager).toString()
             }
         } catch (ignored: PackageManager.NameNotFoundException) {
         }
@@ -2004,7 +2004,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == VPN_PERMISSION_REQUEST_CODE && easyTierController != null) {
-            easyTierController!!.handleVpnPermissionResult(resultCode)
+            easyTierController?.handleVpnPermissionResult(resultCode)
         } else if (requestCode == UpdateManager.INSTALL_PERMISSION_REQUEST_CODE) {
             UpdateManager.onInstallPermissionResult(this)
         }
