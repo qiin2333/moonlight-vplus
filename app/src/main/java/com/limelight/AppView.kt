@@ -1246,7 +1246,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
 
                 // 如果从视图获取失败,尝试从缓存获取
                 if (appBitmap == null && appGridAdapter != null && appGridAdapter!!.getLoader() != null) {
-                    val tuple = CachedAppAssetLoader.LoaderTuple(computer, app.app)
+                    val tuple = CachedAppAssetLoader.LoaderTuple(computer!!, app.app)
                     val cachedBitmap = appGridAdapter!!.getLoader()?.getBitmapFromCache(tuple)
                     if (cachedBitmap != null) {
                         appBitmap = cachedBitmap.bitmap

@@ -260,7 +260,7 @@ class ShortcutTrampoline : Activity() {
         }
 
         if (uuidString == null || uuidString!!.isEmpty()) {
-            val foundComputer = dbManager.getComputerByName(nameString)
+            val foundComputer = dbManager.getComputerByName(nameString!!)
 
             if (foundComputer == null) {
                 Dialog.displayDialog(this@ShortcutTrampoline,

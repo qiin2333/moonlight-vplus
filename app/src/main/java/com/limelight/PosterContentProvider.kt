@@ -57,7 +57,7 @@ class PosterContentProvider : ContentProvider() {
     }
 
     override fun onCreate(): Boolean {
-        diskAssetLoader = DiskAssetLoader(context)
+        diskAssetLoader = DiskAssetLoader(context!!)
         return true
     }
 

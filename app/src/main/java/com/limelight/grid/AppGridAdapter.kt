@@ -125,7 +125,7 @@ class AppGridAdapter(
     }
 
     override fun populateView(parentView: View, imgView: ImageView?, spinnerView: View?, txtView: TextView?, overlayView: ImageView?, obj: AppView.AppObject) {
-        loader?.populateImageView(obj, imgView, txtView, false) {
+        loader?.populateImageView(obj, imgView!!, txtView, false) {
             try {
                 val tuple = CachedAppAssetLoader.LoaderTuple(computer, obj.app)
                 val scaledBitmap = loader?.getBitmapFromCache(tuple)

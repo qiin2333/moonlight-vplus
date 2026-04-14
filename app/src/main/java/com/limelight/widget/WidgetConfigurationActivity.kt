@@ -43,7 +43,7 @@ class WidgetConfigurationActivity : Activity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
 
         val dbManager = ComputerDatabaseManager(this)
-        val computers = dbManager.allComputers
+        val computers = dbManager.getAllComputers()
         dbManager.close()
 
         recyclerView.adapter = ComputerAdapter(computers)
