@@ -687,15 +687,13 @@ class AppView : Activity(), AdapterFragmentCallbacks {
                 useVdd = true
             } else if (selectedId >= 0 && selectedId < (availableDisplays?.size ?: 0)) {
                 val selectedDisplay = availableDisplays!![selectedId]
-                displayGuid = if (selectedDisplay.guid != null && selectedDisplay.guid.isNotEmpty())
+                displayGuid = if (selectedDisplay.guid.isNotEmpty())
                     selectedDisplay.guid else selectedDisplay.name
             }
         }
 
         // 设置useVdd标志
-        if (computer != null) {
-            computer?.useVdd = useVdd
-        }
+        computer?.useVdd = useVdd
 
         doStartStream(app, displayGuid, useVdd)
     }
@@ -786,7 +784,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
                 val displays = httpConn.getDisplays()
 
                 runOnUiThread {
-                    if (displays != null && displays.size > 0) {
+                    if (displays.isNotEmpty()) {
                         updateDisplaySelectionUI(displays)
                     } else {
                         displaySelectionInfo?.visibility = View.GONE
@@ -813,7 +811,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         // 添加所有物理显示器选项
         for (i in displays.indices) {
             val display = displays[i]
-            val displayName = if (display.name != null && display.name.isNotEmpty())
+            val displayName = if (display.name.isNotEmpty())
                 display.name else "Display " + (display.index + 1)
             LimeLog.info("Display " + (display.index + 1) + ": " + display.name + " (guid: " + display.guid + ")")
 
@@ -1423,9 +1421,9 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         receiveAdapterView(listView)
     }
 
-    override fun receiveAbsListView(view: View) {
+    override fun receiveAbsListView(gridView: View) {
         // Implementation for the generalized interface method
-        receiveAdapterView(view)
+        receiveAdapterView(gridView)
     }
 
     // New generalized receiver to accept RecyclerView or legacy AbsListView
@@ -1472,7 +1470,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
             rv.postDelayed({
                 if (appGridAdapter != null && (appGridAdapter?.count ?: 0) > 0) {
                     val holder = rv.findViewHolderForAdapterPosition(0)
-                    if (holder != null && holder.itemView != null) {
+                    if (holder != null) {
                         // 确保itemView已经完成布局测量
                         if (holder.itemView.width > 0 && holder.itemView.height > 0) {
                             holder.itemView.requestFocus()

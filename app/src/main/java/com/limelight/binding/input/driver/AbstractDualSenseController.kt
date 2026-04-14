@@ -67,7 +67,7 @@ abstract class AbstractDualSenseController(
                     }
 
                     val lastMillis = SystemClock.uptimeMillis()
-                    if (connection == null || inEndpt == null) {
+                    if (inEndpt == null) {
                         Log.w("DualSenseController", "Connection or endpoint is null")
                         res = -1
                         break

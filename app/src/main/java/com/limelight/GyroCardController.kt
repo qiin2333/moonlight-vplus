@@ -37,11 +37,6 @@ class GyroCardController(private val game: Game) {
             isChecked = isAnyGyroOn
             setOnCheckedChangeListener { buttonView, isChecked ->
                 val ch = game.controllerHandler
-                if (ch == null) {
-                    Toast.makeText(game, game.getString(R.string.gyro_controller_access_failed), Toast.LENGTH_SHORT).show()
-                    buttonView.isChecked = !isChecked
-                    return@setOnCheckedChangeListener
-                }
                 val mouseMode = mouseModeSwitch?.isChecked ?: false
                 if (isChecked) {
                     if (mouseMode) ch.setGyroToMouseEnabled(true)
@@ -59,11 +54,6 @@ class GyroCardController(private val game: Game) {
             if (!gyroOn) return@setOnCheckedChangeListener
 
             val ch = game.controllerHandler
-            if (ch == null) {
-                Toast.makeText(game, game.getString(R.string.gyro_controller_access_failed), Toast.LENGTH_SHORT).show()
-                buttonView.isChecked = !isChecked
-                return@setOnCheckedChangeListener
-            }
 
             if (isChecked) {
                 ch.setGyroToMouseEnabled(true)

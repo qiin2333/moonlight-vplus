@@ -293,8 +293,9 @@ class ConnectionCallbackHandler(private val game: Game) {
             UiHelper.notifyStreamEnded(game)
 
             // Save current settings for this app before stopping connection
-            if (game.appSettingsManager != null && game.computerUuid != null && game.app != null) {
-                game.appSettingsManager?.saveAppLastSettings(game.computerUuid!!, game.app!!, game.prefConfig)
+            val uuid = game.computerUuid
+            if (uuid != null) {
+                game.appSettingsManager?.saveAppLastSettings(uuid, game.app, game.prefConfig)
             }
 
             // Stop may take a few hundred ms to do some network I/O to tell

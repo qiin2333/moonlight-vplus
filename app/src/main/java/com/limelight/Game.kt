@@ -934,10 +934,8 @@ class Game : Activity(), SurfaceHolder.Callback,
                 notificationOverlayManager.setHiding(false)
                 notificationOverlayManager.applyVisibility()
                 microphoneManager?.setEnableMic(prefConfig.enableMic)
-                if (controllerHandler != null) {
-                    controllerHandler.enableSensors()
-                    controllerHandler.onSensorsReenabled()
-                }
+                controllerHandler.enableSensors()
+                controllerHandler.onSensorsReenabled()
                 UiHelper.notifyStreamExitingPiP(this)
             }
         }
@@ -1089,6 +1087,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     @RequiresApi(Build.VERSION_CODES.N)
+    @Deprecated("Deprecated in Java")
     override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean) {
         super.onMultiWindowModeChanged(isInMultiWindowMode)
         if (isInMultiWindowMode) {
@@ -1120,10 +1119,8 @@ class Game : Activity(), SurfaceHolder.Callback,
             MoonBridge.setBassEnergyListener(null)
         }
 
-        if (keyboardInputHandler.keyboardTranslator != null) {
-            val inputManager = getSystemService(Context.INPUT_SERVICE) as InputManager
-            inputManager.unregisterInputDeviceListener(keyboardInputHandler.keyboardTranslator)
-        }
+        val inputManager = getSystemService(Context.INPUT_SERVICE) as InputManager
+        inputManager.unregisterInputDeviceListener(keyboardInputHandler.keyboardTranslator)
 
         lowLatencyWifiLock?.release()
         highPerfWifiLock?.release()
@@ -1248,8 +1245,8 @@ class Game : Activity(), SurfaceHolder.Callback,
             message = if (message != null) "$message [mic]$micStats" else micStats
         }
 
-        val surfaceFlingerStats = (decoderRenderer?.getSurfaceFlingerStats() ?: "")
-        if (surfaceFlingerStats != null) {
+        val surfaceFlingerStats = decoderRenderer?.getSurfaceFlingerStats() ?: ""
+        if (surfaceFlingerStats.isNotEmpty()) {
             message = if (message != null) "$message\n$surfaceFlingerStats" else surfaceFlingerStats
         }
 
@@ -1545,8 +1542,6 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     private fun updateStreamViewSize(width: Int, height: Int, forceFixedSize: Boolean) {
-        if (streamView == null) return
-
         val screenSize = Point()
         currentTargetDisplay.getRealSize(screenSize)
 
@@ -1731,6 +1726,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         keyboardInputHandler.keyboardEvent(buttonDown, keyCode)
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onSystemUiVisibilityChange(visibility: Int) {
         if (!connected) return
         if ((visibility and View.SYSTEM_UI_FLAG_FULLSCREEN) == 0 ||

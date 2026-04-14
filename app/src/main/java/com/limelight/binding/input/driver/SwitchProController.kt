@@ -68,7 +68,7 @@ class SwitchProController(
     private fun isJoyConRight(): Boolean = device.productId == JOYCON_RIGHT_PID
 
     private fun sendData(data: ByteArray, size: Int): Boolean {
-        if (outEndpt == null || connection == null) return false
+        if (outEndpt == null) return false
         return connection.bulkTransfer(outEndpt, data, size, 100) == size
     }
 
@@ -81,7 +81,7 @@ class SwitchProController(
             val buffer = ByteArray(PACKET_SIZE)
             var retries = 0
             do {
-                if (inEndpt == null || connection == null) return false
+                if (inEndpt == null) return false
                 val res = connection.bulkTransfer(inEndpt, buffer, buffer.size, 100)
                 if (res > 0 && (buffer[0].toInt() and 0xFF) == 0x81 && (buffer[1].toInt() and 0xFF) == id.toInt() and 0xFF) {
                     return true
@@ -109,7 +109,7 @@ class SwitchProController(
 
             var retries = 0
             do {
-                if (inEndpt == null || connection == null) return false
+                if (inEndpt == null) return false
                 val res = connection.bulkTransfer(inEndpt, buffer, buffer.size, 100)
                 if (res < 0 || res < 15 || buffer[0] != 0x21.toByte() || buffer[14] != subcommand) {
                     retries++
@@ -318,7 +318,7 @@ class SwitchProController(
                 do {
                     if (stopped || Thread.currentThread().isInterrupted) break
                     val lastMillis = SystemClock.uptimeMillis()
-                    if (inEndpt == null || connection == null) break
+                    if (inEndpt == null) break
                     res = connection.bulkTransfer(inEndpt, buffer, buffer.size, 1000)
                     if (res == 0) res = -1
                     if (res == -1 && SystemClock.uptimeMillis() - lastMillis < 1000) {
@@ -415,7 +415,7 @@ class SwitchProController(
     }
 
     override fun rumble(lowFreqMotor: Short, highFreqMotor: Short) {
-        if (outEndpt == null || connection == null) return
+        if (outEndpt == null) return
 
         val data = ByteArray(10)
         data[0] = 0x10

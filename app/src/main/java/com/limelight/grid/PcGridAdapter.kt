@@ -162,8 +162,8 @@ class PcGridAdapter(
             if (!lhsIsAdd && rhsIsAdd) return@sortWith -1
             if (lhsIsAdd) return@sortWith 0
 
-            val lhsOnline = lhs.details != null && lhs.details.state == ComputerDetails.State.ONLINE
-            val rhsOnline = rhs.details != null && rhs.details.state == ComputerDetails.State.ONLINE
+            val lhsOnline = lhs.details.state == ComputerDetails.State.ONLINE
+            val rhsOnline = rhs.details.state == ComputerDetails.State.ONLINE
             if (lhsOnline && !rhsOnline) return@sortWith -1
             if (!lhsOnline && rhsOnline) return@sortWith 1
 
@@ -174,9 +174,7 @@ class PcGridAdapter(
                 if (!lhsUnpaired && rhsUnpaired) return@sortWith -1
             }
 
-            if (lhs.details != null) {
-                (lhs.details.name ?: "").lowercase().compareTo((rhs.details.name ?: "").lowercase())
-            } else 0
+            (lhs.details.name ?: "").lowercase().compareTo((rhs.details.name ?: "").lowercase())
         }
     }
 
@@ -240,7 +238,7 @@ class PcGridAdapter(
 
     @SuppressLint("ClickableViewAccessibility")
     private fun setupImageTouchListener(imageView: ImageView, itemView: View, computer: PcView.ComputerObject) {
-        if (isAddComputerCard(computer) || avatarClickListener == null || computer.details == null) {
+        if (isAddComputerCard(computer) || avatarClickListener == null) {
             imageView.setOnTouchListener(null)
             imageView.isClickable = false
             return
@@ -365,7 +363,7 @@ class PcGridAdapter(
         private const val OFFLINE_TEXT_COLOR = 0xFF8E8E93.toInt()
 
         fun isAddComputerCard(obj: PcView.ComputerObject?): Boolean {
-            return obj != null && obj.details != null && ADD_COMPUTER_UUID == obj.details.uuid
+            return obj != null && ADD_COMPUTER_UUID == obj.details.uuid
         }
 
         private fun isUnpairedComputer(obj: PcView.ComputerObject?): Boolean {

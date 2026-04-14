@@ -206,15 +206,15 @@ object UpdateManager {
                             val isRootApk = name.lowercase().contains("root")
                             if (isRootApk == BuildConfig.ROOT_BUILD) {
                                 apkName = name
-                                apkUrl = a.optString("browser_download_url", null)
+                                apkUrl = a.opt("browser_download_url") as? String
                                 break
                             }
                         }
                         // 若没匹配到，退而求其次取第一个APK
                         if (apkUrl == null && apkAssets.isNotEmpty()) {
                             val a = apkAssets[0]
-                            apkName = a.optString("name", null)
-                            apkUrl = a.optString("browser_download_url", null)
+                            apkName = a.opt("name") as? String
+                            apkUrl = a.opt("browser_download_url") as? String
                         }
                     }
 

@@ -852,16 +852,14 @@ class StreamSettings : AppCompatActivity() {
 
         override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
             val view = super.onCreateView(inflater, container, savedInstanceState)
-            if (view != null) {
-                // 确保列表背景透明
-                view.setBackgroundColor(Color.TRANSPARENT)
+            // 确保列表背景透明
+            view.setBackgroundColor(Color.TRANSPARENT)
 
-                // 减少顶部间距，让设置内容更贴近导航栏
-                val topPadding = view.paddingTop
-                val reducedPadding = Math.max(0, topPadding - (16 * resources.displayMetrics.density).toInt())
-                view.setPadding(view.paddingLeft, reducedPadding,
-                        view.paddingRight, view.paddingBottom)
-            }
+            // 减少顶部间距，让设置内容更贴近导航栏
+            val topPadding = view.paddingTop
+            val reducedPadding = Math.max(0, topPadding - (16 * resources.displayMetrics.density).toInt())
+            view.setPadding(view.paddingLeft, reducedPadding,
+                    view.paddingRight, view.paddingBottom)
             UiHelper.applyStatusBarPadding(view)
             return view
         }
@@ -1197,35 +1195,39 @@ class StreamSettings : AppCompatActivity() {
                 @Suppress("UNUSED_VARIABLE")
 
                 if (avcDecoder != null) {
-                    val avcWidthRange = avcDecoder.getCapabilitiesForType("video/avc").videoCapabilities.supportedWidths
+                    val avcWidthRange = avcDecoder.getCapabilitiesForType("video/avc").videoCapabilities?.supportedWidths
 
-                    LimeLog.info("AVC supported width range: ${avcWidthRange.lower} - ${avcWidthRange.upper}")
+                    if (avcWidthRange != null) {
+                        LimeLog.info("AVC supported width range: ${avcWidthRange.lower} - ${avcWidthRange.upper}")
 
-                    // If 720p is not reported as supported, ignore all results from this API
-                    if (avcWidthRange.contains(1280)) {
-                        if (avcWidthRange.contains(3840) && maxSupportedResW < 3840) {
-                            maxSupportedResW = 3840
-                        } else if (avcWidthRange.contains(1920) && maxSupportedResW < 1920) {
-                            maxSupportedResW = 1920
-                        } else if (maxSupportedResW < 1280) {
-                            maxSupportedResW = 1280
+                        // If 720p is not reported as supported, ignore all results from this API
+                        if (avcWidthRange.contains(1280)) {
+                            if (avcWidthRange.contains(3840) && maxSupportedResW < 3840) {
+                                maxSupportedResW = 3840
+                            } else if (avcWidthRange.contains(1920) && maxSupportedResW < 1920) {
+                                maxSupportedResW = 1920
+                            } else if (maxSupportedResW < 1280) {
+                                maxSupportedResW = 1280
+                            }
                         }
                     }
                 }
 
                 if (hevcDecoder != null) {
-                    val hevcWidthRange = hevcDecoder.getCapabilitiesForType("video/hevc").videoCapabilities.supportedWidths
+                    val hevcWidthRange = hevcDecoder.getCapabilitiesForType("video/hevc").videoCapabilities?.supportedWidths
 
-                    LimeLog.info("HEVC supported width range: ${hevcWidthRange.lower} - ${hevcWidthRange.upper}")
+                    if (hevcWidthRange != null) {
+                        LimeLog.info("HEVC supported width range: ${hevcWidthRange.lower} - ${hevcWidthRange.upper}")
 
-                    // If 720p is not reported as supported, ignore all results from this API
-                    if (hevcWidthRange.contains(1280)) {
-                        if (hevcWidthRange.contains(3840) && maxSupportedResW < 3840) {
-                            maxSupportedResW = 3840
-                        } else if (hevcWidthRange.contains(1920) && maxSupportedResW < 1920) {
-                            maxSupportedResW = 1920
-                        } else if (maxSupportedResW < 1280) {
-                            maxSupportedResW = 1280
+                        // If 720p is not reported as supported, ignore all results from this API
+                        if (hevcWidthRange.contains(1280)) {
+                            if (hevcWidthRange.contains(3840) && maxSupportedResW < 3840) {
+                                maxSupportedResW = 3840
+                            } else if (hevcWidthRange.contains(1920) && maxSupportedResW < 1920) {
+                                maxSupportedResW = 1920
+                            } else if (maxSupportedResW < 1280) {
+                                maxSupportedResW = 1280
+                            }
                         }
                     }
                 }

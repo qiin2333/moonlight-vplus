@@ -424,7 +424,7 @@ class CachedAppAssetLoader(
 
             if (loaderTask != null && !loaderTask.isCancelled) {
                 val taskTuple = loaderTask.tuple
-                if (taskTuple == null || taskTuple != tuple) {
+                if (taskTuple != tuple) {
                     loaderTask.cancel(true)
                 } else {
                     return false

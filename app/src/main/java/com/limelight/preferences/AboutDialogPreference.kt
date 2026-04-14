@@ -25,6 +25,7 @@ class AboutDialogPreference : Preference {
 
     constructor(context: Context) : super(context)
 
+    @Deprecated("Deprecated in Java")
     override fun onClick() {
         showAboutDialog()
     }

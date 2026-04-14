@@ -601,8 +601,6 @@ class PerformanceOverlayManager(
                     layoutParams.gravity = Gravity.LEFT or Gravity.BOTTOM
                 PreferenceConfiguration.PerfOverlayPosition.BOTTOM_RIGHT ->
                     layoutParams.gravity = Gravity.RIGHT or Gravity.BOTTOM
-                else ->
-                    layoutParams.gravity = Gravity.CENTER_HORIZONTAL or Gravity.TOP
             }
             layoutParams.leftMargin = 0
             layoutParams.topMargin = 0

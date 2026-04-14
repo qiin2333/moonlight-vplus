@@ -56,7 +56,7 @@ class KeyboardUIController(
         this.prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
 
         // Inflate the keyboard layout into the container if it doesn't already have it
-        var view = parentContainer.findViewById<View?>(R.id.layer_6_keyboard)
+        var view = parentContainer.findViewById<View>(R.id.layer_6_keyboard)
         if (view == null) {
             view = LayoutInflater.from(context).inflate(
                 R.layout.layer_6_keyboard,
@@ -71,10 +71,10 @@ class KeyboardUIController(
         opacitySeekbar = keyboardLayout.findViewById<SeekBar>(R.id.float_keyboard_seekbar)
         keyPopup = keyboardLayout.findViewById<TextView?>(R.id.keyboard_key_popup)
 
-        layoutMain = keyboardLayout.findViewById<View?>(R.id.layout_main)
-        layoutNav = keyboardLayout.findViewById<View?>(R.id.layout_nav)
-        layoutNum = keyboardLayout.findViewById<View?>(R.id.layout_num)
-        layoutMini = keyboardLayout.findViewById<View?>(R.id.layout_mini)
+        layoutMain = keyboardLayout.findViewById<View>(R.id.layout_main)
+        layoutNav = keyboardLayout.findViewById<View>(R.id.layout_nav)
+        layoutNum = keyboardLayout.findViewById<View>(R.id.layout_num)
+        layoutMini = keyboardLayout.findViewById<View>(R.id.layout_mini)
 
         btnMain = keyboardLayout.findViewById<TextView>(R.id.btn_key_page_main)
         btnNav = keyboardLayout.findViewById<TextView>(R.id.btn_key_page_nav)
@@ -82,13 +82,13 @@ class KeyboardUIController(
         btnMini = keyboardLayout.findViewById<TextView>(R.id.btn_key_page_mini)
 
         // 初始化子面板
-        panelAlpha = keyboardLayout.findViewById<View?>(R.id.panel_alpha)
-        panelNumMini = keyboardLayout.findViewById<View?>(R.id.panel_num_mini)
-        panelPcMini = keyboardLayout.findViewById<View?>(R.id.panel_pc_mini)
+        panelAlpha = keyboardLayout.findViewById<View>(R.id.panel_alpha)
+        panelNumMini = keyboardLayout.findViewById<View>(R.id.panel_num_mini)
+        panelPcMini = keyboardLayout.findViewById<View>(R.id.panel_pc_mini)
 
         // 初始化拖动区域和修饰键容器
-        miniDragHandle = keyboardLayout.findViewById<View?>(R.id.mini_drag_handle)
-        miniModifierContainer = keyboardLayout.findViewById<View?>(R.id.mini_modifier_container)
+        miniDragHandle = keyboardLayout.findViewById<View>(R.id.mini_drag_handle)
+        miniModifierContainer = keyboardLayout.findViewById<View>(R.id.mini_modifier_container)
 
         initModifiers()
         initSeekbars()
@@ -186,7 +186,7 @@ class KeyboardUIController(
             keyboardContent.setTranslationX(0f)
             keyboardContent.setTranslationY(0f)
 
-            keyboardLayout.findViewById<View?>(R.id.keyboard_resize_handle).setVisibility(View.GONE)
+            keyboardLayout.findViewById<View>(R.id.keyboard_resize_handle).setVisibility(View.GONE)
 
             updateTabStyle(btnMain, true)
             updateTabStyle(btnNav, false)
@@ -225,46 +225,46 @@ class KeyboardUIController(
         val panelNumMini = keyboardLayout.findViewById<View>(R.id.panel_num_mini)
         val panelPcMini = keyboardLayout.findViewById<View>(R.id.panel_pc_mini)
 
-        keyboardLayout.findViewById<View?>(R.id.btn_switch_num)
+        keyboardLayout.findViewById<View>(R.id.btn_switch_num)
             .setOnClickListener(View.OnClickListener { v: View? ->
                 panelAlpha.setVisibility(View.GONE)
                 panelNumMini.setVisibility(View.VISIBLE)
             })
-        keyboardLayout.findViewById<View?>(R.id.btn_keyboard_collapse_alpah)
+        keyboardLayout.findViewById<View>(R.id.btn_keyboard_collapse_alpah)
             .setOnClickListener(View.OnClickListener { v: View? ->
                 hide()
             })
-        keyboardLayout.findViewById<View?>(R.id.btn_switch_pc)
+        keyboardLayout.findViewById<View>(R.id.btn_switch_pc)
             .setOnClickListener(View.OnClickListener { v: View? ->
                 panelAlpha.setVisibility(View.GONE)
                 panelPcMini.setVisibility(View.VISIBLE)
             })
-        keyboardLayout.findViewById<View?>(R.id.btn_switch_alpha_from_num_bottom)
+        keyboardLayout.findViewById<View>(R.id.btn_switch_alpha_from_num_bottom)
             .setOnClickListener(
                 View.OnClickListener { v: View? ->
                     panelNumMini.setVisibility(View.GONE)
                     panelAlpha.setVisibility(View.VISIBLE)
                 })
-        keyboardLayout.findViewById<View?>(R.id.btn_keyboard_collapse_num_bottom)
+        keyboardLayout.findViewById<View>(R.id.btn_keyboard_collapse_num_bottom)
             .setOnClickListener(
                 View.OnClickListener { v: View? ->
                     hide()
                 })
-        keyboardLayout.findViewById<View?>(R.id.btn_switch_pc_from_num)
+        keyboardLayout.findViewById<View>(R.id.btn_switch_pc_from_num)
             .setOnClickListener(View.OnClickListener { v: View? ->
                 panelNumMini.setVisibility(View.GONE)
                 panelPcMini.setVisibility(View.VISIBLE)
             })
-        keyboardLayout.findViewById<View?>(R.id.btn_switch_alpha_from_pc)
+        keyboardLayout.findViewById<View>(R.id.btn_switch_alpha_from_pc)
             .setOnClickListener(View.OnClickListener { v: View? ->
                 panelPcMini.setVisibility(View.GONE)
                 panelAlpha.setVisibility(View.VISIBLE)
             })
 
         val backToFullListener = View.OnClickListener { v: View? -> setMiniMode(false) }
-        keyboardLayout.findViewById<View?>(R.id.btn_switch_full)
+        keyboardLayout.findViewById<View>(R.id.btn_switch_full)
             .setOnClickListener(backToFullListener)
-        keyboardLayout.findViewById<View?>(R.id.btn_switch_full_from_num)
+        keyboardLayout.findViewById<View>(R.id.btn_switch_full_from_num)
             .setOnClickListener(backToFullListener)
 
         val btnCollapse = keyboardLayout.findViewById<TextView?>(R.id.btn_keyboard_collapse)
@@ -273,7 +273,7 @@ class KeyboardUIController(
         }
 
         val btnResize = keyboardLayout.findViewById<TextView?>(R.id.btn_keyboard_resize)
-        val resizeHandle = keyboardLayout.findViewById<View?>(R.id.keyboard_resize_handle)
+        val resizeHandle = keyboardLayout.findViewById<View>(R.id.keyboard_resize_handle)
 
         val dragListener: OnTouchListener = object : OnTouchListener {
             private var initialTouchX = 0f
@@ -410,19 +410,19 @@ class KeyboardUIController(
         val tag = "k" + keyCode
 
         if (layoutMini != null && layoutMini.getVisibility() == View.VISIBLE) {
-            v = layoutMini.findViewWithTag<View?>(tag)
+            v = layoutMini.findViewWithTag<View>(tag)
         } else if (layoutNum != null && layoutNum.getVisibility() == View.VISIBLE) {
-            v = layoutNum.findViewWithTag<View?>(tag)
+            v = layoutNum.findViewWithTag<View>(tag)
         } else if (layoutNav != null && layoutNav.getVisibility() == View.VISIBLE) {
-            v = layoutNav.findViewWithTag<View?>(tag)
+            v = layoutNav.findViewWithTag<View>(tag)
         } else {
             if (layoutMain != null) {
-                v = layoutMain.findViewWithTag<View?>(tag)
+                v = layoutMain.findViewWithTag<View>(tag)
             }
         }
 
         if (v == null) {
-            v = keyboardLayout.findViewWithTag<View?>(tag)
+            v = keyboardLayout.findViewWithTag<View>(tag)
         }
 
         if (modifierStates.containsKey(keyCode)) {
@@ -581,7 +581,7 @@ class KeyboardUIController(
 
     private fun updateKeyInContainer(container: View?, tag: String?, resId: Int) {
         if (container != null) {
-            val v = container.findViewWithTag<View?>(tag)
+            val v = container.findViewWithTag<View>(tag)
             if (v != null) {
                 v.setBackgroundResource(resId)
             }

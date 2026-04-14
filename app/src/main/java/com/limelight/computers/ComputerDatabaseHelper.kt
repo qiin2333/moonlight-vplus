@@ -187,7 +187,7 @@ class ComputerDatabaseHelper(private val context: Context) :
         try {
             val blob = c.getBlob(col)
             if (blob != null) {
-                val addr = InetAddress.getByAddress(blob).hostAddress
+                val addr = InetAddress.getByAddress(blob).hostAddress ?: return null
                 LimeLog.warning("DB: Legacy $type address (blob) for $name")
                 return ComputerDetails.AddressTuple(addr, NvHTTP.DEFAULT_HTTP_PORT)
             }

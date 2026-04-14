@@ -450,10 +450,6 @@ class GameMenu(
     private fun testLocalRumbleAll() {
         try {
             val ch = game.controllerHandler
-            if (ch == null) {
-                Toast.makeText(game, getString(R.string.toast_cannot_access_controller), Toast.LENGTH_SHORT).show()
-                return
-            }
 
             val on: Short = 0xFFFF.toShort()
             val off: Short = 0
@@ -926,9 +922,9 @@ class GameMenu(
             }
 
             val action = QuickActionRegistry.getBuiltin(id)
-            if (id == "toggle_mic" && (game.prefConfig == null || !game.prefConfig.enableMic)) {
+            if (id == "toggle_mic" && !game.prefConfig.enableMic) {
                 btn.isEnabled = false; btn.alpha = 0.5f
-                if (action?.iconDisabledRes != 0 && action != null)
+                if (action != null && action.iconDisabledRes != 0)
                     btn.setUniformIcon(action.iconDisabledRes)
                 btn.setOnClickListener {
                     Toast.makeText(game, getString(R.string.toast_enable_mic_redirect), Toast.LENGTH_SHORT).show()
@@ -1390,7 +1386,7 @@ class GameMenu(
 
     private fun saveCustomKey(name: String, keysString: String) {
         val preferences = game.getSharedPreferences(PREF_NAME, Activity.MODE_PRIVATE)
-        val value = preferences.getString(KEY_NAME, "{\"data\":[]}")
+        val value = preferences.getString(KEY_NAME, "{\"data\":[]}") ?: "{\"data\":[]}"
 
         try {
             val keyParts = keysString.split(",")

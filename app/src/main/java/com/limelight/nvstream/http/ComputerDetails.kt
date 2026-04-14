@@ -117,9 +117,7 @@ class ComputerDetails {
             this.sunshineVersion = details.sunshineVersion
         }
 
-        if (details.availableAddresses != null) {
-            this.availableAddresses = ArrayList(details.availableAddresses)
-        }
+        this.availableAddresses = ArrayList(details.availableAddresses)
     }
 
     fun addAvailableAddress(address: AddressTuple?) {

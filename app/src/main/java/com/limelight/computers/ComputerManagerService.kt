@@ -382,14 +382,14 @@ class ComputerManagerService : Service() {
                 val details = ComputerDetails()
 
                 if (computer.getLocalAddress() != null) {
-                    details.localAddress = ComputerDetails.AddressTuple(computer.getLocalAddress()!!.hostAddress, computer.getPort())
+                    details.localAddress = ComputerDetails.AddressTuple(computer.getLocalAddress()!!.hostAddress!!, computer.getPort())
 
                     if (computer.getLocalAddress() is Inet4Address) {
                         populateExternalAddress(details)
                     }
                 }
                 if (computer.getIpv6Address() != null) {
-                    details.ipv6Address = ComputerDetails.AddressTuple(computer.getIpv6Address()!!.hostAddress, computer.getPort())
+                    details.ipv6Address = ComputerDetails.AddressTuple(computer.getIpv6Address()!!.hostAddress!!, computer.getPort())
                 }
 
                 try {

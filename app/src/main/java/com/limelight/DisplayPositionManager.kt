@@ -46,7 +46,6 @@ class DisplayPositionManager(
                     layoutParams.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
                 PreferenceConfiguration.ScreenPosition.BOTTOM_RIGHT ->
                     layoutParams.gravity = Gravity.BOTTOM or Gravity.RIGHT
-                else -> {}
             }
 
             // 计算偏移量的像素值

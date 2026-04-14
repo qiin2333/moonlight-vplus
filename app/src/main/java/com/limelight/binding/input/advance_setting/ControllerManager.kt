@@ -29,7 +29,7 @@ class ControllerManager(layout: FrameLayout, context: Context) {
                 field = TouchController(
                     (context as Game?)!!,
                     this,
-                    layerElement.findViewById<View?>(R.id.element_touch_view)
+                    layerElement.findViewById<View>(R.id.element_touch_view)
                 )
             }
             return field
@@ -39,7 +39,7 @@ class ControllerManager(layout: FrameLayout, context: Context) {
         get() {
             if (field == null) {
                 val superPagesBox =
-                    advanceSettingView!!.findViewById<FrameLayout?>(R.id.super_pages_box)
+                    advanceSettingView!!.findViewById<FrameLayout>(R.id.super_pages_box)
                 field = SuperPagesController(superPagesBox, context)
             }
             return field

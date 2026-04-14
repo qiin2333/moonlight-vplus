@@ -209,8 +209,8 @@ class MediaCodecDecoderRenderer(
         avcDecoderInfo: MediaCodecInfo,
         prefs: PreferenceConfiguration
     ): Boolean {
-        val avcCaps = avcDecoderInfo.getCapabilitiesForType("video/avc").videoCapabilities
-        val hevcCaps = hevcDecoderInfo.getCapabilitiesForType("video/hevc").videoCapabilities
+        val avcCaps = avcDecoderInfo.getCapabilitiesForType("video/avc").videoCapabilities ?: return false
+        val hevcCaps = hevcDecoderInfo.getCapabilitiesForType("video/hevc").videoCapabilities ?: return false
         return !decoderCanMeetPerformancePoint(avcCaps, prefs) && decoderCanMeetPerformancePoint(hevcCaps, prefs)
     }
 
@@ -219,8 +219,8 @@ class MediaCodecDecoderRenderer(
         hevcDecoderInfo: MediaCodecInfo,
         prefs: PreferenceConfiguration
     ): Boolean {
-        val av1Caps = av1DecoderInfo.getCapabilitiesForType("video/av01").videoCapabilities
-        val hevcCaps = hevcDecoderInfo.getCapabilitiesForType("video/hevc").videoCapabilities
+        val av1Caps = av1DecoderInfo.getCapabilitiesForType("video/av01").videoCapabilities ?: return false
+        val hevcCaps = hevcDecoderInfo.getCapabilitiesForType("video/hevc").videoCapabilities ?: return false
         return !decoderCanMeetPerformancePoint(hevcCaps, prefs) && decoderCanMeetPerformancePoint(av1Caps, prefs)
     }
 
@@ -229,8 +229,8 @@ class MediaCodecDecoderRenderer(
         avcDecoderInfo: MediaCodecInfo,
         prefs: PreferenceConfiguration
     ): Boolean {
-        val avcCaps = avcDecoderInfo.getCapabilitiesForType("video/avc").videoCapabilities
-        val av1Caps = av1DecoderInfo.getCapabilitiesForType("video/av01").videoCapabilities
+        val avcCaps = avcDecoderInfo.getCapabilitiesForType("video/avc").videoCapabilities ?: return false
+        val av1Caps = av1DecoderInfo.getCapabilitiesForType("video/av01").videoCapabilities ?: return false
         return !decoderCanMeetPerformancePoint(avcCaps, prefs) && decoderCanMeetPerformancePoint(av1Caps, prefs)
     }
 

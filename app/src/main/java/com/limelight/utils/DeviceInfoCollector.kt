@@ -39,12 +39,8 @@ object DeviceInfoCollector {
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (Build.SOC_MANUFACTURER != null) {
-                    deviceInfo["soc_manufacturer"] = Build.SOC_MANUFACTURER
-                }
-                if (Build.SOC_MODEL != null) {
-                    deviceInfo["soc_model"] = Build.SOC_MODEL
-                }
+                deviceInfo["soc_manufacturer"] = Build.SOC_MANUFACTURER
+                deviceInfo["soc_model"] = Build.SOC_MODEL
                 deviceInfo["media_performance_class"] = Build.VERSION.MEDIA_PERFORMANCE_CLASS.toString()
             }
 
@@ -184,12 +180,8 @@ object DeviceInfoCollector {
             fingerprint.append(Build.VERSION.SDK_INT)
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (Build.SOC_MANUFACTURER != null) {
-                    fingerprint.append("_").append(Build.SOC_MANUFACTURER)
-                }
-                if (Build.SOC_MODEL != null) {
-                    fingerprint.append("_").append(Build.SOC_MODEL)
-                }
+                fingerprint.append("_").append(Build.SOC_MANUFACTURER)
+                fingerprint.append("_").append(Build.SOC_MODEL)
             }
 
             fingerprint.toString().replace(Regex("[^a-zA-Z0-9_]"), "_")

@@ -356,7 +356,7 @@ class NvHTTP(
         val response = performAndroidTlsHack(client).newCall(request).execute()
         val responseBody = response.body
 
-        if (response.isSuccessful && responseBody != null) {
+        if (response.isSuccessful) {
             val respString = responseBody.string()
             responseBody.close()
 
@@ -367,7 +367,7 @@ class NvHTTP(
             return respString
         }
 
-        responseBody?.close()
+        responseBody.close()
 
         if (response.code == 404) {
             throw FileNotFoundException(completeUrl.toString())

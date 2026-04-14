@@ -1358,7 +1358,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         }
 
         computer.useVdd = true
-        quickStartStreamWithScreenMode(computer, null, true, 1)
+        quickStartStreamWithScreenMode(computer, null, true, 2)
     }
 
     // Quick Start Stream Methods
@@ -1443,7 +1443,14 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             }
 
             runOnUiThread {
-                val intent = ServerHelper.createStartIntent(this, targetApp, targetComputer, managerBinder!!, null, screenMode)
+                val intent = ServerHelper.createStartIntent(this, targetApp, targetComputer, managerBinder!!, null)
+                if (screenMode != -1) {
+                    if (targetComputer.useVdd) {
+                        intent.putExtra(Game.EXTRA_VDD_SCREEN_COMBINATION_MODE, screenMode)
+                    } else {
+                        intent.putExtra(Game.EXTRA_SCREEN_COMBINATION_MODE, screenMode)
+                    }
+                }
                 startActivity(intent)
             }
         }.start()
@@ -1797,8 +1804,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         return R.layout.pc_grid_view
     }
 
-    override fun receiveAbsListView(view: View) {
-        receiveAdapterView(view)
+    override fun receiveAbsListView(gridView: View) {
+        receiveAdapterView(gridView)
     }
 
     @SuppressLint("ClickableViewAccessibility")

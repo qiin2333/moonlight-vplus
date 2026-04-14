@@ -65,7 +65,7 @@ class FloatBallHandler(private val game: Game, private val prefConfig: Preferenc
                         prefConfig.floatBallSwipeRightAction
                     }
                 }
-                if (actionToExecute != null && actionToExecute != "none") {
+                if (actionToExecute != "none") {
                     executeAction(actionToExecute)
                 }
             }

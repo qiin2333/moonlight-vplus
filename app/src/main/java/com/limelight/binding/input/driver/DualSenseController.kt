@@ -153,7 +153,7 @@ class DualSenseController(
     }
 
     override fun sendCommand(data: ByteArray) {
-        if (outEndpt == null || connection == null) {
+        if (outEndpt == null) {
             Log.w("DualSenseController", "Cannot send command: invalid parameters")
             return
         }
