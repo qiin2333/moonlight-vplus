@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.limelight
 
 import java.io.File

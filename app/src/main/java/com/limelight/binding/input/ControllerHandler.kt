@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.limelight.binding.input
 
 import android.annotation.TargetApi
