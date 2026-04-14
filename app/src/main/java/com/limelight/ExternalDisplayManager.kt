@@ -199,7 +199,7 @@ class ExternalDisplayManager(
             val batteryTextView = TextView(activity)
             batteryTextView.gravity = Gravity.CENTER
             batteryTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 48f)
-            batteryTextView.setTextColor(activity.resources.getColor(R.color.scene_color_1))
+            batteryTextView.setTextColor(androidx.core.content.ContextCompat.getColor(activity, R.color.scene_color_1))
 
             val params = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,

@@ -411,7 +411,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         Thread {
             try {
                 val glideTarget = resolveGlideTarget(imageUrl)
-                val bitmap = Glide.with(this)
+                val bitmap = Glide.with(this as Context)
                         .asBitmap()
                         .load(glideTarget)
                         .skipMemoryCache(true)
@@ -441,7 +441,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
     private fun applyBlurredBackground(bitmap: Bitmap) {
         if (backgroundImageView == null) return
-        Glide.with(this)
+        Glide.with(this as Context)
                 .load(bitmap)
                 .apply(RequestOptions.bitmapTransform(BlurTransformation(2, 3)))
                 .transform(ColorFilterTransformation(Color.argb(120, 0, 0, 0)))
@@ -516,7 +516,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         Thread {
             try {
                 val glideTarget = resolveGlideTarget(imageUrl)
-                val bitmap = Glide.with(this)
+                val bitmap = Glide.with(this as Context)
                         .asBitmap()
                         .load(glideTarget)
                         .skipMemoryCache(true)
@@ -582,7 +582,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         Thread {
             try {
                 val glideTarget = resolveGlideTarget(getBackgroundImageUrl())
-                val bitmap = Glide.with(this)
+                val bitmap = Glide.with(this as Context)
                         .asBitmap()
                         .load(glideTarget)
                         .submit()
@@ -1953,7 +1953,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     private fun getVersionInfo(): String {
         try {
             val info = packageManager.getPackageInfo(packageName, 0)
-            return String.format("Version %s (Build %d)", info.versionName, info.versionCode)
+            return String.format("Version %s (Build %d)", info.versionName, androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(info))
         } catch (e: PackageManager.NameNotFoundException) {
             return "Version Unknown"
         }

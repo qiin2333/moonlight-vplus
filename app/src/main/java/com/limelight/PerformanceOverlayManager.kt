@@ -568,10 +568,10 @@ class PerformanceOverlayManager(
         val isPortrait = activity.resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
         if (isEffectiveVerticalLayout()) {
             overlay.orientation = LinearLayout.VERTICAL
-            overlay.setBackgroundColor(activity.resources.getColor(R.color.overlay_background_vertical))
+            overlay.setBackgroundColor(androidx.core.content.ContextCompat.getColor(activity, R.color.overlay_background_vertical))
         } else {
             overlay.orientation = LinearLayout.HORIZONTAL
-            overlay.setBackgroundColor(activity.resources.getColor(R.color.overlay_background_horizontal))
+            overlay.setBackgroundColor(androidx.core.content.ContextCompat.getColor(activity, R.color.overlay_background_horizontal))
         }
 
         configureDisplayItems()

@@ -54,7 +54,7 @@ import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.ResponseBody
 
@@ -342,9 +342,8 @@ class NvHTTP(
     private fun openHttpConnectionPost(client: OkHttpClient, baseUrl: HttpUrl, path: String, jsonData: String): String {
         val completeUrl = getCompleteUrl(baseUrl, path, null)
 
-        val body = RequestBody.create(
-            "application/json; charset=utf-8".toMediaTypeOrNull(),
-            jsonData
+        val body = jsonData.toRequestBody(
+            "application/json; charset=utf-8".toMediaTypeOrNull()
         )
 
         val request = Request.Builder()
@@ -817,7 +816,7 @@ class NvHTTP(
                         }
                     }
                     XmlPullParser.TEXT -> {
-                        val app = appList.last
+                        val app = appList.last()
                         when (currentTag.peek()) {
                             "AppTitle" -> app.appName = xpp.text
                             "ID" -> app.setAppId(xpp.text)

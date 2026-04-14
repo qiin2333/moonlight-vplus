@@ -63,14 +63,14 @@ class AdapterRecyclerBridge(
             holder.container.setLayerType(View.LAYER_TYPE_HARDWARE, null)
 
             holder.container.setOnClickListener {
-                val adapterPosition = holder.adapterPosition
+                val adapterPosition = holder.bindingAdapterPosition
                 if (adapterPosition != RecyclerView.NO_POSITION) {
                     onItemClickListener?.onItemClick(adapterPosition, baseAdapter.getItem(adapterPosition))
                 }
             }
 
             holder.container.setOnKeyListener { _, keyCode, event ->
-                val adapterPosition = holder.adapterPosition
+                val adapterPosition = holder.bindingAdapterPosition
                 if (adapterPosition == RecyclerView.NO_POSITION) return@setOnKeyListener false
 
                 onItemKeyListener?.let {
@@ -83,7 +83,7 @@ class AdapterRecyclerBridge(
                         KeyEvent.ACTION_DOWN -> {
                             aKeyDownTime = System.currentTimeMillis()
                             longPressRunnable = Runnable {
-                                val pos = holder.adapterPosition
+                                val pos = holder.bindingAdapterPosition
                                 if (pos != RecyclerView.NO_POSITION) {
                                     onItemLongClickListener?.onItemLongClick(pos, baseAdapter.getItem(pos))
                                 }
@@ -106,7 +106,7 @@ class AdapterRecyclerBridge(
             }
 
             holder.container.setOnLongClickListener {
-                val adapterPosition = holder.adapterPosition
+                val adapterPosition = holder.bindingAdapterPosition
                 if (adapterPosition != RecyclerView.NO_POSITION) {
                     onItemLongClickListener?.onItemLongClick(adapterPosition, baseAdapter.getItem(adapterPosition)) ?: false
                 } else {

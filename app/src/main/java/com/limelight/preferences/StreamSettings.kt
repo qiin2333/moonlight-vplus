@@ -316,11 +316,11 @@ class StreamSettings : AppCompatActivity() {
             updateItemAppearance(holder, isSelected, false)
 
             // 点击事件
-            holder.root.setOnClickListener { selectCategory(holder.adapterPosition, item) }
+            holder.root.setOnClickListener { selectCategory(holder.bindingAdapterPosition, item) }
 
             // 焦点变化事件（控制器支持）
             holder.root.setOnFocusChangeListener { _, hasFocus ->
-                val selected = holder.adapterPosition == selectedCategoryIndex
+                val selected = holder.bindingAdapterPosition == selectedCategoryIndex
                 updateItemAppearance(holder, selected, hasFocus)
             }
         }
@@ -330,7 +330,7 @@ class StreamSettings : AppCompatActivity() {
          */
         private fun updateItemAppearance(holder: ViewHolder, isSelected: Boolean, hasFocus: Boolean) {
             // 使用项目公共粉色主题
-            val pinkPrimary = resources.getColor(R.color.theme_pink_primary)    // #FF6B9D
+            val pinkPrimary = androidx.core.content.ContextCompat.getColor(this@StreamSettings, R.color.theme_pink_primary)    // #FF6B9D
             val white = Color.WHITE
             val lightGray = Color.parseColor("#BBBBBB")
             val dimGray = Color.parseColor("#888888")
@@ -1791,7 +1791,7 @@ class StreamSettings : AppCompatActivity() {
                     if (bitmap != null) {
                         runOnUiThread {
                             if (isDestroyed || isFinishing) return@runOnUiThread
-                            Glide.with(this@StreamSettings)
+                            Glide.with(this@StreamSettings as Context)
                                     .load(bitmap)
                                     .apply(RequestOptions.bitmapTransform(BlurTransformation(2, 3)))
                                     .transform(ColorFilterTransformation(Color.argb(120, 0, 0, 0)))

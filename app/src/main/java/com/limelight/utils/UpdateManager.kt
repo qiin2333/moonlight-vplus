@@ -21,6 +21,7 @@ import android.widget.TextView
 import android.widget.Toast
 
 import androidx.annotation.RequiresApi
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 
 import com.limelight.BuildConfig
@@ -276,7 +277,7 @@ object UpdateManager {
             version.text = "v$currentVersion"
 
             if (releaseNotes != null && releaseNotes.trim().isNotEmpty()) {
-                val accentColor = activity.resources.getColor(R.color.theme_pink_primary)
+                val accentColor = ContextCompat.getColor(activity, R.color.theme_pink_primary)
                 val notesScroll = view.findViewById<ScrollView>(R.id.update_notes_scroll)
                 notesScroll.visibility = View.VISIBLE
                 val notes = view.findViewById<TextView>(R.id.update_notes)
@@ -304,7 +305,7 @@ object UpdateManager {
             version.text = "v$curVer → v${updateInfo.version}"
 
             if (updateInfo.releaseNotes != null && updateInfo.releaseNotes.isNotEmpty()) {
-                val accentColor = activity.resources.getColor(R.color.theme_pink_primary)
+                val accentColor = ContextCompat.getColor(activity, R.color.theme_pink_primary)
                 val notesScroll = view.findViewById<ScrollView>(R.id.update_notes_scroll)
                 notesScroll.visibility = View.VISIBLE
                 val notesView = view.findViewById<TextView>(R.id.update_notes)

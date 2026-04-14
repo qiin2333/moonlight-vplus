@@ -69,7 +69,7 @@ class AboutDialogPreference : Preference {
     private fun getVersionInfo(context: Context): String {
         return try {
             val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            String.format("Version %s (Build %d)", packageInfo.versionName, packageInfo.versionCode)
+            String.format("Version %s (Build %d)", packageInfo.versionName, androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(packageInfo))
         } catch (e: PackageManager.NameNotFoundException) {
             "Version Unknown"
         }
