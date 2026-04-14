@@ -13,7 +13,6 @@ import java.util.Collections
 
 object NetHelper {
 
-    @JvmStatic
     fun isActiveNetworkVpn(context: Context): Boolean {
         val connMgr = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
 
@@ -28,7 +27,6 @@ object NetHelper {
         }
     }
 
-    @JvmStatic
     fun isActiveNetworkMobile(context: Context): Boolean {
         val connMgr = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
 
@@ -51,7 +49,6 @@ object NetHelper {
         }
     }
 
-    @JvmStatic
     fun isActiveNetworkWifi(context: Context): Boolean {
         val connMgr = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
 
@@ -65,7 +62,6 @@ object NetHelper {
         }
     }
 
-    @JvmStatic
     fun isActiveNetworkEthernet(context: Context): Boolean {
         val connMgr = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
 
@@ -79,7 +75,6 @@ object NetHelper {
         }
     }
 
-    @JvmStatic
     fun getDownstreamBandwidthKbps(context: Context): Int {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val connMgr = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
@@ -92,7 +87,6 @@ object NetHelper {
         return -1
     }
 
-    @JvmStatic
     fun isLanAddress(addressStr: String?): Boolean {
         if (addressStr.isNullOrEmpty()) return false
         return try {
@@ -103,7 +97,6 @@ object NetHelper {
         }
     }
 
-    @JvmStatic
     fun isLocalNetworkInterfaceAvailable(): Boolean {
         try {
             val interfaces = NetworkInterface.getNetworkInterfaces() ?: return false
@@ -130,7 +123,6 @@ object NetHelper {
         return false
     }
 
-    @JvmStatic
     fun isPrivateAddress(addr: InetAddress): Boolean {
         val bytes = addr.address
         if (bytes.size == 4) {
@@ -142,7 +134,6 @@ object NetHelper {
     }
 
     @SuppressLint("DefaultLocale")
-    @JvmStatic
     fun calculateBandwidth(currentRxBytes: Long, previousRxBytes: Long, timeInterval: Long): String {
         if (timeInterval <= 0 || timeInterval > 5000) return "N/A"
         if (currentRxBytes < 0 || previousRxBytes < 0) return "N/A"

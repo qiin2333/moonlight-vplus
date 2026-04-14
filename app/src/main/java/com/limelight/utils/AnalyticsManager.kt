@@ -252,7 +252,6 @@ class AnalyticsManager private constructor(context: Context) {
         @Volatile
         private var instance: AnalyticsManager? = null
 
-        @JvmStatic
         @Synchronized
         fun getInstance(context: Context): AnalyticsManager {
             if (instance == null) {

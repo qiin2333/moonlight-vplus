@@ -112,7 +112,6 @@ class BackgroundImageManager(
          * Android 12+: GPU加速的RenderEffect，零额外内存分配
          * 低版本: 后台线程StackBlur
          */
-        @JvmStatic
         fun setBlurredBitmap(imageView: ImageView, bitmap: Bitmap, alpha: Int) {
             if (bitmap.isRecycled) return
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -142,7 +141,6 @@ class BackgroundImageManager(
         /**
          * 设置模糊Drawable到ImageView
          */
-        @JvmStatic
         fun setBlurredDrawable(imageView: ImageView, drawable: android.graphics.drawable.Drawable, alpha: Int) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 imageView.setImageDrawable(drawable)
@@ -171,7 +169,6 @@ class BackgroundImageManager(
          * 给Bitmap应用全局透明度，并在下方填充背景色，
          * 使fitCenter的图像区域不透过底层模糊层
          */
-        @JvmStatic
         fun applyAlpha(original: Bitmap, alpha: Int): Bitmap {
             if (original.isRecycled) return original
             return try {
@@ -198,7 +195,6 @@ class BackgroundImageManager(
         /**
          * StackBlur 算法 - 对缩小后的图片进行模糊处理以提升性能
          */
-        @JvmStatic
         fun stackBlur(original: Bitmap, radius: Int): Bitmap {
             if (original.isRecycled) return original
             try {

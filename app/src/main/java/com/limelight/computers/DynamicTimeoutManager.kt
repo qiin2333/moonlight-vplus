@@ -13,9 +13,9 @@ class DynamicTimeoutManager(private val networkDiagnostics: NetworkDiagnostics) 
      * 基础超时配置
      */
     class TimeoutConfig(
-        @JvmField var connectTimeout: Int,
-        @JvmField var readTimeout: Int,
-        @JvmField var stunTimeout: Int
+        var connectTimeout: Int,
+        var readTimeout: Int,
+        var stunTimeout: Int
     ) {
         override fun toString(): String {
             return String.format("TimeoutConfig{connect=%dms, read=%dms, stun=%dms}",

@@ -240,7 +240,6 @@ class Dialog private constructor(
     companion object {
         private val rundownDialogs = ArrayList<Dialog>()
 
-        @JvmStatic
         fun closeDialogs() {
             synchronized(rundownDialogs) {
                 for (d in rundownDialogs) {
@@ -252,21 +251,18 @@ class Dialog private constructor(
             }
         }
 
-        @JvmStatic
         fun displayDialog(activity: Activity, title: String, message: String, endAfterDismiss: Boolean) {
             activity.runOnUiThread(Dialog(activity, title, message, Runnable {
                 if (endAfterDismiss) activity.finish()
             }))
         }
 
-        @JvmStatic
         fun displayDetailsDialog(activity: Activity, title: String, message: String, endAfterDismiss: Boolean) {
             activity.runOnUiThread(Dialog(activity, title, message, Runnable {
                 if (endAfterDismiss) activity.finish()
             }, isDetailsDialog = true))
         }
 
-        @JvmStatic
         fun displayDialog(activity: Activity, title: String, message: String, runOnDismiss: Runnable) {
             activity.runOnUiThread(Dialog(activity, title, message, runOnDismiss))
         }

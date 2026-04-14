@@ -35,7 +35,7 @@ class AddressSelectionDialog(
         computerNameView.text = computerDetails.name
 
         addressList = dialogView.findViewById(R.id.address_list)
-        adapter = AddressListAdapter(context, computerDetails.getAvailableAddresses())
+        adapter = AddressListAdapter(context, computerDetails.availableAddresses)
         addressList.adapter = adapter
         if (adapter.count > 0) {
             addressList.setSelection(0)

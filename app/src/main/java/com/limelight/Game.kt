@@ -113,11 +113,11 @@ class Game : Activity(), SurfaceHolder.Callback,
     KeyboardAccessibilityService.KeyEventCallback {
 
     // 这个标志位用于区分事件是来自无障碍服务还是来自UI（如StreamView）
-    @JvmField var isEventFromAccessibilityService = false
+    var isEventFromAccessibilityService = false
 
-    @JvmField var controllerHandler: ControllerHandler? = null
+    var controllerHandler: ControllerHandler? = null
     lateinit var touchInputHandler: TouchInputHandler
-    @JvmField var virtualController: VirtualController? = null
+    var virtualController: VirtualController? = null
     lateinit var panZoomHandler: PanZoomHandler
     private var audioVibrationService: AudioVibrationService? = null
 
@@ -129,38 +129,38 @@ class Game : Activity(), SurfaceHolder.Callback,
     private var standaloneKeyboardUI: KeyboardUIController? = null
     private val performanceInfoDisplays = ArrayList<PerformanceInfoDisplay>()
 
-    @JvmField var microphoneManager: MicrophoneManager? = null
-    @JvmField var micButton: ImageButton? = null
+    var microphoneManager: MicrophoneManager? = null
+    var micButton: ImageButton? = null
     lateinit var prefConfig: PreferenceConfiguration
     lateinit var orientationManager: OrientationManager
     private lateinit var tombstonePrefs: SharedPreferences
 
-    @JvmField var conn: NvConnection? = null
-    @JvmField var progressOverlay: FullscreenProgressOverlay? = null
+    var conn: NvConnection? = null
+    var progressOverlay: FullscreenProgressOverlay? = null
 
-    @JvmField var displayedFailureDialog = false
-    @JvmField var connecting = false
-    @JvmField var connected = false
+    var displayedFailureDialog = false
+    var connecting = false
+    var connected = false
     private var autoEnterPip = false
     private var surfaceCreated = false
-    @JvmField var attemptedConnection = false
-    @JvmField var analyticsManager: AnalyticsManager? = null
-    @JvmField var streamStartTime: Long = 0
-    @JvmField var accumulatedStreamTime: Long = 0
-    @JvmField var lastActiveTime: Long = 0
-    @JvmField var isStreamingActive = false
+    var attemptedConnection = false
+    var analyticsManager: AnalyticsManager? = null
+    var streamStartTime: Long = 0
+    var accumulatedStreamTime: Long = 0
+    var lastActiveTime: Long = 0
+    var isStreamingActive = false
     private var suppressPipRefCount = 0
-    @JvmField var pcName: String? = null
-    @JvmField var appName: String? = null
-    @JvmField var app: NvApp? = null
+    var pcName: String? = null
+    var appName: String? = null
+    var app: NvApp? = null
     private var desiredRefreshRate = 0f
-    @JvmField var appSettingsManager: AppSettingsManager? = null
-    @JvmField var computerUuid: String? = null
+    var appSettingsManager: AppSettingsManager? = null
+    var computerUuid: String? = null
 
     lateinit var inputCaptureProvider: InputCaptureProvider
-    @JvmField var grabbedInput = true
-    @JvmField var cursorVisible = false
-    @JvmField var streamView: StreamView? = null
+    var grabbedInput = true
+    var cursorVisible = false
+    var streamView: StreamView? = null
     private var externalStreamView: StreamView? = null
     private var previousTimeMillis: Long = 0
     private var previousRxBytes: Long = 0
@@ -178,7 +178,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     private var highPerfWifiLock: WifiManager.WifiLock? = null
     private var lowLatencyWifiLock: WifiManager.WifiLock? = null
 
-    @JvmField var currentHostAddress: String? = null
+    var currentHostAddress: String? = null
     private var shouldResumeSession = false
     private var isExtremeResumeEnabled = false
     private var isChangingResolution = false
@@ -227,7 +227,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         }
     }
 
-    @JvmField var isTouchOverrideEnabled = false
+    var isTouchOverrideEnabled = false
 
     fun getisTouchOverrideEnabled(): Boolean = isTouchOverrideEnabled
 
@@ -235,8 +235,8 @@ class Game : Activity(), SurfaceHolder.Callback,
         this.isTouchOverrideEnabled = isTouchOverrideEnabled
     }
 
-    @JvmField var usbDriverServiceManager: UsbDriverServiceManager? = null
-    @JvmField var externalDisplayManager: ExternalDisplayManager? = null
+    var usbDriverServiceManager: UsbDriverServiceManager? = null
+    var externalDisplayManager: ExternalDisplayManager? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -1891,8 +1891,6 @@ class Game : Activity(), SurfaceHolder.Callback,
             }
         }
 
-    fun getControllerHandler(): ControllerHandler? = controllerHandler
-
     fun addPerformanceInfoDisplay(performanceInfoDisplay: PerformanceInfoDisplay) {
         performanceInfoDisplays.add(performanceInfoDisplay)
     }
@@ -1900,8 +1898,6 @@ class Game : Activity(), SurfaceHolder.Callback,
     fun refreshDisplayPosition() {
         DisplayPositionManager(this, prefConfig, streamView!!).refreshDisplayPosition(surfaceCreated)
     }
-
-    fun getStreamView(): StreamView? = streamView
 
     val activeStreamView: StreamView?
         get() {
@@ -1933,25 +1929,25 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     companion object {
-        @JvmField val REFERENCE_HORIZ_RES = 1280
-        @JvmField val REFERENCE_VERT_RES = 720
+        val REFERENCE_HORIZ_RES = 1280
+        val REFERENCE_VERT_RES = 720
 
-        @JvmField val EXTRA_HOST = "Host"
-        @JvmField val EXTRA_PORT = "Port"
-        @JvmField val EXTRA_HTTPS_PORT = "HttpsPort"
-        @JvmField val EXTRA_APP_NAME = "AppName"
-        @JvmField val EXTRA_APP_ID = "AppId"
-        @JvmField val EXTRA_UNIQUEID = "UniqueId"
-        @JvmField val EXTRA_PC_UUID = "UUID"
-        @JvmField val EXTRA_PC_NAME = "PcName"
-        @JvmField val EXTRA_PAIR_NAME = "PairName"
-        @JvmField val EXTRA_APP_HDR = "HDR"
-        @JvmField val EXTRA_SERVER_CERT = "ServerCert"
-        @JvmField val EXTRA_PC_USEVDD = "usevdd"
-        @JvmField val EXTRA_APP_CMD = "CmdList"
-        @JvmField val EXTRA_DISPLAY_NAME = "DisplayName"
-        @JvmField val EXTRA_SCREEN_COMBINATION_MODE = "Screen combination mode"
-        @JvmField val EXTRA_VDD_SCREEN_COMBINATION_MODE = "VDD screen combination mode"
+        val EXTRA_HOST = "Host"
+        val EXTRA_PORT = "Port"
+        val EXTRA_HTTPS_PORT = "HttpsPort"
+        val EXTRA_APP_NAME = "AppName"
+        val EXTRA_APP_ID = "AppId"
+        val EXTRA_UNIQUEID = "UniqueId"
+        val EXTRA_PC_UUID = "UUID"
+        val EXTRA_PC_NAME = "PcName"
+        val EXTRA_PAIR_NAME = "PairName"
+        val EXTRA_APP_HDR = "HDR"
+        val EXTRA_SERVER_CERT = "ServerCert"
+        val EXTRA_PC_USEVDD = "usevdd"
+        val EXTRA_APP_CMD = "CmdList"
+        val EXTRA_DISPLAY_NAME = "DisplayName"
+        val EXTRA_SCREEN_COMBINATION_MODE = "Screen combination mode"
+        val EXTRA_VDD_SCREEN_COMBINATION_MODE = "VDD screen combination mode"
 
         private const val KEEP_ALIVE_NOTIFICATION_ID = 1001
     }

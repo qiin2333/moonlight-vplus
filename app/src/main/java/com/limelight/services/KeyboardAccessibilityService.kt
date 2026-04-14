@@ -112,14 +112,11 @@ class KeyboardAccessibilityService : AccessibilityService() {
     companion object {
         private const val TAG = "KeyboardService"
 
-        @JvmStatic
         var instance: KeyboardAccessibilityService? = null
             private set
 
-        @JvmStatic
         var interceptingEnabled = false
 
-        @JvmStatic
         fun setIntercepting(enabled: Boolean) {
             Log.d(TAG, "Setting interception to: $enabled")
             interceptingEnabled = enabled

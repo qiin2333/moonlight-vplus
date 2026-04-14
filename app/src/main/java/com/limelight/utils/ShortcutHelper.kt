@@ -168,7 +168,6 @@ class ShortcutHelper(private val context: Activity) {
     }
 
     companion object {
-        @JvmStatic
         private fun prepareAdaptiveSquareBitmap(source: Bitmap?): Bitmap? {
             if (source == null) return null
 

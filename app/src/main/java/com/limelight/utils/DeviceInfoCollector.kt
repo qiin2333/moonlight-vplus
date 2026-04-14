@@ -15,7 +15,6 @@ import java.io.InputStreamReader
 object DeviceInfoCollector {
     private const val TAG = "DeviceInfoCollector"
 
-    @JvmStatic
     fun collectBasicDeviceInfo(): Map<String, String> {
         val deviceInfo = HashMap<String, String>()
 
@@ -58,7 +57,6 @@ object DeviceInfoCollector {
         return deviceInfo
     }
 
-    @JvmStatic
     fun collectCpuInfo(): Map<String, String> {
         val cpuInfo = HashMap<String, String>()
 
@@ -97,7 +95,6 @@ object DeviceInfoCollector {
         return cpuInfo
     }
 
-    @JvmStatic
     fun collectGpuInfo(): Map<String, String> {
         val gpuInfo = HashMap<String, String>()
 
@@ -123,7 +120,6 @@ object DeviceInfoCollector {
         return gpuInfo
     }
 
-    @JvmStatic
     fun collectNetworkInfo(context: Context): Map<String, String> {
         val networkInfo = HashMap<String, String>()
 
@@ -157,7 +153,6 @@ object DeviceInfoCollector {
         return networkInfo
     }
 
-    @JvmStatic
     fun collectAllDeviceInfo(context: Context): Map<String, String> {
         val allInfo = HashMap<String, String>()
         allInfo.putAll(collectBasicDeviceInfo())
@@ -180,7 +175,6 @@ object DeviceInfoCollector {
         }
     }
 
-    @JvmStatic
     fun generateDeviceFingerprint(): String {
         return try {
             val fingerprint = StringBuilder()

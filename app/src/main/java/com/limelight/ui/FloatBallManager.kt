@@ -32,7 +32,7 @@ import kotlin.math.sqrt
 /**
  * 悬浮球管理器核心类
  */
-class FloatBallManager @JvmOverloads constructor(
+class FloatBallManager constructor(
         context: Context,
         sizeInDp: Int = DEFAULT_BALL_SIZE,
         opacityPercent: Int = DEFAULT_OPACITY,

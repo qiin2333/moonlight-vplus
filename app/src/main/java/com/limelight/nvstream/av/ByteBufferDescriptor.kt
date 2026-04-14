@@ -16,7 +16,6 @@ class ByteBufferDescriptor(
         this.nextDescriptor = null
     }
 
-    @JvmOverloads
     fun print(offset: Int = this.offset, length: Int = this.length) {
         var i = offset
         while (i < offset + length) {

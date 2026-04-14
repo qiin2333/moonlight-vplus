@@ -206,7 +206,6 @@ class DiskAssetLoader(context: Context) {
         private const val STANDARD_ASSET_HEIGHT = 400
 
         // https://developer.android.com/topic/performance/graphics/load-bitmap.html
-        @JvmStatic
         fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
             val height = options.outHeight
             val width = options.outWidth

@@ -84,9 +84,9 @@ class NvHTTP(
     internal var serverCert: X509Certificate? = null
 
     class DisplayInfo(
-        @JvmField val index: Int,
-        @JvmField val name: String,
-        @JvmField val guid: String
+        val index: Int,
+        val name: String,
+        val guid: String
     )
 
     init {
@@ -728,7 +728,6 @@ class NvHTTP(
             throw IllegalStateException("No X509 trust manager found")
         }
 
-        @JvmStatic
         @Throws(XmlPullParserException::class, IOException::class)
         fun getXmlString(r: Reader, tagname: String, throwIfMissing: Boolean): String? {
             val factory = XmlPullParserFactory.newInstance()
@@ -766,13 +765,11 @@ class NvHTTP(
             return null
         }
 
-        @JvmStatic
         @Throws(XmlPullParserException::class, IOException::class)
         fun getXmlString(str: String, tagname: String, throwIfMissing: Boolean): String? {
             return getXmlString(StringReader(str), tagname, throwIfMissing)
         }
 
-        @JvmStatic
         private fun verifyResponseStatus(xpp: XmlPullParser) {
             val statusCode = xpp.getAttributeValue(XmlPullParser.NO_NAMESPACE, "status_code").toLong().toInt()
             if (statusCode != 200) {
@@ -790,7 +787,6 @@ class NvHTTP(
             return if (address == null) null else ComputerDetails.AddressTuple(address, port)
         }
 
-        @JvmStatic
         @Throws(XmlPullParserException::class, IOException::class)
         fun getAppListByReader(r: Reader): LinkedList<NvApp> {
             val factory = XmlPullParserFactory.newInstance()
@@ -825,7 +821,7 @@ class NvHTTP(
                         when (currentTag.peek()) {
                             "AppTitle" -> app.appName = xpp.text
                             "ID" -> app.setAppId(xpp.text)
-                            "IsHdrSupported" -> app.setHdrSupported(xpp.text == "1")
+                            "IsHdrSupported" -> app.hdrSupported = (xpp.text == "1")
                             "SuperCmds" -> {
                                 val cmdListStr = xpp.text
                                 if (cmdListStr != "null") {

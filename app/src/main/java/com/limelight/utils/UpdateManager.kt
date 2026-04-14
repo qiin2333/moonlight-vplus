@@ -81,7 +81,6 @@ object UpdateManager {
     // 公开 API
     // ------------------------------------------------------------------
 
-    @JvmStatic
     fun checkForUpdates(context: Context, showToast: Boolean) {
         if (isChecking.getAndSet(true)) {
             return
@@ -89,7 +88,6 @@ object UpdateManager {
         executor.execute(UpdateCheckTask(context, showToast))
     }
 
-    @JvmStatic
     fun checkForUpdatesOnStartup(context: Context) {
         val lastCheckTime = context.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
                 .getLong("last_check_time", 0)
@@ -104,7 +102,6 @@ object UpdateManager {
      * 当用户在系统设置中授予安装权限后由 Activity.onActivityResult 调用。
      * 如果之前有暂存的更新信息且权限已授予，则自动开始下载。
      */
-    @JvmStatic
     fun onInstallPermissionResult(context: Context) {
         if (pendingUpdateInfo != null && canInstallApk(context)) {
             val info = pendingUpdateInfo
@@ -120,7 +117,6 @@ object UpdateManager {
      * 由 [UpdateDownloadReceiver] 在下载完成时调用。
      * 也会由应用内进度轮询在检测到完成时调用。
      */
-    @JvmStatic
     fun onDownloadComplete(context: Context, completedDownloadId: Long) {
         val prefs = context.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
         val savedDownloadId = prefs.getLong(PREF_DOWNLOAD_ID, -1)
@@ -162,7 +158,6 @@ object UpdateManager {
     /**
      * 清理进度对话框资源（在 Activity 销毁时调用）
      */
-    @JvmStatic
     fun cleanup() {
         dismissProgressDialog()
         if (progressHandler != null && progressRunnable != null) {
@@ -930,7 +925,6 @@ object UpdateManager {
     /**
      * Build a list of candidate URLs: original first, then proxied variants.
      */
-    @JvmStatic
     fun buildProxiedUrls(url: String): List<String> {
         val tries = ArrayList<String>()
         tries.add(url)
@@ -940,7 +934,6 @@ object UpdateManager {
         return tries
     }
 
-    @JvmStatic
     fun ensureProxyListUpdated(context: Context) {
         if (shouldUpdateProxyList(context)) {
             updateProxyList(context)

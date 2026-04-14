@@ -32,7 +32,6 @@ class SelectionIndicatorAnimator(
         this.adapter = adapter
     }
 
-    @JvmOverloads
     fun moveToPosition(position: Int, isFirstFocus: Boolean = false) {
         if (!isValidPosition(position)) return
         val rv = recyclerView ?: return

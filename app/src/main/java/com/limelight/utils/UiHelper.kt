@@ -63,22 +63,16 @@ object UiHelper {
         }
     }
 
-    @JvmStatic
     fun notifyStreamConnecting(context: Context) = setGameModeStatus(context, true, true)
 
-    @JvmStatic
     fun notifyStreamConnected(context: Context) = setGameModeStatus(context, true, false)
 
-    @JvmStatic
     fun notifyStreamEnteringPiP(context: Context) = setGameModeStatus(context, true, true)
 
-    @JvmStatic
     fun notifyStreamExitingPiP(context: Context) = setGameModeStatus(context, true, false)
 
-    @JvmStatic
     fun notifyStreamEnded(context: Context) = setGameModeStatus(context, false, false)
 
-    @JvmStatic
     fun setLocale(activity: Activity) {
         val locale = PreferenceConfiguration.readPreferences(activity).language
         if (locale != PreferenceConfiguration.DEFAULT_LANGUAGE) {
@@ -99,7 +93,6 @@ object UiHelper {
         }
     }
 
-    @JvmStatic
     fun applyStatusBarPadding(view: View) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             view.setOnApplyWindowInsetsListener { v, windowInsets ->
@@ -115,7 +108,6 @@ object UiHelper {
         }
     }
 
-    @JvmStatic
     fun notifyNewRootView(activity: Activity) {
         val rootView = activity.findViewById<View>(android.R.id.content)
         val modeMgr = activity.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
@@ -156,7 +148,6 @@ object UiHelper {
         }
     }
 
-    @JvmStatic
     fun showDecoderCrashDialog(activity: Activity) {
         val prefs = activity.getSharedPreferences("DecoderTombstone", 0)
         val crashCount = prefs.getInt("CrashCount", 0)
@@ -184,7 +175,6 @@ object UiHelper {
         }
     }
 
-    @JvmStatic
     fun displayQuitConfirmationDialog(parent: Activity, onYes: Runnable?, onNo: Runnable?) {
         AlertDialog.Builder(parent, R.style.AppDialogStyle)
             .setMessage(parent.resources.getString(R.string.applist_quit_confirmation))
@@ -193,7 +183,6 @@ object UiHelper {
             .show()
     }
 
-    @JvmStatic
     fun displayDeletePcConfirmationDialog(
         parent: Activity, computer: ComputerDetails,
         onYes: Runnable?, onNo: Runnable?
@@ -206,7 +195,6 @@ object UiHelper {
             .show()
     }
 
-    @JvmStatic
     fun getBatteryLevel(context: Context): Int {
         try {
             val level = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -231,7 +219,6 @@ object UiHelper {
         }
     }
 
-    @JvmStatic
     fun isCharging(context: Context): Boolean {
         return try {
             val batteryStatus = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
@@ -245,7 +232,6 @@ object UiHelper {
         }
     }
 
-    @JvmStatic
     fun isColorOS(): Boolean {
         val manufacturer = Build.MANUFACTURER.lowercase()
         val model = Build.MODEL.lowercase()
@@ -257,7 +243,6 @@ object UiHelper {
         }
     }
 
-    @JvmStatic
     fun getDeviceRefreshRate(activity: Activity): Float {
         return try {
             @Suppress("DEPRECATION")

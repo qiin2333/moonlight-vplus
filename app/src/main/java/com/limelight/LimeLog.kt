@@ -17,12 +17,10 @@ object LimeLog {
         LOGGER.warning(msg)
     }
 
-    @JvmStatic
     fun severe(msg: String) {
         LOGGER.severe(msg)
     }
 
-    @JvmStatic
     @Throws(IOException::class)
     fun setFileHandler(fileName: String) {
         LOGGER.addHandler(FileHandler(fileName))

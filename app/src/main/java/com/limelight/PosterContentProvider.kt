@@ -81,7 +81,6 @@ class PosterContentProvider : ContentProvider() {
     }
 
     companion object {
-        @JvmField
         val AUTHORITY = "poster." + BuildConfig.APPLICATION_ID
         const val PNG_MIME_TYPE = "image/png"
         const val APP_ID_PATH_INDEX = 2
@@ -94,7 +93,6 @@ class PosterContentProvider : ContentProvider() {
             addURI(AUTHORITY, BOXART_PATH, BOXART_URI_ID)
         }
 
-        @JvmStatic
         fun createBoxArtUri(uuid: String, appId: String): Uri {
             return Uri.Builder()
                 .scheme(ContentResolver.SCHEME_CONTENT)

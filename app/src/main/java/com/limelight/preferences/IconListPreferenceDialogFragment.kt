@@ -68,7 +68,6 @@ class IconListPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
     }
 
     companion object {
-        @JvmStatic
         fun newInstance(key: String): IconListPreferenceDialogFragment {
             val fragment = IconListPreferenceDialogFragment()
             val args = Bundle(1)

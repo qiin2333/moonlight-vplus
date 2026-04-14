@@ -19,24 +19,20 @@ object DisplayModeManager {
         val aspectRatioMatch: Boolean
     )
 
-    @JvmStatic
     fun isRefreshRateEqualMatch(refreshRate: Float, targetFps: Int): Boolean {
         return refreshRate >= targetFps && refreshRate <= targetFps + 3
     }
 
-    @JvmStatic
     fun isRefreshRateGoodMatch(refreshRate: Float, targetFps: Int): Boolean {
         return refreshRate >= targetFps && Math.round(refreshRate) % targetFps <= 3
     }
 
-    @JvmStatic
     fun mayReduceRefreshRate(prefConfig: PreferenceConfiguration): Boolean {
         return prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_CAP_FPS ||
                 prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_MAX_SMOOTHNESS ||
                 (prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_BALANCED && prefConfig.reduceRefreshRate)
     }
 
-    @JvmStatic
     fun shouldIgnoreInsetsForResolution(display: Display, width: Int, height: Int): Boolean {
         if (!PreferenceConfiguration.isNativeResolution(width, height)) {
             return false
@@ -55,7 +51,6 @@ object DisplayModeManager {
         return false
     }
 
-    @JvmStatic
     fun selectBestDisplayMode(display: Display, prefConfig: PreferenceConfiguration): DisplayModeResult {
         val displayRefreshRate: Float
         var preferredModeId = -1

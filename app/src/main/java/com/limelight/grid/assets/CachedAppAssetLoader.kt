@@ -190,7 +190,7 @@ class CachedAppAssetLoader(
         return null
     }
 
-    private inner class LoaderTask @JvmOverloads constructor(
+    private inner class LoaderTask constructor(
         imageView: ImageView,
         textView: TextView?,
         private val diskOnly: Boolean,
@@ -207,7 +207,6 @@ class CachedAppAssetLoader(
         @Volatile
         private var runningThread: Thread? = null
         @Volatile
-        @JvmField
         var tuple: LoaderTuple? = null
 
         val isCancelled: Boolean
@@ -349,7 +348,6 @@ class CachedAppAssetLoader(
                 (bitmap.originalWidth == 628 && bitmap.originalHeight == 888)     // GFE 3.0
     }
 
-    @JvmOverloads
     fun populateImageView(
         obj: AppView.AppObject,
         imgView: ImageView,
@@ -385,8 +383,8 @@ class CachedAppAssetLoader(
     }
 
     class LoaderTuple(
-        @JvmField val computer: ComputerDetails,
-        @JvmField val app: NvApp
+        val computer: ComputerDetails,
+        val app: NvApp
     ) {
         override fun equals(other: Any?): Boolean {
             if (other !is LoaderTuple) return false

@@ -94,7 +94,6 @@ class CustomResolutionsPreferenceDialogFragment : PreferenceDialogFragmentCompat
     }
 
     companion object {
-        @JvmStatic
         fun newInstance(key: String): CustomResolutionsPreferenceDialogFragment {
             val fragment = CustomResolutionsPreferenceDialogFragment()
             val args = Bundle(1)

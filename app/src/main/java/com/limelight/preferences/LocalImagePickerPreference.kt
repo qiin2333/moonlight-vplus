@@ -131,7 +131,6 @@ class LocalImagePickerPreference : Preference {
         const val PICK_IMAGE_REQUEST = 1001
         private const val BACKGROUND_FILE_NAME = "custom_background_image.png"
 
-        @JvmStatic
         var instance: LocalImagePickerPreference? = null
             private set
     }

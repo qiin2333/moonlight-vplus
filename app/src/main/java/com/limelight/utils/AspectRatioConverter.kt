@@ -3,7 +3,6 @@ package com.limelight.utils
 import kotlin.math.floor
 
 object AspectRatioConverter {
-    @JvmStatic
     fun getAspectRatio(width: Int, height: Int): String? {
         val ratio = width.toFloat() / height
         val truncatedValue = (floor((ratio * 100).toDouble()) / 100).toFloat()

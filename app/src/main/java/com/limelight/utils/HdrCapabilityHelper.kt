@@ -53,7 +53,6 @@ object HdrCapabilityHelper {
     }
 
     @SuppressLint("NewApi")
-    @JvmStatic
     fun getBrightnessInfo(context: Context?): BrightnessInfo {
         val info = BrightnessInfo()
         if (context == null) return info
@@ -143,7 +142,6 @@ object HdrCapabilityHelper {
     }
 
     @SuppressLint("NewApi")
-    @JvmStatic
     fun getHdrTypeSupport(context: Context?): HdrTypeSupport {
         val support = HdrTypeSupport()
         if (context == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return support
@@ -167,7 +165,6 @@ object HdrCapabilityHelper {
     }
 
     @SuppressLint("NewApi")
-    @JvmStatic
     fun getFullCapabilityInfo(context: Context?): HdrCapabilityInfo {
         val capInfo = HdrCapabilityInfo()
         capInfo.brightness = getBrightnessInfo(context)
@@ -197,7 +194,6 @@ object HdrCapabilityHelper {
         return capInfo
     }
 
-    @JvmStatic
     fun getBrightnessRangeAsInts(context: Context?): IntArray {
         val info = getBrightnessInfo(context)
         val min = maxOf(1, info.minLuminance.toInt())
@@ -212,7 +208,6 @@ object HdrCapabilityHelper {
         return intArrayOf(min, max, avg)
     }
 
-    @JvmStatic
     fun getSystemBrightness(context: Context): Int {
         return try {
             Settings.System.getInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS, -1)
@@ -221,7 +216,6 @@ object HdrCapabilityHelper {
         }
     }
 
-    @JvmStatic
     fun isAutoBrightnessEnabled(context: Context): Boolean {
         return try {
             val mode = Settings.System.getInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS_MODE, -1)

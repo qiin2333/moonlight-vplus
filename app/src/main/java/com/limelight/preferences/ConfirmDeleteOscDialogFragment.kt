@@ -18,7 +18,6 @@ class ConfirmDeleteOscDialogFragment : PreferenceDialogFragmentCompat() {
     }
 
     companion object {
-        @JvmStatic
         fun newInstance(key: String): ConfirmDeleteOscDialogFragment {
             val fragment = ConfirmDeleteOscDialogFragment()
             val args = Bundle(1)

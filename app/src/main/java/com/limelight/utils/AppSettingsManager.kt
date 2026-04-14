@@ -378,7 +378,6 @@ class AppSettingsManager(private val context: Context) {
         /**
          * Add last settings to Intent
          */
-        @JvmStatic
         fun addLastSettingsToIntent(intent: Intent?, lastSettings: PreferenceConfiguration?) {
             if (intent == null || lastSettings == null) return
 

@@ -13,7 +13,7 @@ class ComputerDetails {
         ONLINE, OFFLINE, UNKNOWN
     }
 
-    class AddressTuple(@JvmField var address: String, @JvmField var port: Int) {
+    class AddressTuple(var address: String, var port: Int) {
         init {
             require(port > 0) { "Invalid port" }
 
@@ -39,28 +39,28 @@ class ComputerDetails {
     }
 
     // Persistent attributes
-    @JvmField var uuid: String? = null
-    @JvmField var name: String? = null
-    @JvmField var localAddress: AddressTuple? = null
-    @JvmField var remoteAddress: AddressTuple? = null
-    @JvmField var manualAddress: AddressTuple? = null
-    @JvmField var ipv6Address: AddressTuple? = null
-    @JvmField var macAddress: String? = null
-    @JvmField var serverCert: X509Certificate? = null
-    @JvmField var ipv6Disabled = false
+    var uuid: String? = null
+    var name: String? = null
+    var localAddress: AddressTuple? = null
+    var remoteAddress: AddressTuple? = null
+    var manualAddress: AddressTuple? = null
+    var ipv6Address: AddressTuple? = null
+    var macAddress: String? = null
+    var serverCert: X509Certificate? = null
+    var ipv6Disabled = false
 
     // Transient attributes
-    @JvmField var state: State = State.UNKNOWN
-    @JvmField var activeAddress: AddressTuple? = null
-    @JvmField var availableAddresses: MutableList<AddressTuple> = ArrayList()
-    @JvmField var httpsPort = 0
-    @JvmField var externalPort = 0
-    @JvmField var pairState: PairingManager.PairState? = null
-    @JvmField var runningGameId = 0
-    @JvmField var rawAppList: String? = null
-    @JvmField var nvidiaServer = false
-    @JvmField var useVdd = false
-    @JvmField var sunshineVersion: String? = null
+    var state: State = State.UNKNOWN
+    var activeAddress: AddressTuple? = null
+    var availableAddresses: MutableList<AddressTuple> = ArrayList()
+    var httpsPort = 0
+    var externalPort = 0
+    var pairState: PairingManager.PairState? = null
+    var runningGameId = 0
+    var rawAppList: String? = null
+    var nvidiaServer = false
+    var useVdd = false
+    var sunshineVersion: String? = null
 
     constructor()
 
@@ -132,10 +132,6 @@ class ComputerDetails {
         if (!availableAddresses.contains(address)) {
             availableAddresses.add(address)
         }
-    }
-
-    fun getAvailableAddresses(): List<AddressTuple> {
-        return availableAddresses
     }
 
     fun hasMultipleAddresses(): Boolean {
@@ -248,7 +244,6 @@ class ComputerDetails {
     companion object {
         private const val ZERO_MAC = "00:00:00:00:00:00"
 
-        @JvmStatic
         fun isLanIpv4Address(address: AddressTuple?): Boolean {
             if (address?.address == null) return false
 
@@ -261,12 +256,10 @@ class ComputerDetails {
             }
         }
 
-        @JvmStatic
         fun isIpv6Address(address: AddressTuple?): Boolean {
             return address?.address?.contains(":") == true
         }
 
-        @JvmStatic
         fun isPublicAddress(address: AddressTuple?): Boolean {
             if (address?.address == null) return false
             return !isLanIpv4Address(address) && !isIpv6Address(address)

@@ -24,7 +24,7 @@ class NetworkDiagnostics(private val context: Context) {
         UNKNOWN
     }
 
-    enum class NetworkQuality(@JvmField val suggestedConnectTimeout: Int) {
+    enum class NetworkQuality(val suggestedConnectTimeout: Int) {
         /** 优秀 - 低延迟、高带宽、稳定 */
         EXCELLENT(3000),
         /** 良好 - 中等延迟、合理带宽 */
@@ -43,14 +43,13 @@ class NetworkDiagnostics(private val context: Context) {
      * 网络诊断快照
      */
     class NetworkDiagnosticsSnapshot(
-        @JvmField val networkType: NetworkType,
-        @JvmField val networkQuality: NetworkQuality,
-        @JvmField val isVpn: Boolean,
-        @JvmField val isMobile: Boolean,
-        @JvmField val isWifi: Boolean,
-        @JvmField val isStableConnection: Boolean
+        val networkType: NetworkType,
+        val networkQuality: NetworkQuality,
+        val isVpn: Boolean,
+        val isMobile: Boolean,
+        val isWifi: Boolean,
+        val isStableConnection: Boolean
     ) {
-        @JvmField
         val timestamp: Long = System.currentTimeMillis()
 
         override fun toString(): String {
@@ -128,7 +127,6 @@ class NetworkDiagnostics(private val context: Context) {
     }
 
     companion object {
-        @JvmStatic
         @Deprecated("使用 NetHelper.isLanAddress(String) 代替", ReplaceWith("NetHelper.isLanAddress(addressStr)"))
         fun isLanAddress(addressStr: String): Boolean {
             return NetHelper.isLanAddress(addressStr)

@@ -325,7 +325,6 @@ class ComputerDatabaseHelper(private val context: Context) :
             }
         }
 
-        @JvmStatic
         @Throws(JSONException::class)
         fun tupleFromJson(json: JSONObject, name: String): ComputerDetails.AddressTuple? {
             if (!json.has(name) || json.isNull(name)) return null

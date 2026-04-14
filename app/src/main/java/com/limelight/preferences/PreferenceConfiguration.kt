@@ -60,142 +60,142 @@ class PreferenceConfiguration {
 
     // ---- Instance fields ----
 
-    @JvmField var enableDoubleClickDrag = false
-    @JvmField var doubleTapTimeThreshold = 0
-    @JvmField var enableLocalCursorRendering = false
+    var enableDoubleClickDrag = false
+    var doubleTapTimeThreshold = 0
+    var enableLocalCursorRendering = false
     //自定义按键映射
-    @JvmField var enableCustomKeyMap = false
+    var enableCustomKeyMap = false
     //修复鼠标中键识别
-    @JvmField var fixMouseMiddle = false
+    var fixMouseMiddle = false
     //修复本地鼠标滚轮识别
-    @JvmField var fixMouseWheel = false
+    var fixMouseWheel = false
 
-    @JvmField var width = 0
-    @JvmField var height = 0
-    @JvmField var fps = 0
-    @JvmField var resolutionScale = 0
-    @JvmField var bitrate = 0
-    @JvmField var longPressflatRegionPixels = 0 //Assigned to NativeTouchContext.INTIAL_ZONE_PIXELS
-    @JvmField var syncTouchEventWithDisplay = false // if true, view.requestUnbufferedDispatch(event) will be disabled
-    @JvmField var enableEnhancedTouch = false //Assigned to NativeTouchContext.ENABLE_ENHANCED_TOUCH
-    @JvmField var enhancedTouchOnWhichSide = false //Assigned to NativeTouchContext.ENHANCED_TOUCH_ON_RIGHT
-    @JvmField var enhanceTouchZoneDivider = 0 //Assigned to NativeTouchContext.ENHANCED_TOUCH_ZONE_DIVIDER
-    @JvmField var pointerVelocityFactor = 0f //Assigned to NativeTouchContext.POINTER_VELOCITY_FACTOR
-    @JvmField var nativeTouchFingersToToggleKeyboard = 0 // Number of fingers to tap to toggle local on-screen keyboard in native touch mode.
+    var width = 0
+    var height = 0
+    var fps = 0
+    var resolutionScale = 0
+    var bitrate = 0
+    var longPressflatRegionPixels = 0 //Assigned to NativeTouchContext.INTIAL_ZONE_PIXELS
+    var syncTouchEventWithDisplay = false // if true, view.requestUnbufferedDispatch(event) will be disabled
+    var enableEnhancedTouch = false //Assigned to NativeTouchContext.ENABLE_ENHANCED_TOUCH
+    var enhancedTouchOnWhichSide = false //Assigned to NativeTouchContext.ENHANCED_TOUCH_ON_RIGHT
+    var enhanceTouchZoneDivider = 0 //Assigned to NativeTouchContext.ENHANCED_TOUCH_ZONE_DIVIDER
+    var pointerVelocityFactor = 0f //Assigned to NativeTouchContext.POINTER_VELOCITY_FACTOR
+    var nativeTouchFingersToToggleKeyboard = 0 // Number of fingers to tap to toggle local on-screen keyboard in native touch mode.
 
-    @JvmField var videoFormat: FormatOption = FormatOption.AUTO
-    @JvmField var deadzonePercentage = 0
+    var videoFormat: FormatOption = FormatOption.AUTO
+    var deadzonePercentage = 0
     @JvmField var oscOpacity = 0
-    @JvmField var stretchVideo = false
-    @JvmField var enableSops = false
-    @JvmField var playHostAudio = false
-    @JvmField var disableWarnings = false
-    @JvmField var language: String = ""
-    @JvmField var smallIconMode = false
-    @JvmField var multiController = false
-    @JvmField var usbDriver = false
+    var stretchVideo = false
+    var enableSops = false
+    var playHostAudio = false
+    var disableWarnings = false
+    var language: String = ""
+    var smallIconMode = false
+    var multiController = false
+    var usbDriver = false
     @JvmField var flipFaceButtons = false
-    @JvmField var onscreenController = false
-    @JvmField var onscreenKeyboard = false
+    var onscreenController = false
+    var onscreenKeyboard = false
     @JvmField var onlyL3R3 = false
     @JvmField var showGuideButton = false
     @JvmField var halfHeightOscPortrait = false
-    @JvmField var enableHdr = false
-    @JvmField var enableHdrHighBrightness = false
-    @JvmField var hdrMode = 0 // 0=HDR disabled, 1=HDR10/PQ, 2=HLG
-    @JvmField var enablePip = false
-    @JvmField var enablePerfOverlay = false
-    @JvmField var perfOverlayLocked = false
-    @JvmField var perfOverlayOrientation: PerfOverlayOrientation = PerfOverlayOrientation.HORIZONTAL
-    @JvmField var perfOverlayPosition: PerfOverlayPosition = PerfOverlayPosition.TOP
-    @JvmField var enableSimplifyPerfOverlay = false
-    @JvmField var enableLatencyToast = false
-    @JvmField var enableStun = false
-    @JvmField var screenCombinationMode = 0
-    @JvmField var vddScreenCombinationMode = 0
-    @JvmField var lockScreenAfterDisconnect = false
-    @JvmField var swapQuitAndDisconnect = false
-    @JvmField var bindAllUsb = false
-    @JvmField var mouseEmulation = false
-    @JvmField var analogStickForScrolling: AnalogStickForScrolling = AnalogStickForScrolling.NONE
-    @JvmField var mouseNavButtons = false
-    @JvmField var unlockFps = false
-    @JvmField var vibrateOsc = false
-    @JvmField var vibrateFallbackToDevice = false
-    @JvmField var vibrateFallbackToDeviceStrength = 0
-    @JvmField var enableAudioVibration = false
-    @JvmField var audioVibrationStrength = 0
-    @JvmField var audioVibrationMode: String = ""
-    @JvmField var audioVibrationScene = 0
-    @JvmField var touchscreenTrackpad = false
-    @JvmField var audioConfiguration: MoonBridge.AudioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO
-    @JvmField var framePacing = 0
-    @JvmField var absoluteMouseMode = false
-    @JvmField var enableNativeMousePointer = false
-    @JvmField var enableAudioFx = false
-    @JvmField var enableSpatializer = false
-    @JvmField var reduceRefreshRate = false
-    @JvmField var fullRange = false
-    @JvmField var gamepadMotionSensors = false
-    @JvmField var gamepadTouchpadAsMouse = false
-    @JvmField var gamepadMotionSensorsFallbackToDevice = false
-    @JvmField var reverseResolution = false
-    @JvmField var rotableScreen = false
+    var enableHdr = false
+    var enableHdrHighBrightness = false
+    var hdrMode = 0 // 0=HDR disabled, 1=HDR10/PQ, 2=HLG
+    var enablePip = false
+    var enablePerfOverlay = false
+    var perfOverlayLocked = false
+    var perfOverlayOrientation: PerfOverlayOrientation = PerfOverlayOrientation.HORIZONTAL
+    var perfOverlayPosition: PerfOverlayPosition = PerfOverlayPosition.TOP
+    var enableSimplifyPerfOverlay = false
+    var enableLatencyToast = false
+    var enableStun = false
+    var screenCombinationMode = 0
+    var vddScreenCombinationMode = 0
+    var lockScreenAfterDisconnect = false
+    var swapQuitAndDisconnect = false
+    var bindAllUsb = false
+    var mouseEmulation = false
+    var analogStickForScrolling: AnalogStickForScrolling = AnalogStickForScrolling.NONE
+    var mouseNavButtons = false
+    var unlockFps = false
+    var vibrateOsc = false
+    var vibrateFallbackToDevice = false
+    var vibrateFallbackToDeviceStrength = 0
+    var enableAudioVibration = false
+    var audioVibrationStrength = 0
+    var audioVibrationMode: String = ""
+    var audioVibrationScene = 0
+    var touchscreenTrackpad = false
+    var audioConfiguration: MoonBridge.AudioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO
+    var framePacing = 0
+    var absoluteMouseMode = false
+    var enableNativeMousePointer = false
+    var enableAudioFx = false
+    var enableSpatializer = false
+    var reduceRefreshRate = false
+    var fullRange = false
+    var gamepadMotionSensors = false
+    var gamepadTouchpadAsMouse = false
+    var gamepadMotionSensorsFallbackToDevice = false
+    var reverseResolution = false
+    var rotableScreen = false
     // Runtime-only: enable mapping gyroscope motion to right analog stick
-    @JvmField var gyroToRightStick = false
+    var gyroToRightStick = false
     // Runtime-only: enable mapping gyroscope motion to relative mouse movement
-    @JvmField var gyroToMouse = false
+    var gyroToMouse = false
     // Runtime-only: sensitivity in deg/s for full stick deflection
-    @JvmField var gyroFullDeflectionDps = 0f
+    var gyroFullDeflectionDps = 0f
     // Persistent: sensitivity multiplier (higher -> faster)
-    @JvmField var gyroSensitivityMultiplier = 0f
+    var gyroSensitivityMultiplier = 0f
     // Persistent: activation keycode to hold (Android keycode); 0 means LT analog, 1 means RT analog, otherwise Android key
-    @JvmField var gyroActivationKeyCode = 0
+    var gyroActivationKeyCode = 0
     // Persistent: invert X-axis direction for gyro input
-    @JvmField var gyroInvertXAxis = false
+    var gyroInvertXAxis = false
     // Persistent: invert Y-axis direction for gyro input
-    @JvmField var gyroInvertYAxis = false
+    var gyroInvertYAxis = false
     // Card visibility
-    @JvmField var showBitrateCard = false
-    @JvmField var showGyroCard = false
-    @JvmField var showQuickKeyCard = false
+    var showBitrateCard = false
+    var showGyroCard = false
+    var showQuickKeyCard = false
 
     // 麦克风设置
-    @JvmField var enableMic = false
-    @JvmField var micBitrate = 0
-    @JvmField var micIconColor: String = ""
+    var enableMic = false
+    var micBitrate = 0
+    var micIconColor: String = ""
 
     // ESC菜单设置
-    @JvmField var enableEscMenu = false
-    @JvmField var escMenuKey = 0
+    var enableEscMenu = false
+    var escMenuKey = 0
 
     // Start键菜单设置
-    @JvmField var enableStartKeyMenu = false
+    var enableStartKeyMenu = false
 
     // 控制流only模式设置
-    @JvmField var controlOnly = false
+    var controlOnly = false
 
     // 输出缓冲区队列大小
-    @JvmField var outputBufferQueueLimit = 0
+    var outputBufferQueueLimit = 0
 
-    @JvmField var screenPosition: ScreenPosition = ScreenPosition.CENTER
-    @JvmField var screenOffsetX = 0
-    @JvmField var screenOffsetY = 0
+    var screenPosition: ScreenPosition = ScreenPosition.CENTER
+    var screenOffsetX = 0
+    var screenOffsetY = 0
 
-    @JvmField var useExternalDisplay = false
+    var useExternalDisplay = false
 
     // 悬浮球设置
-    @JvmField var enableFloatBall = false
-    @JvmField var floatBallAutoHideDelay = 0
+    var enableFloatBall = false
+    var floatBallAutoHideDelay = 0
 
     // 悬浮球交互监听器设置
-    @JvmField var floatBallSingleClickAction: String = ""
-    @JvmField var floatBallDoubleClickAction: String = ""
-    @JvmField var floatBallLongClickAction: String = ""
-    @JvmField var floatBallSwipeUpAction: String = ""
-    @JvmField var floatBallSwipeDownAction: String = ""
-    @JvmField var floatBallSwipeLeftAction: String = ""
-    @JvmField var floatBallSwipeRightAction: String = ""
+    var floatBallSingleClickAction: String = ""
+    var floatBallDoubleClickAction: String = ""
+    var floatBallLongClickAction: String = ""
+    var floatBallSwipeUpAction: String = ""
+    var floatBallSwipeDownAction: String = ""
+    var floatBallSwipeLeftAction: String = ""
+    var floatBallSwipeRightAction: String = ""
 
     // ---- Instance methods ----
 
@@ -579,14 +579,12 @@ class PreferenceConfiguration {
         private const val VIDEO_FORMAT_HEVC = "forceh265"
         private const val VIDEO_FORMAT_H264 = "neverh265"
 
-        @JvmField
         val RESOLUTIONS = arrayOf(
             "640x360", "854x480", "1280x720", "1920x1080", "2560x1440", "3840x2160", "Native"
         )
 
         // ---- Public static methods ----
 
-        @JvmStatic
         fun isNativeResolution(width: Int, height: Int): Boolean {
             val resolutionSet = RESOLUTIONS.toHashSet()
             return !resolutionSet.contains("${width}x${height}")
@@ -594,7 +592,6 @@ class PreferenceConfiguration {
 
         // If we have a screen that has semi-square dimensions, we may want to change our behavior
         // to allow any orientation and vertical+horizontal resolutions.
-        @JvmStatic
         fun isSquarishScreen(width: Int, height: Int): Boolean {
             val longDim = max(width, height).toFloat()
             val shortDim = min(width, height).toFloat()
@@ -604,7 +601,6 @@ class PreferenceConfiguration {
         }
 
         @Suppress("DEPRECATION")
-        @JvmStatic
         fun isSquarishScreen(display: Display): Boolean {
             val width: Int
             val height: Int
@@ -661,7 +657,6 @@ class PreferenceConfiguration {
             return RES_1080P // 默认返回1080P
         }
 
-        @JvmStatic
         fun getDefaultBitrate(resString: String, fpsString: String): Int {
             val width = getWidthFromResolutionString(resString)
             val height = getHeightFromResolutionString(resString)
@@ -724,7 +719,6 @@ class PreferenceConfiguration {
             return (resolutionFactor * frameRateFactor).roundToInt() * 1000
         }
 
-        @JvmStatic
         fun getDefaultSmallMode(context: Context): Boolean {
             val manager = context.packageManager
             if (manager != null) {
@@ -745,7 +739,6 @@ class PreferenceConfiguration {
             return context.resources.configuration.smallestScreenWidthDp < 500
         }
 
-        @JvmStatic
         fun getDefaultBitrate(context: Context): Int {
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
             return getDefaultBitrate(
@@ -806,7 +799,6 @@ class PreferenceConfiguration {
             }
         }
 
-        @JvmStatic
         fun resetStreamingSettings(context: Context) {
             // We consider resolution, FPS, bitrate, HDR, and video format as "streaming settings" here
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
@@ -825,14 +817,12 @@ class PreferenceConfiguration {
                 .apply()
         }
 
-        @JvmStatic
         fun completeLanguagePreferenceMigration(context: Context) {
             // Put our language option back to default which tells us that we've already migrated it
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
             prefs.edit().putString(LANGUAGE_PREF_STRING, DEFAULT_LANGUAGE).apply()
         }
 
-        @JvmStatic
         fun isShieldAtvFirmwareWithBrokenHdr(): Boolean {
             // This particular Shield TV firmware crashes when using HDR
             // https://www.nvidia.com/en-us/geforce/forums/notifications/comment/155192/

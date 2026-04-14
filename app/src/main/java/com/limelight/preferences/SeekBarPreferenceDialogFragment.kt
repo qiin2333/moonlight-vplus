@@ -182,7 +182,6 @@ class SeekBarPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
         private const val LONG_PRESS_DELAY = 400
         private const val LONG_PRESS_INTERVAL = 80
 
-        @JvmStatic
         fun newInstance(key: String): SeekBarPreferenceDialogFragment {
             return SeekBarPreferenceDialogFragment().apply {
                 arguments = Bundle(1).apply {

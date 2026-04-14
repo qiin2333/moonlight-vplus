@@ -84,14 +84,12 @@ class SpinnerDialog private constructor(
     companion object {
         private val rundownDialogs = ArrayList<SpinnerDialog>()
 
-        @JvmStatic
         fun displayDialog(activity: Activity, title: String, message: String, finish: Boolean): SpinnerDialog {
             val spinner = SpinnerDialog(activity, title, message, finish)
             activity.runOnUiThread(spinner)
             return spinner
         }
 
-        @JvmStatic
         fun closeDialogs(activity: Activity) {
             synchronized(rundownDialogs) {
                 val i = rundownDialogs.iterator()

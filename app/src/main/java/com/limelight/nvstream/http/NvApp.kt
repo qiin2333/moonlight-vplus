@@ -5,16 +5,16 @@ import com.google.gson.JsonArray
 import com.limelight.LimeLog
 
 class NvApp {
-    @JvmField
     var appName: String = ""
-    @JvmField
     var appId: Int = 0
-    @JvmField
+        set(value) {
+            field = value
+            initialized = true
+        }
     var initialized: Boolean = false
-    @JvmField
+        private set
     var hdrSupported: Boolean = false
 
-    @JvmField
     var cmdList: JsonArray? = null
 
     constructor()
@@ -27,34 +27,15 @@ class NvApp {
         this.appName = appName
         this.appId = appId
         this.hdrSupported = hdrSupported
-        this.initialized = true
-    }
-
-    fun setAppName(appName: String) {
-        this.appName = appName
     }
 
     fun setAppId(appId: String) {
         try {
             this.appId = appId.toInt()
-            this.initialized = true
         } catch (e: NumberFormatException) {
             LimeLog.warning("Malformed app ID: $appId")
         }
     }
-
-    fun setAppId(appId: Int) {
-        this.appId = appId
-        this.initialized = true
-    }
-
-    fun setHdrSupported(hdrSupported: Boolean) {
-        this.hdrSupported = hdrSupported
-    }
-
-    fun getAppName(): String = this.appName
-
-    fun getAppId(): Int = this.appId
 
     fun isHdrSupported(): Boolean = this.hdrSupported
 
@@ -63,8 +44,6 @@ class NvApp {
     fun setCmdList(cmdList: String) {
         this.cmdList = Gson().fromJson(cmdList, JsonArray::class.java)
     }
-
-    fun getCmdList(): JsonArray? = this.cmdList
 
     override fun toString(): String {
         return buildString {

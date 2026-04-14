@@ -938,16 +938,14 @@ class ComputerManagerService : Service() {
 }
 
 class PollingTuple(
-    @JvmField val computer: ComputerDetails,
-    @JvmField var thread: Thread?
+    val computer: ComputerDetails,
+    var thread: Thread?
 ) {
-    @JvmField
     val networkLock = Any()
-    @JvmField
     var lastSuccessfulPollMs: Long = 0
 }
 
 class ReachabilityTuple(
-    @JvmField val computer: ComputerDetails,
-    @JvmField val reachableAddress: String
+    val computer: ComputerDetails,
+    val reachableAddress: String
 )

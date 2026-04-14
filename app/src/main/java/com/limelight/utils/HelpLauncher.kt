@@ -8,7 +8,6 @@ import android.net.Uri
 import com.limelight.HelpActivity
 
 object HelpLauncher {
-    @JvmStatic
     fun launchUrl(context: Context, url: String) {
         // Try to launch the default browser
         try {
@@ -38,17 +37,14 @@ object HelpLauncher {
         context.startActivity(i)
     }
 
-    @JvmStatic
     fun launchSetupGuide(context: Context) {
         launchUrl(context, "https://github.com/moonlight-stream/moonlight-docs/wiki/Setup-Guide")
     }
 
-    @JvmStatic
     fun launchTroubleshooting(context: Context) {
         launchUrl(context, "https://github.com/moonlight-stream/moonlight-docs/wiki/Troubleshooting")
     }
 
-    @JvmStatic
     fun launchGameStreamEolFaq(context: Context) {
         launchUrl(context, "https://github.com/moonlight-stream/moonlight-docs/wiki/NVIDIA-GameStream-End-Of-Service-Announcement-FAQ")
     }

@@ -185,7 +185,6 @@ class ComputerDatabaseManager(c: Context) {
         private const val MAC_ADDRESS_COLUMN_NAME = "MacAddress"
         private const val SERVER_CERT_COLUMN_NAME = "ServerCert"
 
-        @JvmStatic
         @Throws(JSONException::class)
         fun tupleToJson(tuple: ComputerDetails.AddressTuple?): JSONObject? {
             if (tuple == null) {
@@ -197,7 +196,6 @@ class ComputerDatabaseManager(c: Context) {
             return json
         }
 
-        @JvmStatic
         @Throws(JSONException::class)
         fun tupleFromJson(json: JSONObject, name: String): ComputerDetails.AddressTuple? {
             if (!json.has(name)) {

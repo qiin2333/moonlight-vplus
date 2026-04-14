@@ -121,7 +121,6 @@ class GameMenu(
         ALT(KeyboardTranslator.VK_MENU.s(), KeyboardPacket.MODIFIER_ALT);
 
         companion object {
-            @JvmStatic
             fun getModifier(key: Short): Byte =
                 entries.find { it.keyCode == key }?.modifier ?: 0
         }
@@ -1778,7 +1777,6 @@ class GameMenu(
         private const val PREF_NAME = "custom_special_keys"
         private const val KEY_NAME = "data"
 
-        @JvmStatic
         private var mouse_enable_switch = false
 
         private val ICON_MAP = mapOf(
@@ -1797,7 +1795,6 @@ class GameMenu(
             "game_menu_test_local_rumble" to R.drawable.ic_rumble_cute
         )
 
-        @JvmStatic
         fun getIconForMenuOption(iconKey: String?): Int {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 return ICON_MAP.getOrDefault(iconKey, R.drawable.ic_menu_item_default)

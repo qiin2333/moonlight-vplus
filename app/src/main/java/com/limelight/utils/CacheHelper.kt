@@ -3,7 +3,6 @@ package com.limelight.utils
 import java.io.*
 
 object CacheHelper {
-    @JvmStatic
     fun openPath(createPath: Boolean, root: File, vararg path: String): File {
         var f = root
         for (i in path.indices) {
@@ -21,34 +20,28 @@ object CacheHelper {
         return f
     }
 
-    @JvmStatic
     fun getFileSize(root: File, vararg path: String): Long {
         return openPath(false, root, *path).length()
     }
 
-    @JvmStatic
     fun deleteCacheFile(root: File, vararg path: String): Boolean {
         return openPath(false, root, *path).delete()
     }
 
-    @JvmStatic
     fun cacheFileExists(root: File, vararg path: String): Boolean {
         return openPath(false, root, *path).exists()
     }
 
-    @JvmStatic
     @Throws(FileNotFoundException::class)
     fun openCacheFileForInput(root: File, vararg path: String): InputStream {
         return BufferedInputStream(FileInputStream(openPath(false, root, *path)))
     }
 
-    @JvmStatic
     @Throws(FileNotFoundException::class)
     fun openCacheFileForOutput(root: File, vararg path: String): OutputStream {
         return BufferedOutputStream(FileOutputStream(openPath(true, root, *path)))
     }
 
-    @JvmStatic
     @Throws(IOException::class)
     fun writeInputStreamToOutputStream(input: InputStream, out: OutputStream, maxLength: Long) {
         var remaining = maxLength
@@ -64,7 +57,6 @@ object CacheHelper {
         }
     }
 
-    @JvmStatic
     @Throws(IOException::class)
     fun readInputStreamToString(input: InputStream): String {
         val r = InputStreamReader(input)
@@ -84,7 +76,6 @@ object CacheHelper {
         return sb.toString()
     }
 
-    @JvmStatic
     @Throws(IOException::class)
     fun writeStringToOutputStream(out: OutputStream, str: String) {
         out.write(str.toByteArray(Charsets.UTF_8))

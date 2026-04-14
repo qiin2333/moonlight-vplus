@@ -59,7 +59,6 @@ object WakeOnLanSender {
         }
     }
 
-    @JvmStatic
     @Throws(IOException::class)
     fun sendWolPacket(computer: ComputerDetails) {
         val payload = createWolPayload(computer)

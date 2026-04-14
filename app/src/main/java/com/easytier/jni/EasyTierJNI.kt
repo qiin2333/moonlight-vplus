@@ -15,26 +15,22 @@ object EasyTierJNI {
     /**
      * 设置 TUN 文件描述符。
      */
-    @JvmStatic
     external fun setTunFd(instanceName: String, fd: Int): Int
 
     /**
      * 解析配置字符串以进行验证。
      */
-    @JvmStatic
     external fun parseConfig(config: String): Int
 
     /**
      * 根据配置运行一个新的网络实例。
      */
-    @JvmStatic
     external fun runNetworkInstance(config: String): Int
 
     /**
      * 保留指定的网络实例，停止其他所有实例。
      * @param instanceNames 要保留的实例名称数组，传入 null 或空数组将停止所有实例
      */
-    @JvmStatic
     external fun retainNetworkInstance(instanceNames: Array<String>?): Int
 
     /**
@@ -42,20 +38,17 @@ object EasyTierJNI {
      * @param maxLength 最大返回条目数
      * @return 包含网络信息的 JSON 格式字符串
      */
-    @JvmStatic
     external fun collectNetworkInfos(maxLength: Int): String
 
     /**
      * 获取最后一次 JNI 调用发生的错误消息。
      * @return 错误消息字符串，如果没有错误则返回 null
      */
-    @JvmStatic
     external fun getLastError(): String?
 
     /**
      * 便利方法：停止所有网络实例。
      */
-    @JvmStatic
     fun stopAllInstances(): Int {
         return retainNetworkInstance(null)
     }

@@ -24,13 +24,11 @@ import java.security.cert.CertificateEncodingException
 object ServerHelper {
     const val CONNECTION_TEST_SERVER = "android.conntest.moonlight-stream.org"
 
-    @JvmStatic
     @Throws(IOException::class)
     fun getCurrentAddressFromComputer(computer: ComputerDetails): ComputerDetails.AddressTuple {
         return computer.activeAddress ?: throw IOException("No active address for ${computer.name}")
     }
 
-    @JvmStatic
     fun createPcShortcutIntent(parent: Activity, computer: ComputerDetails): Intent {
         return Intent(parent, ShortcutTrampoline::class.java).apply {
             putExtra(AppView.NAME_EXTRA, computer.name)
@@ -39,7 +37,6 @@ object ServerHelper {
         }
     }
 
-    @JvmStatic
     fun createAppShortcutIntent(parent: Activity, computer: ComputerDetails, app: NvApp): Intent {
         return Intent(parent, ShortcutTrampoline::class.java).apply {
             putExtra(AppView.NAME_EXTRA, computer.name)
@@ -51,8 +48,6 @@ object ServerHelper {
         }
     }
 
-    @JvmStatic
-    @JvmOverloads
     fun createStartIntent(
         parent: Activity,
         app: NvApp,
@@ -88,7 +83,6 @@ object ServerHelper {
         }
     }
 
-    @JvmStatic
     fun doStart(
         parent: Activity,
         app: NvApp,
@@ -102,7 +96,6 @@ object ServerHelper {
         parent.startActivity(createStartIntent(parent, app, computer, managerBinder))
     }
 
-    @JvmStatic
     fun doNetworkTest(parent: Activity) {
         Thread {
             val spinnerDialog = SpinnerDialog.displayDialog(
@@ -133,7 +126,6 @@ object ServerHelper {
         }.start()
     }
 
-    @JvmStatic
     fun pcSleep(
         parent: Activity,
         computer: ComputerDetails,
@@ -178,7 +170,6 @@ object ServerHelper {
         }.start()
     }
 
-    @JvmStatic
     fun doQuit(
         parent: Activity,
         computer: ComputerDetails,

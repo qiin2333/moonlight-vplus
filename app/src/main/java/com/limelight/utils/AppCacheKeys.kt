@@ -19,7 +19,6 @@ object AppCacheKeys {
      * @param appId 应用ID
      * @return 应用名称的缓存key
      */
-    @JvmStatic
     fun getAppNameKey(pcUuid: String, appId: Int): String {
         return "${APP_CACHE_PREFIX}${pcUuid}_${appId}${APP_NAME_SUFFIX}"
     }
@@ -30,7 +29,6 @@ object AppCacheKeys {
      * @param appId 应用ID
      * @return 应用命令列表的缓存key
      */
-    @JvmStatic
     fun getAppCmdKey(pcUuid: String, appId: Int): String {
         return "${APP_CACHE_PREFIX}${pcUuid}_${appId}${APP_CMD_SUFFIX}"
     }
@@ -41,7 +39,6 @@ object AppCacheKeys {
      * @param appId 应用ID
      * @return 应用HDR支持的缓存key
      */
-    @JvmStatic
     fun getAppHdrKey(pcUuid: String, appId: Int): String {
         return "${APP_CACHE_PREFIX}${pcUuid}_${appId}${APP_HDR_SUFFIX}"
     }
@@ -52,7 +49,6 @@ object AppCacheKeys {
      * @param appId 应用ID
      * @return 应用信息的基础key
      */
-    @JvmStatic
     fun getAppBaseKey(pcUuid: String, appId: Int): String {
         return "${APP_CACHE_PREFIX}${pcUuid}_${appId}"
     }
@@ -62,7 +58,6 @@ object AppCacheKeys {
      * @param key 要检查的key
      * @return 如果是应用缓存key则返回true
      */
-    @JvmStatic
     fun isAppCacheKey(key: String?): Boolean {
         return key != null && key.startsWith(APP_CACHE_PREFIX)
     }
@@ -72,7 +67,6 @@ object AppCacheKeys {
      * @param key 应用缓存key
      * @return 包含pcUuid和appId的数组，如果解析失败则返回null
      */
-    @JvmStatic
     fun parseAppCacheKey(key: String): Array<String>? {
         if (!isAppCacheKey(key)) {
             return null

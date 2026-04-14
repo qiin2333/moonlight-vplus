@@ -4,8 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 
 class GlPreferences private constructor(private val prefs: SharedPreferences) {
-    @JvmField var glRenderer: String = ""
-    @JvmField var savedFingerprint: String = ""
+    var glRenderer: String = ""
+    var savedFingerprint: String = ""
 
     fun writePreferences(): Boolean {
         return prefs.edit()
@@ -19,7 +19,6 @@ class GlPreferences private constructor(private val prefs: SharedPreferences) {
         private const val FINGERPRINT_PREF_STRING = "Fingerprint"
         private const val GL_RENDERER_PREF_STRING = "Renderer"
 
-        @JvmStatic
         fun readPreferences(context: Context): GlPreferences {
             val prefs = context.getSharedPreferences(PREF_NAME, 0)
             return GlPreferences(prefs).apply {

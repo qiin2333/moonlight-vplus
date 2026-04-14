@@ -249,7 +249,6 @@ class ExternalDisplayManager(
     }
 
     companion object {
-        @JvmStatic
         fun hasExternalDisplay(context: Context): Boolean {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
                 val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager

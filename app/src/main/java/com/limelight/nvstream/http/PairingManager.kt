@@ -34,8 +34,7 @@ class PairingManager(
         ALREADY_IN_PROGRESS
     }
 
-    class PairResult(@JvmField val state: PairState, pairName: String?) {
-        @JvmField
+    class PairResult(val state: PairState, pairName: String?) {
         val pairName: String = if (pairName != null && pairName != "unknown") pairName else ""
     }
 
@@ -303,7 +302,6 @@ class PairingManager(
             return c
         }
 
-        @JvmStatic
         fun generatePinString(): String {
             val r = SecureRandom()
             return String.format(null as Locale?, "%d%d%d%d",

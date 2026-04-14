@@ -17,7 +17,6 @@ object SimpleMarkdownRenderer {
     private const val BULLET_SYMBOL = "◦ "
     private const val SECTION_DIVIDER = "· · · ✿ · · ·"
 
-    @JvmStatic
     fun render(markdown: String?, accentColor: Int): CharSequence {
         if (markdown.isNullOrEmpty()) return ""
 

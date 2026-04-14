@@ -36,7 +36,7 @@ import com.limelight.nvstream.http.PairingManager
 import com.limelight.nvstream.input.MouseButtonPacket
 import com.limelight.nvstream.jni.MoonBridge
 
-class NvConnection @JvmOverloads constructor(
+class NvConnection constructor(
     private val appContext: Context,
     host: ComputerDetails.AddressTuple,
     httpsPort: Int,
@@ -663,7 +663,6 @@ class NvConnection @JvmOverloads constructor(
     companion object {
         private val connectionAllowed = Semaphore(1)
 
-        @JvmStatic
         fun findExternalAddressForMdns(stunHostname: String, stunPort: Int): String {
             return MoonBridge.findExternalAddressIP4(stunHostname, stunPort)
         }

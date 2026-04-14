@@ -34,7 +34,6 @@ class Vector2d {
     }
 
     companion object {
-        @JvmField
         val ZERO = Vector2d()
     }
 }

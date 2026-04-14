@@ -364,7 +364,6 @@ class PcGridAdapter(
         private const val ONLINE_TEXT_COLOR = 0xFF1C1C1E.toInt()
         private const val OFFLINE_TEXT_COLOR = 0xFF8E8E93.toInt()
 
-        @JvmStatic
         fun isAddComputerCard(obj: PcView.ComputerObject?): Boolean {
             return obj != null && obj.details != null && ADD_COMPUTER_UUID == obj.details.uuid
         }

@@ -82,8 +82,8 @@ class AppView : Activity(), AdapterFragmentCallbacks {
 
         // ==================== Intent Extras & 偏好键 ====================
         const val HIDDEN_APPS_PREF_FILENAME = "HiddenApps"
-        @JvmField val NAME_EXTRA = "Name"
-        @JvmField val UUID_EXTRA = "UUID"
+        val NAME_EXTRA = "Name"
+        val UUID_EXTRA = "UUID"
         const val NEW_PAIR_EXTRA = "NewPair"
         const val SHOW_HIDDEN_APPS_EXTRA = "ShowHiddenApps"
         const val SELECTED_ADDRESS_EXTRA = "SelectedAddress"
@@ -1754,7 +1754,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
 
     // ==================== 内部类 ====================
 
-    class AppObject(@JvmField val app: NvApp) {
+    class AppObject(val app: NvApp) {
         var isRunning = false
         var isHidden = false
 

@@ -86,7 +86,6 @@ class StreamSettings : AppCompatActivity() {
         private const val KEY_SELECTED_CATEGORY = "selected_category_index"
 
         // HACK for Android 9
-        @JvmField
         var displayCutoutP: DisplayCutout? = null
 
         private const val SETTINGS_BG_URL = "https://raw.githubusercontent.com/qiin2333/qiin.github.io/assets/img/moonlight-bg2.webp"
