@@ -778,7 +778,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             .setResolution(prefConfig.width, prefConfig.height)
             .setLaunchRefreshRate(prefConfig.fps)
             .setRefreshRate(chosenFrameRate)
-            .setApp(app)
+            .setApp(app!!)
             .setBitrate(prefConfig.bitrate)
             .setResolutionScale(prefConfig.resolutionScale)
             .setEnableSops(prefConfig.enableSops)

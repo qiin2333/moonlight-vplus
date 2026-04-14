@@ -83,7 +83,7 @@ class DynamicTimeoutManager(private val networkDiagnostics: NetworkDiagnostics) 
      * 获取动态超时配置
      */
     fun getDynamicTimeoutConfig(address: String?, isLikelyOnline: Boolean): TimeoutConfig {
-        val diagnostics = networkDiagnostics.lastDiagnostics
+        val diagnostics = networkDiagnostics.getLastDiagnostics()
 
         if (isNetworkUnstable) {
             if (isNetworkUnstableRecovered()) {
@@ -111,7 +111,7 @@ class DynamicTimeoutManager(private val networkDiagnostics: NetworkDiagnostics) 
      * 获取用于快速查询的超时配置 - 如果失败要快速放弃
      */
     fun getFastFailConfig(): TimeoutConfig {
-        val diagnostics = networkDiagnostics.lastDiagnostics
+        val diagnostics = networkDiagnostics.getLastDiagnostics()
 
         return when (diagnostics.networkType) {
             NetworkDiagnostics.NetworkType.LAN -> FAST_FAIL_LAN_CONFIG
