@@ -142,6 +142,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     var displayedFailureDialog = false
     var connecting = false
     var connected = false
+    private var activeGameMenu: GameMenu? = null
     private var autoEnterPip = false
     private var surfaceCreated = false
     var attemptedConnection = false
@@ -1177,6 +1178,8 @@ class Game : Activity(), SurfaceHolder.Callback,
             progressOverlay = null
         }
         Dialog.closeDialogs()
+        activeGameMenu?.dismiss()
+        activeGameMenu = null
 
         if (virtualController != null) {
             virtualController?.hide()
@@ -1799,7 +1802,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             }
             BackKeyMenuMode.NO_MENU -> {}
             BackKeyMenuMode.GAME_MENU -> {
-                GameMenu(this, app, conn!!, device)
+                activeGameMenu = GameMenu(this, app, conn!!, device)
             }
         }
     }

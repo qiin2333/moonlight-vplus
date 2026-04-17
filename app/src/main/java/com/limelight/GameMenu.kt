@@ -77,6 +77,10 @@ class GameMenu(
         showMenu()
     }
 
+    fun dismiss() {
+        activeDialog?.dismiss()
+    }
+
     /**
      * 菜单选项类
      */
