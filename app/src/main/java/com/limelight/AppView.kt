@@ -45,7 +45,6 @@ import androidx.recyclerview.widget.RecyclerView
 import org.xmlpull.v1.XmlPullParserException
 
 import com.limelight.binding.PlatformBinding
-import com.limelight.computers.ComputerManagerListener
 import com.limelight.computers.ComputerManagerService
 import com.limelight.grid.AppGridAdapter
 import com.limelight.grid.assets.CachedAppAssetLoader
@@ -69,7 +68,20 @@ import com.limelight.utils.ShortcutHelper
 import com.limelight.utils.SpinnerDialog
 import com.limelight.utils.UiHelper
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
 class AppView : Activity(), AdapterFragmentCallbacks {
+
+    // 主线程作用域，用于收集 ComputerManagerService 的 Flow。
+    private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var pollingCollectJob: Job? = null
 
     // ==================== 上下文菜单 ID ====================
     companion object {
@@ -153,73 +165,57 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         override fun onServiceConnected(className: ComponentName, binder: IBinder) {
             val localBinder = binder as ComputerManagerService.ComputerManagerBinder
 
-            // Wait in a separate thread to avoid stalling the UI
-            Thread {
-                // Wait for the binder to be ready
-                localBinder.waitForReady()
+            uiScope.launch {
+                // Wait in IO to avoid stalling the UI
+                val ready = withContext(Dispatchers.IO) {
+                    localBinder.waitForReady()
 
-                // Get the computer object
-                computer = localBinder.getComputer(uuidString)
-                if (computer == null) {
+                    val comp = localBinder.getComputer(uuidString)
+                    if (comp == null) return@withContext false
+                    computer = comp
+
+                    val selectedAddress = intent.getStringExtra(SELECTED_ADDRESS_EXTRA)
+                    val selectedPort = intent.getIntExtra(SELECTED_PORT_EXTRA, -1)
+                    if (selectedAddress != null && selectedPort > 0) {
+                        computer?.activeAddress = ComputerDetails.AddressTuple(selectedAddress, selectedPort)
+                    }
+
+                    shortcutHelper.createAppViewShortcut(computer!!, true, intent.getBooleanExtra(NEW_PAIR_EXTRA, false))
+                    shortcutHelper.reportComputerShortcutUsed(computer!!)
+
+                    try {
+                        appGridAdapter = AppGridAdapter(this@AppView,
+                                PreferenceConfiguration.readPreferences(this@AppView),
+                                computer!!, localBinder.getUniqueId(),
+                                showHiddenApps)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        return@withContext false
+                    }
+
+                    appGridAdapter?.updateHiddenApps(hiddenAppIds, true)
+                    managerBinder = localBinder
+                    true
+                }
+
+                if (!ready) {
                     finish()
-                    return@Thread
+                    return@launch
                 }
 
-                // 如果Intent中传递了选中的地址，则使用该地址覆盖activeAddress
-                val selectedAddress = intent.getStringExtra(SELECTED_ADDRESS_EXTRA)
-                val selectedPort = intent.getIntExtra(SELECTED_PORT_EXTRA, -1)
-                if (selectedAddress != null && selectedPort > 0) {
-                    computer?.activeAddress = ComputerDetails.AddressTuple(selectedAddress, selectedPort)
-                }
+                if (isFinishing || isChangingConfigurations) return@launch
 
-                // Add a launcher shortcut for this PC (forced, since this is user interaction)
-                shortcutHelper.createAppViewShortcut(computer!!, true, intent.getBooleanExtra(NEW_PAIR_EXTRA, false))
-                shortcutHelper.reportComputerShortcutUsed(computer!!)
-
-                try {
-                    appGridAdapter = AppGridAdapter(this@AppView,
-                            PreferenceConfiguration.readPreferences(this@AppView),
-                            computer!!, localBinder.getUniqueId(),
-                            showHiddenApps)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    finish()
-                    return@Thread
-                }
-
-                appGridAdapter?.updateHiddenApps(hiddenAppIds, true)
-
-                // Now make the binder visible. We must do this after appGridAdapter
-                // is set to prevent us from reaching updateUiWithServerinfo() and
-                // touching the appGridAdapter prior to initialization.
-                managerBinder = localBinder
-
-                // Load the app grid with cached data (if possible).
-                // This must be done _before_ startComputerUpdates()
-                // so the initial serverinfo response can update the running
-                // icon.
                 populateAppGridWithCache()
-
-                // Start updates
                 startComputerUpdates()
 
-                runOnUiThread {
-                    if (isFinishing || isChangingConfigurations) {
-                        return@runOnUiThread
-                    }
-
-                    // Despite my best efforts to catch all conditions that could
-                    // cause the activity to be destroyed when we try to commit
-                    // I haven't been able to, so we have this try-catch block.
-                    try {
-                        fragmentManager.beginTransaction()
-                                .replace(R.id.appFragmentContainer, AdapterFragment())
-                                .commitAllowingStateLoss()
-                    } catch (e: IllegalStateException) {
-                        e.printStackTrace()
-                    }
+                try {
+                    fragmentManager.beginTransaction()
+                            .replace(R.id.appFragmentContainer, AdapterFragment())
+                            .commitAllowingStateLoss()
+                } catch (e: IllegalStateException) {
+                    e.printStackTrace()
                 }
-            }.start()
+            }
         }
 
         override fun onServiceDisconnected(className: ComponentName) {
@@ -258,89 +254,71 @@ class AppView : Activity(), AdapterFragmentCallbacks {
 
     private fun startComputerUpdates() {
         // Don't start polling if we're not bound or in the foreground
-        if (managerBinder == null || !inForeground) {
+        val binder = managerBinder ?: return
+        if (!inForeground) return
+
+        pollingCollectJob?.cancel()
+        pollingCollectJob = uiScope.launch {
+            binder.computerUpdates
+                .filter { !suspendGridUpdates }
+                .filter { it.uuid.equals(uuidString, ignoreCase = true) }
+                .collect { details -> handleComputerUpdate(details) }
+        }
+        binder.startPolling()
+
+        if (poller == null) {
+            poller = binder.createAppListPoller(computer!!)
+        }
+        poller?.start()
+    }
+
+    private fun handleComputerUpdate(details: ComputerDetails) {
+        if (details.state == ComputerDetails.State.OFFLINE) {
+            Toast.makeText(this, resources.getText(R.string.lost_connection), Toast.LENGTH_SHORT).show()
+            finish()
             return
         }
 
-        managerBinder?.startPolling(object : ComputerManagerListener {
-            override fun notifyComputerUpdated(details: ComputerDetails) {
-                // Do nothing if updates are suspended
-                if (suspendGridUpdates) {
-                    return
-                }
-
-                // Don't care about other computers
-                if (!details.uuid.equals(uuidString, ignoreCase = true)) {
-                    return
-                }
-
-                if (details.state == ComputerDetails.State.OFFLINE) {
-                    // The PC is unreachable now
-                    runOnUiThread {
-                        // Display a toast to the user and quit the activity
-                        Toast.makeText(this@AppView, resources.getText(R.string.lost_connection), Toast.LENGTH_SHORT).show()
-                        finish()
-                    }
-
-                    return
-                }
-
-                // Close immediately if the PC is no longer paired
-                if (details.state == ComputerDetails.State.ONLINE && details.pairState != PairingManager.PairState.PAIRED) {
-                    runOnUiThread {
-                        // Disable shortcuts referencing this PC for now
-                        shortcutHelper.disableComputerShortcut(details,
-                                resources.getString(R.string.scut_not_paired))
-
-                        // Display a toast to the user and quit the activity
-                        Toast.makeText(this@AppView, resources.getText(R.string.scut_not_paired), Toast.LENGTH_SHORT).show()
-                        finish()
-                    }
-
-                    return
-                }
-
-                // App list is the same or empty
-                if (details.rawAppList == null || details.rawAppList == lastRawApplist) {
-
-                    // Let's check if the running app ID changed
-                    if (details.runningGameId != lastRunningAppId) {
-                        // Update the currently running game using the app ID
-                        lastRunningAppId = details.runningGameId
-                        updateUiWithServerinfo(details)
-                    }
-
-                    return
-                }
-
-                lastRunningAppId = details.runningGameId
-                lastRawApplist = details.rawAppList
-
-                try {
-                    updateUiWithAppList(NvHTTP.getAppListByReader(StringReader(details.rawAppList)))
-                    updateUiWithServerinfo(details)
-
-                    if (blockingLoadSpinner != null) {
-                        blockingLoadSpinner?.dismiss()
-                        blockingLoadSpinner = null
-                    }
-                } catch (e: XmlPullParserException) {
-                    e.printStackTrace()
-                } catch (e: IOException) {
-                    e.printStackTrace()
-                }
-            }
-        })
-
-        if (poller == null) {
-            poller = managerBinder?.createAppListPoller(computer!!)
+        if (details.state == ComputerDetails.State.ONLINE && details.pairState != PairingManager.PairState.PAIRED) {
+            shortcutHelper.disableComputerShortcut(details,
+                    resources.getString(R.string.scut_not_paired))
+            Toast.makeText(this, resources.getText(R.string.scut_not_paired), Toast.LENGTH_SHORT).show()
+            finish()
+            return
         }
-        poller?.start()
+
+        // App list is the same or empty
+        if (details.rawAppList == null || details.rawAppList == lastRawApplist) {
+            if (details.runningGameId != lastRunningAppId) {
+                lastRunningAppId = details.runningGameId
+                updateUiWithServerinfo(details)
+            }
+            return
+        }
+
+        lastRunningAppId = details.runningGameId
+        lastRawApplist = details.rawAppList
+
+        try {
+            updateUiWithAppList(NvHTTP.getAppListByReader(StringReader(details.rawAppList)))
+            updateUiWithServerinfo(details)
+
+            if (blockingLoadSpinner != null) {
+                blockingLoadSpinner?.dismiss()
+                blockingLoadSpinner = null
+            }
+        } catch (e: XmlPullParserException) {
+            e.printStackTrace()
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
     }
 
     private fun stopComputerUpdates() {
         poller?.stop()
 
+        pollingCollectJob?.cancel()
+        pollingCollectJob = null
         managerBinder?.stopPolling()
 
         appGridAdapter?.cancelQueuedOperations()
@@ -776,26 +754,24 @@ class AppView : Activity(), AdapterFragmentCallbacks {
             return
         }
 
-        Thread {
+        uiScope.launch {
             try {
-                val httpConn = NvHTTP(computer?.activeAddress!!, (computer?.httpsPort ?: 0),
-                        managerBinder?.getUniqueId() ?: "", "", computer?.serverCert!!,
-                        PlatformBinding.getCryptoProvider(this))
-
-                val displays = httpConn.getDisplays()
-
-                runOnUiThread {
-                    if (displays.isNotEmpty()) {
-                        updateDisplaySelectionUI(displays)
-                    } else {
-                        displaySelectionInfo?.visibility = View.GONE
-                    }
+                val displays = withContext(Dispatchers.IO) {
+                    val httpConn = NvHTTP(computer?.activeAddress!!, (computer?.httpsPort ?: 0),
+                            managerBinder?.getUniqueId() ?: "", "", computer?.serverCert!!,
+                            PlatformBinding.getCryptoProvider(this@AppView))
+                    httpConn.getDisplays()
+                }
+                if (displays.isNotEmpty()) {
+                    updateDisplaySelectionUI(displays)
+                } else {
+                    displaySelectionInfo?.visibility = View.GONE
                 }
             } catch (e: Exception) {
                 LimeLog.warning("Failed to get displays: " + e.message)
-                runOnUiThread { displaySelectionInfo?.visibility = View.GONE }
+                displaySelectionInfo?.visibility = View.GONE
             }
-        }.start()
+        }
     }
 
     /**
@@ -1041,6 +1017,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
     override fun onDestroy() {
         super.onDestroy()
 
+        uiScope.cancel()
         SpinnerDialog.closeDialogs(this)
         Dialog.closeDialogs()
 

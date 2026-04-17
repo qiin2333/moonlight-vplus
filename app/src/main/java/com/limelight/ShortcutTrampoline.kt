@@ -9,7 +9,6 @@ import android.os.Bundle
 import android.os.IBinder
 
 import com.limelight.computers.ComputerDatabaseManager
-import com.limelight.computers.ComputerManagerListener
 import com.limelight.computers.ComputerManagerService
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.NvApp
@@ -22,6 +21,15 @@ import com.limelight.utils.ServerHelper
 import com.limelight.utils.SpinnerDialog
 import com.limelight.utils.UiHelper
 import com.limelight.utils.AppCacheManager
+
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 import org.xmlpull.v1.XmlPullParserException
 
@@ -40,12 +48,17 @@ class ShortcutTrampoline : Activity() {
 
     private var managerBinder: ComputerManagerService.ComputerManagerBinder? = null
 
+    private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var pollingCollectJob: Job? = null
+
     private val serviceConnection: ServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, binder: IBinder) {
             val localBinder = binder as ComputerManagerService.ComputerManagerBinder
 
-            Thread {
-                localBinder.waitForReady()
+            uiScope.launch {
+                withContext(Dispatchers.IO) {
+                    localBinder.waitForReady()
+                }
                 managerBinder = localBinder
 
                 computer = managerBinder?.getComputer(uuidString!!)
@@ -60,105 +73,109 @@ class ShortcutTrampoline : Activity() {
                     blockingLoadSpinner = null
 
                     if (managerBinder != null) {
-                        unbindService(this)
+                        unbindService(serviceConnection)
                         managerBinder = null
                     }
-                    return@Thread
+                    return@launch
                 }
 
                 managerBinder?.invalidateStateForComputer(computer?.uuid!!)
 
-                managerBinder?.startPolling(object : ComputerManagerListener {
-                    override fun notifyComputerUpdated(details: ComputerDetails) {
-                        if (!details.uuid.equals(uuidString, ignoreCase = true)) return
-
-                        if (details.state == ComputerDetails.State.OFFLINE && details.macAddress != null && --wakeHostTries >= 0) {
-                            try {
-                                val comp = computer ?: return
-                                WakeOnLanSender.sendWolPacket(comp)
-                                managerBinder?.invalidateStateForComputer(comp.uuid!!)
-                                return
-                            } catch (e: IOException) {
-                                e.printStackTrace()
-                            }
-                        }
-
-                        if (details.state != ComputerDetails.State.UNKNOWN) {
-                            runOnUiThread {
-                                blockingLoadSpinner?.dismiss()
-                                blockingLoadSpinner = null
-
-                                if (managerBinder == null) {
-                                    finish()
-                                    return@runOnUiThread
-                                }
-
-                                if (details.state == ComputerDetails.State.ONLINE && details.pairState == PairingManager.PairState.PAIRED) {
-                                    if (app != null) {
-                                        if (details.runningGameId == 0 || details.runningGameId == app?.appId) {
-                                            intentStack.add(ServerHelper.createStartIntent(this@ShortcutTrampoline, app!!, details, managerBinder!!))
-                                            finish()
-                                            startActivities(intentStack.toTypedArray())
-                                        } else {
-                                            val startIntent = ServerHelper.createStartIntent(this@ShortcutTrampoline, app!!, details, managerBinder!!)
-
-                                            UiHelper.displayQuitConfirmationDialog(this@ShortcutTrampoline, {
-                                                intentStack.add(startIntent)
-                                                finish()
-                                                startActivities(intentStack.toTypedArray())
-                                            }, {
-                                                finish()
-                                            })
-                                        }
-                                    } else {
-                                        finish()
-
-                                        var i = Intent(this@ShortcutTrampoline, PcView::class.java)
-                                        i.action = Intent.ACTION_MAIN
-                                        i.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
-                                        intentStack.add(i)
-
-                                        i = Intent(intent)
-                                        i.setClass(this@ShortcutTrampoline, AppView::class.java)
-                                        intentStack.add(i)
-
-                                        if (details.runningGameId != 0) {
-                                            val actualApp = getNvAppById(details.runningGameId, uuidString!!)
-                                            if (actualApp != null) {
-                                                intentStack.add(ServerHelper.createStartIntent(this@ShortcutTrampoline, actualApp, details, managerBinder!!))
-                                            } else {
-                                                intentStack.add(ServerHelper.createStartIntent(this@ShortcutTrampoline,
-                                                        NvApp("", details.runningGameId, false), details, managerBinder!!))
-                                            }
-                                        }
-
-                                        startActivities(intentStack.toTypedArray())
-                                    }
-                                } else if (details.state == ComputerDetails.State.OFFLINE) {
-                                    Dialog.displayDialog(this@ShortcutTrampoline,
-                                            resources.getString(R.string.conn_error_title),
-                                            resources.getString(R.string.error_pc_offline),
-                                            true)
-                                } else if (details.pairState != PairingManager.PairState.PAIRED) {
-                                    Dialog.displayDialog(this@ShortcutTrampoline,
-                                            resources.getString(R.string.conn_error_title),
-                                            resources.getString(R.string.scut_not_paired),
-                                            true)
-                                }
-
-                                if (managerBinder != null) {
-                                    managerBinder?.stopPolling()
-                                    unbindService(this@ShortcutTrampoline.serviceConnection)
-                                    managerBinder = null
-                                }
-                            }
-                        }
-                    }
-                })
-            }.start()
+                pollingCollectJob?.cancel()
+                pollingCollectJob = uiScope.launch {
+                    localBinder.computerUpdates
+                        .filter { it.uuid.equals(uuidString, ignoreCase = true) }
+                        .collect { details -> handleDetails(details) }
+                }
+                localBinder.startPolling()
+            }
         }
 
         override fun onServiceDisconnected(className: ComponentName) {
+            managerBinder = null
+        }
+    }
+
+    private fun handleDetails(details: ComputerDetails) {
+        if (details.state == ComputerDetails.State.OFFLINE && details.macAddress != null && --wakeHostTries >= 0) {
+            try {
+                val comp = computer ?: return
+                WakeOnLanSender.sendWolPacket(comp)
+                managerBinder?.invalidateStateForComputer(comp.uuid!!)
+                return
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        }
+
+        if (details.state == ComputerDetails.State.UNKNOWN) return
+
+        blockingLoadSpinner?.dismiss()
+        blockingLoadSpinner = null
+
+        if (managerBinder == null) {
+            finish()
+            return
+        }
+
+        if (details.state == ComputerDetails.State.ONLINE && details.pairState == PairingManager.PairState.PAIRED) {
+            if (app != null) {
+                if (details.runningGameId == 0 || details.runningGameId == app?.appId) {
+                    intentStack.add(ServerHelper.createStartIntent(this@ShortcutTrampoline, app!!, details, managerBinder!!))
+                    finish()
+                    startActivities(intentStack.toTypedArray())
+                } else {
+                    val startIntent = ServerHelper.createStartIntent(this@ShortcutTrampoline, app!!, details, managerBinder!!)
+
+                    UiHelper.displayQuitConfirmationDialog(this@ShortcutTrampoline, {
+                        intentStack.add(startIntent)
+                        finish()
+                        startActivities(intentStack.toTypedArray())
+                    }, {
+                        finish()
+                    })
+                }
+            } else {
+                finish()
+
+                var i = Intent(this@ShortcutTrampoline, PcView::class.java)
+                i.action = Intent.ACTION_MAIN
+                i.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
+                intentStack.add(i)
+
+                i = Intent(intent)
+                i.setClass(this@ShortcutTrampoline, AppView::class.java)
+                intentStack.add(i)
+
+                if (details.runningGameId != 0) {
+                    val actualApp = getNvAppById(details.runningGameId, uuidString!!)
+                    if (actualApp != null) {
+                        intentStack.add(ServerHelper.createStartIntent(this@ShortcutTrampoline, actualApp, details, managerBinder!!))
+                    } else {
+                        intentStack.add(ServerHelper.createStartIntent(this@ShortcutTrampoline,
+                                NvApp("", details.runningGameId, false), details, managerBinder!!))
+                    }
+                }
+
+                startActivities(intentStack.toTypedArray())
+            }
+        } else if (details.state == ComputerDetails.State.OFFLINE) {
+            Dialog.displayDialog(this@ShortcutTrampoline,
+                    resources.getString(R.string.conn_error_title),
+                    resources.getString(R.string.error_pc_offline),
+                    true)
+        } else if (details.pairState != PairingManager.PairState.PAIRED) {
+            Dialog.displayDialog(this@ShortcutTrampoline,
+                    resources.getString(R.string.conn_error_title),
+                    resources.getString(R.string.scut_not_paired),
+                    true)
+        }
+
+        if (managerBinder != null) {
+            pollingCollectJob?.cancel()
+            pollingCollectJob = null
+            managerBinder?.stopPolling()
+            unbindService(serviceConnection)
             managerBinder = null
         }
     }
@@ -345,6 +362,7 @@ class ShortcutTrampoline : Activity() {
     override fun onStop() {
         super.onStop()
 
+        uiScope.cancel()
         blockingLoadSpinner?.dismiss()
         blockingLoadSpinner = null
 

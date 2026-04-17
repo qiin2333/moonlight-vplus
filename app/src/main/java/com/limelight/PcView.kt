@@ -18,7 +18,6 @@ import com.bumptech.glide.request.RequestOptions
 import com.limelight.binding.PlatformBinding
 import com.limelight.binding.crypto.AndroidCryptoProvider
 import com.limelight.computers.ComputerManagerService
-import com.limelight.computers.ComputerManagerListener
 import com.limelight.dialogs.AddressSelectionDialog
 import com.limelight.grid.PcGridAdapter
 import com.limelight.grid.assets.DiskAssetLoader
@@ -48,6 +47,15 @@ import com.limelight.utils.ShortcutHelper
 import com.limelight.utils.UiHelper
 import com.limelight.utils.UpdateManager
 import com.squareup.seismic.ShakeDetector
+
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 import com.google.zxing.integration.android.IntentIntegrator
 import com.google.zxing.integration.android.IntentResult
@@ -174,18 +182,24 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     private val refreshHandler = Handler(Looper.getMainLooper())
     private var pendingRefreshRunnable: Runnable? = null
 
+    // 主线程作用域，用于收集 ComputerManagerService 的 Flow。onDestroy 时 cancel。
+    private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var pollingCollectJob: Job? = null
+
     lateinit var clientName: String
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, binder: IBinder) {
             val localBinder = binder as ComputerManagerService.ComputerManagerBinder
 
-            Thread {
-                localBinder.waitForReady()
+            uiScope.launch {
+                withContext(Dispatchers.IO) {
+                    localBinder.waitForReady()
+                    AndroidCryptoProvider(this@PcView).getClientCertificate()
+                }
                 managerBinder = localBinder
                 startComputerUpdates()
-                AndroidCryptoProvider(this@PcView).getClientCertificate()
-            }.start()
+            }
         }
 
         override fun onServiceDisconnected(className: ComponentName) {
@@ -267,6 +281,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     override fun onDestroy() {
         super.onDestroy()
 
+        uiScope.cancel()
         easyTierController?.onDestroy()
         if (managerBinder != null) {
             unbindService(serviceConnection)
@@ -409,27 +424,28 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         if (backgroundImageView == null) return
 
         val imageUrl = getBackgroundImageUrl()
-        Thread {
+        uiScope.launch {
             try {
-                val glideTarget = resolveGlideTarget(imageUrl)
-                val bitmap = Glide.with(this as Context)
-                        .asBitmap()
-                        .load(glideTarget)
-                        .skipMemoryCache(true)
-                        .diskCacheStrategy(DiskCacheStrategy.NONE)
-                        .submit()
-                        .get()
-
+                val bitmap = withContext(Dispatchers.IO) {
+                    val glideTarget = resolveGlideTarget(imageUrl)
+                    Glide.with(this@PcView as Context)
+                            .asBitmap()
+                            .load(glideTarget)
+                            .skipMemoryCache(true)
+                            .diskCacheStrategy(DiskCacheStrategy.NONE)
+                            .submit()
+                            .get()
+                }
                 if (bitmap != null) {
                     bitmapLruCache.put(imageUrl, bitmap)
-                    runOnUiThread { applyBlurredBackground(bitmap) }
+                    applyBlurredBackground(bitmap)
                 }
             } catch (e: ExecutionException) {
                 handleGlideException(e)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
-        }.start()
+        }
     }
 
     private fun resolveGlideTarget(imageUrl: String): Any {
@@ -514,33 +530,32 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         val imageUrl = getBackgroundImageUrl()
         bitmapLruCache.remove(imageUrl)
 
-        Thread {
+        uiScope.launch {
             try {
-                val glideTarget = resolveGlideTarget(imageUrl)
-                val bitmap = Glide.with(this as Context)
-                        .asBitmap()
-                        .load(glideTarget)
-                        .skipMemoryCache(true)
-                        .diskCacheStrategy(DiskCacheStrategy.NONE)
-                        .submit()
-                        .get()
-
+                val bitmap = withContext(Dispatchers.IO) {
+                    val glideTarget = resolveGlideTarget(imageUrl)
+                    Glide.with(this@PcView as Context)
+                            .asBitmap()
+                            .load(glideTarget)
+                            .skipMemoryCache(true)
+                            .diskCacheStrategy(DiskCacheStrategy.NONE)
+                            .submit()
+                            .get()
+                }
                 if (bitmap != null) {
                     bitmapLruCache.put(imageUrl, bitmap)
-                    runOnUiThread {
-                        applyBlurredBackground(bitmap)
-                        if (isFromShake) {
-                            showToast(getString(R.string.background_refreshed_with_remaining, getRemainingRefreshCount()))
-                        }
+                    applyBlurredBackground(bitmap)
+                    if (isFromShake) {
+                        showToast(getString(R.string.background_refreshed_with_remaining, getRemainingRefreshCount()))
                     }
                 } else {
-                    runOnUiThread { showToast(getString(R.string.refresh_failed_please_retry)) }
+                    showToast(getString(R.string.refresh_failed_please_retry))
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                runOnUiThread { showToast(getString(R.string.refresh_failed_with_error, e.message)) }
+                showToast(getString(R.string.refresh_failed_with_error, e.message))
             }
-        }.start()
+        }
     }
 
     // Image Save Methods
@@ -580,26 +595,27 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     }
 
     private fun downloadAndSaveImage() {
-        Thread {
+        uiScope.launch {
             try {
-                val glideTarget = resolveGlideTarget(getBackgroundImageUrl())
-                val bitmap = Glide.with(this as Context)
-                        .asBitmap()
-                        .load(glideTarget)
-                        .submit()
-                        .get()
-
+                val bitmap = withContext(Dispatchers.IO) {
+                    val glideTarget = resolveGlideTarget(getBackgroundImageUrl())
+                    Glide.with(this@PcView as Context)
+                            .asBitmap()
+                            .load(glideTarget)
+                            .submit()
+                            .get()
+                }
                 if (bitmap != null) {
                     bitmapLruCache.put(getBackgroundImageUrl(), bitmap)
-                    runOnUiThread { saveBitmapToFile(bitmap) }
+                    saveBitmapToFile(bitmap)
                 } else {
-                    runOnUiThread { showToast(getString(R.string.image_download_failed_retry)) }
+                    showToast(getString(R.string.image_download_failed_retry))
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                runOnUiThread { showToast(getString(R.string.image_download_failed_with_error, e.message)) }
+                showToast(getString(R.string.image_download_failed_with_error, e.message))
             }
-        }.start()
+        }
     }
 
     private fun saveBitmapToFile(bitmap: Bitmap?) {
@@ -759,26 +775,31 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     // Computer Manager Methods
 
     private fun startComputerUpdates() {
-        if (managerBinder != null && !runningPolling && inForeground) {
-            freezeUpdates = false
-            managerBinder?.startPolling(object : ComputerManagerListener {
-                override fun notifyComputerUpdated(details: ComputerDetails) {
-                    if (!freezeUpdates) {
-                        runOnUiThread { updateComputer(details) }
-                        if (details.pairState == PairState.PAIRED) {
-                            shortcutHelper.createAppViewShortcutForOnlineHost(details)
-                        }
+        val binder = managerBinder ?: return
+        if (runningPolling || !inForeground) return
+
+        freezeUpdates = false
+        pollingCollectJob?.cancel()
+        pollingCollectJob = uiScope.launch {
+            binder.computerUpdates
+                .filter { !freezeUpdates }
+                .collect { details ->
+                    updateComputer(details)
+                    if (details.pairState == PairState.PAIRED) {
+                        shortcutHelper.createAppViewShortcutForOnlineHost(details)
                     }
                 }
-            })
-            runningPolling = true
         }
+        binder.startPolling()
+        runningPolling = true
     }
 
     private fun stopComputerUpdates(wait: Boolean) {
         if (managerBinder == null || !runningPolling) return
 
         freezeUpdates = true
+        pollingCollectJob?.cancel()
+        pollingCollectJob = null
         managerBinder?.stopPolling()
 
         if (wait) {
@@ -1029,59 +1050,70 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         }
 
         showToast(getString(R.string.pairing))
-        Thread {
+        uiScope.launch {
             var message: String? = null
             var success = false
 
             try {
                 stopComputerUpdates(true)
 
-                val httpConn = NvHTTP(
-                        ServerHelper.getCurrentAddressFromComputer(computer),
-                        computer.httpsPort,
-                        (managerBinder?.getUniqueId() ?: ""),
-                        clientName,
-                        computer.serverCert,
-                        PlatformBinding.getCryptoProvider(this)
-                )
+                val result = withContext(Dispatchers.IO) {
+                    val httpConn = NvHTTP(
+                            ServerHelper.getCurrentAddressFromComputer(computer),
+                            computer.httpsPort,
+                            (managerBinder?.getUniqueId() ?: ""),
+                            clientName,
+                            computer.serverCert,
+                            PlatformBinding.getCryptoProvider(this@PcView)
+                    )
 
-                if (httpConn.getPairState() == PairState.PAIRED) {
-                    success = true
-                } else {
+                    if (httpConn.getPairState() == PairState.PAIRED) {
+                        return@withContext Triple<String?, Boolean, Pair<String, String>?>(null, true, null)
+                    }
+
                     val pinStr = PairingManager.generatePinString()
-                    Dialog.displayDialog(this,
-                            getString(R.string.pair_pairing_title),
-                            getString(R.string.pair_pairing_msg) + " " + pinStr + "\n\n" + getString(R.string.pair_pairing_help),
-                            false)
+                    withContext(Dispatchers.Main) {
+                        Dialog.displayDialog(this@PcView,
+                                getString(R.string.pair_pairing_title),
+                                getString(R.string.pair_pairing_msg) + " " + pinStr + "\n\n" + getString(R.string.pair_pairing_help),
+                                false)
+                    }
 
                     val pm = httpConn.pairingManager
-                    val result = pm.pair(httpConn.getServerInfo(true), pinStr)
+                    val pairResult = pm.pair(httpConn.getServerInfo(true), pinStr)
 
-                    when (result.state) {
+                    when (pairResult.state) {
                         PairState.PIN_WRONG ->
-                            message = getString(R.string.pair_incorrect_pin)
+                            Triple<String?, Boolean, Pair<String, String>?>(getString(R.string.pair_incorrect_pin), false, null)
                         PairState.FAILED ->
-                            message = if (computer.runningGameId != 0) getString(R.string.pair_pc_ingame) else getString(R.string.pair_fail)
+                            Triple<String?, Boolean, Pair<String, String>?>(
+                                if (computer.runningGameId != 0) getString(R.string.pair_pc_ingame) else getString(R.string.pair_fail),
+                                false, null
+                            )
                         PairState.ALREADY_IN_PROGRESS ->
-                            message = getString(R.string.pair_already_in_progress)
+                            Triple<String?, Boolean, Pair<String, String>?>(getString(R.string.pair_already_in_progress), false, null)
                         PairState.PAIRED -> {
-                            success = true
                             managerBinder?.getComputer(computer.uuid!!)!!.serverCert = pm.pairedCert
-                            getSharedPreferences("pair_name_map", MODE_PRIVATE)
-                                    .edit()
-                                    .putString(computer.uuid, result.pairName)
-                                    .apply()
-                            managerBinder?.invalidateStateForComputer(computer.uuid!!)
+                            Triple<String?, Boolean, Pair<String, String>?>(null, true, computer.uuid!! to pairResult.pairName)
                         }
-                        else -> {}
+                        else -> Triple<String?, Boolean, Pair<String, String>?>(null, false, null)
                     }
+                }
+
+                message = result.first
+                success = result.second
+                result.third?.let { (uuid, pairName) ->
+                    getSharedPreferences("pair_name_map", MODE_PRIVATE)
+                            .edit()
+                            .putString(uuid, pairName)
+                            .apply()
+                    managerBinder?.invalidateStateForComputer(uuid)
                 }
             } catch (e: UnknownHostException) {
                 message = getString(R.string.error_unknown_host)
             } catch (e: FileNotFoundException) {
                 message = getString(R.string.error_404)
             } catch (e: InterruptedException) {
-                Thread.currentThread().interrupt()
                 message = getString(R.string.pair_fail)
             } catch (e: XmlPullParserException) {
                 message = e.message
@@ -1091,19 +1123,15 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 Dialog.closeDialogs()
             }
 
-            val finalMessage = message
-            val finalSuccess = success
-            runOnUiThread {
-                if (finalMessage != null) {
-                    showToast(finalMessage)
-                }
-                if (finalSuccess) {
-                    doAppList(computer, true, false)
-                } else {
-                    startComputerUpdates()
-                }
+            if (message != null) {
+                showToast(message)
             }
-        }.start()
+            if (success) {
+                doAppList(computer, true, false)
+            } else {
+                startComputerUpdates()
+            }
+        }
     }
 
     private fun showAddComputerDialog() {
@@ -1155,7 +1183,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
         showToast(getString(R.string.qr_pairing))
         val finalPort = port
-        Thread {
+        uiScope.launch {
             var message: String? = null
             var success = false
             var pairedComputer: ComputerDetails? = null
@@ -1163,15 +1191,16 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             try {
                 stopComputerUpdates(true)
 
-                // Add the computer first
-                val addDetails = ComputerDetails()
-                addDetails.manualAddress = ComputerDetails.AddressTuple(host, finalPort)
-                val added = managerBinder?.addComputerBlocking(addDetails) == true
-                if (!added) {
-                    message = getString(R.string.addpc_fail)
-                } else {
+                val result = withContext(Dispatchers.IO) {
+                    // Add the computer first
+                    val addDetails = ComputerDetails()
+                    addDetails.manualAddress = ComputerDetails.AddressTuple(host, finalPort)
+                    val added = managerBinder?.addComputerBlocking(addDetails) == true
+                    if (!added) {
+                        return@withContext QrPairResult(getString(R.string.addpc_fail), false, null, null)
+                    }
+
                     // addComputerBlocking fills addDetails in-place (uuid, httpsPort, etc.)
-                    // Use getComputer to get the latest state from pollingTuples
                     var computer = managerBinder?.getComputer(addDetails.uuid!!)
                     if (computer == null) {
                         computer = addDetails
@@ -1183,60 +1212,66 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                         (managerBinder?.getUniqueId() ?: ""),
                         clientName,
                         computer.serverCert,
-                        PlatformBinding.getCryptoProvider(this)
+                        PlatformBinding.getCryptoProvider(this@PcView)
                     )
 
                     if (httpConn.getPairState() == PairState.PAIRED) {
-                        success = true
-                        pairedComputer = computer
-                    } else {
-                        val pm = httpConn.pairingManager
-                        val result = pm.pair(httpConn.getServerInfo(true), pin)
-                        when (result.state) {
-                            PairState.PIN_WRONG ->
-                                message = getString(R.string.pair_incorrect_pin)
-                            PairState.FAILED ->
-                                message = getString(R.string.pair_fail)
-                            PairState.ALREADY_IN_PROGRESS ->
-                                message = getString(R.string.pair_already_in_progress)
-                            PairState.PAIRED -> {
-                                success = true
-                                pairedComputer = computer
-                                managerBinder?.getComputer(computer.uuid!!)!!.serverCert = pm.pairedCert
-                                getSharedPreferences("pair_name_map", MODE_PRIVATE)
-                                    .edit()
-                                    .putString(computer.uuid, result.pairName)
-                                    .apply()
-                                managerBinder?.invalidateStateForComputer(computer.uuid!!)
-                            }
-                            else -> {}
-                        }
+                        return@withContext QrPairResult(null, true, computer, null)
                     }
+
+                    val pm = httpConn.pairingManager
+                    val pairResult = pm.pair(httpConn.getServerInfo(true), pin)
+                    when (pairResult.state) {
+                        PairState.PIN_WRONG ->
+                            QrPairResult(getString(R.string.pair_incorrect_pin), false, null, null)
+                        PairState.FAILED ->
+                            QrPairResult(getString(R.string.pair_fail), false, null, null)
+                        PairState.ALREADY_IN_PROGRESS ->
+                            QrPairResult(getString(R.string.pair_already_in_progress), false, null, null)
+                        PairState.PAIRED -> {
+                            managerBinder?.getComputer(computer.uuid!!)!!.serverCert = pm.pairedCert
+                            QrPairResult(null, true, computer, computer.uuid!! to pairResult.pairName)
+                        }
+                        else -> QrPairResult(null, false, null, null)
+                    }
+                }
+
+                message = result.message
+                success = result.success
+                pairedComputer = result.computer
+                result.saveName?.let { (uuid, pairName) ->
+                    getSharedPreferences("pair_name_map", MODE_PRIVATE)
+                        .edit()
+                        .putString(uuid, pairName)
+                        .apply()
+                    managerBinder?.invalidateStateForComputer(uuid)
                 }
             } catch (e: Exception) {
                 message = e.message
             }
 
-            val finalMessage = message
-            val finalSuccess = success
-            val finalComputer = pairedComputer
-            runOnUiThread {
-                if (finalMessage != null) {
-                    showToast(finalMessage)
-                }
-                if (finalSuccess) {
-                    showToast(getString(R.string.qr_pair_success))
-                    if (finalComputer != null) {
-                        doAppList(finalComputer, true, false)
-                    } else {
-                        startComputerUpdates()
-                    }
+            if (message != null) {
+                showToast(message)
+            }
+            if (success) {
+                showToast(getString(R.string.qr_pair_success))
+                if (pairedComputer != null) {
+                    doAppList(pairedComputer, true, false)
                 } else {
                     startComputerUpdates()
                 }
+            } else {
+                startComputerUpdates()
             }
-        }.start()
+        }
     }
+
+    private data class QrPairResult(
+        val message: String?,
+        val success: Boolean,
+        val computer: ComputerDetails?,
+        val saveName: Pair<String, String>?
+    )
 
     private fun findComputerByAddress(host: String): ComputerDetails? {
         if (managerBinder == null) return null
@@ -1261,17 +1296,17 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             return
         }
 
-        Thread {
-            var message: String
-            try {
-                WakeOnLanSender.sendWolPacket(computer)
-                message = getString(R.string.wol_waking_msg)
-            } catch (e: IOException) {
-                message = getString(R.string.wol_fail)
+        uiScope.launch {
+            val message = withContext(Dispatchers.IO) {
+                try {
+                    WakeOnLanSender.sendWolPacket(computer)
+                    getString(R.string.wol_waking_msg)
+                } catch (e: IOException) {
+                    getString(R.string.wol_fail)
+                }
             }
-            val finalMessage = message
-            runOnUiThread { showToast(finalMessage) }
-        }.start()
+            showToast(message)
+        }
     }
 
     private fun doUnpair(computer: ComputerDetails) {
@@ -1286,42 +1321,41 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
         showToast(getString(R.string.unpairing))
         val binder = managerBinder!!
-        Thread {
-            var message: String?
-            try {
-                val httpConn = NvHTTP(
-                        ServerHelper.getCurrentAddressFromComputer(computer),
-                        computer.httpsPort,
-                        binder.getUniqueId(),
-                        clientName,
-                        computer.serverCert,
-                        PlatformBinding.getCryptoProvider(this)
-                )
+        uiScope.launch {
+            val message = withContext(Dispatchers.IO) {
+                try {
+                    val httpConn = NvHTTP(
+                            ServerHelper.getCurrentAddressFromComputer(computer),
+                            computer.httpsPort,
+                            binder.getUniqueId(),
+                            clientName,
+                            computer.serverCert,
+                            PlatformBinding.getCryptoProvider(this@PcView)
+                    )
 
-                message = if (httpConn.getPairState() == PairState.PAIRED) {
-                    httpConn.unpair()
-                    if (httpConn.getPairState() == PairState.NOT_PAIRED)
-                        getString(R.string.unpair_success)
-                    else
-                        getString(R.string.unpair_fail)
-                } else {
-                    getString(R.string.unpair_error)
+                    if (httpConn.getPairState() == PairState.PAIRED) {
+                        httpConn.unpair()
+                        if (httpConn.getPairState() == PairState.NOT_PAIRED)
+                            getString(R.string.unpair_success)
+                        else
+                            getString(R.string.unpair_fail)
+                    } else {
+                        getString(R.string.unpair_error)
+                    }
+                } catch (e: UnknownHostException) {
+                    getString(R.string.error_unknown_host)
+                } catch (e: FileNotFoundException) {
+                    getString(R.string.error_404)
+                } catch (e: XmlPullParserException) {
+                    e.message ?: getString(R.string.unpair_fail)
+                } catch (e: IOException) {
+                    e.message ?: getString(R.string.unpair_fail)
+                } catch (e: InterruptedException) {
+                    getString(R.string.error_interrupted)
                 }
-            } catch (e: UnknownHostException) {
-                message = getString(R.string.error_unknown_host)
-            } catch (e: FileNotFoundException) {
-                message = getString(R.string.error_404)
-            } catch (e: XmlPullParserException) {
-                message = e.message
-            } catch (e: IOException) {
-                message = e.message
-            } catch (e: InterruptedException) {
-                message = getString(R.string.error_interrupted)
             }
-
-            val finalMessage = message
-            runOnUiThread { showToast(finalMessage!!) }
-        }.start()
+            showToast(message)
+        }
     }
 
     private fun doAppList(computer: ComputerDetails, newlyPaired: Boolean, showHiddenGames: Boolean) {
@@ -1381,31 +1415,33 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             return
         }
 
-        Thread {
-            val targetApp = if (computer.runningGameId != 0)
-                getNvAppById(computer.runningGameId, computer.uuid!!)
-            else
-                getFirstAppFromCache(computer.uuid!!)
+        uiScope.launch {
+            val targetApp = withContext(Dispatchers.IO) {
+                if (computer.runningGameId != 0)
+                    getNvAppById(computer.runningGameId, computer.uuid!!)
+                else
+                    getFirstAppFromCache(computer.uuid!!)
+            }
 
             if (targetApp == null) {
                 fallbackToAppList(computer)
-                return@Thread
+                return@launch
             }
 
             val targetComputer = prepareComputerWithAddress(computer)
             if (targetComputer == null) {
-                runOnUiThread { showToast(getString(R.string.error_pc_offline)) }
-                return@Thread
+                showToast(getString(R.string.error_pc_offline))
+                return@launch
             }
 
             if (targetComputer.hasMultipleLanAddresses()) {
-                runOnUiThread { showAddressSelectionDialog(targetComputer) }
-                return@Thread
+                showAddressSelectionDialog(targetComputer)
+                return@launch
             }
 
             val appToStart = targetApp
-            runOnUiThread { ServerHelper.doStart(this, appToStart, targetComputer, managerBinder!!) }
-        }.start()
+            ServerHelper.doStart(this@PcView, appToStart, targetComputer, managerBinder!!)
+        }
     }
 
     private fun quickStartStreamWithScreenMode(computer: ComputerDetails, itemView: View?, isSecondaryScreen: Boolean, screenMode: Int) {
@@ -1421,40 +1457,40 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             return
         }
 
-        Thread {
-            val targetApp = if (computer.runningGameId != 0)
-                getNvAppById(computer.runningGameId, computer.uuid!!)
-            else
-                getFirstAppFromCache(computer.uuid!!)
+        uiScope.launch {
+            val targetApp = withContext(Dispatchers.IO) {
+                if (computer.runningGameId != 0)
+                    getNvAppById(computer.runningGameId, computer.uuid!!)
+                else
+                    getFirstAppFromCache(computer.uuid!!)
+            }
 
             if (targetApp == null) {
                 fallbackToAppList(computer)
-                return@Thread
+                return@launch
             }
 
             val targetComputer = prepareComputerWithAddress(computer)
             if (targetComputer == null) {
-                runOnUiThread { showToast(getString(R.string.error_pc_offline)) }
-                return@Thread
+                showToast(getString(R.string.error_pc_offline))
+                return@launch
             }
 
             if (targetComputer.hasMultipleLanAddresses()) {
-                runOnUiThread { showAddressSelectionDialog(targetComputer) }
-                return@Thread
+                showAddressSelectionDialog(targetComputer)
+                return@launch
             }
 
-            runOnUiThread {
-                val intent = ServerHelper.createStartIntent(this, targetApp, targetComputer, managerBinder!!, null)
-                if (screenMode != -1) {
-                    if (targetComputer.useVdd) {
-                        intent.putExtra(Game.EXTRA_VDD_SCREEN_COMBINATION_MODE, screenMode)
-                    } else {
-                        intent.putExtra(Game.EXTRA_SCREEN_COMBINATION_MODE, screenMode)
-                    }
+            val intent = ServerHelper.createStartIntent(this@PcView, targetApp, targetComputer, managerBinder!!, null)
+            if (screenMode != -1) {
+                if (targetComputer.useVdd) {
+                    intent.putExtra(Game.EXTRA_VDD_SCREEN_COMBINATION_MODE, screenMode)
+                } else {
+                    intent.putExtra(Game.EXTRA_SCREEN_COMBINATION_MODE, screenMode)
                 }
-                startActivity(intent)
             }
-        }.start()
+            startActivity(intent)
+        }
     }
 
     private fun prepareComputerWithAddress(computer: ComputerDetails): ComputerDetails? {

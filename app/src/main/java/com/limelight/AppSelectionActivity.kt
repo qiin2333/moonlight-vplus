@@ -11,7 +11,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.limelight.computers.ComputerManagerListener
 import com.limelight.computers.ComputerManagerService
 import com.limelight.grid.AppGridAdapter
 import com.limelight.nvstream.http.ComputerDetails
@@ -24,11 +23,22 @@ import com.limelight.utils.CacheHelper
 import com.limelight.utils.ServerHelper
 import com.limelight.utils.SpinnerDialog
 import com.limelight.utils.UiHelper
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.xmlpull.v1.XmlPullParserException
 import java.io.IOException
 import java.io.StringReader
 
-class AppSelectionActivity : Activity(), ComputerManagerListener {
+class AppSelectionActivity : Activity() {
+
+    private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var pollingCollectJob: Job? = null
 
     private var pcName: String? = null
     private var pcUuid: String? = null
@@ -45,22 +55,27 @@ class AppSelectionActivity : Activity(), ComputerManagerListener {
         override fun onServiceConnected(className: ComponentName, binder: IBinder) {
             val localBinder = binder as ComputerManagerService.ComputerManagerBinder
 
-            Thread {
-                localBinder.waitForReady()
+            uiScope.launch {
+                withContext(Dispatchers.IO) {
+                    localBinder.waitForReady()
+                }
                 managerBinder = localBinder
-
-                managerBinder?.startPolling(this@AppSelectionActivity)
 
                 if (pcUuid != null) {
                     managerBinder?.invalidateStateForComputer(pcUuid!!)
                 }
 
-                runOnUiThread {
-                    if (!isFinishing && !isDestroyed) {
-                        loadApps()
+                if (!isFinishing && !isDestroyed) {
+                    pollingCollectJob?.cancel()
+                    pollingCollectJob = uiScope.launch {
+                        localBinder.computerUpdates
+                            .filter { it.uuid == pcUuid }
+                            .collect { handleComputerUpdate(it) }
                     }
+                    localBinder.startPolling()
+                    loadApps()
                 }
-            }.start()
+            }
         }
 
         override fun onServiceDisconnected(className: ComponentName) {
@@ -92,6 +107,7 @@ class AppSelectionActivity : Activity(), ComputerManagerListener {
 
     override fun onDestroy() {
         super.onDestroy()
+        uiScope.cancel()
         if (managerBinder != null) {
             managerBinder?.stopPolling()
             unbindService(serviceConnection)
@@ -153,46 +169,44 @@ class AppSelectionActivity : Activity(), ComputerManagerListener {
                     getString(R.string.applist_connect_msg), true
                 )
 
-                Thread {
-                    binder.invalidateStateForComputer(pcUuid!!)
+                uiScope.launch {
+                    withContext(Dispatchers.IO) {
+                        binder.invalidateStateForComputer(pcUuid!!)
 
-                    if (comp.state == ComputerDetails.State.OFFLINE) {
-                        try {
-                            WakeOnLanSender.sendWolPacket(comp)
-                            binder.invalidateStateForComputer(pcUuid!!)
-                        } catch (e: IOException) {
-                            LimeLog.warning("Failed to send WoL packet:$e")
+                        if (comp.state == ComputerDetails.State.OFFLINE) {
+                            try {
+                                WakeOnLanSender.sendWolPacket(comp)
+                                binder.invalidateStateForComputer(pcUuid!!)
+                            } catch (e: IOException) {
+                                LimeLog.warning("Failed to send WoL packet:$e")
+                            }
                         }
                     }
-                }.start()
+                }
             }
         }
     }
 
-    override fun notifyComputerUpdated(details: ComputerDetails) {
-        if (details.uuid != pcUuid) return
-
+    private fun handleComputerUpdate(details: ComputerDetails) {
         computer = details
 
         val pending = pendingAppLaunch ?: return
         if (details.state == ComputerDetails.State.ONLINE && details.activeAddress != null) {
-            runOnUiThread {
-                if (connectingDialog != null) {
-                    connectingDialog?.dismiss()
-                    connectingDialog = null
-                }
+            if (connectingDialog != null) {
+                connectingDialog?.dismiss()
+                connectingDialog = null
+            }
 
-                val comp = computer!!
-                val binder = managerBinder ?: return@runOnUiThread
-                if (comp.runningGameId != 0 && comp.runningGameId != pending.app.appId) {
-                    UiHelper.displayQuitConfirmationDialog(this@AppSelectionActivity, {
-                        ServerHelper.doStart(this@AppSelectionActivity, pending.app, comp, binder)
-                        finish()
-                    }, null)
-                } else {
+            val comp = computer!!
+            val binder = managerBinder ?: return
+            if (comp.runningGameId != 0 && comp.runningGameId != pending.app.appId) {
+                UiHelper.displayQuitConfirmationDialog(this@AppSelectionActivity, {
                     ServerHelper.doStart(this@AppSelectionActivity, pending.app, comp, binder)
                     finish()
-                }
+                }, null)
+            } else {
+                ServerHelper.doStart(this@AppSelectionActivity, pending.app, comp, binder)
+                finish()
             }
         }
     }

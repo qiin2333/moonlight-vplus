@@ -26,6 +26,23 @@ import com.limelight.utils.CacheHelper
 import com.limelight.utils.NetHelper
 import com.limelight.utils.ServerHelper
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.runInterruptible
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+
 import android.app.Service
 import android.content.ComponentName
 import android.content.Context
@@ -50,11 +67,22 @@ class ComputerManagerService : Service() {
 
     private lateinit var idManager: IdentityManager
     private val pollingTuples = LinkedList<PollingTuple>()
-    private var listener: ComputerManagerListener? = null
+
+    // Flow 版数据流。所有计算机状态更新从这里发射。
+    private val _computerUpdates = MutableSharedFlow<ComputerDetails>(
+        replay = 0,
+        extraBufferCapacity = 128,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val computerUpdates: SharedFlow<ComputerDetails> = _computerUpdates.asSharedFlow()
+
     private val activePolls = AtomicInteger(0)
     @Volatile
     private var pollingActive = false
     private val defaultNetworkLock = ReentrantLock()
+
+    // Service 生命周期作用域，用于所有后台协程（轮询、STUN 等）。onDestroy 时 cancel。
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private lateinit var networkCallback: ConnectivityManager.NetworkCallback
 
@@ -130,59 +158,70 @@ class ComputerManagerService : Service() {
             }
         }
 
-        if ((!newPc || details.state == ComputerDetails.State.ONLINE) && listener != null) {
-            listener?.notifyComputerUpdated(details)
+        if (!newPc || details.state == ComputerDetails.State.ONLINE) {
+            _computerUpdates.tryEmit(details)
         }
 
         releaseLocalDatabaseReference()
         return true
     }
 
-    private fun createPollingThread(tuple: PollingTuple): Thread {
-        val t = object : Thread() {
-            override fun run() {
-                var offlineCount = 0
-                while (!isInterrupted && pollingActive && tuple.thread === this) {
-                    try {
-                        synchronized(tuple.networkLock) {
-                            if (!runPoll(tuple.computer, false, offlineCount)) {
-                                LimeLog.warning("${tuple.computer.name} is offline (try $offlineCount)")
-                                offlineCount++
-                            } else {
-                                tuple.lastSuccessfulPollMs = SystemClock.elapsedRealtime()
-                                offlineCount = 0
-                            }
-                        }
-                        sleep(SERVERINFO_POLLING_PERIOD_MS.toLong())
-                    } catch (e: InterruptedException) {
-                        break
-                    }
+    private fun startPollingInternal() {
+        pollingActive = true
+        discoveryBinder?.startDiscovery(MDNS_QUERY_PERIOD_MS)
+
+        synchronized(pollingTuples) {
+            for (tuple in pollingTuples) {
+                if (SystemClock.elapsedRealtime() - tuple.lastSuccessfulPollMs > POLL_DATA_TTL_MS) {
+                    LimeLog.info("Timing out polled state for ${tuple.computer.name}")
+                    tuple.computer.state = ComputerDetails.State.UNKNOWN
+                }
+                _computerUpdates.tryEmit(tuple.computer)
+                if (tuple.job == null) {
+                    tuple.job = createPollingJob(tuple)
                 }
             }
         }
-        t.name = "Polling thread for ${tuple.computer.name}"
-        return t
+    }
+
+    private fun createPollingJob(tuple: PollingTuple): Job = serviceScope.launch {
+        var offlineCount = 0
+        while (isActive && pollingActive && tuple.job === coroutineContext[Job]) {
+            try {
+                val polled = runInterruptible {
+                    synchronized(tuple.networkLock) {
+                        runPoll(tuple.computer, false, offlineCount)
+                    }
+                }
+                if (!polled) {
+                    LimeLog.warning("${tuple.computer.name} is offline (try $offlineCount)")
+                    offlineCount++
+                } else {
+                    tuple.lastSuccessfulPollMs = SystemClock.elapsedRealtime()
+                    offlineCount = 0
+                }
+            } catch (e: InterruptedException) {
+                break
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            }
+            try {
+                delay(SERVERINFO_POLLING_PERIOD_MS.toLong())
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            }
+        }
     }
 
     inner class ComputerManagerBinder : Binder() {
-        fun startPolling(listener: ComputerManagerListener) {
-            pollingActive = true
-            this@ComputerManagerService.listener = listener
-            discoveryBinder?.startDiscovery(MDNS_QUERY_PERIOD_MS)
+        /**
+         * Flow 版的计算机更新流。调用 [startPolling] 后，所有轮询结果都会从这里发射。
+         */
+        val computerUpdates: SharedFlow<ComputerDetails>
+            get() = this@ComputerManagerService.computerUpdates
 
-            synchronized(pollingTuples) {
-                for (tuple in pollingTuples) {
-                    if (SystemClock.elapsedRealtime() - tuple.lastSuccessfulPollMs > POLL_DATA_TTL_MS) {
-                        LimeLog.info("Timing out polled state for ${tuple.computer.name}")
-                        tuple.computer.state = ComputerDetails.State.UNKNOWN
-                    }
-                    listener.notifyComputerUpdated(tuple.computer)
-                    if (tuple.thread == null) {
-                        tuple.thread = createPollingThread(tuple)
-                        tuple.thread?.start()
-                    }
-                }
-            }
+        fun startPolling() {
+            startPollingInternal()
         }
 
         fun waitForReady() {
@@ -264,14 +303,11 @@ class ComputerManagerService : Service() {
         pollingActive = false
         synchronized(pollingTuples) {
             for (tuple in pollingTuples) {
-                if (tuple.thread != null) {
-                    tuple.thread?.interrupt()
-                    tuple.thread = null
-                }
+                tuple.job?.cancel()
+                tuple.job = null
             }
         }
 
-        listener = null
         return false
     }
 
@@ -280,10 +316,10 @@ class ComputerManagerService : Service() {
         if (!prefConfig.enableStun) {
             return
         }
-        Thread({ performStunRequestAsync(details) }, "STUN-Request-${details.name}").start()
+        serviceScope.launch { performStunRequestAsync(details) }
     }
 
-    private fun performStunRequestAsync(details: ComputerDetails) {
+    private suspend fun performStunRequestAsync(details: ComputerDetails) {
         try {
             var boundToNetwork = false
             val activeNetworkIsVpn = NetHelper.isActiveNetworkVpn(this)
@@ -320,7 +356,7 @@ class ComputerManagerService : Service() {
 
                     if (!activeNetworkIsVpn || boundToNetwork) {
                         val startTime = System.currentTimeMillis()
-                        val stunResolvedAddress = performStunQueryWithTimeout("stun.moonlight-stream.org", 3478, stunTimeout)
+                        val stunResolvedAddress = performStunQuerySuspending("stun.moonlight-stream.org", 3478, stunTimeout.toLong())
                         val duration = System.currentTimeMillis() - startTime
 
                         if (stunResolvedAddress != null) {
@@ -349,31 +385,16 @@ class ComputerManagerService : Service() {
         }
     }
 
-    private fun performStunQueryWithTimeout(stunHost: String, stunPort: Int, timeoutMs: Int): String? {
-        var address: String? = null
-        val stunThread = Thread({
-            try {
-                address = NvConnection.findExternalAddressForMdns(stunHost, stunPort)
-            } catch (e: Exception) {
-                LimeLog.warning("STUN query exception: ${e.message}")
+    private suspend fun performStunQuerySuspending(stunHost: String, stunPort: Int, timeoutMs: Long): String? {
+        return withTimeoutOrNull(timeoutMs) {
+            runInterruptible(Dispatchers.IO) {
+                try {
+                    NvConnection.findExternalAddressForMdns(stunHost, stunPort)
+                } catch (e: Exception) {
+                    LimeLog.warning("STUN query exception: ${e.message}")
+                    null
+                }
             }
-        }, "STUN-Query")
-
-        stunThread.start()
-
-        return try {
-            stunThread.join(timeoutMs.toLong())
-            if (stunThread.isAlive) {
-                LimeLog.warning("STUN query timeout after ${timeoutMs}ms")
-                stunThread.interrupt()
-                stunThread.join(500)
-                null
-            } else {
-                address
-            }
-        } catch (e: InterruptedException) {
-            stunThread.interrupt()
-            null
         }
     }
 
@@ -415,9 +436,8 @@ class ComputerManagerService : Service() {
             for (tuple in pollingTuples) {
                 if (tuple.computer.uuid == details.uuid) {
                     tuple.computer.update(details)
-                    if (pollingActive && tuple.thread == null) {
-                        tuple.thread = createPollingThread(tuple)
-                        tuple.thread?.start()
+                    if (pollingActive && tuple.job == null) {
+                        tuple.job = createPollingJob(tuple)
                     }
                     return
                 }
@@ -425,10 +445,9 @@ class ComputerManagerService : Service() {
 
             val tuple = PollingTuple(details, null)
             if (pollingActive) {
-                tuple.thread = createPollingThread(tuple)
+                tuple.job = createPollingJob(tuple)
             }
             pollingTuples.add(tuple)
-            tuple.thread?.start()
         }
     }
 
@@ -464,8 +483,8 @@ class ComputerManagerService : Service() {
             while (iterator.hasNext()) {
                 val tuple = iterator.next()
                 if (tuple.computer.uuid == computer.uuid) {
-                    tuple.thread?.interrupt()
-                    tuple.thread = null
+                    tuple.job?.cancel()
+                    tuple.job = null
                     iterator.remove()
                     break
                 }
@@ -556,163 +575,103 @@ class ComputerManagerService : Service() {
         }
     }
 
-    private class ParallelPollTuple(
-        val address: ComputerDetails.AddressTuple?,
-        val existingDetails: ComputerDetails
-    ) {
-        @Volatile
-        var complete = false
-        var pollingThread: Thread? = null
-
-        @Volatile
-        var returnedDetails: ComputerDetails? = null
-
-        fun interrupt() {
-            pollingThread?.interrupt()
-        }
-    }
-
     @Throws(InterruptedException::class)
     private fun parallelPollPc(details: ComputerDetails): ComputerDetails? {
-        val tuples = arrayOf(
-            ParallelPollTuple(details.localAddress, details),
-            ParallelPollTuple(details.manualAddress, details),
-            ParallelPollTuple(details.remoteAddress, details),
-            ParallelPollTuple(details.ipv6Address, details)
-        )
+        val candidates = listOfNotNull(
+            details.localAddress,
+            details.manualAddress,
+            details.remoteAddress,
+            details.ipv6Address
+        ).distinct()
 
-        val sharedLock = Object()
+        if (candidates.isEmpty()) return null
 
-        val uniqueAddresses = HashSet<ComputerDetails.AddressTuple>()
-        for (tuple in tuples) {
-            startParallelPollThreadFast(tuple, uniqueAddresses, sharedLock)
-        }
+        val diagnostics = networkDiagnostics?.getLastDiagnostics()
+        val skipLan = diagnostics?.networkType == NetworkDiagnostics.NetworkType.WAN ||
+                diagnostics?.networkType == NetworkDiagnostics.NetworkType.MOBILE
 
-        var result: ComputerDetails? = null
-        var primaryAddress: ComputerDetails.AddressTuple? = null
-        var firstResponseTime: Long = 0
+        // 使用 runBlocking 在当前（已是后台）线程中构造结构化并发作用域；
+        // 调用方要么在 Dispatchers.IO 协程的 runInterruptible 内，要么在 mDNS 发现线程，均非主线程。
+        return runBlocking {
+            val results = kotlinx.coroutines.channels.Channel<Pair<ComputerDetails.AddressTuple, ComputerDetails?>>(candidates.size)
 
-        try {
-            synchronized(sharedLock) {
-                while (true) {
-                    if (result == null) {
-                        for (tuple in tuples) {
-                            if (tuple.complete && tuple.returnedDetails != null) {
-                                result = tuple.returnedDetails
-                                primaryAddress = tuple.address
-                                result?.activeAddress = primaryAddress
-                                result?.addAvailableAddress(primaryAddress)
-                                firstResponseTime = SystemClock.elapsedRealtime()
-                                LimeLog.info("Fast poll: got first response from address ${tuple.address}")
-                                break
-                            }
+            // 并发探测每个地址
+            val probeJobs = candidates.map { addr ->
+                launch(Dispatchers.IO) {
+                    val polled = try {
+                        @Suppress("DEPRECATION")
+                        val isLan = NetworkDiagnostics.isLanAddress(addr.address)
+                        if (isLan && skipLan) {
+                            LimeLog.info("Skipping LAN address $addr on WAN/MOBILE network")
+                            null
+                        } else {
+                            runInterruptible { tryPollIp(details, addr) }
                         }
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        LimeLog.warning("Poll exception for $addr: ${e.message}")
+                        null
                     }
+                    results.trySend(addr to polled)
+                }
+            }
 
-                    if (result != null && primaryAddress != null) {
-                        for (tuple in tuples) {
-                            if (tuple.complete && tuple.returnedDetails != null &&
-                                tuple.address != null && tuple.address != primaryAddress &&
-                                result?.uuid != null && tuple.returnedDetails?.uuid != null &&
-                                result?.uuid == tuple.returnedDetails?.uuid
-                            ) {
-                                if (result?.availableAddresses?.contains(tuple.address) != true) {
-                                    result?.addAvailableAddress(tuple.address)
-                                    LimeLog.info("Fast poll: also got response from address ${tuple.address}")
-                                }
-                            }
-                        }
+            var result: ComputerDetails? = null
+            var primaryAddress: ComputerDetails.AddressTuple? = null
+            var firstResponseTime = 0L
+            var completed = 0
 
-                        val elapsed = SystemClock.elapsedRealtime() - firstResponseTime
-                        val allComplete = areAllComplete(tuples)
-
-                        if (elapsed >= COLLECTION_TIMEOUT_MS || allComplete) {
-                            LimeLog.info("Fast poll: collected ${result?.availableAddresses?.size} available addresses (timeout: ${elapsed >= COLLECTION_TIMEOUT_MS}, all complete: $allComplete)")
+            try {
+                while (completed < candidates.size) {
+                    val pair = if (result != null) {
+                        val remaining = COLLECTION_TIMEOUT_MS - (SystemClock.elapsedRealtime() - firstResponseTime)
+                        if (remaining <= 0) {
+                            LimeLog.info("Fast poll: collection window elapsed (collected ${result?.availableAddresses?.size} addresses)")
                             break
                         }
-                    }
-
-                    if (result == null && areAllComplete(tuples)) {
-                        LimeLog.info("Fast poll: all addresses failed")
-                        break
-                    }
-
-                    (sharedLock as Object).wait()
-                }
-            }
-        } finally {
-            for (tuple in tuples) {
-                tuple.interrupt()
-            }
-        }
-
-        return result
-    }
-
-    private fun areAllComplete(tuples: Array<ParallelPollTuple>): Boolean {
-        for (tuple in tuples) {
-            if (!tuple.complete) return false
-        }
-        return true
-    }
-
-    private fun startParallelPollThreadFast(
-        tuple: ParallelPollTuple,
-        uniqueAddresses: HashSet<ComputerDetails.AddressTuple>,
-        sharedLock: Any
-    ) {
-        if (tuple.address == null || !uniqueAddresses.add(tuple.address)) {
-            tuple.complete = true
-            tuple.returnedDetails = null
-            synchronized(sharedLock) {
-                (sharedLock as Object).notifyAll()
-            }
-            return
-        }
-
-        @Suppress("DEPRECATION")
-        val isLanAddress = NetworkDiagnostics.isLanAddress(tuple.address.address)
-        val diagnostics = networkDiagnostics?.getLastDiagnostics()
-
-        LimeLog.info("Starting poll thread for ${tuple.address} (LAN: $isLanAddress, Network: ${diagnostics?.networkType ?: "UNKNOWN"})")
-
-        tuple.pollingThread = object : Thread() {
-            override fun run() {
-                val startTime = System.currentTimeMillis()
-                var details: ComputerDetails? = null
-
-                try {
-                    if (isLanAddress && diagnostics != null &&
-                        (diagnostics.networkType == NetworkDiagnostics.NetworkType.WAN ||
-                                diagnostics.networkType == NetworkDiagnostics.NetworkType.MOBILE)
-                    ) {
-                        LimeLog.info("Skipping LAN address ${tuple.address} on WAN/MOBILE network")
-                        details = null
+                        withTimeoutOrNull(remaining) { results.receiveCatching().getOrNull() }
+                            ?: run {
+                                LimeLog.info("Fast poll: timed out waiting for more responses")
+                                null
+                            }
                     } else {
-                        details = tryPollIp(tuple.existingDetails, tuple.address)
+                        results.receiveCatching().getOrNull()
+                    } ?: break
+
+                    completed++
+                    val (addr, polled) = pair
+
+                    if (polled != null) {
+                        if (result == null) {
+                            result = polled
+                            primaryAddress = addr
+                            polled.activeAddress = addr
+                            polled.addAvailableAddress(addr)
+                            firstResponseTime = SystemClock.elapsedRealtime()
+                            LimeLog.info("Fast poll: got first response from address $addr")
+                        } else if (addr != primaryAddress &&
+                            result!!.uuid != null && polled.uuid != null &&
+                            result!!.uuid == polled.uuid &&
+                            result!!.availableAddresses?.contains(addr) != true
+                        ) {
+                            result!!.addAvailableAddress(addr)
+                            LimeLog.info("Fast poll: also got response from address $addr")
+                        }
                     }
-
-                    val duration = System.currentTimeMillis() - startTime
-                    if (details == null && duration < 1000) {
-                        LimeLog.warning("Poll failed quickly for ${tuple.address} (${duration}ms)")
-                    }
-                } catch (e: Exception) {
-                    LimeLog.warning("Poll thread exception for ${tuple.address}: ${e.message}")
                 }
 
-                synchronized(tuple) {
-                    tuple.complete = true
-                    tuple.returnedDetails = details
-                    (tuple as Object).notify()
+                if (result == null) {
+                    LimeLog.info("Fast poll: all addresses failed")
                 }
-
-                synchronized(sharedLock) {
-                    (sharedLock as Object).notifyAll()
-                }
+            } finally {
+                // 提前结束（拿够地址或超时）时取消未完成的探测
+                probeJobs.forEach { it.cancel() }
+                results.close()
             }
+
+            result
         }
-        tuple.pollingThread?.name = "Parallel Poll - ${tuple.address} - ${tuple.existingDetails.name}"
-        tuple.pollingThread?.start()
     }
 
     @Throws(InterruptedException::class)
@@ -761,7 +720,7 @@ class ComputerManagerService : Service() {
                     synchronized(pollingTuples) {
                         for (tuple in pollingTuples) {
                             tuple.computer.state = ComputerDetails.State.UNKNOWN
-                            listener?.notifyComputerUpdated(tuple.computer)
+                            _computerUpdates.tryEmit(tuple.computer)
                         }
                     }
                 }
@@ -772,7 +731,7 @@ class ComputerManagerService : Service() {
                     synchronized(pollingTuples) {
                         for (tuple in pollingTuples) {
                             tuple.computer.state = ComputerDetails.State.OFFLINE
-                            listener?.notifyComputerUpdated(tuple.computer)
+                            _computerUpdates.tryEmit(tuple.computer)
                         }
                     }
                 }
@@ -789,6 +748,8 @@ class ComputerManagerService : Service() {
             connMgr.unregisterNetworkCallback(networkCallback)
         }
 
+        serviceScope.cancel()
+
         if (discoveryBinder != null) {
             unbindService(discoveryServiceConnection)
         }
@@ -801,29 +762,15 @@ class ComputerManagerService : Service() {
     }
 
     inner class ApplistPoller(private val computer: ComputerDetails) {
-        private var thread: Thread? = null
-        private val pollEvent = Object()
+        private var job: Job? = null
+        private val pollSignal = kotlinx.coroutines.channels.Channel<Unit>(
+            capacity = kotlinx.coroutines.channels.Channel.CONFLATED
+        )
+        @Volatile
         private var receivedAppList = false
 
         fun pollNow() {
-            synchronized(pollEvent) {
-                (pollEvent as Object).notify()
-            }
-        }
-
-        private fun waitPollingDelay(): Boolean {
-            try {
-                synchronized(pollEvent) {
-                    if (receivedAppList) {
-                        (pollEvent as Object).wait(APPLIST_POLLING_PERIOD_MS.toLong())
-                    } else {
-                        (pollEvent as Object).wait(APPLIST_FAILED_POLLING_RETRY_MS.toLong())
-                    }
-                }
-            } catch (e: InterruptedException) {
-                return false
-            }
-            return thread?.isInterrupted == false
+            pollSignal.trySend(Unit)
         }
 
         private fun getPollingTuple(details: ComputerDetails): PollingTuple? {
@@ -837,23 +784,31 @@ class ComputerManagerService : Service() {
             return null
         }
 
+        private suspend fun awaitNextPoll(): Boolean {
+            val delayMs = if (receivedAppList) APPLIST_POLLING_PERIOD_MS else APPLIST_FAILED_POLLING_RETRY_MS
+            // 等待信号或超时，任一触发都继续下一轮轮询
+            val result = withTimeoutOrNull(delayMs.toLong()) { pollSignal.receiveCatching() }
+            // Channel 被关闭时终止轮询
+            return result?.isClosed != true
+        }
+
         fun start() {
-            thread = object : Thread() {
-                override fun run() {
-                    var emptyAppListResponses = 0
-                    do {
-                        if (computer.state != ComputerDetails.State.ONLINE ||
-                            computer.pairState != PairingManager.PairState.PAIRED
-                        ) {
-                            listener?.notifyComputerUpdated(computer)
-                            continue
-                        }
+            job = serviceScope.launch {
+                var emptyAppListResponses = 0
+                do {
+                    if (computer.state != ComputerDetails.State.ONLINE ||
+                        computer.pairState != PairingManager.PairState.PAIRED
+                    ) {
+                        _computerUpdates.tryEmit(computer)
+                        continue
+                    }
 
-                        if (computer.uuid == null) continue
+                    if (computer.uuid == null) continue
 
-                        val tuple = getPollingTuple(computer)
+                    val tuple = getPollingTuple(computer)
 
-                        try {
+                    try {
+                        runInterruptible {
                             val http = NvHTTP(
                                 ServerHelper.getCurrentAddressFromComputer(computer),
                                 computer.httpsPort, idManager.uniqueId, "",
@@ -877,7 +832,7 @@ class ComputerManagerService : Service() {
                                 (list.isNotEmpty() || emptyAppListResponses >= EMPTY_LIST_THRESHOLD)
                             ) {
                                 try {
-                                CacheHelper.openCacheFileForOutput(cacheDir, "applist", computer.uuid!!).use { cacheOut ->
+                                    CacheHelper.openCacheFileForOutput(cacheDir, "applist", computer.uuid!!).use { cacheOut ->
                                         CacheHelper.writeStringToOutputStream(cacheOut, appList)
                                     }
                                 } catch (e: IOException) {
@@ -897,31 +852,29 @@ class ComputerManagerService : Service() {
                                 computer.rawAppList = appList
                                 receivedAppList = true
 
-                                if (listener != null && thread != null) {
-                                    listener?.notifyComputerUpdated(computer)
-                                }
+                                _computerUpdates.tryEmit(computer)
                             } else if (appList.isEmpty()) {
                                 LimeLog.warning("Null app list received from ${computer.uuid}")
                             }
-                        } catch (e: IOException) {
-                            e.printStackTrace()
-                        } catch (e: XmlPullParserException) {
-                            e.printStackTrace()
-                        } catch (e: InterruptedException) {
-                            LimeLog.info("App list polling thread interrupted for ${computer.name}")
-                            currentThread().interrupt()
-                            break
                         }
-                    } while (waitPollingDelay())
-                }
+                    } catch (e: IOException) {
+                        e.printStackTrace()
+                    } catch (e: XmlPullParserException) {
+                        e.printStackTrace()
+                    } catch (e: InterruptedException) {
+                        LimeLog.info("App list polling interrupted for ${computer.name}")
+                        break
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    }
+                } while (awaitNextPoll())
             }
-            thread?.name = "App list polling thread for ${computer.name}"
-            thread?.start()
         }
 
         fun stop() {
-            thread?.interrupt()
-            thread = null
+            job?.cancel()
+            job = null
+            pollSignal.close()
         }
     }
 
@@ -940,7 +893,7 @@ class ComputerManagerService : Service() {
 
 class PollingTuple(
     val computer: ComputerDetails,
-    var thread: Thread?
+    var job: kotlinx.coroutines.Job?
 ) {
     val networkLock = Any()
     var lastSuccessfulPollMs: Long = 0
