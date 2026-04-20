@@ -33,6 +33,19 @@
             android:summary="@string/summary_seekbar_bitrate"
             android:text="@string/suffix_seekbar_bitrate_mbps"
             android:title="@string/title_seekbar_bitrate" />
+        <CheckBoxPreference
+            android:key="checkbox_adaptive_bitrate"
+            android:title="@string/title_adaptive_bitrate"
+            android:summary="@string/summary_adaptive_bitrate"
+            android:defaultValue="false" />
+        <ListPreference
+            android:key="list_abr_mode"
+            android:title="@string/title_abr_mode"
+            android:summary="@string/summary_abr_mode"
+            android:entries="@array/abr_mode_names"
+            android:entryValues="@array/abr_mode_values"
+            android:defaultValue="balanced"
+            android:dependency="checkbox_adaptive_bitrate" />
         <ListPreference
             android:key="frame_pacing"
             android:title="@string/title_frame_pacing"

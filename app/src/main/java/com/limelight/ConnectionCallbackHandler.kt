@@ -264,6 +264,9 @@ class ConnectionCallbackHandler(private val game: Game) {
             game.prefConfig.enableLocalCursorRendering && game.prefConfig.touchscreenTrackpad,
             game.currentHostAddress
         )
+
+        // 3. 启动智能码率（如设置已开启）
+        game.startAdaptiveBitrateIfEnabled()
     }
 
     /**
@@ -280,6 +283,12 @@ class ConnectionCallbackHandler(private val game: Game) {
             game.connected = false
             game.orientationManager.connected = false
             game.updatePipAutoEnter()
+
+            // 停止智能码率
+            game.stopAdaptiveBitrate()
+
+            // 停止智能码率
+            game.stopAdaptiveBitrate()
 
             game.controllerHandler?.stop()
 

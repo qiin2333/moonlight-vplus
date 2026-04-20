@@ -699,6 +699,90 @@ class NvHTTP(
         return getXmlString(xmlStr, "bitrate", true) != "0"
     }
 
+    // ---------------------------------------------------------------------------
+    // 智能码率 (ABR) — Sunshine 扩展 API
+    // ---------------------------------------------------------------------------
+
+    /** 查询服务端 ABR 能力。失败返回 supported=false 的占位对象。*/
+    fun getAbrCapabilities(): AbrCapabilities {
+        return try {
+            val baseUrl = getHttpsUrl(true)
+            val url = baseUrl.newBuilder().addPathSegments("api/abr/capabilities").build()
+            val resp = performAndroidTlsHack(httpClientLongConnectTimeout)
+                .newCall(Request.Builder().url(url).get().build())
+                .execute()
+            resp.use { r ->
+                val body = r.body?.string()
+                if (!r.isSuccessful || body.isNullOrEmpty()) {
+                    return AbrCapabilities(false, 0, emptyList())
+                }
+                val json = org.json.JSONObject(body)
+                val features = mutableListOf<String>()
+                json.optJSONArray("features")?.let { arr ->
+                    for (i in 0 until arr.length()) features.add(arr.optString(i))
+                }
+                AbrCapabilities(
+                    json.optBoolean("supported", false),
+                    json.optInt("version", 0),
+                    features
+                )
+            }
+        } catch (e: Exception) {
+            AbrCapabilities(false, 0, emptyList())
+        }
+    }
+
+    /** 通知服务端启用/关闭 ABR。*/
+    fun setAbrMode(config: AbrConfig): Boolean {
+        return try {
+            val baseUrl = getHttpsUrl(true)
+            val url = baseUrl.newBuilder().addPathSegments("api/abr").build()
+            val payload = org.json.JSONObject().apply {
+                put("enabled", config.enabled)
+                put("minBitrate", config.minBitrate)
+                put("maxBitrate", config.maxBitrate)
+                put("mode", config.mode)
+            }.toString()
+            val body = payload.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
+            val resp = performAndroidTlsHack(httpClientLongConnectTimeout)
+                .newCall(Request.Builder().url(url).post(body).build())
+                .execute()
+            resp.use { it.isSuccessful }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /** 上报客户端网络指标，可能返回服务端建议的新码率。*/
+    fun reportNetworkFeedback(feedback: NetworkFeedback): AbrAction? {
+        return try {
+            val baseUrl = getHttpsUrl(true)
+            val url = baseUrl.newBuilder().addPathSegments("api/abr/feedback").build()
+            val payload = org.json.JSONObject().apply {
+                put("packetLoss", feedback.packetLoss)
+                put("rttMs", feedback.rttMs)
+                put("decodeFps", feedback.decodeFps)
+                put("droppedFrames", feedback.droppedFrames)
+                put("currentBitrate", feedback.currentBitrate)
+            }.toString()
+            val body = payload.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
+            val resp = performAndroidTlsHack(httpClientLongConnectTimeout)
+                .newCall(Request.Builder().url(url).post(body).build())
+                .execute()
+            resp.use { r ->
+                val respBody = r.body?.string()
+                if (!r.isSuccessful || respBody.isNullOrEmpty()) return null
+                val json = org.json.JSONObject(respBody)
+                AbrAction(
+                    if (json.has("newBitrate")) json.optInt("newBitrate") else null,
+                    if (json.has("reason")) json.optString("reason") else null
+                )
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     companion object {
         private const val DEFAULT_HTTPS_PORT = 47984
         const val DEFAULT_HTTP_PORT = 47989
@@ -862,3 +946,34 @@ class NvHTTP(
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// 智能码率 (ABR) 数据结构
+// ---------------------------------------------------------------------------
+
+data class AbrCapabilities(
+    val supported: Boolean,
+    val version: Int,
+    val features: List<String>
+)
+
+data class AbrConfig(
+    val enabled: Boolean,
+    val minBitrate: Int,
+    val maxBitrate: Int,
+    val mode: String  // "quality" | "balanced" | "lowLatency"
+)
+
+data class NetworkFeedback(
+    val packetLoss: Float,
+    val rttMs: Int,
+    val decodeFps: Float,
+    val droppedFrames: Int,
+    val currentBitrate: Int
+)
+
+data class AbrAction(
+    val newBitrate: Int?,
+    val reason: String?
+)
+

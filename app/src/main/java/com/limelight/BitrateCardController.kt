@@ -107,9 +107,15 @@ class BitrateCardController(
 
         val currentBitrate = conn.currentBitrate
 
-        currentBitrateText.text = String.format(
-            game.resources.getString(R.string.game_menu_bitrate_current), currentBitrate / 1000
-        )
+        // 应用 ABR 状态显示（如启用）
+        val abrService = game.adaptiveBitrateService
+        fun renderCurrentText(kbps: Int, abrTag: String? = null) {
+            val base = String.format(
+                game.resources.getString(R.string.game_menu_bitrate_current), kbps / 1000
+            )
+            currentBitrateText.text = if (abrTag.isNullOrEmpty()) base else "$base   $abrTag"
+        }
+        renderCurrentText(currentBitrate, abrService?.takeIf { it.enabled }?.getStatusText())
 
         // Configure segmented seekbar: 45 positions mapping to 0.5~200 Mbps
         bitrateSeekBar.max = MAX_PROGRESS
@@ -138,6 +144,7 @@ class BitrateCardController(
         val bitrateApplyRunnable = Runnable {
             val newBitrate = progressToBitrateKbps(bitrateSeekBar.progress)
             adjustBitrate(newBitrate, currentBitrateText)
+            userTracking = false
         }
 
         bitrateSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -163,9 +170,12 @@ class BitrateCardController(
                 }
             }
 
-            override fun onStartTrackingTouch(seekBar: SeekBar) {}
+            override fun onStartTrackingTouch(seekBar: SeekBar) {
+                userTracking = true
+            }
 
             override fun onStopTrackingTouch(seekBar: SeekBar) {
+                userTracking = false
                 val newBitrate = progressToBitrateKbps(seekBar.progress)
                 adjustBitrate(newBitrate, currentBitrateText)
             }
@@ -176,12 +186,31 @@ class BitrateCardController(
                 if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
                     keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
                 ) {
+                    userTracking = true
                     bitrateHandler.removeCallbacks(bitrateApplyRunnable)
                     bitrateHandler.postDelayed(bitrateApplyRunnable, 300)
                     return@setOnKeyListener false
                 }
             }
             false
+        }
+
+        // 订阅 ABR 码率变更，同步更新滑块与文本
+        if (abrService != null) {
+            val listener: (Int, String) -> Unit = { kbps, _ ->
+                game.runOnUiThread {
+                    if (userTracking) return@runOnUiThread // 用户拖动中不抢占 UI
+                    bitrateSeekBar.progress = bitrateToProgress(kbps)
+                    bitrateValueText.text = formatBitrateMbps(kbps)
+                    renderCurrentText(kbps, abrService.getStatusText())
+                }
+            }
+            abrService.bitrateListener = listener
+            dialog.setOnDismissListener {
+                if (abrService.bitrateListener === listener) {
+                    abrService.bitrateListener = null
+                }
+            }
         }
     }
 
@@ -191,6 +220,9 @@ class BitrateCardController(
 
     /** Reusable toast reference to dismiss previous one before showing new text. */
     private var bitrateToast: Toast? = null
+
+    /** 用户当前是否在拖动滑块（含触摸 + DPad 按下连续操作的间隙）。*/
+    private var userTracking: Boolean = false
 
     private fun showBitrateToast(message: String) {
         bitrateToast?.cancel()
@@ -207,6 +239,9 @@ class BitrateCardController(
                         try {
                             // Update prefConfig with the new bitrate so it gets saved when streaming ends
                             game.prefConfig.bitrate = newBitrate
+
+                            // 同步 ABR 基准（避免 ABR 仍按旧码率决策）
+                            game.adaptiveBitrateService?.notifyManualOverride(newBitrate)
 
                             // Update the "current bitrate" label in the dialog
                             currentBitrateText?.text = String.format(

@@ -76,6 +76,8 @@ class PreferenceConfiguration {
     var fps = 0
     var resolutionScale = 0
     var bitrate = 0
+    var enableAdaptiveBitrate = false
+    var abrMode: String = "balanced"  // quality | balanced | lowLatency
     var longPressflatRegionPixels = 0 //Assigned to NativeTouchContext.INTIAL_ZONE_PIXELS
     var syncTouchEventWithDisplay = false // if true, view.requestUnbufferedDispatch(event) will be disabled
     var enableEnhancedTouch = false //Assigned to NativeTouchContext.ENABLE_ENHANCED_TOUCH
@@ -328,6 +330,8 @@ class PreferenceConfiguration {
         private const val LEGACY_ENABLE_51_SURROUND_PREF_STRING = "checkbox_51_surround"
 
         private const val BITRATE_PREF_OLD_STRING = "seekbar_bitrate"
+        private const val ADAPTIVE_BITRATE_PREF_STRING = "checkbox_adaptive_bitrate"
+        private const val ABR_MODE_PREF_STRING = "list_abr_mode"
         private const val STRETCH_PREF_STRING = "checkbox_stretch_video"
         private const val SOPS_PREF_STRING = "checkbox_enable_sops"
         private const val DISABLE_TOASTS_PREF_STRING = "checkbox_disable_warnings"
@@ -902,6 +906,9 @@ class PreferenceConfiguration {
             if (config.bitrate == 0) {
                 config.bitrate = getDefaultBitrate(context)
             }
+
+            config.enableAdaptiveBitrate = prefs.getBoolean(ADAPTIVE_BITRATE_PREF_STRING, false)
+            config.abrMode = prefs.getString(ABR_MODE_PREF_STRING, "balanced") ?: "balanced"
 
             config.resolutionScale = prefs.getInt(HOST_SCALE_PREF_STRING, 100)
             config.longPressflatRegionPixels = prefs.getInt(LONG_PRESS_FLAT_REGION_PIXELS_PREF_STRING, 0) // define a flat region to suppress coordinates jitter.

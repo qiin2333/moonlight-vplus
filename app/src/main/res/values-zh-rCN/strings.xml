@@ -179,6 +179,13 @@
     <string name="summary_fps_list">高帧数提升视频流流畅度。低帧数提升在低端设备中的串流体验。</string>
     <string name="title_seekbar_bitrate"> 视频码率 </string>
     <string name="summary_seekbar_bitrate">高码率提升图像质量。低码率提升在较慢网络中的串流体验。</string>
+    <string name="title_adaptive_bitrate">智能码率</string>
+    <string name="summary_adaptive_bitrate">根据丢包/延迟自动调节码率。优先由 Sunshine 服务端决策，不支持时回退到客户端本地控制器。</string>
+    <string name="title_abr_mode">智能码率模式</string>
+    <string name="summary_abr_mode">画质优先：偏向高码率；低延迟：丢包时降档更快。</string>
+    <string name="abr_mode_quality">画质优先</string>
+    <string name="abr_mode_balanced">均衡</string>
+    <string name="abr_mode_low_latency">低延迟</string>
     <string name="title_seekbar_scale">主机分辨率缩放</string>
     <string name="summary_seekbar_scale">请求给主机的分辨率相当于客户端基础分辨率 * 缩放因子。这将改变主机端的游戏渲染材质精度（超分辨率串流）。降低此比例也可用于减轻主机端GPU压力。⚠注意：应用此选项前请检查主机是否支持缩放后的分辨率。</string>
     <string name="title_unlock_fps"> 解锁所有可用帧数 </string>

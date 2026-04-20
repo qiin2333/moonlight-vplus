@@ -80,6 +80,18 @@ class NvConnection constructor(
         connectionAllowed.release()
     }
 
+    /**
+     * 创建一个新的 NvHTTP 实例（线程安全：调用方负责自行分线程）。
+     * 主要用于 [com.limelight.AdaptiveBitrateService] 等需要直接访问服务端 API 的旁路逻辑。
+     */
+    fun createNvHttp(): NvHTTP =
+        NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider)
+
+    /** 应用 ABR 调整后的码率到本地配置（不发起网络请求）。*/
+    fun applyBitrateLocally(bitrateKbps: Int) {
+        context.streamConfig.bitrate = bitrateKbps
+    }
+
     private fun resolveServerAddress(): InetAddress {
         val serverAddress = context.serverAddress
         val addrs = InetAddress.getAllByName(serverAddress.address)

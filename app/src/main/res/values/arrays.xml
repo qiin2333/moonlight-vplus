@@ -141,6 +141,18 @@
         <item>neverh265</item>
     </string-array>
 
+    <!-- Adaptive Bitrate (ABR) modes -->
+    <string-array name="abr_mode_names">
+        <item>@string/abr_mode_quality</item>
+        <item>@string/abr_mode_balanced</item>
+        <item>@string/abr_mode_low_latency</item>
+    </string-array>
+    <string-array name="abr_mode_values" translatable="false">
+        <item>quality</item>
+        <item>balanced</item>
+        <item>lowLatency</item>
+    </string-array>
+
     <!-- HDR Mode options: 1=HDR10/PQ, 2=HLG -->
     <string-array name="hdr_mode_entries">
         <item>@string/hdr_mode_hdr10</item>

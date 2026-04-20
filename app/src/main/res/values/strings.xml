@@ -221,6 +221,13 @@
     <string name="title_seekbar_bitrate">Video bitrate</string>
     <string name="summary_seekbar_bitrate">Increase for better image quality. Decrease to improve performance on slower connections.</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
+    <string name="title_adaptive_bitrate">Adaptive bitrate</string>
+    <string name="summary_adaptive_bitrate">Auto-adjust bitrate based on packet loss and latency. Falls back to a local controller when the host doesn\'t support server-side ABR.</string>
+    <string name="title_abr_mode">ABR mode</string>
+    <string name="summary_abr_mode">Quality prefers higher bitrate; Low-latency drops faster on packet loss.</string>
+    <string name="abr_mode_quality">Quality</string>
+    <string name="abr_mode_balanced">Balanced</string>
+    <string name="abr_mode_low_latency">Low latency</string>
     <string name="title_seekbar_scale">Host Resolution Scale</string>
     <string name="summary_seekbar_scale">The resolution requested to the host is equivalent to the client\'s base resolution * scale factor. This will change the game rendering material precision on the host side (super-resolution streaming). Reducing this ratio can also be used to reduce GPU pressure on the host side. ⚠Note: Check if the host supports the scaled resolution before applying this option.</string>
     <string name="title_checkbox_stretch_video">Stretch video to full-screen</string>
