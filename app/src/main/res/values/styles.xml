@@ -27,6 +27,19 @@
         <item name="android:windowTranslucentNavigation">true</item>
     </style>
 
+    <!--
+        Splash launch theme (compat).
+        On API < 31 this uses AndroidX core-splashscreen backport: shows a solid
+        background and centered launcher icon, then jumps to postSplashScreenTheme.
+        On API >= 31 it is overridden in values-v31/styles.xml to use the system
+        SplashScreen API with animated icon support.
+    -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_bg</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_saba</item>
+        <item name="postSplashScreenTheme">@style/AppTheme</item>
+    </style>
+
     <style name="StreamBaseTheme" parent="AppBaseTheme">
         <!-- Transparent streaming background to avoid extra overdraw -->
         <item name="android:windowBackground">@android:color/transparent</item>

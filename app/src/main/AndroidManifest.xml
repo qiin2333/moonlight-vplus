@@ -129,6 +129,7 @@
             android:name=".PcView"
             android:exported="true"
             android:resizeableActivity="true"
+            android:theme="@style/Theme.App.Starting"
             android:enableOnBackInvokedCallback="true"
             android:configChanges="mcc|mnc|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection">
 

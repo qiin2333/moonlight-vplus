@@ -84,6 +84,11 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import androidx.preference.PreferenceManager
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import android.animation.ObjectAnimator
+import android.animation.AnimatorSet
+import androidx.core.animation.doOnEnd
+import android.view.animation.AnticipateInterpolator
 import android.provider.Settings
 import android.util.LruCache
 import android.view.ContextMenu
@@ -196,6 +201,27 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     // Lifecycle Methods
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Install the SplashScreen API BEFORE super.onCreate so the system can hand off
+        // the launch theme. On API 31+ this is the system SplashScreen; on lower APIs the
+        // androidx core-splashscreen backport shows the static icon over splash_bg and then
+        // hands control to postSplashScreenTheme (AppTheme).
+        val splashScreen = installSplashScreen()
+        // Customize exit transition: subtle scale-up + fade-out of the icon, ~350ms.
+        // System will block the first frame of our content until this animation finishes,
+        // creating a smooth handoff instead of a hard cut.
+        splashScreen.setOnExitAnimationListener { provider ->
+            val icon = provider.iconView
+            val scaleX = ObjectAnimator.ofFloat(icon, View.SCALE_X, 1f, 1.2f, 0.6f)
+            val scaleY = ObjectAnimator.ofFloat(icon, View.SCALE_Y, 1f, 1.2f, 0.6f)
+            val alpha = ObjectAnimator.ofFloat(icon, View.ALPHA, 1f, 0f)
+            val set = AnimatorSet().apply {
+                duration = 350L
+                interpolator = AnticipateInterpolator(1.4f)
+                playTogether(scaleX, scaleY, alpha)
+            }
+            set.doOnEnd { provider.remove() }
+            set.start()
+        }
         super.onCreate(savedInstanceState)
 
         //自动获取无障碍权限

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        On Android 12+ the system SplashScreen API takes over.
+        - windowSplashScreenAnimatedIcon: launcher icon shown center-screen
+        - windowSplashScreenIconBackgroundColor: ring behind icon (helps light icons)
+        - windowSplashScreenAnimationDuration: AVD playback hint (system caps at ~1s)
+        - windowSplashScreenBrandingImage: optional bottom branding (kept null)
+    -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_bg</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_saba</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/splash_icon_bg</item>
+        <item name="windowSplashScreenAnimationDuration">600</item>
+        <item name="postSplashScreenTheme">@style/AppTheme</item>
+    </style>
+</resources>
