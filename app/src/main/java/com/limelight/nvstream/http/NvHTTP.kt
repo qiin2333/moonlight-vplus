@@ -703,30 +703,41 @@ class NvHTTP(
     // 智能码率 (ABR) — Sunshine 扩展 API
     // ---------------------------------------------------------------------------
 
+    /** ABR HTTPS GET 助手；返回响应正文或 null。*/
+    private fun abrGet(pathSegments: String): String? = try {
+        val url = getHttpsUrl(true).newBuilder().addPathSegments(pathSegments).build()
+        performAndroidTlsHack(httpClientLongConnectTimeout)
+            .newCall(Request.Builder().url(url).get().build())
+            .execute()
+            .use { if (it.isSuccessful) it.body?.string() else null }
+    } catch (e: Exception) { null }
+
+    /** ABR HTTPS POST 助手；返回响应正文或 null（失败/非 2xx 也返回 null）。*/
+    private fun abrPost(pathSegments: String, payload: org.json.JSONObject): String? = try {
+        val url = getHttpsUrl(true).newBuilder().addPathSegments(pathSegments).build()
+        val body = payload.toString()
+            .toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
+        performAndroidTlsHack(httpClientLongConnectTimeout)
+            .newCall(Request.Builder().url(url).post(body).build())
+            .execute()
+            .use { if (it.isSuccessful) it.body?.string() ?: "" else null }
+    } catch (e: Exception) { null }
+
     /** 查询服务端 ABR 能力。失败返回 supported=false 的占位对象。*/
     fun getAbrCapabilities(): AbrCapabilities {
+        val body = abrGet("api/abr/capabilities").takeUnless { it.isNullOrEmpty() }
+            ?: return AbrCapabilities(false, 0, emptyList())
         return try {
-            val baseUrl = getHttpsUrl(true)
-            val url = baseUrl.newBuilder().addPathSegments("api/abr/capabilities").build()
-            val resp = performAndroidTlsHack(httpClientLongConnectTimeout)
-                .newCall(Request.Builder().url(url).get().build())
-                .execute()
-            resp.use { r ->
-                val body = r.body?.string()
-                if (!r.isSuccessful || body.isNullOrEmpty()) {
-                    return AbrCapabilities(false, 0, emptyList())
-                }
-                val json = org.json.JSONObject(body)
-                val features = mutableListOf<String>()
-                json.optJSONArray("features")?.let { arr ->
-                    for (i in 0 until arr.length()) features.add(arr.optString(i))
-                }
-                AbrCapabilities(
-                    json.optBoolean("supported", false),
-                    json.optInt("version", 0),
-                    features
-                )
+            val json = org.json.JSONObject(body)
+            val features = mutableListOf<String>()
+            json.optJSONArray("features")?.let { arr ->
+                for (i in 0 until arr.length()) features.add(arr.optString(i))
             }
+            AbrCapabilities(
+                json.optBoolean("supported", false),
+                json.optInt("version", 0),
+                features
+            )
         } catch (e: Exception) {
             AbrCapabilities(false, 0, emptyList())
         }
@@ -734,57 +745,39 @@ class NvHTTP(
 
     /** 通知服务端启用/关闭 ABR。*/
     fun setAbrMode(config: AbrConfig): Boolean {
-        return try {
-            val baseUrl = getHttpsUrl(true)
-            val url = baseUrl.newBuilder().addPathSegments("api/abr").build()
-            val payload = org.json.JSONObject().apply {
-                put("enabled", config.enabled)
-                put("minBitrate", config.minBitrate)
-                put("maxBitrate", config.maxBitrate)
-                put("mode", config.mode)
-            }.toString()
-            val body = payload.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
-            val resp = performAndroidTlsHack(httpClientLongConnectTimeout)
-                .newCall(Request.Builder().url(url).post(body).build())
-                .execute()
-            resp.use { it.isSuccessful }
-        } catch (e: Exception) {
-            false
+        val payload = org.json.JSONObject().apply {
+            put("enabled", config.enabled)
+            put("minBitrate", config.minBitrate)
+            put("maxBitrate", config.maxBitrate)
+            put("mode", config.mode)
         }
+        return abrPost("api/abr", payload) != null
     }
 
     /** 上报客户端网络指标，可能返回服务端建议的新码率。*/
     fun reportNetworkFeedback(feedback: NetworkFeedback): AbrAction? {
+        val payload = org.json.JSONObject().apply {
+            put("packetLoss", feedback.packetLoss)
+            put("rttMs", feedback.rttMs)
+            put("decodeFps", feedback.decodeFps)
+            put("droppedFrames", feedback.droppedFrames)
+            put("currentBitrate", feedback.currentBitrate)
+        }
+        val body = abrPost("api/abr/feedback", payload).takeUnless { it.isNullOrEmpty() }
+            ?: return null
         return try {
-            val baseUrl = getHttpsUrl(true)
-            val url = baseUrl.newBuilder().addPathSegments("api/abr/feedback").build()
-            val payload = org.json.JSONObject().apply {
-                put("packetLoss", feedback.packetLoss)
-                put("rttMs", feedback.rttMs)
-                put("decodeFps", feedback.decodeFps)
-                put("droppedFrames", feedback.droppedFrames)
-                put("currentBitrate", feedback.currentBitrate)
-            }.toString()
-            val body = payload.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
-            val resp = performAndroidTlsHack(httpClientLongConnectTimeout)
-                .newCall(Request.Builder().url(url).post(body).build())
-                .execute()
-            resp.use { r ->
-                val respBody = r.body?.string()
-                if (!r.isSuccessful || respBody.isNullOrEmpty()) return null
-                val json = org.json.JSONObject(respBody)
-                AbrAction(
-                    if (json.has("newBitrate")) json.optInt("newBitrate") else null,
-                    if (json.has("reason")) json.optString("reason") else null
-                )
-            }
+            val json = org.json.JSONObject(body)
+            AbrAction(
+                if (json.has("newBitrate")) json.optInt("newBitrate") else null,
+                if (json.has("reason")) json.optString("reason") else null
+            )
         } catch (e: Exception) {
             null
         }
     }
 
     companion object {
-        private const val DEFAULT_HTTPS_PORT = 47984
+        const val DEFAULT_HTTPS_PORT = 47984
         const val DEFAULT_HTTP_PORT = 47989
         const val SHORT_CONNECTION_TIMEOUT = 3000
         const val LONG_CONNECTION_TIMEOUT = 5000

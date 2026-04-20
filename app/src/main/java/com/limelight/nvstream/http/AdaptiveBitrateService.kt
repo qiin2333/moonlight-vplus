@@ -206,18 +206,17 @@ class AdaptiveBitrateService(
         val newBitrate = action.newBitrate ?: return
         if (newBitrate == currentBitrate) return
         val clamped = newBitrate.coerceIn(minBitrate, maxBitrate)
-        val reason = action.reason ?: "server"
-        if (applyBitrateInternal(clamped, reason)) {
-            LimeLog.info("[ABR][server] $currentBitrate -> ${clamped}kbps ($reason)")
-        }
+        applyBitrateInternal(clamped, action.reason ?: "server", source = "server")
     }
 
     /** 内部统一码率应用：复用缓存的 nvHttp 实例，避免每次新建 OkHttpClient + TLS。*/
-    private fun applyBitrateInternal(kbps: Int, reason: String): Boolean {
+    private fun applyBitrateInternal(kbps: Int, reason: String, source: String = "local"): Boolean {
         val http = nvHttp ?: return false
+        val from = currentBitrate
         return try {
             if (http.setBitrate(kbps)) {
                 currentBitrate = kbps
+                LimeLog.info("[ABR][$source] ${from}kbps -> ${kbps}kbps ($reason)")
                 onBitrateChanged(kbps, reason)
                 try { bitrateListener?.invoke(kbps, reason) } catch (_: Exception) {}
                 true
@@ -275,9 +274,8 @@ class AdaptiveBitrateService(
         val target = newBitrate.toInt().coerceIn(minBitrate, maxBitrate)
         if (target != currentBitrate) {
             val direction = if (target > currentBitrate) DIR_UP else DIR_DOWN
-            if (applyBitrateInternal(target, reason)) {
+            if (applyBitrateInternal(target, reason, source = "local")) {
                 lastDirection = direction
-                LimeLog.info("[ABR][local] -> ${target}kbps ($reason)")
                 lastAdjustWallClock = now
             }
         }

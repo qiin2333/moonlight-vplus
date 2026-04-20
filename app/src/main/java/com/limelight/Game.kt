@@ -28,6 +28,7 @@ import com.limelight.binding.video.PerformanceInfo
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.StreamConfiguration
 import com.limelight.nvstream.http.ComputerDetails
+import com.limelight.nvstream.http.AdaptiveBitrateService
 import com.limelight.nvstream.NvConnectionListener
 import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
@@ -140,7 +141,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     var progressOverlay: FullscreenProgressOverlay? = null
 
     // 智能码率
-    var adaptiveBitrateService: com.limelight.nvstream.http.AdaptiveBitrateService? = null
+    var adaptiveBitrateService: AdaptiveBitrateService? = null
     @Volatile private var latestPerfInfo: PerformanceInfo? = null
 
     var displayedFailureDialog = false
@@ -1408,11 +1409,11 @@ class Game : Activity(), SurfaceHolder.Callback,
         if (!prefConfig.enableAdaptiveBitrate) return
         if (adaptiveBitrateService != null) return
         val c = conn ?: return
-        val service = com.limelight.nvstream.http.AdaptiveBitrateService(
+        val service = AdaptiveBitrateService(
             nvHttpFactory = { c.createNvHttp() },
             statsProvider = {
                 latestPerfInfo?.let { p ->
-                    com.limelight.nvstream.http.AdaptiveBitrateService.AbrStats(
+                    AdaptiveBitrateService.AbrStats(
                         packetLoss = p.lostFrameRate,
                         rttMs = (p.rttInfo shr 32).toInt(),
                         decodeFps = p.totalFps,
