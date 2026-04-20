@@ -212,6 +212,7 @@
 
     <!-- Preferences -->
     <string name="category_basic_settings">Basic Settings</string>
+    <string name="category_advanced_features">Advanced Features</string>
     <string name="title_resolution_list">Video resolution</string>
     <string name="summary_resolution_list">Increase to improve image clarity. Decrease for better performance on lower end devices and slower networks.</string>
     <string name="title_native_res_dialog">Native Resolution Warning</string>

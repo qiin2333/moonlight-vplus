@@ -33,26 +33,6 @@
             android:summary="@string/summary_seekbar_bitrate"
             android:text="@string/suffix_seekbar_bitrate_mbps"
             android:title="@string/title_seekbar_bitrate" />
-        <CheckBoxPreference
-            android:key="checkbox_adaptive_bitrate"
-            android:title="@string/title_adaptive_bitrate"
-            android:summary="@string/summary_adaptive_bitrate"
-            android:defaultValue="false" />
-        <ListPreference
-            android:key="list_abr_mode"
-            android:title="@string/title_abr_mode"
-            android:summary="@string/summary_abr_mode"
-            android:entries="@array/abr_mode_names"
-            android:entryValues="@array/abr_mode_values"
-            android:defaultValue="balanced"
-            android:dependency="checkbox_adaptive_bitrate" />
-        <ListPreference
-            android:key="frame_pacing"
-            android:title="@string/title_frame_pacing"
-            android:entries="@array/video_frame_pacing_names"
-            android:entryValues="@array/video_frame_pacing_values"
-            android:summary="@string/summary_frame_pacing"
-            android:defaultValue="latency" />
         <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_resolutions_scale"
             android:dialogMessage="@string/summary_seekbar_scale"
@@ -76,6 +56,30 @@
             android:entryValues="@array/video_format_values"
             android:summary="@string/summary_video_format"
             android:defaultValue="auto" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="@string/category_advanced_features"
+        android:key="category_advanced_features"
+        android:layout="@layout/preference_category_material">
+        <CheckBoxPreference
+            android:key="checkbox_adaptive_bitrate"
+            android:title="@string/title_adaptive_bitrate"
+            android:summary="@string/summary_adaptive_bitrate"
+            android:defaultValue="false" />
+        <ListPreference
+            android:key="list_abr_mode"
+            android:title="@string/title_abr_mode"
+            android:summary="@string/summary_abr_mode"
+            android:entries="@array/abr_mode_names"
+            android:entryValues="@array/abr_mode_values"
+            android:defaultValue="balanced"
+            android:dependency="checkbox_adaptive_bitrate" />
+        <ListPreference
+            android:key="frame_pacing"
+            android:title="@string/title_frame_pacing"
+            android:entries="@array/video_frame_pacing_names"
+            android:entryValues="@array/video_frame_pacing_values"
+            android:summary="@string/summary_frame_pacing"
+            android:defaultValue="latency" />
         <CheckBoxPreference
             android:key="checkbox_unlock_fps"
             android:title="@string/title_unlock_fps"
