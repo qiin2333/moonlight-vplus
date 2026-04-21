@@ -1,9 +1,7 @@
 package com.limelight.preferences
 
 import android.content.Context
-import android.content.Intent
 import androidx.preference.Preference
-import androidx.preference.PreferenceManager
 import android.util.AttributeSet
 import android.widget.Toast
 
@@ -29,8 +27,6 @@ class ResetBackgroundImagePreference : Preference {
      * 重置背景图片配置
      */
     private fun resetBackgroundImage() {
-        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-
         // 删除本地图片文件（如果存在）
         try {
             val localImageFile = File(context.filesDir, BACKGROUND_FILE_NAME)
@@ -44,21 +40,13 @@ class ResetBackgroundImagePreference : Preference {
             LimeLog.warning("Failed to delete local background image: ${e.message}")
         }
 
-        // 清除所有背景图片相关配置
-        prefs.edit()
-            // New unified source key (issue #263): reset to smart default.
-            .putString("background_source", "auto")
-            .putString("background_image_type", "default")
-            .remove("background_image_url")
-            .remove("background_image_local_path")
-            .apply()
+        // BackgroundSource.setActive() is the single writer: it flips the active
+        // source to Auto, clears per-source extras (URL / local path), drops the
+        // legacy key, and broadcasts a refresh.
+        BackgroundSource.setActive(context, BackgroundSource.Auto)
 
         Toast.makeText(context, "已恢复默认背景图片", Toast.LENGTH_SHORT).show()
         LimeLog.info("Background image reset to default")
-
-        // 发送广播通知 PcView 更新背景图片
-        val broadcastIntent = Intent("com.limelight.REFRESH_BACKGROUND_IMAGE")
-        context.sendBroadcast(broadcastIntent)
     }
 
     companion object {

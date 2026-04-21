@@ -79,22 +79,16 @@ class LocalImagePickerPreference : Preference {
 
             val internalPath = copyImageToInternalStorage(context, imageUri)
             if (internalPath != null) {
-                val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-                prefs.edit()
-                    // New unified source key (issue #263). Must be written alongside
-                    // the legacy key because PcView's resolver prefers the new key
-                    // once the first-run dialog has set it to anything.
-                    .putString("background_source", "local")
-                    .putString("background_image_type", "local")
-                    .putString("background_image_local_path", internalPath)
-                    .remove("background_image_url")
+                // Persist the path, then let BackgroundSource flip the active
+                // source and broadcast the refresh. Using
+                // setActivePreservingExtras so the newly saved path isn't wiped.
+                PreferenceManager.getDefaultSharedPreferences(context).edit()
+                    .putString(BackgroundSource.KEY_LOCAL_PATH, internalPath)
                     .apply()
+                BackgroundSource.setActivePreservingExtras(context, BackgroundSource.Local)
 
                 Toast.makeText(context, "背景图片设置成功", Toast.LENGTH_SHORT).show()
                 LimeLog.info("Image saved to internal storage: $internalPath")
-
-                val broadcastIntent = Intent("com.limelight.REFRESH_BACKGROUND_IMAGE")
-                context.sendBroadcast(broadcastIntent)
             } else {
                 Toast.makeText(context, "图片保存失败，请重试", Toast.LENGTH_SHORT).show()
                 LimeLog.warning("Failed to copy image to internal storage")
