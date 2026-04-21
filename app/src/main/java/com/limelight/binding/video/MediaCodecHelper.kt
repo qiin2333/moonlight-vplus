@@ -350,8 +350,13 @@ object MediaCodecHelper {
         }
     }
 
-    private fun applyMtkVendorParams(videoFormat: MediaFormat) {
-        // Core performance params
+    private fun applyMtkVendorParams(videoFormat: MediaFormat, tryNumber: Int) {
+        // Tiered MTK low-latency profile (inspired by derflacco/Artemide):
+        //   tier 0 = stable baseline (current proven config + OPERATING_RATE)
+        //   tier 1+ = progressive fallback: shrink queues / drop preload
+        // Higher tiers are only reached if a previous attempt failed to start.
+
+        // Core performance params (unchanged across tiers)
         videoFormat.setInteger("vendor.mtk.vdec.cpu.boost.mode", 1)
         videoFormat.setInteger("vendor.mtk.vdec.cpu.boost.mode.value", 2)
         videoFormat.setInteger("vendor.mtk.ext.dolby.vision.cpu-boost", 1)
@@ -362,28 +367,49 @@ object MediaCodecHelper {
         videoFormat.setInteger("vendor.mtk.vdec.buffer.fetch.timeout.ms.value", 2)
         videoFormat.setInteger("vendor.mtk.vdec.vsync.adjust.enable", 0)
 
-        // Queue depth and timeout tuning
+        // Queue depth and timeout tuning (tiered)
+        // tier 0: depth=3 (your existing safe value)
+        // tier 1: depth=2  -> -1 frame of internal queueing
+        // tier 2+: depth=1 -> minimum, only as last resort
+        val qDepth = when {
+            tryNumber >= 2 -> 1
+            tryNumber >= 1 -> 2
+            else -> 3
+        }
+        val fetchTimeoutMs = if (tryNumber >= 1) 2 else 4
         runCatching {
-            videoFormat.setInteger("vendor.mtk.vdec.buffer.fetch.timeout.ms", 4)
-            videoFormat.setInteger("vendor.mtk.vdec.bq.guard.interval.time", 4)
-            videoFormat.setInteger("vendor.mtk.vdec.input.max.queue.depth", 3)
-            videoFormat.setInteger("vendor.mtk.vdec.output.max.queue.depth", 3)
+            videoFormat.setInteger("vendor.mtk.vdec.buffer.fetch.timeout.ms", fetchTimeoutMs)
+            videoFormat.setInteger("vendor.mtk.vdec.bq.guard.interval.time", fetchTimeoutMs)
+            videoFormat.setInteger("vendor.mtk.vdec.input.max.queue.depth", qDepth)
+            videoFormat.setInteger("vendor.mtk.vdec.output.max.queue.depth", qDepth)
         }
 
         // Low-latency pipeline
+        // preload: tier 0 keeps 1 (smoother first frame); tier 1+ drops to 0
         runCatching {
             videoFormat.setInteger("vendor.mtk.vdec.low-latency.mode", 1)
             videoFormat.setInteger("vendor.mtk.vdec.ultra-low-latency", 0) // Off for stability
             videoFormat.setInteger("vendor.mtk.vdec.disable-idle", 1)
-            videoFormat.setInteger("vendor.mtk.vdec.preload.frame.count", 1)
+            videoFormat.setInteger(
+                "vendor.mtk.vdec.preload.frame.count",
+                if (tryNumber >= 1) 0 else 1
+            )
         }
 
-        // Decode behavior
+        // Decode behavior (unchanged across tiers)
         runCatching {
             videoFormat.setInteger("vendor.mtk.vdec.realtime.priority", 1)
             videoFormat.setInteger("vendor.mtk.vdec.no-reorder", 1)
             videoFormat.setInteger("vendor.mtk.vdec.decode-immediately", 1)
             videoFormat.setInteger("vendor.mtk.vdec.force-max-freq", 1)
+        }
+
+        // Standard Android low-latency hint: ask the decoder to run at max clock.
+        // KEY_OPERATING_RATE is normally gated by decoderSupportsMaxOperatingRate()
+        // because it crashes some Adreno parts; that gate is irrelevant for MTK,
+        // so we apply it directly here. Wrapped in runCatching for safety.
+        runCatching {
+            videoFormat.setInteger(MediaFormat.KEY_OPERATING_RATE, Short.MAX_VALUE.toInt())
         }
     }
 
@@ -483,7 +509,7 @@ object MediaCodecHelper {
                     setNewOption = true
                 }
                 isDecoderInList(mtkDecoderPrefixes, decoderName) -> if (tryNumber < 4) {
-                    applyMtkVendorParams(videoFormat)
+                    applyMtkVendorParams(videoFormat, tryNumber)
                     setNewOption = true
                 }
                 isDecoderInList(kirinDecoderPrefixes, decoderName) -> if (tryNumber < 4) {
