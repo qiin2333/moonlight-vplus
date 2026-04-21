@@ -187,7 +187,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     // Helpers
     private lateinit var shortcutHelper: ShortcutHelper
     private var easyTierController: EasyTierController? = null
-    private lateinit var analyticsManager: AnalyticsManager
+    private var analyticsManager: AnalyticsManager? = null
     private var shakeDetector: ShakeDetector? = null
     private var currentAddressDialog: AddressSelectionDialog? = null
     private var backgroundImageRefreshReceiver: BroadcastReceiver? = null
@@ -386,7 +386,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         UiHelper.setLocale(this)
 
         analyticsManager = AnalyticsManager.getInstance(this)
-        analyticsManager.logAppLaunch()
+        analyticsManager?.logAppLaunch()
         UpdateManager.checkForUpdatesOnStartup(this)
 
         bindService(Intent(this, ComputerManagerService::class.java), serviceConnection, Service.BIND_AUTO_CREATE)
