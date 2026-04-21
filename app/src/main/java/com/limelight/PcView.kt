@@ -674,16 +674,34 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         )
         val values = arrayOf(BG_SOURCE_PICSUM, BG_SOURCE_PIPW, BG_SOURCE_NONE)
 
+        // NOTE: AlertDialog ignores items when both setMessage and setItems are used
+        // (the message TextView and the ListView fight for the same content slot, items lose).
+        // We compose the explanation into the title instead, and provide an explicit
+        // "later" negative button so the dialog is never a dead end even if input is flaky.
+        val title = getString(R.string.background_source_dialog_title) + "\n\n" +
+                getString(R.string.background_source_dialog_message)
+
         AlertDialog.Builder(this)
-            .setTitle(R.string.background_source_dialog_title)
-            .setMessage(R.string.background_source_dialog_message)
-            .setCancelable(false)
+            .setTitle(title)
             .setItems(labels) { _, which ->
                 prefs.edit()
                     .putString(BG_SOURCE_KEY, values[which])
                     .putBoolean(BG_SOURCE_DIALOG_SHOWN_KEY, true)
                     .apply()
                 loadBackgroundImage()
+            }
+            .setNegativeButton(R.string.background_source_dialog_later) { _, _ ->
+                // User defers: keep auto default, but remember we asked so we don't nag again.
+                prefs.edit()
+                    .putString(BG_SOURCE_KEY, BG_SOURCE_AUTO)
+                    .putBoolean(BG_SOURCE_DIALOG_SHOWN_KEY, true)
+                    .apply()
+            }
+            .setOnCancelListener {
+                prefs.edit()
+                    .putString(BG_SOURCE_KEY, BG_SOURCE_AUTO)
+                    .putBoolean(BG_SOURCE_DIALOG_SHOWN_KEY, true)
+                    .apply()
             }
             .show()
     }

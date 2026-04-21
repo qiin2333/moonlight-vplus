@@ -591,6 +591,7 @@
     <string name="background_source_none">No background</string>
     <string name="background_source_dialog_title">Pick a background style</string>
     <string name="background_source_dialog_message">Choose the style of random wallpapers shown on the home screen. You can change this anytime in Settings.</string>
+    <string name="background_source_dialog_later">Decide later</string>
     
     <!-- Local image picker -->
     <string name="title_local_image_picker">Select Local Image</string>
