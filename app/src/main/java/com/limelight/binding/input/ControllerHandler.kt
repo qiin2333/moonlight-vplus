@@ -2134,7 +2134,11 @@ class ControllerHandler(
                 context.startDownTime = System.currentTimeMillis()
             } else {
                 // start键刚被释放，检查是否长按足够时间以切换鼠标模拟模式
-                if (context.startDownTime > 0) {
+                // 与系统手柄路径(handleKeyUp)统一接受 enableStartKeyMenu 守卫；
+                // USB接管下系统看不到手柄输入，无法导航 GameMenu，所以这里执行的是
+                // 切鼠标动作 — 但用户关闭"长按 Start 功能"时同样应禁用，避免游戏内
+                // 长按 Start (暂停/菜单) 误触发模拟鼠标。 (issue #277)
+                if (context.startDownTime > 0 && prefConfig.enableStartKeyMenu) {
                     val pressDuration = System.currentTimeMillis() - context.startDownTime
                     if (pressDuration > START_DOWN_TIME_MOUSE_MODE_MS) {
                         // 必须在主线程上切换鼠标模拟模式

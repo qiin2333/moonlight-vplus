@@ -225,8 +225,8 @@
     <string name="summary_checkbox_usb_bind_all"> 强制Moonlight的USB驱动接管所有受支持的Xbox手柄 </string>
     <string name="title_checkbox_mouse_emulation"> 通过手柄模拟鼠标 </string>
     <string name="summary_checkbox_mouse_emulation"> 长按开始键将手柄切换为鼠标模式 </string>
-    <string name="title_checkbox_enable_start_key_menu"> 启用长按开始键菜单 </string>
-    <string name="summary_checkbox_enable_start_key_menu"> 长按开始键将打开游戏菜单 </string>
+    <string name="title_checkbox_enable_start_key_menu"> 长按开始键功能 </string>
+    <string name="summary_checkbox_enable_start_key_menu"> 启用后：长按 Start 键打开游戏菜单（系统手柄）或切换鼠标模拟（接管手柄）。关闭后游戏内长按 Start（如菜单/暂停）不会被劫持。 </string>
     <string name="title_checkbox_mouse_nav_buttons"> 启用前进后退鼠标键 </string>
     <string name="summary_checkbox_mouse_nav_buttons"> 在一些支持不佳的设备上启用此项可能会使其右键失效 </string>
 

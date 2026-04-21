@@ -336,8 +336,8 @@
     <string name="title_seekbar_vibrate_fallback_strength">Ajustar intensidade da vibração emulada</string>
     <string name="summary_seekbar_vibrate_fallback_strength">Amplificar ou reduzir a intensidade da vibração no seu dispositivo</string>
     <string name="suffix_seekbar_vibrate_fallback_strength">%</string>
-    <string name="title_checkbox_enable_start_key_menu">Ativar menu de pressionar Start</string>
-    <string name="summary_checkbox_enable_start_key_menu">Pressionar longamente o botão Start abrirá o menu do jogo</string>
+    <string name="title_checkbox_enable_start_key_menu">Ações ao pressionar Start longamente</string>
+    <string name="summary_checkbox_enable_start_key_menu">Quando ativado: abre o menu do jogo (gamepad do sistema) ou alterna a emulação de rato (gamepad em modo takeover). Desative para liberar o Start em jogos.</string>
     <string name="title_checkbox_gamepad_touchpad_as_mouse">Sempre controlar rato com touchpad</string>
     <string name="summary_checkbox_gamepad_touchpad_as_mouse">Força a entrada do touchpad do gamepad a controlar o rato do host.</string>
     <string name="title_checkbox_gamepad_motion_sensors">Permitir uso de sensores de movimento do gamepad</string>
