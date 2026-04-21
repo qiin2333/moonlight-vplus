@@ -1,5 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="background_source_names">
+        <item>@string/background_source_auto</item>
+        <item>@string/background_source_picsum</item>
+        <item>@string/background_source_pipw</item>
+        <item>@string/background_source_api</item>
+        <item>@string/background_source_local</item>
+        <item>@string/background_source_none</item>
+    </string-array>
+    <string-array name="background_source_values">
+        <item>auto</item>
+        <item>picsum</item>
+        <item>pipw</item>
+        <item>api</item>
+        <item>local</item>
+        <item>none</item>
+    </string-array>
     <string-array name="resolution_names">
         <item>@string/resolution_360p</item>
         <item>@string/resolution_480p</item>

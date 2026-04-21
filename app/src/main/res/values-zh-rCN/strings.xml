@@ -512,9 +512,21 @@
 
     <!-- Background image API -->
     <string name="title_background_image_api">背景图片API</string>
-    <string name="summary_background_image_api">输入自定义背景图片的API，也可以是单张图片地址哦，留空就是看随机涩图</string>
+    <string name="summary_background_image_api">输入自定义背景图片的API，也可以是单张图片地址哦</string>
     <string name="dialog_title_background_image_api">背景图片API</string>
     <string name="dialog_message_background_image_api">请输入完整的图片API</string>
+
+    <!-- Background source (issue #263) -->
+    <string name="title_background_source">背景图来源</string>
+    <string name="summary_background_source">选择桌面随机壁纸的来源</string>
+    <string name="background_source_auto">智能默认（推荐）</string>
+    <string name="background_source_picsum">摄影风景（Lorem Picsum）</string>
+    <string name="background_source_pipw">二次元（Pipw）</string>
+    <string name="background_source_api">自定义 API</string>
+    <string name="background_source_local">本地图片</string>
+    <string name="background_source_none">不显示背景</string>
+    <string name="background_source_dialog_title">选择壁纸风格</string>
+    <string name="background_source_dialog_message">选一种首页随机壁纸的风格吧，随时可以在设置里重新调整～</string>
 
     <!-- Local image picker -->
     <string name="title_local_image_picker">选择本地图片</string>

@@ -579,6 +579,18 @@
     <string name="summary_background_image_api">Enter a custom background image API, or a single image URL. Leave empty to view random images</string>
     <string name="dialog_title_background_image_api">Background Image API</string>
     <string name="dialog_message_background_image_api">Please enter the complete image API</string>
+
+    <!-- Background source (issue #263) -->
+    <string name="title_background_source">Background source</string>
+    <string name="summary_background_source">Choose where random backgrounds come from</string>
+    <string name="background_source_auto">Smart default (recommended)</string>
+    <string name="background_source_picsum">Photography (Lorem Picsum)</string>
+    <string name="background_source_pipw">Animé (Pipw)</string>
+    <string name="background_source_api">Custom API URL</string>
+    <string name="background_source_local">Local image</string>
+    <string name="background_source_none">No background</string>
+    <string name="background_source_dialog_title">Pick a background style</string>
+    <string name="background_source_dialog_message">Choose the style of random wallpapers shown on the home screen. You can change this anytime in Settings.</string>
     
     <!-- Local image picker -->
     <string name="title_local_image_picker">Select Local Image</string>

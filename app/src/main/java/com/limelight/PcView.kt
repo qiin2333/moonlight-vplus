@@ -141,6 +141,17 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         private const val SCENE_PREF_NAME = "SceneConfigs"
         private const val SCENE_KEY_PREFIX = "scene_"
 
+        // Background image source (issue #263).
+        // New unified pref key; legacy `background_image_type` is still read for migration.
+        const val BG_SOURCE_KEY = "background_source"
+        const val BG_SOURCE_AUTO = "auto"      // Smart default: TV → picsum, phone → pipw
+        const val BG_SOURCE_PIPW = "pipw"      // Animé (Pipw API)
+        const val BG_SOURCE_PICSUM = "picsum"  // Photography (Lorem Picsum, Unsplash-licensed)
+        const val BG_SOURCE_API = "api"        // User-supplied custom API URL
+        const val BG_SOURCE_LOCAL = "local"    // Local file path
+        const val BG_SOURCE_NONE = "none"      // No background image
+        private const val BG_SOURCE_DIALOG_SHOWN_KEY = "background_source_dialog_shown"
+
         // Menu item IDs
         private const val PAIR_ID = 2
         private const val UNPAIR_ID = 3
@@ -415,6 +426,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         loadBackgroundImage()
         setupBackgroundImageLongPress()
         initSceneButtons()
+        maybeShowBackgroundSourceDialog()
 
         pcGridAdapter.updateLayoutWithPreferences(this, PreferenceConfiguration.readPreferences(this))
         setupButtons()
@@ -476,6 +488,11 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         if (backgroundImageView == null) return
 
         val imageUrl = getBackgroundImageUrl()
+        if (imageUrl.isEmpty()) {
+            // "none" source — clear any existing image, fall back to the solid theme background.
+            backgroundImageView?.setImageDrawable(null)
+            return
+        }
         uiScope.launch {
             try {
                 val bitmap = withContext(Dispatchers.IO) {
@@ -538,37 +555,64 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
     private fun getBackgroundImageUrl(): String {
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-        val type = prefs.getString("background_image_type", "default")
+        // New unified source key (auto/pipw/picsum/api/local/none).
+        // Falls back to legacy `background_image_type` for old installs migrated from default/api/local.
+        val source = resolveBackgroundSource(prefs)
 
-        return when (type) {
-            "api" -> {
+        return when (source) {
+            BG_SOURCE_NONE -> ""
+            BG_SOURCE_PIPW -> getPipwApiUrl()
+            BG_SOURCE_PICSUM -> getPicsumApiUrl()
+            BG_SOURCE_API -> {
                 val apiUrl = prefs.getString("background_image_url", null)
-                if (!apiUrl.isNullOrEmpty()) {
-                    apiUrl
-                } else {
-                    prefs.edit().putString("background_image_type", "default").apply()
-                    getDefaultApiUrl()
-                }
+                if (!apiUrl.isNullOrEmpty()) apiUrl else getDefaultApiUrl()
             }
-
-            "local" -> {
+            BG_SOURCE_LOCAL -> {
                 val localPath = prefs.getString("background_image_local_path", null)
                 if (localPath != null && File(localPath).exists()) {
                     localPath
                 } else {
+                    // local file missing -> demote to smart default so user still sees something
                     prefs.edit()
-                            .putString("background_image_type", "default")
-                            .remove("background_image_local_path")
-                            .apply()
+                        .putString(BG_SOURCE_KEY, BG_SOURCE_AUTO)
+                        .remove("background_image_local_path")
+                        .apply()
                     getDefaultApiUrl()
                 }
             }
-
-            else -> getDefaultApiUrl()
+            else -> getDefaultApiUrl() // BG_SOURCE_AUTO and any unknown value
         }
     }
 
+    /**
+     * Resolve effective background source:
+     * 1. Read new `background_source` key first (user picked via ListPreference).
+     * 2. Fall back to legacy `background_image_type` (api/local) for users upgrading.
+     * 3. Default = auto (smart).
+     */
+    private fun resolveBackgroundSource(prefs: SharedPreferences): String {
+        prefs.getString(BG_SOURCE_KEY, null)?.let { return it }
+        return when (prefs.getString("background_image_type", BG_SOURCE_AUTO)) {
+            "api" -> BG_SOURCE_API
+            "local" -> BG_SOURCE_LOCAL
+            else -> BG_SOURCE_AUTO
+        }
+    }
+
+    /**
+     * Smart default URL:
+     * - TV / Android TV / Leanback devices → Picsum photography (family/living-room safe)
+     * - Phone / tablet → Pipw animé (preserves legacy behavior for existing users)
+     * Rationale: TV is the highest-risk environment for "awkward random anime" scenarios
+     * (shared screen, family viewing). Auto-picking Picsum there eliminates it without any
+     * user action. Phone users keep the original look; they can flip the source in settings
+     * or via the first-launch dialog.
+     */
     private fun getDefaultApiUrl(): String {
+        return if (isTvDevice()) getPicsumApiUrl() else getPipwApiUrl()
+    }
+
+    private fun getPipwApiUrl(): String {
         val rotation = windowManager.defaultDisplay.rotation
         return if (rotation == Configuration.ORIENTATION_PORTRAIT)
             "https://img-api.pipw.top"
@@ -576,10 +620,82 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             "https://img-api.pipw.top/?phone=true"
     }
 
+    private fun getPicsumApiUrl(): String {
+        val rotation = windowManager.defaultDisplay.rotation
+        // Lorem Picsum (https://picsum.photos) — free, Unsplash-licensed, no NSFW.
+        // Append ?random=ms to defeat HTTP caching so each call truly rotates the image.
+        val ts = System.currentTimeMillis()
+        return if (rotation == Configuration.ORIENTATION_PORTRAIT)
+            "https://picsum.photos/1080/1920?random=$ts"
+        else
+            "https://picsum.photos/1920/1080?random=$ts"
+    }
+
+    private fun isTvDevice(): Boolean {
+        val uiModeManager = getSystemService(UI_MODE_SERVICE) as? android.app.UiModeManager
+        return uiModeManager?.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION ||
+                packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) ||
+                packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK_ONLY)
+    }
+
+    /**
+     * First-launch background source picker (issue #263).
+     *
+     * Goals:
+     *  - TV / Leanback users: never nag. They are auto-defaulted to Picsum photography
+     *    (see [getDefaultApiUrl]); showing a dialog via D-pad on a shared TV is a worse UX
+     *    than silently picking the safe option.
+     *  - Phone / tablet users on a fresh install: show a one-time picker the first time
+     *    the PcView renders so nobody is ambushed by animé wallpapers at work / on a commute.
+     *  - Anyone who already has a source explicitly picked, or who already saw the dialog,
+     *    is skipped (idempotent).
+     */
+    private fun maybeShowBackgroundSourceDialog() {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        if (prefs.getBoolean(BG_SOURCE_DIALOG_SHOWN_KEY, false)) return
+        if (prefs.contains(BG_SOURCE_KEY)) {
+            // User reached here via settings already; just record that we've shown/skipped.
+            prefs.edit().putBoolean(BG_SOURCE_DIALOG_SHOWN_KEY, true).apply()
+            return
+        }
+        if (isTvDevice()) {
+            // TV → auto Picsum silently, mark as shown.
+            prefs.edit()
+                .putString(BG_SOURCE_KEY, BG_SOURCE_PICSUM)
+                .putBoolean(BG_SOURCE_DIALOG_SHOWN_KEY, true)
+                .apply()
+            return
+        }
+
+        val labels = arrayOf(
+            getString(R.string.background_source_picsum),
+            getString(R.string.background_source_pipw),
+            getString(R.string.background_source_none)
+        )
+        val values = arrayOf(BG_SOURCE_PICSUM, BG_SOURCE_PIPW, BG_SOURCE_NONE)
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.background_source_dialog_title)
+            .setMessage(R.string.background_source_dialog_message)
+            .setCancelable(false)
+            .setItems(labels) { _, which ->
+                prefs.edit()
+                    .putString(BG_SOURCE_KEY, values[which])
+                    .putBoolean(BG_SOURCE_DIALOG_SHOWN_KEY, true)
+                    .apply()
+                loadBackgroundImage()
+            }
+            .show()
+    }
+
     private fun refreshBackgroundImage(isFromShake: Boolean) {
         if (backgroundImageView == null) return
 
         val imageUrl = getBackgroundImageUrl()
+        if (imageUrl.isEmpty()) {
+            backgroundImageView?.setImageDrawable(null)
+            return
+        }
         bitmapLruCache.remove(imageUrl)
 
         uiScope.launch {

@@ -687,6 +687,13 @@
             android:key="checkbox_small_icon_mode"
             android:title="@string/title_checkbox_small_icon_mode"
             android:summary="@string/summary_checkbox_small_icon_mode" />
+        <ListPreference
+            android:key="background_source"
+            android:title="@string/title_background_source"
+            android:summary="@string/summary_background_source"
+            android:entries="@array/background_source_names"
+            android:entryValues="@array/background_source_values"
+            android:defaultValue="auto" />
         <EditTextPreference
             android:key="background_image_url"
             android:title="@string/title_background_image_api"
