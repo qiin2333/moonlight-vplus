@@ -46,6 +46,8 @@ class ResetBackgroundImagePreference : Preference {
 
         // 清除所有背景图片相关配置
         prefs.edit()
+            // New unified source key (issue #263): reset to smart default.
+            .putString("background_source", "auto")
             .putString("background_image_type", "default")
             .remove("background_image_url")
             .remove("background_image_local_path")

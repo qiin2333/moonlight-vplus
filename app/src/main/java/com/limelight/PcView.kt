@@ -192,6 +192,16 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     private var currentAddressDialog: AddressSelectionDialog? = null
     private var backgroundImageRefreshReceiver: BroadcastReceiver? = null
 
+    // Monotonically increasing token for background image loads. Stale async Glide
+    // results (e.g. the initial load still racing while the first-run dialog picked
+    // "none") are discarded by comparing their captured generation against this.
+    private var backgroundLoadGeneration = 0
+
+    // Remember the source that produced the currently displayed background so that
+    // returning from Settings (where the ListPreference may have changed) triggers
+    // a reload. We snapshot in loadBackgroundImage and compare in onResume.
+    private var lastBackgroundSourceSnapshot: String? = null
+
     // Managers
     private var managerBinder: ComputerManagerService.ComputerManagerBinder? = null
     private lateinit var bitmapLruCache: LruCache<String, Bitmap>
@@ -309,6 +319,11 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         UiHelper.showDecoderCrashDialog(this)
         inForeground = true
         startComputerUpdates()
+
+        // If the user flipped the background source (or path / URL) in Settings
+        // while we were paused, reload. Cheap string compare of the resolved
+        // source is enough — the actual Glide work only runs when it differs.
+        maybeReloadBackgroundAfterSettingsChange()
 
         analyticsManager?.startUsageTracking()
         startShakeDetector()
@@ -487,9 +502,16 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     private fun loadBackgroundImage() {
         if (backgroundImageView == null) return
 
+        val gen = ++backgroundLoadGeneration
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        lastBackgroundSourceSnapshot = resolveBackgroundSource(prefs)
         val imageUrl = getBackgroundImageUrl()
         if (imageUrl.isEmpty()) {
-            // "none" source — clear any existing image, fall back to the solid theme background.
+            // "none" source — cancel any in-flight Glide request targeting the
+            // background view and clear the drawable so a stale earlier load
+            // (e.g. initial onCreate request racing with the dialog pick) cannot
+            // overwrite us.
+            Glide.with(this@PcView).clear(backgroundImageView!!)
             backgroundImageView?.setImageDrawable(null)
             return
         }
@@ -505,7 +527,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                             .submit()
                             .get()
                 }
-                if (bitmap != null) {
+                if (bitmap != null && gen == backgroundLoadGeneration) {
                     bitmapLruCache.put(imageUrl, bitmap)
                     applyBlurredBackground(bitmap)
                 }
@@ -631,6 +653,27 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             "https://picsum.photos/1920/1080?random=$ts"
     }
 
+    /**
+     * Called from onResume so that flipping `background_source` (or the custom URL /
+     * local path) in Settings causes an immediate reload instead of waiting until
+     * the next app launch.
+     */
+    private fun maybeReloadBackgroundAfterSettingsChange() {
+        if (backgroundImageView == null || !completeOnCreateCalled) return
+        val prev = lastBackgroundSourceSnapshot ?: return
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val current = resolveBackgroundSource(prefs)
+        val needReload = when {
+            current != prev -> true
+            current == BG_SOURCE_API -> true   // URL may have changed in the EditText pref
+            current == BG_SOURCE_LOCAL -> true // local image may have been replaced
+            else -> false
+        }
+        if (needReload) {
+            loadBackgroundImage()
+        }
+    }
+
     private fun isTvDevice(): Boolean {
         val uiModeManager = getSystemService(UI_MODE_SERVICE) as? android.app.UiModeManager
         return uiModeManager?.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION ||
@@ -709,8 +752,10 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     private fun refreshBackgroundImage(isFromShake: Boolean) {
         if (backgroundImageView == null) return
 
+        val gen = ++backgroundLoadGeneration
         val imageUrl = getBackgroundImageUrl()
         if (imageUrl.isEmpty()) {
+            Glide.with(this@PcView).clear(backgroundImageView!!)
             backgroundImageView?.setImageDrawable(null)
             return
         }
@@ -728,13 +773,13 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                             .submit()
                             .get()
                 }
-                if (bitmap != null) {
+                if (bitmap != null && gen == backgroundLoadGeneration) {
                     bitmapLruCache.put(imageUrl, bitmap)
                     applyBlurredBackground(bitmap)
                     if (isFromShake) {
                         showToast(getString(R.string.background_refreshed_with_remaining, getRemainingRefreshCount()))
                     }
-                } else {
+                } else if (bitmap == null) {
                     showToast(getString(R.string.refresh_failed_please_retry))
                 }
             } catch (e: Exception) {

@@ -81,6 +81,10 @@ class LocalImagePickerPreference : Preference {
             if (internalPath != null) {
                 val prefs = PreferenceManager.getDefaultSharedPreferences(context)
                 prefs.edit()
+                    // New unified source key (issue #263). Must be written alongside
+                    // the legacy key because PcView's resolver prefers the new key
+                    // once the first-run dialog has set it to anything.
+                    .putString("background_source", "local")
                     .putString("background_image_type", "local")
                     .putString("background_image_local_path", internalPath)
                     .remove("background_image_url")
