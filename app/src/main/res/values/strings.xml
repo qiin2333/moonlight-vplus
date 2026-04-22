@@ -592,6 +592,13 @@
     <string name="background_source_dialog_title">Pick a background style</string>
     <string name="background_source_dialog_message">Choose the style of random wallpapers shown on the home screen. You can change this anytime in Settings.</string>
     <string name="background_source_dialog_later">Decide later</string>
+
+    <!-- Crash report prompt -->
+    <string name="crash_report_dialog_title">Moonlight closed unexpectedly last time</string>
+    <string name="crash_report_dialog_message">Send the diagnostic log to the developer to help fix it?\n\n%1$s</string>
+    <string name="crash_report_share">Share log</string>
+    <string name="crash_report_dismiss">Ignore</string>
+    <string name="crash_report_subject">Moonlight crash report</string>
     
     <!-- Local image picker -->
     <string name="title_local_image_picker">Select Local Image</string>

@@ -69,6 +69,7 @@
         tools:ignore="ProtectedPermissions" />
 
     <application
+        android:name=".LimelightApplication"
         android:allowBackup="true"
         android:fullBackupContent="@xml/backup_rules"
         android:dataExtractionRules="@xml/backup_rules_s"

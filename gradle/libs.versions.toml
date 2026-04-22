@@ -2,6 +2,7 @@
 agp = "9.2.0"
 kotlin = "2.2.10"
 google-services = "4.4.4"
+firebase-crashlytics-gradle = "2.9.9"
 desugar = "2.1.5"
 bouncycastle = "1.83"
 jcodec = "0.2.5"
@@ -49,6 +50,8 @@ tvprovider = { module = "androidx.tvprovider:tvprovider", version.ref = "tvprovi
 zxing-embedded = { module = "com.journeyapps:zxing-android-embedded", version.ref = "zxing" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
+firebase-crashlytics-ndk = { module = "com.google.firebase:firebase-crashlytics-ndk" }
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
@@ -57,3 +60,4 @@ androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtim
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }
+firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebase-crashlytics-gradle" }

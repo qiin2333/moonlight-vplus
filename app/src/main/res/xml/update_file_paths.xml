@@ -2,4 +2,6 @@
 <paths>
     <external-path name="external_downloads" path="Download/" />
     <external-files-path name="app_updates" path="updates/" />
+    <!-- Crash report file shared via Intent.ACTION_SEND. -->
+    <files-path name="crash_logs" path="crash/" />
 </paths>

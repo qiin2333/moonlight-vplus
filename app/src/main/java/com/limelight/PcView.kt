@@ -434,6 +434,9 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         setupBackgroundImageLongPress()
         initSceneButtons()
         maybeShowBackgroundSourceDialog()
+        // Surface any uncaught crash captured by CrashReporter on a previous run
+        // so the user can ship the log back to the dev with one tap.
+        com.limelight.crash.CrashReportPrompt.maybeShow(this)
 
         pcGridAdapter.updateLayoutWithPreferences(this, PreferenceConfiguration.readPreferences(this))
         setupButtons()

@@ -7,8 +7,10 @@ plugins {
 def hasGoogleServicesJson = file('google-services.json').exists()
 if (hasGoogleServicesJson && (project.hasProperty('enableAnalytics') || gradle.startParameter.taskNames.any { it.contains('Release') })) {
     apply plugin: 'com.google.gms.google-services'
+    // Crashlytics requires google-services to be applied first.
+    apply plugin: 'com.google.firebase.crashlytics'
 } else if (!hasGoogleServicesJson) {
-    logger.lifecycle("google-services.json not found; skipping Google Services plugin")
+    logger.lifecycle("google-services.json not found; skipping Google Services + Crashlytics plugins")
 }
 
 android {
@@ -203,11 +205,13 @@ dependencies {
     implementation libs.tvprovider
     implementation libs.zxing.embedded
 
-    // Firebase Analytics
+    // Firebase Analytics + Crashlytics
     // BOM 版本说明: https://firebase.google.com/support/release-notes/android
     // 注意: Firebase 33.0.0+ 需要 minSdk 23，我们使用 32.8.1 保持 API 22 兼容
+    // 没有 google-services.json 时 Crashlytics 仍能编译进 APK 但不会上报 (init 静默失败)
     implementation platform(libs.firebase.bom)
     implementation libs.firebase.analytics
+    implementation libs.firebase.crashlytics
 
     // Kotlin
     implementation libs.kotlin.stdlib

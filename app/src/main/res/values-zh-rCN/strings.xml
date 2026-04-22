@@ -529,6 +529,13 @@
     <string name="background_source_dialog_message">选一种首页随机壁纸的风格吧，随时可以在设置里重新调整～</string>
     <string name="background_source_dialog_later">以后再说</string>
 
+    <!-- 崩溃日志反馈弹窗 -->
+    <string name="crash_report_dialog_title">应用上次异常退出</string>
+    <string name="crash_report_dialog_message">把诊断日志发送给开发者帮忙排查吗？\n\n%1$s</string>
+    <string name="crash_report_share">发送日志</string>
+    <string name="crash_report_dismiss">忽略</string>
+    <string name="crash_report_subject">Moonlight 崩溃日志</string>
+
     <!-- Local image picker -->
     <string name="title_local_image_picker">选择本地图片</string>
     <string name="summary_local_image_picker">从本地相册中选择一张图片作为背景</string>
