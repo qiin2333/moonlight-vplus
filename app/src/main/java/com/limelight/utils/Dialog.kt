@@ -44,17 +44,11 @@ class Dialog private constructor(
         alert.setCanceledOnTouchOutside(false)
 
         alert.setButton(AlertDialog.BUTTON_POSITIVE, activity.resources.getText(android.R.string.ok)) { dialog, _ ->
-            synchronized(rundownDialogs) {
-                rundownDialogs.remove(this)
-                alert.dismiss()
-            }
+            dismissFromRundown()
             runOnDismiss.run()
         }
         alert.setButton(AlertDialog.BUTTON_NEUTRAL, activity.resources.getText(R.string.help)) { dialog, _ ->
-            synchronized(rundownDialogs) {
-                rundownDialogs.remove(this)
-                alert.dismiss()
-            }
+            dismissFromRundown()
             runOnDismiss.run()
             HelpLauncher.launchTroubleshooting(activity)
         }
@@ -120,7 +114,7 @@ class Dialog private constructor(
                         true
                     }
                     KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
-                        alert.dismiss()
+                        dismissFromRundown()
                         true
                     }
                     else -> false
@@ -136,7 +130,7 @@ class Dialog private constructor(
                         true
                     }
                     KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
-                        alert.dismiss()
+                        dismissFromRundown()
                         true
                     }
                     else -> false
@@ -152,7 +146,7 @@ class Dialog private constructor(
                         true
                     }
                     KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
-                        alert.dismiss()
+                        dismissFromRundown()
                         true
                     }
                     else -> false
@@ -162,10 +156,7 @@ class Dialog private constructor(
 
         builder.setView(dialogView)
         builder.setPositiveButton(android.R.string.ok) { _, _ ->
-            synchronized(rundownDialogs) {
-                rundownDialogs.remove(this)
-                alert.dismiss()
-            }
+            dismissFromRundown()
             runOnDismiss.run()
         }
 
@@ -192,13 +183,20 @@ class Dialog private constructor(
             if (event.action == KeyEvent.ACTION_DOWN) {
                 when (keyCode) {
                     KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
-                        alert.dismiss()
+                        dismissFromRundown()
                         true
                     }
                     else -> false
                 }
             } else false
         }
+    }
+
+    private fun dismissFromRundown() {
+        synchronized(rundownDialogs) {
+            rundownDialogs.remove(this)
+        }
+        safeDismiss(this)
     }
 
     private fun formatDetailsMessage(message: String): String {
@@ -241,13 +239,32 @@ class Dialog private constructor(
         private val rundownDialogs = ArrayList<Dialog>()
 
         fun closeDialogs() {
-            synchronized(rundownDialogs) {
-                for (d in rundownDialogs) {
-                    if (d.alert.isShowing) {
-                        d.alert.dismiss()
-                    }
-                }
+            val dialogs = synchronized(rundownDialogs) {
+                val dialogs = rundownDialogs.toList()
                 rundownDialogs.clear()
+                dialogs
+            }
+
+            for (d in dialogs) {
+                safeDismiss(d)
+            }
+        }
+
+        private fun safeDismiss(d: Dialog) {
+            // Activity 已经 finishing / destroyed 时，DecorView 可能已经从 WindowManager 解绑，
+            // 此时 isShowing 仍可能为 true，直接 dismiss 会触发
+            // IllegalArgumentException: View ... not attached to window manager
+            if (d.activity.isFinishing || d.activity.isDestroyed) {
+                return
+            }
+            try {
+                if (d.alert.isShowing) {
+                    d.alert.dismiss()
+                }
+            } catch (e: IllegalArgumentException) {
+                // View 已与 WindowManager 解绑，安全忽略
+            } catch (e: RuntimeException) {
+                // 兜底：任何 dismiss 异常都不应让 onStop 崩溃
             }
         }
 

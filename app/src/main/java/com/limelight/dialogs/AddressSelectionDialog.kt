@@ -1,5 +1,6 @@
 package com.limelight.dialogs
 
+import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.view.KeyEvent
@@ -24,6 +25,7 @@ class AddressSelectionDialog(
     }
 
     private val dialog: AlertDialog
+    private val hostActivity = context as? Activity
     private val adapter: AddressListAdapter
     private val addressList: ListView
 
@@ -46,7 +48,7 @@ class AddressSelectionDialog(
         addressList.setOnItemClickListener { _, _, position, _ ->
             val address = adapter.getItem(position) as ComputerDetails.AddressTuple
             listener?.onAddressSelected(address)
-            dialog.dismiss()
+            dismiss()
         }
 
         builder.setView(dialogView)
@@ -54,11 +56,33 @@ class AddressSelectionDialog(
     }
 
     fun show() {
-        dialog.show()
+        if (hostActivity?.isFinishing == true || hostActivity?.isDestroyed == true) {
+            return
+        }
+
+        try {
+            dialog.show()
+        } catch (e: IllegalArgumentException) {
+            // Window token 或视图状态异常时安全忽略
+        } catch (e: RuntimeException) {
+            // 兜底：显示失败不应导致调用方崩溃
+        }
     }
 
     fun dismiss() {
-        dialog.dismiss()
+        if (hostActivity?.isFinishing == true || hostActivity?.isDestroyed == true) {
+            return
+        }
+
+        try {
+            if (dialog.isShowing) {
+                dialog.dismiss()
+            }
+        } catch (e: IllegalArgumentException) {
+            // DecorView 已与 WindowManager 解绑，安全忽略
+        } catch (e: RuntimeException) {
+            // 兜底：dismiss 失败不应让 Activity 生命周期崩溃
+        }
     }
 
     private fun setupControllerSupport() {
@@ -87,7 +111,7 @@ class AddressSelectionDialog(
             if (selectedPosition in 0 until itemCount) {
                 val address = adapter.getItem(selectedPosition) as ComputerDetails.AddressTuple
                 listener?.onAddressSelected(address)
-                dialog.dismiss()
+                dismiss()
             }
             return true
         }
@@ -132,7 +156,7 @@ class AddressSelectionDialog(
 
             view.setOnClickListener {
                 listener?.onAddressSelected(address)
-                dialog.dismiss()
+                dismiss()
             }
 
             return view

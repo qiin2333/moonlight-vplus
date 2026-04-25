@@ -17,13 +17,13 @@ class SpinnerDialog private constructor(
     private var progress: ProgressDialog? = null
 
     override fun run() {
-        // If we're dying, don't bother doing anything
-        if (activity.isFinishing) {
-            return
-        }
-
         val currentProgress = progress
         if (currentProgress == null) {
+            // If we're dying, don't bother showing anything new
+            if (activity.isFinishing || activity.isDestroyed) {
+                return
+            }
+
             val newProgress = ProgressDialog(activity, R.style.AppProgressDialogStyle).apply {
                 setTitle(this@SpinnerDialog.title)
                 setMessage(this@SpinnerDialog.message)
@@ -54,17 +54,14 @@ class SpinnerDialog private constructor(
                 window.attributes = layoutParams
             }
         } else {
-            synchronized(rundownDialogs) {
-                if (rundownDialogs.remove(this) && currentProgress.isShowing) {
-                    currentProgress.dismiss()
-                }
-            }
+            dismissFromRundown()
         }
     }
 
     fun dismiss() {
-        // Running again with progress != null will destroy it
-        activity.runOnUiThread(this)
+        activity.runOnUiThread {
+            dismissFromRundown()
+        }
     }
 
     fun setMessage(message: String) {
@@ -82,8 +79,40 @@ class SpinnerDialog private constructor(
         activity.finish()
     }
 
+    private fun dismissFromRundown() {
+        synchronized(rundownDialogs) {
+            rundownDialogs.remove(this)
+        }
+        safeDismiss(this)
+    }
+
     companion object {
         private val rundownDialogs = ArrayList<SpinnerDialog>()
+
+        private fun safeDismiss(dialog: SpinnerDialog) {
+            safeDismiss(dialog.activity, dialog.progress)
+            dialog.progress = null
+        }
+
+        private fun safeDismiss(activity: Activity, progress: ProgressDialog?) {
+            if (progress == null) {
+                return
+            }
+
+            if (activity.isFinishing || activity.isDestroyed) {
+                return
+            }
+
+            try {
+                if (progress.isShowing) {
+                    progress.dismiss()
+                }
+            } catch (e: IllegalArgumentException) {
+                // ProgressDialog 的 DecorView 已解绑，安全忽略
+            } catch (e: RuntimeException) {
+                // 兜底：dismiss 失败不应让生命周期回调崩溃
+            }
+        }
 
         fun displayDialog(activity: Activity, title: String, message: String, finish: Boolean): SpinnerDialog {
             val spinner = SpinnerDialog(activity, title, message, finish)
@@ -92,17 +121,21 @@ class SpinnerDialog private constructor(
         }
 
         fun closeDialogs(activity: Activity) {
+            val dialogs = ArrayList<SpinnerDialog>()
+
             synchronized(rundownDialogs) {
                 val i = rundownDialogs.iterator()
                 while (i.hasNext()) {
                     val dialog = i.next()
                     if (dialog.activity === activity) {
                         i.remove()
-                        if (dialog.progress?.isShowing == true) {
-                            dialog.progress?.dismiss()
-                        }
+                        dialogs.add(dialog)
                     }
                 }
+            }
+
+            for (dialog in dialogs) {
+                safeDismiss(dialog)
             }
         }
     }
