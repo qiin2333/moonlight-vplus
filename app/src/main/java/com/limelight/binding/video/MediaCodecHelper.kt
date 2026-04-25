@@ -75,6 +75,7 @@ object MediaCodecHelper {
     private var isLowEndSnapdragon = false
     private var isAdreno620 = false
     private var isSnapdragonGSeries = false
+    private var isAmlogicRfiSafe = false
     private var initialized = false
 
     init {
@@ -190,7 +191,11 @@ object MediaCodecHelper {
             refFrameInvalidationHevcPrefixes.addAll(listOf("omx.mtk", "c2.mtk"))
             whitelistedHevcDecoders.add("omx.amlogic")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                refFrameInvalidationHevcPrefixes.addAll(listOf("omx.amlogic", "c2.amlogic"))
+                // Amlogic HEVC decoders are known to produce artifacts and decoder hangs
+                // when HEVC RFI is enabled after packet loss on many Android TV devices.
+                // Fire TV devices on Fire OS 7+ (Android 8+) are confirmed working.
+                isAmlogicRfiSafe = true
+                LimeLog.info("Enabling Amlogic HEVC RFI on Fire OS 7+ device")
             }
         }
 
@@ -606,8 +611,16 @@ object MediaCodecHelper {
         if (decoderSupportsAndroidRLowLatency(decoderInfo, "video/hevc") ||
             decoderSupportsKnownVendorLowLatencyOption(decoderInfo.name)
         ) {
-            LimeLog.info("Enabling HEVC RFI based on low latency option support")
-            return true
+            return if (!isDecoderInList(amlogicDecoderPrefixes, decoderInfo.name)) {
+                LimeLog.info("Enabling HEVC RFI based on low latency option support")
+                true
+            } else if (isAmlogicRfiSafe) {
+                LimeLog.info("Enabling HEVC RFI on confirmed-safe Amlogic device")
+                true
+            } else {
+                LimeLog.info("Not enabling HEVC RFI on unconfirmed Amlogic decoder: ${decoderInfo.name}")
+                false
+            }
         }
         return isDecoderInList(refFrameInvalidationHevcPrefixes, decoderInfo.name)
     }
