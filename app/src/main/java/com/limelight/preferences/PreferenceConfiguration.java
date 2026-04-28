@@ -87,6 +87,7 @@ public class PreferenceConfiguration {
     private static final String HDR_MODE_PREF_STRING = "list_hdr_mode"; // 0=SDR, 1=HDR10, 2=HLG
     private static final String ENABLE_PIP_PREF_STRING = "checkbox_enable_pip";
     private static final String ENABLE_PERF_OVERLAY_STRING = "checkbox_enable_perf_overlay";
+    private static final String ENABLE_QUICK_ACTION_TAB_BAR_PREF_STRING = "checkbox_enable_quick_action_tab_bar";
     private static final String PERF_OVERLAY_LOCKED_STRING = "perf_overlay_locked";
     private static final String PERF_OVERLAY_ORIENTATION_STRING = "list_perf_overlay_orientation";
     private static final String PERF_OVERLAY_POSITION_STRING = "list_perf_overlay_position";
@@ -196,6 +197,7 @@ public class PreferenceConfiguration {
     private static final int DEFAULT_HDR_MODE = 1; // 默认 HDR10/PQ 模式 (0=禁用自动HDR切换, 1=HDR10, 2=HLG)
     private static final boolean DEFAULT_ENABLE_PIP = false;
     private static final boolean DEFAULT_ENABLE_PERF_OVERLAY = false;
+    private static final boolean DEFAULT_ENABLE_QUICK_ACTION_TAB_BAR = true;
     private static final boolean DEFAULT_PERF_OVERLAY_LOCKED = false;
     private static final String DEFAULT_PERF_OVERLAY_ORIENTATION = "horizontal";
     private static final String DEFAULT_PERF_OVERLAY_POSITION = "top";
@@ -357,6 +359,7 @@ public class PreferenceConfiguration {
     public int hdrMode; // 0=HDR disabled, 1=HDR10/PQ, 2=HLG
     public boolean enablePip;
     public boolean enablePerfOverlay;
+    public boolean enableQuickActionTabBar;
     public boolean perfOverlayLocked;
     public PerfOverlayOrientation perfOverlayOrientation;
     public PerfOverlayPosition perfOverlayPosition;
@@ -874,6 +877,7 @@ public class PreferenceConfiguration {
         }
         config.enablePip = prefs.getBoolean(ENABLE_PIP_PREF_STRING, DEFAULT_ENABLE_PIP);
         config.enablePerfOverlay = prefs.getBoolean(ENABLE_PERF_OVERLAY_STRING, DEFAULT_ENABLE_PERF_OVERLAY);
+        config.enableQuickActionTabBar = prefs.getBoolean(ENABLE_QUICK_ACTION_TAB_BAR_PREF_STRING, DEFAULT_ENABLE_QUICK_ACTION_TAB_BAR);
         config.perfOverlayLocked = prefs.getBoolean(PERF_OVERLAY_LOCKED_STRING, DEFAULT_PERF_OVERLAY_LOCKED);
         
         // 读取性能覆盖层方向和位置设置
@@ -1125,6 +1129,7 @@ public class PreferenceConfiguration {
                     .putBoolean(ENABLE_HDR_PREF_STRING, enableHdr)
                     .putBoolean(ENABLE_HDR_HIGH_BRIGHTNESS_PREF_STRING, enableHdrHighBrightness)
                     .putBoolean(ENABLE_PERF_OVERLAY_STRING, enablePerfOverlay)
+                    .putBoolean(ENABLE_QUICK_ACTION_TAB_BAR_PREF_STRING, enableQuickActionTabBar)
                     .putBoolean(PERF_OVERLAY_LOCKED_STRING, perfOverlayLocked)
                     .putBoolean(REVERSE_RESOLUTION_PREF_STRING, reverseResolution)
                     .putBoolean(ROTABLE_SCREEN_PREF_STRING, rotableScreen)
@@ -1173,6 +1178,7 @@ public class PreferenceConfiguration {
         copy.enableHdrHighBrightness = this.enableHdrHighBrightness;
         copy.hdrMode = this.hdrMode;
         copy.enablePerfOverlay = this.enablePerfOverlay;
+        copy.enableQuickActionTabBar = this.enableQuickActionTabBar;
         copy.perfOverlayLocked = this.perfOverlayLocked;
         copy.perfOverlayOrientation = this.perfOverlayOrientation;
         copy.perfOverlayPosition = this.perfOverlayPosition;

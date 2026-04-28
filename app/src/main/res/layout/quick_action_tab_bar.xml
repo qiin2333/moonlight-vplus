@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Quick-action tab bar (drawer-style) shown during streaming.
+  Landscape: anchors to the left long edge; Portrait: anchors to the bottom long edge.
+  Orientation and layout_gravity are overridden at runtime in QuickActionTabBarManager.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/quickActionTabBarRoot"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="start|center_vertical"
+    android:elevation="22dp"
+    android:visibility="gone">
+
+    <LinearLayout
+        android:id="@+id/quickActionPanel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/quick_action_panel_bg"
+        android:padding="6dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <TextView
+            android:id="@+id/quickActionBtnOps"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_margin="2dp"
+            android:gravity="center"
+            android:textColor="@color/quick_action_text"
+            android:textSize="12sp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground"
+            android:text="@string/quick_action_ops" />
+
+        <TextView
+            android:id="@+id/quickActionBtnKeyboard"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_margin="2dp"
+            android:gravity="center"
+            android:textColor="@color/quick_action_text"
+            android:textSize="12sp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground"
+            android:text="@string/quick_action_keyboard" />
+
+        <TextView
+            android:id="@+id/quickActionBtnShowDesktop"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_margin="2dp"
+            android:gravity="center"
+            android:textColor="@color/quick_action_text"
+            android:textSize="12sp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground"
+            android:text="@string/quick_action_show_desktop" />
+
+        <TextView
+            android:id="@+id/quickActionBtnShowWindows"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_margin="2dp"
+            android:gravity="center"
+            android:textColor="@color/quick_action_text"
+            android:textSize="12sp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground"
+            android:text="@string/quick_action_show_windows" />
+
+        <TextView
+            android:id="@+id/quickActionBtnClose"
+            android:layout_width="56dp"
+            android:layout_height="32dp"
+            android:layout_margin="2dp"
+            android:gravity="center"
+            android:textColor="@color/quick_action_text"
+            android:textSize="16sp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground"
+            android:text="✕" />
+
+    </LinearLayout>
+
+    <View
+        android:id="@+id/quickActionHandle"
+        android:layout_width="12dp"
+        android:layout_height="80dp"
+        android:layout_gravity="center_vertical|end"
+        android:layout_marginStart="2dp"
+        android:layout_marginEnd="2dp"
+        android:background="@drawable/quick_action_handle_bg"
+        android:clickable="true"
+        android:focusable="true"
+        android:contentDescription="@string/quick_action_handle_cd" />
+
+</FrameLayout>

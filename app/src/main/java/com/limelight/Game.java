@@ -38,6 +38,7 @@ import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.services.StreamNotificationService;
 import com.limelight.ui.CursorView;
 import com.limelight.ui.GameGestures;
+import com.limelight.ui.QuickActionTabBarManager;
 import com.limelight.ui.StreamView;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.PanZoomHandler;
@@ -229,6 +230,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     // 性能覆盖层管理器
     private PerformanceOverlayManager performanceOverlayManager;
+    private QuickActionTabBarManager quickActionTabBarManager;
 
     // 光标服务管理器
     private CursorServiceManager cursorServiceManager;
@@ -584,6 +586,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // 初始化性能覆盖层管理器
         performanceOverlayManager = new PerformanceOverlayManager(this, prefConfig);
         performanceOverlayManager.initialize();
+
+        // 初始化串流快捷动作 tab 栏（抽屉式外壳）
+        quickActionTabBarManager = new QuickActionTabBarManager(this, prefConfig);
+        quickActionTabBarManager.initialize();
 
         inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(this, this);
 
@@ -1492,6 +1498,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 if (performanceOverlayManager != null) {
                     performanceOverlayManager.hideOverlayImmediate();
                 }
+                if (quickActionTabBarManager != null) {
+                    quickActionTabBarManager.hideForPip();
+                }
                 notificationOverlayView.setVisibility(View.GONE);
 
                 // 隐藏麦克风按钮
@@ -1517,6 +1526,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
                 if (performanceOverlayManager != null) {
                     performanceOverlayManager.applyRequestedVisibility();
+                }
+                if (quickActionTabBarManager != null) {
+                    quickActionTabBarManager.onPipExited();
                 }
                 if (requestedNotificationOverlayVisibility == View.VISIBLE) {
                     notificationOverlayView.setVisibility(View.VISIBLE);
@@ -1545,6 +1557,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // 屏幕方向变化时重新配置性能覆盖层布局
         if (performanceOverlayManager != null) {
             performanceOverlayManager.onConfigurationChanged();
+        }
+
+        // 屏幕方向变化时切换快捷动作 tab 栏的贴边侧（左长边 ↔ 底长边）
+        if (quickActionTabBarManager != null) {
+            quickActionTabBarManager.onConfigurationChanged();
         }
 
         // Re-apply display position

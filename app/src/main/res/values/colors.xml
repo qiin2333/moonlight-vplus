@@ -17,4 +17,9 @@
     <color name="appview_text_primary">#FFFFFF</color>
     <color name="appview_text_secondary">#CCFFFFFF</color>
     <color name="appview_text_shadow">#80000000</color>
+
+    <!-- Quick action tab bar (in-stream drawer) -->
+    <color name="quick_action_panel_bg">#E61C1C1E</color>
+    <color name="quick_action_handle_bg">#99FFFFFF</color>
+    <color name="quick_action_text">#FFFFFFFF</color>
 </resources>

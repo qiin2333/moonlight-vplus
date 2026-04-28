@@ -238,4 +238,6 @@
         android:visibility="gone"
         android:elevation="20dp" />
 
+    <include layout="@layout/quick_action_tab_bar" />
+
 </merge>
