@@ -17,7 +17,8 @@ import com.limelight.nvstream.jni.MoonBridge
 class SmartAudioRenderer(
     private val context: Context,
     private val enableAudioFx: Boolean,
-    private val enableSpatializer: Boolean
+    private val enableSpatializer: Boolean,
+    private val passthroughBufferBytes: Int = 16 * 1024
 ) : AudioRenderer {
 
     private var delegate: AudioRenderer? = null
@@ -29,11 +30,25 @@ class SmartAudioRenderer(
         codec: Int,
         bitrate: Int
     ): Int {
-        // Prefer AC3 / E-AC3 passthrough when negotiated; fall back to Opus
-        // PCM renderer if passthrough init fails (route doesn't support it,
-        // unsupported channel layout, etc.).
+        // Route by negotiated codec:
+        //   PCM_S16  -> PcmPassthroughRenderer (raw LPCM, lowest latency)
+        //   AC3/EAC3 -> Ac3PassthroughRenderer (encoded bitstream to AVR)
+        //   OPUS     -> AndroidAudioRenderer (decode + render)
+        if (codec == MoonBridge.AUDIO_CODEC_PCM_S16) {
+            val pcmThru = PcmPassthroughRenderer(context, passthroughBufferBytes)
+            val res = pcmThru.setup(audioConfiguration, sampleRate, samplesPerFrame, codec, bitrate)
+            if (res == 0) {
+                LimeLog.info("SmartAudioRenderer: using PcmPassthroughRenderer")
+                delegate = pcmThru
+                return 0
+            }
+            LimeLog.warning("SmartAudioRenderer: PcmPassthroughRenderer setup failed ($res)")
+            pcmThru.cleanup()
+            return res
+        }
+
         if (codec != MoonBridge.AUDIO_CODEC_OPUS) {
-            val passthrough = Ac3PassthroughRenderer(context)
+            val passthrough = Ac3PassthroughRenderer(context, passthroughBufferBytes)
             val res = passthrough.setup(audioConfiguration, sampleRate, samplesPerFrame, codec, bitrate)
             if (res == 0) {
                 LimeLog.info("SmartAudioRenderer: using Ac3PassthroughRenderer (codec=$codec)")

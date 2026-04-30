@@ -3,6 +3,7 @@ package com.limelight.binding.audio
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
+import android.media.AudioManager
 import android.media.AudioTrack
 import android.os.Build
 
@@ -19,7 +20,10 @@ import com.limelight.nvstream.jni.MoonBridge
  *
  * Only [setup] for non-Opus codecs succeeds; Opus must use [AndroidAudioRenderer].
  */
-class Ac3PassthroughRenderer(private val context: Context) : AudioRenderer {
+class Ac3PassthroughRenderer(
+    private val context: Context,
+    private val bufferBytes: Int = 16 * 1024
+) : AudioRenderer {
 
     private var track: AudioTrack? = null
     private var encoding: Int = 0
@@ -85,16 +89,34 @@ class Ac3PassthroughRenderer(private val context: Context) : AudioRenderer {
             }
         }
 
-        // AC3 frame = 1536 samples; size up the buffer for ~6 frames worth of
-        // bitstream headroom (each AC3 frame max ~2560 bytes @ 640 kbps).
-        val bufferSize = 16 * 1024
+        // AC3 frame = 1536 samples @ 48kHz = 32 ms; bufferBytes is set from
+        // user preference (low/normal/high). Each AC3 frame max ~2560 bytes
+        // @ 640 kbps so 16 KB ≈ 5 frames ≈ 160 ms latency.
+        val bufferSize = bufferBytes
         try {
-            track = AudioTrack.Builder()
+            val builder = AudioTrack.Builder()
                 .setAudioFormat(format)
                 .setAudioAttributes(attributes)
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .setBufferSizeInBytes(bufferSize)
-                .build()
+
+            // Offloaded playback (API 29+): hand the encoded bitstream straight
+            // to the DSP / hardware codec, bypassing the AudioFlinger mixer.
+            // Saves ~50-100 ms of latency vs. the standard playback path.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                try {
+                    if (AudioManager.isOffloadedPlaybackSupported(format, attributes)) {
+                        builder.setOffloadedPlayback(true)
+                        LimeLog.info("Ac3PassthroughRenderer: offloaded playback enabled")
+                    } else {
+                        LimeLog.info("Ac3PassthroughRenderer: offload NOT supported for this format/route")
+                    }
+                } catch (e: Throwable) {
+                    LimeLog.warning("Ac3PassthroughRenderer: offload probe failed (${e.message}); using standard playback")
+                }
+            }
+
+            track = builder.build()
             track!!.play()
             LimeLog.info("Ac3PassthroughRenderer: $codecName initialized @${sampleRate} Hz, ${audioConfiguration.channelCount}ch, bitrate=$bitrate bps")
             return 0

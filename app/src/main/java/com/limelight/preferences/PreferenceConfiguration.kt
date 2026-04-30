@@ -137,6 +137,8 @@ class PreferenceConfiguration {
     var audioCodec: Int = MoonBridge.AUDIO_CODEC_OPUS
     /** Bitrate hint for AC3/E-AC3 in bps; 0 lets the server pick. */
     var audioCodecBitrate: Int = 0
+    /** AC3 passthrough AudioTrack buffer size in bytes — trade jitter resilience for latency. */
+    var audioPassthroughBufferBytes: Int = 16 * 1024
     var framePacing = 0
     var absoluteMouseMode = false
     var enableNativeMousePointer = false
@@ -465,6 +467,9 @@ class PreferenceConfiguration {
         /** Audio codec preference: "auto" | "opus" | "ac3" | "eac3" */
         const val AUDIO_CODEC_PREF_STRING = "list_audio_codec"
         const val DEFAULT_AUDIO_CODEC = "auto"
+        /** "low" (8KB ~96ms) | "normal" (16KB ~160ms) | "high" (32KB ~320ms) */
+        const val AUDIO_PASSTHROUGH_BUFFER_PREF_STRING = "list_audio_passthrough_buffer"
+        const val DEFAULT_AUDIO_PASSTHROUGH_BUFFER = "normal"
         const val UNLOCK_FPS_STRING = "checkbox_unlock_fps"
         const val IMPORT_CONFIG_STRING = "import_super_config"
         const val EXPORT_CONFIG_STRING = "export_super_config"
@@ -950,11 +955,18 @@ class PreferenceConfiguration {
             config.audioCodec = when (audioCodec) {
                 "ac3" -> MoonBridge.AUDIO_CODEC_AC3
                 "eac3" -> MoonBridge.AUDIO_CODEC_EAC3
+                "pcm" -> MoonBridge.AUDIO_CODEC_PCM_S16
                 "opus" -> MoonBridge.AUDIO_CODEC_OPUS
                 else -> {
                     // "auto": let Game.kt fill in based on device capability + channel count.
                     MoonBridge.AUDIO_CODEC_OPUS
                 }
+            }
+            val audioPassthroughBuffer = prefs.getString(AUDIO_PASSTHROUGH_BUFFER_PREF_STRING, DEFAULT_AUDIO_PASSTHROUGH_BUFFER) ?: DEFAULT_AUDIO_PASSTHROUGH_BUFFER
+            config.audioPassthroughBufferBytes = when (audioPassthroughBuffer) {
+                "low" -> 8 * 1024
+                "high" -> 32 * 1024
+                else -> 16 * 1024
             }
 
             config.videoFormat = getVideoFormatValue(context)

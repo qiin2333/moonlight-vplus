@@ -1640,7 +1640,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             attemptedConnection = true
             UiHelper.notifyStreamConnecting(this)
 
-            this.audioRenderer = com.limelight.binding.audio.SmartAudioRenderer(this, prefConfig.enableAudioFx, prefConfig.enableSpatializer)
+            this.audioRenderer = com.limelight.binding.audio.SmartAudioRenderer(this, prefConfig.enableAudioFx, prefConfig.enableSpatializer, prefConfig.audioPassthroughBufferBytes)
             conn?.start(this.audioRenderer!!, decoderRenderer!!, this)
 
             streamView.post { cursorServiceManager.syncCursorWithStream() }

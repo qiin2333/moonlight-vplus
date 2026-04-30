@@ -18,6 +18,7 @@ public class MoonBridge {
     public static final int AUDIO_CODEC_OPUS = 0;
     public static final int AUDIO_CODEC_AC3  = 1;
     public static final int AUDIO_CODEC_EAC3 = 2;
+    public static final int AUDIO_CODEC_PCM_S16 = 3;
 
     public static final int VIDEO_FORMAT_H264 = 0x0001;
     public static final int VIDEO_FORMAT_H265 = 0x0100;
