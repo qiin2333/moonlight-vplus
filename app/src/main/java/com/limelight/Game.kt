@@ -182,7 +182,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     private var shouldResumeSession = false
     private var isExtremeResumeEnabled = false
     private var isChangingResolution = false
-    private var audioRenderer: AndroidAudioRenderer? = null
+    private var audioRenderer: com.limelight.binding.audio.SmartAudioRenderer? = null
 
     enum class BackKeyMenuMode {
         GAME_MENU, CROWN_MODE, NO_MENU
@@ -794,6 +794,8 @@ class Game : Activity(), SurfaceHolder.Callback,
             .setAttachedGamepadMask(gamepadMask)
             .setClientRefreshRateX100(clientRefreshRateX100)
             .setAudioConfiguration(prefConfig.audioConfiguration)
+            .setAudioCodec(prefConfig.audioCodec)
+            .setAudioBitrate(prefConfig.audioCodecBitrate)
             .setColorSpace(decoderRenderer?.getPreferredColorSpace() ?: 0)
             .setColorRange(
                 if (willStreamHdr && prefConfig.hdrMode == MoonBridge.HDR_MODE_HLG)
@@ -1638,7 +1640,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             attemptedConnection = true
             UiHelper.notifyStreamConnecting(this)
 
-            this.audioRenderer = AndroidAudioRenderer(this, prefConfig.enableAudioFx, prefConfig.enableSpatializer)
+            this.audioRenderer = com.limelight.binding.audio.SmartAudioRenderer(this, prefConfig.enableAudioFx, prefConfig.enableSpatializer)
             conn?.start(this.audioRenderer!!, decoderRenderer!!, this)
 
             streamView.post { cursorServiceManager.syncCursorWithStream() }

@@ -274,6 +274,16 @@ Java_com_limelight_nvstream_jni_MoonBridge_getHostFeatureFlags(JNIEnv *env, jcla
 }
 
 JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_getNegotiatedAudioCodec(JNIEnv *env, jclass clazz) {
+    return LiGetNegotiatedAudioCodec();
+}
+
+JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_getNegotiatedAudioBitrate(JNIEnv *env, jclass clazz) {
+    return LiGetNegotiatedAudioBitrate();
+}
+
+JNIEXPORT jint JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_getMicPortNumber(JNIEnv *env, jclass clazz) {
     return MicPortNumber;
 }

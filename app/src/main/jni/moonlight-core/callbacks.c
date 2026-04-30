@@ -29,6 +29,7 @@ static jmethodID BridgeArStartMethod;
 static jmethodID BridgeArStopMethod;
 static jmethodID BridgeArCleanupMethod;
 static jmethodID BridgeArPlaySampleMethod;
+static jmethodID BridgeArPlayEncodedSampleMethod;
 static jmethodID BridgeClStageStartingMethod;
 static jmethodID BridgeClStageCompleteMethod;
 static jmethodID BridgeClStageFailedMethod;
@@ -44,6 +45,13 @@ static jmethodID BridgeClResolutionChangedMethod;
 static jmethodID BridgeBassEnergyMethod;
 static jbyteArray DecodedFrameBuffer;
 static jshortArray DecodedAudioBuffer;
+// Pre-allocated byte buffer for AC3/E-AC3 raw frame passthrough.
+// AC3 max frame size at 640 kbps / 32 ms = 2560 bytes; round up for E-AC3 headroom.
+// E-AC3 frame size: a single independent + up to 8 dependent substreams
+// can stack to ~8 KB; pad to 16 KB for headroom. AC3 alone tops out around
+// 2.5 KB at 640 kbps so this is generous either way.
+#define ENCODED_AUDIO_BUFFER_SIZE 16384
+static jbyteArray EncodedAudioBuffer;
 
 void DetachThread(void* context) {
     (*JVM)->DetachCurrentThread(JVM);
@@ -90,11 +98,12 @@ Java_com_limelight_nvstream_jni_MoonBridge_init(JNIEnv *env, jclass clazz) {
     BridgeDrStopMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeDrStop", "()V");
     BridgeDrCleanupMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeDrCleanup", "()V");
     BridgeDrSubmitDecodeUnitMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeDrSubmitDecodeUnit", "([BIIIICJJ)I");
-    BridgeArInitMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeArInit", "(III)I");
+    BridgeArInitMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeArInit", "(IIIII)I");
     BridgeArStartMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeArStart", "()V");
     BridgeArStopMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeArStop", "()V");
     BridgeArCleanupMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeArCleanup", "()V");
     BridgeArPlaySampleMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeArPlaySample", "([S)V");
+    BridgeArPlayEncodedSampleMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeArPlayEncodedSample", "([BI)V");
     BridgeClStageStartingMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClStageStarting", "(I)V");
     BridgeClStageCompleteMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClStageComplete", "(I)V");
     BridgeClStageFailedMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClStageFailed", "(II)V");
@@ -210,29 +219,45 @@ int BridgeArInit(int audioConfiguration, POPUS_MULTISTREAM_CONFIGURATION opusCon
     JNIEnv* env = GetThreadEnv();
     int err;
 
-    err = (*env)->CallStaticIntMethod(env, GlobalBridgeClass, BridgeArInitMethod, audioConfiguration, opusConfig->sampleRate, opusConfig->samplesPerFrame);
+    int negotiatedCodec = LiGetNegotiatedAudioCodec();
+    int negotiatedBitrate = LiGetNegotiatedAudioBitrate();
+
+    err = (*env)->CallStaticIntMethod(env, GlobalBridgeClass, BridgeArInitMethod,
+                                      audioConfiguration, opusConfig->sampleRate, opusConfig->samplesPerFrame,
+                                      negotiatedCodec, negotiatedBitrate);
     if ((*env)->ExceptionCheck(env)) {
         // This is called on a Java thread, so it's safe to return
         err = -1;
     }
     if (err == 0) {
         memcpy(&OpusConfig, opusConfig, sizeof(*opusConfig));
-        Decoder = opus_multistream_decoder_create(opusConfig->sampleRate,
-                                                  opusConfig->channelCount,
-                                                  opusConfig->streams,
-                                                  opusConfig->coupledStreams,
-                                                  opusConfig->mapping,
-                                                  &err);
-        if (Decoder == NULL) {
-            (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeArCleanupMethod);
-            return -1;
+
+        if (negotiatedCodec == AUDIO_CODEC_OPUS) {
+            // PCM path: create the Opus decoder + short-array sink.
+            Decoder = opus_multistream_decoder_create(opusConfig->sampleRate,
+                                                      opusConfig->channelCount,
+                                                      opusConfig->streams,
+                                                      opusConfig->coupledStreams,
+                                                      opusConfig->mapping,
+                                                      &err);
+            if (Decoder == NULL) {
+                (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeArCleanupMethod);
+                return -1;
+            }
+
+            // We know ahead of time what the buffer size will be for decoded audio, so pre-allocate it
+            DecodedAudioBuffer = (*env)->NewGlobalRef(env, (*env)->NewShortArray(env, opusConfig->channelCount * opusConfig->samplesPerFrame));
+
+            // Initialize bass energy analyzer for audio-driven vibration
+            bass_energy_init(opusConfig->sampleRate, opusConfig->channelCount);
+        } else {
+            // Encoded passthrough (AC3 / E-AC3): skip Opus decoder, allocate raw byte buffer.
+            Decoder = NULL;
+            EncodedAudioBuffer = (*env)->NewGlobalRef(env, (*env)->NewByteArray(env, ENCODED_AUDIO_BUFFER_SIZE));
+            __android_log_print(ANDROID_LOG_INFO, "moonlight-jni",
+                                "BridgeArInit: codec=%d (passthrough), bitrate=%d bps",
+                                negotiatedCodec, negotiatedBitrate);
         }
-
-        // We know ahead of time what the buffer size will be for decoded audio, so pre-allocate it
-        DecodedAudioBuffer = (*env)->NewGlobalRef(env, (*env)->NewShortArray(env, opusConfig->channelCount * opusConfig->samplesPerFrame));
-
-        // Initialize bass energy analyzer for audio-driven vibration
-        bass_energy_init(opusConfig->sampleRate, opusConfig->channelCount);
     }
 
     return err;
@@ -253,15 +278,44 @@ void BridgeArStop(void) {
 void BridgeArCleanup() {
     JNIEnv* env = GetThreadEnv();
 
-    opus_multistream_decoder_destroy(Decoder);
+    if (Decoder != NULL) {
+        opus_multistream_decoder_destroy(Decoder);
+        Decoder = NULL;
+    }
 
-    (*env)->DeleteGlobalRef(env, DecodedAudioBuffer);
+    if (DecodedAudioBuffer != NULL) {
+        (*env)->DeleteGlobalRef(env, DecodedAudioBuffer);
+        DecodedAudioBuffer = NULL;
+    }
+
+    if (EncodedAudioBuffer != NULL) {
+        (*env)->DeleteGlobalRef(env, EncodedAudioBuffer);
+        EncodedAudioBuffer = NULL;
+    }
 
     (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeArCleanupMethod);
 }
 
 void BridgeArDecodeAndPlaySample(char* sampleData, int sampleLength) {
     JNIEnv* env = GetThreadEnv();
+
+    // Encoded passthrough path (AC3 / E-AC3): hand the raw bitstream to Java
+    // verbatim, no Opus decode. Drop oversized frames to avoid buffer overrun.
+    if (Decoder == NULL) {
+        if (sampleLength <= 0 || sampleLength > ENCODED_AUDIO_BUFFER_SIZE) {
+            __android_log_print(ANDROID_LOG_WARN, "moonlight-jni",
+                                "BridgeArDecodeAndPlaySample: dropping oversized encoded frame (%d bytes)", sampleLength);
+            return;
+        }
+        (*env)->SetByteArrayRegion(env, EncodedAudioBuffer, 0, sampleLength, (const jbyte*)sampleData);
+        // Java side reads the leading sampleLength bytes (first 2 bytes of an AC3
+        // frame are the sync word 0x0B77, length is encoded inside the bitstream).
+        (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeArPlayEncodedSampleMethod, EncodedAudioBuffer, (jint) sampleLength);
+        if ((*env)->ExceptionCheck(env)) {
+            (*JVM)->DetachCurrentThread(JVM);
+        }
+        return;
+    }
 
     jshort* decodedData = (*env)->GetPrimitiveArrayCritical(env, DecodedAudioBuffer, NULL);
 
@@ -496,7 +550,8 @@ Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass c
                                                            jbyteArray riAesKey, jbyteArray riAesIv,
                                                            jint videoCapabilities,
                                                            jint colorSpace, jint colorRange, jint hdrMode,
-                                                           jboolean enableMic, jboolean controlOnly) {
+                                                           jboolean enableMic, jboolean controlOnly,
+                                                           jint audioCodec, jint audioBitrate) {
     SERVER_INFORMATION serverInfo = {
             .address = (*env)->GetStringUTFChars(env, address, 0),
             .serverInfoAppVersion = (*env)->GetStringUTFChars(env, appVersion, 0),
@@ -519,7 +574,9 @@ Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass c
             .colorRange = colorRange,
             .hdrMode = hdrMode,  // 0=SDR, 1=HDR10/PQ, 2=HLG
             .enableMic = enableMic,
-            .controlOnly = controlOnly
+            .controlOnly = controlOnly,
+            .audioCodec = audioCodec,
+            .audioBitrate = audioBitrate
     };
 
     jbyte* riAesKeyBuf = (*env)->GetByteArrayElements(env, riAesKey, NULL);

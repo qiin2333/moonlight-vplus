@@ -12,6 +12,13 @@ public class MoonBridge {
     public static final AudioConfiguration AUDIO_CONFIGURATION_71_SURROUND = new AudioConfiguration(8, 0x63F);
     public static final AudioConfiguration AUDIO_CONFIGURATION_714_SURROUND = new AudioConfiguration(12, 0xF63F);
 
+    // Audio codec values negotiated via the "x-ml-audio.codec" RTSP attribute
+    // (Sunshine extension; see LiGetNegotiatedAudioCodec in moonlight-common-c).
+    // Defaults to OPUS for backward compatibility with stock GFE / older Sunshine.
+    public static final int AUDIO_CODEC_OPUS = 0;
+    public static final int AUDIO_CODEC_AC3  = 1;
+    public static final int AUDIO_CODEC_EAC3 = 2;
+
     public static final int VIDEO_FORMAT_H264 = 0x0001;
     public static final int VIDEO_FORMAT_H265 = 0x0100;
     public static final int VIDEO_FORMAT_H265_MAIN10 = 0x0200;
@@ -245,9 +252,9 @@ public class MoonBridge {
         }
     }
 
-    public static int bridgeArInit(int audioConfiguration, int sampleRate, int samplesPerFrame) {
+    public static int bridgeArInit(int audioConfiguration, int sampleRate, int samplesPerFrame, int codec, int bitrate) {
         if (audioRenderer != null) {
-            return audioRenderer.setup(new AudioConfiguration(audioConfiguration), sampleRate, samplesPerFrame);
+            return audioRenderer.setup(new AudioConfiguration(audioConfiguration), sampleRate, samplesPerFrame, codec, bitrate);
         }
         else {
             return -1;
@@ -275,6 +282,18 @@ public class MoonBridge {
     public static void bridgeArPlaySample(short[] pcmData) {
         if (audioRenderer != null) {
             audioRenderer.playDecodedAudio(pcmData);
+        }
+    }
+
+    /**
+     * Called from native (callbacks.c) when the host streams encoded audio frames
+     * (AC3 / E-AC3) instead of Opus PCM. Native side bypasses Opus decoding and
+     * forwards raw bitstream bytes for the renderer to write to an AudioTrack
+     * configured for direct passthrough.
+     */
+    public static void bridgeArPlayEncodedSample(byte[] encodedData, int length) {
+        if (audioRenderer != null) {
+            audioRenderer.playEncodedAudio(encodedData, length);
         }
     }
 
@@ -385,7 +404,8 @@ public class MoonBridge {
                                               byte[] riAesKey, byte[] riAesIv,
                                               int videoCapabilities,
                                               int colorSpace, int colorRange, int hdrMode,
-                                              boolean enableMic, boolean controlOnly);
+                                              boolean enableMic, boolean controlOnly,
+                                              int audioCodec, int audioBitrate);
 
     public static native void stopConnection();
 
@@ -459,6 +479,12 @@ public class MoonBridge {
 
     // This function returns any extended feature flags supported by the host.
     public static native int getHostFeatureFlags();
+
+    /** @return Negotiated audio codec for the active connection (AUDIO_CODEC_OPUS/AC3/EAC3). */
+    public static native int getNegotiatedAudioCodec();
+
+    /** @return Negotiated audio bitrate (bits/sec) for AC3/E-AC3, 0 for Opus. */
+    public static native int getNegotiatedAudioBitrate();
     
     public static native int getMicPortNumber();
     

@@ -391,7 +391,9 @@ open class NvConnection(
                     context.streamConfig.colorRange,
                     context.streamConfig.hdrMode,
                     context.streamConfig.getEnableMic(),
-                    context.streamConfig.getControlOnly()
+                    context.streamConfig.getControlOnly(),
+                    context.streamConfig.audioCodec,
+                    context.streamConfig.audioBitrate
                 )
                 if (ret != 0) {
                     connectionAllowed.release()

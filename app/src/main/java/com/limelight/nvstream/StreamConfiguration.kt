@@ -44,6 +44,12 @@ class StreamConfiguration private constructor() {
     private var enableMic: Boolean = false
     private var useVdd: Boolean = false
     private var controlOnly: Boolean = false
+    /** Requested audio codec — see [MoonBridge.AUDIO_CODEC_OPUS]/AC3/EAC3. Default = OPUS. */
+    var audioCodec: Int = MoonBridge.AUDIO_CODEC_OPUS
+        private set
+    /** Requested AC3/E-AC3 bitrate in bits/sec. 0 = use server default. */
+    var audioBitrate: Int = 0
+        private set
     var customScreenMode: Int = -1
         private set
     var customVddScreenMode: Int = 0
@@ -99,6 +105,8 @@ class StreamConfiguration private constructor() {
         fun setUseVdd(value: Boolean): Builder = apply { config.useVdd = value }
         fun setEnableMic(enable: Boolean): Builder = apply { config.enableMic = enable }
         fun setControlOnly(controlOnly: Boolean): Builder = apply { config.controlOnly = controlOnly }
+        fun setAudioCodec(codec: Int): Builder = apply { config.audioCodec = codec }
+        fun setAudioBitrate(bitrate: Int): Builder = apply { config.audioBitrate = bitrate }
         fun setCustomScreenMode(customScreenMode: Int): Builder = apply { config.customScreenMode = customScreenMode }
         fun setCustomVddScreenMode(customVddScreenMode: Int): Builder = apply { config.customVddScreenMode = customVddScreenMode }
 

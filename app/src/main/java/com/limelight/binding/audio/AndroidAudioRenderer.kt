@@ -192,7 +192,14 @@ class AndroidAudioRenderer(
         return 0
     }
 
-    override fun setup(audioConfiguration: MoonBridge.AudioConfiguration, sampleRate: Int, samplesPerFrame: Int): Int {
+    override fun setup(audioConfiguration: MoonBridge.AudioConfiguration, sampleRate: Int, samplesPerFrame: Int, codec: Int, bitrate: Int): Int {
+        // This renderer only handles Opus PCM output. Non-Opus codecs (AC3 / E-AC3)
+        // are routed through a dedicated passthrough renderer; refuse setup so the
+        // caller can fall back appropriately.
+        if (codec != MoonBridge.AUDIO_CODEC_OPUS) {
+            LimeLog.warning("AndroidAudioRenderer: refusing non-Opus codec=$codec (use Ac3PassthroughRenderer)")
+            return -1
+        }
         // 保存配置，供 resume 时使用
         this.savedAudioConfig = audioConfiguration
         this.savedSampleRate = sampleRate
