@@ -281,6 +281,20 @@
             android:entryValues="@array/audio_vibration_scene_values"
             android:defaultValue="0" />
     </PreferenceCategory>
+    <PreferenceCategory android:title="@string/category_clipboard_sync"
+        android:key="category_clipboard_sync"
+        android:layout="@layout/preference_category_material">
+        <CheckBoxPreference
+            android:key="checkbox_clipboard_sync_text"
+            android:title="@string/title_checkbox_clipboard_sync_text"
+            android:summary="@string/summary_checkbox_clipboard_sync_text"
+            android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_clipboard_sync_image"
+            android:title="@string/title_checkbox_clipboard_sync_image"
+            android:summary="@string/summary_checkbox_clipboard_sync_image"
+            android:defaultValue="false" />
+    </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_gamepad_settings"
         android:key="category_gamepad_settings"
         android:layout="@layout/preference_category_material">

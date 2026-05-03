@@ -42,6 +42,7 @@ static jmethodID BridgeClRumbleTriggersMethod;
 static jmethodID BridgeClSetMotionEventStateMethod;
 static jmethodID BridgeClSetControllerLEDMethod;
 static jmethodID BridgeClResolutionChangedMethod;
+static jmethodID BridgeClClipboardDataMethod;
 static jmethodID BridgeBassEnergyMethod;
 static jbyteArray DecodedFrameBuffer;
 static jshortArray DecodedAudioBuffer;
@@ -116,6 +117,7 @@ Java_com_limelight_nvstream_jni_MoonBridge_init(JNIEnv *env, jclass clazz) {
     BridgeClSetMotionEventStateMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClSetMotionEventState", "(SBS)V");
     BridgeClSetControllerLEDMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClSetControllerLED", "(SBBB)V");
     BridgeClResolutionChangedMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClResolutionChanged", "(II)V");
+    BridgeClClipboardDataMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClClipboardData", "([B)V");
     BridgeBassEnergyMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeBassEnergy", "(II)V");
 }
 
@@ -476,6 +478,34 @@ void BridgeClResolutionChanged(uint32_t width, uint32_t height) {
     }
 }
 
+// Sunshine clipboard sync. Invoked from the control receive thread; we marshal the
+// payload as a fresh byte[] each time. The receive thread is dedicated and short-
+// lived per packet, so the cost of allocating a Java array per inbound clipboard
+// item (rare event) is acceptable. The wire format of `data` is opaque to native;
+// Java parses the v1 frame.
+void BridgeClClipboardData(const char* data, int length) {
+    JNIEnv* env = GetThreadEnv();
+
+    if (length < 0) {
+        return;
+    }
+
+    jbyteArray payload = (*env)->NewByteArray(env, (jsize)length);
+    if (payload == NULL) {
+        (*env)->ExceptionClear(env);
+        return;
+    }
+    if (length > 0) {
+        (*env)->SetByteArrayRegion(env, payload, 0, (jsize)length, (const jbyte*)data);
+    }
+
+    (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeClClipboardDataMethod, payload);
+    (*env)->DeleteLocalRef(env, payload);
+    if ((*env)->ExceptionCheck(env)) {
+        (*JVM)->DetachCurrentThread(JVM);
+    }
+}
+
 void BridgeClLogMessage(const char* format, ...) {
     va_list va;
     va_start(va, format);
@@ -514,6 +544,7 @@ static CONNECTION_LISTENER_CALLBACKS BridgeConnListenerCallbacks = {
         .setMotionEventState = BridgeClSetMotionEventState,
         .setControllerLED = BridgeClSetControllerLED,
         .resolutionChanged = BridgeClResolutionChanged,
+        .clipboardData = BridgeClClipboardData,
 };
 
 static bool

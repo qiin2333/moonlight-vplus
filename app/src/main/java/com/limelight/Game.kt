@@ -31,6 +31,7 @@ import com.limelight.nvstream.http.AdaptiveBitrateService
 import com.limelight.nvstream.NvConnectionListener
 import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
+import com.limelight.nvstream.input.ClipboardSyncManager
 import com.limelight.nvstream.input.MouseButtonPacket
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.GlPreferences
@@ -136,6 +137,9 @@ class Game : Activity(), SurfaceHolder.Callback,
     // 智能码率
     var adaptiveBitrateService: AdaptiveBitrateService? = null
     @Volatile private var latestPerfInfo: PerformanceInfo? = null
+
+    // Sunshine clipboard sync — null until pref toggles enable it.
+    private var clipboardSyncManager: ClipboardSyncManager? = null
 
     var displayedFailureDialog = false
     var connecting = false
@@ -1147,6 +1151,8 @@ class Game : Activity(), SurfaceHolder.Callback,
         }
         externalDisplayManager?.cleanup()
         microphoneManager?.stopMicrophoneStream()
+        clipboardSyncManager?.stop()
+        clipboardSyncManager = null
     }
 
     override fun onPause() {
@@ -1423,6 +1429,26 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     override fun connectionStarted() {
         connectionCallbackHandler.connectionStarted()
+        startClipboardSyncIfEnabled()
+    }
+
+    private fun startClipboardSyncIfEnabled() {
+        if (clipboardSyncManager != null) return
+        // moonlight-common-c PR #5 does not advertise a feature flag; we rely on the
+        // user opting in. If the host doesn't speak 0x5508 the native send returns
+        // -2 and inbound packets simply never arrive — no observable harm.
+        val wantText = prefConfig.enableClipboardSyncText
+        val wantImage = prefConfig.enableClipboardSyncImage
+        if (!wantText && !wantImage) return
+        val mgr = ClipboardSyncManager(
+            context = applicationContext,
+            syncText = wantText,
+            syncImage = wantImage,
+            fileProviderAuthority = "$packageName.clipboard_fileprovider",
+        )
+        runCatching { mgr.start() }
+            .onFailure { LimeLog.warning("Clipboard sync start failed: ${it.message}") }
+            .onSuccess { clipboardSyncManager = mgr }
     }
 
     /** 启动智能码率（如设置已开启）。在连接建立后调用。*/

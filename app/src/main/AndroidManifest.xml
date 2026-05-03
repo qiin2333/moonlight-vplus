@@ -104,6 +104,19 @@
                 android:resource="@xml/update_file_paths" />
         </provider>
 
+        <!-- FileProvider for Sunshine clipboard image sync. Inbound PNGs are written to
+             cache/clipboard and exposed read-only via this authority so other apps can
+             paste them via ClipData.newUri. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.clipboard_fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/clipboard_file_paths" />
+        </provider>
+
         <!-- Samsung multi-window support -->
         <uses-library
             android:name="com.sec.android.app.multiwindow"

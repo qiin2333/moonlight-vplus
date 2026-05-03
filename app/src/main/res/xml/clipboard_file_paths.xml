@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Inbound clipboard images persist in the app cache; we expose only this folder. -->
+    <cache-path name="clipboard" path="clipboard/" />
+</paths>

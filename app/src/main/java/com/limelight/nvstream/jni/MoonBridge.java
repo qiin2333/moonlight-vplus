@@ -138,6 +138,28 @@ public class MoonBridge {
 
     public static final byte LI_BATTERY_PERCENTAGE_UNKNOWN = (byte)0xFF;
 
+    // Sunshine clipboard sync. The native protocol packet is opaque — we build/parse
+    // the v1 wire frame here in Java to keep moonlight-common-c free of payload
+    // semantics. Frame layout (little-endian): u8 version=1, u8 kind, u32 token,
+    // u32 length, bytes payload.
+    private static final int CLIPBOARD_WIRE_VERSION = 1;
+    /** Header size of the v1 wire frame; exposed so callers can size their payload. */
+    public static final int CLIPBOARD_WIRE_HEADER = 10;
+
+    public static final byte LI_CLIPBOARD_KIND_TEXT = 1;
+    public static final byte LI_CLIPBOARD_KIND_PNG  = 2;
+
+    /** Listener for inbound clipboard packets coming from the host. */
+    public interface ClipboardListener {
+        void onClipboardData(byte kind, int token, byte[] data);
+    }
+
+    private static volatile ClipboardListener clipboardListener;
+
+    public static void setClipboardListener(ClipboardListener listener) {
+        clipboardListener = listener;
+    }
+
     private static AudioRenderer audioRenderer;
     private static VideoDecoderRenderer videoRenderer;
     private static NvConnectionListener connectionListener;
@@ -383,6 +405,55 @@ public class MoonBridge {
         }
     }
 
+    /**
+     * Invoked from native (callbacks.c) on the control receive thread when the host
+     * sends a Sunshine clipboard sync packet. The payload is the raw v1 frame; we
+     * parse it here and dispatch to the listener.
+     */
+    public static void bridgeClClipboardData(byte[] frame) {
+        ClipboardListener l = clipboardListener;
+        if (l == null || frame == null || frame.length < CLIPBOARD_WIRE_HEADER) return;
+        if ((frame[0] & 0xFF) != CLIPBOARD_WIRE_VERSION) return;
+        byte kind = frame[1];
+        int token =  (frame[2] & 0xFF)
+                  | ((frame[3] & 0xFF) << 8)
+                  | ((frame[4] & 0xFF) << 16)
+                  | ((frame[5] & 0xFF) << 24);
+        int length =  (frame[6] & 0xFF)
+                   | ((frame[7] & 0xFF) << 8)
+                   | ((frame[8] & 0xFF) << 16)
+                   | ((frame[9] & 0xFF) << 24);
+        if (length < 0 || length > frame.length - CLIPBOARD_WIRE_HEADER) return;
+        byte[] payload = new byte[length];
+        System.arraycopy(frame, CLIPBOARD_WIRE_HEADER, payload, 0, length);
+        l.onClipboardData(kind, token, payload);
+    }
+
+    /**
+     * Encode a v1 clipboard frame and send it to the host. Returns 0 on success;
+     * negative on failure (-1 invalid args, -2 unsupported by host, -3 transport).
+     */
+    public static int sendClipboardData(byte kind, int token, byte[] payload) {
+        if (payload == null) payload = new byte[0];
+        // 16-bit packet length on the wire — cap a touch below 65535 to leave
+        // room for the v2 ENet header that wraps the payload.
+        if (payload.length > 65500 - CLIPBOARD_WIRE_HEADER) return -1;
+        byte[] frame = new byte[CLIPBOARD_WIRE_HEADER + payload.length];
+        frame[0] = CLIPBOARD_WIRE_VERSION;
+        frame[1] = kind;
+        frame[2] = (byte)(token & 0xFF);
+        frame[3] = (byte)((token >>> 8) & 0xFF);
+        frame[4] = (byte)((token >>> 16) & 0xFF);
+        frame[5] = (byte)((token >>> 24) & 0xFF);
+        int len = payload.length;
+        frame[6] = (byte)(len & 0xFF);
+        frame[7] = (byte)((len >>> 8) & 0xFF);
+        frame[8] = (byte)((len >>> 16) & 0xFF);
+        frame[9] = (byte)((len >>> 24) & 0xFF);
+        System.arraycopy(payload, 0, frame, CLIPBOARD_WIRE_HEADER, len);
+        return sendClipboardFrameNative(frame);
+    }
+
     public static void setupBridge(VideoDecoderRenderer videoRenderer, AudioRenderer audioRenderer, NvConnectionListener connectionListener) {
         MoonBridge.videoRenderer = videoRenderer;
         MoonBridge.audioRenderer = audioRenderer;
@@ -394,6 +465,7 @@ public class MoonBridge {
         MoonBridge.audioRenderer = null;
         MoonBridge.connectionListener = null;
         MoonBridge.bassEnergyListener = null;
+        MoonBridge.clipboardListener = null;
     }
 
     public static native int startConnection(String address, String appVersion, String gfeVersion,
@@ -448,6 +520,13 @@ public class MoonBridge {
     public static native void sendMouseHighResHScroll(short scrollAmount);
 
     public static native void sendUtf8Text(String text);
+
+    /**
+     * Native opaque clipboard transport. The argument is the already-encoded v1
+     * wire frame; see {@link #sendClipboardData(byte, int, byte[])} for the
+     * helper that builds it.
+     */
+    private static native int sendClipboardFrameNative(byte[] frame);
 
     public static native String getStageName(int stage);
 

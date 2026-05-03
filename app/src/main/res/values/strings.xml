@@ -465,6 +465,11 @@
     <string name="category_help">Help</string>
     <string name="category_mic_settings">Microphone Settings</string>
     <string name="category_audio_vibration_settings">Audio Vibration</string>
+    <string name="category_clipboard_sync">Clipboard sync (Sunshine)</string>
+    <string name="title_checkbox_clipboard_sync_text">Sync clipboard text</string>
+    <string name="summary_checkbox_clipboard_sync_text">Mirror text copied here to/from the host (Sunshine only)</string>
+    <string name="title_checkbox_clipboard_sync_image">Sync clipboard images</string>
+    <string name="summary_checkbox_clipboard_sync_image">Mirror PNG images copied here to/from the host (Sunshine only)</string>
     <string name="category_connection_settings">Connection Settings</string>
     <string name="title_setup_guide">Setup guide</string>
     <string name="summary_setup_guide">View instructions on how to set up your gaming PC for streaming</string>

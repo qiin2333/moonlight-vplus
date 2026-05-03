@@ -131,6 +131,12 @@ class PreferenceConfiguration {
     var audioVibrationStrength = 0
     var audioVibrationMode: String = ""
     var audioVibrationScene = 0
+
+    /** Sync local clipboard text changes with the host (Sunshine clipboard sync). */
+    var enableClipboardSyncText = false
+
+    /** Sync local clipboard images (PNG) with the host. */
+    var enableClipboardSyncImage = false
     var touchscreenTrackpad = false
     var audioConfiguration: MoonBridge.AudioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO
     /** Negotiated audio codec preference — see [MoonBridge.AUDIO_CODEC_OPUS] etc. */
@@ -374,6 +380,8 @@ class PreferenceConfiguration {
         private const val VIBRATE_FALLBACK_PREF_STRING = "checkbox_vibrate_fallback"
         private const val VIBRATE_FALLBACK_STRENGTH_PREF_STRING = "seekbar_vibrate_fallback_strength"
         private const val AUDIO_VIBRATION_ENABLE_PREF_STRING = "checkbox_audio_vibration"
+        private const val CLIPBOARD_SYNC_TEXT_PREF_STRING = "checkbox_clipboard_sync_text"
+        private const val CLIPBOARD_SYNC_IMAGE_PREF_STRING = "checkbox_clipboard_sync_image"
         private const val AUDIO_VIBRATION_STRENGTH_PREF_STRING = "seekbar_audio_vibration_strength"
         private const val AUDIO_VIBRATION_MODE_PREF_STRING = "list_audio_vibration_mode"
         private const val AUDIO_VIBRATION_SCENE_PREF_STRING = "list_audio_vibration_scene"
@@ -515,6 +523,8 @@ class PreferenceConfiguration {
         private const val DEFAULT_VIBRATE_FALLBACK = false
         private const val DEFAULT_VIBRATE_FALLBACK_STRENGTH = 100
         private const val DEFAULT_AUDIO_VIBRATION = false
+        private const val DEFAULT_CLIPBOARD_SYNC_TEXT = false
+        private const val DEFAULT_CLIPBOARD_SYNC_IMAGE = false
         private const val DEFAULT_AUDIO_VIBRATION_STRENGTH = 80
         private const val DEFAULT_AUDIO_VIBRATION_MODE = "auto"
         private const val DEFAULT_AUDIO_VIBRATION_SCENE = 0 // Game/Movie
@@ -1039,6 +1049,8 @@ class PreferenceConfiguration {
             config.vibrateFallbackToDeviceStrength = prefs.getInt(VIBRATE_FALLBACK_STRENGTH_PREF_STRING, DEFAULT_VIBRATE_FALLBACK_STRENGTH)
             config.enableAudioVibration = prefs.getBoolean(AUDIO_VIBRATION_ENABLE_PREF_STRING, DEFAULT_AUDIO_VIBRATION)
             config.audioVibrationStrength = prefs.getInt(AUDIO_VIBRATION_STRENGTH_PREF_STRING, DEFAULT_AUDIO_VIBRATION_STRENGTH)
+            config.enableClipboardSyncText = prefs.getBoolean(CLIPBOARD_SYNC_TEXT_PREF_STRING, DEFAULT_CLIPBOARD_SYNC_TEXT)
+            config.enableClipboardSyncImage = prefs.getBoolean(CLIPBOARD_SYNC_IMAGE_PREF_STRING, DEFAULT_CLIPBOARD_SYNC_IMAGE)
             config.audioVibrationMode = prefs.getString(AUDIO_VIBRATION_MODE_PREF_STRING, DEFAULT_AUDIO_VIBRATION_MODE) ?: DEFAULT_AUDIO_VIBRATION_MODE
             config.audioVibrationScene = (prefs.getString(AUDIO_VIBRATION_SCENE_PREF_STRING, DEFAULT_AUDIO_VIBRATION_SCENE.toString()) ?: DEFAULT_AUDIO_VIBRATION_SCENE.toString()).toInt()
             config.flipFaceButtons = prefs.getBoolean(FLIP_FACE_BUTTONS_PREF_STRING, DEFAULT_FLIP_FACE_BUTTONS)

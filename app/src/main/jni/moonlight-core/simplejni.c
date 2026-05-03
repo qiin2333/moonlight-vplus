@@ -127,6 +127,26 @@ Java_com_limelight_nvstream_jni_MoonBridge_sendUtf8Text(JNIEnv *env, jclass claz
     (*env)->ReleaseStringUTFChars(env, text, utf8Text);
 }
 
+// Forward an opaque clipboard payload to the host. Wire format (the v1 frame
+// with kind/token/length) is built on the Java side; native passes bytes as-is.
+JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_sendClipboardFrameNative(JNIEnv *env, jclass clazz, jbyteArray payload) {
+    if (payload == NULL) {
+        return -1;
+    }
+    jsize length = (*env)->GetArrayLength(env, payload);
+    if (length <= 0) {
+        return -1;
+    }
+    jbyte* data = (*env)->GetByteArrayElements(env, payload, NULL);
+    if (data == NULL) {
+        return -1;
+    }
+    int rc = LiSendClipboardData((const void*)data, (int)length);
+    (*env)->ReleaseByteArrayElements(env, payload, data, JNI_ABORT);
+    return rc;
+}
+
 JNIEXPORT void JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_stopConnection(JNIEnv *env, jclass clazz) {
     LiStopConnection();
