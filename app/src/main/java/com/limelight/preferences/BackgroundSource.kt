@@ -42,9 +42,9 @@ sealed class BackgroundSource(val prefValue: String) {
     data object Pipw : BackgroundSource("pipw") {
         override fun resolveTarget(ctx: Context, orientation: Int): String =
             if (orientation == Configuration.ORIENTATION_PORTRAIT)
-                "https://img-api.pipw.top"
-            else
                 "https://img-api.pipw.top/?phone=true"
+            else
+                "https://img-api.pipw.top"
     }
 
     /** Lorem Picsum photography. Unsplash-licensed, family/TV safe. */
