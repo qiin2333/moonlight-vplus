@@ -409,13 +409,11 @@ object MediaCodecHelper {
             videoFormat.setInteger("vendor.mtk.vdec.force-max-freq", 1)
         }
 
-        // Standard Android low-latency hint: ask the decoder to run at max clock.
-        // KEY_OPERATING_RATE is normally gated by decoderSupportsMaxOperatingRate()
-        // because it crashes some Adreno parts; that gate is irrelevant for MTK,
-        // so we apply it directly here. Wrapped in runCatching for safety.
-        runCatching {
-            videoFormat.setInteger(MediaFormat.KEY_OPERATING_RATE, Short.MAX_VALUE.toInt())
-        }
+        // Do not force KEY_OPERATING_RATE=Short.MAX_VALUE on MTK decoders.
+        // Some Android TV firmware (for example Hisense U7Q / c2.mtk.hevc.decoder)
+        // accepts the value but then misses SurfaceFlinger deadlines and accumulates
+        // seconds of display latency. Keep MTK on KEY_PRIORITY + vendor low-latency
+        // knobs instead; KEY_OPERATING_RATE remains gated to known-good Qualcomm paths.
     }
 
     private fun applyKirinVendorParams(videoFormat: MediaFormat) {
