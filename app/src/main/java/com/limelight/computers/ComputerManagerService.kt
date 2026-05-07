@@ -587,8 +587,9 @@ class ComputerManagerService : Service() {
         if (candidates.isEmpty()) return null
 
         val diagnostics = networkDiagnostics?.getLastDiagnostics()
-        val skipLan = diagnostics?.networkType == NetworkDiagnostics.NetworkType.WAN ||
-                diagnostics?.networkType == NetworkDiagnostics.NetworkType.MOBILE
+        val skipLan = (diagnostics?.networkType == NetworkDiagnostics.NetworkType.WAN ||
+                diagnostics?.networkType == NetworkDiagnostics.NetworkType.MOBILE) &&
+                diagnostics?.isVpn != true
 
         // 使用 runBlocking 在当前（已是后台）线程中构造结构化并发作用域；
         // 调用方要么在 Dispatchers.IO 协程的 runInterruptible 内，要么在 mDNS 发现线程，均非主线程。
