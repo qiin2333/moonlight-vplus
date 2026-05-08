@@ -601,8 +601,9 @@ class ComputerManagerService : Service() {
                     val polled = try {
                         @Suppress("DEPRECATION")
                         val isLan = NetworkDiagnostics.isLanAddress(addr.address)
-                        if (isLan && skipLan) {
-                            LimeLog.info("Skipping LAN address $addr on WAN/MOBILE network")
+                        val isLearnedAddress = addr == details.remoteAddress || addr == details.ipv6Address
+                        if (isLan && skipLan && isLearnedAddress) {
+                            LimeLog.info("Skipping learned LAN address $addr on WAN/MOBILE network")
                             null
                         } else {
                             runInterruptible { tryPollIp(details, addr) }
