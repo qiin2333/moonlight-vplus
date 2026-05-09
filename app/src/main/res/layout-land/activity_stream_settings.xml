@@ -95,12 +95,35 @@
         </LinearLayout>
 
         <FrameLayout
-            android:id="@+id/preference_container"
+            android:id="@+id/settings_detail_container"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:background="@android:color/transparent"
-            android:paddingTop="0dp" />
+            android:background="@android:color/transparent">
+
+            <FrameLayout
+                android:id="@+id/preference_container"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent"
+                android:paddingTop="72dp" />
+
+            <TextView
+                android:id="@+id/settings_header_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|center_horizontal"
+                android:layout_marginTop="16dp"
+                android:ellipsize="end"
+                android:fontFamily="sans-serif-medium"
+                android:gravity="center"
+                android:letterSpacing="0.02"
+                android:maxLines="1"
+                android:textColor="@android:color/white"
+                android:textSize="17sp"
+                android:visibility="invisible"
+                tools:text="Basic Settings" />
+        </FrameLayout>
     </LinearLayout>
 
 </FrameLayout>

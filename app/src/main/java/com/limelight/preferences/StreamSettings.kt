@@ -261,6 +261,7 @@ class StreamSettings : AppCompatActivity() {
         if (usesPersistentSidebarLayout()) {
             homeContainer?.visibility = View.VISIBLE
             findViewById<View>(R.id.preference_container)?.visibility = View.VISIBLE
+            headerTitle?.visibility = View.INVISIBLE
             updateNavigationButtonForCurrentPage(true)
             updateSystemBackHandlerState()
             focusSelectedCategory()
@@ -279,6 +280,8 @@ class StreamSettings : AppCompatActivity() {
         if (usesPersistentSidebarLayout()) {
             homeContainer?.visibility = View.VISIBLE
             findViewById<View>(R.id.preference_container)?.visibility = View.VISIBLE
+            headerTitle?.text = title
+            headerTitle?.visibility = View.VISIBLE
             updateNavigationButtonForCurrentPage(false)
             updateSystemBackHandlerState()
             focusPreferenceList()
@@ -391,12 +394,12 @@ class StreamSettings : AppCompatActivity() {
                 homeContainer?.paddingBottom ?: 0
         )
 
-        val preferenceContainer = findViewById<View>(R.id.preference_container)
-        preferenceContainer?.setPadding(
-                preferenceContainer.paddingLeft,
+        val detailContainer = findViewById<View>(R.id.settings_detail_container)
+        detailContainer?.setPadding(
+            detailContainer.paddingLeft,
                 topInset,
-                preferenceContainer.paddingRight,
-                preferenceContainer.paddingBottom
+            detailContainer.paddingRight,
+            detailContainer.paddingBottom
         )
     }
 
@@ -1047,6 +1050,26 @@ class StreamSettings : AppCompatActivity() {
 
             categoryList.clear()
             findPreference<PreferenceCategory>(selectedKey)?.let { categoryList.add(it) }
+            categoryPositionsValid = false
+        }
+
+        private fun flattenSelectedCategory(screen: PreferenceScreen, selectedKey: String) {
+            val selectedCategory = findPreference<PreferenceCategory>(selectedKey) ?: return
+            val preferencesToMove: MutableList<Preference> = ArrayList()
+
+            while (selectedCategory.preferenceCount > 0) {
+                val childPreference = selectedCategory.getPreference(0)
+                selectedCategory.removePreference(childPreference)
+                preferencesToMove.add(childPreference)
+            }
+
+            screen.removePreference(selectedCategory)
+
+            for (preference in preferencesToMove) {
+                screen.addPreference(preference)
+            }
+
+            categoryList.clear()
             categoryPositionsValid = false
         }
 
@@ -1926,6 +1949,7 @@ class StreamSettings : AppCompatActivity() {
                 currentCategoryIndex = availableCategories.indexOfFirst { it.key == currentCategoryKey }
                         .takeIf { it >= 0 } ?: 0
                 retainSelectedCategory(screen, currentCategoryKey!!)
+                flattenSelectedCategory(screen, currentCategoryKey!!)
             }
         }
 
