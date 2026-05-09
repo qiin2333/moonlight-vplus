@@ -61,6 +61,7 @@ class ComputerDetails {
     var nvidiaServer = false
     var useVdd = false
     var sunshineVersion: String? = null
+    var supportsDesktopSpecialApp = false
 
     constructor()
 
@@ -116,6 +117,7 @@ class ComputerDetails {
         if (details.sunshineVersion != null) {
             this.sunshineVersion = details.sunshineVersion
         }
+        this.supportsDesktopSpecialApp = details.supportsDesktopSpecialApp
 
         this.availableAddresses = ArrayList(details.availableAddresses)
     }
@@ -236,6 +238,7 @@ class ComputerDetails {
         str.append("Running Game ID: ").append(runningGameId).append("\n")
         str.append("HTTPS Port: ").append(httpsPort).append("\n")
         str.append("Sunshine Version: ").append(getSunshineVersionDisplay()).append("\n")
+        str.append("Desktop Special App Support: ").append(supportsDesktopSpecialApp).append("\n")
         return str.toString()
     }
 

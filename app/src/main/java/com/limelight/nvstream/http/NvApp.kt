@@ -53,4 +53,9 @@ class NvApp {
             if (cmdList != null) append("Super CMDs: ").append(cmdList.toString()).append("\n")
         }
     }
+
+    companion object {
+        const val DESKTOP_APP_ID = Int.MAX_VALUE
+        const val DESKTOP_APP_NAME = "Desktop"
+    }
 }

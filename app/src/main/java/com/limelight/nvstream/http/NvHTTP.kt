@@ -242,6 +242,7 @@ class NvHTTP(
         details.runningGameId = getCurrentGame(serverInfo)
 
         details.nvidiaServer = getXmlString(serverInfo, "state", true)!!.contains("MJOLNIR")
+        details.supportsDesktopSpecialApp = getXmlString(serverInfo, "DesktopSpecialAppSupport", false) == "1"
 
         try {
             details.sunshineVersion = getSunshineVersion(serverInfo)

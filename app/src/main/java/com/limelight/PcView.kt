@@ -1600,7 +1600,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 if (computer.runningGameId != 0)
                     getNvAppById(computer.runningGameId, computer.uuid!!)
                 else
-                    getFirstAppFromCache(computer.uuid!!)
+                    getDefaultQuickStartApp(computer)
             }
 
             if (targetApp == null) {
@@ -1623,8 +1623,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 this@PcView,
                 targetApp,
                 targetComputer,
-                managerBinder!!,
-                forceResumeCurrentSession = targetComputer.runningGameId != 0
+                managerBinder!!
             )
         }
     }
@@ -1647,7 +1646,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 if (computer.runningGameId != 0)
                     getNvAppById(computer.runningGameId, computer.uuid!!)
                 else
-                    getFirstAppFromCache(computer.uuid!!)
+                    getDefaultQuickStartApp(computer)
             }
 
             if (targetApp == null) {
@@ -1671,8 +1670,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 targetApp,
                 targetComputer,
                 managerBinder!!,
-                lastSettings = null,
-                forceResumeCurrentSession = targetComputer.runningGameId != 0
+                lastSettings = null
             )
             if (screenMode != -1) {
                 if (targetComputer.useVdd) {
@@ -1717,8 +1715,12 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         }
     }
 
-    private fun getFirstAppFromCache(uuid: String): NvApp? {
-        val appList = getAppListFromCache(uuid)
+    private fun getDefaultQuickStartApp(computer: ComputerDetails): NvApp? {
+        if (computer.supportsDesktopSpecialApp) {
+            return NvApp(NvApp.DESKTOP_APP_NAME, NvApp.DESKTOP_APP_ID, false)
+        }
+
+        val appList = getAppListFromCache(computer.uuid!!)
         return if (!appList.isNullOrEmpty()) appList[0] else null
     }
 
