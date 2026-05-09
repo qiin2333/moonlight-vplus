@@ -61,6 +61,8 @@ public class ElementController {
     private static final String SPECIAL_KEY_MOUSE_ENABLE_SWITCH = "MES";
     private static final String SPECIAL_KEY_PC_KEYBOARD_SWITCH = "PKS";
     private static final String SPECIAL_KEY_ANDROID_KEYBOARD_SWITCH = "AKS";
+    // 游戏触控板模式
+    private static final String SPECIAL_KEY_GAME_TOUCHPAD_MODE = "GTM";
     // 切换配置
     private static final String SPECIAL_KEY_CONFIG_SWITCH = "CSW";
     private static final String SPECIAL_KEY_PAN_ZOOM_MODE = "PZM";
@@ -1071,6 +1073,27 @@ public class ElementController {
                         open();
                     }
                 }
+                @Override
+                public void sendEvent(int analog1, int analog2) {
+
+                }
+            };
+        }
+        else if (key.equals(SPECIAL_KEY_GAME_TOUCHPAD_MODE)) {
+            return new SendEventHandler() {
+                @Override
+                public void sendEvent(boolean down) {
+                    if (down) {
+                        boolean isEnabled = game.prefConfig.getGameTouchpadMode();
+                        game.prefConfig.setGameTouchpadMode(!isEnabled);
+                        if (!isEnabled) {
+                            showToast("游戏触控板已开启");
+                        } else {
+                            showToast("游戏触控板已关闭");
+                        }
+                    }
+                }
+
                 @Override
                 public void sendEvent(int analog1, int analog2) {
 

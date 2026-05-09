@@ -927,6 +927,7 @@
     <string name="layout_page_device_text_34842">切换配置</string>
     <string name="layout_page_device_text_6c15c">平移/缩放</string>
     <string name="layout_page_device_text_104a1">打开GAME MENU</string>
+    <string name="layout_page_device_text_gtm">游戏触控板</string>
     <string name="layout_page_digital_combine_button_text_3bb27">类型 : 组合键</string>
     <string name="layout_page_digital_combine_button_text_bab9f">显示文本</string>
     <string name="layout_page_digital_combine_button_text_499ef">一二三四五</string>
