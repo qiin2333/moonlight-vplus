@@ -222,7 +222,7 @@ class StreamSettings : AppCompatActivity() {
     private fun setupMenuToggle() {
         val menuToggle = navigationButton
         if (menuToggle != null) {
-            menuToggle.setOnClickListener { navigateToHomePage() }
+            menuToggle.setOnClickListener { handleNavigationButtonClick() }
             menuToggle.isFocusable = true
             menuToggle.isFocusableInTouchMode = false
         }
@@ -261,7 +261,7 @@ class StreamSettings : AppCompatActivity() {
         if (usesPersistentSidebarLayout()) {
             homeContainer?.visibility = View.VISIBLE
             findViewById<View>(R.id.preference_container)?.visibility = View.VISIBLE
-            navigationButton?.visibility = View.GONE
+            updateNavigationButtonForCurrentPage(true)
             updateSystemBackHandlerState()
             focusSelectedCategory()
             return
@@ -269,8 +269,8 @@ class StreamSettings : AppCompatActivity() {
 
         homeContainer?.visibility = View.VISIBLE
         findViewById<View>(R.id.preference_container)?.visibility = View.GONE
-        navigationButton?.visibility = View.INVISIBLE
         headerTitle?.text = getString(R.string.title_settings)
+        updateNavigationButtonForCurrentPage(true)
         updateSystemBackHandlerState()
         focusSelectedCategory()
     }
@@ -279,7 +279,7 @@ class StreamSettings : AppCompatActivity() {
         if (usesPersistentSidebarLayout()) {
             homeContainer?.visibility = View.VISIBLE
             findViewById<View>(R.id.preference_container)?.visibility = View.VISIBLE
-            navigationButton?.visibility = View.GONE
+            updateNavigationButtonForCurrentPage(false)
             updateSystemBackHandlerState()
             focusPreferenceList()
             return
@@ -287,10 +287,37 @@ class StreamSettings : AppCompatActivity() {
 
         homeContainer?.visibility = View.GONE
         findViewById<View>(R.id.preference_container)?.visibility = View.VISIBLE
-        navigationButton?.visibility = View.VISIBLE
         headerTitle?.text = title
+        updateNavigationButtonForCurrentPage(false)
         updateSystemBackHandlerState()
         focusPreferenceList()
+    }
+
+    private fun updateNavigationButtonForCurrentPage(isHomePage: Boolean) {
+        val menuToggle = navigationButton ?: return
+
+        if (usesPersistentSidebarLayout()) {
+            menuToggle.visibility = View.GONE
+            return
+        }
+
+        menuToggle.visibility = View.VISIBLE
+
+        if (isHomePage) {
+            menuToggle.setImageResource(R.drawable.ic_close)
+            menuToggle.contentDescription = getString(R.string.about_dialog_close)
+        } else {
+            menuToggle.setImageResource(R.drawable.ic_chevron_left)
+            menuToggle.contentDescription = getString(R.string.settings_nav_back)
+        }
+    }
+
+    private fun handleNavigationButtonClick() {
+        if (navigateToHomePage()) {
+            return
+        }
+
+        handleActivityBackPress()
     }
 
     private fun navigateToHomePage(): Boolean {
