@@ -2,7 +2,6 @@
 <FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/drawer_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -30,7 +29,7 @@
 
         <!-- 左侧菜单（固定显示） -->
         <LinearLayout
-            android:id="@+id/drawer_menu"
+            android:id="@+id/settings_home_container"
             android:layout_width="@dimen/drawer_width"
             android:layout_height="match_parent"
             android:orientation="vertical"
@@ -52,9 +51,11 @@
                 <androidx.cardview.widget.CardView
                     android:layout_width="52dp"
                     android:layout_height="52dp"
+                    android:theme="@style/Theme.AppCompat"
+                    app:cardBackgroundColor="#222222"
                     app:cardCornerRadius="26dp"
                     app:cardElevation="4dp"
-                    app:cardBackgroundColor="#222222">
+                    xmlns:app="http://schemas.android.com/apk/res-auto">
 
                     <ImageView
                         android:layout_width="match_parent"
@@ -93,23 +94,13 @@
 
         </LinearLayout>
 
-        <!-- 右侧主内容区域 -->
-        <RelativeLayout
-            android:id="@+id/stream_settings"
+        <FrameLayout
+            android:id="@+id/preference_container"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="1">
-
-            <!-- 设置内容区域（横屏无顶部标题，直接顶到安全区） -->
-            <FrameLayout
-                android:id="@+id/preference_container"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@android:color/transparent"
-                android:paddingTop="@dimen/activity_safearea_top"/>
-
-        </RelativeLayout>
-
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:paddingTop="@dimen/activity_safearea_top" />
     </LinearLayout>
 
 </FrameLayout>

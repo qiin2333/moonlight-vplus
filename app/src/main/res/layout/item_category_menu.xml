@@ -14,10 +14,10 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingLeft="16dp"
-        android:paddingRight="16dp"
-        android:paddingTop="14dp"
-        android:paddingBottom="14dp"
+        android:paddingLeft="18dp"
+        android:paddingRight="18dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp"
         android:background="@drawable/category_item_background"
         android:clickable="true"
         android:focusable="true"
@@ -31,7 +31,7 @@
             android:layout_height="5dp"
             android:layout_marginRight="12dp"
             android:background="@drawable/category_indicator_shape"
-            android:visibility="invisible" />
+            android:visibility="gone" />
 
         <!-- 分类标题 -->
         <TextView
@@ -40,7 +40,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginRight="10dp"
-            android:textSize="15sp"
+            android:textSize="18sp"
             android:textColor="#BBBBBB"
             android:singleLine="true"
             android:ellipsize="end"
@@ -50,8 +50,8 @@
         <!-- 右箭头指示器 -->
         <ImageView
             android:id="@+id/category_arrow"
-            android:layout_width="10dp"
-            android:layout_height="10dp"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
             android:src="@drawable/ic_chevron_right"
             android:tint="#44FF6B9D" />
 
