@@ -44,7 +44,8 @@ open class NvConnection(
     config: StreamConfiguration,
     private val cryptoProvider: LimelightCryptoProvider,
     serverCert: X509Certificate?,
-    displayName: String? = null
+    displayName: String? = null,
+    forceResumeCurrentSession: Boolean = false
 ) {
     private val clientName: String =
         pairName.ifEmpty {
@@ -62,6 +63,7 @@ open class NvConnection(
         context.streamConfig = config
         context.serverCert = serverCert
         context.displayName = displayName
+        context.forceResumeCurrentSession = forceResumeCurrentSession
 
         context.riKey = generateRiAesKey()
         context.riKeyId = generateRiKeyId()
@@ -253,42 +255,56 @@ open class NvConnection(
             }
         }
 
-        if (h.getCurrentGame(serverInfo) != 0) {
-            try {
-                if (h.getCurrentGame(serverInfo) == app.appId) {
-                    if (!h.launchApp(context, "resume", app.appId, context.negotiatedHdr)) {
-                        connListener.displayMessage("Failed to resume existing session")
-                        return false
-                    }
-                } else {
-                    return quitAndLaunch(h, context)
-                }
-            } catch (e: HostHttpResponseException) {
-                when (e.getErrorCode()) {
-                    470 -> {
-                        connListener.displayMessage(
-                            "This session wasn't started by this device," +
-                                    " so it cannot be resumed. End streaming on the original " +
-                                    "device or the PC itself and try again. (Error code: ${e.getErrorCode()})"
-                        )
-                        return false
-                    }
-                    525 -> {
-                        connListener.displayMessage(
-                            "The application is minimized. Resume it on the PC manually or " +
-                                    "quit the session and start streaming again."
-                        )
-                        return false
-                    }
-                    else -> throw e
-                }
-            }
+        val currentGameId = h.getCurrentGame(serverInfo)
 
-            LimeLog.info("Resumed existing game session")
-            return true
-        } else {
-            return launchNotRunningApp(h, context)
+        if (context.forceResumeCurrentSession) {
+            val resumeAppId = if (currentGameId != 0) currentGameId else app.appId
+            return resumeExistingSession(h, context, resumeAppId)
         }
+
+        if (currentGameId != 0) {
+            return if (currentGameId == app.appId) {
+                resumeExistingSession(h, context, app.appId)
+            } else {
+                quitAndLaunch(h, context)
+            }
+        }
+
+        return launchNotRunningApp(h, context)
+    }
+
+    @Throws(IOException::class, XmlPullParserException::class, InterruptedException::class)
+    private fun resumeExistingSession(h: NvHTTP, context: ConnectionContext, appId: Int): Boolean {
+        val connListener = context.connListener
+
+        try {
+            if (!h.launchApp(context, "resume", appId, context.negotiatedHdr)) {
+                connListener.displayMessage("Failed to resume existing session")
+                return false
+            }
+        } catch (e: HostHttpResponseException) {
+            when (e.getErrorCode()) {
+                470 -> {
+                    connListener.displayMessage(
+                        "This session wasn't started by this device," +
+                                " so it cannot be resumed. End streaming on the original " +
+                                "device or the PC itself and try again. (Error code: ${e.getErrorCode()})"
+                    )
+                    return false
+                }
+                525 -> {
+                    connListener.displayMessage(
+                        "The application is minimized. Resume it on the PC manually or " +
+                                "quit the session and start streaming again."
+                    )
+                    return false
+                }
+                else -> throw e
+            }
+        }
+
+        LimeLog.info("Resumed existing game session")
+        return true
     }
 
     @Throws(IOException::class, XmlPullParserException::class, InterruptedException::class)

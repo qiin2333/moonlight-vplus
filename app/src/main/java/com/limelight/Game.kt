@@ -641,6 +641,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         val pairName = intent.getStringExtra(EXTRA_PAIR_NAME) ?: ""
         val pcUseVdd = intent.getBooleanExtra(EXTRA_PC_USEVDD, false)
         val displayName = intent.getStringExtra(EXTRA_DISPLAY_NAME)
+        val forceResumeCurrentSession = intent.getBooleanExtra(EXTRA_FORCE_RESUME_CURRENT_SESSION, false)
         val serverCert = parseServerCert()
 
         val streamConfigResult = buildStreamConfiguration(
@@ -652,7 +653,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             applicationContext,
             ComputerDetails.AddressTuple(host, port),
             httpsPort, uniqueId, pairName, config,
-            PlatformBinding.getCryptoProvider(this), serverCert, displayName
+            PlatformBinding.getCryptoProvider(this), serverCert, displayName, forceResumeCurrentSession
         )
         orientationManager.connection = conn
         controllerHandler = ControllerHandler(this, conn!!, this, prefConfig)
@@ -2041,6 +2042,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         val EXTRA_DISPLAY_NAME = "DisplayName"
         val EXTRA_SCREEN_COMBINATION_MODE = "Screen combination mode"
         val EXTRA_VDD_SCREEN_COMBINATION_MODE = "VDD screen combination mode"
+        val EXTRA_FORCE_RESUME_CURRENT_SESSION = "ForceResumeCurrentSession"
 
         private const val KEEP_ALIVE_NOTIFICATION_ID = 1001
     }

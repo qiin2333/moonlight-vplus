@@ -54,7 +54,8 @@ object ServerHelper {
         computer: ComputerDetails,
         managerBinder: ComputerManagerService.ComputerManagerBinder,
         lastSettings: PreferenceConfiguration? = null,
-        screenCombinationMode: Int = -1
+        screenCombinationMode: Int = -1,
+        forceResumeCurrentSession: Boolean = false
     ): Intent {
         return Intent(parent, Game::class.java).apply {
             putExtra(Game.EXTRA_HOST, computer.activeAddress!!.address)
@@ -80,6 +81,9 @@ object ServerHelper {
             if (screenCombinationMode != -1) {
                 putExtra(Game.EXTRA_SCREEN_COMBINATION_MODE, screenCombinationMode)
             }
+            if (forceResumeCurrentSession) {
+                putExtra(Game.EXTRA_FORCE_RESUME_CURRENT_SESSION, true)
+            }
         }
     }
 
@@ -87,13 +91,14 @@ object ServerHelper {
         parent: Activity,
         app: NvApp,
         computer: ComputerDetails,
-        managerBinder: ComputerManagerService.ComputerManagerBinder
+        managerBinder: ComputerManagerService.ComputerManagerBinder,
+        forceResumeCurrentSession: Boolean = false
     ) {
         if (computer.state == ComputerDetails.State.OFFLINE || computer.activeAddress == null) {
             Toast.makeText(parent, parent.resources.getString(R.string.pair_pc_offline), Toast.LENGTH_SHORT).show()
             return
         }
-        parent.startActivity(createStartIntent(parent, app, computer, managerBinder))
+        parent.startActivity(createStartIntent(parent, app, computer, managerBinder, forceResumeCurrentSession = forceResumeCurrentSession))
     }
 
     fun doNetworkTest(parent: Activity) {

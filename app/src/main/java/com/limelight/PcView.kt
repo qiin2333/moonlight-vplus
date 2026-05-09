@@ -1619,7 +1619,13 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 return@launch
             }
 
-            ServerHelper.doStart(this@PcView, targetApp, targetComputer, managerBinder!!)
+            ServerHelper.doStart(
+                this@PcView,
+                targetApp,
+                targetComputer,
+                managerBinder!!,
+                forceResumeCurrentSession = targetComputer.runningGameId != 0
+            )
         }
     }
 
@@ -1660,7 +1666,14 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 return@launch
             }
 
-            val intent = ServerHelper.createStartIntent(this@PcView, targetApp, targetComputer, managerBinder!!, null)
+            val intent = ServerHelper.createStartIntent(
+                this@PcView,
+                targetApp,
+                targetComputer,
+                managerBinder!!,
+                lastSettings = null,
+                forceResumeCurrentSession = targetComputer.runningGameId != 0
+            )
             if (screenMode != -1) {
                 if (targetComputer.useVdd) {
                     intent.putExtra(Game.EXTRA_VDD_SCREEN_COMBINATION_MODE, screenMode)
@@ -1750,7 +1763,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         }
 
         showToast(getString(R.string.restoring_session, target.name))
-        ServerHelper.doStart(this, app, target, managerBinder!!)
+        ServerHelper.doStart(this, app, target, managerBinder!!, forceResumeCurrentSession = true)
     }
 
     private fun showAddressSelectionDialog(computer: ComputerDetails) {
@@ -1941,7 +1954,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         if (app == null) {
             app = NvApp("app", details.runningGameId, false)
         }
-        ServerHelper.doStart(this, app, details, managerBinder!!)
+        ServerHelper.doStart(this, app, details, managerBinder!!, forceResumeCurrentSession = true)
     }
 
     private fun handleQuit(details: ComputerDetails) {

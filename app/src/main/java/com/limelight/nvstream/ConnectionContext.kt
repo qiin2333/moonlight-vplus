@@ -38,4 +38,5 @@ class ConnectionContext {
 
     // 选择的显示器名称
     var displayName: String? = null
+    var forceResumeCurrentSession: Boolean = false
 }
