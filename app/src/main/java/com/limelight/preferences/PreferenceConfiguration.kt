@@ -72,6 +72,12 @@ class PreferenceConfiguration {
     var fixMouseMiddle = false
     //修复本地鼠标滚轮识别
     var fixMouseWheel = false
+    //游戏触控板模式
+    var gameTouchpadMode = false
+    var gameTouchpadDisableLeftClick = false
+    var gameTouchpadDisableRightClick = false
+    var gameTouchpadDisableScroll = false
+    var gameTouchpadDisableKeyboardToggle = false
 
     var width = 0
     var height = 0
@@ -275,6 +281,11 @@ class PreferenceConfiguration {
                 .putBoolean(ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, enableNativeMousePointer)
                 .putBoolean(ENABLE_DOUBLE_CLICK_DRAG_PREF_STRING, enableDoubleClickDrag)
                 .putBoolean(ENABLE_LOCAL_CURSOR_RENDERING_PREF_STRING, enableLocalCursorRendering)
+                .putBoolean(GAME_TOUCHPAD_MODE_PREF_STRING, gameTouchpadMode)
+                .putBoolean(GAME_TOUCHPAD_DISABLE_LEFT_CLICK_PREF_STRING, gameTouchpadDisableLeftClick)
+                .putBoolean(GAME_TOUCHPAD_DISABLE_RIGHT_CLICK_PREF_STRING, gameTouchpadDisableRightClick)
+                .putBoolean(GAME_TOUCHPAD_DISABLE_SCROLL_PREF_STRING, gameTouchpadDisableScroll)
+                .putBoolean(GAME_TOUCHPAD_DISABLE_KEYBOARD_TOGGLE_PREF_STRING, gameTouchpadDisableKeyboardToggle)
                 .putFloat(GYRO_SENSITIVITY_MULTIPLIER_PREF_STRING, gyroSensitivityMultiplier)
                 .putBoolean(GYRO_INVERT_X_AXIS_PREF_STRING, gyroInvertXAxis)
                 .putBoolean(GYRO_INVERT_Y_AXIS_PREF_STRING, gyroInvertYAxis)
@@ -324,6 +335,11 @@ class PreferenceConfiguration {
         copy.enableNativeMousePointer = this.enableNativeMousePointer
         copy.enableDoubleClickDrag = this.enableDoubleClickDrag
         copy.enableLocalCursorRendering = this.enableLocalCursorRendering
+        copy.gameTouchpadMode = this.gameTouchpadMode
+        copy.gameTouchpadDisableLeftClick = this.gameTouchpadDisableLeftClick
+        copy.gameTouchpadDisableRightClick = this.gameTouchpadDisableRightClick
+        copy.gameTouchpadDisableScroll = this.gameTouchpadDisableScroll
+        copy.gameTouchpadDisableKeyboardToggle = this.gameTouchpadDisableKeyboardToggle
         copy.gyroToRightStick = this.gyroToRightStick
         copy.gyroToMouse = this.gyroToMouse
         copy.gyroFullDeflectionDps = this.gyroFullDeflectionDps
@@ -342,6 +358,11 @@ class PreferenceConfiguration {
     companion object {
         // ---- Private pref key constants ----
         private const val ENABLE_DOUBLE_CLICK_DRAG_PREF_STRING = "pref_enable_double_click_drag"
+        private const val GAME_TOUCHPAD_MODE_PREF_STRING = "checkbox_game_touchpad_mode"
+        private const val GAME_TOUCHPAD_DISABLE_LEFT_CLICK_PREF_STRING = "checkbox_game_touchpad_disable_left_click"
+        private const val GAME_TOUCHPAD_DISABLE_RIGHT_CLICK_PREF_STRING = "checkbox_game_touchpad_disable_right_click"
+        private const val GAME_TOUCHPAD_DISABLE_SCROLL_PREF_STRING = "checkbox_game_touchpad_disable_scroll"
+        private const val GAME_TOUCHPAD_DISABLE_KEYBOARD_TOGGLE_PREF_STRING = "checkbox_game_touchpad_disable_keyboard_toggle"
         private const val DOUBLE_TAP_TIME_THRESHOLD_PREF_STRING = "seekbar_double_tap_time_threshold"
         private const val ENABLE_LOCAL_CURSOR_RENDERING_PREF_STRING = "pref_enable_local_cursor_rendering"
 
@@ -1065,6 +1086,11 @@ class PreferenceConfiguration {
             config.enableDoubleClickDrag = prefs.getBoolean(ENABLE_DOUBLE_CLICK_DRAG_PREF_STRING, DEFAULT_ENABLE_DOUBLE_CLICK_DRAG)
             config.doubleTapTimeThreshold = prefs.getInt(DOUBLE_TAP_TIME_THRESHOLD_PREF_STRING, DEFAULT_DOUBLE_TAP_TIME_THRESHOLD)
             config.enableLocalCursorRendering = prefs.getBoolean(ENABLE_LOCAL_CURSOR_RENDERING_PREF_STRING, DEFAULT_ENABLE_LOCAL_CURSOR_RENDERING)
+            config.gameTouchpadMode = prefs.getBoolean(GAME_TOUCHPAD_MODE_PREF_STRING, false)
+            config.gameTouchpadDisableLeftClick = prefs.getBoolean(GAME_TOUCHPAD_DISABLE_LEFT_CLICK_PREF_STRING, false)
+            config.gameTouchpadDisableRightClick = prefs.getBoolean(GAME_TOUCHPAD_DISABLE_RIGHT_CLICK_PREF_STRING, false)
+            config.gameTouchpadDisableScroll = prefs.getBoolean(GAME_TOUCHPAD_DISABLE_SCROLL_PREF_STRING, false)
+            config.gameTouchpadDisableKeyboardToggle = prefs.getBoolean(GAME_TOUCHPAD_DISABLE_KEYBOARD_TOGGLE_PREF_STRING, false)
             config.enableCustomKeyMap = prefs.getBoolean("checkbox_special_key_map", false)
             config.fixMouseMiddle = prefs.getBoolean("checkbox_mouse_middle", false)
             config.fixMouseWheel = prefs.getBoolean("checkbox_mouse_wheel", false)

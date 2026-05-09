@@ -440,8 +440,10 @@ class TouchInputHandler(private val game: Game) {
 
                         if (multiFingerDownTime == 0L && event.pointerCount == 2 && !twoFingerMoved && game.prefConfig.touchscreenTrackpad) {
                             if (event.eventTime - twoFingerDownTime < TWO_FINGER_TAP_THRESHOLD) {
-                                game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
-                                game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
+                                if (!game.prefConfig.gameTouchpadMode || !game.prefConfig.gameTouchpadDisableRightClick) {
+                                    game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
+                                    game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
+                                }
                                 twoFingerTapPending = false
                                 twoFingerMoved = true
                                 context.cancelTouch()
@@ -459,8 +461,10 @@ class TouchInputHandler(private val game: Game) {
                         ) {
                             if (twoFingerTapPending && !twoFingerMoved && game.prefConfig.touchscreenTrackpad) {
                                 if (event.eventTime - firstFingerUpTime < TWO_FINGER_TAP_THRESHOLD) {
-                                    game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
-                                    game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
+                                    if (!game.prefConfig.gameTouchpadMode || !game.prefConfig.gameTouchpadDisableRightClick) {
+                                        game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
+                                        game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
+                                    }
                                     twoFingerTapPending = false
                                     for (tc in touchContextMap) {
                                         tc?.cancelTouch()
@@ -472,7 +476,9 @@ class TouchInputHandler(private val game: Game) {
                             twoFingerTapPending = false
 
                             if (event.eventTime - multiFingerDownTime < MULTI_FINGER_TAP_THRESHOLD) {
-                                game.toggleKeyboard()
+                                if (!game.prefConfig.gameTouchpadMode || !game.prefConfig.gameTouchpadDisableKeyboardToggle) {
+                                    game.toggleKeyboard()
+                                }
                                 return true
                             }
                         }

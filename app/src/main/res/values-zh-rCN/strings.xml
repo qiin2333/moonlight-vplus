@@ -231,6 +231,17 @@
     <string name="summary_checkbox_mouse_nav_buttons"> 在一些支持不佳的设备上启用此项可能会使其右键失效 </string>
 
     <string name="category_enhanced_touch_settings">多点触控设置</string>
+    <string name="category_game_touchpad">游戏触控板</string>
+    <string name="title_checkbox_game_touchpad_mode">游戏触控板模式</string>
+    <string name="summary_checkbox_game_touchpad_mode">防止移动时误触点击</string>
+    <string name="title_checkbox_game_touchpad_disable_left_click">禁用左键</string>
+    <string name="summary_checkbox_game_touchpad_disable_left_click">禁用单指单击</string>
+    <string name="title_checkbox_game_touchpad_disable_right_click">禁用右键</string>
+    <string name="summary_checkbox_game_touchpad_disable_right_click">禁用双指单击</string>
+    <string name="title_checkbox_game_touchpad_disable_scroll">禁用滚轮</string>
+    <string name="summary_checkbox_game_touchpad_disable_scroll">禁用双指滑动</string>
+    <string name="title_checkbox_game_touchpad_disable_keyboard_toggle">禁用键盘切换</string>
+    <string name="summary_checkbox_game_touchpad_disable_keyboard_toggle">禁用三指单击</string>
     <string name="title_checkbox_enable_enhanced_touch">打开增强型触控</string>
     <string name="summary_checkbox_enable_enhanced_touch">关闭后可恢复经典模拟鼠标操作模式</string>
     <string name="title_checkbox_enhanced_touch_on_which_side">反转增强型触控区</string>

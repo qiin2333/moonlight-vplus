@@ -540,6 +540,39 @@
             android:text="@string/suffix_pointer_velocity_factor"
             android:title="@string/title_pointer_velocity_factor" />
     </PreferenceCategory>
+    <PreferenceCategory android:title="@string/category_game_touchpad"
+        android:key="category_game_touchpad"
+        android:layout="@layout/preference_category_material">
+        <CheckBoxPreference
+            android:key="checkbox_game_touchpad_mode"
+            android:title="@string/title_checkbox_game_touchpad_mode"
+            android:summary="@string/summary_checkbox_game_touchpad_mode"
+            android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_game_touchpad_disable_left_click"
+            android:title="@string/title_checkbox_game_touchpad_disable_left_click"
+            android:summary="@string/summary_checkbox_game_touchpad_disable_left_click"
+            android:defaultValue="false"
+            android:dependency="checkbox_game_touchpad_mode" />
+        <CheckBoxPreference
+            android:key="checkbox_game_touchpad_disable_right_click"
+            android:title="@string/title_checkbox_game_touchpad_disable_right_click"
+            android:summary="@string/summary_checkbox_game_touchpad_disable_right_click"
+            android:defaultValue="false"
+            android:dependency="checkbox_game_touchpad_mode" />
+        <CheckBoxPreference
+            android:key="checkbox_game_touchpad_disable_scroll"
+            android:title="@string/title_checkbox_game_touchpad_disable_scroll"
+            android:summary="@string/summary_checkbox_game_touchpad_disable_scroll"
+            android:defaultValue="false"
+            android:dependency="checkbox_game_touchpad_mode" />
+        <CheckBoxPreference
+            android:key="checkbox_game_touchpad_disable_keyboard_toggle"
+            android:title="@string/title_checkbox_game_touchpad_disable_keyboard_toggle"
+            android:summary="@string/summary_checkbox_game_touchpad_disable_keyboard_toggle"
+            android:defaultValue="false"
+            android:dependency="checkbox_game_touchpad_mode" />
+    </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_on_screen_controls_settings"
         android:key="category_onscreen_controls"
         android:layout="@layout/preference_category_material">

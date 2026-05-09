@@ -45,7 +45,11 @@ class RelativeTouchContext(
     private val handler: Handler = Handler(Looper.getMainLooper())
 
     private val buttonUpRunnables: Array<Runnable> = arrayOf(
-        Runnable { conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT) },
+        Runnable {
+            if (shouldSendLeftClick()) {
+                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
+            }
+        },
         Runnable { conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE) },
         Runnable { conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT) },
         Runnable { conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X1) },
@@ -75,7 +79,7 @@ class RelativeTouchContext(
 
         // We haven't been cancelled before the timer expired so begin dragging
         confirmedDrag = true
-        conn.sendMouseButtonDown(getMouseButtonIndex())
+        safeSendMouseButtonDown(getMouseButtonIndex())
     }
 
     // 定义2次点击的间隔小于多久才为双击按住
@@ -83,6 +87,24 @@ class RelativeTouchContext(
 
     fun setTargetView(view: View) {
         this.targetView = view
+    }
+
+    private fun shouldSendLeftClick(): Boolean {
+        return !(prefConfig.gameTouchpadMode && prefConfig.gameTouchpadDisableLeftClick && actionIndex == 0)
+    }
+
+    private fun safeSendMouseButtonDown(button: Byte) {
+        if (button == MouseButtonPacket.BUTTON_LEFT && !shouldSendLeftClick()) {
+            return
+        }
+        conn.sendMouseButtonDown(button)
+    }
+
+    private fun safeSendMouseButtonUp(button: Byte) {
+        if (button == MouseButtonPacket.BUTTON_LEFT && !shouldSendLeftClick()) {
+            return
+        }
+        conn.sendMouseButtonUp(button)
     }
 
     /**
@@ -211,11 +233,11 @@ class RelativeTouchContext(
 
             // 立即发送一次完整的点击 (模拟第一次点击)
             val buttonIndex = MouseButtonPacket.BUTTON_LEFT
-            conn.sendMouseButtonDown(buttonIndex)
-            conn.sendMouseButtonUp(buttonIndex)
+            safeSendMouseButtonDown(buttonIndex)
+            safeSendMouseButtonUp(buttonIndex)
 
             // 紧接着发送第二次点击
-            conn.sendMouseButtonDown(buttonIndex)
+            safeSendMouseButtonDown(buttonIndex)
             val buttonUpRunnable = buttonUpRunnables[buttonIndex - 1]
             handler.removeCallbacks(buttonUpRunnable)
             handler.postDelayed(buttonUpRunnable, 100)
@@ -226,7 +248,7 @@ class RelativeTouchContext(
         }
 
         if (isDoubleClickDrag) {
-            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
+            safeSendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
             isDoubleClickDrag = false
             lastTapUpTime = 0
             return
@@ -237,7 +259,7 @@ class RelativeTouchContext(
         val buttonIndex = getMouseButtonIndex()
 
         if (confirmedDrag) {
-            conn.sendMouseButtonUp(buttonIndex)
+            safeSendMouseButtonUp(buttonIndex)
             // 拖动结束后重置点击时间，避免影响后续的双指右键
             lastTapUpTime = 0
         } else if (isTap(eventTime)) {
@@ -250,7 +272,7 @@ class RelativeTouchContext(
 
                 // 创建一个"单击"任务，并延迟执行
                 singleTapRunnable = Runnable {
-                    conn.sendMouseButtonDown(buttonIndex)
+                    safeSendMouseButtonDown(buttonIndex)
                     val buttonUpRunnable = buttonUpRunnables[buttonIndex - 1]
                     handler.postDelayed(buttonUpRunnable, 100)
                     singleTapRunnable = null // 执行后清空
@@ -260,7 +282,7 @@ class RelativeTouchContext(
                 // 如果功能关闭，或者不是左键单击（如右键），则立即发送，不延迟
                 lastTapUpTime = 0 // 清除非左键单击的记录
 
-                conn.sendMouseButtonDown(buttonIndex)
+                safeSendMouseButtonDown(buttonIndex)
 
                 // Release the mouse button in 100ms to allow for apps that use polling
                 // to detect mouse button presses.
@@ -291,7 +313,7 @@ class RelativeTouchContext(
                 isDoubleClickDrag = true
                 confirmedMove = true // 标记为已移动，避免后续逻辑冲突
 
-                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
+                safeSendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
             }
         }
 
@@ -368,12 +390,12 @@ class RelativeTouchContext(
         cancelDoubleTapHoldTimer()
 
         if (isDoubleClickDrag) {
-            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
+            safeSendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
             isDoubleClickDrag = false
         }
 
         if (confirmedDrag) {
-            conn.sendMouseButtonUp(getMouseButtonIndex())
+            safeSendMouseButtonUp(getMouseButtonIndex())
         }
 
         confirmedMove = false
@@ -392,7 +414,7 @@ class RelativeTouchContext(
                 isPotentialDoubleClick = false
                 isDoubleClickDrag = true
                 confirmedMove = true
-                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
+                safeSendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
             }
         }
         handler.postDelayed(doubleTapHoldRunnable!!, DOUBLE_TAP_HOLD_TO_DRAG_THRESHOLD.toLong())
@@ -434,6 +456,10 @@ class RelativeTouchContext(
     }
 
     private fun checkForConfirmedScroll() {
+        if (prefConfig.gameTouchpadMode && prefConfig.gameTouchpadDisableScroll) {
+            confirmedScroll = false
+            return
+        }
         confirmedScroll = actionIndex == 0 && pointerCount == 2 && confirmedMove
     }
 

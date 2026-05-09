@@ -324,6 +324,17 @@
     <string name="summary_checkbox_mouse_nav_buttons">Enabling this option may break right clicking on some buggy devices</string>
 
     <string name="category_enhanced_touch_settings">Enhanced Multi-Point Touch</string>
+    <string name="category_game_touchpad">Game Touchpad</string>
+    <string name="title_checkbox_game_touchpad_mode">Game Touchpad Mode</string>
+    <string name="summary_checkbox_game_touchpad_mode">Prevent accidental clicks while moving</string>
+    <string name="title_checkbox_game_touchpad_disable_left_click">Disable Left Click</string>
+    <string name="summary_checkbox_game_touchpad_disable_left_click">Disable single finger tap</string>
+    <string name="title_checkbox_game_touchpad_disable_right_click">Disable Right Click</string>
+    <string name="summary_checkbox_game_touchpad_disable_right_click">Disable two finger tap</string>
+    <string name="title_checkbox_game_touchpad_disable_scroll">Disable Scroll</string>
+    <string name="summary_checkbox_game_touchpad_disable_scroll">Disable two finger scroll</string>
+    <string name="title_checkbox_game_touchpad_disable_keyboard_toggle">Disable Keyboard Toggle</string>
+    <string name="summary_checkbox_game_touchpad_disable_keyboard_toggle">Disable three finger tap</string>
     <string name="title_checkbox_enable_enhanced_touch">Enable enhanced touch</string>
     <string name="summary_checkbox_enable_enhanced_touch">\t</string>
     <string name="title_checkbox_enhanced_touch_on_which_side">Reverse enhanced touch zone</string>
