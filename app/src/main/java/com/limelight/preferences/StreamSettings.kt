@@ -70,6 +70,8 @@ import jp.wasabeef.glide.transformations.ColorFilterTransformation
 import androidx.core.graphics.toColorInt
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import kotlin.math.roundToInt
 
 class StreamSettings : AppCompatActivity() {
@@ -171,6 +173,8 @@ class StreamSettings : AppCompatActivity() {
 
         // 初始化抽屉菜单
         initDrawerMenu()
+
+        applyOrientationSystemBars()
 
         registerSystemBackHandler()
 
@@ -316,6 +320,57 @@ class StreamSettings : AppCompatActivity() {
     private fun focusPreferenceList() {
         val preferenceContainer = findViewById<View>(R.id.preference_container)
         preferenceContainer?.requestFocus()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun applyOrientationSystemBars() {
+        val controller = WindowInsetsControllerCompat(window, window.decorView)
+
+        if (usesPersistentSidebarLayout()) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                window.setDecorFitsSystemWindows(false)
+            }
+
+            window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.hide(WindowInsetsCompat.Type.statusBars())
+            window.decorView.post { applyLandscapeTopInsetPadding() }
+            return
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(true)
+        }
+
+        window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        controller.show(WindowInsetsCompat.Type.statusBars())
+    }
+
+    private fun applyLandscapeTopInsetPadding() {
+        if (!usesPersistentSidebarLayout()) {
+            return
+        }
+
+        val topInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.decorView.rootWindowInsets?.displayCutout?.safeInsetTop ?: 0
+        } else {
+            0
+        }
+
+        homeContainer?.setPadding(
+                homeContainer?.paddingLeft ?: 0,
+                topInset,
+                homeContainer?.paddingRight ?: 0,
+                homeContainer?.paddingBottom ?: 0
+        )
+
+        val preferenceContainer = findViewById<View>(R.id.preference_container)
+        preferenceContainer?.setPadding(
+                preferenceContainer.paddingLeft,
+                topInset,
+                preferenceContainer.paddingRight,
+                preferenceContainer.paddingBottom
+        )
     }
 
     private fun registerSystemBackHandler() {
@@ -580,7 +635,13 @@ class StreamSettings : AppCompatActivity() {
             }
         }
 
+        applyOrientationSystemBars()
         reloadSettings()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyOrientationSystemBars()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

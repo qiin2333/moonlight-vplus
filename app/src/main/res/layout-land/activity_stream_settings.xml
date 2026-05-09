@@ -34,8 +34,8 @@
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:background="@drawable/drawer_background"
-            android:paddingTop="@dimen/activity_safearea_top"
-            android:fitsSystemWindows="true"
+            android:paddingTop="0dp"
+            android:fitsSystemWindows="false"
             android:elevation="4dp">
 
             <!-- 顶部品牌区域（紧凑） -->
@@ -100,7 +100,7 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:background="@android:color/transparent"
-            android:paddingTop="@dimen/activity_safearea_top" />
+            android:paddingTop="0dp" />
     </LinearLayout>
 
 </FrameLayout>
