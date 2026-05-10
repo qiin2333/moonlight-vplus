@@ -150,4 +150,36 @@ object NetHelper {
             String.format("%.2f M/s", speedKBps / 1024)
         }
     }
+
+    /**
+     * Returns true if [host] is an IP literal in a private range:
+     *   IPv4: RFC1918 (10/8, 172.16/12, 192.168/16), loopback (127/8) or link-local (169.254/16).
+     *   IPv6: loopback (::1), link-local (fe80::/10) or unique-local (fc00::/7).
+     * Domain names and invalid input return false. Brackets around IPv6 are accepted.
+     */
+    fun isPrivateAddress(host: String?): Boolean {
+        val h = host?.removePrefix("[")?.removeSuffix("]")?.takeIf { it.isNotEmpty() } ?: return false
+        if (!isIpLiteral(h)) return false  // skip DNS for hostnames
+        val addr = try { InetAddress.getByName(h) } catch (_: Exception) { return false }
+        return addr.isSiteLocalAddress || addr.isLoopbackAddress || addr.isLinkLocalAddress ||
+                (addr is java.net.Inet6Address && isIpv6UniqueLocal(addr))
+    }
+
+    /** Convenience: parse [url] and apply [isPrivateAddress] to its host. */
+    fun isPrivateNetworkUrl(url: String?): Boolean {
+        val host = try { android.net.Uri.parse(url ?: return false).host } catch (_: Exception) { null }
+        return isPrivateAddress(host)
+    }
+
+    private fun isIpLiteral(h: String): Boolean {
+        if (h.contains(':')) return true  // IPv6 always uses ':'
+        val parts = h.split('.')
+        return parts.size == 4 && parts.all { (it.toIntOrNull() ?: -1) in 0..255 }
+    }
+
+    /** IPv6 unique-local fc00::/7 → top byte is 0xFC or 0xFD. */
+    private fun isIpv6UniqueLocal(addr: java.net.Inet6Address): Boolean {
+        val b = addr.address[0].toInt() and 0xFF
+        return b == 0xFC || b == 0xFD
+    }
 }

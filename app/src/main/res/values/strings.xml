@@ -38,6 +38,16 @@
     <string name="pcview_menu_sleep_fail">Host sleep failed</string>
     <string name="pcview_menu_disable_ipv6">Disable IPv6</string>
     <string name="pcview_menu_enable_ipv6">Enable IPv6</string>
+    <string name="pcview_menu_open_webui">Open Web Management (Sunshine)</string>
+    <string name="pcview_open_webui_unavailable">No reachable address available for Web management</string>
+    <string name="pcview_open_webui_no_browser">No browser available to open Web management</string>
+    <string name="sunshine_webui_ssl_warning_title">Untrusted Certificate</string>
+    <string name="sunshine_webui_ssl_warning_msg">The host\'s certificate does not match the one Moonlight has on file. The page may have been tampered with. Continue anyway?\n\nURL: %1$s</string>
+    <string name="sunshine_webui_ssl_proceed">Continue</string>
+    <string name="sunshine_webui_auth_title">Sign in to %1$s (%2$s)</string>
+    <string name="sunshine_webui_auth_user_hint">Username</string>
+    <string name="sunshine_webui_auth_pass_hint">Password</string>
+    <string name="about_dialog_official_site">🌐 Official Website</string>
     <string name="pcview_ipv6_disabled">IPv6 disabled for this PC</string>
     <string name="pcview_ipv6_enabled">IPv6 enabled for this PC</string>
 

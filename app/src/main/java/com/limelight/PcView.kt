@@ -42,6 +42,7 @@ import com.limelight.utils.Dialog
 import com.limelight.utils.EasyTierController
 import com.limelight.utils.HelpLauncher
 import com.limelight.utils.Iperf3Tester
+import com.limelight.utils.NetHelper
 import com.limelight.utils.ServerHelper
 import com.limelight.utils.ShortcutHelper
 import com.limelight.utils.UiHelper
@@ -163,6 +164,9 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         private const val IPERF3_TEST_ID = 13
         private const val SECONDARY_SCREEN_ID = 14
         private const val DISABLE_IPV6_ID = 15
+        private const val OPEN_WEBUI_ID = 16
+
+        private const val OFFICIAL_SITE_URL = "https://www.alkaidlab.com/"
     }
 
     // UI Components
@@ -1829,6 +1833,10 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
         menu.add(Menu.NONE, TEST_NETWORK_ID, 5, R.string.pcview_menu_test_network)
         menu.add(Menu.NONE, IPERF3_TEST_ID, 6, R.string.network_bandwidth_test)
+        // Sunshine 主机暴露 Web 管理界面（默认 https://<ip>:47990）；GFE 主机没有 WebUI
+        if (!details.nvidiaServer && resolveSunshineWebUiUrl(details) != null) {
+            menu.add(Menu.NONE, OPEN_WEBUI_ID, 6, R.string.pcview_menu_open_webui)
+        }
         menu.add(Menu.NONE, DELETE_ID, 6, R.string.pcview_menu_delete_pc)
         menu.add(Menu.NONE, VIEW_DETAILS_ID, 7, R.string.pcview_menu_details)
 
@@ -1914,7 +1922,64 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 handleToggleIpv6Disabled(details)
                 true
             }
+            OPEN_WEBUI_ID -> {
+                handleOpenSunshineWebUi(details)
+                true
+            }
             else -> false
+        }
+    }
+
+    /**
+     * 解析 Sunshine 主机的 WebUI 地址：使用当前激活地址（在线时）或备选已知地址，
+     * 端口 = HTTP 端口 + 1（Sunshine 默认 47989 -> 47990，HTTPS）。
+     */
+    private fun resolveSunshineWebUiUrl(details: ComputerDetails): String? {
+        val tuple = details.activeAddress
+            ?: details.localAddress
+            ?: details.manualAddress
+            ?: details.remoteAddress
+            ?: details.ipv6Address
+            ?: return null
+        val host = if (tuple.address.contains(":")) "[${tuple.address}]" else tuple.address
+        val webPort = tuple.port + 1
+        return "https://$host:$webPort"
+    }
+
+    private fun handleOpenSunshineWebUi(details: ComputerDetails) {
+        val url = resolveSunshineWebUiUrl(details)
+        if (url == null) {
+            showToast(getString(R.string.pcview_open_webui_unavailable))
+            return
+        }
+        // LAN（私网 IP）下 Sunshine 用自签证书，Android System WebView 147+ 在
+        // 私网 IP + self-signed 组合下即使 onReceivedSslError → proceed() 也会
+        // 进入 ERR_TOO_MANY_RETRIES 死循环（chromium 不缓存 trust 决定）。
+        // 此场景跳转系统浏览器，由用户在浏览器里"高级 → 继续访问"绕过。
+        if (NetHelper.isPrivateNetworkUrl(url)) {
+            try {
+                val view = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                view.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(view)
+                return
+            } catch (e: Exception) {
+                LimeLog.warning("No external browser for $url: ${e.message}")
+                showToast(getString(R.string.pcview_open_webui_no_browser))
+                return
+            }
+        }
+        try {
+            val certDer = details.serverCert?.encoded
+            val intent = SunshineWebUiActivity.createIntent(
+                this,
+                url,
+                getString(R.string.pcview_menu_open_webui) + " - " + (details.name ?: ""),
+                certDer
+            )
+            startActivity(intent)
+        } catch (e: Exception) {
+            LimeLog.warning("Failed to launch in-app WebUI for $url: ${e.message}")
+            showToast(getString(R.string.pcview_open_webui_no_browser))
         }
     }
 
@@ -2152,9 +2217,18 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         val dialogTheme = android.R.style.Theme_Material_Light_Dialog_Alert
         val dialog = AlertDialog.Builder(this, dialogTheme)
                 .setView(dialogView)
-                .setPositiveButton(R.string.about_dialog_github) { _, _ -> openUrl("https://github.com/qiin2333/moonlight-vplus") }
-                .setNeutralButton(R.string.about_dialog_qq) { _, _ -> joinQQGroup("LlbLDIF_YolaM4HZyLx0xAXXo04ZmoBM") }
-                .setNegativeButton(R.string.about_dialog_close) { d, _ -> d.dismiss() }
+                .setPositiveButton(R.string.about_dialog_official_site) { _, _ ->
+                    startActivity(
+                        SunshineWebUiActivity.createIntent(
+                            this,
+                            OFFICIAL_SITE_URL,
+                            getString(R.string.about_dialog_official_site),
+                            null
+                        )
+                    )
+                }
+                .setNeutralButton(R.string.about_dialog_github) { _, _ -> openUrl("https://github.com/qiin2333/moonlight-vplus") }
+                .setNegativeButton(R.string.about_dialog_qq) { _, _ -> joinQQGroup("LlbLDIF_YolaM4HZyLx0xAXXo04ZmoBM") }
                 .create()
         if (dialog.window != null) {
             dialog.window?.setBackgroundDrawableResource(R.drawable.app_dialog_bg_cute)
