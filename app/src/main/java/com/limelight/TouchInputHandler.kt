@@ -521,6 +521,12 @@ class TouchInputHandler(private val game: Game) {
                         }
                     }
                     MotionEvent.ACTION_CANCEL -> {
+                        if (multiFingerDownTime != 0L && event.eventTime - multiFingerDownTime < MULTI_FINGER_TAP_THRESHOLD) {
+                            if (!game.prefConfig.gameTouchpadMode || !game.prefConfig.gameTouchpadDisableKeyboardToggle) {
+                                game.toggleKeyboard()
+                            }
+                            multiFingerDownTime = 0
+                        }
                         for (tc in touchContextMap) {
                             tc?.cancelTouch()
                             tc?.setPointerCount(0)
