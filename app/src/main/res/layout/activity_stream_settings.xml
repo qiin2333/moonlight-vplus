@@ -1,120 +1,104 @@
-<androidx.drawerlayout.widget.DrawerLayout
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/drawer_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".preferences.StreamSettings">
 
-    <!-- 主内容区域 -->
-    <RelativeLayout
-        android:id="@+id/stream_settings"
+    <ImageView
+        android:id="@+id/settingsBackgroundImage"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-        <ImageView
-            android:id="@+id/settingsBackgroundImage"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:scaleType="centerCrop"/>
-        
-        <View
-            android:layout_width="match_parent" 
-            android:layout_height="match_parent"
-            android:background="#B3333333" />
-
-        <!-- 设置内容区域（顶部留出菜单按钮空间） -->
-        <FrameLayout
-            android:id="@+id/preference_container"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@android:color/transparent"
-            android:paddingTop="@dimen/activity_safearea_top"/>
-        
-        <!-- 浮动菜单按钮（右上角）- 精致圆形设计 -->
-        <ImageView
-            android:id="@+id/settings_menu_toggle"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_alignParentTop="true"
-            android:layout_alignParentEnd="true"
-            android:layout_marginTop="@dimen/activity_safearea_top"
-            android:layout_marginEnd="14dp"
-            android:layout_marginBottom="8dp"
-            android:src="@drawable/ic_menu_stylish"
-            android:background="@drawable/menu_button_background_stylish"
-            android:scaleType="center"
-            android:padding="10dp"
-            android:elevation="6dp"
-            android:contentDescription="@string/menu" />
-
-    </RelativeLayout>
-
-    <!-- 侧边抽屉菜单 - 精致风格 -->
-    <LinearLayout
-        android:id="@+id/drawer_menu"
-        android:layout_width="280dp"
         android:layout_height="match_parent"
-        android:layout_gravity="start"
-        android:orientation="vertical"
-        android:background="@drawable/drawer_background"
-        android:paddingTop="@dimen/activity_safearea_top"
-        android:fitsSystemWindows="true"
-        android:elevation="8dp">
+        android:scaleType="centerCrop" />
 
-        <!-- 顶部品牌区域（紧凑） -->
-        <LinearLayout
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#B3333333" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingTop="@dimen/activity_safearea_top">
+
+        <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center_horizontal"
-            android:paddingTop="16dp"
-            android:paddingBottom="12dp">
+            android:paddingStart="12dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="8dp">
 
-            <!-- 圆形品牌图标 -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="52dp"
-                android:layout_height="52dp"
-                app:cardCornerRadius="26dp"
-                app:cardElevation="4dp"
-                app:cardBackgroundColor="#222222">
+            <ImageView
+                android:id="@+id/settings_menu_toggle"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:background="@drawable/menu_button_background_stylish"
+                android:contentDescription="@string/about_dialog_close"
+                android:elevation="6dp"
+                android:padding="10dp"
+                android:scaleType="center"
+                android:src="@drawable/ic_close"
+                android:visibility="invisible" />
 
-                <ImageView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:src="@drawable/vplus"
-                    android:scaleType="centerCrop" />
+            <TextView
+                android:id="@+id/settings_header_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:ellipsize="end"
+                android:fontFamily="sans-serif-medium"
+                android:gravity="center"
+                android:maxLines="1"
+                android:text="@string/title_settings"
+                android:textColor="@android:color/white"
+                android:textSize="20sp" />
+        </RelativeLayout>
 
-            </androidx.cardview.widget.CardView>
-
-        </LinearLayout>
-
-        <!-- 分类列表 -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/category_list"
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:scrollbars="none"
-            android:overScrollMode="never"
-            android:clipToPadding="false"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp" />
+            android:layout_weight="1">
 
-        <!-- 版本号 -->
-        <TextView
-            android:id="@+id/drawer_version"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:paddingBottom="12dp"
-            android:paddingTop="8dp"
-            android:textSize="10sp"
-            android:textColor="#44FF6B9D"
-            android:letterSpacing="0.05"
-            android:fontFamily="monospace" />
+            <FrameLayout
+                android:id="@+id/settings_home_container"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
 
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/category_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:clipToPadding="false"
+                    android:overScrollMode="never"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="44dp"
+                    android:scrollbars="none" />
+
+                <TextView
+                    android:id="@+id/drawer_version"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal|bottom"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="12dp"
+                    android:textColor="#44FF6B9D"
+                    android:textSize="10sp"
+                    android:fontFamily="monospace"
+                    android:letterSpacing="0.05" />
+            </FrameLayout>
+
+            <FrameLayout
+                android:id="@+id/preference_container"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent"
+                android:visibility="gone" />
+        </FrameLayout>
     </LinearLayout>
 
-</androidx.drawerlayout.widget.DrawerLayout>
+</FrameLayout>
