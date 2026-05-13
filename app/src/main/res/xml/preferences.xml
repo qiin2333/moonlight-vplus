@@ -208,6 +208,16 @@
             android:summary="@string/summary_checkbox_multi_controller"
             android:defaultValue="true" />
         <CheckBoxPreference
+            android:key="checkbox_mouse_emulation"
+            android:title="@string/title_checkbox_mouse_emulation"
+            android:summary="@string/summary_checkbox_mouse_emulation"
+            android:defaultValue="true" />
+        <CheckBoxPreference
+            android:key="checkbox_enable_start_key_menu"
+            android:title="@string/title_checkbox_enable_start_key_menu"
+            android:summary="@string/summary_checkbox_enable_start_key_menu"
+            android:defaultValue="true" />
+        <CheckBoxPreference
             android:key="checkbox_usb_driver"
             android:title="@string/title_checkbox_xb1_driver"
             android:summary="@string/summary_checkbox_xb1_driver"
@@ -218,16 +228,6 @@
             android:title="@string/title_checkbox_usb_bind_all"
             android:summary="@string/summary_checkbox_usb_bind_all"
             android:defaultValue="false" />
-        <CheckBoxPreference
-            android:key="checkbox_mouse_emulation"
-            android:title="@string/title_checkbox_mouse_emulation"
-            android:summary="@string/summary_checkbox_mouse_emulation"
-            android:defaultValue="true" />
-        <CheckBoxPreference
-            android:key="checkbox_enable_start_key_menu"
-            android:title="@string/title_checkbox_enable_start_key_menu"
-            android:summary="@string/summary_checkbox_enable_start_key_menu"
-            android:defaultValue="true" />
         <ListPreference
             android:key="analog_scrolling"
             android:dependency="checkbox_mouse_emulation"
@@ -370,16 +370,6 @@
             android:entries="@array/esc_menu_key_names"
             android:entryValues="@array/esc_menu_key_values"
             android:defaultValue="111" />
-        <CheckBoxPreference
-            android:key="checkbox_clipboard_sync_text"
-            android:title="@string/title_checkbox_clipboard_sync_text"
-            android:summary="@string/summary_checkbox_clipboard_sync_text"
-            android:defaultValue="false" />
-        <CheckBoxPreference
-            android:key="checkbox_clipboard_sync_image"
-            android:title="@string/title_checkbox_clipboard_sync_image"
-            android:summary="@string/summary_checkbox_clipboard_sync_image"
-            android:defaultValue="false" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_on_screen_controls_settings"
         android:key="category_onscreen_controls"
