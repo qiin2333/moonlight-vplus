@@ -168,8 +168,19 @@ class ConnectionCallbackHandler(private val game: Game) {
 
     fun connectionStarted() {
         game.runOnUiThread {
-            game.progressOverlay?.dismiss()
-            game.progressOverlay = null
+            // 不在此处 dismiss progressOverlay：connectionStarted 是连接级回调，
+            // 视频首帧通常还没解码出来。dismiss 已交由 decoderRenderer.firstFrameCallback
+            // 在首帧到达瞬间触发，避免 "loading 消失 → 黑屏 → 闪出画面" 的割裂感。
+            // 这里只做 5 秒 fallback，防止首帧因异常迟迟不来导致 loading 卡死。
+            val overlay = game.progressOverlay
+            if (overlay != null) {
+                Handler(Looper.getMainLooper()).postDelayed({
+                    if (game.progressOverlay === overlay) {
+                        overlay.dismiss()
+                        game.progressOverlay = null
+                    }
+                }, 5000)
+            }
 
             game.connected = true
             game.orientationManager.connected = true

@@ -101,6 +101,8 @@ class SeekBarPreference(context: Context, attrs: AttributeSet) : DialogPreferenc
     fun setProgress(progress: Int) {
         this.currentValue = progress
         persistInt(progress)
+        // 触发 ViewHolder 重新 bind，让 SummaryProvider 显示的当前值能立刻刷新
+        notifyChanged()
     }
 
     fun getProgress(): Int = currentValue

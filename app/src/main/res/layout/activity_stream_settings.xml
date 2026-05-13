@@ -49,6 +49,75 @@
             android:elevation="6dp"
             android:contentDescription="@string/menu" />
 
+        <!-- 浮动搜索按钮（菜单按钮左侧）- 同风格 -->
+        <ImageView
+            android:id="@+id/settings_search_toggle"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_alignParentTop="true"
+            android:layout_toStartOf="@id/settings_menu_toggle"
+            android:layout_marginTop="@dimen/activity_safearea_top"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="8dp"
+            android:src="@drawable/ic_search_stylish"
+            android:background="@drawable/menu_button_background_stylish"
+            android:scaleType="center"
+            android:padding="10dp"
+            android:elevation="6dp"
+            android:contentDescription="@string/settings_search_hint" />
+
+        <!-- 顶部搜索栏（默认隐藏，点击搜索按钮后展开） -->
+        <LinearLayout
+            android:id="@+id/settings_search_bar"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_alignParentTop="true"
+            android:layout_marginTop="@dimen/activity_safearea_top"
+            android:layout_marginStart="14dp"
+            android:layout_marginEnd="14dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/settings_search_bar_background"
+            android:elevation="6dp"
+            android:visibility="gone"
+            android:paddingStart="14dp"
+            android:paddingEnd="6dp">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_search_stylish"
+                android:layout_marginEnd="10dp"
+                android:contentDescription="@string/settings_search_hint" />
+
+            <EditText
+                android:id="@+id/settings_search_input"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:hint="@string/settings_search_hint"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#88FFFFFF"
+                android:textSize="14sp"
+                android:imeOptions="actionSearch"
+                android:inputType="text"
+                android:singleLine="true"
+                android:maxLines="1"
+                android:importantForAutofill="no" />
+
+            <ImageView
+                android:id="@+id/settings_search_close"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_close_stylish"
+                android:scaleType="center"
+                android:padding="6dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/settings_search_close" />
+
+        </LinearLayout>
+
     </RelativeLayout>
 
     <!-- 侧边抽屉菜单 - 精致风格 -->

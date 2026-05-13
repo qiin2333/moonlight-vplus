@@ -33,6 +33,15 @@
             android:background="@drawable/category_indicator_shape"
             android:visibility="invisible" />
 
+        <!-- 分类图标（Phosphor SVG 矢量图） -->
+        <ImageView
+            android:id="@+id/category_icon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginEnd="12dp"
+            android:scaleType="fitCenter"
+            android:contentDescription="@null" />
+
         <!-- 分类标题 -->
         <TextView
             android:id="@+id/category_title"
