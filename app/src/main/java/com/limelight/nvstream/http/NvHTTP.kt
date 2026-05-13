@@ -772,12 +772,112 @@ class NvHTTP(
         }
     }
 
+    // ---------------------------------------------------------------------------
+    // 剪贴板 blob 通道 (Sunshine /api/v1/clipboard/blob)
+    //
+    // 当 0x5508 控制包负载（>~64 KiB）超过 ENet 帧上限时，先把数据上传到
+    // 该 HTTPS 端点拿到 id，然后通过 LI_CLIPBOARD_KIND_REF 帧把 id 发送给
+    // 主机；主机再 GET 同一端点取回原始字节。所有调用走 mTLS（客户端证书）。
+    // ---------------------------------------------------------------------------
+
+    /**
+     * Upload an oversized clipboard payload to the host. Blocks on the calling
+     * thread (do NOT call from the UI thread). Returns the id/mime/size needed
+     * to construct a [LI_CLIPBOARD_KIND_REF] frame.
+     */
+    @Throws(IOException::class, InterruptedException::class)
+    fun uploadClipboardBlob(mime: String, data: ByteArray): ClipboardBlobUploadResult {
+        val url = getHttpsUrl(true).newBuilder()
+            .addPathSegments("api/v1/clipboard/blob")
+            .build()
+        val body = data.toRequestBody(mime.toMediaTypeOrNull())
+        val request = Request.Builder()
+            .url(url)
+            .post(body)
+            .addHeader("X-Clipboard-Mime", mime)
+            .build()
+        performAndroidTlsHack(clipboardBlobClient())
+            .newCall(request).execute().use { response ->
+                val responseBody = response.body
+                if (!response.isSuccessful) {
+                    throw HostHttpResponseException(response.code, response.message)
+                }
+                val text = responseBody.string()
+                return parseClipboardBlobUploadResponse(text, mime, data.size.toLong())
+            }
+    }
+
+    /**
+     * Download a previously advertised clipboard blob by id. Blocks on the
+     * calling thread. Caller is responsible for enforcing any size cap before
+     * passing the bytes on to a decoder.
+     */
+    @Throws(IOException::class, InterruptedException::class)
+    fun downloadClipboardBlob(id: String): ByteArray {
+        val url = getHttpsUrl(true).newBuilder()
+            .addPathSegments("api/v1/clipboard/blob")
+            .addPathSegment(id)
+            .build()
+        val request = Request.Builder().url(url).get().build()
+        performAndroidTlsHack(clipboardBlobClient())
+            .newCall(request).execute().use { response ->
+                val responseBody = response.body
+                if (!response.isSuccessful) {
+                    throw HostHttpResponseException(response.code, response.message)
+                }
+                return responseBody.bytes()
+            }
+    }
+
+    /**
+     * OkHttp client tuned for clipboard blob transfers: same mTLS pipeline as
+     * the regular long-timeout client but with a finite read timeout so a
+     * silently wedged server socket eventually surfaces as IOException instead
+     * of hanging the IO executor forever.
+     */
+    private fun clipboardBlobClient(): OkHttpClient =
+        httpClientLongConnectTimeout.newBuilder()
+            .readTimeout(CLIPBOARD_BLOB_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
+            .writeTimeout(CLIPBOARD_BLOB_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
+            .build()
+
+    private fun parseClipboardBlobUploadResponse(
+        body: String,
+        fallbackMime: String,
+        fallbackSize: Long
+    ): ClipboardBlobUploadResult {
+        val trimmed = body.trim()
+        if (trimmed.isEmpty()) {
+            throw IOException("Empty clipboard blob upload response")
+        }
+        val obj = try {
+            JSONObject(trimmed)
+        } catch (e: org.json.JSONException) {
+            throw IOException("Clipboard blob upload response is not JSON: ${e.message}")
+        }
+        val id = obj.optString("id").trim()
+        if (id.isEmpty()) {
+            throw IOException("Clipboard blob upload response missing id")
+        }
+        val mime = obj.optString("mime").ifBlank { fallbackMime }
+        val sizeRaw = obj.optLong("size", -1L)
+        val size = if (sizeRaw >= 0) sizeRaw else fallbackSize
+        return ClipboardBlobUploadResult(id, mime, size)
+    }
+
     companion object {
         const val DEFAULT_HTTPS_PORT = 47984
         const val DEFAULT_HTTP_PORT = 47989
         const val SHORT_CONNECTION_TIMEOUT = 3000
         const val LONG_CONNECTION_TIMEOUT = 5000
         const val READ_TIMEOUT = 7000
+
+        /**
+         * Per-attempt timeout for clipboard blob upload/download. Generous
+         * enough for a multi-MiB image over a slow link, but bounded so a
+         * silently dead host eventually surfaces as a retryable IOException.
+         */
+        private const val CLIPBOARD_BLOB_TIMEOUT_MS = 30_000
 
         private val verbose = BuildConfig.DEBUG
 
@@ -964,5 +1064,20 @@ data class NetworkFeedback(
 data class AbrAction(
     val newBitrate: Int?,
     val reason: String?
+)
+
+// ---------------------------------------------------------------------------
+// 剪贴板 blob 通道 (Sunshine /api/v1/clipboard/blob)
+// ---------------------------------------------------------------------------
+
+/**
+ * Result of a successful clipboard blob upload. The host stores the blob
+ * temporarily and addresses it by [id]; clients (this one and the host's
+ * peers) fetch it back via GET /api/v1/clipboard/blob/{id}.
+ */
+data class ClipboardBlobUploadResult(
+    val id: String,
+    val mime: String,
+    val size: Long,
 )
 

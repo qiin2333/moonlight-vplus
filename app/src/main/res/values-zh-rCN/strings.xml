@@ -162,7 +162,7 @@
     <string name="addpc_wrong_sitelocal"> 该地址似乎不正确。 您必须使用路由器的公共IP地址通过Internet进行串流。 </string>
     <!-- Preferences -->
     <string name="category_basic_settings">基本设置</string>
-    <string name="category_advanced_features">高级特性</string>
+    <string name="category_advanced_features">性能与流畅度</string>
     <string name="title_resolution_list"> 视频分辨率 </string>
     <string name="summary_resolution_list">高分辨率提升图像清晰度。低分辨率提升在低端设备和较慢网络中的串流体验。</string>
     <string name="title_custom_resolutions"> 自定义分辨率 </string>
@@ -312,6 +312,10 @@
     <string name="summary_checkbox_enable_sops"> 允许主机自动更改为与客户端最佳匹配的显示设置 </string>
     <string name="title_checkbox_host_audio"> 在电脑上播放声音 </string>
     <string name="summary_checkbox_host_audio"> 在电脑和本设备同时输出声音 </string>
+    <string name="title_checkbox_clipboard_sync_text">同步剪贴板文本</string>
+    <string name="summary_checkbox_clipboard_sync_text">本机复制的文本会同步到主机，反之亦然。注意：所有复制内容（包括密码、验证码）都会离开本设备。</string>
+    <string name="title_checkbox_clipboard_sync_image">同步剪贴板图片</string>
+    <string name="summary_checkbox_clipboard_sync_image">本机复制的图片会同步到主机。截图较大时可能消耗较多流量。</string>
     <string name="category_advanced_settings">高级设置</string>
     <string name="title_disable_frame_drop"> 永不掉帧 </string>
     <string name="summary_disable_frame_drop"> 可能会减少在一些设备上的卡顿，但会增加延迟 </string>
@@ -417,7 +421,6 @@
     <string name="about_dialog_star">Star 项目</string>
     <string name="about_dialog_qq">加入QQ群</string>
     <string name="about_dialog_close">关闭</string>
-    <string name="settings_nav_back">返回</string>
     <string name="check_for_updates">检查更新</string>
     <string name="summary_check_for_updates">检查是否有新版本可用</string>
     <string name="category_help">帮助</string>
@@ -557,6 +560,8 @@
     <string name="crash_report_dialog_title">应用上次异常退出</string>
     <string name="crash_report_dialog_message">把诊断日志发送给开发者帮忙排查吗？\n\n%1$s</string>
     <string name="crash_report_share">发送日志</string>
+    <string name="crash_report_copy">复制</string>
+    <string name="crash_report_copied">崩溃日志已复制到剪贴板</string>
     <string name="crash_report_dismiss">忽略</string>
     <string name="crash_report_subject">Moonlight 崩溃日志</string>
 
@@ -1058,6 +1063,9 @@
     <string name="float_ball_action_toggle_visibility">切换悬浮球显隐</string>
     <string name="game_menu_toggle_all_keyboard">切换电脑键盘</string>
     <string name="menu">菜单</string>
+    <string name="settings_search_hint">搜索设置项…</string>
+    <string name="settings_search_close">关闭搜索</string>
+    <string name="settings_search_no_results">没有匹配的设置</string>
     <string name="no_app_found_for_streaming">未找到可串流的应用</string>
     <string name="notification_icon">通知图标</string>
     <string name="pacing_precise_sync">精确同步</string>

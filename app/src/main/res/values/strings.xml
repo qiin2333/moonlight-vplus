@@ -222,7 +222,7 @@
 
     <!-- Preferences -->
     <string name="category_basic_settings">Basic Settings</string>
-    <string name="category_advanced_features">Advanced Features</string>
+    <string name="category_advanced_features">Performance &amp; smoothness</string>
     <string name="title_resolution_list">Video resolution</string>
     <string name="summary_resolution_list">Increase to improve image clarity. Decrease for better performance on lower end devices and slower networks.</string>
     <string name="title_native_res_dialog">Native Resolution Warning</string>
@@ -429,6 +429,10 @@
     <string name="summary_checkbox_enable_sops">Allow GFE to modify game settings for optimal streaming</string>
     <string name="title_checkbox_host_audio">Play audio on PC</string>
     <string name="summary_checkbox_host_audio">Play audio from the computer and this device</string>
+    <string name="title_checkbox_clipboard_sync_text">Sync clipboard text with PC</string>
+    <string name="summary_checkbox_clipboard_sync_text">Forward text copied on this device to the PC and vice versa. Warning: anything you copy (including passwords and 2FA codes) will leave this device.</string>
+    <string name="title_checkbox_clipboard_sync_image">Sync clipboard images with PC</string>
+    <string name="summary_checkbox_clipboard_sync_image">Forward images copied on this device to the PC. Large screenshots may use significant bandwidth.</string>
     <string name="title_screen_combination_mode">Screen combination mode (Sunshine Foundation)</string>
     <string name="summary_screen_combination_mode">Control how Sunshine manages your monitors when starting a stream, this configuration will override the host configuration.</string>
     <string name="screen_mode_host_default">Use Sunshine host configuration (default)</string>
@@ -486,10 +490,6 @@
     <string name="category_help">Help</string>
     <string name="category_mic_settings">Microphone Settings</string>
     <string name="category_audio_vibration_settings">Audio Vibration</string>
-    <string name="title_checkbox_clipboard_sync_text">Sync clipboard text (Sunshine)</string>
-    <string name="summary_checkbox_clipboard_sync_text">Mirror text copied here to/from the host (Sunshine only)</string>
-    <string name="title_checkbox_clipboard_sync_image">Sync clipboard images (Sunshine)</string>
-    <string name="summary_checkbox_clipboard_sync_image">Mirror PNG images copied here to/from the host (Sunshine only)</string>
     <string name="title_checkbox_enable_audio_passthrough">Enable audio passthrough</string>
     <string name="summary_checkbox_enable_audio_passthrough">Forward PCM/AC3/E-AC3 audio bit-perfect to the AVR when supported. Disable to always decode locally.</string>
     <string name="title_list_audio_codec">Passthrough codec</string>
@@ -522,7 +522,6 @@
     <string name="about_dialog_star">Star Project</string>
     <string name="about_dialog_qq">Join QQ Group</string>
     <string name="about_dialog_close">Close</string>
-    <string name="settings_nav_back">Back</string>
     <string name="check_for_updates">Check for updates</string>
     <string name="summary_check_for_updates">Check if there is a new version available</string>
 
@@ -639,6 +638,8 @@
     <string name="crash_report_dialog_title">Moonlight closed unexpectedly last time</string>
     <string name="crash_report_dialog_message">Send the diagnostic log to the developer to help fix it?\n\n%1$s</string>
     <string name="crash_report_share">Share log</string>
+    <string name="crash_report_copy">Copy</string>
+    <string name="crash_report_copied">Crash log copied to clipboard</string>
     <string name="crash_report_dismiss">Ignore</string>
     <string name="crash_report_subject">Moonlight crash report</string>
     
@@ -858,6 +859,9 @@
 
     <!-- Drawer Menu -->
     <string name="menu">Menu</string>
+    <string name="settings_search_hint">Search settings…</string>
+    <string name="settings_search_close">Close search</string>
+    <string name="settings_search_no_results">No matching settings</string>
     <string name="title_settings">Settings</string>
     <string name="game_menu_change_resolution">Change resolution</string>
     <string name="notification_content_streaming">Streaming in progress: %1$s (%2$s)</string>

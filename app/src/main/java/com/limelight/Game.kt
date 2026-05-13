@@ -723,6 +723,17 @@ class Game : Activity(), SurfaceHolder.Callback,
                 glPrefs.glRenderer,
                 this
             )
+            // 首帧解码到达时立刻隐藏 loading overlay，无缝切到真实画面
+            decoderRenderer?.firstFrameCallback = {
+                runOnUiThread {
+                    // OnFrameRenderedListener 触发时 SurfaceFlinger 还要等几个 vsync 才把帧真正合成上屏，
+                    // 此时立即 GONE overlay 仍会暴露空缝；延迟 ~3 帧让 SurfaceView 上的视频稳定再隐藏。
+                    streamView.postDelayed({
+                        progressOverlay?.dismiss()
+                        progressOverlay = null
+                    }, 48)
+                }
+            }
         }
 
         if (willStreamHdr && decoderRenderer?.isHevcMain10Supported() != true && decoderRenderer?.isAv1Main10Supported() != true) {
@@ -1056,6 +1067,12 @@ class Game : Activity(), SurfaceHolder.Callback,
         super.onWindowFocusChanged(hasFocus)
         keyboardInputHandler.clearModifierState()
         inputCaptureProvider.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            // Android only delivers OnPrimaryClipChangedListener events while
+            // the app holds input focus; clips copied in another app while
+            // Game was paused are silently dropped. Re-poll on focus regain.
+            clipboardSyncManager?.onFocusGained()
+        }
     }
 
     private fun prepareDisplayForRendering(): Float {
@@ -1448,6 +1465,10 @@ class Game : Activity(), SurfaceHolder.Callback,
             syncText = wantText,
             syncImage = wantImage,
             fileProviderAuthority = "$packageName.clipboard_fileprovider",
+            // Lazily resolve NvHTTP each time so the manager outlives transient
+            // disconnects without us caching a stale instance. conn is set
+            // before connectionStarted fires, so this is safe at construction.
+            nvHttpProvider = { conn?.createNvHttp() },
         )
         runCatching { mgr.start() }
             .onFailure { LimeLog.warning("Clipboard sync start failed: ${it.message}") }

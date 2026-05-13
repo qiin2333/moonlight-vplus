@@ -1,5 +1,5 @@
 [versions]
-agp = "9.2.0"
+agp = "9.2.1"
 kotlin = "2.2.10"
 google-services = "4.4.4"
 firebase-crashlytics-gradle = "3.0.5"

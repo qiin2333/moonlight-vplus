@@ -2,8 +2,12 @@ package com.limelight.crash
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 
 import androidx.core.content.FileProvider
 
@@ -34,6 +38,10 @@ object CrashReportPrompt {
             .setPositiveButton(R.string.crash_report_share) { _, _ ->
                 shareReport(activity)
                 CrashReporter.clear(activity)
+            }
+            .setNeutralButton(R.string.crash_report_copy) { _, _ ->
+                copyReport(activity)
+                // 复制后保留报告文件，方便用户多次粘贴或最终分享
             }
             .setNegativeButton(R.string.crash_report_dismiss) { _, _ ->
                 CrashReporter.clear(activity)
@@ -69,5 +77,18 @@ object CrashReportPrompt {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         activity.startActivity(Intent.createChooser(send, null))
+    }
+
+    private fun copyReport(activity: Activity) {
+        val report = CrashReporter.pendingReportFile(activity) ?: return
+        val text = try {
+            report.readText()
+        } catch (_: Exception) {
+            return
+        }
+        val cm = activity.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
+        cm.setPrimaryClip(ClipData.newPlainText(
+            activity.getString(R.string.crash_report_subject), text))
+        Toast.makeText(activity, R.string.crash_report_copied, Toast.LENGTH_SHORT).show()
     }
 }
