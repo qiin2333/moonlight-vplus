@@ -18,6 +18,7 @@ class ConnectionContext {
     var serverAppVersion: String? = null
     var serverGfeVersion: String? = null
     var serverCodecModeSupport: Int = 0
+    var supportsDesktopSpecialApp: Boolean = false
 
     // This is the sessionUrl0 tag from /resume and /launch
     var rtspSessionUrl: String? = null

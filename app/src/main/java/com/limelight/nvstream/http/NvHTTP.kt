@@ -600,6 +600,11 @@ class NvHTTP(
 
     @Throws(IOException::class, XmlPullParserException::class, InterruptedException::class)
     fun launchApp(context: ConnectionContext, verb: String, appId: Int, enableHdr: Boolean): Boolean {
+        if (appId == NvApp.DESKTOP_APP_ID && !context.supportsDesktopSpecialApp) {
+            LimeLog.warning("Refusing Desktop special app launch without DesktopSpecialAppSupport")
+            return false
+        }
+
         val streamConfig = context.streamConfig
         val fps = if (context.isNvidiaServerSoftware && streamConfig.launchRefreshRate > 60)
             0 else streamConfig.launchRefreshRate

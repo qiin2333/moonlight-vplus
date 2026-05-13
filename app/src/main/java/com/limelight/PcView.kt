@@ -1698,6 +1698,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
     private fun fallbackToAppList(computer: ComputerDetails) {
         runOnUiThread {
+            showToast(getString(R.string.quick_start_load_app_list_first))
             val target = prepareComputerWithAddress(computer)
             doAppList(target ?: computer, newlyPaired = false, showHiddenGames = false)
         }

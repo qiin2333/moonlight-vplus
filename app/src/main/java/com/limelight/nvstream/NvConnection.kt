@@ -25,11 +25,13 @@ import javax.crypto.SecretKey
 import org.xmlpull.v1.XmlPullParserException
 
 import com.limelight.LimeLog
+import com.limelight.R
 import com.limelight.nvstream.av.audio.AudioRenderer
 import com.limelight.nvstream.av.video.VideoDecoderRenderer
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.HostHttpResponseException
 import com.limelight.nvstream.http.LimelightCryptoProvider
+import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.http.PairingManager
 import com.limelight.nvstream.input.MouseButtonPacket
@@ -200,6 +202,7 @@ open class NvConnection(
 
         val details = h.getComputerDetails(serverInfo)
         context.isNvidiaServerSoftware = details.nvidiaServer
+        context.supportsDesktopSpecialApp = details.supportsDesktopSpecialApp
 
         context.serverGfeVersion = h.getGfeVersion(serverInfo)
 
@@ -277,6 +280,10 @@ open class NvConnection(
     private fun resumeExistingSession(h: NvHTTP, context: ConnectionContext, appId: Int): Boolean {
         val connListener = context.connListener
 
+        if (!ensureDesktopSpecialAppSupported(context, appId)) {
+            return false
+        }
+
         try {
             if (!h.launchApp(context, "resume", appId, context.negotiatedHdr)) {
                 connListener.displayMessage("Failed to resume existing session")
@@ -310,6 +317,11 @@ open class NvConnection(
     @Throws(IOException::class, XmlPullParserException::class, InterruptedException::class)
     protected fun quitAndLaunch(h: NvHTTP, context: ConnectionContext): Boolean {
         val connListener = context.connListener
+
+        if (!ensureDesktopSpecialAppSupported(context, context.streamConfig.app.appId)) {
+            return false
+        }
+
         try {
             if (!h.quitApp()) {
                 connListener.displayMessage("Failed to quit previous session! You must quit it manually")
@@ -333,6 +345,10 @@ open class NvConnection(
 
     @Throws(IOException::class, XmlPullParserException::class, InterruptedException::class)
     private fun launchNotRunningApp(h: NvHTTP, context: ConnectionContext): Boolean {
+        if (!ensureDesktopSpecialAppSupported(context, context.streamConfig.app.appId)) {
+            return false
+        }
+
         if (!h.launchApp(context, "launch", context.streamConfig.app.appId, context.negotiatedHdr)) {
             context.connListener.displayMessage("Failed to launch application")
             return false
@@ -340,6 +356,15 @@ open class NvConnection(
 
         LimeLog.info("Launched new game session")
         return true
+    }
+
+    private fun ensureDesktopSpecialAppSupported(context: ConnectionContext, appId: Int): Boolean {
+        if (appId != NvApp.DESKTOP_APP_ID || context.supportsDesktopSpecialApp) {
+            return true
+        }
+
+        context.connListener.displayMessage(appContext.getString(R.string.error_desktop_special_app_unsupported))
+        return false
     }
 
     fun start(audioRenderer: AudioRenderer, videoDecoderRenderer: VideoDecoderRenderer, connectionListener: NvConnectionListener) {

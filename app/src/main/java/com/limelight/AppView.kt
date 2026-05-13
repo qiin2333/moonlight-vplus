@@ -843,26 +843,23 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         if (appSettingsManager != null) {
             // 使用AppSettingsManager统一管理启动逻辑
             val startIntent = appSettingsManager?.createStartIntentWithLastSettingsIfEnabled(
-                    this, app.app, comp, binder)
+                    this, app.app, comp, binder,
+                    forceResumeCurrentSession = forceResumeCurrentSession)
             if (displayName != null) {
                 startIntent?.putExtra(Game.EXTRA_DISPLAY_NAME, displayName)
             }
             // 传递屏幕组合模式
             startIntent?.let { addScreenCombinationModeToIntent(it, useVdd) }
-            if (forceResumeCurrentSession) {
-                startIntent?.putExtra(Game.EXTRA_FORCE_RESUME_CURRENT_SESSION, true)
-            }
             startIntent?.let { startActivity(it) }
         } else {
             // 回退到默认方式启动
-            val startIntent = ServerHelper.createStartIntent(this, app.app, comp, binder)
+            val startIntent = ServerHelper.createStartIntent(
+                    this, app.app, comp, binder,
+                    forceResumeCurrentSession = forceResumeCurrentSession)
             if (displayName != null) {
                 startIntent.putExtra(Game.EXTRA_DISPLAY_NAME, displayName)
             }
             addScreenCombinationModeToIntent(startIntent, useVdd)
-            if (forceResumeCurrentSession) {
-                startIntent.putExtra(Game.EXTRA_FORCE_RESUME_CURRENT_SESSION, true)
-            }
             startActivity(startIntent)
         }
     }

@@ -165,6 +165,8 @@
     <string name="applist_refresh_msg">Refreshing apps…</string>
     <string name="applist_refresh_error_title">Error</string>
     <string name="applist_refresh_error_msg">Failed to get app list</string>
+    <string name="quick_start_load_app_list_first">No cached apps yet. Opening the app list to load them first.</string>
+    <string name="error_desktop_special_app_unsupported">This host does not support Desktop quick start. Open the app list once to load cached apps, or update Foundation Sunshine.</string>
     <string name="applist_quit_app">Quitting</string>
     <string name="applist_quit_success">Successfully quit</string>
     <string name="applist_quit_fail">Failed to quit</string>

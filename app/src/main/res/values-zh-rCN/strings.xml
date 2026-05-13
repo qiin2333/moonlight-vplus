@@ -110,6 +110,8 @@
     <string name="applist_refresh_msg"> 刷新中…… </string>
     <string name="applist_refresh_error_title"> 错误 </string>
     <string name="applist_refresh_error_msg"> 获取列表失败 </string>
+    <string name="quick_start_load_app_list_first">还没有应用缓存，正在打开应用列表先加载一次</string>
+    <string name="error_desktop_special_app_unsupported">当前主机不支持桌面快速启动。请先打开应用列表加载一次，或升级 Foundation Sunshine。</string>
     <string name="applist_quit_app"> 退出中 </string>
     <string name="applist_quit_success"> 成功退出串流 </string>
     <string name="applist_quit_fail"> 退出串流失败 </string>
