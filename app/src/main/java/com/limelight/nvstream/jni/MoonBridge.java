@@ -148,6 +148,13 @@ public class MoonBridge {
 
     public static final byte LI_CLIPBOARD_KIND_TEXT = 1;
     public static final byte LI_CLIPBOARD_KIND_PNG  = 2;
+    /**
+     * Reference to a payload uploaded out-of-band via the Sunshine HTTPS
+     * /api/v1/clipboard/blob endpoint. Used when the inline payload would
+     * exceed the per-frame ENet control packet cap (~64 KiB). The frame's
+     * payload is a small UTF-8 JSON object: {"type":"ref","id":...,"mime":...,"size":...}.
+     */
+    public static final byte LI_CLIPBOARD_KIND_REF  = 3;
 
     /** Listener for inbound clipboard packets coming from the host. */
     public interface ClipboardListener {

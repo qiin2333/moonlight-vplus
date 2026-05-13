@@ -98,14 +98,20 @@ class ShortcutTrampoline : Activity() {
 
     private fun handleDetails(details: ComputerDetails) {
         if (details.state == ComputerDetails.State.OFFLINE && details.macAddress != null && --wakeHostTries >= 0) {
-            try {
-                val comp = computer ?: return
-                WakeOnLanSender.sendWolPacket(comp)
-                managerBinder?.invalidateStateForComputer(comp.uuid!!)
-                return
-            } catch (e: IOException) {
-                e.printStackTrace()
+            val comp = computer ?: return
+            // WoL 必须在 IO 线程发送 UDP，handleDetails 由 uiScope (Main) collect 调用，
+            // 直接调 sendWolPacket 会触发 NetworkOnMainThreadException。
+            uiScope.launch {
+                try {
+                    withContext(Dispatchers.IO) {
+                        WakeOnLanSender.sendWolPacket(comp)
+                    }
+                    managerBinder?.invalidateStateForComputer(comp.uuid!!)
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                }
             }
+            return
         }
 
         if (details.state == ComputerDetails.State.UNKNOWN) return

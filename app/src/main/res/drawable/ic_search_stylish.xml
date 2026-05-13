@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 搜索图标，与 ic_menu_stylish 同风格（粉主色） -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FF6B9D"
+        android:pathData="M10,4 A6,6 0 1,1 10,16 A6,6 0 1,1 10,4 M10,6 A4,4 0 1,0 10,14 A4,4 0 1,0 10,6 M14.5,14.5 L20,20 A1.5,1.5 0 1,1 17.879,22.121 L12.379,16.621 Z"
+        android:fillType="evenOdd"/>
+</vector>
