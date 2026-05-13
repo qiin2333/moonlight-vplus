@@ -23,8 +23,10 @@
         <item name="android:windowBackground">@color/advance_setting_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowTranslucentStatus">true</item>
-        <item name="android:windowTranslucentNavigation">true</item>
+        <!-- 用现代 edge-to-edge（WindowCompat）控制沉浸式，避免旧 windowTranslucent* 产生火色蒙层 -->
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
     </style>
 
     <!--
@@ -126,8 +128,10 @@
         <item name="android:windowSoftInputMode">adjustPan|stateHidden</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowTranslucentStatus">true</item>
-        <item name="android:windowTranslucentNavigation">true</item>
+        <!-- 与 AppTheme/SettingsThemeCompat 一致：不使用旧 windowTranslucent* 避免火色蒙层 -->
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:textColorPrimary">@color/theme_pink_primary</item>
         <item name="android:textColorSecondary">@color/game_menu_text_secondary</item>
         <item name="android:colorAccent">@color/theme_pink_primary</item>
@@ -146,8 +150,11 @@
         <item name="android:windowBackground">@color/advance_setting_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowTranslucentStatus">true</item>
-        <item name="android:windowTranslucentNavigation">true</item>
+        <!-- 沉浸式顶栏：内容延伸到状态栏后方，由 Activity 通过 WindowCompat.setDecorFitsSystemWindows(false) 控制；
+             禁用旧 windowTranslucent* 标志以避免系统自动添加灰色 scrim 蒙层 -->
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
     </style>
 

@@ -7,7 +7,9 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -21,12 +23,18 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 
-import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
+import androidx.core.graphics.toColorInt
+import androidx.core.net.toUri
+import androidx.core.widget.doAfterTextChanged
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.preference.CheckBoxPreference
 import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
@@ -35,10 +43,16 @@ import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceGroupAdapter
 import androidx.preference.PreferenceManager
-import androidx.preference.PreferenceScreen
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.MultiTransformation
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import com.bumptech.glide.request.RequestOptions
+import com.bumptech.glide.request.target.CustomTarget
+import com.bumptech.glide.request.transition.Transition
 import com.limelight.LimeLog
 import com.limelight.PcView
 import com.limelight.R
@@ -51,27 +65,14 @@ import com.limelight.utils.Dialog
 import com.limelight.utils.UiHelper
 import com.limelight.utils.UpdateManager
 
+import jp.wasabeef.glide.transformations.BlurTransformation
+import jp.wasabeef.glide.transformations.ColorFilterTransformation
+
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
 import java.util.*
 
-import android.graphics.Bitmap
-import android.graphics.drawable.Drawable
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.MultiTransformation
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
-import com.bumptech.glide.request.RequestOptions
-import com.bumptech.glide.request.target.CustomTarget
-import com.bumptech.glide.request.transition.Transition
-import jp.wasabeef.glide.transformations.BlurTransformation
-import jp.wasabeef.glide.transformations.ColorFilterTransformation
-import androidx.core.graphics.toColorInt
-import androidx.core.content.edit
-import androidx.core.net.toUri
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import kotlin.math.roundToInt
 
 class StreamSettings : AppCompatActivity() {
@@ -81,21 +82,21 @@ class StreamSettings : AppCompatActivity() {
     private var externalDisplayManager: ExternalDisplayManager? = null
 
     // 抽屉菜单相关
+    private var drawerLayout: DrawerLayout? = null // 竖屏时使用，横屏时为 null
     private var categoryList: RecyclerView? = null
     private var categoryAdapter: CategoryAdapter? = null
-    private var homeContainer: View? = null
-    private var navigationButton: ImageView? = null
-    private var headerTitle: TextView? = null
     private val categories: MutableList<CategoryItem> = ArrayList()
     private var selectedCategoryIndex = 0
-    private var selectedCategoryKey: String? = null
-    private var lastKnownOrientation = Configuration.ORIENTATION_UNDEFINED
-    private var systemBackCallback: OnBackPressedCallback? = null
+
+    // 搜索栏相关（仅竖屏 layout 提供，横屏 layout 不渲染搜索控件）
+    private var searchBar: View? = null
+    private var searchInput: EditText? = null
+    private var searchToggle: ImageView? = null
+    private var menuToggleView: ImageView? = null
 
     // 状态保存键
     companion object {
         private const val KEY_SELECTED_CATEGORY = "selected_category_index"
-        private const val KEY_SELECTED_CATEGORY_KEY = "selected_category_key"
 
         // HACK for Android 9
         var displayCutoutP: DisplayCutout? = null
@@ -103,27 +104,28 @@ class StreamSettings : AppCompatActivity() {
         private const val SETTINGS_BG_URL = "https://raw.githubusercontent.com/qiin2333/qiin.github.io/assets/img/moonlight-bg2.webp"
 
         /**
-         * 获取分类对应的 emoji（每个分类唯一）
+         * 获取分类对应的 Phosphor 矢量图标资源 ID（与鸿蒙项目一致）。
          */
-        private fun getEmojiForCategory(key: String): String {
+        private fun getIconForCategory(key: String): Int {
             return when (key) {
-                "category_basic_settings" -> "⚙️"      // 基本设置
-                "category_screen_position" -> "📐"     // 屏幕位置
-                "category_audio_settings" -> "🔊"      // 音频
-                "category_mic_settings" -> "🎤"        // 麦克风
-                "category_audio_vibration" -> "📳"     // 音频振动
-                "category_gamepad_settings" -> "🎮"    // 手柄
-                "category_input_settings" -> "⌨️"      // 输入
-                "category_enhanced_touch" -> "👆"      // 触摸增强
-                "category_onscreen_controls" -> "🎛️"   // 屏幕控制
-                "category_float_ball" -> "⚽"           // 悬浮球
-                "category_crown_features" -> "👑"      // 皇冠功能
-                "category_host_settings" -> "🖥️"       // 主机
-                "category_connection_settings" -> "🔗"  // 连接
-                "category_ui_settings" -> "🎨"         // 界面
-                "category_advanced_settings" -> "🔧"   // 高级(legacy)
-                "category_help" -> "❓"                // 帮助
-                else -> "📋"
+                "category_basic_settings" -> R.drawable.phc_settings
+                "category_screen_position" -> R.drawable.phc_display
+                "category_audio_settings" -> R.drawable.phc_audio
+                "category_mic_settings" -> R.drawable.phc_microphone
+                "category_audio_vibration" -> R.drawable.phc_pulse
+                "category_gamepad_settings" -> R.drawable.phc_gamepad
+                "category_input_settings" -> R.drawable.phc_keyboard
+                "category_enhanced_touch" -> R.drawable.phc_touch
+                "category_onscreen_controls" -> R.drawable.phc_game_controller
+                "category_float_ball" -> R.drawable.phc_eye
+                "category_crown_features" -> R.drawable.phc_crown
+                "category_host_settings" -> R.drawable.phc_host
+                "category_connection_settings" -> R.drawable.phc_plug
+                "category_ui_settings" -> R.drawable.phc_lightbulb
+                "category_advanced_settings" -> R.drawable.phc_settings    // legacy
+                "category_advanced_features" -> R.drawable.phc_lightning   // 性能与流畅度
+                "category_help" -> R.drawable.phc_info
+                else -> R.drawable.phc_list
             }
         }
     }
@@ -135,7 +137,7 @@ class StreamSettings : AppCompatActivity() {
             previousDisplayPixelCount = mode.physicalWidth * mode.physicalHeight
         }
         supportFragmentManager.beginTransaction().replace(
-                R.id.preference_container, SettingsFragment.newInstance(selectedCategoryKey)
+                R.id.preference_container, SettingsFragment()
         ).commitAllowingStateLoss()
     }
 
@@ -158,25 +160,25 @@ class StreamSettings : AppCompatActivity() {
         // 设置自定义布局
         setContentView(R.layout.activity_stream_settings)
 
-        // 确保状态栏透明
+        // 启用沉浸式顶栏：内容延伸到状态栏/导航栏下方，系统栏完全透明
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
-        window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+        window.navigationBarColor = Color.TRANSPARENT
+        // 深色背景图 → 状态栏 / 导航栏图标使用浅色
+        androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
+        }
 
         UiHelper.notifyNewRootView(this)
-        lastKnownOrientation = resources.configuration.orientation
 
         // 恢复保存的状态（屏幕旋转时）
         if (savedInstanceState != null) {
             selectedCategoryIndex = savedInstanceState.getInt(KEY_SELECTED_CATEGORY, 0)
-            selectedCategoryKey = savedInstanceState.getString(KEY_SELECTED_CATEGORY_KEY)
         }
 
         // 初始化抽屉菜单
         initDrawerMenu()
-
-        applyOrientationSystemBars()
-
-        registerSystemBackHandler()
 
         // 加载背景图片
         loadBackgroundImage()
@@ -190,55 +192,144 @@ class StreamSettings : AppCompatActivity() {
      */
     @SuppressLint("SetTextI18n")
     private fun setupVersionInfo() {
-        val versionText = findViewById<TextView>(R.id.drawer_version)
-        if (versionText != null) {
-            try {
-                val versionName = packageManager
-                        .getPackageInfo(packageName, 0).versionName
-                versionText.text = "v$versionName"
-            } catch (e: PackageManager.NameNotFoundException) {
-                versionText.visibility = View.GONE
-            }
+        val versionText = findViewById<TextView>(R.id.drawer_version) ?: return
+        try {
+            val versionName = packageManager.getPackageInfo(packageName, 0).versionName
+            versionText.text = "v$versionName"
+        } catch (e: PackageManager.NameNotFoundException) {
+            versionText.visibility = View.GONE
         }
     }
 
     /**
-     * 初始化首页列表和详情页容器
+     * 初始化抽屉菜单
+     * 竖屏使用 DrawerLayout，横屏使用并排的 LinearLayout
      */
     private fun initDrawerMenu() {
+        // 横屏时 drawer_layout 是 LinearLayout，不是 DrawerLayout
+        val rootView = findViewById<View>(R.id.drawer_layout)
+        drawerLayout = rootView as? DrawerLayout
+
         categoryList = findViewById(R.id.category_list)
-        homeContainer = findViewById(R.id.settings_home_container)
-        navigationButton = findViewById(R.id.settings_menu_toggle)
-        headerTitle = findViewById(R.id.settings_header_title)
 
         setupMenuToggle()
         setupCategoryList()
-        showHomePage()
+        setupDrawerListener()
+        setupSearchBar()
     }
 
     /**
-     * 设置返回按钮
+     * 设置菜单按钮（仅竖屏有效）
      */
     private fun setupMenuToggle() {
-        val menuToggle = navigationButton
-        if (menuToggle != null) {
-            menuToggle.setOnClickListener { handleNavigationButtonClick() }
-            menuToggle.isFocusable = true
-            menuToggle.isFocusableInTouchMode = false
+        val menuToggle = findViewById<ImageView>(R.id.settings_menu_toggle) ?: return
+        menuToggle.setOnClickListener { openDrawer() }
+        menuToggle.isFocusable = true
+        menuToggle.isFocusableInTouchMode = false
+    }
+
+    /**
+     * 设置浮动搜索按钮 + 顶部搜索栏（仅竖屏 layout 提供这些 view，
+     * 横屏 layout 不包含搜索控件，findViewById 返回 null，自动跳过）。
+     */
+    private fun setupSearchBar() {
+        searchBar = findViewById(R.id.settings_search_bar)
+        searchInput = findViewById(R.id.settings_search_input)
+        searchToggle = findViewById(R.id.settings_search_toggle)
+        menuToggleView = findViewById(R.id.settings_menu_toggle)
+        val closeBtn = findViewById<ImageView?>(R.id.settings_search_close)
+
+        // 横屏布局没有这些控件
+        if (searchBar == null || searchInput == null || searchToggle == null) return
+
+        searchToggle?.setOnClickListener { showSearchBar() }
+        closeBtn?.setOnClickListener { hideSearchBar() }
+
+        searchInput?.doAfterTextChanged { applyFilterToFragment(it?.toString().orEmpty()) }
+
+        // IME 回车：仅收起键盘，保留过滤结果
+        searchInput?.setOnEditorActionListener { v, _, _ ->
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+            imm?.hideSoftInputFromWindow(v.windowToken, 0)
+            v.clearFocus()
+            true
         }
+    }
+
+    private val isSearchBarVisible: Boolean
+        get() = searchBar?.visibility == View.VISIBLE
+
+    private fun fadeIn(v: View?) {
+        v ?: return
+        v.alpha = 0f
+        v.visibility = View.VISIBLE
+        v.animate().alpha(1f).setDuration(180L).start()
+    }
+
+    private fun fadeOut(v: View?) {
+        v ?: return
+        v.animate().alpha(0f).setDuration(140L).withEndAction { v.visibility = View.GONE }.start()
+    }
+
+    private fun showSearchBar() {
+        fadeOut(searchToggle)
+        fadeOut(menuToggleView)
+        fadeIn(searchBar)
+        searchInput?.requestFocus()
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.showSoftInput(searchInput, InputMethodManager.SHOW_IMPLICIT)
+    }
+
+    private fun hideSearchBar() {
+        searchInput?.setText("")
+        applyFilterToFragment("")
+        fadeOut(searchBar)
+        fadeIn(searchToggle)
+        fadeIn(menuToggleView)
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.hideSoftInputFromWindow(searchInput?.windowToken, 0)
+    }
+
+    private fun applyFilterToFragment(query: String) {
+        val fragment = supportFragmentManager
+                .findFragmentById(R.id.preference_container) as? SettingsFragment
+        fragment?.applySearchFilter(query)
     }
 
     /**
      * 设置分类列表
      */
     private fun setupCategoryList() {
-        if (categoryList != null) {
-            categoryList?.layoutManager = LinearLayoutManager(this)
-            categoryAdapter = CategoryAdapter()
-            categoryList?.adapter = categoryAdapter
-            categoryList?.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
-            categoryList?.isFocusable = true
-        }
+        val list = categoryList ?: return
+        list.layoutManager = LinearLayoutManager(this)
+        categoryAdapter = CategoryAdapter()
+        list.adapter = categoryAdapter
+        list.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+        list.isFocusable = true
+    }
+
+    /**
+     * 设置抽屉监听器（仅竖屏有效）
+     */
+    private fun setupDrawerListener() {
+        if (drawerLayout == null) return
+
+        drawerLayout?.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
+            override fun onDrawerOpened(drawerView: View) {
+                focusSelectedCategory()
+            }
+
+            override fun onDrawerClosed(drawerView: View) {
+                focusPreferenceList()
+            }
+        })
+    }
+
+    /**
+     * 打开抽屉（仅竖屏有效）
+     */
+    private fun openDrawer() {
+        drawerLayout?.openDrawer(findViewById(R.id.drawer_menu))
     }
 
     /**
@@ -251,90 +342,6 @@ class StreamSettings : AppCompatActivity() {
                 vh?.itemView?.requestFocus()
             }
         }
-    }
-
-    private fun usesPersistentSidebarLayout(): Boolean {
-        return resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    }
-
-    private fun showHomePage() {
-        if (usesPersistentSidebarLayout()) {
-            homeContainer?.visibility = View.VISIBLE
-            findViewById<View>(R.id.preference_container)?.visibility = View.VISIBLE
-            headerTitle?.visibility = View.INVISIBLE
-            updateNavigationButtonForCurrentPage(true)
-            updateSystemBackHandlerState()
-            focusSelectedCategory()
-            return
-        }
-
-        homeContainer?.visibility = View.VISIBLE
-        findViewById<View>(R.id.preference_container)?.visibility = View.GONE
-        headerTitle?.text = getString(R.string.title_settings)
-        updateNavigationButtonForCurrentPage(true)
-        updateSystemBackHandlerState()
-        focusSelectedCategory()
-    }
-
-    private fun showCategoryPage(title: String) {
-        if (usesPersistentSidebarLayout()) {
-            homeContainer?.visibility = View.VISIBLE
-            findViewById<View>(R.id.preference_container)?.visibility = View.VISIBLE
-            headerTitle?.text = title
-            headerTitle?.visibility = View.VISIBLE
-            updateNavigationButtonForCurrentPage(false)
-            updateSystemBackHandlerState()
-            focusPreferenceList()
-            return
-        }
-
-        homeContainer?.visibility = View.GONE
-        findViewById<View>(R.id.preference_container)?.visibility = View.VISIBLE
-        headerTitle?.text = title
-        updateNavigationButtonForCurrentPage(false)
-        updateSystemBackHandlerState()
-        focusPreferenceList()
-    }
-
-    private fun updateNavigationButtonForCurrentPage(isHomePage: Boolean) {
-        val menuToggle = navigationButton ?: return
-
-        if (usesPersistentSidebarLayout()) {
-            menuToggle.visibility = View.GONE
-            return
-        }
-
-        menuToggle.visibility = View.VISIBLE
-
-        if (isHomePage) {
-            menuToggle.setImageResource(R.drawable.ic_close)
-            menuToggle.contentDescription = getString(R.string.about_dialog_close)
-        } else {
-            menuToggle.setImageResource(R.drawable.ic_chevron_left)
-            menuToggle.contentDescription = getString(R.string.settings_nav_back)
-        }
-    }
-
-    private fun handleNavigationButtonClick() {
-        if (navigateToHomePage()) {
-            return
-        }
-
-        handleActivityBackPress()
-    }
-
-    private fun navigateToHomePage(): Boolean {
-        if (usesPersistentSidebarLayout()) {
-            return false
-        }
-
-        if (selectedCategoryKey == null) {
-            return false
-        }
-
-        selectedCategoryKey = null
-        showHomePage()
-        return true
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -352,84 +359,6 @@ class StreamSettings : AppCompatActivity() {
         preferenceContainer?.requestFocus()
     }
 
-    @Suppress("DEPRECATION")
-    private fun applyOrientationSystemBars() {
-        val controller = WindowInsetsControllerCompat(window, window.decorView)
-
-        if (usesPersistentSidebarLayout()) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                window.setDecorFitsSystemWindows(false)
-            }
-
-            window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            controller.hide(WindowInsetsCompat.Type.statusBars())
-            window.decorView.post { applyLandscapeTopInsetPadding() }
-            return
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.setDecorFitsSystemWindows(true)
-        }
-
-        window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-        controller.show(WindowInsetsCompat.Type.statusBars())
-    }
-
-    private fun applyLandscapeTopInsetPadding() {
-        if (!usesPersistentSidebarLayout()) {
-            return
-        }
-
-        val topInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            window.decorView.rootWindowInsets?.displayCutout?.safeInsetTop ?: 0
-        } else {
-            0
-        }
-
-        homeContainer?.setPadding(
-                homeContainer?.paddingLeft ?: 0,
-                topInset,
-                homeContainer?.paddingRight ?: 0,
-                homeContainer?.paddingBottom ?: 0
-        )
-
-        val detailContainer = findViewById<View>(R.id.settings_detail_container)
-        detailContainer?.setPadding(
-            detailContainer.paddingLeft,
-                topInset,
-            detailContainer.paddingRight,
-            detailContainer.paddingBottom
-        )
-    }
-
-    private fun registerSystemBackHandler() {
-        systemBackCallback = object : OnBackPressedCallback(false) {
-            override fun handleOnBackPressed() {
-                handleActivityBackPress()
-            }
-        }
-        onBackPressedDispatcher.addCallback(this, systemBackCallback!!)
-        updateSystemBackHandlerState()
-    }
-
-    private fun shouldInterceptSystemBack(): Boolean {
-        return !usesPersistentSidebarLayout() && homeContainer?.visibility == View.GONE
-    }
-
-    private fun updateSystemBackHandlerState() {
-        systemBackCallback?.isEnabled = shouldInterceptSystemBack()
-    }
-
-    private fun handleActivityBackPress() {
-        if (navigateToHomePage()) {
-            return
-        }
-
-        finish()
-        handleLanguageChange()
-    }
-
     /**
      * dp 转 px
      */
@@ -440,7 +369,7 @@ class StreamSettings : AppCompatActivity() {
     /**
      * 分类数据项
      */
-    class CategoryItem(var key: String, var title: String, var emoji: String)
+    class CategoryItem(var key: String, var title: String, var iconRes: Int)
 
     /**
      * 分类菜单适配器
@@ -449,6 +378,7 @@ class StreamSettings : AppCompatActivity() {
 
         inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             val title: TextView = itemView.findViewById(R.id.category_title)
+            val icon: ImageView = itemView.findViewById(R.id.category_icon)
             val indicator: View = itemView.findViewById(R.id.category_indicator)
             val root: View = itemView.findViewById(R.id.category_item_root)
         }
@@ -461,8 +391,9 @@ class StreamSettings : AppCompatActivity() {
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val item = categories[position]
-            // 抽屉菜单显示 emoji + 标题
-            holder.title.text = "${item.emoji} ${item.title}"
+            // Phosphor 矢量图标 + 文本（图标颜色随选中态在 updateItemAppearance 中切换）
+            holder.icon.setImageResource(item.iconRes)
+            holder.title.text = item.title
 
             // 高亮选中项
             val isSelected = position == selectedCategoryIndex
@@ -487,64 +418,33 @@ class StreamSettings : AppCompatActivity() {
             val white = Color.WHITE
             val lightGray = "#BBBBBB".toColorInt()
             val dimGray = "#888888".toColorInt()
-            val usePersistentSidebarLayout = usesPersistentSidebarLayout()
 
-            if (usePersistentSidebarLayout) {
-                holder.indicator.visibility = if (isSelected) View.VISIBLE else View.INVISIBLE
+            // 指示器显示（小圆点）
+            holder.indicator.visibility = if (isSelected) View.VISIBLE else View.INVISIBLE
 
-                when {
-                    isSelected -> {
-                        holder.title.setTextColor(white)
-                        holder.title.alpha = 1.0f
-                    }
-                    hasFocus -> {
-                        holder.title.setTextColor(pinkPrimary)
-                        holder.title.alpha = 1.0f
-                    }
-                    else -> {
-                        holder.title.setTextColor(lightGray)
-                        holder.title.alpha = 0.9f
-                    }
-                }
-
-                val arrow = holder.root.findViewById<ImageView>(R.id.category_arrow)
-                if (arrow != null) {
-                    when {
-                        isSelected -> {
-                            arrow.alpha = 1.0f
-                            arrow.setColorFilter(pinkPrimary)
-                        }
-                        hasFocus -> {
-                            arrow.alpha = 0.9f
-                            arrow.setColorFilter(pinkPrimary)
-                        }
-                        else -> {
-                            arrow.alpha = 0.4f
-                            arrow.setColorFilter(dimGray)
-                        }
-                    }
-                }
-
-                return
+            // 文字 + 图标颜色三态切换
+            val textColor: Int; val textAlpha: Float; val iconColor: Int; val iconAlpha: Float
+            when {
+                isSelected -> { textColor = white;       textAlpha = 1.0f; iconColor = pinkPrimary; iconAlpha = 1.0f }
+                hasFocus   -> { textColor = pinkPrimary; textAlpha = 1.0f; iconColor = pinkPrimary; iconAlpha = 0.95f }
+                else       -> { textColor = lightGray;   textAlpha = 0.9f; iconColor = lightGray;   iconAlpha = 0.7f }
             }
+            holder.title.setTextColor(textColor)
+            holder.title.alpha = textAlpha
+            holder.icon.setColorFilter(iconColor)
+            holder.icon.alpha = iconAlpha
 
-            holder.indicator.visibility = View.GONE
-
-            if (hasFocus) {
-                holder.title.setTextColor(pinkPrimary)
-                holder.title.alpha = 1.0f
-            } else {
-                holder.title.setTextColor(white)
-                holder.title.alpha = 0.95f
-            }
-
+            // 箭头透明度和颜色
             val arrow = holder.root.findViewById<ImageView>(R.id.category_arrow)
             if (arrow != null) {
-                if (hasFocus) {
+                if (isSelected) {
+                    arrow.alpha = 1.0f
+                    arrow.setColorFilter(pinkPrimary)
+                } else if (hasFocus) {
                     arrow.alpha = 0.9f
                     arrow.setColorFilter(pinkPrimary)
                 } else {
-                    arrow.alpha = 0.65f
+                    arrow.alpha = 0.4f
                     arrow.setColorFilter(dimGray)
                 }
             }
@@ -556,16 +456,22 @@ class StreamSettings : AppCompatActivity() {
         private fun selectCategory(position: Int, item: CategoryItem) {
             if (position < 0 || position >= categories.size) return
 
-            if (usesPersistentSidebarLayout()) {
-                val oldIndex = selectedCategoryIndex
-                if (position != oldIndex) {
-                    selectedCategoryIndex = position
-                    notifyItemChanged(oldIndex)
-                    notifyItemChanged(position)
-                }
-            }
+            val oldIndex = selectedCategoryIndex
+            selectedCategoryIndex = position
 
-            showCategory(item.key, position)
+            // 确保 oldIndex 有效再通知更新
+            if (oldIndex in 0 until categories.size) {
+                notifyItemChanged(oldIndex)
+            }
+            notifyItemChanged(selectedCategoryIndex)
+
+            // 滚动到对应分类
+            scrollToCategory(item.key)
+
+            // 竖屏时关闭抽屉（横屏时 drawerLayout 为 null，无需处理）
+            if (drawerLayout != null) {
+                drawerLayout?.closeDrawers()
+            }
         }
 
         override fun getItemCount(): Int = categories.size
@@ -580,75 +486,59 @@ class StreamSettings : AppCompatActivity() {
         fragment?.scrollToCategoryByKey(categoryKey)
     }
 
-    private fun showCategory(categoryKey: String, position: Int) {
-        if (position in categories.indices) {
-            selectedCategoryIndex = position
-        }
-
-        if (selectedCategoryKey != categoryKey) {
-            selectedCategoryKey = categoryKey
-            reloadSettings()
-        } else {
-            showCategoryPage(categories[selectedCategoryIndex].title)
-        }
-    }
-
     /**
      * 通知 Activity 分类已加载
      */
-    fun onCategoriesLoaded(loadedCategories: List<CategoryItem>, currentCategoryKey: String?) {
+    fun onCategoriesLoaded(loadedCategories: List<CategoryItem>) {
         categories.clear()
         categories.addAll(loadedCategories)
 
-        if (categories.isEmpty()) {
-            selectedCategoryIndex = 0
-            selectedCategoryKey = null
-            categoryAdapter?.notifyDataSetChanged()
-            return
+        // 验证并校正 selectedCategoryIndex（屏幕旋转后恢复时可能越界）
+        if (selectedCategoryIndex >= categories.size) {
+            selectedCategoryIndex = 0.coerceAtLeast(categories.size - 1)
         }
 
-        val resolvedIndex = categories.indexOfFirst { it.key == currentCategoryKey }
-                .takeIf { it >= 0 }
-                ?: categories.indexOfFirst { it.key == selectedCategoryKey }.takeIf { it >= 0 }
-                ?: selectedCategoryIndex.coerceIn(0, categories.lastIndex)
-
-        if (usesPersistentSidebarLayout()) {
-            selectedCategoryIndex = resolvedIndex
-            categoryAdapter?.notifyDataSetChanged()
-
-            val resolvedKey = currentCategoryKey ?: categories[resolvedIndex].key
-            selectedCategoryKey = resolvedKey
-
-            if (currentCategoryKey == null) {
-                reloadSettings()
-                return
-            }
-
-            showCategoryPage(categories[resolvedIndex].title)
-            return
-        }
-
-        if (currentCategoryKey == null) {
-            selectedCategoryIndex = resolvedIndex
-            selectedCategoryKey = null
-            categoryAdapter?.notifyDataSetChanged()
-            showHomePage()
-        } else {
-            selectedCategoryIndex = resolvedIndex
-            selectedCategoryKey = categories[resolvedIndex].key
-            categoryAdapter?.notifyDataSetChanged()
-            showCategoryPage(categories[resolvedIndex].title)
-        }
+        categoryAdapter?.notifyDataSetChanged()
     }
 
     /**
      * 更新选中的分类
      */
     fun updateSelectedCategory(index: Int) {
-        if (index != selectedCategoryIndex && index >= 0 && index < categories.size) {
-            selectedCategoryIndex = index
-            selectedCategoryKey = categories[selectedCategoryIndex].key
+        if (index == selectedCategoryIndex || index < 0 || index >= categories.size) return
+
+        val oldIndex = selectedCategoryIndex
+        selectedCategoryIndex = index
+        // 确保 oldIndex 有效再通知更新
+        if (oldIndex in 0 until categories.size) {
+            categoryAdapter?.notifyItemChanged(oldIndex)
         }
+        categoryAdapter?.notifyItemChanged(selectedCategoryIndex)
+    }
+
+    /**
+     * 更新抽屉布局模式（仅竖屏有效）
+     * 横屏使用并排的 LinearLayout，不需要 DrawerLayout 操作
+     * 竖屏：默认关闭，可通过菜单按钮打开
+     */
+    private fun updateDrawerMode() {
+        // 横屏时 drawerLayout 为 null（使用并排布局），直接返回
+        if (drawerLayout == null) return
+
+        // 以下代码仅在竖屏时执行
+        val drawerMenu = findViewById<View>(R.id.drawer_menu)
+        val menuToggle = findViewById<ImageView>(R.id.settings_menu_toggle)
+
+        // 竖屏：可收起抽屉
+        drawerLayout?.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, drawerMenu)
+        drawerLayout?.setScrimColor(0x99000000.toInt())
+
+        // 关闭抽屉
+        if (drawerLayout?.isDrawerOpen(drawerMenu) == true) {
+            drawerLayout?.closeDrawer(drawerMenu, false)
+        }
+
+        menuToggle?.visibility = View.VISIBLE
     }
 
     override fun onAttachedToWindow() {
@@ -665,27 +555,17 @@ class StreamSettings : AppCompatActivity() {
             }
         }
 
-        applyOrientationSystemBars()
-        reloadSettings()
-    }
+        // 设置抽屉模式
+        updateDrawerMode()
 
-    override fun onResume() {
-        super.onResume()
-        applyOrientationSystemBars()
+        reloadSettings()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
 
-        val previousOrientation = lastKnownOrientation
-        lastKnownOrientation = newConfig.orientation
-
-        if (previousOrientation != Configuration.ORIENTATION_UNDEFINED &&
-                newConfig.orientation != Configuration.ORIENTATION_UNDEFINED &&
-                newConfig.orientation != previousOrientation) {
-            recreate()
-            return
-        }
+        // 更新抽屉模式
+        updateDrawerMode()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val mode = windowManager.defaultDisplay.mode
@@ -702,21 +582,89 @@ class StreamSettings : AppCompatActivity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (handlePageKeyEvent(keyCode)) {
+        if (handleDrawerKeyEvent(keyCode)) {
             return true
         }
         return super.onKeyDown(keyCode, event)
     }
 
     /**
-     * 处理页面返回相关的控制器按键事件
+     * 处理控制器按键事件（抽屉导航）
+     *
+     * 手柄支持（仅竖屏有效，横屏时菜单固定显示）：
+     * - L1/L2：打开抽屉菜单
+     * - R1/R2：关闭抽屉菜单
+     * - D-pad 左：打开抽屉
+     * - D-pad 右：关闭抽屉（从抽屉内）
+     * - B 键：关闭抽屉
      */
-    private fun handlePageKeyEvent(keyCode: Int): Boolean {
-        if (selectedCategoryKey != null &&
-                (keyCode == KeyEvent.KEYCODE_BUTTON_B || keyCode == KeyEvent.KEYCODE_DPAD_LEFT)) {
-            return navigateToHomePage()
+    private fun handleDrawerKeyEvent(keyCode: Int): Boolean {
+        // 横屏时 drawerLayout 为 null（使用并排布局），直接返回
+        if (drawerLayout == null) return false
+
+        // 以下代码仅在竖屏时执行
+        val drawerMenu = findViewById<View>(R.id.drawer_menu)
+        val isDrawerOpen = drawerLayout?.isDrawerOpen(drawerMenu)
+
+        // L1/L2：打开抽屉
+        if (keyCode == KeyEvent.KEYCODE_BUTTON_L1 ||
+                keyCode == KeyEvent.KEYCODE_BUTTON_L2) {
+            if (isDrawerOpen != true) {
+                drawerLayout?.openDrawer(drawerMenu)
+                return true
+            }
         }
 
+        // R1/R2：关闭抽屉
+        if (keyCode == KeyEvent.KEYCODE_BUTTON_R1 ||
+                keyCode == KeyEvent.KEYCODE_BUTTON_R2) {
+            if (isDrawerOpen == true) {
+                drawerLayout?.closeDrawer(drawerMenu)
+                return true
+            }
+        }
+
+        // D-pad 左键：打开抽屉
+        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+            if (isDrawerOpen != true) {
+                drawerLayout?.openDrawer(drawerMenu)
+                return true
+            }
+        }
+
+        // D-pad 右键：关闭抽屉（从抽屉内）
+        if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+            if (isDrawerOpen == true) {
+                val focusedView = currentFocus
+                if (focusedView != null && isViewInsideDrawer(focusedView)) {
+                    drawerLayout?.closeDrawer(drawerMenu)
+                    return true
+                }
+            }
+        }
+
+        // B 键（手柄）：关闭抽屉
+        if (keyCode == KeyEvent.KEYCODE_BUTTON_B) {
+            if (isDrawerOpen == true) {
+                drawerLayout?.closeDrawer(drawerMenu)
+                return true
+            }
+        }
+
+        return false
+    }
+
+    /**
+     * 检查视图是否在抽屉内
+     */
+    private fun isViewInsideDrawer(view: View): Boolean {
+        val drawerMenu = findViewById<View>(R.id.drawer_menu) ?: return false
+
+        var current: View? = view
+        while (current != null) {
+            if (current === drawerMenu) return true
+            current = if (current.parent is View) current.parent as View else null
+        }
         return false
     }
 
@@ -724,21 +672,44 @@ class StreamSettings : AppCompatActivity() {
         super.onSaveInstanceState(outState)
         // 保存选中的分类索引，用于屏幕旋转后恢复
         outState.putInt(KEY_SELECTED_CATEGORY, selectedCategoryIndex)
-        outState.putString(KEY_SELECTED_CATEGORY_KEY, selectedCategoryKey)
     }
 
     override fun onDestroy() {
         super.onDestroy()
-
-        if (externalDisplayManager != null) {
-            externalDisplayManager?.cleanup()
-            externalDisplayManager = null
-        }
+        externalDisplayManager?.cleanup()
+        externalDisplayManager = null
     }
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        handleActivityBackPress()
+        // 搜索栏可见时，优先关闭搜索而不是退出
+        if (isSearchBarVisible) {
+            hideSearchBar()
+            return
+        }
+
+        super.onBackPressed()
+        if (handleBackForDrawer()) {
+            return
+        }
+
+        finish()
+        handleLanguageChange()
+    }
+
+    /**
+     * 处理返回键时的抽屉关闭逻辑（仅竖屏有效）
+     */
+    private fun handleBackForDrawer(): Boolean {
+        // 横屏时 drawerLayout 为 null（使用并排布局），直接返回
+        if (drawerLayout == null) return false
+
+        // 以下代码仅在竖屏时执行
+        val drawerMenu = findViewById<View>(R.id.drawer_menu)
+        if (drawerLayout?.isDrawerOpen(drawerMenu) != true) return false
+
+        drawerLayout?.closeDrawer(drawerMenu)
+        return true
     }
 
     /**
@@ -757,26 +728,10 @@ class StreamSettings : AppCompatActivity() {
 
     class SettingsFragment : PreferenceFragmentCompat() {
 
-        companion object {
-            private const val ARG_CATEGORY_KEY = "selected_category_key"
-
-            fun newInstance(categoryKey: String?): SettingsFragment {
-                return SettingsFragment().apply {
-                    arguments = Bundle().apply {
-                        if (categoryKey != null) {
-                            putString(ARG_CATEGORY_KEY, categoryKey)
-                        }
-                    }
-                }
-            }
-        }
-
         private var nativeResolutionStartIndex = Int.MAX_VALUE
         private var nativeFramerateShown = false
 
         private lateinit var exportConfigString: String
-        private val availableCategories: MutableList<CategoryItem> = ArrayList()
-        private var currentCategoryKey: String? = null
 
         // 分类列表（用于抽屉菜单同步）
         private val categoryList: MutableList<PreferenceCategory> = ArrayList()
@@ -840,11 +795,8 @@ class StreamSettings : AppCompatActivity() {
             val newValue = "${nativeWidth}x${nativeHeight}"
 
             // Check if the native resolution is already present
-            for (value in pref.entryValues) {
-                if (newValue == value.toString()) {
-                    // It is present in the default list, so don't add it again
-                    return
-                }
+            if (pref.entryValues.any { it.toString() == newValue }) {
+                return
             }
 
             if (pref.entryValues.size < nativeResolutionStartIndex) {
@@ -925,12 +877,9 @@ class StreamSettings : AppCompatActivity() {
                     " (" + fpsValue + " " + resources.getString(R.string.fps_suffix_fps) + ")"
 
             // Check if the native frame rate is already present
-            for (value in pref.entryValues) {
-                if (fpsValue == value.toString()) {
-                    // It is present in the default list, so don't add it again
-                    nativeFramerateShown = false
-                    return
-                }
+            if (pref.entryValues.any { it.toString() == fpsValue }) {
+                nativeFramerateShown = false
+                return
             }
 
             appendPreferenceEntry(pref, fpsName, fpsValue)
@@ -1015,62 +964,35 @@ class StreamSettings : AppCompatActivity() {
             if (activity == null || activity !is StreamSettings) return
 
             val settingsActivity = activity
-            settingsActivity.onCategoriesLoaded(availableCategories, currentCategoryKey)
-        }
+            val screen = preferenceScreen ?: return
 
-        private fun buildAvailableCategories(screen: PreferenceScreen): List<CategoryItem> {
+            // 收集所有分类
+            categoryList.clear()
             val items: MutableList<CategoryItem> = ArrayList()
-
             for (i in 0 until screen.preferenceCount) {
                 val pref = screen.getPreference(i)
-                if (pref !is PreferenceCategory || pref.title == null) {
-                    continue
-                }
+                if (pref !is PreferenceCategory) continue
 
+                if (pref.title == null) continue
+
+                val title = pref.title.toString()
                 val key = pref.key ?: "category_$i"
-                items.add(CategoryItem(key, pref.title.toString(), getEmojiForCategory(key)))
+                val iconRes = getIconForCategory(key)
+
+                categoryList.add(pref)
+                items.add(CategoryItem(key, title, iconRes))
             }
 
-            return items
-        }
+            // 通知 Activity 分类已加载
+            settingsActivity.onCategoriesLoaded(items)
 
-        private fun retainSelectedCategory(screen: PreferenceScreen, selectedKey: String) {
-            val toRemove: MutableList<Preference> = ArrayList()
-
-            for (i in 0 until screen.preferenceCount) {
-                val pref = screen.getPreference(i)
-                if (pref is PreferenceCategory && pref.key != selectedKey) {
-                    toRemove.add(pref)
+            // 添加滚动监听
+            Handler(Looper.getMainLooper()).post {
+                val recyclerView = listView
+                if (recyclerView != null) {
+                    setupScrollListener(recyclerView, settingsActivity)
                 }
             }
-
-            for (pref in toRemove) {
-                screen.removePreference(pref)
-            }
-
-            categoryList.clear()
-            findPreference<PreferenceCategory>(selectedKey)?.let { categoryList.add(it) }
-            categoryPositionsValid = false
-        }
-
-        private fun flattenSelectedCategory(screen: PreferenceScreen, selectedKey: String) {
-            val selectedCategory = findPreference<PreferenceCategory>(selectedKey) ?: return
-            val preferencesToMove: MutableList<Preference> = ArrayList()
-
-            while (selectedCategory.preferenceCount > 0) {
-                val childPreference = selectedCategory.getPreference(0)
-                selectedCategory.removePreference(childPreference)
-                preferencesToMove.add(childPreference)
-            }
-
-            screen.removePreference(selectedCategory)
-
-            for (preference in preferencesToMove) {
-                screen.addPreference(preference)
-            }
-
-            categoryList.clear()
-            categoryPositionsValid = false
         }
 
         /**
@@ -1085,6 +1007,84 @@ class StreamSettings : AppCompatActivity() {
                     return
                 }
             }
+        }
+
+        /**
+         * 记录每个折叠分组的原始 initialExpandedChildrenCount，
+         * 搜索时全部展开，清空搜索时还原。
+         */
+        private val originalCollapseCounts = mutableMapOf<String, Int>()
+
+        /**
+         * 应用搜索过滤。空查询恢复全部可见性 + 原始折叠状态；
+         * 非空查询仅显示匹配的项，匹配类的整组也展开。
+         */
+        fun applySearchFilter(query: String) {
+            val screen = preferenceScreen ?: return
+            val q = query.trim().lowercase(Locale.getDefault())
+            val isSearching = q.isNotEmpty()
+
+            for (i in 0 until screen.preferenceCount) {
+                val category = screen.getPreference(i) as? PreferenceCategory ?: continue
+                val catKey = category.key ?: "category_$i"
+
+                // 一次性记录原始折叠数（仅首次进入搜索时）
+                if (isSearching && !originalCollapseCounts.containsKey(catKey)) {
+                    originalCollapseCounts[catKey] = category.initialExpandedChildrenCount
+                }
+
+                if (!isSearching) {
+                    // 还原
+                    category.isVisible = true
+                    for (j in 0 until category.preferenceCount) {
+                        category.getPreference(j).isVisible = true
+                    }
+                    originalCollapseCounts[catKey]?.let { category.initialExpandedChildrenCount = it }
+                    continue
+                }
+
+                // 搜索中：完全展开（避免折叠掉匹配项）
+                category.initialExpandedChildrenCount = Int.MAX_VALUE
+
+                val categoryMatches = category.title?.toString()?.lowercase(Locale.getDefault())?.contains(q) == true
+                var anyChildMatches = false
+                for (j in 0 until category.preferenceCount) {
+                    val child = category.getPreference(j)
+                    val childMatches = categoryMatches || preferenceMatches(child, q)
+                    child.isVisible = childMatches
+                    if (childMatches) anyChildMatches = true
+                }
+                category.isVisible = categoryMatches || anyChildMatches
+            }
+        }
+
+        private fun preferenceMatches(p: Preference, q: String): Boolean {
+            val title = p.title?.toString()?.lowercase(Locale.getDefault())
+            if (title != null && title.contains(q)) return true
+            val summary = p.summary?.toString()?.lowercase(Locale.getDefault())
+            if (summary != null && summary.contains(q)) return true
+            val key = p.key?.lowercase(Locale.getDefault())
+            if (key != null && key.contains(q)) return true
+            return false
+        }
+
+        /**
+         * 查询全部高级配置档案，返回 id->name 映射。
+         * 供 export / merge / import-refresh 三处复用。
+         */
+        private fun loadConfigMap(helper: SuperConfigDatabaseHelper): MutableMap<String, String> {
+            val map = LinkedHashMap<String, String>()
+            for (id in helper.queryAllConfigIds()) {
+                val name = helper.queryConfigAttribute(
+                        id, PageConfigController.COLUMN_STRING_CONFIG_NAME, "default") as String
+                map[id.toString()] = name
+            }
+            return map
+        }
+
+        private fun applyConfigEntries(pref: ListPreference, map: Map<String, String>) {
+            pref.entries = map.values.toTypedArray<CharSequence>()
+            pref.entryValues = map.keys.toTypedArray<CharSequence>()
         }
 
         /**
@@ -1348,10 +1348,7 @@ class StreamSettings : AppCompatActivity() {
             }
 
             // Fire TV apps are not allowed to use WebViews or browsers, so hide the Help category
-            /*if (requireActivity().packageManager.hasSystemFeature("amazon.hardware.fire_tv")) {
-                val category = findPreference<PreferenceCategory>("category_help")!!
-                screen.removePreference(category)
-            }*/
+            // (currently disabled — keep Help category visible on all builds)
             val categoryGamepadSettings = findPreference<PreferenceCategory>("category_gamepad_settings")!!
             // Remove the vibration options if the device can't vibrate
             if (!(requireActivity().getSystemService(VIBRATOR_SERVICE) as Vibrator).hasVibrator()) {
@@ -1441,8 +1438,6 @@ class StreamSettings : AppCompatActivity() {
 
                 val avcDecoder = MediaCodecHelper.findProbableSafeDecoder("video/avc", -1)
                 val hevcDecoder = MediaCodecHelper.findProbableSafeDecoder("video/hevc", -1)
-
-                @Suppress("UNUSED_VARIABLE")
 
                 if (avcDecoder != null) {
                     val avcWidthRange = avcDecoder.getCapabilitiesForType("video/avc").videoCapabilities?.supportedWidths
@@ -1591,28 +1586,10 @@ class StreamSettings : AppCompatActivity() {
                 val targetDisplay = getTargetDisplay()
                 val hdrCaps = targetDisplay.hdrCapabilities
 
-                // We must now ensure our display is compatible with HDR10
-                var foundHdr10 = false
-                if (hdrCaps != null) {
-                    // getHdrCapabilities() returns null on Lenovo Lenovo Mirage Solo (vega), Android 8.0
-                    for (hdrType in hdrCaps.supportedHdrTypes) {
-                        if (hdrType == Display.HdrCapabilities.HDR_TYPE_HDR10) {
-                            foundHdr10 = true
-                            break
-                        }
-                    }
-                }
-
-                // Check for HLG support as well
-                var foundHlg = false
-                if (hdrCaps != null) {
-                    for (hdrType in hdrCaps.supportedHdrTypes) {
-                        if (hdrType == Display.HdrCapabilities.HDR_TYPE_HLG) {
-                            foundHlg = true
-                            break
-                        }
-                    }
-                }
+                // We must now ensure our display is compatible with HDR10 / HLG
+                val supportedHdrTypes = hdrCaps?.supportedHdrTypes
+                val foundHdr10 = supportedHdrTypes?.any { it == Display.HdrCapabilities.HDR_TYPE_HDR10 } == true
+                val foundHlg = supportedHdrTypes?.any { it == Display.HdrCapabilities.HDR_TYPE_HLG } == true
 
                 val category = findPreference<PreferenceCategory>("category_screen_position")!!
                 val hdrPref = findPreference<CheckBoxPreference>("checkbox_enable_hdr")
@@ -1744,17 +1721,8 @@ class StreamSettings : AppCompatActivity() {
             val exportPreference = findPreference<ListPreference>(PreferenceConfiguration.EXPORT_CONFIG_STRING)!!
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 val superConfigDatabaseHelper = SuperConfigDatabaseHelper(context)
-                val configIdList = superConfigDatabaseHelper.queryAllConfigIds()
-                val configMap: MutableMap<String, String> = HashMap()
-                for (configId in configIdList) {
-                    val configName = superConfigDatabaseHelper.queryConfigAttribute(configId, PageConfigController.COLUMN_STRING_CONFIG_NAME, "default") as String
-                    val configIdString = configId.toString()
-                    configMap[configIdString] = configName
-                }
-                val nameEntries = configMap.values.toTypedArray<CharSequence>()
-                val nameEntryValues = configMap.keys.toTypedArray<CharSequence>()
-                exportPreference.entries = nameEntries
-                exportPreference.entryValues = nameEntryValues
+                val configMap = loadConfigMap(superConfigDatabaseHelper)
+                applyConfigEntries(exportPreference, configMap)
 
                 exportPreference.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
                     exportConfigString = superConfigDatabaseHelper.exportConfig((newValue as String).toLong())
@@ -1773,17 +1741,7 @@ class StreamSettings : AppCompatActivity() {
             val mergePreference = findPreference<ListPreference>(PreferenceConfiguration.MERGE_CONFIG_STRING)!!
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 val superConfigDatabaseHelper = SuperConfigDatabaseHelper(context)
-                val configIdList = superConfigDatabaseHelper.queryAllConfigIds()
-                val configMap: MutableMap<String, String> = HashMap()
-                for (configId in configIdList) {
-                    val configName = superConfigDatabaseHelper.queryConfigAttribute(configId, PageConfigController.COLUMN_STRING_CONFIG_NAME, "default") as String
-                    val configIdString = configId.toString()
-                    configMap[configIdString] = configName
-                }
-                val nameEntries = configMap.values.toTypedArray<CharSequence>()
-                val nameEntryValues = configMap.keys.toTypedArray<CharSequence>()
-                mergePreference.entries = nameEntries
-                mergePreference.entryValues = nameEntryValues
+                applyConfigEntries(mergePreference, loadConfigMap(superConfigDatabaseHelper))
 
                 mergePreference.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
                     exportConfigString = newValue as String
@@ -1840,77 +1798,21 @@ class StreamSettings : AppCompatActivity() {
             }
 
             // 添加本地鼠标模式预设选择监听器
+            // 每种预设对应 (enhancedTouch, trackpad, nativePointer) 三元组
+            val touchPresetMap = mapOf(
+                    "enhanced" to Triple(true,  false, false),
+                    "classic"  to Triple(false, false, false),
+                    "trackpad" to Triple(false, true,  false),
+                    "native"   to Triple(false, false, true)
+            )
             mouseModePresetPref.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
                 val preset = newValue as String
+                val flags = touchPresetMap[preset] ?: return@OnPreferenceChangeListener true
                 val prefs = PreferenceManager.getDefaultSharedPreferences(this@SettingsFragment.requireActivity())
                 prefs.edit {
-
-                    // 根据预设值自动设置相关配置
-                    when (preset) {
-                        "enhanced" -> {
-                            // 增强式多点触控
-                            putBoolean(
-                                PreferenceConfiguration.ENABLE_ENHANCED_TOUCH_PREF_STRING,
-                                true
-                            )
-                            putBoolean(
-                                PreferenceConfiguration.TOUCHSCREEN_TRACKPAD_PREF_STRING,
-                                false
-                            )
-                            putBoolean(
-                                PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING,
-                                false
-                            )
-                        }
-
-                        "classic" -> {
-                            // 经典鼠标模式
-                            putBoolean(
-                                PreferenceConfiguration.ENABLE_ENHANCED_TOUCH_PREF_STRING,
-                                false
-                            )
-                            putBoolean(
-                                PreferenceConfiguration.TOUCHSCREEN_TRACKPAD_PREF_STRING,
-                                false
-                            )
-                            putBoolean(
-                                PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING,
-                                false
-                            )
-                        }
-
-                        "trackpad" -> {
-                            // 触控板模式
-                            putBoolean(
-                                PreferenceConfiguration.ENABLE_ENHANCED_TOUCH_PREF_STRING,
-                                false
-                            )
-                            putBoolean(
-                                PreferenceConfiguration.TOUCHSCREEN_TRACKPAD_PREF_STRING,
-                                true
-                            )
-                            putBoolean(
-                                PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING,
-                                false
-                            )
-                        }
-
-                        "native" -> {
-                            // 本地鼠标指针
-                            putBoolean(
-                                PreferenceConfiguration.ENABLE_ENHANCED_TOUCH_PREF_STRING,
-                                false
-                            )
-                            putBoolean(
-                                PreferenceConfiguration.TOUCHSCREEN_TRACKPAD_PREF_STRING,
-                                false
-                            )
-                            putBoolean(
-                                PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING,
-                                true
-                            )
-                        }
-                    }
+                    putBoolean(PreferenceConfiguration.ENABLE_ENHANCED_TOUCH_PREF_STRING, flags.first)
+                    putBoolean(PreferenceConfiguration.TOUCHSCREEN_TRACKPAD_PREF_STRING, flags.second)
+                    putBoolean(PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, flags.third)
                 }
 
                 // 显示提示信息
@@ -1926,30 +1828,6 @@ class StreamSettings : AppCompatActivity() {
                         Toast.LENGTH_SHORT).show()
 
                 true
-            }
-
-            availableCategories.clear()
-            availableCategories.addAll(buildAvailableCategories(screen))
-
-            val requestedCategoryKey = arguments?.getString(ARG_CATEGORY_KEY)
-            val usePersistentSidebarLayout = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
-            currentCategoryKey = if (requestedCategoryKey == null) {
-                if (usePersistentSidebarLayout) {
-                    availableCategories.firstOrNull()?.key
-                } else {
-                    null
-                }
-            } else {
-                availableCategories.firstOrNull { it.key == requestedCategoryKey }?.key
-                    ?: availableCategories.firstOrNull()?.key
-            }
-
-            if (currentCategoryKey != null) {
-                currentCategoryIndex = availableCategories.indexOfFirst { it.key == currentCategoryKey }
-                        .takeIf { it >= 0 } ?: 0
-                retainSelectedCategory(screen, currentCategoryKey!!)
-                flattenSelectedCategory(screen, currentCategoryKey!!)
             }
         }
 
@@ -2026,17 +1904,7 @@ class StreamSettings : AppCompatActivity() {
                                         Toast.makeText(context, "导入配置文件成功", Toast.LENGTH_SHORT).show()
                                         //更新导出配置文件列表
                                         val exportPref = findPreference<ListPreference>(PreferenceConfiguration.EXPORT_CONFIG_STRING)!!
-                                        val configIdList = superConfigDatabaseHelper.queryAllConfigIds()
-                                        val configMap: MutableMap<String, String> = HashMap()
-                                        for (configId in configIdList) {
-                                            val configName = superConfigDatabaseHelper.queryConfigAttribute(configId, PageConfigController.COLUMN_STRING_CONFIG_NAME, "default") as String
-                                            val configIdString = configId.toString()
-                                            configMap[configIdString] = configName
-                                        }
-                                        val nameEntries = configMap.values.toTypedArray<CharSequence>()
-                                        val nameEntryValues = configMap.keys.toTypedArray<CharSequence>()
-                                        exportPref.entries = nameEntries
-                                        exportPref.entryValues = nameEntryValues
+                                        applyConfigEntries(exportPref, loadConfigMap(superConfigDatabaseHelper))
                                     }
                                     -1, -2 -> Toast.makeText(context, "读取配置文件失败", Toast.LENGTH_SHORT).show()
                                     -3 -> Toast.makeText(context, "配置文件版本不匹配", Toast.LENGTH_SHORT).show()

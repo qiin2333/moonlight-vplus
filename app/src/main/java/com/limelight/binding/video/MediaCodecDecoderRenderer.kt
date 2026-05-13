@@ -91,6 +91,16 @@ class MediaCodecDecoderRenderer(
     private var refFrameInvalidationAv1 = false
     private val optimalSlicesPerFrame: Byte
     private var refFrameInvalidationActive = false
+
+    /**
+     * 首帧解码完成后只触发一次的回调（线程不固定，调用方需自行切换 UI 线程）。
+     * 用于让上层（progress overlay）在视频真正开始出画时再隐藏 loading，而不是凭
+     * connectionStarted 这种连接级回调（首帧通常还没解码出来）。
+     */
+    @Volatile
+    var firstFrameCallback: (() -> Unit)? = null
+    @Volatile
+    private var firstFrameDelivered = false
     private var initialWidth = 0
     private var initialHeight = 0
     private var videoFormat = 0
@@ -844,6 +854,12 @@ class MediaCodecDecoderRenderer(
 
         if (USE_FRAME_RENDER_TIME && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             videoDecoder!!.setOnFrameRenderedListener({ _, presentationTimeUs, renderTimeNanos ->
+                // 首帧实际显示到 surface 的时刻（最准的"画面已上屏"时机）
+                if (!firstFrameDelivered) {
+                    firstFrameDelivered = true
+                    try { firstFrameCallback?.invoke() } catch (_: Throwable) {}
+                }
+
                 // presentationTimeUs: 我们告诉系统这一帧应该在什么时间点显示
                 // renderTimeNanos: 系统报告的这一帧实际显示在屏幕上的时间点
                 val presentationTimeMs = presentationTimeUs / 1000
@@ -1167,6 +1183,12 @@ class MediaCodecDecoderRenderer(
                 }
                 activeWindowVideoStats.totalFramesRendered++
                 frameIntervalTracker.recordFrame()
+                // 兜底首帧通知（API < 23 没有 OnFrameRenderedListener，buffered 模式也走这里之外的路径）
+                // 这里 release 已发出，SurfaceFlinger 会在下一次 vsync 合成；UI 层 dismiss 时再延一帧能避开缝隙。
+                if (!firstFrameDelivered) {
+                    firstFrameDelivered = true
+                    try { firstFrameCallback?.invoke() } catch (_: Throwable) {}
+                }
             } catch (e: IllegalStateException) {
                 handleDecoderException(e)
             }

@@ -2,14 +2,19 @@ package com.limelight
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.SharedPreferences
 import android.content.res.Configuration
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.Typeface
+import android.graphics.drawable.Drawable
 import android.net.TrafficStats
 import android.text.SpannableString
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
+import android.text.style.ImageSpan
 import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
 import android.text.style.TypefaceSpan
@@ -18,29 +23,32 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 
 import androidx.appcompat.app.AlertDialog
-
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
-import java.util.TimeZone
+import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 
 import com.limelight.binding.video.PerformanceInfo
 import com.limelight.preferences.PerfOverlayDisplayItemsPreference
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.ui.StreamView
-import com.limelight.utils.NetHelper
 import com.limelight.utils.MoonPhaseUtils
+import com.limelight.utils.NetHelper
 import com.limelight.utils.UiHelper
+
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.EnumMap
+import java.util.Locale
+import java.util.TimeZone
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
-import androidx.core.content.edit
 
 class PerformanceOverlayManager(
     private val activity: Activity,
@@ -50,13 +58,9 @@ class PerformanceOverlayManager(
     private var performanceOverlayView: LinearLayout? = null
     private lateinit var streamView: StreamView
 
-    private var perfResView: TextView? = null
-    private var perfDecoderView: TextView? = null
-    private var perfRenderFpsView: TextView? = null
-    private var networkLatencyView: TextView? = null
-    private var decodeLatencyView: TextView? = null
-    private var hostLatencyView: TextView? = null
-    private var packetLossView: TextView? = null
+    private val overlayPrefs: SharedPreferences by lazy {
+        activity.getSharedPreferences("performance_overlay", Activity.MODE_PRIVATE)
+    }
 
     private var requestedPerformanceOverlayVisibility = View.GONE
     private var hasShownPerfOverlay = false
@@ -107,16 +111,16 @@ class PerformanceOverlayManager(
     /**
      * 性能项目枚举 - 统一管理所有性能指标
      */
-    private enum class PerformanceItem(val viewId: Int, val preferenceKey: String, val fieldName: String) {
-        RESOLUTION(R.id.perfRes, "resolution", "perfResView"),
-        DECODER(R.id.perfDecoder, "decoder", "perfDecoderView"),
-        RENDER_FPS(R.id.perfRenderFps, "render_fps", "perfRenderFpsView"),
-        PACKET_LOSS(R.id.perfPacketLoss, "packet_loss", "packetLossView"),
-        NETWORK_LATENCY(R.id.perfNetworkLatency, "network_latency", "networkLatencyView"),
-        DECODE_LATENCY(R.id.perfDecodeLatency, "decode_latency", "decodeLatencyView"),
-        HOST_LATENCY(R.id.perfHostLatency, "host_latency", "hostLatencyView"),
-        BATTERY(R.id.perfBattery, "battery", "perfBatteryView"),
-        ONE_PERCENT_LOW(R.id.perfOnePercentLow, "one_percent_low", "perfOnePercentLowView")
+    private enum class PerformanceItem(val viewId: Int, val preferenceKey: String) {
+        RESOLUTION(R.id.perfRes, "resolution"),
+        DECODER(R.id.perfDecoder, "decoder"),
+        RENDER_FPS(R.id.perfRenderFps, "render_fps"),
+        PACKET_LOSS(R.id.perfPacketLoss, "packet_loss"),
+        NETWORK_LATENCY(R.id.perfNetworkLatency, "network_latency"),
+        DECODE_LATENCY(R.id.perfDecodeLatency, "decode_latency"),
+        HOST_LATENCY(R.id.perfHostLatency, "host_latency"),
+        BATTERY(R.id.perfBattery, "battery"),
+        ONE_PERCENT_LOW(R.id.perfOnePercentLow, "one_percent_low")
     }
 
     /**
@@ -133,6 +137,8 @@ class PerformanceOverlayManager(
 
     // 性能项目信息数组
     private lateinit var performanceItems: Array<PerformanceItemInfo>
+    // 枚举 → 项信息 快查索引，避免频繁 O(n) 遍历
+    private lateinit var performanceItemMap: EnumMap<PerformanceItem, PerformanceItemInfo>
 
     // 解码器类型信息类
     private class DecoderTypeInfo(val fullName: String, val shortName: String)
@@ -165,6 +171,10 @@ class PerformanceOverlayManager(
             val view: TextView? = activity.findViewById(item.viewId)
             val infoMethod = getInfoMethodForItem(item)
             PerformanceItemInfo(item, view, infoMethod)
+        }
+        performanceItemMap = EnumMap(PerformanceItem::class.java)
+        for (info in performanceItems) {
+            performanceItemMap[info.item] = info
         }
     }
 
@@ -200,16 +210,7 @@ class PerformanceOverlayManager(
         if (requestedPerformanceOverlayVisibility == View.VISIBLE) {
             requestedPerformanceOverlayVisibility = View.GONE
             hasShownPerfOverlay = false
-            val fadeOutAnimation = AnimationUtils.loadAnimation(activity, R.anim.perf_overlay_fadeout)
-            overlay.startAnimation(fadeOutAnimation)
-            fadeOutAnimation.setAnimationListener(object : android.view.animation.Animation.AnimationListener {
-                override fun onAnimationStart(animation: android.view.animation.Animation) {}
-                override fun onAnimationEnd(animation: android.view.animation.Animation) {
-                    overlay.visibility = View.GONE
-                    overlay.alpha = 0.0f
-                }
-                override fun onAnimationRepeat(animation: android.view.animation.Animation) {}
-            })
+            fadeOutAndHide(overlay)
         } else {
             requestedPerformanceOverlayVisibility = View.VISIBLE
             hasShownPerfOverlay = true
@@ -224,17 +225,7 @@ class PerformanceOverlayManager(
         if (!prefConfig.enablePerfOverlay) {
             requestedPerformanceOverlayVisibility = View.GONE
             hasShownPerfOverlay = false
-
-            val fadeOutAnimation = AnimationUtils.loadAnimation(activity, R.anim.perf_overlay_fadeout)
-            overlay.startAnimation(fadeOutAnimation)
-            fadeOutAnimation.setAnimationListener(object : android.view.animation.Animation.AnimationListener {
-                override fun onAnimationStart(animation: android.view.animation.Animation) {}
-                override fun onAnimationEnd(animation: android.view.animation.Animation) {
-                    overlay.visibility = View.GONE
-                    overlay.alpha = 0.0f
-                }
-                override fun onAnimationRepeat(animation: android.view.animation.Animation) {}
-            })
+            fadeOutAndHide(overlay)
             return
         }
 
@@ -247,6 +238,19 @@ class PerformanceOverlayManager(
         }
 
         setupPerformanceOverlayDragging()
+    }
+
+    private fun fadeOutAndHide(overlay: View) {
+        val anim = AnimationUtils.loadAnimation(activity, R.anim.perf_overlay_fadeout)
+        overlay.startAnimation(anim)
+        anim.setAnimationListener(object : Animation.AnimationListener {
+            override fun onAnimationStart(animation: Animation) {}
+            override fun onAnimationEnd(animation: Animation) {
+                overlay.visibility = View.GONE
+                overlay.alpha = 0.0f
+            }
+            override fun onAnimationRepeat(animation: Animation) {}
+        })
     }
 
     fun refreshPerformanceOverlayConfig() {
@@ -326,11 +330,8 @@ class PerformanceOverlayManager(
 
     private fun buildDecoderInfo(performanceInfo: PerformanceInfo): String {
         val decoderTypeInfo = getDecoderTypeInfo(performanceInfo.decoder)
-        var decoderInfo = decoderTypeInfo.shortName
-        if (performanceInfo.isHdrActive) {
-            decoderInfo += " HDR"
-        }
-        return decoderInfo
+        return if (performanceInfo.isHdrActive) "${decoderTypeInfo.shortName} HDR"
+               else decoderTypeInfo.shortName
     }
 
     private fun getCurrentMoonPhaseIcon(): String {
@@ -356,12 +357,44 @@ class PerformanceOverlayManager(
         }
     }
 
-    private fun createStyledText(icon: String?, value: String?, unit: String?, valueColor: Int?): SpannableString {
+    /**
+     * 构造带图标 + 数值 + 单位的样式化文本。
+     *
+     * 优先级：[iconRes] > [iconEmoji]。当指定 [iconRes] 时使用 Phosphor 矢量图标
+     * （与 HarmonyOS 版本视觉一致），通过 ImageSpan 嵌入到行内；图标颜色默认跟随
+     * [valueColor]（未提供时为白色）。
+     */
+    private fun createStyledText(
+        iconRes: Int?,
+        value: String?,
+        unit: String?,
+        valueColor: Int?,
+        iconEmoji: String? = null,
+        textSizePx: Float? = null
+    ): SpannableString {
         val builder = SpannableStringBuilder()
 
-        if (!icon.isNullOrEmpty()) {
+        if (iconRes != null) {
+            val drawable = ContextCompat.getDrawable(activity, iconRes)?.mutate()
+            if (drawable != null) {
+                // 图标尺寸跟随当前行字号；缺省时回退到 14sp
+                val basePx = textSizePx ?: TypedValue.applyDimension(
+                    TypedValue.COMPLEX_UNIT_SP, 14f, activity.resources.displayMetrics
+                )
+                val sizePx = (basePx * 1.05f).toInt()
+                drawable.setBounds(0, 0, sizePx, sizePx)
+                drawable.setTint(valueColor ?: Color.WHITE)
+                val placeholder = builder.length
+                builder.append(" ")
+                builder.setSpan(
+                    CenterAlignedImageSpan(drawable),
+                    placeholder, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+                builder.append(" ")
+            }
+        } else if (!iconEmoji.isNullOrEmpty()) {
             val iconStart = builder.length
-            builder.append(icon)
+            builder.append(iconEmoji)
             builder.setSpan(StyleSpan(Typeface.BOLD), iconStart, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             builder.setSpan(RelativeSizeSpan(1.1f), iconStart, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             builder.append(" ")
@@ -417,12 +450,14 @@ class PerformanceOverlayManager(
         val resValue = String.format("%dx%d@%.0f",
             performanceInfo.initialWidth, performanceInfo.initialHeight, performanceInfo.totalFps)
         val moonIcon = getCurrentMoonPhaseIcon()
-        view.text = createStyledText(moonIcon, resValue, "", null)
+        // 月相位置保持与原版一致：用 emoji 作为前缀图标
+        view.text = createStyledText(null, resValue, "", null, moonIcon, textSizePx = view.textSize)
     }
 
     private fun updateDecoderText(view: TextView, performanceInfo: PerformanceInfo) {
         val decoderInfo = buildDecoderInfo(performanceInfo)
-        view.text = createStyledText("", decoderInfo, "", null)
+        // 原版本解码器行不带图标
+        view.text = createStyledText(null, decoderInfo, "", null, textSizePx = view.textSize)
         view.typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
     }
 
@@ -430,68 +465,82 @@ class PerformanceOverlayManager(
     private fun updateRenderFpsText(view: TextView, performanceInfo: PerformanceInfo) {
         val fpsValue = String.format("Rx %.0f / Rd %.0f",
             performanceInfo.receivedFps, performanceInfo.renderedFps)
-        view.text = createStyledText("", fpsValue, "FPS", 0xFF0DDAF4.toInt())
+        // 原版本本行无图标
+        view.text = createStyledText(null, fpsValue, "FPS", 0xFF0DDAF4.toInt(), textSizePx = view.textSize)
     }
 
     @SuppressLint("DefaultLocale")
     private fun updatePacketLossText(view: TextView, performanceInfo: PerformanceInfo) {
         val lossValue = String.format("%.2f", performanceInfo.lostFrameRate)
         val lossColor = if (performanceInfo.lostFrameRate < 5.0f) 0xFF7D9D7D.toInt() else 0xFFB57D7D.toInt()
-        view.text = createStyledText("📶", lossValue, "%", lossColor)
+        view.text = createStyledText(R.drawable.phc_perf_signal, lossValue, "%", lossColor, textSizePx = view.textSize)
     }
 
     @SuppressLint("DefaultLocale")
     private fun updateNetworkLatencyText(view: TextView, performanceInfo: PerformanceInfo) {
-        val showPacketLoss = getPerformanceItemView(PerformanceItem.PACKET_LOSS)?.visibility == View.VISIBLE
-        val icon = if (showPacketLoss) "" else "🌐"
+        // 带宽用 gauge 仪表盘图标更直观，始终显示
+        val iconRes: Int = R.drawable.phc_perf_gauge
         val bandwidthAndLatency = String.format("%s   %d ± %d",
             performanceInfo.bandWidth,
             (performanceInfo.rttInfo shr 32).toInt(),
             performanceInfo.rttInfo.toInt())
-        view.text = createStyledText(icon, bandwidthAndLatency, "ms", 0xFFBCEDD3.toInt())
+        view.text = createStyledText(iconRes, bandwidthAndLatency, "ms", 0xFFBCEDD3.toInt(), textSizePx = view.textSize)
     }
 
     @SuppressLint("DefaultLocale")
     private fun updateDecodeLatencyText(view: TextView, performanceInfo: PerformanceInfo) {
-        val icon = if (performanceInfo.decodeTimeMs < 15) "⏱️" else "🥵"
+        val isHot = performanceInfo.decodeTimeMs >= 15
+        val iconRes: Int? = if (isHot) null else R.drawable.phc_perf_timer
+        val iconEmoji: String? = if (isHot) "🥵" else null
         val latencyValue = String.format("%.2f", performanceInfo.decodeTimeMs)
-        view.text = createStyledText(icon, latencyValue, "ms", 0xFFD597E3.toInt())
+        view.text = createStyledText(iconRes, latencyValue, "ms", 0xFFD597E3.toInt(), iconEmoji, textSizePx = view.textSize)
     }
 
     @SuppressLint("DefaultLocale")
     private fun updateHostLatencyText(view: TextView, performanceInfo: PerformanceInfo) {
         if (performanceInfo.framesWithHostProcessingLatency > 0) {
             val latencyValue = String.format("%.1f", performanceInfo.aveHostProcessingLatency)
-            view.text = createStyledText("🖥", latencyValue, "ms", 0xFF009688.toInt())
+            view.text = createStyledText(R.drawable.phc_perf_monitor, latencyValue, "ms", 0xFF009688.toInt(), textSizePx = view.textSize)
         } else {
-            view.text = createStyledText("🧋", "Ver.V+", "", 0xFF009688.toInt())
+            // 空置时保持原版本的 🧋 emoji
+            view.text = createStyledText(null, "Ver.V+", "", 0xFF009688.toInt(), iconEmoji = "🧋", textSizePx = view.textSize)
         }
     }
 
     private fun updateBatteryText(view: TextView) {
         val batteryLevel = UiHelper.getBatteryLevel(activity)
+        val isCharging = UiHelper.isCharging(activity)
         val batteryColor = when {
             batteryLevel > 50 -> 0xFF90EE90.toInt()
             batteryLevel > 20 -> 0xFFFFA500.toInt()
             else -> 0xFFFF6B6B.toInt()
         }
-        view.text = createStyledText("🔋", batteryLevel.toString(), "%", batteryColor)
+        // 与鸿蒙一致：根据充电/电量分档选择不同电池图标
+        val iconRes = when {
+            isCharging          -> R.drawable.phc_perf_charging
+            batteryLevel > 80   -> R.drawable.phc_perf_battery_full
+            batteryLevel > 50   -> R.drawable.phc_perf_battery_mid
+            batteryLevel > 20   -> R.drawable.phc_perf_battery_low
+            batteryLevel > 0    -> R.drawable.phc_perf_battery_empty
+            else                -> R.drawable.phc_perf_battery
+        }
+        view.text = createStyledText(iconRes, batteryLevel.toString(), "%", batteryColor, textSizePx = view.textSize)
     }
 
     @SuppressLint("DefaultLocale")
     private fun updateOnePercentLowText(view: TextView, performanceInfo: PerformanceInfo) {
         val lowFps = performanceInfo.onePercentLowFps
         if (lowFps <= 0) {
-            view.text = createStyledText("📉", "—", "FPS", 0xFFFF7043.toInt())
+            view.text = createStyledText(null, "1%Low —", "FPS", 0xFFFF7043.toInt(), textSizePx = view.textSize)
             return
         }
-        val value = String.format("%.1f", lowFps)
+        val value = String.format("1%%Low %.1f", lowFps)
         val color = when {
             lowFps >= performanceInfo.renderedFps * 0.9f -> 0xFF90EE90.toInt()
             lowFps >= performanceInfo.renderedFps * 0.7f -> 0xFFFFD740.toInt()
             else -> 0xFFFF7043.toInt()
         }
-        view.text = createStyledText("📉", value, "1%Low", color)
+        view.text = createStyledText(null, value, "FPS", color, textSizePx = view.textSize)
     }
 
     private fun showBatteryInfo() {
@@ -551,12 +600,7 @@ class PerformanceOverlayManager(
     }
 
     private fun getPerformanceItemView(item: PerformanceItem): TextView? {
-        for (itemInfo in performanceItems) {
-            if (itemInfo.item == item) {
-                return itemInfo.view
-            }
-        }
-        return null
+        return performanceItemMap[item]?.view
     }
 
     private fun isEffectiveVerticalLayout(): Boolean {
@@ -572,16 +616,33 @@ class PerformanceOverlayManager(
         val layoutParams = overlay.layoutParams as FrameLayout.LayoutParams
 
         val isPortrait = activity.resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
-        if (isEffectiveVerticalLayout()) {
+        val isVertical = isEffectiveVerticalLayout()
+        if (isVertical) {
             overlay.orientation = LinearLayout.VERTICAL
         } else {
             overlay.orientation = LinearLayout.HORIZONTAL
+        }
+        // 同步每个性能 TextView 的宽度模式：
+        // - 垂直布局保留 match_parent 让 gravity 右对齐生效
+        // - 水平布局必须 wrap_content，否则 LinearLayout 二次测量会让子项保留之前的最大宽度，
+        //   数字位数缩短后无法回退，导致 item 间距残留。
+        val targetWidth = if (isVertical)
+            LinearLayout.LayoutParams.MATCH_PARENT
+        else
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        for (itemInfo in performanceItems) {
+            val view = itemInfo.view ?: continue
+            val lp = view.layoutParams as? LinearLayout.LayoutParams ?: continue
+            if (lp.width != targetWidth) {
+                lp.width = targetWidth
+                view.layoutParams = lp
+            }
         }
         overlay.setBackgroundColor(getOverlayBackgroundColor())
 
         configureDisplayItems()
 
-        val prefs = activity.getSharedPreferences("performance_overlay", Activity.MODE_PRIVATE)
+        val prefs = overlayPrefs
         val hasCustomPosition = prefs.getBoolean("has_custom_position", false)
 
         if (isPortrait) {
@@ -650,7 +711,7 @@ class PerformanceOverlayManager(
     }
 
     private fun determineRightSidePosition(isVertical: Boolean): Boolean {
-        val prefs = activity.getSharedPreferences("performance_overlay", Activity.MODE_PRIVATE)
+        val prefs = overlayPrefs
         val hasCustomPosition = prefs.getBoolean("has_custom_position", false)
 
         return if (hasCustomPosition) {
@@ -812,15 +873,11 @@ class PerformanceOverlayManager(
     }
 
     private fun applyDraggingVisualFeedback(v: View, isDragging: Boolean) {
-        if (isDragging) {
-            v.alpha = 0.7f
-            v.scaleX = 1.05f
-            v.scaleY = 1.05f
-        } else {
-            v.alpha = 1.0f
-            v.scaleX = 1.0f
-            v.scaleY = 1.0f
-        }
+        val targetAlpha = if (isDragging) 0.7f else 1.0f
+        val targetScale = if (isDragging) 1.05f else 1.0f
+        v.alpha = targetAlpha
+        v.scaleX = targetScale
+        v.scaleY = targetScale
     }
 
     private fun handleClickEvent() {
@@ -902,13 +959,7 @@ class PerformanceOverlayManager(
         return -1
     }
 
-    private fun getVisibleItemCount(): Int {
-        var count = 0
-        for (itemInfo in performanceItems) {
-            if (itemInfo.isVisible) count++
-        }
-        return count
-    }
+    private fun getVisibleItemCount(): Int = performanceItems.count { it.isVisible }
 
     private fun showInfoByIndex(index: Int) {
         var currentIndex = 0
@@ -1070,14 +1121,14 @@ class PerformanceOverlayManager(
     }
 
     private fun saveLayoutOrientation() {
-        val prefs = activity.getSharedPreferences("performance_overlay", Activity.MODE_PRIVATE)
+        val prefs = overlayPrefs
         prefs.edit {
             putString("layout_orientation", prefConfig.perfOverlayOrientation.name)
         }
     }
 
     private fun loadLayoutOrientation() {
-        val prefs = activity.getSharedPreferences("performance_overlay", Activity.MODE_PRIVATE)
+        val prefs = overlayPrefs
         val savedOrientation = prefs.getString("layout_orientation", null)
 
         if (savedOrientation != null) {
@@ -1171,7 +1222,7 @@ class PerformanceOverlayManager(
     }
 
     private fun savePerformanceOverlayPosition(x: Int, y: Int) {
-        val prefs = activity.getSharedPreferences("performance_overlay", Activity.MODE_PRIVATE)
+        val prefs = overlayPrefs
         prefs.edit {
             putBoolean("has_custom_position", true)
                 .putInt("left_margin", x)
@@ -1193,7 +1244,6 @@ class PerformanceOverlayManager(
     }
 
     companion object {
-        private const val SNAP_THRESHOLD = 100
         private const val CLICK_THRESHOLD = 10
         private const val DOUBLE_CLICK_TIMEOUT = 300
         private const val BATTERY_UPDATE_INTERVAL_MS = 15000L
@@ -1208,5 +1258,34 @@ class PerformanceOverlayManager(
             "vp9" to DecoderTypeInfo("VP9", "VP9"),
             "vp8" to DecoderTypeInfo("VP8", "VP8")
         )
+    }
+}
+
+/**
+ * 居中对齐的 ImageSpan：基于字体度量将图标垂直居中到文字中线，
+ * 解决默认 ALIGN_BOTTOM/ALIGN_BASELINE 偏低、与中文字符不齐的问题。
+ */
+private class CenterAlignedImageSpan(drawable: Drawable) : ImageSpan(drawable, ALIGN_BASELINE) {
+
+    override fun draw(
+        canvas: Canvas,
+        text: CharSequence?,
+        start: Int,
+        end: Int,
+        x: Float,
+        top: Int,
+        y: Int,
+        bottom: Int,
+        paint: Paint
+    ) {
+        val d = drawable
+        val fm = paint.fontMetricsInt
+        // 文本内容垂直中线（不含 leading）
+        val textCenter = y + (fm.descent + fm.ascent) / 2
+        val transY = textCenter - d.bounds.height() / 2
+        canvas.save()
+        canvas.translate(x, transY.toFloat())
+        d.draw(canvas)
+        canvas.restore()
     }
 }
