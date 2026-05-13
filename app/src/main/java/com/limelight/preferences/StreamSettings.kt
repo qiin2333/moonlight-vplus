@@ -9,12 +9,17 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.Vibrator
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.text.style.StyleSpan
 import android.util.DisplayMetrics
 import android.view.Display
 import android.view.DisplayCutout
@@ -30,6 +35,7 @@ import android.widget.TextView
 import android.widget.Toast
 
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.graphics.toColorInt
 import androidx.core.net.toUri
@@ -41,6 +47,7 @@ import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
+import androidx.preference.PreferenceGroup
 import androidx.preference.PreferenceGroupAdapter
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -1069,6 +1076,66 @@ class StreamSettings : AppCompatActivity() {
         }
 
         /**
+         * 递归遍历 PreferenceGroup，给所有 ListPreference 装上一个 SummaryProvider：
+         * - 第一行显示「当前: {entry}」
+         * - 第二行保留 XML 中原本写好的说明 summary（如果有）
+         * SummaryProvider 是按需调用的，所以即便后续动态 setEntries() 也能拿到最新值。
+         */
+        private fun applyListPreferenceCurrentValueSummary(group: PreferenceGroup) {
+            val accent = ContextCompat.getColor(group.context, R.color.theme_pink_secondary)
+            applyHighlightedSummariesRecursively(group, accent)
+        }
+
+        private fun applyHighlightedSummariesRecursively(group: PreferenceGroup, accent: Int) {
+            for (i in 0 until group.preferenceCount) {
+                val child = group.getPreference(i)
+                when {
+                    child is PreferenceGroup -> applyHighlightedSummariesRecursively(child, accent)
+                    // IconListPreference 自己重写 setSummary 维护 "(当前：xxx)"，
+                    // 装 SummaryProvider 会与其 super.setSummary 调用互斥，跳过。
+                    child is IconListPreference -> Unit
+                    child is ListPreference -> applyHighlightedSummary(child, accent) {
+                        val entry = it.entry?.toString()
+                        if (entry.isNullOrBlank()) "—" else entry
+                    }
+                    child is SeekBarPreference -> applyHighlightedSummary(child, accent) {
+                        val display = it.formatDisplayValue(it.currentValue)
+                        val suffix = it.suffix?.takeIf { s -> s.isNotBlank() }
+                        if (suffix != null) "$display $suffix" else display
+                    }
+                }
+            }
+        }
+
+        /**
+         * 给 Preference 装上一个 SummaryProvider：
+         * 第一行用主题强调色 + 粗体显示 currentValueProvider 返回的当前值，
+         * 第二行恢复默认色显示 XML 中原本的说明 summary。
+         */
+        private inline fun <reified T : Preference> applyHighlightedSummary(
+                pref: T,
+                accent: Int,
+                crossinline currentValueProvider: (T) -> String
+        ) {
+            val originalSummary = pref.summary?.toString()?.takeIf { it.isNotBlank() }
+            pref.summaryProvider = Preference.SummaryProvider<T> { p ->
+                val current = currentValueProvider(p)
+                val builder = SpannableStringBuilder()
+                builder.append(current)
+                builder.setSpan(
+                        ForegroundColorSpan(accent),
+                        0, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                builder.setSpan(
+                        StyleSpan(Typeface.BOLD),
+                        0, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                if (originalSummary != null) {
+                    builder.append('\n').append(originalSummary)
+                }
+                builder
+            }
+        }
+
+        /**
          * 查询全部高级配置档案，返回 id->name 映射。
          * 供 export / merge / import-refresh 三处复用。
          */
@@ -1266,6 +1333,10 @@ class StreamSettings : AppCompatActivity() {
 
             setPreferencesFromResource(R.xml.preferences, rootKey)
             val screen = preferenceScreen
+
+            // 让所有 ListPreference 在 summary 顶部显示当前选中值，
+            // 避免用户必须点开才知道现值。原 summary 作为说明保留在第二行。
+            applyListPreferenceCurrentValueSummary(screen)
 
             // 为 LocalImagePickerPreference 设置 Fragment 实例，确保 onActivityResult 回调正确
             val localImagePicker = findPreference<LocalImagePickerPreference>("local_image_picker")
@@ -1636,22 +1707,8 @@ class StreamSettings : AppCompatActivity() {
                             hdrModePref.value = "1"
                         }
 
-                        // Update summary to show current selection
-                        hdrModePref.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { preference, newValue ->
-                            val value = newValue as String
-                            val listPref = preference as ListPreference
-                            val idx = listPref.findIndexOfValue(value)
-                            if (idx >= 0) {
-                                preference.setSummary(listPref.entries[idx])
-                            }
-                            true
-                        }
-
-                        // Set initial summary
-                        val idx = hdrModePref.findIndexOfValue(hdrModePref.value)
-                        if (idx >= 0) {
-                            hdrModePref.summary = hdrModePref.entries[idx]
-                        }
+                        // 当前选中值由通用的 SummaryProvider 自动显示（applyListPreferenceCurrentValueSummary），
+                        // 这里不再单独设置 summary，避免与 SummaryProvider 互斥而抛 IllegalStateException
                     }
                 }
             }
