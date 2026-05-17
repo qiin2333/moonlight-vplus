@@ -621,12 +621,18 @@ class TouchInputHandler(private val game: Game) {
             )
         }
 
-        val scaleX = activeStreamView.scaleX
-        val scaleY = activeStreamView.scaleY
-        if (scaleX == 0f || scaleY == 0f) return floatArrayOf(0f, 0f)
-
-        val absoluteX = (rawX - activeStreamView.x) / scaleX
-        val absoluteY = (rawY - activeStreamView.y) / scaleY
+        val absoluteX: Float
+        val absoluteY: Float
+        if (view == activeStreamView) {
+            absoluteX = rawX
+            absoluteY = rawY
+        } else {
+            val scaleX = activeStreamView.scaleX
+            val scaleY = activeStreamView.scaleY
+            if (scaleX == 0f || scaleY == 0f) return floatArrayOf(0f, 0f)
+            absoluteX = (rawX - activeStreamView.x) / scaleX
+            absoluteY = (rawY - activeStreamView.y) / scaleY
+        }
         val streamWidth = activeStreamView.width
         val streamHeight = activeStreamView.height
         if (streamWidth == 0 || streamHeight == 0) return floatArrayOf(0f, 0f)
