@@ -821,7 +821,12 @@ class MediaCodecDecoderRenderer(
             val mediaFormat = createBaseMediaFormat(mimeType)
 
             // This will try low latency options until we find one that works (or we give up).
-            val newFormat = MediaCodecHelper.setDecoderLowLatencyOptions(mediaFormat, selectedDecoderInfo, tryNumber)
+            val newFormat = MediaCodecHelper.setDecoderLowLatencyOptions(
+                mediaFormat,
+                selectedDecoderInfo,
+                tryNumber,
+                prefs.forceMtkMaxOperatingRate
+            )
 
             // Throw the underlying codec exception on the last attempt if the caller requested it
             if (tryConfigureDecoder(selectedDecoderInfo, mediaFormat, !newFormat && throwOnCodecError)) {

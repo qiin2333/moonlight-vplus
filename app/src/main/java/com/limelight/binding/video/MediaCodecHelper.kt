@@ -355,9 +355,13 @@ object MediaCodecHelper {
         }
     }
 
-    private fun applyMtkVendorParams(videoFormat: MediaFormat, tryNumber: Int) {
+    private fun applyMtkVendorParams(
+        videoFormat: MediaFormat,
+        tryNumber: Int,
+        allowMaxOperatingRate: Boolean
+    ) {
         // Tiered MTK low-latency profile (inspired by derflacco/Artemide):
-        //   tier 0 = stable baseline (current proven config + OPERATING_RATE)
+        //   tier 0 = stable baseline (with optional max operating-rate override)
         //   tier 1+ = progressive fallback: shrink queues / drop preload
         // Higher tiers are only reached if a previous attempt failed to start.
 
@@ -409,11 +413,19 @@ object MediaCodecHelper {
             videoFormat.setInteger("vendor.mtk.vdec.force-max-freq", 1)
         }
 
-        // Do not force KEY_OPERATING_RATE=Short.MAX_VALUE on MTK decoders.
-        // Some Android TV firmware (for example Hisense U7Q / c2.mtk.hevc.decoder)
+        // Optional Android low-latency hint: ask the decoder to run at max clock.
+        // Some MTK devices (including newer Dimensity parts) benefit from this,
+        // but others regress badly. For example, Hisense U7Q / c2.mtk.hevc.decoder
         // accepts the value but then misses SurfaceFlinger deadlines and accumulates
-        // seconds of display latency. Keep MTK on KEY_PRIORITY + vendor low-latency
-        // knobs instead; KEY_OPERATING_RATE remains gated to known-good Qualcomm paths.
+        // seconds of display latency. Keep it disabled by default and expose it
+        // behind a user toggle.
+        if (allowMaxOperatingRate) {
+            runCatching {
+                videoFormat.setInteger(MediaFormat.KEY_OPERATING_RATE, Short.MAX_VALUE.toInt())
+            }
+        } else if (tryNumber == 0) {
+            LimeLog.info("Skipping MTK max operating rate override (disabled in settings)")
+        }
     }
 
     private fun applyKirinVendorParams(videoFormat: MediaFormat) {
@@ -463,7 +475,8 @@ object MediaCodecHelper {
     fun setDecoderLowLatencyOptions(
         videoFormat: MediaFormat,
         decoderInfo: MediaCodecInfo,
-        tryNumber: Int
+        tryNumber: Int,
+        allowMtkMaxOperatingRate: Boolean
     ): Boolean {
         // Options are tried in order of most to least risky. The decoder will use
         // the first MediaFormat that doesn't fail in configure().
@@ -512,7 +525,7 @@ object MediaCodecHelper {
                     setNewOption = true
                 }
                 isDecoderInList(mtkDecoderPrefixes, decoderName) -> if (tryNumber < 4) {
-                    applyMtkVendorParams(videoFormat, tryNumber)
+                    applyMtkVendorParams(videoFormat, tryNumber, allowMtkMaxOperatingRate)
                     setNewOption = true
                 }
                 isDecoderInList(kirinDecoderPrefixes, decoderName) -> if (tryNumber < 4) {

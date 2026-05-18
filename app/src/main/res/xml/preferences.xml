@@ -102,6 +102,11 @@
             android:summary="@string/summary_seekbar_output_buffer_queue_limit"
             android:text="@string/suffix_seekbar_output_buffer_queue_limit"
             android:title="@string/title_seekbar_output_buffer_queue_limit" />
+        <CheckBoxPreference
+            android:key="checkbox_force_mtk_max_operating_rate"
+            android:title="@string/title_force_mtk_max_operating_rate"
+            android:summary="@string/summary_force_mtk_max_operating_rate"
+            android:defaultValue="false" />
     </PreferenceCategory>
     <PreferenceCategory
         android:key="category_screen_position"
