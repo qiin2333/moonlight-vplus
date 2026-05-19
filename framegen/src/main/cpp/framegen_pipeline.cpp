@@ -12,6 +12,7 @@
 #include "yuv_to_rgba.comp.spv.h"
 
 #include <atomic>
+#include <chrono>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
@@ -1166,7 +1167,9 @@ bool dispatchYuvToRgbaLocked(VkImage decoderImage, VkImageView decoderView) {
     }
 
     // 1s 上限，足够覆盖 4K dispatch；超时算失败。
+    const auto t0 = std::chrono::steady_clock::now();
     VkResult wres = vkWaitForFences(device, 1, &fence, VK_TRUE, 1'000'000'000ULL);
+    const auto t1 = std::chrono::steady_clock::now();
     vkDestroyFence(device, fence, nullptr);
     vkFreeCommandBuffers(device, g_vk->cmdPool, 1, &cmd);
     if (wres != VK_SUCCESS) {
@@ -1175,11 +1178,13 @@ bool dispatchYuvToRgbaLocked(VkImage decoderImage, VkImageView decoderView) {
     }
 
     g_context->dispatchCount += 1;
-    if (g_context->dispatchCount == 1 || (g_context->dispatchCount % 60) == 0) {
-        LOGI("stage3.3a-iii.b.2: dispatch ok slot=%u count=%llu groups=%ux%u extent=%ux%u",
+    const bool logThisFrame = (g_context->dispatchCount == 1 || (g_context->dispatchCount % 60) == 0);
+    if (logThisFrame) {
+        LOGI("stage3.3a-iii.b.2: dispatch ok slot=%u count=%llu groups=%ux%u extent=%ux%u waitFence=%lldms",
              slot,
              static_cast<unsigned long long>(g_context->dispatchCount),
-             gx, gy, g_context->width, g_context->height);
+             gx, gy, g_context->width, g_context->height,
+             static_cast<long long>(std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count()));
     }
 
     // 阶段 3.3b：input AHB 内容已就绪，请求 LSFG 用 input0/input1 生成中间帧到 output AHB。
@@ -1188,10 +1193,15 @@ bool dispatchYuvToRgbaLocked(VkImage decoderImage, VkImageView decoderView) {
     // 视觉无副作用；只要不报 vulkan error / 不 crash 就算通过。
     try {
         std::vector<int> noOutSems;
+        const auto p0 = std::chrono::steady_clock::now();
         LSFG_3_1::presentContext(g_context->contextId, -1, noOutSems);
+        const auto p1 = std::chrono::steady_clock::now();
         LSFG_3_1::waitIdle();
-        if (g_context->dispatchCount == 1 || (g_context->dispatchCount % 60) == 0) {
-            LOGI("stage3.3b: LSFG presentContext+waitIdle ok ctx=%d slot=%u",
+        const auto p2 = std::chrono::steady_clock::now();
+        if (logThisFrame) {
+            LOGI("stage3.3b: LSFG present=%lldms waitIdle=%lldms ctx=%d slot=%u",
+                 static_cast<long long>(std::chrono::duration_cast<std::chrono::milliseconds>(p1 - p0).count()),
+                 static_cast<long long>(std::chrono::duration_cast<std::chrono::milliseconds>(p2 - p1).count()),
                  g_context->contextId, slot);
         }
     } catch (const std::exception& e) {
@@ -1204,8 +1214,16 @@ bool dispatchYuvToRgbaLocked(VkImage decoderImage, VkImageView decoderView) {
     // 在 120Hz 显示器上可达成真 2x 视觉效果，去除"只贴插值帧"导致的液化。
     // 第一次调用时另一 input slot 还没有真实内容，插值帧是 garbage，但仅持续一帧。
     AHardwareBuffer* realAhb = (slot == 0) ? g_context->input0.get() : g_context->input1.get();
+    const auto b0 = std::chrono::steady_clock::now();
     blitAhbToWindowLocked(g_context->outputs[0].get(), "interp");
+    const auto b1 = std::chrono::steady_clock::now();
     blitAhbToWindowLocked(realAhb, "real");
+    const auto b2 = std::chrono::steady_clock::now();
+    if (logThisFrame) {
+        LOGI("stage3.3c: blit interp=%lldms real=%lldms",
+             static_cast<long long>(std::chrono::duration_cast<std::chrono::milliseconds>(b1 - b0).count()),
+             static_cast<long long>(std::chrono::duration_cast<std::chrono::milliseconds>(b2 - b1).count()));
+    }
     return true;
 }
 
