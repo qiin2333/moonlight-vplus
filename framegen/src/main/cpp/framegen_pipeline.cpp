@@ -103,9 +103,21 @@ struct ContextResources {
     VkPipelineLayout pipelineLayout{VK_NULL_HANDLE};
     VkPipeline pipeline{VK_NULL_HANDLE};
 
+    // 阶段 3.3a-iii.b.2：descriptor pool + 2 个 ping-pong descriptor sets。
+    // binding 1 (storage image dst) 在 pipeline 创建时一次性 pre-write 到 input0/input1View；
+    // binding 0 (combined sampler src) 每次 dispatch 用本帧 decoder image view 覆盖。
+    VkDescriptorPool dsPool{VK_NULL_HANDLE};
+    VkDescriptorSet dsSets[2]{VK_NULL_HANDLE, VK_NULL_HANDLE};
+    uint32_t pingPongIndex{0};
+    uint64_t dispatchCount{0};
+
     ~ContextResources() {
         if (ownerDevice == VK_NULL_HANDLE) {
             return;
+        }
+        if (dsPool != VK_NULL_HANDLE) {
+            // descriptor sets 自动随 pool 销毁。
+            vkDestroyDescriptorPool(ownerDevice, dsPool, nullptr);
         }
         if (pipeline != VK_NULL_HANDLE) {
             vkDestroyPipeline(ownerDevice, pipeline, nullptr);
@@ -844,6 +856,53 @@ bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDR
         return false;
     }
 
+    // 6. descriptor pool + 2 个 ping-pong 集合，并预绑 binding 1 = input{0,1}View（GENERAL）。
+    // binding 0 (combined sampler with immutable ycbcr sampler) 每帧 dispatch 时再覆盖。
+    VkDescriptorPoolSize poolSizes[2]{
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2 },
+    };
+    VkDescriptorPoolCreateInfo dpCi{
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .maxSets = 2,
+        .poolSizeCount = 2,
+        .pPoolSizes = poolSizes,
+    };
+    if (vkCreateDescriptorPool(device, &dpCi, nullptr, &g_context->dsPool) != VK_SUCCESS) {
+        LOGE("stage3.3a-iii.b.1: vkCreateDescriptorPool failed");
+        return false;
+    }
+
+    VkDescriptorSetLayout setLayouts[2] = { g_context->dsLayout, g_context->dsLayout };
+    VkDescriptorSetAllocateInfo dsAi{
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        .pNext = nullptr,
+        .descriptorPool = g_context->dsPool,
+        .descriptorSetCount = 2,
+        .pSetLayouts = setLayouts,
+    };
+    if (vkAllocateDescriptorSets(device, &dsAi, g_context->dsSets) != VK_SUCCESS) {
+        LOGE("stage3.3a-iii.b.1: vkAllocateDescriptorSets failed");
+        return false;
+    }
+
+    VkDescriptorImageInfo dstInfos[2]{
+        { VK_NULL_HANDLE, g_context->input0View, VK_IMAGE_LAYOUT_GENERAL },
+        { VK_NULL_HANDLE, g_context->input1View, VK_IMAGE_LAYOUT_GENERAL },
+    };
+    VkWriteDescriptorSet preWrites[2]{};
+    for (int i = 0; i < 2; ++i) {
+        preWrites[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        preWrites[i].dstSet = g_context->dsSets[i];
+        preWrites[i].dstBinding = 1;
+        preWrites[i].descriptorCount = 1;
+        preWrites[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        preWrites[i].pImageInfo = &dstInfos[i];
+    }
+    vkUpdateDescriptorSets(device, 2, preWrites, 0, nullptr);
+
     g_context->boundExternalFormat = fp.externalFormat;
     LOGI("stage3.3a-iii.b.1: ycbcr conversion + sampler + pipeline ready "
          "externalFormat=0x%llx model=%u range=%u chromaFilter=%d",
@@ -851,6 +910,162 @@ bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDR
          static_cast<unsigned>(fp.suggestedYcbcrModel),
          static_cast<unsigned>(fp.suggestedYcbcrRange),
          static_cast<int>(cvtCi.chromaFilter));
+    return true;
+}
+
+// 阶段 3.3a-iii.b.2：对当前 decoder VkImage + view 提交一次 YUV→RGBA compute dispatch，
+// 写到 ping-pong input{0,1}Image。调用方必须持 g_contextMutex，且 g_vk / g_context / pipeline 必备。
+// decoder image 假设 AHB queue family 为 FOREIGN_EXT；本函数做 acquire barrier 接管。
+// 返回 false 表示本帧 dispatch 失败（不影响后续）。
+bool dispatchYuvToRgbaLocked(VkImage decoderImage, VkImageView decoderView) {
+    if (g_context == nullptr || g_vk == nullptr) {
+        return false;
+    }
+    if (g_context->pipeline == VK_NULL_HANDLE || g_context->dsSets[0] == VK_NULL_HANDLE) {
+        return false;
+    }
+    VkDevice device = g_vk->device;
+
+    const uint32_t slot = g_context->pingPongIndex & 1U;
+    g_context->pingPongIndex = (g_context->pingPongIndex + 1U) & 1U;
+    const VkImage inputImage = (slot == 0) ? g_context->input0Image : g_context->input1Image;
+
+    // 1. 用本帧 decoder view 覆写 binding 0（immutable sampler 由 layout 提供，sampler 字段忽略）。
+    VkDescriptorImageInfo srcInfo{
+        .sampler = VK_NULL_HANDLE,
+        .imageView = decoderView,
+        .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    };
+    VkWriteDescriptorSet writeSrc{
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .pNext = nullptr,
+        .dstSet = g_context->dsSets[slot],
+        .dstBinding = 0,
+        .dstArrayElement = 0,
+        .descriptorCount = 1,
+        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        .pImageInfo = &srcInfo,
+        .pBufferInfo = nullptr,
+        .pTexelBufferView = nullptr,
+    };
+    vkUpdateDescriptorSets(device, 1, &writeSrc, 0, nullptr);
+
+    // 2. 一次性 cmd buffer + fence（60 帧节奏，性能可忽略；后续 3.3b 再改成池化）。
+    VkCommandBuffer cmd = VK_NULL_HANDLE;
+    VkCommandBufferAllocateInfo cmdAi{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .pNext = nullptr,
+        .commandPool = g_vk->cmdPool,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1,
+    };
+    if (vkAllocateCommandBuffers(device, &cmdAi, &cmd) != VK_SUCCESS) {
+        LOGE("stage3.3a-iii.b.2: vkAllocateCommandBuffers failed");
+        return false;
+    }
+
+    VkCommandBufferBeginInfo cmdBi{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .pNext = nullptr,
+        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+        .pInheritanceInfo = nullptr,
+    };
+    vkBeginCommandBuffer(cmd, &cmdBi);
+
+    // 3. 双 barrier：
+    //  - decoder image: FOREIGN_EXT → 我方 queue family，UNDEFINED → SHADER_READ_ONLY_OPTIMAL；
+    //  - input image:  IGNORED → IGNORED，UNDEFINED → GENERAL（旧内容不保留）。
+    VkImageMemoryBarrier barriers[2]{};
+    barriers[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barriers[0].srcAccessMask = 0;
+    barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    barriers[0].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    barriers[0].newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    barriers[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_FOREIGN_EXT;
+    barriers[0].dstQueueFamilyIndex = g_vk->queueFamilyIndex;
+    barriers[0].image = decoderImage;
+    barriers[0].subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+
+    barriers[1].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barriers[1].srcAccessMask = 0;
+    barriers[1].dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    barriers[1].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    barriers[1].newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    barriers[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barriers[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barriers[1].image = inputImage;
+    barriers[1].subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+
+    vkCmdPipelineBarrier(cmd,
+                         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                         0,
+                         0, nullptr,
+                         0, nullptr,
+                         2, barriers);
+
+    // 4. dispatch。
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, g_context->pipeline);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
+                            g_context->pipelineLayout, 0, 1, &g_context->dsSets[slot],
+                            0, nullptr);
+    const uint32_t gx = (g_context->width + 7U) / 8U;
+    const uint32_t gy = (g_context->height + 7U) / 8U;
+    vkCmdDispatch(cmd, gx, gy, 1);
+
+    if (vkEndCommandBuffer(cmd) != VK_SUCCESS) {
+        LOGE("stage3.3a-iii.b.2: vkEndCommandBuffer failed");
+        vkFreeCommandBuffers(device, g_vk->cmdPool, 1, &cmd);
+        return false;
+    }
+
+    VkFence fence = VK_NULL_HANDLE;
+    VkFenceCreateInfo fci{
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+    };
+    if (vkCreateFence(device, &fci, nullptr, &fence) != VK_SUCCESS) {
+        LOGE("stage3.3a-iii.b.2: vkCreateFence failed");
+        vkFreeCommandBuffers(device, g_vk->cmdPool, 1, &cmd);
+        return false;
+    }
+
+    VkSubmitInfo si{
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .pNext = nullptr,
+        .waitSemaphoreCount = 0,
+        .pWaitSemaphores = nullptr,
+        .pWaitDstStageMask = nullptr,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &cmd,
+        .signalSemaphoreCount = 0,
+        .pSignalSemaphores = nullptr,
+    };
+    VkResult sres = vkQueueSubmit(g_vk->queue, 1, &si, fence);
+    if (sres != VK_SUCCESS) {
+        LOGE("stage3.3a-iii.b.2: vkQueueSubmit failed res=%d", sres);
+        vkDestroyFence(device, fence, nullptr);
+        vkFreeCommandBuffers(device, g_vk->cmdPool, 1, &cmd);
+        return false;
+    }
+
+    // 1s 上限，足够覆盖 4K dispatch；超时算失败。
+    VkResult wres = vkWaitForFences(device, 1, &fence, VK_TRUE, 1'000'000'000ULL);
+    vkDestroyFence(device, fence, nullptr);
+    vkFreeCommandBuffers(device, g_vk->cmdPool, 1, &cmd);
+    if (wres != VK_SUCCESS) {
+        LOGE("stage3.3a-iii.b.2: vkWaitForFences res=%d", wres);
+        return false;
+    }
+
+    g_context->dispatchCount += 1;
+    if (g_context->dispatchCount == 1 || (g_context->dispatchCount % 10) == 0) {
+        LOGI("stage3.3a-iii.b.2: dispatch ok slot=%u count=%llu groups=%ux%u extent=%ux%u",
+             slot,
+             static_cast<unsigned long long>(g_context->dispatchCount),
+             gx, gy, g_context->width, g_context->height);
+    }
     return true;
 }
 
@@ -882,7 +1097,7 @@ bool probeImportDecoderAhb(AHardwareBuffer* decoderAhb) {
 
     // iii.b.1: 首次接收到 decoder AHB 时建立 ycbcr conversion + compute pipeline。
     // 失败不阻断 probe，让 iii.a 的 import-only 路径仍可观察。
-    ensureYcbcrPipelineLocked(formatProps);
+    const bool pipelineReady = ensureYcbcrPipelineLocked(formatProps);
 
     AHardwareBuffer_Desc desc{};
     AHardwareBuffer_describe(decoderAhb, &desc);
@@ -977,9 +1192,39 @@ bool probeImportDecoderAhb(AHardwareBuffer* decoderAhb) {
          ahbProps.memoryTypeBits,
          formatProps.formatFeatures);
 
+    // 阶段 3.3a-iii.b.2：建立 decoder image view（绑 ycbcr conversion）+ 提交一次 YUV→RGBA dispatch。
+    // 失败不影响 import 本身成功的语义；下一次帧再试。
+    bool dispatchOk = false;
+    if (pipelineReady && g_context != nullptr && g_context->pipeline != VK_NULL_HANDLE) {
+        VkSamplerYcbcrConversionInfo cvtInfoView{
+            .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO,
+            .pNext = nullptr,
+            .conversion = g_context->ycbcrConversion,
+        };
+        VkImageViewCreateInfo viewCi{
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .pNext = &cvtInfoView,
+            .flags = 0,
+            .image = image,
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .format = VK_FORMAT_UNDEFINED,
+            .components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
+                           VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY},
+            .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
+        };
+        VkImageView decoderView = VK_NULL_HANDLE;
+        VkResult vres = vkCreateImageView(g_vk->device, &viewCi, nullptr, &decoderView);
+        if (vres != VK_SUCCESS) {
+            LOGE("stage3.3a-iii.b.2: vkCreateImageView (decoder ycbcr) failed res=%d", vres);
+        } else {
+            dispatchOk = dispatchYuvToRgbaLocked(image, decoderView);
+            vkDestroyImageView(g_vk->device, decoderView, nullptr);
+        }
+    }
+
     vkFreeMemory(g_vk->device, memory, nullptr);
     vkDestroyImage(g_vk->device, image, nullptr);
-    return true;
+    return dispatchOk || !pipelineReady;
 }
 
 } // namespace FramegenPipeline
