@@ -860,7 +860,19 @@ bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDR
         return false;
     }
 
-    // 5. compute pipeline。
+    // 5. compute pipeline。spec const 0 = IS_HDR：HDR 串流时开启 PQ→sRGB tonemap。
+    const int32_t isHdrSpec = g_hdrEnabled.load(std::memory_order_acquire) ? 1 : 0;
+    VkSpecializationMapEntry specEntry{
+        .constantID = 0,
+        .offset = 0,
+        .size = sizeof(int32_t),
+    };
+    VkSpecializationInfo specInfo{
+        .mapEntryCount = 1,
+        .pMapEntries = &specEntry,
+        .dataSize = sizeof(int32_t),
+        .pData = &isHdrSpec,
+    };
     VkComputePipelineCreateInfo pipeCi{
         .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
         .pNext = nullptr,
@@ -872,7 +884,7 @@ bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDR
             .stage = VK_SHADER_STAGE_COMPUTE_BIT,
             .module = g_context->shaderModule,
             .pName = "main",
-            .pSpecializationInfo = nullptr,
+            .pSpecializationInfo = &specInfo,
         },
         .layout = g_context->pipelineLayout,
         .basePipelineHandle = VK_NULL_HANDLE,
@@ -882,6 +894,7 @@ bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDR
         LOGE("stage3.3a-iii.b.1: vkCreateComputePipelines failed");
         return false;
     }
+    LOGI("stage3.3a-iii.b.1: pipeline ready IS_HDR=%d", isHdrSpec);
 
     // 6. descriptor pool + 2 个 ping-pong 集合，并预绑 binding 1 = input{0,1}View（GENERAL）。
     // binding 0 (combined sampler with immutable ycbcr sampler) 每帧 dispatch 时再覆盖。
@@ -963,6 +976,11 @@ void blitAhbToWindowLocked(AHardwareBuffer* srcAhb, const char* tag) {
             LOGE("stage3.3c: ANativeWindow_setBuffersGeometry rc=%d w=%d h=%d", rc, srcW, srcH);
             return;
         }
+        // 显式声明数据空间为标准 sRGB，让 SurfaceFlinger 把 buffer 当 sRGB→display
+        // 做色域管理；否则宽色域 OLED 屏会把 sRGB 数据按 native gamut 直显，
+        // 视觉上颜色过饱和。ADATASPACE_SRGB = STANDARD_BT709 | TRANSFER_SRGB | RANGE_FULL。
+        constexpr int32_t kAdataspaceSrgb = 142671872;
+        ANativeWindow_setBuffersDataSpace(g_outputWindow, kAdataspaceSrgb);
         g_outputWindowConfiguredW = srcW;
         g_outputWindowConfiguredH = srcH;
         LOGI("stage3.3c: configured output window %dx%d (src stride=%d px)",
