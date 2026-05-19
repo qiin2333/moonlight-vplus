@@ -113,15 +113,12 @@ Java_com_limelight_framegen_FramegenInterceptor_nativeOnFrameAvailable(
 
     const uint64_t n = g_frameCount.fetch_add(1, std::memory_order_relaxed) + 1;
 
-    // 阶段 3.3a-ii：节流测试 decoder AHB → VkImage import。
-    // 每 60 帧 import 一次（仅 import + 立即销毁，不拷贝、无 GPU 工作），
-    // 目的是先验证 import 路径稳定，避免每帧调 Vulkan API 后才发现泄漏/崩溃。
-    // bootstrap 完成前这步直接返回 false，不打日志。
-    if (n == 1 || (n % 60) == 0) {
-        (void)FramegenPipeline::probeImportDecoderAhb(ahb);
-    }
+    // 阶段 3.3a/b：每帧都跑 decoder AHB import → YUV→RGBA dispatch → LSFG presentContext。
+    // bootstrap 完成前 probeImportDecoderAhb 直接返回 false，不打日志。
+    (void)FramegenPipeline::probeImportDecoderAhb(ahb);
 
-    if (n == 1 || (n % 60) == 0) {
+    // 帧日志节流：首帧 + 每 300 帧（约 5s @60fps），减少 logcat 压力。
+    if (n == 1 || (n % 300) == 0) {
         AHardwareBuffer_Desc desc{};
         AHardwareBuffer_describe(ahb, &desc);
         LOGI("frame#%llu ahb=%p reader=%dx%d/fmt=%d  ahb=%ux%u/fmt=0x%x/usage=0x%llx/layers=%u/stride=%u  ts=%lld",

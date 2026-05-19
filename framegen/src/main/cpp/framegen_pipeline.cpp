@@ -666,11 +666,11 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
 
         g_context = std::move(resources);
 
-        std::vector<int> noOutputSemaphores;
-        LSFG_3_1::presentContext(g_context->contextId, -1, noOutputSemaphores);
-        LSFG_3_1::waitIdle();
+        // 之前这里调一次 LSFG presentContext 做 smoke，但会让 LSFG 内部 frameIdx 起点变成 1，
+        // 与本侧 pingPongIndex 起点 0 错位（slot mismatch，3.3b 的插帧会读到错误 slot）。
+        // 删掉 smoke：3.3b 的真实 dispatch+presentContext 已经覆盖了 LSFG 调用路径。
 
-        LOGI("stage3.2 bootstrap ok: lsfg context id=%d outputs=%zu submit-smoke=ok",
+        LOGI("stage3.2 bootstrap ok: lsfg context id=%d outputs=%zu",
              g_context->contextId, g_context->outputs.size());
 
         g_contextBootState.store(ContextBootState::kReady, std::memory_order_release);
@@ -1060,7 +1060,7 @@ bool dispatchYuvToRgbaLocked(VkImage decoderImage, VkImageView decoderView) {
     }
 
     g_context->dispatchCount += 1;
-    if (g_context->dispatchCount == 1 || (g_context->dispatchCount % 10) == 0) {
+    if (g_context->dispatchCount == 1 || (g_context->dispatchCount % 60) == 0) {
         LOGI("stage3.3a-iii.b.2: dispatch ok slot=%u count=%llu groups=%ux%u extent=%ux%u",
              slot,
              static_cast<unsigned long long>(g_context->dispatchCount),
@@ -1075,7 +1075,7 @@ bool dispatchYuvToRgbaLocked(VkImage decoderImage, VkImageView decoderView) {
         std::vector<int> noOutSems;
         LSFG_3_1::presentContext(g_context->contextId, -1, noOutSems);
         LSFG_3_1::waitIdle();
-        if (g_context->dispatchCount == 1 || (g_context->dispatchCount % 10) == 0) {
+        if (g_context->dispatchCount == 1 || (g_context->dispatchCount % 60) == 0) {
             LOGI("stage3.3b: LSFG presentContext+waitIdle ok ctx=%d slot=%u",
                  g_context->contextId, slot);
         }
@@ -1097,6 +1097,10 @@ bool probeImportDecoderAhb(AHardwareBuffer* decoderAhb) {
     if (g_vk == nullptr || g_vk->device == VK_NULL_HANDLE) {
         return false;
     }
+    // 节流：每帧都进来，但日志只在第 1 次和每 60 次打印一次。
+    static uint64_t s_importCount = 0;
+    ++s_importCount;
+    const bool logImport = (s_importCount == 1) || (s_importCount % 60 == 0);
 
     VkAndroidHardwareBufferFormatPropertiesANDROID formatProps{
         .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_FORMAT_PROPERTIES_ANDROID,
@@ -1202,15 +1206,16 @@ bool probeImportDecoderAhb(AHardwareBuffer* decoderAhb) {
         return false;
     }
 
-    LOGI("stage3.3a-ii: decoder AHB import ok externalFormat=0x%llx size=%llu memBits=0x%x "
-         "samplerYcbcrFeatures=0x%x",
-         static_cast<unsigned long long>(formatProps.externalFormat),
-         static_cast<unsigned long long>(ahbProps.allocationSize),
-         ahbProps.memoryTypeBits,
-         formatProps.formatFeatures);
+    if (logImport) {
+        LOGI("stage3.3a-ii: decoder AHB import ok externalFormat=0x%llx size=%llu memBits=0x%x "
+             "samplerYcbcrFeatures=0x%x",
+             static_cast<unsigned long long>(formatProps.externalFormat),
+             static_cast<unsigned long long>(ahbProps.allocationSize),
+             ahbProps.memoryTypeBits,
+             formatProps.formatFeatures);
+    }
 
     // 阶段 3.3a-iii.b.2：建立 decoder image view（绑 ycbcr conversion）+ 提交一次 YUV→RGBA dispatch。
-    // 失败不影响 import 本身成功的语义；下一次帧再试。
     bool dispatchOk = false;
     if (pipelineReady && g_context != nullptr && g_context->pipeline != VK_NULL_HANDLE) {
         VkSamplerYcbcrConversionInfo cvtInfoView{
