@@ -1665,6 +1665,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         framegenCapture?.release()
         framegenCapture = null
         decoderRenderer?.framegenSurface = null
+        FramegenInterceptor.configureOutputSurface(null)
 
         val fgPrefs = PreferenceManager.getDefaultSharedPreferences(this)
         if (fgPrefs.getBoolean("checkbox_framegen_enabled", false) && FramegenInterceptor.isAvailable()) {
@@ -1683,6 +1684,10 @@ class Game : Activity(), SurfaceHolder.Callback,
             if (cap != null) {
                 framegenCapture = cap
                 decoderRenderer?.framegenSurface = cap.surface
+                // 3.3c: 把 SurfaceView 原始 surface 注册成 framegen output 回贴目标。
+                // decoder 已被重定向到 ImageReader（cap.surface），holder.surface 此时空闲，
+                // 由 native 在每次 LSFG present 完成后 CPU memcpy output[0] 上去。
+                FramegenInterceptor.configureOutputSurface(holder.surface)
                 LimeLog.info("Framegen capture armed (${prefConfig.width}x${prefConfig.height})")
                 runOnUiThread {
                     Toast.makeText(this,
@@ -1746,6 +1751,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         framegenCapture?.release()
         framegenCapture = null
         decoderRenderer?.framegenSurface = null
+        FramegenInterceptor.configureOutputSurface(null)
 
         cursorServiceManager.destroyLocalCursorRenderers()
 

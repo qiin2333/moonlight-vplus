@@ -1,6 +1,7 @@
 #pragma once
 
 #include <android/hardware_buffer.h>
+#include <android/native_window.h>
 
 #include <cstdint>
 
@@ -25,5 +26,11 @@ void reset();
 // 阶段 3.3a-iii.b.1 修正：由 Java 在 bootstrap 之前传入是否 HDR 流，
 // 决定 LSFG_3_1::initialize 的 isHdr 参数（影响 LSFG 内部颜色空间处理）。
 void setHdrEnabled(bool enabled);
+
+// 阶段 3.3c：注册 LSFG output AHB 的回贴目标 ANativeWindow（SurfaceView 的 holder.surface）。
+// 调用方需保证 nativeWindow 已 ANativeWindow_acquire（本侧只负责 release）。
+// 传 nullptr 解绑。dispatchYuvToRgbaLocked 完成 LSFG present 后会 CPU memcpy
+// output[0] 到该窗口。
+void setOutputWindow(ANativeWindow* nativeWindow);
 
 } // namespace FramegenPipeline

@@ -12,6 +12,8 @@
 #include <android/log.h>
 #include <android/hardware_buffer.h>
 #include <android/hardware_buffer_jni.h>
+#include <android/native_window.h>
+#include <android/native_window_jni.h>
 #include <pe-parse/parse.h>
 
 #include "extract/trans.hpp"
@@ -166,6 +168,21 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_limelight_framegen_FramegenInterceptor_nativeSetHdrEnabled(
         JNIEnv * /*env*/, jclass /* clazz */, jboolean enabled) {
     FramegenPipeline::setHdrEnabled(enabled == JNI_TRUE);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_limelight_framegen_FramegenInterceptor_nativeSetOutputSurface(
+        JNIEnv *env, jclass /* clazz */, jobject jSurface) {
+    ANativeWindow* win = nullptr;
+    if (jSurface != nullptr) {
+        win = ANativeWindow_fromSurface(env, jSurface);
+        if (win == nullptr) {
+            LOGE("nativeSetOutputSurface: ANativeWindow_fromSurface returned NULL");
+            return;
+        }
+    }
+    // Pipeline 持有所有权 + 旧窗口由它 release。
+    FramegenPipeline::setOutputWindow(win);
 }
 
 extern "C" JNIEXPORT jstring JNICALL

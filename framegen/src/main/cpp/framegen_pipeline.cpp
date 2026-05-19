@@ -165,6 +165,13 @@ std::mutex g_contextMutex;
 std::unique_ptr<VulkanContext> g_vk;
 std::unique_ptr<ContextResources> g_context;
 
+// 阶段 3.3c：output AHB → SurfaceView 回贴目标窗口。
+// 受 g_contextMutex 保护（与 dispatch 路径互斥）。本侧通过 ANativeWindow_release 归还。
+ANativeWindow* g_outputWindow = nullptr;
+int32_t g_outputWindowConfiguredW = 0;
+int32_t g_outputWindowConfiguredH = 0;
+uint64_t g_blitCount = 0;
+
 constexpr uint64_t kFirstAvailableDeviceUuid = 0x1463ABACULL;
 constexpr uint32_t kGenerationCount = 1; // 2x 插帧：每两帧之间生成 1 帧。
 
@@ -702,6 +709,13 @@ void reset() {
     g_vk.reset();
     g_probeState.store(ProbeState::kUninitialized, std::memory_order_release);
     g_contextBootState.store(ContextBootState::kUninitialized, std::memory_order_release);
+    if (g_outputWindow != nullptr) {
+        ANativeWindow_release(g_outputWindow);
+        g_outputWindow = nullptr;
+        g_outputWindowConfiguredW = 0;
+        g_outputWindowConfiguredH = 0;
+        g_blitCount = 0;
+    }
 }
 
 void setHdrEnabled(bool enabled) {
@@ -710,6 +724,19 @@ void setHdrEnabled(bool enabled) {
         LOGI("setHdrEnabled: %d -> %d (effective on next bootstrap)",
              static_cast<int>(prev), static_cast<int>(enabled));
     }
+}
+
+void setOutputWindow(ANativeWindow* nativeWindow) {
+    std::lock_guard<std::mutex> lock(g_contextMutex);
+    if (g_outputWindow == nativeWindow) return;
+    if (g_outputWindow != nullptr) {
+        ANativeWindow_release(g_outputWindow);
+    }
+    g_outputWindow = nativeWindow;
+    g_outputWindowConfiguredW = 0;
+    g_outputWindowConfiguredH = 0;
+    g_blitCount = 0;
+    LOGI("stage3.3c: setOutputWindow window=%p", nativeWindow);
 }
 
 // 阶段 3.3a-iii.b.1：用首帧的 externalFormat 创建延后到运行时的 YCbCr conversion +
@@ -913,6 +940,77 @@ bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDR
     return true;
 }
 
+// 阶段 3.3c：把 LSFG 写好的 output[0] AHB（RGBA8888，与 input 同尺寸）通过 CPU 拷贝
+// 回贴到 SurfaceView 的 ANativeWindow。调用方必须持 g_contextMutex。
+// 失败只打日志，不影响后续帧。
+void blitOutputToWindowLocked() {
+    if (g_outputWindow == nullptr || g_context == nullptr || g_context->outputs.empty()) {
+        return;
+    }
+    AHardwareBuffer* outAhb = g_context->outputs[0].get();
+    if (outAhb == nullptr) return;
+
+    AHardwareBuffer_Desc desc{};
+    AHardwareBuffer_describe(outAhb, &desc);
+    const int32_t srcW = static_cast<int32_t>(desc.width);
+    const int32_t srcH = static_cast<int32_t>(desc.height);
+    const int32_t srcStridePx = static_cast<int32_t>(desc.stride);
+    if (srcW <= 0 || srcH <= 0) return;
+
+    // 首次或尺寸变化时重配窗口。WINDOW_FORMAT_RGBA_8888 与 output AHB 格式一致。
+    if (g_outputWindowConfiguredW != srcW || g_outputWindowConfiguredH != srcH) {
+        const int32_t rc = ANativeWindow_setBuffersGeometry(
+            g_outputWindow, srcW, srcH, WINDOW_FORMAT_RGBA_8888);
+        if (rc != 0) {
+            LOGE("stage3.3c: ANativeWindow_setBuffersGeometry rc=%d w=%d h=%d", rc, srcW, srcH);
+            return;
+        }
+        g_outputWindowConfiguredW = srcW;
+        g_outputWindowConfiguredH = srcH;
+        LOGI("stage3.3c: configured output window %dx%d (src stride=%d px)",
+             srcW, srcH, srcStridePx);
+    }
+
+    void* srcPtr = nullptr;
+    const int lockResult = AHardwareBuffer_lock(
+        outAhb, AHARDWAREBUFFER_USAGE_CPU_READ_OFTEN, -1, nullptr, &srcPtr);
+    if (lockResult != 0 || srcPtr == nullptr) {
+        LOGE("stage3.3c: AHardwareBuffer_lock(output) rc=%d ptr=%p", lockResult, srcPtr);
+        return;
+    }
+
+    ANativeWindow_Buffer dst{};
+    const int32_t rc = ANativeWindow_lock(g_outputWindow, &dst, nullptr);
+    if (rc != 0) {
+        LOGE("stage3.3c: ANativeWindow_lock rc=%d", rc);
+        AHardwareBuffer_unlock(outAhb, nullptr);
+        return;
+    }
+
+    const int32_t copyW = std::min(srcW, dst.width);
+    const int32_t copyH = std::min(srcH, dst.height);
+    const uint8_t* srcRow = static_cast<const uint8_t*>(srcPtr);
+    uint8_t* dstRow = static_cast<uint8_t*>(dst.bits);
+    const size_t srcRowBytes = static_cast<size_t>(srcStridePx) * 4u;
+    const size_t dstRowBytes = static_cast<size_t>(dst.stride) * 4u;
+    const size_t copyRowBytes = static_cast<size_t>(copyW) * 4u;
+    for (int32_t y = 0; y < copyH; ++y) {
+        std::memcpy(dstRow, srcRow, copyRowBytes);
+        srcRow += srcRowBytes;
+        dstRow += dstRowBytes;
+    }
+
+    ANativeWindow_unlockAndPost(g_outputWindow);
+    AHardwareBuffer_unlock(outAhb, nullptr);
+
+    g_blitCount += 1;
+    if (g_blitCount == 1 || (g_blitCount % 60) == 0) {
+        LOGI("stage3.3c: blit ok count=%llu src=%dx%d/stride=%d dst=%dx%d/stride=%d",
+             static_cast<unsigned long long>(g_blitCount),
+             srcW, srcH, srcStridePx, dst.width, dst.height, dst.stride);
+    }
+}
+
 // 阶段 3.3a-iii.b.2：对当前 decoder VkImage + view 提交一次 YUV→RGBA compute dispatch，
 // 写到 ping-pong input{0,1}Image。调用方必须持 g_contextMutex，且 g_vk / g_context / pipeline 必备。
 // decoder image 假设 AHB queue family 为 FOREIGN_EXT；本函数做 acquire barrier 接管。
@@ -1083,6 +1181,9 @@ bool dispatchYuvToRgbaLocked(VkImage decoderImage, VkImageView decoderView) {
         LOGE("stage3.3b: LSFG presentContext threw: %s", e.what());
         return false;
     }
+
+    // 阶段 3.3c：LSFG 已把生成帧写到 output[0]；CPU 回贴到 SurfaceView。
+    blitOutputToWindowLocked();
     return true;
 }
 

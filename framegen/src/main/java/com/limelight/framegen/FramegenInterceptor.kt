@@ -130,6 +130,20 @@ class FramegenInterceptor {
         }
 
         /**
+         * 阶段 3.3c：把 SurfaceView 的原始 Surface 注册成 framegen output 回贴目标。
+         * 传 null 解绑（surfaceDestroyed / release 时调）。
+         */
+        @JvmStatic
+        fun configureOutputSurface(surface: android.view.Surface?) {
+            if (!isAvailable()) return
+            try {
+                nativeSetOutputSurface(surface)
+            } catch (t: Throwable) {
+                Log.w(TAG, "failed to configure framegen output surface", t)
+            }
+        }
+
+        /**
          * 阶段 3.1 骨架：把 ImageReader 拿到的 HardwareBuffer 透传给 native 端，
          * native 只做计数/log 打印，不导入 Vulkan、不持有引用。
          *
@@ -157,5 +171,8 @@ class FramegenInterceptor {
 
         @JvmStatic
         private external fun nativeSetHdrEnabled(enabled: Boolean)
+
+        @JvmStatic
+        private external fun nativeSetOutputSurface(surface: android.view.Surface?)
     }
 }
