@@ -1066,6 +1066,23 @@ bool dispatchYuvToRgbaLocked(VkImage decoderImage, VkImageView decoderView) {
              static_cast<unsigned long long>(g_context->dispatchCount),
              gx, gy, g_context->width, g_context->height);
     }
+
+    // 阶段 3.3b：input AHB 内容已就绪，请求 LSFG 用 input0/input1 生成中间帧到 output AHB。
+    // LSFG 内部按调用次数 frameIdx % 2 选 input slot，与本侧 pingPongIndex 对齐。
+    // 第一次调用时另一 slot 还没有数据，生成结果是 garbage —— output 还没回贴 SurfaceView，
+    // 视觉无副作用；只要不报 vulkan error / 不 crash 就算通过。
+    try {
+        std::vector<int> noOutSems;
+        LSFG_3_1::presentContext(g_context->contextId, -1, noOutSems);
+        LSFG_3_1::waitIdle();
+        if (g_context->dispatchCount == 1 || (g_context->dispatchCount % 10) == 0) {
+            LOGI("stage3.3b: LSFG presentContext+waitIdle ok ctx=%d slot=%u",
+                 g_context->contextId, slot);
+        }
+    } catch (const std::exception& e) {
+        LOGE("stage3.3b: LSFG presentContext threw: %s", e.what());
+        return false;
+    }
     return true;
 }
 
