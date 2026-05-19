@@ -182,7 +182,11 @@ android {
 dependencies {
     // Desugaring 支持，用于在旧版 Android 上使用 Java 8+ API
     coreLibraryDesugaring libs.desugar.jdk.libs
-    
+
+    // Lossless Scaling Frame Generation 桥接模块（仅 arm64-v8a 设备 + Android 10+ 实际可用）。
+    // 阶段 1：仅提供占位 API；阶段 2 起接入 MediaCodec 拦截路径。
+    implementation project(':framegen')
+
     implementation libs.bouncycastle.prov
     implementation libs.bouncycastle.pkix
     implementation libs.jcodec

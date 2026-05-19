@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  :framegen 是纯库模块，无 Activity / Service。
+  Vulkan / AHardwareBuffer 都是 NDK API，不需要额外权限。
+  uses-feature 写在这里会被合并到 :app 的 manifest 里，所以保持 required="false"，
+  避免在不支持 Vulkan 的设备上从 Play Store 被过滤。
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-feature
+        android:name="android.hardware.vulkan.version"
+        android:version="0x00401000"
+        android:required="false" />
+
+    <uses-feature
+        android:name="android.hardware.vulkan.compute"
+        android:version="0"
+        android:required="false" />
+
+</manifest>

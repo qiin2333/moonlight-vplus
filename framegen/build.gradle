@@ -1,0 +1,72 @@
+// :framegen — Lossless Scaling Frame Generation (lsfg-vk) Android library module.
+//
+// 状态：阶段 1 骨架。CMake 仅编译上游 lsfg-vk-framegen 静态库 + 占位 JNI 桥，
+// 不接 MediaCodec 也不暴露真实功能。验证编译链路通了即算成功。
+//
+// 限制：
+//   - 仅 arm64-v8a（lsfg-vk 不支持 32 位）
+//   - minSdk 29（AHardwareBuffer Vulkan import 需要 API 29 + Vulkan 1.1 device 扩展）
+//   - C++20、NDK 27+（本仓使用 NDK 28）
+plugins {
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
+}
+
+android {
+    namespace 'com.limelight.framegen'
+    compileSdk 36
+    ndkVersion "28.2.13676358"
+
+    defaultConfig {
+        minSdk 29
+
+        ndk {
+            // lsfg-vk 仅支持 64 位 ARM。x86_64 仅用于模拟器，本仓 :app 也不打包，
+            // 因此这里只编 arm64-v8a 即可。
+            abiFilters 'arm64-v8a'
+        }
+
+        externalNativeBuild {
+            cmake {
+                arguments "-DANDROID_STL=c++_shared",
+                          "-DANDROID_ARM_NEON=ON",
+                          "-DCMAKE_BUILD_TYPE=Release"
+                cppFlags "-std=c++20", "-fexceptions", "-frtti"
+            }
+        }
+
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    kotlinOptions {
+        jvmTarget = '11'
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version "3.22.1"
+        }
+    }
+
+    // lsfg-vk 子模块带大量上游头文件 / 第三方代码。lint 跑这些会噪音爆炸，关掉。
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+dependencies {
+    // 占位：阶段 1 暂无 Java/Kotlin 依赖。后续接 MediaCodec 时再加。
+}
