@@ -94,9 +94,33 @@ struct ContextResources {
     // conversion 与 decoder external format 绑定，要等首帧到达后才在 3.3a-iii.b 创建）。
     VkShaderModule shaderModule{VK_NULL_HANDLE};
 
+    // 阶段 3.3a-iii.b.1：首帧到达后才创建的 ycbcr conversion + descriptor 套件 + compute pipeline。
+    // conversion 绑 decoder externalFormat，所以必须延后到第一帧才能建。
+    uint64_t boundExternalFormat{0};
+    VkSamplerYcbcrConversion ycbcrConversion{VK_NULL_HANDLE};
+    VkSampler ycbcrSampler{VK_NULL_HANDLE};
+    VkDescriptorSetLayout dsLayout{VK_NULL_HANDLE};
+    VkPipelineLayout pipelineLayout{VK_NULL_HANDLE};
+    VkPipeline pipeline{VK_NULL_HANDLE};
+
     ~ContextResources() {
         if (ownerDevice == VK_NULL_HANDLE) {
             return;
+        }
+        if (pipeline != VK_NULL_HANDLE) {
+            vkDestroyPipeline(ownerDevice, pipeline, nullptr);
+        }
+        if (pipelineLayout != VK_NULL_HANDLE) {
+            vkDestroyPipelineLayout(ownerDevice, pipelineLayout, nullptr);
+        }
+        if (dsLayout != VK_NULL_HANDLE) {
+            vkDestroyDescriptorSetLayout(ownerDevice, dsLayout, nullptr);
+        }
+        if (ycbcrSampler != VK_NULL_HANDLE) {
+            vkDestroySampler(ownerDevice, ycbcrSampler, nullptr);
+        }
+        if (ycbcrConversion != VK_NULL_HANDLE) {
+            vkDestroySamplerYcbcrConversion(ownerDevice, ycbcrConversion, nullptr);
         }
         if (shaderModule != VK_NULL_HANDLE) {
             vkDestroyShaderModule(ownerDevice, shaderModule, nullptr);
@@ -664,6 +688,160 @@ void reset() {
     g_contextBootState.store(ContextBootState::kUninitialized, std::memory_order_release);
 }
 
+// 阶段 3.3a-iii.b.1：用首帧的 externalFormat 创建延后到运行时的 YCbCr conversion +
+// sampler + descriptor set layout + compute pipeline。一次性创建后整个 framegen
+// 生命周期内复用。必须在 g_contextMutex 持锁下调用。
+bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDROID& fp) {
+    if (g_context == nullptr || g_vk == nullptr) {
+        return false;
+    }
+    if (g_context->pipeline != VK_NULL_HANDLE) {
+        // 已经建过 — 假定后续 decoder AHB 的 externalFormat 不会变。如果变了我们再处理。
+        if (g_context->boundExternalFormat != fp.externalFormat) {
+            LOGE("stage3.3a-iii.b.1: externalFormat changed 0x%llx -> 0x%llx (not supported yet)",
+                 static_cast<unsigned long long>(g_context->boundExternalFormat),
+                 static_cast<unsigned long long>(fp.externalFormat));
+        }
+        return true;
+    }
+    if (fp.externalFormat == 0) {
+        LOGE("stage3.3a-iii.b.1: externalFormat=0 cannot build conversion");
+        return false;
+    }
+
+    VkDevice device = g_vk->device;
+
+    // 1. YCbCr conversion（external format 绑定）。
+    VkExternalFormatANDROID extFmt{
+        .sType = VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_ANDROID,
+        .pNext = nullptr,
+        .externalFormat = fp.externalFormat,
+    };
+    VkSamplerYcbcrConversionCreateInfo cvtCi{
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO,
+        .pNext = &extFmt,
+        .format = VK_FORMAT_UNDEFINED,
+        .ycbcrModel = fp.suggestedYcbcrModel,
+        .ycbcrRange = fp.suggestedYcbcrRange,
+        .components = fp.samplerYcbcrConversionComponents,
+        .xChromaOffset = fp.suggestedXChromaOffset,
+        .yChromaOffset = fp.suggestedYChromaOffset,
+        .chromaFilter = (fp.formatFeatures &
+                         VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_LINEAR_FILTER_BIT)
+                            ? VK_FILTER_LINEAR
+                            : VK_FILTER_NEAREST,
+        .forceExplicitReconstruction = VK_FALSE,
+    };
+    if (vkCreateSamplerYcbcrConversion(device, &cvtCi, nullptr, &g_context->ycbcrConversion) != VK_SUCCESS) {
+        LOGE("stage3.3a-iii.b.1: vkCreateSamplerYcbcrConversion failed");
+        return false;
+    }
+
+    // 2. sampler 绑 conversion。
+    VkSamplerYcbcrConversionInfo cvtInfo{
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO,
+        .pNext = nullptr,
+        .conversion = g_context->ycbcrConversion,
+    };
+    VkSamplerCreateInfo samplerCi{
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .pNext = &cvtInfo,
+        .flags = 0,
+        .magFilter = cvtCi.chromaFilter,
+        .minFilter = cvtCi.chromaFilter,
+        .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
+        .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        .mipLodBias = 0.0F,
+        .anisotropyEnable = VK_FALSE,
+        .maxAnisotropy = 1.0F,
+        .compareEnable = VK_FALSE,
+        .compareOp = VK_COMPARE_OP_NEVER,
+        .minLod = 0.0F,
+        .maxLod = 0.0F,
+        .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK,
+        .unnormalizedCoordinates = VK_FALSE,
+    };
+    if (vkCreateSampler(device, &samplerCi, nullptr, &g_context->ycbcrSampler) != VK_SUCCESS) {
+        LOGE("stage3.3a-iii.b.1: vkCreateSampler failed");
+        return false;
+    }
+
+    // 3. descriptor set layout：binding 0 = combined image sampler with immutable ycbcr sampler，
+    // binding 1 = storage image (R8G8B8A8_UNORM)。
+    VkSampler immutable = g_context->ycbcrSampler;
+    VkDescriptorSetLayoutBinding bindings[2]{};
+    bindings[0].binding = 0;
+    bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    bindings[0].descriptorCount = 1;
+    bindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    bindings[0].pImmutableSamplers = &immutable;
+    bindings[1].binding = 1;
+    bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    bindings[1].descriptorCount = 1;
+    bindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    bindings[1].pImmutableSamplers = nullptr;
+    VkDescriptorSetLayoutCreateInfo dslCi{
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .bindingCount = 2,
+        .pBindings = bindings,
+    };
+    if (vkCreateDescriptorSetLayout(device, &dslCi, nullptr, &g_context->dsLayout) != VK_SUCCESS) {
+        LOGE("stage3.3a-iii.b.1: vkCreateDescriptorSetLayout failed");
+        return false;
+    }
+
+    // 4. pipeline layout（无 push constants，待 iii.b.2 再加）。
+    VkPipelineLayoutCreateInfo plCi{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .setLayoutCount = 1,
+        .pSetLayouts = &g_context->dsLayout,
+        .pushConstantRangeCount = 0,
+        .pPushConstantRanges = nullptr,
+    };
+    if (vkCreatePipelineLayout(device, &plCi, nullptr, &g_context->pipelineLayout) != VK_SUCCESS) {
+        LOGE("stage3.3a-iii.b.1: vkCreatePipelineLayout failed");
+        return false;
+    }
+
+    // 5. compute pipeline。
+    VkComputePipelineCreateInfo pipeCi{
+        .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .stage = {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = 0,
+            .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+            .module = g_context->shaderModule,
+            .pName = "main",
+            .pSpecializationInfo = nullptr,
+        },
+        .layout = g_context->pipelineLayout,
+        .basePipelineHandle = VK_NULL_HANDLE,
+        .basePipelineIndex = -1,
+    };
+    if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipeCi, nullptr, &g_context->pipeline) != VK_SUCCESS) {
+        LOGE("stage3.3a-iii.b.1: vkCreateComputePipelines failed");
+        return false;
+    }
+
+    g_context->boundExternalFormat = fp.externalFormat;
+    LOGI("stage3.3a-iii.b.1: ycbcr conversion + sampler + pipeline ready "
+         "externalFormat=0x%llx model=%u range=%u chromaFilter=%d",
+         static_cast<unsigned long long>(fp.externalFormat),
+         static_cast<unsigned>(fp.suggestedYcbcrModel),
+         static_cast<unsigned>(fp.suggestedYcbcrRange),
+         static_cast<int>(cvtCi.chromaFilter));
+    return true;
+}
+
 bool probeImportDecoderAhb(AHardwareBuffer* decoderAhb) {
     if (decoderAhb == nullptr) {
         return false;
@@ -689,6 +867,10 @@ bool probeImportDecoderAhb(AHardwareBuffer* decoderAhb) {
         LOGE("stage3.3a-ii: vkGetAndroidHardwareBufferPropertiesANDROID failed res=%d", res);
         return false;
     }
+
+    // iii.b.1: 首次接收到 decoder AHB 时建立 ycbcr conversion + compute pipeline。
+    // 失败不阻断 probe，让 iii.a 的 import-only 路径仍可观察。
+    ensureYcbcrPipelineLocked(formatProps);
 
     AHardwareBuffer_Desc desc{};
     AHardwareBuffer_describe(decoderAhb, &desc);
