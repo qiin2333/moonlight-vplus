@@ -1404,6 +1404,42 @@ class StreamSettings : AppCompatActivity() {
             setPreferencesFromResource(R.xml.preferences, rootKey)
             val screen = preferenceScreen
 
+            // ---- Framegen 自检按钮（阶段 2）----
+            // 点击立即调用 native 桥，结果以 Toast + Logcat (TAG=Framegen) 返回。
+            // 用 setOnPreferenceClickListener 而非 :app 直接依赖 :framegen 的 native API —— 这条路径
+            // 已经通过 isAvailable() 自动降级，不会在不支持的设备上炸。
+            findPreference<Preference>("pref_framegen_selftest")?.let { pref ->
+                pref.setOnPreferenceClickListener {
+                    val ctx = requireContext()
+                    val result = if (com.limelight.framegen.FramegenInterceptor.isAvailable()) {
+                        com.limelight.framegen.FramegenInterceptor().selfTest()
+                    } else {
+                        ctx.getString(R.string.toast_framegen_unavailable)
+                    }
+                    Toast.makeText(
+                        ctx,
+                        ctx.getString(R.string.toast_framegen_selftest_result, result),
+                        Toast.LENGTH_LONG
+                    ).show()
+                    true
+                }
+            }
+            // 开关切换 ON 时给一次警告 Toast，让用户清楚阶段 2 还没接流水线。
+            findPreference<Preference>("checkbox_framegen_enabled")?.let { pref ->
+                pref.onPreferenceChangeListener =
+                    Preference.OnPreferenceChangeListener { _, newValue ->
+                        if (newValue == true) {
+                            val ctx = requireContext()
+                            if (!com.limelight.framegen.FramegenInterceptor.isAvailable()) {
+                                Toast.makeText(ctx, R.string.toast_framegen_unavailable, Toast.LENGTH_LONG).show()
+                                return@OnPreferenceChangeListener false
+                            }
+                            Toast.makeText(ctx, R.string.toast_framegen_enabled_warning, Toast.LENGTH_LONG).show()
+                        }
+                        true
+                    }
+            }
+
             // 让所有 ListPreference 在 summary 顶部显示当前选中值，
             // 避免用户必须点开才知道现值。原 summary 作为说明保留在第二行。
             applyListPreferenceCurrentValueSummary(screen)

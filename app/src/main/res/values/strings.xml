@@ -873,6 +873,15 @@
     <string name="suffix_seekbar_output_buffer_queue_limit">frames</string>
     <string name="title_force_mtk_max_operating_rate">Force MTK max operating rate (Experimental)</string>
     <string name="summary_force_mtk_max_operating_rate">Enables the MediaTek decoder override `KEY_OPERATING_RATE = Short.MAX_VALUE`. This can improve latency on some newer Dimensity / MTK SoCs, but may cause major regressions on others. For example, issue #299 reports Hisense U7Q (`c2.mtk.hevc.decoder`) building up 3-5 seconds of display latency with this enabled. Off by default. Only affects MTK decoders.</string>
+
+    <!-- Frame Generation (Lossless Scaling on-device) -->
+    <string name="title_framegen_enabled">Frame generation (实验性 / Stage 2 wiring only)</string>
+    <string name="summary_framegen_enabled">基于 lsfg-vk-android 的客户端插帧。当前为阶段 2 接线状态：仅校验 native 库可加载，不会真正插帧。需要 arm64-v8a + Android 10+ + Adreno 7xx 级 GPU。</string>
+    <string name="title_framegen_selftest">Framegen 自检</string>
+    <string name="summary_framegen_selftest">点击后调用 native 桥的 selfTest()，结果通过 Toast / Logcat (TAG: Framegen) 展示。</string>
+    <string name="toast_framegen_selftest_result">Framegen 自检结果: %1$s</string>
+    <string name="toast_framegen_enabled_warning">Framegen 已启用 — 阶段 2 仅校验 native 加载，串流流水线未接入</string>
+    <string name="toast_framegen_unavailable">当前设备不支持 framegen（需 Android 10+ / arm64-v8a / Vulkan 1.1）</string>
     <string name="unpaired_devices_shown">Unpaired devices shown</string>
     <string name="unpaired_devices_hidden">Unpaired devices hidden</string>
     <string name="new_unpaired_device_shown">New unpaired device detected, showing unpaired devices</string>

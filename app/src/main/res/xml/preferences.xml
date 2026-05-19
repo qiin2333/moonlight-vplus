@@ -100,6 +100,20 @@
             android:title="@string/title_force_mtk_max_operating_rate"
             android:summary="@string/summary_force_mtk_max_operating_rate"
             android:defaultValue="false" />
+        <!--
+          Frame generation (Lossless Scaling 端上插帧).
+          阶段 2：开关 + 自检按钮，仅验证 native 库加载。
+          阶段 3+ 才接入 MediaCodec→AHB→framegen→显示 流水线。
+        -->
+        <CheckBoxPreference
+            android:key="checkbox_framegen_enabled"
+            android:title="@string/title_framegen_enabled"
+            android:summary="@string/summary_framegen_enabled"
+            android:defaultValue="false" />
+        <Preference
+            android:key="pref_framegen_selftest"
+            android:title="@string/title_framegen_selftest"
+            android:summary="@string/summary_framegen_selftest" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_host_settings"
         android:key="category_host_settings"
