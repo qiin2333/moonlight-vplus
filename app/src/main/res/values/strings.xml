@@ -875,13 +875,20 @@
     <string name="summary_force_mtk_max_operating_rate">Enables the MediaTek decoder override `KEY_OPERATING_RATE = Short.MAX_VALUE`. This can improve latency on some newer Dimensity / MTK SoCs, but may cause major regressions on others. For example, issue #299 reports Hisense U7Q (`c2.mtk.hevc.decoder`) building up 3-5 seconds of display latency with this enabled. Off by default. Only affects MTK decoders.</string>
 
     <!-- Frame Generation (Lossless Scaling on-device) -->
-    <string name="title_framegen_enabled">Frame generation (实验性 / Stage 2 wiring only)</string>
-    <string name="summary_framegen_enabled">基于 lsfg-vk-android 的客户端插帧。当前为阶段 2 接线状态：仅校验 native 库可加载，不会真正插帧。需要 arm64-v8a + Android 10+ + Adreno 7xx 级 GPU。</string>
+    <string name="title_framegen_enabled">Frame generation (实验性 / Stage 3.1 verified)</string>
+    <string name="summary_framegen_enabled">基于 lsfg-vk-android 的客户端插帧。当前已验证 MediaCodec → ImageReader → AHardwareBuffer → JNI 数据通道；尚未把画面重新显示/插帧输出。需要 arm64-v8a + Android 10+ + Vulkan 1.1。</string>
     <string name="title_framegen_selftest">Framegen 自检</string>
     <string name="summary_framegen_selftest">点击后调用 native 桥的 selfTest()，结果通过 Toast / Logcat (TAG: Framegen) 展示。</string>
+    <string name="title_framegen_pick_lossless_dll">选择 Lossless.dll（阶段 4 自检）</string>
+    <string name="summary_framegen_pick_lossless_dll">从存储中选择官方的 `Lossless.dll`。应用会复制到私有目录，并在 native 侧验证是否能解析 PE 资源与转译 DXBC shader。</string>
+    <string name="summary_framegen_pick_lossless_dll_selected">已暂存 Lossless.dll：%1$s
+再次点击可重新选择并覆盖。</string>
     <string name="toast_framegen_selftest_result">Framegen 自检结果: %1$s</string>
-    <string name="toast_framegen_enabled_warning">Framegen 已启用 — 阶段 2 仅校验 native 加载，串流流水线未接入</string>
+    <string name="toast_framegen_enabled_warning">Framegen 已启用 — 阶段 3.1：下次串流时画面会被重定向到 ImageReader（黑屏）以验证 AHB 数据通道，请查看 logcat -s Framegen</string>
     <string name="toast_framegen_unavailable">当前设备不支持 framegen（需 Android 10+ / arm64-v8a / Vulkan 1.1）</string>
+    <string name="toast_framegen_lossless_dll_copying">正在复制并验证 Lossless.dll…</string>
+    <string name="toast_framegen_lossless_dll_probe_result">Lossless.dll 自检结果: %1$s</string>
+    <string name="toast_framegen_lossless_dll_pick_failed">选择或读取 Lossless.dll 失败：%1$s</string>
     <string name="unpaired_devices_shown">Unpaired devices shown</string>
     <string name="unpaired_devices_hidden">Unpaired devices hidden</string>
     <string name="new_unpaired_device_shown">New unpaired device detected, showing unpaired devices</string>

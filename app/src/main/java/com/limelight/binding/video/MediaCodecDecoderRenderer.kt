@@ -105,6 +105,14 @@ class MediaCodecDecoderRenderer(
     private var initialHeight = 0
     private var videoFormat = 0
     private var renderTarget: SurfaceHolder? = null
+    /**
+     * 阶段 3 framegen 注入点：非 null 时，MediaCodec.configure() 用该 Surface 替代
+     * renderTarget.surface，把解码帧导向 ImageReader 而不是直接上屏。null 表示走原路径。
+     * 仅在 decoder 未配置（[configureAndStartDecoder] 调用前）期间设置才生效；
+     * 运行中切换需要先 [pauseProcessing] / [resumeProcessing]。
+     */
+    @Volatile
+    var framegenSurface: android.view.Surface? = null
     @Volatile
     private var stopping = false
     private var reportedCrash = false
@@ -675,7 +683,14 @@ class MediaCodecDecoderRenderer(
 
         LimeLog.info("Configuring with format: $format")
 
-        videoDecoder!!.configure(format, renderTarget!!.surface, null, 0)
+        // 阶段 3：framegenSurface 非空时走 ImageReader 截流路径，原 SurfaceView 不再接收帧。
+        // 注意：HDR DataSpace 设置仍作用在 renderTarget!!.surface 上 —— 阶段 3.1 暂不
+        // 关心 HDR 路径下的截流（一切 framegen 路径强制 SDR 处理）。
+        val outSurface = framegenSurface ?: renderTarget!!.surface
+        if (framegenSurface != null) {
+            LimeLog.info("Framegen capture surface active (decoder output redirected to ImageReader)")
+        }
+        videoDecoder!!.configure(format, outSurface, null, 0)
 
         // Set DataSpace on the output Surface for HDR content.
         // Equivalent to HarmonyOS OH_NativeWindow_SetColorSpace().

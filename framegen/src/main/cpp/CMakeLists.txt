@@ -29,6 +29,12 @@ add_library(volk STATIC "${LSFGVK_ROOT}/thirdparty/volk/volk.c")
 target_include_directories(volk PUBLIC "${LSFGVK_ROOT}/thirdparty/volk")
 target_compile_definitions(volk PUBLIC VK_USE_PLATFORM_ANDROID_KHR=1)
 
+# ----- 第三方依赖：DXBC / PE 解析 -----
+# 阶段 4：复用 lsfg-vk-android 自带的 dxbc + pe-parse，
+# 用于验证 Lossless.dll 中 shader 资源可以在 Android 侧被读取并转译。
+add_subdirectory("${LSFGVK_ROOT}/thirdparty/dxbc" dxbc_build EXCLUDE_FROM_ALL)
+add_subdirectory("${LSFGVK_ROOT}/thirdparty/pe-parse/pe-parser-library" peparse_build EXCLUDE_FROM_ALL)
+
 # ----- 上游 framegen 核心 -----
 # framegen/CMakeLists.txt 把 lsfg-vk-framegen 定义为 STATIC，链接 volk。
 # 上游用 CMAKE_CONFIGURE_DEPENDS 让 AGP 增量构建能感知到子模块内的源文件变化——照搬。
@@ -45,9 +51,12 @@ add_subdirectory("${LSFGVK_ROOT}/framegen" framegen_build EXCLUDE_FROM_ALL)
 
 # ----- 我们自己的 JNI 桥 -----
 add_library(moonlight-framegen SHARED
-    jni_bridge.cpp)
+    jni_bridge.cpp
+    "${LSFGVK_ROOT}/src/extract/trans.cpp")
 
 target_include_directories(moonlight-framegen PRIVATE
+    "${LSFGVK_ROOT}"                 # <thirdparty/spirv.hpp>
+    "${LSFGVK_ROOT}/include"         # extract/trans.hpp 等
     "${LSFGVK_ROOT}/framegen/public"   # LSFG_3_1 / LSFG_3_1P 公共 API
     "${LSFGVK_ROOT}/framegen/include") # Core::Image 等内部头（后续 AHB 路径要用）
 
@@ -59,6 +68,8 @@ find_library(nativewindow-lib nativewindow)
 target_link_libraries(moonlight-framegen PRIVATE
     lsfg-vk-framegen
     volk
+    pe-parse
+    dxbc
     ${android-lib}
     ${log-lib}
     ${nativewindow-lib})

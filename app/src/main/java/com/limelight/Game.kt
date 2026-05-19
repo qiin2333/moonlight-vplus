@@ -21,6 +21,8 @@ import com.limelight.binding.input.driver.UsbDriverService
 import com.limelight.binding.input.evdev.EvdevListener
 import com.limelight.binding.input.virtual_controller.VirtualController
 import com.limelight.binding.video.MediaCodecDecoderRenderer
+import com.limelight.framegen.FramegenCapture
+import com.limelight.framegen.FramegenInterceptor
 import com.limelight.binding.video.MediaCodecHelper
 import com.limelight.binding.video.PerfOverlayListener
 import com.limelight.binding.video.PerformanceInfo
@@ -178,6 +180,11 @@ class Game : Activity(), SurfaceHolder.Callback,
     lateinit var keyboardInputHandler: KeyboardInputHandler
 
     private var decoderRenderer: MediaCodecDecoderRenderer? = null
+    /**
+     * 阶段 3.1 framegen 被动截流句柄。为 null 表示未开启 / 不可用 / 已释放。
+     * 在 surfaceChanged 里创建（在 setRenderTarget 之前），在 surfaceDestroyed 里 release。
+     */
+    private var framegenCapture: FramegenCapture? = null
     private var reportedCrash = false
 
     private var highPerfWifiLock: WifiManager.WifiLock? = null
@@ -1651,6 +1658,30 @@ class Game : Activity(), SurfaceHolder.Callback,
             throw IllegalStateException("Surface changed before creation!")
         }
 
+        // 阶段 3.1：若用户在 Settings 勾了 framegen_enabled，则创建 ImageReader 截流。
+        // 必须在 setRenderTarget 之前，因为 configureAndStartDecoder 会读 framegenSurface。
+        // 反复进出应用会多次触发 surfaceChanged，先 release 旧的避免泄漏。
+        framegenCapture?.release()
+        framegenCapture = null
+        decoderRenderer?.framegenSurface = null
+
+        val fgPrefs = PreferenceManager.getDefaultSharedPreferences(this)
+        if (fgPrefs.getBoolean("checkbox_framegen_enabled", false) && FramegenInterceptor.isAvailable()) {
+            val cap = FramegenCapture.create(prefConfig.width, prefConfig.height)
+            if (cap != null) {
+                framegenCapture = cap
+                decoderRenderer?.framegenSurface = cap.surface
+                LimeLog.info("Framegen capture armed (${prefConfig.width}x${prefConfig.height})")
+                runOnUiThread {
+                    Toast.makeText(this,
+                        "Framegen 阶段 3.1：帧被重定向到 ImageReader，屏幕将黑屏。请查 logcat -s Framegen",
+                        Toast.LENGTH_LONG).show()
+                }
+            } else {
+                LimeLog.warning("Framegen capture create() returned null — fallback to direct path")
+            }
+        }
+
         decoderRenderer?.setRenderTarget(holder)
 
         if (!attemptedConnection) {
@@ -1697,6 +1728,12 @@ class Game : Activity(), SurfaceHolder.Callback,
         if (!surfaceCreated) {
             throw IllegalStateException("Surface destroyed before creation!")
         }
+
+        // 阶段 3.1：framegen capture 生命周期跟着 surface。先 release ImageReader，
+        // 后面 decoder cleanup() 才不会在子线程崩。
+        framegenCapture?.release()
+        framegenCapture = null
+        decoderRenderer?.framegenSurface = null
 
         cursorServiceManager.destroyLocalCursorRenderers()
 

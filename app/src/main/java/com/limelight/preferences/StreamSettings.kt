@@ -22,6 +22,7 @@ import android.text.Spanned
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
 import android.util.DisplayMetrics
+import android.util.Log
 import android.view.Display
 import android.view.DisplayCutout
 import android.view.KeyEvent
@@ -77,10 +78,12 @@ import jp.wasabeef.glide.transformations.BlurTransformation
 import jp.wasabeef.glide.transformations.ColorFilterTransformation
 
 import java.io.BufferedReader
+import java.io.File
 import java.io.IOException
 import java.io.InputStreamReader
 import java.util.*
 
+import kotlin.concurrent.thread
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -106,6 +109,9 @@ class StreamSettings : AppCompatActivity() {
     // 状态保存键
     companion object {
         private const val KEY_SELECTED_CATEGORY = "selected_category_index"
+        private const val REQUEST_CODE_PICK_FRAMEGEN_DLL = 4
+        private const val PREF_FRAMEGEN_DLL_URI = "pref_framegen_lossless_dll_uri"
+        private const val PREF_FRAMEGEN_DLL_STAGED_PATH = "pref_framegen_lossless_dll_staged_path"
 
         // HACK for Android 9
         var displayCutoutP: DisplayCutout? = null
@@ -1424,6 +1430,23 @@ class StreamSettings : AppCompatActivity() {
                     true
                 }
             }
+            findPreference<Preference>("pref_framegen_pick_lossless_dll")?.let { pref ->
+                pref.setOnPreferenceClickListener {
+                    val ctx = requireContext()
+                    if (!com.limelight.framegen.FramegenInterceptor.isAvailable()) {
+                        Toast.makeText(ctx, R.string.toast_framegen_unavailable, Toast.LENGTH_LONG).show()
+                        return@setOnPreferenceClickListener true
+                    }
+
+                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "*/*"
+                    }
+                    @Suppress("DEPRECATION")
+                    startActivityForResult(intent, REQUEST_CODE_PICK_FRAMEGEN_DLL)
+                    true
+                }
+            }
             // 开关切换 ON 时给一次警告 Toast，让用户清楚阶段 2 还没接流水线。
             findPreference<Preference>("checkbox_framegen_enabled")?.let { pref ->
                 pref.onPreferenceChangeListener =
@@ -1439,6 +1462,7 @@ class StreamSettings : AppCompatActivity() {
                         true
                     }
             }
+            updateFramegenDllPreferenceSummary()
 
             // 让所有 ListPreference 在 summary 顶部显示当前选中值，
             // 避免用户必须点开才知道现值。原 summary 作为说明保留在第二行。
@@ -2064,11 +2088,127 @@ class StreamSettings : AppCompatActivity() {
                 }
             }
 
+            if (requestCode == REQUEST_CODE_PICK_FRAMEGEN_DLL && resultCode == RESULT_OK) {
+                val dllUri = data?.data
+                if (dllUri != null) {
+                    val ctx = requireContext()
+                    Log.i("Framegen", "picked Lossless.dll uri=$dllUri flags=${data.flags}")
+                    Toast.makeText(ctx, R.string.toast_framegen_lossless_dll_copying, Toast.LENGTH_SHORT).show()
+
+                    thread(name = "FramegenLosslessDllProbe") {
+                        val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
+                        val resultText = try {
+                            // takePersistableUriPermission 只接受 READ/WRITE 两个权限位（0x1 / 0x2），
+                            // 不能把 FLAG_GRANT_PERSISTABLE_URI_PERMISSION 本身传进去——否则抛 IllegalArgumentException。
+                            try {
+                                val readWriteFlags = data.flags and
+                                    (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                                val grantFlags = if (readWriteFlags != 0) readWriteFlags
+                                                 else Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                ctx.contentResolver.takePersistableUriPermission(dllUri, grantFlags)
+                            } catch (e: Throwable) {
+                                // 某些文档提供器不支持持久授权 / Intent 里没带 read flag；
+                                // 这一步只是为了下次冷启动还能读，失败不该阻塞本次复制。
+                                Log.w("Framegen", "takePersistableUriPermission skipped: ${e.message}")
+                            }
+
+                            val stagedFile = stageFramegenLosslessDll(dllUri)
+                            Log.i(
+                                "Framegen",
+                                "staged Lossless.dll path=${stagedFile.absolutePath} size=${stagedFile.length()}"
+                            )
+                            prefs.edit {
+                                putString(PREF_FRAMEGEN_DLL_URI, dllUri.toString())
+                                putString(PREF_FRAMEGEN_DLL_STAGED_PATH, stagedFile.absolutePath)
+                            }
+
+                            com.limelight.framegen.FramegenInterceptor().probeLosslessDll(stagedFile.absolutePath)
+                        } catch (e: Exception) {
+                            Log.e("Framegen", "pick/probe Lossless.dll failed", e)
+                            getString(
+                                R.string.toast_framegen_lossless_dll_pick_failed,
+                                e.message ?: e.javaClass.simpleName
+                            )
+                        }
+
+                        activity?.runOnUiThread {
+                            if (isAdded) {
+                                updateFramegenDllPreferenceSummary()
+                            }
+                            Toast.makeText(
+                                ctx,
+                                if (resultText.startsWith("Lossless.dll 自检结果:")) {
+                                    resultText
+                                } else {
+                                    getString(R.string.toast_framegen_lossless_dll_probe_result, resultText)
+                                },
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+            }
+
             // 处理本地图片选择
             if (requestCode == LocalImagePickerPreference.PICK_IMAGE_REQUEST && resultCode == RESULT_OK) {
                 val pickerPreference = LocalImagePickerPreference.instance
                 pickerPreference?.handleImagePickerResult(data)
             }
+        }
+
+        private fun updateFramegenDllPreferenceSummary() {
+            val pref = findPreference<Preference>("pref_framegen_pick_lossless_dll") ?: return
+            val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
+            val stagedPath = prefs.getString(PREF_FRAMEGEN_DLL_STAGED_PATH, null)
+            pref.summary = if (!stagedPath.isNullOrBlank() && File(stagedPath).exists()) {
+                getString(R.string.summary_framegen_pick_lossless_dll_selected, stagedPath)
+            } else {
+                getString(R.string.summary_framegen_pick_lossless_dll)
+            }
+        }
+
+        @Throws(IOException::class)
+        private fun stageFramegenLosslessDll(sourceUri: android.net.Uri): File {
+            val ctx = requireContext()
+            val targetDir = File(ctx.filesDir, "framegen").apply { mkdirs() }
+            if (!targetDir.exists()) {
+                throw IOException("unable to create framegen dir")
+            }
+
+            val targetFile = File(targetDir, "Lossless.dll")
+            var copied = false
+            var lastError: Exception? = null
+            repeat(5) { attempt ->
+                try {
+                    ctx.contentResolver.openInputStream(sourceUri)?.use { input ->
+                        targetFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    } ?: throw IOException("unable to open selected dll")
+
+                    if (targetFile.exists() && targetFile.length() > 0L) {
+                        copied = true
+                        return@repeat
+                    }
+                } catch (e: Exception) {
+                    lastError = e
+                    Log.w("Framegen", "stage Lossless.dll attempt ${attempt + 1}/5 failed", e)
+                }
+
+                if (!copied && attempt < 4) {
+                    Thread.sleep(120)
+                }
+            }
+
+            if (!copied) {
+                throw IOException(lastError?.message ?: "unable to open selected dll")
+            }
+
+            if (!targetFile.exists() || targetFile.length() <= 0L) {
+                throw IOException("staged dll is empty")
+            }
+
+            return targetFile
         }
     }
 

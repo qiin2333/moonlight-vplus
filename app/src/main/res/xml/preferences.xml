@@ -114,6 +114,10 @@
             android:key="pref_framegen_selftest"
             android:title="@string/title_framegen_selftest"
             android:summary="@string/summary_framegen_selftest" />
+        <Preference
+            android:key="pref_framegen_pick_lossless_dll"
+            android:title="@string/title_framegen_pick_lossless_dll"
+            android:summary="@string/summary_framegen_pick_lossless_dll" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_host_settings"
         android:key="category_host_settings"

@@ -42,6 +42,25 @@ class FramegenInterceptor {
     }
 
     /**
+     * 阶段 4 自检：验证用户提供的 Lossless.dll 能否在 native 侧被解析，
+     * 并成功把至少一份 DXBC shader 转成 SPIR-V。
+     */
+    fun probeLosslessDll(dllPath: String): String {
+        if (!isAvailable()) {
+            return "unavailable (sdk=${Build.VERSION.SDK_INT}, abi=${Build.SUPPORTED_ABIS.joinToString()})"
+        }
+        return try {
+            nativeProbeLosslessDll(dllPath)
+        } catch (t: UnsatisfiedLinkError) {
+            Log.e(TAG, "native probe missing", t)
+            "missing-native"
+        } catch (t: Throwable) {
+            Log.e(TAG, "native probe failed", t)
+            "probe-exception: ${t.message ?: t.javaClass.simpleName}"
+        }
+    }
+
+    /**
      * 后续阶段才实现。当前抛 NotImplementedError 是为了让上层任何意外调用都立即暴露。
      */
     fun initialize(width: Int, height: Int, multiplier: Int): Boolean {
@@ -54,6 +73,7 @@ class FramegenInterceptor {
 
     // ---- native 入口（与 framegen/src/main/cpp/jni_bridge.cpp 一一对应）----
     private external fun nativeSelfTest(): String
+    private external fun nativeProbeLosslessDll(dllPath: String): String
 
     companion object {
         private const val TAG = "Framegen"
@@ -83,5 +103,28 @@ class FramegenInterceptor {
             if (Build.SUPPORTED_64_BIT_ABIS.none { it == "arm64-v8a" }) return false
             return libLoaded
         }
+
+        /**
+         * 阶段 3.1 骨架：把 ImageReader 拿到的 HardwareBuffer 透传给 native 端，
+         * native 只做计数/log 打印，不导入 Vulkan、不持有引用。
+         *
+         * @param hwBuffer  从 Image.getHardwareBuffer() 拿到的 HardwareBuffer（不为 null）
+         * @param width     ImageReader 配置宽（≠ AHB 实际宽，因为驱动可能 align）
+         * @param height    ImageReader 配置高
+         * @param format    ImageReader 配置 format（ImageFormat.PRIVATE 时取 -1 即可）
+         * @param timestampNs  Image.getTimestamp() 返回的 mono ns
+         * @return  到目前为止累计收到的帧数（≥1），0 表示 native 出错
+         */
+        @JvmStatic
+        external fun nativeOnFrameAvailable(
+            hwBuffer: android.hardware.HardwareBuffer,
+            width: Int,
+            height: Int,
+            format: Int,
+            timestampNs: Long
+        ): Long
+
+        @JvmStatic
+        external fun nativeResetFrameCounter()
     }
 }
