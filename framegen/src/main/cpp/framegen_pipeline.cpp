@@ -940,18 +940,16 @@ bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDR
     return true;
 }
 
-// 阶段 3.3c：把 LSFG 写好的 output[0] AHB（RGBA8888，与 input 同尺寸）通过 CPU 拷贝
-// 回贴到 SurfaceView 的 ANativeWindow。调用方必须持 g_contextMutex。
-// 失败只打日志，不影响后续帧。
-void blitOutputToWindowLocked() {
-    if (g_outputWindow == nullptr || g_context == nullptr || g_context->outputs.empty()) {
+// 阶段 3.3c：把指定 RGBA8888 AHB 通过 CPU 拷贝回贴到 SurfaceView 的 ANativeWindow。
+// 调用方必须持 g_contextMutex 且 AHB 内容已 GPU 完成（dispatch 后 vkWaitForFences /
+// LSFG waitIdle）。失败只打日志，不影响后续帧。tag 仅用于日志区分。
+void blitAhbToWindowLocked(AHardwareBuffer* srcAhb, const char* tag) {
+    if (g_outputWindow == nullptr || srcAhb == nullptr) {
         return;
     }
-    AHardwareBuffer* outAhb = g_context->outputs[0].get();
-    if (outAhb == nullptr) return;
 
     AHardwareBuffer_Desc desc{};
-    AHardwareBuffer_describe(outAhb, &desc);
+    AHardwareBuffer_describe(srcAhb, &desc);
     const int32_t srcW = static_cast<int32_t>(desc.width);
     const int32_t srcH = static_cast<int32_t>(desc.height);
     const int32_t srcStridePx = static_cast<int32_t>(desc.stride);
@@ -973,17 +971,17 @@ void blitOutputToWindowLocked() {
 
     void* srcPtr = nullptr;
     const int lockResult = AHardwareBuffer_lock(
-        outAhb, AHARDWAREBUFFER_USAGE_CPU_READ_OFTEN, -1, nullptr, &srcPtr);
+        srcAhb, AHARDWAREBUFFER_USAGE_CPU_READ_OFTEN, -1, nullptr, &srcPtr);
     if (lockResult != 0 || srcPtr == nullptr) {
-        LOGE("stage3.3c: AHardwareBuffer_lock(output) rc=%d ptr=%p", lockResult, srcPtr);
+        LOGE("stage3.3c: AHardwareBuffer_lock(%s) rc=%d ptr=%p", tag, lockResult, srcPtr);
         return;
     }
 
     ANativeWindow_Buffer dst{};
     const int32_t rc = ANativeWindow_lock(g_outputWindow, &dst, nullptr);
     if (rc != 0) {
-        LOGE("stage3.3c: ANativeWindow_lock rc=%d", rc);
-        AHardwareBuffer_unlock(outAhb, nullptr);
+        LOGE("stage3.3c: ANativeWindow_lock(%s) rc=%d", tag, rc);
+        AHardwareBuffer_unlock(srcAhb, nullptr);
         return;
     }
 
@@ -1001,11 +999,12 @@ void blitOutputToWindowLocked() {
     }
 
     ANativeWindow_unlockAndPost(g_outputWindow);
-    AHardwareBuffer_unlock(outAhb, nullptr);
+    AHardwareBuffer_unlock(srcAhb, nullptr);
 
     g_blitCount += 1;
-    if (g_blitCount == 1 || (g_blitCount % 60) == 0) {
-        LOGI("stage3.3c: blit ok count=%llu src=%dx%d/stride=%d dst=%dx%d/stride=%d",
+    if (g_blitCount == 1 || (g_blitCount % 120) == 0) {
+        LOGI("stage3.3c: blit ok tag=%s count=%llu src=%dx%d/stride=%d dst=%dx%d/stride=%d",
+             tag,
              static_cast<unsigned long long>(g_blitCount),
              srcW, srcH, srcStridePx, dst.width, dst.height, dst.stride);
     }
@@ -1182,8 +1181,13 @@ bool dispatchYuvToRgbaLocked(VkImage decoderImage, VkImageView decoderView) {
         return false;
     }
 
-    // 阶段 3.3c：LSFG 已把生成帧写到 output[0]；CPU 回贴到 SurfaceView。
-    blitOutputToWindowLocked();
+    // 阶段 3.3c (优化)：标准 2x 插帧顺序 —— 先贴 LSFG 插值帧（位于 realN-1 与 realN 之间），
+    // 再贴 realN 本帧。两次 ANativeWindow_unlockAndPost 会被 SurfaceFlinger 按顺序入队，
+    // 在 120Hz 显示器上可达成真 2x 视觉效果，去除"只贴插值帧"导致的液化。
+    // 第一次调用时另一 input slot 还没有真实内容，插值帧是 garbage，但仅持续一帧。
+    AHardwareBuffer* realAhb = (slot == 0) ? g_context->input0.get() : g_context->input1.get();
+    blitAhbToWindowLocked(g_context->outputs[0].get(), "interp");
+    blitAhbToWindowLocked(realAhb, "real");
     return true;
 }
 
