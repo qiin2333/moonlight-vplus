@@ -9,6 +9,8 @@
 #include "extract/extract.hpp"
 #include "extract/trans.hpp"
 
+#include "yuv_to_rgba.comp.spv.h"
+
 #include <atomic>
 #include <cstdlib>
 #include <cstring>
@@ -77,6 +79,47 @@ struct ContextResources {
     int32_t contextId{-1};
     uint32_t width{0};
     uint32_t height{0};
+
+    // 阶段 3.3a-iii.a：owned input AHB import 后的 VkImage / memory / view。
+    // 这些资源跟 AHB 绑定，整个 framegen 生命周期内不变。
+    VkDevice ownerDevice{VK_NULL_HANDLE};
+    VkImage input0Image{VK_NULL_HANDLE};
+    VkDeviceMemory input0Memory{VK_NULL_HANDLE};
+    VkImageView input0View{VK_NULL_HANDLE};
+    VkImage input1Image{VK_NULL_HANDLE};
+    VkDeviceMemory input1Memory{VK_NULL_HANDLE};
+    VkImageView input1View{VK_NULL_HANDLE};
+
+    // 阶段 3.3a-iii.a：YUV→RGBA compute pipeline（不含 ycbcr conversion；
+    // conversion 与 decoder external format 绑定，要等首帧到达后才在 3.3a-iii.b 创建）。
+    VkShaderModule shaderModule{VK_NULL_HANDLE};
+
+    ~ContextResources() {
+        if (ownerDevice == VK_NULL_HANDLE) {
+            return;
+        }
+        if (shaderModule != VK_NULL_HANDLE) {
+            vkDestroyShaderModule(ownerDevice, shaderModule, nullptr);
+        }
+        if (input0View != VK_NULL_HANDLE) {
+            vkDestroyImageView(ownerDevice, input0View, nullptr);
+        }
+        if (input1View != VK_NULL_HANDLE) {
+            vkDestroyImageView(ownerDevice, input1View, nullptr);
+        }
+        if (input0Image != VK_NULL_HANDLE) {
+            vkDestroyImage(ownerDevice, input0Image, nullptr);
+        }
+        if (input1Image != VK_NULL_HANDLE) {
+            vkDestroyImage(ownerDevice, input1Image, nullptr);
+        }
+        if (input0Memory != VK_NULL_HANDLE) {
+            vkFreeMemory(ownerDevice, input0Memory, nullptr);
+        }
+        if (input1Memory != VK_NULL_HANDLE) {
+            vkFreeMemory(ownerDevice, input1Memory, nullptr);
+        }
+    }
 };
 
 std::atomic<ProbeState> g_probeState{ProbeState::kUninitialized};
@@ -107,6 +150,119 @@ AhbPtr allocateOwnedRgbaAhb(uint32_t width, uint32_t height) {
         throw std::runtime_error("AHardwareBuffer_allocate failed");
     }
     return AhbPtr(raw);
+}
+
+// 把已经分配的 owned RGBA AHB 导入成 VkImage + VkDeviceMemory + VkImageView。
+// 这跟 probeImportDecoderAhb 不同：因为 AHB 格式是已知的 R8G8B8A8_UNORM，所以
+// VkImage.format = VK_FORMAT_R8G8B8A8_UNORM 且不需要 VkExternalFormatANDROID，
+// 也不需要 ycbcr conversion，可以直接作为 storage image 被 compute shader 写。
+struct ImportedImage {
+    VkImage image{VK_NULL_HANDLE};
+    VkDeviceMemory memory{VK_NULL_HANDLE};
+    VkImageView view{VK_NULL_HANDLE};
+};
+
+ImportedImage importOwnedRgbaAhb(VkDevice device,
+                                 const VkPhysicalDeviceMemoryProperties& memProps,
+                                 AHardwareBuffer* ahb,
+                                 uint32_t width, uint32_t height) {
+    VkAndroidHardwareBufferFormatPropertiesANDROID fmtProps{
+        .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_FORMAT_PROPERTIES_ANDROID,
+        .pNext = nullptr,
+    };
+    VkAndroidHardwareBufferPropertiesANDROID ahbProps{
+        .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_PROPERTIES_ANDROID,
+        .pNext = &fmtProps,
+    };
+    if (vkGetAndroidHardwareBufferPropertiesANDROID(device, ahb, &ahbProps) != VK_SUCCESS) {
+        throw std::runtime_error("vkGetAHBPropsAndroid (owned RGBA) failed");
+    }
+
+    VkExternalMemoryImageCreateInfo extImg{
+        .sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_ANDROID_HARDWARE_BUFFER_BIT_ANDROID,
+    };
+    VkImageCreateInfo imgCi{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .pNext = &extImg,
+        .flags = 0,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = VK_FORMAT_R8G8B8A8_UNORM,
+        .extent = { width, height, 1 },
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .usage = VK_IMAGE_USAGE_STORAGE_BIT |
+                 VK_IMAGE_USAGE_SAMPLED_BIT |
+                 VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .queueFamilyIndexCount = 0,
+        .pQueueFamilyIndices = nullptr,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    };
+    ImportedImage out{};
+    if (vkCreateImage(device, &imgCi, nullptr, &out.image) != VK_SUCCESS) {
+        throw std::runtime_error("vkCreateImage (owned RGBA AHB) failed");
+    }
+
+    uint32_t typeIndex = UINT32_MAX;
+    for (uint32_t i = 0; i < memProps.memoryTypeCount; ++i) {
+        if (ahbProps.memoryTypeBits & (1u << i)) {
+            typeIndex = i;
+            break;
+        }
+    }
+    if (typeIndex == UINT32_MAX) {
+        vkDestroyImage(device, out.image, nullptr);
+        throw std::runtime_error("no compatible memory type for owned RGBA AHB");
+    }
+
+    VkMemoryDedicatedAllocateInfo dedicated{
+        .sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO,
+        .pNext = nullptr,
+        .image = out.image,
+        .buffer = VK_NULL_HANDLE,
+    };
+    VkImportAndroidHardwareBufferInfoANDROID importInfo{
+        .sType = VK_STRUCTURE_TYPE_IMPORT_ANDROID_HARDWARE_BUFFER_INFO_ANDROID,
+        .pNext = &dedicated,
+        .buffer = ahb,
+    };
+    VkMemoryAllocateInfo alloc{
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .pNext = &importInfo,
+        .allocationSize = ahbProps.allocationSize,
+        .memoryTypeIndex = typeIndex,
+    };
+    if (vkAllocateMemory(device, &alloc, nullptr, &out.memory) != VK_SUCCESS) {
+        vkDestroyImage(device, out.image, nullptr);
+        throw std::runtime_error("vkAllocateMemory (owned RGBA AHB) failed");
+    }
+    if (vkBindImageMemory(device, out.image, out.memory, 0) != VK_SUCCESS) {
+        vkFreeMemory(device, out.memory, nullptr);
+        vkDestroyImage(device, out.image, nullptr);
+        throw std::runtime_error("vkBindImageMemory (owned RGBA AHB) failed");
+    }
+
+    VkImageViewCreateInfo viewCi{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .image = out.image,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = VK_FORMAT_R8G8B8A8_UNORM,
+        .components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
+                       VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY},
+        .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
+    };
+    if (vkCreateImageView(device, &viewCi, nullptr, &out.view) != VK_SUCCESS) {
+        vkFreeMemory(device, out.memory, nullptr);
+        vkDestroyImage(device, out.image, nullptr);
+        throw std::runtime_error("vkCreateImageView (owned RGBA AHB) failed");
+    }
+    return out;
 }
 
 std::vector<uint8_t> loadTranslatedShader(const std::string& name) {
@@ -434,6 +590,39 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
             VkExtent2D{ctxWidth, ctxHeight},
             VK_FORMAT_R8G8B8A8_UNORM);
         unsetenv("DISABLE_LSFG"); // NOLINT(concurrency-mt-unsafe)
+
+        // 阶段 3.3a-iii.a：把 owned input0/input1 RGBA AHB 同步 import 到我们自己的 VkDevice，
+        // 这样后面 compute shader 可以把 YUV decoder 帧解码写到这些 VkImage 上，LSFG 通过 AHB
+        // 共享自动看到内容。output AHB 暂不在我们这边 import，由 LSFG 内部 device 持有。
+        resources->ownerDevice = g_vk->device;
+        {
+            auto in0 = importOwnedRgbaAhb(g_vk->device, g_vk->memProps,
+                                          resources->input0.get(), ctxWidth, ctxHeight);
+            resources->input0Image = in0.image;
+            resources->input0Memory = in0.memory;
+            resources->input0View = in0.view;
+            auto in1 = importOwnedRgbaAhb(g_vk->device, g_vk->memProps,
+                                          resources->input1.get(), ctxWidth, ctxHeight);
+            resources->input1Image = in1.image;
+            resources->input1Memory = in1.memory;
+            resources->input1View = in1.view;
+        }
+
+        // 编译内嵌的 YUV→RGBA compute shader（descriptor 套件需要 ycbcr conversion，
+        // 留到 iii.b 接到首帧时再建）。
+        {
+            VkShaderModuleCreateInfo smCi{
+                .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .codeSize = k_yuv_to_rgba_spv_size,
+                .pCode = k_yuv_to_rgba_spv,
+            };
+            if (vkCreateShaderModule(g_vk->device, &smCi, nullptr, &resources->shaderModule) != VK_SUCCESS) {
+                throw std::runtime_error("vkCreateShaderModule (yuv_to_rgba) failed");
+            }
+        }
+        LOGI("stage3.3a-iii.a: owned RGBA AHB imported to VkImage + shader module ok");
 
         g_context = std::move(resources);
 
