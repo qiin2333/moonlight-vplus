@@ -622,14 +622,15 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
 
         setenv("DISABLE_LSFG", "1", 1); // NOLINT(concurrency-mt-unsafe)
         const bool hdrEnabled = g_hdrEnabled.load(std::memory_order_acquire);
+        constexpr float kFlowScale = 1.0F; // 实测：Adreno 上 <1.0 反而显著变慢（0.5 → waitIdle 65ms→245ms）
         LSFG_3_1::initialize(
             kFirstAvailableDeviceUuid,
             hdrEnabled,
-            1.0F,
+            kFlowScale,
             kGenerationCount,
             loadTranslatedShader);
-        LOGI("stage3.2 bootstrap: LSFG_3_1::initialize isHdr=%d generationCount=%u",
-             static_cast<int>(hdrEnabled), kGenerationCount);
+        LOGI("stage3.2 bootstrap: LSFG_3_1::initialize isHdr=%d flowScale=%.2f generationCount=%u",
+             static_cast<int>(hdrEnabled), kFlowScale, kGenerationCount);
 
         resources->contextId = LSFG_3_1::createContextFromAHB(
             resources->input0.get(),
