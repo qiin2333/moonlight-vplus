@@ -103,6 +103,7 @@ import java.util.Locale
 import kotlin.math.roundToInt
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import java.io.File
 
 class Game : Activity(), SurfaceHolder.Callback,
     OnGenericMotionListener, OnTouchListener, NvConnectionListener, EvdevListener,
@@ -1667,6 +1668,11 @@ class Game : Activity(), SurfaceHolder.Callback,
 
         val fgPrefs = PreferenceManager.getDefaultSharedPreferences(this)
         if (fgPrefs.getBoolean("checkbox_framegen_enabled", false) && FramegenInterceptor.isAvailable()) {
+            fgPrefs.getString("pref_framegen_lossless_dll_staged_path", null)?.let { stagedDll ->
+                if (File(stagedDll).exists()) {
+                    FramegenInterceptor.configureLosslessDllPath(stagedDll)
+                }
+            }
             val cap = FramegenCapture.create(prefConfig.width, prefConfig.height)
             if (cap != null) {
                 framegenCapture = cap

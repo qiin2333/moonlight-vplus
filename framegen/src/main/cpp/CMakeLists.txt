@@ -52,13 +52,17 @@ add_subdirectory("${LSFGVK_ROOT}/framegen" framegen_build EXCLUDE_FROM_ALL)
 # ----- 我们自己的 JNI 桥 -----
 add_library(moonlight-framegen SHARED
     jni_bridge.cpp
+    framegen_pipeline.cpp
+    "${LSFGVK_ROOT}/src/config/config.cpp"
+    "${LSFGVK_ROOT}/src/extract/extract.cpp"
     "${LSFGVK_ROOT}/src/extract/trans.cpp")
 
 target_include_directories(moonlight-framegen PRIVATE
     "${LSFGVK_ROOT}"                 # <thirdparty/spirv.hpp>
     "${LSFGVK_ROOT}/include"         # extract/trans.hpp 等
     "${LSFGVK_ROOT}/framegen/public"   # LSFG_3_1 / LSFG_3_1P 公共 API
-    "${LSFGVK_ROOT}/framegen/include") # Core::Image 等内部头（后续 AHB 路径要用）
+    "${LSFGVK_ROOT}/framegen/include"  # Core::Image 等内部头（后续 AHB 路径要用）
+    "${LSFGVK_ROOT}/thirdparty/toml11/include")
 
 # Android 系统库：android（AHardwareBuffer）、log、nativewindow（API 26+ HardwareBuffer JNI）
 find_library(android-lib   android)

@@ -15,6 +15,7 @@
 #include <pe-parse/parse.h>
 
 #include "extract/trans.hpp"
+#include "framegen_pipeline.hpp"
 
 #include <atomic>
 #include <algorithm>
@@ -106,6 +107,10 @@ Java_com_limelight_framegen_FramegenInterceptor_nativeOnFrameAvailable(
         return 0;
     }
 
+    // 阶段 3.2 骨架：一次性 Vulkan AHB 探测 + LSFG AHB 上下文 bootstrap。
+    // 当前仍不提交帧、不持有 decoder AHB，不改变 3.1 的 close(Image) 行为。
+    (void)FramegenPipeline::ensureContextBootstrapped(ahb, width, height, format);
+
     const uint64_t n = g_frameCount.fetch_add(1, std::memory_order_relaxed) + 1;
 
     if (n == 1 || (n % 60) == 0) {
@@ -129,7 +134,27 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_limelight_framegen_FramegenInterceptor_nativeResetFrameCounter(
         JNIEnv * /* env */, jclass /* clazz */) {
     const uint64_t prev = g_frameCount.exchange(0, std::memory_order_relaxed);
+    FramegenPipeline::reset();
     LOGI("frame counter reset (was %llu)", (unsigned long long)prev);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_limelight_framegen_FramegenInterceptor_nativeSetLosslessDllPath(
+        JNIEnv *env, jclass /* clazz */, jstring jDllPath) {
+    if (jDllPath == nullptr) {
+        LOGW("nativeSetLosslessDllPath: null path");
+        return;
+    }
+
+    const char* rawPath = env->GetStringUTFChars(jDllPath, nullptr);
+    if (rawPath == nullptr) {
+        LOGE("nativeSetLosslessDllPath: GetStringUTFChars failed");
+        return;
+    }
+
+    setenv("LSFG_DLL_PATH_UNIX", rawPath, 1); // NOLINT(concurrency-mt-unsafe)
+    LOGI("nativeSetLosslessDllPath -> %s", rawPath);
+    env->ReleaseStringUTFChars(jDllPath, rawPath);
 }
 
 extern "C" JNIEXPORT jstring JNICALL
@@ -151,6 +176,7 @@ Java_com_limelight_framegen_FramegenInterceptor_nativeProbeLosslessDll(
     std::string result;
     try {
         result = probeLosslessDll(rawPath);
+        setenv("LSFG_DLL_PATH_UNIX", rawPath, 1); // NOLINT(concurrency-mt-unsafe)
         LOGI("nativeProbeLosslessDll(%s) -> %s", rawPath, result.c_str());
     } catch (const std::exception& e) {
         result = std::string("lossless-dll-probe-failed: ") + e.what();

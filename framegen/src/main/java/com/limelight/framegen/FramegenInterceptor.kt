@@ -104,6 +104,16 @@ class FramegenInterceptor {
             return libLoaded
         }
 
+        @JvmStatic
+        fun configureLosslessDllPath(dllPath: String?) {
+            if (!isAvailable() || dllPath.isNullOrBlank()) return
+            try {
+                nativeSetLosslessDllPath(dllPath)
+            } catch (t: Throwable) {
+                Log.w(TAG, "failed to configure Lossless.dll path", t)
+            }
+        }
+
         /**
          * 阶段 3.1 骨架：把 ImageReader 拿到的 HardwareBuffer 透传给 native 端，
          * native 只做计数/log 打印，不导入 Vulkan、不持有引用。
@@ -126,5 +136,8 @@ class FramegenInterceptor {
 
         @JvmStatic
         external fun nativeResetFrameCounter()
+
+        @JvmStatic
+        private external fun nativeSetLosslessDllPath(dllPath: String)
     }
 }
