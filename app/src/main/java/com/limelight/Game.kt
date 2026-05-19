@@ -1673,6 +1673,12 @@ class Game : Activity(), SurfaceHolder.Callback,
                     FramegenInterceptor.configureLosslessDllPath(stagedDll)
                 }
             }
+            // iii.b.1: 把流的 HDR 模式告诉 native 端，决定 LSFG_3_1::initialize(isHdr) 取值。
+            // 用 prefConfig.hdrMode（用户偏好）而不是 willStreamHdr（运行时回退），
+            // 因为 surfaceChanged 可能早于 willStreamHdr 计算完成。
+            FramegenInterceptor.configureHdrEnabled(
+                prefConfig.hdrMode != MoonBridge.HDR_MODE_SDR
+            )
             val cap = FramegenCapture.create(prefConfig.width, prefConfig.height)
             if (cap != null) {
                 framegenCapture = cap

@@ -115,6 +115,21 @@ class FramegenInterceptor {
         }
 
         /**
+         * 阶段 3.3a-iii.b.1：在 framegen bootstrap 之前由上层声明本次流是否 HDR。
+         * 影响 native 调 `LSFG_3_1::initialize(isHdr=...)` 的取值。必须在首帧到达 native 之前
+         * （即创建 [FramegenCapture] 之前/之后立刻）调用，否则后续 bootstrap 用的是上一次的值。
+         */
+        @JvmStatic
+        fun configureHdrEnabled(enabled: Boolean) {
+            if (!isAvailable()) return
+            try {
+                nativeSetHdrEnabled(enabled)
+            } catch (t: Throwable) {
+                Log.w(TAG, "failed to configure framegen HDR flag", t)
+            }
+        }
+
+        /**
          * 阶段 3.1 骨架：把 ImageReader 拿到的 HardwareBuffer 透传给 native 端，
          * native 只做计数/log 打印，不导入 Vulkan、不持有引用。
          *
@@ -139,5 +154,8 @@ class FramegenInterceptor {
 
         @JvmStatic
         private external fun nativeSetLosslessDllPath(dllPath: String)
+
+        @JvmStatic
+        private external fun nativeSetHdrEnabled(enabled: Boolean)
     }
 }

@@ -165,6 +165,12 @@ Java_com_limelight_framegen_FramegenInterceptor_nativeSetLosslessDllPath(
     env->ReleaseStringUTFChars(jDllPath, rawPath);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_limelight_framegen_FramegenInterceptor_nativeSetHdrEnabled(
+        JNIEnv * /*env*/, jclass /* clazz */, jboolean enabled) {
+    FramegenPipeline::setHdrEnabled(enabled == JNI_TRUE);
+}
+
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_limelight_framegen_FramegenInterceptor_nativeProbeLosslessDll(
         JNIEnv *env, jobject /* thiz */, jstring jDllPath) {

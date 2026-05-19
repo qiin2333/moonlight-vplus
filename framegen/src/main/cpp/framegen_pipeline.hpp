@@ -22,4 +22,8 @@ bool probeImportDecoderAhb(AHardwareBuffer* decoderAhb);
 // 重置探测状态（在流重建时调用，便于重新打印一次探测日志）。
 void reset();
 
+// 阶段 3.3a-iii.b.1 修正：由 Java 在 bootstrap 之前传入是否 HDR 流，
+// 决定 LSFG_3_1::initialize 的 isHdr 参数（影响 LSFG 内部颜色空间处理）。
+void setHdrEnabled(bool enabled);
+
 } // namespace FramegenPipeline

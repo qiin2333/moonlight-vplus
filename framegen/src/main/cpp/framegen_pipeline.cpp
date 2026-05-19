@@ -148,6 +148,7 @@ struct ContextResources {
 
 std::atomic<ProbeState> g_probeState{ProbeState::kUninitialized};
 std::atomic<ContextBootState> g_contextBootState{ContextBootState::kUninitialized};
+std::atomic<bool> g_hdrEnabled{false};
 std::mutex g_contextMutex;
 std::unique_ptr<VulkanContext> g_vk;
 std::unique_ptr<ContextResources> g_context;
@@ -600,12 +601,15 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
         }
 
         setenv("DISABLE_LSFG", "1", 1); // NOLINT(concurrency-mt-unsafe)
+        const bool hdrEnabled = g_hdrEnabled.load(std::memory_order_acquire);
         LSFG_3_1::initialize(
             kFirstAvailableDeviceUuid,
-            false,
+            hdrEnabled,
             1.0F,
             kGenerationCount,
             loadTranslatedShader);
+        LOGI("stage3.2 bootstrap: LSFG_3_1::initialize isHdr=%d generationCount=%u",
+             static_cast<int>(hdrEnabled), kGenerationCount);
 
         resources->contextId = LSFG_3_1::createContextFromAHB(
             resources->input0.get(),
@@ -686,6 +690,14 @@ void reset() {
     g_vk.reset();
     g_probeState.store(ProbeState::kUninitialized, std::memory_order_release);
     g_contextBootState.store(ContextBootState::kUninitialized, std::memory_order_release);
+}
+
+void setHdrEnabled(bool enabled) {
+    const bool prev = g_hdrEnabled.exchange(enabled, std::memory_order_acq_rel);
+    if (prev != enabled) {
+        LOGI("setHdrEnabled: %d -> %d (effective on next bootstrap)",
+             static_cast<int>(prev), static_cast<int>(enabled));
+    }
 }
 
 // 阶段 3.3a-iii.b.1：用首帧的 externalFormat 创建延后到运行时的 YCbCr conversion +
