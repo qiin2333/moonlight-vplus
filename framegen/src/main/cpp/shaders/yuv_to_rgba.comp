@@ -1,0 +1,24 @@
+#version 450
+
+// 阶段 3.3a-iii: 把 decoder YUV AHB（externalFormat 走 VkSamplerYcbcrConversion）
+// 采样转 RGBA 写到 LSFG owned input AHB（VK_FORMAT_R8G8B8A8_UNORM）。
+//
+// sampler2D 在 host 侧用 immutable sampler 绑定 ycbcr conversion，
+// 因此 texture() 返回的就是已经做完 ITU-R BT.601/709 矩阵和 narrow-range
+// 解码的 RGB —— shader 里不需要手写转换矩阵。
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform sampler2D uYuvSrc;
+layout(set = 0, binding = 1, rgba8) uniform writeonly image2D uRgbaDst;
+
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(uRgbaDst);
+    if (coord.x >= size.x || coord.y >= size.y) {
+        return;
+    }
+    vec2 uv = (vec2(coord) + vec2(0.5)) / vec2(size);
+    vec4 rgb = texture(uYuvSrc, uv);
+    imageStore(uRgbaDst, coord, vec4(rgb.rgb, 1.0));
+}

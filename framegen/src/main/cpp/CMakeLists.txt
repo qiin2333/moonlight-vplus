@@ -64,6 +64,40 @@ target_include_directories(moonlight-framegen PRIVATE
     "${LSFGVK_ROOT}/framegen/include"  # Core::Image 等内部头（后续 AHB 路径要用）
     "${LSFGVK_ROOT}/thirdparty/toml11/include")
 
+# ----- SPIR-V shaders -----
+# 阶段 3.3a-iii：YUV→RGBA compute shader。NDK 自带 glslc，用它把 .comp 编成 .spv，
+# 再生成一个 C header（uint32_t 数组），include 到 framegen_pipeline.cpp。
+# 这样既不在运行时拉 shaderc 依赖，也不需要打包到 assets。
+find_program(GLSLC_EXECUTABLE glslc
+    HINTS "${ANDROID_NDK}/shader-tools/${ANDROID_HOST_TAG}"
+    REQUIRED)
+message(STATUS "framegen: glslc = ${GLSLC_EXECUTABLE}")
+
+set(SHADER_GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated_shaders")
+file(MAKE_DIRECTORY "${SHADER_GEN_DIR}")
+
+function(framegen_compile_shader SHADER_NAME)
+    set(SRC "${CMAKE_CURRENT_SOURCE_DIR}/shaders/${SHADER_NAME}.comp")
+    set(SPV "${SHADER_GEN_DIR}/${SHADER_NAME}.comp.spv")
+    set(HDR "${SHADER_GEN_DIR}/${SHADER_NAME}.comp.spv.h")
+    add_custom_command(
+        OUTPUT "${HDR}"
+        COMMAND "${GLSLC_EXECUTABLE}" --target-env=vulkan1.1 -O
+                -o "${SPV}" "${SRC}"
+        COMMAND "${CMAKE_COMMAND}" -DSPV_FILE=${SPV} -DHDR_FILE=${HDR}
+                -DSYMBOL_NAME=k_${SHADER_NAME}_spv
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/EmbedSpv.cmake"
+        DEPENDS "${SRC}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/cmake/EmbedSpv.cmake"
+        COMMENT "Compiling SPIR-V ${SHADER_NAME}"
+        VERBATIM)
+    target_sources(moonlight-framegen PRIVATE "${HDR}")
+endfunction()
+
+framegen_compile_shader(yuv_to_rgba)
+
+target_include_directories(moonlight-framegen PRIVATE "${SHADER_GEN_DIR}")
+
 # Android 系统库：android（AHardwareBuffer）、log、nativewindow（API 26+ HardwareBuffer JNI）
 find_library(android-lib   android)
 find_library(log-lib       log)
