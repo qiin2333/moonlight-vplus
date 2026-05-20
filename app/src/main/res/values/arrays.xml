@@ -378,6 +378,14 @@
         <item>gradient_red</item>
         <item>solid_white</item>
     </string-array>
+    <string-array name="mic_menu_action_mode_entries">
+        <item>@string/mic_menu_action_show_button</item>
+        <item>@string/mic_menu_action_toggle_microphone</item>
+    </string-array>
+    <string-array name="mic_menu_action_mode_values" translatable="false">
+        <item>show_button</item>
+        <item>toggle_microphone</item>
+    </string-array>
 
     <!-- Native mouse mode preset options -->
     <string-array name="native_mouse_mode_preset_names">

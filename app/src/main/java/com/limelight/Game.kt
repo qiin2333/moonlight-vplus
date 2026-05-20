@@ -1969,6 +1969,15 @@ class Game : Activity(), SurfaceHolder.Callback,
         }
     }
 
+    fun handleMicrophoneMenuAction() {
+        if (prefConfig.micMenuActionMode == PreferenceConfiguration.MIC_MENU_ACTION_TOGGLE_MIC) {
+            microphoneManager?.toggleMicrophone()
+                ?: Toast.makeText(this, getString(R.string.toast_enable_mic_redirect), Toast.LENGTH_SHORT).show()
+        } else {
+            toggleMicrophoneButton()
+        }
+    }
+
     fun toggleVirtualController() {
         if (virtualController != null && virtualController?.elements?.isNotEmpty() == true) {
             val isVisible = virtualController?.elements?.get(0)?.visibility == View.VISIBLE
