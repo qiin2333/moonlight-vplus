@@ -352,7 +352,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             streamView.setOnCapturedPointerListener { _, event ->
-                touchInputHandler.handleMotionEvent(null, event)
+                touchInputHandler.handleMotionEvent(getMotionEventTargetView(), event)
             }
         }
 
@@ -525,6 +525,13 @@ class Game : Activity(), SurfaceHolder.Callback,
     /** Resolve the display currently used for rendering (external or built-in). */
     val currentTargetDisplay: Display
         get() = externalDisplayManager?.getTargetDisplay() ?: windowManager.defaultDisplay
+
+    /**
+     * Generic motion / captured pointer callbacks may arrive without a view argument.
+     * Hand the active StreamView through so stylus events can still use pen routing and
+     * the correct coordinate space, while regular touch handling remains unchanged.
+     */
+    private fun getMotionEventTargetView(): StreamView = activeStreamView ?: streamView
 
     /** Re-point all absolute/relative touch contexts at [view]. */
     private fun retargetTouchContexts(view: StreamView?) {
@@ -1411,7 +1418,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {
-        return touchInputHandler.handleMotionEvent(null, event) || super.onGenericMotionEvent(event)
+        return touchInputHandler.handleMotionEvent(getMotionEventTargetView(), event) || super.onGenericMotionEvent(event)
     }
 
     override fun onGenericMotion(view: View, event: MotionEvent): Boolean {
