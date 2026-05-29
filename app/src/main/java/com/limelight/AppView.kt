@@ -333,7 +333,10 @@ class AppView : Activity(), AdapterFragmentCallbacks {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        // AppView rebuilds its dynamic AdapterFragment from the computer service/cache.
+        // Restoring stale fragment state after lock-screen/process recreation can run
+        // fragment callbacks before this activity has initialized its adapter/UI.
+        super.onCreate(null)
 
         // Assume we're in the foreground when created to avoid a race
         // between binding to CMS and onResume()
@@ -423,10 +426,19 @@ class AppView : Activity(), AdapterFragmentCallbacks {
 
         showHiddenApps = intent.getBooleanExtra(SHOW_HIDDEN_APPS_EXTRA, false)
         uuidString = intent.getStringExtra(UUID_EXTRA) ?: ""
+        if (uuidString.isEmpty()) {
+            LimeLog.warning("AppView launched without a computer UUID; returning to PC list")
+            startActivity(Intent(this, PcView::class.java).apply {
+                action = Intent.ACTION_MAIN
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
+            })
+            finish()
+            return
+        }
 
         val hiddenAppsPrefs = getSharedPreferences(HIDDEN_APPS_PREF_FILENAME, MODE_PRIVATE)
         for (hiddenAppIdStr in (hiddenAppsPrefs.getStringSet(uuidString, HashSet()) ?: emptySet())) {
-            hiddenAppIds.add(hiddenAppIdStr.toInt())
+            hiddenAppIdStr.toIntOrNull()?.let { hiddenAppIds.add(it) }
         }
 
         computerName = intent.getStringExtra(NAME_EXTRA) ?: ""
