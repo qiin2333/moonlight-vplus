@@ -829,9 +829,15 @@
     <string name="config_save_failed">Configuration save failed</string>
     <string name="scene_config_applied">Applied scene %1$d configuration: %2$dx%3$d@%4$dFPS %5$.2fMbps %6$s HDR %7$s</string>
     <string name="scene_not_configured">Scene %1$d not configured</string>
+    <string name="scene_empty_title">Scene %1$d is empty</string>
+    <string name="scene_empty_message">Save the current quality and display settings to Scene %1$d so this shortcut can be used next time?</string>
+    <string name="scene_configured_content_description">Scene %1$d saved. Tap to apply, long press to overwrite.</string>
+    <string name="scene_empty_content_description">Scene %1$d empty. Tap to save current settings.</string>
     <string name="config_apply_failed">Configuration apply failed</string>
     <string name="save_to_scene">Save to Scene %1$d</string>
     <string name="overwrite_current_config">Overwrite current configuration?</string>
+    <string name="overwrite_scene_config">Save the current quality and display settings to Scene %1$d? This will overwrite the saved scene.</string>
+    <string name="save_current_config_to_scene">SAVE CURRENT</string>
     <string name="scene_saved_successfully">Scene %1$d saved successfully</string>
     <string name="unable_to_get_pc_address">Unable to get PC address: %1$s</string>
     <string name="send_sleep_command">Send Sleep Command</string>

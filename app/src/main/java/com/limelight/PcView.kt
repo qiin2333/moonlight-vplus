@@ -78,6 +78,7 @@ import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -184,6 +185,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     private var completeOnCreateCalled = false
     private var pendingSplashFadeIn = true
     private var lastShakeTime = 0L
+    private var activeSceneNumber: Int? = null
 
     // Helpers
     private lateinit var shortcutHelper: ShortcutHelper
@@ -1230,6 +1232,137 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
     // Scene Configuration Methods
 
+    private data class SceneConfiguration(
+            val width: Int,
+            val height: Int,
+            val fps: Int,
+            val bitrate: Int,
+            val enableAdaptiveBitrate: Boolean,
+            val abrMode: String,
+            val videoFormat: PreferenceConfiguration.FormatOption,
+            val framePacing: Int,
+            val stretchVideo: Boolean,
+            val enableSops: Boolean,
+            val unlockFps: Boolean,
+            val reduceRefreshRate: Boolean,
+            val fullRange: Boolean,
+            val enableHdr: Boolean,
+            val enableHdrHighBrightness: Boolean,
+            val hdrMode: Int,
+            val enablePerfOverlay: Boolean,
+            val perfOverlayLocked: Boolean,
+            val perfOverlayBgOpacity: Int,
+            val perfOverlayOrientation: PreferenceConfiguration.PerfOverlayOrientation,
+            val perfOverlayPosition: PreferenceConfiguration.PerfOverlayPosition
+    ) {
+        fun applyTo(prefs: PreferenceConfiguration): PreferenceConfiguration {
+            prefs.width = width
+            prefs.height = height
+            prefs.fps = fps
+            prefs.bitrate = bitrate
+            prefs.enableAdaptiveBitrate = enableAdaptiveBitrate
+            prefs.abrMode = abrMode
+            prefs.videoFormat = videoFormat
+            prefs.framePacing = framePacing
+            prefs.stretchVideo = stretchVideo
+            prefs.enableSops = enableSops
+            prefs.unlockFps = unlockFps
+            prefs.reduceRefreshRate = reduceRefreshRate
+            prefs.fullRange = fullRange
+            prefs.enableHdr = enableHdr
+            prefs.enableHdrHighBrightness = enableHdrHighBrightness
+            prefs.hdrMode = hdrMode
+            prefs.enablePerfOverlay = enablePerfOverlay
+            prefs.perfOverlayLocked = perfOverlayLocked
+            prefs.perfOverlayBgOpacity = perfOverlayBgOpacity
+            prefs.perfOverlayOrientation = perfOverlayOrientation
+            prefs.perfOverlayPosition = perfOverlayPosition
+            return prefs
+        }
+
+        fun toJson(): JSONObject {
+            return JSONObject().apply {
+                put("width", width)
+                put("height", height)
+                put("fps", fps)
+                put("bitrate", bitrate)
+                put("enableAdaptiveBitrate", enableAdaptiveBitrate)
+                put("abrMode", abrMode)
+                put("videoFormat", videoFormat.name)
+                put("framePacing", framePacing)
+                put("stretchVideo", stretchVideo)
+                put("enableSops", enableSops)
+                put("unlockFps", unlockFps)
+                put("reduceRefreshRate", reduceRefreshRate)
+                put("fullRange", fullRange)
+                put("enableHdr", enableHdr)
+                put("enableHdrHighBrightness", enableHdrHighBrightness)
+                put("hdrMode", hdrMode)
+                put("enablePerfOverlay", enablePerfOverlay)
+                put("perfOverlayLocked", perfOverlayLocked)
+                put("perfOverlayBgOpacity", perfOverlayBgOpacity)
+                put("perfOverlayOrientation", perfOverlayOrientation.name)
+                put("perfOverlayPosition", perfOverlayPosition.name)
+            }
+        }
+
+        companion object {
+            fun fromPreferences(prefs: PreferenceConfiguration): SceneConfiguration {
+                return SceneConfiguration(
+                        width = prefs.width,
+                        height = prefs.height,
+                        fps = prefs.fps,
+                        bitrate = prefs.bitrate,
+                        enableAdaptiveBitrate = prefs.enableAdaptiveBitrate,
+                        abrMode = prefs.abrMode,
+                        videoFormat = prefs.videoFormat,
+                        framePacing = prefs.framePacing,
+                        stretchVideo = prefs.stretchVideo,
+                        enableSops = prefs.enableSops,
+                        unlockFps = prefs.unlockFps,
+                        reduceRefreshRate = prefs.reduceRefreshRate,
+                        fullRange = prefs.fullRange,
+                        enableHdr = prefs.enableHdr,
+                        enableHdrHighBrightness = prefs.enableHdrHighBrightness,
+                        hdrMode = prefs.hdrMode,
+                        enablePerfOverlay = prefs.enablePerfOverlay,
+                        perfOverlayLocked = prefs.perfOverlayLocked,
+                        perfOverlayBgOpacity = prefs.perfOverlayBgOpacity,
+                        perfOverlayOrientation = prefs.perfOverlayOrientation,
+                        perfOverlayPosition = prefs.perfOverlayPosition)
+            }
+
+            fun fromJson(json: JSONObject, fallback: PreferenceConfiguration): SceneConfiguration {
+                return SceneConfiguration(
+                        width = json.optInt("width", fallback.width),
+                        height = json.optInt("height", fallback.height),
+                        fps = json.optInt("fps", fallback.fps),
+                        bitrate = json.optInt("bitrate", fallback.bitrate),
+                        enableAdaptiveBitrate = json.optBoolean("enableAdaptiveBitrate", fallback.enableAdaptiveBitrate),
+                        abrMode = json.optString("abrMode", fallback.abrMode),
+                        videoFormat = parseEnum(json.optString("videoFormat", fallback.videoFormat.name), fallback.videoFormat),
+                        framePacing = json.optInt("framePacing", fallback.framePacing),
+                        stretchVideo = json.optBoolean("stretchVideo", fallback.stretchVideo),
+                        enableSops = json.optBoolean("enableSops", fallback.enableSops),
+                        unlockFps = json.optBoolean("unlockFps", fallback.unlockFps),
+                        reduceRefreshRate = json.optBoolean("reduceRefreshRate", fallback.reduceRefreshRate),
+                        fullRange = json.optBoolean("fullRange", fallback.fullRange),
+                        enableHdr = json.optBoolean("enableHdr", fallback.enableHdr),
+                        enableHdrHighBrightness = json.optBoolean("enableHdrHighBrightness", fallback.enableHdrHighBrightness),
+                        hdrMode = json.optInt("hdrMode", fallback.hdrMode),
+                        enablePerfOverlay = json.optBoolean("enablePerfOverlay", fallback.enablePerfOverlay),
+                        perfOverlayLocked = json.optBoolean("perfOverlayLocked", fallback.perfOverlayLocked),
+                        perfOverlayBgOpacity = json.optInt("perfOverlayBgOpacity", fallback.perfOverlayBgOpacity),
+                        perfOverlayOrientation = parseEnum(json.optString("perfOverlayOrientation", fallback.perfOverlayOrientation.name), fallback.perfOverlayOrientation),
+                        perfOverlayPosition = parseEnum(json.optString("perfOverlayPosition", fallback.perfOverlayPosition.name), fallback.perfOverlayPosition))
+            }
+
+            private inline fun <reified T : Enum<T>> parseEnum(value: String, fallback: T): T {
+                return runCatching { enumValueOf<T>(value.uppercase(Locale.US)) }.getOrDefault(fallback)
+            }
+        }
+    }
+
     private fun initSceneButtons() {
         try {
             val sceneButtonIds = intArrayOf(R.id.scene1Btn, R.id.scene2Btn, R.id.scene3Btn, R.id.scene4Btn, R.id.scene5Btn)
@@ -1249,8 +1382,35 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                     true
                 }
             }
+            updateSceneButtonStates()
         } catch (e: Exception) {
             LimeLog.warning("Scene init failed: $e")
+        }
+    }
+
+    private fun updateSceneButtonStates() {
+        val sceneButtonIds = intArrayOf(R.id.scene1Btn, R.id.scene2Btn, R.id.scene3Btn, R.id.scene4Btn, R.id.scene5Btn)
+        val prefs = getSharedPreferences(SCENE_PREF_NAME, MODE_PRIVATE)
+
+        for (i in sceneButtonIds.indices) {
+            val sceneNumber = i + 1
+            val btn = findViewById<ImageButton>(sceneButtonIds[i]) ?: continue
+            val isConfigured = prefs.contains(SCENE_KEY_PREFIX + sceneNumber)
+            val isActive = activeSceneNumber == sceneNumber
+
+            btn.alpha = when {
+                isActive -> 1.0f
+                isConfigured -> 0.9f
+                else -> 0.68f
+            }
+            btn.imageTintList = ColorStateList.valueOf(when {
+                isActive -> Color.WHITE
+                isConfigured -> Color.argb(230, 255, 255, 255)
+                else -> Color.argb(190, 255, 255, 255)
+            })
+            btn.contentDescription = getString(
+                    if (isConfigured) R.string.scene_configured_content_description else R.string.scene_empty_content_description,
+                    sceneNumber)
         }
     }
 
@@ -1261,27 +1421,21 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             val configJson = prefs.getString(SCENE_KEY_PREFIX + sceneNumber, null)
 
             if (configJson == null) {
-                showToast(getString(R.string.scene_not_configured, sceneNumber))
+                showUnconfiguredSceneDialog(sceneNumber)
                 return
             }
 
-            val config = JSONObject(configJson)
-            val configPrefs = PreferenceConfiguration.readPreferences(this).copy()
+            val configPrefs = PreferenceConfiguration.readPreferences(this)
+            SceneConfiguration.fromJson(JSONObject(configJson), configPrefs).applyTo(configPrefs)
 
-            configPrefs.width = config.optInt("width", 1920)
-            configPrefs.height = config.optInt("height", 1080)
-            configPrefs.fps = config.optInt("fps", 60)
-            configPrefs.bitrate = config.optInt("bitrate", 10000)
-            configPrefs.videoFormat = PreferenceConfiguration.FormatOption.valueOf(config.optString("videoFormat", "auto"))
-            configPrefs.enableHdr = config.optBoolean("enableHdr", false)
-            configPrefs.enablePerfOverlay = config.optBoolean("enablePerfOverlay", false)
-
-            if (!configPrefs.writePreferences(this)) {
+            if (!configPrefs.writeScenePreferences(this)) {
                 showToast(getString(R.string.config_save_failed))
                 return
             }
 
             pcGridAdapter.updateLayoutWithPreferences(this, configPrefs)
+            activeSceneNumber = sceneNumber
+            updateSceneButtonStates()
             showToast(getString(R.string.scene_config_applied, sceneNumber, configPrefs.width, configPrefs.height,
                     configPrefs.fps, configPrefs.bitrate / 1000.0, configPrefs.videoFormat.toString(),
                     if (configPrefs.enableHdr) "On" else "Off"))
@@ -1292,10 +1446,19 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         }
     }
 
+    private fun showUnconfiguredSceneDialog(sceneNumber: Int) {
+        AlertDialog.Builder(this, R.style.AppDialogStyle)
+                .setTitle(getString(R.string.scene_empty_title, sceneNumber))
+                .setMessage(getString(R.string.scene_empty_message, sceneNumber))
+                .setPositiveButton(R.string.save_current_config_to_scene) { _, _ -> saveCurrentConfiguration(sceneNumber) }
+                .setNegativeButton(R.string.dialog_button_cancel, null)
+                .show()
+    }
+
     private fun showSaveConfirmationDialog(sceneNumber: Int) {
         AlertDialog.Builder(this, R.style.AppDialogStyle)
                 .setTitle(getString(R.string.save_to_scene, sceneNumber))
-                .setMessage(getString(R.string.overwrite_current_config))
+                .setMessage(getString(R.string.overwrite_scene_config, sceneNumber))
                 .setPositiveButton(R.string.dialog_button_save) { _, _ -> saveCurrentConfiguration(sceneNumber) }
                 .setNegativeButton(R.string.dialog_button_cancel, null)
                 .show()
@@ -1303,21 +1466,17 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
     private fun saveCurrentConfiguration(sceneNumber: Int) {
         try {
-            val prefs = PreferenceConfiguration.readPreferences(this)
-            val config = JSONObject()
-            config.put("width", prefs.width)
-            config.put("height", prefs.height)
-            config.put("fps", prefs.fps)
-            config.put("bitrate", prefs.bitrate)
-            config.put("videoFormat", prefs.videoFormat.toString())
-            config.put("enableHdr", prefs.enableHdr)
-            config.put("enablePerfOverlay", prefs.enablePerfOverlay)
+            val config = SceneConfiguration
+                    .fromPreferences(PreferenceConfiguration.readPreferences(this))
+                    .toJson()
 
             getSharedPreferences(SCENE_PREF_NAME, MODE_PRIVATE)
                     .edit {
                         putString(SCENE_KEY_PREFIX + sceneNumber, config.toString())
                     }
 
+            activeSceneNumber = sceneNumber
+            updateSceneButtonStates()
             showToast(getString(R.string.scene_saved_successfully, sceneNumber))
         } catch (e: JSONException) {
             showToast(getString(R.string.config_save_failed))

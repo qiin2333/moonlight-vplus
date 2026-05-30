@@ -749,9 +749,15 @@
     <string name="config_save_failed">配置保存失败</string>
     <string name="scene_config_applied">已应用场景%1$d配置: %2$dx%3$d@%4$dFPS %5$.2fMbps %6$s HDR %7$s</string>
     <string name="scene_not_configured">场景%1$d未配置</string>
+    <string name="scene_empty_title">场景%1$d还没有保存配置</string>
+    <string name="scene_empty_message">是否将当前画质与显示配置保存到场景%1$d？保存后下次可直接点按使用。</string>
+    <string name="scene_configured_content_description">场景%1$d已保存。点按应用，长按覆盖。</string>
+    <string name="scene_empty_content_description">场景%1$d为空。点按保存当前设置。</string>
     <string name="config_apply_failed">配置应用失败</string>
     <string name="save_to_scene">保存到场景%1$d</string>
     <string name="overwrite_current_config">是否覆盖当前配置？</string>
+    <string name="overwrite_scene_config">是否将当前画质与显示配置保存到场景%1$d？这会覆盖已保存的场景。</string>
+    <string name="save_current_config_to_scene">保存当前配置</string>
     <string name="scene_saved_successfully">场景%1$d保存成功</string>
     <string name="unable_to_get_pc_address">无法获取PC地址: %1$s</string>
     <string name="send_sleep_command">发送睡眠指令</string>
