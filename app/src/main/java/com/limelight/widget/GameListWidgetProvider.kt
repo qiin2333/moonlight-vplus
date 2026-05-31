@@ -11,6 +11,7 @@ import android.net.Uri
 import android.widget.RemoteViews
 
 import com.limelight.AppSelectionActivity
+import com.limelight.LimeLog
 import com.limelight.R
 import com.limelight.ShortcutTrampoline
 
@@ -22,28 +23,37 @@ class GameListWidgetProvider : AppWidgetProvider() {
         }
     }
 
-    override fun onReceive(context: Context, intent: Intent) {
-        super.onReceive(context, intent)
+    override fun onReceive(context: Context, intent: Intent?) {
+        if (intent == null) {
+            LimeLog.warning("Ignoring null widget broadcast")
+            return
+        }
 
-        if (ACTION_REFRESH_WIDGET == intent.action) {
-            val computerUuid = intent.getStringExtra(EXTRA_COMPUTER_UUID)
-            val appWidgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+        try {
+            super.onReceive(context, intent)
 
-            val appWidgetManager = AppWidgetManager.getInstance(context)
+            if (ACTION_REFRESH_WIDGET == intent.action) {
+                val computerUuid = intent.getStringExtra(EXTRA_COMPUTER_UUID)
+                val appWidgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
 
-            if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                refreshWidget(context, appWidgetManager, appWidgetId)
-            } else if (computerUuid != null) {
-                // Refresh all widgets bound to this computer
-                val ids = appWidgetManager.getAppWidgetIds(ComponentName(context, GameListWidgetProvider::class.java))
-                val prefs = context.getSharedPreferences("widget_prefs", Context.MODE_PRIVATE)
-                for (id in ids) {
-                    val widgetUuid = prefs.getString("widget_${id}_uuid", null)
-                    if (computerUuid == widgetUuid) {
-                        refreshWidget(context, appWidgetManager, id)
+                val appWidgetManager = AppWidgetManager.getInstance(context)
+
+                if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
+                    refreshWidget(context, appWidgetManager, appWidgetId)
+                } else if (computerUuid != null) {
+                    // Refresh all widgets bound to this computer
+                    val ids = appWidgetManager.getAppWidgetIds(ComponentName(context, GameListWidgetProvider::class.java))
+                    val prefs = context.getSharedPreferences("widget_prefs", Context.MODE_PRIVATE)
+                    for (id in ids) {
+                        val widgetUuid = prefs.getString("widget_${id}_uuid", null)
+                        if (computerUuid == widgetUuid) {
+                            refreshWidget(context, appWidgetManager, id)
+                        }
                     }
                 }
             }
+        } catch (e: RuntimeException) {
+            LimeLog.warning("Ignoring widget broadcast failure: ${e.message}")
         }
     }
 
