@@ -934,6 +934,9 @@
     <string name="summary_enable_stun">Attempt to obtain the host\'s public IP via STUN servers for connecting outside the local network. This may slow down scanning for users without a public IP.</string>
 
     <!-- AppView Top Panel -->
+    <string name="appview_background_mode_title">Background</string>
+    <string name="appview_background_mode_artwork">App artwork</string>
+    <string name="appview_background_mode_soft_color">Soft color</string>
     <string name="appview_display_selection_title">Display Selection</string>
 
 

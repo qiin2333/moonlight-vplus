@@ -8,6 +8,7 @@ import android.os.Looper
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.widget.ImageView
+import android.graphics.drawable.ColorDrawable
 import java.util.concurrent.Executors
 
 import com.limelight.R
@@ -27,6 +28,9 @@ class BackgroundImageManager(
 ) {
     var currentBackground: Bitmap? = null
         private set
+    private var currentSolidColor: Int? = null
+    val hasBackground: Boolean
+        get() = currentBackground != null || currentSolidColor != null
 
     /**
      * 平滑地切换到新的背景图片
@@ -45,6 +49,7 @@ class BackgroundImageManager(
         // 如果当前没有背景图片，直接设置
         if (currentBackground == null) {
             currentBackground = newBackground
+            currentSolidColor = null
             applyBitmap(newBackground)
             val fadeIn = AnimationUtils.loadAnimation(context, R.anim.background_fadein)
             blurImageView?.startAnimation(fadeIn)
@@ -59,7 +64,45 @@ class BackgroundImageManager(
 
             override fun onAnimationEnd(animation: Animation) {
                 currentBackground = newBackground
+                currentSolidColor = null
                 applyBitmap(newBackground)
+                val fadeIn = AnimationUtils.loadAnimation(context, R.anim.background_fadein)
+                blurImageView?.startAnimation(fadeIn)
+                clearImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadein))
+            }
+
+            override fun onAnimationRepeat(animation: Animation) {}
+        })
+
+        (blurImageView ?: clearImageView).startAnimation(fadeOutAnimation)
+        if (blurImageView != null) {
+            clearImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadeout))
+        }
+    }
+
+    fun setBackgroundColorSmoothly(color: Int) {
+        if (currentSolidColor == color) {
+            return
+        }
+
+        if (!hasBackground) {
+            currentBackground = null
+            currentSolidColor = color
+            applyColor(color)
+            val fadeIn = AnimationUtils.loadAnimation(context, R.anim.background_fadein)
+            blurImageView?.startAnimation(fadeIn)
+            clearImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadein))
+            return
+        }
+
+        val fadeOutAnimation = AnimationUtils.loadAnimation(context, R.anim.background_fadeout)
+        fadeOutAnimation.setAnimationListener(object : Animation.AnimationListener {
+            override fun onAnimationStart(animation: Animation) {}
+
+            override fun onAnimationEnd(animation: Animation) {
+                currentBackground = null
+                currentSolidColor = color
+                applyColor(color)
                 val fadeIn = AnimationUtils.loadAnimation(context, R.anim.background_fadein)
                 blurImageView?.startAnimation(fadeIn)
                 clearImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadein))
@@ -89,11 +132,26 @@ class BackgroundImageManager(
         }
     }
 
+    private fun applyColor(color: Int) {
+        blurImageView?.let {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                it.setRenderEffect(null)
+            }
+            it.setImageDrawable(ColorDrawable(color))
+            it.imageAlpha = 255
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            clearImageView.setRenderEffect(null)
+        }
+        clearImageView.setImageDrawable(ColorDrawable(color))
+        clearImageView.imageAlpha = 255
+    }
+
     /**
      * 清除背景图片
      */
     fun clearBackground() {
-        if (currentBackground != null) {
+        if (hasBackground) {
             val fadeOutAnimation = AnimationUtils.loadAnimation(context, R.anim.background_fadeout)
             fadeOutAnimation.setAnimationListener(object : Animation.AnimationListener {
                 override fun onAnimationStart(animation: Animation) {}
@@ -105,6 +163,7 @@ class BackgroundImageManager(
                     }
                     clearImageView.setImageBitmap(null)
                     currentBackground = null
+                    currentSolidColor = null
                 }
 
                 override fun onAnimationRepeat(animation: Animation) {}

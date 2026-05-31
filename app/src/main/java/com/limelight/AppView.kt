@@ -4,6 +4,7 @@ package com.limelight
 import java.io.IOException
 import java.io.StringReader
 import java.util.HashSet
+import java.util.concurrent.ConcurrentHashMap
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -34,6 +35,7 @@ import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.TextView
 import android.widget.Toast
 
@@ -62,6 +64,7 @@ import com.limelight.utils.CacheHelper
 import com.limelight.utils.Dialog
 import com.limelight.utils.ServerHelper
 import com.limelight.utils.ShortcutHelper
+import com.limelight.utils.SoftBackgroundColorExtractor
 import com.limelight.utils.SpinnerDialog
 import com.limelight.utils.UiHelper
 
@@ -109,6 +112,8 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         private const val VERTICAL_SINGLE_ROW_THRESHOLD = 5
         private const val BACKGROUND_CHANGE_DELAY = 300 // ms
         private const val VIRTUAL_DISPLAY_ID = 212333
+        private const val APPVIEW_PREFS_NAME = "AppView"
+        private const val KEY_APP_BACKGROUND_MODE = "app_background_mode"
     }
 
     // ==================== 核心数据 ====================
@@ -135,6 +140,12 @@ class AppView : Activity(), AdapterFragmentCallbacks {
     private var backgroundImageManager: BackgroundImageManager? = null
     private val backgroundChangeHandler = Handler(Looper.getMainLooper())
     private var backgroundChangeRunnable: Runnable? = null
+    private lateinit var appBackgroundModeGroup: RadioGroup
+    private var appBackgroundMode = AppBackgroundMode.Artwork
+    private var activeBackgroundAppId: Int? = null
+    private var activeBackgroundMode: AppBackgroundMode? = null
+    private var backgroundRequestSerial = 0
+    private val appSoftColorCache = ConcurrentHashMap<Int, Int>()
 
     // ==================== UI 组件 - 选中框 & 列表 ====================
     private var selectionAnimator: SelectionIndicatorAnimator? = null
@@ -154,7 +165,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
     private lateinit var topDropdownPanel: LinearLayout
     private var isPanelOpen = false
     private lateinit var displaySelectionInfo: LinearLayout
-    private lateinit var displayRadioGroup: android.widget.RadioGroup
+    private lateinit var displayRadioGroup: RadioGroup
     private lateinit var screenCombinationModeLabel: TextView
     private var selectedScreenCombinationMode = -1
     private var currentModeNames: Array<String>? = null
@@ -370,6 +381,9 @@ class AppView : Activity(), AdapterFragmentCallbacks {
 
         // Initialize top dropdown panel
         topDropdownPanel = findViewById(R.id.topDropdownPanel)
+        appBackgroundMode = readAppBackgroundMode()
+        appBackgroundModeGroup = findViewById(R.id.appBackgroundModeGroup)
+        setupAppBackgroundModeControls()
 
         // Initialize display selection UI components
         displaySelectionInfo = findViewById(R.id.displaySelectionInfo)
@@ -545,44 +559,117 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         }
     }
 
-    /**
-     * 防抖的背景切换方法
-     *
-     * @param app 要切换背景的应用对象
-     */
     private fun changeBackgroundWithDebounce(app: AppObject?) {
-        // 取消之前的延迟任务
-        if (backgroundChangeRunnable != null) {
-            backgroundChangeHandler.removeCallbacks(backgroundChangeRunnable!!)
-        }
-
-        // 创建新的延迟任务
-        backgroundChangeRunnable = Runnable {
-            if (app != null && appGridAdapter != null && appGridAdapter?.getLoader() != null) {
-                setAppAsBackground(app)
-            }
-            backgroundChangeRunnable = null
-        }
-
-        // 延迟执行背景切换
-        backgroundChangeHandler.postDelayed(backgroundChangeRunnable!!, BACKGROUND_CHANGE_DELAY.toLong())
+        requestAppBackground(app, debounce = true)
     }
 
-    /**
-     * 设置指定应用为背景
-     *
-     * @param appObject 应用对象
-     */
-    private fun setAppAsBackground(appObject: AppObject) {
+    private fun requestAppBackground(app: AppObject?, debounce: Boolean, force: Boolean = false) {
+        backgroundChangeRunnable?.let { backgroundChangeHandler.removeCallbacks(it) }
+        if (app == null || !isBackgroundEligible(app)) {
+            backgroundChangeRunnable = null
+            return
+        }
+
+        val runnable = Runnable {
+            applyAppBackground(app, force)
+            backgroundChangeRunnable = null
+        }
+        backgroundChangeRunnable = runnable
+
+        if (debounce) {
+            backgroundChangeHandler.postDelayed(runnable, BACKGROUND_CHANGE_DELAY.toLong())
+        } else {
+            runnable.run()
+        }
+    }
+
+    private fun applyAppBackground(appObject: AppObject, force: Boolean = false) {
         if (isFinishing || isDestroyed) {
             return
         }
 
-        if (backgroundImageManager != null && appBackgroundImageBlur != null) {
-            val loader = appGridAdapter?.getLoader()
-            loader?.loadFullBitmap(appObject.app) { bitmap -> backgroundImageManager?.setBackgroundSmoothly(bitmap) }
+        val manager = backgroundImageManager ?: return
+        val mode = appBackgroundMode
+        val appId = appObject.app.appId
+        if (!force && activeBackgroundAppId == appId && activeBackgroundMode == mode && manager.hasBackground) {
+            return
+        }
+
+        activeBackgroundAppId = appId
+        activeBackgroundMode = mode
+        val requestId = ++backgroundRequestSerial
+
+        when (mode) {
+            AppBackgroundMode.Artwork -> {
+                val loader = appGridAdapter?.getLoader() ?: return
+                loader.loadFullBitmap(appObject.app) { bitmap ->
+                    runOnUiThread {
+                        if (requestId == backgroundRequestSerial) {
+                            manager.setBackgroundSmoothly(bitmap)
+                        }
+                    }
+                }
+            }
+            AppBackgroundMode.SoftColor -> {
+                applySoftColorBackground(appObject, requestId, manager)
+            }
         }
     }
+
+    private fun applySoftColorBackground(appObject: AppObject, requestId: Int, manager: BackgroundImageManager) {
+        val app = appObject.app
+        appSoftColorCache[app.appId]?.let {
+            manager.setBackgroundColorSmoothly(it)
+            return
+        }
+
+        val fallbackColor = SoftBackgroundColorExtractor.fallbackFor(app)
+        manager.setBackgroundColorSmoothly(fallbackColor)
+
+        val loader = appGridAdapter?.getLoader() ?: return
+        loader.loadFullBitmap(app) { bitmap ->
+            uiScope.launch(Dispatchers.Default) {
+                val color = SoftBackgroundColorExtractor.fromBitmap(bitmap, fallbackColor)
+                appSoftColorCache[app.appId] = color
+                withContext(Dispatchers.Main.immediate) {
+                    if (!isFinishing &&
+                            !isDestroyed &&
+                            requestId == backgroundRequestSerial &&
+                            appBackgroundMode == AppBackgroundMode.SoftColor &&
+                            activeBackgroundAppId == app.appId) {
+                        manager.setBackgroundColorSmoothly(color)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun resolveCurrentBackgroundCandidate(): AppObject? {
+        val adapter = appGridAdapter ?: return null
+        val focused = if (selectedPosition in 0 until adapter.count) {
+            adapter.getItem(selectedPosition) as? AppObject
+        } else {
+            null
+        }
+        if (focused != null && isBackgroundEligible(focused)) return focused
+
+        findFirstBackgroundCandidate { it.isRunning }?.let { return it }
+        findFirstBackgroundCandidate { it.app.appName.equals("desktop", ignoreCase = true) }?.let { return it }
+        return findFirstBackgroundCandidate { true }
+    }
+
+    private fun findFirstBackgroundCandidate(predicate: (AppObject) -> Boolean): AppObject? {
+        val adapter = appGridAdapter ?: return null
+        for (i in 0 until adapter.count) {
+            val app = adapter.getItem(i) as? AppObject ?: continue
+            if (isBackgroundEligible(app) && predicate(app)) {
+                return app
+            }
+        }
+        return null
+    }
+
+    private fun isBackgroundEligible(app: AppObject): Boolean = !app.isHidden || showHiddenApps
 
     /**
      * 计算最优的spanCount
@@ -759,6 +846,37 @@ class AppView : Activity(), AdapterFragmentCallbacks {
                     toggleView?.requestFocus()
                 }
                 .start()
+    }
+
+    private fun setupAppBackgroundModeControls() {
+        appBackgroundModeGroup.check(
+            when (appBackgroundMode) {
+                AppBackgroundMode.Artwork -> R.id.appBackgroundModeArtwork
+                AppBackgroundMode.SoftColor -> R.id.appBackgroundModeSoftColor
+            }
+        )
+        appBackgroundModeGroup.setOnCheckedChangeListener { _, checkedId ->
+            val newMode = when (checkedId) {
+                R.id.appBackgroundModeSoftColor -> AppBackgroundMode.SoftColor
+                else -> AppBackgroundMode.Artwork
+            }
+            if (newMode == appBackgroundMode) return@setOnCheckedChangeListener
+
+            appBackgroundMode = newMode
+            getSharedPreferences(APPVIEW_PREFS_NAME, MODE_PRIVATE)
+                .edit()
+                .putString(KEY_APP_BACKGROUND_MODE, newMode.prefValue)
+                .apply()
+            resolveCurrentBackgroundCandidate()?.let {
+                requestAppBackground(it, debounce = false, force = true)
+            }
+        }
+    }
+
+    private fun readAppBackgroundMode(): AppBackgroundMode {
+        val value = getSharedPreferences(APPVIEW_PREFS_NAME, MODE_PRIVATE)
+            .getString(KEY_APP_BACKGROUND_MODE, null)
+        return AppBackgroundMode.fromPrefValue(value)
     }
 
     // ==================== 显示器选择 ====================
@@ -1325,6 +1443,9 @@ class AppView : Activity(), AdapterFragmentCallbacks {
                 if (currentRecyclerView != null && currentRecyclerView?.adapter != null) {
                     currentRecyclerView?.adapter?.notifyItemRangeChanged(0, appGridAdapter?.count ?: 0)
                 }
+                if (selectedPosition < 0) {
+                    requestAppBackground(resolveCurrentBackgroundCandidate(), debounce = false)
+                }
             }
 
             // 根据是否有运行中的应用来显示/隐藏恢复按钮
@@ -1387,7 +1508,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
             appGridAdapter?.rebuildAppList(newAppObjects)
             appGridAdapter?.notifyDataSetChanged()
 
-            // Set first app's cover as background if no current background
+            // Establish the initial background from the same priority path used by focus changes.
             setFirstAppAsBackground(newAppObjects)
 
             // 检查并更新布局（竖屏时根据app数量调整行数）
@@ -1409,33 +1530,18 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         }
 
         // Only set background if we don't have one already and there are apps
-        if (backgroundImageManager?.currentBackground == null &&
+        if (backgroundImageManager?.hasBackground != true &&
             appObjects.isNotEmpty() &&
             appBackgroundImageBlur != null) {
 
-            val firstApp = appObjects[0]
-
-            // Don't set background for hidden apps unless we're showing hidden apps
-            if (!firstApp.isHidden || showHiddenApps) {
-                if (appGridAdapter != null && appGridAdapter?.getLoader() != null) {
-                    setFirstAppBackgroundImage(firstApp)
-                }
-            }
+            requestAppBackground(resolveCurrentBackgroundCandidate(), debounce = false)
         }
-    }
-
-    private fun setFirstAppBackgroundImage(firstApp: AppObject) {
-        val loader = appGridAdapter?.getLoader()
-        loader?.loadFullBitmap(firstApp.app) { bitmap -> backgroundImageManager?.setBackgroundSmoothly(bitmap) }
     }
 
     override fun getAdapterFragmentLayoutId(): Int {
         return if (PreferenceConfiguration.readPreferences(this@AppView).smallIconMode)
             R.layout.app_grid_view_small else R.layout.app_grid_view
     }
-
-    val backgroundImageManagerInstance: BackgroundImageManager?
-        get() = backgroundImageManager
 
     fun receiveAbsListView(listView: AbsListView) {
         // Backwards-compatible wrapper: if a RecyclerView was passed as a View,
@@ -1797,6 +1903,16 @@ class AppView : Activity(), AdapterFragmentCallbacks {
     }
 
     // ==================== 内部类 ====================
+
+    private enum class AppBackgroundMode(val prefValue: String) {
+        Artwork("artwork"),
+        SoftColor("soft_color");
+
+        companion object {
+            fun fromPrefValue(value: String?): AppBackgroundMode =
+                values().firstOrNull { it.prefValue == value } ?: Artwork
+        }
+    }
 
     class AppObject(val app: NvApp) {
         var isRunning = false

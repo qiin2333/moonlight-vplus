@@ -860,6 +860,9 @@
     <string name="summary_enable_stun">这会尝试利用 STUN 服务器获取被控端的公网访问方式，以便在离开局域网环境后继续连接。但此功能可能会导致无公网 IP 用户扫描变慢。</string>
 
     <!-- AppView Top Panel -->
+    <string name="appview_background_mode_title">背景</string>
+    <string name="appview_background_mode_artwork">应用封面</string>
+    <string name="appview_background_mode_soft_color">柔和纯色</string>
     <string name="appview_display_selection_title">显示器选择</string>
 
     <!-- Layout hardcoded Chinese strings (auto-extracted) -->

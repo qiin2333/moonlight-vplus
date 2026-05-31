@@ -1,8 +1,6 @@
 package com.limelight.grid
 
-import android.app.Activity
 import android.content.Context
-import android.content.ContextWrapper
 import android.graphics.BitmapFactory
 import android.view.View
 import android.widget.ImageView
@@ -143,13 +141,7 @@ class AppGridAdapter(
         if (obj.isRunning) {
             overlayView?.setImageResource(R.drawable.ic_play_cute)
             overlayView?.visibility = View.VISIBLE
-            setBackgroundViaManager(obj)
         } else {
-            val activity = getActivity(context)
-            val blurView = activity?.findViewById<ImageView>(R.id.appBackgroundImageBlur)
-            if (obj.app.appName.equals("desktop", ignoreCase = true) && blurView != null && blurView.drawable == null) {
-                setBackgroundViaManager(obj)
-            }
             overlayView?.visibility = View.GONE
         }
 
@@ -160,12 +152,6 @@ class AppGridAdapter(
         }
     }
 
-    private fun setBackgroundViaManager(obj: AppView.AppObject) {
-        val activity = getActivity(context) as? AppView ?: return
-        val bgManager = activity.backgroundImageManagerInstance ?: return
-        loader?.loadFullBitmap(obj.app) { bitmap -> bgManager.setBackgroundSmoothly(bitmap) }
-    }
-
     companion object {
         private const val ART_WIDTH_PX = 300
         private const val SMALL_WIDTH_DP = 120
@@ -173,14 +159,6 @@ class AppGridAdapter(
 
         fun getLayoutIdForPreferences(prefs: PreferenceConfiguration): Int {
             return if (prefs.smallIconMode) R.layout.app_grid_item_small else R.layout.app_grid_item
-        }
-
-        fun getActivity(context: Context): Activity? {
-            return when (context) {
-                is Activity -> context
-                is ContextWrapper -> getActivity(context.baseContext)
-                else -> null
-            }
         }
 
         private fun sortList(list: MutableList<AppView.AppObject>) {
