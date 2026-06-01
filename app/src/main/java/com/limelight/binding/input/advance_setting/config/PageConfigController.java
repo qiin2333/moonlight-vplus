@@ -40,6 +40,7 @@ public class PageConfigController {
     public static final String COLUMN_LONG_CONFIG_ID = "config_id";
     private static final String COLUMN_INT_MOUSE_WHEEL_SPEED = "mouse_wheel_speed";
     public static final String COLUMN_BOOLEAN_ENHANCED_TOUCH = "enhanced_touch";
+    public static final String COLUMN_STRING_QUICK_ACTION_IDS = "quick_action_ids";
 
 
     private SuperPageLayout pageConfig;
@@ -67,7 +68,7 @@ public class PageConfigController {
             public void onClick(View v) {
                 SuperPageLayout pageWindow = (SuperPageLayout) LayoutInflater.from(context).inflate(R.layout.page_window,null);
                 TextView title = pageWindow.findViewById(R.id.window_title);
-                title.setText("配置名称");
+                title.setText(context.getString(R.string.crown_profile_name_title));
                 EditText editText = pageWindow.findViewById(R.id.window_edittext);
                 //窗口确认按钮
                 pageWindow.findViewById(R.id.window_confirm).setOnClickListener(new View.OnClickListener() {
@@ -75,7 +76,7 @@ public class PageConfigController {
                     public void onClick(View v) {
                         String configName = editText.getText().toString();
                         if (!configName.matches("^.{1,10}$")){
-                            Toast.makeText(context,"名称只能由1-20个字符组成",Toast.LENGTH_SHORT).show();
+                            Toast.makeText(context, context.getString(R.string.crown_profile_name_error), Toast.LENGTH_SHORT).show();
                             return;
                         }
                         ContentValues contentValues = new ContentValues();
@@ -424,7 +425,7 @@ public class PageConfigController {
     public void openRenameDialog() {
         SuperPageLayout pageWindow = (SuperPageLayout) LayoutInflater.from(context).inflate(R.layout.page_window,null);
         TextView title = pageWindow.findViewById(R.id.window_title);
-        title.setText("配置名称");
+        title.setText(context.getString(R.string.crown_profile_name_title));
         EditText editText = pageWindow.findViewById(R.id.window_edittext);
         
         // 获取当前选中的配置名称
@@ -444,7 +445,7 @@ public class PageConfigController {
                 }
                 String configNewName = editText.getText().toString();
                 if (!configNewName.matches("^.{1,10}$")){
-                    Toast.makeText(context,"名称只能由1-20个字符组成",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(context, context.getString(R.string.crown_profile_name_error), Toast.LENGTH_SHORT).show();
                     return;
                 }
                 ContentValues contentValues = new ContentValues();

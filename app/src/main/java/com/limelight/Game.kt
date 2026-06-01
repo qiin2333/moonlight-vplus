@@ -122,6 +122,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     var controllerManager: ControllerManager? = null
+    private val crownSessionController = CrownSessionController(this) { controllerManager }
     private var standaloneKeyboardUI: KeyboardUIController? = null
     private val performanceInfoDisplays = ArrayList<PerformanceInfoDisplay>()
 
@@ -192,43 +193,16 @@ class Game : Activity(), SurfaceHolder.Callback,
         GAME_MENU, CROWN_MODE, NO_MENU
     }
 
-    private var currentBackKeyMenu = BackKeyMenuMode.GAME_MENU
-
     fun setcurrentBackKeyMenu(currentBackKeyMenu: BackKeyMenuMode) {
-        this.currentBackKeyMenu = currentBackKeyMenu
+        crownSessionController.setBackKeyMenuMode(currentBackKeyMenu)
     }
 
-    private var areElementsVisible = true
-
     fun toggleVirtualControllerVisibility() {
-        if (controllerManager != null) {
-            areElementsVisible = !areElementsVisible
-            if (areElementsVisible) {
-                controllerManager?.elementController?.showAllElementsForTest()
-                Toast.makeText(this, getString(R.string.toast_elements_visible), Toast.LENGTH_SHORT).show()
-            } else {
-                controllerManager?.elementController?.hideAllElementsForTest()
-                Toast.makeText(this, getString(R.string.toast_elements_hidden), Toast.LENGTH_SHORT).show()
-            }
-        }
+        crownSessionController.toggleElementsVisibility()
     }
 
     fun toggleBackKeyMenuType() {
-        when (currentBackKeyMenu) {
-            BackKeyMenuMode.GAME_MENU -> {
-                currentBackKeyMenu = BackKeyMenuMode.CROWN_MODE
-                areElementsVisible = true
-                controllerManager?.elementController?.showAllElementsForTest()
-                Toast.makeText(this, getString(R.string.toast_back_key_menu_switch_2), Toast.LENGTH_SHORT).show()
-            }
-            BackKeyMenuMode.CROWN_MODE -> {
-                currentBackKeyMenu = BackKeyMenuMode.GAME_MENU
-                Toast.makeText(this, getString(R.string.toast_back_key_menu_switch_1), Toast.LENGTH_SHORT).show()
-            }
-            BackKeyMenuMode.NO_MENU -> {
-                currentBackKeyMenu = BackKeyMenuMode.GAME_MENU
-            }
-        }
+        crownSessionController.toggleBackKeyMenuType()
     }
 
     var isTouchOverrideEnabled = false
@@ -272,7 +246,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             prefConfig.width,
             prefConfig.height,
             prefConfig.rotableScreen,
-            prefConfig.onscreenController || prefConfig.onscreenKeyboard
+            prefConfig.onscreenController || prefConfig.enableCrownFeatures
         ) { currentTargetDisplay }
         tombstonePrefs = getSharedPreferences("DecoderTombstone", 0)
 
@@ -457,16 +431,8 @@ class Game : Activity(), SurfaceHolder.Callback,
             setupVirtualControllerGyro()
         }
 
-        if (prefConfig.onscreenKeyboard) {
-            controllerManager = ControllerManager(streamView.parent as FrameLayout, this)
-
-            val keyboardContainer = findViewById<FrameLayout>(R.id.virtual_full_keyboard_container)
-            if (keyboardContainer != null) {
-                val kUI = KeyboardUIController(keyboardContainer, createKeyboardEventListener(), this)
-                controllerManager?.keyboardUIController = kUI
-            }
-
-            controllerManager?.refreshLayout()
+        if (prefConfig.enableCrownFeatures) {
+            initializeControllerManager()
         }
 
         if (prefConfig.usbDriver) {
@@ -876,7 +842,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         }
 
         if (controllerManager != null) {
-            if (prefConfig.onscreenKeyboard) {
+            if (prefConfig.enableCrownFeatures) {
                 controllerManager?.refreshLayout()
             } else {
                 controllerManager = null
@@ -1909,9 +1875,9 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     override fun showGameMenu(device: GameInputDevice?) {
-        when (currentBackKeyMenu) {
+        when (crownSessionController.backKeyMenuMode) {
             BackKeyMenuMode.CROWN_MODE -> {
-                if (controllerManager != null && prefConfig.onscreenKeyboard) {
+                if (controllerManager != null && prefConfig.enableCrownFeatures) {
                     controllerManager?.superPagesController?.returnOperation()
                 }
             }
@@ -1985,22 +1951,22 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     fun initializeControllerManager() {
-        if (controllerManager == null) {
-            controllerManager = ControllerManager(streamView.parent as FrameLayout, this)
-            controllerManager?.refreshLayout()
+        val manager = controllerManager ?: ControllerManager(streamView.parent as FrameLayout, this)
+            .also { controllerManager = it }
+        if (manager.keyboardUIController == null) {
+            manager.keyboardUIController = getOrCreateKeyboardUIController()
         }
+        manager.refreshLayout()
     }
 
     var isCrownFeatureEnabled: Boolean
-        get() = prefConfig.onscreenKeyboard
+        get() = prefConfig.enableCrownFeatures
         set(value) {
+            prefConfig.enableCrownFeatures = value
             prefConfig.onscreenKeyboard = value
             if (value) {
-                if (controllerManager != null) {
-                    controllerManager?.show()
-                } else {
-                    initializeControllerManager()
-                }
+                initializeControllerManager()
+                controllerManager?.show()
             } else {
                 controllerManager?.hide()
             }

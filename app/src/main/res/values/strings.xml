@@ -573,9 +573,9 @@
     <string name="summary_screen_offset_y">Vertical offset of the screen</string>
     
     <!-- Crown feature area -->
-    <string name="category_crown_features">Crown Feature Area</string>
-    <string name="title_crown_super_features">Crown Super Features</string>
-    <string name="summary_crown_super_features">Custom buttons and settings during streaming, saved to custom configurations for quick switching</string>
+    <string name="category_crown_features">Crown</string>
+    <string name="title_crown_super_features">Enable Crown</string>
+    <string name="summary_crown_super_features">Save on-screen buttons, quick actions, touch mode, and feedback settings as switchable Crown profiles</string>
     <string name="title_export_super_config">Export Configuration</string>
     <string name="summary_export_super_config">Export custom button and streaming settings configuration file</string>
     <string name="title_import_super_config">Import Configuration</string>
@@ -587,19 +587,26 @@
     
     <!-- Crown feature toggle -->
     <string name="crown_toggle_button">Crown</string>
-    <string name="crown_mode_normal">Normal Mode</string>
-    <string name="crown_mode_crown">Crown Mode</string>
-    <string name="crown_switch_to_normal">Switch to Normal Mode</string>
-    <string name="crown_switch_to_crown">Switch to Crown Mode</string>
-    <string name="game_menu_crown_function">Crown Function</string>
-    <string name="game_menu_toggle_elements_visibility">Show/Hide Virtual Keys</string>
-    <string name="game_menu_configure_crown_function">Configure Crown Function</string>
-    <string name="toast_elements_visible">Virtual button displayed</string>
-    <string name="toast_elements_hidden">Virtual button hidden</string>
-    <string name="toast_back_key_menu_switch_1">The crown function configuration has been exited</string>
-    <string name="toast_back_key_menu_switch_2">Entered the crown function configuration</string>
-    <string name="game_menu_edit_mode">Crown button editing mode</string>
-    <string name="game_menu_configure_settings">Crown button configuration mode</string>
+    <string name="crown_mode_normal">Crown Off</string>
+    <string name="crown_mode_crown">Crown On</string>
+    <string name="crown_switch_to_normal">Disable Crown</string>
+    <string name="crown_switch_to_crown">Enable Crown</string>
+    <string name="game_menu_crown_function">Crown</string>
+    <string name="game_menu_crown_function_title">♛ Crown</string>
+    <string name="game_menu_toggle_elements_visibility">Show/Hide Buttons</string>
+    <string name="game_menu_configure_crown_function">Back Key Opens Crown</string>
+    <string name="crown_control_enable_subtitle">Turn on Crown profiles and controls</string>
+    <string name="crown_control_visibility_subtitle">Keep the on-screen buttons out of the way</string>
+    <string name="crown_control_touch_subtitle">Pause or resume touch input</string>
+    <string name="crown_control_profiles_subtitle">Switch saved button and touch profiles</string>
+    <string name="crown_control_layout_subtitle">Move and resize the on-screen buttons</string>
+    <string name="crown_control_back_key_subtitle">Use Back to reopen this Crown panel</string>
+    <string name="toast_elements_visible">Buttons shown</string>
+    <string name="toast_elements_hidden">Buttons hidden</string>
+    <string name="toast_back_key_menu_switch_1">Exited Crown configuration</string>
+    <string name="toast_back_key_menu_switch_2">Entered Crown configuration</string>
+    <string name="game_menu_edit_mode">Button Layout</string>
+    <string name="game_menu_configure_settings">Configuration Profiles</string>
     
     <!-- External display -->
     <string name="title_use_external_display">Use External Display</string>
@@ -944,7 +951,7 @@
     <string name="layout_address_list_item_cd_30f7d">Connect</string>
     <string name="layout_config_item_text_c8ce4">Rename</string>
     <string name="layout_config_item_text_2f4aa">Delete</string>
-    <string name="layout_custom_dialog_text_c9831">Enable Crown Menu</string>
+    <string name="layout_custom_dialog_text_c9831">Enable Crown</string>
     <string name="layout_custom_dialog_text_6d521">Sleep</string>
     <string name="layout_custom_dialog_text_c3992">Exit</string>
     <string name="layout_custom_dialog_text_f090a">Special Keys Shortcut</string>
@@ -1015,14 +1022,19 @@
     <string name="layout_page_analog_stick_text_4573a">Background Color</string>
     <string name="layout_page_analog_stick_text_69066">Font Color</string>
     <string name="layout_page_analog_stick_text_4b292">Font Pressed Color</string>
-    <string name="layout_page_config_text_9eba2">Current Configuration</string>
-    <string name="layout_page_config_text_83a23">Enable Touch</string>
-    <string name="layout_page_config_text_f4b7c">Touchpad Mode</string>
-    <string name="layout_page_config_text_8ea81">Multi-Touch Mode</string>
-    <string name="layout_page_config_text_cd2c1">Game Vibration</string>
-    <string name="layout_page_config_text_f4651">Button Vibration</string>
-    <string name="layout_page_config_text_66ab5">Add</string>
-    <string name="layout_page_config_text_df603">Exit Crown Configuration</string>
+    <string name="page_config_section_profile">Profile</string>
+    <string name="page_config_section_touch">Touch</string>
+    <string name="page_config_section_feedback">Feedback</string>
+    <string name="crown_profile_name_title">Profile Name</string>
+    <string name="crown_profile_name_error">Profile name must be 1-10 characters</string>
+    <string name="layout_page_config_text_9eba2">Current Profile</string>
+    <string name="layout_page_config_text_83a23">Touch Input</string>
+    <string name="layout_page_config_text_f4b7c">Touchpad</string>
+    <string name="layout_page_config_text_8ea81">Multi-Touch</string>
+    <string name="layout_page_config_text_cd2c1">Game Rumble</string>
+    <string name="layout_page_config_text_f4651">Button Feedback</string>
+    <string name="layout_page_config_text_66ab5">New</string>
+    <string name="layout_page_config_text_df603">Done</string>
     <string name="layout_page_device_text_5f411">Back</string>
     <string name="layout_page_device_text_d81bb">None</string>
     <string name="layout_page_device_text_01e77">Touch Mode</string>
@@ -1131,8 +1143,8 @@
     <string name="apptext_pg_analog_stick_ae177">Border Thickness</string>
     <string name="apptext_pg_analog_stick_6896d">Z-Order</string>
     <string name="apptext_pg_analog_stick_5f15e">Font Size</string>
-    <string name="apptext_pg_config_835d4">Touchpad Sensitivity</string>
-    <string name="apptext_pg_config_3f729">Virtual Mouse Scroll Speed</string>
+    <string name="apptext_pg_config_835d4">Pointer Sensitivity</string>
+    <string name="apptext_pg_config_3f729">Scroll Speed</string>
     <string name="apptext_pg_digital_combine_button_ea5a1">Width</string>
     <string name="apptext_pg_digital_combine_button_4296d">Height</string>
     <string name="apptext_pg_digital_combine_button_3ebb3">Border Radius</string>
@@ -1173,8 +1185,8 @@
     <string name="game_menu_off">Off</string>
     <string name="toast_local_cursor_enabled">Local cursor rendering enabled</string>
     <string name="toast_local_cursor_disabled">Local cursor rendering disabled</string>
-    <string name="toast_crown_not_enabled">Crown feature not enabled</string>
-    <string name="game_menu_toggle_touch">Toggle Touch</string>
+    <string name="toast_crown_not_enabled">Crown is off</string>
+    <string name="game_menu_toggle_touch">Touch Input</string>
     <string name="toast_touch_enabled">Touch enabled</string>
     <string name="toast_touch_disabled">Touch disabled</string>
     <string name="toast_cannot_access_controller">Cannot access controller</string>

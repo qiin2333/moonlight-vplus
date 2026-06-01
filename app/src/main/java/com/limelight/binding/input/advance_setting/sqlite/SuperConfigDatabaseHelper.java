@@ -139,7 +139,8 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
     private static final int DATABASE_OLD_VERSION_4 = 4;
     private static final int DATABASE_OLD_VERSION_5 = 5;
     private static final int DATABASE_OLD_VERSION_6 = 6;
-    private static final int DATABASE_VERSION = 8;
+    private static final int DATABASE_OLD_VERSION_8 = 8;
+    private static final int DATABASE_VERSION = 9;
     private SQLiteDatabase writableDataBase;
     private SQLiteDatabase readableDataBase;
 
@@ -203,7 +204,8 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
                 "game_vibrator TEXT," +
                 "button_vibrator TEXT," +
                 "mouse_wheel_speed INTEGER," +
-                PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH + " TEXT DEFAULT 'false'" +
+                PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH + " TEXT DEFAULT 'false'," +
+                PageConfigController.COLUMN_STRING_QUICK_ACTION_IDS + " TEXT" +
                 ")";
 
         db.execSQL(createConfigTable);
@@ -244,6 +246,9 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         }
         if (oldVersion < 8) {
             db.execSQL("ALTER TABLE element ADD COLUMN extra_attributes TEXT;");
+        }
+        if (oldVersion < 9) {
+            db.execSQL("ALTER TABLE config ADD COLUMN " + PageConfigController.COLUMN_STRING_QUICK_ACTION_IDS + " TEXT;");
         }
     }
 
@@ -326,6 +331,8 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
                         element.getAsJsonObject().addProperty("extra_attributes", "{}");
                     }
                 }
+            case DATABASE_OLD_VERSION_8:
+                settingsJson.addProperty(PageConfigController.COLUMN_STRING_QUICK_ACTION_IDS, "");
             case DATABASE_VERSION:
                 break; // 到达最新版本，停止
             default:

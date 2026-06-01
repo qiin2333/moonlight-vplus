@@ -11,6 +11,8 @@ class FloatBallHandler(private val game: Game, private val prefConfig: Preferenc
 
     var manager: FloatBallManager? = null
         private set
+    private val actionExecutor = StreamActionExecutor(game, { game.conn })
+    private var visible = false
 
     /**
      * 根据设置决定是否创建悬浮球并注册交互监听器。
@@ -75,7 +77,14 @@ class FloatBallHandler(private val game: Game, private val prefConfig: Preferenc
     }
 
     fun show() = manager?.showFloatBall()
+        ?.also { visible = true }
+
     fun hide() = manager?.hideFloatBall()
+        ?.also { visible = false }
+
+    fun toggleVisibility() {
+        if (visible) hide() else show()
+    }
 
     fun release() {
         manager?.release()
@@ -83,11 +92,8 @@ class FloatBallHandler(private val game: Game, private val prefConfig: Preferenc
     }
 
     private fun executeAction(actionType: String?) {
-        if (actionType == null || actionType == "none") return
-        when (actionType) {
-            "open_keyboard" -> game.toggleVirtualKeyboard()
-            "open_menu" -> game.showGameMenu(null)
-            else -> LimeLog.warning("Unknown float ball action: $actionType")
+        if (!actionExecutor.execute(actionType)) {
+            LimeLog.warning("Unknown float ball action: $actionType")
         }
     }
 }

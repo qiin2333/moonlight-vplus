@@ -505,9 +505,9 @@
     <string name="summary_screen_offset_y">画面垂直方向的偏移量。</string>
 
     <!-- Crown feature area -->
-    <string name="category_crown_features">王冠的功能区</string>
-    <string name="title_crown_super_features">王冠的超级功能</string>
-    <string name="summary_crown_super_features">串流中自定义按键和一些设置，并将这些保存到自定义可快速切换的配置中。</string>
+    <string name="category_crown_features">王冠</string>
+    <string name="title_crown_super_features">启用王冠</string>
+    <string name="summary_crown_super_features">将屏幕按键、快捷动作、触控模式和反馈设置保存为可切换的王冠配置档案。</string>
     <string name="title_export_super_config">导出配置</string>
     <string name="summary_export_super_config">导出自定义按钮的和串流内设置的配置文件。</string>
     <string name="title_import_super_config">导入配置</string>
@@ -519,19 +519,26 @@
 
     <!-- 王冠功能切换 -->
     <string name="crown_toggle_button">王冠</string>
-    <string name="crown_mode_normal">普通模式</string>
-    <string name="crown_mode_crown">王冠模式</string>
-    <string name="crown_switch_to_normal">退出王冠配置</string>
-    <string name="crown_switch_to_crown">启用王冠模式</string>
-    <string name="game_menu_crown_function">王冠功能</string>
-    <string name="game_menu_toggle_elements_visibility">显示/隐藏虚拟按键</string>
-    <string name="game_menu_configure_crown_function">配置王冠功能</string>
-    <string name="toast_elements_visible">虚拟按键已显示</string>
-    <string name="toast_elements_hidden">虚拟按键已隐藏</string>
-    <string name="toast_back_key_menu_switch_1">已退出王冠功能配置</string>
-    <string name="toast_back_key_menu_switch_2">已进入王冠功能配置</string>
-    <string name="game_menu_edit_mode">王冠按键编辑模式</string>
-    <string name="game_menu_configure_settings">王冠按键配置模式</string>
+    <string name="crown_mode_normal">王冠关闭</string>
+    <string name="crown_mode_crown">王冠开启</string>
+    <string name="crown_switch_to_normal">关闭王冠</string>
+    <string name="crown_switch_to_crown">启用王冠</string>
+    <string name="game_menu_crown_function">王冠</string>
+    <string name="game_menu_crown_function_title">♛ 王冠</string>
+    <string name="game_menu_toggle_elements_visibility">显示/隐藏按键</string>
+    <string name="game_menu_configure_crown_function">返回键打开王冠</string>
+    <string name="crown_control_enable_subtitle">启用王冠档案和控制入口</string>
+    <string name="crown_control_visibility_subtitle">临时收起或显示屏幕按键</string>
+    <string name="crown_control_touch_subtitle">暂停或恢复当前档案的触控输入</string>
+    <string name="crown_control_profiles_subtitle">切换已保存的按键、触控和反馈档案</string>
+    <string name="crown_control_layout_subtitle">移动和调整屏幕按键</string>
+    <string name="crown_control_back_key_subtitle">用返回键快速打开王冠面板</string>
+    <string name="toast_elements_visible">按键已显示</string>
+    <string name="toast_elements_hidden">按键已隐藏</string>
+    <string name="toast_back_key_menu_switch_1">已退出王冠配置</string>
+    <string name="toast_back_key_menu_switch_2">已进入王冠配置</string>
+    <string name="game_menu_edit_mode">按键布局</string>
+    <string name="game_menu_configure_settings">配置档案</string>
 
     <!-- External display -->
     <string name="title_use_external_display">使用外接显示器</string>
@@ -869,7 +876,7 @@
     <string name="layout_address_list_item_cd_30f7d">连接</string>
     <string name="layout_config_item_text_c8ce4">重命名</string>
     <string name="layout_config_item_text_2f4aa">删除</string>
-    <string name="layout_custom_dialog_text_c9831">启用王冠菜单</string>
+    <string name="layout_custom_dialog_text_c9831">启用王冠</string>
     <string name="layout_custom_dialog_text_6d521">睡眠</string>
     <string name="layout_custom_dialog_text_c3992">退出</string>
     <string name="layout_custom_dialog_text_f090a">特殊按键 Shortcuht</string>
@@ -940,14 +947,19 @@
     <string name="layout_page_analog_stick_text_4573a">背景颜色</string>
     <string name="layout_page_analog_stick_text_69066">字体颜色</string>
     <string name="layout_page_analog_stick_text_4b292">字体按下颜色</string>
-    <string name="layout_page_config_text_9eba2">当前配置</string>
-    <string name="layout_page_config_text_83a23">开启触摸</string>
-    <string name="layout_page_config_text_f4b7c">触控板模式</string>
-    <string name="layout_page_config_text_8ea81">多点触控模式</string>
-    <string name="layout_page_config_text_cd2c1">游戏震动</string>
-    <string name="layout_page_config_text_f4651">按键震动</string>
-    <string name="layout_page_config_text_66ab5">新增</string>
-    <string name="layout_page_config_text_df603">退出王冠配置</string>
+    <string name="page_config_section_profile">档案</string>
+    <string name="page_config_section_touch">触控</string>
+    <string name="page_config_section_feedback">反馈</string>
+    <string name="crown_profile_name_title">档案名称</string>
+    <string name="crown_profile_name_error">档案名称需为 1-10 个字符</string>
+    <string name="layout_page_config_text_9eba2">当前档案</string>
+    <string name="layout_page_config_text_83a23">触控输入</string>
+    <string name="layout_page_config_text_f4b7c">触控板</string>
+    <string name="layout_page_config_text_8ea81">多点触控</string>
+    <string name="layout_page_config_text_cd2c1">游戏反馈</string>
+    <string name="layout_page_config_text_f4651">按键反馈</string>
+    <string name="layout_page_config_text_66ab5">新建</string>
+    <string name="layout_page_config_text_df603">完成</string>
     <string name="layout_page_device_text_5f411">返回</string>
     <string name="layout_page_device_text_d81bb">无</string>
     <string name="layout_page_device_text_01e77">触控模式</string>
@@ -1027,8 +1039,8 @@
     <string name="apptext_pg_analog_stick_ae177">边框厚度</string>
     <string name="apptext_pg_analog_stick_6896d">层级</string>
     <string name="apptext_pg_analog_stick_5f15e">字体大小</string>
-    <string name="apptext_pg_config_835d4">触控板灵敏度</string>
-    <string name="apptext_pg_config_3f729">虚拟鼠标滚轮速度</string>
+    <string name="apptext_pg_config_835d4">指针灵敏度</string>
+    <string name="apptext_pg_config_3f729">滚动速度</string>
     <string name="apptext_pg_digital_combine_button_ea5a1">宽</string>
     <string name="apptext_pg_digital_combine_button_4296d">高</string>
     <string name="apptext_pg_digital_combine_button_3ebb3">边框圆角</string>
@@ -1118,8 +1130,8 @@
     <string name="game_menu_off">关闭</string>
     <string name="toast_local_cursor_enabled">本地光标渲染已开启</string>
     <string name="toast_local_cursor_disabled">本地光标渲染已关闭</string>
-    <string name="toast_crown_not_enabled">王冠功能未启用</string>
-    <string name="game_menu_toggle_touch">开启/关闭触控</string>
+    <string name="toast_crown_not_enabled">王冠未启用</string>
+    <string name="game_menu_toggle_touch">触控输入</string>
     <string name="toast_touch_enabled">触控已开启</string>
     <string name="toast_touch_disabled">触控已关闭</string>
     <string name="toast_cannot_access_controller">无法访问控制器</string>

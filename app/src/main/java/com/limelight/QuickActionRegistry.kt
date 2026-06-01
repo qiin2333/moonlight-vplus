@@ -1,86 +1,86 @@
 package com.limelight
 
+import android.content.ContentValues
 import android.content.Context
+import com.limelight.binding.input.advance_setting.config.PageConfigController
 import org.json.JSONArray
 
-/**
- * 快捷按钮动作注册表。
- * 管理所有可用的快捷按钮动作，支持内置动作和用户自定义快捷键。
- */
 object QuickActionRegistry {
-
     private const val PREF_FILE = "quick_button_config"
     private const val PREF_KEY = "button_ids"
 
-    /** 默认按钮配置（与旧版 6 按钮一致） */
     val DEFAULT_IDS = arrayOf(
         "send_win", "send_esc", "toggle_hdr",
         "toggle_mic", "send_sleep", "quit"
     )
 
-    data class QuickAction(
-        val id: String,
-        val label: String,
-        val iconRes: Int,
-        val iconDisabledRes: Int = 0,
-        val labelRes: Int = 0   // @StringRes, 非 0 时优先使用
-    )
+    fun getAllActions(customKeys: List<Array<String>>?): LinkedHashMap<String, StreamAction> =
+        StreamActionRegistry.getQuickActions(customKeys)
 
-    /** 所有内置动作（有序） */
-    private val BUILTIN = linkedMapOf(
-        "send_win"    to QuickAction("send_win",    "WIN",     R.drawable.ic_btn_win),
-        "send_esc"    to QuickAction("send_esc",    "ESC",     R.drawable.ic_btn_esc),
-        "toggle_hdr"  to QuickAction("toggle_hdr",  "HDR",     R.drawable.ic_btn_hdr),
-        "toggle_mic"  to QuickAction("toggle_mic",  "Mic",     R.drawable.ic_mic_gm, R.drawable.ic_mic_gm_disabled, R.string.quick_btn_mic),
-        "send_sleep"  to QuickAction("send_sleep",  "Sleep",   R.drawable.ic_btn_sleep, 0, R.string.quick_btn_sleep),
-        "quit"        to QuickAction("quit",        "Quit",    R.drawable.ic_btn_quit, 0, R.string.quick_btn_quit),
-        // ── 扩展内置动作 ──
-        "send_tab"          to QuickAction("send_tab",          "Tab",     R.drawable.ic_btn_keyboard),
-        "send_alt_tab"      to QuickAction("send_alt_tab",      "Alt+Tab", R.drawable.ic_btn_keyboard),
-        "send_alt_f4"       to QuickAction("send_alt_f4",       "Alt+F4",  R.drawable.ic_btn_esc),
-        "toggle_keyboard"   to QuickAction("toggle_keyboard",   "KB",      R.drawable.ic_keyboard_cute, 0, R.string.quick_btn_keyboard),
-        "toggle_controller" to QuickAction("toggle_controller", "Pad",     R.drawable.ic_controller_cute, 0, R.string.quick_btn_controller),
-        "toggle_perf"       to QuickAction("toggle_perf",       "Perf",    R.drawable.ic_performance_cute, 0, R.string.quick_btn_perf),
-    )
+    fun getBuiltin(id: String): StreamAction? = StreamActionRegistry.getBuiltin(id)
 
-    /**
-     * 获取所有可用动作（内置 + 用户自定义快捷键）。
-     *
-     * @param customKeys 自定义快捷键列表，每项 [0]=name, [1]=reserved
-     */
-    fun getAllActions(customKeys: List<Array<String>>?): LinkedHashMap<String, QuickAction> {
-        val all = LinkedHashMap(BUILTIN)
-        customKeys?.forEach { ck ->
-            val id = "custom_${ck[0]}"
-            all[id] = QuickAction(id, ck[0], 0)
-        }
-        return all
+    fun loadConfig(context: Context): MutableList<String> {
+        loadProfileConfig(context)?.let { return it }
+        return loadLegacyConfig(context)
     }
 
-    /** 获取内置动作 */
-    fun getBuiltin(id: String): QuickAction? = BUILTIN[id]
+    fun saveConfig(context: Context, ids: List<String>) {
+        if (saveProfileConfig(context, ids)) return
+        saveLegacyConfig(context, ids)
+    }
 
-    // ── 配置持久化 ──────────────────────────────────────────────
+    private fun loadProfileConfig(context: Context): MutableList<String>? {
+        val game = context as? Game ?: return null
+        val controllerManager = game.controllerManager ?: return null
+        val configId = controllerManager.pageConfigController?.currentConfigId ?: return null
+        val databaseHelper = controllerManager.superConfigDatabaseHelper ?: return null
+        val json = databaseHelper.queryConfigAttribute(
+            configId,
+            PageConfigController.COLUMN_STRING_QUICK_ACTION_IDS,
+            ""
+        ) as? String
 
-    /** 读取用户配置的按钮 ID 列表，若无则返回默认 */
-    fun loadConfig(context: Context): MutableList<String> {
+        if (json.isNullOrEmpty()) return null
+        return parseConfig(json)
+    }
+
+    private fun saveProfileConfig(context: Context, ids: List<String>): Boolean {
+        val game = context as? Game ?: return false
+        val controllerManager = game.controllerManager ?: return false
+        val configId = controllerManager.pageConfigController?.currentConfigId ?: return false
+        val databaseHelper = controllerManager.superConfigDatabaseHelper ?: return false
+        val values = ContentValues().apply {
+            put(PageConfigController.COLUMN_STRING_QUICK_ACTION_IDS, encodeConfig(ids))
+        }
+        databaseHelper.updateConfig(configId, values)
+        return true
+    }
+
+    private fun loadLegacyConfig(context: Context): MutableList<String> {
         val prefs = context.getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE)
         val json = prefs.getString(PREF_KEY, null)
         if (json != null) {
-            try {
-                val arr = JSONArray(json)
-                return MutableList(arr.length()) { arr.getString(it) }
-            } catch (_: Exception) { }
+            parseConfig(json)?.let { return it }
         }
         return DEFAULT_IDS.toMutableList()
     }
 
-    /** 保存用户配置 */
-    fun saveConfig(context: Context, ids: List<String>) {
-        val arr = JSONArray().apply { ids.forEach { put(it) } }
+    private fun saveLegacyConfig(context: Context, ids: List<String>) {
         context.getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE)
             .edit()
-            .putString(PREF_KEY, arr.toString())
+            .putString(PREF_KEY, encodeConfig(ids))
             .apply()
+    }
+
+    private fun encodeConfig(ids: List<String>): String =
+        JSONArray().apply { ids.forEach { put(it) } }.toString()
+
+    private fun parseConfig(json: String): MutableList<String>? {
+        return try {
+            val arr = JSONArray(json)
+            MutableList(arr.length()) { arr.getString(it) }
+        } catch (_: Exception) {
+            null
+        }
     }
 }

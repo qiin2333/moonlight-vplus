@@ -17,6 +17,12 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="10dp">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="24dp"
+                android:gravity="bottom"
+                android:text="@string/page_config_section_profile"
+                android:textStyle="bold" />
             <LinearLayout
                 android:orientation="vertical"
                 android:layout_width="match_parent"
@@ -41,6 +47,38 @@
                     android:min="1"
                     app:progress="10"/>
             </LinearLayout>
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginVertical="5dp">
+                <Button
+                    android:id="@+id/add_config_button"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="@string/layout_page_config_text_66ab5"/>
+                <Button
+                    android:id="@+id/rename_config_button"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="@string/layout_config_item_text_c8ce4"/>
+                <Button
+                    android:id="@+id/delete_config_button"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="@string/layout_config_item_text_2f4aa"/>
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="24dp"
+                android:gravity="bottom"
+                android:text="@string/page_config_section_touch"
+                android:textStyle="bold" />
+
             <LinearLayout
                 android:orientation="horizontal"
                 android:layout_width="match_parent"
@@ -116,6 +154,13 @@
                 app:progress="20"
                 app:text="@string/apptext_pg_config_3f729" />
 
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="24dp"
+                android:gravity="bottom"
+                android:text="@string/page_config_section_feedback"
+                android:textStyle="bold" />
+
             <LinearLayout
                 android:orientation="horizontal"
                 android:layout_width="match_parent"
@@ -149,30 +194,6 @@
                     android:layout_width="50dp"
                     android:layout_height="match_parent"
                     android:checked="true"/>
-            </LinearLayout>
-            <LinearLayout
-                android:orientation="horizontal"
-                android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:layout_marginVertical="5dp">
-                <Button
-                    android:id="@+id/add_config_button"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:text="@string/layout_page_config_text_66ab5"/>
-                <Button
-                    android:id="@+id/rename_config_button"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:text="@string/layout_config_item_text_c8ce4"/>
-                <Button
-                    android:id="@+id/delete_config_button"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:text="@string/layout_config_item_text_2f4aa"/>
             </LinearLayout>
 
             <Button
