@@ -561,6 +561,7 @@ public class ElementController {
         } else {
             applyCrownDetailStyle(elementSettingPage);
             promoteCrownDetailActions(elementSettingPage);
+            positionCrownDetailPageAwayFromOwner(elementSettingPage);
             controllerManager.getSuperPagesController().openNewPage(elementSettingPage);
             elementSettingPage.setPageReturnListener(new SuperPageLayout.ReturnListener() {
                 @Override
@@ -569,6 +570,22 @@ public class ElementController {
                 }
             });
         }
+    }
+
+    private void positionCrownDetailPageAwayFromOwner(SuperPageLayout page) {
+        Element owner = getCrownAutoColorOwner(page);
+        if (owner == null || owner.getWidth() <= 0) {
+            return;
+        }
+
+        int[] location = new int[2];
+        owner.getLocationOnScreen(location);
+        float ownerCenterX = location[0] + owner.getWidth() / 2f;
+        int screenWidth = context.getResources().getDisplayMetrics().widthPixels;
+        SuperPagesController.BoxPosition targetPosition = ownerCenterX > screenWidth / 2f
+                ? SuperPagesController.BoxPosition.Left
+                : SuperPagesController.BoxPosition.Right;
+        controllerManager.getSuperPagesController().setPosition(targetPosition);
     }
 
     private void promoteCrownDetailActions(SuperPageLayout page) {

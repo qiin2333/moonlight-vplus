@@ -2,15 +2,14 @@
 <com.limelight.binding.input.advance_setting.superpage.SuperPageLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="280dp"
+    android:layout_width="320dp"
     android:layout_height="match_parent"
-    android:tag="280">
+    android:tag="320">
 
     <ScrollView
         android:id="@+id/crown_config_scroll"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_vertical"
+        android:layout_height="match_parent"
         android:layout_marginEnd="5dp"
         android:background="@drawable/crown_config_panel_bg"
         android:clipToPadding="false"
