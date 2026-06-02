@@ -9,6 +9,10 @@ import com.limelight.binding.input.advance_setting.superpage.ElementEditText;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
 
 final class CrownAutoColorApplier {
+    private interface ColorSetter {
+        void set(int color);
+    }
+
     private CrownAutoColorApplier() {
     }
 
@@ -29,25 +33,75 @@ final class CrownAutoColorApplier {
 
     static boolean apply(Element element, CrownAutoColorPalette palette, SuperPageLayout page) {
         if (element instanceof AnalogStick) {
-            applyShape((AnalogStick) element, palette);
+            AnalogStick analogStick = (AnalogStick) element;
+            applyShape(palette,
+                    analogStick::setElementNormalColor,
+                    analogStick::setElementPressedColor,
+                    analogStick::setElementBackgroundColor);
         } else if (element instanceof DigitalStick) {
-            applyShape((DigitalStick) element, palette);
+            DigitalStick digitalStick = (DigitalStick) element;
+            applyShape(palette,
+                    digitalStick::setElementNormalColor,
+                    digitalStick::setElementPressedColor,
+                    digitalStick::setElementBackgroundColor);
         } else if (element instanceof DigitalPad) {
-            applyShape((DigitalPad) element, palette);
+            DigitalPad digitalPad = (DigitalPad) element;
+            applyShape(palette,
+                    digitalPad::setElementNormalColor,
+                    digitalPad::setElementPressedColor,
+                    digitalPad::setElementBackgroundColor);
         } else if (element instanceof InvisibleAnalogStick) {
-            applyShape((InvisibleAnalogStick) element, palette);
+            InvisibleAnalogStick analogStick = (InvisibleAnalogStick) element;
+            applyShape(palette,
+                    analogStick::setElementNormalColor,
+                    analogStick::setElementPressedColor,
+                    analogStick::setElementBackgroundColor);
         } else if (element instanceof InvisibleDigitalStick) {
-            applyShape((InvisibleDigitalStick) element, palette);
+            InvisibleDigitalStick digitalStick = (InvisibleDigitalStick) element;
+            applyShape(palette,
+                    digitalStick::setElementNormalColor,
+                    digitalStick::setElementPressedColor,
+                    digitalStick::setElementBackgroundColor);
         } else if (element instanceof DigitalCommonButton) {
-            applyTextButton((DigitalCommonButton) element, palette);
+            DigitalCommonButton button = (DigitalCommonButton) element;
+            applyTextButton(palette,
+                    button::setElementNormalColor,
+                    button::setElementPressedColor,
+                    button::setElementBackgroundColor,
+                    button::setElementNormalTextColor,
+                    button::setElementPressedTextColor);
         } else if (element instanceof DigitalSwitchButton) {
-            applyTextButton((DigitalSwitchButton) element, palette);
+            DigitalSwitchButton button = (DigitalSwitchButton) element;
+            applyTextButton(palette,
+                    button::setElementNormalColor,
+                    button::setElementPressedColor,
+                    button::setElementBackgroundColor,
+                    button::setElementNormalTextColor,
+                    button::setElementPressedTextColor);
         } else if (element instanceof DigitalCombineButton) {
-            applyTextButton((DigitalCombineButton) element, palette);
+            DigitalCombineButton button = (DigitalCombineButton) element;
+            applyTextButton(palette,
+                    button::setElementNormalColor,
+                    button::setElementPressedColor,
+                    button::setElementBackgroundColor,
+                    button::setElementNormalTextColor,
+                    button::setElementPressedTextColor);
         } else if (element instanceof DigitalMovableButton) {
-            applyTextButton((DigitalMovableButton) element, palette);
+            DigitalMovableButton button = (DigitalMovableButton) element;
+            applyTextButton(palette,
+                    button::setElementNormalColor,
+                    button::setElementPressedColor,
+                    button::setElementBackgroundColor,
+                    button::setElementNormalTextColor,
+                    button::setElementPressedTextColor);
         } else if (element instanceof GroupButton) {
-            applyTextButton((GroupButton) element, palette);
+            GroupButton button = (GroupButton) element;
+            applyTextButton(palette,
+                    button::setElementNormalColor,
+                    button::setElementPressedColor,
+                    button::setElementBackgroundColor,
+                    button::setElementNormalTextColor,
+                    button::setElementPressedTextColor);
         } else if (element instanceof SimplifyPerformance) {
             SimplifyPerformance performance = (SimplifyPerformance) element;
             performance.setElementTextColor(palette.normalTextColor);
@@ -71,74 +125,24 @@ final class CrownAutoColorApplier {
         return true;
     }
 
-    private static void applyShape(AnalogStick element, CrownAutoColorPalette palette) {
-        element.setElementNormalColor(palette.normalColor);
-        element.setElementPressedColor(palette.pressedColor);
-        element.setElementBackgroundColor(palette.backgroundColor);
+    private static void applyShape(CrownAutoColorPalette palette,
+                                   ColorSetter normalColor,
+                                   ColorSetter pressedColor,
+                                   ColorSetter backgroundColor) {
+        normalColor.set(palette.normalColor);
+        pressedColor.set(palette.pressedColor);
+        backgroundColor.set(palette.backgroundColor);
     }
 
-    private static void applyShape(DigitalStick element, CrownAutoColorPalette palette) {
-        element.setElementNormalColor(palette.normalColor);
-        element.setElementPressedColor(palette.pressedColor);
-        element.setElementBackgroundColor(palette.backgroundColor);
-    }
-
-    private static void applyShape(DigitalPad element, CrownAutoColorPalette palette) {
-        element.setElementNormalColor(palette.normalColor);
-        element.setElementPressedColor(palette.pressedColor);
-        element.setElementBackgroundColor(palette.backgroundColor);
-    }
-
-    private static void applyShape(InvisibleAnalogStick element, CrownAutoColorPalette palette) {
-        element.setElementNormalColor(palette.normalColor);
-        element.setElementPressedColor(palette.pressedColor);
-        element.setElementBackgroundColor(palette.backgroundColor);
-    }
-
-    private static void applyShape(InvisibleDigitalStick element, CrownAutoColorPalette palette) {
-        element.setElementNormalColor(palette.normalColor);
-        element.setElementPressedColor(palette.pressedColor);
-        element.setElementBackgroundColor(palette.backgroundColor);
-    }
-
-    private static void applyTextButton(DigitalCommonButton element, CrownAutoColorPalette palette) {
-        element.setElementNormalColor(palette.normalColor);
-        element.setElementPressedColor(palette.pressedColor);
-        element.setElementBackgroundColor(palette.backgroundColor);
-        element.setElementNormalTextColor(palette.normalTextColor);
-        element.setElementPressedTextColor(palette.pressedTextColor);
-    }
-
-    private static void applyTextButton(DigitalSwitchButton element, CrownAutoColorPalette palette) {
-        element.setElementNormalColor(palette.normalColor);
-        element.setElementPressedColor(palette.pressedColor);
-        element.setElementBackgroundColor(palette.backgroundColor);
-        element.setElementNormalTextColor(palette.normalTextColor);
-        element.setElementPressedTextColor(palette.pressedTextColor);
-    }
-
-    private static void applyTextButton(DigitalCombineButton element, CrownAutoColorPalette palette) {
-        element.setElementNormalColor(palette.normalColor);
-        element.setElementPressedColor(palette.pressedColor);
-        element.setElementBackgroundColor(palette.backgroundColor);
-        element.setElementNormalTextColor(palette.normalTextColor);
-        element.setElementPressedTextColor(palette.pressedTextColor);
-    }
-
-    private static void applyTextButton(DigitalMovableButton element, CrownAutoColorPalette palette) {
-        element.setElementNormalColor(palette.normalColor);
-        element.setElementPressedColor(palette.pressedColor);
-        element.setElementBackgroundColor(palette.backgroundColor);
-        element.setElementNormalTextColor(palette.normalTextColor);
-        element.setElementPressedTextColor(palette.pressedTextColor);
-    }
-
-    private static void applyTextButton(GroupButton element, CrownAutoColorPalette palette) {
-        element.setElementNormalColor(palette.normalColor);
-        element.setElementPressedColor(palette.pressedColor);
-        element.setElementBackgroundColor(palette.backgroundColor);
-        element.setElementNormalTextColor(palette.normalTextColor);
-        element.setElementPressedTextColor(palette.pressedTextColor);
+    private static void applyTextButton(CrownAutoColorPalette palette,
+                                        ColorSetter normalColor,
+                                        ColorSetter pressedColor,
+                                        ColorSetter backgroundColor,
+                                        ColorSetter normalTextColor,
+                                        ColorSetter pressedTextColor) {
+        applyShape(palette, normalColor, pressedColor, backgroundColor);
+        normalTextColor.set(palette.normalTextColor);
+        pressedTextColor.set(palette.pressedTextColor);
     }
 
     private static void refreshColorFields(View view, CrownAutoColorPalette palette) {
