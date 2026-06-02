@@ -3,6 +3,7 @@ package com.limelight.binding.input.advance_setting.element;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.res.ColorStateList;
+import android.content.res.Resources;
 import android.content.DialogInterface;
 import android.graphics.drawable.ColorDrawable;
 import android.preference.PreferenceManager;
@@ -652,7 +653,12 @@ public class ElementController {
             return false;
         }
 
-        String idName = context.getResources().getResourceEntryName(view.getId());
+        String idName;
+        try {
+            idName = context.getResources().getResourceEntryName(view.getId());
+        } catch (Resources.NotFoundException e) {
+            return false;
+        }
         return idName.endsWith("_copy")
                 || idName.endsWith("_delete")
                 || idName.endsWith("_reset")
