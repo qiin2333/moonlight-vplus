@@ -27,6 +27,7 @@ import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
 import android.app.AlertDialog;
 import android.widget.SeekBar;
 import android.widget.Switch;
@@ -738,6 +739,12 @@ public class ElementController {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 switchView.setThumbTintList(getColorStateList(R.color.crown_switch_thumb));
                 switchView.setTrackTintList(getColorStateList(R.color.crown_switch_track));
+            }
+        } else if (view instanceof RadioButton) {
+            RadioButton radioButton = (RadioButton) view;
+            radioButton.setTextColor(context.getResources().getColor(R.color.crown_text_primary));
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                radioButton.setButtonTintList(getColorStateList(R.color.crown_radio_button));
             }
         } else if (view instanceof Button) {
             Button button = (Button) view;
