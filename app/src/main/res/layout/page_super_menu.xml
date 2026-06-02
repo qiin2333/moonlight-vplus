@@ -1,95 +1,136 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.limelight.binding.input.advance_setting.superpage.SuperPageLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="250dp"
+    android:layout_width="280dp"
     android:layout_height="match_parent"
-    android:tag="250">
+    android:tag="280">
+
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="5dp"
-        android:paddingTop="3dp"
         android:layout_gravity="center_vertical"
-        android:background="@drawable/super_content_box_background">
+        android:layout_marginEnd="5dp"
+        android:background="@drawable/crown_config_panel_bg"
+        android:padding="10dp">
+
         <LinearLayout
             android:id="@+id/page_super_menu_list"
-            android:orientation="vertical"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="10dp">
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/game_menu_crown_function_title"
+                android:textColor="@color/game_menu_text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
             <LinearLayout
                 android:id="@+id/page_super_menu_config_page"
-                android:orientation="horizontal"
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
+                android:layout_height="46dp"
+                android:layout_marginBottom="6dp"
+                android:background="@drawable/crown_config_action_button_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="10dp">
+
                 <TextView
                     android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:gravity="center_vertical"
-                    android:text="@string/layout_page_super_menu_text_899a4" />
-                <View
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
-                    android:layout_margin="5dp"
-                    android:background="@drawable/right_arrow"/>
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/layout_page_super_menu_text_899a4"
+                    android:textColor="@color/game_menu_text_primary"
+                    android:textSize="13sp" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_arrow_right" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/page_super_menu_edit_mode"
-                android:orientation="horizontal"
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
+                android:layout_height="46dp"
+                android:layout_marginBottom="6dp"
+                android:background="@drawable/crown_config_action_button_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="10dp">
+
                 <TextView
                     android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:gravity="center_vertical"
-                    android:text="@string/layout_item_page_super_menu_text_ce0e8" />
-                <View
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
-                    android:layout_margin="5dp"
-                    android:background="@drawable/right_arrow"/>
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/layout_item_page_super_menu_text_ce0e8"
+                    android:textColor="@color/game_menu_text_primary"
+                    android:textSize="13sp" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_arrow_right" />
             </LinearLayout>
+
             <LinearLayout
                 android:id="@+id/page_super_menu_toggle_normal_mode"
-                android:orientation="horizontal"
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
+                android:layout_height="46dp"
+                android:layout_marginBottom="6dp"
+                android:background="@drawable/crown_config_action_button_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="10dp">
+
                 <TextView
                     android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:gravity="center_vertical"
-                    android:text="@string/crown_switch_to_normal" />
-                <View
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
-                    android:layout_margin="5dp"
-                    android:background="@drawable/right_arrow"/>
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/crown_switch_to_normal"
+                    android:textColor="@color/game_menu_text_primary"
+                    android:textSize="13sp" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_arrow_right" />
             </LinearLayout>
+
             <LinearLayout
                 android:id="@+id/page_super_menu_disconnect"
-                android:orientation="horizontal"
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
+                android:layout_height="46dp"
+                android:background="@drawable/crown_config_action_button_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="10dp">
+
                 <TextView
                     android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:gravity="center_vertical"
-                    android:text="@string/layout_page_super_menu_text_e2f14" />
-                <View
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
-                    android:layout_margin="5dp"
-                    android:background="@drawable/right_arrow"/>
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/layout_page_super_menu_text_e2f14"
+                    android:textColor="@color/game_menu_text_primary"
+                    android:textSize="13sp" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_arrow_right" />
             </LinearLayout>
         </LinearLayout>
     </ScrollView>

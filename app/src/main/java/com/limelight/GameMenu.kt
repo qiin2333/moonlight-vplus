@@ -302,30 +302,25 @@ class GameMenu(
      * 切换王冠功能并即时刷新菜单内容
      */
     private fun toggleCrownFeature() {
-        game.isCrownFeatureEnabled = !game.isCrownFeatureEnabled
+        setCrownFeatureEnabled(!game.isCrownFeatureEnabled, refreshMenu = true)
+    }
 
-        Toast.makeText(game,
-            if (game.isCrownFeatureEnabled) getString(R.string.crown_switch_to_crown)
-            else getString(R.string.crown_switch_to_normal),
-            Toast.LENGTH_SHORT).show()
+    private fun getCrownToggleText(): String {
+        return if (game.isCrownFeatureEnabled)
+            getString(R.string.crown_switch_to_normal)
+        else
+            getString(R.string.crown_switch_to_crown)
+    }
 
-        activeDialog?.let { dialog ->
-            if (dialog.isShowing) {
-                updateCrownToggleButton()
-                rebuildAndReplaceMenu()
-            }
-        }
+    private fun updateCrownToggleButtonText(crownToggleButton: TextView) {
+        @Suppress("DEPRECATION")
+        crownToggleButton.text = Html.fromHtml("<u>${getCrownToggleText()}</u>")
     }
 
     private fun updateCrownToggleButton() {
         activeCustomView?.let { view ->
             val crownToggleButton = view.findViewById<TextView>(R.id.btnCrownToggle) ?: return
-            val crownText = if (game.isCrownFeatureEnabled)
-                getString(R.string.crown_switch_to_normal)
-            else
-                getString(R.string.crown_switch_to_crown)
-            @Suppress("DEPRECATION")
-            crownToggleButton.text = Html.fromHtml("<u>$crownText</u>")
+            updateCrownToggleButtonText(crownToggleButton)
         }
     }
 
@@ -398,13 +393,16 @@ class GameMenu(
         )
     }
 
-    private fun setCrownFeatureEnabled(enabled: Boolean) {
+    private fun setCrownFeatureEnabled(enabled: Boolean, refreshMenu: Boolean = false) {
         game.isCrownFeatureEnabled = enabled
         Toast.makeText(game,
             if (game.isCrownFeatureEnabled) getString(R.string.crown_switch_to_crown)
             else getString(R.string.crown_switch_to_normal),
             Toast.LENGTH_SHORT).show()
         updateCrownToggleButton()
+        if (refreshMenu && activeDialog?.isShowing == true) {
+            rebuildAndReplaceMenu()
+        }
     }
 
     private fun replaceCrownFunctionMenu() {
@@ -792,21 +790,9 @@ class GameMenu(
 
         val crownToggleButton = customView.findViewById<TextView>(R.id.btnCrownToggle)
         if (crownToggleButton != null) {
-            val crownText = if (game.isCrownFeatureEnabled)
-                getString(R.string.crown_switch_to_normal)
-            else
-                getString(R.string.crown_switch_to_crown)
-            @Suppress("DEPRECATION")
-            crownToggleButton.text = Html.fromHtml("<u>$crownText</u>")
+            updateCrownToggleButtonText(crownToggleButton)
             crownToggleButton.setOnClickListener {
-                val wasEnabled = game.isCrownFeatureEnabled
                 toggleCrownFeature()
-                val newCrownText = if (!wasEnabled)
-                    getString(R.string.crown_switch_to_normal)
-                else
-                    getString(R.string.crown_switch_to_crown)
-                @Suppress("DEPRECATION")
-                crownToggleButton.text = Html.fromHtml("<u>$newCrownText</u>")
             }
         }
     }

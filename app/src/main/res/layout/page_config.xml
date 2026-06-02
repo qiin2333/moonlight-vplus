@@ -2,208 +2,297 @@
 <com.limelight.binding.input.advance_setting.superpage.SuperPageLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="250dp"
+    android:layout_width="280dp"
     android:layout_height="match_parent"
-    android:tag="250">
+    android:tag="280">
+
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="5dp"
-        android:paddingTop="3dp"
         android:layout_gravity="center_vertical"
-        android:background="@drawable/super_content_box_background">
+        android:layout_marginEnd="5dp"
+        android:background="@drawable/crown_config_panel_bg"
+        android:fillViewport="false"
+        android:padding="10dp">
+
         <LinearLayout
-            android:orientation="vertical"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="10dp">
+            android:orientation="vertical">
+
             <TextView
                 android:layout_width="match_parent"
-                android:layout_height="24dp"
-                android:gravity="bottom"
-                android:text="@string/page_config_section_profile"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/game_menu_crown_function_title"
+                android:textColor="@color/game_menu_text_primary"
+                android:textSize="18sp"
                 android:textStyle="bold" />
-            <LinearLayout
-                android:orientation="vertical"
+
+            <TextView
                 android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:layout_marginVertical="5dp">
-                <FrameLayout
-                    android:orientation="horizontal"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
+                android:text="@string/page_config_section_profile"
+                android:textColor="@color/theme_pink_primary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:background="@drawable/crown_config_section_bg"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView
                     android:layout_width="match_parent"
-                    android:layout_height="30dp"
-                    android:layout_marginBottom="5dp">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="match_parent"
-                        android:gravity="center_vertical"
-                        android:text="@string/layout_page_config_text_9eba2"/>
-                </FrameLayout>
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="5dp"
+                    android:text="@string/layout_page_config_text_9eba2"
+                    android:textColor="@color/game_menu_text_secondary"
+                    android:textSize="12sp" />
+
                 <Spinner
                     android:id="@+id/config_select_spinner"
                     android:layout_width="match_parent"
-                    android:layout_height="25dp"
+                    android:layout_height="34dp"
+                    android:background="@drawable/crown_config_input_bg"
                     android:max="10"
                     android:min="1"
-                    app:progress="10"/>
-            </LinearLayout>
-            <LinearLayout
-                android:orientation="horizontal"
-                android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:layout_marginVertical="5dp">
-                <Button
-                    android:id="@+id/add_config_button"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:text="@string/layout_page_config_text_66ab5"/>
-                <Button
-                    android:id="@+id/rename_config_button"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:text="@string/layout_config_item_text_c8ce4"/>
-                <Button
-                    android:id="@+id/delete_config_button"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:text="@string/layout_config_item_text_2f4aa"/>
+                    app:progress="10" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="38dp"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/add_config_button"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/crown_config_action_button_bg"
+                        android:text="@string/layout_page_config_text_66ab5"
+                        android:textAllCaps="false"
+                        android:textColor="@color/game_menu_text_primary"
+                        android:textSize="12sp" />
+
+                    <Button
+                        android:id="@+id/rename_config_button"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginHorizontal="2dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/crown_config_action_button_bg"
+                        android:text="@string/layout_config_item_text_c8ce4"
+                        android:textAllCaps="false"
+                        android:textColor="@color/game_menu_text_primary"
+                        android:textSize="12sp" />
+
+                    <Button
+                        android:id="@+id/delete_config_button"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="4dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/crown_config_action_button_bg"
+                        android:text="@string/layout_config_item_text_2f4aa"
+                        android:textAllCaps="false"
+                        android:textColor="@color/game_menu_text_primary"
+                        android:textSize="12sp" />
+                </LinearLayout>
             </LinearLayout>
 
             <TextView
                 android:layout_width="match_parent"
-                android:layout_height="24dp"
-                android:gravity="bottom"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
                 android:text="@string/page_config_section_touch"
+                android:textColor="@color/theme_pink_primary"
+                android:textSize="13sp"
                 android:textStyle="bold" />
 
             <LinearLayout
-                android:orientation="horizontal"
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:background="@drawable/crown_config_section_bg"
+                android:orientation="vertical"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
                     android:gravity="center_vertical"
-                    android:layout_weight="1"
-                    android:text="@string/layout_page_config_text_83a23"/>
-                <Switch
-                    android:id="@+id/mouse_enable_switch"
-                    android:layout_width="50dp"
-                    android:layout_height="match_parent"
-                    android:checked="true"/>
-            </LinearLayout>
+                    android:orientation="horizontal">
 
-            <LinearLayout
-                android:orientation="horizontal"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/layout_page_config_text_83a23"
+                        android:textColor="@color/game_menu_text_primary"
+                        android:textSize="13sp" />
+
+                    <Switch
+                        android:id="@+id/mouse_enable_switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
                     android:gravity="center_vertical"
-                    android:layout_weight="1"
-                    android:text="@string/layout_page_config_text_f4b7c"/>
-                <Switch
-                    android:id="@+id/trackpad_enable_switch"
-                    android:layout_width="50dp"
-                    android:layout_height="match_parent"
-                    android:checked="true"/>
-            </LinearLayout>
+                    android:orientation="horizontal">
 
-            <LinearLayout
-                android:id="@+id/enhanced_touch_layout"
-                android:orientation="horizontal"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/layout_page_config_text_f4b7c"
+                        android:textColor="@color/game_menu_text_primary"
+                        android:textSize="13sp" />
+
+                    <Switch
+                        android:id="@+id/trackpad_enable_switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/enhanced_touch_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
                     android:gravity="center_vertical"
-                    android:layout_weight="1"
-                    android:text="@string/layout_page_config_text_8ea81"/>
-                <Switch
-                    android:id="@+id/enhanced_touch_switch"
-                    android:layout_width="50dp"
-                    android:layout_height="match_parent"
-                    android:checked="false"/>
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/layout_page_config_text_8ea81"
+                        android:textColor="@color/game_menu_text_primary"
+                        android:textSize="13sp" />
+
+                    <Switch
+                        android:id="@+id/enhanced_touch_switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="false" />
+                </LinearLayout>
+
+                <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                    android:id="@+id/mouse_sense_number_seekbar"
+                    android:layout_width="match_parent"
+                    android:layout_height="62dp"
+                    android:layout_marginTop="4dp"
+                    app:max="500"
+                    app:min="1"
+                    app:progress="100"
+                    app:text="@string/apptext_pg_config_835d4" />
+
+                <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                    android:id="@+id/mouse_wheel_speed_number_seekbar"
+                    android:layout_width="match_parent"
+                    android:layout_height="62dp"
+                    android:layout_marginTop="4dp"
+                    app:max="100"
+                    app:min="1"
+                    app:progress="20"
+                    app:text="@string/apptext_pg_config_3f729" />
             </LinearLayout>
-
-            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
-                android:id="@+id/mouse_sense_number_seekbar"
-                android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:layout_marginVertical="5dp"
-                app:text="@string/apptext_pg_config_835d4"
-                app:max="500"
-                app:min="1"
-                app:progress="100" />
-
-            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
-                android:id="@+id/mouse_wheel_speed_number_seekbar"
-                android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:layout_marginVertical="5dp"
-                app:max="100"
-                app:min="1"
-                app:progress="20"
-                app:text="@string/apptext_pg_config_3f729" />
 
             <TextView
                 android:layout_width="match_parent"
-                android:layout_height="24dp"
-                android:gravity="bottom"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
                 android:text="@string/page_config_section_feedback"
+                android:textColor="@color/theme_pink_primary"
+                android:textSize="13sp"
                 android:textStyle="bold" />
 
             <LinearLayout
-                android:orientation="horizontal"
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:background="@drawable/crown_config_section_bg"
+                android:orientation="vertical"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
                     android:gravity="center_vertical"
-                    android:layout_weight="1"
-                    android:text="@string/layout_page_config_text_cd2c1"/>
-                <Switch
-                    android:id="@+id/game_vibrator_enable_switch"
-                    android:layout_width="50dp"
-                    android:layout_height="match_parent"
-                    android:checked="true"/>
-            </LinearLayout>
-            <LinearLayout
-                android:orientation="horizontal"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/layout_page_config_text_cd2c1"
+                        android:textColor="@color/game_menu_text_primary"
+                        android:textSize="13sp" />
+
+                    <Switch
+                        android:id="@+id/game_vibrator_enable_switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
                     android:gravity="center_vertical"
-                    android:layout_weight="1"
-                    android:text="@string/layout_page_config_text_f4651"/>
-                <Switch
-                    android:id="@+id/button_vibrator_enable_switch"
-                    android:layout_width="50dp"
-                    android:layout_height="match_parent"
-                    android:checked="true"/>
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/layout_page_config_text_f4651"
+                        android:textColor="@color/game_menu_text_primary"
+                        android:textSize="13sp" />
+
+                    <Switch
+                        android:id="@+id/button_vibrator_enable_switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true" />
+                </LinearLayout>
             </LinearLayout>
 
             <Button
                 android:id="@+id/exit_crown_config_button"
                 android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:layout_marginVertical="5dp"
-                android:text="@string/layout_page_config_text_df603" />
-
+                android:layout_height="44dp"
+                android:background="@drawable/game_menu_button_bg"
+                android:text="@string/layout_page_config_text_df603"
+                android:textAllCaps="false"
+                android:textColor="@color/game_menu_text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
         </LinearLayout>
     </ScrollView>
 </com.limelight.binding.input.advance_setting.superpage.SuperPageLayout>
-
