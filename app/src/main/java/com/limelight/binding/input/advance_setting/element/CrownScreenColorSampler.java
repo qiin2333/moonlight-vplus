@@ -68,12 +68,13 @@ final class CrownScreenColorSampler {
             return FALLBACK_ACCENT;
         }
 
+        int accentColor = accent.toColor();
         float[] hsv = new float[3];
-        Color.colorToHSV(Color.rgb(accent.red, accent.green, accent.blue), hsv);
+        Color.colorToHSV(accentColor, hsv);
         if (hsv[1] < 0.10f || hsv[2] < 0.12f) {
             return FALLBACK_ACCENT;
         }
-        return Color.rgb(accent.red, accent.green, accent.blue);
+        return accentColor;
     }
 
     private static List<ColorSample> collectSamples(Bitmap bitmap) {
@@ -278,6 +279,10 @@ final class CrownScreenColorSampler {
 
         boolean sameColor(ColorSample other) {
             return red == other.red && green == other.green && blue == other.blue;
+        }
+
+        int toColor() {
+            return Color.rgb(red, green, blue);
         }
     }
 

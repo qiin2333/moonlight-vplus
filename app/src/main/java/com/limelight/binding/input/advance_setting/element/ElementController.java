@@ -146,14 +146,10 @@ public class ElementController {
     static class SnapResult {
         public final int centralX;
         public final int centralY;
-        public final float verticalGuide;
-        public final float horizontalGuide;
 
-        private SnapResult(int centralX, int centralY, float verticalGuide, float horizontalGuide) {
+        private SnapResult(int centralX, int centralY) {
             this.centralX = centralX;
             this.centralY = centralY;
-            this.verticalGuide = verticalGuide;
-            this.horizontalGuide = horizontalGuide;
         }
     }
 
@@ -642,7 +638,7 @@ public class ElementController {
         int snappedCentralY = editGridHandle(candidateCentralY);
         if (mode != Mode.Edit || !alignmentSnapEnabled || movingElement == null || elementsLayout == null) {
             clearAlignmentGuides();
-            return new SnapResult(snappedCentralX, snappedCentralY, EditGridView.NO_GUIDE, EditGridView.NO_GUIDE);
+            return new SnapResult(snappedCentralX, snappedCentralY);
         }
 
         int threshold = dp(ALIGNMENT_SNAP_THRESHOLD_DP);
@@ -690,14 +686,8 @@ public class ElementController {
 
         int finalCentralX = editGridHandle(xSnap.getCenter());
         int finalCentralY = editGridHandle(ySnap.getCenter());
-        SnapResult result = new SnapResult(
-                finalCentralX,
-                finalCentralY,
-                xSnap.getGuide(finalCentralX),
-                ySnap.getGuide(finalCentralY)
-        );
-        updateAlignmentGuides(result);
-        return result;
+        updateAlignmentGuides(xSnap.getGuide(finalCentralX), ySnap.getGuide(finalCentralY));
+        return new SnapResult(finalCentralX, finalCentralY);
     }
 
     protected void clearAlignmentGuides() {
@@ -718,9 +708,9 @@ public class ElementController {
         }
     }
 
-    private void updateAlignmentGuides(SnapResult result) {
+    private void updateAlignmentGuides(float verticalGuide, float horizontalGuide) {
         if (editGridView != null) {
-            editGridView.setAlignmentGuides(result.verticalGuide, result.horizontalGuide);
+            editGridView.setAlignmentGuides(verticalGuide, horizontalGuide);
         }
     }
 
