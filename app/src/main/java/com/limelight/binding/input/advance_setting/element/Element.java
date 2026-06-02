@@ -282,6 +282,7 @@ public abstract class Element extends View {
 
                         // 启动长按检测
                         elementController.getHandler().removeCallbacks(longPressRunnable);
+                        elementController.clearAlignmentGuides();
                         elementController.getHandler().postDelayed(longPressRunnable, DRAG_EDIT_LONG_PRESS_TIMEOUT);
                         return true;
                     }
@@ -299,8 +300,13 @@ public abstract class Element extends View {
                         // 只有检测到长按或没有开启长按移动后才允许拖动
                         if (!elementController.isDragEditEnabled() | longPressDetected) {
                             isClick = false;
-                            setElementCentralX((int) getX() + getWidth() / 2 + (int) deltaX);
-                            setElementCentralY((int) getY() + getHeight() / 2 + (int) deltaY);
+                            ElementController.SnapResult snapResult = elementController.snapElementPosition(
+                                    this,
+                                    (int) getX() + getWidth() / 2 + (int) deltaX,
+                                    (int) getY() + getHeight() / 2 + (int) deltaY
+                            );
+                            setElementCentralX(snapResult.centralX);
+                            setElementCentralY(snapResult.centralY);
                             updatePage();
                         }
                         return true;
@@ -309,6 +315,7 @@ public abstract class Element extends View {
                     case MotionEvent.ACTION_UP: {
                         // 取消长按检测
                         elementController.getHandler().removeCallbacks(longPressRunnable);
+                        elementController.clearAlignmentGuides();
 
                         editColor = 0xffdc143c;
                         invalidate();

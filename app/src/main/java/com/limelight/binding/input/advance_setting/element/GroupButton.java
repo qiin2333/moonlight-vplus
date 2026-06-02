@@ -455,8 +455,13 @@ public class GroupButton extends Element {
                             movable = true;
                             if (layoutComplete) {
                                 layoutComplete = false;
-                                setElementCentralX((int) getX() + getWidth() / 2 + (int) deltaX);
-                                setElementCentralY((int) getY() + getHeight() / 2 + (int) deltaY);
+                                ElementController.SnapResult snapResult = elementController.snapElementPosition(
+                                        this,
+                                        (int) getX() + getWidth() / 2 + (int) deltaX,
+                                        (int) getY() + getHeight() / 2 + (int) deltaY
+                                );
+                                setElementCentralX(snapResult.centralX);
+                                setElementCentralY(snapResult.centralY);
                             }
                             updatePage();
                         }
@@ -466,6 +471,7 @@ public class GroupButton extends Element {
                     case MotionEvent.ACTION_UP:
                         // 取消长按检测
                         elementController.getHandler().removeCallbacks(longPressRunnable);
+                        elementController.clearAlignmentGuides();
 
                         if (movable) {
                                 save();

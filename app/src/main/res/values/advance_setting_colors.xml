@@ -61,6 +61,7 @@
     <color name="crown_input_border">#2EFFFFFF</color>
     <color name="crown_accent">#E881A8</color>
     <color name="crown_accent_pressed">#33E881A8</color>
+    <color name="crown_alignment_guide">#F7E881A8</color>
     <color name="crown_text_primary">#F7F3F7</color>
     <color name="crown_text_secondary">#C9D0D8</color>
     <color name="crown_button_pressed">#2AE881A8</color>

@@ -139,6 +139,53 @@ public class ElementController {
     private static int MOUSE_SCROLL_REPEAT_INTERVAL = 100; // 重复间隔（毫秒）
 
     private static final String CROWN_DETAIL_ACTION_BAR_TAG = "crown_detail_action_bar";
+    private static final int ALIGNMENT_SNAP_THRESHOLD_DP = 8;
+
+    static class SnapResult {
+        public final int centralX;
+        public final int centralY;
+        public final float verticalGuide;
+        public final float horizontalGuide;
+
+        private SnapResult(int centralX, int centralY, float verticalGuide, float horizontalGuide) {
+            this.centralX = centralX;
+            this.centralY = centralY;
+            this.verticalGuide = verticalGuide;
+            this.horizontalGuide = horizontalGuide;
+        }
+    }
+
+    private static class AxisSnap {
+        private int center;
+        private int guideOffset;
+        private int distance = Integer.MAX_VALUE;
+        private boolean matched = false;
+
+        AxisSnap(int center) {
+            this.center = center;
+        }
+
+        void consider(int candidateCenter, int movingOffset, int targetGuide, int threshold) {
+            int candidateGuide = candidateCenter + movingOffset;
+            int candidateDistance = Math.abs(candidateGuide - targetGuide);
+            if (candidateDistance > threshold || candidateDistance >= distance) {
+                return;
+            }
+
+            center = targetGuide - movingOffset;
+            guideOffset = movingOffset;
+            distance = candidateDistance;
+            matched = true;
+        }
+
+        int getCenter() {
+            return center;
+        }
+
+        float getGuide(int finalCenter) {
+            return matched ? finalCenter + guideOffset : EditGridView.NO_GUIDE;
+        }
+    }
 
     public static void setMouseScrollRepeatInterval(int interval) {
         MOUSE_SCROLL_REPEAT_INTERVAL = interval;
@@ -553,6 +600,92 @@ public class ElementController {
         return position - position % editGridWidth;
     }
 
+    protected SnapResult snapElementPosition(Element movingElement, int candidateCentralX, int candidateCentralY) {
+        int snappedCentralX = editGridHandle(candidateCentralX);
+        int snappedCentralY = editGridHandle(candidateCentralY);
+        if (mode != Mode.Edit || movingElement == null || elementsLayout == null) {
+            return new SnapResult(snappedCentralX, snappedCentralY, EditGridView.NO_GUIDE, EditGridView.NO_GUIDE);
+        }
+
+        int threshold = dp(ALIGNMENT_SNAP_THRESHOLD_DP);
+        AxisSnap xSnap = new AxisSnap(snappedCentralX);
+        AxisSnap ySnap = new AxisSnap(snappedCentralY);
+
+        int halfWidth = movingElement.getElementWidth() / 2;
+        int halfHeight = movingElement.getElementHeight() / 2;
+        int[] movingXOffsets = new int[]{-halfWidth, 0, halfWidth};
+        int[] movingYOffsets = new int[]{-halfHeight, 0, halfHeight};
+
+        int layoutWidth = elementsLayout.getWidth();
+        int layoutHeight = elementsLayout.getHeight();
+        if (layoutWidth > 0) {
+            considerAxisGuides(xSnap, snappedCentralX, movingXOffsets, new int[]{0, layoutWidth / 2, layoutWidth}, threshold);
+        }
+        if (layoutHeight > 0) {
+            considerAxisGuides(ySnap, snappedCentralY, movingYOffsets, new int[]{0, layoutHeight / 2, layoutHeight}, threshold);
+        }
+
+        for (Element element : elements) {
+            if (element == movingElement || element.getVisibility() != View.VISIBLE) {
+                continue;
+            }
+
+            int elementHalfWidth = element.getElementWidth() / 2;
+            int elementHalfHeight = element.getElementHeight() / 2;
+            int elementCentralX = element.getElementCentralX();
+            int elementCentralY = element.getElementCentralY();
+            considerAxisGuides(
+                    xSnap,
+                    snappedCentralX,
+                    movingXOffsets,
+                    new int[]{elementCentralX - elementHalfWidth, elementCentralX, elementCentralX + elementHalfWidth},
+                    threshold
+            );
+            considerAxisGuides(
+                    ySnap,
+                    snappedCentralY,
+                    movingYOffsets,
+                    new int[]{elementCentralY - elementHalfHeight, elementCentralY, elementCentralY + elementHalfHeight},
+                    threshold
+            );
+        }
+
+        int finalCentralX = editGridHandle(xSnap.getCenter());
+        int finalCentralY = editGridHandle(ySnap.getCenter());
+        SnapResult result = new SnapResult(
+                finalCentralX,
+                finalCentralY,
+                xSnap.getGuide(finalCentralX),
+                ySnap.getGuide(finalCentralY)
+        );
+        updateAlignmentGuides(result);
+        return result;
+    }
+
+    protected void clearAlignmentGuides() {
+        if (editGridView != null) {
+            editGridView.clearAlignmentGuides();
+        }
+    }
+
+    private void considerAxisGuides(AxisSnap snap,
+                                    int movingCenter,
+                                    int[] movingOffsets,
+                                    int[] targetGuides,
+                                    int threshold) {
+        for (int movingOffset : movingOffsets) {
+            for (int targetGuide : targetGuides) {
+                snap.consider(movingCenter, movingOffset, targetGuide, threshold);
+            }
+        }
+    }
+
+    private void updateAlignmentGuides(SnapResult result) {
+        if (editGridView != null) {
+            editGridView.setAlignmentGuides(result.verticalGuide, result.horizontalGuide);
+        }
+    }
+
 
     public void toggleInfoPage(SuperPageLayout elementSettingPage) {
         if (elementSettingPage == controllerManager.getSuperPagesController().getPageNow()) {
@@ -887,6 +1020,7 @@ public class ElementController {
             case Normal:
                 controllerManager.getTouchController().enableTouch(true);
                 this.mode = Mode.Normal;
+                clearAlignmentGuides();
                 elementsLayout.removeView(editGridView);
                 for (Element element : elements) {
                     element.invalidate();
@@ -905,6 +1039,7 @@ public class ElementController {
                 }
                 break;
             case Select:
+                clearAlignmentGuides();
                 elementsLayout.removeView(editGridView);
                 this.mode = Mode.Select;
                 for (Element element : elements) {
