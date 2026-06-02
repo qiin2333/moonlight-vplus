@@ -11,6 +11,7 @@ import android.view.View;
 import android.view.ViewConfiguration;
 import android.widget.FrameLayout;
 
+import com.limelight.R;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
 
 import java.util.Map;
@@ -313,7 +314,9 @@ public abstract class Element extends View {
                         invalidate();
 
                         if (isClick || !longPressDetected) {
-                            elementController.toggleInfoPage(getInfoPage());
+                            SuperPageLayout infoPage = getInfoPage();
+                            infoPage.setTag(R.id.crown_auto_color_owner, this);
+                            elementController.toggleInfoPage(infoPage);
                         } else {
                                 save();
                         }
@@ -344,6 +347,14 @@ public abstract class Element extends View {
     abstract protected void updatePage();
 
     abstract protected void save();
+
+    protected boolean supportsCrownAutoColors() {
+        return CrownAutoColorApplier.supports(this);
+    }
+
+    protected boolean applyCrownAutoColors(CrownAutoColorPalette palette, SuperPageLayout page) {
+        return CrownAutoColorApplier.apply(this, palette, page);
+    }
 
     abstract protected void onElementDraw(Canvas canvas);
 

@@ -578,7 +578,9 @@ public class ElementController {
 
         List<Button> actionButtons = new ArrayList<>();
         collectCrownActionButtons(page, actionButtons);
-        if (actionButtons.isEmpty()) {
+        Element autoColorOwner = getCrownAutoColorOwner(page);
+        boolean supportsAutoColor = autoColorOwner != null && autoColorOwner.supportsCrownAutoColors();
+        if (actionButtons.isEmpty() && !supportsAutoColor) {
             return;
         }
 
@@ -594,29 +596,80 @@ public class ElementController {
         );
         actionBarParams.setMargins(0, dp(10), dp(20), 0);
 
+        if (supportsAutoColor) {
+            ImageButton autoColorButton = createCrownIconActionButton(
+                    R.drawable.phc_action_auto_color,
+                    context.getString(R.string.crown_auto_color_action),
+                    v -> applyCrownAutoColors(autoColorOwner, page)
+            );
+            actionBar.addView(autoColorButton, createCrownIconActionParams());
+        }
+
         for (Button originalButton : actionButtons) {
             String idName = context.getResources().getResourceEntryName(originalButton.getId());
-            ImageButton actionButton = new ImageButton(context);
-            actionButton.setBackgroundResource(R.drawable.crown_action_icon_button_bg);
-            actionButton.setColorFilter(context.getResources().getColor(R.color.crown_text_primary));
-            actionButton.setContentDescription(originalButton.getText());
-            actionButton.setImageResource(getCrownActionIconRes(idName));
-            actionButton.setPadding(dp(8), dp(8), dp(8), dp(8));
-            actionButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-            actionButton.setOnClickListener(v -> originalButton.performClick());
-
-            LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
-                    dp(32),
-                    ViewGroup.LayoutParams.MATCH_PARENT
+            ImageButton actionButton = createCrownIconActionButton(
+                    getCrownActionIconRes(idName),
+                    originalButton.getText(),
+                    v -> originalButton.performClick()
             );
-            buttonParams.setMarginStart(dp(4));
-            actionBar.addView(actionButton, buttonParams);
-
+            actionBar.addView(actionButton, createCrownIconActionParams());
             originalButton.setVisibility(View.GONE);
             hideActionRowIfNeeded(originalButton);
         }
 
         page.addView(actionBar, actionBarParams);
+    }
+
+    private ImageButton createCrownIconActionButton(int iconResId, CharSequence contentDescription, View.OnClickListener listener) {
+        ImageButton actionButton = new ImageButton(context);
+        actionButton.setBackgroundResource(R.drawable.crown_action_icon_button_bg);
+        actionButton.setColorFilter(context.getResources().getColor(R.color.crown_text_primary));
+        actionButton.setContentDescription(contentDescription);
+        actionButton.setImageResource(iconResId);
+        actionButton.setPadding(dp(8), dp(8), dp(8), dp(8));
+        actionButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        actionButton.setOnClickListener(listener);
+        return actionButton;
+    }
+
+    private LinearLayout.LayoutParams createCrownIconActionParams() {
+        LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
+                dp(32),
+                ViewGroup.LayoutParams.MATCH_PARENT
+        );
+        buttonParams.setMarginStart(dp(4));
+        return buttonParams;
+    }
+
+    private Element getCrownAutoColorOwner(SuperPageLayout page) {
+        Object owner = page.getTag(R.id.crown_auto_color_owner);
+        if (owner instanceof Element) {
+            return (Element) owner;
+        }
+        return null;
+    }
+
+    private void applyCrownAutoColors(Element element, SuperPageLayout page) {
+        if (!(context instanceof Game)) {
+            Toast.makeText(context, R.string.crown_auto_color_no_frame, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        CrownScreenColorSampler.sample((Game) context, new CrownScreenColorSampler.Callback() {
+            @Override
+            public void onPalette(CrownAutoColorPalette palette) {
+                if (element.applyCrownAutoColors(palette, page)) {
+                    Toast.makeText(context, R.string.crown_auto_color_done, Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(context, R.string.crown_auto_color_failed, Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onError(String message) {
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private int getCrownActionIconRes(String idName) {

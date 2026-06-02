@@ -35,7 +35,7 @@ final class CrownColorPickerBinder {
         ).show());
     }
 
-    private static void updateColorDisplay(ElementEditText colorDisplay, int color) {
+    static void updateColorDisplay(ElementEditText colorDisplay, int color) {
         colorDisplay.setTextWithNoTextChangedCallBack(String.format("%08X", color));
         colorDisplay.setBackgroundColor(color);
         double luminance = (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255;

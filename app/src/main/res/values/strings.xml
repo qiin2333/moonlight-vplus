@@ -1106,6 +1106,11 @@
     <string name="layout_page_wheel_pad_text_3ed82">Section Text Color</string>
     <string name="layout_page_wheel_pad_text_pressed_text_color">Pressed Text Color</string>
     <string name="layout_page_wheel_pad_text_58796">Center Text Color</string>
+    <string name="crown_auto_color_action">Auto color from screen</string>
+    <string name="crown_auto_color_done">Auto colors applied</string>
+    <string name="crown_auto_color_failed">Could not sample the current screen</string>
+    <string name="crown_auto_color_no_frame">No stream frame available for auto color</string>
+    <string name="crown_auto_color_unsupported">Auto color requires Android 8.0 or later</string>
     <string name="layout_page_window_text_625fb">Cancel</string>
 
 

@@ -1031,6 +1031,11 @@
     <string name="layout_page_wheel_pad_text_3ed82">分区文字颜色</string>
     <string name="layout_page_wheel_pad_text_pressed_text_color">按下文字颜色</string>
     <string name="layout_page_wheel_pad_text_58796">中心文字颜色</string>
+    <string name="crown_auto_color_action">根据当前画面自动配色</string>
+    <string name="crown_auto_color_done">已根据当前画面自动配色</string>
+    <string name="crown_auto_color_failed">无法采样当前画面</string>
+    <string name="crown_auto_color_no_frame">当前没有可用于配色的串流画面</string>
+    <string name="crown_auto_color_unsupported">自动配色需要 Android 8.0 或更高版本</string>
     <string name="layout_page_window_text_625fb">取消</string>
 
 

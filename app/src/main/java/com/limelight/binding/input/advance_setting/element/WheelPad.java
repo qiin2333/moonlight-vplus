@@ -1170,6 +1170,21 @@ public class WheelPad extends Element {
         invalidate();
     }
 
+    protected void setElementNormalTextColor(int normalTextColor) {
+        this.normalTextColor = normalTextColor;
+        invalidate();
+    }
+
+    protected void setElementPressedTextColor(int pressedTextColor) {
+        this.pressedTextColor = pressedTextColor;
+        invalidate();
+    }
+
+    protected void setElementCenterTextColor(int centerTextColor) {
+        this.centerTextColor = centerTextColor;
+        invalidate();
+    }
+
     protected void setCenterText(String text) {
         this.centerText = text;
         this.isPopupMode = !text.isEmpty();
