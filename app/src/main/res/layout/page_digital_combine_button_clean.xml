@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <com.limelight.binding.input.advance_setting.superpage.SuperPageLayout 
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -12,7 +12,7 @@
         android:layout_marginEnd="8dp"
         android:paddingVertical="12dp"
         android:layout_gravity="center_vertical"
-        android:background="@drawable/super_content_box_background"
+        android:background="@drawable/crown_config_panel_bg"
         android:scrollbars="none"
         android:fillViewport="true">
         
@@ -42,7 +42,7 @@
                 android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/card_background_with_border"
+                android:background="@drawable/crown_config_section_bg"
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
@@ -74,7 +74,7 @@
                         android:layout_height="42dp"
                         android:gravity="center"
                         android:text="@string/layout_page_digital_combine_button_text_499ef"
-                        android:background="@drawable/input_field_background"
+                        android:background="@drawable/crown_config_input_bg"
                         android:textSize="15sp"
                         android:paddingHorizontal="12dp"/>
                 </LinearLayout>
@@ -108,7 +108,7 @@
                         android:layout_height="36dp"
                         android:gravity="center"
                         android:text="A"
-                        android:background="@drawable/input_field_background"
+                        android:background="@drawable/crown_config_input_bg"
                         android:textSize="14sp"
                         android:textStyle="bold"/>
                 </LinearLayout>
@@ -133,7 +133,7 @@
                         android:layout_height="36dp"
                         android:gravity="center"
                         android:text="@string/layout_page_device_text_d81bb"
-                        android:background="@drawable/input_field_background"
+                        android:background="@drawable/crown_config_input_bg"
                         android:textSize="14sp"/>
                 </LinearLayout>
                 
@@ -157,7 +157,7 @@
                         android:layout_height="36dp"
                         android:gravity="center"
                         android:text="@string/layout_page_device_text_d81bb"
-                        android:background="@drawable/input_field_background"
+                        android:background="@drawable/crown_config_input_bg"
                         android:textSize="14sp"/>
                 </LinearLayout>
                 
@@ -181,7 +181,7 @@
                         android:layout_height="36dp"
                         android:gravity="center"
                         android:text="@string/layout_page_device_text_d81bb"
-                        android:background="@drawable/input_field_background"
+                        android:background="@drawable/crown_config_input_bg"
                         android:textSize="14sp"/>
                 </LinearLayout>
                 
@@ -204,7 +204,7 @@
                         android:layout_height="36dp"
                         android:gravity="center"
                         android:text="@string/layout_page_device_text_d81bb"
-                        android:background="@drawable/input_field_background"
+                        android:background="@drawable/crown_config_input_bg"
                         android:textSize="14sp"/>
                 </LinearLayout>
             </LinearLayout>
@@ -214,7 +214,7 @@
                 android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/card_background_with_border"
+                android:background="@drawable/crown_config_section_bg"
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
@@ -272,7 +272,7 @@
                 android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/card_background_with_border"
+                android:background="@drawable/crown_config_section_bg"
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
@@ -319,7 +319,7 @@
                 android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/card_background_with_border"
+                android:background="@drawable/crown_config_section_bg"
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
@@ -358,7 +358,7 @@
                             android:gravity="center"
                             android:text="#FFFFFF"
                             android:textSize="11sp"
-                            android:background="@drawable/color_input_background"
+                            android:background="@drawable/crown_color_input_bg"
                             android:paddingHorizontal="6dp"/>
                     </LinearLayout>
                     
@@ -381,7 +381,7 @@
                             android:gravity="center"
                             android:text="#00FF00"
                             android:textSize="11sp"
-                            android:background="@drawable/color_input_background"
+                            android:background="@drawable/crown_color_input_bg"
                             android:paddingHorizontal="6dp"/>
                     </LinearLayout>
                 </LinearLayout>
@@ -405,7 +405,7 @@
                         android:gravity="center"
                         android:text="#80000000"
                         android:textSize="11sp"
-                        android:background="@drawable/color_input_background"
+                        android:background="@drawable/crown_color_input_bg"
                         android:paddingHorizontal="6dp"/>
                 </LinearLayout>
             </LinearLayout>
@@ -415,7 +415,7 @@
                 android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/card_background_with_border"
+                android:background="@drawable/crown_config_section_bg"
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
@@ -463,7 +463,7 @@
                             android:gravity="center"
                             android:text="#FFFFFF"
                             android:textSize="11sp"
-                            android:background="@drawable/color_input_background"
+                            android:background="@drawable/crown_color_input_bg"
                             android:paddingHorizontal="6dp"/>
                     </LinearLayout>
                     
@@ -486,7 +486,7 @@
                             android:gravity="center"
                             android:text="#000000"
                             android:textSize="11sp"
-                            android:background="@drawable/color_input_background"
+                            android:background="@drawable/crown_color_input_bg"
                             android:paddingHorizontal="6dp"/>
                     </LinearLayout>
                 </LinearLayout>

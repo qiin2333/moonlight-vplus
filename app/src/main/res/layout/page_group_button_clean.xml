@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <com.limelight.binding.input.advance_setting.superpage.SuperPageLayout 
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -12,7 +12,7 @@
         android:layout_marginEnd="8dp"
         android:paddingVertical="12dp"
         android:layout_gravity="center_vertical"
-        android:background="@drawable/super_content_box_background"
+        android:background="@drawable/crown_config_panel_bg"
         android:scrollbars="none"
         android:fillViewport="true">
         
@@ -42,7 +42,7 @@
                 android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/card_background_with_border"
+                android:background="@drawable/crown_config_section_bg"
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
@@ -120,7 +120,7 @@
                 android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/card_background_with_border"
+                android:background="@drawable/crown_config_section_bg"
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
@@ -163,7 +163,7 @@
                         android:layout_height="42dp"
                         android:gravity="center"
                         android:text="@string/layout_page_digital_combine_button_text_499ef"
-                        android:background="@drawable/input_field_background"
+                        android:background="@drawable/crown_config_input_bg"
                         android:textSize="15sp"
                         android:paddingHorizontal="12dp"/>
                 </LinearLayout>
@@ -184,7 +184,7 @@
                 android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/card_background_with_border"
+                android:background="@drawable/crown_config_section_bg"
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
@@ -253,7 +253,7 @@
                 android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/card_background_with_border"
+                android:background="@drawable/crown_config_section_bg"
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
@@ -300,7 +300,7 @@
                 android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/card_background_with_border"
+                android:background="@drawable/crown_config_section_bg"
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
@@ -319,7 +319,7 @@
                     android:orientation="horizontal"
                     android:layout_width="match_parent"
                     android:layout_height="44dp"
-                    android:background="@drawable/input_field_background"
+                    android:background="@drawable/crown_config_input_bg"
                     android:gravity="center_vertical"
                     android:paddingHorizontal="12dp">
                     <TextView
@@ -331,7 +331,7 @@
                     <View
                         android:layout_width="24dp"
                         android:layout_height="24dp"
-                        android:background="@drawable/right_arrow"/>
+                        android:background="@drawable/crown_right_arrow"/>
                 </LinearLayout>
             </LinearLayout>
             
@@ -340,7 +340,7 @@
                 android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/card_background_with_border"
+                android:background="@drawable/crown_config_section_bg"
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
@@ -379,7 +379,7 @@
                             android:gravity="center"
                             android:text="#FFFFFF"
                             android:textSize="11sp"
-                            android:background="@drawable/color_input_background"
+                            android:background="@drawable/crown_color_input_bg"
                             android:paddingHorizontal="6dp"/>
                     </LinearLayout>
                     
@@ -402,7 +402,7 @@
                             android:gravity="center"
                             android:text="#00FF00"
                             android:textSize="11sp"
-                            android:background="@drawable/color_input_background"
+                            android:background="@drawable/crown_color_input_bg"
                             android:paddingHorizontal="6dp"/>
                     </LinearLayout>
                 </LinearLayout>
@@ -426,7 +426,7 @@
                         android:gravity="center"
                         android:text="#80000000"
                         android:textSize="11sp"
-                        android:background="@drawable/color_input_background"
+                        android:background="@drawable/crown_color_input_bg"
                         android:paddingHorizontal="6dp"/>
                 </LinearLayout>
             </LinearLayout>
@@ -436,7 +436,7 @@
                 android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/card_background_with_border"
+                android:background="@drawable/crown_config_section_bg"
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
@@ -484,7 +484,7 @@
                             android:gravity="center"
                             android:text="#FFFFFF"
                             android:textSize="11sp"
-                            android:background="@drawable/color_input_background"
+                            android:background="@drawable/crown_color_input_bg"
                             android:paddingHorizontal="6dp"/>
                     </LinearLayout>
                     
@@ -507,7 +507,7 @@
                             android:gravity="center"
                             android:text="#000000"
                             android:textSize="11sp"
-                            android:background="@drawable/color_input_background"
+                            android:background="@drawable/crown_color_input_bg"
                             android:paddingHorizontal="6dp"/>
                     </LinearLayout>
                 </LinearLayout>
@@ -518,7 +518,7 @@
                 android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/card_background_with_border"
+                android:background="@drawable/crown_config_section_bg"
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
@@ -542,7 +542,7 @@
                         android:layout_height="44dp"
                         android:layout_weight="1"
                         android:layout_marginEnd="8dp"
-                        android:background="@drawable/input_field_background"
+                        android:background="@drawable/crown_config_input_bg"
                         android:paddingHorizontal="12dp"
                         android:textSize="14sp"
                         android:hint="@string/page_hint_confirm_delete"/>

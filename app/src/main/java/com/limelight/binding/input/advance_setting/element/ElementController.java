@@ -2,7 +2,9 @@ package com.limelight.binding.input.advance_setting.element;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.content.DialogInterface;
+import android.graphics.drawable.ColorDrawable;
 import android.preference.PreferenceManager;
 import android.media.AudioAttributes;
 import android.os.Build;
@@ -16,10 +18,13 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CompoundButton;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.app.AlertDialog;
 import android.widget.SeekBar;
 import android.widget.Switch;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.limelight.Game;
@@ -545,6 +550,7 @@ public class ElementController {
             controllerManager.getSuperPagesController().openNewPage(
                     controllerManager.getSuperPagesController().getPageNull());
         } else {
+            applyCrownDetailStyle(elementSettingPage);
             controllerManager.getSuperPagesController().openNewPage(elementSettingPage);
             elementSettingPage.setPageReturnListener(new SuperPageLayout.ReturnListener() {
                 @Override
@@ -553,6 +559,42 @@ public class ElementController {
                 }
             });
         }
+    }
+
+    private void applyCrownDetailStyle(View view) {
+        if (view instanceof Switch) {
+            Switch switchView = (Switch) view;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                switchView.setThumbTintList(getColorStateList(R.color.crown_switch_thumb));
+                switchView.setTrackTintList(getColorStateList(R.color.crown_switch_track));
+            }
+        } else if (view instanceof Button) {
+            Button button = (Button) view;
+            button.setBackgroundResource(R.drawable.crown_config_action_button_bg);
+            button.setTextColor(context.getResources().getColor(R.color.crown_text_primary));
+        } else if (view instanceof EditText) {
+            EditText editText = (EditText) view;
+            if (!(editText.getBackground() instanceof ColorDrawable)) {
+                editText.setTextColor(context.getResources().getColor(R.color.crown_text_primary));
+                editText.setHintTextColor(context.getResources().getColor(R.color.crown_text_secondary));
+            }
+        } else if (view instanceof TextView) {
+            ((TextView) view).setTextColor(context.getResources().getColor(R.color.crown_text_primary));
+        }
+
+        if (view instanceof ViewGroup) {
+            ViewGroup viewGroup = (ViewGroup) view;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                applyCrownDetailStyle(viewGroup.getChildAt(i));
+            }
+        }
+    }
+
+    private ColorStateList getColorStateList(int colorResId) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            return context.getResources().getColorStateList(colorResId, context.getTheme());
+        }
+        return context.getResources().getColorStateList(colorResId);
     }
 
     public SuperPageLayout getCurrentEditingPage() {

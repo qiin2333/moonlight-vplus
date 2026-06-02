@@ -53,6 +53,13 @@ public class PageConfigController {
     private List<Long> configIds = new ArrayList<>();
     private List<String> configNames = new ArrayList<>();
 
+    private String getCrownDialogTitle(int titleResId) {
+        return "\u265B " + context.getString(titleResId);
+    }
+
+    private String getCrownDialogTitle(String title) {
+        return "\u265B " + title;
+    }
 
 
     public PageConfigController(ControllerManager controllerManager, Context context){
@@ -68,7 +75,7 @@ public class PageConfigController {
             public void onClick(View v) {
                 SuperPageLayout pageWindow = (SuperPageLayout) LayoutInflater.from(context).inflate(R.layout.page_window,null);
                 TextView title = pageWindow.findViewById(R.id.window_title);
-                title.setText(context.getString(R.string.crown_profile_name_title));
+                title.setText(getCrownDialogTitle(R.string.crown_profile_name_title));
                 EditText editText = pageWindow.findViewById(R.id.window_edittext);
                 //窗口确认按钮
                 pageWindow.findViewById(R.id.window_confirm).setOnClickListener(new View.OnClickListener() {
@@ -116,7 +123,7 @@ public class PageConfigController {
                 SuperPageLayout pageWindow = (SuperPageLayout) LayoutInflater.from(context).inflate(R.layout.page_window,null);
                 TextView title = pageWindow.findViewById(R.id.window_title);
                 String titleString = "是否删除:" + configNames.get(configIds.indexOf(currentConfigId));
-                title.setText(titleString);
+                title.setText(getCrownDialogTitle(titleString));
                 pageWindow.findViewById(R.id.window_edittext).setVisibility(View.GONE);
                 //窗口确认按钮
                 pageWindow.findViewById(R.id.window_confirm).setOnClickListener(new View.OnClickListener() {
@@ -426,7 +433,7 @@ public class PageConfigController {
     public void openRenameDialog() {
         SuperPageLayout pageWindow = (SuperPageLayout) LayoutInflater.from(context).inflate(R.layout.page_window,null);
         TextView title = pageWindow.findViewById(R.id.window_title);
-        title.setText(context.getString(R.string.crown_profile_name_title));
+        title.setText(getCrownDialogTitle(R.string.crown_profile_name_title));
         EditText editText = pageWindow.findViewById(R.id.window_edittext);
         
         // 获取当前选中的配置名称

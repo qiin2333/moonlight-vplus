@@ -1,44 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.limelight.binding.input.advance_setting.superpage.SuperPageLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="250dp"
+    android:layout_width="280dp"
     android:layout_height="match_parent"
-    android:tag="250">
+    android:tag="280">
     <FrameLayout
-        android:layout_width="250dp"
+        android:layout_width="280dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
-        android:padding="10dp"
-        android:background="@drawable/super_content_box_background">
+        android:background="@drawable/crown_config_panel_bg"
+        android:padding="16dp">
         <LinearLayout
             android:orientation="vertical"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center">
             <TextView
                 android:id="@+id/window_title"
-                android:layout_width="200dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="20dp"
+                android:layout_marginBottom="12dp"
+                android:textColor="@color/crown_text_primary"
+                android:textSize="18sp"
                 android:text="Title:"/>
             <EditText
                 android:id="@+id/window_edittext"
-                android:layout_width="200dp"
-                android:layout_height="50dp"/>
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/crown_config_input_bg"
+                android:paddingHorizontal="12dp"
+                android:singleLine="true"
+                android:textColor="@color/crown_text_primary"
+                android:textColorHint="@color/crown_text_secondary" />
             <LinearLayout
                 android:orientation="horizontal"
-                android:layout_width="200dp"
-                android:layout_height="50dp">
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:layout_marginTop="14dp">
                 <Button
                     android:id="@+id/window_confirm"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
+                    android:layout_marginEnd="6dp"
                     android:layout_weight="1"
+                    android:background="@drawable/crown_config_action_button_bg"
+                    android:textColor="@color/crown_text_primary"
                     android:text="@string/layout_page_simplify_performance_text_e83a2"/>
                 <Button
                     android:id="@+id/window_cancel"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
+                    android:layout_marginStart="6dp"
                     android:layout_weight="1"
+                    android:background="@drawable/crown_config_action_button_bg"
+                    android:textColor="@color/crown_text_primary"
                     android:text="@string/layout_page_window_text_625fb"/>
             </LinearLayout>
         </LinearLayout>

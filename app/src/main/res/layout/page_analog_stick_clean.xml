@@ -11,7 +11,7 @@
         android:layout_marginEnd="5dp"
         android:paddingTop="3dp"
         android:layout_gravity="center_vertical"
-        android:background="@drawable/super_content_box_background">
+        android:background="@drawable/crown_config_panel_bg">
         <LinearLayout
             android:orientation="vertical"
             android:layout_width="match_parent"
@@ -38,7 +38,7 @@
                 android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/card_background_with_border"
+                android:background="@drawable/crown_config_section_bg"
                 android:padding="12dp"
                 android:layout_marginBottom="8dp">
                 <TextView
@@ -120,7 +120,7 @@
                 android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/card_background_with_border"
+                android:background="@drawable/crown_config_section_bg"
                 android:padding="12dp"
                 android:layout_marginBottom="8dp">
                 <TextView
@@ -173,7 +173,7 @@
                 android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/card_background_with_border"
+                android:background="@drawable/crown_config_section_bg"
                 android:padding="12dp"
                 android:layout_marginBottom="8dp">
                 <TextView
@@ -227,7 +227,7 @@
                             android:gravity="center"
                             android:text="#FFFFFF"
                             android:textSize="13sp"
-                            android:background="@drawable/color_input_background" />
+                            android:background="@drawable/crown_color_input_bg" />
                     </LinearLayout>
                     <LinearLayout
                         android:orientation="vertical"
@@ -248,7 +248,7 @@
                             android:gravity="center"
                             android:text="#00FF00"
                             android:textSize="13sp"
-                            android:background="@drawable/color_input_background"/>
+                            android:background="@drawable/crown_color_input_bg"/>
                     </LinearLayout>
                 </LinearLayout>
 
@@ -270,7 +270,7 @@
                         android:gravity="center"
                         android:text="#000000"
                         android:textSize="13sp"
-                        android:background="@drawable/color_input_background" />
+                        android:background="@drawable/crown_color_input_bg" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -279,7 +279,7 @@
                 android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/card_background_with_border"
+                android:background="@drawable/crown_config_section_bg"
                 android:padding="12dp"
                 android:layout_marginBottom="8dp">
                 <TextView
@@ -324,7 +324,7 @@
                             android:gravity="center"
                             android:text="#FFFFFF"
                             android:textSize="13sp"
-                            android:background="@drawable/color_input_background" />
+                            android:background="@drawable/crown_color_input_bg" />
                     </LinearLayout>
                     <LinearLayout
                         android:orientation="vertical"
@@ -345,7 +345,7 @@
                             android:gravity="center"
                             android:text="#00FF00"
                             android:textSize="13sp"
-                            android:background="@drawable/color_input_background" />
+                            android:background="@drawable/crown_color_input_bg" />
                     </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
@@ -355,7 +355,7 @@
                 android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/card_background_with_border"
+                android:background="@drawable/crown_config_section_bg"
                 android:padding="12dp">
                 <TextView
                     android:layout_width="match_parent"

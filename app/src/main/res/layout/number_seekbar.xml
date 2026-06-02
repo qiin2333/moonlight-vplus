@@ -13,6 +13,7 @@
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:gravity="center_vertical"
+            android:textColor="@color/crown_text_secondary"
             android:text="@string/layout_number_seekbar_text_e12e7"/>
         <LinearLayout
             android:orientation="horizontal"
@@ -33,6 +34,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:gravity="center_vertical"
+                android:textColor="@color/crown_text_primary"
                 android:text="100"/>
             <View
                 android:id="@+id/number_seekbar_add"
@@ -53,6 +55,8 @@
         android:layout_height="25dp"
         android:max="500"
         android:min="1"
+        android:progressTint="@color/theme_pink_primary"
+        android:progressBackgroundTint="@color/crown_input_border"
         android:progress="100"/>
 
 </LinearLayout>
