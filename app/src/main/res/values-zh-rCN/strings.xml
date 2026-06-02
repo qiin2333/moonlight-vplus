@@ -1029,6 +1029,7 @@
     <string name="layout_page_wheel_pad_text_cfb46">键值(从上顺时针开始)</string>
     <string name="layout_page_wheel_pad_text_97f5a">按下颜色</string>
     <string name="layout_page_wheel_pad_text_3ed82">分区文字颜色</string>
+    <string name="layout_page_wheel_pad_text_pressed_text_color">按下文字颜色</string>
     <string name="layout_page_wheel_pad_text_58796">中心文字颜色</string>
     <string name="layout_page_window_text_625fb">取消</string>
 

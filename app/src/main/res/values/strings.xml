@@ -1104,6 +1104,7 @@
     <string name="layout_page_wheel_pad_text_cfb46">Key values (clockwise from top)</string>
     <string name="layout_page_wheel_pad_text_97f5a">Pressed Color</string>
     <string name="layout_page_wheel_pad_text_3ed82">Section Text Color</string>
+    <string name="layout_page_wheel_pad_text_pressed_text_color">Pressed Text Color</string>
     <string name="layout_page_wheel_pad_text_58796">Center Text Color</string>
     <string name="layout_page_window_text_625fb">Cancel</string>
 

@@ -739,6 +739,7 @@ public class WheelPad extends Element {
 
         NumberSeekbar textSizeNumberSeekbar = wheelPadPage.findViewById(R.id.page_wheel_pad_text_size);
         ElementEditText normalTextColorElementEditText = wheelPadPage.findViewById(R.id.page_wheel_pad_normal_text_color);
+        ElementEditText pressedTextColorElementEditText = wheelPadPage.findViewById(R.id.page_wheel_pad_pressed_text_color);
         NumberSeekbar centerTextSizeNumberSeekbar = wheelPadPage.findViewById(R.id.page_wheel_pad_center_text_size);
         ElementEditText centerTextColorElementEditText = wheelPadPage.findViewById(R.id.page_wheel_pad_center_text_color);
         NumberSeekbar triggerTextSizeNumberSeekbar = wheelPadPage.findViewById(R.id.page_wheel_pad_trigger_text_size);
@@ -857,6 +858,10 @@ public class WheelPad extends Element {
             this.normalTextColor = color;
             invalidate();
         });
+        CrownColorPickerBinder.bind(this, pressedTextColorElementEditText, () -> this.pressedTextColor, color -> {
+            this.pressedTextColor = color;
+            invalidate();
+        });
         CrownColorPickerBinder.bind(this, centerTextColorElementEditText, () -> this.centerTextColor, color -> {
             this.centerTextColor = color;
             invalidate();
@@ -905,6 +910,7 @@ public class WheelPad extends Element {
 
         JsonObject extraAttrs = new JsonObject();
         extraAttrs.addProperty("normalTextColor", this.normalTextColor);
+        extraAttrs.addProperty("pressedTextColor", this.pressedTextColor);
         extraAttrs.addProperty("centerTextColor", this.centerTextColor);
         extraAttrs.addProperty("textSizePercent", this.textSizePercent);
         extraAttrs.addProperty("centerTextSizePercent", this.centerTextSizePercent);

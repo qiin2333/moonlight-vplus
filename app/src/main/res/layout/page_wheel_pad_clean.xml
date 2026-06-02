@@ -367,6 +367,27 @@
                         android:textSize="13sp"
                         android:background="@drawable/crown_color_input_bg" />
                 </LinearLayout>
+
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="8dp">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/layout_page_wheel_pad_text_pressed_text_color"
+                        android:textSize="12sp"
+                        android:paddingBottom="4dp"/>
+                    <com.limelight.binding.input.advance_setting.superpage.ElementEditText
+                        android:id="@+id/page_wheel_pad_pressed_text_color"
+                        android:layout_width="match_parent"
+                        android:layout_height="40dp"
+                        android:gravity="center"
+                        android:textSize="13sp"
+                        android:background="@drawable/crown_color_input_bg" />
+                </LinearLayout>
                 
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                     android:id="@+id/page_wheel_pad_trigger_text_size"
