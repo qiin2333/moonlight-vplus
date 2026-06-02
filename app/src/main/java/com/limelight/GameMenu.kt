@@ -9,7 +9,6 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.text.Html
-import android.text.TextUtils
 import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.LayoutInflater
@@ -902,8 +901,6 @@ class GameMenu(
                 FrameLayout.LayoutParams.WRAP_CONTENT
             )
             text = label
-            maxLines = 1
-            ellipsize = TextUtils.TruncateAt.END
             gravity = android.view.Gravity.CENTER
             includeFontPadding = false
             setUniformIcon(iconRes)
