@@ -29,7 +29,6 @@ import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHel
 import com.limelight.binding.input.advance_setting.superpage.ElementEditText;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
-import com.limelight.utils.ColorPickerDialog;
 
 import java.util.Map;
 
@@ -637,9 +636,9 @@ public class AnalogStick extends Element {
             }
         });
 
-        setupColorPickerButton(normalColorEditText, () -> this.normalColor, this::setElementNormalColor);
-        setupColorPickerButton(pressedColorEditText, () -> this.pressedColor, this::setElementPressedColor);
-        setupColorPickerButton(backgroundColorEditText, () -> this.backgroundColor, this::setElementBackgroundColor);
+        CrownColorPickerBinder.bind(this, normalColorEditText, () -> this.normalColor, this::setElementNormalColor);
+        CrownColorPickerBinder.bind(this, pressedColorEditText, () -> this.pressedColor, this::setElementPressedColor);
+        CrownColorPickerBinder.bind(this, backgroundColorEditText, () -> this.backgroundColor, this::setElementBackgroundColor);
 
 
         copyButton.setOnClickListener(new OnClickListener() {
@@ -775,58 +774,4 @@ public class AnalogStick extends Element {
 
     }
 
-    private interface IntSupplier {
-        int get();
-    }
-
-    private interface IntConsumer {
-        void accept(int value);
-    }
-
-    /**
-     * 更新颜色显示按钮的外观（文本、背景色、文本颜色）。
-     */
-    private void updateColorDisplay(ElementEditText colorDisplay, int color) {
-        // 显示十六进制颜色码
-        colorDisplay.setTextWithNoTextChangedCallBack(String.format("%08X", color));
-        // 将背景设置为当前颜色
-        colorDisplay.setBackgroundColor(color);
-
-        // 根据背景色的亮度自动设置文本颜色为黑色或白色，以确保可读性
-        double luminance = (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255;
-        colorDisplay.setTextColor(luminance > 0.5 ? Color.BLACK : Color.WHITE);
-        colorDisplay.setGravity(Gravity.CENTER);
-    }
-
-    /**
-     * 配置一个 ElementEditText 控件，使其作为颜色选择器按钮使用。
-     *
-     * @param colorDisplay        用于作为按钮的 ElementEditText 视图。
-     * @param initialColorFetcher 一个用于获取当前颜色值的 Lambda 表达式。
-     * @param colorUpdater        一个用于设置新颜色值的 Lambda 表达式。
-     */
-    private void setupColorPickerButton(ElementEditText colorDisplay, IntSupplier initialColorFetcher, IntConsumer colorUpdater) {
-        // 禁输入，让 EditText 表现得像一个按钮
-        colorDisplay.setFocusable(false);
-        colorDisplay.setCursorVisible(false);
-        colorDisplay.setKeyListener(null);
-
-        // 使用传入的 Lambda 获取初始颜色并设置外观
-        updateColorDisplay(colorDisplay, initialColorFetcher.get());
-
-        // 设置点击监听器，打开颜色选择器
-        colorDisplay.setOnClickListener(v -> {
-            // 再次获取当前颜色，确保打开时颜色是最新的
-            new ColorPickerDialog(
-                    getContext(),
-                    initialColorFetcher.get(),
-                    true, // true 表示显示 Alpha 透明度滑块
-                    newColor -> {
-                        colorUpdater.accept(newColor); // 使用传入的 Lambda 更新颜色属性
-                        save();                      // 保存更改
-                        updateColorDisplay(colorDisplay, newColor); // 更新UI显示
-                    }
-            ).show(); // <-- 主要变化：在最后调用 .show()
-        });
-    }
 }

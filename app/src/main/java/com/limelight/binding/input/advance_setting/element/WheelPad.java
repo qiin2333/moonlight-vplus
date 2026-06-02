@@ -34,7 +34,6 @@ import com.limelight.binding.input.advance_setting.PageDeviceController;
 import com.limelight.binding.input.advance_setting.superpage.ElementEditText;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
-import com.limelight.utils.ColorPickerDialog;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -854,11 +853,11 @@ public class WheelPad extends Element {
             }
         });
 
-        setupColorPickerButton(normalTextColorElementEditText, () -> this.normalTextColor, color -> {
+        CrownColorPickerBinder.bind(this, normalTextColorElementEditText, () -> this.normalTextColor, color -> {
             this.normalTextColor = color;
             invalidate();
         });
-        setupColorPickerButton(centerTextColorElementEditText, () -> this.centerTextColor, color -> {
+        CrownColorPickerBinder.bind(this, centerTextColorElementEditText, () -> this.centerTextColor, color -> {
             this.centerTextColor = color;
             invalidate();
         });
@@ -1058,9 +1057,9 @@ public class WheelPad extends Element {
             }
         });
 
-        setupColorPickerButton(normalColor, () -> this.normalColor, this::setElementNormalColor);
-        setupColorPickerButton(pressedColor, () -> this.pressedColor, this::setElementPressedColor);
-        setupColorPickerButton(backgroundColor, () -> this.backgroundColor, this::setElementBackgroundColor);
+        CrownColorPickerBinder.bind(this, normalColor, () -> this.normalColor, this::setElementNormalColor);
+        CrownColorPickerBinder.bind(this, pressedColor, () -> this.pressedColor, this::setElementPressedColor);
+        CrownColorPickerBinder.bind(this, backgroundColor, () -> this.backgroundColor, this::setElementBackgroundColor);
 
         copy.setOnClickListener(v -> {
             ContentValues cv = new ContentValues();
@@ -1491,38 +1490,4 @@ public class WheelPad extends Element {
         }
     }
 
-    private interface IntSupplier {
-        int get();
-    }
-
-    private interface IntConsumer {
-        void accept(int value);
-    }
-
-    private void updateColorDisplay(ElementEditText colorDisplay, int color) {
-        colorDisplay.setTextWithNoTextChangedCallBack(String.format("%08X", color));
-        colorDisplay.setBackgroundColor(color);
-        double luminance = (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255;
-        colorDisplay.setTextColor(luminance > 0.5 ? Color.BLACK : Color.WHITE);
-        colorDisplay.setGravity(Gravity.CENTER);
-    }
-
-    private void setupColorPickerButton(ElementEditText colorDisplay, IntSupplier initialColorFetcher, IntConsumer colorUpdater) {
-        colorDisplay.setFocusable(false);
-        colorDisplay.setCursorVisible(false);
-        colorDisplay.setKeyListener(null);
-        updateColorDisplay(colorDisplay, initialColorFetcher.get());
-        colorDisplay.setOnClickListener(v -> {
-            new ColorPickerDialog(
-                    getContext(),
-                    initialColorFetcher.get(),
-                    true,
-                    newColor -> {
-                        colorUpdater.accept(newColor);
-                        save();
-                        updateColorDisplay(colorDisplay, newColor);
-                    }
-            ).show();
-        });
-    }
 }

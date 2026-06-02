@@ -27,7 +27,6 @@ import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHel
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
 import com.limelight.binding.input.virtual_controller.DigitalButton;
 import com.limelight.binding.input.virtual_controller.VirtualControllerElement;
-import com.limelight.utils.ColorPickerDialog;
 
 import java.util.Map;
 
@@ -565,11 +564,11 @@ public class DigitalCommonButton extends Element {
         });
 
         // Setup for all color pickers
-        setupColorPickerButton(normalColorElementEditText, () -> this.normalColor, this::setElementNormalColor);
-        setupColorPickerButton(pressedColorElementEditText, () -> this.pressedColor, this::setElementPressedColor);
-        setupColorPickerButton(backgroundColorElementEditText, () -> this.backgroundColor, this::setElementBackgroundColor);
-        setupColorPickerButton(normalTextColorElementEditText, () -> this.normalTextColor, this::setElementNormalTextColor);
-        setupColorPickerButton(pressedTextColorElementEditText, () -> this.pressedTextColor, this::setElementPressedTextColor);
+        CrownColorPickerBinder.bind(this, normalColorElementEditText, () -> this.normalColor, this::setElementNormalColor);
+        CrownColorPickerBinder.bind(this, pressedColorElementEditText, () -> this.pressedColor, this::setElementPressedColor);
+        CrownColorPickerBinder.bind(this, backgroundColorElementEditText, () -> this.backgroundColor, this::setElementBackgroundColor);
+        CrownColorPickerBinder.bind(this, normalTextColorElementEditText, () -> this.normalTextColor, this::setElementNormalTextColor);
+        CrownColorPickerBinder.bind(this, pressedTextColorElementEditText, () -> this.pressedTextColor, this::setElementPressedTextColor);
 
 
         copyButton.setOnClickListener(v -> {
@@ -675,36 +674,4 @@ public class DigitalCommonButton extends Element {
         return contentValues;
     }
 
-    private interface IntSupplier {
-        int get();
-    }
-
-    private interface IntConsumer {
-        void accept(int value);
-    }
-
-    private void updateColorDisplay(ElementEditText colorDisplay, int color) {
-        colorDisplay.setTextWithNoTextChangedCallBack(String.format("%08X", color));
-        colorDisplay.setBackgroundColor(color);
-        double luminance = (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255;
-        colorDisplay.setTextColor(luminance > 0.5 ? Color.BLACK : Color.WHITE);
-        colorDisplay.setGravity(Gravity.CENTER);
-    }
-
-    private void setupColorPickerButton(ElementEditText colorDisplay, IntSupplier initialColorFetcher, IntConsumer colorUpdater) {
-        colorDisplay.setFocusable(false);
-        colorDisplay.setCursorVisible(false);
-        colorDisplay.setKeyListener(null);
-        updateColorDisplay(colorDisplay, initialColorFetcher.get());
-        colorDisplay.setOnClickListener(v -> new ColorPickerDialog(
-                getContext(),
-                initialColorFetcher.get(),
-                true,
-                newColor -> {
-                    colorUpdater.accept(newColor);
-                    save();
-                    updateColorDisplay(colorDisplay, newColor);
-                }
-        ).show());
-    }
 }
