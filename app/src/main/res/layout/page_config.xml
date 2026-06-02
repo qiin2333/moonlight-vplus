@@ -16,7 +16,7 @@
         android:clipToPadding="false"
         android:fillViewport="false"
         android:paddingHorizontal="10dp"
-        android:paddingTop="10dp"
+        android:paddingTop="56dp"
         android:paddingBottom="62dp">
 
         <LinearLayout
@@ -69,48 +69,6 @@
                     android:min="1"
                     app:progress="10" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="38dp"
-                    android:layout_marginTop="8dp"
-                    android:orientation="horizontal">
-
-                    <Button
-                        android:id="@+id/add_config_button"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_marginEnd="4dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/crown_config_action_button_bg"
-                        android:text="@string/layout_page_config_text_66ab5"
-                        android:textAllCaps="false"
-                        android:textColor="@color/crown_text_primary"
-                        android:textSize="12sp" />
-
-                    <Button
-                        android:id="@+id/rename_config_button"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_marginHorizontal="2dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/crown_config_action_button_bg"
-                        android:text="@string/layout_config_item_text_c8ce4"
-                        android:textAllCaps="false"
-                        android:textColor="@color/crown_text_primary"
-                        android:textSize="12sp" />
-
-                    <Button
-                        android:id="@+id/delete_config_button"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_marginStart="4dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/crown_config_action_button_bg"
-                        android:text="@string/layout_config_item_text_2f4aa"
-                        android:textAllCaps="false"
-                        android:textColor="@color/crown_text_primary"
-                        android:textSize="12sp" />
-                </LinearLayout>
             </LinearLayout>
 
             <TextView
@@ -300,18 +258,72 @@
         </LinearLayout>
     </ScrollView>
 
-    <Button
-        android:id="@+id/exit_crown_config_button"
+    <LinearLayout
+        android:id="@+id/crown_config_action_bar"
         android:layout_width="match_parent"
-        android:layout_height="44dp"
-        android:layout_gravity="bottom"
+        android:layout_height="38dp"
+        android:layout_gravity="top|end"
         android:layout_marginStart="10dp"
         android:layout_marginEnd="15dp"
-        android:layout_marginBottom="10dp"
-        android:background="@drawable/crown_config_action_button_bg"
-        android:text="@string/layout_page_config_text_df603"
-        android:textAllCaps="false"
-        android:textColor="@color/crown_text_primary"
-        android:textSize="14sp"
-        android:textStyle="bold" />
+        android:layout_marginTop="10dp"
+        android:gravity="end"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/add_config_button"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="4dp"
+            android:layout_weight="1"
+            android:background="@drawable/crown_config_action_button_bg"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/layout_page_config_text_66ab5"
+            android:textAllCaps="false"
+            android:textColor="@color/crown_text_primary"
+            android:textSize="11sp" />
+
+        <Button
+            android:id="@+id/rename_config_button"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginHorizontal="2dp"
+            android:layout_weight="1"
+            android:background="@drawable/crown_config_action_button_bg"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/layout_config_item_text_c8ce4"
+            android:textAllCaps="false"
+            android:textColor="@color/crown_text_primary"
+            android:textSize="11sp" />
+
+        <Button
+            android:id="@+id/delete_config_button"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginHorizontal="2dp"
+            android:layout_weight="1"
+            android:background="@drawable/crown_config_action_button_bg"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/layout_config_item_text_2f4aa"
+            android:textAllCaps="false"
+            android:textColor="@color/crown_text_primary"
+            android:textSize="11sp" />
+
+        <Button
+            android:id="@+id/exit_crown_config_button"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="4dp"
+            android:layout_weight="1"
+            android:background="@drawable/crown_config_action_button_bg"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/layout_page_config_text_df603"
+            android:textAllCaps="false"
+            android:textColor="@color/crown_text_primary"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+    </LinearLayout>
 </com.limelight.binding.input.advance_setting.superpage.SuperPageLayout>

@@ -14,13 +14,17 @@ import android.os.VibrationAttributes;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.util.DisplayMetrics;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.widget.CompoundButton;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.app.AlertDialog;
 import android.widget.SeekBar;
 import android.widget.Switch;
@@ -130,6 +134,8 @@ public class ElementController {
     private Map<Integer, Runnable> mouseScrollRunnableMap = new HashMap<>();
     private static final int MOUSE_SCROLL_INITIAL_DELAY = 150; // 初始延迟（毫秒）
     private static int MOUSE_SCROLL_REPEAT_INTERVAL = 100; // 重复间隔（毫秒）
+
+    private static final String CROWN_DETAIL_ACTION_BAR_TAG = "crown_detail_action_bar";
 
     public static void setMouseScrollRepeatInterval(int interval) {
         MOUSE_SCROLL_REPEAT_INTERVAL = interval;
@@ -551,6 +557,7 @@ public class ElementController {
                     controllerManager.getSuperPagesController().getPageNull());
         } else {
             applyCrownDetailStyle(elementSettingPage);
+            promoteCrownDetailActions(elementSettingPage);
             controllerManager.getSuperPagesController().openNewPage(elementSettingPage);
             elementSettingPage.setPageReturnListener(new SuperPageLayout.ReturnListener() {
                 @Override
@@ -559,6 +566,170 @@ public class ElementController {
                 }
             });
         }
+    }
+
+    private void promoteCrownDetailActions(SuperPageLayout page) {
+        if (page.findViewWithTag(CROWN_DETAIL_ACTION_BAR_TAG) != null) {
+            return;
+        }
+
+        List<Button> actionButtons = new ArrayList<>();
+        collectCrownActionButtons(page, actionButtons);
+        if (actionButtons.isEmpty()) {
+            return;
+        }
+
+        LinearLayout actionBar = new LinearLayout(context);
+        actionBar.setTag(CROWN_DETAIL_ACTION_BAR_TAG);
+        actionBar.setGravity(Gravity.END);
+        actionBar.setOrientation(LinearLayout.HORIZONTAL);
+
+        FrameLayout.LayoutParams actionBarParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(36),
+                Gravity.TOP | Gravity.END
+        );
+        actionBarParams.setMargins(dp(12), dp(10), dp(20), 0);
+
+        for (Button originalButton : actionButtons) {
+            Button actionButton = new Button(context);
+            actionButton.setText(originalButton.getText());
+            actionButton.setTextSize(11);
+            actionButton.setSingleLine(true);
+            actionButton.setAllCaps(false);
+            actionButton.setMinWidth(0);
+            actionButton.setMinimumWidth(0);
+            actionButton.setPadding(dp(8), 0, dp(8), 0);
+            actionButton.setBackgroundResource(R.drawable.crown_config_action_button_bg);
+            actionButton.setTextColor(context.getResources().getColor(R.color.crown_text_primary));
+            actionButton.setOnClickListener(v -> originalButton.performClick());
+
+            LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+            );
+            buttonParams.setMarginStart(dp(4));
+            actionBar.addView(actionButton, buttonParams);
+
+            originalButton.setVisibility(View.GONE);
+            hideActionRowIfNeeded(originalButton);
+        }
+
+        padFirstScrollViewForActionBar(page);
+        page.addView(actionBar, actionBarParams);
+    }
+
+    private void collectCrownActionButtons(View view, List<Button> actionButtons) {
+        if (view instanceof Button && isCrownDetailActionButton(view)) {
+            actionButtons.add((Button) view);
+            return;
+        }
+
+        if (view instanceof ViewGroup) {
+            ViewGroup viewGroup = (ViewGroup) view;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                collectCrownActionButtons(viewGroup.getChildAt(i), actionButtons);
+            }
+        }
+    }
+
+    private boolean isCrownDetailActionButton(View view) {
+        if (view.getId() == View.NO_ID) {
+            return false;
+        }
+
+        String idName = context.getResources().getResourceEntryName(view.getId());
+        return idName.endsWith("_copy")
+                || idName.endsWith("_delete")
+                || idName.endsWith("_reset")
+                || idName.endsWith("_ensure");
+    }
+
+    private void hideActionRowIfNeeded(Button originalButton) {
+        ViewParent parent = originalButton.getParent();
+        if (!(parent instanceof ViewGroup)) {
+            return;
+        }
+
+        ViewGroup row = (ViewGroup) parent;
+        if (containsVisibleActionButton(row)) {
+            return;
+        }
+        if (containsVisibleNonActionChild(row)) {
+            return;
+        }
+
+        row.setVisibility(View.GONE);
+        ViewParent sectionParent = row.getParent();
+        if (sectionParent instanceof ViewGroup) {
+            ViewGroup section = (ViewGroup) sectionParent;
+            if (hasOnlyTextAndHiddenActionRows(section)) {
+                section.setVisibility(View.GONE);
+            }
+        }
+    }
+
+    private boolean containsVisibleActionButton(ViewGroup viewGroup) {
+        for (int i = 0; i < viewGroup.getChildCount(); i++) {
+            View child = viewGroup.getChildAt(i);
+            if (child instanceof Button && child.getVisibility() == View.VISIBLE && isCrownDetailActionButton(child)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean containsVisibleNonActionChild(ViewGroup viewGroup) {
+        for (int i = 0; i < viewGroup.getChildCount(); i++) {
+            View child = viewGroup.getChildAt(i);
+            if (child.getVisibility() != View.VISIBLE) {
+                continue;
+            }
+            if (!(child instanceof Button) || !isCrownDetailActionButton(child)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasOnlyTextAndHiddenActionRows(ViewGroup viewGroup) {
+        boolean hasHiddenActionRow = false;
+        for (int i = 0; i < viewGroup.getChildCount(); i++) {
+            View child = viewGroup.getChildAt(i);
+            if (child.getVisibility() == View.GONE && child instanceof ViewGroup) {
+                hasHiddenActionRow = true;
+                continue;
+            }
+            if (child instanceof TextView) {
+                continue;
+            }
+            return false;
+        }
+        return hasHiddenActionRow;
+    }
+
+    private void padFirstScrollViewForActionBar(ViewGroup viewGroup) {
+        for (int i = 0; i < viewGroup.getChildCount(); i++) {
+            View child = viewGroup.getChildAt(i);
+            if (child instanceof ScrollView) {
+                ScrollView scrollView = (ScrollView) child;
+                scrollView.setClipToPadding(false);
+                scrollView.setPadding(
+                        scrollView.getPaddingLeft(),
+                        scrollView.getPaddingTop() + dp(44),
+                        scrollView.getPaddingRight(),
+                        scrollView.getPaddingBottom()
+                );
+                return;
+            }
+            if (child instanceof ViewGroup) {
+                padFirstScrollViewForActionBar((ViewGroup) child);
+            }
+        }
+    }
+
+    private int dp(int value) {
+        return Math.round(value * context.getResources().getDisplayMetrics().density);
     }
 
     private void applyCrownDetailStyle(View view) {
