@@ -9,6 +9,8 @@ import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.Shader
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -23,6 +25,8 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.TextView
+
+import androidx.core.content.ContextCompat
 
 import com.limelight.R
 import kotlin.math.max
@@ -65,7 +69,12 @@ class ColorPickerDialog(
 
         val masterLayout = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16))
+            background = rounded(
+                color(R.color.crown_panel_background),
+                dpToPx(14).toFloat(),
+                color(R.color.crown_panel_border)
+            )
+            setPadding(dpToPx(14), dpToPx(14), dpToPx(14), dpToPx(14))
             gravity = Gravity.CENTER_VERTICAL
         }
 
@@ -79,34 +88,54 @@ class ColorPickerDialog(
         pickerLayout.addView(hueSlider, LinearLayout.LayoutParams(dpToPx(24), ViewGroup.LayoutParams.MATCH_PARENT))
 
         masterLayout.addView(pickerLayout, LinearLayout.LayoutParams(0, dpToPx(220), 2f).apply {
-            rightMargin = dpToPx(16)
+            rightMargin = dpToPx(14)
         })
 
-        val controlsScrollView = ScrollView(context)
-        val controlsLayout = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        val controlsScrollView = ScrollView(context).apply {
+            isVerticalScrollBarEnabled = false
+        }
+        val controlsLayout = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            background = rounded(
+                color(R.color.crown_section_background),
+                dpToPx(10).toFloat(),
+                color(R.color.crown_section_border)
+            )
+            setPadding(dpToPx(10), dpToPx(10), dpToPx(10), dpToPx(10))
+        }
 
         val previewHexLayout = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, 0, 0, dpToPx(16))
+            setPadding(0, 0, 0, dpToPx(12))
         }
 
         colorPreview = View(context)
-        previewHexLayout.addView(colorPreview, LinearLayout.LayoutParams(dpToPx(40), dpToPx(40)))
+        previewHexLayout.addView(colorPreview, LinearLayout.LayoutParams(dpToPx(44), dpToPx(44)))
 
         val hexContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dpToPx(8), 0, 0, 0)
+            setPadding(dpToPx(10), 0, 0, 0)
         }
 
         hexContainer.addView(TextView(context).apply {
-            text = "Hex:"
-            textSize = 14f
+            text = "HEX"
+            textSize = 11f
+            setTextColor(color(R.color.crown_text_secondary))
         })
 
         hexInput = EditText(context).apply {
             isSingleLine = true
             minEms = 9
+            textSize = 13f
+            setTextColor(color(R.color.crown_text_primary))
+            setHintTextColor(color(R.color.crown_text_secondary))
+            background = rounded(
+                color(R.color.crown_input_background),
+                dpToPx(8).toFloat(),
+                color(R.color.crown_input_border)
+            )
+            setPadding(dpToPx(10), 0, dpToPx(10), 0)
         }
         hexContainer.addView(hexInput)
 
@@ -123,19 +152,25 @@ class ColorPickerDialog(
         val buttonLayout = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.END
-            setPadding(0, dpToPx(16), 0, 0)
+            setPadding(0, dpToPx(12), 0, 0)
         }
 
         buttonLayout.addView(Button(context).apply {
             setText(R.string.game_menu_cancel)
+            styleActionButton(this)
             setOnClickListener { dismiss() }
+        }, LinearLayout.LayoutParams(0, dpToPx(38), 1f).apply {
+            rightMargin = dpToPx(6)
         })
         buttonLayout.addView(Button(context).apply {
             setText(R.string.game_menu_ok)
+            styleActionButton(this)
             setOnClickListener {
                 listener?.onColorSelected(getColor())
                 dismiss()
             }
+        }, LinearLayout.LayoutParams(0, dpToPx(38), 1f).apply {
+            leftMargin = dpToPx(6)
         })
         controlsLayout.addView(buttonLayout)
 
@@ -143,6 +178,8 @@ class ColorPickerDialog(
         masterLayout.addView(controlsScrollView, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
 
         setContentView(masterLayout)
+        window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        window?.setDimAmount(0.35f)
 
         setupListeners()
         updateAllComponents(initialColor)
@@ -158,9 +195,18 @@ class ColorPickerDialog(
         row.addView(TextView(context).apply {
             text = label
             minWidth = dpToPx(20)
+            textSize = 12f
+            setTextColor(color(R.color.crown_text_secondary))
         })
 
-        val seekBar = SeekBar(context).apply { this.max = max }
+        val seekBar = SeekBar(context).apply {
+            this.max = max
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                progressTintList = android.content.res.ColorStateList.valueOf(color(R.color.theme_pink_primary))
+                progressBackgroundTintList = android.content.res.ColorStateList.valueOf(color(R.color.crown_input_border))
+                thumbTintList = android.content.res.ColorStateList.valueOf(color(R.color.theme_pink_primary))
+            }
+        }
         row.addView(seekBar, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
             leftMargin = dpToPx(8)
             rightMargin = dpToPx(8)
@@ -169,8 +215,16 @@ class ColorPickerDialog(
         val valueInput = EditText(context).apply {
             setText("0")
             maxLines = 1
-            minWidth = dpToPx(40)
+            minWidth = dpToPx(44)
             gravity = Gravity.CENTER
+            textSize = 12f
+            setTextColor(color(R.color.crown_text_primary))
+            background = rounded(
+                color(R.color.crown_input_background),
+                dpToPx(8).toFloat(),
+                color(R.color.crown_input_border)
+            )
+            setPadding(dpToPx(4), 0, dpToPx(4), 0)
         }
         row.addView(valueInput)
 
@@ -324,7 +378,11 @@ class ColorPickerDialog(
     }
 
     private fun updatePreview(color: Int) {
-        colorPreview.setBackgroundColor(color)
+        colorPreview.background = rounded(
+            color,
+            dpToPx(10).toFloat(),
+            color(R.color.crown_panel_border)
+        )
     }
 
     private fun getColor(): Int {
@@ -333,6 +391,34 @@ class ColorPickerDialog(
 
     private fun dpToPx(dp: Int): Int {
         return (dp * context.resources.displayMetrics.density + 0.5f).toInt()
+    }
+
+    private fun color(resId: Int): Int {
+        return ContextCompat.getColor(context, resId)
+    }
+
+    private fun rounded(fillColor: Int, radius: Float, strokeColor: Int? = null): GradientDrawable {
+        return GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            setColor(fillColor)
+            cornerRadius = radius
+            if (strokeColor != null) {
+                setStroke(dpToPx(1), strokeColor)
+            }
+        }
+    }
+
+    private fun styleActionButton(button: Button) {
+        button.isAllCaps = false
+        button.textSize = 13f
+        button.setTextColor(color(R.color.crown_text_primary))
+        button.background = rounded(
+            color(R.color.crown_input_background),
+            dpToPx(8).toFloat(),
+            color(R.color.crown_input_border)
+        )
+        button.minWidth = 0
+        button.minimumWidth = 0
     }
 
     private class SaturationValueView(context: Context) : View(context) {
