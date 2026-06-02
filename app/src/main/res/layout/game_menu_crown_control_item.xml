@@ -11,8 +11,8 @@
 
     <ImageView
         android:id="@+id/menu_item_icon"
-        android:layout_width="20dp"
-        android:layout_height="20dp"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
         android:layout_marginEnd="8dp"
         android:src="@drawable/ic_super_crown" />
 
