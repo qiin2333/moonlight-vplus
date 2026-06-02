@@ -57,6 +57,33 @@
                         android:trackTint="@color/crown_switch_track" />
                 </LinearLayout>
 
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/crown_alignment_snap_switch"
+                        android:textColor="@color/crown_text_primary"
+                        android:textSize="13sp" />
+
+                    <Switch
+                        android:id="@+id/page_edit_alignment_snap_switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:textOff=""
+                        android:textOn=""
+                        android:thumbTint="@color/crown_switch_thumb"
+                        android:trackTint="@color/crown_switch_track" />
+                </LinearLayout>
+
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                     android:id="@+id/page_edit_edit_grid_width"
                     android:layout_width="match_parent"
@@ -393,17 +420,36 @@
         </LinearLayout>
     </ScrollView>
 
-    <ImageButton
-        android:id="@+id/page_edit_exit_edit_mode"
-        android:layout_width="32dp"
+    <LinearLayout
+        android:layout_width="wrap_content"
         android:layout_height="32dp"
         android:layout_gravity="top|end"
         android:layout_marginTop="10dp"
         android:layout_marginEnd="15dp"
-        android:background="@drawable/crown_action_icon_button_bg"
-        android:contentDescription="@string/layout_page_edit_text_b8a5e"
-        android:padding="8dp"
-        android:scaleType="centerInside"
-        android:src="@drawable/phc_action_exit"
-        android:tint="@color/crown_text_primary" />
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/page_edit_auto_color_all"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginEnd="4dp"
+            android:background="@drawable/crown_action_icon_button_bg"
+            android:contentDescription="@string/crown_auto_color_all_action"
+            android:padding="8dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/phc_action_auto_color"
+            android:tint="@color/crown_text_primary" />
+
+        <ImageButton
+            android:id="@+id/page_edit_exit_edit_mode"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="@drawable/crown_action_icon_button_bg"
+            android:contentDescription="@string/layout_page_edit_text_b8a5e"
+            android:padding="8dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/phc_action_exit"
+            android:tint="@color/crown_text_primary" />
+    </LinearLayout>
 </com.limelight.binding.input.advance_setting.superpage.SuperPageLayout>

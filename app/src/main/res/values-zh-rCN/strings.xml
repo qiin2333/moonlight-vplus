@@ -1033,9 +1033,15 @@
     <string name="layout_page_wheel_pad_text_58796">中心文字颜色</string>
     <string name="crown_auto_color_action">根据当前画面自动配色</string>
     <string name="crown_auto_color_done">已根据当前画面自动配色</string>
+    <string name="crown_auto_color_all_action">一键全局自动配色</string>
+    <string name="crown_auto_color_all_done">已为 %1$d 个按键自动配色</string>
     <string name="crown_auto_color_failed">无法采样当前画面</string>
     <string name="crown_auto_color_no_frame">当前没有可用于配色的串流画面</string>
+    <string name="crown_auto_color_no_supported_elements">当前没有支持自动配色的按键</string>
     <string name="crown_auto_color_unsupported">自动配色需要 Android 8.0 或更高版本</string>
+    <string name="crown_alignment_snap_switch">对齐吸附</string>
+    <string name="crown_alignment_snap_enabled">已开启对齐吸附</string>
+    <string name="crown_alignment_snap_disabled">已关闭对齐吸附</string>
     <string name="layout_page_window_text_625fb">取消</string>
 
 

@@ -2,6 +2,7 @@ package com.limelight.binding.input.advance_setting.element;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.content.DialogInterface;
@@ -139,6 +140,7 @@ public class ElementController {
     private static int MOUSE_SCROLL_REPEAT_INTERVAL = 100; // 重复间隔（毫秒）
 
     private static final String CROWN_DETAIL_ACTION_BAR_TAG = "crown_detail_action_bar";
+    private static final String PREF_CROWN_ALIGNMENT_SNAP_ENABLED = "crown_alignment_snap_enabled";
     private static final int ALIGNMENT_SNAP_THRESHOLD_DP = 8;
 
     static class SnapResult {
@@ -227,6 +229,19 @@ public class ElementController {
         return dragEditEnabled;
     }
 
+    private boolean alignmentSnapEnabled = true;
+
+    private void setAlignmentSnapEnabled(boolean enabled) {
+        alignmentSnapEnabled = enabled;
+        PreferenceManager.getDefaultSharedPreferences(context)
+                .edit()
+                .putBoolean(PREF_CROWN_ALIGNMENT_SNAP_ENABLED, enabled)
+                .apply();
+        if (!enabled) {
+            clearAlignmentGuides();
+        }
+    }
+
 
     public void showToast(String message) {
         if (currentToast != null) {
@@ -249,6 +264,8 @@ public class ElementController {
         this.editGridView = new EditGridView(context);
         this.bottomViewAmount = elementsLayout.getChildCount();
         this.deviceVibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(context);
+        this.alignmentSnapEnabled = preferences.getBoolean(PREF_CROWN_ALIGNMENT_SNAP_ENABLED, true);
         initEditPage();
     }
 
@@ -263,6 +280,12 @@ public class ElementController {
 
                 // 2. 显示操作成功的提示信息
                 Toast.makeText(context, context.getString(R.string.toast_back_key_menu_switch_1), Toast.LENGTH_SHORT).show();
+            }
+        });
+        pageEdit.findViewById(R.id.page_edit_auto_color_all).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                applyCrownAutoColorsToAll();
             }
         });
         ((NumberSeekbar) pageEdit.findViewById(R.id.page_edit_edit_grid_width)).setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
@@ -382,6 +405,20 @@ public class ElementController {
                     setDragEditEnabled(isChecked);
                     String message = isChecked ? "长按移动按键" : "可直接拖动按键";
                     showToast(message);
+                }
+            });
+        }
+        Switch alignmentSnapSwitch = pageEdit.findViewById(R.id.page_edit_alignment_snap_switch);
+        if (alignmentSnapSwitch != null) {
+            alignmentSnapSwitch.setChecked(alignmentSnapEnabled);
+            alignmentSnapSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                    setAlignmentSnapEnabled(isChecked);
+                    int messageResId = isChecked
+                            ? R.string.crown_alignment_snap_enabled
+                            : R.string.crown_alignment_snap_disabled;
+                    showToast(context.getString(messageResId));
                 }
             });
         }
@@ -603,7 +640,8 @@ public class ElementController {
     protected SnapResult snapElementPosition(Element movingElement, int candidateCentralX, int candidateCentralY) {
         int snappedCentralX = editGridHandle(candidateCentralX);
         int snappedCentralY = editGridHandle(candidateCentralY);
-        if (mode != Mode.Edit || movingElement == null || elementsLayout == null) {
+        if (mode != Mode.Edit || !alignmentSnapEnabled || movingElement == null || elementsLayout == null) {
+            clearAlignmentGuides();
             return new SnapResult(snappedCentralX, snappedCentralY, EditGridView.NO_GUIDE, EditGridView.NO_GUIDE);
         }
 
@@ -812,6 +850,43 @@ public class ElementController {
                     Toast.makeText(context, R.string.crown_auto_color_done, Toast.LENGTH_SHORT).show();
                 } else {
                     Toast.makeText(context, R.string.crown_auto_color_failed, Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onError(String message) {
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void applyCrownAutoColorsToAll() {
+        if (!(context instanceof Game)) {
+            Toast.makeText(context, R.string.crown_auto_color_no_frame, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        CrownScreenColorSampler.sample((Game) context, new CrownScreenColorSampler.Callback() {
+            @Override
+            public void onPalette(CrownAutoColorPalette palette) {
+                int appliedCount = 0;
+                for (Element element : elements) {
+                    if (!element.supportsCrownAutoColors()) {
+                        continue;
+                    }
+                    if (element.applyCrownAutoColors(palette, null)) {
+                        appliedCount++;
+                    }
+                }
+
+                if (appliedCount > 0) {
+                    Toast.makeText(
+                            context,
+                            context.getString(R.string.crown_auto_color_all_done, appliedCount),
+                            Toast.LENGTH_SHORT
+                    ).show();
+                } else {
+                    Toast.makeText(context, R.string.crown_auto_color_no_supported_elements, Toast.LENGTH_SHORT).show();
                 }
             }
 

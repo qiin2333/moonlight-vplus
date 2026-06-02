@@ -1108,9 +1108,15 @@
     <string name="layout_page_wheel_pad_text_58796">Center Text Color</string>
     <string name="crown_auto_color_action">Auto color from screen</string>
     <string name="crown_auto_color_done">Auto colors applied</string>
+    <string name="crown_auto_color_all_action">Auto color all controls</string>
+    <string name="crown_auto_color_all_done">Auto colors applied to %1$d controls</string>
     <string name="crown_auto_color_failed">Could not sample the current screen</string>
     <string name="crown_auto_color_no_frame">No stream frame available for auto color</string>
+    <string name="crown_auto_color_no_supported_elements">No controls support auto color</string>
     <string name="crown_auto_color_unsupported">Auto color requires Android 8.0 or later</string>
+    <string name="crown_alignment_snap_switch">Alignment snapping</string>
+    <string name="crown_alignment_snap_enabled">Alignment snapping enabled</string>
+    <string name="crown_alignment_snap_disabled">Alignment snapping disabled</string>
     <string name="layout_page_window_text_625fb">Cancel</string>
 
 
