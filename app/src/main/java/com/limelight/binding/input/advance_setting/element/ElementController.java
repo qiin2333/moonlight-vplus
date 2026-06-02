@@ -597,7 +597,7 @@ public class ElementController {
         for (Button originalButton : actionButtons) {
             String idName = context.getResources().getResourceEntryName(originalButton.getId());
             ImageButton actionButton = new ImageButton(context);
-            actionButton.setBackgroundResource(R.drawable.crown_config_action_button_bg);
+            actionButton.setBackgroundResource(R.drawable.crown_action_icon_button_bg);
             actionButton.setColorFilter(context.getResources().getColor(R.color.crown_text_primary));
             actionButton.setContentDescription(originalButton.getText());
             actionButton.setImageResource(getCrownActionIconRes(idName));

@@ -401,7 +401,7 @@
         android:layout_gravity="top|end"
         android:layout_marginTop="10dp"
         android:layout_marginEnd="15dp"
-        android:background="@drawable/crown_config_action_button_bg"
+        android:background="@drawable/crown_action_icon_button_bg"
         android:contentDescription="@string/layout_page_edit_text_b8a5e"
         android:padding="8dp"
         android:scaleType="centerInside"
