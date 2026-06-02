@@ -1,21 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="60dp"
+    android:layout_height="56dp"
     android:layout_margin="1dp"
-    android:background="@drawable/game_menu_crown_control_bg"
+    android:background="@drawable/game_menu_list_item_bg"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingStart="10dp"
+    android:paddingStart="8dp"
     android:paddingEnd="8dp">
 
     <ImageView
         android:id="@+id/menu_item_icon"
-        android:layout_width="22dp"
-        android:layout_height="22dp"
-        android:layout_marginEnd="10dp"
-        android:src="@drawable/ic_super_crown"
-        android:tint="@color/theme_pink_primary" />
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_marginEnd="8dp"
+        android:src="@drawable/ic_super_crown" />
 
     <LinearLayout
         android:layout_width="0dp"
@@ -31,7 +30,7 @@
             android:ellipsize="end"
             android:maxLines="1"
             android:textColor="@color/game_menu_text_primary"
-            android:textSize="12sp" />
+            android:textSize="13sp" />
 
         <TextView
             android:id="@+id/menu_item_subtitle"
@@ -40,7 +39,7 @@
             android:ellipsize="end"
             android:maxLines="1"
             android:textColor="@color/game_menu_text_secondary"
-            android:textSize="9sp" />
+            android:textSize="10sp" />
 
     </LinearLayout>
 
@@ -48,7 +47,6 @@
         android:layout_width="14dp"
         android:layout_height="14dp"
         android:layout_marginStart="8dp"
-        android:src="@drawable/ic_arrow_right"
-        android:tint="@color/theme_pink_primary" />
+        android:src="@drawable/ic_arrow_right" />
 
 </LinearLayout>
