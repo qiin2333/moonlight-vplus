@@ -30,7 +30,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
                 android:text="@string/page_config_section_profile"
-                android:textColor="@color/theme_pink_primary"
+                android:textColor="@color/crown_accent"
                 android:textSize="13sp"
                 android:textStyle="bold" />
 
@@ -66,7 +66,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
                 android:text="@string/page_config_section_touch"
-                android:textColor="@color/theme_pink_primary"
+                android:textColor="@color/crown_accent"
                 android:textSize="13sp"
                 android:textStyle="bold" />
 
@@ -181,7 +181,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
                 android:text="@string/page_config_section_feedback"
-                android:textColor="@color/theme_pink_primary"
+                android:textColor="@color/crown_accent"
                 android:textSize="13sp"
                 android:textStyle="bold" />
 
