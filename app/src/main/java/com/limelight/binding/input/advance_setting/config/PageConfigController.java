@@ -186,9 +186,10 @@ public class PageConfigController {
         }
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 context,
-                R.layout.app_spinner_item,
+                R.layout.crown_spinner_item,
                 configNames
         );
+        adapter.setDropDownViewResource(R.layout.crown_spinner_item);
         configSelectSpinner.setAdapter(adapter);
 
     }
@@ -469,6 +470,15 @@ public class PageConfigController {
 
     public void open(){
         controllerManager.getSuperPagesController().openNewPage(pageConfig);
+        pageConfig.post(new Runnable() {
+            @Override
+            public void run() {
+                View scrollView = pageConfig.findViewById(R.id.crown_config_scroll);
+                if (scrollView != null) {
+                    scrollView.scrollTo(0, 0);
+                }
+            }
+        });
         pageConfig.setPageReturnListener(new SuperPageLayout.ReturnListener() {
             @Override
             public void returnCallBack() {

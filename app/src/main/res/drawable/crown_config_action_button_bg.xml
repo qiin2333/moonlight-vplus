@@ -2,22 +2,22 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
-            <solid android:color="@color/game_menu_list_item_pressed" />
+            <solid android:color="@color/crown_button_pressed" />
             <stroke android:width="1dp" android:color="@color/theme_pink_primary" />
             <corners android:radius="8dp" />
         </shape>
     </item>
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="@color/game_menu_list_item_focused" />
+            <solid android:color="@color/crown_button_focused" />
             <stroke android:width="1dp" android:color="@color/theme_pink_primary" />
             <corners android:radius="8dp" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#F8FFFFFF" />
-            <stroke android:width="1dp" android:color="@color/game_menu_button_border" />
+            <solid android:color="@color/crown_input_background" />
+            <stroke android:width="1dp" android:color="@color/crown_input_border" />
             <corners android:radius="8dp" />
         </shape>
     </item>

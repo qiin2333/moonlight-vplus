@@ -26,7 +26,7 @@
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:text="@string/game_menu_crown_function_title"
-                android:textColor="@color/game_menu_text_primary"
+                android:textColor="@color/crown_text_primary"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -47,7 +47,7 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:text="@string/layout_page_super_menu_text_899a4"
-                    android:textColor="@color/game_menu_text_primary"
+                    android:textColor="@color/crown_text_primary"
                     android:textSize="13sp" />
 
                 <ImageView
@@ -73,7 +73,7 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:text="@string/layout_item_page_super_menu_text_ce0e8"
-                    android:textColor="@color/game_menu_text_primary"
+                    android:textColor="@color/crown_text_primary"
                     android:textSize="13sp" />
 
                 <ImageView
@@ -99,7 +99,7 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:text="@string/crown_switch_to_normal"
-                    android:textColor="@color/game_menu_text_primary"
+                    android:textColor="@color/crown_text_primary"
                     android:textSize="13sp" />
 
                 <ImageView
@@ -124,7 +124,7 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:text="@string/layout_page_super_menu_text_e2f14"
-                    android:textColor="@color/game_menu_text_primary"
+                    android:textColor="@color/crown_text_primary"
                     android:textSize="13sp" />
 
                 <ImageView

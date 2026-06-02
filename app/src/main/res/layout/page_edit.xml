@@ -1,353 +1,432 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.limelight.binding.input.advance_setting.superpage.SuperPageLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="250dp"
-    android:layout_height="match_parent"
+<com.limelight.binding.input.advance_setting.superpage.SuperPageLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:tag="250">
+    android:layout_width="280dp"
+    android:layout_height="match_parent"
+    android:tag="280">
+
     <ScrollView
+        android:id="@+id/page_edit_scroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="5dp"
-        android:paddingTop="3dp"
         android:layout_gravity="center_vertical"
-        android:background="@drawable/super_content_box_background">
+        android:layout_marginEnd="5dp"
+        android:background="@drawable/crown_config_panel_bg"
+        android:padding="10dp">
+
         <LinearLayout
-            android:orientation="vertical"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="10dp">
-            <LinearLayout
-                android:orientation="vertical"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
-                <LinearLayout
-                    android:id="@+id/page_edit_exit_edit_mode"
-                    android:orientation="horizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:gravity="center_vertical"
-                        android:text="@string/layout_page_edit_text_b8a5e" />
-                    <View
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:layout_margin="5dp"
-                        android:background="@drawable/right_arrow"/>
-                </LinearLayout>
-            </LinearLayout>
-            <LinearLayout
+            android:orientation="vertical">
+
+            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/game_menu_crown_function_title"
+                android:textColor="@color/crown_text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:id="@+id/page_edit_exit_edit_mode"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:layout_marginBottom="6dp"
+                android:background="@drawable/crown_config_action_button_bg"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="5dp"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:paddingHorizontal="10dp">
 
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="10dp"
                     android:layout_weight="1"
-                    android:text="@string/layout_page_edit_text_e8341" />
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/layout_page_edit_text_b8a5e"
+                    android:textColor="@color/crown_text_primary"
+                    android:textSize="13sp" />
 
-                <Switch
-                    android:id="@+id/page_edit_drag_edit_switch"
-                    android:layout_width="wrap_content"
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_arrow_right"
+                    android:tint="@color/crown_text_secondary" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:background="@drawable/crown_config_section_bg"
+                android:orientation="vertical"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/layout_page_edit_text_e8341"
+                        android:textColor="@color/crown_text_primary"
+                        android:textSize="13sp" />
+
+                    <Switch
+                        android:id="@+id/page_edit_drag_edit_switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:textOff=""
+                        android:textOn=""
+                        android:thumbTint="@color/crown_switch_thumb"
+                        android:trackTint="@color/crown_switch_track" />
+                </LinearLayout>
+
+                <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                    android:id="@+id/page_edit_edit_grid_width"
+                    android:layout_width="match_parent"
+                    android:layout_height="62dp"
+                    android:layout_marginTop="4dp"
+                    app:max="100"
+                    app:min="1"
+                    app:progress="1"
+                    app:text="@string/apptext_pg_edit_458a8" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/page_edit_add_digital_common_button"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:layout_marginBottom="6dp"
+                android:background="@drawable/crown_config_action_button_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="10dp">
+
+                <TextView
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:textOff=""
-                    android:textOn=""
-                    android:checked="true" />
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/layout_page_edit_text_2c372"
+                    android:textColor="@color/crown_text_primary"
+                    android:textSize="13sp" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_arrow_right"
+                    android:tint="@color/crown_text_secondary" />
             </LinearLayout>
-            <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
-                android:id="@+id/page_edit_edit_grid_width"
-                android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:layout_marginVertical="5dp"
-                app:text="@string/apptext_pg_edit_458a8"
-                app:max="100"
-                app:min="1"
-                app:progress="1" />
+
             <LinearLayout
-                android:orientation="horizontal"
+                android:id="@+id/page_edit_add_digital_switch_button"
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
-                <LinearLayout
-                    android:id="@+id/page_edit_add_digital_common_button"
-                    android:orientation="horizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:gravity="center_vertical"
-                        android:text="@string/layout_page_edit_text_2c372"/>
-                    <View
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:layout_margin="5dp"
-                        android:background="@drawable/right_arrow"/>
-                </LinearLayout>
+                android:layout_height="46dp"
+                android:layout_marginBottom="6dp"
+                android:background="@drawable/crown_config_action_button_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="10dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/layout_page_edit_text_c0c18"
+                    android:textColor="@color/crown_text_primary"
+                    android:textSize="13sp" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_arrow_right"
+                    android:tint="@color/crown_text_secondary" />
             </LinearLayout>
+
             <LinearLayout
-                android:orientation="horizontal"
+                android:id="@+id/page_edit_add_digital_movable_button"
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
-                <LinearLayout
-                    android:id="@+id/page_edit_add_digital_switch_button"
-                    android:orientation="horizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:gravity="center_vertical"
-                        android:text="@string/layout_page_edit_text_c0c18"/>
-                    <View
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:layout_margin="5dp"
-                        android:background="@drawable/right_arrow"/>
-                </LinearLayout>
+                android:layout_height="46dp"
+                android:layout_marginBottom="6dp"
+                android:background="@drawable/crown_config_action_button_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="10dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/layout_page_edit_text_5817f"
+                    android:textColor="@color/crown_text_primary"
+                    android:textSize="13sp" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_arrow_right"
+                    android:tint="@color/crown_text_secondary" />
             </LinearLayout>
+
             <LinearLayout
-                android:orientation="horizontal"
+                android:id="@+id/page_edit_add_pad"
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
-                <LinearLayout
-                    android:id="@+id/page_edit_add_digital_movable_button"
-                    android:orientation="horizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:gravity="center_vertical"
-                        android:text="@string/layout_page_edit_text_5817f"/>
-                    <View
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:layout_margin="5dp"
-                        android:background="@drawable/right_arrow"/>
-                </LinearLayout>
+                android:layout_height="46dp"
+                android:layout_marginBottom="6dp"
+                android:background="@drawable/crown_config_action_button_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="10dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/layout_page_edit_text_061fc"
+                    android:textColor="@color/crown_text_primary"
+                    android:textSize="13sp" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_arrow_right"
+                    android:tint="@color/crown_text_secondary" />
             </LinearLayout>
+
             <LinearLayout
-                android:orientation="horizontal"
+                android:id="@+id/page_edit_add_analog_stick"
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
-                <LinearLayout
-                    android:id="@+id/page_edit_add_pad"
-                    android:orientation="horizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:gravity="center_vertical"
-                        android:text="@string/layout_page_edit_text_061fc"/>
-                    <View
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:layout_margin="5dp"
-                        android:background="@drawable/right_arrow"/>
-                </LinearLayout>
+                android:layout_height="46dp"
+                android:layout_marginBottom="6dp"
+                android:background="@drawable/crown_config_action_button_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="10dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/layout_page_edit_text_e0cc1"
+                    android:textColor="@color/crown_text_primary"
+                    android:textSize="13sp" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_arrow_right"
+                    android:tint="@color/crown_text_secondary" />
             </LinearLayout>
+
             <LinearLayout
-                android:orientation="horizontal"
+                android:id="@+id/page_edit_add_digital_stick"
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
-                <LinearLayout
-                    android:id="@+id/page_edit_add_analog_stick"
-                    android:orientation="horizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:gravity="center_vertical"
-                        android:text="@string/layout_page_edit_text_e0cc1"/>
-                    <View
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:layout_margin="5dp"
-                        android:background="@drawable/right_arrow"/>
-                </LinearLayout>
+                android:layout_height="46dp"
+                android:layout_marginBottom="6dp"
+                android:background="@drawable/crown_config_action_button_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="10dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/layout_page_edit_text_6d757"
+                    android:textColor="@color/crown_text_primary"
+                    android:textSize="13sp" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_arrow_right"
+                    android:tint="@color/crown_text_secondary" />
             </LinearLayout>
+
             <LinearLayout
-                android:orientation="horizontal"
+                android:id="@+id/page_edit_add_invisible_analog_stick"
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
-                <LinearLayout
-                    android:id="@+id/page_edit_add_digital_stick"
-                    android:orientation="horizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:gravity="center_vertical"
-                        android:text="@string/layout_page_edit_text_6d757"/>
-                    <View
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:layout_margin="5dp"
-                        android:background="@drawable/right_arrow"/>
-                </LinearLayout>
+                android:layout_height="46dp"
+                android:layout_marginBottom="6dp"
+                android:background="@drawable/crown_config_action_button_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="10dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/layout_page_edit_text_9851e"
+                    android:textColor="@color/crown_text_primary"
+                    android:textSize="13sp" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_arrow_right"
+                    android:tint="@color/crown_text_secondary" />
             </LinearLayout>
+
             <LinearLayout
-                android:orientation="horizontal"
+                android:id="@+id/page_edit_add_invisible_digital_stick"
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
-                <LinearLayout
-                    android:id="@+id/page_edit_add_invisible_analog_stick"
-                    android:orientation="horizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:gravity="center_vertical"
-                        android:text="@string/layout_page_edit_text_9851e"/>
-                    <View
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:layout_margin="5dp"
-                        android:background="@drawable/right_arrow"/>
-                </LinearLayout>
+                android:layout_height="46dp"
+                android:layout_marginBottom="6dp"
+                android:background="@drawable/crown_config_action_button_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="10dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/layout_page_edit_text_b4881"
+                    android:textColor="@color/crown_text_primary"
+                    android:textSize="13sp" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_arrow_right"
+                    android:tint="@color/crown_text_secondary" />
             </LinearLayout>
+
             <LinearLayout
-                android:orientation="horizontal"
+                android:id="@+id/page_edit_add_simplify_performance"
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
-                <LinearLayout
-                    android:id="@+id/page_edit_add_invisible_digital_stick"
-                    android:orientation="horizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:gravity="center_vertical"
-                        android:text="@string/layout_page_edit_text_b4881"/>
-                    <View
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:layout_margin="5dp"
-                        android:background="@drawable/right_arrow"/>
-                </LinearLayout>
+                android:layout_height="46dp"
+                android:layout_marginBottom="6dp"
+                android:background="@drawable/crown_config_action_button_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="10dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/layout_page_edit_text_e19e5"
+                    android:textColor="@color/crown_text_primary"
+                    android:textSize="13sp" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_arrow_right"
+                    android:tint="@color/crown_text_secondary" />
             </LinearLayout>
+
             <LinearLayout
-                android:orientation="horizontal"
+                android:id="@+id/page_edit_add_digital_combine_button"
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
-                <LinearLayout
-                    android:id="@+id/page_edit_add_simplify_performance"
-                    android:orientation="horizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:gravity="center_vertical"
-                        android:text="@string/layout_page_edit_text_e19e5"/>
-                    <View
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:layout_margin="5dp"
-                        android:background="@drawable/right_arrow"/>
-                </LinearLayout>
+                android:layout_height="46dp"
+                android:layout_marginBottom="6dp"
+                android:background="@drawable/crown_config_action_button_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="10dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/layout_page_edit_text_ed364"
+                    android:textColor="@color/crown_text_primary"
+                    android:textSize="13sp" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_arrow_right"
+                    android:tint="@color/crown_text_secondary" />
             </LinearLayout>
+
             <LinearLayout
-                android:orientation="horizontal"
+                android:id="@+id/page_edit_add_wheel_pad"
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
-                <LinearLayout
-                    android:id="@+id/page_edit_add_digital_combine_button"
-                    android:orientation="horizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:gravity="center_vertical"
-                        android:text="@string/layout_page_edit_text_ed364"/>
-                    <View
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:layout_margin="5dp"
-                        android:background="@drawable/right_arrow"/>
-                </LinearLayout>
+                android:layout_height="46dp"
+                android:layout_marginBottom="6dp"
+                android:background="@drawable/crown_config_action_button_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="10dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/layout_page_edit_text_1483c"
+                    android:textColor="@color/crown_text_primary"
+                    android:textSize="13sp" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_arrow_right"
+                    android:tint="@color/crown_text_secondary" />
             </LinearLayout>
+
             <LinearLayout
-                android:orientation="horizontal"
+                android:id="@+id/page_edit_add_group_button"
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
-                <LinearLayout
-                    android:id="@+id/page_edit_add_wheel_pad"
-                    android:orientation="horizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:gravity="center_vertical"
-                        android:text="@string/layout_page_edit_text_1483c"/>
-                    <View
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:layout_margin="5dp"
-                        android:background="@drawable/right_arrow"/>
-                </LinearLayout>
-            </LinearLayout>
-            <LinearLayout
+                android:layout_height="46dp"
+                android:background="@drawable/crown_config_action_button_bg"
+                android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginVertical="5dp">
-                <LinearLayout
-                    android:id="@+id/page_edit_add_group_button"
-                    android:orientation="horizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:gravity="center_vertical"
-                        android:text="@string/layout_page_edit_text_bd823"/>
-                    <View
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:layout_margin="5dp"
-                        android:background="@drawable/right_arrow"/>
-                </LinearLayout>
+                android:paddingHorizontal="10dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/layout_page_edit_text_bd823"
+                    android:textColor="@color/crown_text_primary"
+                    android:textSize="13sp" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_arrow_right"
+                    android:tint="@color/crown_text_secondary" />
             </LinearLayout>
         </LinearLayout>
     </ScrollView>
-
-
 </com.limelight.binding.input.advance_setting.superpage.SuperPageLayout>

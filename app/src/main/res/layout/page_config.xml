@@ -7,6 +7,7 @@
     android:tag="280">
 
     <ScrollView
+        android:id="@+id/crown_config_scroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
@@ -27,7 +28,7 @@
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:text="@string/game_menu_crown_function_title"
-                android:textColor="@color/game_menu_text_primary"
+                android:textColor="@color/crown_text_primary"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -53,7 +54,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="5dp"
                     android:text="@string/layout_page_config_text_9eba2"
-                    android:textColor="@color/game_menu_text_secondary"
+                    android:textColor="@color/crown_text_secondary"
                     android:textSize="12sp" />
 
                 <Spinner
@@ -80,7 +81,7 @@
                         android:background="@drawable/crown_config_action_button_bg"
                         android:text="@string/layout_page_config_text_66ab5"
                         android:textAllCaps="false"
-                        android:textColor="@color/game_menu_text_primary"
+                        android:textColor="@color/crown_text_primary"
                         android:textSize="12sp" />
 
                     <Button
@@ -92,7 +93,7 @@
                         android:background="@drawable/crown_config_action_button_bg"
                         android:text="@string/layout_config_item_text_c8ce4"
                         android:textAllCaps="false"
-                        android:textColor="@color/game_menu_text_primary"
+                        android:textColor="@color/crown_text_primary"
                         android:textSize="12sp" />
 
                     <Button
@@ -104,7 +105,7 @@
                         android:background="@drawable/crown_config_action_button_bg"
                         android:text="@string/layout_config_item_text_2f4aa"
                         android:textAllCaps="false"
-                        android:textColor="@color/game_menu_text_primary"
+                        android:textColor="@color/crown_text_primary"
                         android:textSize="12sp" />
                 </LinearLayout>
             </LinearLayout>
@@ -140,14 +141,16 @@
                         android:ellipsize="end"
                         android:maxLines="1"
                         android:text="@string/layout_page_config_text_83a23"
-                        android:textColor="@color/game_menu_text_primary"
+                        android:textColor="@color/crown_text_primary"
                         android:textSize="13sp" />
 
                     <Switch
                         android:id="@+id/mouse_enable_switch"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:checked="true" />
+                        android:checked="true"
+                        android:thumbTint="@color/crown_switch_thumb"
+                        android:trackTint="@color/crown_switch_track" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -163,14 +166,16 @@
                         android:ellipsize="end"
                         android:maxLines="1"
                         android:text="@string/layout_page_config_text_f4b7c"
-                        android:textColor="@color/game_menu_text_primary"
+                        android:textColor="@color/crown_text_primary"
                         android:textSize="13sp" />
 
                     <Switch
                         android:id="@+id/trackpad_enable_switch"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:checked="true" />
+                        android:checked="true"
+                        android:thumbTint="@color/crown_switch_thumb"
+                        android:trackTint="@color/crown_switch_track" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -187,14 +192,16 @@
                         android:ellipsize="end"
                         android:maxLines="1"
                         android:text="@string/layout_page_config_text_8ea81"
-                        android:textColor="@color/game_menu_text_primary"
+                        android:textColor="@color/crown_text_primary"
                         android:textSize="13sp" />
 
                     <Switch
                         android:id="@+id/enhanced_touch_switch"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:checked="false" />
+                        android:checked="false"
+                        android:thumbTint="@color/crown_switch_thumb"
+                        android:trackTint="@color/crown_switch_track" />
                 </LinearLayout>
 
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
@@ -249,14 +256,16 @@
                         android:ellipsize="end"
                         android:maxLines="1"
                         android:text="@string/layout_page_config_text_cd2c1"
-                        android:textColor="@color/game_menu_text_primary"
+                        android:textColor="@color/crown_text_primary"
                         android:textSize="13sp" />
 
                     <Switch
                         android:id="@+id/game_vibrator_enable_switch"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:checked="true" />
+                        android:checked="true"
+                        android:thumbTint="@color/crown_switch_thumb"
+                        android:trackTint="@color/crown_switch_track" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -272,14 +281,16 @@
                         android:ellipsize="end"
                         android:maxLines="1"
                         android:text="@string/layout_page_config_text_f4651"
-                        android:textColor="@color/game_menu_text_primary"
+                        android:textColor="@color/crown_text_primary"
                         android:textSize="13sp" />
 
                     <Switch
                         android:id="@+id/button_vibrator_enable_switch"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:checked="true" />
+                        android:checked="true"
+                        android:thumbTint="@color/crown_switch_thumb"
+                        android:trackTint="@color/crown_switch_track" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -290,7 +301,7 @@
                 android:background="@drawable/game_menu_button_bg"
                 android:text="@string/layout_page_config_text_df603"
                 android:textAllCaps="false"
-                android:textColor="@color/game_menu_text_primary"
+                android:textColor="@color/crown_text_primary"
                 android:textSize="14sp"
                 android:textStyle="bold" />
         </LinearLayout>

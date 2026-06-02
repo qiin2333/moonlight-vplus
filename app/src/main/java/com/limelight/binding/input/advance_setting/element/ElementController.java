@@ -576,6 +576,15 @@ public class ElementController {
                 superPagesController.openNewPage(pageNull);
             }
         });
+        pageEdit.post(new Runnable() {
+            @Override
+            public void run() {
+                View scrollView = pageEdit.findViewById(R.id.page_edit_scroll);
+                if (scrollView != null) {
+                    scrollView.scrollTo(0, 0);
+                }
+            }
+        });
     }
 
     public void changeMode(Mode mode) {
