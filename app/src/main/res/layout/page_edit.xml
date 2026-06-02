@@ -32,33 +32,6 @@
                 android:textStyle="bold" />
 
             <LinearLayout
-                android:id="@+id/page_edit_exit_edit_mode"
-                android:layout_width="match_parent"
-                android:layout_height="46dp"
-                android:layout_marginBottom="6dp"
-                android:background="@drawable/crown_config_action_button_bg"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingHorizontal="10dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:text="@string/layout_page_edit_text_b8a5e"
-                    android:textColor="@color/crown_text_primary"
-                    android:textSize="13sp" />
-
-                <ImageView
-                    android:layout_width="14dp"
-                    android:layout_height="14dp"
-                    android:src="@drawable/ic_arrow_right"
-                    android:tint="@color/crown_text_secondary" />
-            </LinearLayout>
-
-            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="10dp"
@@ -429,4 +402,18 @@
             </LinearLayout>
         </LinearLayout>
     </ScrollView>
+
+    <ImageButton
+        android:id="@+id/page_edit_exit_edit_mode"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="15dp"
+        android:background="@drawable/crown_config_action_button_bg"
+        android:contentDescription="@string/layout_page_edit_text_b8a5e"
+        android:padding="8dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/phc_action_exit"
+        android:tint="@color/crown_text_primary" />
 </com.limelight.binding.input.advance_setting.superpage.SuperPageLayout>

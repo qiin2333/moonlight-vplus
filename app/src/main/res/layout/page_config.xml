@@ -16,8 +16,8 @@
         android:clipToPadding="false"
         android:fillViewport="false"
         android:paddingHorizontal="10dp"
-        android:paddingTop="56dp"
-        android:paddingBottom="62dp">
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -260,70 +260,60 @@
 
     <LinearLayout
         android:id="@+id/crown_config_action_bar"
-        android:layout_width="match_parent"
-        android:layout_height="38dp"
+        android:layout_width="wrap_content"
+        android:layout_height="32dp"
         android:layout_gravity="top|end"
-        android:layout_marginStart="10dp"
         android:layout_marginEnd="15dp"
         android:layout_marginTop="10dp"
         android:gravity="end"
         android:orientation="horizontal">
 
-        <Button
+        <ImageButton
             android:id="@+id/add_config_button"
-            android:layout_width="0dp"
+            android:layout_width="32dp"
             android:layout_height="match_parent"
             android:layout_marginEnd="4dp"
-            android:layout_weight="1"
             android:background="@drawable/crown_config_action_button_bg"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:text="@string/layout_page_config_text_66ab5"
-            android:textAllCaps="false"
-            android:textColor="@color/crown_text_primary"
-            android:textSize="11sp" />
+            android:contentDescription="@string/layout_page_config_text_66ab5"
+            android:padding="8dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/phc_action_plus"
+            android:tint="@color/crown_text_primary" />
 
-        <Button
+        <ImageButton
             android:id="@+id/rename_config_button"
-            android:layout_width="0dp"
+            android:layout_width="32dp"
             android:layout_height="match_parent"
             android:layout_marginHorizontal="2dp"
-            android:layout_weight="1"
             android:background="@drawable/crown_config_action_button_bg"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:text="@string/layout_config_item_text_c8ce4"
-            android:textAllCaps="false"
-            android:textColor="@color/crown_text_primary"
-            android:textSize="11sp" />
+            android:contentDescription="@string/layout_config_item_text_c8ce4"
+            android:padding="8dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/phc_action_edit"
+            android:tint="@color/crown_text_primary" />
 
-        <Button
+        <ImageButton
             android:id="@+id/delete_config_button"
-            android:layout_width="0dp"
+            android:layout_width="32dp"
             android:layout_height="match_parent"
             android:layout_marginHorizontal="2dp"
-            android:layout_weight="1"
             android:background="@drawable/crown_config_action_button_bg"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:text="@string/layout_config_item_text_2f4aa"
-            android:textAllCaps="false"
-            android:textColor="@color/crown_text_primary"
-            android:textSize="11sp" />
+            android:contentDescription="@string/layout_config_item_text_2f4aa"
+            android:padding="8dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/phc_action_trash"
+            android:tint="@color/crown_text_primary" />
 
-        <Button
+        <ImageButton
             android:id="@+id/exit_crown_config_button"
-            android:layout_width="0dp"
+            android:layout_width="32dp"
             android:layout_height="match_parent"
             android:layout_marginStart="4dp"
-            android:layout_weight="1"
             android:background="@drawable/crown_config_action_button_bg"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:text="@string/layout_page_config_text_df603"
-            android:textAllCaps="false"
-            android:textColor="@color/crown_text_primary"
-            android:textSize="11sp"
-            android:textStyle="bold" />
+            android:contentDescription="@string/layout_page_config_text_df603"
+            android:padding="8dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/phc_action_check"
+            android:tint="@color/crown_text_primary" />
     </LinearLayout>
 </com.limelight.binding.input.advance_setting.superpage.SuperPageLayout>

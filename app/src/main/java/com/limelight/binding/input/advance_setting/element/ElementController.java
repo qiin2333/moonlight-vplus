@@ -23,8 +23,9 @@ import android.widget.CompoundButton;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.app.AlertDialog;
 import android.widget.SeekBar;
 import android.widget.Switch;
@@ -585,27 +586,25 @@ public class ElementController {
         actionBar.setOrientation(LinearLayout.HORIZONTAL);
 
         FrameLayout.LayoutParams actionBarParams = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                dp(36),
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                dp(32),
                 Gravity.TOP | Gravity.END
         );
-        actionBarParams.setMargins(dp(12), dp(10), dp(20), 0);
+        actionBarParams.setMargins(0, dp(10), dp(20), 0);
 
         for (Button originalButton : actionButtons) {
-            Button actionButton = new Button(context);
-            actionButton.setText(originalButton.getText());
-            actionButton.setTextSize(11);
-            actionButton.setSingleLine(true);
-            actionButton.setAllCaps(false);
-            actionButton.setMinWidth(0);
-            actionButton.setMinimumWidth(0);
-            actionButton.setPadding(dp(8), 0, dp(8), 0);
+            String idName = context.getResources().getResourceEntryName(originalButton.getId());
+            ImageButton actionButton = new ImageButton(context);
             actionButton.setBackgroundResource(R.drawable.crown_config_action_button_bg);
-            actionButton.setTextColor(context.getResources().getColor(R.color.crown_text_primary));
+            actionButton.setColorFilter(context.getResources().getColor(R.color.crown_text_primary));
+            actionButton.setContentDescription(originalButton.getText());
+            actionButton.setImageResource(getCrownActionIconRes(idName));
+            actionButton.setPadding(dp(8), dp(8), dp(8), dp(8));
+            actionButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
             actionButton.setOnClickListener(v -> originalButton.performClick());
 
             LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    dp(32),
                     ViewGroup.LayoutParams.MATCH_PARENT
             );
             buttonParams.setMarginStart(dp(4));
@@ -615,8 +614,23 @@ public class ElementController {
             hideActionRowIfNeeded(originalButton);
         }
 
-        padFirstScrollViewForActionBar(page);
         page.addView(actionBar, actionBarParams);
+    }
+
+    private int getCrownActionIconRes(String idName) {
+        if (idName.endsWith("_copy")) {
+            return R.drawable.phc_action_copy;
+        }
+        if (idName.endsWith("_delete")) {
+            return R.drawable.phc_action_trash;
+        }
+        if (idName.endsWith("_reset")) {
+            return R.drawable.phc_action_reset;
+        }
+        if (idName.endsWith("_ensure")) {
+            return R.drawable.phc_action_check;
+        }
+        return R.drawable.phc_settings;
     }
 
     private void collectCrownActionButtons(View view, List<Button> actionButtons) {
@@ -706,26 +720,6 @@ public class ElementController {
             return false;
         }
         return hasHiddenActionRow;
-    }
-
-    private void padFirstScrollViewForActionBar(ViewGroup viewGroup) {
-        for (int i = 0; i < viewGroup.getChildCount(); i++) {
-            View child = viewGroup.getChildAt(i);
-            if (child instanceof ScrollView) {
-                ScrollView scrollView = (ScrollView) child;
-                scrollView.setClipToPadding(false);
-                scrollView.setPadding(
-                        scrollView.getPaddingLeft(),
-                        scrollView.getPaddingTop() + dp(44),
-                        scrollView.getPaddingRight(),
-                        scrollView.getPaddingBottom()
-                );
-                return;
-            }
-            if (child instanceof ViewGroup) {
-                padFirstScrollViewForActionBar((ViewGroup) child);
-            }
-        }
     }
 
     private int dp(int value) {
