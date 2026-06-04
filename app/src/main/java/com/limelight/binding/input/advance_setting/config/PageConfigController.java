@@ -157,14 +157,11 @@ public class PageConfigController {
         pageConfig.findViewById(R.id.exit_crown_config_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // 将 Game Activity 中的 currentBackKeyMenu 标志位设为 GAME_MENU，以切换回GAME_MENU模式
-                ((Game)context).setcurrentBackKeyMenu(Game.BackKeyMenuMode.GAME_MENU);
+                // 保存/关闭配置页后继续保留王冠返回菜单模式
+                ((Game)context).setcurrentBackKeyMenu(Game.BackKeyMenuMode.CROWN_MODE);
 
                 // 关闭当前的高级设置页面，相当于按返回键
                 controllerManager.getSuperPagesController().returnOperation();
-
-                // 显示提示信息
-                Toast.makeText(context, context.getString(R.string.toast_back_key_menu_switch_1), Toast.LENGTH_SHORT).show();
             }
         });
 
