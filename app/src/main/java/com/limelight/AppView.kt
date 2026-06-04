@@ -111,6 +111,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         private const val DEFAULT_HORIZONTAL_SPAN_COUNT = 1
         private const val VERTICAL_SINGLE_ROW_THRESHOLD = 5
         private const val BACKGROUND_CHANGE_DELAY = 300 // ms
+        private const val DISPLAY_CHECK_DELAY_MS = 800L
         private const val VIRTUAL_DISPLAY_ID = 212333
         private const val APPVIEW_PREFS_NAME = "AppView"
         private const val KEY_APP_BACKGROUND_MODE = "app_background_mode"
@@ -140,6 +141,8 @@ class AppView : Activity(), AdapterFragmentCallbacks {
     private var backgroundImageManager: BackgroundImageManager? = null
     private val backgroundChangeHandler = Handler(Looper.getMainLooper())
     private var backgroundChangeRunnable: Runnable? = null
+    private val displayCheckHandler = Handler(Looper.getMainLooper())
+    private var displayCheckRunnable: Runnable? = null
     private lateinit var appBackgroundModeGroup: RadioGroup
     private var appBackgroundMode = AppBackgroundMode.Artwork
     private var activeBackgroundAppId: Int? = null
@@ -171,6 +174,9 @@ class AppView : Activity(), AdapterFragmentCallbacks {
     private var currentModeNames: Array<String>? = null
     private var currentModeValues: Array<String>? = null
     private var availableDisplays: List<DisplayInfo>? = null
+    private val hostHttpLock = Any()
+    private var hostHttpClient: NvHTTP? = null
+    private var hostHttpKey: String? = null
 
     // ==================== 服务连接 ====================
 
@@ -207,6 +213,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
 
                     appGridAdapter?.updateHiddenApps(hiddenAppIds, true)
                     managerBinder = localBinder
+                    localBinder.setForegroundComputer(uuidString)
                     true
                 }
 
@@ -219,6 +226,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
 
                 populateAppGridWithCache()
                 startComputerUpdates()
+                scheduleDisplayCheck()
 
                 pendingAdapterFragmentView?.let { pendingView ->
                     pendingAdapterFragmentView = null
@@ -489,8 +497,6 @@ class AppView : Activity(), AdapterFragmentCallbacks {
             BIND_AUTO_CREATE
         )
 
-        // Delay checking displays to allow service connection to complete
-        Handler(Looper.getMainLooper()).postDelayed({ checkDisplaysAndUpdateUI() }, 500)
     }
 
     // ==================== UI 更新 ====================
@@ -879,6 +885,37 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         return AppBackgroundMode.fromPrefValue(value)
     }
 
+    private fun scheduleDisplayCheck() {
+        displayCheckRunnable?.let { displayCheckHandler.removeCallbacks(it) }
+        displayCheckRunnable = Runnable {
+            displayCheckRunnable = null
+            checkDisplaysAndUpdateUI()
+        }
+        displayCheckHandler.postDelayed(displayCheckRunnable!!, DISPLAY_CHECK_DELAY_MS)
+    }
+
+    private fun getHostHttpClient(): NvHTTP? {
+        val comp = computer ?: return null
+        val address = comp.activeAddress ?: return null
+        val binder = managerBinder ?: return null
+        val cert = comp.serverCert ?: return null
+        val key = "${address}|${comp.httpsPort}|${cert.hashCode()}"
+
+        synchronized(hostHttpLock) {
+            if (hostHttpClient == null || hostHttpKey != key) {
+                hostHttpClient = NvHTTP(
+                    address, comp.httpsPort,
+                    binder.getUniqueId(), "", cert,
+                    PlatformBinding.getCryptoProvider(this@AppView)
+                )
+                hostHttpKey = key
+                LimeLog.info("AppView HTTP client prepared for $address")
+            }
+
+            return hostHttpClient
+        }
+    }
+
     // ==================== 显示器选择 ====================
 
     /**
@@ -893,10 +930,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         uiScope.launch {
             try {
                 val displays = withContext(Dispatchers.IO) {
-                    val httpConn = NvHTTP(computer?.activeAddress!!, (computer?.httpsPort ?: 0),
-                            managerBinder?.getUniqueId() ?: "", "", computer?.serverCert!!,
-                            PlatformBinding.getCryptoProvider(this@AppView))
-                    httpConn.getDisplays()
+                    getHostHttpClient()?.getDisplays() ?: emptyList()
                 }
                 if (displays.isNotEmpty()) {
                     updateDisplaySelectionUI(displays)
@@ -1175,7 +1209,10 @@ class AppView : Activity(), AdapterFragmentCallbacks {
             backgroundChangeHandler.removeCallbacks(backgroundChangeRunnable!!)
             backgroundChangeRunnable = null
         }
+        displayCheckRunnable?.let { displayCheckHandler.removeCallbacks(it) }
+        displayCheckRunnable = null
 
+        managerBinder?.clearForegroundComputer(uuidString)
         if (managerBinder != null) {
             unbindService(serviceConnection)
         }
@@ -1194,6 +1231,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         UiHelper.showDecoderCrashDialog(this)
 
         inForeground = true
+        managerBinder?.setForegroundComputer(uuidString)
         startComputerUpdates()
     }
 
@@ -1201,6 +1239,9 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         super.onPause()
 
         inForeground = false
+        managerBinder?.clearForegroundComputer(uuidString)
+        displayCheckRunnable?.let { displayCheckHandler.removeCallbacks(it) }
+        displayCheckRunnable = null
         stopComputerUpdates()
     }
 

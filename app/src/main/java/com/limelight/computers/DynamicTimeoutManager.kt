@@ -77,6 +77,17 @@ class DynamicTimeoutManager(private val networkDiagnostics: NetworkDiagnostics) 
             return String.format("Stats{success=%d, failure=%d, rate=%.1f%%, consecutive_failures=%d, avg_response=%dms}",
                 successCount.get(), failureCount.get(), successRate * 100, consecutiveFailures, averageResponseTimeMs)
         }
+
+        fun getCooldownRemainingMs(nowMs: Long): Long {
+            if (consecutiveFailures < PROBE_COOLDOWN_FAILURE_THRESHOLD) {
+                return 0
+            }
+
+            val multiplierShift = (consecutiveFailures - PROBE_COOLDOWN_FAILURE_THRESHOLD).coerceAtMost(3)
+            val cooldownMs = (PROBE_COOLDOWN_BASE_MS shl multiplierShift).coerceAtMost(PROBE_COOLDOWN_MAX_MS)
+            val elapsedMs = nowMs - lastFailureTime
+            return (cooldownMs - elapsedMs).coerceAtLeast(0)
+        }
     }
 
     /**
@@ -84,20 +95,20 @@ class DynamicTimeoutManager(private val networkDiagnostics: NetworkDiagnostics) 
      */
     fun getDynamicTimeoutConfig(address: String?, isLikelyOnline: Boolean): TimeoutConfig {
         val diagnostics = networkDiagnostics.getLastDiagnostics()
+        val stats = if (address != null) addressStats[address] else null
+        val baseConfig = getBaseConfig(diagnostics)
 
         if (isNetworkUnstable) {
             if (isNetworkUnstableRecovered()) {
                 isNetworkUnstable = false
                 LimeLog.info("Network recovered from unstable state")
-            } else {
+            } else if (stats == null || !stats.isHealthy) {
                 LimeLog.info("Network is unstable, using extended timeouts")
                 return DEFAULT_UNSTABLE_CONFIG
+            } else {
+                LimeLog.info("Network is unstable, but address $address is healthy; using base timeouts")
             }
         }
-
-        val stats = if (address != null) addressStats[address] else null
-
-        val baseConfig = getBaseConfig(diagnostics)
 
         if (stats != null && !stats.isHealthy) {
             LimeLog.warning("Address $address is unhealthy: $stats")
@@ -108,25 +119,22 @@ class DynamicTimeoutManager(private val networkDiagnostics: NetworkDiagnostics) 
     }
 
     /**
-     * 获取用于快速查询的超时配置 - 如果失败要快速放弃
-     */
-    fun getFastFailConfig(): TimeoutConfig {
-        val diagnostics = networkDiagnostics.getLastDiagnostics()
-
-        return when (diagnostics.networkType) {
-            NetworkDiagnostics.NetworkType.LAN -> FAST_FAIL_LAN_CONFIG
-            NetworkDiagnostics.NetworkType.WAN,
-            NetworkDiagnostics.NetworkType.MOBILE -> FAST_FAIL_WAN_CONFIG
-            NetworkDiagnostics.NetworkType.VPN -> FAST_FAIL_WAN_CONFIG
-            else -> FAST_FAIL_WAN_CONFIG
-        }
-    }
-
-    /**
      * 获取STUN超时配置
      */
     val stunTimeout: Int
         get() = getDynamicTimeoutConfig(null, false).stunTimeout
+
+    fun isAddressHealthy(address: String): Boolean {
+        return addressStats[address]?.isHealthy == true
+    }
+
+    fun getProbeCooldownRemainingMs(address: String, isLikelyOnline: Boolean): Long {
+        if (isLikelyOnline) {
+            return 0
+        }
+
+        return addressStats[address]?.getCooldownRemainingMs(System.currentTimeMillis()) ?: 0
+    }
 
     /**
      * 获取基础超时配置
@@ -234,12 +242,9 @@ class DynamicTimeoutManager(private val networkDiagnostics: NetworkDiagnostics) 
         private val DEFAULT_WAN_CONFIG = TimeoutConfig(8000, 12000, 5000)
         private val DEFAULT_MOBILE_CONFIG = TimeoutConfig(10000, 15000, 8000)
         private val DEFAULT_UNSTABLE_CONFIG = TimeoutConfig(15000, 20000, 10000)
-
-        // LAN环境中的最快超时 - 用于快速失败
-        private val FAST_FAIL_LAN_CONFIG = TimeoutConfig(1000, 2000, 500)
-        // WAN环境中的快速超时
-        private val FAST_FAIL_WAN_CONFIG = TimeoutConfig(3000, 5000, 1500)
-
+        private const val PROBE_COOLDOWN_FAILURE_THRESHOLD = 3
+        private const val PROBE_COOLDOWN_BASE_MS: Long = 30000
+        private const val PROBE_COOLDOWN_MAX_MS: Long = 300000
         private const val UNSTABLE_RECOVERY_TIME_MS: Long = 30000 // 30秒后恢复
     }
 }

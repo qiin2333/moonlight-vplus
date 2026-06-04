@@ -8,6 +8,8 @@ import java.net.InetAddress
 import java.net.UnknownHostException
 import java.util.HashSet
 import java.util.LinkedList
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
@@ -67,6 +69,8 @@ class ComputerManagerService : Service() {
 
     private lateinit var idManager: IdentityManager
     private val pollingTuples = LinkedList<PollingTuple>()
+    private val activePollFlights = ConcurrentHashMap<String, PollFlight>()
+    private val recentPollResults = ConcurrentHashMap<String, RecentPoll>()
 
     // Flow 版数据流。所有计算机状态更新从这里发射。
     private val _computerUpdates = MutableSharedFlow<ComputerDetails>(
@@ -79,6 +83,8 @@ class ComputerManagerService : Service() {
     private val activePolls = AtomicInteger(0)
     @Volatile
     private var pollingActive = false
+    @Volatile
+    private var foregroundComputerUuid: String? = null
     private val defaultNetworkLock = ReentrantLock()
 
     // Service 生命周期作用域，用于所有后台协程（轮询、STUN 等）。onDestroy 时 cancel。
@@ -206,11 +212,27 @@ class ComputerManagerService : Service() {
                 throw e
             }
             try {
-                delay(SERVERINFO_POLLING_PERIOD_MS.toLong())
+                delay(getNextPollingDelayMs(tuple, offlineCount))
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             }
         }
+    }
+
+    private fun getNextPollingDelayMs(tuple: PollingTuple, offlineCount: Int): Long {
+        val focusedUuid = foregroundComputerUuid ?: return SERVERINFO_POLLING_PERIOD_MS.toLong()
+        val uuid = tuple.computer.uuid
+
+        if (uuid == null || uuid == focusedUuid) {
+            return SERVERINFO_POLLING_PERIOD_MS.toLong()
+        }
+
+        if (tuple.computer.state != ComputerDetails.State.ONLINE || offlineCount in 1 until OFFLINE_POLL_TRIES) {
+            return SERVERINFO_POLLING_PERIOD_MS.toLong()
+        }
+
+        LimeLog.info("AppView foreground $focusedUuid; slowing background poll for ${tuple.computer.name}")
+        return APPVIEW_BACKGROUND_POLLING_PERIOD_MS
     }
 
     inner class ComputerManagerBinder : Binder() {
@@ -267,6 +289,27 @@ class ComputerManagerService : Service() {
 
         fun createAppListPoller(computer: ComputerDetails): ApplistPoller {
             return ApplistPoller(computer)
+        }
+
+        fun setForegroundComputer(uuid: String?) {
+            if (uuid.isNullOrEmpty()) {
+                clearForegroundComputer(null)
+                return
+            }
+
+            if (foregroundComputerUuid != uuid) {
+                foregroundComputerUuid = uuid
+                LimeLog.info("AppView foreground computer set to $uuid; background polling will slow down")
+            }
+        }
+
+        fun clearForegroundComputer(uuid: String?) {
+            if (uuid == null || foregroundComputerUuid == uuid) {
+                if (foregroundComputerUuid != null) {
+                    LimeLog.info("AppView foreground computer cleared; background polling restored")
+                }
+                foregroundComputerUuid = null
+            }
         }
 
         fun getUniqueId(): String {
@@ -523,6 +566,109 @@ class ComputerManagerService : Service() {
         }
     }
 
+    private fun toNvHttpTimeoutConfig(timeoutConfig: DynamicTimeoutManager.TimeoutConfig?): NvHTTP.TimeoutConfig {
+        if (timeoutConfig == null) {
+            return NvHTTP.TimeoutConfig.DEFAULT
+        }
+
+        return NvHTTP.TimeoutConfig(
+            connectTimeoutMs = timeoutConfig.connectTimeout,
+            readTimeoutMs = timeoutConfig.readTimeout,
+            shortConnectTimeoutMs = minOf(timeoutConfig.connectTimeout, NvHTTP.SHORT_CONNECTION_TIMEOUT)
+        )
+    }
+
+    private fun getPollKeys(details: ComputerDetails): List<String> {
+        val keys = ArrayList<String>()
+        details.uuid?.let { keys.add("uuid:$it") }
+
+        val addressKey = listOfNotNull(
+            details.activeAddress,
+            details.localAddress,
+            details.manualAddress,
+            details.remoteAddress,
+            details.ipv6Address
+        )
+            .distinct()
+            .sortedBy { it.toString() }
+            .joinToString("|")
+
+        if (addressKey.isNotEmpty()) {
+            keys.add("addr:$addressKey")
+        }
+
+        return keys.distinct()
+    }
+
+    private fun getPrimaryPollKey(details: ComputerDetails): String? {
+        return getPollKeys(details).firstOrNull()
+    }
+
+    private fun claimPollFlight(details: ComputerDetails): PollClaim? {
+        val keys = getPollKeys(details)
+        if (keys.isEmpty()) {
+            return null
+        }
+
+        val flight = PollFlight()
+        val claimedKeys = ArrayList<String>()
+        for (key in keys) {
+            val existing = activePollFlights.putIfAbsent(key, flight)
+            if (existing != null) {
+                for (claimedKey in claimedKeys) {
+                    activePollFlights.remove(claimedKey, flight)
+                }
+                return PollClaim(emptyList(), existing, false)
+            }
+            claimedKeys.add(key)
+        }
+
+        return PollClaim(claimedKeys, flight, true)
+    }
+
+    private fun getFreshPollResult(details: ComputerDetails, nowMs: Long): ComputerDetails? {
+        for (key in getPollKeys(details)) {
+            val recent = recentPollResults[key] ?: continue
+            val ageMs = nowMs - recent.pollTimeMs
+            if (ageMs > POLL_RESULT_REUSE_MS) {
+                recentPollResults.remove(key, recent)
+                continue
+            }
+
+            if (recent.details.state == ComputerDetails.State.ONLINE &&
+                recent.details.activeAddress != null
+            ) {
+                LimeLog.info("Fast poll: reusing fresh state for ${details.name ?: key} from ${ageMs}ms ago")
+                return ComputerDetails(recent.details)
+            }
+        }
+
+        return null
+    }
+
+    private fun findPollingTuple(details: ComputerDetails): PollingTuple? {
+        synchronized(pollingTuples) {
+            for (tuple in pollingTuples) {
+                if (tuple.computer === details ||
+                    (details.uuid != null && tuple.computer.uuid == details.uuid)
+                ) {
+                    return tuple
+                }
+            }
+        }
+        return null
+    }
+
+    private fun rememberPollResult(request: ComputerDetails, result: ComputerDetails, pollTimeMs: Long) {
+        val snapshot = ComputerDetails(result)
+        val keys = (getPollKeys(request) + getPollKeys(result)).distinct()
+        for (key in keys) {
+            recentPollResults[key] = RecentPoll(snapshot, pollTimeMs)
+        }
+
+        findPollingTuple(result)?.lastNetworkPollMs = pollTimeMs
+    }
+
     private fun tryPollIp(details: ComputerDetails, address: ComputerDetails.AddressTuple): ComputerDetails? {
         val startTime = System.currentTimeMillis()
         try {
@@ -534,21 +680,22 @@ class ComputerManagerService : Service() {
             //
             // 老的 state == ONLINE 守卫是进程内热路径才有效，DB 加载后 state 是
             // UNKNOWN，会退化。现在 activeAddress 也持久化了，冷启动也能命中。
-            val httpsPortReusable = details.httpsPort != 0 && address == details.activeAddress
-
-            val http = NvHTTP(
-                address,
-                if (httpsPortReusable) details.httpsPort else 0,
-                idManager.uniqueId, "", details.serverCert,
-                PlatformBinding.getCryptoProvider(this)
-            )
-
             val isLikelyOnline = details.state == ComputerDetails.State.ONLINE && address == details.activeAddress
 
             val timeoutConfig = timeoutManager?.getDynamicTimeoutConfig(address.address, isLikelyOnline)
             if (timeoutConfig != null) {
                 LimeLog.info("Polling $address with timeout config: $timeoutConfig")
             }
+
+            val httpsPortReusable = details.httpsPort != 0 && address == details.activeAddress
+
+            val http = NvHTTP(
+                address,
+                if (httpsPortReusable) details.httpsPort else 0,
+                idManager.uniqueId, "", details.serverCert,
+                PlatformBinding.getCryptoProvider(this),
+                toNvHttpTimeoutConfig(timeoutConfig)
+            )
 
             val newDetails = http.getComputerDetails(isLikelyOnline)
 
@@ -596,25 +743,41 @@ class ComputerManagerService : Service() {
         val diagnostics = networkDiagnostics?.getLastDiagnostics()
         val skipLan = diagnostics?.networkType == NetworkDiagnostics.NetworkType.WAN ||
                 diagnostics?.networkType == NetworkDiagnostics.NetworkType.MOBILE
+        val orderedCandidates = candidates.sortedBy { if (it == details.activeAddress) 0 else 1 }
+        val probeCandidates = orderedCandidates.filter { addr ->
+            @Suppress("DEPRECATION")
+            val isLan = NetworkDiagnostics.isLanAddress(addr.address)
+            val isLearnedAddress = addr == details.remoteAddress || addr == details.ipv6Address
+            if (isLan && skipLan && isLearnedAddress) {
+                LimeLog.info("Skipping learned LAN address $addr on WAN/MOBILE network")
+                false
+            } else {
+                val isLikelyOnline = details.state == ComputerDetails.State.ONLINE && addr == details.activeAddress
+                val cooldownMs = timeoutManager?.getProbeCooldownRemainingMs(addr.address, isLikelyOnline) ?: 0
+                if (cooldownMs > 0) {
+                    LimeLog.info("Skipping $addr for ${cooldownMs}ms due to probe cooldown")
+                    false
+                } else {
+                    true
+                }
+            }
+        }
+
+        if (probeCandidates.isEmpty()) {
+            LimeLog.info("Fast poll: all candidate addresses are cooling down or skipped")
+            return null
+        }
 
         // 使用 runBlocking 在当前（已是后台）线程中构造结构化并发作用域；
         // 调用方要么在 Dispatchers.IO 协程的 runInterruptible 内，要么在 mDNS 发现线程，均非主线程。
         return runBlocking {
-            val results = kotlinx.coroutines.channels.Channel<Pair<ComputerDetails.AddressTuple, ComputerDetails?>>(candidates.size)
+            val results = kotlinx.coroutines.channels.Channel<Pair<ComputerDetails.AddressTuple, ComputerDetails?>>(probeCandidates.size)
 
             // 并发探测每个地址
-            val probeJobs = candidates.map { addr ->
+            val probeJobs = probeCandidates.map { addr ->
                 launch(Dispatchers.IO) {
                     val polled = try {
-                        @Suppress("DEPRECATION")
-                        val isLan = NetworkDiagnostics.isLanAddress(addr.address)
-                        val isLearnedAddress = addr == details.remoteAddress || addr == details.ipv6Address
-                        if (isLan && skipLan && isLearnedAddress) {
-                            LimeLog.info("Skipping learned LAN address $addr on WAN/MOBILE network")
-                            null
-                        } else {
-                            runInterruptible { tryPollIp(details, addr) }
-                        }
+                        runInterruptible { tryPollIp(details, addr) }
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -631,7 +794,7 @@ class ComputerManagerService : Service() {
             var completed = 0
 
             try {
-                while (completed < candidates.size) {
+                while (completed < probeCandidates.size) {
                     val pair = if (result != null) {
                         val remaining = COLLECTION_TIMEOUT_MS - (SystemClock.elapsedRealtime() - firstResponseTime)
                         if (remaining <= 0) {
@@ -658,6 +821,13 @@ class ComputerManagerService : Service() {
                             polled.addAvailableAddress(addr)
                             firstResponseTime = SystemClock.elapsedRealtime()
                             LimeLog.info("Fast poll: got first response from address $addr")
+                            val canReturnImmediately = addr == details.activeAddress &&
+                                    (details.state == ComputerDetails.State.ONLINE ||
+                                            timeoutManager?.isAddressHealthy(addr.address) == true)
+                            if (canReturnImmediately) {
+                                LimeLog.info("Fast poll: returning immediately for healthy active address $addr")
+                                break
+                            }
                         } else if (addr != primaryAddress &&
                             result!!.uuid != null && polled.uuid != null &&
                             result!!.uuid == polled.uuid &&
@@ -684,15 +854,53 @@ class ComputerManagerService : Service() {
 
     @Throws(InterruptedException::class)
     private fun pollComputer(details: ComputerDetails): Boolean {
-        LimeLog.info("Starting parallel poll for ${details.name} (${details.localAddress}, ${details.remoteAddress}, ${details.manualAddress}, ${details.ipv6Address})")
-        val polledDetails = parallelPollPc(details)
-        LimeLog.info("Parallel poll for ${details.name} returned address: ${details.activeAddress}")
-
-        if (polledDetails != null) {
-            details.update(polledDetails)
+        val nowMs = SystemClock.elapsedRealtime()
+        val freshResult = getFreshPollResult(details, nowMs)
+        if (freshResult != null) {
+            details.update(freshResult)
             return true
         }
-        return false
+
+        val pollClaim = claimPollFlight(details)
+        val pollFlight = pollClaim?.flight
+
+        if (pollClaim?.isOwner == false) {
+            LimeLog.info("Fast poll: waiting for in-flight poll for ${details.name ?: getPrimaryPollKey(details)}")
+            pollFlight?.latch?.await()
+
+            val polledDetails = pollFlight?.result
+            if (polledDetails != null) {
+                details.update(polledDetails)
+                rememberPollResult(details, polledDetails, pollFlight.completedAtMs)
+                LimeLog.info("Fast poll: reused in-flight result for ${details.name ?: getPrimaryPollKey(details)}")
+                return true
+            }
+
+            return false
+        }
+
+        try {
+            LimeLog.info("Starting parallel poll for ${details.name} (${details.localAddress}, ${details.remoteAddress}, ${details.manualAddress}, ${details.ipv6Address})")
+            val polledDetails = parallelPollPc(details)
+            LimeLog.info("Parallel poll for ${details.name} returned address: ${details.activeAddress}")
+
+            if (polledDetails != null) {
+                val completedAtMs = SystemClock.elapsedRealtime()
+                details.update(polledDetails)
+                rememberPollResult(details, polledDetails, completedAtMs)
+                pollFlight?.result = ComputerDetails(polledDetails)
+                pollFlight?.completedAtMs = completedAtMs
+                return true
+            }
+            return false
+        } finally {
+            pollFlight?.latch?.countDown()
+            if (pollClaim?.isOwner == true) {
+                for (key in pollClaim.keys) {
+                    activePollFlights.remove(key, pollFlight)
+                }
+            }
+        }
     }
 
     override fun onCreate() {
@@ -725,6 +933,7 @@ class ComputerManagerService : Service() {
                     LimeLog.info("Resetting PC state for new available network")
                     networkDiagnostics?.diagnoseNetwork()
                     LimeLog.info("Network diagnostics after available: ${networkDiagnostics?.getLastDiagnostics()}")
+                    recentPollResults.clear()
                     synchronized(pollingTuples) {
                         for (tuple in pollingTuples) {
                             tuple.computer.state = ComputerDetails.State.UNKNOWN
@@ -736,6 +945,7 @@ class ComputerManagerService : Service() {
                 override fun onLost(network: Network) {
                     LimeLog.info("Offlining PCs due to network loss")
                     networkDiagnostics?.diagnoseNetwork()
+                    recentPollResults.clear()
                     synchronized(pollingTuples) {
                         for (tuple in pollingTuples) {
                             tuple.computer.state = ComputerDetails.State.OFFLINE
@@ -776,6 +986,8 @@ class ComputerManagerService : Service() {
         )
         @Volatile
         private var receivedAppList = false
+        private var httpClient: NvHTTP? = null
+        private var httpClientKey: String? = null
 
         fun pollNow() {
             pollSignal.trySend(Unit)
@@ -800,6 +1012,25 @@ class ComputerManagerService : Service() {
             return result?.isClosed != true
         }
 
+        private fun getHttpClient(
+            address: ComputerDetails.AddressTuple,
+            timeoutConfig: DynamicTimeoutManager.TimeoutConfig?
+        ): NvHTTP {
+            val key = "${address}|${computer.httpsPort}|${computer.serverCert?.hashCode()}|${timeoutConfig}"
+            if (httpClient == null || httpClientKey != key) {
+                httpClient = NvHTTP(
+                    address,
+                    computer.httpsPort, idManager.uniqueId, "",
+                    computer.serverCert, PlatformBinding.getCryptoProvider(this@ComputerManagerService),
+                    toNvHttpTimeoutConfig(timeoutConfig)
+                )
+                httpClientKey = key
+                LimeLog.info("App list HTTP client prepared for $address")
+            }
+
+            return httpClient!!
+        }
+
         fun start() {
             job = serviceScope.launch {
                 var emptyAppListResponses = 0
@@ -817,11 +1048,9 @@ class ComputerManagerService : Service() {
 
                     try {
                         runInterruptible {
-                            val http = NvHTTP(
-                                ServerHelper.getCurrentAddressFromComputer(computer),
-                                computer.httpsPort, idManager.uniqueId, "",
-                                computer.serverCert, PlatformBinding.getCryptoProvider(this@ComputerManagerService)
-                            )
+                            val address = ServerHelper.getCurrentAddressFromComputer(computer)
+                            val timeoutConfig = timeoutManager?.getDynamicTimeoutConfig(address.address, true)
+                            val http = getHttpClient(address, timeoutConfig)
 
                             val appList: String = if (tuple != null) {
                                 synchronized(tuple.networkLock) {
@@ -882,12 +1111,15 @@ class ComputerManagerService : Service() {
         fun stop() {
             job?.cancel()
             job = null
+            httpClient = null
+            httpClientKey = null
             pollSignal.close()
         }
     }
 
     companion object {
         private const val SERVERINFO_POLLING_PERIOD_MS = 1500
+        private const val APPVIEW_BACKGROUND_POLLING_PERIOD_MS: Long = 10000
         private const val APPLIST_POLLING_PERIOD_MS = 30000
         private const val APPLIST_FAILED_POLLING_RETRY_MS = 2000
         private const val MDNS_QUERY_PERIOD_MS = 1000
@@ -895,9 +1127,31 @@ class ComputerManagerService : Service() {
         private const val INITIAL_POLL_TRIES = 2
         private const val EMPTY_LIST_THRESHOLD = 3
         private const val POLL_DATA_TTL_MS = 30000
+        private const val POLL_RESULT_REUSE_MS: Long = 2500
         private const val COLLECTION_TIMEOUT_MS: Long = 2000
     }
 }
+
+private class PollFlight {
+    val latch = CountDownLatch(1)
+
+    @Volatile
+    var result: ComputerDetails? = null
+
+    @Volatile
+    var completedAtMs: Long = 0
+}
+
+private data class RecentPoll(
+    val details: ComputerDetails,
+    val pollTimeMs: Long
+)
+
+private data class PollClaim(
+    val keys: List<String>,
+    val flight: PollFlight,
+    val isOwner: Boolean
+)
 
 class PollingTuple(
     val computer: ComputerDetails,
@@ -905,6 +1159,7 @@ class PollingTuple(
 ) {
     val networkLock = Any()
     var lastSuccessfulPollMs: Long = 0
+    var lastNetworkPollMs: Long = 0
 }
 
 class ReachabilityTuple(
