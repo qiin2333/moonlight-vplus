@@ -1144,6 +1144,10 @@
     <string name="page_section_appearance_settings">🎨 Appearance Settings</string>
     <string name="page_section_stick_style">🕹️ Stick Style</string>
     <string name="page_section_operations">🔧 Operations</string>
+    <string name="page_section_analog_stick_trigger">🎯 Push Trigger</string>
+    <string name="page_analog_stick_trigger_key_label">Trigger Key</string>
+    <string name="page_analog_stick_trigger_key_none">None</string>
+    <string name="page_analog_stick_trigger_range_label">Trigger Range</string>
     <string name="page_section_child_management">🔧 Child Management</string>
     <string name="page_section_dpad_config">🎮 D-Pad Config</string>
     <string name="page_section_dpad_settings">🎮 D-Pad Settings</string>

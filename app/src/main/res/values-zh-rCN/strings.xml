@@ -1091,6 +1091,10 @@
     <string name="page_section_appearance_settings">🎨 外观设置</string>
     <string name="page_section_stick_style">🕹️ 摇杆样式</string>
     <string name="page_section_operations">🔧 操作</string>
+    <string name="page_section_analog_stick_trigger">🎯 推杆触发</string>
+    <string name="page_analog_stick_trigger_key_label">触发按键</string>
+    <string name="page_analog_stick_trigger_key_none">空</string>
+    <string name="page_analog_stick_trigger_range_label">触发范围</string>
     <string name="page_section_child_management">🔧 子元素管理</string>
     <string name="page_section_dpad_config">🎮 方向键配置</string>
     <string name="page_section_dpad_settings">🎮 方向键设置</string>

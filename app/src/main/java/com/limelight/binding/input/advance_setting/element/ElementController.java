@@ -54,7 +54,7 @@ import java.util.Map;
 public class ElementController {
 
     // 空按键
-    private static final String SPECIAL_KEY_NULL = "null";
+    public static final String SPECIAL_KEY_NULL = "null";
     // 手柄左摇杆
     private static final String SPECIAL_KEY_GAMEPAD_LEFT_STICK = "LS";
     // 手柄右摇杆

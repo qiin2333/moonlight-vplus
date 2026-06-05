@@ -30,11 +30,28 @@ import com.limelight.binding.input.advance_setting.superpage.ElementEditText;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+import java.lang.reflect.Type;
+import java.util.HashMap;
 import java.util.Map;
 
 public class AnalogStick extends Element {
 
     private static final String COLUMN_INT_ELEMENT_DEAD_ZONE_RADIUS = COLUMN_INT_ELEMENT_SENSE;
+
+    /**
+     * extra_attributes 中存放触发功能配置的键名
+     */
+    private static final String EXTRA_ATTR_TRIGGER_KEY = "trigger_key";
+    private static final String EXTRA_ATTR_TRIGGER_RANGE = "trigger_range_adjust";
+
+    /**
+     * 触发圈的颜色（橙色），按下触发时高亮
+     */
+    private static final int TRIGGER_RING_COLOR = 0xF0FF8800;
+    private static final int TRIGGER_RING_ACTIVE_COLOR = 0xFFFF5500;
 
     /**
      * outer radius size in percent of the ui element
@@ -165,8 +182,16 @@ public class AnalogStick extends Element {
     private NumberSeekbar centralXNumberSeekbar;
     private NumberSeekbar centralYNumberSeekbar;
 
+    // 推杆触发功能：当摇杆推出到触发圈外时，触发一个自定义按键
+    private String triggerKey = ElementController.SPECIAL_KEY_NULL; // 自定义触发按键，"null" 表示关闭
+    private int triggerRangeAdjust = 0; // 触发范围调节值（0-100），0 表示关闭/紧贴摇杆头
+    private ElementController.SendEventHandler triggerSendHandler;
+    private float radius_trigger = 0; // 触发圈半径（像素），由 radius + triggerRangeAdjust 计算
+    private boolean triggerPressed = false; // 触发键当前是否处于按下状态（用于边沿检测）
+
     private final Paint paintStick = new Paint();
     private final Paint paintBackground = new Paint();
+    private final Paint paintTrigger = new Paint();
     private final Paint paintEdit = new Paint();
     private final RectF rect = new RectF();
     private AnalogStick.STICK_STATE stick_state = AnalogStick.STICK_STATE.NO_MOVEMENT;
@@ -235,6 +260,7 @@ public class AnalogStick extends Element {
 
         paintBackground.setStyle(Paint.Style.FILL);
         paintStick.setStyle(Paint.Style.STROKE);
+        paintTrigger.setStyle(Paint.Style.STROKE);
         paintEdit.setStyle(Paint.Style.STROKE);
         paintEdit.setStrokeWidth(4);
         paintEdit.setPathEffect(new DashPathEffect(new float[]{10, 20}, 0));
@@ -264,6 +290,30 @@ public class AnalogStick extends Element {
         radius_complete = getPercent(radius, 100) - 2 * thick;
         radius_dead_zone = getPercent(radius, deadZoneRadius);
         radius_analog_stick = getPercent(radius, 20);
+
+        // 读取推杆触发功能配置（存放于通用的 extra_attributes JSON 列）
+        Object extraAttrObj = attributesMap.get(COLUMN_STRING_EXTRA_ATTRIBUTES);
+        if (extraAttrObj instanceof String) {
+            try {
+                Gson gson = new Gson();
+                Type type = new TypeToken<Map<String, Object>>() {}.getType();
+                Map<String, Object> extraAttrs = gson.fromJson((String) extraAttrObj, type);
+                if (extraAttrs != null) {
+                    Object keyObj = extraAttrs.get(EXTRA_ATTR_TRIGGER_KEY);
+                    if (keyObj instanceof String && !((String) keyObj).isEmpty()) {
+                        triggerKey = (String) keyObj;
+                    }
+                    Object rangeObj = extraAttrs.get(EXTRA_ATTR_TRIGGER_RANGE);
+                    if (rangeObj instanceof Number) {
+                        triggerRangeAdjust = ((Number) rangeObj).intValue();
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        triggerSendHandler = controller.getSendEventHandler(triggerKey);
+        updateTriggerRadius();
 
         valueSendHandler = controller.getSendEventHandler(value);
 
@@ -312,6 +362,63 @@ public class AnalogStick extends Element {
         listener.onRevoke();
     }
 
+    /**
+     * 计算触发圈半径。
+     * 规则：摇杆中心 + 摇杆头半径(radius_analog_stick) + 自定义调节范围值。
+     * 由于摇杆的实际位移会被裁剪到 (radius_complete - radius_analog_stick)，
+     * 且绘制不能超出可触摸区域(View 尺寸 = 2*radius)，
+     * 因此将触发半径夹在 [radius_dead_zone, radius_complete - radius_analog_stick] 之间，
+     * 保证既能被推到、橙色圈又始终完整可见。
+     */
+    private void updateTriggerRadius() {
+        float maxReach = radius_complete - radius_analog_stick;
+        radius_trigger = radius_analog_stick + getPercent(radius, triggerRangeAdjust);
+        if (radius_trigger > maxReach) {
+            radius_trigger = maxReach;
+        }
+        if (radius_trigger < radius_dead_zone) {
+            radius_trigger = radius_dead_zone;
+        }
+    }
+
+    /**
+     * 触发功能是否启用：必须配置了非空按键，且调节范围大于 0。
+     */
+    private boolean isTriggerEnabled() {
+        return triggerKey != null
+                && !triggerKey.equals(ElementController.SPECIAL_KEY_NULL)
+                && triggerRangeAdjust > 0;
+    }
+
+    /**
+     * 根据当前位移半径处理触发按键的按下/松开（边沿检测）。
+     * @param rawMovementRadius 未被裁剪的原始位移半径
+     */
+    private void handleTrigger(double rawMovementRadius) {
+        if (!isTriggerEnabled()) {
+            return;
+        }
+        boolean shouldPress = rawMovementRadius >= radius_trigger;
+        if (shouldPress && !triggerPressed) {
+            triggerPressed = true;
+            triggerSendHandler.sendEvent(true);
+        } else if (!shouldPress && triggerPressed) {
+            // 手指退回触发圈内：松开按键
+            triggerPressed = false;
+            triggerSendHandler.sendEvent(false);
+        }
+    }
+
+    /**
+     * 释放触发按键（用于抬手/撤销时）。
+     */
+    private void releaseTrigger() {
+        if (triggerPressed) {
+            triggerPressed = false;
+            triggerSendHandler.sendEvent(false);
+        }
+    }
+
 
     @Override
     protected void onElementDraw(Canvas canvas) {
@@ -331,6 +438,15 @@ public class AnalogStick extends Element {
         paintStick.setColor(normalColor);
         // draw dead zone
         canvas.drawCircle(radius, radius, radius_dead_zone, paintStick);
+
+        // 绘制橙色触发圈：启用触发功能时，或处于编辑/选择模式时（便于调节时实时预览）
+        ElementController.Mode drawMode = elementController.getMode();
+        boolean editingNow = drawMode == ElementController.Mode.Edit || drawMode == ElementController.Mode.Select;
+        if (isTriggerEnabled() || (editingNow && triggerRangeAdjust > 0)) {
+            paintTrigger.setStrokeWidth(thick);
+            paintTrigger.setColor(triggerPressed ? TRIGGER_RING_ACTIVE_COLOR : TRIGGER_RING_COLOR);
+            canvas.drawCircle(radius, radius, radius_trigger, paintTrigger);
+        }
 
         // draw stick depending on state
         switch (stick_state) {
@@ -411,6 +527,9 @@ public class AnalogStick extends Element {
         movement_radius = getMovementRadius(relative_x, relative_y);
         movement_angle = getAngle(relative_x, relative_y);
 
+        // 记录未被裁剪的原始位移半径，用于触发圈判定（触发圈可能位于裁剪范围边缘）
+        double rawMovementRadius = movement_radius;
+
         // pass touch event to parent if out of outer circle
         if (movement_radius > radius_complete && !isPressed())
             return false;
@@ -455,9 +574,14 @@ public class AnalogStick extends Element {
         if (isPressed()) {
             // when is pressed calculate new positions (will trigger movement if necessary)
             updatePosition(event.getEventTime());
+            // 处理推杆触发：用未裁剪的原始位移半径判定是否越过触发圈
+            handleTrigger(rawMovementRadius);
         } else {
             stick_state = AnalogStick.STICK_STATE.NO_MOVEMENT;
             notifyOnRevoke();
+
+            // 抬手时释放触发按键
+            releaseTrigger();
 
             // not longer pressed reset analog stick
             notifyOnMovement(0, 0);
@@ -484,6 +608,8 @@ public class AnalogStick extends Element {
         NumberSeekbar deadZoneRadiusNumberSeekbar = analogStickPage.findViewById(R.id.page_analog_stick_sense);
         NumberSeekbar thickNumberSeekbar = analogStickPage.findViewById(R.id.page_analog_stick_thick);
         NumberSeekbar layerNumberSeekbar = analogStickPage.findViewById(R.id.page_analog_stick_layer);
+        TextView triggerValueTextView = analogStickPage.findViewById(R.id.page_analog_stick_trigger_value);
+        NumberSeekbar triggerRangeNumberSeekbar = analogStickPage.findViewById(R.id.page_analog_stick_trigger_range);
         ElementEditText normalColorEditText = analogStickPage.findViewById(R.id.page_analog_stick_normal_color);
         ElementEditText pressedColorEditText = analogStickPage.findViewById(R.id.page_analog_stick_pressed_color);
         ElementEditText backgroundColorEditText = analogStickPage.findViewById(R.id.page_analog_stick_background_color);
@@ -636,6 +762,41 @@ public class AnalogStick extends Element {
             }
         });
 
+        // 触发按键选择器：点击弹出设备选择，支持键盘/鼠标/手柄任意键
+        triggerValueTextView.setText(pageDeviceController.getKeyNameByValue(triggerKey));
+        triggerValueTextView.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                PageDeviceController.DeviceCallBack deviceCallBack = new PageDeviceController.DeviceCallBack() {
+                    @Override
+                    public void OnKeyClick(TextView key) {
+                        ((TextView) v).setText(key.getText());
+                        setElementTriggerValue(key.getTag().toString());
+                        save();
+                    }
+                };
+                pageDeviceController.open(deviceCallBack, View.VISIBLE, View.VISIBLE, View.VISIBLE);
+            }
+        });
+
+        // 触发范围调节：拖动时实时重算并重绘橙色触发圈
+        triggerRangeNumberSeekbar.setValueWithNoCallBack(triggerRangeAdjust);
+        triggerRangeNumberSeekbar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                setElementTriggerRangeAdjust(progress);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                save();
+            }
+        });
+
         CrownColorPickerBinder.bind(this, normalColorEditText, () -> this.normalColor, this::setElementNormalColor);
         CrownColorPickerBinder.bind(this, pressedColorEditText, () -> this.pressedColor, this::setElementPressedColor);
         CrownColorPickerBinder.bind(this, backgroundColorEditText, () -> this.backgroundColor, this::setElementBackgroundColor);
@@ -660,6 +821,7 @@ public class AnalogStick extends Element {
                 contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, pressedColor);
                 contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, backgroundColor);
                 contentValues.put(COLUMN_INT_ELEMENT_MODE, moveMode);
+                contentValues.put(COLUMN_STRING_EXTRA_ATTRIBUTES, buildExtraAttributesJson());
                 elementController.addElement(contentValues);
             }
         });
@@ -693,8 +855,19 @@ public class AnalogStick extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, pressedColor);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, backgroundColor);
         contentValues.put(COLUMN_INT_ELEMENT_MODE, moveMode);
+        contentValues.put(COLUMN_STRING_EXTRA_ATTRIBUTES, buildExtraAttributesJson());
         elementController.updateElement(elementId, contentValues);
 
+    }
+
+    /**
+     * 将推杆触发配置序列化为 extra_attributes JSON 字符串。
+     */
+    private String buildExtraAttributesJson() {
+        Map<String, Object> extraAttrs = new HashMap<>();
+        extraAttrs.put(EXTRA_ATTR_TRIGGER_KEY, triggerKey);
+        extraAttrs.put(EXTRA_ATTR_TRIGGER_RANGE, triggerRangeAdjust);
+        return new Gson().toJson(extraAttrs);
     }
 
     @Override
@@ -721,6 +894,7 @@ public class AnalogStick extends Element {
         radius_complete = getPercent(radius, 100) - 2 * thick;
         radius_dead_zone = getPercent(radius, deadZoneRadius);
         radius_analog_stick = getPercent(radius, 20);
+        updateTriggerRadius();
         setElementWidth(radius * 2);
         setElementHeight(radius * 2);
         invalidate();
@@ -729,11 +903,14 @@ public class AnalogStick extends Element {
     public void setElementDeadZoneRadius(int deadZoneRadius) {
         this.deadZoneRadius = deadZoneRadius;
         radius_dead_zone = getPercent(radius, deadZoneRadius);
+        updateTriggerRadius();
         invalidate();
     }
 
     public void setElementThick(int thick) {
         this.thick = thick;
+        radius_complete = getPercent(radius, 100) - 2 * thick;
+        updateTriggerRadius();
         invalidate();
     }
 
@@ -749,6 +926,18 @@ public class AnalogStick extends Element {
 
     public void setElementBackgroundColor(int backgroundColor) {
         this.backgroundColor = backgroundColor;
+        invalidate();
+    }
+
+    public void setElementTriggerValue(String triggerKey) {
+        this.triggerKey = triggerKey;
+        this.triggerSendHandler = elementController.getSendEventHandler(triggerKey);
+        invalidate();
+    }
+
+    public void setElementTriggerRangeAdjust(int triggerRangeAdjust) {
+        this.triggerRangeAdjust = triggerRangeAdjust;
+        updateTriggerRadius();
         invalidate();
     }
 
@@ -769,6 +958,10 @@ public class AnalogStick extends Element {
         contentValues.put(COLUMN_INT_ELEMENT_PRESSED_COLOR, 0xF00000FF);
         contentValues.put(COLUMN_INT_ELEMENT_BACKGROUND_COLOR, 0x00FFFFFF);
         contentValues.put(COLUMN_INT_ELEMENT_MODE, 0);
+        Map<String, Object> extraAttrs = new HashMap<>();
+        extraAttrs.put(EXTRA_ATTR_TRIGGER_KEY, ElementController.SPECIAL_KEY_NULL);
+        extraAttrs.put(EXTRA_ATTR_TRIGGER_RANGE, 0);
+        contentValues.put(COLUMN_STRING_EXTRA_ATTRIBUTES, new Gson().toJson(extraAttrs));
         return contentValues;
 
 
