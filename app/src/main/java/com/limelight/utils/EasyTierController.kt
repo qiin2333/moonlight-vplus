@@ -35,6 +35,7 @@ class EasyTierController(
 ) {
     private var easyTierManager: EasyTierManager? = null
     private var currentDialog: AlertDialog? = null
+    private val instanceName = "Default"
 
     interface VpnPermissionCallback {
         fun requestVpnPermission()
@@ -48,7 +49,6 @@ class EasyTierController(
 
     private fun initEasyTierManager() {
         val config = getEasyTierConfig()
-        val instanceName = "Default"
 
         if (easyTierManager != null && easyTierManager?.latestNetworkInfoJson != null) {
             easyTierManager?.stop()
@@ -404,7 +404,7 @@ class EasyTierController(
             return
         }
 
-        val displayInfo = parseNetworkInfoForDialog(json, "Default")
+        val displayInfo = parseNetworkInfoForDialog(json, instanceName)
 
         // 添加本机信息
         addSectionTitle(container, "本机信息")
@@ -464,7 +464,8 @@ class EasyTierController(
         val displayInfo = EasyTierDisplayInfo()
         try {
             val root = JSONObject(jsonString)
-            val instance = root.getJSONObject("map").getJSONObject(instanceName)
+            val instance = resolveInstanceInfo(root, instanceName)
+                    ?: throw IllegalStateException("No EasyTier network info instance found")
 
             // 解析本机信息
             val myNode = instance.getJSONObject("my_node_info")
@@ -648,6 +649,23 @@ class EasyTierController(
         if (value != defaultValue) {
             sb.append(key).append(" = ").append(value).append("\n")
         }
+    }
+
+    private fun resolveInstanceInfo(root: JSONObject, preferredName: String): JSONObject? {
+        val instances = root.optJSONObject("map") ?: return null
+        instances.optJSONObject(preferredName)?.let { return it }
+
+        val keys = instances.keys()
+        while (keys.hasNext()) {
+            val fallbackName = keys.next()
+            val fallback = instances.optJSONObject(fallbackName)
+            if (fallback != null) {
+                LimeLog.warning("EasyTier instance '$preferredName' not found; using '$fallbackName'")
+                return fallback
+            }
+        }
+
+        return null
     }
 
     private fun ipFromInt(addr: Int): String {

@@ -35,10 +35,9 @@ object EasyTierJNI {
 
     /**
      * 收集所有正在运行的网络实例的信息。
-     * @param maxLength 最大返回条目数
      * @return 包含网络信息的 JSON 格式字符串
      */
-    external fun collectNetworkInfos(maxLength: Int): String
+    external fun collectNetworkInfos(): String
 
     /**
      * 获取最后一次 JNI 调用发生的错误消息。

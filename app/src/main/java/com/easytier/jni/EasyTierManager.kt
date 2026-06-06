@@ -70,7 +70,7 @@ class EasyTierManager(
 
     private fun monitorNetworkStatus() {
         try {
-            val infosJson = EasyTierJNI.collectNetworkInfos(10)
+            val infosJson = EasyTierJNI.collectNetworkInfos()
             latestNetworkInfoJson = infosJson
 
             if (infosJson.isNullOrEmpty()) {
@@ -88,7 +88,15 @@ class EasyTierManager(
 
             try {
                 val root = JSONObject(infosJson)
-                val instance = root.getJSONObject("map").getJSONObject(instanceName)
+                val instance = resolveInstanceInfo(root)
+                if (instance == null) {
+                    if (currentIpv4 != null) {
+                        stopVpnService()
+                        currentIpv4 = null
+                        currentProxyCidrs.clear()
+                    }
+                    return
+                }
 
                 var myIp: String? = null
                 var myPrefix = 0
@@ -182,6 +190,23 @@ class EasyTierManager(
         activity.sendBroadcast(stopIntent)
         Log.i(TAG, "停止发送VPN广播。")
         vpnServiceIntent = null
+    }
+
+    private fun resolveInstanceInfo(root: JSONObject): JSONObject? {
+        val instances = root.optJSONObject("map") ?: return null
+        instances.optJSONObject(instanceName)?.let { return it }
+
+        val keys = instances.keys()
+        while (keys.hasNext()) {
+            val fallbackName = keys.next()
+            val fallback = instances.optJSONObject(fallbackName)
+            if (fallback != null) {
+                Log.w(TAG, "EasyTier instance '$instanceName' not found; using '$fallbackName'")
+                return fallback
+            }
+        }
+
+        return null
     }
 
     private fun ipFromInt(addr: Int): String {
