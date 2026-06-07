@@ -635,6 +635,12 @@ class ComputerManagerService : Service() {
                 continue
             }
 
+            if (isPairedHostDowngradedToNotPaired(details, recent.details)) {
+                recentPollResults.remove(key, recent)
+                LimeLog.warning("Fast poll: dropping stale NOT_PAIRED result for paired host ${details.name ?: key}")
+                continue
+            }
+
             if (recent.details.state == ComputerDetails.State.ONLINE &&
                 recent.details.activeAddress != null
             ) {
@@ -667,6 +673,40 @@ class ComputerManagerService : Service() {
         }
 
         findPollingTuple(result)?.lastNetworkPollMs = pollTimeMs
+    }
+
+    private fun isPairedHostDowngradedToNotPaired(current: ComputerDetails, polled: ComputerDetails): Boolean {
+        return current.pairState == PairingManager.PairState.PAIRED &&
+                current.serverCert != null &&
+                polled.state == ComputerDetails.State.ONLINE &&
+                polled.pairState == PairingManager.PairState.NOT_PAIRED
+    }
+
+    private fun stabilizePairState(current: ComputerDetails, polled: ComputerDetails): ComputerDetails {
+        val tuple = findPollingTuple(current)
+
+        if (!isPairedHostDowngradedToNotPaired(current, polled)) {
+            tuple?.notPairedPollCount = 0
+            return polled
+        }
+
+        val notPairedCount = (tuple?.notPairedPollCount ?: 0) + 1
+        tuple?.notPairedPollCount = notPairedCount
+
+        if (notPairedCount >= NOT_PAIRED_CONFIRMATION_POLLS) {
+            LimeLog.warning("Accepting confirmed NOT_PAIRED state for ${current.name} after $notPairedCount polls")
+            return polled
+        }
+
+        LimeLog.warning(
+            "Suppressing transient NOT_PAIRED state for paired host ${current.name} " +
+                    "($notPairedCount/$NOT_PAIRED_CONFIRMATION_POLLS)"
+        )
+
+        return ComputerDetails(polled).apply {
+            pairState = PairingManager.PairState.PAIRED
+            serverCert = current.serverCert
+        }
     }
 
     private fun tryPollIp(details: ComputerDetails, address: ComputerDetails.AddressTuple): ComputerDetails? {
@@ -870,8 +910,9 @@ class ComputerManagerService : Service() {
 
             val polledDetails = pollFlight?.result
             if (polledDetails != null) {
-                details.update(polledDetails)
-                rememberPollResult(details, polledDetails, pollFlight.completedAtMs)
+                val stableDetails = stabilizePairState(details, polledDetails)
+                details.update(stableDetails)
+                rememberPollResult(details, stableDetails, pollFlight.completedAtMs)
                 LimeLog.info("Fast poll: reused in-flight result for ${details.name ?: getPrimaryPollKey(details)}")
                 return true
             }
@@ -886,9 +927,10 @@ class ComputerManagerService : Service() {
 
             if (polledDetails != null) {
                 val completedAtMs = SystemClock.elapsedRealtime()
-                details.update(polledDetails)
-                rememberPollResult(details, polledDetails, completedAtMs)
-                pollFlight?.result = ComputerDetails(polledDetails)
+                val stableDetails = stabilizePairState(details, polledDetails)
+                details.update(stableDetails)
+                rememberPollResult(details, stableDetails, completedAtMs)
+                pollFlight?.result = ComputerDetails(stableDetails)
                 pollFlight?.completedAtMs = completedAtMs
                 return true
             }
@@ -1128,6 +1170,7 @@ class ComputerManagerService : Service() {
         private const val EMPTY_LIST_THRESHOLD = 3
         private const val POLL_DATA_TTL_MS = 30000
         private const val POLL_RESULT_REUSE_MS: Long = 2500
+        private const val NOT_PAIRED_CONFIRMATION_POLLS = 3
         private const val COLLECTION_TIMEOUT_MS: Long = 2000
     }
 }
@@ -1160,6 +1203,7 @@ class PollingTuple(
     val networkLock = Any()
     var lastSuccessfulPollMs: Long = 0
     var lastNetworkPollMs: Long = 0
+    var notPairedPollCount: Int = 0
 }
 
 class ReachabilityTuple(
