@@ -185,6 +185,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     private var decoderRenderer: MediaCodecDecoderRenderer? = null
     private var framegenCapture: FramegenCapture? = null
     private var framegenInputHdrEnabled = false
+    private var framegenEnabledToastShown = false
     private var reportedCrash = false
 
     private var highPerfWifiLock: WifiManager.WifiLock? = null
@@ -602,8 +603,12 @@ class Game : Activity(), SurfaceHolder.Callback,
         get() = PreferenceManager.getDefaultSharedPreferences(this)
             .getBoolean("checkbox_resume_stream", false)
 
-    private fun shouldUseFramegen(prefs: SharedPreferences = defaultPreferences()): Boolean =
+    private fun isFramegenConfigured(prefs: SharedPreferences = defaultPreferences()): Boolean =
         FramegenInterceptor.isAvailable() && FramegenSettings.isAllowedByUser(prefs)
+
+    private fun shouldUseFramegen(prefs: SharedPreferences = defaultPreferences()): Boolean =
+        isFramegenConfigured(prefs) &&
+            FramegenSettings.isCaptureResolutionSupported(prefConfig.width, prefConfig.height)
 
     private fun framegenPresentationFps(prefs: SharedPreferences = defaultPreferences()): Int {
         val inputFps = prefConfig.fps
@@ -622,6 +627,7 @@ class Game : Activity(), SurfaceHolder.Callback,
      * Shared by [onCreate] (first launch) and [prepareConnection] (resume reconnect).
      */
     private fun createConnectionAndHandler() {
+        framegenEnabledToastShown = false
         val host = intent.getStringExtra(EXTRA_HOST) ?: ""
         val port = intent.getIntExtra(EXTRA_PORT, NvHTTP.DEFAULT_HTTP_PORT)
         val httpsPort = intent.getIntExtra(EXTRA_HTTPS_PORT, 0)
@@ -1708,7 +1714,14 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     private fun framegenConfigForStream(): FramegenRuntimeConfig? {
         val prefs = defaultPreferences()
-        if (!shouldUseFramegen(prefs)) {
+        if (!isFramegenConfigured(prefs)) {
+            return null
+        }
+        if (!FramegenSettings.isCaptureResolutionSupported(prefConfig.width, prefConfig.height)) {
+            LimeLog.warning(
+                "Framegen disabled for ${prefConfig.width}x${prefConfig.height}: " +
+                    "exceeds ${FramegenSettings.MAX_CAPTURE_PIXELS} pixels"
+            )
             return null
         }
 
@@ -1728,7 +1741,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         )
     }
 
-    private fun prepareFramegenSurface(outputSurface: Surface) {
+    private fun prepareFramegenSurface(outputSurface: Surface, showEnabledToast: Boolean) {
         releaseFramegenCapture()
 
         val config = framegenConfigForStream() ?: return
@@ -1749,8 +1762,11 @@ class Game : Activity(), SurfaceHolder.Callback,
             "Framegen capture armed ${prefConfig.width}x${prefConfig.height} " +
                 "fps=${config.presentationFps} hdrIn=${config.inputHdrEnabled}"
         )
-        runOnUiThread {
-            Toast.makeText(this, R.string.toast_framegen_stream_enabled, Toast.LENGTH_LONG).show()
+        if (showEnabledToast && !framegenEnabledToastShown) {
+            framegenEnabledToastShown = true
+            runOnUiThread {
+                Toast.makeText(this, R.string.toast_framegen_stream_enabled, Toast.LENGTH_LONG).show()
+            }
         }
     }
 
@@ -1788,8 +1804,12 @@ class Game : Activity(), SurfaceHolder.Callback,
             throw IllegalStateException("Surface changed before creation!")
         }
 
-        // setRenderTarget() may start the decoder, which reads framegenSurface.
-        prepareFramegenSurface(holder.surface)
+        if (!attemptedConnection || (connected && isExtremeResumeEnabled && framegenCapture == null)) {
+            // setRenderTarget() may start the decoder, which reads framegenSurface.
+            prepareFramegenSurface(holder.surface, !attemptedConnection)
+        } else if (framegenCapture != null) {
+            FramegenInterceptor.configureOutputSurface(holder.surface)
+        }
 
         decoderRenderer?.setRenderTarget(holder)
 
@@ -1839,8 +1859,6 @@ class Game : Activity(), SurfaceHolder.Callback,
             throw IllegalStateException("Surface destroyed before creation!")
         }
 
-        releaseFramegenCapture()
-
         cursorServiceManager.destroyLocalCursorRenderers()
 
         if (attemptedConnection) {
@@ -1851,13 +1869,17 @@ class Game : Activity(), SurfaceHolder.Callback,
                     LimeLog.info("Extreme Resume: Audio muted for background.")
                 }
                 decoderRenderer?.pauseProcessing()
+                releaseFramegenCapture()
                 return
             } else {
                 decoderRenderer?.prepareForStop()
+                releaseFramegenCapture()
                 if (connected) {
                     connectionCallbackHandler.stopConnection()
                 }
             }
+        } else {
+            releaseFramegenCapture()
         }
     }
 

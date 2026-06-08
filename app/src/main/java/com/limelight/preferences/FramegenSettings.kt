@@ -19,6 +19,7 @@ object FramegenSettings {
     const val DEFAULT_INTERNAL_WIDTH = 864
     const val DEFAULT_SLOW_THRESHOLD_MS = 18
     const val DEFAULT_PRESENT_QUEUE_MAX = 2
+    const val MAX_CAPTURE_PIXELS = 2560 * 1440
 
     private const val MIN_INTERNAL_WIDTH = 640
     private const val MAX_INTERNAL_WIDTH = 1920
@@ -40,6 +41,9 @@ object FramegenSettings {
 
     fun isAllowedByUser(prefs: SharedPreferences): Boolean =
         isUserEnabled(prefs) && DeveloperUnlockSettings.isUnlocked(prefs) && isLosslessDllReady(prefs)
+
+    fun isCaptureResolutionSupported(width: Int, height: Int): Boolean =
+        width > 0 && height > 0 && width.toLong() * height.toLong() <= MAX_CAPTURE_PIXELS.toLong()
 
     fun resolveInternalWidth(prefs: SharedPreferences): Int {
         val width = when (prefs.getString(PREF_QUALITY_PRESET, null)) {
