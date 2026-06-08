@@ -343,7 +343,7 @@
     <string-array name="perf_overlay_display_items_names">
         <item>🎬 Resolution &amp; Target FPS</item>
         <item>Codec Decoder Info</item>
-        <item>Rx/Rd Received &amp; Rendered FPS</item>
+        <item>Rx/Rd/FG Frame Rates</item>
         <item>📶 Packet Loss</item>
         <item>🌐 Bitrate &amp; Network Latency</item>
         <item>⏱️/🥵 Decode Latency (normal &lt; 15ms)</item>
@@ -448,6 +448,19 @@
         <item>0</item>
         <item>1</item>
         <item>2</item>
+    </string-array>
+
+    <string-array name="framegen_quality_preset_names">
+        <item>@string/framegen_quality_performance</item>
+        <item>@string/framegen_quality_balanced</item>
+        <item>@string/framegen_quality_clarity</item>
+        <item>@string/framegen_quality_custom</item>
+    </string-array>
+    <string-array name="framegen_quality_preset_values" translatable="false">
+        <item>performance</item>
+        <item>balanced</item>
+        <item>clarity</item>
+        <item>custom</item>
     </string-array>
 
     <!-- Float Ball Gesture Actions -->

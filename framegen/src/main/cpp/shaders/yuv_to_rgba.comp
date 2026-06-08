@@ -18,6 +18,10 @@ layout(constant_id = 0) const int IS_HDR = 0;
 layout(set = 0, binding = 0) uniform sampler2D uYuvSrc;
 layout(set = 0, binding = 1, rgba8) uniform writeonly image2D uRgbaDst;
 
+layout(push_constant) uniform PushConstants {
+    vec2 srcUvScale;
+} pc;
+
 // SMPTE ST.2084 (PQ) inverse EOTF — 把 [0,1] PQ 码值还原为 [0,1] 归一化的亮度
 // （1.0 = 10000 nits 峰值）。
 vec3 pq_to_linear(vec3 pq) {
@@ -59,13 +63,19 @@ vec3 linear_to_srgb(vec3 c) {
                step(0.0031308, c));
 }
 
+vec3 soften_hdr_chroma(vec3 c) {
+    const vec3 lumaWeights = vec3(0.2126, 0.7152, 0.0722);
+    float y = dot(c, lumaWeights);
+    return mix(vec3(y), c, 0.88);
+}
+
 void main() {
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
     ivec2 size = imageSize(uRgbaDst);
     if (coord.x >= size.x || coord.y >= size.y) {
         return;
     }
-    vec2 uv = (vec2(coord) + vec2(0.5)) / vec2(size);
+    vec2 uv = ((vec2(coord) + vec2(0.5)) / vec2(size)) * pc.srcUvScale;
     vec3 rgb = texture(uYuvSrc, uv).rgb;
 
     if (IS_HDR != 0) {
@@ -84,6 +94,7 @@ void main() {
         float yIn = dot(lin, vec3(0.2126, 0.7152, 0.0722));
         float yOut = yIn / (1.0 + yIn);
         lin = lin * (yOut / max(yIn, 1e-4));
+        lin = soften_hdr_chroma(lin);
         rgb = linear_to_srgb(lin);
     }
 

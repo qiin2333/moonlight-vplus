@@ -1,0 +1,28 @@
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform sampler2D uSrc;
+layout(set = 0, binding = 1, rgba8) uniform writeonly image2D uDst;
+
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 dstSize = imageSize(uDst);
+    if (coord.x >= dstSize.x || coord.y >= dstSize.y) {
+        return;
+    }
+
+    ivec2 srcSize = textureSize(uSrc, 0);
+    vec2 uv = (vec2(coord) + vec2(0.5)) / vec2(dstSize);
+    vec2 texel = 1.0 / vec2(srcSize);
+
+    vec3 c = texture(uSrc, uv).rgb;
+    vec3 n = texture(uSrc, uv + vec2(0.0, -texel.y)).rgb;
+    vec3 s = texture(uSrc, uv + vec2(0.0,  texel.y)).rgb;
+    vec3 e = texture(uSrc, uv + vec2( texel.x, 0.0)).rgb;
+    vec3 w = texture(uSrc, uv + vec2(-texel.x, 0.0)).rgb;
+    vec3 blur = (n + s + e + w) * 0.25;
+    vec3 sharp = c + (c - blur) * 0.12;
+
+    imageStore(uDst, coord, vec4(clamp(sharp, 0.0, 1.0), 1.0));
+}

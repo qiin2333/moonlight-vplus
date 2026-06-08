@@ -773,7 +773,7 @@
     <string name="perf_decoder_info">The decoder is responsible for decoding video streams into displayable images.\n\nCommon Decoders:\n• H.264 (AVC) - Best compatibility\n• H.265 (HEVC) - Higher compression\n• AV1 - Latest standard, most efficient\n\nHDR Support:\n• High Dynamic Range video\n• Richer color representation\n• Requires hardware support</string>
     
     <string name="perf_fps_title">📊 Frame Rate Information</string>
-    <string name="perf_fps_info">Rx FPS: Received Frame Rate\n• Number of video frames received from host\n• Should be stable under ideal conditions\n\nRd FPS: Rendered Frame Rate\n• Number of frames actually rendered to screen\n• May be reduced due to device performance\n\nPerformance Indicators:\n• Close values indicate good performance\n• Low render FPS may affect smoothness</string>
+    <string name="perf_fps_info">Rx FPS: Received frame rate\n• Number of video frames received from host\n• Should be stable under ideal conditions\n\nRd FPS: Rendered frame rate\n• Number of decoded frames rendered by the client path\n• May be reduced due to device performance\n\nFG FPS: Frame generation output estimate\n• Shown when frame generation is active\n• Estimated from rendered FPS and the configured output multiplier\n\nPerformance indicators:\n• Close Rx/Rd values indicate good decode/render performance\n• Low FG FPS may affect frame generation smoothness</string>
     
     <string name="perf_packet_loss_title">📶 Packet Loss Information</string>
     <string name="perf_packet_loss_info" formatted="false">Packet loss represents the percentage of data packets lost during network transmission.\n\nNormal Range:\n• 0-0.5%: Excellent network quality\n• 0.5-2%: Good network quality\n• 2-5%: Fair network quality\n• &gt;5%: Poor network quality\n\nInfluencing Factors:\n• Network stability\n• Router performance\n• Wireless signal strength</string>
@@ -874,21 +874,58 @@
     <string name="title_force_mtk_max_operating_rate">Force MTK max operating rate (Experimental)</string>
     <string name="summary_force_mtk_max_operating_rate">Enables the MediaTek decoder override `KEY_OPERATING_RATE = Short.MAX_VALUE`. This can improve latency on some newer Dimensity / MTK SoCs, but may cause major regressions on others. For example, issue #299 reports Hisense U7Q (`c2.mtk.hevc.decoder`) building up 3-5 seconds of display latency with this enabled. Off by default. Only affects MTK decoders.</string>
 
-    <!-- Frame Generation (Lossless Scaling on-device) -->
-    <string name="title_framegen_enabled">Frame generation (实验性 / Stage 3.1 verified)</string>
-    <string name="summary_framegen_enabled">基于 lsfg-vk-android 的客户端插帧。当前已验证 MediaCodec → ImageReader → AHardwareBuffer → JNI 数据通道；尚未把画面重新显示/插帧输出。需要 arm64-v8a + Android 10+ + Vulkan 1.1。</string>
-    <string name="title_framegen_selftest">Framegen 自检</string>
-    <string name="summary_framegen_selftest">点击后调用 native 桥的 selfTest()，结果通过 Toast / Logcat (TAG: Framegen) 展示。</string>
-    <string name="title_framegen_pick_lossless_dll">选择 Lossless.dll（阶段 4 自检）</string>
-    <string name="summary_framegen_pick_lossless_dll">从存储中选择官方的 `Lossless.dll`。应用会复制到私有目录，并在 native 侧验证是否能解析 PE 资源与转译 DXBC shader。</string>
-    <string name="summary_framegen_pick_lossless_dll_selected">已暂存 Lossless.dll：%1$s
-再次点击可重新选择并覆盖。</string>
-    <string name="toast_framegen_selftest_result">Framegen 自检结果: %1$s</string>
-    <string name="toast_framegen_enabled_warning">Framegen 已启用 — 阶段 3.1：下次串流时画面会被重定向到 ImageReader（黑屏）以验证 AHB 数据通道，请查看 logcat -s Framegen</string>
-    <string name="toast_framegen_unavailable">当前设备不支持 framegen（需 Android 10+ / arm64-v8a / Vulkan 1.1）</string>
-    <string name="toast_framegen_lossless_dll_copying">正在复制并验证 Lossless.dll…</string>
-    <string name="toast_framegen_lossless_dll_probe_result">Lossless.dll 自检结果: %1$s</string>
-    <string name="toast_framegen_lossless_dll_pick_failed">选择或读取 Lossless.dll 失败：%1$s</string>
+    <!-- Frame Generation -->
+    <string name="title_developer_unlock">Unlock developer features</string>
+    <string name="summary_developer_unlock_locked">Verify your GitHub Star to unlock developer features.</string>
+    <string name="summary_developer_unlock_unlocked">Developer features are unlocked on this device. Thank you for supporting Moonlight V+.</string>
+    <string name="message_developer_unlock_required">Developer features are available to Moonlight V+ supporters. Sign in with GitHub and the app will verify that your account has starred the project.</string>
+    <string name="message_developer_unlock_done">Developer features are unlocked on this device. You can recheck your Star or open the project page.</string>
+    <string name="message_developer_oauth_unconfigured">This build has not configured a GitHub OAuth client ID, so Moonlight V+ cannot unlock developer features yet. Set githubOAuthClientId in local.properties, pass -PgithubOAuthClientId=..., or set GITHUB_OAUTH_CLIENT_ID when building.</string>
+    <string name="message_developer_device_code">1. Open the authorization page and enter this code: %1$s\n2. Open the project page and Star Moonlight V+.\n3. Return here after authorization, then tap I have authorized.\n\nAuthorization page: %2$s</string>
+    <string name="message_developer_star_not_found">GitHub authorization succeeded, but the Star is not visible for this account yet. Star Moonlight V+, wait a moment if you just starred it, then verify again.</string>
+    <string name="action_developer_open_project">Open project</string>
+    <string name="action_developer_open_authorization">Open authorization</string>
+    <string name="action_developer_check_authorization">I have authorized</string>
+    <string name="action_developer_verify_star">Verify GitHub Star</string>
+    <string name="toast_developer_unlocked">Developer features unlocked. Thanks for the star!</string>
+    <string name="toast_developer_oauth_unconfigured">GitHub OAuth client ID is not configured for this build.</string>
+    <string name="toast_developer_verification_started">Starting developer feature unlock…</string>
+    <string name="toast_developer_verification_running">Developer feature unlock is already running.</string>
+    <string name="toast_developer_authorization_pending">Still waiting for GitHub authorization. Try again in a few seconds.</string>
+    <string name="toast_developer_verification_expired">GitHub authorization expired. Start verification again.</string>
+    <string name="toast_developer_verification_failed">Developer feature unlock failed: %1$s</string>
+    <string name="toast_developer_open_project_failed">Unable to open project page: %1$s</string>
+    <string name="title_framegen_enabled">Frame generation</string>
+    <string name="summary_framegen_enabled">Generate extra frames on the phone for smoother streaming. For 120 Hz output, set stream FPS to 60; values above half of the target refresh rate will not improve frame generation.</string>
+    <string name="summary_framegen_enabled_locked">Unlock developer features first to enable frame generation.</string>
+    <string name="summary_framegen_enabled_needs_dll">Import the frame generation engine file first, then enable this for your next stream.</string>
+    <string name="title_framegen_quality_preset">Frame generation quality</string>
+    <string name="summary_framegen_quality_preset">Choose the balance between smoothness and clarity.</string>
+    <string name="framegen_quality_performance">Performance (recommended)</string>
+    <string name="framegen_quality_balanced">Balanced</string>
+    <string name="framegen_quality_clarity">Clarity</string>
+    <string name="framegen_quality_custom">Custom</string>
+    <string name="title_framegen_selftest">Check device support</string>
+    <string name="summary_framegen_selftest">Use this if frame generation cannot be enabled or the picture looks wrong.</string>
+    <string name="title_framegen_pick_lossless_dll">Import frame generation engine</string>
+    <string name="summary_framegen_pick_lossless_dll">Required before first use. Copy Lossless.dll to this phone, then select it here.</string>
+    <string name="summary_framegen_pick_lossless_dll_selected">Frame generation engine is ready: %1$s
+Tap again to replace it.</string>
+    <string name="toast_framegen_selftest_result">Device support check: %1$s</string>
+    <string name="toast_framegen_enabled_warning">Frame generation will be used on the next stream. For 120 Hz output, set stream FPS to 60.</string>
+    <string name="toast_framegen_stream_enabled">Frame generation is active for this stream.</string>
+    <string name="toast_framegen_unavailable">This device does not support frame generation. Android 10+, arm64-v8a, and Vulkan 1.1 are required.</string>
+    <string name="toast_framegen_need_lossless_dll">Import Lossless.dll before enabling frame generation.</string>
+    <string name="toast_framegen_lossless_dll_copying">Importing frame generation engine…</string>
+    <string name="toast_framegen_lossless_dll_probe_result">Frame generation engine check: %1$s</string>
+    <string name="toast_framegen_lossless_dll_pick_failed">Unable to import Lossless.dll: %1$s</string>
+    <string name="title_framegen_internal_width">Custom render width</string>
+    <string name="summary_framegen_internal_width">Advanced tuning for the internal frame generation render width. Lower values improve stability; higher values improve detail.</string>
+    <string name="suffix_framegen_pixels">px</string>
+    <string name="title_framegen_slow_threshold_ms">Smoothness protection</string>
+    <string name="summary_framegen_slow_threshold_ms">Custom mode only. Moonlight V+ falls back to direct rendering when frame generation gets too slow. Default: 18 ms.</string>
+    <string name="title_framegen_present_real_first">Motion cadence fallback</string>
+    <string name="summary_framegen_present_real_first">Custom troubleshooting option. Leave off unless motion looks uneven.</string>
     <string name="unpaired_devices_shown">Unpaired devices shown</string>
     <string name="unpaired_devices_hidden">Unpaired devices hidden</string>
     <string name="new_unpaired_device_shown">New unpaired device detected, showing unpaired devices</string>

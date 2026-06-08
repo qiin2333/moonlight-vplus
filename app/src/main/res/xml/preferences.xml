@@ -100,24 +100,57 @@
             android:title="@string/title_force_mtk_max_operating_rate"
             android:summary="@string/summary_force_mtk_max_operating_rate"
             android:defaultValue="false" />
-        <!--
-          Frame generation (Lossless Scaling 端上插帧).
-          阶段 2：开关 + 自检按钮，仅验证 native 库加载。
-          阶段 3+ 才接入 MediaCodec→AHB→framegen→显示 流水线。
-        -->
+
+        <!-- Frame generation settings. Runtime gating is enforced again in Game before capture starts. -->
+        <Preference
+            android:key="pref_framegen_pick_lossless_dll"
+            android:title="@string/title_framegen_pick_lossless_dll"
+            android:summary="@string/summary_framegen_pick_lossless_dll" />
         <CheckBoxPreference
             android:key="checkbox_framegen_enabled"
             android:title="@string/title_framegen_enabled"
             android:summary="@string/summary_framegen_enabled"
             android:defaultValue="false" />
+        <ListPreference
+            android:key="list_framegen_quality_preset"
+            android:title="@string/title_framegen_quality_preset"
+            android:summary="@string/summary_framegen_quality_preset"
+            android:entries="@array/framegen_quality_preset_names"
+            android:entryValues="@array/framegen_quality_preset_values"
+            android:defaultValue="performance" />
         <Preference
             android:key="pref_framegen_selftest"
             android:title="@string/title_framegen_selftest"
             android:summary="@string/summary_framegen_selftest" />
-        <Preference
-            android:key="pref_framegen_pick_lossless_dll"
-            android:title="@string/title_framegen_pick_lossless_dll"
-            android:summary="@string/summary_framegen_pick_lossless_dll" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_framegen_internal_width"
+            android:dialogMessage="@string/summary_framegen_internal_width"
+            seekbar:min="640"
+            android:max="1920"
+            android:defaultValue="864"
+            seekbar:step="16"
+            seekbar:keyStep="32"
+            seekbar:divisor="1"
+            android:summary="@string/summary_framegen_internal_width"
+            android:text="@string/suffix_framegen_pixels"
+            android:title="@string/title_framegen_internal_width" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_framegen_slow_threshold_ms"
+            android:dialogMessage="@string/summary_framegen_slow_threshold_ms"
+            seekbar:min="8"
+            android:max="30"
+            android:defaultValue="18"
+            seekbar:step="1"
+            seekbar:keyStep="2"
+            seekbar:divisor="1"
+            android:summary="@string/summary_framegen_slow_threshold_ms"
+            android:text="ms"
+            android:title="@string/title_framegen_slow_threshold_ms" />
+        <CheckBoxPreference
+            android:key="checkbox_framegen_present_real_first"
+            android:title="@string/title_framegen_present_real_first"
+            android:summary="@string/summary_framegen_present_real_first"
+            android:defaultValue="false" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_host_settings"
         android:key="category_host_settings"
@@ -851,5 +884,9 @@
             android:title="@string/title_privacy_policy"
             android:summary="@string/summary_privacy_policy"
             url="https://github.com/qiin2333/moonlight-vplus/blob/master/PRIVACY_POLICY.md"/>
+        <Preference
+            android:key="pref_developer_unlock"
+            android:title="@string/title_developer_unlock"
+            android:summary="@string/summary_developer_unlock_locked" />
     </PreferenceCategory>
 </PreferenceScreen>

@@ -2,134 +2,295 @@ package com.limelight.framegen
 
 import android.graphics.ImageFormat
 import android.hardware.HardwareBuffer
+import android.media.Image
 import android.media.ImageReader
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.SystemClock
 import android.util.Log
 import android.view.Surface
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * 阶段 3.1 骨架 —— MediaCodec 输出截流器。
+ * MediaCodec output capture for frame generation.
  *
- * 用 ImageReader（PRIVATE/HW buffer 模式）替换 MediaCodec 的 output Surface，
- * 解码出来的每一帧都会以 [HardwareBuffer] 形式回调到 Java 层。本类负责：
- *
- *   1. 从 [ImageReader.acquireLatestImage] 拿到 [android.media.Image]；
- *   2. 取出 [HardwareBuffer]，透传给 native，让 native 验证 AHB 数据通道；
- *   3. **立即 close 该 Image**，把 buffer 槽位还给 ImageReader（不持有引用）。
- *
- * 阶段 3.1 的"成功"标准就是 native 端 logcat 能稳定看到 frame#1、frame#60、frame#120…
- * 屏幕会黑屏（因为帧没有被任何东西 present 回去），这是预期行为，由 UI 文案告知用户。
- *
- * **生命周期**：调用方在 `surfaceChanged` 之前 [create]，在 `surfaceDestroyed` 之后
- * [release]。所有 ImageReader 回调都在专用 HandlerThread 上跑，避免阻塞主线程或解码线程。
- *
- * **maxImages**：取 3。MediaCodec 至少需要 1 个 free slot 才能 dequeueOutputBuffer，
- * 我们额外预留 2 个抗 jitter；过大会浪费显存，过小会反压解码器。
- *
- * **API 29+**：模块 minSdk 已是 29，HardwareBuffer + ImageReader 带 usage 重载从 API 29 起可用。
+ * ImageReader callbacks only acquire decoded AHardwareBuffers. The native LSFG
+ * pipeline runs on a dedicated worker thread. If a new decoded frame arrives
+ * while native is busy, keep a single latest pending frame instead of dropping
+ * it immediately. This absorbs decoder output bursts without adding an
+ * unbounded latency queue.
  */
 class FramegenCapture private constructor(
     private val reader: ImageReader,
     private val callbackThread: HandlerThread,
+    private val workerThread: HandlerThread,
+    private val released: AtomicBoolean,
+    private val releasePendingFrames: () -> Unit,
 ) {
 
-    /** 给 MediaCodec.configure 用的 Surface。生命周期跟 [reader] 绑定。 */
     val surface: Surface = reader.surface
 
-    @Volatile
-    private var released = false
-
     fun release() {
-        if (released) return
-        released = true
+        if (!released.compareAndSet(false, true)) return
         try {
             reader.setOnImageAvailableListener(null, null)
+            releasePendingFrames()
             reader.close()
         } catch (t: Throwable) {
             Log.w(TAG, "ImageReader.close failed: ${t.message}")
         }
         callbackThread.quitSafely()
+        workerThread.quitSafely()
         Log.i(TAG, "FramegenCapture released")
     }
 
     companion object {
         private const val TAG = "Framegen"
-
-        /** ImageReader 槽位数。详见类 KDoc。 */
         private const val MAX_IMAGES = 3
 
-        /**
-         * @param width  解码器 output 宽
-         * @param height 解码器 output 高
-         * @return  失败返回 null（设备不支持 / 没 HW buffer 能力），调用方应回退普通路径
-         */
         @JvmStatic
         fun create(width: Int, height: Int): FramegenCapture? {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-                Log.w(TAG, "FramegenCapture 需要 API 29+, 当前 ${Build.VERSION.SDK_INT}")
+                Log.w(TAG, "FramegenCapture requires API 29+, current=${Build.VERSION.SDK_INT}")
                 return null
             }
-            // GPU_SAMPLED_IMAGE 让我们后续可以把这个 AHB 当 sampled texture 喂给 Vulkan；
-            // 不要加 CPU usage flag，否则部分驱动会拒绝 MediaCodec 写入。
+
             val usage = HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE
             val reader = try {
                 ImageReader.newInstance(
-                    width, height,
+                    width,
+                    height,
                     ImageFormat.PRIVATE,
                     MAX_IMAGES,
                     usage
                 )
             } catch (t: Throwable) {
-                Log.e(TAG, "ImageReader.newInstance ${width}x${height} 失败：${t.message}", t)
+                Log.e(TAG, "ImageReader.newInstance ${width}x${height} failed: ${t.message}", t)
                 return null
             }
 
-            val thread = HandlerThread("FramegenCapture", Thread.MAX_PRIORITY).apply { start() }
-            val handler = Handler(thread.looper)
+            val callbackThread = HandlerThread("FramegenCapture", Thread.MAX_PRIORITY).apply { start() }
+            val callbackHandler = Handler(callbackThread.looper)
+            val workerThread = HandlerThread("FramegenRender", Thread.MAX_PRIORITY).apply { start() }
+            val workerHandler = Handler(workerThread.looper)
+            val released = AtomicBoolean(false)
+            val processing = AtomicBoolean(false)
+            val pendingLock = Object()
+            var pendingFrame: CapturedFrame? = null
+            var queuedWhileBusy = 0L
+            var replacedWhileBusy = 0L
+            var lastImageTimestampNs = 0L
+            var observedInputFps = 0f
+            var processedByWorker = 0L
 
             FramegenInterceptor.nativeResetFrameCounter()
-            Log.i(TAG, "FramegenCapture 创建 ${width}x${height} maxImages=$MAX_IMAGES usage=0x${usage.toString(16)}")
+            Log.i(
+                TAG,
+                "FramegenCapture created ${width}x${height} maxImages=$MAX_IMAGES " +
+                    "usage=0x${usage.toString(16)}"
+            )
+
+            fun closePendingFrame() {
+                val frame = synchronized(pendingLock) {
+                    val pending = pendingFrame
+                    pendingFrame = null
+                    pending
+                }
+                try {
+                    frame?.image?.close()
+                } catch (_: Throwable) {
+                }
+            }
+
+            fun drainFramesOnWorker(firstFrame: CapturedFrame) {
+                var frame: CapturedFrame? = firstFrame
+                while (true) {
+                    val current = frame ?: break
+                    val image = current.image
+                    val workerStartNs = SystemClock.elapsedRealtimeNanos()
+                    val queueDelayMs = (workerStartNs - current.enqueueNs) / 1_000_000L
+
+                    try {
+                        if (!released.get()) {
+                            val hb = try {
+                                image.hardwareBuffer
+                            } catch (t: IllegalStateException) {
+                                Log.w(TAG, "Framegen image already closed before worker read buffer: ${t.message}")
+                                null
+                            }
+                            if (hb == null) {
+                                Log.w(TAG, "Image.hardwareBuffer == null")
+                            } else {
+                                try {
+                                    val nativeStartNs = SystemClock.elapsedRealtimeNanos()
+                                    val cnt = FramegenInterceptor.nativeOnFrameAvailable(
+                                        hb,
+                                        current.width,
+                                        current.height,
+                                        current.format,
+                                        current.timestampNs,
+                                        current.observedInputFps
+                                    )
+                                    val nativeElapsedMs =
+                                        (SystemClock.elapsedRealtimeNanos() - nativeStartNs) / 1_000_000L
+
+                                    processedByWorker += 1L
+                                    if (processedByWorker == 1L ||
+                                        processedByWorker % 120L == 0L ||
+                                        nativeElapsedMs >= 16L ||
+                                        queueDelayMs >= 8L
+                                    ) {
+                                        Log.i(
+                                            TAG,
+                                            "Framegen worker timing processed=$processedByWorker " +
+                                                "native=${nativeElapsedMs}ms queue=${queueDelayMs}ms " +
+                                                "observedFps=${"%.1f".format(current.observedInputFps)}"
+                                        )
+                                    }
+                                    if (cnt == 1L) {
+                                        Log.i(TAG, "First frame AHB received (${current.width}x${current.height})")
+                                    }
+                                } finally {
+                                    hb.close()
+                                }
+                            }
+                        }
+                    } finally {
+                        try {
+                            image.close()
+                        } catch (_: Throwable) {
+                        }
+                    }
+
+                    frame = if (released.get()) {
+                        closePendingFrame()
+                        processing.set(false)
+                        null
+                    } else {
+                        synchronized(pendingLock) {
+                            val next = pendingFrame
+                            pendingFrame = null
+                            if (next == null) {
+                                processing.set(false)
+                            }
+                            next
+                        }
+                    }
+                }
+            }
 
             reader.setOnImageAvailableListener({ r ->
-                // acquireLatestImage：丢弃所有更早的，只拿最新——这正好是
-                // 阶段 3.1 想要的行为（无 present，越新越好以反映真实延迟）。
+                if (released.get()) return@setOnImageAvailableListener
+
                 val image = try {
                     r.acquireLatestImage()
                 } catch (t: Throwable) {
-                    Log.w(TAG, "acquireLatestImage 异常：${t.message}")
+                    Log.w(TAG, "acquireLatestImage failed: ${t.message}")
                     null
                 } ?: return@setOnImageAvailableListener
 
+                if (released.get()) {
+                    image.close()
+                    return@setOnImageAvailableListener
+                }
+
+                val frameWidth: Int
+                val frameHeight: Int
+                val frameFormat: Int
+                val timestampNs: Long
                 try {
-                    val hb = image.hardwareBuffer
-                    if (hb == null) {
-                        Log.w(TAG, "Image.hardwareBuffer == null（驱动不支持 PRIVATE+HW buffer？）")
-                    } else {
-                        try {
-                            val cnt = FramegenInterceptor.nativeOnFrameAvailable(
-                                hb,
-                                image.width,
-                                image.height,
-                                image.format,
-                                image.timestamp
-                            )
-                            if (cnt == 1L) {
-                                Log.i(TAG, "首帧 AHB 接收成功（${image.width}x${image.height}）")
-                            }
-                        } finally {
-                            // HardwareBuffer 来自 Image，Image.close 会负责释放底层
-                            // 引用，但 hardwareBuffer 自身需要显式 close 避免 leak warning。
-                            hb.close()
+                    frameWidth = image.width
+                    frameHeight = image.height
+                    frameFormat = image.format
+                    timestampNs = image.timestamp
+                } catch (t: IllegalStateException) {
+                    Log.w(TAG, "Framegen image closed before metadata capture: ${t.message}")
+                    try {
+                        image.close()
+                    } catch (_: Throwable) {
+                    }
+                    return@setOnImageAvailableListener
+                }
+                if (timestampNs > 0L && lastImageTimestampNs > 0L && timestampNs > lastImageTimestampNs) {
+                    val deltaNs = timestampNs - lastImageTimestampNs
+                    if (deltaNs in 1_000_000L..250_000_000L) {
+                        val instantFps = (1_000_000_000.0 / deltaNs).toFloat()
+                        observedInputFps = if (observedInputFps <= 0f) {
+                            instantFps
+                        } else {
+                            (observedInputFps * 0.88f) + (instantFps * 0.12f)
                         }
                     }
-                } finally {
-                    image.close()
                 }
-            }, handler)
+                if (timestampNs > 0L) {
+                    lastImageTimestampNs = timestampNs
+                }
 
-            return FramegenCapture(reader, thread)
+                val frame = CapturedFrame(
+                    image = image,
+                    width = frameWidth,
+                    height = frameHeight,
+                    format = frameFormat,
+                    timestampNs = timestampNs,
+                    observedInputFps = observedInputFps,
+                    enqueueNs = SystemClock.elapsedRealtimeNanos()
+                )
+
+                while (!processing.compareAndSet(false, true)) {
+                    var shouldRetry = false
+                    synchronized(pendingLock) {
+                        if (!processing.get()) {
+                            shouldRetry = true
+                        } else {
+                            queuedWhileBusy += 1L
+                            val previous = pendingFrame
+                            if (previous != null) {
+                                replacedWhileBusy += 1L
+                                try {
+                                    previous.image.close()
+                                } catch (_: Throwable) {
+                                }
+                            }
+                            pendingFrame = frame
+                            if (queuedWhileBusy == 1L || queuedWhileBusy % 120L == 0L) {
+                                Log.i(
+                                    TAG,
+                                    "Framegen worker busy; queued latest frame " +
+                                        "count=$queuedWhileBusy replaced=$replacedWhileBusy"
+                                )
+                            }
+                        }
+                    }
+                    if (!shouldRetry) return@setOnImageAvailableListener
+                }
+
+                val posted = workerHandler.post {
+                    drainFramesOnWorker(frame)
+                }
+                if (!posted) {
+                    image.close()
+                    processing.set(false)
+                }
+            }, callbackHandler)
+
+            return FramegenCapture(
+                reader,
+                callbackThread,
+                workerThread,
+                released,
+                ::closePendingFrame
+            )
         }
+
+        private data class CapturedFrame(
+            val image: Image,
+            val width: Int,
+            val height: Int,
+            val format: Int,
+            val timestampNs: Long,
+            val observedInputFps: Float,
+            val enqueueNs: Long,
+        )
     }
 }

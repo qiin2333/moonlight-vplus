@@ -68,12 +68,18 @@
     <string-array name="perf_overlay_display_items_names">
         <item>🎬 目标分辨率与帧率</item>
         <item>codec 解码器信息</item>
-        <item>Rx/Rd 传输帧率与渲染帧率</item>
+        <item>Rx/Rd/FG 帧率</item>
         <item>📶 丢帧率</item>
         <item>🌐 带宽与网络延迟</item>
         <item>⏱️/🥵 解码延迟(15ms以下为正常)</item>
         <item>🖥 主机延迟</item>
         <item>🔋 电池电量</item>
         <item>📉 1%Low帧 (帧率平滑性)</item>
+    </string-array>
+    <string-array name="framegen_quality_preset_names">
+        <item>@string/framegen_quality_performance</item>
+        <item>@string/framegen_quality_balanced</item>
+        <item>@string/framegen_quality_clarity</item>
+        <item>@string/framegen_quality_custom</item>
     </string-array>
 </resources>

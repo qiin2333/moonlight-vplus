@@ -465,8 +465,13 @@ class PerformanceOverlayManager(
     @SuppressLint("DefaultLocale")
     private fun updateRenderFpsText(view: TextView, performanceInfo: PerformanceInfo) {
         // NBSP + Word Joiner 围绕 / 防止 TextView 在 "Rx 60 / Rd 60" 任意空格或斜杠处断行
-        val fpsValue = String.format("Rx\u00A0%.0f\u00A0\u2060/\u2060\u00A0Rd\u00A0%.0f",
-            performanceInfo.receivedFps, performanceInfo.renderedFps)
+        val fpsValue = if (performanceInfo.framegenFps > 0.5f) {
+            String.format("Rx\u00A0%.0f\u00A0\u2060/\u2060\u00A0Rd\u00A0%.0f\u00A0\u2060/\u2060\u00A0FG\u00A0%.0f",
+                performanceInfo.receivedFps, performanceInfo.renderedFps, performanceInfo.framegenFps)
+        } else {
+            String.format("Rx\u00A0%.0f\u00A0\u2060/\u2060\u00A0Rd\u00A0%.0f",
+                performanceInfo.receivedFps, performanceInfo.renderedFps)
+        }
         // 原版本本行无图标
         view.text = createStyledText(null, fpsValue, "FPS", 0xFF0DDAF4.toInt(), textSizePx = view.textSize)
     }

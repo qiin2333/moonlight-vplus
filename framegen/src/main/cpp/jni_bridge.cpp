@@ -1,12 +1,8 @@
-// JNI 桥 —— moonlight-android :framegen 模块。
+// JNI bridge for the :framegen module.
 //
-// 阶段 1：只暴露 nativeSelfTest()，证明 .so 装载、链接 lsfg-vk-framegen 没有未解析符号。
-//        真实的 createContextFromAHB / submitFrame / generate 流程在后续阶段补。
-//
-// 设计约束：
-//   - JNI 入口必须 C ABI；所有 Java_* 函数加 JNIEXPORT，让链接器把它从 hidden 默认下导出。
-//   - 不在此处直接 #include LSFG_3_1 头，避免编译期把整套 Vulkan 头拉进来拖慢 incremental build。
-//     等真正调用时再分离到独立 framegen_pipeline.cpp。
+// Keep this file as a thin C ABI layer. Heavier Vulkan/LSFG work lives in
+// framegen_pipeline.cpp so incremental Android builds do not need to pull the
+// whole native pipeline through every small JNI edit.
 
 #include <jni.h>
 #include <android/log.h>
@@ -19,9 +15,10 @@
 #include "extract/trans.hpp"
 #include "framegen_pipeline.hpp"
 
-#include <atomic>
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
+#include <cstdlib>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -32,13 +29,6 @@
 #define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN,  LOG_TAG, __VA_ARGS__))
 #define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
 
-// 阶段 3 骨架计数器 —— 仅做调用验证，不持有 AHB。
-// Java 侧每收到一帧调用 nativeOnFrameAvailable() 一次，这里：
-//   - 第一帧：详细打 desc，证明 AHB 真的能从 ImageReader 拿到
-//   - 后续帧：每 60 帧打一次心跳，避免 logcat 刷屏
-//   - 立即返回，让 Java 侧 close(Image) 把 buffer 还给 ImageReader
-// 真正持有/导入 AHB 进 Vulkan 是阶段 3.2（FramegenContext）做的事，
-// 阶段 3.1 只验证 MediaCodec → ImageReader → JNI 数据通道通了。
 static std::atomic<uint64_t> g_frameCount{0};
 
 namespace {
@@ -51,8 +41,9 @@ struct LosslessProbeState {
 
 int onLosslessResource(void* context, const peparse::resource& res) {
     auto* state = static_cast<LosslessProbeState*>(context);
-    if (state == nullptr || res.type != peparse::RT_RCDATA || res.buf == nullptr || res.buf->bufLen <= 0)
+    if (state == nullptr || res.type != peparse::RT_RCDATA || res.buf == nullptr || res.buf->bufLen <= 0) {
         return 0;
+    }
 
     state->rcdataCount++;
     if (res.name == kGenerateShaderResourceId) {
@@ -89,7 +80,7 @@ std::string probeLosslessDll(const std::string& dllPath) {
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_limelight_framegen_FramegenInterceptor_nativeSelfTest(JNIEnv *env, jobject /* thiz */) {
-    const std::string msg = "framegen-skeleton-ok";
+    const std::string msg = "framegen-native-ok";
     LOGI("nativeSelfTest -> %s", msg.c_str());
     return env->NewStringUTF(msg.c_str());
 }
@@ -97,7 +88,8 @@ Java_com_limelight_framegen_FramegenInterceptor_nativeSelfTest(JNIEnv *env, jobj
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_limelight_framegen_FramegenInterceptor_nativeOnFrameAvailable(
         JNIEnv *env, jclass /* clazz */,
-        jobject jHwBuffer, jint width, jint height, jint format, jlong timestampNs) {
+        jobject jHwBuffer, jint width, jint height, jint format,
+        jlong timestampNs, jfloat observedInputFps) {
     if (jHwBuffer == nullptr) {
         LOGW("nativeOnFrameAvailable: null HardwareBuffer");
         return 0;
@@ -109,31 +101,28 @@ Java_com_limelight_framegen_FramegenInterceptor_nativeOnFrameAvailable(
         return 0;
     }
 
-    // 阶段 3.2 骨架：一次性 Vulkan AHB 探测 + LSFG AHB 上下文 bootstrap。
-    // 当前仍不提交帧、不持有 decoder AHB，不改变 3.1 的 close(Image) 行为。
     (void)FramegenPipeline::ensureContextBootstrapped(ahb, width, height, format);
 
     const uint64_t n = g_frameCount.fetch_add(1, std::memory_order_relaxed) + 1;
 
-    // 阶段 3.3a/b：每帧都跑 decoder AHB import → YUV→RGBA dispatch → LSFG presentContext。
-    // bootstrap 完成前 probeImportDecoderAhb 直接返回 false，不打日志。
-    (void)FramegenPipeline::probeImportDecoderAhb(ahb);
+    (void)FramegenPipeline::probeImportDecoderAhb(
+        ahb,
+        static_cast<int64_t>(timestampNs),
+        static_cast<float>(observedInputFps));
 
-    // 帧日志节流：首帧 + 每 300 帧（约 5s @60fps），减少 logcat 压力。
     if (n == 1 || (n % 300) == 0) {
         AHardwareBuffer_Desc desc{};
         AHardwareBuffer_describe(ahb, &desc);
-        LOGI("frame#%llu ahb=%p reader=%dx%d/fmt=%d  ahb=%ux%u/fmt=0x%x/usage=0x%llx/layers=%u/stride=%u  ts=%lld",
+        LOGI("frame#%llu ahb=%p reader=%dx%d/fmt=%d  ahb=%ux%u/fmt=0x%x/usage=0x%llx/layers=%u/stride=%u  ts=%lld observedFps=%.1f",
              (unsigned long long)n, ahb,
              width, height, format,
              desc.width, desc.height, desc.format,
              (unsigned long long)desc.usage,
              desc.layers, desc.stride,
-             (long long)timestampNs);
+             (long long)timestampNs,
+             static_cast<double>(observedInputFps));
     }
 
-    // 阶段 3.1 骨架：不 acquire、不导入 Vulkan，直接返回让 Java 侧 close(Image)。
-    // 返回累计帧数，方便 Java 侧做"是否真的在收帧"的快速判断。
     return static_cast<jlong>(n);
 }
 
@@ -143,6 +132,14 @@ Java_com_limelight_framegen_FramegenInterceptor_nativeResetFrameCounter(
     const uint64_t prev = g_frameCount.exchange(0, std::memory_order_relaxed);
     FramegenPipeline::reset();
     LOGI("frame counter reset (was %llu)", (unsigned long long)prev);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_limelight_framegen_FramegenInterceptor_nativePrewarmContext(
+        JNIEnv * /* env */, jclass /* clazz */, jint width, jint height) {
+    return FramegenPipeline::prewarmContext(
+        static_cast<int32_t>(width),
+        static_cast<int32_t>(height)) ? JNI_TRUE : JNI_FALSE;
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -171,6 +168,23 @@ Java_com_limelight_framegen_FramegenInterceptor_nativeSetHdrEnabled(
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_limelight_framegen_FramegenInterceptor_nativeSetOutputFrameRate(
+        JNIEnv * /*env*/, jclass /* clazz */, jint fps) {
+    FramegenPipeline::setOutputFrameRate(static_cast<int32_t>(fps));
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_limelight_framegen_FramegenInterceptor_nativeSetTuningConfig(
+        JNIEnv * /*env*/, jclass /* clazz */,
+        jint internalWidth, jint presentMode, jint slowLsfgThresholdMs, jint presentQueueMax) {
+    FramegenPipeline::setTuningConfig(
+        static_cast<int32_t>(internalWidth),
+        static_cast<int32_t>(presentMode),
+        static_cast<int32_t>(slowLsfgThresholdMs),
+        static_cast<int32_t>(presentQueueMax));
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_limelight_framegen_FramegenInterceptor_nativeSetOutputSurface(
         JNIEnv *env, jclass /* clazz */, jobject jSurface) {
     ANativeWindow* win = nullptr;
@@ -181,7 +195,7 @@ Java_com_limelight_framegen_FramegenInterceptor_nativeSetOutputSurface(
             return;
         }
     }
-    // Pipeline 持有所有权 + 旧窗口由它 release。
+    // FramegenPipeline owns and releases the previous native window reference.
     FramegenPipeline::setOutputWindow(win);
 }
 

@@ -310,4 +310,57 @@
     <string name="float_ball_action_none">無動作</string>
     <string name="float_ball_action_open_keyboard">顯示虛擬鍵盤</string>
     <string name="float_ball_action_open_menu">顯示遊戲選單</string>
+    <string name="perf_fps_info">Rx FPS：接收幀率\n• 從主機接收的視訊幀數\n• 理想情況下應該穩定\n\nRd FPS：渲染幀率\n• 用戶端解碼路徑實際渲染的幀數\n• 可能因裝置效能而降低\n\nFG FPS：插幀後幀率估算\n• 插幀增強啟用時顯示\n• 根據渲染幀率和目前輸出倍數估算\n\n效能指標：\n• Rx/Rd 接近表示解碼與渲染表現良好\n• FG 幀率過低可能影響插幀流暢度</string>
+    <!-- 插幀增強 -->
+    <string name="title_developer_unlock">解鎖開發者功能</string>
+    <string name="summary_developer_unlock_locked">驗證你的 GitHub Star 後即可解鎖開發者功能。</string>
+    <string name="summary_developer_unlock_unlocked">本機已解鎖開發者功能，感謝你支持 Moonlight V+。</string>
+    <string name="message_developer_unlock_required">開發者功能是 Moonlight V+ 的支持者功能。請登入 GitHub，App 會驗證你的帳號是否已經給專案點 Star。</string>
+    <string name="message_developer_unlock_done">本機已解鎖開發者功能。你可以重新驗證 Star，或打開專案頁面。</string>
+    <string name="message_developer_oauth_unconfigured">目前構建沒有配置 GitHub OAuth Client ID，Moonlight V+ 還無法解鎖開發者功能。請在 local.properties 配置 githubOAuthClientId，或在構建時傳入 -PgithubOAuthClientId=... / GITHUB_OAUTH_CLIENT_ID。</string>
+    <string name="message_developer_device_code">1. 打開授權頁並輸入代碼：%1$s\n2. 打開專案頁，給 Moonlight V+ 點 Star。\n3. 授權完成後回到本頁，點擊「已授權，檢查」。\n\n授權頁：%2$s</string>
+    <string name="message_developer_star_not_found">GitHub 授權成功，但還沒有看到這個帳號的 Star。如果你剛剛點過 Star，請稍等片刻後再次驗證。</string>
+    <string name="action_developer_open_project">打開專案</string>
+    <string name="action_developer_open_authorization">打開授權頁</string>
+    <string name="action_developer_check_authorization">已授權，檢查</string>
+    <string name="action_developer_verify_star">驗證 GitHub Star</string>
+    <string name="toast_developer_unlocked">開發者功能已解鎖，感謝你的 Star。</string>
+    <string name="toast_developer_oauth_unconfigured">目前構建未配置 GitHub OAuth Client ID。</string>
+    <string name="toast_developer_verification_started">正在開始解鎖開發者功能…</string>
+    <string name="toast_developer_verification_running">開發者功能解鎖已經在進行中。</string>
+    <string name="toast_developer_authorization_pending">還沒有收到 GitHub 授權，請稍後再試。</string>
+    <string name="toast_developer_verification_expired">GitHub 授權已過期，請重新開始驗證。</string>
+    <string name="toast_developer_verification_failed">開發者功能解鎖失敗：%1$s</string>
+    <string name="toast_developer_open_project_failed">無法打開專案頁面：%1$s</string>
+    <string name="title_framegen_enabled">插幀增強</string>
+    <string name="summary_framegen_enabled">在手機端生成額外幀，讓串流更順滑。想輸出 120Hz 時請把串流幀率設為 60 FPS；超過目標刷新率一半的設定不會提升插幀效果。</string>
+    <string name="summary_framegen_enabled_locked">請先解鎖開發者功能，再啟用插幀增強。</string>
+    <string name="summary_framegen_enabled_needs_dll">請先匯入插幀引擎檔案，然後在下一次串流中啟用。</string>
+    <string name="title_framegen_quality_preset">插幀畫質</string>
+    <string name="summary_framegen_quality_preset">選擇流暢度與清晰度的平衡。</string>
+    <string name="framegen_quality_performance">性能優先（推薦）</string>
+    <string name="framegen_quality_balanced">均衡</string>
+    <string name="framegen_quality_clarity">清晰優先</string>
+    <string name="framegen_quality_custom">自訂</string>
+    <string name="title_framegen_selftest">檢查裝置支援</string>
+    <string name="summary_framegen_selftest">插幀無法啟用或畫面異常時使用。</string>
+    <string name="title_framegen_pick_lossless_dll">匯入插幀引擎檔案</string>
+    <string name="summary_framegen_pick_lossless_dll">首次使用前必須匯入。請先把 Lossless.dll 複製到手機，再在這裡選擇。</string>
+    <string name="summary_framegen_pick_lossless_dll_selected">插幀引擎已準備好：%1$s
+再次點擊可重新匯入。</string>
+    <string name="toast_framegen_selftest_result">裝置支援檢查：%1$s</string>
+    <string name="toast_framegen_enabled_warning">插幀增強將在下次串流時啟用。想輸出 120Hz 時請把串流幀率設為 60 FPS。</string>
+    <string name="toast_framegen_stream_enabled">本次串流已啟用插幀增強。</string>
+    <string name="toast_framegen_unavailable">目前裝置不支援插幀增強，需要 Android 10+、arm64-v8a 與 Vulkan 1.1。</string>
+    <string name="toast_framegen_need_lossless_dll">請先匯入 Lossless.dll，再啟用插幀增強。</string>
+    <string name="toast_framegen_lossless_dll_copying">正在匯入插幀引擎…</string>
+    <string name="toast_framegen_lossless_dll_probe_result">插幀引擎檢查：%1$s</string>
+    <string name="toast_framegen_lossless_dll_pick_failed">無法匯入 Lossless.dll：%1$s</string>
+    <string name="title_framegen_internal_width">自訂渲染寬度</string>
+    <string name="summary_framegen_internal_width">進階調校項。數值越低越穩定，數值越高越清晰。</string>
+    <string name="suffix_framegen_pixels">px</string>
+    <string name="title_framegen_slow_threshold_ms">流暢度保護</string>
+    <string name="summary_framegen_slow_threshold_ms">僅自訂模式顯示。插幀變慢時會自動回退直通渲染，預設：18 ms。</string>
+    <string name="title_framegen_present_real_first">運動節奏修正</string>
+    <string name="summary_framegen_present_real_first">僅在畫面節奏不穩時嘗試，預設關閉。</string>
 </resources>

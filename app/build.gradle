@@ -3,6 +3,24 @@ plugins {
     alias(libs.plugins.kotlin.android)
 }
 
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withInputStream { stream ->
+        localProperties.load(stream)
+    }
+}
+
+def githubOAuthClientId = (
+        project.findProperty("githubOAuthClientId")
+                ?: localProperties.getProperty("githubOAuthClientId")
+                ?: System.getenv("GITHUB_OAUTH_CLIENT_ID")
+                ?: ""
+).toString().trim()
+def escapeBuildConfigString = { value ->
+    value.replace("\\", "\\\\").replace("\"", "\\\"")
+}
+
 // 仅在存在 google-services.json 且满足条件时应用 Google Services 插件
 def hasGoogleServicesJson = file('google-services.json').exists()
 if (hasGoogleServicesJson && (project.hasProperty('enableAnalytics') || gradle.startParameter.taskNames.any { it.contains('Release') })) {
@@ -26,6 +44,11 @@ android {
 
         versionName "12.9.6"
         versionCode = 384
+
+        // Optional GitHub OAuth App client ID. Enable Device Flow on the OAuth app,
+        // then set githubOAuthClientId in local.properties, pass -PgithubOAuthClientId=...,
+        // or set GITHUB_OAUTH_CLIENT_ID in the environment.
+        buildConfigField "String", "GITHUB_OAUTH_CLIENT_ID", "\"${escapeBuildConfigString(githubOAuthClientId)}\""
 
         // Generate native debug symbols to allow Google Play to symbolicate our native crashes
         ndk.debugSymbolLevel = 'FULL'

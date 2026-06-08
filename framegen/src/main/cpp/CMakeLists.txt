@@ -95,6 +95,7 @@ function(framegen_compile_shader SHADER_NAME)
 endfunction()
 
 framegen_compile_shader(yuv_to_rgba)
+framegen_compile_shader(rgba_upscale)
 
 target_include_directories(moonlight-framegen PRIVATE "${SHADER_GEN_DIR}")
 

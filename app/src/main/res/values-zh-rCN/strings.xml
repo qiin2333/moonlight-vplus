@@ -701,7 +701,7 @@
     <string name="perf_decoder_title">🎬 解码器信息</string>
     <string name="perf_decoder_info">解码器负责将视频流解码为可显示的图像。\n\n常见解码器：\n• H.264 (AVC) - 兼容性最好\n• H.265 (HEVC) - 压缩率更高\n• AV1 - 最新标准，效率最高\n\nHDR支持：\n• 高动态范围视频\n• 更丰富的色彩表现\n• 需要硬件支持</string>
     <string name="perf_fps_title">📊 帧率信息</string>
-    <string name="perf_fps_info">Rx FPS：接收帧率\n• 从主机接收的视频帧数\n• 理想情况下应该稳定\n\nRd FPS：渲染帧率\n• 实际渲染到屏幕的帧数\n• 可能因设备性能而降低\n\n性能指标：\n• 两者接近表示性能良好\n• 渲染帧率过低可能影响流畅度</string>
+    <string name="perf_fps_info">Rx FPS：接收帧率\n• 从主机接收的视频帧数\n• 理想情况下应该稳定\n\nRd FPS：渲染帧率\n• 客户端解码路径实际渲染的帧数\n• 可能因设备性能而降低\n\nFG FPS：插帧后帧率估算\n• 插帧增强启用时显示\n• 根据渲染帧率和当前输出倍数估算\n\n性能指标：\n• Rx/Rd 接近表示解码与渲染表现良好\n• FG 帧率过低可能影响插帧流畅度</string>
     <string name="perf_packet_loss_title">📶 丢包率信息</string>
     <string name="perf_packet_loss_info" formatted="false">丢包率表示网络传输中丢失的数据包比例。\n\n正常范围：\n• 0–0.5%：网络质量优秀\n• 0.5–2%：网络质量良好\n• 2–5%：网络质量一般\n• &gt;5%：网络质量较差\n\n影响因素：\n• 网络稳定性\n• 路由器性能\n• 无线信号强度</string>
     <string name="perf_network_latency_title">🌐 网络延迟信息</string>
@@ -1228,4 +1228,56 @@
     <string name="seekbar_decrease">减小</string>
     <string name="seekbar_increase">增大</string>
 
+    <!-- 插帧增强 -->
+    <string name="title_developer_unlock">解锁开发者功能</string>
+    <string name="summary_developer_unlock_locked">验证你的 GitHub Star 后即可解锁开发者功能。</string>
+    <string name="summary_developer_unlock_unlocked">本机已解锁开发者功能，感谢你支持 Moonlight V+。</string>
+    <string name="message_developer_unlock_required">开发者功能是 Moonlight V+ 的支持者功能。请登录 GitHub，App 会验证你的账号是否已经给项目点 Star。</string>
+    <string name="message_developer_unlock_done">本机已解锁开发者功能。你可以重新验证 Star，或打开项目页面。</string>
+    <string name="message_developer_oauth_unconfigured">当前构建没有配置 GitHub OAuth Client ID，Moonlight V+ 还无法解锁开发者功能。请在 local.properties 配置 githubOAuthClientId，或在构建时传入 -PgithubOAuthClientId=... / GITHUB_OAUTH_CLIENT_ID。</string>
+    <string name="message_developer_device_code">1. 打开授权页并输入代码：%1$s\n2. 打开项目页，给 Moonlight V+ 点 Star。\n3. 授权完成后回到本页，点击“已授权，检查”。\n\n授权页：%2$s</string>
+    <string name="message_developer_star_not_found">GitHub 授权成功，但还没有看到这个账号的 Star。如果你刚刚点过 Star，请稍等片刻后再次验证。</string>
+    <string name="action_developer_open_project">打开项目</string>
+    <string name="action_developer_open_authorization">打开授权页</string>
+    <string name="action_developer_check_authorization">已授权，检查</string>
+    <string name="action_developer_verify_star">验证 GitHub Star</string>
+    <string name="toast_developer_unlocked">开发者功能已解锁，感谢你的 Star。</string>
+    <string name="toast_developer_oauth_unconfigured">当前构建未配置 GitHub OAuth Client ID。</string>
+    <string name="toast_developer_verification_started">正在开始解锁开发者功能…</string>
+    <string name="toast_developer_verification_running">开发者功能解锁已经在进行中。</string>
+    <string name="toast_developer_authorization_pending">还没有收到 GitHub 授权，请稍后再试。</string>
+    <string name="toast_developer_verification_expired">GitHub 授权已过期，请重新开始验证。</string>
+    <string name="toast_developer_verification_failed">开发者功能解锁失败：%1$s</string>
+    <string name="toast_developer_open_project_failed">无法打开项目页面：%1$s</string>
+    <string name="title_framegen_enabled">插帧增强</string>
+    <string name="summary_framegen_enabled">在手机端生成额外帧，让串流更顺滑。想输出 120Hz 时请把串流帧率设为 60 FPS；超过目标刷新率一半的设置不会提升插帧效果。</string>
+    <string name="summary_framegen_enabled_locked">请先解锁开发者功能，再启用插帧增强。</string>
+    <string name="summary_framegen_enabled_needs_dll">请先导入插帧引擎文件，然后在下一次串流中启用。</string>
+    <string name="title_framegen_quality_preset">插帧画质</string>
+    <string name="summary_framegen_quality_preset">选择流畅度与清晰度的平衡。</string>
+    <string name="framegen_quality_performance">性能优先（推荐）</string>
+    <string name="framegen_quality_balanced">均衡</string>
+    <string name="framegen_quality_clarity">清晰优先</string>
+    <string name="framegen_quality_custom">自定义</string>
+    <string name="title_framegen_selftest">检查设备支持</string>
+    <string name="summary_framegen_selftest">插帧无法启用或画面异常时使用。</string>
+    <string name="title_framegen_pick_lossless_dll">导入插帧引擎文件</string>
+    <string name="summary_framegen_pick_lossless_dll">首次使用前必须导入。请先把 Lossless.dll 复制到手机，再在这里选择。</string>
+    <string name="summary_framegen_pick_lossless_dll_selected">插帧引擎已准备好：%1$s
+再次点击可重新导入。</string>
+    <string name="toast_framegen_selftest_result">设备支持检查：%1$s</string>
+    <string name="toast_framegen_enabled_warning">插帧增强将在下次串流时启用。想输出 120Hz 时请把串流帧率设为 60 FPS。</string>
+    <string name="toast_framegen_stream_enabled">本次串流已启用插帧增强。</string>
+    <string name="toast_framegen_unavailable">当前设备不支持插帧增强，需要 Android 10+、arm64-v8a 与 Vulkan 1.1。</string>
+    <string name="toast_framegen_need_lossless_dll">请先导入 Lossless.dll，再启用插帧增强。</string>
+    <string name="toast_framegen_lossless_dll_copying">正在导入插帧引擎…</string>
+    <string name="toast_framegen_lossless_dll_probe_result">插帧引擎检查：%1$s</string>
+    <string name="toast_framegen_lossless_dll_pick_failed">无法导入 Lossless.dll：%1$s</string>
+    <string name="title_framegen_internal_width">自定义渲染宽度</string>
+    <string name="summary_framegen_internal_width">高级调校项。数值越低越稳定，数值越高越清晰。</string>
+    <string name="suffix_framegen_pixels">px</string>
+    <string name="title_framegen_slow_threshold_ms">流畅度保护</string>
+    <string name="summary_framegen_slow_threshold_ms">仅自定义模式显示。插帧变慢时会自动回退直通渲染，默认：18 ms。</string>
+    <string name="title_framegen_present_real_first">运动节奏修正</string>
+    <string name="summary_framegen_present_real_first">仅在画面节奏不稳时尝试，默认关闭。</string>
 </resources>

@@ -110,8 +110,6 @@ class StreamSettings : AppCompatActivity() {
     companion object {
         private const val KEY_SELECTED_CATEGORY = "selected_category_index"
         private const val REQUEST_CODE_PICK_FRAMEGEN_DLL = 4
-        private const val PREF_FRAMEGEN_DLL_URI = "pref_framegen_lossless_dll_uri"
-        private const val PREF_FRAMEGEN_DLL_STAGED_PATH = "pref_framegen_lossless_dll_staged_path"
 
         // HACK for Android 9
         var displayCutoutP: DisplayCutout? = null
@@ -758,6 +756,15 @@ class StreamSettings : AppCompatActivity() {
         private var categoryPositions: IntArray = IntArray(0)
         private var categoryPositionsValid = false
         private var adapterDataObserver: RecyclerView.AdapterDataObserver? = null
+        @Volatile
+        private var developerUnlockVerificationRunning = false
+        @Volatile
+        private var developerPendingDeviceCode: GitHubStarVerifier.DeviceCode? = null
+        @Volatile
+        private var developerLastForegroundPollMs = 0L
+        @Volatile
+        private var developerForegroundPollRunning = false
+        private var developerDeviceCodeDialog: AlertDialog? = null
 
         /**
          * 获取目标显示器（优先使用外接显示器）
@@ -1301,6 +1308,11 @@ class StreamSettings : AppCompatActivity() {
             super.onDestroyView()
         }
 
+        override fun onResume() {
+            super.onResume()
+            resumeDeveloperUnlockVerificationIfPending()
+        }
+
         /**
          * 一次性扫描 adapter，建立 category preference -> position 的映射缓存。
          * 避免每个滚动帧都做 O(categories * itemCount) 全表扫描。
@@ -1410,59 +1422,7 @@ class StreamSettings : AppCompatActivity() {
             setPreferencesFromResource(R.xml.preferences, rootKey)
             val screen = preferenceScreen
 
-            // ---- Framegen 自检按钮（阶段 2）----
-            // 点击立即调用 native 桥，结果以 Toast + Logcat (TAG=Framegen) 返回。
-            // 用 setOnPreferenceClickListener 而非 :app 直接依赖 :framegen 的 native API —— 这条路径
-            // 已经通过 isAvailable() 自动降级，不会在不支持的设备上炸。
-            findPreference<Preference>("pref_framegen_selftest")?.let { pref ->
-                pref.setOnPreferenceClickListener {
-                    val ctx = requireContext()
-                    val result = if (com.limelight.framegen.FramegenInterceptor.isAvailable()) {
-                        com.limelight.framegen.FramegenInterceptor().selfTest()
-                    } else {
-                        ctx.getString(R.string.toast_framegen_unavailable)
-                    }
-                    Toast.makeText(
-                        ctx,
-                        ctx.getString(R.string.toast_framegen_selftest_result, result),
-                        Toast.LENGTH_LONG
-                    ).show()
-                    true
-                }
-            }
-            findPreference<Preference>("pref_framegen_pick_lossless_dll")?.let { pref ->
-                pref.setOnPreferenceClickListener {
-                    val ctx = requireContext()
-                    if (!com.limelight.framegen.FramegenInterceptor.isAvailable()) {
-                        Toast.makeText(ctx, R.string.toast_framegen_unavailable, Toast.LENGTH_LONG).show()
-                        return@setOnPreferenceClickListener true
-                    }
-
-                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                        addCategory(Intent.CATEGORY_OPENABLE)
-                        type = "*/*"
-                    }
-                    @Suppress("DEPRECATION")
-                    startActivityForResult(intent, REQUEST_CODE_PICK_FRAMEGEN_DLL)
-                    true
-                }
-            }
-            // 开关切换 ON 时给一次警告 Toast，让用户清楚阶段 2 还没接流水线。
-            findPreference<Preference>("checkbox_framegen_enabled")?.let { pref ->
-                pref.onPreferenceChangeListener =
-                    Preference.OnPreferenceChangeListener { _, newValue ->
-                        if (newValue == true) {
-                            val ctx = requireContext()
-                            if (!com.limelight.framegen.FramegenInterceptor.isAvailable()) {
-                                Toast.makeText(ctx, R.string.toast_framegen_unavailable, Toast.LENGTH_LONG).show()
-                                return@OnPreferenceChangeListener false
-                            }
-                            Toast.makeText(ctx, R.string.toast_framegen_enabled_warning, Toast.LENGTH_LONG).show()
-                        }
-                        true
-                    }
-            }
-            updateFramegenDllPreferenceSummary()
+            setupFramegenPreferences()
 
             // 让所有 ListPreference 在 summary 顶部显示当前选中值，
             // 避免用户必须点开才知道现值。原 summary 作为说明保留在第二行。
@@ -2118,8 +2078,7 @@ class StreamSettings : AppCompatActivity() {
                                 "staged Lossless.dll path=${stagedFile.absolutePath} size=${stagedFile.length()}"
                             )
                             prefs.edit {
-                                putString(PREF_FRAMEGEN_DLL_URI, dllUri.toString())
-                                putString(PREF_FRAMEGEN_DLL_STAGED_PATH, stagedFile.absolutePath)
+                                putString(FramegenSettings.PREF_LOSSLESS_DLL_STAGED_PATH, stagedFile.absolutePath)
                             }
 
                             com.limelight.framegen.FramegenInterceptor().probeLosslessDll(stagedFile.absolutePath)
@@ -2134,6 +2093,7 @@ class StreamSettings : AppCompatActivity() {
                         activity?.runOnUiThread {
                             if (isAdded) {
                                 updateFramegenDllPreferenceSummary()
+                                refreshDeveloperFeatureGateState()
                             }
                             Toast.makeText(
                                 ctx,
@@ -2156,10 +2116,488 @@ class StreamSettings : AppCompatActivity() {
             }
         }
 
+        private fun setupFramegenPreferences() {
+            DeveloperUnlockSettings.migrateLegacyPrefs(
+                PreferenceManager.getDefaultSharedPreferences(requireContext())
+            )
+            setupDeveloperUnlockPreference()
+            setupFramegenSelfTestPreference()
+            setupFramegenLosslessDllPreference()
+            setupFramegenEnabledPreference()
+            setupFramegenQualityPreference()
+            refreshDeveloperFeatureGateState()
+            updateFramegenDllPreferenceSummary()
+        }
+
+        private fun setupDeveloperUnlockPreference() {
+            findPreference<Preference>(DeveloperUnlockSettings.PREF_ENTRY)?.setOnPreferenceClickListener {
+                showDeveloperUnlockDialog()
+                true
+            }
+        }
+
+        private fun setupFramegenSelfTestPreference() {
+            findPreference<Preference>("pref_framegen_selftest")?.setOnPreferenceClickListener {
+                val ctx = requireContext()
+                val result = if (com.limelight.framegen.FramegenInterceptor.isAvailable()) {
+                    com.limelight.framegen.FramegenInterceptor().selfTest()
+                } else {
+                    ctx.getString(R.string.toast_framegen_unavailable)
+                }
+                Toast.makeText(
+                    ctx,
+                    ctx.getString(R.string.toast_framegen_selftest_result, result),
+                    Toast.LENGTH_LONG
+                ).show()
+                true
+            }
+        }
+
+        private fun setupFramegenLosslessDllPreference() {
+            findPreference<Preference>("pref_framegen_pick_lossless_dll")?.setOnPreferenceClickListener {
+                val ctx = requireContext()
+                if (!com.limelight.framegen.FramegenInterceptor.isAvailable()) {
+                    Toast.makeText(ctx, R.string.toast_framegen_unavailable, Toast.LENGTH_LONG).show()
+                    return@setOnPreferenceClickListener true
+                }
+
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "*/*"
+                }
+                @Suppress("DEPRECATION")
+                startActivityForResult(intent, REQUEST_CODE_PICK_FRAMEGEN_DLL)
+                true
+            }
+        }
+
+        private fun setupFramegenEnabledPreference() {
+            findPreference<CheckBoxPreference>(FramegenSettings.PREF_ENABLED)?.onPreferenceChangeListener =
+                Preference.OnPreferenceChangeListener { _, newValue ->
+                    if (newValue == true) {
+                        val ctx = requireContext()
+                        val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
+                        if (!DeveloperUnlockSettings.isUnlocked(prefs)) {
+                            showDeveloperUnlockDialog()
+                            return@OnPreferenceChangeListener false
+                        }
+                        if (!FramegenSettings.isLosslessDllReady(prefs)) {
+                            Toast.makeText(ctx, R.string.toast_framegen_need_lossless_dll, Toast.LENGTH_LONG).show()
+                            updateFramegenDllPreferenceSummary()
+                            return@OnPreferenceChangeListener false
+                        }
+                        if (!com.limelight.framegen.FramegenInterceptor.isAvailable()) {
+                            Toast.makeText(ctx, R.string.toast_framegen_unavailable, Toast.LENGTH_LONG).show()
+                            return@OnPreferenceChangeListener false
+                        }
+                        Toast.makeText(ctx, R.string.toast_framegen_enabled_warning, Toast.LENGTH_LONG).show()
+                    }
+                    true
+                }
+        }
+
+        private fun setupFramegenQualityPreference() {
+            findPreference<ListPreference>(FramegenSettings.PREF_QUALITY_PRESET)?.onPreferenceChangeListener =
+                Preference.OnPreferenceChangeListener { _, newValue ->
+                    updateFramegenQualityVisibility(newValue as? String)
+                    true
+                }
+            updateFramegenQualityVisibility(
+                PreferenceManager.getDefaultSharedPreferences(requireContext())
+                    .getString(FramegenSettings.PREF_QUALITY_PRESET, null)
+            )
+        }
+
+        private fun refreshDeveloperFeatureGateState() {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
+            val unlocked = DeveloperUnlockSettings.isUnlocked(prefs)
+            val dllReady = FramegenSettings.isLosslessDllReady(prefs)
+
+            findPreference<Preference>(DeveloperUnlockSettings.PREF_ENTRY)?.summary =
+                getString(
+                    if (unlocked) {
+                        R.string.summary_developer_unlock_unlocked
+                    } else {
+                        R.string.summary_developer_unlock_locked
+                    }
+                )
+
+            findPreference<CheckBoxPreference>(FramegenSettings.PREF_ENABLED)?.let { pref ->
+                pref.isEnabled = unlocked && dllReady
+                if ((!unlocked || !dllReady) && pref.isChecked) {
+                    pref.isChecked = false
+                    prefs.edit { putBoolean(FramegenSettings.PREF_ENABLED, false) }
+                }
+                pref.summary = getString(
+                    when {
+                        !unlocked -> R.string.summary_framegen_enabled_locked
+                        !dllReady -> R.string.summary_framegen_enabled_needs_dll
+                        else -> R.string.summary_framegen_enabled
+                    }
+                )
+            }
+        }
+
+        private fun updateFramegenQualityVisibility(selectedPreset: String?) {
+            val showCustomWidth = selectedPreset == FramegenSettings.QUALITY_CUSTOM
+            findPreference<Preference>(FramegenSettings.PREF_INTERNAL_WIDTH)?.isVisible = showCustomWidth
+            findPreference<Preference>(FramegenSettings.PREF_SLOW_THRESHOLD_MS)?.isVisible = showCustomWidth
+            findPreference<Preference>(FramegenSettings.PREF_PRESENT_REAL_FIRST)?.isVisible = showCustomWidth
+        }
+
+        private fun showDeveloperUnlockDialog() {
+            val ctx = requireContext()
+            val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
+            val alreadyUnlocked = DeveloperUnlockSettings.isUnlocked(prefs)
+            if (!GitHubStarVerifier.isConfigured()) {
+                AlertDialog.Builder(ctx)
+                    .setTitle(R.string.title_developer_unlock)
+                    .setMessage(R.string.message_developer_oauth_unconfigured)
+                    .setPositiveButton(R.string.action_developer_open_project) { _, _ ->
+                        openDeveloperProjectPage()
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+                return
+            }
+
+            if (!alreadyUnlocked) {
+                val pendingDeviceCode = loadDeveloperPendingDeviceCode(ctx.applicationContext)
+                if (pendingDeviceCode != null) {
+                    developerPendingDeviceCode = pendingDeviceCode
+                    showDeveloperDeviceCodeDialog(pendingDeviceCode)
+                    pollDeveloperPendingDeviceCode(showPendingToast = false, enforceThrottle = true)
+                    return
+                }
+            }
+
+            AlertDialog.Builder(ctx)
+                .setTitle(R.string.title_developer_unlock)
+                .setMessage(
+                    if (alreadyUnlocked) {
+                        R.string.message_developer_unlock_done
+                    } else {
+                        R.string.message_developer_unlock_required
+                    }
+                )
+                .setPositiveButton(R.string.action_developer_verify_star) { _, _ ->
+                    startDeveloperUnlockVerification()
+                }
+                .setNeutralButton(R.string.action_developer_open_project) { _, _ ->
+                    openDeveloperProjectPage()
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
+
+        private fun startDeveloperUnlockVerification() {
+            val ctx = requireContext().applicationContext
+            val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
+            if (developerUnlockVerificationRunning) {
+                Toast.makeText(ctx, R.string.toast_developer_verification_running, Toast.LENGTH_LONG).show()
+                return
+            }
+            if (!GitHubStarVerifier.isConfigured()) {
+                Toast.makeText(ctx, R.string.toast_developer_oauth_unconfigured, Toast.LENGTH_LONG).show()
+                return
+            }
+
+            val savedToken = prefs.getString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, null)
+            if (savedToken.isNullOrBlank()) {
+                val pendingDeviceCode = loadDeveloperPendingDeviceCode(ctx)
+                if (pendingDeviceCode != null) {
+                    developerPendingDeviceCode = pendingDeviceCode
+                    showDeveloperDeviceCodeDialog(pendingDeviceCode)
+                    pollDeveloperPendingDeviceCode(showPendingToast = false, enforceThrottle = true)
+                    return
+                }
+            }
+
+            developerUnlockVerificationRunning = true
+            Toast.makeText(ctx, R.string.toast_developer_verification_started, Toast.LENGTH_LONG).show()
+            thread(name = "DeveloperGitHubStarVerify") {
+                try {
+                    if (!savedToken.isNullOrBlank()) {
+                        completeDeveloperUnlockVerification(
+                            ctx = ctx,
+                            accessToken = savedToken,
+                            starCheck = GitHubStarVerifier.checkStar(savedToken)
+                        )
+                        return@thread
+                    }
+
+                    val deviceCode = GitHubStarVerifier.requestDeviceCode()
+                    developerPendingDeviceCode = deviceCode
+                    saveDeveloperPendingDeviceCode(ctx, deviceCode)
+                    Log.i(
+                        "DeveloperUnlock",
+                        "GitHub star device code requested: userCode=${deviceCode.userCode}, " +
+                            "interval=${deviceCode.intervalSeconds}s, expires=${deviceCode.expiresInSeconds}s"
+                    )
+                    activity?.runOnUiThread {
+                        if (isAdded) {
+                            showDeveloperDeviceCodeDialog(deviceCode)
+                        }
+                    }
+                    developerUnlockVerificationRunning = false
+                } catch (e: Exception) {
+                    Log.e("DeveloperUnlock", "GitHub star verification failed", e)
+                    failDeveloperUnlockVerification(ctx, e.message ?: e.javaClass.simpleName)
+                }
+            }
+        }
+
+        private fun resumeDeveloperUnlockVerificationIfPending() {
+            pollDeveloperPendingDeviceCode(showPendingToast = false, enforceThrottle = true)
+        }
+
+        private fun pollDeveloperPendingDeviceCode(showPendingToast: Boolean, enforceThrottle: Boolean) {
+            val ctx = requireContext().applicationContext
+            val deviceCode = developerPendingDeviceCode ?: loadDeveloperPendingDeviceCode(ctx)
+            if (deviceCode == null) {
+                if (showPendingToast) {
+                    Toast.makeText(ctx, R.string.toast_developer_verification_expired, Toast.LENGTH_LONG).show()
+                }
+                return
+            }
+            developerPendingDeviceCode = deviceCode
+            developerUnlockVerificationRunning = true
+            if (developerForegroundPollRunning) {
+                if (showPendingToast) {
+                    Toast.makeText(ctx, R.string.toast_developer_verification_running, Toast.LENGTH_LONG).show()
+                }
+                return
+            }
+
+            val nowMs = System.currentTimeMillis()
+            if (enforceThrottle && nowMs - developerLastForegroundPollMs < 1500L) {
+                return
+            }
+            developerLastForegroundPollMs = nowMs
+            developerForegroundPollRunning = true
+
+            thread(name = "DeveloperGitHubStarVerifyResume") {
+                try {
+                    Log.i("DeveloperUnlock", "GitHub star verification foreground poll, manual=$showPendingToast")
+                    when (val poll = GitHubStarVerifier.pollAccessToken(deviceCode)) {
+                        is GitHubStarVerifier.TokenPollResult.Authorized -> {
+                            Log.i("DeveloperUnlock", "GitHub star device flow authorized from foreground poll")
+                            completeDeveloperUnlockVerification(
+                                ctx = ctx,
+                                accessToken = poll.accessToken,
+                                starCheck = GitHubStarVerifier.checkStar(poll.accessToken)
+                            )
+                        }
+                        GitHubStarVerifier.TokenPollResult.Pending -> {
+                            Log.i("DeveloperUnlock", "GitHub star verification still pending")
+                            if (showPendingToast) {
+                                showDeveloperUnlockToast(R.string.toast_developer_authorization_pending)
+                            }
+                        }
+                        is GitHubStarVerifier.TokenPollResult.SlowDown -> {
+                            Log.i("DeveloperUnlock", "GitHub star foreground poll slowed down to ${poll.intervalSeconds}s")
+                            if (showPendingToast) {
+                                showDeveloperUnlockToast(R.string.toast_developer_authorization_pending)
+                            }
+                        }
+                        is GitHubStarVerifier.TokenPollResult.Failed -> {
+                            failDeveloperUnlockVerification(ctx, poll.message)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("DeveloperUnlock", "GitHub star foreground verification failed", e)
+                    failDeveloperUnlockVerification(ctx, e.message ?: e.javaClass.simpleName)
+                } finally {
+                    developerForegroundPollRunning = false
+                    if (developerPendingDeviceCode != null) {
+                        developerUnlockVerificationRunning = false
+                    }
+                }
+            }
+        }
+
+        private fun showDeveloperUnlockToast(messageResId: Int) {
+            activity?.runOnUiThread {
+                if (isAdded) {
+                    Toast.makeText(requireContext(), messageResId, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+
+        private fun saveDeveloperPendingDeviceCode(ctx: Context, deviceCode: GitHubStarVerifier.DeviceCode) {
+            val expiresAtMs = System.currentTimeMillis() + deviceCode.expiresInSeconds * 1000L
+            PreferenceManager.getDefaultSharedPreferences(ctx).edit {
+                putString(DeveloperUnlockSettings.PREF_PENDING_DEVICE_CODE, deviceCode.deviceCode)
+                putString(DeveloperUnlockSettings.PREF_PENDING_USER_CODE, deviceCode.userCode)
+                putString(DeveloperUnlockSettings.PREF_PENDING_VERIFICATION_URI, deviceCode.verificationUri)
+                putString(
+                    DeveloperUnlockSettings.PREF_PENDING_VERIFICATION_URI_COMPLETE,
+                    deviceCode.verificationUriComplete
+                )
+                putLong(DeveloperUnlockSettings.PREF_PENDING_EXPIRES_AT_MS, expiresAtMs)
+                putInt(DeveloperUnlockSettings.PREF_PENDING_INTERVAL_SECONDS, deviceCode.intervalSeconds)
+            }
+        }
+
+        private fun loadDeveloperPendingDeviceCode(ctx: Context): GitHubStarVerifier.DeviceCode? {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
+            val expiresAtMs = prefs.getLong(DeveloperUnlockSettings.PREF_PENDING_EXPIRES_AT_MS, 0L)
+            val remainingSeconds = ((expiresAtMs - System.currentTimeMillis()) / 1000L).toInt()
+            if (remainingSeconds <= 0) {
+                clearDeveloperPendingDeviceCode(ctx)
+                return null
+            }
+
+            val deviceCode = prefs.getString(DeveloperUnlockSettings.PREF_PENDING_DEVICE_CODE, null)
+            val userCode = prefs.getString(DeveloperUnlockSettings.PREF_PENDING_USER_CODE, null)
+            val verificationUri = prefs.getString(DeveloperUnlockSettings.PREF_PENDING_VERIFICATION_URI, null)
+            if (deviceCode.isNullOrBlank() || userCode.isNullOrBlank() || verificationUri.isNullOrBlank()) {
+                clearDeveloperPendingDeviceCode(ctx)
+                return null
+            }
+
+            Log.i("DeveloperUnlock", "GitHub star verification restored pending device code: userCode=$userCode")
+            return GitHubStarVerifier.DeviceCode(
+                deviceCode = deviceCode,
+                userCode = userCode,
+                verificationUri = verificationUri,
+                verificationUriComplete = prefs.getString(
+                    DeveloperUnlockSettings.PREF_PENDING_VERIFICATION_URI_COMPLETE,
+                    null
+                )?.takeIf { it.isNotBlank() },
+                expiresInSeconds = remainingSeconds,
+                intervalSeconds = prefs.getInt(DeveloperUnlockSettings.PREF_PENDING_INTERVAL_SECONDS, 5)
+                    .coerceAtLeast(1)
+            )
+        }
+
+        private fun clearDeveloperPendingDeviceCode(ctx: Context) {
+            developerPendingDeviceCode = null
+            PreferenceManager.getDefaultSharedPreferences(ctx).edit {
+                remove(DeveloperUnlockSettings.PREF_PENDING_DEVICE_CODE)
+                remove(DeveloperUnlockSettings.PREF_PENDING_USER_CODE)
+                remove(DeveloperUnlockSettings.PREF_PENDING_VERIFICATION_URI)
+                remove(DeveloperUnlockSettings.PREF_PENDING_VERIFICATION_URI_COMPLETE)
+                remove(DeveloperUnlockSettings.PREF_PENDING_EXPIRES_AT_MS)
+                remove(DeveloperUnlockSettings.PREF_PENDING_INTERVAL_SECONDS)
+            }
+        }
+
+        private fun showDeveloperDeviceCodeDialog(deviceCode: GitHubStarVerifier.DeviceCode) {
+            developerDeviceCodeDialog?.dismiss()
+            val dialog = AlertDialog.Builder(requireContext())
+                .setTitle(R.string.title_developer_unlock)
+                .setMessage(
+                    getString(
+                        R.string.message_developer_device_code,
+                        deviceCode.userCode,
+                        deviceCode.verificationUri
+                    )
+                )
+                .setPositiveButton(R.string.action_developer_open_authorization, null)
+                .setNeutralButton(R.string.action_developer_check_authorization, null)
+                .setNegativeButton(android.R.string.cancel) { _, _ ->
+                    developerUnlockVerificationRunning = false
+                    clearDeveloperPendingDeviceCode(requireContext().applicationContext)
+                }
+                .create()
+            dialog.setOnShowListener {
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                    openDeveloperUrl(deviceCode.verificationUriComplete ?: deviceCode.verificationUri)
+                }
+                dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                    pollDeveloperPendingDeviceCode(showPendingToast = true, enforceThrottle = false)
+                }
+            }
+            dialog.setOnDismissListener {
+                if (developerDeviceCodeDialog === dialog) {
+                    developerDeviceCodeDialog = null
+                }
+            }
+            developerDeviceCodeDialog = dialog
+            dialog.show()
+        }
+
+        private fun completeDeveloperUnlockVerification(
+            ctx: Context,
+            accessToken: String,
+            starCheck: GitHubStarVerifier.StarCheck
+        ) {
+            developerUnlockVerificationRunning = false
+            clearDeveloperPendingDeviceCode(ctx)
+            val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
+            prefs.edit {
+                putString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, accessToken)
+                starCheck.login?.let { putString(DeveloperUnlockSettings.PREF_USER_LOGIN, it) }
+                if (starCheck.starred) {
+                    putBoolean(DeveloperUnlockSettings.PREF_UNLOCKED, true)
+                    putLong(DeveloperUnlockSettings.PREF_VERIFIED_AT_MS, System.currentTimeMillis())
+                } else {
+                    putBoolean(DeveloperUnlockSettings.PREF_UNLOCKED, false)
+                    putLong(DeveloperUnlockSettings.PREF_VERIFIED_AT_MS, 0L)
+                }
+            }
+            Log.i(
+                "DeveloperUnlock",
+                "GitHub star verification completed: starred=${starCheck.starred}, login=${starCheck.login ?: "unknown"}"
+            )
+            activity?.runOnUiThread {
+                if (!isAdded) {
+                    return@runOnUiThread
+                }
+                developerDeviceCodeDialog?.dismiss()
+                refreshDeveloperFeatureGateState()
+
+                if (starCheck.starred) {
+                    Toast.makeText(requireContext(), R.string.toast_developer_unlocked, Toast.LENGTH_LONG).show()
+                } else {
+                    AlertDialog.Builder(requireContext())
+                        .setTitle(R.string.title_developer_unlock)
+                        .setMessage(R.string.message_developer_star_not_found)
+                        .setPositiveButton(R.string.action_developer_open_project) { _, _ ->
+                            openDeveloperProjectPage()
+                        }
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show()
+                }
+            }
+        }
+
+        private fun failDeveloperUnlockVerification(ctx: Context, message: String) {
+            developerUnlockVerificationRunning = false
+            clearDeveloperPendingDeviceCode(ctx)
+            Log.w("DeveloperUnlock", "GitHub star verification failed: $message")
+            activity?.runOnUiThread {
+                if (isAdded) {
+                    Toast.makeText(
+                        requireContext(),
+                        getString(R.string.toast_developer_verification_failed, message),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+
+        private fun openDeveloperProjectPage() {
+            openDeveloperUrl(DeveloperUnlockSettings.GITHUB_REPO_URL)
+        }
+
+        private fun openDeveloperUrl(url: String) {
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+            } catch (e: Exception) {
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.toast_developer_open_project_failed, e.message ?: e.javaClass.simpleName),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+
         private fun updateFramegenDllPreferenceSummary() {
             val pref = findPreference<Preference>("pref_framegen_pick_lossless_dll") ?: return
             val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
-            val stagedPath = prefs.getString(PREF_FRAMEGEN_DLL_STAGED_PATH, null)
+            val stagedPath = prefs.getString(FramegenSettings.PREF_LOSSLESS_DLL_STAGED_PATH, null)
             pref.summary = if (!stagedPath.isNullOrBlank() && File(stagedPath).exists()) {
                 getString(R.string.summary_framegen_pick_lossless_dll_selected, stagedPath)
             } else {

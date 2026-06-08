@@ -25,6 +25,7 @@ import java.nio.ByteOrder
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 class MediaCodecDecoderRenderer(
@@ -113,6 +114,9 @@ class MediaCodecDecoderRenderer(
      */
     @Volatile
     var framegenSurface: android.view.Surface? = null
+    @Volatile
+    private var framegenOutputSwitchPending = false
+    private val framegenOutputSwitchRequested = AtomicBoolean(false)
     @Volatile
     private var stopping = false
     private var reportedCrash = false
@@ -337,6 +341,42 @@ class MediaCodecDecoderRenderer(
 
     fun setRenderTarget(renderTarget: SurfaceHolder) {
         this.renderTarget = renderTarget
+    }
+
+    private fun requestFramegenOutputSurfaceSwitch(reason: String) {
+        if (!framegenOutputSwitchPending || stopping) {
+            return
+        }
+        if (!framegenOutputSwitchRequested.compareAndSet(false, true)) {
+            return
+        }
+
+        val switchAction = Runnable {
+            val targetSurface = framegenSurface
+            val decoder = videoDecoder
+            if (!framegenOutputSwitchPending || stopping || targetSurface == null || decoder == null) {
+                framegenOutputSwitchPending = false
+                return@Runnable
+            }
+
+            val startMs = SystemClock.uptimeMillis()
+            try {
+                decoder.setOutputSurface(targetSurface)
+                framegenOutputSwitchPending = false
+                LimeLog.info(
+                    "Framegen delayed capture switch to ImageReader after $reason " +
+                        "elapsed=${SystemClock.uptimeMillis() - startMs}ms"
+                )
+            } catch (t: Throwable) {
+                framegenOutputSwitchPending = false
+                LimeLog.warning(
+                    "Framegen delayed capture switch failed after $reason: " +
+                        "${t.javaClass.simpleName}: ${t.message}; staying on direct SurfaceView"
+                )
+            }
+        }
+
+        codecCallbackHandler?.post(switchAction) ?: switchAction.run()
     }
 
     init {
@@ -686,9 +726,21 @@ class MediaCodecDecoderRenderer(
         // 阶段 3：framegenSurface 非空时走 ImageReader 截流路径，原 SurfaceView 不再接收帧。
         // 注意：HDR DataSpace 设置仍作用在 renderTarget!!.surface 上 —— 阶段 3.1 暂不
         // 关心 HDR 路径下的截流（一切 framegen 路径强制 SDR 处理）。
-        val outSurface = framegenSurface ?: renderTarget!!.surface
-        if (framegenSurface != null) {
-            LimeLog.info("Framegen capture surface active (decoder output redirected to ImageReader)")
+        val pendingFramegenSurface = framegenSurface
+        framegenOutputSwitchRequested.set(false)
+        framegenOutputSwitchPending =
+            pendingFramegenSurface != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+        val outSurface = if (framegenOutputSwitchPending) {
+            LimeLog.info(
+                "Framegen delayed capture active: decoder starts on SurfaceView " +
+                    "and will switch to ImageReader after first direct frame"
+            )
+            renderTarget!!.surface
+        } else {
+            if (pendingFramegenSurface != null) {
+                LimeLog.info("Framegen capture surface active (decoder output redirected to ImageReader)")
+            }
+            pendingFramegenSurface ?: renderTarget!!.surface
         }
         videoDecoder!!.configure(format, outSurface, null, 0)
 
@@ -878,6 +930,7 @@ class MediaCodecDecoderRenderer(
                 if (!firstFrameDelivered) {
                     firstFrameDelivered = true
                     try { firstFrameCallback?.invoke() } catch (_: Throwable) {}
+                    requestFramegenOutputSurfaceSwitch("first rendered frame")
                 }
 
                 // presentationTimeUs: 我们告诉系统这一帧应该在什么时间点显示
@@ -1208,6 +1261,7 @@ class MediaCodecDecoderRenderer(
                 if (!firstFrameDelivered) {
                     firstFrameDelivered = true
                     try { firstFrameCallback?.invoke() } catch (_: Throwable) {}
+                    requestFramegenOutputSurfaceSwitch("first released frame")
                 }
             } catch (e: IllegalStateException) {
                 handleDecoderException(e)

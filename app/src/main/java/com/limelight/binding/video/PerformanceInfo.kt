@@ -10,6 +10,7 @@ class PerformanceInfo {
     var totalFps: Float = 0f
     var receivedFps: Float = 0f
     var renderedFps: Float = 0f
+    var framegenFps: Float = 0f
     var lostFrameRate: Float = 0f
     var rttInfo: Long = 0
     var framesWithHostProcessingLatency: Int = 0
