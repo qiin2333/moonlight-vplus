@@ -72,6 +72,7 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
+import android.os.SystemClock
 import androidx.preference.PreferenceManager
 import android.util.Rational
 import android.view.Display
@@ -101,10 +102,10 @@ import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.util.Locale
+import kotlin.concurrent.thread
 import kotlin.math.roundToInt
 import androidx.core.content.edit
 import androidx.core.net.toUri
-import java.io.File
 
 class Game : Activity(), SurfaceHolder.Callback,
     OnGenericMotionListener, OnTouchListener, NvConnectionListener, EvdevListener,
@@ -182,12 +183,8 @@ class Game : Activity(), SurfaceHolder.Callback,
     lateinit var keyboardInputHandler: KeyboardInputHandler
 
     private var decoderRenderer: MediaCodecDecoderRenderer? = null
-    /**
-     * Framegen capture handle. Null means disabled, unavailable, or released.
-     * 在 surfaceChanged 里创建（在 setRenderTarget 之前），在 surfaceDestroyed 里 release。
-     */
     private var framegenCapture: FramegenCapture? = null
-    private var framegenStreamHdrEnabled = false
+    private var framegenInputHdrEnabled = false
     private var reportedCrash = false
 
     private var highPerfWifiLock: WifiManager.WifiLock? = null
@@ -605,18 +602,20 @@ class Game : Activity(), SurfaceHolder.Callback,
         get() = PreferenceManager.getDefaultSharedPreferences(this)
             .getBoolean("checkbox_resume_stream", false)
 
-    private val isFramegenEnabledForStream: Boolean
-        get() {
-            val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-            return FramegenSettings.isAllowedByUser(prefs) && FramegenInterceptor.isAvailable()
-        }
+    private fun shouldUseFramegen(prefs: SharedPreferences = defaultPreferences()): Boolean =
+        FramegenInterceptor.isAvailable() && FramegenSettings.isAllowedByUser(prefs)
 
-    private val framegenOutputFps: Int
-        get() = if (isFramegenEnabledForStream && prefConfig.fps <= 60) {
-            prefConfig.fps * 2
+    private fun framegenPresentationFps(prefs: SharedPreferences = defaultPreferences()): Int {
+        val inputFps = prefConfig.fps
+        return if (shouldUseFramegen(prefs) && inputFps in 1..MAX_FRAMEGEN_DOUBLING_INPUT_FPS) {
+            inputFps * 2
         } else {
-            prefConfig.fps
+            inputFps
         }
+    }
+
+    private fun defaultPreferences(): SharedPreferences =
+        PreferenceManager.getDefaultSharedPreferences(this)
 
     /**
      * Parse intent extras, build stream config, create NvConnection + ControllerHandler.
@@ -784,7 +783,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             }
         }
 
-        framegenStreamHdrEnabled = willStreamHdr && prefConfig.hdrMode != MoonBridge.HDR_MODE_SDR
+        framegenInputHdrEnabled = willStreamHdr && prefConfig.hdrMode != MoonBridge.HDR_MODE_SDR
 
         val config = StreamConfiguration.Builder()
             .setResolution(prefConfig.width, prefConfig.height)
@@ -830,6 +829,16 @@ class Game : Activity(), SurfaceHolder.Callback,
         val config: StreamConfiguration,
         val displayRefreshRate: Float,
         val clientRefreshRateX100: Int
+    )
+
+    private data class FramegenRuntimeConfig(
+        val losslessDllPath: String,
+        val presentationFps: Int,
+        val inputHdrEnabled: Boolean,
+        val internalWidth: Int,
+        val presentMode: Int,
+        val slowFrameThresholdMs: Int,
+        val presentQueueMax: Int
     )
 
     private fun prepareConnection() {
@@ -1070,9 +1079,10 @@ class Game : Activity(), SurfaceHolder.Callback,
     private fun prepareDisplayForRendering(): Float {
         val display = currentTargetDisplay
 
-        val displayConfig = if (isFramegenEnabledForStream && framegenOutputFps != prefConfig.fps) {
+        val presentationFps = framegenPresentationFps()
+        val displayConfig = if (presentationFps != prefConfig.fps) {
             prefConfig.copy().apply {
-                fps = framegenOutputFps
+                fps = presentationFps
             }
         } else {
             prefConfig
@@ -1576,6 +1586,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     override fun setHdrMode(enabled: Boolean, hdrMetadata: ByteArray?) {
         LimeLog.info("Display HDR mode: ${if (enabled) "enabled" else "disabled"}")
+        framegenInputHdrEnabled = enabled
         FramegenInterceptor.configureHdrEnabled(enabled)
         decoderRenderer?.setHdrMode(enabled, hdrMetadata)
 
@@ -1587,9 +1598,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     private fun notifySystemHdrStatus(hdrEnabled: Boolean) {
         runOnUiThread {
             try {
-                val framegenSdrOutput =
-                    framegenCapture != null ||
-                        isFramegenEnabledForStream
+                val framegenSdrOutput = willFramegenOutputSdr()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     window.colorMode =
                         if (hdrEnabled && !framegenSdrOutput) {
@@ -1621,6 +1630,9 @@ class Game : Activity(), SurfaceHolder.Callback,
             }
         }
     }
+
+    private fun willFramegenOutputSdr(): Boolean =
+        framegenCapture != null || shouldUseFramegen()
 
     override fun setMotionEventState(controllerNumber: Short, motionType: Byte, reportRateHz: Short) {
         controllerHandler.handleSetMotionEventState(controllerNumber, motionType, reportRateHz)
@@ -1694,64 +1706,90 @@ class Game : Activity(), SurfaceHolder.Callback,
         controllerHandler.handleSetControllerLED(controllerNumber, r, g, b)
     }
 
+    private fun framegenConfigForStream(): FramegenRuntimeConfig? {
+        val prefs = defaultPreferences()
+        if (!shouldUseFramegen(prefs)) {
+            return null
+        }
+
+        val dllPath = FramegenSettings.resolveLosslessDllPath(prefs) ?: return null
+
+        return FramegenRuntimeConfig(
+            losslessDllPath = dllPath,
+            presentationFps = framegenPresentationFps(prefs),
+            inputHdrEnabled = framegenInputHdrEnabled,
+            internalWidth = FramegenSettings.resolveInternalWidth(prefs),
+            presentMode = if (prefs.getBoolean(FramegenSettings.PREF_PRESENT_REAL_FIRST, false)) 1 else 0,
+            slowFrameThresholdMs = prefs.getInt(
+                FramegenSettings.PREF_SLOW_THRESHOLD_MS,
+                FramegenSettings.DEFAULT_SLOW_THRESHOLD_MS
+            ),
+            presentQueueMax = FramegenSettings.DEFAULT_PRESENT_QUEUE_MAX
+        )
+    }
+
+    private fun prepareFramegenSurface(outputSurface: Surface) {
+        releaseFramegenCapture()
+
+        val config = framegenConfigForStream() ?: return
+        applyFramegenConfig(config)
+
+        val capture = FramegenCapture.create(prefConfig.width, prefConfig.height)
+        if (capture == null) {
+            LimeLog.warning("Framegen capture unavailable; using direct decoder output")
+            return
+        }
+
+        framegenCapture = capture
+        decoderRenderer?.framegenSurface = capture.surface
+        FramegenInterceptor.configureOutputSurface(outputSurface)
+        prewarmFramegen()
+
+        LimeLog.info(
+            "Framegen capture armed ${prefConfig.width}x${prefConfig.height} " +
+                "fps=${config.presentationFps} hdrIn=${config.inputHdrEnabled}"
+        )
+        runOnUiThread {
+            Toast.makeText(this, R.string.toast_framegen_stream_enabled, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun applyFramegenConfig(config: FramegenRuntimeConfig) {
+        FramegenInterceptor.configureLosslessDllPath(config.losslessDllPath)
+        FramegenInterceptor.configureHdrEnabled(config.inputHdrEnabled)
+        FramegenInterceptor.configureOutputFrameRate(config.presentationFps)
+        FramegenInterceptor.configureTuning(
+            config.internalWidth,
+            config.presentMode,
+            config.slowFrameThresholdMs,
+            config.presentQueueMax
+        )
+    }
+
+    private fun prewarmFramegen() {
+        thread(name = "FramegenPrewarm", isDaemon = true) {
+            val startedAtMs = SystemClock.uptimeMillis()
+            val ok = FramegenInterceptor.prewarmContext(prefConfig.width, prefConfig.height)
+            LimeLog.info(
+                "Framegen prewarm ok=$ok elapsed=${SystemClock.uptimeMillis() - startedAtMs}ms"
+            )
+        }
+    }
+
+    private fun releaseFramegenCapture() {
+        framegenCapture?.release()
+        framegenCapture = null
+        decoderRenderer?.framegenSurface = null
+        FramegenInterceptor.configureOutputSurface(null)
+    }
+
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
         if (!surfaceCreated) {
             throw IllegalStateException("Surface changed before creation!")
         }
 
-        // If framegen is allowed, redirect decoder output through ImageReader and native LSFG.
-        // 必须在 setRenderTarget 之前，因为 configureAndStartDecoder 会读 framegenSurface。
-        // 反复进出应用会多次触发 surfaceChanged，先 release 旧的避免泄漏。
-        framegenCapture?.release()
-        framegenCapture = null
-        decoderRenderer?.framegenSurface = null
-        FramegenInterceptor.configureOutputSurface(null)
-
-        val fgPrefs = PreferenceManager.getDefaultSharedPreferences(this)
-        if (FramegenSettings.isAllowedByUser(fgPrefs) && FramegenInterceptor.isAvailable()) {
-            fgPrefs.getString(FramegenSettings.PREF_LOSSLESS_DLL_STAGED_PATH, null)?.let { stagedDll ->
-                if (File(stagedDll).exists()) {
-                    FramegenInterceptor.configureLosslessDllPath(stagedDll)
-                }
-            }
-            FramegenInterceptor.configureHdrEnabled(framegenStreamHdrEnabled)
-            FramegenInterceptor.configureOutputFrameRate(framegenOutputFps)
-            val framegenInternalWidth = FramegenSettings.resolveInternalWidth(fgPrefs)
-            val framegenPresentMode = if (fgPrefs.getBoolean(FramegenSettings.PREF_PRESENT_REAL_FIRST, false)) 1 else 0
-            val framegenSlowThresholdMs = fgPrefs.getInt(
-                FramegenSettings.PREF_SLOW_THRESHOLD_MS,
-                FramegenSettings.DEFAULT_SLOW_THRESHOLD_MS
-            )
-            FramegenInterceptor.configureTuning(
-                framegenInternalWidth,
-                framegenPresentMode,
-                framegenSlowThresholdMs,
-                FramegenSettings.DEFAULT_PRESENT_QUEUE_MAX
-            )
-            val cap = FramegenCapture.create(prefConfig.width, prefConfig.height)
-            if (cap != null) {
-                framegenCapture = cap
-                decoderRenderer?.framegenSurface = cap.surface
-                // 3.3c: 把 SurfaceView 原始 surface 注册成 framegen output 回贴目标。
-                // decoder 已被重定向到 ImageReader（cap.surface），holder.surface 此时空闲，
-                // 由 native 把真实帧和 LSFG 插帧重新输出到该 surface。
-                FramegenInterceptor.configureOutputSurface(holder.surface)
-                Thread({
-                    val prewarmStartMs = android.os.SystemClock.uptimeMillis()
-                    val ok = FramegenInterceptor.prewarmContext(prefConfig.width, prefConfig.height)
-                    LimeLog.info(
-                        "Framegen prewarm finished ok=$ok hdr=$framegenStreamHdrEnabled " +
-                            "elapsed=${android.os.SystemClock.uptimeMillis() - prewarmStartMs}ms"
-                    )
-                }, "FramegenPrewarm").start()
-                LimeLog.info("Framegen capture armed (${prefConfig.width}x${prefConfig.height})")
-                runOnUiThread {
-                    Toast.makeText(this, R.string.toast_framegen_stream_enabled, Toast.LENGTH_LONG).show()
-                }
-            } else {
-                LimeLog.warning("Framegen capture create() returned null — fallback to direct path")
-            }
-        }
+        // setRenderTarget() may start the decoder, which reads framegenSurface.
+        prepareFramegenSurface(holder.surface)
 
         decoderRenderer?.setRenderTarget(holder)
 
@@ -1775,7 +1813,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     override fun surfaceCreated(holder: SurfaceHolder) {
         surfaceCreated = true
 
-        val outputFps = framegenOutputFps
+        val outputFps = framegenPresentationFps()
         val desiredFrameRate: Float = if (DisplayModeManager.mayReduceRefreshRate(prefConfig) || desiredRefreshRate < outputFps) {
             outputFps.toFloat()
         } else {
@@ -1801,12 +1839,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             throw IllegalStateException("Surface destroyed before creation!")
         }
 
-        // Framegen capture follows the surface lifecycle. Release ImageReader first so
-        // decoder cleanup cannot race a closed capture surface on its worker thread.
-        framegenCapture?.release()
-        framegenCapture = null
-        decoderRenderer?.framegenSurface = null
-        FramegenInterceptor.configureOutputSurface(null)
+        releaseFramegenCapture()
 
         cursorServiceManager.destroyLocalCursorRenderers()
 
@@ -1974,7 +2007,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     private fun enrichFramegenPerformanceInfo(performanceInfo: PerformanceInfo) {
         val baseFps = prefConfig.fps
-        val outputFps = framegenOutputFps
+        val outputFps = framegenPresentationFps()
         performanceInfo.framegenFps =
             if (framegenCapture != null && baseFps > 0 && outputFps > baseFps) {
                 val multiplier = outputFps.toFloat() / baseFps.toFloat()
@@ -2156,5 +2189,6 @@ class Game : Activity(), SurfaceHolder.Callback,
         val EXTRA_FORCE_RESUME_CURRENT_SESSION = "ForceResumeCurrentSession"
 
         private const val KEEP_ALIVE_NOTIFICATION_ID = 1001
+        private const val MAX_FRAMEGEN_DOUBLING_INPUT_FPS = 60
     }
 }

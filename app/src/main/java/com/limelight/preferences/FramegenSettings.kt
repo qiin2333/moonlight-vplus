@@ -26,10 +26,17 @@ object FramegenSettings {
     fun isUserEnabled(prefs: SharedPreferences): Boolean =
         prefs.getBoolean(PREF_ENABLED, false)
 
-    fun isLosslessDllReady(prefs: SharedPreferences): Boolean {
+    fun resolveLosslessDllPath(prefs: SharedPreferences): String? {
         val path = prefs.getString(PREF_LOSSLESS_DLL_STAGED_PATH, null)
-        return !path.isNullOrBlank() && File(path).let { it.isFile && it.length() > 0L }
+            ?.takeUnless { it.isBlank() }
+            ?: return null
+        val file = File(path)
+
+        return path.takeIf { file.isFile && file.length() > 0L }
     }
+
+    fun isLosslessDllReady(prefs: SharedPreferences): Boolean =
+        resolveLosslessDllPath(prefs) != null
 
     fun isAllowedByUser(prefs: SharedPreferences): Boolean =
         isUserEnabled(prefs) && DeveloperUnlockSettings.isUnlocked(prefs) && isLosslessDllReady(prefs)
