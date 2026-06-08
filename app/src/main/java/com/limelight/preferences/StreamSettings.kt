@@ -2161,12 +2161,19 @@ class StreamSettings : AppCompatActivity() {
                     return@setOnPreferenceClickListener true
                 }
 
-                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
-                    type = "*/*"
-                }
-                @Suppress("DEPRECATION")
-                startActivityForResult(intent, REQUEST_CODE_PICK_FRAMEGEN_DLL)
+                AlertDialog.Builder(ctx)
+                    .setTitle(R.string.title_framegen_pick_lossless_dll)
+                    .setMessage(R.string.message_framegen_lossless_dll_source)
+                    .setPositiveButton(R.string.action_framegen_select_lossless_dll) { _, _ ->
+                        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                            type = "*/*"
+                        }
+                        @Suppress("DEPRECATION")
+                        startActivityForResult(intent, REQUEST_CODE_PICK_FRAMEGEN_DLL)
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
                 true
             }
         }

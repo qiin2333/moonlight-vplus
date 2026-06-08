@@ -1262,7 +1262,9 @@
     <string name="title_framegen_selftest">检查设备支持</string>
     <string name="summary_framegen_selftest">插帧无法启用或画面异常时使用。</string>
     <string name="title_framegen_pick_lossless_dll">导入插帧引擎文件</string>
-    <string name="summary_framegen_pick_lossless_dll">首次使用前必须导入。请先把 Lossless.dll 复制到手机，再在这里选择。</string>
+    <string name="summary_framegen_pick_lossless_dll">首次使用前必须导入。请先从 Windows 电脑已安装的 Lossless Scaling 目录复制 Lossless.dll 到手机，再在这里选择。</string>
+    <string name="message_framegen_lossless_dll_source">请先在你的 Windows 电脑上安装 Lossless Scaling，然后从它的安装目录复制 Lossless.dll 到手机。Steam 版通常在 SteamLibrary/steamapps/common/Lossless Scaling/Lossless.dll。复制完成后，在这里选择这个文件。</string>
+    <string name="action_framegen_select_lossless_dll">选择 Lossless.dll</string>
     <string name="summary_framegen_pick_lossless_dll_selected">插帧引擎已准备好：%1$s
 再次点击可重新导入。</string>
     <string name="toast_framegen_selftest_result">设备支持检查：%1$s</string>

@@ -908,7 +908,9 @@
     <string name="title_framegen_selftest">Check device support</string>
     <string name="summary_framegen_selftest">Use this if frame generation cannot be enabled or the picture looks wrong.</string>
     <string name="title_framegen_pick_lossless_dll">Import frame generation engine</string>
-    <string name="summary_framegen_pick_lossless_dll">Required before first use. Copy Lossless.dll to this phone, then select it here.</string>
+    <string name="summary_framegen_pick_lossless_dll">Required before first use. Copy Lossless.dll from your installed Lossless Scaling folder on a Windows PC, then select it here.</string>
+    <string name="message_framegen_lossless_dll_source">Install Lossless Scaling on your Windows PC first, then copy Lossless.dll from its install folder to this phone. Steam installs are usually under SteamLibrary/steamapps/common/Lossless Scaling/Lossless.dll. After copying it, select that file here.</string>
+    <string name="action_framegen_select_lossless_dll">Select Lossless.dll</string>
     <string name="summary_framegen_pick_lossless_dll_selected">Frame generation engine is ready: %1$s
 Tap again to replace it.</string>
     <string name="toast_framegen_selftest_result">Device support check: %1$s</string>
