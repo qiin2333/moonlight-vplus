@@ -273,15 +273,15 @@
     <string name="summary_checkbox_control_only">Only establish control stream connection without video and audio streams. Useful for remote input control only. Requires Sunshine server with control-only mode support.</string>
     <string name="title_checkbox_enable_mic">Enable microphone redirection</string>
     <string name="summary_checkbox_enable_mic">Redirect device microphone to the host computer for voice chat and communication, requires Sunshine-Foundation version 20250720 or higher on the host.</string>
+    <string name="title_list_mic_menu_action_mode">Stream menu microphone action</string>
+    <string name="summary_list_mic_menu_action_mode">Choose what the microphone button in the stream menu does</string>
+    <string name="mic_menu_action_show_button">Show or hide floating microphone button</string>
+    <string name="mic_menu_action_toggle_microphone">Toggle microphone directly</string>
     <string name="title_seekbar_mic_bitrate">Microphone bitrate</string>
     <string name="summary_seekbar_mic_bitrate">Adjust the audio quality of microphone redirection. Higher bitrates provide better audio quality but use more bandwidth.</string>
     <string name="suffix_seekbar_mic_bitrate_kbps">kbps</string>
     <string name="title_list_mic_icon_color">Microphone icon color</string>
     <string name="summary_list_mic_icon_color">Choose the color scheme for the microphone button icon</string>
-    <string name="title_list_mic_menu_action_mode">Stream menu microphone action</string>
-    <string name="summary_list_mic_menu_action_mode">Choose what the microphone button in the stream menu does</string>
-    <string name="mic_menu_action_show_button">Show or hide floating microphone button</string>
-    <string name="mic_menu_action_toggle_microphone">Toggle microphone directly</string>
     <string name="title_checkbox_reduce_refresh_rate">Allow refresh rate reduction</string>
     <string name="summary_checkbox_reduce_refresh_rate">Lower display refresh rates can save power at the expense of some additional video latency</string>
 
