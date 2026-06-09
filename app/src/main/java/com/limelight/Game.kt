@@ -2046,6 +2046,12 @@ class Game : Activity(), SurfaceHolder.Callback,
         }
     }
 
+    override fun onVideoFrameLoss(framesLost: Int, frameNumber: Int) {
+        if (framegenCapture != null) {
+            framegenAdaptiveController.onFrameLossEvent(framesLost, frameNumber)
+        }
+    }
+
     private fun enrichFramegenPerformanceInfo(performanceInfo: PerformanceInfo) {
         val baseFps = prefConfig.fps
         val outputFps = framegenAdaptiveController.activePresentationFps

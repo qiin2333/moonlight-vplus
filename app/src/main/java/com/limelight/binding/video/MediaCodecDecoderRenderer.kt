@@ -1745,12 +1745,14 @@ class MediaCodecDecoderRenderer(
 
         if (lastFrameNumber == 0) {
             activeWindowVideoStats.measurementStartTimestamp = SystemClock.uptimeMillis()
-        } else if (frameNumber != lastFrameNumber && frameNumber != lastFrameNumber + 1) {
+        } else if (frameNumber > lastFrameNumber + 1) {
             // We can receive the same "frame" multiple times if it's an IDR frame.
             // In that case, each frame start NALU is submitted independently.
-            activeWindowVideoStats.framesLost += frameNumber - lastFrameNumber - 1
-            activeWindowVideoStats.totalFrames += frameNumber - lastFrameNumber - 1
+            val framesLost = frameNumber - lastFrameNumber - 1
+            activeWindowVideoStats.framesLost += framesLost
+            activeWindowVideoStats.totalFrames += framesLost
             activeWindowVideoStats.frameLossEvents++
+            perfListener.onVideoFrameLoss(framesLost, frameNumber)
         }
 
         // Reset CSD data for each IDR frame

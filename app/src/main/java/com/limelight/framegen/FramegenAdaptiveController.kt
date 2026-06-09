@@ -68,6 +68,26 @@ class FramegenAdaptiveController {
         }
     }
 
+    fun onFrameLossEvent(framesLost: Int, frameNumber: Int) {
+        val currentConfig = config ?: return
+        if (!currentConfig.adaptiveEnabled ||
+            currentConfig.presentationFps <= currentConfig.inputFps ||
+            currentConfig.inputFps <= 0
+        ) {
+            return
+        }
+
+        lossWindows = LOSS_ENTER_WINDOWS
+        lossRecoveryWindows = LOSS_RECOVERY_WINDOWS
+        deviceWindows = 0
+        stableWindows = 0
+        applyMode(
+            Mode.LOSS_SMOOTH,
+            "fastLoss frames=$framesLost frame=$frameNumber",
+            force = false
+        )
+    }
+
     private fun chooseMode(config: Config, performanceInfo: PerformanceInfo): Mode {
         val inputFps = config.inputFps.toFloat()
         val renderedRatio = performanceInfo.renderedFps.ratioTo(inputFps)
