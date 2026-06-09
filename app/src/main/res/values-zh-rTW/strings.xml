@@ -336,8 +336,8 @@
     <string name="summary_framegen_enabled">在手機端生成額外幀，讓串流更順滑。想輸出 120Hz 時請把串流幀率設為 60 FPS；超過目標刷新率一半的設定不會提升插幀效果。</string>
     <string name="summary_framegen_enabled_locked">請先解鎖開發者功能，再啟用插幀增強。</string>
     <string name="summary_framegen_enabled_needs_dll">請先匯入插幀引擎檔案，然後在下一次串流中啟用。</string>
-    <string name="title_framegen_adaptive_enabled">弱網自適應插幀</string>
-    <string name="summary_framegen_adaptive_enabled">根據丟幀、延遲與裝置負載自動調整插幀策略。關閉後使用固定插幀參數。</string>
+    <string name="title_framegen_adaptive_enabled">弱網自適應調節</string>
+    <string name="summary_framegen_adaptive_enabled">插幀開啟後，在丟幀、延遲或裝置負載變化時自動調整插幀參數。網路恢復後回到普通插幀參數。</string>
     <string name="title_framegen_quality_preset">插幀畫質</string>
     <string name="summary_framegen_quality_preset">選擇流暢度與清晰度的平衡。</string>
     <string name="framegen_quality_performance">性能優先（推薦）</string>

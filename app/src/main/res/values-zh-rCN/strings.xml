@@ -1253,8 +1253,8 @@
     <string name="summary_framegen_enabled">在手机端生成额外帧，让串流更顺滑。想输出 120Hz 时请把串流帧率设为 60 FPS；超过目标刷新率一半的设置不会提升插帧效果。</string>
     <string name="summary_framegen_enabled_locked">请先解锁开发者功能，再启用插帧增强。</string>
     <string name="summary_framegen_enabled_needs_dll">请先导入插帧引擎文件，然后在下一次串流中启用。</string>
-    <string name="title_framegen_adaptive_enabled">弱网自适应插帧</string>
-    <string name="summary_framegen_adaptive_enabled">根据丢帧、延迟和设备负载自动调整插帧策略。关闭后使用固定插帧参数。</string>
+    <string name="title_framegen_adaptive_enabled">弱网自适应调节</string>
+    <string name="summary_framegen_adaptive_enabled">插帧开启后，在丢帧、延迟或设备负载变化时自动调整插帧参数。网络恢复后回到普通插帧参数。</string>
     <string name="title_framegen_quality_preset">插帧画质</string>
     <string name="summary_framegen_quality_preset">选择流畅度与清晰度的平衡。</string>
     <string name="framegen_quality_performance">性能优先（推荐）</string>
