@@ -112,6 +112,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         private const val VERTICAL_SINGLE_ROW_THRESHOLD = 5
         private const val BACKGROUND_CHANGE_DELAY = 300 // ms
         private const val DISPLAY_CHECK_DELAY_MS = 800L
+        private const val NOT_PAIRED_EXIT_CONFIRMATION_UPDATES = 2
         private const val VIRTUAL_DISPLAY_ID = 212333
         private const val APPVIEW_PREFS_NAME = "AppView"
         private const val KEY_APP_BACKGROUND_MODE = "app_background_mode"
@@ -124,6 +125,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
     private lateinit var computerName: String
     private var lastRawApplist: String? = null
     private var lastRunningAppId = 0
+    private var notPairedExitUpdateCount = 0
     private var suspendGridUpdates = false
     private var inForeground = false
     private var showHiddenApps = false
@@ -306,13 +308,15 @@ class AppView : Activity(), AdapterFragmentCallbacks {
             return
         }
 
-        if (details.state == ComputerDetails.State.ONLINE && details.pairState != PairingManager.PairState.PAIRED) {
+        if (shouldExitForNotPaired(details)) {
             shortcutHelper.disableComputerShortcut(details,
                     resources.getString(R.string.scut_not_paired))
             Toast.makeText(this, resources.getText(R.string.scut_not_paired), Toast.LENGTH_SHORT).show()
             finish()
             return
         }
+
+        computer = details
 
         // App list is the same or empty
         if (details.rawAppList == null || details.rawAppList == lastRawApplist) {
@@ -339,6 +343,26 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         } catch (e: IOException) {
             e.printStackTrace()
         }
+    }
+
+    private fun shouldExitForNotPaired(details: ComputerDetails): Boolean {
+        if (details.state != ComputerDetails.State.ONLINE ||
+            details.pairState == PairingManager.PairState.PAIRED
+        ) {
+            notPairedExitUpdateCount = 0
+            return false
+        }
+
+        notPairedExitUpdateCount++
+        if (notPairedExitUpdateCount < NOT_PAIRED_EXIT_CONFIRMATION_UPDATES) {
+            LimeLog.warning(
+                "AppView: deferring NOT_PAIRED update for ${details.name ?: details.uuid} " +
+                        "($notPairedExitUpdateCount/$NOT_PAIRED_EXIT_CONFIRMATION_UPDATES)"
+            )
+            return false
+        }
+
+        return true
     }
 
     private fun stopComputerUpdates() {

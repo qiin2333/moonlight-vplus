@@ -35,6 +35,7 @@ import com.limelight.nvstream.http.LimelightCryptoProvider
 import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.http.PairingManager
+import com.limelight.nvstream.http.PairStateTrust
 import com.limelight.nvstream.input.MouseButtonPacket
 import com.limelight.nvstream.jni.MoonBridge
 
@@ -211,14 +212,19 @@ open class NvConnection(
         context.serverAppVersion = h.getServerVersion(serverInfo)
 
         val details = h.getComputerDetails(serverInfo)
+        details.serverCert = context.serverCert
         context.isNvidiaServerSoftware = details.nvidiaServer
         context.supportsDesktopSpecialApp = details.supportsDesktopSpecialApp
 
         context.serverGfeVersion = h.getGfeVersion(serverInfo)
 
-        if (h.getPairState(serverInfo) != PairingManager.PairState.PAIRED) {
-            connListener.displayMessage("Device not paired with computer")
-            return false
+        if (details.pairState != PairingManager.PairState.PAIRED) {
+            if (PairStateTrust.shouldPreserveLocalPairing(details, details)) {
+                LimeLog.warning("Ignoring untrusted NOT_PAIRED serverinfo while starting stream")
+            } else {
+                connListener.displayMessage("Device not paired with computer")
+                return false
+            }
         }
 
         context.serverCodecModeSupport = h.getServerCodecModeSupport(serverInfo).toInt()

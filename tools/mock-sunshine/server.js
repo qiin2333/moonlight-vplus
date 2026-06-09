@@ -17,6 +17,7 @@ const defaults = {
   currentGame: 0,
   appVersion: '99.99.99',
   gfeVersion: '99.99.99',
+  appTitles: ['Mock Desktop', 'Mock Steam'],
 };
 
 const config = {
@@ -57,7 +58,16 @@ function serverInfoXml() {
   return `<?xml version="1.0" encoding="utf-8"?><root status_code="200"><hostname>${host}</hostname><uniqueid>${uuid}</uniqueid><HttpsPort>${config.httpsPort}</HttpsPort><ExternalPort>${config.httpPort}</ExternalPort><LocalIP>${address}</LocalIP><ExternalIP>${address}</ExternalIP><mac>00:11:22:33:44:55</mac><PairStatus>${config.pairStatus}</PairStatus><state>MJOLNIR_SERVER_AVAILABLE</state><currentgame>${config.currentGame}</currentgame><appversion>${xmlEscape(config.appVersion)}</appversion><GfeVersion>${xmlEscape(config.gfeVersion)}</GfeVersion><DesktopSpecialAppSupport>1</DesktopSpecialAppSupport></root>`;
 }
 
-const appListXml = '<?xml version="1.0" encoding="utf-8"?><root status_code="200"><App><AppTitle>Mock Desktop</AppTitle><ID>1</ID><IsHdrSupported>0</IsHdrSupported><SuperCmds>null</SuperCmds></App></root>';
+function appListXml() {
+  const titles = Array.isArray(config.appTitles) && config.appTitles.length > 0
+    ? config.appTitles
+    : defaults.appTitles;
+  const apps = titles.map((title, index) => {
+    return `<App><AppTitle>${xmlEscape(title)}</AppTitle><ID>${index + 1}</ID><IsHdrSupported>0</IsHdrSupported><SuperCmds>null</SuperCmds></App>`;
+  }).join('');
+
+  return `<?xml version="1.0" encoding="utf-8"?><root status_code="200">${apps}</root>`;
+}
 
 function respond(res, statusCode, body, contentType = 'text/xml') {
   res.writeHead(statusCode, { 'Content-Type': contentType });
@@ -75,7 +85,7 @@ function route(protocol, req, res) {
   }
 
   if (req.url.startsWith('/applist')) {
-    return respond(res, 200, appListXml);
+    return respond(res, 200, appListXml());
   }
 
   return respond(res, 404, 'not found', 'text/plain');

@@ -6,6 +6,7 @@ param(
     [int]$HttpsPort = 48084,
     [int]$PairStatus = 0,
     [int]$HttpsServerInfoStatus = 401,
+    [string[]]$AppTitles = @("Mock Desktop", "Mock Steam"),
     [switch]$Background
 )
 
@@ -34,24 +35,37 @@ function New-TestCertificateIfMissing($KeyPath, $CertPath, $Subject) {
         return
     }
 
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
     & openssl req -x509 -newkey rsa:2048 -nodes `
         -keyout $KeyPath `
         -out $CertPath `
         -days 7 `
-        -subj $Subject *> $null
+        -subj $Subject > $null 2> $null
+    $opensslExitCode = $LASTEXITCODE
+    $ErrorActionPreference = $previousErrorActionPreference
+
+    if ($opensslExitCode -ne 0) {
+        throw "openssl failed to create test certificate for $Subject"
+    }
 }
 
 $serverKey = Join-Path $generatedDir "mock-server-key.pem"
 $serverCert = Join-Path $generatedDir "mock-server-cert.pem"
-$dbKey = Join-Path $generatedDir "mock-db-key.pem"
-$dbCert = Join-Path $generatedDir "mock-db-cert.pem"
-$dbCertDer = Join-Path $generatedDir "mock-db-cert.der"
+$serverCertDer = Join-Path $generatedDir "mock-server-cert.der"
 
 New-TestCertificateIfMissing $serverKey $serverCert "/CN=mock-sunshine-server"
-New-TestCertificateIfMissing $dbKey $dbCert "/CN=mock-db-cert"
 
-if (!(Test-Path $dbCertDer)) {
-    & openssl x509 -in $dbCert -outform DER -out $dbCertDer *> $null
+if (!(Test-Path $serverCertDer)) {
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    & openssl x509 -in $serverCert -outform DER -out $serverCertDer > $null 2> $null
+    $opensslExitCode = $LASTEXITCODE
+    $ErrorActionPreference = $previousErrorActionPreference
+
+    if ($opensslExitCode -ne 0) {
+        throw "openssl failed to export mock server certificate DER"
+    }
 }
 
 $config = [ordered]@{
@@ -62,6 +76,7 @@ $config = [ordered]@{
     httpsPort = $HttpsPort
     pairStatus = $PairStatus
     httpsServerInfoStatus = $HttpsServerInfoStatus
+    appTitles = $AppTitles
 }
 
 $configPath = Join-Path $generatedDir "mock-config.json"
@@ -89,7 +104,7 @@ if ($Background) {
     "Started mock Sunshine PID=$($process.Id)"
     "stdout: $stdout"
     "stderr: $stderr"
-    "db cert: $dbCertDer"
+    "seed cert: $serverCertDer"
     return
 }
 
