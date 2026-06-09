@@ -24,6 +24,9 @@ import com.limelight.binding.video.MediaCodecDecoderRenderer
 import com.limelight.framegen.FramegenCapture
 import com.limelight.framegen.FramegenAdaptiveController
 import com.limelight.framegen.FramegenInterceptor
+import com.limelight.framegen.FramegenPerformanceEnricher
+import com.limelight.framegen.FramegenRuntimeConfig
+import com.limelight.framegen.FramegenRuntimePlanner
 import com.limelight.binding.video.MediaCodecHelper
 import com.limelight.binding.video.PerfOverlayListener
 import com.limelight.binding.video.PerformanceInfo
@@ -38,7 +41,6 @@ import com.limelight.nvstream.input.ClipboardSyncManager
 import com.limelight.nvstream.input.MouseButtonPacket
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.GlPreferences
-import com.limelight.preferences.FramegenSettings
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.services.StreamNotificationService
 import com.limelight.ui.CursorView
@@ -605,29 +607,11 @@ class Game : Activity(), SurfaceHolder.Callback,
         get() = PreferenceManager.getDefaultSharedPreferences(this)
             .getBoolean("checkbox_resume_stream", false)
 
-    private fun isFramegenReady(prefs: SharedPreferences = defaultPreferences()): Boolean =
-        FramegenInterceptor.isAvailable() && FramegenSettings.isReadyForUser(prefs)
-
-    private fun shouldUseRegularFramegen(prefs: SharedPreferences = defaultPreferences()): Boolean =
-        isFramegenReady(prefs) &&
-            FramegenSettings.isUserEnabled(prefs) &&
-            prefConfig.fps in 1..MAX_FRAMEGEN_DOUBLING_INPUT_FPS
-
-    private fun shouldUseWeakNetworkFramegen(prefs: SharedPreferences = defaultPreferences()): Boolean =
-        isFramegenReady(prefs) && FramegenSettings.isAdaptiveEnabled(prefs)
-
     private fun shouldUseFramegen(prefs: SharedPreferences = defaultPreferences()): Boolean =
-        (shouldUseRegularFramegen(prefs) || shouldUseWeakNetworkFramegen(prefs)) &&
-            FramegenSettings.isCaptureResolutionSupported(prefConfig.width, prefConfig.height)
+        FramegenRuntimePlanner.shouldUse(prefs, prefConfig.width, prefConfig.height, prefConfig.fps)
 
-    private fun framegenPresentationFps(prefs: SharedPreferences = defaultPreferences()): Int {
-        val inputFps = prefConfig.fps
-        return if (shouldUseRegularFramegen(prefs)) {
-            inputFps * 2
-        } else {
-            inputFps
-        }
-    }
+    private fun framegenPresentationFps(prefs: SharedPreferences = defaultPreferences()): Int =
+        FramegenRuntimePlanner.presentationFps(prefs, prefConfig.fps)
 
     private fun defaultPreferences(): SharedPreferences =
         PreferenceManager.getDefaultSharedPreferences(this)
@@ -845,18 +829,6 @@ class Game : Activity(), SurfaceHolder.Callback,
         val config: StreamConfiguration,
         val displayRefreshRate: Float,
         val clientRefreshRateX100: Int
-    )
-
-    private data class FramegenRuntimeConfig(
-        val losslessDllPath: String,
-        val presentationFps: Int,
-        val inputHdrEnabled: Boolean,
-        val adaptiveEnabled: Boolean,
-        val allowAdaptiveWithoutDoubling: Boolean,
-        val internalWidth: Int,
-        val presentMode: Int,
-        val slowFrameThresholdMs: Int,
-        val presentQueueMax: Int
     )
 
     private fun prepareConnection() {
@@ -1724,46 +1696,16 @@ class Game : Activity(), SurfaceHolder.Callback,
         controllerHandler.handleSetControllerLED(controllerNumber, r, g, b)
     }
 
-    private fun framegenConfigForStream(): FramegenRuntimeConfig? {
-        val prefs = defaultPreferences()
-        if (!isFramegenReady(prefs)) {
-            return null
-        }
-        val regularEnabled = shouldUseRegularFramegen(prefs)
-        val adaptiveEnabled = FramegenSettings.isAdaptiveEnabled(prefs)
-        if (!regularEnabled && !adaptiveEnabled) {
-            return null
-        }
-        if (!FramegenSettings.isCaptureResolutionSupported(prefConfig.width, prefConfig.height)) {
-            LimeLog.warning(
-                "Framegen disabled for ${prefConfig.width}x${prefConfig.height}: " +
-                    "exceeds ${FramegenSettings.MAX_CAPTURE_PIXELS} pixels"
-            )
-            return null
-        }
-
-        val dllPath = FramegenSettings.resolveLosslessDllPath(prefs) ?: return null
-
-        return FramegenRuntimeConfig(
-            losslessDllPath = dllPath,
-            presentationFps = framegenPresentationFps(prefs),
-            inputHdrEnabled = framegenInputHdrEnabled,
-            adaptiveEnabled = adaptiveEnabled,
-            allowAdaptiveWithoutDoubling = adaptiveEnabled && !regularEnabled,
-            internalWidth = FramegenSettings.resolveInternalWidth(prefs),
-            presentMode = if (prefs.getBoolean(FramegenSettings.PREF_PRESENT_REAL_FIRST, false)) 1 else 0,
-            slowFrameThresholdMs = prefs.getInt(
-                FramegenSettings.PREF_SLOW_THRESHOLD_MS,
-                FramegenSettings.DEFAULT_SLOW_THRESHOLD_MS
-            ),
-            presentQueueMax = FramegenSettings.DEFAULT_PRESENT_QUEUE_MAX
-        )
-    }
-
     private fun prepareFramegenSurface(outputSurface: Surface, showEnabledToast: Boolean) {
         releaseFramegenCapture()
 
-        val config = framegenConfigForStream() ?: return
+        val config = FramegenRuntimePlanner.configForStream(
+            defaultPreferences(),
+            prefConfig.width,
+            prefConfig.height,
+            prefConfig.fps,
+            framegenInputHdrEnabled
+        ) ?: return
         applyFramegenConfig(config)
 
         val capture = FramegenCapture.create(prefConfig.width, prefConfig.height)
@@ -1802,7 +1744,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         )
         framegenAdaptiveController.configure(
             FramegenAdaptiveController.Config(
-                inputFps = prefConfig.fps,
+                inputFps = config.inputFps,
                 presentationFps = config.presentationFps,
                 adaptiveEnabled = config.adaptiveEnabled,
                 allowAdaptiveWithoutDoubling = config.allowAdaptiveWithoutDoubling,
@@ -2076,28 +2018,15 @@ class Game : Activity(), SurfaceHolder.Callback,
         }
     }
 
-    private fun enrichFramegenPerformanceInfo(performanceInfo: PerformanceInfo) {
-        val baseFps = prefConfig.fps
-        val outputFps = framegenAdaptiveController.activePresentationFps
-            .takeIf { it > 0 }
-            ?: framegenPresentationFps()
-        performanceInfo.framegenFps =
-            if (framegenCapture != null && baseFps > 0 && outputFps > 0) {
-                if (outputFps > baseFps) {
-                    val multiplier = outputFps.toFloat() / baseFps.toFloat()
-                    (performanceInfo.renderedFps * multiplier).coerceAtMost(outputFps.toFloat())
-                } else {
-                    val targetFps = outputFps.toFloat()
-                    if (performanceInfo.renderedFps >= targetFps * 0.95f) {
-                        0f
-                    } else {
-                        (performanceInfo.renderedFps * 2f).coerceAtMost(targetFps)
-                    }
-                }
-            } else {
-                0f
-            }
-    }
+    private fun enrichFramegenPerformanceInfo(performanceInfo: PerformanceInfo) =
+        FramegenPerformanceEnricher.update(
+            performanceInfo,
+            framegenActive = framegenCapture != null,
+            baseFps = prefConfig.fps,
+            outputFps = framegenAdaptiveController.activePresentationFps
+                .takeIf { it > 0 }
+                ?: framegenPresentationFps()
+        )
 
     fun removePerformanceInfoDisplay(display: PerformanceInfoDisplay) {
         performanceInfoDisplays.remove(display)
@@ -2271,6 +2200,5 @@ class Game : Activity(), SurfaceHolder.Callback,
         val EXTRA_FORCE_RESUME_CURRENT_SESSION = "ForceResumeCurrentSession"
 
         private const val KEEP_ALIVE_NOTIFICATION_ID = 1001
-        private const val MAX_FRAMEGEN_DOUBLING_INPUT_FPS = 60
     }
 }
