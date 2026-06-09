@@ -2198,6 +2198,9 @@ class StreamSettings : AppCompatActivity() {
                             return@OnPreferenceChangeListener false
                         }
                         Toast.makeText(ctx, R.string.toast_framegen_enabled_warning, Toast.LENGTH_LONG).show()
+                        updateFramegenAdaptivePreferenceState(framegenEnabled = true)
+                    } else if (newValue == false) {
+                        updateFramegenAdaptivePreferenceState(framegenEnabled = false)
                     }
                     true
                 }
@@ -2244,8 +2247,20 @@ class StreamSettings : AppCompatActivity() {
                 )
             }
 
-            findPreference<CheckBoxPreference>(FramegenSettings.PREF_ADAPTIVE_ENABLED)?.isEnabled =
-                unlocked && dllReady
+            updateFramegenAdaptivePreferenceState(prefs, unlocked, dllReady)
+        }
+
+        private fun updateFramegenAdaptivePreferenceState(
+            prefs: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(requireContext()),
+            unlocked: Boolean = DeveloperUnlockSettings.isUnlocked(prefs),
+            dllReady: Boolean = FramegenSettings.isLosslessDllReady(prefs),
+            framegenEnabled: Boolean = FramegenSettings.isUserEnabled(prefs)
+        ) {
+            val showAdaptive = unlocked && dllReady && framegenEnabled
+            findPreference<CheckBoxPreference>(FramegenSettings.PREF_ADAPTIVE_ENABLED)?.let { pref ->
+                pref.isVisible = showAdaptive
+                pref.isEnabled = showAdaptive
+            }
         }
 
         private fun updateFramegenQualityVisibility(selectedPreset: String?) {
