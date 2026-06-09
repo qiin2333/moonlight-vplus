@@ -2243,6 +2243,9 @@ class StreamSettings : AppCompatActivity() {
                     }
                 )
             }
+
+            findPreference<CheckBoxPreference>(FramegenSettings.PREF_ADAPTIVE_ENABLED)?.isEnabled =
+                unlocked && dllReady
         }
 
         private fun updateFramegenQualityVisibility(selectedPreset: String?) {

@@ -9,6 +9,7 @@ class FramegenAdaptiveController {
     data class Config(
         val inputFps: Int,
         val presentationFps: Int,
+        val adaptiveEnabled: Boolean,
         val internalWidth: Int,
         val presentMode: Int,
         val slowFrameThresholdMs: Int,
@@ -24,6 +25,7 @@ class FramegenAdaptiveController {
     private var config: Config? = null
     private var mode = Mode.NORMAL
     private var lossWindows = 0
+    private var lossRecoveryWindows = 0
     private var deviceWindows = 0
     private var stableWindows = 0
 
@@ -35,6 +37,7 @@ class FramegenAdaptiveController {
         this.config = config
         mode = Mode.NORMAL
         lossWindows = 0
+        lossRecoveryWindows = 0
         deviceWindows = 0
         stableWindows = 0
         activePresentationFps = config.presentationFps
@@ -44,6 +47,7 @@ class FramegenAdaptiveController {
         config = null
         mode = Mode.NORMAL
         lossWindows = 0
+        lossRecoveryWindows = 0
         deviceWindows = 0
         stableWindows = 0
         activePresentationFps = 0
@@ -51,7 +55,10 @@ class FramegenAdaptiveController {
 
     fun onPerformanceInfo(performanceInfo: PerformanceInfo) {
         val currentConfig = config ?: return
-        if (currentConfig.presentationFps <= currentConfig.inputFps || currentConfig.inputFps <= 0) {
+        if (!currentConfig.adaptiveEnabled ||
+            currentConfig.presentationFps <= currentConfig.inputFps ||
+            currentConfig.inputFps <= 0
+        ) {
             return
         }
 
@@ -74,12 +81,18 @@ class FramegenAdaptiveController {
                 (rttMs >= RTT_HIGH_MS && receivedRatio > 0f && receivedRatio < LOSS_RECEIVED_RATIO) ||
                 (receivedRatio > 0f && receivedRatio < LOSS_RECEIVED_RATIO && renderedRatio >= receivedRatio * 0.9f)
 
+        if (networkPressure) {
+            lossRecoveryWindows = LOSS_RECOVERY_WINDOWS
+        } else if (lossRecoveryWindows > 0) {
+            lossRecoveryWindows -= 1
+        }
+
         val localWorkPressure =
             localWorkMs > max(DEVICE_MIN_WORK_MS, outputBudgetMs * DEVICE_WORK_BUDGET_MULTIPLIER)
         val localFpsPressure =
             (renderedRatio > 0f && renderedRatio < DEVICE_RENDERED_RATIO) ||
                 (performanceInfo.onePercentLowFps > 0f && performanceInfo.onePercentLowFps < inputFps * DEVICE_LOW_FPS_RATIO)
-        val devicePressure = localWorkPressure || (!networkPressure && localFpsPressure)
+        val devicePressure = localWorkPressure || (!networkPressure && lossRecoveryWindows == 0 && localFpsPressure)
 
         if (devicePressure && performanceInfo.lostFrameRate < LOSS_SEVERE_PERCENT) {
             deviceWindows += 1
@@ -181,6 +194,7 @@ class FramegenAdaptiveController {
         private const val LOSS_RECEIVED_RATIO = 0.94f
         private const val RTT_HIGH_MS = 80
         private const val LOSS_ENTER_WINDOWS = 2
+        private const val LOSS_RECOVERY_WINDOWS = 6
         private const val LOSS_PRESENT_QUEUE_MAX = 3
         private const val LOSS_SLOW_THRESHOLD_MS = 24
 

@@ -5,6 +5,7 @@ import java.io.File
 
 object FramegenSettings {
     const val PREF_ENABLED = "checkbox_framegen_enabled"
+    const val PREF_ADAPTIVE_ENABLED = "checkbox_framegen_adaptive_enabled"
     const val PREF_QUALITY_PRESET = "list_framegen_quality_preset"
     const val PREF_INTERNAL_WIDTH = "seekbar_framegen_internal_width"
     const val PREF_SLOW_THRESHOLD_MS = "seekbar_framegen_slow_threshold_ms"
@@ -26,6 +27,9 @@ object FramegenSettings {
 
     fun isUserEnabled(prefs: SharedPreferences): Boolean =
         prefs.getBoolean(PREF_ENABLED, false)
+
+    fun isAdaptiveEnabled(prefs: SharedPreferences): Boolean =
+        prefs.getBoolean(PREF_ADAPTIVE_ENABLED, true)
 
     fun resolveLosslessDllPath(prefs: SharedPreferences): String? {
         val path = prefs.getString(PREF_LOSSLESS_DLL_STAGED_PATH, null)
