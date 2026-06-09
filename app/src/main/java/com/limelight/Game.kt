@@ -22,6 +22,7 @@ import com.limelight.binding.input.evdev.EvdevListener
 import com.limelight.binding.input.virtual_controller.VirtualController
 import com.limelight.binding.video.MediaCodecDecoderRenderer
 import com.limelight.framegen.FramegenCapture
+import com.limelight.framegen.FramegenAdaptiveController
 import com.limelight.framegen.FramegenInterceptor
 import com.limelight.binding.video.MediaCodecHelper
 import com.limelight.binding.video.PerfOverlayListener
@@ -184,6 +185,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     private var decoderRenderer: MediaCodecDecoderRenderer? = null
     private var framegenCapture: FramegenCapture? = null
+    private val framegenAdaptiveController = FramegenAdaptiveController()
     private var framegenInputHdrEnabled = false
     private var framegenEnabledToastShown = false
     private var reportedCrash = false
@@ -1780,6 +1782,16 @@ class Game : Activity(), SurfaceHolder.Callback,
             config.slowFrameThresholdMs,
             config.presentQueueMax
         )
+        framegenAdaptiveController.configure(
+            FramegenAdaptiveController.Config(
+                inputFps = prefConfig.fps,
+                presentationFps = config.presentationFps,
+                internalWidth = config.internalWidth,
+                presentMode = config.presentMode,
+                slowFrameThresholdMs = config.slowFrameThresholdMs,
+                presentQueueMax = config.presentQueueMax
+            )
+        )
     }
 
     private fun prewarmFramegen() {
@@ -1795,6 +1807,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     private fun releaseFramegenCapture() {
         framegenCapture?.release()
         framegenCapture = null
+        framegenAdaptiveController.reset()
         decoderRenderer?.framegenSurface = null
         FramegenInterceptor.configureOutputSurface(null)
     }
@@ -1984,6 +1997,9 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     override fun onPerfUpdateV(performanceInfo: PerformanceInfo) {
+        if (framegenCapture != null) {
+            framegenAdaptiveController.onPerformanceInfo(performanceInfo)
+        }
         enrichFramegenPerformanceInfo(performanceInfo)
         performanceOverlayManager?.updatePerformanceInfo(performanceInfo)
     }
@@ -2029,7 +2045,9 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     private fun enrichFramegenPerformanceInfo(performanceInfo: PerformanceInfo) {
         val baseFps = prefConfig.fps
-        val outputFps = framegenPresentationFps()
+        val outputFps = framegenAdaptiveController.activePresentationFps
+            .takeIf { it > 0 }
+            ?: framegenPresentationFps()
         performanceInfo.framegenFps =
             if (framegenCapture != null && baseFps > 0 && outputFps > baseFps) {
                 val multiplier = outputFps.toFloat() / baseFps.toFloat()
