@@ -1577,7 +1577,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     override fun setHdrMode(enabled: Boolean, hdrMetadata: ByteArray?) {
         LimeLog.info("Display HDR mode: ${if (enabled) "enabled" else "disabled"}")
         framegenInputHdrEnabled = enabled
-        FramegenInterceptor.configureHdrEnabled(enabled)
+        FramegenInterceptor.configureHdrMode(if (enabled) prefConfig.hdrMode else MoonBridge.HDR_MODE_SDR)
         decoderRenderer?.setHdrMode(enabled, hdrMetadata)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -1622,7 +1622,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     private fun willFramegenOutputSdr(): Boolean =
-        framegenCapture != null || shouldUseFramegen()
+        (framegenCapture != null || shouldUseFramegen()) && !framegenInputHdrEnabled
 
     override fun setMotionEventState(controllerNumber: Short, motionType: Byte, reportRateHz: Short) {
         controllerHandler.handleSetMotionEventState(controllerNumber, motionType, reportRateHz)
@@ -1704,7 +1704,8 @@ class Game : Activity(), SurfaceHolder.Callback,
             prefConfig.width,
             prefConfig.height,
             prefConfig.fps,
-            framegenInputHdrEnabled
+            framegenInputHdrEnabled,
+            prefConfig.hdrMode
         ) ?: return
         applyFramegenConfig(config)
 
@@ -1733,7 +1734,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     private fun applyFramegenConfig(config: FramegenRuntimeConfig) {
         FramegenInterceptor.configureLosslessDllPath(config.losslessDllPath)
-        FramegenInterceptor.configureHdrEnabled(config.inputHdrEnabled)
+        FramegenInterceptor.configureHdrMode(config.inputHdrMode)
         FramegenInterceptor.configureOutputFrameRate(config.presentationFps)
         FramegenInterceptor.configureTuning(
             config.internalWidth,
@@ -1779,7 +1780,9 @@ class Game : Activity(), SurfaceHolder.Callback,
             throw IllegalStateException("Surface changed before creation!")
         }
 
-        if (!attemptedConnection || (connected && isExtremeResumeEnabled && framegenCapture == null)) {
+        val shouldPrepareFramegen =
+            !attemptedConnection || (connected && framegenCapture == null && shouldUseFramegen())
+        if (shouldPrepareFramegen) {
             // setRenderTarget() may start the decoder, which reads framegenSurface.
             prepareFramegenSurface(holder.surface, !attemptedConnection)
         } else if (framegenCapture != null) {

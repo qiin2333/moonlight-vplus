@@ -1,0 +1,22 @@
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform sampler2D uYuvSrc;
+layout(set = 0, binding = 1, rgba16f) uniform writeonly image2D uRgbaDst;
+
+layout(push_constant) uniform PushConstants {
+    vec2 srcUvScale;
+} pc;
+
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(uRgbaDst);
+    if (coord.x >= size.x || coord.y >= size.y) {
+        return;
+    }
+
+    vec2 uv = ((vec2(coord) + vec2(0.5)) / vec2(size)) * pc.srcUvScale;
+    vec3 rgb = texture(uYuvSrc, uv).rgb;
+    imageStore(uRgbaDst, coord, vec4(rgb, 1.0));
+}

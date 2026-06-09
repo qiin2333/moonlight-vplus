@@ -2,6 +2,7 @@ package com.limelight.framegen
 
 import android.content.SharedPreferences
 import com.limelight.LimeLog
+import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.FramegenSettings
 
 data class FramegenRuntimeConfig(
@@ -9,6 +10,7 @@ data class FramegenRuntimeConfig(
     val inputFps: Int,
     val presentationFps: Int,
     val inputHdrEnabled: Boolean,
+    val inputHdrMode: Int,
     val adaptiveEnabled: Boolean,
     val allowAdaptiveWithoutDoubling: Boolean,
     val internalWidth: Int,
@@ -46,7 +48,8 @@ object FramegenRuntimePlanner {
         width: Int,
         height: Int,
         inputFps: Int,
-        inputHdrEnabled: Boolean
+        inputHdrEnabled: Boolean,
+        inputHdrMode: Int
     ): FramegenRuntimeConfig? {
         if (!ready(prefs)) {
             return null
@@ -73,6 +76,7 @@ object FramegenRuntimePlanner {
             inputFps = inputFps,
             presentationFps = presentationFps(prefs, inputFps),
             inputHdrEnabled = inputHdrEnabled,
+            inputHdrMode = if (inputHdrEnabled) inputHdrMode else MoonBridge.HDR_MODE_SDR,
             adaptiveEnabled = adaptiveEnabled,
             allowAdaptiveWithoutDoubling = adaptiveEnabled && !regularEnabled,
             internalWidth = FramegenSettings.resolveInternalWidth(prefs),

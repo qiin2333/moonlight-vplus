@@ -168,6 +168,12 @@ Java_com_limelight_framegen_FramegenInterceptor_nativeSetHdrEnabled(
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_limelight_framegen_FramegenInterceptor_nativeSetHdrMode(
+        JNIEnv * /*env*/, jclass /* clazz */, jint mode) {
+    FramegenPipeline::setHdrMode(static_cast<int32_t>(mode));
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_limelight_framegen_FramegenInterceptor_nativeSetOutputFrameRate(
         JNIEnv * /*env*/, jclass /* clazz */, jint fps) {
     FramegenPipeline::setOutputFrameRate(static_cast<int32_t>(fps));

@@ -11,6 +11,8 @@
 
 #include "yuv_to_rgba.comp.spv.h"
 #include "rgba_upscale.comp.spv.h"
+#include "yuv_to_rgba16f.comp.spv.h"
+#include "rgba_upscale16f.comp.spv.h"
 
 #include <algorithm>
 #include <atomic>
@@ -32,8 +34,20 @@
 #define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN,  LOG_TAG, __VA_ARGS__))
 #define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
 
+#ifndef WINDOW_FORMAT_RGBA_FP16
+#define WINDOW_FORMAT_RGBA_FP16 0x16
+#endif
+
 namespace FramegenPipeline {
 namespace {
+
+constexpr int32_t kHdrModeSdr = 0;
+constexpr int32_t kHdrModeHdr10 = 1;
+constexpr int32_t kHdrModeHlg = 2;
+
+constexpr int32_t kDataspaceSrgbFull = 142671872;
+constexpr int32_t kDataspaceBt2020HlgFull = 0x09C60000;
+constexpr int32_t kDataspaceBt2020PqFull = 0x09860000;
 
 enum class ProbeState : uint8_t {
     kUninitialized = 0,
@@ -108,6 +122,13 @@ struct ContextResources {
     uint32_t presentHeight{0};
     float srcUvScaleX{1.0F};
     float srcUvScaleY{1.0F};
+    bool hdrPassthrough{false};
+    uint32_t ahbFormat{AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM};
+    VkFormat vkFormat{VK_FORMAT_R8G8B8A8_UNORM};
+    int32_t windowFormat{WINDOW_FORMAT_RGBA_8888};
+    int32_t windowDataspace{kDataspaceSrgbFull};
+    uint32_t bytesPerPixel{4};
+    int32_t hdrMode{kHdrModeSdr};
 
     // 阶段 3.3a-iii.a：owned input AHB import 后的 VkImage / memory / view。
     // 这些资源跟 AHB 绑定，整个 framegen 生命周期内不变。
@@ -283,6 +304,7 @@ struct ContextResources {
 std::atomic<ProbeState> g_probeState{ProbeState::kUninitialized};
 std::atomic<ContextBootState> g_contextBootState{ContextBootState::kUninitialized};
 std::atomic<bool> g_hdrEnabled{false};
+std::atomic<int32_t> g_hdrMode{kHdrModeSdr};
 std::mutex g_contextMutex;
 std::unique_ptr<VulkanContext> g_vk;
 std::unique_ptr<ContextResources> g_context;
@@ -292,6 +314,8 @@ std::unique_ptr<ContextResources> g_context;
 ANativeWindow* g_outputWindow = nullptr;
 int32_t g_outputWindowConfiguredW = 0;
 int32_t g_outputWindowConfiguredH = 0;
+int32_t g_outputWindowConfiguredFormat = 0;
+int32_t g_outputWindowConfiguredDataspace = 0;
 int32_t g_outputWindowHintedFps = 0;
 bool g_outputWindowBuffersRequested = false;
 std::atomic<uint64_t> g_blitCount{0};
@@ -303,6 +327,7 @@ struct PresentFrame {
     int32_t height{0};
     int32_t displayWidth{0};
     int32_t displayHeight{0};
+    uint32_t bytesPerPixel{4};
     uint64_t sourceFrame{0};
     uint32_t sourceOrder{0};
     std::string tag;
@@ -429,17 +454,37 @@ void copyRgbaToWindowBuffer(const PresentFrame& frame, ANativeWindow_Buffer& dst
 
     const uint8_t* src = frame.rgba.data();
     uint8_t* dstBase = static_cast<uint8_t*>(dst.bits);
-    const size_t srcRowBytes = static_cast<size_t>(frame.width) * 4u;
-    const size_t dstRowBytes = static_cast<size_t>(dst.stride) * 4u;
+    const size_t pixelBytes = std::max<uint32_t>(frame.bytesPerPixel, 4U);
+    const size_t srcRowBytes = static_cast<size_t>(frame.width) * pixelBytes;
+    const size_t dstRowBytes = static_cast<size_t>(dst.stride) * pixelBytes;
 
     if (frame.width == dstW && frame.height == dstH) {
-        const size_t copyRowBytes = static_cast<size_t>(dstW) * 4u;
+        const size_t copyRowBytes = static_cast<size_t>(dstW) * pixelBytes;
         const uint8_t* srcRow = src;
         uint8_t* dstRow = dstBase;
         for (int32_t y = 0; y < dstH; ++y) {
             std::memcpy(dstRow, srcRow, copyRowBytes);
             srcRow += srcRowBytes;
             dstRow += dstRowBytes;
+        }
+        return;
+    }
+
+    if (pixelBytes != 4u) {
+        const int64_t xStep = (static_cast<int64_t>(frame.width) << 32) / dstW;
+        const int64_t yStep = (static_cast<int64_t>(frame.height) << 32) / dstH;
+        for (int32_t y = 0; y < dstH; ++y) {
+            const int32_t sy = std::min(static_cast<int32_t>((yStep * y) >> 32), frame.height - 1);
+            const uint8_t* srcRow = src + static_cast<size_t>(sy) * srcRowBytes;
+            uint8_t* dstRow = dstBase + static_cast<size_t>(y) * dstRowBytes;
+            int64_t sxAcc = 0;
+            for (int32_t x = 0; x < dstW; ++x) {
+                const int32_t sx = std::min(static_cast<int32_t>(sxAcc >> 32), frame.width - 1);
+                std::memcpy(dstRow + static_cast<size_t>(x) * pixelBytes,
+                            srcRow + static_cast<size_t>(sx) * pixelBytes,
+                            pixelBytes);
+                sxAcc += xStep;
+            }
         }
         return;
     }
@@ -608,12 +653,12 @@ VkExtent2D chooseFramegenExtent(uint32_t streamWidth,
     return extent;
 }
 
-AhbPtr allocateOwnedRgbaAhb(uint32_t width, uint32_t height) {
+AhbPtr allocateOwnedColorAhb(uint32_t width, uint32_t height, uint32_t ahbFormat) {
     AHardwareBuffer_Desc desc{
         .width = width,
         .height = height,
         .layers = 1,
-        .format = AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM,
+        .format = ahbFormat,
         .usage = AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE |
                  AHARDWAREBUFFER_USAGE_GPU_COLOR_OUTPUT |
                  AHARDWAREBUFFER_USAGE_CPU_READ_OFTEN,
@@ -639,10 +684,11 @@ struct ImportedImage {
     VkImageView view{VK_NULL_HANDLE};
 };
 
-ImportedImage importOwnedRgbaAhb(VkDevice device,
-                                 const VkPhysicalDeviceMemoryProperties& memProps,
-                                 AHardwareBuffer* ahb,
-                                 uint32_t width, uint32_t height) {
+ImportedImage importOwnedColorAhb(VkDevice device,
+                                  const VkPhysicalDeviceMemoryProperties& memProps,
+                                  AHardwareBuffer* ahb,
+                                  uint32_t width, uint32_t height,
+                                  VkFormat vkFormat) {
     VkAndroidHardwareBufferFormatPropertiesANDROID fmtProps{
         .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_FORMAT_PROPERTIES_ANDROID,
         .pNext = nullptr,
@@ -665,7 +711,7 @@ ImportedImage importOwnedRgbaAhb(VkDevice device,
         .pNext = &extImg,
         .flags = 0,
         .imageType = VK_IMAGE_TYPE_2D,
-        .format = VK_FORMAT_R8G8B8A8_UNORM,
+        .format = vkFormat,
         .extent = { width, height, 1 },
         .mipLevels = 1,
         .arrayLayers = 1,
@@ -729,7 +775,7 @@ ImportedImage importOwnedRgbaAhb(VkDevice device,
         .flags = 0,
         .image = out.image,
         .viewType = VK_IMAGE_VIEW_TYPE_2D,
-        .format = VK_FORMAT_R8G8B8A8_UNORM,
+        .format = vkFormat,
         .components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
                        VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY},
         .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
@@ -1074,6 +1120,18 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
         resources->height = ctxHeight;
         resources->presentWidth = streamWidth;
         resources->presentHeight = streamHeight;
+        const int32_t hdrMode = g_hdrMode.load(std::memory_order_acquire);
+        resources->hdrMode = hdrMode;
+        resources->hdrPassthrough =
+            g_hdrEnabled.load(std::memory_order_acquire) && hdrMode != kHdrModeSdr;
+        if (resources->hdrPassthrough) {
+            resources->ahbFormat = AHARDWAREBUFFER_FORMAT_R16G16B16A16_FLOAT;
+            resources->vkFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
+            resources->windowFormat = WINDOW_FORMAT_RGBA_FP16;
+            resources->windowDataspace =
+                hdrMode == kHdrModeHlg ? kDataspaceBt2020HlgFull : kDataspaceBt2020PqFull;
+            resources->bytesPerPixel = 8;
+        }
         if (decoderDesc.width > 0 && streamWidth > 0) {
             resources->srcUvScaleX = std::min(
                 1.0F,
@@ -1085,17 +1143,25 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
                 static_cast<float>(streamHeight) / static_cast<float>(decoderDesc.height));
         }
         const auto allocateStart = std::chrono::steady_clock::now();
-        resources->input0 = allocateOwnedRgbaAhb(ctxWidth, ctxHeight);
-        resources->input1 = allocateOwnedRgbaAhb(ctxWidth, ctxHeight);
-        resources->realOutput = allocateOwnedRgbaAhb(resources->presentWidth, resources->presentHeight);
-        resources->interpOutput = allocateOwnedRgbaAhb(resources->presentWidth, resources->presentHeight);
-        resources->outputs.emplace_back(allocateOwnedRgbaAhb(ctxWidth, ctxHeight));
+        resources->input0 = allocateOwnedColorAhb(ctxWidth, ctxHeight, resources->ahbFormat);
+        resources->input1 = allocateOwnedColorAhb(ctxWidth, ctxHeight, resources->ahbFormat);
+        resources->realOutput = allocateOwnedColorAhb(
+            resources->presentWidth, resources->presentHeight, resources->ahbFormat);
+        resources->interpOutput = allocateOwnedColorAhb(
+            resources->presentWidth, resources->presentHeight, resources->ahbFormat);
+        resources->outputs.emplace_back(allocateOwnedColorAhb(ctxWidth, ctxHeight, resources->ahbFormat));
         const auto allocateEnd = std::chrono::steady_clock::now();
-        LOGI("stage3.2 bootstrap timing: allocateOwnedAhb=%lldms total=%lldms fg=%ux%u present=%ux%u",
+        LOGI("stage3.2 bootstrap timing: allocateOwnedAhb=%lldms total=%lldms fg=%ux%u present=%ux%u hdrPass=%d hdrMode=%d dataspace=0x%x vkFmt=%d ahbFmt=0x%x bpp=%u",
              static_cast<long long>(elapsedMs(allocateStart, allocateEnd)),
              static_cast<long long>(elapsedMs(bootStart, allocateEnd)),
              ctxWidth, ctxHeight,
-             resources->presentWidth, resources->presentHeight);
+             resources->presentWidth, resources->presentHeight,
+             static_cast<int>(resources->hdrPassthrough),
+             hdrMode,
+             resources->windowDataspace,
+             static_cast<int>(resources->vkFormat),
+             resources->ahbFormat,
+             resources->bytesPerPixel);
 
         std::vector<AHardwareBuffer*> outputAhbs;
         outputAhbs.reserve(resources->outputs.size());
@@ -1126,7 +1192,7 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
             resources->input1.get(),
             outputAhbs,
             VkExtent2D{ctxWidth, ctxHeight},
-            VK_FORMAT_R8G8B8A8_UNORM);
+            resources->vkFormat);
         const auto createContextEnd = std::chrono::steady_clock::now();
         LOGI("stage3.2 bootstrap timing: createContextFromAHB=%lldms total=%lldms context=%d",
              static_cast<long long>(elapsedMs(createContextStart, createContextEnd)),
@@ -1141,32 +1207,37 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
         resources->ownerCmdPool = g_vk->cmdPool;
         const auto ownedImportStart = std::chrono::steady_clock::now();
         {
-            auto in0 = importOwnedRgbaAhb(g_vk->device, g_vk->memProps,
-                                          resources->input0.get(), ctxWidth, ctxHeight);
+            auto in0 = importOwnedColorAhb(g_vk->device, g_vk->memProps,
+                                           resources->input0.get(), ctxWidth, ctxHeight,
+                                           resources->vkFormat);
             resources->input0Image = in0.image;
             resources->input0Memory = in0.memory;
             resources->input0View = in0.view;
-            auto in1 = importOwnedRgbaAhb(g_vk->device, g_vk->memProps,
-                                          resources->input1.get(), ctxWidth, ctxHeight);
+            auto in1 = importOwnedColorAhb(g_vk->device, g_vk->memProps,
+                                           resources->input1.get(), ctxWidth, ctxHeight,
+                                           resources->vkFormat);
             resources->input1Image = in1.image;
             resources->input1Memory = in1.memory;
             resources->input1View = in1.view;
-            auto real = importOwnedRgbaAhb(g_vk->device, g_vk->memProps,
-                                           resources->realOutput.get(),
-                                           resources->presentWidth,
-                                           resources->presentHeight);
+            auto real = importOwnedColorAhb(g_vk->device, g_vk->memProps,
+                                            resources->realOutput.get(),
+                                            resources->presentWidth,
+                                            resources->presentHeight,
+                                            resources->vkFormat);
             resources->realOutputImage = real.image;
             resources->realOutputMemory = real.memory;
             resources->realOutputView = real.view;
-            auto interp = importOwnedRgbaAhb(g_vk->device, g_vk->memProps,
-                                             resources->interpOutput.get(),
-                                             resources->presentWidth,
-                                             resources->presentHeight);
+            auto interp = importOwnedColorAhb(g_vk->device, g_vk->memProps,
+                                              resources->interpOutput.get(),
+                                              resources->presentWidth,
+                                              resources->presentHeight,
+                                              resources->vkFormat);
             resources->interpOutputImage = interp.image;
             resources->interpOutputMemory = interp.memory;
             resources->interpOutputView = interp.view;
-            auto lsfgOut = importOwnedRgbaAhb(g_vk->device, g_vk->memProps,
-                                              resources->outputs[0].get(), ctxWidth, ctxHeight);
+            auto lsfgOut = importOwnedColorAhb(g_vk->device, g_vk->memProps,
+                                               resources->outputs[0].get(), ctxWidth, ctxHeight,
+                                               resources->vkFormat);
             resources->lsfgOutputImage = lsfgOut.image;
             resources->lsfgOutputMemory = lsfgOut.memory;
             resources->lsfgOutputView = lsfgOut.view;
@@ -1180,24 +1251,36 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
         // 留到 iii.b 接到首帧时再建）。
         const auto shaderModuleStart = std::chrono::steady_clock::now();
         {
+            const size_t shaderSize = resources->hdrPassthrough
+                ? k_yuv_to_rgba16f_spv_size
+                : k_yuv_to_rgba_spv_size;
+            const uint32_t* shaderCode = resources->hdrPassthrough
+                ? k_yuv_to_rgba16f_spv
+                : k_yuv_to_rgba_spv;
             VkShaderModuleCreateInfo smCi{
                 .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
                 .pNext = nullptr,
                 .flags = 0,
-                .codeSize = k_yuv_to_rgba_spv_size,
-                .pCode = k_yuv_to_rgba_spv,
+                .codeSize = shaderSize,
+                .pCode = shaderCode,
             };
             if (vkCreateShaderModule(g_vk->device, &smCi, nullptr, &resources->shaderModule) != VK_SUCCESS) {
                 throw std::runtime_error("vkCreateShaderModule (yuv_to_rgba) failed");
             }
         }
         {
+            const size_t shaderSize = resources->hdrPassthrough
+                ? k_rgba_upscale16f_spv_size
+                : k_rgba_upscale_spv_size;
+            const uint32_t* shaderCode = resources->hdrPassthrough
+                ? k_rgba_upscale16f_spv
+                : k_rgba_upscale_spv;
             VkShaderModuleCreateInfo smCi{
                 .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
                 .pNext = nullptr,
                 .flags = 0,
-                .codeSize = k_rgba_upscale_spv_size,
-                .pCode = k_rgba_upscale_spv,
+                .codeSize = shaderSize,
+                .pCode = shaderCode,
             };
             if (vkCreateShaderModule(g_vk->device, &smCi, nullptr, &resources->upscaleShaderModule) != VK_SUCCESS) {
                 throw std::runtime_error("vkCreateShaderModule (rgba_upscale) failed");
@@ -1303,6 +1386,8 @@ void reset() {
         g_outputWindow = nullptr;
         g_outputWindowConfiguredW = 0;
         g_outputWindowConfiguredH = 0;
+        g_outputWindowConfiguredFormat = 0;
+        g_outputWindowConfiguredDataspace = 0;
         g_outputWindowHintedFps = 0;
         g_outputWindowBuffersRequested = false;
         g_blitCount.store(0, std::memory_order_relaxed);
@@ -1311,9 +1396,32 @@ void reset() {
 
 void setHdrEnabled(bool enabled) {
     const bool prev = g_hdrEnabled.exchange(enabled, std::memory_order_acq_rel);
+    if (!enabled) {
+        g_hdrMode.store(kHdrModeSdr, std::memory_order_release);
+    } else if (g_hdrMode.load(std::memory_order_acquire) == kHdrModeSdr) {
+        g_hdrMode.store(kHdrModeHdr10, std::memory_order_release);
+    }
     if (prev != enabled) {
-        LOGI("setHdrEnabled: %d -> %d (effective on next bootstrap)",
-             static_cast<int>(prev), static_cast<int>(enabled));
+        LOGI("setHdrEnabled: %d -> %d mode=%d (effective on next bootstrap)",
+             static_cast<int>(prev),
+             static_cast<int>(enabled),
+             g_hdrMode.load(std::memory_order_acquire));
+    }
+}
+
+void setHdrMode(int32_t mode) {
+    const int32_t clampedMode =
+        mode == kHdrModeHlg ? kHdrModeHlg :
+        mode == kHdrModeHdr10 ? kHdrModeHdr10 :
+        kHdrModeSdr;
+    const int32_t prevMode = g_hdrMode.exchange(clampedMode, std::memory_order_acq_rel);
+    const bool enabled = clampedMode != kHdrModeSdr;
+    const bool prevEnabled = g_hdrEnabled.exchange(enabled, std::memory_order_acq_rel);
+    if (prevMode != clampedMode || prevEnabled != enabled) {
+        LOGI("setHdrMode: %d -> %d enabled=%d (effective on next bootstrap)",
+             prevMode,
+             clampedMode,
+             static_cast<int>(enabled));
     }
 }
 
@@ -1371,6 +1479,8 @@ void setOutputWindow(ANativeWindow* nativeWindow) {
     g_outputWindow = nativeWindow;
     g_outputWindowConfiguredW = 0;
     g_outputWindowConfiguredH = 0;
+    g_outputWindowConfiguredFormat = 0;
+    g_outputWindowConfiguredDataspace = 0;
     g_outputWindowHintedFps = 0;
     g_outputWindowBuffersRequested = false;
     g_blitCount.store(0, std::memory_order_relaxed);
@@ -1407,12 +1517,21 @@ bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDR
         .pNext = nullptr,
         .externalFormat = fp.externalFormat,
     };
+    const bool forceHlgFullRange =
+        g_context->hdrPassthrough && g_context->hdrMode == kHdrModeHlg;
+    const VkSamplerYcbcrModelConversion ycbcrModel = forceHlgFullRange
+        ? VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_2020
+        : fp.suggestedYcbcrModel;
+    const VkSamplerYcbcrRange ycbcrRange = forceHlgFullRange
+        ? VK_SAMPLER_YCBCR_RANGE_ITU_FULL
+        : fp.suggestedYcbcrRange;
+
     VkSamplerYcbcrConversionCreateInfo cvtCi{
         .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO,
         .pNext = &extFmt,
         .format = VK_FORMAT_UNDEFINED,
-        .ycbcrModel = fp.suggestedYcbcrModel,
-        .ycbcrRange = fp.suggestedYcbcrRange,
+        .ycbcrModel = ycbcrModel,
+        .ycbcrRange = ycbcrRange,
         .components = fp.samplerYcbcrConversionComponents,
         .xChromaOffset = fp.suggestedXChromaOffset,
         .yChromaOffset = fp.suggestedYChromaOffset,
@@ -1730,10 +1849,14 @@ bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDR
 
     g_context->boundExternalFormat = fp.externalFormat;
     LOGI("stage3.3a-iii.b.1: ycbcr conversion + sampler + pipeline ready "
-         "externalFormat=0x%llx model=%u range=%u chromaFilter=%d",
+         "externalFormat=0x%llx model=%u range=%u suggestedModel=%u suggestedRange=%u "
+         "hdrMode=%d chromaFilter=%d",
          static_cast<unsigned long long>(fp.externalFormat),
+         static_cast<unsigned>(ycbcrModel),
+         static_cast<unsigned>(ycbcrRange),
          static_cast<unsigned>(fp.suggestedYcbcrModel),
          static_cast<unsigned>(fp.suggestedYcbcrRange),
+         g_context->hdrMode,
          static_cast<int>(cvtCi.chromaFilter));
     LOGI("stage3.3u: rgba upscale pipeline ready src=%ux%u dst=%ux%u",
          g_context->width, g_context->height,
@@ -1758,24 +1881,34 @@ void blitAhbToWindowLocked(AHardwareBuffer* srcAhb, const char* tag) {
     if (srcW <= 0 || srcH <= 0) return;
 
     // 首次或尺寸变化时重配窗口。WINDOW_FORMAT_RGBA_8888 与 output AHB 格式一致。
-    if (g_outputWindowConfiguredW != srcW || g_outputWindowConfiguredH != srcH) {
+    const uint32_t bytesPerPixel = g_context != nullptr ? g_context->bytesPerPixel : 4U;
+    const int32_t windowFormat = g_context != nullptr ? g_context->windowFormat : WINDOW_FORMAT_RGBA_8888;
+    const int32_t windowDataspace =
+        g_context != nullptr ? g_context->windowDataspace : kDataspaceSrgbFull;
+
+    if (g_outputWindowConfiguredW != srcW ||
+        g_outputWindowConfiguredH != srcH ||
+        g_outputWindowConfiguredFormat != windowFormat ||
+        g_outputWindowConfiguredDataspace != windowDataspace) {
         const int32_t rc = ANativeWindow_setBuffersGeometry(
-            g_outputWindow, srcW, srcH, WINDOW_FORMAT_RGBA_8888);
+            g_outputWindow, srcW, srcH, windowFormat);
         if (rc != 0) {
-            LOGE("stage3.3c: ANativeWindow_setBuffersGeometry rc=%d w=%d h=%d", rc, srcW, srcH);
+            LOGE("stage3.3c: ANativeWindow_setBuffersGeometry rc=%d w=%d h=%d fmt=%d",
+                 rc, srcW, srcH, windowFormat);
             return;
         }
         // 显式声明数据空间为标准 sRGB，让 SurfaceFlinger 把 buffer 当 sRGB→display
         // 做色域管理；否则宽色域 OLED 屏会把 sRGB 数据按 native gamut 直显，
         // 视觉上颜色过饱和。ADATASPACE_SRGB = STANDARD_BT709 | TRANSFER_SRGB | RANGE_FULL。
-        constexpr int32_t kAdataspaceSrgb = 142671872;
-        ANativeWindow_setBuffersDataSpace(g_outputWindow, kAdataspaceSrgb);
+        ANativeWindow_setBuffersDataSpace(g_outputWindow, windowDataspace);
         g_outputWindowConfiguredW = srcW;
         g_outputWindowConfiguredH = srcH;
+        g_outputWindowConfiguredFormat = windowFormat;
+        g_outputWindowConfiguredDataspace = windowDataspace;
         g_outputWindowBuffersRequested = false;
         applyOutputWindowHintsLocked(true);
-        LOGI("stage3.3c: configured output window %dx%d (src stride=%d px)",
-             srcW, srcH, srcStridePx);
+        LOGI("stage3.3c: configured output window %dx%d fmt=%d dataspace=%d bpp=%u (src stride=%d px)",
+             srcW, srcH, windowFormat, windowDataspace, bytesPerPixel, srcStridePx);
     }
 
     void* srcPtr = nullptr;
@@ -1803,9 +1936,9 @@ void blitAhbToWindowLocked(AHardwareBuffer* srcAhb, const char* tag) {
     const int32_t copyH = std::min(srcH, dst.height);
     const uint8_t* srcRow = static_cast<const uint8_t*>(srcPtr);
     uint8_t* dstRow = static_cast<uint8_t*>(dst.bits);
-    const size_t srcRowBytes = static_cast<size_t>(srcStridePx) * 4u;
-    const size_t dstRowBytes = static_cast<size_t>(dst.stride) * 4u;
-    const size_t copyRowBytes = static_cast<size_t>(copyW) * 4u;
+    const size_t srcRowBytes = static_cast<size_t>(srcStridePx) * bytesPerPixel;
+    const size_t dstRowBytes = static_cast<size_t>(dst.stride) * bytesPerPixel;
+    const size_t copyRowBytes = static_cast<size_t>(copyW) * bytesPerPixel;
     for (int32_t y = 0; y < copyH; ++y) {
         std::memcpy(dstRow, srcRow, copyRowBytes);
         srcRow += srcRowBytes;
@@ -1868,22 +2001,31 @@ bool enqueueAhbToPresenterLocked(AHardwareBuffer* srcAhb,
     const int32_t displayH = (g_context != nullptr && g_context->presentHeight > 0)
         ? static_cast<int32_t>(g_context->presentHeight)
         : srcH;
+    const uint32_t bytesPerPixel = g_context != nullptr ? g_context->bytesPerPixel : 4U;
+    const int32_t windowFormat = g_context != nullptr ? g_context->windowFormat : WINDOW_FORMAT_RGBA_8888;
+    const int32_t windowDataspace =
+        g_context != nullptr ? g_context->windowDataspace : kDataspaceSrgbFull;
 
-    if (g_outputWindowConfiguredW != displayW || g_outputWindowConfiguredH != displayH) {
+    if (g_outputWindowConfiguredW != displayW ||
+        g_outputWindowConfiguredH != displayH ||
+        g_outputWindowConfiguredFormat != windowFormat ||
+        g_outputWindowConfiguredDataspace != windowDataspace) {
         const int32_t rc = ANativeWindow_setBuffersGeometry(
-            g_outputWindow, displayW, displayH, WINDOW_FORMAT_RGBA_8888);
+            g_outputWindow, displayW, displayH, windowFormat);
         if (rc != 0) {
-            LOGE("stage3.3c: ANativeWindow_setBuffersGeometry rc=%d w=%d h=%d", rc, displayW, displayH);
+            LOGE("stage3.3c: ANativeWindow_setBuffersGeometry rc=%d w=%d h=%d fmt=%d",
+                 rc, displayW, displayH, windowFormat);
             return false;
         }
-        constexpr int32_t kAdataspaceSrgb = 142671872;
-        ANativeWindow_setBuffersDataSpace(g_outputWindow, kAdataspaceSrgb);
+        ANativeWindow_setBuffersDataSpace(g_outputWindow, windowDataspace);
         g_outputWindowConfiguredW = displayW;
         g_outputWindowConfiguredH = displayH;
+        g_outputWindowConfiguredFormat = windowFormat;
+        g_outputWindowConfiguredDataspace = windowDataspace;
         g_outputWindowBuffersRequested = false;
         applyOutputWindowHintsLocked(true);
-        LOGI("stage3.3c: configured async output window %dx%d (src=%dx%d stride=%d px)",
-             displayW, displayH, srcW, srcH, srcStridePx);
+        LOGI("stage3.3c: configured async output window %dx%d fmt=%d dataspace=%d bpp=%u (src=%dx%d stride=%d px)",
+             displayW, displayH, windowFormat, windowDataspace, bytesPerPixel, srcW, srcH, srcStridePx);
     }
 
     void* srcPtr = nullptr;
@@ -1901,9 +2043,10 @@ bool enqueueAhbToPresenterLocked(AHardwareBuffer* srcAhb,
     frame.height = srcH;
     frame.displayWidth = displayW;
     frame.displayHeight = displayH;
+    frame.bytesPerPixel = bytesPerPixel;
     frame.tag = tag != nullptr ? tag : "";
     try {
-        frame.rgba.resize(static_cast<size_t>(srcW) * static_cast<size_t>(srcH) * 4u);
+        frame.rgba.resize(static_cast<size_t>(srcW) * static_cast<size_t>(srcH) * bytesPerPixel);
     } catch (const std::exception& e) {
         AHardwareBuffer_unlock(srcAhb, nullptr);
         LOGE("stage3.3c: staging allocation failed tag=%s err=%s", tag, e.what());
@@ -1913,8 +2056,8 @@ bool enqueueAhbToPresenterLocked(AHardwareBuffer* srcAhb,
     const auto copyStart = std::chrono::steady_clock::now();
     const uint8_t* srcRow = static_cast<const uint8_t*>(srcPtr);
     uint8_t* dstRow = frame.rgba.data();
-    const size_t srcRowBytes = static_cast<size_t>(srcStridePx) * 4u;
-    const size_t dstRowBytes = static_cast<size_t>(srcW) * 4u;
+    const size_t srcRowBytes = static_cast<size_t>(srcStridePx) * bytesPerPixel;
+    const size_t dstRowBytes = static_cast<size_t>(srcW) * bytesPerPixel;
     for (int32_t y = 0; y < srcH; ++y) {
         std::memcpy(dstRow, srcRow, dstRowBytes);
         srcRow += srcRowBytes;

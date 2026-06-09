@@ -89,6 +89,16 @@ class FramegenInterceptor {
         }
 
         @JvmStatic
+        fun configureHdrMode(mode: Int) {
+            if (!isAvailable()) return
+            try {
+                nativeSetHdrMode(mode.coerceIn(0, 2))
+            } catch (t: Throwable) {
+                Log.w(TAG, "failed to configure framegen HDR mode", t)
+            }
+        }
+
+        @JvmStatic
         fun configureOutputFrameRate(fps: Int) {
             if (!isAvailable()) return
             try {
@@ -166,6 +176,9 @@ class FramegenInterceptor {
 
         @JvmStatic
         private external fun nativeSetHdrEnabled(enabled: Boolean)
+
+        @JvmStatic
+        private external fun nativeSetHdrMode(mode: Int)
 
         @JvmStatic
         private external fun nativeSetOutputFrameRate(fps: Int)

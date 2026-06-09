@@ -14,6 +14,7 @@ bool prewarmContext(int width, int height);
 
 void reset();
 void setHdrEnabled(bool enabled);
+void setHdrMode(int32_t mode);
 void setOutputFrameRate(int32_t fps);
 void setTuningConfig(int32_t internalWidth,
                      int32_t presentMode,
