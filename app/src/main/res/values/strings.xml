@@ -899,8 +899,8 @@
     <string name="summary_framegen_enabled">Generate extra frames on the phone for smoother streaming. For 120 Hz output, set stream FPS to 60; values above half of the target refresh rate will not improve frame generation.</string>
     <string name="summary_framegen_enabled_locked">Unlock developer features first to enable frame generation.</string>
     <string name="summary_framegen_enabled_needs_dll">Import the frame generation engine file first, then enable this for your next stream.</string>
-    <string name="title_framegen_adaptive_enabled">Network adaptive tuning</string>
-    <string name="summary_framegen_adaptive_enabled">When frame generation is enabled, adjust its tuning during packet loss or device load changes. After recovery, it returns to normal frame generation tuning.</string>
+    <string name="title_framegen_adaptive_enabled">Weak-network frame fill</string>
+    <string name="summary_framegen_adaptive_enabled">During packet loss or unstable frame delivery, use frame generation to stay near the current target FPS. This does not require setting stream FPS to 60.</string>
     <string name="title_framegen_quality_preset">Frame generation quality</string>
     <string name="summary_framegen_quality_preset">Choose the balance between smoothness and clarity.</string>
     <string name="framegen_quality_performance">Performance (recommended)</string>

@@ -113,10 +113,9 @@
             android:defaultValue="false" />
         <CheckBoxPreference
             android:key="checkbox_framegen_adaptive_enabled"
-            android:dependency="checkbox_framegen_enabled"
             android:title="@string/title_framegen_adaptive_enabled"
             android:summary="@string/summary_framegen_adaptive_enabled"
-            android:defaultValue="true" />
+            android:defaultValue="false" />
         <ListPreference
             android:key="list_framegen_quality_preset"
             android:title="@string/title_framegen_quality_preset"

@@ -10,6 +10,7 @@ class FramegenAdaptiveController {
         val inputFps: Int,
         val presentationFps: Int,
         val adaptiveEnabled: Boolean,
+        val allowAdaptiveWithoutDoubling: Boolean,
         val internalWidth: Int,
         val presentMode: Int,
         val slowFrameThresholdMs: Int,
@@ -59,7 +60,7 @@ class FramegenAdaptiveController {
     fun onPerformanceInfo(performanceInfo: PerformanceInfo) {
         val currentConfig = config ?: return
         if (!currentConfig.adaptiveEnabled ||
-            currentConfig.presentationFps <= currentConfig.inputFps ||
+            (!currentConfig.allowAdaptiveWithoutDoubling && currentConfig.presentationFps <= currentConfig.inputFps) ||
             currentConfig.inputFps <= 0
         ) {
             return
@@ -74,7 +75,7 @@ class FramegenAdaptiveController {
     fun onFrameLossEvent(framesLost: Int, frameNumber: Int) {
         val currentConfig = config ?: return
         if (!currentConfig.adaptiveEnabled ||
-            currentConfig.presentationFps <= currentConfig.inputFps ||
+            (!currentConfig.allowAdaptiveWithoutDoubling && currentConfig.presentationFps <= currentConfig.inputFps) ||
             currentConfig.inputFps <= 0
         ) {
             return

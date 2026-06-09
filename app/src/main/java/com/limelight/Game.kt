@@ -605,16 +605,24 @@ class Game : Activity(), SurfaceHolder.Callback,
         get() = PreferenceManager.getDefaultSharedPreferences(this)
             .getBoolean("checkbox_resume_stream", false)
 
-    private fun isFramegenConfigured(prefs: SharedPreferences = defaultPreferences()): Boolean =
-        FramegenInterceptor.isAvailable() && FramegenSettings.isAllowedByUser(prefs)
+    private fun isFramegenReady(prefs: SharedPreferences = defaultPreferences()): Boolean =
+        FramegenInterceptor.isAvailable() && FramegenSettings.isReadyForUser(prefs)
+
+    private fun shouldUseRegularFramegen(prefs: SharedPreferences = defaultPreferences()): Boolean =
+        isFramegenReady(prefs) &&
+            FramegenSettings.isUserEnabled(prefs) &&
+            prefConfig.fps in 1..MAX_FRAMEGEN_DOUBLING_INPUT_FPS
+
+    private fun shouldUseWeakNetworkFramegen(prefs: SharedPreferences = defaultPreferences()): Boolean =
+        isFramegenReady(prefs) && FramegenSettings.isAdaptiveEnabled(prefs)
 
     private fun shouldUseFramegen(prefs: SharedPreferences = defaultPreferences()): Boolean =
-        isFramegenConfigured(prefs) &&
+        (shouldUseRegularFramegen(prefs) || shouldUseWeakNetworkFramegen(prefs)) &&
             FramegenSettings.isCaptureResolutionSupported(prefConfig.width, prefConfig.height)
 
     private fun framegenPresentationFps(prefs: SharedPreferences = defaultPreferences()): Int {
         val inputFps = prefConfig.fps
-        return if (shouldUseFramegen(prefs) && inputFps in 1..MAX_FRAMEGEN_DOUBLING_INPUT_FPS) {
+        return if (shouldUseRegularFramegen(prefs)) {
             inputFps * 2
         } else {
             inputFps
@@ -844,6 +852,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         val presentationFps: Int,
         val inputHdrEnabled: Boolean,
         val adaptiveEnabled: Boolean,
+        val allowAdaptiveWithoutDoubling: Boolean,
         val internalWidth: Int,
         val presentMode: Int,
         val slowFrameThresholdMs: Int,
@@ -1717,7 +1726,12 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     private fun framegenConfigForStream(): FramegenRuntimeConfig? {
         val prefs = defaultPreferences()
-        if (!isFramegenConfigured(prefs)) {
+        if (!isFramegenReady(prefs)) {
+            return null
+        }
+        val regularEnabled = shouldUseRegularFramegen(prefs)
+        val adaptiveEnabled = FramegenSettings.isAdaptiveEnabled(prefs)
+        if (!regularEnabled && !adaptiveEnabled) {
             return null
         }
         if (!FramegenSettings.isCaptureResolutionSupported(prefConfig.width, prefConfig.height)) {
@@ -1734,7 +1748,8 @@ class Game : Activity(), SurfaceHolder.Callback,
             losslessDllPath = dllPath,
             presentationFps = framegenPresentationFps(prefs),
             inputHdrEnabled = framegenInputHdrEnabled,
-            adaptiveEnabled = FramegenSettings.isAdaptiveEnabled(prefs),
+            adaptiveEnabled = adaptiveEnabled,
+            allowAdaptiveWithoutDoubling = adaptiveEnabled && !regularEnabled,
             internalWidth = FramegenSettings.resolveInternalWidth(prefs),
             presentMode = if (prefs.getBoolean(FramegenSettings.PREF_PRESENT_REAL_FIRST, false)) 1 else 0,
             slowFrameThresholdMs = prefs.getInt(
@@ -1789,6 +1804,7 @@ class Game : Activity(), SurfaceHolder.Callback,
                 inputFps = prefConfig.fps,
                 presentationFps = config.presentationFps,
                 adaptiveEnabled = config.adaptiveEnabled,
+                allowAdaptiveWithoutDoubling = config.allowAdaptiveWithoutDoubling,
                 internalWidth = config.internalWidth,
                 presentMode = config.presentMode,
                 slowFrameThresholdMs = config.slowFrameThresholdMs,

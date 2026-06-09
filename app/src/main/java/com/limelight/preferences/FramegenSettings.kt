@@ -29,7 +29,7 @@ object FramegenSettings {
         prefs.getBoolean(PREF_ENABLED, false)
 
     fun isAdaptiveEnabled(prefs: SharedPreferences): Boolean =
-        prefs.getBoolean(PREF_ADAPTIVE_ENABLED, true)
+        prefs.getBoolean(PREF_ADAPTIVE_ENABLED, false)
 
     fun resolveLosslessDllPath(prefs: SharedPreferences): String? {
         val path = prefs.getString(PREF_LOSSLESS_DLL_STAGED_PATH, null)
@@ -43,8 +43,8 @@ object FramegenSettings {
     fun isLosslessDllReady(prefs: SharedPreferences): Boolean =
         resolveLosslessDllPath(prefs) != null
 
-    fun isAllowedByUser(prefs: SharedPreferences): Boolean =
-        isUserEnabled(prefs) && DeveloperUnlockSettings.isUnlocked(prefs) && isLosslessDllReady(prefs)
+    fun isReadyForUser(prefs: SharedPreferences): Boolean =
+        DeveloperUnlockSettings.isUnlocked(prefs) && isLosslessDllReady(prefs)
 
     fun isCaptureResolutionSupported(width: Int, height: Int): Boolean =
         width > 0 && height > 0 && width.toLong() * height.toLong() <= MAX_CAPTURE_PIXELS.toLong()
