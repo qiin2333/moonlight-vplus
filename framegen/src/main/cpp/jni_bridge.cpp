@@ -176,12 +176,14 @@ Java_com_limelight_framegen_FramegenInterceptor_nativeSetOutputFrameRate(
 extern "C" JNIEXPORT void JNICALL
 Java_com_limelight_framegen_FramegenInterceptor_nativeSetTuningConfig(
         JNIEnv * /*env*/, jclass /* clazz */,
-        jint internalWidth, jint presentMode, jint slowLsfgThresholdMs, jint presentQueueMax) {
+        jint internalWidth, jint presentMode, jint slowLsfgThresholdMs, jint presentQueueMax,
+        jboolean allowHighInputBypass) {
     FramegenPipeline::setTuningConfig(
         static_cast<int32_t>(internalWidth),
         static_cast<int32_t>(presentMode),
         static_cast<int32_t>(slowLsfgThresholdMs),
-        static_cast<int32_t>(presentQueueMax));
+        static_cast<int32_t>(presentQueueMax),
+        allowHighInputBypass == JNI_TRUE);
 }
 
 extern "C" JNIEXPORT void JNICALL

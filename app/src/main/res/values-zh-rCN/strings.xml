@@ -1140,6 +1140,9 @@
     <string name="perf_decoder">解码器</string>
     <string name="perf_resolution">分辨率</string>
     <string name="perf_fps">帧率</string>
+    <string name="perf_rx_fps">Rx</string>
+    <string name="perf_rd_fps">Rd</string>
+    <string name="perf_fg_fps">FG</string>
     <string name="perf_frame_loss">丢帧率</string>
     <string name="perf_network_rtt">网络延时</string>
     <string name="perf_host_latency">主机延时</string>

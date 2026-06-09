@@ -103,7 +103,8 @@ class FramegenInterceptor {
             internalWidth: Int,
             presentMode: Int,
             slowLsfgThresholdMs: Int,
-            presentQueueMax: Int
+            presentQueueMax: Int,
+            allowHighInputBypass: Boolean = false
         ) {
             if (!isAvailable()) return
             try {
@@ -111,7 +112,8 @@ class FramegenInterceptor {
                     internalWidth.coerceIn(0, 1920),
                     if (presentMode == 1) 1 else 0,
                     slowLsfgThresholdMs.coerceIn(0, 100),
-                    presentQueueMax.coerceIn(1, 12)
+                    presentQueueMax.coerceIn(1, 12),
+                    allowHighInputBypass
                 )
             } catch (t: Throwable) {
                 Log.w(TAG, "failed to configure framegen tuning", t)
@@ -173,7 +175,8 @@ class FramegenInterceptor {
             internalWidth: Int,
             presentMode: Int,
             slowLsfgThresholdMs: Int,
-            presentQueueMax: Int
+            presentQueueMax: Int,
+            allowHighInputBypass: Boolean
         )
 
         @JvmStatic

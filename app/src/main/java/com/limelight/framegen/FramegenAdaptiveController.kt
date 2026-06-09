@@ -189,7 +189,8 @@ class FramegenAdaptiveController {
             internalWidth,
             presentMode,
             slowFrameThresholdMs,
-            presentQueueMax
+            presentQueueMax,
+            currentConfig.allowAdaptiveWithoutDoubling
         )
 
         val previousMode = mode

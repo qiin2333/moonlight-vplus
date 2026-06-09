@@ -1797,7 +1797,8 @@ class Game : Activity(), SurfaceHolder.Callback,
             config.internalWidth,
             config.presentMode,
             config.slowFrameThresholdMs,
-            config.presentQueueMax
+            config.presentQueueMax,
+            config.allowAdaptiveWithoutDoubling
         )
         framegenAdaptiveController.configure(
             FramegenAdaptiveController.Config(
@@ -2049,6 +2050,13 @@ class Game : Activity(), SurfaceHolder.Callback,
                 perfAttrs[getString(R.string.perf_decoder)] = performanceInfo.decoder ?: ""
                 perfAttrs[getString(R.string.perf_resolution)] = "${performanceInfo.initialWidth}x${performanceInfo.initialHeight}"
                 perfAttrs[getString(R.string.perf_fps)] = String.format("%.0f", performanceInfo.totalFps)
+                perfAttrs[getString(R.string.perf_rx_fps)] = String.format("%.0f", performanceInfo.receivedFps)
+                perfAttrs[getString(R.string.perf_rd_fps)] = String.format("%.0f", performanceInfo.renderedFps)
+                perfAttrs[getString(R.string.perf_fg_fps)] = if (performanceInfo.framegenFps > 0.5f) {
+                    String.format("%.0f", performanceInfo.framegenFps)
+                } else {
+                    "0"
+                }
                 perfAttrs[getString(R.string.perf_frame_loss)] = String.format("%.1f", performanceInfo.lostFrameRate)
                 perfAttrs[getString(R.string.perf_network_rtt)] = String.format("%d", (performanceInfo.rttInfo shr 32).toInt())
                 perfAttrs[getString(R.string.perf_host_latency)] = String.format("%.2f", performanceInfo.aveHostProcessingLatency)
@@ -2074,9 +2082,18 @@ class Game : Activity(), SurfaceHolder.Callback,
             .takeIf { it > 0 }
             ?: framegenPresentationFps()
         performanceInfo.framegenFps =
-            if (framegenCapture != null && baseFps > 0 && outputFps > baseFps) {
-                val multiplier = outputFps.toFloat() / baseFps.toFloat()
-                (performanceInfo.renderedFps * multiplier).coerceAtMost(outputFps.toFloat())
+            if (framegenCapture != null && baseFps > 0 && outputFps > 0) {
+                if (outputFps > baseFps) {
+                    val multiplier = outputFps.toFloat() / baseFps.toFloat()
+                    (performanceInfo.renderedFps * multiplier).coerceAtMost(outputFps.toFloat())
+                } else {
+                    val targetFps = outputFps.toFloat()
+                    if (performanceInfo.renderedFps >= targetFps * 0.95f) {
+                        0f
+                    } else {
+                        (performanceInfo.renderedFps * 2f).coerceAtMost(targetFps)
+                    }
+                }
             } else {
                 0f
             }

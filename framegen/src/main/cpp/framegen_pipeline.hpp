@@ -18,7 +18,8 @@ void setOutputFrameRate(int32_t fps);
 void setTuningConfig(int32_t internalWidth,
                      int32_t presentMode,
                      int32_t slowLsfgThresholdMs,
-                     int32_t presentQueueMax);
+                     int32_t presentQueueMax,
+                     bool allowHighInputBypass);
 void setOutputWindow(ANativeWindow* nativeWindow);
 
 } // namespace FramegenPipeline

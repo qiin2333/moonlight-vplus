@@ -338,6 +338,7 @@ std::atomic<int32_t> g_outputFrameRate{0};
 std::atomic<int32_t> g_internalFramegenWidth{864};
 std::atomic<int32_t> g_presentMode{0};
 std::atomic<int32_t> g_slowLsfgThresholdMs{18};
+std::atomic<bool> g_allowHighInputBypass{false};
 AdaptiveFramegenState g_adaptive;
 
 constexpr uint64_t kFirstAvailableDeviceUuid = 0x1463ABACULL;
@@ -1332,7 +1333,8 @@ void setOutputFrameRate(int32_t fps) {
 void setTuningConfig(int32_t internalWidth,
                      int32_t presentMode,
                      int32_t slowLsfgThresholdMs,
-                     int32_t presentQueueMax) {
+                     int32_t presentQueueMax,
+                     bool allowHighInputBypass) {
     const int32_t clampedWidth = std::clamp(internalWidth, 0, 1920);
     const int32_t clampedPresentMode = presentMode == 1 ? 1 : 0;
     const int32_t clampedSlowThreshold = std::clamp(slowLsfgThresholdMs, 0, 100);
@@ -1343,14 +1345,19 @@ void setTuningConfig(int32_t internalWidth,
     const int32_t prevMode = g_presentMode.exchange(clampedPresentMode, std::memory_order_acq_rel);
     const int32_t prevSlow = g_slowLsfgThresholdMs.exchange(clampedSlowThreshold, std::memory_order_acq_rel);
     const int32_t prevQueue = g_presentQueueMax.exchange(clampedQueueMax, std::memory_order_acq_rel);
+    const bool prevAllowHighInputBypass =
+        g_allowHighInputBypass.exchange(allowHighInputBypass, std::memory_order_acq_rel);
     if (prevWidth != clampedWidth ||
         prevMode != clampedPresentMode ||
         prevSlow != clampedSlowThreshold ||
-        prevQueue != clampedQueueMax) {
-        LOGI("stage3.3d: tuning width=%d mode=%d slowMs=%d queueMax=%d "
-             "(prev width=%d mode=%d slowMs=%d queueMax=%d)",
+        prevQueue != clampedQueueMax ||
+        prevAllowHighInputBypass != allowHighInputBypass) {
+        LOGI("stage3.3d: tuning width=%d mode=%d slowMs=%d queueMax=%d highBypass=%d "
+             "(prev width=%d mode=%d slowMs=%d queueMax=%d highBypass=%d)",
              clampedWidth, clampedPresentMode, clampedSlowThreshold, clampedQueueMax,
-             prevWidth, prevMode, prevSlow, prevQueue);
+             static_cast<int>(allowHighInputBypass),
+             prevWidth, prevMode, prevSlow, prevQueue,
+             static_cast<int>(prevAllowHighInputBypass));
     }
 }
 
@@ -2172,6 +2179,7 @@ bool upscaleInterpLocked(bool logThisFrame, int64_t* outWaitMs) {
 // are both observed here, not in the Java setup path.
 bool shouldBypassFramegenLocked(int64_t timestampNs, float observedInputFps, bool logThisFrame) {
     const int32_t targetFps = g_outputFrameRate.load(std::memory_order_acquire);
+    const bool allowHighInputBypass = g_allowHighInputBypass.load(std::memory_order_acquire);
     if (targetFps < 30) {
         if (timestampNs > 0) {
             g_adaptive.lastTimestampNs = timestampNs;
@@ -2179,27 +2187,29 @@ bool shouldBypassFramegenLocked(int64_t timestampNs, float observedInputFps, boo
         return false;
     }
 
-    if (observedInputFps > 1.0F && observedInputFps < 500.0F) {
-        if (g_adaptive.inputFpsEma <= 0.0) {
-            g_adaptive.inputFpsEma = observedInputFps;
-        } else {
-            g_adaptive.inputFpsEma = (g_adaptive.inputFpsEma * 0.88) +
-                                     (static_cast<double>(observedInputFps) * 0.12);
-        }
-    } else if (timestampNs > 0 && g_adaptive.lastTimestampNs > 0 && timestampNs > g_adaptive.lastTimestampNs) {
+    double timestampFps = 0.0;
+    if (timestampNs > 0 && g_adaptive.lastTimestampNs > 0 && timestampNs > g_adaptive.lastTimestampNs) {
         const double deltaMs = static_cast<double>(timestampNs - g_adaptive.lastTimestampNs) / 1'000'000.0;
         if (deltaMs >= 1.0 && deltaMs <= 250.0) {
-            const double instantFps = 1000.0 / deltaMs;
-            if (g_adaptive.inputFpsEma <= 0.0) {
-                g_adaptive.inputFpsEma = instantFps;
-            } else {
-                g_adaptive.inputFpsEma = (g_adaptive.inputFpsEma * 0.88) + (instantFps * 0.12);
-            }
-
+            timestampFps = 1000.0 / deltaMs;
+        }
+    }
+    const double sampleFps = (allowHighInputBypass && timestampFps > 0.0)
+        ? timestampFps
+        : static_cast<double>(observedInputFps);
+    const double maxSampleFps = allowHighInputBypass
+        ? static_cast<double>(targetFps) * 1.35
+        : 500.0;
+    if (sampleFps > 1.0 && sampleFps <= maxSampleFps) {
+        if (g_adaptive.inputFpsEma <= 0.0) {
+            g_adaptive.inputFpsEma = sampleFps;
+        } else {
+            g_adaptive.inputFpsEma = (g_adaptive.inputFpsEma * 0.88) +
+                                     (sampleFps * 0.12);
         }
     }
     if (g_adaptive.inputFpsEma > 0.0) {
-        if (targetFps >= 100) {
+        if (targetFps >= 100 && !allowHighInputBypass) {
             if (g_adaptive.highInputBypass) {
                 LOGI("stage3.3d: adaptive exit high-input bypass for 2x target=%d inputEma=%.1f",
                      targetFps, g_adaptive.inputFpsEma);
@@ -2208,14 +2218,16 @@ bool shouldBypassFramegenLocked(int64_t timestampNs, float observedInputFps, boo
             g_adaptive.highInputFrames = 0;
             g_adaptive.lowInputFrames = 0;
         } else {
-            const double enterRatio = 0.85;
-            const double exitRatio = 0.70;
+            const double enterRatio = allowHighInputBypass ? 0.96 : 0.85;
+            const double exitRatio = allowHighInputBypass ? 0.82 : 0.70;
+            const uint32_t enterFrames = allowHighInputBypass ? 6U : 4U;
+            const uint32_t exitFrames = allowHighInputBypass ? 3U : 24U;
             const double enterFps = static_cast<double>(targetFps) * enterRatio;
             const double exitFps = static_cast<double>(targetFps) * exitRatio;
             if (!g_adaptive.highInputBypass) {
                 if (g_adaptive.inputFpsEma >= enterFps) {
                     g_adaptive.highInputFrames += 1;
-                    if (g_adaptive.highInputFrames >= 4) {
+                    if (g_adaptive.highInputFrames >= enterFrames) {
                         g_adaptive.highInputBypass = true;
                         g_adaptive.highInputFrames = 0;
                         g_adaptive.lowInputFrames = 0;
@@ -2228,7 +2240,7 @@ bool shouldBypassFramegenLocked(int64_t timestampNs, float observedInputFps, boo
             } else {
                 if (g_adaptive.inputFpsEma <= exitFps) {
                     g_adaptive.lowInputFrames += 1;
-                    if (g_adaptive.lowInputFrames >= 24) {
+                    if (g_adaptive.lowInputFrames >= exitFrames) {
                         g_adaptive.highInputBypass = false;
                         g_adaptive.highInputFrames = 0;
                         g_adaptive.lowInputFrames = 0;
@@ -2251,9 +2263,10 @@ bool shouldBypassFramegenLocked(int64_t timestampNs, float observedInputFps, boo
 
     const bool bypass = g_adaptive.highInputBypass || g_adaptive.slowCooldownFrames > 0;
     if (logThisFrame) {
-        LOGI("stage3.3d: adaptive target=%d inputEma=%.1f bypass=%d high=%d cooldown=%u",
+        LOGI("stage3.3d: adaptive target=%d inputEma=%.1f sample=%.1f bypass=%d high=%d cooldown=%u",
              targetFps,
              g_adaptive.inputFpsEma,
+             sampleFps,
              static_cast<int>(bypass),
              static_cast<int>(g_adaptive.highInputBypass),
              g_adaptive.slowCooldownFrames);
@@ -2515,18 +2528,35 @@ bool dispatchYuvToRgbaLocked(DecoderAhbImport& decoderImport,
         inputGapMs = static_cast<double>(timestampNs - prevTimestampNs) / 1'000'000.0;
         const int32_t targetFps = g_outputFrameRate.load(std::memory_order_acquire);
         if (targetFps >= 100) {
-            const double expectedSourceFps = std::max(30.0, static_cast<double>(targetFps) * 0.5);
+            const bool allowHighInputBypass = g_allowHighInputBypass.load(std::memory_order_acquire);
+            const double expectedSourceFps = allowHighInputBypass
+                ? static_cast<double>(targetFps)
+                : std::max(30.0, static_cast<double>(targetFps) * 0.5);
             const double expectedGapMs = 1000.0 / expectedSourceFps;
-            const double breakGapMs = std::max(28.0, expectedGapMs * 1.65);
+            const double breakGapMs = allowHighInputBypass
+                ? std::max(90.0, expectedGapMs * 10.0)
+                : std::max(28.0, expectedGapMs * 1.65);
             cadenceBreak = inputGapMs > breakGapMs;
         }
     }
     if (cadenceBreak) {
+        if (g_allowHighInputBypass.load(std::memory_order_acquire) &&
+            g_adaptive.highInputBypass) {
+            g_adaptive.highInputBypass = false;
+            g_adaptive.highInputFrames = 0;
+            g_adaptive.lowInputFrames = 0;
+            LOGI("stage3.3d: adaptive exit high-input bypass on cadence gap=%.2fms inputEma=%.1f",
+                 inputGapMs,
+                 g_adaptive.inputFpsEma);
+        }
         g_adaptive.cadenceBreakFrames += 1;
+        const bool allowHighInputBypass = g_allowHighInputBypass.load(std::memory_order_acquire);
         g_adaptive.cadenceSuppressFrames = std::max(
             g_adaptive.cadenceSuppressFrames,
-            kCadenceRecoverySuppressFrames);
-        clearPresenterQueue("cadence");
+            allowHighInputBypass ? 1U : kCadenceRecoverySuppressFrames);
+        if (!allowHighInputBypass || inputGapMs >= 140.0) {
+            clearPresenterQueue("cadence");
+        }
         if (g_adaptive.cadenceBreakFrames == 1 ||
             (g_adaptive.cadenceBreakFrames % 60) == 0 ||
             logThisFrame) {

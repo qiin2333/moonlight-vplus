@@ -1251,6 +1251,9 @@ Tap again to replace it.</string>
     <string name="perf_decoder">Decoder</string>
     <string name="perf_resolution">Resolution</string>
     <string name="perf_fps">FPS</string>
+    <string name="perf_rx_fps">Rx</string>
+    <string name="perf_rd_fps">Rd</string>
+    <string name="perf_fg_fps">FG</string>
     <string name="perf_frame_loss">Frame Loss</string>
     <string name="perf_network_rtt">Network RTT</string>
     <string name="perf_host_latency">Host Latency</string>
