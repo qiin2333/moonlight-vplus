@@ -25,6 +25,7 @@ class FramegenAdaptiveController {
     private var config: Config? = null
     private var mode = Mode.NORMAL
     private var lossWindows = 0
+    private var fastLossHoldWindows = 0
     private var lossRecoveryWindows = 0
     private var deviceWindows = 0
     private var stableWindows = 0
@@ -37,6 +38,7 @@ class FramegenAdaptiveController {
         this.config = config
         mode = Mode.NORMAL
         lossWindows = 0
+        fastLossHoldWindows = 0
         lossRecoveryWindows = 0
         deviceWindows = 0
         stableWindows = 0
@@ -47,6 +49,7 @@ class FramegenAdaptiveController {
         config = null
         mode = Mode.NORMAL
         lossWindows = 0
+        fastLossHoldWindows = 0
         lossRecoveryWindows = 0
         deviceWindows = 0
         stableWindows = 0
@@ -77,10 +80,12 @@ class FramegenAdaptiveController {
             return
         }
 
-        lossWindows = LOSS_ENTER_WINDOWS
-        lossRecoveryWindows = LOSS_RECOVERY_WINDOWS
+        if (mode != Mode.LOSS_SMOOTH) {
+            fastLossHoldWindows = FAST_LOSS_HOLD_WINDOWS
+            stableWindows = 0
+        }
+        lossRecoveryWindows = max(lossRecoveryWindows, FAST_LOSS_RECOVERY_WINDOWS)
         deviceWindows = 0
-        stableWindows = 0
         applyMode(
             Mode.LOSS_SMOOTH,
             "fastLoss frames=$framesLost frame=$frameNumber",
@@ -96,12 +101,14 @@ class FramegenAdaptiveController {
         val localWorkMs = performanceInfo.decodeTimeMs + performanceInfo.renderingLatencyMs
         val outputBudgetMs = 1000f / config.presentationFps.toFloat()
 
-        val networkPressure =
+        val fastLossActive = fastLossHoldWindows > 0
+        val metricNetworkPressure =
             performanceInfo.lostFrameRate >= LOSS_MILD_PERCENT ||
                 (rttMs >= RTT_HIGH_MS && receivedRatio > 0f && receivedRatio < LOSS_RECEIVED_RATIO) ||
                 (receivedRatio > 0f && receivedRatio < LOSS_RECEIVED_RATIO && renderedRatio >= receivedRatio * 0.9f)
+        val networkPressure = metricNetworkPressure || fastLossActive
 
-        if (networkPressure) {
+        if (metricNetworkPressure) {
             lossRecoveryWindows = LOSS_RECOVERY_WINDOWS
         } else if (lossRecoveryWindows > 0) {
             lossRecoveryWindows -= 1
@@ -109,9 +116,7 @@ class FramegenAdaptiveController {
 
         val localWorkPressure =
             localWorkMs > max(DEVICE_MIN_WORK_MS, outputBudgetMs * DEVICE_WORK_BUDGET_MULTIPLIER)
-        val localFpsPressure =
-            (renderedRatio > 0f && renderedRatio < DEVICE_RENDERED_RATIO) ||
-                (performanceInfo.onePercentLowFps > 0f && performanceInfo.onePercentLowFps < inputFps * DEVICE_LOW_FPS_RATIO)
+        val localFpsPressure = renderedRatio > 0f && renderedRatio < DEVICE_RENDERED_RATIO
         val devicePressure = localWorkPressure || (!networkPressure && lossRecoveryWindows == 0 && localFpsPressure)
 
         if (devicePressure && performanceInfo.lostFrameRate < LOSS_SEVERE_PERCENT) {
@@ -134,13 +139,18 @@ class FramegenAdaptiveController {
             stableWindows = 0
         }
 
-        return when {
+        val targetMode = when {
+            fastLossActive -> Mode.LOSS_SMOOTH
             deviceWindows >= DEVICE_ENTER_WINDOWS -> Mode.DEVICE_LIMITED
             performanceInfo.lostFrameRate >= LOSS_SEVERE_PERCENT -> Mode.LOSS_SMOOTH
             lossWindows >= LOSS_ENTER_WINDOWS -> Mode.LOSS_SMOOTH
             stableWindows >= STABLE_EXIT_WINDOWS -> Mode.NORMAL
             else -> mode
         }
+        if (fastLossHoldWindows > 0) {
+            fastLossHoldWindows -= 1
+        }
+        return targetMode
     }
 
     private fun applyMode(nextMode: Mode, reason: String, force: Boolean) {
@@ -214,18 +224,19 @@ class FramegenAdaptiveController {
         private const val LOSS_RECEIVED_RATIO = 0.94f
         private const val RTT_HIGH_MS = 80
         private const val LOSS_ENTER_WINDOWS = 2
-        private const val LOSS_RECOVERY_WINDOWS = 6
+        private const val FAST_LOSS_HOLD_WINDOWS = 2
+        private const val FAST_LOSS_RECOVERY_WINDOWS = 2
+        private const val LOSS_RECOVERY_WINDOWS = 3
         private const val LOSS_PRESENT_QUEUE_MAX = 3
         private const val LOSS_SLOW_THRESHOLD_MS = 24
 
         private const val DEVICE_RENDERED_RATIO = 0.82f
-        private const val DEVICE_LOW_FPS_RATIO = 0.65f
         private const val DEVICE_MIN_WORK_MS = 15f
         private const val DEVICE_WORK_BUDGET_MULTIPLIER = 1.8f
         private const val DEVICE_ENTER_WINDOWS = 2
         private const val DEVICE_LIMITED_INTERNAL_WIDTH = 864
 
         private const val STABLE_RENDERED_RATIO = 0.95f
-        private const val STABLE_EXIT_WINDOWS = 5
+        private const val STABLE_EXIT_WINDOWS = 3
     }
 }
