@@ -73,6 +73,84 @@ Java_com_limelight_nvstream_jni_MoonBridge_sendTouchpadEvent(JNIEnv *env, jclass
 }
 
 JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_sendTouchpadFrameEvent(JNIEnv *env, jclass clazz,
+                                                                  jbyte contactCount,
+                                                                  jbyteArray eventTypesArray,
+                                                                  jintArray pointerIdsArray,
+                                                                  jfloatArray xArray,
+                                                                  jfloatArray yArray,
+                                                                  jfloatArray pressureArray,
+                                                                  jshort rotation,
+                                                                  jshort deviceWidthMm,
+                                                                  jshort deviceHeightMm,
+                                                                  jbyte buttonState) {
+    uint8_t count = (uint8_t)contactCount;
+    uint8_t eventTypes[SS_TOUCHPAD_FRAME_MAX_CONTACTS];
+    uint32_t pointerIds[SS_TOUCHPAD_FRAME_MAX_CONTACTS];
+    float x[SS_TOUCHPAD_FRAME_MAX_CONTACTS];
+    float y[SS_TOUCHPAD_FRAME_MAX_CONTACTS];
+    float pressure[SS_TOUCHPAD_FRAME_MAX_CONTACTS];
+
+    if (count > SS_TOUCHPAD_FRAME_MAX_CONTACTS) {
+        return -3;
+    }
+
+    if (count > 0 &&
+        (eventTypesArray == NULL || pointerIdsArray == NULL || xArray == NULL || yArray == NULL || pressureArray == NULL ||
+         (*env)->GetArrayLength(env, eventTypesArray) < count ||
+         (*env)->GetArrayLength(env, pointerIdsArray) < count ||
+         (*env)->GetArrayLength(env, xArray) < count ||
+         (*env)->GetArrayLength(env, yArray) < count ||
+         (*env)->GetArrayLength(env, pressureArray) < count)) {
+        return -3;
+    }
+
+    if (count > 0) {
+        jbyte* eventTypesJava = (*env)->GetByteArrayElements(env, eventTypesArray, NULL);
+        jint* pointerIdsJava = (*env)->GetIntArrayElements(env, pointerIdsArray, NULL);
+        jfloat* xJava = (*env)->GetFloatArrayElements(env, xArray, NULL);
+        jfloat* yJava = (*env)->GetFloatArrayElements(env, yArray, NULL);
+        jfloat* pressureJava = (*env)->GetFloatArrayElements(env, pressureArray, NULL);
+
+        if (eventTypesJava == NULL || pointerIdsJava == NULL || xJava == NULL || yJava == NULL || pressureJava == NULL) {
+            if (eventTypesJava != NULL) {
+                (*env)->ReleaseByteArrayElements(env, eventTypesArray, eventTypesJava, JNI_ABORT);
+            }
+            if (pointerIdsJava != NULL) {
+                (*env)->ReleaseIntArrayElements(env, pointerIdsArray, pointerIdsJava, JNI_ABORT);
+            }
+            if (xJava != NULL) {
+                (*env)->ReleaseFloatArrayElements(env, xArray, xJava, JNI_ABORT);
+            }
+            if (yJava != NULL) {
+                (*env)->ReleaseFloatArrayElements(env, yArray, yJava, JNI_ABORT);
+            }
+            if (pressureJava != NULL) {
+                (*env)->ReleaseFloatArrayElements(env, pressureArray, pressureJava, JNI_ABORT);
+            }
+            return -1;
+        }
+
+        for (uint8_t i = 0; i < count; i++) {
+            eventTypes[i] = (uint8_t)eventTypesJava[i];
+            pointerIds[i] = (uint32_t)pointerIdsJava[i];
+            x[i] = xJava[i];
+            y[i] = yJava[i];
+            pressure[i] = pressureJava[i];
+        }
+
+        (*env)->ReleaseByteArrayElements(env, eventTypesArray, eventTypesJava, JNI_ABORT);
+        (*env)->ReleaseIntArrayElements(env, pointerIdsArray, pointerIdsJava, JNI_ABORT);
+        (*env)->ReleaseFloatArrayElements(env, xArray, xJava, JNI_ABORT);
+        (*env)->ReleaseFloatArrayElements(env, yArray, yJava, JNI_ABORT);
+        (*env)->ReleaseFloatArrayElements(env, pressureArray, pressureJava, JNI_ABORT);
+    }
+
+    return LiSendTouchpadFrameEvent(count, eventTypes, pointerIds, x, y, pressure,
+                                    rotation, deviceWidthMm, deviceHeightMm, buttonState);
+}
+
+JNIEXPORT jint JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_sendPenEvent(JNIEnv *env, jclass clazz, jbyte eventType,
                                                         jbyte toolType, jbyte penButtons,
                                                         jfloat x, jfloat y, jfloat pressureOrDistance,

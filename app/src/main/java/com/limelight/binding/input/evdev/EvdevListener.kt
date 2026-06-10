@@ -20,6 +20,19 @@ interface EvdevListener {
         buttonState: Byte
     )
 
+    fun touchpadFrameEvent(
+        contactCount: Byte,
+        eventTypes: ByteArray,
+        pointerIds: IntArray,
+        x: FloatArray,
+        y: FloatArray,
+        pressure: FloatArray,
+        rotation: Short,
+        deviceWidthMm: Short,
+        deviceHeightMm: Short,
+        buttonState: Byte
+    ): Int
+
     companion object {
         const val BUTTON_LEFT = 1
         const val BUTTON_MIDDLE = 2

@@ -1971,6 +1971,25 @@ class Game : Activity(), SurfaceHolder.Callback,
         )
     }
 
+    override fun touchpadFrameEvent(
+        contactCount: Byte,
+        eventTypes: ByteArray,
+        pointerIds: IntArray,
+        x: FloatArray,
+        y: FloatArray,
+        pressure: FloatArray,
+        rotation: Short,
+        deviceWidthMm: Short,
+        deviceHeightMm: Short,
+        buttonState: Byte
+    ): Int {
+        return conn?.sendTouchpadFrameEvent(
+            contactCount, eventTypes, pointerIds,
+            x, y, pressure, rotation,
+            deviceWidthMm, deviceHeightMm, buttonState
+        ) ?: MoonBridge.LI_ERR_UNSUPPORTED
+    }
+
     @Deprecated("Deprecated in Java")
     override fun onSystemUiVisibilityChange(visibility: Int) {
         if (!connected) return

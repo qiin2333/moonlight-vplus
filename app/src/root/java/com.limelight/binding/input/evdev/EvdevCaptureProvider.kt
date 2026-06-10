@@ -293,6 +293,72 @@ class EvdevCaptureProvider(
         }
 
         private fun flushFrame(listener: EvdevListener) {
+            val eventTypes = ByteArray(MAX_TOUCHPAD_SLOTS)
+            val pointerIds = IntArray(MAX_TOUCHPAD_SLOTS)
+            val x = FloatArray(MAX_TOUCHPAD_SLOTS)
+            val y = FloatArray(MAX_TOUCHPAD_SLOTS)
+            val pressure = FloatArray(MAX_TOUCHPAD_SLOTS)
+            var contactCount = 0
+
+            fun appendSlot(eventType: Byte, slot: TouchpadSlot, pointerId: Int) {
+                if (contactCount >= MAX_TOUCHPAD_SLOTS) return
+                eventTypes[contactCount] = eventType
+                pointerIds[contactCount] = pointerId.coerceAtLeast(0)
+                x[contactCount] = slot.x
+                y[contactCount] = slot.y
+                pressure[contactCount] = slot.pressure
+                contactCount++
+            }
+
+            for (slot in slots) {
+                if (slot.pendingDown) {
+                    appendSlot(MoonBridge.LI_TOUCH_EVENT_DOWN, slot, slot.trackingId)
+                }
+            }
+
+            for (slot in slots) {
+                if (slot.active && slot.dirty && !slot.pendingDown && !slot.pendingUp) {
+                    appendSlot(MoonBridge.LI_TOUCH_EVENT_MOVE, slot, slot.trackingId)
+                }
+            }
+
+            if (buttonChanged && contactCount == 0) {
+                val primarySlot = slots.firstOrNull { it.active && !it.pendingUp }
+                if (primarySlot != null) {
+                    appendSlot(MoonBridge.LI_TOUCH_EVENT_BUTTON_ONLY, primarySlot, primarySlot.trackingId)
+                }
+            }
+
+            for (slot in slots) {
+                if (slot.pendingUp) {
+                    appendSlot(MoonBridge.LI_TOUCH_EVENT_UP, slot, slot.lastTrackingId)
+                }
+            }
+
+            if (contactCount > 0) {
+                val result = listener.touchpadFrameEvent(
+                    contactCount.toByte(),
+                    eventTypes,
+                    pointerIds,
+                    x,
+                    y,
+                    pressure,
+                    MoonBridge.LI_ROT_UNKNOWN,
+                    deviceWidthMm,
+                    deviceHeightMm,
+                    buttonState
+                )
+
+                if (result == MoonBridge.LI_ERR_UNSUPPORTED) {
+                    flushFrameLegacy(listener)
+                    return
+                }
+            }
+
+            finishFrame()
+        }
+
+        private fun flushFrameLegacy(listener: EvdevListener) {
             for (slot in slots) {
                 if (slot.pendingDown) {
                     sendSlot(listener, MoonBridge.LI_TOUCH_EVENT_DOWN, slot, slot.trackingId)
@@ -319,6 +385,35 @@ class EvdevCaptureProvider(
             for (slot in slots) {
                 if (slot.pendingUp) {
                     sendSlot(listener, MoonBridge.LI_TOUCH_EVENT_UP, slot, slot.lastTrackingId)
+                    slot.pendingUp = false
+                    slot.trackingId = -1
+                    slot.lastTrackingId = -1
+                    slot.dirty = false
+                    slot.pressure = 0f
+                    slot.contactAreaMajor = 0f
+                    slot.contactAreaMinor = 0f
+                }
+            }
+        }
+
+        private fun finishFrame() {
+            for (slot in slots) {
+                if (slot.pendingDown) {
+                    slot.pendingDown = false
+                    slot.dirty = false
+                }
+            }
+
+            for (slot in slots) {
+                if (slot.active && slot.dirty && !slot.pendingUp) {
+                    slot.dirty = false
+                }
+            }
+
+            buttonChanged = false
+
+            for (slot in slots) {
+                if (slot.pendingUp) {
                     slot.pendingUp = false
                     slot.trackingId = -1
                     slot.lastTrackingId = -1

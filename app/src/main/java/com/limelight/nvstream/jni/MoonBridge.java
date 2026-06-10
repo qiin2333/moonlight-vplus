@@ -92,6 +92,8 @@ public class MoonBridge {
 
     public static final int LI_ERR_UNSUPPORTED = -5501;
 
+    public static final int LI_FF_TOUCHPAD_FRAME_EVENTS = 0x20;
+
     public static final byte LI_TOUCH_EVENT_HOVER       = 0x00;
     public static final byte LI_TOUCH_EVENT_DOWN        = 0x01;
     public static final byte LI_TOUCH_EVENT_UP          = 0x02;
@@ -513,6 +515,10 @@ public class MoonBridge {
     public static native int sendTouchpadEvent(byte eventType, int pointerId, float x, float y, float pressure,
                                                float contactAreaMajor, float contactAreaMinor, short rotation,
                                                short deviceWidthMm, short deviceHeightMm, byte buttonState);
+
+    public static native int sendTouchpadFrameEvent(byte contactCount, byte[] eventTypes, int[] pointerIds,
+                                                    float[] x, float[] y, float[] pressure, short rotation,
+                                                    short deviceWidthMm, short deviceHeightMm, byte buttonState);
 
     public static native int sendPenEvent(byte eventType, byte toolType, byte penButtons, float x, float y,
                                           float pressure, float contactAreaMajor, float contactAreaMinor,
