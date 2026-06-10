@@ -674,6 +674,11 @@
             android:entries="@array/esc_menu_key_names"
             android:entryValues="@array/esc_menu_key_values"
             android:defaultValue="111" />
+        <CheckBoxPreference
+            android:key="checkbox_optimize_hardware_touchpad"
+            android:title="@string/title_optimize_hardware_touchpad"
+            android:summary="@string/summary_optimize_hardware_touchpad"
+            android:defaultValue="true" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_on_screen_controls_settings"
         android:key="category_onscreen_controls"

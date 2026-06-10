@@ -62,5 +62,10 @@ class EvdevEvent(
         const val BTN_FORWARD: Short = 0x115
         const val BTN_BACK: Short = 0x116
         const val BTN_TASK: Short = 0x117
+        const val BTN_TOOL_QUINTTAP: Short = 0x148
+        const val BTN_TOOL_FINGER: Short = 0x145
+        const val BTN_TOOL_DOUBLETAP: Short = 0x14d
+        const val BTN_TOOL_TRIPLETAP: Short = 0x14e
+        const val BTN_TOOL_QUADTAP: Short = 0x14f
     }
 }

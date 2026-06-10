@@ -16,11 +16,13 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.net.ServerSocket
 import java.net.Socket
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 class EvdevCaptureProvider(
     private val activity: Activity,
-    private val listener: EvdevListener
+    private val listener: EvdevListener,
+    private val optimizeHardwareTouchpad: Boolean
 ) : InputCaptureProvider() {
 
     private val libraryPath: String = activity.applicationInfo.nativeLibraryDir
@@ -107,7 +109,7 @@ class EvdevCaptureProvider(
                                 "x=${event.absXMin}..${event.absXMax}@${event.absXResolution}, " +
                                 "y=${event.absYMin}..${event.absYMax}@${event.absYResolution}"
                         )
-                        TouchpadDeviceState(event)
+                        TouchpadDeviceState(event, optimizeHardwareTouchpad)
                     }.handleEvent(event, listener)
                     continue
                 }
@@ -168,11 +170,17 @@ class EvdevCaptureProvider(
         }
     }
 
-    private class TouchpadDeviceState(firstEvent: EvdevEvent) {
+    private class TouchpadDeviceState(firstEvent: EvdevEvent, private val optimizeHardwareTouchpad: Boolean) {
         private val slots = Array(MAX_TOUCHPAD_SLOTS) { TouchpadSlot() }
         private var currentSlot = 0
         private var buttonState: Byte = 0
         private var buttonChanged = false
+        private var touchpadFrameUnsupported = false
+        private var pendingMoveFrame: TouchpadFrame? = null
+        private var lastMoveFrameSentNs = 0L
+        private val toolFingerDown = BooleanArray(MAX_TOUCHPAD_SLOTS + 1)
+        private var frameMaxToolFingerCount = 0
+        private val syntheticSlots = Array(MAX_TOUCHPAD_SLOTS) { SyntheticTouchpadSlot() }
 
         private var absXMin = 0
         private var absXMax = 0
@@ -278,6 +286,16 @@ class EvdevCaptureProvider(
         }
 
         private fun handleKeyEvent(event: EvdevEvent) {
+            val toolFingerCount = toolFingerCountForCode(event.code)
+            if (toolFingerCount > 0) {
+                val isDown = event.value != 0
+                toolFingerDown[toolFingerCount] = isDown
+                if (isDown) {
+                    frameMaxToolFingerCount = max(frameMaxToolFingerCount, toolFingerCount)
+                }
+                return
+            }
+
             if (event.code == EvdevEvent.BTN_LEFT) {
                 val newState = if (event.value != 0) {
                     (buttonState.toInt() or MoonBridge.SS_TOUCHPAD_BUTTON_PRIMARY.toInt()).toByte()
@@ -293,6 +311,57 @@ class EvdevCaptureProvider(
         }
 
         private fun flushFrame(listener: EvdevListener) {
+            if (!optimizeHardwareTouchpad || touchpadFrameUnsupported) {
+                pendingMoveFrame = null
+                flushFrameLegacy(listener)
+                return
+            }
+
+            updateSyntheticContacts()
+
+            val frame = buildFrame() ?: run {
+                flushPendingMoveIfDue(listener)
+                finishFrame()
+                return
+            }
+
+            if (frame.hasStateChange) {
+                pendingMoveFrame = null
+                if (!sendFrame(listener, frame)) {
+                    flushFrameLegacy(listener)
+                    return
+                }
+                lastMoveFrameSentNs = System.nanoTime()
+                finishFrame()
+                return
+            }
+
+            pendingMoveFrame = frame
+            val nowNs = System.nanoTime()
+            if (lastMoveFrameSentNs == 0L || nowNs - lastMoveFrameSentNs >= MOVE_FRAME_MIN_INTERVAL_NS) {
+                val moveFrame = pendingMoveFrame
+                pendingMoveFrame = null
+                if (moveFrame != null && !sendFrame(listener, moveFrame)) {
+                    flushFrameLegacy(listener)
+                    return
+                }
+                lastMoveFrameSentNs = nowNs
+            }
+
+            finishFrame()
+        }
+
+        private fun buildFrame(): TouchpadFrame? {
+            val hasContactStateChange = slots.any { it.pendingDown || it.pendingUp } ||
+                syntheticSlots.any { it.pendingDown || it.pendingUp }
+            val hasMove = slots.any { it.active && it.dirty && !it.pendingUp } ||
+                syntheticSlots.any { it.active && it.dirty && !it.pendingUp }
+            val hasStateChange = hasContactStateChange || buttonChanged
+
+            if (!hasStateChange && !hasMove) {
+                return null
+            }
+
             val eventTypes = ByteArray(MAX_TOUCHPAD_SLOTS)
             val pointerIds = IntArray(MAX_TOUCHPAD_SLOTS)
             val x = FloatArray(MAX_TOUCHPAD_SLOTS)
@@ -317,7 +386,19 @@ class EvdevCaptureProvider(
             }
 
             for (slot in slots) {
-                if (slot.active && slot.dirty && !slot.pendingDown && !slot.pendingUp) {
+                if (slot.active && !slot.pendingDown && !slot.pendingUp && (slot.dirty || hasStateChange)) {
+                    appendSlot(MoonBridge.LI_TOUCH_EVENT_MOVE, slot, slot.trackingId)
+                }
+            }
+
+            for (slot in syntheticSlots) {
+                if (slot.pendingDown) {
+                    appendSlot(MoonBridge.LI_TOUCH_EVENT_DOWN, slot, slot.trackingId)
+                }
+            }
+
+            for (slot in syntheticSlots) {
+                if (slot.active && !slot.pendingDown && !slot.pendingUp && (slot.dirty || hasStateChange)) {
                     appendSlot(MoonBridge.LI_TOUCH_EVENT_MOVE, slot, slot.trackingId)
                 }
             }
@@ -335,30 +416,64 @@ class EvdevCaptureProvider(
                 }
             }
 
-            if (contactCount > 0) {
-                val result = listener.touchpadFrameEvent(
-                    contactCount.toByte(),
-                    eventTypes,
-                    pointerIds,
-                    x,
-                    y,
-                    pressure,
-                    MoonBridge.LI_ROT_UNKNOWN,
-                    deviceWidthMm,
-                    deviceHeightMm,
-                    buttonState
-                )
-
-                if (result == MoonBridge.LI_ERR_UNSUPPORTED) {
-                    flushFrameLegacy(listener)
-                    return
+            for (slot in syntheticSlots) {
+                if (slot.pendingUp) {
+                    appendSlot(MoonBridge.LI_TOUCH_EVENT_UP, slot, slot.lastTrackingId)
                 }
             }
 
-            finishFrame()
+            if (contactCount == 0) {
+                return null
+            }
+
+            return TouchpadFrame(
+                contactCount,
+                eventTypes,
+                pointerIds,
+                x,
+                y,
+                pressure,
+                hasStateChange
+            )
+        }
+
+        private fun flushPendingMoveIfDue(listener: EvdevListener) {
+            val frame = pendingMoveFrame ?: return
+            val nowNs = System.nanoTime()
+            if (lastMoveFrameSentNs == 0L || nowNs - lastMoveFrameSentNs >= MOVE_FRAME_MIN_INTERVAL_NS) {
+                pendingMoveFrame = null
+                if (sendFrame(listener, frame)) {
+                    lastMoveFrameSentNs = nowNs
+                }
+            }
+        }
+
+        private fun sendFrame(listener: EvdevListener, frame: TouchpadFrame): Boolean {
+            val result = listener.touchpadFrameEvent(
+                frame.contactCount.toByte(),
+                frame.eventTypes,
+                frame.pointerIds,
+                frame.x,
+                frame.y,
+                frame.pressure,
+                MoonBridge.LI_ROT_UNKNOWN,
+                deviceWidthMm,
+                deviceHeightMm,
+                buttonState
+            )
+
+            if (result == MoonBridge.LI_ERR_UNSUPPORTED) {
+                touchpadFrameUnsupported = true
+                pendingMoveFrame = null
+                return false
+            }
+
+            return true
         }
 
         private fun flushFrameLegacy(listener: EvdevListener) {
+            resetSyntheticContacts()
+
             for (slot in slots) {
                 if (slot.pendingDown) {
                     sendSlot(listener, MoonBridge.LI_TOUCH_EVENT_DOWN, slot, slot.trackingId)
@@ -397,22 +512,27 @@ class EvdevCaptureProvider(
         }
 
         private fun finishFrame() {
-            for (slot in slots) {
+            finishSlots(slots)
+            finishSlots(syntheticSlots)
+            frameMaxToolFingerCount = 0
+            buttonChanged = false
+        }
+
+        private fun finishSlots(frameSlots: Array<out TouchpadSlot>) {
+            for (slot in frameSlots) {
                 if (slot.pendingDown) {
                     slot.pendingDown = false
                     slot.dirty = false
                 }
             }
 
-            for (slot in slots) {
+            for (slot in frameSlots) {
                 if (slot.active && slot.dirty && !slot.pendingUp) {
                     slot.dirty = false
                 }
             }
 
-            buttonChanged = false
-
-            for (slot in slots) {
+            for (slot in frameSlots) {
                 if (slot.pendingUp) {
                     slot.pendingUp = false
                     slot.trackingId = -1
@@ -426,6 +546,9 @@ class EvdevCaptureProvider(
         }
 
         private fun cancelAll(listener: EvdevListener) {
+            pendingMoveFrame = null
+            lastMoveFrameSentNs = 0L
+
             listener.touchpadEvent(
                 MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL,
                 0,
@@ -443,6 +566,9 @@ class EvdevCaptureProvider(
             for (slot in slots) {
                 slot.reset()
             }
+            resetSyntheticContacts()
+            toolFingerDown.fill(false)
+            frameMaxToolFingerCount = 0
             buttonChanged = false
         }
 
@@ -460,6 +586,131 @@ class EvdevCaptureProvider(
                 deviceHeightMm,
                 buttonState
             )
+        }
+
+        private fun updateSyntheticContacts() {
+            val realActiveSlots = slots.filter { (it.active || it.pendingDown) && !it.pendingUp }
+            val toolFingerCount = max(highestToolFingerCount(), frameMaxToolFingerCount)
+            // Four-finger gestures need real contact slots. BTN_TOOL_QUADTAP alone
+            // does not include positions, so do not invent a fourth/fifth contact.
+            val syntheticToolFingerCount = if (toolFingerCount <= MAX_SYNTHETIC_TOOL_FINGERS) {
+                toolFingerCount
+            }
+            else {
+                0
+            }
+            val targetFingerCount = max(syntheticToolFingerCount, realActiveSlots.size)
+                .coerceAtMost(MAX_TOUCHPAD_SLOTS)
+            val syntheticNeeded = (targetFingerCount - realActiveSlots.size)
+                .coerceIn(0, MAX_TOUCHPAD_SLOTS - realActiveSlots.size)
+
+            if (syntheticNeeded == 0 || realActiveSlots.isEmpty()) {
+                releaseSyntheticContacts()
+                return
+            }
+
+            var centroidX = 0f
+            var centroidY = 0f
+            var pressureTotal = 0f
+            for (slot in realActiveSlots) {
+                centroidX += slot.x
+                centroidY += slot.y
+                pressureTotal += if (slot.pressure > 0f) slot.pressure else DEFAULT_TOUCHPAD_PRESSURE
+            }
+            centroidX /= realActiveSlots.size
+            centroidY /= realActiveSlots.size
+            val pressure = (pressureTotal / realActiveSlots.size).coerceIn(0f, 1f)
+
+            for (i in syntheticSlots.indices) {
+                val slot = syntheticSlots[i]
+                if (i < syntheticNeeded) {
+                    val newX = syntheticX(centroidX, i)
+                    val newY = syntheticY(centroidY, i)
+                    val trackingId = SYNTHETIC_POINTER_ID_BASE + i
+
+                    if (!slot.active && !slot.pendingDown) {
+                        slot.trackingId = trackingId
+                        slot.lastTrackingId = trackingId
+                        slot.active = true
+                        slot.pendingDown = true
+                        slot.pendingUp = false
+                        slot.dirty = true
+                    }
+                    else if (slot.x != newX || slot.y != newY || slot.pressure != pressure) {
+                        slot.dirty = slot.active || slot.pendingDown
+                    }
+
+                    slot.x = newX
+                    slot.y = newY
+                    slot.pressure = pressure
+                }
+                else {
+                    releaseSyntheticContact(slot)
+                }
+            }
+        }
+
+        private fun releaseSyntheticContacts() {
+            for (slot in syntheticSlots) {
+                releaseSyntheticContact(slot)
+            }
+        }
+
+        private fun releaseSyntheticContact(slot: SyntheticTouchpadSlot) {
+            if (slot.active || slot.pendingDown) {
+                slot.lastTrackingId = slot.trackingId
+                slot.active = false
+                slot.pendingDown = false
+                slot.pendingUp = true
+                slot.dirty = false
+            }
+        }
+
+        private fun resetSyntheticContacts() {
+            for (slot in syntheticSlots) {
+                slot.reset()
+            }
+        }
+
+        private fun highestToolFingerCount(): Int {
+            for (i in toolFingerDown.indices.reversed()) {
+                if (toolFingerDown[i]) {
+                    return i
+                }
+            }
+
+            return 0
+        }
+
+        private fun toolFingerCountForCode(code: Short): Int {
+            return when (code) {
+                EvdevEvent.BTN_TOOL_FINGER -> 1
+                EvdevEvent.BTN_TOOL_DOUBLETAP -> 2
+                EvdevEvent.BTN_TOOL_TRIPLETAP -> 3
+                EvdevEvent.BTN_TOOL_QUADTAP -> 4
+                EvdevEvent.BTN_TOOL_QUINTTAP -> 5
+                else -> 0
+            }
+        }
+
+        private fun syntheticX(centroidX: Float, index: Int): Float {
+            val direction = when (index) {
+                1 -> -1f
+                3 -> -1f
+                else -> 1f
+            }
+
+            return (centroidX + direction * SYNTHETIC_CONTACT_OFFSET).coerceIn(0f, 1f)
+        }
+
+        private fun syntheticY(centroidY: Float, index: Int): Float {
+            val direction = when (index) {
+                2 -> -1f
+                3 -> -1f
+                else -> 1f
+            }
+
+            return (centroidY + direction * SYNTHETIC_CONTACT_OFFSET).coerceIn(0f, 1f)
         }
 
         private fun normalize(value: Int, min: Int, max: Int): Float {
@@ -487,7 +738,7 @@ class EvdevCaptureProvider(
             return mm.roundToInt().coerceIn(MIN_TOUCHPAD_MM, MAX_TOUCHPAD_MM)
         }
 
-        private class TouchpadSlot {
+        private open class TouchpadSlot {
             var active = false
             var trackingId = -1
             var lastTrackingId = -1
@@ -515,8 +766,25 @@ class EvdevCaptureProvider(
             }
         }
 
+        private class SyntheticTouchpadSlot : TouchpadSlot()
+
+        private class TouchpadFrame(
+            val contactCount: Int,
+            val eventTypes: ByteArray,
+            val pointerIds: IntArray,
+            val x: FloatArray,
+            val y: FloatArray,
+            val pressure: FloatArray,
+            val hasStateChange: Boolean
+        )
+
         companion object {
             private const val MAX_TOUCHPAD_SLOTS = 5
+            private const val MOVE_FRAME_MIN_INTERVAL_NS = 8_333_333L
+            private const val MAX_SYNTHETIC_TOOL_FINGERS = 3
+            private const val SYNTHETIC_POINTER_ID_BASE = 0x10000000
+            private const val SYNTHETIC_CONTACT_OFFSET = 0.08f
+            private const val DEFAULT_TOUCHPAD_PRESSURE = 0.5f
             private const val DEFAULT_TOUCHPAD_WIDTH_MM = 92
             private const val DEFAULT_TOUCHPAD_HEIGHT_MM = 54
             private const val MIN_TOUCHPAD_MM = 40
