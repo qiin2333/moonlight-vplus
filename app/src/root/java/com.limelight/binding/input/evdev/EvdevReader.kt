@@ -40,15 +40,53 @@ object EvdevReader {
         bb = ByteBuffer.allocate(packetLength).order(ByteOrder.nativeOrder())
         readAll(input, bb)
 
-        // Throw away the time stamp
-        if (packetLength == EvdevEvent.EVDEV_MAX_EVENT_SIZE) {
-            bb.getLong()
-            bb.getLong()
-        } else {
-            bb.getInt()
-            bb.getInt()
-        }
+        if (packetLength == EvdevEvent.EVDEV_WRAPPED_EVENT_SIZE) {
+            val version = bb.getInt()
+            if (version != EvdevEvent.EVDEV_PACKET_VERSION) {
+                LimeLog.warning("Unknown EvdevReader packet version: $version")
+                return null
+            }
 
-        return EvdevEvent(bb.getShort(), bb.getShort(), bb.getInt())
+            val deviceId = bb.getInt()
+            val deviceClass = bb.getInt()
+            val eventSize = bb.getInt()
+            val absXMin = bb.getInt()
+            val absXMax = bb.getInt()
+            val absYMin = bb.getInt()
+            val absYMax = bb.getInt()
+            val absXResolution = bb.getInt()
+            val absYResolution = bb.getInt()
+
+            if (eventSize != EvdevEvent.EVDEV_MIN_EVENT_SIZE && eventSize != EvdevEvent.EVDEV_MAX_EVENT_SIZE) {
+                LimeLog.warning("Unexpected evdev input_event size: $eventSize")
+                return null
+            }
+
+            // Throw away the time stamp from the embedded input_event
+            if (eventSize == EvdevEvent.EVDEV_MAX_EVENT_SIZE) {
+                bb.getLong()
+                bb.getLong()
+            } else {
+                bb.getInt()
+                bb.getInt()
+            }
+
+            return EvdevEvent(
+                bb.getShort(), bb.getShort(), bb.getInt(),
+                deviceId, deviceClass,
+                absXMin, absXMax, absYMin, absYMax, absXResolution, absYResolution
+            )
+        } else {
+            // Throw away the time stamp
+            if (packetLength == EvdevEvent.EVDEV_MAX_EVENT_SIZE) {
+                bb.getLong()
+                bb.getLong()
+            } else {
+                bb.getInt()
+                bb.getInt()
+            }
+
+            return EvdevEvent(bb.getShort(), bb.getShort(), bb.getInt())
+        }
     }
 }

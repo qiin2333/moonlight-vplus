@@ -6,6 +6,19 @@ interface EvdevListener {
     fun mouseVScroll(amount: Byte)
     fun mouseHScroll(amount: Byte)
     fun keyboardEvent(buttonDown: Boolean, keyCode: Short)
+    fun touchpadEvent(
+        eventType: Byte,
+        pointerId: Int,
+        x: Float,
+        y: Float,
+        pressure: Float,
+        contactAreaMajor: Float,
+        contactAreaMinor: Float,
+        rotation: Short,
+        deviceWidthMm: Short,
+        deviceHeightMm: Short,
+        buttonState: Byte
+    )
 
     companion object {
         const val BUTTON_LEFT = 1

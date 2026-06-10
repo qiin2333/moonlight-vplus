@@ -3,114 +3,142 @@ package com.limelight.binding.input.evdev
 import android.view.KeyEvent
 
 object EvdevTranslator {
-    fun translateEvdevKeyCode(evdevKeyCode: Int): Int {
-        return when (evdevKeyCode) {
-            EvdevEvent.KEY_ESC -> KeyEvent.KEYCODE_ESCAPE
-            EvdevEvent.KEY_1 -> KeyEvent.KEYCODE_1
-            EvdevEvent.KEY_2 -> KeyEvent.KEYCODE_2
-            EvdevEvent.KEY_3 -> KeyEvent.KEYCODE_3
-            EvdevEvent.KEY_4 -> KeyEvent.KEYCODE_4
-            EvdevEvent.KEY_5 -> KeyEvent.KEYCODE_5
-            EvdevEvent.KEY_6 -> KeyEvent.KEYCODE_6
-            EvdevEvent.KEY_7 -> KeyEvent.KEYCODE_7
-            EvdevEvent.KEY_8 -> KeyEvent.KEYCODE_8
-            EvdevEvent.KEY_9 -> KeyEvent.KEYCODE_9
-            EvdevEvent.KEY_0 -> KeyEvent.KEYCODE_0
-            EvdevEvent.KEY_MINUS -> KeyEvent.KEYCODE_MINUS
-            EvdevEvent.KEY_EQUAL -> KeyEvent.KEYCODE_EQUALS
-            EvdevEvent.KEY_BACKSPACE -> KeyEvent.KEYCODE_DEL
-            EvdevEvent.KEY_TAB -> KeyEvent.KEYCODE_TAB
-            EvdevEvent.KEY_Q -> KeyEvent.KEYCODE_Q
-            EvdevEvent.KEY_W -> KeyEvent.KEYCODE_W
-            EvdevEvent.KEY_E -> KeyEvent.KEYCODE_E
-            EvdevEvent.KEY_R -> KeyEvent.KEYCODE_R
-            EvdevEvent.KEY_T -> KeyEvent.KEYCODE_T
-            EvdevEvent.KEY_Y -> KeyEvent.KEYCODE_Y
-            EvdevEvent.KEY_U -> KeyEvent.KEYCODE_U
-            EvdevEvent.KEY_I -> KeyEvent.KEYCODE_I
-            EvdevEvent.KEY_O -> KeyEvent.KEYCODE_O
-            EvdevEvent.KEY_P -> KeyEvent.KEYCODE_P
-            EvdevEvent.KEY_LEFTBRACE -> KeyEvent.KEYCODE_LEFT_BRACKET
-            EvdevEvent.KEY_RIGHTBRACE -> KeyEvent.KEYCODE_RIGHT_BRACKET
-            EvdevEvent.KEY_ENTER -> KeyEvent.KEYCODE_ENTER
-            EvdevEvent.KEY_LEFTCTRL -> KeyEvent.KEYCODE_CTRL_LEFT
-            EvdevEvent.KEY_A -> KeyEvent.KEYCODE_A
-            EvdevEvent.KEY_S -> KeyEvent.KEYCODE_S
-            EvdevEvent.KEY_D -> KeyEvent.KEYCODE_D
-            EvdevEvent.KEY_F -> KeyEvent.KEYCODE_F
-            EvdevEvent.KEY_G -> KeyEvent.KEYCODE_G
-            EvdevEvent.KEY_H -> KeyEvent.KEYCODE_H
-            EvdevEvent.KEY_J -> KeyEvent.KEYCODE_J
-            EvdevEvent.KEY_K -> KeyEvent.KEYCODE_K
-            EvdevEvent.KEY_L -> KeyEvent.KEYCODE_L
-            EvdevEvent.KEY_SEMICOLON -> KeyEvent.KEYCODE_SEMICOLON
-            EvdevEvent.KEY_APOSTROPHE -> KeyEvent.KEYCODE_APOSTROPHE
-            EvdevEvent.KEY_GRAVE -> KeyEvent.KEYCODE_GRAVE
-            EvdevEvent.KEY_LEFTSHIFT -> KeyEvent.KEYCODE_SHIFT_LEFT
-            EvdevEvent.KEY_BACKSLASH -> KeyEvent.KEYCODE_BACKSLASH
-            EvdevEvent.KEY_Z -> KeyEvent.KEYCODE_Z
-            EvdevEvent.KEY_X -> KeyEvent.KEYCODE_X
-            EvdevEvent.KEY_C -> KeyEvent.KEYCODE_C
-            EvdevEvent.KEY_V -> KeyEvent.KEYCODE_V
-            EvdevEvent.KEY_B -> KeyEvent.KEYCODE_B
-            EvdevEvent.KEY_N -> KeyEvent.KEYCODE_N
-            EvdevEvent.KEY_M -> KeyEvent.KEYCODE_M
-            EvdevEvent.KEY_COMMA -> KeyEvent.KEYCODE_COMMA
-            EvdevEvent.KEY_DOT -> KeyEvent.KEYCODE_PERIOD
-            EvdevEvent.KEY_SLASH -> KeyEvent.KEYCODE_SLASH
-            EvdevEvent.KEY_RIGHTSHIFT -> KeyEvent.KEYCODE_SHIFT_RIGHT
-            EvdevEvent.KEY_KPASTERISK -> KeyEvent.KEYCODE_NUMPAD_MULTIPLY
-            EvdevEvent.KEY_LEFTALT -> KeyEvent.KEYCODE_ALT_LEFT
-            EvdevEvent.KEY_SPACE -> KeyEvent.KEYCODE_SPACE
-            EvdevEvent.KEY_CAPSLOCK -> KeyEvent.KEYCODE_CAPS_LOCK
-            EvdevEvent.KEY_F1 -> KeyEvent.KEYCODE_F1
-            EvdevEvent.KEY_F2 -> KeyEvent.KEYCODE_F2
-            EvdevEvent.KEY_F3 -> KeyEvent.KEYCODE_F3
-            EvdevEvent.KEY_F4 -> KeyEvent.KEYCODE_F4
-            EvdevEvent.KEY_F5 -> KeyEvent.KEYCODE_F5
-            EvdevEvent.KEY_F6 -> KeyEvent.KEYCODE_F6
-            EvdevEvent.KEY_F7 -> KeyEvent.KEYCODE_F7
-            EvdevEvent.KEY_F8 -> KeyEvent.KEYCODE_F8
-            EvdevEvent.KEY_F9 -> KeyEvent.KEYCODE_F9
-            EvdevEvent.KEY_F10 -> KeyEvent.KEYCODE_F10
-            EvdevEvent.KEY_NUMLOCK -> KeyEvent.KEYCODE_NUM_LOCK
-            EvdevEvent.KEY_SCROLLLOCK -> KeyEvent.KEYCODE_SCROLL_LOCK
-            EvdevEvent.KEY_KP7 -> KeyEvent.KEYCODE_NUMPAD_7
-            EvdevEvent.KEY_KP8 -> KeyEvent.KEYCODE_NUMPAD_8
-            EvdevEvent.KEY_KP9 -> KeyEvent.KEYCODE_NUMPAD_9
-            EvdevEvent.KEY_KPMINUS -> KeyEvent.KEYCODE_NUMPAD_SUBTRACT
-            EvdevEvent.KEY_KP4 -> KeyEvent.KEYCODE_NUMPAD_4
-            EvdevEvent.KEY_KP5 -> KeyEvent.KEYCODE_NUMPAD_5
-            EvdevEvent.KEY_KP6 -> KeyEvent.KEYCODE_NUMPAD_6
-            EvdevEvent.KEY_KPPLUS -> KeyEvent.KEYCODE_NUMPAD_ADD
-            EvdevEvent.KEY_KP1 -> KeyEvent.KEYCODE_NUMPAD_1
-            EvdevEvent.KEY_KP2 -> KeyEvent.KEYCODE_NUMPAD_2
-            EvdevEvent.KEY_KP3 -> KeyEvent.KEYCODE_NUMPAD_3
-            EvdevEvent.KEY_KP0 -> KeyEvent.KEYCODE_NUMPAD_0
-            EvdevEvent.KEY_KPDOT -> KeyEvent.KEYCODE_NUMPAD_DOT
-            EvdevEvent.KEY_F11 -> KeyEvent.KEYCODE_F11
-            EvdevEvent.KEY_F12 -> KeyEvent.KEYCODE_F12
-            EvdevEvent.KEY_KPENTER -> KeyEvent.KEYCODE_NUMPAD_ENTER
-            EvdevEvent.KEY_RIGHTCTRL -> KeyEvent.KEYCODE_CTRL_RIGHT
-            EvdevEvent.KEY_KPSLASH -> KeyEvent.KEYCODE_NUMPAD_DIVIDE
-            EvdevEvent.KEY_SYSRQ -> KeyEvent.KEYCODE_SYSRQ
-            EvdevEvent.KEY_RIGHTALT -> KeyEvent.KEYCODE_ALT_RIGHT
-            EvdevEvent.KEY_HOME -> KeyEvent.KEYCODE_MOVE_HOME
-            EvdevEvent.KEY_UP -> KeyEvent.KEYCODE_DPAD_UP
-            EvdevEvent.KEY_PAGEUP -> KeyEvent.KEYCODE_PAGE_UP
-            EvdevEvent.KEY_LEFT -> KeyEvent.KEYCODE_DPAD_LEFT
-            EvdevEvent.KEY_RIGHT -> KeyEvent.KEYCODE_DPAD_RIGHT
-            EvdevEvent.KEY_END -> KeyEvent.KEYCODE_MOVE_END
-            EvdevEvent.KEY_DOWN -> KeyEvent.KEYCODE_DPAD_DOWN
-            EvdevEvent.KEY_PAGEDOWN -> KeyEvent.KEYCODE_PAGE_DOWN
-            EvdevEvent.KEY_INSERT -> KeyEvent.KEYCODE_INSERT
-            EvdevEvent.KEY_DELETE -> KeyEvent.KEYCODE_FORWARD_DEL
-            EvdevEvent.KEY_KPEQUAL -> KeyEvent.KEYCODE_NUMPAD_EQUALS
-            EvdevEvent.KEY_PAUSE -> KeyEvent.KEYCODE_BREAK
-            EvdevEvent.KEY_KPCOMMA -> KeyEvent.KEYCODE_NUMPAD_COMMA
-            EvdevEvent.KEY_LEFTMETA -> KeyEvent.KEYCODE_META_LEFT
-            EvdevEvent.KEY_RIGHTMETA -> KeyEvent.KEYCODE_META_RIGHT
-            else -> 0
+    private val EVDEV_KEY_CODES = intArrayOf(
+        0,
+        KeyEvent.KEYCODE_ESCAPE,
+        KeyEvent.KEYCODE_1,
+        KeyEvent.KEYCODE_2,
+        KeyEvent.KEYCODE_3,
+        KeyEvent.KEYCODE_4,
+        KeyEvent.KEYCODE_5,
+        KeyEvent.KEYCODE_6,
+        KeyEvent.KEYCODE_7,
+        KeyEvent.KEYCODE_8,
+        KeyEvent.KEYCODE_9,
+        KeyEvent.KEYCODE_0,
+        KeyEvent.KEYCODE_MINUS,
+        KeyEvent.KEYCODE_EQUALS,
+        KeyEvent.KEYCODE_DEL,
+        KeyEvent.KEYCODE_TAB,
+        KeyEvent.KEYCODE_Q,
+        KeyEvent.KEYCODE_W,
+        KeyEvent.KEYCODE_E,
+        KeyEvent.KEYCODE_R,
+        KeyEvent.KEYCODE_T,
+        KeyEvent.KEYCODE_Y,
+        KeyEvent.KEYCODE_U,
+        KeyEvent.KEYCODE_I,
+        KeyEvent.KEYCODE_O,
+        KeyEvent.KEYCODE_P,
+        KeyEvent.KEYCODE_LEFT_BRACKET,
+        KeyEvent.KEYCODE_RIGHT_BRACKET,
+        KeyEvent.KEYCODE_ENTER,
+        KeyEvent.KEYCODE_CTRL_LEFT,
+        KeyEvent.KEYCODE_A,
+        KeyEvent.KEYCODE_S,
+        KeyEvent.KEYCODE_D,
+        KeyEvent.KEYCODE_F,
+        KeyEvent.KEYCODE_G,
+        KeyEvent.KEYCODE_H,
+        KeyEvent.KEYCODE_J,
+        KeyEvent.KEYCODE_K,
+        KeyEvent.KEYCODE_L,
+        KeyEvent.KEYCODE_SEMICOLON,
+        KeyEvent.KEYCODE_APOSTROPHE,
+        KeyEvent.KEYCODE_GRAVE,
+        KeyEvent.KEYCODE_SHIFT_LEFT,
+        KeyEvent.KEYCODE_BACKSLASH,
+        KeyEvent.KEYCODE_Z,
+        KeyEvent.KEYCODE_X,
+        KeyEvent.KEYCODE_C,
+        KeyEvent.KEYCODE_V,
+        KeyEvent.KEYCODE_B,
+        KeyEvent.KEYCODE_N,
+        KeyEvent.KEYCODE_M,
+        KeyEvent.KEYCODE_COMMA,
+        KeyEvent.KEYCODE_PERIOD,
+        KeyEvent.KEYCODE_SLASH,
+        KeyEvent.KEYCODE_SHIFT_RIGHT,
+        KeyEvent.KEYCODE_NUMPAD_MULTIPLY,
+        KeyEvent.KEYCODE_ALT_LEFT,
+        KeyEvent.KEYCODE_SPACE,
+        KeyEvent.KEYCODE_CAPS_LOCK,
+        KeyEvent.KEYCODE_F1,
+        KeyEvent.KEYCODE_F2,
+        KeyEvent.KEYCODE_F3,
+        KeyEvent.KEYCODE_F4,
+        KeyEvent.KEYCODE_F5,
+        KeyEvent.KEYCODE_F6,
+        KeyEvent.KEYCODE_F7,
+        KeyEvent.KEYCODE_F8,
+        KeyEvent.KEYCODE_F9,
+        KeyEvent.KEYCODE_F10,
+        KeyEvent.KEYCODE_NUM_LOCK,
+        KeyEvent.KEYCODE_SCROLL_LOCK,
+        KeyEvent.KEYCODE_NUMPAD_7,
+        KeyEvent.KEYCODE_NUMPAD_8,
+        KeyEvent.KEYCODE_NUMPAD_9,
+        KeyEvent.KEYCODE_NUMPAD_SUBTRACT,
+        KeyEvent.KEYCODE_NUMPAD_4,
+        KeyEvent.KEYCODE_NUMPAD_5,
+        KeyEvent.KEYCODE_NUMPAD_6,
+        KeyEvent.KEYCODE_NUMPAD_ADD,
+        KeyEvent.KEYCODE_NUMPAD_1,
+        KeyEvent.KEYCODE_NUMPAD_2,
+        KeyEvent.KEYCODE_NUMPAD_3,
+        KeyEvent.KEYCODE_NUMPAD_0,
+        KeyEvent.KEYCODE_NUMPAD_DOT,
+        0,
+        0,
+        0,
+        KeyEvent.KEYCODE_F11,
+        KeyEvent.KEYCODE_F12,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        KeyEvent.KEYCODE_NUMPAD_ENTER,
+        KeyEvent.KEYCODE_CTRL_RIGHT,
+        KeyEvent.KEYCODE_NUMPAD_DIVIDE,
+        KeyEvent.KEYCODE_SYSRQ,
+        KeyEvent.KEYCODE_ALT_RIGHT,
+        0,
+        KeyEvent.KEYCODE_MOVE_HOME,
+        KeyEvent.KEYCODE_DPAD_UP,
+        KeyEvent.KEYCODE_PAGE_UP,
+        KeyEvent.KEYCODE_DPAD_LEFT,
+        KeyEvent.KEYCODE_DPAD_RIGHT,
+        KeyEvent.KEYCODE_MOVE_END,
+        KeyEvent.KEYCODE_DPAD_DOWN,
+        KeyEvent.KEYCODE_PAGE_DOWN,
+        KeyEvent.KEYCODE_INSERT,
+        KeyEvent.KEYCODE_FORWARD_DEL,
+        0,
+        0,
+        0,
+        0,
+        0,
+        KeyEvent.KEYCODE_NUMPAD_EQUALS,
+        0,
+        KeyEvent.KEYCODE_BREAK,
+        0,
+        KeyEvent.KEYCODE_NUMPAD_COMMA,
+        0,
+        0,
+        0,
+        KeyEvent.KEYCODE_META_LEFT,
+        KeyEvent.KEYCODE_META_RIGHT
+    )
+
+    fun translateEvdevKeyCode(evdevKeyCode: Short): Short {
+        val keyCode = evdevKeyCode.toInt()
+        return if (keyCode in EVDEV_KEY_CODES.indices) {
+            EVDEV_KEY_CODES[keyCode].toShort()
+        } else {
+            0
         }
     }
 }

@@ -109,6 +109,8 @@ public class MoonBridge {
     public static final byte LI_PEN_BUTTON_SECONDARY = 0x02;
     public static final byte LI_PEN_BUTTON_TERTIARY = 0x04;
 
+    public static final byte SS_TOUCHPAD_BUTTON_PRIMARY = 0x01;
+
     public static final byte LI_TILT_UNKNOWN = (byte)0xFF;
     public static final short LI_ROT_UNKNOWN = (short)0xFFFF;
 
@@ -507,6 +509,10 @@ public class MoonBridge {
 
     public static native int sendTouchEvent(byte eventType, int pointerId, float x, float y, float pressure,
                                             float contactAreaMajor, float contactAreaMinor, short rotation);
+
+    public static native int sendTouchpadEvent(byte eventType, int pointerId, float x, float y, float pressure,
+                                               float contactAreaMajor, float contactAreaMinor, short rotation,
+                                               short deviceWidthMm, short deviceHeightMm, byte buttonState);
 
     public static native int sendPenEvent(byte eventType, byte toolType, byte penButtons, float x, float y,
                                           float pressure, float contactAreaMajor, float contactAreaMinor,

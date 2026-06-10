@@ -1951,6 +1951,26 @@ class Game : Activity(), SurfaceHolder.Callback,
         keyboardInputHandler.keyboardEvent(buttonDown, keyCode)
     }
 
+    override fun touchpadEvent(
+        eventType: Byte,
+        pointerId: Int,
+        x: Float,
+        y: Float,
+        pressure: Float,
+        contactAreaMajor: Float,
+        contactAreaMinor: Float,
+        rotation: Short,
+        deviceWidthMm: Short,
+        deviceHeightMm: Short,
+        buttonState: Byte
+    ) {
+        conn?.sendTouchpadEvent(
+            eventType, pointerId, x, y, pressure,
+            contactAreaMajor, contactAreaMinor, rotation,
+            deviceWidthMm, deviceHeightMm, buttonState
+        )
+    }
+
     @Deprecated("Deprecated in Java")
     override fun onSystemUiVisibilityChange(visibility: Int) {
         if (!connected) return

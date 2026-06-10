@@ -61,6 +61,18 @@ Java_com_limelight_nvstream_jni_MoonBridge_sendTouchEvent(JNIEnv *env, jclass cl
 }
 
 JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_sendTouchpadEvent(JNIEnv *env, jclass clazz,
+                                                             jbyte eventType, jint pointerId,
+                                                             jfloat x, jfloat y, jfloat pressure,
+                                                             jfloat contactAreaMajor, jfloat contactAreaMinor,
+                                                             jshort rotation, jshort deviceWidthMm,
+                                                             jshort deviceHeightMm, jbyte buttonState) {
+    return LiSendTouchpadEvent(eventType, pointerId, x, y, pressure,
+                               contactAreaMajor, contactAreaMinor, rotation,
+                               deviceWidthMm, deviceHeightMm, buttonState);
+}
+
+JNIEXPORT jint JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_sendPenEvent(JNIEnv *env, jclass clazz, jbyte eventType,
                                                         jbyte toolType, jbyte penButtons,
                                                         jfloat x, jfloat y, jfloat pressureOrDistance,
