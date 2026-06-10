@@ -66,7 +66,7 @@ class PreferenceConfiguration {
     var enableDoubleClickDrag = false
     var doubleTapTimeThreshold = 0
     var enableLocalCursorRendering = false
-    var optimizeHardwareTouchpad = true
+    var optimizeHardwareTouchpad = false
     //自定义按键映射
     var enableCustomKeyMap = false
     //修复鼠标中键识别
@@ -687,7 +687,7 @@ class PreferenceConfiguration {
         private const val DEFAULT_ENABLE_DOUBLE_CLICK_DRAG = false
         private const val DEFAULT_DOUBLE_TAP_TIME_THRESHOLD = 125 // 默认125ms
         private const val DEFAULT_ENABLE_LOCAL_CURSOR_RENDERING = true
-        private const val DEFAULT_OPTIMIZE_HARDWARE_TOUCHPAD = true
+        private const val DEFAULT_OPTIMIZE_HARDWARE_TOUCHPAD = false
 
         private const val DEFAULT_REVERSE_RESOLUTION = false
         private const val DEFAULT_ROTABLE_SCREEN = false
