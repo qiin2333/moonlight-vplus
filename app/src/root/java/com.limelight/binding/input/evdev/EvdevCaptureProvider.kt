@@ -50,7 +50,8 @@ class EvdevCaptureProvider(
                 return
             }
 
-            val evdevReaderCmd = libraryPath + File.separatorChar + "libevdev_reader.so " + servSock!!.localPort
+            val evdevReaderCmd = libraryPath + File.separatorChar + "libevdev_reader.so " +
+                servSock!!.localPort + " " + (if (optimizeHardwareTouchpad) 1 else 0)
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 try {

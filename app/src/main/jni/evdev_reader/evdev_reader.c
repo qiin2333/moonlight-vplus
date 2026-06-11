@@ -59,6 +59,9 @@ struct DeviceEntry {
 
 static struct DeviceEntry *DeviceListHead;
 static int grabbing = 1;
+// When 0, hardware touchpads are left to Android's input stack (native mouse
+// behavior) instead of being grabbed and streamed as a precision touchpad.
+static int optimizeTouchpad = 1;
 static int NextDeviceId = 1;
 static pthread_mutex_t DeviceListLock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t SocketSendLock = PTHREAD_MUTEX_INITIALIZER;
@@ -262,11 +265,14 @@ static int precheckDeviceForPolling(int fd) {
     if (isKeyboard) {
         deviceClass |= EVDEV_DEVICE_KEYBOARD;
     }
-    if (isTouchpad) {
+    if (isTouchpad && optimizeTouchpad) {
         deviceClass |= EVDEV_DEVICE_TOUCHPAD;
     }
 
-    // We only handle keyboards, mice, and touchpads that aren't gamepads
+    // We only handle keyboards, mice, and touchpads that aren't gamepads.
+    // When touchpad optimization is disabled, a pure touchpad (no REL/key mouse
+    // capabilities) reports deviceClass 0 here, so we leave it untouched and
+    // Android handles it as a normal pointer device.
     return isGamepad ? 0 : deviceClass;
 }
 
@@ -416,6 +422,14 @@ int main(int argc, char* argv[]) {
 
     port = atoi(argv[1]);
     __android_log_print(ANDROID_LOG_INFO, "EvdevReader", "Requested port number: %d", port);
+
+    // Optional second argument: 1 to stream hardware touchpads, 0 to leave them
+    // to Android (native mouse). Defaults to enabled for backward compatibility.
+    if (argc > 2) {
+        optimizeTouchpad = atoi(argv[2]);
+    }
+    __android_log_print(ANDROID_LOG_INFO, "EvdevReader", "Touchpad optimization: %s",
+        optimizeTouchpad ? "enabled" : "disabled");
 
     // Connect to the app's socket
     ret = connectSocket(port);
