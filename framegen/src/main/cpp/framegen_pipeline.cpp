@@ -333,6 +333,19 @@ struct PresentFrame {
     std::string tag;
 };
 
+struct LastPresentedFrame {
+    ANativeWindow* window{nullptr};
+    std::vector<uint8_t> rgba;
+    int32_t width{0};
+    int32_t height{0};
+    int32_t displayWidth{0};
+    int32_t displayHeight{0};
+    uint32_t bytesPerPixel{4};
+    uint64_t sourceFrame{0};
+    uint32_t fallbackCount{0};
+    std::chrono::steady_clock::time_point presentedAt{};
+};
+
 std::mutex g_presentMutex;
 std::condition_variable g_presentCv;
 std::deque<PresentFrame> g_presentQueue;
@@ -341,6 +354,7 @@ bool g_presentStop = false;
 uint64_t g_presentEnqueued = 0;
 uint64_t g_presentDropped = 0;
 std::atomic<int32_t> g_presentQueueMax{2};
+LastPresentedFrame g_lastPresentedFrame;
 
 struct AdaptiveFramegenState {
     int64_t lastTimestampNs{0};
@@ -366,6 +380,25 @@ std::atomic<int32_t> g_slowLsfgThresholdMs{18};
 std::atomic<bool> g_allowHighInputBypass{false};
 AdaptiveFramegenState g_adaptive;
 
+enum FramegenRuntimeMode : int32_t {
+    kModeNormal = 0,
+    kModeHighInputBypass = 1,
+    kModeSlowCooldown = 2,
+    kModeCadenceRecover = 3,
+};
+
+std::atomic<uint64_t> g_statsRealFrames{0};
+std::atomic<uint64_t> g_statsInterpolatedFrames{0};
+std::atomic<uint64_t> g_statsBypassFrames{0};
+std::atomic<uint64_t> g_statsRealOnlyFrames{0};
+std::atomic<uint64_t> g_statsPresenterDrops{0};
+std::atomic<uint64_t> g_statsFallbackFrames{0};
+std::atomic<int32_t> g_statsQueueDepth{0};
+std::atomic<int32_t> g_statsInputFpsTenths{0};
+std::atomic<int32_t> g_statsMode{kModeNormal};
+std::atomic<int32_t> g_statsLastLsfgWaitMs{0};
+std::atomic<int32_t> g_statsLastBlitMs{0};
+
 constexpr uint64_t kFirstAvailableDeviceUuid = 0x1463ABACULL;
 constexpr uint32_t kGenerationCount = 1; // 2x 插帧：每两帧之间生成 1 帧。
 constexpr int64_t kSlowFrameMs = 16;
@@ -375,6 +408,39 @@ constexpr uint32_t kCadenceRecoverySuppressFrames = 2;
 int64_t elapsedMs(std::chrono::steady_clock::time_point start,
                   std::chrono::steady_clock::time_point end) {
     return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+}
+
+void recordPresentedFrame(const PresentFrame& frame, int64_t totalMs) {
+    g_statsLastBlitMs.store(static_cast<int32_t>(std::clamp<int64_t>(totalMs, 0, 60'000)),
+                            std::memory_order_release);
+    if (frame.tag.rfind("interp", 0) == 0) {
+        g_statsInterpolatedFrames.fetch_add(1, std::memory_order_relaxed);
+    } else if (frame.tag == "real-bypass") {
+        g_statsBypassFrames.fetch_add(1, std::memory_order_relaxed);
+    } else if (frame.tag == "real-fallback") {
+        g_statsFallbackFrames.fetch_add(1, std::memory_order_relaxed);
+    } else if (frame.tag == "real") {
+        g_statsRealOnlyFrames.fetch_add(1, std::memory_order_relaxed);
+        g_statsRealFrames.fetch_add(1, std::memory_order_relaxed);
+    } else if (frame.tag == "real-pair") {
+        g_statsRealFrames.fetch_add(1, std::memory_order_relaxed);
+    } else {
+        g_statsRealFrames.fetch_add(1, std::memory_order_relaxed);
+    }
+}
+
+void resetStats() {
+    g_statsRealFrames.store(0, std::memory_order_release);
+    g_statsInterpolatedFrames.store(0, std::memory_order_release);
+    g_statsBypassFrames.store(0, std::memory_order_release);
+    g_statsRealOnlyFrames.store(0, std::memory_order_release);
+    g_statsPresenterDrops.store(0, std::memory_order_release);
+    g_statsFallbackFrames.store(0, std::memory_order_release);
+    g_statsQueueDepth.store(0, std::memory_order_release);
+    g_statsInputFpsTenths.store(0, std::memory_order_release);
+    g_statsMode.store(kModeNormal, std::memory_order_release);
+    g_statsLastLsfgWaitMs.store(0, std::memory_order_release);
+    g_statsLastBlitMs.store(0, std::memory_order_release);
 }
 
 void applyOutputWindowHintsLocked(bool requestBuffers) {
@@ -426,6 +492,75 @@ void releasePresentFrame(PresentFrame& frame) {
     }
 }
 
+void releaseLastPresentedFrameLocked() {
+    if (g_lastPresentedFrame.window != nullptr) {
+        ANativeWindow_release(g_lastPresentedFrame.window);
+    }
+    g_lastPresentedFrame = LastPresentedFrame{};
+}
+
+void rememberFrameForFallbackLocked(PresentFrame& frame,
+                                    std::chrono::steady_clock::time_point presentedAt) {
+    if (frame.window == nullptr || frame.rgba.empty() || frame.tag == "real-fallback") {
+        return;
+    }
+
+    if (g_lastPresentedFrame.window != nullptr) {
+        ANativeWindow_release(g_lastPresentedFrame.window);
+    }
+    ANativeWindow_acquire(frame.window);
+    g_lastPresentedFrame.window = frame.window;
+    g_lastPresentedFrame.rgba = std::move(frame.rgba);
+    g_lastPresentedFrame.width = frame.width;
+    g_lastPresentedFrame.height = frame.height;
+    g_lastPresentedFrame.displayWidth = frame.displayWidth;
+    g_lastPresentedFrame.displayHeight = frame.displayHeight;
+    g_lastPresentedFrame.bytesPerPixel = frame.bytesPerPixel;
+    g_lastPresentedFrame.sourceFrame = frame.sourceFrame;
+    g_lastPresentedFrame.fallbackCount = 0;
+    g_lastPresentedFrame.presentedAt = presentedAt;
+}
+
+bool makeFallbackFrameLocked(PresentFrame& out) {
+    constexpr uint32_t kMaxFallbackRepeats = 2;
+    const int32_t targetFps = g_outputFrameRate.load(std::memory_order_acquire);
+    if (targetFps < 90 ||
+        g_lastPresentedFrame.window == nullptr ||
+        g_lastPresentedFrame.rgba.empty() ||
+        g_lastPresentedFrame.fallbackCount >= kMaxFallbackRepeats) {
+        return false;
+    }
+
+    const bool allowHighInputBypass = g_allowHighInputBypass.load(std::memory_order_acquire);
+    const double expectedSourceFps = allowHighInputBypass
+        ? static_cast<double>(targetFps)
+        : std::max(30.0, static_cast<double>(targetFps) * 0.5);
+    const double minMissingMs = (1000.0 / expectedSourceFps) * 1.15;
+    const auto now = std::chrono::steady_clock::now();
+    const double sinceLastMs =
+        static_cast<double>(
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                now - g_lastPresentedFrame.presentedAt).count()) / 1000.0;
+    if (sinceLastMs < minMissingMs) {
+        return false;
+    }
+
+    ANativeWindow_acquire(g_lastPresentedFrame.window);
+    out.window = g_lastPresentedFrame.window;
+    out.rgba = g_lastPresentedFrame.rgba;
+    out.width = g_lastPresentedFrame.width;
+    out.height = g_lastPresentedFrame.height;
+    out.displayWidth = g_lastPresentedFrame.displayWidth;
+    out.displayHeight = g_lastPresentedFrame.displayHeight;
+    out.bytesPerPixel = g_lastPresentedFrame.bytesPerPixel;
+    out.sourceFrame = g_lastPresentedFrame.sourceFrame;
+    out.sourceOrder = 99;
+    out.tag = "real-fallback";
+    g_lastPresentedFrame.fallbackCount += 1;
+    g_lastPresentedFrame.presentedAt = now;
+    return true;
+}
+
 uint64_t clearPresenterQueue(const char* reason) {
     uint64_t cleared = 0;
     {
@@ -435,7 +570,10 @@ uint64_t clearPresenterQueue(const char* reason) {
             releasePresentFrame(frame);
         }
         g_presentQueue.clear();
+        releaseLastPresentedFrameLocked();
         g_presentDropped += cleared;
+        g_statsPresenterDrops.fetch_add(cleared, std::memory_order_relaxed);
+        g_statsQueueDepth.store(0, std::memory_order_release);
     }
     if (cleared > 0) {
         LOGW("stage3.3c: presenter queue clear reason=%s cleared=%llu",
@@ -536,11 +674,16 @@ void presentFrameToWindow(PresentFrame frame) {
         LOGE("stage3.3c: presenter ANativeWindow_unlockAndPost(%s) rc=%d",
              frame.tag.c_str(), postRc);
     }
-    releasePresentFrame(frame);
     const auto totalEnd = std::chrono::steady_clock::now();
+    const int64_t totalMs = elapsedMs(totalStart, totalEnd);
+    if (postRc == 0) {
+        recordPresentedFrame(frame, totalMs);
+        std::lock_guard<std::mutex> lock(g_presentMutex);
+        rememberFrameForFallbackLocked(frame, totalEnd);
+    }
+    releasePresentFrame(frame);
 
     const uint64_t blitCount = g_blitCount.fetch_add(1, std::memory_order_relaxed) + 1;
-    const int64_t totalMs = elapsedMs(totalStart, totalEnd);
     const bool logSample = (blitCount == 1 || (blitCount % 120) == 0);
     if (logSample || totalMs >= kSlowBlitMs) {
         LOGI("stage3.3c: presenter timing tag=%s count=%llu src=%llu/%u total=%lldms "
@@ -564,14 +707,40 @@ void presenterLoop() {
         PresentFrame frame;
         {
             std::unique_lock<std::mutex> lock(g_presentMutex);
-            g_presentCv.wait(lock, [] {
-                return g_presentStop || !g_presentQueue.empty();
-            });
+            if (g_presentQueue.empty() && !g_presentStop) {
+                const int32_t targetFps = g_outputFrameRate.load(std::memory_order_acquire);
+                if (targetFps >= 90) {
+                    const auto waitMs = std::chrono::milliseconds(
+                        std::clamp(1000 / std::max(1, targetFps), 4, 16));
+                    g_presentCv.wait_for(lock, waitMs, [] {
+                        return g_presentStop || !g_presentQueue.empty();
+                    });
+                    if (!g_presentStop && g_presentQueue.empty() &&
+                        makeFallbackFrameLocked(frame)) {
+                        // Present the fallback outside the queue lock, just like normal frames.
+                    } else {
+                        if (g_presentStop && g_presentQueue.empty()) {
+                            break;
+                        }
+                        if (g_presentQueue.empty()) {
+                            continue;
+                        }
+                    }
+                } else {
+                    g_presentCv.wait(lock, [] {
+                        return g_presentStop || !g_presentQueue.empty();
+                    });
+                }
+            }
             if (g_presentStop && g_presentQueue.empty()) {
                 break;
             }
-            frame = std::move(g_presentQueue.front());
-            g_presentQueue.pop_front();
+            if (frame.window == nullptr) {
+                frame = std::move(g_presentQueue.front());
+                g_presentQueue.pop_front();
+                g_statsQueueDepth.store(static_cast<int32_t>(g_presentQueue.size()),
+                                        std::memory_order_release);
+            }
         }
         presentFrameToWindow(std::move(frame));
     }
@@ -595,6 +764,8 @@ void stopPresenterThread() {
             releasePresentFrame(frame);
         }
         g_presentQueue.clear();
+        releaseLastPresentedFrameLocked();
+        g_statsQueueDepth.store(0, std::memory_order_release);
         presenter = std::move(g_presentThread);
     }
     g_presentCv.notify_all();
@@ -1366,9 +1537,27 @@ bool prewarmContext(int width, int height) {
         AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM);
 }
 
+StatsSnapshot getStatsSnapshot() {
+    StatsSnapshot snapshot{};
+    snapshot.realFrames = g_statsRealFrames.load(std::memory_order_acquire);
+    snapshot.interpolatedFrames = g_statsInterpolatedFrames.load(std::memory_order_acquire);
+    snapshot.bypassFrames = g_statsBypassFrames.load(std::memory_order_acquire);
+    snapshot.realOnlyFrames = g_statsRealOnlyFrames.load(std::memory_order_acquire);
+    snapshot.presenterDrops = g_statsPresenterDrops.load(std::memory_order_acquire);
+    snapshot.fallbackFrames = g_statsFallbackFrames.load(std::memory_order_acquire);
+    snapshot.queueDepth = g_statsQueueDepth.load(std::memory_order_acquire);
+    snapshot.outputFrameRate = g_outputFrameRate.load(std::memory_order_acquire);
+    snapshot.inputFpsTenths = g_statsInputFpsTenths.load(std::memory_order_acquire);
+    snapshot.mode = g_statsMode.load(std::memory_order_acquire);
+    snapshot.lastLsfgWaitMs = g_statsLastLsfgWaitMs.load(std::memory_order_acquire);
+    snapshot.lastBlitMs = g_statsLastBlitMs.load(std::memory_order_acquire);
+    return snapshot;
+}
+
 void reset() {
     std::lock_guard<std::mutex> lock(g_contextMutex);
     stopPresenterThread();
+    resetStats();
     if (g_context != nullptr) {
         LOGI("stage3.2 reset: deleting lsfg context id=%d", g_context->contextId);
     }
@@ -2083,6 +2272,7 @@ bool enqueueAhbToPresenterLocked(AHardwareBuffer* srcAhb,
             g_presentQueue.pop_front();
             releasePresentFrame(dropped);
             g_presentDropped += 1;
+            g_statsPresenterDrops.fetch_add(1, std::memory_order_relaxed);
             if (g_presentDropped == 1 || (g_presentDropped % 120) == 0) {
                 LOGW("stage3.3c: presenter queue drop count=%llu depth=%zu",
                      static_cast<unsigned long long>(g_presentDropped),
@@ -2093,6 +2283,7 @@ bool enqueueAhbToPresenterLocked(AHardwareBuffer* srcAhb,
         g_presentEnqueued += 1;
         enqueued = g_presentEnqueued;
         queueDepth = g_presentQueue.size();
+        g_statsQueueDepth.store(static_cast<int32_t>(queueDepth), std::memory_order_release);
     }
     g_presentCv.notify_one();
 
@@ -2350,6 +2541,9 @@ bool shouldBypassFramegenLocked(int64_t timestampNs, float observedInputFps, boo
             g_adaptive.inputFpsEma = (g_adaptive.inputFpsEma * 0.88) +
                                      (sampleFps * 0.12);
         }
+        g_statsInputFpsTenths.store(
+            static_cast<int32_t>(std::clamp(g_adaptive.inputFpsEma * 10.0, 0.0, 10'000.0)),
+            std::memory_order_release);
     }
     if (g_adaptive.inputFpsEma > 0.0) {
         if (targetFps >= 100 && !allowHighInputBypass) {
@@ -2405,6 +2599,11 @@ bool shouldBypassFramegenLocked(int64_t timestampNs, float observedInputFps, boo
     }
 
     const bool bypass = g_adaptive.highInputBypass || g_adaptive.slowCooldownFrames > 0;
+    const int32_t mode =
+        g_adaptive.slowCooldownFrames > 0 ? kModeSlowCooldown :
+        g_adaptive.highInputBypass ? kModeHighInputBypass :
+        kModeNormal;
+    g_statsMode.store(mode, std::memory_order_release);
     if (logThisFrame) {
         LOGI("stage3.3d: adaptive target=%d inputEma=%.1f sample=%.1f bypass=%d high=%d cooldown=%u",
              targetFps,
@@ -2442,6 +2641,9 @@ void recordLsfgCostLocked(int64_t waitIdleMs, bool logThisFrame) {
     } else {
         g_adaptive.slowLsfgFrames = 0;
     }
+    g_statsLastLsfgWaitMs.store(
+        static_cast<int32_t>(std::clamp<int64_t>(waitIdleMs, 0, 60'000)),
+        std::memory_order_release);
 
     if (logThisFrame) {
         LOGI("stage3.3d: lsfg cost waitIdle=%lldms threshold=%.1f slowFrames=%u cooldown=%u",
@@ -2697,6 +2899,7 @@ bool dispatchYuvToRgbaLocked(DecoderAhbImport& decoderImport,
         g_adaptive.cadenceSuppressFrames = std::max(
             g_adaptive.cadenceSuppressFrames,
             allowHighInputBypass ? 1U : kCadenceRecoverySuppressFrames);
+        g_statsMode.store(kModeCadenceRecover, std::memory_order_release);
         if (!allowHighInputBypass || inputGapMs >= 140.0) {
             clearPresenterQueue("cadence");
         }
@@ -2979,11 +3182,11 @@ bool dispatchYuvToRgbaLocked(DecoderAhbImport& decoderImport,
     if (showInterp) {
         const int32_t presentMode = g_presentMode.load(std::memory_order_acquire);
         if (presentMode == 1) {
-            enqueueAhbToPresenterLocked(realAhb, "real", g_context->dispatchCount, 0);
+            enqueueAhbToPresenterLocked(realAhb, "real-pair", g_context->dispatchCount, 0);
             enqueueAhbToPresenterLocked(interpAhb, interpUpscaled ? "interp-up" : "interp", g_context->dispatchCount, 1);
         } else {
             enqueueAhbToPresenterLocked(interpAhb, interpUpscaled ? "interp-up" : "interp", g_context->dispatchCount, 0);
-            enqueueAhbToPresenterLocked(realAhb, "real", g_context->dispatchCount, 1);
+            enqueueAhbToPresenterLocked(realAhb, "real-pair", g_context->dispatchCount, 1);
         }
     } else {
         enqueueAhbToPresenterLocked(realAhb, "real", g_context->dispatchCount, 0);

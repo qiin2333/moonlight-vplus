@@ -1708,17 +1708,18 @@ class Game : Activity(), SurfaceHolder.Callback,
             prefConfig.hdrMode
         ) ?: return
         applyFramegenConfig(config)
+        FramegenInterceptor.configureOutputSurface(outputSurface)
+        prewarmFramegen()
 
         val capture = FramegenCapture.create(prefConfig.width, prefConfig.height)
         if (capture == null) {
+            FramegenInterceptor.configureOutputSurface(null)
             LimeLog.warning("Framegen capture unavailable; using direct decoder output")
             return
         }
 
         framegenCapture = capture
         decoderRenderer?.framegenSurface = capture.surface
-        FramegenInterceptor.configureOutputSurface(outputSurface)
-        prewarmFramegen()
 
         LimeLog.info(
             "Framegen capture armed ${prefConfig.width}x${prefConfig.height} " +
