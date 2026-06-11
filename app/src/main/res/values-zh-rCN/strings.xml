@@ -306,6 +306,7 @@
     <string name="float_ball_action_open_menu">显示游戏菜单</string>
 
     <string name="category_ui_settings">界面设置</string>
+    <string name="category_backup_restore">备份与恢复</string>
     <string name="category_display_behavior">画面设置</string>
     <string name="title_language_list"> 语言 </string>
     <string name="summary_language_list"> 选择Moonlight显示的语言。 </string>

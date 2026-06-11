@@ -403,6 +403,7 @@
     <string name="float_ball_action_lock_screen">Lock Screen</string>
 
     <string name="category_ui_settings">UI Settings</string>
+    <string name="category_backup_restore">Backup &amp; Restore</string>
     <string name="category_display_behavior">Display</string>
     <string name="title_checkbox_enable_pip">Enable Picture-in-Picture observer mode</string>
     <string name="summary_checkbox_enable_pip">Allows the stream to be viewed (but not controlled) while multitasking</string>
