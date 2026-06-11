@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- nonRoot flavor overrides: this build captures the touchpad via Android input, no root needed -->
+    <string name="summary_optimize_hardware_touchpad">Enable native touchpad input support for Xiaomi tablet keyboard touchpads. No root required; works only while pointer capture is active.</string>
+</resources>

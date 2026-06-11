@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- nonRoot flavor overrides: this build captures the touchpad via Android input, no root needed -->
+    <string name="summary_optimize_hardware_touchpad">为小米平板键盘触摸板启用原生触摸板输入适配。无需 Root 权限，仅在指针捕获激活时生效。</string>
+</resources>

@@ -11,6 +11,7 @@ import com.limelight.binding.input.touch.AbsoluteTouchContext
 import com.limelight.binding.input.touch.NativeTouchContext
 import com.limelight.binding.input.touch.RelativeTouchContext
 import com.limelight.binding.input.touch.TouchContext
+import com.limelight.binding.input.touchpad.NonRootTouchpadHandler
 import com.limelight.binding.input.virtual_controller.VirtualController
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.input.MouseButtonPacket
@@ -59,6 +60,7 @@ class TouchInputHandler(private val game: Game) {
     private var detectScrolling = false
     var detectMouseMiddle = false         // 键盘处理也会读写
     var detectMouseMiddleDown = false     // 键盘处理也会读写
+    private val nonRootTouchpadHandler = NonRootTouchpadHandler()
 
     // ---- 公共入口 ----
 
@@ -67,6 +69,16 @@ class TouchInputHandler(private val game: Game) {
         if (!game.grabbedInput) return false
 
         val eventSource = event.source
+
+        if (!BuildConfig.ROOT_BUILD && game.prefConfig.optimizeHardwareTouchpad &&
+            NonRootTouchpadHandler.isHardwareTouchpadEvent(event)) {
+            if (game.inputCaptureProvider.isCapturingActive()) {
+                nonRootTouchpadHandler.handleMotionEvent(event, game.conn)
+            } else {
+                nonRootTouchpadHandler.cancelAll(game.conn)
+            }
+            return true
+        }
 
         // 华为平板原生鼠标下的滚动逻辑
         if (game.prefConfig.fixMouseWheel && game.cursorVisible &&
@@ -1005,6 +1017,10 @@ class TouchInputHandler(private val game: Game) {
         if (game.prefConfig.enableEnhancedTouch) {
             game.prefConfig.enableNativeMousePointer = false
         }
+    }
+
+    fun cancelNonRootTouchpad() {
+        nonRootTouchpadHandler.cancelAll(game.conn)
     }
 
     /**

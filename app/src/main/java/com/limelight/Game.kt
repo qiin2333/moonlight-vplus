@@ -1349,6 +1349,9 @@ class Game : Activity(), SurfaceHolder.Callback,
                 inputCaptureProvider.showCursor()
             }
         } else {
+            if (::touchInputHandler.isInitialized) {
+                touchInputHandler.cancelNonRootTouchpad()
+            }
             inputCaptureProvider.disableCapture()
         }
         setMetaKeyCaptureState(grab)
@@ -1398,6 +1401,9 @@ class Game : Activity(), SurfaceHolder.Callback,
         prefConfig.enableNativeMousePointer = enable
 
         if (enable) {
+            if (::touchInputHandler.isInitialized) {
+                touchInputHandler.cancelNonRootTouchpad()
+            }
             inputCaptureProvider.disableCapture()
             cursorVisible = true
             inputCaptureProvider.showCursor()

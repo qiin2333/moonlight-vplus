@@ -70,6 +70,10 @@ class AndroidNativePointerCaptureProvider(
         }, 500)
     }
 
+    override fun isCapturingActive(): Boolean {
+        return isCapturing && targetView.hasPointerCapture()
+    }
+
     override fun eventHasRelativeMouseAxes(event: MotionEvent): Boolean {
         val eventSource = event.source
         return (eventSource == InputDevice.SOURCE_MOUSE_RELATIVE && event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE) ||
