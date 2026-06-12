@@ -57,6 +57,8 @@ class MediaCodecDecoderRenderer(
         private const val CR_FLAG_ALL = CR_FLAG_INPUT_THREAD or CR_FLAG_RENDER_THREAD or CR_FLAG_CHOREOGRAPHER
 
         private const val EXCEPTION_REPORT_DELAY_MS = 3000
+        private const val FRAMEGEN_SURFACE_SWITCH_MAX_RETRIES = 20
+        private const val FRAMEGEN_SURFACE_SWITCH_RETRY_DELAY_MS = 50L
     }
 
     // Used on versions < 5.0
@@ -116,7 +118,9 @@ class MediaCodecDecoderRenderer(
     var framegenSurface: android.view.Surface? = null
     @Volatile
     private var framegenOutputSwitchPending = false
+    private val framegenOutputSwitchReady = AtomicBoolean(false)
     private val framegenOutputSwitchRequested = AtomicBoolean(false)
+    private val framegenOutputSwitchRetryCount = AtomicInteger(0)
     @Volatile
     private var stopping = false
     private var reportedCrash = false
@@ -343,8 +347,18 @@ class MediaCodecDecoderRenderer(
         this.renderTarget = renderTarget
     }
 
+    fun setFramegenCaptureSwitchReady(ready: Boolean) {
+        framegenOutputSwitchReady.set(ready)
+        if (ready) {
+            requestFramegenOutputSurfaceSwitch("framegen prewarm ready")
+        }
+    }
+
     private fun requestFramegenOutputSurfaceSwitch(reason: String) {
         if (!framegenOutputSwitchPending || stopping) {
+            return
+        }
+        if (!framegenOutputSwitchReady.get()) {
             return
         }
         if (!framegenOutputSwitchRequested.compareAndSet(false, true)) {
@@ -356,6 +370,7 @@ class MediaCodecDecoderRenderer(
             val decoder = videoDecoder
             if (!framegenOutputSwitchPending || stopping || targetSurface == null || decoder == null) {
                 framegenOutputSwitchPending = false
+                framegenOutputSwitchRetryCount.set(0)
                 return@Runnable
             }
 
@@ -363,12 +378,31 @@ class MediaCodecDecoderRenderer(
             try {
                 decoder.setOutputSurface(targetSurface)
                 framegenOutputSwitchPending = false
+                framegenOutputSwitchRetryCount.set(0)
                 LimeLog.info(
                     "Framegen delayed capture switch to ImageReader after $reason " +
                         "elapsed=${SystemClock.uptimeMillis() - startMs}ms"
                 )
             } catch (t: Throwable) {
+                val retry = framegenOutputSwitchRetryCount.incrementAndGet()
+                if (!stopping && retry <= FRAMEGEN_SURFACE_SWITCH_MAX_RETRIES) {
+                    framegenOutputSwitchRequested.set(false)
+                    LimeLog.warning(
+                        "Framegen delayed capture switch retry $retry/" +
+                            "$FRAMEGEN_SURFACE_SWITCH_MAX_RETRIES after $reason: " +
+                            "${t.javaClass.simpleName}: ${t.message}"
+                    )
+                    val retryAction = Runnable {
+                        requestFramegenOutputSurfaceSwitch("$reason retry")
+                    }
+                    codecCallbackHandler?.postDelayed(
+                        retryAction,
+                        FRAMEGEN_SURFACE_SWITCH_RETRY_DELAY_MS
+                    ) ?: retryAction.run()
+                    return@Runnable
+                }
                 framegenOutputSwitchPending = false
+                framegenOutputSwitchRetryCount.set(0)
                 LimeLog.warning(
                     "Framegen delayed capture switch failed after $reason: " +
                         "${t.javaClass.simpleName}: ${t.message}; staying on direct SurfaceView"
@@ -728,6 +762,7 @@ class MediaCodecDecoderRenderer(
         // 关心 HDR 路径下的截流（一切 framegen 路径强制 SDR 处理）。
         val pendingFramegenSurface = framegenSurface
         framegenOutputSwitchRequested.set(false)
+        framegenOutputSwitchRetryCount.set(0)
         framegenOutputSwitchPending =
             pendingFramegenSurface != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
         val outSurface = if (framegenOutputSwitchPending) {
@@ -785,6 +820,9 @@ class MediaCodecDecoderRenderer(
 
         // Start the decoder
         videoDecoder!!.start()
+        if (framegenOutputSwitchPending && framegenOutputSwitchReady.get()) {
+            requestFramegenOutputSurfaceSwitch("decoder started after framegen prewarm")
+        }
     }
 
     private fun tryConfigureDecoder(

@@ -105,7 +105,10 @@ import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.util.Locale
-import kotlin.concurrent.thread
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.roundToInt
 import androidx.core.content.edit
 import androidx.core.net.toUri
@@ -188,6 +191,10 @@ class Game : Activity(), SurfaceHolder.Callback,
     private var decoderRenderer: MediaCodecDecoderRenderer? = null
     private var framegenCapture: FramegenCapture? = null
     private val framegenAdaptiveController = FramegenAdaptiveController()
+    private val framegenSurfaceExecutor: ExecutorService = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "FramegenSurface").apply { isDaemon = true }
+    }
+    private val framegenSurfaceGeneration = AtomicInteger(0)
     private var framegenInputHdrEnabled = false
     private var framegenEnabledToastShown = false
     private var reportedCrash = false
@@ -1176,6 +1183,8 @@ class Game : Activity(), SurfaceHolder.Callback,
         microphoneManager?.stopMicrophoneStream()
         clipboardSyncManager?.stop()
         clipboardSyncManager = null
+        framegenSurfaceGeneration.incrementAndGet()
+        framegenSurfaceExecutor.shutdownNow()
     }
 
     override fun onPause() {
@@ -1708,18 +1717,21 @@ class Game : Activity(), SurfaceHolder.Callback,
             prefConfig.hdrMode
         ) ?: return
         applyFramegenConfig(config)
-        FramegenInterceptor.configureOutputSurface(outputSurface)
-        prewarmFramegen()
+        decoderRenderer?.setFramegenCaptureSwitchReady(false)
 
         val capture = FramegenCapture.create(prefConfig.width, prefConfig.height)
         if (capture == null) {
-            FramegenInterceptor.configureOutputSurface(null)
+            configureFramegenOutputSurface(null)
             LimeLog.warning("Framegen capture unavailable; using direct decoder output")
             return
         }
 
         framegenCapture = capture
         decoderRenderer?.framegenSurface = capture.surface
+        prewarmFramegen(
+            outputSurface,
+            framegenSurfaceGeneration.incrementAndGet()
+        )
 
         LimeLog.info(
             "Framegen capture armed ${prefConfig.width}x${prefConfig.height} " +
@@ -1758,22 +1770,47 @@ class Game : Activity(), SurfaceHolder.Callback,
         )
     }
 
-    private fun prewarmFramegen() {
-        thread(name = "FramegenPrewarm", isDaemon = true) {
+    private fun prewarmFramegen(
+        outputSurface: Surface,
+        generation: Int
+    ) {
+        enqueueFramegenSurfaceTask {
             val startedAtMs = SystemClock.uptimeMillis()
+            FramegenInterceptor.configureOutputSurface(outputSurface)
             val ok = FramegenInterceptor.prewarmContext(prefConfig.width, prefConfig.height)
+            if (framegenSurfaceGeneration.get() == generation) {
+                decoderRenderer?.setFramegenCaptureSwitchReady(ok)
+            }
             LimeLog.info(
                 "Framegen prewarm ok=$ok elapsed=${SystemClock.uptimeMillis() - startedAtMs}ms"
             )
         }
     }
 
+    private fun configureFramegenOutputSurface(surface: Surface?) {
+        enqueueFramegenSurfaceTask {
+            FramegenInterceptor.configureOutputSurface(surface)
+        }
+    }
+
+    private fun enqueueFramegenSurfaceTask(task: () -> Unit) {
+        try {
+            framegenSurfaceExecutor.execute { task() }
+        } catch (e: RejectedExecutionException) {
+            LimeLog.warning("Framegen surface task ignored after shutdown")
+        }
+    }
+
     private fun releaseFramegenCapture() {
+        framegenSurfaceGeneration.incrementAndGet()
         framegenCapture?.release()
         framegenCapture = null
         framegenAdaptiveController.reset()
+        decoderRenderer?.setFramegenCaptureSwitchReady(false)
         decoderRenderer?.framegenSurface = null
-        FramegenInterceptor.configureOutputSurface(null)
+        enqueueFramegenSurfaceTask {
+            FramegenInterceptor.configureOutputSurface(null)
+        }
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
@@ -1783,14 +1820,14 @@ class Game : Activity(), SurfaceHolder.Callback,
 
         val shouldPrepareFramegen =
             !attemptedConnection || (connected && framegenCapture == null && shouldUseFramegen())
-        if (shouldPrepareFramegen) {
-            // setRenderTarget() may start the decoder, which reads framegenSurface.
-            prepareFramegenSurface(holder.surface, !attemptedConnection)
-        } else if (framegenCapture != null) {
-            FramegenInterceptor.configureOutputSurface(holder.surface)
-        }
 
         decoderRenderer?.setRenderTarget(holder)
+
+        if (shouldPrepareFramegen) {
+            prepareFramegenSurface(holder.surface, !attemptedConnection)
+        } else if (framegenCapture != null) {
+            configureFramegenOutputSurface(holder.surface)
+        }
 
         if (!attemptedConnection) {
             attemptedConnection = true

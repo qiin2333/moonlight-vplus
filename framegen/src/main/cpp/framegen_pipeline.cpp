@@ -47,7 +47,7 @@ constexpr int32_t kHdrModeHlg = 2;
 
 constexpr int32_t kDataspaceSrgbFull = 142671872;
 constexpr int32_t kDataspaceBt2020HlgFull = 0x09C60000;
-constexpr int32_t kDataspaceBt2020PqFull = 0x09860000;
+constexpr int32_t kDataspaceBt2020PqLimited = 0x11860000;
 
 enum class ProbeState : uint8_t {
     kUninitialized = 0,
@@ -399,11 +399,16 @@ std::atomic<int32_t> g_statsMode{kModeNormal};
 std::atomic<int32_t> g_statsLastLsfgWaitMs{0};
 std::atomic<int32_t> g_statsLastBlitMs{0};
 
+std::mutex g_presentBufferPoolMutex;
+std::vector<std::vector<uint8_t>> g_presentBufferPool;
+
 constexpr uint64_t kFirstAvailableDeviceUuid = 0x1463ABACULL;
 constexpr uint32_t kGenerationCount = 1; // 2x 插帧：每两帧之间生成 1 帧。
 constexpr int64_t kSlowFrameMs = 16;
 constexpr int64_t kSlowBlitMs = 8;
-constexpr uint32_t kCadenceRecoverySuppressFrames = 2;
+constexpr uint32_t kCadenceRecoverySuppressFrames = 1;
+constexpr size_t kPresentBufferPoolMax = 3;
+constexpr size_t kPresentBufferPoolMaxBytes = 96ULL * 1024ULL * 1024ULL;
 
 int64_t elapsedMs(std::chrono::steady_clock::time_point start,
                   std::chrono::steady_clock::time_point end) {
@@ -485,7 +490,51 @@ void applyOutputWindowHintsLocked(bool requestBuffers) {
     g_outputWindowBuffersRequested = true;
 }
 
+std::vector<uint8_t> acquirePresentBuffer(size_t bytes) {
+    std::vector<uint8_t> buffer;
+    {
+        std::lock_guard<std::mutex> lock(g_presentBufferPoolMutex);
+        auto found = std::find_if(
+            g_presentBufferPool.begin(),
+            g_presentBufferPool.end(),
+            [bytes](const std::vector<uint8_t>& candidate) {
+                return candidate.capacity() >= bytes;
+            });
+        if (found != g_presentBufferPool.end()) {
+            buffer = std::move(*found);
+            g_presentBufferPool.erase(found);
+        }
+    }
+    buffer.resize(bytes);
+    return buffer;
+}
+
+void releasePresentBuffer(std::vector<uint8_t>& buffer) {
+    if (buffer.empty() && buffer.capacity() == 0) {
+        return;
+    }
+
+    buffer.clear();
+    if (buffer.capacity() > kPresentBufferPoolMaxBytes) {
+        std::vector<uint8_t>().swap(buffer);
+        return;
+    }
+
+    std::lock_guard<std::mutex> lock(g_presentBufferPoolMutex);
+    if (g_presentBufferPool.size() < kPresentBufferPoolMax) {
+        g_presentBufferPool.emplace_back(std::move(buffer));
+    } else {
+        std::vector<uint8_t>().swap(buffer);
+    }
+}
+
+void clearPresentBufferPool() {
+    std::lock_guard<std::mutex> lock(g_presentBufferPoolMutex);
+    g_presentBufferPool.clear();
+}
+
 void releasePresentFrame(PresentFrame& frame) {
+    releasePresentBuffer(frame.rgba);
     if (frame.window != nullptr) {
         ANativeWindow_release(frame.window);
         frame.window = nullptr;
@@ -496,6 +545,7 @@ void releaseLastPresentedFrameLocked() {
     if (g_lastPresentedFrame.window != nullptr) {
         ANativeWindow_release(g_lastPresentedFrame.window);
     }
+    releasePresentBuffer(g_lastPresentedFrame.rgba);
     g_lastPresentedFrame = LastPresentedFrame{};
 }
 
@@ -508,6 +558,7 @@ void rememberFrameForFallbackLocked(PresentFrame& frame,
     if (g_lastPresentedFrame.window != nullptr) {
         ANativeWindow_release(g_lastPresentedFrame.window);
     }
+    releasePresentBuffer(g_lastPresentedFrame.rgba);
     ANativeWindow_acquire(frame.window);
     g_lastPresentedFrame.window = frame.window;
     g_lastPresentedFrame.rgba = std::move(frame.rgba);
@@ -547,7 +598,15 @@ bool makeFallbackFrameLocked(PresentFrame& out) {
 
     ANativeWindow_acquire(g_lastPresentedFrame.window);
     out.window = g_lastPresentedFrame.window;
-    out.rgba = g_lastPresentedFrame.rgba;
+    try {
+        out.rgba = acquirePresentBuffer(g_lastPresentedFrame.rgba.size());
+        std::memcpy(out.rgba.data(), g_lastPresentedFrame.rgba.data(), out.rgba.size());
+    } catch (const std::exception& e) {
+        ANativeWindow_release(out.window);
+        out.window = nullptr;
+        LOGW("stage3.3c: fallback buffer unavailable: %s", e.what());
+        return false;
+    }
     out.width = g_lastPresentedFrame.width;
     out.height = g_lastPresentedFrame.height;
     out.displayWidth = g_lastPresentedFrame.displayWidth;
@@ -779,6 +838,7 @@ void stopPresenterThread() {
         g_presentEnqueued = 0;
         g_presentDropped = 0;
     }
+    clearPresentBufferPool();
 }
 
 uint32_t alignDown(uint32_t value, uint32_t alignment) {
@@ -1300,7 +1360,7 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
             resources->vkFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
             resources->windowFormat = WINDOW_FORMAT_RGBA_FP16;
             resources->windowDataspace =
-                hdrMode == kHdrModeHlg ? kDataspaceBt2020HlgFull : kDataspaceBt2020PqFull;
+                hdrMode == kHdrModeHlg ? kDataspaceBt2020HlgFull : kDataspaceBt2020PqLimited;
             resources->bytesPerPixel = 8;
         }
         if (decoderDesc.width > 0 && streamWidth > 0) {
@@ -1320,7 +1380,8 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
             resources->presentWidth, resources->presentHeight, resources->ahbFormat);
         resources->interpOutput = allocateOwnedColorAhb(
             resources->presentWidth, resources->presentHeight, resources->ahbFormat);
-        resources->outputs.emplace_back(allocateOwnedColorAhb(ctxWidth, ctxHeight, resources->ahbFormat));
+        resources->outputs.emplace_back(
+            allocateOwnedColorAhb(ctxWidth, ctxHeight, resources->ahbFormat));
         const auto allocateEnd = std::chrono::steady_clock::now();
         LOGI("stage3.2 bootstrap timing: allocateOwnedAhb=%lldms total=%lldms fg=%ux%u present=%ux%u hdrPass=%d hdrMode=%d dataspace=0x%x vkFmt=%d ahbFmt=0x%x bpp=%u",
              static_cast<long long>(elapsedMs(allocateStart, allocateEnd)),
@@ -1660,7 +1721,9 @@ void setTuningConfig(int32_t internalWidth,
 
 void setOutputWindow(ANativeWindow* nativeWindow) {
     std::lock_guard<std::mutex> lock(g_contextMutex);
-    if (g_outputWindow == nativeWindow) return;
+    if (g_outputWindow == nativeWindow) {
+        return;
+    }
     stopPresenterThread();
     if (g_outputWindow != nullptr) {
         ANativeWindow_release(g_outputWindow);
@@ -2047,7 +2110,7 @@ bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDR
          static_cast<unsigned>(fp.suggestedYcbcrRange),
          g_context->hdrMode,
          static_cast<int>(cvtCi.chromaFilter));
-    LOGI("stage3.3u: rgba upscale pipeline ready src=%ux%u dst=%ux%u",
+    LOGI("stage3.3u: rgba upscale pipeline ready src=%ux%u dst=%ux%u filter=catmull sharp=1",
          g_context->width, g_context->height,
          g_context->presentWidth, g_context->presentHeight);
     return true;
@@ -2184,12 +2247,8 @@ bool enqueueAhbToPresenterLocked(AHardwareBuffer* srcAhb,
         return false;
     }
 
-    const int32_t displayW = (g_context != nullptr && g_context->presentWidth > 0)
-        ? static_cast<int32_t>(g_context->presentWidth)
-        : srcW;
-    const int32_t displayH = (g_context != nullptr && g_context->presentHeight > 0)
-        ? static_cast<int32_t>(g_context->presentHeight)
-        : srcH;
+    const int32_t displayW = srcW;
+    const int32_t displayH = srcH;
     const uint32_t bytesPerPixel = g_context != nullptr ? g_context->bytesPerPixel : 4U;
     const int32_t windowFormat = g_context != nullptr ? g_context->windowFormat : WINDOW_FORMAT_RGBA_8888;
     const int32_t windowDataspace =
@@ -2235,7 +2294,8 @@ bool enqueueAhbToPresenterLocked(AHardwareBuffer* srcAhb,
     frame.bytesPerPixel = bytesPerPixel;
     frame.tag = tag != nullptr ? tag : "";
     try {
-        frame.rgba.resize(static_cast<size_t>(srcW) * static_cast<size_t>(srcH) * bytesPerPixel);
+        frame.rgba = acquirePresentBuffer(
+            static_cast<size_t>(srcW) * static_cast<size_t>(srcH) * bytesPerPixel);
     } catch (const std::exception& e) {
         AHardwareBuffer_unlock(srcAhb, nullptr);
         LOGE("stage3.3c: staging allocation failed tag=%s err=%s", tag, e.what());
@@ -3198,7 +3258,9 @@ bool dispatchYuvToRgbaLocked(DecoderAhbImport& decoderImport,
         const char* enqueueTag = "real";
         if (showInterp) {
             const int32_t presentMode = g_presentMode.load(std::memory_order_acquire);
-            enqueueTag = presentMode == 1 ? "real+interp" : "interp+real";
+            enqueueTag = presentMode == 1
+                ? "real+interp"
+                : "interp+real";
         } else if (hasValidInterp && cadenceSuppressInterp) {
             enqueueTag = cadenceBreak ? "real-cadence" : "real-recover";
         }
