@@ -589,11 +589,11 @@ public class MoonBridge {
     // Surface DataSpace control for HDR color space
     // Uses ANativeWindow_setBuffersDataSpace() via JNI (API 28+)
 
-    // DataSpace constants: STANDARD_BT2020 | TRANSFER | RANGE
-    public static final int DATASPACE_BT2020_HLG_FULL = 0x09C60000;
-    public static final int DATASPACE_BT2020_HLG_LIMITED = 0x11C60000;
-    public static final int DATASPACE_BT2020_PQ_FULL = 0x09860000;
-    public static final int DATASPACE_BT2020_PQ_LIMITED = 0x11860000;
+    // DataSpace constants from android/data_space.h: STANDARD_BT2020 | TRANSFER | RANGE
+    public static final int DATASPACE_BT2020_HLG_FULL = 0x0A060000;
+    public static final int DATASPACE_BT2020_HLG_LIMITED = 0x12060000;
+    public static final int DATASPACE_BT2020_PQ_FULL = 0x09C60000;
+    public static final int DATASPACE_BT2020_PQ_LIMITED = 0x11C60000;
 
     /**
      * Set the DataSpace on a Surface for HDR content.

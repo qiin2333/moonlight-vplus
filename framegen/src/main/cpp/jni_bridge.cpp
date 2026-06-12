@@ -189,15 +189,11 @@ Java_com_limelight_framegen_FramegenInterceptor_nativeSetLosslessDllPath(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_limelight_framegen_FramegenInterceptor_nativeSetHdrEnabled(
-        JNIEnv * /*env*/, jclass /* clazz */, jboolean enabled) {
-    FramegenPipeline::setHdrEnabled(enabled == JNI_TRUE);
-}
-
-extern "C" JNIEXPORT void JNICALL
 Java_com_limelight_framegen_FramegenInterceptor_nativeSetHdrMode(
-        JNIEnv * /*env*/, jclass /* clazz */, jint mode) {
-    FramegenPipeline::setHdrMode(static_cast<int32_t>(mode));
+        JNIEnv * /*env*/, jclass /* clazz */, jint mode, jboolean fullRange) {
+    FramegenPipeline::setHdrMode(
+        static_cast<int32_t>(mode),
+        fullRange == JNI_TRUE);
 }
 
 extern "C" JNIEXPORT void JNICALL

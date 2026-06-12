@@ -11,6 +11,7 @@ data class FramegenRuntimeConfig(
     val presentationFps: Int,
     val inputHdrEnabled: Boolean,
     val inputHdrMode: Int,
+    val inputHdrFullRange: Boolean,
     val adaptiveEnabled: Boolean,
     val allowAdaptiveWithoutDoubling: Boolean,
     val internalWidth: Int,
@@ -49,7 +50,8 @@ object FramegenRuntimePlanner {
         height: Int,
         inputFps: Int,
         inputHdrEnabled: Boolean,
-        inputHdrMode: Int
+        inputHdrMode: Int,
+        inputHdrFullRange: Boolean
     ): FramegenRuntimeConfig? {
         if (!ready(prefs)) {
             return null
@@ -77,6 +79,7 @@ object FramegenRuntimePlanner {
             presentationFps = presentationFps(prefs, inputFps),
             inputHdrEnabled = inputHdrEnabled,
             inputHdrMode = if (inputHdrEnabled) inputHdrMode else MoonBridge.HDR_MODE_SDR,
+            inputHdrFullRange = inputHdrEnabled && inputHdrFullRange,
             adaptiveEnabled = adaptiveEnabled,
             allowAdaptiveWithoutDoubling = adaptiveEnabled && !regularEnabled,
             internalWidth = FramegenSettings.resolveInternalWidth(prefs),

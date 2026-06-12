@@ -13,6 +13,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
 import android.os.SystemClock
+import android.view.Surface
 import android.view.SurfaceHolder
 import com.limelight.LimeLog
 import com.limelight.nvstream.av.video.VideoDecoderRenderer
@@ -115,7 +116,7 @@ class MediaCodecDecoderRenderer(
      * 运行中切换需要先 [pauseProcessing] / [resumeProcessing]。
      */
     @Volatile
-    var framegenSurface: android.view.Surface? = null
+    var framegenSurface: Surface? = null
     @Volatile
     private var framegenOutputSwitchPending = false
     private val framegenOutputSwitchReady = AtomicBoolean(false)
@@ -376,6 +377,7 @@ class MediaCodecDecoderRenderer(
 
             val startMs = SystemClock.uptimeMillis()
             try {
+                applyHdrDataSpace(targetSurface, "framegen capture")
                 decoder.setOutputSurface(targetSurface)
                 framegenOutputSwitchPending = false
                 framegenOutputSwitchRetryCount.set(0)
@@ -411,6 +413,28 @@ class MediaCodecDecoderRenderer(
         }
 
         codecCallbackHandler?.post(switchAction) ?: switchAction.run()
+    }
+
+    private fun applyHdrDataSpace(surface: Surface, reason: String) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P || hdrDataSpace == 0) {
+            return
+        }
+
+        val result = MoonBridge.nativeSetSurfaceDataSpace(surface, hdrDataSpace)
+        LimeLog.info(
+            "Surface DataSpace ($reason): 0x${Integer.toHexString(hdrDataSpace)} result=$result"
+        )
+    }
+
+    private fun reapplyHdrDataSpaceIfChanged(surface: Surface, reason: String) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P || hdrDataSpace == 0) {
+            return
+        }
+
+        val currentDataSpace = MoonBridge.nativeGetSurfaceDataSpace(surface)
+        if (currentDataSpace != hdrDataSpace) {
+            applyHdrDataSpace(surface, reason)
+        }
     }
 
     init {
@@ -757,9 +781,9 @@ class MediaCodecDecoderRenderer(
 
         LimeLog.info("Configuring with format: $format")
 
-        // 阶段 3：framegenSurface 非空时走 ImageReader 截流路径，原 SurfaceView 不再接收帧。
-        // 注意：HDR DataSpace 设置仍作用在 renderTarget!!.surface 上 —— 阶段 3.1 暂不
-        // 关心 HDR 路径下的截流（一切 framegen 路径强制 SDR 处理）。
+        // Framegen starts on the direct SurfaceView, then switches to ImageReader
+        // after the first visible frame. Native framegen presents back to this same
+        // SurfaceView and mirrors the HDR dataspace when HDR passthrough is active.
         val pendingFramegenSurface = framegenSurface
         framegenOutputSwitchRequested.set(false)
         framegenOutputSwitchRetryCount.set(0)
@@ -798,9 +822,7 @@ class MediaCodecDecoderRenderer(
                 else
                     MoonBridge.DATASPACE_BT2020_PQ_LIMITED
             }
-            val result = MoonBridge.nativeSetSurfaceDataSpace(renderTarget!!.surface, hdrDataSpace)
-            LimeLog.info("Surface DataSpace: 0x" + Integer.toHexString(hdrDataSpace) +
-                " result=" + result)
+            applyHdrDataSpace(renderTarget!!.surface, "decoder output")
         }
 
         configuredFormat = format
@@ -1353,15 +1375,8 @@ class MediaCodecDecoderRenderer(
                 outputFormat = format
                 LimeLog.info("New output format: $outputFormat")
 
-                // Re-apply DataSpace after format change
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
-                    hdrDataSpace != 0 && renderTarget != null
-                ) {
-                    val currentDataSpace = MoonBridge.nativeGetSurfaceDataSpace(renderTarget!!.surface)
-                    if (currentDataSpace != hdrDataSpace) {
-                        MoonBridge.nativeSetSurfaceDataSpace(renderTarget!!.surface, hdrDataSpace)
-                        LimeLog.info("Re-applied Surface DataSpace: 0x" + Integer.toHexString(hdrDataSpace))
-                    }
+                renderTarget?.surface?.let {
+                    reapplyHdrDataSpaceIfChanged(it, "async format change")
                 }
             }
         }, codecCallbackHandler)
@@ -1442,14 +1457,8 @@ class MediaCodecDecoderRenderer(
                                     LimeLog.info("New output format: $outputFormat")
 
                                     // Re-apply DataSpace after format change — some decoders reset it
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
-                                        hdrDataSpace != 0 && renderTarget != null
-                                    ) {
-                                        val currentDataSpace = MoonBridge.nativeGetSurfaceDataSpace(renderTarget!!.surface)
-                                        if (currentDataSpace != hdrDataSpace) {
-                                            MoonBridge.nativeSetSurfaceDataSpace(renderTarget!!.surface, hdrDataSpace)
-                                            LimeLog.info("Re-applied Surface DataSpace: 0x" + Integer.toHexString(hdrDataSpace))
-                                        }
+                                    renderTarget?.surface?.let {
+                                        reapplyHdrDataSpaceIfChanged(it, "format change")
                                     }
                                 }
                                 MediaCodec.INFO_TRY_AGAIN_LATER -> {}

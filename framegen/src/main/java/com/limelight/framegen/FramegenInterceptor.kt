@@ -107,20 +107,10 @@ class FramegenInterceptor {
         }
 
         @JvmStatic
-        fun configureHdrEnabled(enabled: Boolean) {
+        fun configureHdrMode(mode: Int, fullRange: Boolean) {
             if (!isAvailable()) return
             try {
-                nativeSetHdrEnabled(enabled)
-            } catch (t: Throwable) {
-                Log.w(TAG, "failed to configure framegen HDR flag", t)
-            }
-        }
-
-        @JvmStatic
-        fun configureHdrMode(mode: Int) {
-            if (!isAvailable()) return
-            try {
-                nativeSetHdrMode(mode.coerceIn(0, 2))
+                nativeSetHdrMode(mode.coerceIn(0, 2), fullRange)
             } catch (t: Throwable) {
                 Log.w(TAG, "failed to configure framegen HDR mode", t)
             }
@@ -217,10 +207,7 @@ class FramegenInterceptor {
         private external fun nativeSetLosslessDllPath(dllPath: String)
 
         @JvmStatic
-        private external fun nativeSetHdrEnabled(enabled: Boolean)
-
-        @JvmStatic
-        private external fun nativeSetHdrMode(mode: Int)
+        private external fun nativeSetHdrMode(mode: Int, fullRange: Boolean)
 
         @JvmStatic
         private external fun nativeSetOutputFrameRate(fps: Int)

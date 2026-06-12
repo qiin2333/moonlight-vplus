@@ -1,5 +1,6 @@
 #include "framegen_pipeline.hpp"
 
+#include <android/data_space.h>
 #include <android/log.h>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
@@ -45,9 +46,11 @@ constexpr int32_t kHdrModeSdr = 0;
 constexpr int32_t kHdrModeHdr10 = 1;
 constexpr int32_t kHdrModeHlg = 2;
 
-constexpr int32_t kDataspaceSrgbFull = 142671872;
-constexpr int32_t kDataspaceBt2020HlgFull = 0x09C60000;
-constexpr int32_t kDataspaceBt2020PqLimited = 0x11860000;
+constexpr int32_t kDataspaceSrgbFull = static_cast<int32_t>(ADATASPACE_SRGB);
+constexpr int32_t kDataspaceBt2020HlgFull = static_cast<int32_t>(ADATASPACE_BT2020_HLG);
+constexpr int32_t kDataspaceBt2020HlgLimited = static_cast<int32_t>(ADATASPACE_BT2020_ITU_HLG);
+constexpr int32_t kDataspaceBt2020PqFull = static_cast<int32_t>(ADATASPACE_BT2020_PQ);
+constexpr int32_t kDataspaceBt2020PqLimited = static_cast<int32_t>(ADATASPACE_BT2020_ITU_PQ);
 
 enum class ProbeState : uint8_t {
     kUninitialized = 0,
@@ -60,6 +63,16 @@ enum class ContextBootState : uint8_t {
     kReady,
     kFailed,
 };
+
+int32_t hdrDataspaceForMode(int32_t hdrMode, bool fullRange) {
+    if (hdrMode == kHdrModeHlg) {
+        return fullRange ? kDataspaceBt2020HlgFull : kDataspaceBt2020HlgLimited;
+    }
+    if (hdrMode == kHdrModeHdr10) {
+        return fullRange ? kDataspaceBt2020PqFull : kDataspaceBt2020PqLimited;
+    }
+    return kDataspaceSrgbFull;
+}
 
 struct AhbDeleter {
     void operator()(AHardwareBuffer* buffer) const {
@@ -123,6 +136,7 @@ struct ContextResources {
     float srcUvScaleX{1.0F};
     float srcUvScaleY{1.0F};
     bool hdrPassthrough{false};
+    bool hdrFullRange{false};
     uint32_t ahbFormat{AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM};
     VkFormat vkFormat{VK_FORMAT_R8G8B8A8_UNORM};
     int32_t windowFormat{WINDOW_FORMAT_RGBA_8888};
@@ -305,6 +319,7 @@ std::atomic<ProbeState> g_probeState{ProbeState::kUninitialized};
 std::atomic<ContextBootState> g_contextBootState{ContextBootState::kUninitialized};
 std::atomic<bool> g_hdrEnabled{false};
 std::atomic<int32_t> g_hdrMode{kHdrModeSdr};
+std::atomic<bool> g_hdrFullRange{false};
 std::mutex g_contextMutex;
 std::unique_ptr<VulkanContext> g_vk;
 std::unique_ptr<ContextResources> g_context;
@@ -1352,15 +1367,16 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
         resources->presentWidth = streamWidth;
         resources->presentHeight = streamHeight;
         const int32_t hdrMode = g_hdrMode.load(std::memory_order_acquire);
+        const bool hdrFullRange = g_hdrFullRange.load(std::memory_order_acquire);
         resources->hdrMode = hdrMode;
+        resources->hdrFullRange = hdrFullRange;
         resources->hdrPassthrough =
             g_hdrEnabled.load(std::memory_order_acquire) && hdrMode != kHdrModeSdr;
         if (resources->hdrPassthrough) {
             resources->ahbFormat = AHARDWAREBUFFER_FORMAT_R16G16B16A16_FLOAT;
             resources->vkFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
             resources->windowFormat = WINDOW_FORMAT_RGBA_FP16;
-            resources->windowDataspace =
-                hdrMode == kHdrModeHlg ? kDataspaceBt2020HlgFull : kDataspaceBt2020PqLimited;
+            resources->windowDataspace = hdrDataspaceForMode(hdrMode, hdrFullRange);
             resources->bytesPerPixel = 8;
         }
         if (decoderDesc.width > 0 && streamWidth > 0) {
@@ -1383,13 +1399,14 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
         resources->outputs.emplace_back(
             allocateOwnedColorAhb(ctxWidth, ctxHeight, resources->ahbFormat));
         const auto allocateEnd = std::chrono::steady_clock::now();
-        LOGI("stage3.2 bootstrap timing: allocateOwnedAhb=%lldms total=%lldms fg=%ux%u present=%ux%u hdrPass=%d hdrMode=%d dataspace=0x%x vkFmt=%d ahbFmt=0x%x bpp=%u",
+        LOGI("stage3.2 bootstrap timing: allocateOwnedAhb=%lldms total=%lldms fg=%ux%u present=%ux%u hdrPass=%d hdrMode=%d fullRange=%d dataspace=0x%x vkFmt=%d ahbFmt=0x%x bpp=%u",
              static_cast<long long>(elapsedMs(allocateStart, allocateEnd)),
              static_cast<long long>(elapsedMs(bootStart, allocateEnd)),
              ctxWidth, ctxHeight,
              resources->presentWidth, resources->presentHeight,
              static_cast<int>(resources->hdrPassthrough),
              hdrMode,
+             static_cast<int>(hdrFullRange),
              resources->windowDataspace,
              static_cast<int>(resources->vkFormat),
              resources->ahbFormat,
@@ -1644,22 +1661,7 @@ void reset() {
     }
 }
 
-void setHdrEnabled(bool enabled) {
-    const bool prev = g_hdrEnabled.exchange(enabled, std::memory_order_acq_rel);
-    if (!enabled) {
-        g_hdrMode.store(kHdrModeSdr, std::memory_order_release);
-    } else if (g_hdrMode.load(std::memory_order_acquire) == kHdrModeSdr) {
-        g_hdrMode.store(kHdrModeHdr10, std::memory_order_release);
-    }
-    if (prev != enabled) {
-        LOGI("setHdrEnabled: %d -> %d mode=%d (effective on next bootstrap)",
-             static_cast<int>(prev),
-             static_cast<int>(enabled),
-             g_hdrMode.load(std::memory_order_acquire));
-    }
-}
-
-void setHdrMode(int32_t mode) {
+void setHdrMode(int32_t mode, bool fullRange) {
     const int32_t clampedMode =
         mode == kHdrModeHlg ? kHdrModeHlg :
         mode == kHdrModeHdr10 ? kHdrModeHdr10 :
@@ -1667,11 +1669,16 @@ void setHdrMode(int32_t mode) {
     const int32_t prevMode = g_hdrMode.exchange(clampedMode, std::memory_order_acq_rel);
     const bool enabled = clampedMode != kHdrModeSdr;
     const bool prevEnabled = g_hdrEnabled.exchange(enabled, std::memory_order_acq_rel);
-    if (prevMode != clampedMode || prevEnabled != enabled) {
-        LOGI("setHdrMode: %d -> %d enabled=%d (effective on next bootstrap)",
+    const bool clampedFullRange = enabled && fullRange;
+    const bool prevFullRange = g_hdrFullRange.exchange(clampedFullRange, std::memory_order_acq_rel);
+    if (prevMode != clampedMode ||
+        prevEnabled != enabled ||
+        prevFullRange != clampedFullRange) {
+        LOGI("setHdrMode: %d -> %d enabled=%d fullRange=%d (effective on next bootstrap)",
              prevMode,
              clampedMode,
-             static_cast<int>(enabled));
+             static_cast<int>(enabled),
+             static_cast<int>(clampedFullRange));
     }
 }
 
@@ -1769,13 +1776,14 @@ bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDR
         .pNext = nullptr,
         .externalFormat = fp.externalFormat,
     };
-    const bool forceHlgFullRange =
-        g_context->hdrPassthrough && g_context->hdrMode == kHdrModeHlg;
-    const VkSamplerYcbcrModelConversion ycbcrModel = forceHlgFullRange
+    const bool hdrYcbcr = g_context->hdrPassthrough;
+    const VkSamplerYcbcrModelConversion ycbcrModel = hdrYcbcr
         ? VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_2020
         : fp.suggestedYcbcrModel;
-    const VkSamplerYcbcrRange ycbcrRange = forceHlgFullRange
-        ? VK_SAMPLER_YCBCR_RANGE_ITU_FULL
+    const VkSamplerYcbcrRange ycbcrRange = hdrYcbcr
+        ? (g_context->hdrFullRange
+            ? VK_SAMPLER_YCBCR_RANGE_ITU_FULL
+            : VK_SAMPLER_YCBCR_RANGE_ITU_NARROW)
         : fp.suggestedYcbcrRange;
 
     VkSamplerYcbcrConversionCreateInfo cvtCi{
@@ -2102,13 +2110,14 @@ bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDR
     g_context->boundExternalFormat = fp.externalFormat;
     LOGI("stage3.3a-iii.b.1: ycbcr conversion + sampler + pipeline ready "
          "externalFormat=0x%llx model=%u range=%u suggestedModel=%u suggestedRange=%u "
-         "hdrMode=%d chromaFilter=%d",
+         "hdrMode=%d fullRange=%d chromaFilter=%d",
          static_cast<unsigned long long>(fp.externalFormat),
          static_cast<unsigned>(ycbcrModel),
          static_cast<unsigned>(ycbcrRange),
          static_cast<unsigned>(fp.suggestedYcbcrModel),
          static_cast<unsigned>(fp.suggestedYcbcrRange),
          g_context->hdrMode,
+         static_cast<int>(g_context->hdrFullRange),
          static_cast<int>(cvtCi.chromaFilter));
     LOGI("stage3.3u: rgba upscale pipeline ready src=%ux%u dst=%ux%u filter=catmull sharp=1",
          g_context->width, g_context->height,

@@ -1586,7 +1586,8 @@ class Game : Activity(), SurfaceHolder.Callback,
     override fun setHdrMode(enabled: Boolean, hdrMetadata: ByteArray?) {
         LimeLog.info("Display HDR mode: ${if (enabled) "enabled" else "disabled"}")
         framegenInputHdrEnabled = enabled
-        FramegenInterceptor.configureHdrMode(if (enabled) prefConfig.hdrMode else MoonBridge.HDR_MODE_SDR)
+        val framegenHdrMode = if (enabled) prefConfig.hdrMode else MoonBridge.HDR_MODE_SDR
+        FramegenInterceptor.configureHdrMode(framegenHdrMode, shouldUseFullRangeHdr(framegenHdrMode))
         decoderRenderer?.setHdrMode(enabled, hdrMetadata)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -1632,6 +1633,19 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     private fun willFramegenOutputSdr(): Boolean =
         (framegenCapture != null || shouldUseFramegen()) && !framegenInputHdrEnabled
+
+    private fun shouldUseFullRangeHdr(hdrMode: Int): Boolean {
+        if (hdrMode == MoonBridge.HDR_MODE_SDR) {
+            return false
+        }
+        if (hdrMode == MoonBridge.HDR_MODE_HLG) {
+            return true
+        }
+
+        val preferredRange = decoderRenderer?.getPreferredColorRange()
+            ?: if (prefConfig.fullRange) MoonBridge.COLOR_RANGE_FULL else MoonBridge.COLOR_RANGE_LIMITED
+        return preferredRange == MoonBridge.COLOR_RANGE_FULL
+    }
 
     override fun setMotionEventState(controllerNumber: Short, motionType: Byte, reportRateHz: Short) {
         controllerHandler.handleSetMotionEventState(controllerNumber, motionType, reportRateHz)
@@ -1714,7 +1728,8 @@ class Game : Activity(), SurfaceHolder.Callback,
             prefConfig.height,
             prefConfig.fps,
             framegenInputHdrEnabled,
-            prefConfig.hdrMode
+            prefConfig.hdrMode,
+            shouldUseFullRangeHdr(prefConfig.hdrMode)
         ) ?: return
         applyFramegenConfig(config)
         decoderRenderer?.setFramegenCaptureSwitchReady(false)
@@ -1747,7 +1762,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     private fun applyFramegenConfig(config: FramegenRuntimeConfig) {
         FramegenInterceptor.configureLosslessDllPath(config.losslessDllPath)
-        FramegenInterceptor.configureHdrMode(config.inputHdrMode)
+        FramegenInterceptor.configureHdrMode(config.inputHdrMode, config.inputHdrFullRange)
         FramegenInterceptor.configureOutputFrameRate(config.presentationFps)
         FramegenInterceptor.configureTuning(
             config.internalWidth,
