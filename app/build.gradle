@@ -246,4 +246,5 @@ dependencies {
     implementation libs.androidx.lifecycle.runtime.ktx
 
     testImplementation libs.junit
+    testImplementation libs.json
 }

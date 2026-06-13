@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "packageName": "com.limelight.vplus_debug",
+  "appVersionCode": 390,
+  "appVersionName": "12.9.8",
+  "exportedAt": 1781010000000,
+  "sections": {
+    "defaultPreferences": {
+      "values": {
+        "list_resolution": {
+          "type": "string",
+          "value": "1920x1080"
+        },
+        "list_fps": {
+          "type": "string",
+          "value": "60"
+        },
+        "seekbar_bitrate_kbps": {
+          "type": "int",
+          "value": 50000
+        },
+        "checkbox_enable_hdr": {
+          "type": "boolean",
+          "value": false
+        },
+        "perf_overlay_display_items": {
+          "type": "stringSet",
+          "value": [
+            "decode_latency",
+            "network_latency"
+          ]
+        }
+      }
+    },
+    "appLastSettings": {
+      "values": {
+        "use_last_settings": {
+          "type": "boolean",
+          "value": true
+        }
+      }
+    },
+    "customResolutions": {
+      "values": {
+        "custom_resolutions": {
+          "type": "stringSet",
+          "value": [
+            "2560x1440"
+          ]
+        }
+      }
+    },
+    "sceneConfigs": {
+      "values": {
+        "scene_1": {
+          "type": "string",
+          "value": "{\"width\":1920,\"height\":1080,\"fps\":60}"
+        }
+      }
+    },
+    "appViewPreferences": {
+      "values": {
+        "app_background_mode": {
+          "type": "string",
+          "value": "artwork"
+        }
+      }
+    },
+    "hiddenApps": {
+      "values": {
+        "host-uuid": {
+          "type": "stringSet",
+          "value": [
+            "123"
+          ]
+        }
+      }
+    },
+    "crownProfiles": [
+      {
+        "sourceConfigId": 1781010000000,
+        "name": "default",
+        "payload": "{\"version\":9,\"settings\":\"{}\",\"elements\":\"[]\",\"md5\":\"placeholder\"}"
+      }
+    ]
+  }
+}

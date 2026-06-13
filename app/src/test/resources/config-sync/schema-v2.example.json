@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 2,
+  "syncId": "11111111-2222-4333-8444-555555555555",
+  "deviceId": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+  "backupDeviceKey": "same-device-backup-key",
+  "backupTarget": "sameDevice",
+  "packageName": "com.limelight.vplus_debug",
+  "appVersionCode": 390,
+  "appVersionName": "12.9.8",
+  "exportedAt": 1781010000000,
+  "sections": {
+    "defaultPreferences": {
+      "values": {
+        "list_resolution": {
+          "type": "string",
+          "value": "1920x1080",
+          "updatedAt": 1781010001000,
+          "updatedBy": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+        },
+        "list_fps": {
+          "type": "string",
+          "value": "60",
+          "updatedAt": 1781010001000,
+          "updatedBy": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+        },
+        "seekbar_bitrate_kbps": {
+          "type": "int",
+          "value": 50000,
+          "updatedAt": 1781010001000,
+          "updatedBy": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+        },
+        "checkbox_enable_hdr": {
+          "type": "boolean",
+          "value": false,
+          "updatedAt": 1781010001000,
+          "updatedBy": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+        },
+        "perf_overlay_display_items": {
+          "type": "stringSet",
+          "value": [
+            "decode_latency",
+            "network_latency"
+          ],
+          "updatedAt": 1781010001000,
+          "updatedBy": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+        }
+      }
+    },
+    "appLastSettings": {
+      "values": {
+        "use_last_settings": {
+          "type": "boolean",
+          "value": true,
+          "updatedAt": 1781010001000,
+          "updatedBy": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+        }
+      }
+    },
+    "customResolutions": {
+      "values": {
+        "custom_resolutions": {
+          "type": "stringSet",
+          "value": [
+            "2560x1440"
+          ],
+          "updatedAt": 1781010001000,
+          "updatedBy": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+        }
+      }
+    },
+    "sceneConfigs": {
+      "values": {
+        "scene_1": {
+          "type": "string",
+          "value": "{\"width\":1920,\"height\":1080,\"fps\":60}",
+          "updatedAt": 1781010001000,
+          "updatedBy": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+        }
+      }
+    },
+    "appViewPreferences": {
+      "values": {
+        "app_background_mode": {
+          "type": "string",
+          "value": "artwork",
+          "updatedAt": 1781010001000,
+          "updatedBy": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+        }
+      }
+    },
+    "hiddenApps": {
+      "values": {
+        "host-uuid": {
+          "type": "stringSet",
+          "value": [
+            "123"
+          ],
+          "updatedAt": 1781010001000,
+          "updatedBy": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+        },
+        "old-host-uuid": {
+          "type": "deleted",
+          "value": null,
+          "updatedAt": 1781010002000,
+          "updatedBy": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+        }
+      }
+    },
+    "crownProfiles": [
+      {
+        "profileId": "payload-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sourceConfigId": 1781010000000,
+        "name": "default",
+        "payload": "{\"version\":9,\"settings\":\"{}\",\"elements\":\"[]\",\"md5\":\"placeholder\"}",
+        "deleted": false,
+        "updatedAt": 1781010001000,
+        "updatedBy": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+      }
+    ],
+    "pairing": {
+      "updatedAt": 1781010001000,
+      "uniqueId": "0123456789abcdef",
+      "clientCertificatePem": "Y2xpZW50LWNlcnQ=",
+      "clientPrivateKeyPkcs8": "Y2xpZW50LWtleQ==",
+      "computers": [
+        {
+          "uuid": "host-uuid",
+          "name": "Gaming PC",
+          "localAddress": {
+            "address": "192.168.1.10",
+            "port": 47989
+          },
+          "remoteAddress": null,
+          "manualAddress": null,
+          "ipv6Address": null,
+          "ipv6Disabled": false,
+          "activeAddress": {
+            "address": "192.168.1.10",
+            "port": 47989
+          },
+          "httpsPort": 47984,
+          "macAddress": "00:11:22:33:44:55",
+          "pairName": "Moonlight V+",
+          "serverCertificateDer": "c2VydmVyLWNlcnQ="
+        }
+      ]
+    }
+  }
+}

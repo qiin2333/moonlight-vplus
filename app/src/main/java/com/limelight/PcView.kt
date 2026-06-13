@@ -38,6 +38,7 @@ import com.limelight.ui.AdapterFragmentCallbacks
 import com.limelight.utils.AnalyticsManager
 import com.limelight.utils.AppCacheManager
 import com.limelight.utils.CacheHelper
+import com.limelight.utils.ConfigurationSyncScheduler
 import com.limelight.utils.Dialog
 import com.limelight.utils.EasyTierController
 import com.limelight.utils.HelpLauncher
@@ -290,6 +291,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             set.start()
         }
         super.onCreate(savedInstanceState)
+        ConfigurationSyncScheduler.runNow(this)
 
         //自动获取无障碍权限
         try {
