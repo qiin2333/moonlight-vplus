@@ -8,6 +8,7 @@ import com.google.gson.JsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 class ConfigurationSyncMergeTest {
@@ -301,6 +302,72 @@ class ConfigurationSyncMergeTest {
         )
 
         assertEquals(setOf("list_fps", "list_resolution"), trackedKeys)
+    }
+
+    @Test
+    fun encryptedSyncPackageRoundTripsWithoutLeakingPairingPrivateKey() {
+        val pairing = pairingState(
+            updatedAt = 2000L,
+            uniqueId = "aaaaaaaaaaaaaaaa",
+            computerUuid = "encrypted-host"
+        ).apply {
+            addProperty("clientCertificatePem", "client-cert-plain-text")
+            addProperty("clientPrivateKeyPkcs8", "client-key-plain-text")
+        }
+        val plainPackage = syncPackage(deviceId = "device-a", pairingState = pairing)
+
+        val encryptedPackage = ConfigurationSyncManager.encryptSyncPackageForTest(
+            plainPackage,
+            "correct horse battery staple"
+        )
+
+        assertTrue(ConfigurationSyncManager.isEncryptedSyncPackage(encryptedPackage))
+        assertFalse(encryptedPackage.contains("client-key-plain-text"))
+        assertFalse(encryptedPackage.contains("client-cert-plain-text"))
+        assertEquals(
+            plainPackage,
+            ConfigurationSyncManager.decryptSyncPackageForTest(encryptedPackage, "correct horse battery staple")
+        )
+    }
+
+    @Test
+    fun encryptedSyncPackageRejectsWrongPassword() {
+        val encryptedPackage = ConfigurationSyncManager.encryptSyncPackageForTest(
+            syncPackage(deviceId = "device-a"),
+            "right-password"
+        )
+
+        try {
+            ConfigurationSyncManager.decryptSyncPackageForTest(encryptedPackage, "wrong-password")
+            fail("Expected encrypted backup decryption to reject the wrong password")
+        } catch (_: Exception) {
+            // Expected.
+        }
+    }
+
+    @Test
+    fun externalSnapshotRewriteMigratesPlaintextBackupEvenWhenContentMatches() {
+        assertTrue(
+            ConfigurationSyncManager.shouldWriteExternalSnapshotForTest(
+                mergedHash = "same-content",
+                externalHash = "same-content",
+                externalRequiresEncryptionRewrite = true
+            )
+        )
+        assertTrue(
+            ConfigurationSyncManager.shouldWriteExternalSnapshotForTest(
+                mergedHash = "new-content",
+                externalHash = "old-content",
+                externalRequiresEncryptionRewrite = false
+            )
+        )
+        assertFalse(
+            ConfigurationSyncManager.shouldWriteExternalSnapshotForTest(
+                mergedHash = "same-content",
+                externalHash = "same-content",
+                externalRequiresEncryptionRewrite = false
+            )
+        )
     }
 
     private fun syncPackage(

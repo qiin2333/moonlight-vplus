@@ -420,6 +420,10 @@
             android:key="config_sync_select_directory"
             android:title="@string/title_config_sync_select_directory"
             android:summary="@string/summary_config_sync_select_directory_none" />
+        <Preference
+            android:key="config_sync_backup_password"
+            android:title="@string/title_config_sync_backup_password"
+            android:summary="@string/summary_config_sync_backup_password_missing" />
         <CheckBoxPreference
             android:key="checkbox_config_sync_external_snapshot"
             android:title="@string/title_config_sync_external_snapshot"
