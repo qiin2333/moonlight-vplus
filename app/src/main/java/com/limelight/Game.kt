@@ -1654,9 +1654,11 @@ class Game : Activity(), SurfaceHolder.Callback,
 
         orientationManager.syncOrientationOnFirstFrame(baseWidth, baseHeight)
 
+        // Always clear any in-flight dynres request on a host echo — the host only
+        // echoes a resolution it actually applied (client-driven or host-driven).
+        dynResManager?.onServerResolutionEcho(baseWidth, baseHeight)
+
         if (prefConfig.width == baseWidth && prefConfig.height == baseHeight) {
-            // Echo from a client-driven request: clear in-flight so next trigger can proceed.
-            dynResManager?.onServerResolutionEcho(baseWidth, baseHeight)
             return
         }
 
@@ -1862,6 +1864,9 @@ class Game : Activity(), SurfaceHolder.Callback,
                 }
                 decoderRenderer?.pauseProcessing()
                 releaseFramegenCapture()
+                // Surface will be recreated; drop any stale surface-resize debounce so
+                // the new surfaceChanged dimensions win cleanly.
+                dynResManager?.cancelPendingSurfaceRequest()
                 return
             } else {
                 decoderRenderer?.prepareForStop()

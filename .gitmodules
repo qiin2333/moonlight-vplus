@@ -1,7 +1,7 @@
 [submodule "app/src/main/jni/moonlight-core/moonlight-common-c"]
 	path = app/src/main/jni/moonlight-core/moonlight-common-c
 	url = https://github.com/AsafMah/moonlight-common-c.git
-	branch = mic
+	branch = feat/client-resolution-request
 [submodule "framegen/src/main/cpp/lsfg-vk-android"]
 	path = framegen/src/main/cpp/lsfg-vk-android
 	url = https://github.com/FrankBarretta/lsfg-vk-android.git

@@ -976,6 +976,12 @@ Tap again to replace it.</string>
     <string name="unpaired_devices_hidden">Unpaired devices hidden</string>
     <string name="new_unpaired_device_shown">New unpaired device detected, showing unpaired devices</string>
     <string name="host_resolution_changed">Host resolution changed to %1$dx%2$d</string>
+    <string name="title_follow_rotation_resolution">Follow device rotation</string>
+    <string name="summary_follow_rotation_resolution">Ask the host to change stream resolution when the device rotates</string>
+    <string name="title_follow_external_display_resolution">Follow external display</string>
+    <string name="summary_follow_external_display_resolution">Ask the host to match stream resolution when connecting to DeX or an external display</string>
+    <string name="title_follow_surface_resize_resolution">Follow window resize</string>
+    <string name="summary_follow_surface_resize_resolution">Ask the host to match stream resolution when the app window is resized (freeform, multi-window, foldable)</string>
 
     <!-- Drawer Menu -->
     <string name="menu">Menu</string>
