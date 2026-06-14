@@ -185,6 +185,8 @@ class ConnectionCallbackHandler(private val game: Game) {
             game.connected = true
             game.orientationManager.connected = true
             game.dynResManager?.connected = true
+            // Fix #13: flush any external-display size request that was dropped pre-connect.
+            game.externalDisplayManager?.requestCurrentDisplaySizeIfNeeded()
             game.connecting = false
             game.updatePipAutoEnter()
 

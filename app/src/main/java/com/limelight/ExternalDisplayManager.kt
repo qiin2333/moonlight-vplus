@@ -91,6 +91,18 @@ class ExternalDisplayManager(
 
     fun isUsingExternalDisplay(): Boolean = useExternalDisplay && externalDisplay != null
 
+    /**
+     * Fix #13: call once after the stream connection is established (connected=true) so that
+     * a display already present at startup gets its size requested now that DRM will accept it.
+     * Also covers the case where initialize() ran pre-connect and the request was silently dropped.
+     */
+    fun requestCurrentDisplaySizeIfNeeded() {
+        if (!prefConfig.followExternalDisplayResolution) return
+        val display = getTargetDisplay()
+        LimeLog.info("DynamicRes/ExternalDisplay: post-connect size flush for display ${display.displayId}")
+        dynResManager?.requestFromExternalDisplay(display)
+    }
+
     private fun setupDisplayListener() {
         displayListener = object : DisplayManager.DisplayListener {
             override fun onDisplayAdded(displayId: Int) {
@@ -120,6 +132,13 @@ class ExternalDisplayManager(
                     Toast.makeText(activity, activity.getString(R.string.toast_external_display_disconnected), Toast.LENGTH_SHORT).show()
 
                     callback?.onExternalDisplayDisconnected()
+
+                    // Fix #13: after the external display is cleared, request the default
+                    // display's size so the host follows back to the device screen resolution.
+                    if (prefConfig.followExternalDisplayResolution) {
+                        @Suppress("DEPRECATION")
+                        dynResManager?.requestFromExternalDisplay(activity.windowManager.defaultDisplay)
+                    }
                 }
             }
 

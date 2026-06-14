@@ -48,6 +48,7 @@ class DynamicResolutionManager(
     private var hasQueued = false
     private var queuedWidth = 0
     private var queuedHeight = 0
+    private var queuedIsSurface = false
 
     private var pendingRunnable: Runnable? = null
 
@@ -104,6 +105,12 @@ class DynamicResolutionManager(
             pendingIsSurface = false
             LimeLog.info("DynamicRes: cancelled pending surface request (Extreme Resume)")
         }
+        // Fix #12: also cancel a surface-origin request that already moved into the queue.
+        if (hasQueued && queuedIsSurface) {
+            hasQueued = false
+            queuedIsSurface = false
+            LimeLog.info("DynamicRes: cancelled queued surface request (Extreme Resume)")
+        }
     }
 
     /**
@@ -112,6 +119,12 @@ class DynamicResolutionManager(
      * Clears the in-flight flag; if a queued request is waiting it will be dispatched.
      */
     fun onServerResolutionEcho(width: Int, height: Int) {
+        // Fix #3: this may be called from MoonBridge's native CtrlAsyncCb thread.
+        // All DRM state mutations must run on the handler's looper to avoid races with doSend.
+        if (Looper.myLooper() != handler.looper) {
+            handler.post { onServerResolutionEcho(width, height) }
+            return
+        }
         if (inFlight) {
             LimeLog.info("DynamicRes: server echo ${width}x${height} — clearing in-flight")
             clearInflight()
@@ -127,6 +140,7 @@ class DynamicResolutionManager(
         inflightClearRunnable = null
         inFlight = false
         hasQueued = false
+        queuedIsSurface = false
         lastSentWidth = 0
         lastSentHeight = 0
     }
@@ -149,13 +163,13 @@ class DynamicResolutionManager(
 
         // Cancel any pending debounce and reschedule
         pendingRunnable?.let { handler.removeCallbacks(it) }
-        val runnable = Runnable { doSend(w, h) }
+        val runnable = Runnable { doSend(w, h, isSurface) }
         pendingRunnable = runnable
         pendingIsSurface = isSurface
         handler.postDelayed(runnable, DEBOUNCE_MS)
     }
 
-    private fun doSend(w: Int, h: Int) {
+    private fun doSend(w: Int, h: Int, isSurface: Boolean) {
         pendingRunnable = null
         pendingIsSurface = false
         if (!connected) {
@@ -164,10 +178,14 @@ class DynamicResolutionManager(
         }
         if (inFlight) {
             // Conflate into the one-slot queue; clearInflight() will dispatch it.
-            LimeLog.info("DynamicRes: request in-flight, queuing ${w}x${h}")
-            hasQueued = true
+            // Fix #3: publish dimensions BEFORE the visibility flag to prevent a racing
+            // onServerResolutionEcho (now always on this looper) from seeing hasQueued=true
+            // with stale 0x0 dimensions. Fix #12: record origin so cancel can find it.
+            LimeLog.info("DynamicRes: request in-flight, queuing ${w}x${h} (surface=$isSurface)")
             queuedWidth = w
             queuedHeight = h
+            queuedIsSurface = isSurface
+            hasQueued = true
             return
         }
         if (w == lastSentWidth && h == lastSentHeight) {
@@ -202,17 +220,25 @@ class DynamicResolutionManager(
         if (hasQueued && connected) {
             val w = queuedWidth
             val h = queuedHeight
+            val wasSurface = queuedIsSurface
             hasQueued = false
+            queuedIsSurface = false
+            // Fix #3: validate queued dims before dispatching — guards against a
+            // cancelled-but-not-zeroed queue slot being replayed.
+            if (w < MIN_DIM || h < MIN_DIM) {
+                LimeLog.warning("DynamicRes: queued dims ${w}x${h} invalid, dropping")
+                return
+            }
             if (w != lastSentWidth || h != lastSentHeight) {
-                LimeLog.info("DynamicRes: dispatching queued ${w}x${h} after in-flight cleared")
+                LimeLog.info("DynamicRes: dispatching queued ${w}x${h} (surface=$wasSurface) after in-flight cleared")
                 // Reuse the debounce slot so back-to-back echo storms do not spam the host.
-                val runnable = Runnable { doSend(w, h) }
+                // Fix #12: preserve origin so a subsequent cancelPendingSurfaceRequest() works.
+                val runnable = Runnable { doSend(w, h, wasSurface) }
                 pendingRunnable = runnable
-                pendingIsSurface = false
+                pendingIsSurface = wasSurface
                 handler.postDelayed(runnable, DEBOUNCE_MS)
             } else {
                 LimeLog.info("DynamicRes: queued ${w}x${h} matches last sent, skipping")
-                hasQueued = false
             }
         }
     }
