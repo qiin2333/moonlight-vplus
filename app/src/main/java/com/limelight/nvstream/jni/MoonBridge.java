@@ -535,6 +535,9 @@ public class MoonBridge {
      */
     private static native int sendClipboardFrameNative(byte[] frame);
 
+    /** Send a client-driven resolution change request (0x5506). Returns 0 on success; negative on error. */
+    public static native int sendResolutionChangeRequest(int width, int height);
+
     public static native String getStageName(int stage);
 
     public static native String findExternalAddressIP4(String stunHostName, int stunPort);

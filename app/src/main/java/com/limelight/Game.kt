@@ -227,6 +227,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     var usbDriverServiceManager: UsbDriverServiceManager? = null
     var externalDisplayManager: ExternalDisplayManager? = null
+    var dynResManager: DynamicResolutionManager? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -644,6 +645,10 @@ class Game : Activity(), SurfaceHolder.Callback,
             PlatformBinding.getCryptoProvider(this), serverCert, displayName, forceResumeCurrentSession
         )
         orientationManager.connection = conn
+        dynResManager = DynamicResolutionManager(prefConfig).also { mgr ->
+            mgr.connection = conn
+            orientationManager.dynResManager = mgr
+        }
         controllerHandler = ControllerHandler(this, conn!!, this, prefConfig)
     }
 
@@ -651,6 +656,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     private fun setupExternalDisplay() {
         externalDisplayManager = ExternalDisplayManager(this, prefConfig, conn!!, decoderRenderer!!, pcName ?: "", appName ?: "")
         externalDisplayManager?.callback = createExternalDisplayCallback()
+        externalDisplayManager?.dynResManager = dynResManager
         externalDisplayManager?.initialize()
     }
 
@@ -1173,6 +1179,8 @@ class Game : Activity(), SurfaceHolder.Callback,
             inputCaptureProvider.destroy()
         }
         externalDisplayManager?.cleanup()
+        dynResManager?.cleanup()
+        dynResManager = null
         microphoneManager?.stopMicrophoneStream()
         clipboardSyncManager?.stop()
         clipboardSyncManager = null
@@ -1647,6 +1655,8 @@ class Game : Activity(), SurfaceHolder.Callback,
         orientationManager.syncOrientationOnFirstFrame(baseWidth, baseHeight)
 
         if (prefConfig.width == baseWidth && prefConfig.height == baseHeight) {
+            // Echo from a client-driven request: clear in-flight so next trigger can proceed.
+            dynResManager?.onServerResolutionEcho(baseWidth, baseHeight)
             return
         }
 
@@ -1804,7 +1814,11 @@ class Game : Activity(), SurfaceHolder.Callback,
             audioRenderer?.resumeProcessing()
             decoderRenderer?.resumeProcessing()
         }
-
+        // Notify DynamicResolutionManager of new surface size (covers freeform/fold/multi-window).
+        // Only fire when already connected to avoid a spurious request at initial surface creation.
+        if (connected) {
+            dynResManager?.requestFromSurface(width, height)
+        }
         panZoomHandler.handleSurfaceChange()
     }
 

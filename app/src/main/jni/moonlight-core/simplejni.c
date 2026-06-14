@@ -147,6 +147,11 @@ Java_com_limelight_nvstream_jni_MoonBridge_sendClipboardFrameNative(JNIEnv *env,
     return rc;
 }
 
+JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_sendResolutionChangeRequest(JNIEnv *env, jclass clazz, jint width, jint height) {
+    return LiSendResolutionChangeRequest((unsigned int)width, (unsigned int)height);
+}
+
 JNIEXPORT void JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_stopConnection(JNIEnv *env, jclass clazz) {
     LiStopConnection();

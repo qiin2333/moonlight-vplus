@@ -49,6 +49,8 @@ class ExternalDisplayManager(
     }
 
     var callback: ExternalDisplayCallback? = null
+    /** DynamicResolutionManager to notify when the active external display changes. */
+    var dynResManager: DynamicResolutionManager? = null
 
     fun initialize() {
         displayManager = activity.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
@@ -97,6 +99,8 @@ class ExternalDisplayManager(
                     checkForExternalDisplay()
                     if (useExternalDisplay) {
                         startExternalDisplayPresentation()
+                        // Notify DynamicResolutionManager of the new external display size.
+                        externalDisplay?.let { dynResManager?.requestFromExternalDisplay(it) }
                     }
                 }
             }
@@ -121,6 +125,10 @@ class ExternalDisplayManager(
 
             override fun onDisplayChanged(displayId: Int) {
                 LimeLog.info("Display changed: $displayId")
+                // Display mode/size may have changed (e.g. DeX resolution negotiation).
+                if (externalDisplay != null && displayId == externalDisplay?.displayId) {
+                    externalDisplay?.let { dynResManager?.requestFromExternalDisplay(it) }
+                }
             }
         }
 

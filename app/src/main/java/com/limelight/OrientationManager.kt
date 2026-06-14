@@ -29,6 +29,8 @@ class OrientationManager(
 ) {
     var connection: NvConnection? = null
     var connected = false
+    /** DynamicResolutionManager to notify on rotation. Null if feature not active. */
+    var dynResManager: DynamicResolutionManager? = null
 
     /** 上次已知的旋转方向：-1=未知, 0=竖屏, 1=横屏 */
     private var lastRotation = -1
@@ -246,5 +248,8 @@ class OrientationManager(
         }
         pendingRotationRunnable = runnable
         handler.postDelayed(runnable, ROTATION_DEBOUNCE_MS)
+        // Trigger dynamic resolution request if enabled; DynamicResolutionManager
+        // handles pref-gating, debounce, and in-flight suppression.
+        displayProvider()?.let { dynResManager?.requestFromRotation(it) }
     }
 }
