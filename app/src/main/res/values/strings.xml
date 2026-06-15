@@ -272,6 +272,10 @@
     <string name="summary_checkbox_control_only">Only establish control stream connection without video and audio streams. Useful for remote input control only. Requires Sunshine server with control-only mode support.</string>
     <string name="title_checkbox_enable_mic">Enable microphone redirection</string>
     <string name="summary_checkbox_enable_mic">Redirect device microphone to the host computer for voice chat and communication, requires Sunshine-Foundation version 20250720 or higher on the host.</string>
+    <string name="title_list_mic_menu_action_mode">Stream menu microphone action</string>
+    <string name="summary_list_mic_menu_action_mode">Choose what the microphone button in the stream menu does</string>
+    <string name="mic_menu_action_show_button">Show or hide floating microphone button</string>
+    <string name="mic_menu_action_toggle_microphone">Toggle microphone directly</string>
     <string name="title_seekbar_mic_bitrate">Microphone bitrate</string>
     <string name="summary_seekbar_mic_bitrate">Adjust the audio quality of microphone redirection. Higher bitrates provide better audio quality but use more bandwidth.</string>
     <string name="suffix_seekbar_mic_bitrate_kbps">kbps</string>
@@ -414,9 +418,9 @@
     <string name="title_checkbox_small_icon_mode">Use small box art</string>
     <string name="summary_checkbox_small_icon_mode">Smaller box art in the app grid allows more apps to be visible on screen</string>
     <string name="title_config_sync_export">Export device backup</string>
-    <string name="summary_config_sync_export">Save settings, app presets, scenes, custom resolutions, Crown profiles, and pairing identity as a same-device JSON backup</string>
+    <string name="summary_config_sync_export">Save settings, app presets, scenes, custom resolutions, Crown profiles, and pairing identity as an encrypted same-device JSON backup</string>
     <string name="title_config_sync_import">Import device backup</string>
-    <string name="summary_config_sync_import">Restore settings and pairing information from a same-device JSON backup</string>
+    <string name="summary_config_sync_import">Restore settings and pairing information from a same-device JSON backup, including encrypted backups</string>
     <string name="title_config_sync_auto_snapshot">Automatically create local backup snapshot</string>
     <string name="summary_config_sync_auto_snapshot">Keep an app-private backup updated after settings, Crown profiles, or pairing information change</string>
     <string name="title_config_sync_snapshot_now">Update local backup snapshot now</string>
@@ -425,10 +429,13 @@
     <string name="title_config_sync_select_directory">Select external backup folder</string>
     <string name="summary_config_sync_select_directory_none">No external backup folder selected</string>
     <string name="summary_config_sync_select_directory_selected">External backup folder: %1$s</string>
+    <string name="title_config_sync_backup_password">Backup encryption password</string>
+    <string name="summary_config_sync_backup_password_missing">Set a password before writing encrypted external backups</string>
+    <string name="summary_config_sync_backup_password_set">Password is set for encrypted external backups on this device</string>
     <string name="title_config_sync_external_snapshot">Mirror backups to selected folder</string>
-    <string name="summary_config_sync_external_snapshot">Write the latest same-device backup to the selected system or cloud-backed folder</string>
+    <string name="summary_config_sync_external_snapshot">Write encrypted same-device backups to the selected system or cloud-backed folder</string>
     <string name="title_config_sync_background_sync">Back up and restore automatically in background</string>
-    <string name="summary_config_sync_background_sync">Periodically read the selected folder, restore the backup for this device when needed, and write the latest backup back</string>
+    <string name="summary_config_sync_background_sync">Periodically read the selected folder, restore encrypted backups for this device when needed, and write the latest backup back</string>
     <string name="title_config_sync_status">Background backup status</string>
     <string name="summary_config_sync_status_disabled">Background backup is not enabled</string>
     <string name="summary_config_sync_status_never">No background backup has completed yet</string>
@@ -440,7 +447,13 @@
     <string name="summary_config_sync_import_external_snapshot">Read the backup for this device in the selected folder and preview it before applying</string>
     <string name="message_config_sync_import">This will restore matching settings, Crown profiles, and pairing information for this same device.</string>
     <string name="message_config_sync_import_preview">Source version: %1$s\n\nSettings: %2$d\nApp presets: %3$d\nCustom resolution values: %4$d\nScene presets: %5$d\nApp list preferences: %6$d\nHidden app lists: %7$d\nCrown profiles: %8$d\nPaired computers: %9$d\nPairing identity: %10$s\n\nImporting will restore matching settings, Crown profiles, and pairing information for this same device.</string>
+    <string name="message_config_sync_backup_password_export">Enter a backup password. You will need this password to import the backup after clearing app data or reinstalling.</string>
+    <string name="message_config_sync_backup_password_external">Enter a backup password for encrypted external backups. The password is cached on this device for automatic sync, but you must remember it for restore after clearing app data or reinstalling.</string>
+    <string name="message_config_sync_backup_password_import">This backup is encrypted. Enter its backup password to preview and import it.</string>
     <string name="config_sync_action_import">Import</string>
+    <string name="config_sync_action_export">Export</string>
+    <string name="config_sync_action_save_password">Save password</string>
+    <string name="hint_config_sync_backup_password">Backup password</string>
     <string name="config_sync_unknown_version">Unknown</string>
     <string name="toast_config_sync_export_success">Device backup exported</string>
     <string name="toast_config_sync_export_failed">Unable to export device backup</string>
@@ -450,6 +463,12 @@
     <string name="toast_config_sync_snapshot_success">Local backup snapshot updated</string>
     <string name="toast_config_sync_snapshot_failed">Unable to update local backup snapshot</string>
     <string name="toast_config_sync_directory_failed">Unable to use the selected backup folder</string>
+    <string name="toast_config_sync_password_required">Backup password is required</string>
+    <string name="toast_config_sync_password_saved">Backup password saved for encrypted external backups</string>
+    <string name="toast_config_sync_password_unavailable">Encrypted automatic external backups require Android 6.0 or later</string>
+    <string name="title_config_sync_restart_required">Restart app to apply pairing restore</string>
+    <string name="message_config_sync_restart_required">Pairing identity was restored. Restart Moonlight V+ before checking paired hosts so the running service reloads the restored client identity.</string>
+    <string name="message_config_sync_restart_required_with_failures">Pairing identity was restored, but %1$d pairing items failed. Restart Moonlight V+ before checking paired hosts; failed hosts may need to be paired again.</string>
     <string name="title_checkbox_resume_stream">Resume stream automatically</string>
     <string name="summary_checkbox_resume_stream">Automatically resume the stream when returning to Moonlight from the background</string>
 

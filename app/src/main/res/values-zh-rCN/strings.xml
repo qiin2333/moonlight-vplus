@@ -492,6 +492,8 @@
     <string name="summary_checkbox_enable_spatializer">启用沉浸式3D音频体验使用Android空间音频，需要Android 13+和兼容的音频输出设备，建议配合5.1或7.1环绕声配置以获得最佳体验。</string>
     <string name="title_checkbox_enable_mic">麦克风重定向 (实验性)</string>
     <string name="summary_checkbox_enable_mic">将设备麦克风串流到主机，需Sunshine基地版本在20250720以上的主机。</string>
+    <string name="title_list_mic_menu_action_mode">返回菜单麦克风按钮</string>
+    <string name="summary_list_mic_menu_action_mode">选择串流返回菜单中的麦克风按钮执行什么操作。</string>
     <string name="title_seekbar_mic_bitrate">麦克风传输音质</string>
     <string name="summary_seekbar_mic_bitrate">调整麦克风重定向的音频质量，更高的比特率提供更好的音频质量，但会使用更多带宽。</string>
     <string name="title_list_mic_icon_color">麦克风图标颜色</string>

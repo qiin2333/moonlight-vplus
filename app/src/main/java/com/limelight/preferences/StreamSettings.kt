@@ -19,6 +19,7 @@ import android.os.Looper
 import android.os.Vibrator
 import android.text.SpannableStringBuilder
 import android.text.Spanned
+import android.text.InputType
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
 import android.util.DisplayMetrics
@@ -33,6 +34,7 @@ import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 
@@ -1247,13 +1249,7 @@ class StreamSettings : AppCompatActivity() {
 
         private fun setupConfigSyncPreferences() {
             findPreference<Preference>("config_sync_export")?.setOnPreferenceClickListener {
-                try {
-                    pendingSyncExportString = ConfigurationSyncManager(requireContext()).exportSyncPackage()
-                    createSyncDocument()
-                } catch (e: Exception) {
-                    Log.e("ConfigSync", "Failed to export configuration sync package", e)
-                    Toast.makeText(context, R.string.toast_config_sync_export_failed, Toast.LENGTH_LONG).show()
-                }
+                exportConfigSyncPackage()
                 true
             }
 
@@ -1271,6 +1267,11 @@ class StreamSettings : AppCompatActivity() {
             findPreference<Preference>(ConfigurationSyncManager.PREF_EXTERNAL_SYNC_DIRECTORY)
                 ?.setOnPreferenceClickListener {
                     openSyncDirectory()
+                    true
+                }
+            findPreference<Preference>(ConfigurationSyncManager.PREF_BACKUP_PASSWORD)
+                ?.setOnPreferenceClickListener {
+                    showExternalSyncPasswordDialog()
                     true
                 }
             findPreference<Preference>(ConfigurationSyncManager.PREF_EXTERNAL_SNAPSHOT_IMPORT)
@@ -1301,6 +1302,17 @@ class StreamSettings : AppCompatActivity() {
                 updateExternalSyncDirectorySummary()
                 updateConfigSyncStatusSummary()
                 val ctx = context ?: return
+                if (PreferenceManager.getDefaultSharedPreferences(ctx)
+                        .getBoolean(ConfigurationSyncManager.PREF_EXTERNAL_SNAPSHOT_ENABLED, false) &&
+                    !ConfigurationSyncManager.hasExternalSyncPassword(ctx)) {
+                    PreferenceManager.getDefaultSharedPreferences(ctx).edit {
+                        putBoolean(ConfigurationSyncManager.PREF_EXTERNAL_SNAPSHOT_ENABLED, false)
+                    }
+                    Toast.makeText(context, R.string.toast_config_sync_password_required, Toast.LENGTH_LONG).show()
+                    showExternalSyncPasswordDialog()
+                    updateExternalSyncDirectorySummary()
+                    return
+                }
                 if (ConfigurationSyncManager.isExternalSnapshotEnabled(ctx)) {
                     requestConfigSyncAutoSnapshot(delayMs = 0L)
                     ConfigurationSyncScheduler.schedule(ctx)
@@ -1314,6 +1326,17 @@ class StreamSettings : AppCompatActivity() {
                 updateExternalSyncDirectorySummary()
                 updateConfigSyncStatusSummary()
                 val ctx = context ?: return
+                if (PreferenceManager.getDefaultSharedPreferences(ctx)
+                        .getBoolean(ConfigurationSyncManager.PREF_BACKGROUND_SYNC_ENABLED, false) &&
+                    !ConfigurationSyncManager.hasExternalSyncPassword(ctx)) {
+                    PreferenceManager.getDefaultSharedPreferences(ctx).edit {
+                        putBoolean(ConfigurationSyncManager.PREF_BACKGROUND_SYNC_ENABLED, false)
+                    }
+                    Toast.makeText(context, R.string.toast_config_sync_password_required, Toast.LENGTH_LONG).show()
+                    showExternalSyncPasswordDialog()
+                    updateExternalSyncDirectorySummary()
+                    return
+                }
                 if (ConfigurationSyncManager.isBackgroundSyncEnabled(ctx)) {
                     ConfigurationSyncScheduler.runNow(ctx)
                 } else {
@@ -1429,6 +1452,8 @@ class StreamSettings : AppCompatActivity() {
                     (result.getOrNull() as? ConfigurationSyncManager.AutoSyncResult)
                         ?.errorMessage
                         ?.let { Log.w("ConfigSync", "Local snapshot background merge failed: $it") }
+                    (result.getOrNull() as? ConfigurationSyncManager.AutoSyncResult)
+                        ?.let { maybeShowPairingRestoreRestartPrompt(it.pairingItemsImported, it.pairingItemsFailed) }
 
                     if (configSyncSnapshotDirty &&
                         ConfigurationSyncManager.isAutoSnapshotEnabled(appContext)) {
@@ -1468,9 +1493,13 @@ class StreamSettings : AppCompatActivity() {
             val backgroundSyncPref = findPreference<CheckBoxPreference>(
                 ConfigurationSyncManager.PREF_BACKGROUND_SYNC_ENABLED
             )
+            val backupPasswordPref = findPreference<Preference>(
+                ConfigurationSyncManager.PREF_BACKUP_PASSWORD
+            )
             val importExternalSnapshotPref = findPreference<Preference>(
                 ConfigurationSyncManager.PREF_EXTERNAL_SNAPSHOT_IMPORT
             )
+            val hasBackupPassword = ConfigurationSyncManager.hasExternalSyncPassword(ctx)
 
             directoryPref?.summary = if (treeUri == null) {
                 getString(R.string.summary_config_sync_select_directory_none)
@@ -1480,8 +1509,13 @@ class StreamSettings : AppCompatActivity() {
                 getString(R.string.summary_config_sync_select_directory_selected, label)
             }
 
-            externalSnapshotPref?.isEnabled = treeUri != null
-            backgroundSyncPref?.isEnabled = treeUri != null
+            backupPasswordPref?.summary = if (hasBackupPassword) {
+                getString(R.string.summary_config_sync_backup_password_set)
+            } else {
+                getString(R.string.summary_config_sync_backup_password_missing)
+            }
+            externalSnapshotPref?.isEnabled = treeUri != null && hasBackupPassword
+            backgroundSyncPref?.isEnabled = treeUri != null && hasBackupPassword
             importExternalSnapshotPref?.isEnabled = treeUri != null
         }
 
@@ -1537,13 +1571,53 @@ class StreamSettings : AppCompatActivity() {
             }
         }
 
+        private fun exportConfigSyncPackage() {
+            val manager = ConfigurationSyncManager(requireContext())
+            try {
+                val savedPasswordPackage = manager.exportEncryptedSyncPackageWithSavedPassword()
+                if (savedPasswordPackage != null) {
+                    pendingSyncExportString = savedPasswordPackage
+                    createSyncDocument()
+                    return
+                }
+            } catch (e: Exception) {
+                Log.w("ConfigSync", "Failed to export with saved backup password", e)
+            }
+
+            showConfigSyncPasswordDialog(
+                titleRes = R.string.title_config_sync_export,
+                messageRes = R.string.message_config_sync_backup_password_export,
+                positiveRes = R.string.config_sync_action_export
+            ) { password ->
+                try {
+                    manager.saveExternalSyncPassword(password)
+                    updateExternalSyncDirectorySummary()
+                    pendingSyncExportString = manager.exportEncryptedSyncPackage(password)
+                    createSyncDocument()
+                } catch (e: Exception) {
+                    Log.e("ConfigSync", "Failed to export configuration sync package", e)
+                    Toast.makeText(context, R.string.toast_config_sync_export_failed, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+
         private fun handleSyncImportResult(data: Intent?) {
             val uri = data?.data ?: return
             try {
                 val syncPackage = readDocumentText(uri)
-                val preview = ConfigurationSyncManager(requireContext()).previewSyncPackage(syncPackage)
-                pendingSyncImportString = syncPackage
-                showSyncImportPreview(preview)
+                if (ConfigurationSyncManager.isEncryptedSyncPackage(syncPackage)) {
+                    if (!previewSyncPackageForImportWithSavedPassword(syncPackage)) {
+                        showConfigSyncPasswordDialog(
+                            titleRes = R.string.title_config_sync_import,
+                            messageRes = R.string.message_config_sync_backup_password_import,
+                            positiveRes = R.string.config_sync_action_import
+                        ) { password ->
+                            previewSyncPackageForImport(syncPackage, password)
+                        }
+                    }
+                } else {
+                    previewSyncPackageForImport(syncPackage, null)
+                }
             } catch (e: Exception) {
                 Log.e("ConfigSync", "Failed to import configuration sync package", e)
                 Toast.makeText(context, R.string.toast_config_sync_import_failed, Toast.LENGTH_LONG).show()
@@ -1558,14 +1632,26 @@ class StreamSettings : AppCompatActivity() {
                 if (grantFlags != 0) {
                     requireContext().contentResolver.takePersistableUriPermission(uri, grantFlags)
                 }
-                PreferenceManager.getDefaultSharedPreferences(requireContext()).edit {
-                    putString(ConfigurationSyncManager.PREF_EXTERNAL_SYNC_TREE_URI, uri.toString())
-                    putBoolean(ConfigurationSyncManager.PREF_AUTO_SNAPSHOT_ENABLED, true)
-                    putBoolean(ConfigurationSyncManager.PREF_EXTERNAL_SNAPSHOT_ENABLED, true)
-                    putBoolean(ConfigurationSyncManager.PREF_BACKGROUND_SYNC_ENABLED, true)
+                showConfigSyncPasswordDialog(
+                    titleRes = R.string.title_config_sync_backup_password,
+                    messageRes = R.string.message_config_sync_backup_password_external,
+                    positiveRes = R.string.config_sync_action_save_password
+                ) { password ->
+                    val manager = ConfigurationSyncManager(requireContext())
+                    if (!manager.saveExternalSyncPassword(password)) {
+                        Toast.makeText(context, R.string.toast_config_sync_password_unavailable, Toast.LENGTH_LONG).show()
+                        return@showConfigSyncPasswordDialog
+                    }
+                    PreferenceManager.getDefaultSharedPreferences(requireContext()).edit {
+                        putString(ConfigurationSyncManager.PREF_EXTERNAL_SYNC_TREE_URI, uri.toString())
+                        putBoolean(ConfigurationSyncManager.PREF_AUTO_SNAPSHOT_ENABLED, true)
+                        putBoolean(ConfigurationSyncManager.PREF_EXTERNAL_SNAPSHOT_ENABLED, true)
+                        putBoolean(ConfigurationSyncManager.PREF_BACKGROUND_SYNC_ENABLED, true)
+                    }
+                    Toast.makeText(context, R.string.toast_config_sync_password_saved, Toast.LENGTH_SHORT).show()
+                    updateExternalSyncDirectorySummary()
+                    writeConfigSyncLocalSnapshot(showToast = true, requireAutoEnabled = false)
                 }
-                updateExternalSyncDirectorySummary()
-                writeConfigSyncLocalSnapshot(showToast = true, requireAutoEnabled = false)
             } catch (e: Exception) {
                 Log.e("ConfigSync", "Failed to select external configuration sync directory", e)
                 Toast.makeText(context, R.string.toast_config_sync_directory_failed, Toast.LENGTH_LONG).show()
@@ -1574,6 +1660,21 @@ class StreamSettings : AppCompatActivity() {
 
         private fun importExternalSyncSnapshot() {
             val appContext = context?.applicationContext ?: return
+            if (!ConfigurationSyncManager.hasExternalSyncPassword(appContext)) {
+                showConfigSyncPasswordDialog(
+                    titleRes = R.string.title_config_sync_import_external_snapshot,
+                    messageRes = R.string.message_config_sync_backup_password_import,
+                    positiveRes = R.string.config_sync_action_import
+                ) { password ->
+                    if (!ConfigurationSyncManager(requireContext()).saveExternalSyncPassword(password)) {
+                        Toast.makeText(context, R.string.toast_config_sync_password_unavailable, Toast.LENGTH_LONG).show()
+                        return@showConfigSyncPasswordDialog
+                    }
+                    updateExternalSyncDirectorySummary()
+                    importExternalSyncSnapshot()
+                }
+                return
+            }
             thread(name = "ConfigSyncReadExternalSnapshot") {
                 val result = runCatching {
                     val syncManager = ConfigurationSyncManager(appContext)
@@ -1598,6 +1699,90 @@ class StreamSettings : AppCompatActivity() {
                         }
                 }
             }
+        }
+
+        private fun previewSyncPackageForImport(syncPackage: String, password: String?) {
+            try {
+                val manager = ConfigurationSyncManager(requireContext())
+                val plainPackage = if (ConfigurationSyncManager.isEncryptedSyncPackage(syncPackage)) {
+                    manager.decryptEncryptedSyncPackage(syncPackage, password.orEmpty())
+                } else {
+                    syncPackage
+                }
+                val preview = manager.previewSyncPackage(plainPackage)
+                pendingSyncImportString = plainPackage
+                showSyncImportPreview(preview)
+            } catch (e: Exception) {
+                Log.e("ConfigSync", "Failed to preview configuration sync package", e)
+                Toast.makeText(context, R.string.toast_config_sync_import_failed, Toast.LENGTH_LONG).show()
+            }
+        }
+
+        private fun previewSyncPackageForImportWithSavedPassword(syncPackage: String): Boolean {
+            val manager = ConfigurationSyncManager(requireContext())
+            val plainPackage = runCatching {
+                manager.decryptEncryptedSyncPackageWithSavedPassword(syncPackage)
+            }.getOrNull() ?: return false
+
+            previewSyncPackageForImport(plainPackage, null)
+            return true
+        }
+
+        private fun showExternalSyncPasswordDialog() {
+            showConfigSyncPasswordDialog(
+                titleRes = R.string.title_config_sync_backup_password,
+                messageRes = R.string.message_config_sync_backup_password_external,
+                positiveRes = R.string.config_sync_action_save_password
+            ) { password ->
+                if (ConfigurationSyncManager(requireContext()).saveExternalSyncPassword(password)) {
+                    Toast.makeText(context, R.string.toast_config_sync_password_saved, Toast.LENGTH_SHORT).show()
+                    updateExternalSyncDirectorySummary()
+                    updateConfigSyncStatusSummary()
+                } else {
+                    Toast.makeText(context, R.string.toast_config_sync_password_unavailable, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+
+        private fun showConfigSyncPasswordDialog(
+            titleRes: Int,
+            messageRes: Int,
+            positiveRes: Int,
+            onPassword: (String) -> Unit
+        ) {
+            val input = EditText(requireContext()).apply {
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+                setSingleLine(true)
+                hint = getString(R.string.hint_config_sync_backup_password)
+            }
+            val container = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                val inset = (24 * resources.displayMetrics.density).toInt()
+                setPadding(inset, 0, inset, 0)
+                addView(input)
+            }
+
+            val dialog = AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
+                .setTitle(titleRes)
+                .setMessage(messageRes)
+                .setView(container)
+                .setPositiveButton(positiveRes, null)
+                .setNegativeButton(android.R.string.cancel, null)
+                .create()
+            dialog.setOnShowListener {
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                    val password = input.text?.toString().orEmpty()
+                    if (password.isBlank()) {
+                        input.error = getString(R.string.toast_config_sync_password_required)
+                        return@setOnClickListener
+                    }
+                    dialog.dismiss()
+                    onPassword(password)
+                }
+                input.requestFocus()
+                dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
+            }
+            dialog.show()
         }
 
         private fun showSyncImportPreview(preview: ConfigurationSyncManager.PackagePreview) {
@@ -1646,6 +1831,10 @@ class StreamSettings : AppCompatActivity() {
                 }
                 pendingSyncImportString = ""
                 Toast.makeText(context, toastText, Toast.LENGTH_LONG).show()
+                maybeShowPairingRestoreRestartPrompt(
+                    importResult.pairingItemsImported,
+                    importResult.pairingItemsFailed
+                )
                 requestConfigSyncAutoSnapshot(delayMs = 0L)
                 Handler(Looper.getMainLooper()).post {
                     (activity as? StreamSettings)?.reloadSettings()
@@ -1654,6 +1843,20 @@ class StreamSettings : AppCompatActivity() {
                 Log.e("ConfigSync", "Failed to apply configuration sync package", e)
                 Toast.makeText(context, R.string.toast_config_sync_import_failed, Toast.LENGTH_LONG).show()
             }
+        }
+
+        private fun maybeShowPairingRestoreRestartPrompt(imported: Int, failed: Int) {
+            if (!isAdded || imported <= 0 && failed <= 0) return
+            val message = if (failed > 0) {
+                getString(R.string.message_config_sync_restart_required_with_failures, failed)
+            } else {
+                getString(R.string.message_config_sync_restart_required)
+            }
+            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
+                .setTitle(R.string.title_config_sync_restart_required)
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
         }
 
         private fun showCrownConfigManagementDialog() {

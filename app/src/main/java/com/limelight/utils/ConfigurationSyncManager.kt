@@ -1,5 +1,6 @@
 package com.limelight.utils
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -7,6 +8,8 @@ import android.net.Uri
 import android.os.Build
 import android.provider.DocumentsContract
 import android.provider.Settings
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
 import android.util.Base64
 import androidx.preference.PreferenceManager
 import com.limelight.binding.input.advance_setting.config.PageConfigController
@@ -24,11 +27,22 @@ import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.channels.FileLock
 import java.nio.channels.OverlappingFileLockException
+import java.security.KeyStore
 import java.security.MessageDigest
+import java.security.SecureRandom
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
+import java.util.Arrays
+import java.util.Base64 as JavaBase64
 import java.util.TreeSet
 import java.util.UUID
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.SecretKeyFactory
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.PBEKeySpec
+import javax.crypto.spec.SecretKeySpec
 
 class ConfigurationSyncManager(private val context: Context) {
 
@@ -45,7 +59,8 @@ class ConfigurationSyncManager(private val context: Context) {
         val hiddenAppsCount: Int,
         val crownProfilesCount: Int,
         val pairedComputersCount: Int,
-        val hasPairingIdentity: Boolean
+        val hasPairingIdentity: Boolean,
+        val isEncrypted: Boolean = false
     ) {
         val totalItems: Int
             get() = defaultPreferenceCount +
@@ -107,7 +122,9 @@ class ConfigurationSyncManager(private val context: Context) {
         val appliedMergedPackage: Boolean,
         val wroteExternal: Boolean,
         val contentHash: String,
-        val errorMessage: String? = null
+        val errorMessage: String? = null,
+        val pairingItemsImported: Int = 0,
+        val pairingItemsFailed: Int = 0
     )
 
     data class SyncStatusInfo(
@@ -125,6 +142,11 @@ class ConfigurationSyncManager(private val context: Context) {
     private data class ExternalDocument(
         val uri: Uri,
         val displayName: String
+    )
+
+    private data class ExternalSyncPackageRecord(
+        val syncPackage: String,
+        val requiresEncryptionRewrite: Boolean
     )
 
     private data class PairingImportResult(
@@ -217,6 +239,17 @@ class ConfigurationSyncManager(private val context: Context) {
         return buildSyncPackage(sections)
     }
 
+    @Throws(JSONException::class)
+    fun exportEncryptedSyncPackage(password: String): String {
+        return encryptSyncPackageCore(exportSyncPackage(), password)
+    }
+
+    @Throws(JSONException::class)
+    fun exportEncryptedSyncPackageWithSavedPassword(): String? {
+        val password = loadExternalSyncPassword(context) ?: return null
+        return exportEncryptedSyncPackage(password)
+    }
+
     private fun buildSyncPackage(sections: JSONObject): String {
         return buildSyncPackageCore(sections, currentSyncPackageMetadata())
     }
@@ -232,8 +265,9 @@ class ConfigurationSyncManager(private val context: Context) {
     }
 
     @Throws(JSONException::class)
-    fun previewSyncPackage(syncPackage: String): PackagePreview {
-        val root = parseAndValidateRoot(syncPackage)
+    fun previewSyncPackage(syncPackage: String, password: String? = null): PackagePreview {
+        val encrypted = isEncryptedSyncPackage(syncPackage)
+        val root = parseAndValidateRoot(resolvePlainSyncPackage(syncPackage, password))
         val sections = root.optJSONObject(KEY_SECTIONS)
             ?: throw JSONException("Missing sections")
 
@@ -268,13 +302,14 @@ class ConfigurationSyncManager(private val context: Context) {
             ),
             crownProfilesCount = sections.optJSONArray(SECTION_CROWN_PROFILES)?.length() ?: 0,
             pairedComputersCount = countPairedComputers(sections.optJSONObject(SECTION_PAIRING)),
-            hasPairingIdentity = hasPairingIdentity(sections.optJSONObject(SECTION_PAIRING))
+            hasPairingIdentity = hasPairingIdentity(sections.optJSONObject(SECTION_PAIRING)),
+            isEncrypted = encrypted
         )
     }
 
     @Throws(JSONException::class)
-    fun importSyncPackage(syncPackage: String): ImportResult {
-        val root = parseAndValidateRoot(syncPackage)
+    fun importSyncPackage(syncPackage: String, password: String? = null): ImportResult {
+        val root = parseAndValidateRoot(resolvePlainSyncPackage(syncPackage, password))
         ensureBackupMatchesThisDevice(root)
         val sections = root.optJSONObject(KEY_SECTIONS)
             ?: throw JSONException("Missing sections")
@@ -338,6 +373,25 @@ class ConfigurationSyncManager(private val context: Context) {
     }
 
     @Throws(JSONException::class)
+    fun decryptEncryptedSyncPackage(syncPackage: String, password: String): String {
+        return decryptSyncPackageCore(syncPackage, password)
+    }
+
+    @Throws(JSONException::class)
+    fun decryptEncryptedSyncPackageWithSavedPassword(syncPackage: String): String? {
+        val password = loadExternalSyncPassword(context) ?: return null
+        return decryptEncryptedSyncPackage(syncPackage, password)
+    }
+
+    fun saveExternalSyncPassword(password: String): Boolean {
+        return saveExternalSyncPassword(context, password)
+    }
+
+    fun hasExternalSyncPassword(): Boolean {
+        return hasExternalSyncPassword(context)
+    }
+
+    @Throws(JSONException::class)
     fun mergeSyncPackages(localPackage: String, externalPackage: String): String {
         return mergeSyncPackagePairCore(localPackage, externalPackage, currentSyncPackageMetadata())
     }
@@ -397,7 +451,7 @@ class ConfigurationSyncManager(private val context: Context) {
         return try {
             val localPackage = exportSyncPackage()
             val localHash = syncContentHash(localPackage)
-            val externalPackages = readExternalSyncPackages()
+            val externalPackages = readExternalSyncPackageRecords()
 
             if (externalPackages.isEmpty()) {
                 writeLocalSnapshot(localPackage)
@@ -412,10 +466,11 @@ class ConfigurationSyncManager(private val context: Context) {
                 )
             }
 
-            val externalPackage = mergeSyncPackages(externalPackages)
+            val externalRequiresEncryptionRewrite = externalPackages.any { it.requiresEncryptionRewrite }
+            val externalPackage = mergeSyncPackages(externalPackages.map { it.syncPackage })
             val externalHash = syncContentHash(externalPackage)
             if (!hasKnownExternalSyncBaseline()) {
-                importSyncPackage(externalPackage)
+                val importResult = importSyncPackage(externalPackage)
                 val adoptedPackage = exportSyncPackage()
                 val adoptedHash = syncContentHash(adoptedPackage)
                 writeLocalSnapshot(adoptedPackage)
@@ -426,18 +481,23 @@ class ConfigurationSyncManager(private val context: Context) {
                     readExternal = true,
                     appliedMergedPackage = true,
                     wroteExternal = true,
-                    contentHash = adoptedHash
+                    contentHash = adoptedHash,
+                    pairingItemsImported = importResult.pairingItemsImported,
+                    pairingItemsFailed = importResult.pairingItemsFailed
                 )
             }
 
             if (externalHash == localHash) {
                 writeLocalSnapshot(localPackage)
-                rememberExternalSync(externalPackage, externalHash)
+                if (externalRequiresEncryptionRewrite) {
+                    writeExternalSnapshot(localPackage)
+                }
+                rememberExternalSync(localPackage, localHash)
                 return AutoSyncResult(
                     enabled = true,
                     readExternal = true,
                     appliedMergedPackage = false,
-                    wroteExternal = false,
+                    wroteExternal = externalRequiresEncryptionRewrite,
                     contentHash = localHash
                 )
             }
@@ -445,12 +505,20 @@ class ConfigurationSyncManager(private val context: Context) {
             val mergedPackage = mergeSyncPackages(localPackage, externalPackage)
             val mergedHash = syncContentHash(mergedPackage)
             val applyMerged = mergedHash != localHash
+            var pairingItemsImported = 0
+            var pairingItemsFailed = 0
             if (applyMerged) {
-                importSyncPackage(mergedPackage)
+                val importResult = importSyncPackage(mergedPackage)
+                pairingItemsImported = importResult.pairingItemsImported
+                pairingItemsFailed = importResult.pairingItemsFailed
             }
             writeLocalSnapshot(mergedPackage)
 
-            val writeExternal = mergedHash != externalHash
+            val writeExternal = shouldWriteExternalSnapshotCore(
+                mergedHash,
+                externalHash,
+                externalRequiresEncryptionRewrite
+            )
             if (writeExternal) {
                 writeExternalSnapshot(mergedPackage)
             }
@@ -461,7 +529,9 @@ class ConfigurationSyncManager(private val context: Context) {
                 readExternal = true,
                 appliedMergedPackage = applyMerged,
                 wroteExternal = writeExternal,
-                contentHash = mergedHash
+                contentHash = mergedHash,
+                pairingItemsImported = pairingItemsImported,
+                pairingItemsFailed = pairingItemsFailed
             )
         } catch (e: Exception) {
             AutoSyncResult(
@@ -570,6 +640,7 @@ class ConfigurationSyncManager(private val context: Context) {
     fun writeExternalSnapshot(syncPackage: String): ExternalSnapshotInfo {
         val treeUri = externalSyncTreeUri(context)
             ?: throw IOException("No external sync directory selected")
+        val externalSyncPackage = encryptedExternalSyncPackage(syncPackage)
         val treeDocumentUri = DocumentsContract.buildDocumentUriUsingTree(
             treeUri,
             DocumentsContract.getTreeDocumentId(treeUri)
@@ -580,14 +651,14 @@ class ConfigurationSyncManager(private val context: Context) {
             DEFAULT_FILE_NAME
         )
 
-        writeExternalDocumentText(snapshotUri, syncPackage)
+        writeExternalDocumentText(snapshotUri, externalSyncPackage)
 
         val deviceSnapshotUri = openOrCreateExternalDocument(
             treeUri,
             treeDocumentUri,
             externalDeviceSnapshotFileName()
         )
-        writeExternalDocumentText(deviceSnapshotUri, syncPackage)
+        writeExternalDocumentText(deviceSnapshotUri, externalSyncPackage)
 
         val writtenAt = System.currentTimeMillis()
         val snapshotInfo = queryExternalSnapshotInfo(snapshotUri)
@@ -613,24 +684,52 @@ class ConfigurationSyncManager(private val context: Context) {
 
     @Throws(IOException::class)
     fun readExternalSyncPackages(): List<String> {
+        return readExternalSyncPackageRecords().map { it.syncPackage }
+    }
+
+    @Throws(IOException::class)
+    private fun readExternalSyncPackageRecords(): List<ExternalSyncPackageRecord> {
         val treeUri = externalSyncTreeUri(context)
             ?: throw IOException("No external sync directory selected")
         val documents = queryExternalSnapshotDocuments(treeUri)
         if (documents.isEmpty()) return emptyList()
 
-        val packages = LinkedHashMap<String, String>()
+        val packages = LinkedHashMap<String, ExternalSyncPackageRecord>()
+        val externalPassword = loadExternalSyncPassword(context)
         for (document in documents.sortedBy { it.displayName }) {
-            val syncPackage = runCatching { readExternalDocumentText(document.uri) }.getOrNull()
+            val rawSyncPackage = runCatching { readExternalDocumentText(document.uri) }.getOrNull()
                 ?: continue
+            val encrypted = isEncryptedSyncPackage(rawSyncPackage)
+            val syncPackage = try {
+                resolvePlainSyncPackage(rawSyncPackage, externalPassword)
+            } catch (e: Exception) {
+                if (encrypted) {
+                    throw IOException("Backup password is required to read encrypted external backup", e)
+                }
+                continue
+            }
             if (!isBackupPackageForThisDevice(syncPackage)) continue
             val contentHash = runCatching { syncContentHash(syncPackage) }.getOrNull()
                 ?: continue
-            packages[contentHash] = syncPackage
+            val existing = packages[contentHash]
+            packages[contentHash] = ExternalSyncPackageRecord(
+                syncPackage = syncPackage,
+                requiresEncryptionRewrite = existing?.requiresEncryptionRewrite == true || !encrypted
+            )
         }
 
         return packages.values
-            .sortedWith(compareByDescending<String> { exportedAt(it) }.thenByDescending { syncId(it) })
+            .sortedWith(
+                compareByDescending<ExternalSyncPackageRecord> { exportedAt(it.syncPackage) }
+                    .thenByDescending { syncId(it.syncPackage) }
+            )
             .take(1)
+    }
+
+    private fun encryptedExternalSyncPackage(syncPackage: String): String {
+        val password = loadExternalSyncPassword(context)
+            ?: throw IOException("Backup password is required to write encrypted external backup")
+        return encryptSyncPackageCore(syncPackage, password)
     }
 
     @Throws(JSONException::class, IOException::class)
@@ -772,6 +871,13 @@ class ConfigurationSyncManager(private val context: Context) {
         } catch (_: Exception) {
             ExternalSnapshotInfo(false, 0L, 0L, DEFAULT_FILE_NAME)
         }
+    }
+
+    private fun resolvePlainSyncPackage(syncPackage: String, password: String?): String {
+        if (!isEncryptedSyncPackage(syncPackage)) return syncPackage
+        val backupPassword = password?.takeIf { it.isNotBlank() }
+            ?: throw JSONException("Backup password is required")
+        return decryptSyncPackageCore(syncPackage, backupPassword)
     }
 
     private fun parseAndValidateRoot(syncPackage: String): JSONObject {
@@ -1939,6 +2045,70 @@ class ConfigurationSyncManager(private val context: Context) {
             return trackedKeysAfterImport(existingKeys, importedKey)
         }
 
+        internal fun encryptSyncPackageForTest(syncPackage: String, password: String): String {
+            return encryptSyncPackageCore(syncPackage, password)
+        }
+
+        internal fun decryptSyncPackageForTest(syncPackage: String, password: String): String {
+            return decryptSyncPackageCore(syncPackage, password)
+        }
+
+        internal fun shouldWriteExternalSnapshotForTest(
+            mergedHash: String,
+            externalHash: String,
+            externalRequiresEncryptionRewrite: Boolean
+        ): Boolean {
+            return shouldWriteExternalSnapshotCore(
+                mergedHash,
+                externalHash,
+                externalRequiresEncryptionRewrite
+            )
+        }
+
+        fun isEncryptedSyncPackage(syncPackage: String): Boolean {
+            return runCatching { isEncryptedSyncPackageCore(syncPackage) }.getOrDefault(false)
+        }
+
+        fun canStoreExternalSyncPassword(): Boolean {
+            return Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+        }
+
+        fun hasExternalSyncPassword(context: Context): Boolean {
+            return loadExternalSyncPassword(context) != null
+        }
+
+        private fun saveExternalSyncPassword(context: Context, password: String): Boolean {
+            if (password.isBlank() || !canStoreExternalSyncPassword()) return false
+            return runCatching {
+                val cipher = Cipher.getInstance(AES_GCM_TRANSFORMATION)
+                cipher.init(Cipher.ENCRYPT_MODE, getOrCreateExternalPasswordKey())
+                val ciphertext = cipher.doFinal(password.toByteArray(Charsets.UTF_8))
+                val iv = cipher.iv
+                context.applicationContext
+                    .getSharedPreferences(CONFIG_SYNC_SECRET_PREFS, Context.MODE_PRIVATE)
+                    .edit()
+                    .putString(PREF_EXTERNAL_PASSWORD_IV, encodeEnvelopeBase64(iv))
+                    .putString(PREF_EXTERNAL_PASSWORD_CIPHERTEXT, encodeEnvelopeBase64(ciphertext))
+                    .apply()
+                true
+            }.getOrDefault(false)
+        }
+
+        private fun loadExternalSyncPassword(context: Context): String? {
+            if (!canStoreExternalSyncPassword()) return null
+            return runCatching {
+                val prefs = context.applicationContext
+                    .getSharedPreferences(CONFIG_SYNC_SECRET_PREFS, Context.MODE_PRIVATE)
+                val iv = decodeEnvelopeBase64(prefs.getString(PREF_EXTERNAL_PASSWORD_IV, "") ?: "")
+                val ciphertext = decodeEnvelopeBase64(prefs.getString(PREF_EXTERNAL_PASSWORD_CIPHERTEXT, "") ?: "")
+                if (iv.isEmpty() || ciphertext.isEmpty()) return null
+
+                val cipher = Cipher.getInstance(AES_GCM_TRANSFORMATION)
+                cipher.init(Cipher.DECRYPT_MODE, getOrCreateExternalPasswordKey(), GCMParameterSpec(GCM_TAG_BITS, iv))
+                String(cipher.doFinal(ciphertext), Charsets.UTF_8).takeIf { it.isNotBlank() }
+            }.getOrNull()
+        }
+
         private fun buildSyncPackageCore(sections: JSONObject, metadata: SyncPackageMetadata): String {
             return JSONObject()
                 .put(KEY_SCHEMA_VERSION, SUPPORTED_SCHEMA_VERSION)
@@ -2089,6 +2259,14 @@ class ConfigurationSyncManager(private val context: Context) {
                     .toString()
                     .toByteArray(Charsets.UTF_8)
             )
+        }
+
+        private fun shouldWriteExternalSnapshotCore(
+            mergedHash: String,
+            externalHash: String,
+            externalRequiresEncryptionRewrite: Boolean
+        ): Boolean {
+            return mergedHash != externalHash || externalRequiresEncryptionRewrite
         }
 
         private fun normalizedSectionsForHashCore(sections: JSONObject): JSONObject {
@@ -2453,6 +2631,150 @@ class ConfigurationSyncManager(private val context: Context) {
             return sha256HexCore(payload.toByteArray(Charsets.UTF_8))
         }
 
+        private fun encryptSyncPackageCore(syncPackage: String, password: String): String {
+            if (password.isBlank()) {
+                throw JSONException("Backup password is required")
+            }
+
+            val salt = randomBytes(PASSWORD_SALT_BYTES)
+            val iv = randomBytes(GCM_IV_BYTES)
+            val kdf = preferredKdfAlgorithm()
+            val key = deriveBackupKey(password, salt, PASSWORD_KDF_ITERATIONS, kdf)
+            val cipher = Cipher.getInstance(AES_GCM_TRANSFORMATION)
+            cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(GCM_TAG_BITS, iv))
+            val sealedPayload = cipher.doFinal(syncPackage.toByteArray(Charsets.UTF_8))
+            val tagBytes = GCM_TAG_BITS / 8
+            if (sealedPayload.size <= tagBytes) {
+                throw JSONException("Encrypted backup payload is empty")
+            }
+
+            val ciphertext = sealedPayload.copyOfRange(0, sealedPayload.size - tagBytes)
+            val tag = sealedPayload.copyOfRange(sealedPayload.size - tagBytes, sealedPayload.size)
+            return JSONObject()
+                .put(KEY_ENCRYPTION_FORMAT, ENCRYPTED_PACKAGE_FORMAT)
+                .put(KEY_ENCRYPTION_VERSION, ENCRYPTED_PACKAGE_VERSION)
+                .put(KEY_ENCRYPTION_KDF, kdf)
+                .put(KEY_ENCRYPTION_ITERATIONS, PASSWORD_KDF_ITERATIONS)
+                .put(KEY_ENCRYPTION_SALT, encodeEnvelopeBase64(salt))
+                .put(KEY_ENCRYPTION_CIPHER, ENCRYPTION_CIPHER_NAME)
+                .put(KEY_ENCRYPTION_IV, encodeEnvelopeBase64(iv))
+                .put(KEY_ENCRYPTION_CIPHERTEXT, encodeEnvelopeBase64(ciphertext))
+                .put(KEY_ENCRYPTION_TAG, encodeEnvelopeBase64(tag))
+                .toString(2)
+        }
+
+        private fun decryptSyncPackageCore(syncPackage: String, password: String): String {
+            if (password.isBlank()) {
+                throw JSONException("Backup password is required")
+            }
+
+            val root = JSONObject(syncPackage)
+            if (!isEncryptedSyncPackageCore(root)) {
+                parseAndValidateRootCore(syncPackage)
+                return syncPackage
+            }
+
+            val version = root.optInt(KEY_ENCRYPTION_VERSION, 0)
+            if (version != ENCRYPTED_PACKAGE_VERSION) {
+                throw JSONException("Unsupported encrypted backup version: $version")
+            }
+            if (root.optString(KEY_ENCRYPTION_CIPHER) != ENCRYPTION_CIPHER_NAME) {
+                throw JSONException("Unsupported encrypted backup cipher")
+            }
+
+            val kdf = root.optString(KEY_ENCRYPTION_KDF)
+            val iterations = root.optInt(KEY_ENCRYPTION_ITERATIONS, 0)
+            if (iterations <= 0) {
+                throw JSONException("Missing encrypted backup KDF iterations")
+            }
+            val salt = decodeRequiredBase64(root, KEY_ENCRYPTION_SALT)
+            val iv = decodeRequiredBase64(root, KEY_ENCRYPTION_IV)
+            val ciphertext = decodeRequiredBase64(root, KEY_ENCRYPTION_CIPHERTEXT)
+            val tag = decodeRequiredBase64(root, KEY_ENCRYPTION_TAG)
+            val sealedPayload = ciphertext + tag
+
+            return try {
+                val key = deriveBackupKey(password, salt, iterations, kdf)
+                val cipher = Cipher.getInstance(AES_GCM_TRANSFORMATION)
+                cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(GCM_TAG_BITS, iv))
+                val plainText = String(cipher.doFinal(sealedPayload), Charsets.UTF_8)
+                parseAndValidateRootCore(plainText)
+                plainText
+            } catch (e: Exception) {
+                throw JSONException("Unable to decrypt backup: ${e.message}")
+            }
+        }
+
+        private fun decodeRequiredBase64(root: JSONObject, key: String): ByteArray {
+            val value = root.optString(key).takeIf { it.isNotBlank() }
+                ?: throw JSONException("Missing encrypted backup field: $key")
+            return runCatching { decodeEnvelopeBase64(value) }
+                .getOrElse { throw JSONException("Invalid encrypted backup field: $key") }
+        }
+
+        private fun deriveBackupKey(
+            password: String,
+            salt: ByteArray,
+            iterations: Int,
+            kdfAlgorithm: String
+        ): SecretKeySpec {
+            val chars = password.toCharArray()
+            val spec = PBEKeySpec(chars, salt, iterations, AES_KEY_BITS)
+            return try {
+                val factory = SecretKeyFactory.getInstance(kdfAlgorithm)
+                SecretKeySpec(factory.generateSecret(spec).encoded, KEY_ALGORITHM_AES)
+            } finally {
+                spec.clearPassword()
+                Arrays.fill(chars, '\u0000')
+            }
+        }
+
+        private fun preferredKdfAlgorithm(): String {
+            return runCatching {
+                SecretKeyFactory.getInstance(KDF_PBKDF2_SHA256)
+                KDF_PBKDF2_SHA256
+            }.getOrDefault(KDF_PBKDF2_SHA1)
+        }
+
+        private fun isEncryptedSyncPackageCore(syncPackage: String): Boolean {
+            return isEncryptedSyncPackageCore(JSONObject(syncPackage))
+        }
+
+        private fun isEncryptedSyncPackageCore(root: JSONObject): Boolean {
+            return root.optString(KEY_ENCRYPTION_FORMAT) == ENCRYPTED_PACKAGE_FORMAT
+        }
+
+        private fun randomBytes(size: Int): ByteArray {
+            return ByteArray(size).also { SecureRandom().nextBytes(it) }
+        }
+
+        private fun encodeEnvelopeBase64(bytes: ByteArray): String {
+            return JavaBase64.getEncoder().encodeToString(bytes)
+        }
+
+        private fun decodeEnvelopeBase64(value: String): ByteArray {
+            return JavaBase64.getDecoder().decode(value)
+        }
+
+        @SuppressLint("NewApi")
+        private fun getOrCreateExternalPasswordKey(): SecretKey {
+            val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE_PROVIDER).apply { load(null) }
+            (keyStore.getKey(EXTERNAL_PASSWORD_KEY_ALIAS, null) as? SecretKey)?.let { return it }
+
+            val keyGenerator = KeyGenerator.getInstance(KEY_ALGORITHM_AES, ANDROID_KEYSTORE_PROVIDER)
+            val keySpec = KeyGenParameterSpec.Builder(
+                EXTERNAL_PASSWORD_KEY_ALIAS,
+                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+            )
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setKeySize(AES_KEY_BITS)
+                .setRandomizedEncryptionRequired(true)
+                .build()
+            keyGenerator.init(keySpec)
+            return keyGenerator.generateKey()
+        }
+
         private fun sha256HexCore(bytes: ByteArray): String {
             val digest = MessageDigest.getInstance("SHA-256").digest(bytes)
             return digest.joinToString(separator = "") { "%02x".format(it) }
@@ -2483,6 +2805,7 @@ class ConfigurationSyncManager(private val context: Context) {
         const val PREF_EXTERNAL_SNAPSHOT_IMPORT = "config_sync_import_external_snapshot"
         const val PREF_EXTERNAL_SYNC_DIRECTORY = "config_sync_select_directory"
         const val PREF_EXTERNAL_SYNC_TREE_URI = "config_sync_external_tree_uri"
+        const val PREF_BACKUP_PASSWORD = "config_sync_backup_password"
         const val PREF_LAST_BACKGROUND_SYNC_APPLIED = "config_sync_last_background_sync_applied"
         const val PREF_LAST_BACKGROUND_SYNC_AT = "config_sync_last_background_sync_at"
         const val PREF_LAST_BACKGROUND_SYNC_ERROR = "config_sync_last_background_sync_error"
@@ -2507,6 +2830,24 @@ class ConfigurationSyncManager(private val context: Context) {
         private const val LOCAL_SNAPSHOT_DIRECTORY = "config-sync"
         private const val SYNC_LOCK_DIRECTORY = "config-sync"
         private const val SYNC_LOCK_FILE_NAME = "sync.lock"
+        private const val CONFIG_SYNC_SECRET_PREFS = "config_sync_secrets"
+        private const val ANDROID_KEYSTORE_PROVIDER = "AndroidKeyStore"
+        private const val EXTERNAL_PASSWORD_KEY_ALIAS = "moonlight_vplus_config_sync_external_password"
+        private const val PREF_EXTERNAL_PASSWORD_IV = "external_password_iv"
+        private const val PREF_EXTERNAL_PASSWORD_CIPHERTEXT = "external_password_ciphertext"
+
+        private const val ENCRYPTED_PACKAGE_FORMAT = "moonlight-vplus-config-sync-encrypted"
+        private const val ENCRYPTED_PACKAGE_VERSION = 1
+        private const val ENCRYPTION_CIPHER_NAME = "AES-256-GCM"
+        private const val AES_GCM_TRANSFORMATION = "AES/GCM/NoPadding"
+        private const val KEY_ALGORITHM_AES = "AES"
+        private const val KDF_PBKDF2_SHA256 = "PBKDF2WithHmacSHA256"
+        private const val KDF_PBKDF2_SHA1 = "PBKDF2WithHmacSHA1"
+        private const val AES_KEY_BITS = 256
+        private const val GCM_TAG_BITS = 128
+        private const val GCM_IV_BYTES = 12
+        private const val PASSWORD_SALT_BYTES = 16
+        private const val PASSWORD_KDF_ITERATIONS = 150_000
 
         private const val APP_LAST_SETTINGS_PREFS = "app_last_settings"
         private const val APP_VIEW_PREFS = "AppView"
@@ -2537,6 +2878,15 @@ class ConfigurationSyncManager(private val context: Context) {
         private const val KEY_CROWN_PROFILE_NAME = "name"
         private const val KEY_CROWN_PROFILE_PAYLOAD = "payload"
         private const val KEY_CROWN_PROFILE_SOURCE_CONFIG_ID = "sourceConfigId"
+        private const val KEY_ENCRYPTION_CIPHER = "cipher"
+        private const val KEY_ENCRYPTION_CIPHERTEXT = "ciphertext"
+        private const val KEY_ENCRYPTION_FORMAT = "format"
+        private const val KEY_ENCRYPTION_ITERATIONS = "iterations"
+        private const val KEY_ENCRYPTION_IV = "iv"
+        private const val KEY_ENCRYPTION_KDF = "kdf"
+        private const val KEY_ENCRYPTION_SALT = "salt"
+        private const val KEY_ENCRYPTION_TAG = "tag"
+        private const val KEY_ENCRYPTION_VERSION = "version"
         private const val KEY_PAIRING_ACTIVE_ADDRESS = "activeAddress"
         private const val KEY_PAIRING_ADDRESS = "address"
         private const val KEY_PAIRING_CLIENT_CERTIFICATE = "clientCertificatePem"
@@ -2592,7 +2942,8 @@ class ConfigurationSyncManager(private val context: Context) {
         fun isExternalSnapshotEnabled(context: Context): Boolean {
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
             return prefs.getBoolean(PREF_EXTERNAL_SNAPSHOT_ENABLED, false) &&
-                    !prefs.getString(PREF_EXTERNAL_SYNC_TREE_URI, null).isNullOrBlank()
+                    !prefs.getString(PREF_EXTERNAL_SYNC_TREE_URI, null).isNullOrBlank() &&
+                    hasExternalSyncPassword(context)
         }
 
         fun isBackgroundSyncEnabled(context: Context): Boolean {
@@ -2627,6 +2978,7 @@ class ConfigurationSyncManager(private val context: Context) {
                     key == PREF_EXTERNAL_SNAPSHOT_IMPORT ||
                     key == PREF_EXTERNAL_SYNC_DIRECTORY ||
                     key == PREF_EXTERNAL_SYNC_TREE_URI ||
+                    key == PREF_BACKUP_PASSWORD ||
                     key == PREF_LAST_BACKGROUND_SYNC_APPLIED ||
                     key == PREF_LAST_BACKGROUND_SYNC_AT ||
                     key == PREF_LAST_BACKGROUND_SYNC_ERROR ||

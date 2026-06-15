@@ -295,7 +295,7 @@ class GameMenu(
      * 切换麦克风开关
      */
     private fun toggleMicrophone() {
-        game.toggleMicrophoneButton()
+        game.handleMicrophoneMenuAction()
     }
 
     /**

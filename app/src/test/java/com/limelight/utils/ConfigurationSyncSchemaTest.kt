@@ -100,6 +100,11 @@ class ConfigurationSyncSchemaTest {
         )
         assertFalse(
             ConfigurationSyncManager.isPortableDefaultPreferenceKey(
+                ConfigurationSyncManager.PREF_BACKUP_PASSWORD
+            )
+        )
+        assertFalse(
+            ConfigurationSyncManager.isPortableDefaultPreferenceKey(
                 ConfigurationSyncManager.PREF_LAST_EXTERNAL_CONTENT_HASH
             )
         )

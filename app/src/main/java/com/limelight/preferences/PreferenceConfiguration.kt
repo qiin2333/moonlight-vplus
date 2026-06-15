@@ -186,6 +186,7 @@ class PreferenceConfiguration {
     var enableMic = false
     var micBitrate = 0
     var micIconColor: String = ""
+    var micMenuActionMode: String = MIC_MENU_ACTION_SHOW_BUTTON
 
     // ESC菜单设置
     var enableEscMenu = false
@@ -270,6 +271,7 @@ class PreferenceConfiguration {
                 .putBoolean(ENABLE_MIC_PREF_STRING, enableMic)
                 .putInt(MIC_BITRATE_PREF_STRING, micBitrate)
                 .putString(MIC_ICON_COLOR_PREF_STRING, micIconColor)
+                .putString(MIC_MENU_ACTION_MODE_PREF_STRING, micMenuActionMode)
                 .putBoolean(ENABLE_ESC_MENU_PREF_STRING, enableEscMenu)
                 .putString(ESC_MENU_KEY_PREF_STRING, escMenuKey.toString())
                 .putBoolean(ENABLE_START_KEY_MENU_PREF_STRING, enableStartKeyMenu)
@@ -366,6 +368,7 @@ class PreferenceConfiguration {
         copy.outputBufferQueueLimit = this.outputBufferQueueLimit
         copy.micBitrate = this.micBitrate
         copy.micIconColor = this.micIconColor
+        copy.micMenuActionMode = this.micMenuActionMode
         copy.enableEscMenu = this.enableEscMenu
         copy.escMenuKey = this.escMenuKey
         copy.enableStartKeyMenu = this.enableStartKeyMenu
@@ -478,6 +481,7 @@ class PreferenceConfiguration {
         private const val ENABLE_MIC_PREF_STRING = "checkbox_enable_mic"
         private const val MIC_BITRATE_PREF_STRING = "seekbar_mic_bitrate_kbps"
         private const val MIC_ICON_COLOR_PREF_STRING = "list_mic_icon_color"
+        private const val MIC_MENU_ACTION_MODE_PREF_STRING = "list_mic_menu_action_mode"
 
         private const val ENABLE_ESC_MENU_PREF_STRING = "checkbox_enable_esc_menu"
         private const val ESC_MENU_KEY_PREF_STRING = "list_esc_menu_key"
@@ -657,6 +661,9 @@ class PreferenceConfiguration {
         private const val DEFAULT_ENABLE_MIC = false
         private const val DEFAULT_MIC_BITRATE = 96 // 默认128 kbps
         private const val DEFAULT_MIC_ICON_COLOR = "solid_white" // 默认白
+        const val MIC_MENU_ACTION_SHOW_BUTTON = "show_button"
+        const val MIC_MENU_ACTION_TOGGLE_MIC = "toggle_microphone"
+        private const val DEFAULT_MIC_MENU_ACTION_MODE = MIC_MENU_ACTION_SHOW_BUTTON
         private const val DEFAULT_ENABLE_ESC_MENU = true // 默认启用ESC菜单
         private val DEFAULT_ESC_MENU_KEY = KeyEvent.KEYCODE_ESCAPE
         private const val DEFAULT_ENABLE_START_KEY_MENU = true // 默认启用长按start键菜单
@@ -1263,6 +1270,7 @@ class PreferenceConfiguration {
             config.enableMic = prefs.getBoolean(ENABLE_MIC_PREF_STRING, DEFAULT_ENABLE_MIC)
             config.micBitrate = prefs.getInt(MIC_BITRATE_PREF_STRING, DEFAULT_MIC_BITRATE)
             config.micIconColor = prefs.getString(MIC_ICON_COLOR_PREF_STRING, DEFAULT_MIC_ICON_COLOR) ?: DEFAULT_MIC_ICON_COLOR
+            config.micMenuActionMode = prefs.getString(MIC_MENU_ACTION_MODE_PREF_STRING, DEFAULT_MIC_MENU_ACTION_MODE) ?: DEFAULT_MIC_MENU_ACTION_MODE
 
             // 读取ESC菜单设置
             config.enableEscMenu = prefs.getBoolean(ENABLE_ESC_MENU_PREF_STRING, DEFAULT_ENABLE_ESC_MENU)
