@@ -1,0 +1,85 @@
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform sampler2D uSrc;
+layout(set = 0, binding = 1, rgb10_a2) uniform writeonly image2D uDst;
+
+float catmullRomWeight(float x) {
+    float a = abs(x);
+    float a2 = a * a;
+    float a3 = a2 * a;
+    if (a <= 1.0) {
+        return 1.5 * a3 - 2.5 * a2 + 1.0;
+    }
+    if (a < 2.0) {
+        return -0.5 * a3 + 2.5 * a2 - 4.0 * a + 2.0;
+    }
+    return 0.0;
+}
+
+vec3 sampleTexel(ivec2 p, ivec2 srcSize) {
+    return texelFetch(uSrc, clamp(p, ivec2(0), srcSize - ivec2(1)), 0).rgb;
+}
+
+vec3 sampleCatmullRom(vec2 srcPos, ivec2 srcSize) {
+    ivec2 base = ivec2(floor(srcPos));
+    vec2 f = srcPos - vec2(base);
+    vec3 sum = vec3(0.0);
+    float weightSum = 0.0;
+
+    for (int y = -1; y <= 2; ++y) {
+        float wy = catmullRomWeight(float(y) - f.y);
+        for (int x = -1; x <= 2; ++x) {
+            float w = catmullRomWeight(float(x) - f.x) * wy;
+            sum += sampleTexel(base + ivec2(x, y), srcSize) * w;
+            weightSum += w;
+        }
+    }
+    return sum / max(weightSum, 0.0001);
+}
+
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 dstSize = imageSize(uDst);
+    if (coord.x >= dstSize.x || coord.y >= dstSize.y) {
+        return;
+    }
+
+    ivec2 srcSize = textureSize(uSrc, 0);
+    vec2 srcPos = (vec2(coord) + vec2(0.5)) * vec2(srcSize) / vec2(dstSize) - vec2(0.5);
+    ivec2 center = ivec2(round(srcPos));
+
+    vec3 c = sampleCatmullRom(srcPos, srcSize);
+    vec3 n = sampleTexel(center + ivec2(0, -1), srcSize);
+    vec3 s = sampleTexel(center + ivec2(0,  1), srcSize);
+    vec3 e = sampleTexel(center + ivec2( 1, 0), srcSize);
+    vec3 w = sampleTexel(center + ivec2(-1, 0), srcSize);
+    vec3 ne = sampleTexel(center + ivec2( 1, -1), srcSize);
+    vec3 nw = sampleTexel(center + ivec2(-1, -1), srcSize);
+    vec3 se = sampleTexel(center + ivec2( 1,  1), srcSize);
+    vec3 sw = sampleTexel(center + ivec2(-1,  1), srcSize);
+
+    vec3 lumaWeight = vec3(0.2627, 0.6780, 0.0593);
+    float lumaC = dot(c, lumaWeight);
+    float edge = max(
+        max(abs(lumaC - dot(n, lumaWeight)), abs(lumaC - dot(s, lumaWeight))),
+        max(abs(lumaC - dot(e, lumaWeight)), abs(lumaC - dot(w, lumaWeight))));
+    vec3 blurCross = (n + s + e + w) * 0.25;
+    vec3 blurDiag = (ne + nw + se + sw) * 0.25;
+    vec3 blur = mix(blurCross, blurDiag, 0.35);
+
+    float scale = max(float(dstSize.x) / float(srcSize.x),
+                      float(dstSize.y) / float(srcSize.y));
+    float scaleBoost = smoothstep(1.4, 3.5, scale);
+    float amount = mix(0.10, 0.48, smoothstep(0.006, 0.12, edge));
+    amount *= mix(0.90, 1.24, scaleBoost);
+    vec3 sharp = c + (c - blur) * amount;
+
+    vec3 lo = min(min(c, min(n, min(s, min(e, w)))), min(min(ne, nw), min(se, sw)));
+    vec3 hi = max(max(c, max(n, max(s, max(e, w)))), max(max(ne, nw), max(se, sw)));
+    vec3 range = max(hi - lo, vec3(0.02));
+    sharp = clamp(sharp, lo - range * 0.20, hi + range * 0.20);
+
+    imageStore(uDst, coord, vec4(clamp(sharp, 0.0, 1.0), 1.0));
+}

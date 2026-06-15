@@ -130,14 +130,14 @@
         <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_framegen_internal_width"
             android:dialogMessage="@string/summary_framegen_internal_width"
-            seekbar:min="640"
-            android:max="1920"
-            android:defaultValue="864"
-            seekbar:step="16"
-            seekbar:keyStep="32"
-            seekbar:divisor="1"
+            seekbar:min="20"
+            android:max="100"
+            android:defaultValue="50"
+            seekbar:step="5"
+            seekbar:keyStep="5"
+            seekbar:divisor="100"
             android:summary="@string/summary_framegen_internal_width"
-            android:text="@string/suffix_framegen_pixels"
+            android:text="@string/suffix_framegen_scale"
             android:title="@string/title_framegen_internal_width" />
         <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_framegen_slow_threshold_ms"

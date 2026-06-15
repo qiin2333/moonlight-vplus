@@ -940,10 +940,10 @@
     <string name="title_framegen_adaptive_enabled">Weak-network frame fill</string>
     <string name="summary_framegen_adaptive_enabled">During packet loss or unstable frame delivery, use frame generation to stay near the current target FPS. This does not require setting stream FPS to 60.</string>
     <string name="title_framegen_quality_preset">Frame generation quality</string>
-    <string name="summary_framegen_quality_preset">Choose the balance between smoothness and clarity.</string>
-    <string name="framegen_quality_performance">Performance (recommended)</string>
-    <string name="framegen_quality_balanced">Balanced</string>
-    <string name="framegen_quality_clarity">Clarity</string>
+    <string name="summary_framegen_quality_preset">Scale frame generation resolution from the stream size.</string>
+    <string name="framegen_quality_performance">Performance (25%, recommended)</string>
+    <string name="framegen_quality_balanced">Balanced (50%)</string>
+    <string name="framegen_quality_clarity">Clarity (75%)</string>
     <string name="framegen_quality_custom">Custom</string>
     <string name="title_framegen_selftest">Check device support</string>
     <string name="summary_framegen_selftest">Use this if frame generation cannot be enabled or the picture looks wrong.</string>
@@ -961,9 +961,9 @@ Tap again to replace it.</string>
     <string name="toast_framegen_lossless_dll_copying">Importing frame generation engine…</string>
     <string name="toast_framegen_lossless_dll_probe_result">Frame generation engine check: %1$s</string>
     <string name="toast_framegen_lossless_dll_pick_failed">Unable to import Lossless.dll: %1$s</string>
-    <string name="title_framegen_internal_width">Custom render width</string>
-    <string name="summary_framegen_internal_width">Advanced tuning for the internal frame generation render width. Lower values improve stability; higher values improve detail.</string>
-    <string name="suffix_framegen_pixels">px</string>
+    <string name="title_framegen_internal_width">Custom render scale</string>
+    <string name="summary_framegen_internal_width">Advanced tuning for the internal frame generation scale. Lower values improve stability; higher values improve detail.</string>
+    <string name="suffix_framegen_scale">x</string>
     <string name="title_framegen_slow_threshold_ms">Smoothness protection</string>
     <string name="summary_framegen_slow_threshold_ms">Custom mode only. Moonlight V+ falls back to direct rendering when frame generation gets too slow. Default: 18 ms.</string>
     <string name="title_framegen_present_real_first">Motion cadence fallback</string>

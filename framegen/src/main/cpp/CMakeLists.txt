@@ -98,6 +98,8 @@ framegen_compile_shader(yuv_to_rgba)
 framegen_compile_shader(rgba_upscale)
 framegen_compile_shader(yuv_to_rgba16f)
 framegen_compile_shader(rgba_upscale16f)
+framegen_compile_shader(yuv_to_rgb10a2)
+framegen_compile_shader(rgba_upscale10a2)
 
 target_include_directories(moonlight-framegen PRIVATE "${SHADER_GEN_DIR}")
 

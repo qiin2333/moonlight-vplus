@@ -82,7 +82,7 @@ object FramegenRuntimePlanner {
             inputHdrFullRange = inputHdrEnabled && inputHdrFullRange,
             adaptiveEnabled = adaptiveEnabled,
             allowAdaptiveWithoutDoubling = adaptiveEnabled && !regularEnabled,
-            internalWidth = FramegenSettings.resolveInternalWidth(prefs),
+            internalWidth = FramegenSettings.resolveInternalWidth(prefs, width),
             presentMode = if (prefs.getBoolean(FramegenSettings.PREF_PRESENT_REAL_FIRST, false)) 1 else 0,
             slowFrameThresholdMs = prefs.getInt(
                 FramegenSettings.PREF_SLOW_THRESHOLD_MS,

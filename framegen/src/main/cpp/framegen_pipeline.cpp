@@ -14,6 +14,8 @@
 #include "rgba_upscale.comp.spv.h"
 #include "yuv_to_rgba16f.comp.spv.h"
 #include "rgba_upscale16f.comp.spv.h"
+#include "yuv_to_rgb10a2.comp.spv.h"
+#include "rgba_upscale10a2.comp.spv.h"
 
 #include <algorithm>
 #include <atomic>
@@ -139,6 +141,8 @@ struct ContextResources {
     bool hdrFullRange{false};
     uint32_t ahbFormat{AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM};
     VkFormat vkFormat{VK_FORMAT_R8G8B8A8_UNORM};
+    uint32_t presentAhbFormat{AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM};
+    VkFormat presentVkFormat{VK_FORMAT_R8G8B8A8_UNORM};
     int32_t windowFormat{WINDOW_FORMAT_RGBA_8888};
     int32_t windowDataspace{kDataspaceSrgbFull};
     uint32_t bytesPerPixel{4};
@@ -167,6 +171,7 @@ struct ContextResources {
     // 阶段 3.3a-iii.a：YUV→RGBA compute pipeline（不含 ycbcr conversion；
     // conversion 与 decoder external format 绑定，要等首帧到达后才在 3.3a-iii.b 创建）。
     VkShaderModule shaderModule{VK_NULL_HANDLE};
+    VkShaderModule presentShaderModule{VK_NULL_HANDLE};
     VkShaderModule upscaleShaderModule{VK_NULL_HANDLE};
 
     // 阶段 3.3a-iii.b.1：首帧到达后才创建的 ycbcr conversion + descriptor 套件 + compute pipeline。
@@ -177,6 +182,7 @@ struct ContextResources {
     VkDescriptorSetLayout dsLayout{VK_NULL_HANDLE};
     VkPipelineLayout pipelineLayout{VK_NULL_HANDLE};
     VkPipeline pipeline{VK_NULL_HANDLE};
+    VkPipeline presentPipeline{VK_NULL_HANDLE};
 
     // 阶段 3.3a-iii.b.2：descriptor pool + 2 个 ping-pong descriptor sets。
     // binding 1 (storage image dst) 在 pipeline 创建时一次性 pre-write 到 input0/input1View；
@@ -237,6 +243,9 @@ struct ContextResources {
         if (pipeline != VK_NULL_HANDLE) {
             vkDestroyPipeline(ownerDevice, pipeline, nullptr);
         }
+        if (presentPipeline != VK_NULL_HANDLE) {
+            vkDestroyPipeline(ownerDevice, presentPipeline, nullptr);
+        }
         if (upscalePipeline != VK_NULL_HANDLE) {
             vkDestroyPipeline(ownerDevice, upscalePipeline, nullptr);
         }
@@ -263,6 +272,9 @@ struct ContextResources {
         }
         if (shaderModule != VK_NULL_HANDLE) {
             vkDestroyShaderModule(ownerDevice, shaderModule, nullptr);
+        }
+        if (presentShaderModule != VK_NULL_HANDLE) {
+            vkDestroyShaderModule(ownerDevice, presentShaderModule, nullptr);
         }
         if (upscaleShaderModule != VK_NULL_HANDLE) {
             vkDestroyShaderModule(ownerDevice, upscaleShaderModule, nullptr);
@@ -333,7 +345,7 @@ int32_t g_outputWindowConfiguredFormat = 0;
 int32_t g_outputWindowConfiguredDataspace = 0;
 int32_t g_outputWindowHintedFps = 0;
 bool g_outputWindowBuffersRequested = false;
-std::atomic<uint64_t> g_blitCount{0};
+std::atomic<uint64_t> g_presentCount{0};
 
 struct PresentFrame {
     ANativeWindow* window{nullptr};
@@ -380,7 +392,7 @@ struct AdaptiveFramegenState {
     uint32_t slowLsfgFrames{0};
     uint32_t slowCooldownFrames{0};
     uint32_t cadenceBreakFrames{0};
-    uint32_t cadenceSuppressFrames{0};
+    uint32_t interpSuppressFrames{0};
 };
 
 struct YuvToRgbaPushConstants {
@@ -420,14 +432,51 @@ std::vector<std::vector<uint8_t>> g_presentBufferPool;
 constexpr uint64_t kFirstAvailableDeviceUuid = 0x1463ABACULL;
 constexpr uint32_t kGenerationCount = 1; // 2x 插帧：每两帧之间生成 1 帧。
 constexpr int64_t kSlowFrameMs = 16;
-constexpr int64_t kSlowBlitMs = 8;
+constexpr int64_t kSlowPresentMs = 8;
 constexpr uint32_t kCadenceRecoverySuppressFrames = 1;
 constexpr size_t kPresentBufferPoolMax = 3;
 constexpr size_t kPresentBufferPoolMaxBytes = 96ULL * 1024ULL * 1024ULL;
+constexpr bool kPreferHdrRgb10Present = true;
 
 int64_t elapsedMs(std::chrono::steady_clock::time_point start,
                   std::chrono::steady_clock::time_point end) {
     return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+}
+
+std::chrono::nanoseconds presenterIntervalForTarget(int32_t targetFps) {
+    if (targetFps < 90) {
+        return std::chrono::nanoseconds::zero();
+    }
+    const int32_t clampedFps = std::clamp(targetFps, 1, 240);
+    return std::chrono::nanoseconds(1'000'000'000LL / clampedFps);
+}
+
+bool isUnsetTimePoint(std::chrono::steady_clock::time_point value) {
+    return value.time_since_epoch().count() == 0;
+}
+
+void pacePresenterFrame(std::chrono::steady_clock::time_point& nextPresentAt,
+                        std::chrono::nanoseconds interval) {
+    if (interval <= std::chrono::nanoseconds::zero()) {
+        nextPresentAt = {};
+        return;
+    }
+
+    const auto maxLag = interval * 3;
+    const auto now = std::chrono::steady_clock::now();
+    if (isUnsetTimePoint(nextPresentAt) || now - nextPresentAt > maxLag) {
+        nextPresentAt = now;
+    }
+    if (now < nextPresentAt) {
+        std::this_thread::sleep_until(nextPresentAt);
+    }
+
+    const auto afterSleep = std::chrono::steady_clock::now();
+    if (afterSleep - nextPresentAt > maxLag) {
+        nextPresentAt = afterSleep + interval;
+    } else {
+        nextPresentAt += interval;
+    }
 }
 
 void recordPresentedFrame(const PresentFrame& frame, int64_t totalMs) {
@@ -597,11 +646,10 @@ bool makeFallbackFrameLocked(PresentFrame& out) {
         return false;
     }
 
-    const bool allowHighInputBypass = g_allowHighInputBypass.load(std::memory_order_acquire);
-    const double expectedSourceFps = allowHighInputBypass
-        ? static_cast<double>(targetFps)
-        : std::max(30.0, static_cast<double>(targetFps) * 0.5);
-    const double minMissingMs = (1000.0 / expectedSourceFps) * 1.15;
+    // The caller only asks for fallback when a display slot is due. Leave room for
+    // the ANativeWindow copy/post cost, otherwise 120 Hz misses the next slot.
+    const double slotMs = 1000.0 / static_cast<double>(targetFps);
+    const double minMissingMs = slotMs * 0.65;
     const auto now = std::chrono::steady_clock::now();
     const double sinceLastMs =
         static_cast<double>(
@@ -757,13 +805,13 @@ void presentFrameToWindow(PresentFrame frame) {
     }
     releasePresentFrame(frame);
 
-    const uint64_t blitCount = g_blitCount.fetch_add(1, std::memory_order_relaxed) + 1;
-    const bool logSample = (blitCount == 1 || (blitCount % 120) == 0);
-    if (logSample || totalMs >= kSlowBlitMs) {
+    const uint64_t presentCount = g_presentCount.fetch_add(1, std::memory_order_relaxed) + 1;
+    const bool logSample = (presentCount == 1 || (presentCount % 120) == 0);
+    if (logSample || totalMs >= kSlowPresentMs) {
         LOGI("stage3.3c: presenter timing tag=%s count=%llu src=%llu/%u total=%lldms "
              "winLock=%lldms copy=%lldms post=%lldms src=%dx%d display=%dx%d dst=%dx%d/stride=%d",
              frame.tag.c_str(),
-             static_cast<unsigned long long>(blitCount),
+             static_cast<unsigned long long>(presentCount),
              static_cast<unsigned long long>(frame.sourceFrame),
              frame.sourceOrder,
              static_cast<long long>(totalMs),
@@ -777,36 +825,53 @@ void presentFrameToWindow(PresentFrame frame) {
 }
 
 void presenterLoop() {
+    std::chrono::steady_clock::time_point nextPresentAt{};
     for (;;) {
         PresentFrame frame;
         {
             std::unique_lock<std::mutex> lock(g_presentMutex);
-            if (g_presentQueue.empty() && !g_presentStop) {
+            while (g_presentQueue.empty() && !g_presentStop && frame.window == nullptr) {
                 const int32_t targetFps = g_outputFrameRate.load(std::memory_order_acquire);
-                if (targetFps >= 90) {
-                    const auto waitMs = std::chrono::milliseconds(
-                        std::clamp(1000 / std::max(1, targetFps), 4, 16));
-                    g_presentCv.wait_for(lock, waitMs, [] {
-                        return g_presentStop || !g_presentQueue.empty();
-                    });
-                    if (!g_presentStop && g_presentQueue.empty() &&
-                        makeFallbackFrameLocked(frame)) {
-                        // Present the fallback outside the queue lock, just like normal frames.
-                    } else {
-                        if (g_presentStop && g_presentQueue.empty()) {
-                            break;
-                        }
-                        if (g_presentQueue.empty()) {
-                            continue;
-                        }
-                    }
-                } else {
+                const auto interval = presenterIntervalForTarget(targetFps);
+                if (interval <= std::chrono::nanoseconds::zero()) {
+                    nextPresentAt = {};
                     g_presentCv.wait(lock, [] {
                         return g_presentStop || !g_presentQueue.empty();
                     });
+                    continue;
+                }
+
+                const auto now = std::chrono::steady_clock::now();
+                if (isUnsetTimePoint(nextPresentAt) || now - nextPresentAt > interval * 3) {
+                    nextPresentAt = now + interval;
+                }
+                if (now >= nextPresentAt) {
+                    if (makeFallbackFrameLocked(frame)) {
+                        break;
+                    }
+                    g_presentCv.wait_for(lock, std::chrono::milliseconds(1), [] {
+                        return g_presentStop || !g_presentQueue.empty();
+                    });
+                    continue;
+                }
+                g_presentCv.wait_until(lock, nextPresentAt, [] {
+                    return g_presentStop || !g_presentQueue.empty();
+                });
+                if (!g_presentQueue.empty()) {
+                    break;
+                }
+                if (g_presentStop) {
+                    break;
+                }
+                if (std::chrono::steady_clock::now() >= nextPresentAt &&
+                    makeFallbackFrameLocked(frame)) {
+                    break;
+                }
+                if (std::chrono::steady_clock::now() - nextPresentAt > interval * 3) {
+                    nextPresentAt = std::chrono::steady_clock::now();
                 }
             }
-            if (g_presentStop && g_presentQueue.empty()) {
+            if (g_presentStop && g_presentQueue.empty() && frame.window == nullptr) {
                 break;
             }
             if (frame.window == nullptr) {
@@ -816,6 +881,8 @@ void presenterLoop() {
                                         std::memory_order_release);
             }
         }
+        const int32_t targetFps = g_outputFrameRate.load(std::memory_order_acquire);
+        pacePresenterFrame(nextPresentAt, presenterIntervalForTarget(targetFps));
         presentFrameToWindow(std::move(frame));
     }
 }
@@ -1372,12 +1439,24 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
         resources->hdrFullRange = hdrFullRange;
         resources->hdrPassthrough =
             g_hdrEnabled.load(std::memory_order_acquire) && hdrMode != kHdrModeSdr;
+        resources->presentAhbFormat = resources->ahbFormat;
+        resources->presentVkFormat = resources->vkFormat;
         if (resources->hdrPassthrough) {
             resources->ahbFormat = AHARDWAREBUFFER_FORMAT_R16G16B16A16_FLOAT;
             resources->vkFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
-            resources->windowFormat = WINDOW_FORMAT_RGBA_FP16;
             resources->windowDataspace = hdrDataspaceForMode(hdrMode, hdrFullRange);
-            resources->bytesPerPixel = 8;
+            if (kPreferHdrRgb10Present) {
+                resources->presentAhbFormat = AHARDWAREBUFFER_FORMAT_R10G10B10A2_UNORM;
+                resources->presentVkFormat = VK_FORMAT_A2B10G10R10_UNORM_PACK32;
+                resources->windowFormat =
+                    static_cast<int32_t>(AHARDWAREBUFFER_FORMAT_R10G10B10A2_UNORM);
+                resources->bytesPerPixel = 4;
+            } else {
+                resources->presentAhbFormat = resources->ahbFormat;
+                resources->presentVkFormat = resources->vkFormat;
+                resources->windowFormat = WINDOW_FORMAT_RGBA_FP16;
+                resources->bytesPerPixel = 8;
+            }
         }
         if (decoderDesc.width > 0 && streamWidth > 0) {
             resources->srcUvScaleX = std::min(
@@ -1393,13 +1472,13 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
         resources->input0 = allocateOwnedColorAhb(ctxWidth, ctxHeight, resources->ahbFormat);
         resources->input1 = allocateOwnedColorAhb(ctxWidth, ctxHeight, resources->ahbFormat);
         resources->realOutput = allocateOwnedColorAhb(
-            resources->presentWidth, resources->presentHeight, resources->ahbFormat);
+            resources->presentWidth, resources->presentHeight, resources->presentAhbFormat);
         resources->interpOutput = allocateOwnedColorAhb(
-            resources->presentWidth, resources->presentHeight, resources->ahbFormat);
+            resources->presentWidth, resources->presentHeight, resources->presentAhbFormat);
         resources->outputs.emplace_back(
             allocateOwnedColorAhb(ctxWidth, ctxHeight, resources->ahbFormat));
         const auto allocateEnd = std::chrono::steady_clock::now();
-        LOGI("stage3.2 bootstrap timing: allocateOwnedAhb=%lldms total=%lldms fg=%ux%u present=%ux%u hdrPass=%d hdrMode=%d fullRange=%d dataspace=0x%x vkFmt=%d ahbFmt=0x%x bpp=%u",
+        LOGI("stage3.2 bootstrap timing: allocateOwnedAhb=%lldms total=%lldms fg=%ux%u present=%ux%u hdrPass=%d hdrMode=%d fullRange=%d dataspace=0x%x vkFmt=%d ahbFmt=0x%x presentVkFmt=%d presentAhbFmt=0x%x bpp=%u",
              static_cast<long long>(elapsedMs(allocateStart, allocateEnd)),
              static_cast<long long>(elapsedMs(bootStart, allocateEnd)),
              ctxWidth, ctxHeight,
@@ -1410,6 +1489,8 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
              resources->windowDataspace,
              static_cast<int>(resources->vkFormat),
              resources->ahbFormat,
+             static_cast<int>(resources->presentVkFormat),
+             resources->presentAhbFormat,
              resources->bytesPerPixel);
 
         std::vector<AHardwareBuffer*> outputAhbs;
@@ -1472,7 +1553,7 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
                                             resources->realOutput.get(),
                                             resources->presentWidth,
                                             resources->presentHeight,
-                                            resources->vkFormat);
+                                            resources->presentVkFormat);
             resources->realOutputImage = real.image;
             resources->realOutputMemory = real.memory;
             resources->realOutputView = real.view;
@@ -1480,7 +1561,7 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
                                               resources->interpOutput.get(),
                                               resources->presentWidth,
                                               resources->presentHeight,
-                                              resources->vkFormat);
+                                              resources->presentVkFormat);
             resources->interpOutputImage = interp.image;
             resources->interpOutputMemory = interp.memory;
             resources->interpOutputView = interp.view;
@@ -1518,12 +1599,33 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
             }
         }
         {
-            const size_t shaderSize = resources->hdrPassthrough
-                ? k_rgba_upscale16f_spv_size
-                : k_rgba_upscale_spv_size;
-            const uint32_t* shaderCode = resources->hdrPassthrough
-                ? k_rgba_upscale16f_spv
-                : k_rgba_upscale_spv;
+            if (resources->presentVkFormat != resources->vkFormat) {
+                VkShaderModuleCreateInfo smCi{
+                    .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+                    .pNext = nullptr,
+                    .flags = 0,
+                    .codeSize = k_yuv_to_rgb10a2_spv_size,
+                    .pCode = k_yuv_to_rgb10a2_spv,
+                };
+                if (vkCreateShaderModule(g_vk->device, &smCi, nullptr,
+                                         &resources->presentShaderModule) != VK_SUCCESS) {
+                    throw std::runtime_error("vkCreateShaderModule (yuv_to_rgb10a2) failed");
+                }
+            }
+        }
+        {
+            size_t shaderSize = 0;
+            const uint32_t* shaderCode = nullptr;
+            if (resources->presentVkFormat == VK_FORMAT_A2B10G10R10_UNORM_PACK32) {
+                shaderSize = k_rgba_upscale10a2_spv_size;
+                shaderCode = k_rgba_upscale10a2_spv;
+            } else if (resources->hdrPassthrough) {
+                shaderSize = k_rgba_upscale16f_spv_size;
+                shaderCode = k_rgba_upscale16f_spv;
+            } else {
+                shaderSize = k_rgba_upscale_spv_size;
+                shaderCode = k_rgba_upscale_spv;
+            }
             VkShaderModuleCreateInfo smCi{
                 .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
                 .pNext = nullptr,
@@ -1657,7 +1759,7 @@ void reset() {
         g_outputWindowConfiguredDataspace = 0;
         g_outputWindowHintedFps = 0;
         g_outputWindowBuffersRequested = false;
-        g_blitCount.store(0, std::memory_order_relaxed);
+        g_presentCount.store(0, std::memory_order_relaxed);
     }
 }
 
@@ -1742,7 +1844,7 @@ void setOutputWindow(ANativeWindow* nativeWindow) {
     g_outputWindowConfiguredDataspace = 0;
     g_outputWindowHintedFps = 0;
     g_outputWindowBuffersRequested = false;
-    g_blitCount.store(0, std::memory_order_relaxed);
+    g_presentCount.store(0, std::memory_order_relaxed);
     LOGI("stage3.3c: setOutputWindow window=%p", nativeWindow);
     applyOutputWindowHintsLocked(false);
 }
@@ -1918,7 +2020,18 @@ bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDR
         LOGE("stage3.3a-iii.b.1: vkCreateComputePipelines failed");
         return false;
     }
-    LOGI("stage3.3a-iii.b.1: pipeline ready IS_HDR=%d", isHdrSpec);
+    if (g_context->presentShaderModule != VK_NULL_HANDLE) {
+        pipeCi.stage.module = g_context->presentShaderModule;
+        if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipeCi, nullptr,
+                                     &g_context->presentPipeline) != VK_SUCCESS) {
+            LOGE("stage3.3a-iii.b.1: vkCreateComputePipelines present failed");
+            return false;
+        }
+    }
+    LOGI("stage3.3a-iii.b.1: pipeline ready IS_HDR=%d presentPipeline=%d presentVkFmt=%d",
+         isHdrSpec,
+         static_cast<int>(g_context->presentPipeline != VK_NULL_HANDLE),
+         static_cast<int>(g_context->presentVkFormat));
 
     // 6. descriptor pool + 2 个 ping-pong 集合，并预绑 binding 1 = input{0,1}View（GENERAL）。
     // binding 0 (combined sampler with immutable ycbcr sampler) 每帧 dispatch 时再覆盖。
@@ -2123,119 +2236,6 @@ bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDR
          g_context->width, g_context->height,
          g_context->presentWidth, g_context->presentHeight);
     return true;
-}
-
-// 阶段 3.3c：把指定 RGBA8888 AHB 通过 CPU 拷贝回贴到 SurfaceView 的 ANativeWindow。
-// 调用方必须持 g_contextMutex 且 AHB 内容已 GPU 完成（dispatch 后 vkWaitForFences /
-// LSFG waitIdle）。失败只打日志，不影响后续帧。tag 仅用于日志区分。
-void blitAhbToWindowLocked(AHardwareBuffer* srcAhb, const char* tag) {
-    if (g_outputWindow == nullptr || srcAhb == nullptr) {
-        return;
-    }
-    const auto totalStart = std::chrono::steady_clock::now();
-
-    AHardwareBuffer_Desc desc{};
-    AHardwareBuffer_describe(srcAhb, &desc);
-    const int32_t srcW = static_cast<int32_t>(desc.width);
-    const int32_t srcH = static_cast<int32_t>(desc.height);
-    const int32_t srcStridePx = static_cast<int32_t>(desc.stride);
-    if (srcW <= 0 || srcH <= 0) return;
-
-    // 首次或尺寸变化时重配窗口。WINDOW_FORMAT_RGBA_8888 与 output AHB 格式一致。
-    const uint32_t bytesPerPixel = g_context != nullptr ? g_context->bytesPerPixel : 4U;
-    const int32_t windowFormat = g_context != nullptr ? g_context->windowFormat : WINDOW_FORMAT_RGBA_8888;
-    const int32_t windowDataspace =
-        g_context != nullptr ? g_context->windowDataspace : kDataspaceSrgbFull;
-
-    if (g_outputWindowConfiguredW != srcW ||
-        g_outputWindowConfiguredH != srcH ||
-        g_outputWindowConfiguredFormat != windowFormat ||
-        g_outputWindowConfiguredDataspace != windowDataspace) {
-        const int32_t rc = ANativeWindow_setBuffersGeometry(
-            g_outputWindow, srcW, srcH, windowFormat);
-        if (rc != 0) {
-            LOGE("stage3.3c: ANativeWindow_setBuffersGeometry rc=%d w=%d h=%d fmt=%d",
-                 rc, srcW, srcH, windowFormat);
-            return;
-        }
-        // 显式声明数据空间为标准 sRGB，让 SurfaceFlinger 把 buffer 当 sRGB→display
-        // 做色域管理；否则宽色域 OLED 屏会把 sRGB 数据按 native gamut 直显，
-        // 视觉上颜色过饱和。ADATASPACE_SRGB = STANDARD_BT709 | TRANSFER_SRGB | RANGE_FULL。
-        ANativeWindow_setBuffersDataSpace(g_outputWindow, windowDataspace);
-        g_outputWindowConfiguredW = srcW;
-        g_outputWindowConfiguredH = srcH;
-        g_outputWindowConfiguredFormat = windowFormat;
-        g_outputWindowConfiguredDataspace = windowDataspace;
-        g_outputWindowBuffersRequested = false;
-        applyOutputWindowHintsLocked(true);
-        LOGI("stage3.3c: configured output window %dx%d fmt=%d dataspace=%d bpp=%u (src stride=%d px)",
-             srcW, srcH, windowFormat, windowDataspace, bytesPerPixel, srcStridePx);
-    }
-
-    void* srcPtr = nullptr;
-    const auto ahbLockStart = std::chrono::steady_clock::now();
-    const int lockResult = AHardwareBuffer_lock(
-        srcAhb, AHARDWAREBUFFER_USAGE_CPU_READ_OFTEN, -1, nullptr, &srcPtr);
-    const auto ahbLockEnd = std::chrono::steady_clock::now();
-    if (lockResult != 0 || srcPtr == nullptr) {
-        LOGE("stage3.3c: AHardwareBuffer_lock(%s) rc=%d ptr=%p", tag, lockResult, srcPtr);
-        return;
-    }
-
-    ANativeWindow_Buffer dst{};
-    const auto windowLockStart = std::chrono::steady_clock::now();
-    const int32_t rc = ANativeWindow_lock(g_outputWindow, &dst, nullptr);
-    const auto windowLockEnd = std::chrono::steady_clock::now();
-    if (rc != 0) {
-        LOGE("stage3.3c: ANativeWindow_lock(%s) rc=%d", tag, rc);
-        AHardwareBuffer_unlock(srcAhb, nullptr);
-        return;
-    }
-
-    const auto copyStart = std::chrono::steady_clock::now();
-    const int32_t copyW = std::min(srcW, dst.width);
-    const int32_t copyH = std::min(srcH, dst.height);
-    const uint8_t* srcRow = static_cast<const uint8_t*>(srcPtr);
-    uint8_t* dstRow = static_cast<uint8_t*>(dst.bits);
-    const size_t srcRowBytes = static_cast<size_t>(srcStridePx) * bytesPerPixel;
-    const size_t dstRowBytes = static_cast<size_t>(dst.stride) * bytesPerPixel;
-    const size_t copyRowBytes = static_cast<size_t>(copyW) * bytesPerPixel;
-    for (int32_t y = 0; y < copyH; ++y) {
-        std::memcpy(dstRow, srcRow, copyRowBytes);
-        srcRow += srcRowBytes;
-        dstRow += dstRowBytes;
-    }
-    const auto copyEnd = std::chrono::steady_clock::now();
-
-    const auto postStart = std::chrono::steady_clock::now();
-    const int32_t postRc = ANativeWindow_unlockAndPost(g_outputWindow);
-    const auto postEnd = std::chrono::steady_clock::now();
-    if (postRc != 0) {
-        LOGE("stage3.3c: ANativeWindow_unlockAndPost(%s) rc=%d", tag, postRc);
-    }
-
-    const auto ahbUnlockStart = std::chrono::steady_clock::now();
-    AHardwareBuffer_unlock(srcAhb, nullptr);
-    const auto totalEnd = std::chrono::steady_clock::now();
-
-    const uint64_t blitCount = g_blitCount.fetch_add(1, std::memory_order_relaxed) + 1;
-    const int64_t totalMs = elapsedMs(totalStart, totalEnd);
-    const bool logSample = (blitCount == 1 || (blitCount % 120) == 0);
-    if (logSample || totalMs >= kSlowBlitMs) {
-        LOGI("stage3.3c: blit timing tag=%s count=%llu total=%lldms "
-             "ahbLock=%lldms winLock=%lldms copy=%lldms post=%lldms ahbUnlock=%lldms "
-             "src=%dx%d/stride=%d dst=%dx%d/stride=%d",
-             tag,
-             static_cast<unsigned long long>(blitCount),
-             static_cast<long long>(totalMs),
-             static_cast<long long>(elapsedMs(ahbLockStart, ahbLockEnd)),
-             static_cast<long long>(elapsedMs(windowLockStart, windowLockEnd)),
-             static_cast<long long>(elapsedMs(copyStart, copyEnd)),
-             static_cast<long long>(elapsedMs(postStart, postEnd)),
-             static_cast<long long>(elapsedMs(ahbUnlockStart, totalEnd)),
-             srcW, srcH, srcStridePx,
-             dst.width, dst.height, dst.stride);
-    }
 }
 
 bool enqueueAhbToPresenterLocked(AHardwareBuffer* srcAhb,
@@ -2949,7 +2949,7 @@ bool dispatchYuvToRgbaLocked(DecoderAhbImport& decoderImport,
             const double expectedGapMs = 1000.0 / expectedSourceFps;
             const double breakGapMs = allowHighInputBypass
                 ? std::max(90.0, expectedGapMs * 10.0)
-                : std::max(28.0, expectedGapMs * 1.65);
+                : std::max(60.0, expectedGapMs * 3.5);
             cadenceBreak = inputGapMs > breakGapMs;
         }
     }
@@ -2965,8 +2965,8 @@ bool dispatchYuvToRgbaLocked(DecoderAhbImport& decoderImport,
         }
         g_adaptive.cadenceBreakFrames += 1;
         const bool allowHighInputBypass = g_allowHighInputBypass.load(std::memory_order_acquire);
-        g_adaptive.cadenceSuppressFrames = std::max(
-            g_adaptive.cadenceSuppressFrames,
+        g_adaptive.interpSuppressFrames = std::max(
+            g_adaptive.interpSuppressFrames,
             allowHighInputBypass ? 1U : kCadenceRecoverySuppressFrames);
         g_statsMode.store(kModeCadenceRecover, std::memory_order_release);
         if (!allowHighInputBypass || inputGapMs >= 140.0) {
@@ -2978,13 +2978,13 @@ bool dispatchYuvToRgbaLocked(DecoderAhbImport& decoderImport,
             LOGW("stage3.3d: cadence break suppress interp gap=%.2fms count=%u recover=%u inputEma=%.1f",
                  inputGapMs,
                  g_adaptive.cadenceBreakFrames,
-                 g_adaptive.cadenceSuppressFrames,
+                 g_adaptive.interpSuppressFrames,
                  g_adaptive.inputFpsEma);
         }
     } else {
         g_adaptive.cadenceBreakFrames = 0;
     }
-    const bool cadenceSuppressInterp = g_adaptive.cadenceSuppressFrames > 0;
+    const bool suppressInterp = g_adaptive.interpSuppressFrames > 0;
     const uint32_t slot = g_context->pingPongIndex & 1U;
     const VkImage decoderImage = decoderImport.image;
     const VkImageView decoderView = decoderImport.view;
@@ -3096,6 +3096,10 @@ bool dispatchYuvToRgbaLocked(DecoderAhbImport& decoderImport,
     const uint32_t gy = (g_context->height + 7U) / 8U;
     vkCmdDispatch(cmd, gx, gy, 1);
 
+    if (g_context->presentPipeline != VK_NULL_HANDLE) {
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
+                          g_context->presentPipeline);
+    }
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
                             g_context->pipelineLayout, 0, 1, &g_context->dsSets[2],
                             0, nullptr);
@@ -3184,6 +3188,9 @@ bool dispatchYuvToRgbaLocked(DecoderAhbImport& decoderImport,
     // 视觉无副作用；只要不报 vulkan error / 不 crash 就算通过。
     AHardwareBuffer* realAhb = g_context->realOutput.get();
     if (bypassFramegen) {
+        // LSFG state is not advanced during bypass. Suppress the first generated
+        // output after recovery so it can re-prime on consecutive fresh inputs.
+        g_adaptive.interpSuppressFrames = std::max(g_adaptive.interpSuppressFrames, 1U);
         const auto b0 = std::chrono::steady_clock::now();
         enqueueAhbToPresenterLocked(realAhb, "real-bypass", g_context->dispatchCount, 0);
         const auto b1 = std::chrono::steady_clock::now();
@@ -3229,16 +3236,16 @@ bool dispatchYuvToRgbaLocked(DecoderAhbImport& decoderImport,
     }
 
     const bool hasValidInterp = g_context->lsfgPresentCount > 1 && !g_context->outputs.empty();
-    const bool showInterp = hasValidInterp && !cadenceSuppressInterp;
-    const uint32_t cadenceSuppressBefore = g_adaptive.cadenceSuppressFrames;
-    if (hasValidInterp && cadenceSuppressInterp &&
-        (cadenceBreak || cadenceSuppressBefore == 1 || logThisFrame)) {
-        LOGI("stage3.3d: cadence recovery real-only break=%d suppress=%u",
+    const bool showInterp = hasValidInterp && !suppressInterp;
+    const uint32_t interpSuppressBefore = g_adaptive.interpSuppressFrames;
+    if (hasValidInterp && suppressInterp &&
+        (cadenceBreak || interpSuppressBefore == 1 || logThisFrame)) {
+        LOGI("stage3.3d: interp recovery real-only break=%d suppress=%u",
              static_cast<int>(cadenceBreak),
-             cadenceSuppressBefore);
+             interpSuppressBefore);
     }
-    if (g_adaptive.cadenceSuppressFrames > 0) {
-        g_adaptive.cadenceSuppressFrames -= 1;
+    if (g_adaptive.interpSuppressFrames > 0) {
+        g_adaptive.interpSuppressFrames -= 1;
     }
     int64_t upscaleWaitMs = -1;
     AHardwareBuffer* interpAhb = !g_context->outputs.empty() ? g_context->outputs[0].get() : nullptr;
@@ -3270,7 +3277,7 @@ bool dispatchYuvToRgbaLocked(DecoderAhbImport& decoderImport,
             enqueueTag = presentMode == 1
                 ? "real+interp"
                 : "interp+real";
-        } else if (hasValidInterp && cadenceSuppressInterp) {
+        } else if (hasValidInterp && suppressInterp) {
             enqueueTag = cadenceBreak ? "real-cadence" : "real-recover";
         }
         LOGI("stage3.3c: enqueue tag=%s elapsed=%lldms",
@@ -3279,13 +3286,13 @@ bool dispatchYuvToRgbaLocked(DecoderAhbImport& decoderImport,
     }
     if (logThisFrame || totalMs >= kSlowFrameMs) {
         LOGI("stage3.3e: dispatch total count=%llu bypass=0 validInterp=%d showInterp=%d cadenceBreak=%d "
-             "cadenceSuppress=%u total=%lldms "
+             "interpSuppress=%u total=%lldms "
              "fence=%lldms lsfgPresent=%lldms lsfgWaitIdle=%lldms upscale=%lldms enqueue=%lldms inputEma=%.1f",
              static_cast<unsigned long long>(g_context->dispatchCount),
              static_cast<int>(hasValidInterp),
              static_cast<int>(showInterp),
              static_cast<int>(cadenceBreak),
-             cadenceSuppressBefore,
+             interpSuppressBefore,
              static_cast<long long>(totalMs),
              static_cast<long long>(waitFenceMs),
              static_cast<long long>(lsfgPresentMs),
