@@ -975,11 +975,14 @@ class StreamSettings : AppCompatActivity() {
                 fpsValue = prefs.getString(PreferenceConfiguration.FPS_PREF_STRING, PreferenceConfiguration.DEFAULT_FPS)
             }
 
-            prefs.edit {
-                putInt(
-                    PreferenceConfiguration.BITRATE_PREF_STRING,
-                    PreferenceConfiguration.getDefaultBitrate(resValue!!, fpsValue!!)
-                )
+            val defaultBitrate = PreferenceConfiguration.getDefaultBitrate(resValue!!, fpsValue!!)
+            val bitratePreference = findPreference<SeekBarPreference>(PreferenceConfiguration.BITRATE_PREF_STRING)
+            if (bitratePreference != null) {
+                bitratePreference.setProgress(defaultBitrate)
+            } else {
+                prefs.edit {
+                    putInt(PreferenceConfiguration.BITRATE_PREF_STRING, defaultBitrate)
+                }
             }
         }
 
