@@ -9,13 +9,11 @@
 
 #include "extract/extract.hpp"
 #include "extract/trans.hpp"
+#include "fsr_upscaler.hpp"
 
 #include "yuv_to_rgba.comp.spv.h"
-#include "rgba_upscale.comp.spv.h"
 #include "yuv_to_rgba16f.comp.spv.h"
-#include "rgba_upscale16f.comp.spv.h"
 #include "yuv_to_rgb10a2.comp.spv.h"
-#include "rgba_upscale10a2.comp.spv.h"
 
 #include <algorithm>
 #include <atomic>
@@ -167,12 +165,16 @@ struct ContextResources {
     VkImage lsfgOutputImage{VK_NULL_HANDLE};
     VkDeviceMemory lsfgOutputMemory{VK_NULL_HANDLE};
     VkImageView lsfgOutputView{VK_NULL_HANDLE};
+    VkImage fsrIntermediateImage{VK_NULL_HANDLE};
+    VkDeviceMemory fsrIntermediateMemory{VK_NULL_HANDLE};
+    VkImageView fsrIntermediateView{VK_NULL_HANDLE};
 
     // 阶段 3.3a-iii.a：YUV→RGBA compute pipeline（不含 ycbcr conversion；
     // conversion 与 decoder external format 绑定，要等首帧到达后才在 3.3a-iii.b 创建）。
     VkShaderModule shaderModule{VK_NULL_HANDLE};
     VkShaderModule presentShaderModule{VK_NULL_HANDLE};
     VkShaderModule upscaleShaderModule{VK_NULL_HANDLE};
+    VkShaderModule upscaleRcasShaderModule{VK_NULL_HANDLE};
 
     // 阶段 3.3a-iii.b.1：首帧到达后才创建的 ycbcr conversion + descriptor 套件 + compute pipeline。
     // conversion 绑 decoder externalFormat，所以必须延后到第一帧才能建。
@@ -193,8 +195,10 @@ struct ContextResources {
     VkDescriptorSetLayout upscaleDsLayout{VK_NULL_HANDLE};
     VkPipelineLayout upscalePipelineLayout{VK_NULL_HANDLE};
     VkPipeline upscalePipeline{VK_NULL_HANDLE};
+    VkPipeline upscaleRcasPipeline{VK_NULL_HANDLE};
     VkDescriptorPool upscaleDsPool{VK_NULL_HANDLE};
     VkDescriptorSet upscaleDsSet{VK_NULL_HANDLE};
+    VkDescriptorSet upscaleRcasDsSet{VK_NULL_HANDLE};
     VkCommandBuffer upscaleCmd{VK_NULL_HANDLE};
     VkFence upscaleFence{VK_NULL_HANDLE};
     uint32_t pingPongIndex{0};
@@ -249,6 +253,9 @@ struct ContextResources {
         if (upscalePipeline != VK_NULL_HANDLE) {
             vkDestroyPipeline(ownerDevice, upscalePipeline, nullptr);
         }
+        if (upscaleRcasPipeline != VK_NULL_HANDLE) {
+            vkDestroyPipeline(ownerDevice, upscaleRcasPipeline, nullptr);
+        }
         if (pipelineLayout != VK_NULL_HANDLE) {
             vkDestroyPipelineLayout(ownerDevice, pipelineLayout, nullptr);
         }
@@ -279,6 +286,9 @@ struct ContextResources {
         if (upscaleShaderModule != VK_NULL_HANDLE) {
             vkDestroyShaderModule(ownerDevice, upscaleShaderModule, nullptr);
         }
+        if (upscaleRcasShaderModule != VK_NULL_HANDLE) {
+            vkDestroyShaderModule(ownerDevice, upscaleRcasShaderModule, nullptr);
+        }
         if (input0View != VK_NULL_HANDLE) {
             vkDestroyImageView(ownerDevice, input0View, nullptr);
         }
@@ -293,6 +303,9 @@ struct ContextResources {
         }
         if (lsfgOutputView != VK_NULL_HANDLE) {
             vkDestroyImageView(ownerDevice, lsfgOutputView, nullptr);
+        }
+        if (fsrIntermediateView != VK_NULL_HANDLE) {
+            vkDestroyImageView(ownerDevice, fsrIntermediateView, nullptr);
         }
         if (input0Image != VK_NULL_HANDLE) {
             vkDestroyImage(ownerDevice, input0Image, nullptr);
@@ -309,6 +322,9 @@ struct ContextResources {
         if (lsfgOutputImage != VK_NULL_HANDLE) {
             vkDestroyImage(ownerDevice, lsfgOutputImage, nullptr);
         }
+        if (fsrIntermediateImage != VK_NULL_HANDLE) {
+            vkDestroyImage(ownerDevice, fsrIntermediateImage, nullptr);
+        }
         if (input0Memory != VK_NULL_HANDLE) {
             vkFreeMemory(ownerDevice, input0Memory, nullptr);
         }
@@ -323,6 +339,9 @@ struct ContextResources {
         }
         if (lsfgOutputMemory != VK_NULL_HANDLE) {
             vkFreeMemory(ownerDevice, lsfgOutputMemory, nullptr);
+        }
+        if (fsrIntermediateMemory != VK_NULL_HANDLE) {
+            vkFreeMemory(ownerDevice, fsrIntermediateMemory, nullptr);
         }
     }
 };
@@ -1101,6 +1120,98 @@ ImportedImage importOwnedColorAhb(VkDevice device,
     return out;
 }
 
+uint32_t findMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& memProps,
+                             uint32_t typeBits,
+                             VkMemoryPropertyFlags preferredFlags) {
+    uint32_t fallback = UINT32_MAX;
+    for (uint32_t i = 0; i < memProps.memoryTypeCount; ++i) {
+        if ((typeBits & (1u << i)) == 0) {
+            continue;
+        }
+        if ((memProps.memoryTypes[i].propertyFlags & preferredFlags) == preferredFlags) {
+            return i;
+        }
+        if (fallback == UINT32_MAX) {
+            fallback = i;
+        }
+    }
+    return fallback;
+}
+
+ImportedImage createDeviceColorImage(VkDevice device,
+                                     const VkPhysicalDeviceMemoryProperties& memProps,
+                                     uint32_t width, uint32_t height,
+                                     VkFormat vkFormat) {
+    VkImageCreateInfo imgCi{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = vkFormat,
+        .extent = { width, height, 1 },
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .usage = VK_IMAGE_USAGE_STORAGE_BIT |
+                 VK_IMAGE_USAGE_SAMPLED_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .queueFamilyIndexCount = 0,
+        .pQueueFamilyIndices = nullptr,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    };
+
+    ImportedImage out{};
+    if (vkCreateImage(device, &imgCi, nullptr, &out.image) != VK_SUCCESS) {
+        throw std::runtime_error("vkCreateImage (FSR intermediate) failed");
+    }
+
+    VkMemoryRequirements req{};
+    vkGetImageMemoryRequirements(device, out.image, &req);
+    const uint32_t typeIndex = findMemoryTypeIndex(
+        memProps,
+        req.memoryTypeBits,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    if (typeIndex == UINT32_MAX) {
+        vkDestroyImage(device, out.image, nullptr);
+        throw std::runtime_error("no compatible memory type for FSR intermediate");
+    }
+
+    VkMemoryAllocateInfo alloc{
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .pNext = nullptr,
+        .allocationSize = req.size,
+        .memoryTypeIndex = typeIndex,
+    };
+    if (vkAllocateMemory(device, &alloc, nullptr, &out.memory) != VK_SUCCESS) {
+        vkDestroyImage(device, out.image, nullptr);
+        throw std::runtime_error("vkAllocateMemory (FSR intermediate) failed");
+    }
+    if (vkBindImageMemory(device, out.image, out.memory, 0) != VK_SUCCESS) {
+        vkFreeMemory(device, out.memory, nullptr);
+        vkDestroyImage(device, out.image, nullptr);
+        throw std::runtime_error("vkBindImageMemory (FSR intermediate) failed");
+    }
+
+    VkImageViewCreateInfo viewCi{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .image = out.image,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = vkFormat,
+        .components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
+                       VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY},
+        .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
+    };
+    if (vkCreateImageView(device, &viewCi, nullptr, &out.view) != VK_SUCCESS) {
+        vkFreeMemory(device, out.memory, nullptr);
+        vkDestroyImage(device, out.image, nullptr);
+        throw std::runtime_error("vkCreateImageView (FSR intermediate) failed");
+    }
+    return out;
+}
+
 std::vector<uint8_t> loadTranslatedShader(const std::string& name) {
     return Extract::translateShader(Extract::getShader(name));
 }
@@ -1571,6 +1682,15 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
             resources->lsfgOutputImage = lsfgOut.image;
             resources->lsfgOutputMemory = lsfgOut.memory;
             resources->lsfgOutputView = lsfgOut.view;
+            auto fsrIntermediate = createDeviceColorImage(
+                g_vk->device,
+                g_vk->memProps,
+                resources->presentWidth,
+                resources->presentHeight,
+                resources->vkFormat);
+            resources->fsrIntermediateImage = fsrIntermediate.image;
+            resources->fsrIntermediateMemory = fsrIntermediate.memory;
+            resources->fsrIntermediateView = fsrIntermediate.view;
         }
         const auto ownedImportEnd = std::chrono::steady_clock::now();
         LOGI("stage3.2 bootstrap timing: importOwnedRgbaAhb=%lldms total=%lldms",
@@ -1614,27 +1734,30 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
             }
         }
         {
-            size_t shaderSize = 0;
-            const uint32_t* shaderCode = nullptr;
-            if (resources->presentVkFormat == VK_FORMAT_A2B10G10R10_UNORM_PACK32) {
-                shaderSize = k_rgba_upscale10a2_spv_size;
-                shaderCode = k_rgba_upscale10a2_spv;
-            } else if (resources->hdrPassthrough) {
-                shaderSize = k_rgba_upscale16f_spv_size;
-                shaderCode = k_rgba_upscale16f_spv;
-            } else {
-                shaderSize = k_rgba_upscale_spv_size;
-                shaderCode = k_rgba_upscale_spv;
-            }
+            const auto shader = FsrUpscaler::easuShaderForIntermediateFormat(resources->vkFormat);
             VkShaderModuleCreateInfo smCi{
                 .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
                 .pNext = nullptr,
                 .flags = 0,
-                .codeSize = shaderSize,
-                .pCode = shaderCode,
+                .codeSize = shader.size,
+                .pCode = shader.code,
             };
             if (vkCreateShaderModule(g_vk->device, &smCi, nullptr, &resources->upscaleShaderModule) != VK_SUCCESS) {
-                throw std::runtime_error("vkCreateShaderModule (rgba_upscale) failed");
+                throw std::runtime_error(std::string("vkCreateShaderModule (") + shader.name + ") failed");
+            }
+        }
+        {
+            const auto shader = FsrUpscaler::rcasShaderForOutputFormat(resources->presentVkFormat);
+            VkShaderModuleCreateInfo smCi{
+                .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .codeSize = shader.size,
+                .pCode = shader.code,
+            };
+            if (vkCreateShaderModule(g_vk->device, &smCi, nullptr,
+                                     &resources->upscaleRcasShaderModule) != VK_SUCCESS) {
+                throw std::runtime_error(std::string("vkCreateShaderModule (") + shader.name + ") failed");
             }
         }
         const auto shaderModuleEnd = std::chrono::steady_clock::now();
@@ -2140,42 +2263,56 @@ bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDR
         .pushConstantRangeCount = 0,
         .pPushConstantRanges = nullptr,
     };
+    VkPushConstantRange fsrPushRange = FsrUpscaler::pushConstantRange();
+    upscalePlCi.pushConstantRangeCount = 1;
+    upscalePlCi.pPushConstantRanges = &fsrPushRange;
     if (vkCreatePipelineLayout(device, &upscalePlCi, nullptr, &g_context->upscalePipelineLayout) != VK_SUCCESS) {
         LOGE("stage3.3u: vkCreatePipelineLayout failed");
         return false;
     }
 
-    VkComputePipelineCreateInfo upscalePipeCi{
-        .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = 0,
-        .stage = {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+    auto createUpscalePipeline = [&](VkShaderModule module, VkPipeline* pipeline, const char* tag) -> bool {
+        VkComputePipelineCreateInfo pipeCi{
+            .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
             .pNext = nullptr,
             .flags = 0,
-            .stage = VK_SHADER_STAGE_COMPUTE_BIT,
-            .module = g_context->upscaleShaderModule,
-            .pName = "main",
-            .pSpecializationInfo = nullptr,
-        },
-        .layout = g_context->upscalePipelineLayout,
-        .basePipelineHandle = VK_NULL_HANDLE,
-        .basePipelineIndex = -1,
+            .stage = {
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                .module = module,
+                .pName = "main",
+                .pSpecializationInfo = nullptr,
+            },
+            .layout = g_context->upscalePipelineLayout,
+            .basePipelineHandle = VK_NULL_HANDLE,
+            .basePipelineIndex = -1,
+        };
+        if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipeCi, nullptr, pipeline) != VK_SUCCESS) {
+            LOGE("stage3.3u: vkCreateComputePipelines(%s) failed", tag);
+            return false;
+        }
+        return true;
     };
-    if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &upscalePipeCi, nullptr, &g_context->upscalePipeline) != VK_SUCCESS) {
-        LOGE("stage3.3u: vkCreateComputePipelines failed");
+    if (!createUpscalePipeline(g_context->upscaleShaderModule,
+                               &g_context->upscalePipeline,
+                               "fsr-easu") ||
+        !createUpscalePipeline(g_context->upscaleRcasShaderModule,
+                               &g_context->upscaleRcasPipeline,
+                               "fsr-rcas")) {
         return false;
     }
 
     VkDescriptorPoolSize upscalePoolSizes[2]{
-        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
-        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 },
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2 },
     };
     VkDescriptorPoolCreateInfo upscaleDpCi{
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
         .pNext = nullptr,
         .flags = 0,
-        .maxSets = 1,
+        .maxSets = 2,
         .poolSizeCount = 2,
         .pPoolSizes = upscalePoolSizes,
     };
@@ -2183,42 +2320,47 @@ bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDR
         LOGE("stage3.3u: vkCreateDescriptorPool failed");
         return false;
     }
+    VkDescriptorSetLayout upscaleSetLayouts[2]{
+        g_context->upscaleDsLayout,
+        g_context->upscaleDsLayout,
+    };
+    VkDescriptorSet upscaleSets[2]{VK_NULL_HANDLE, VK_NULL_HANDLE};
     VkDescriptorSetAllocateInfo upscaleDsAi{
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
         .pNext = nullptr,
         .descriptorPool = g_context->upscaleDsPool,
-        .descriptorSetCount = 1,
-        .pSetLayouts = &g_context->upscaleDsLayout,
+        .descriptorSetCount = 2,
+        .pSetLayouts = upscaleSetLayouts,
     };
-    if (vkAllocateDescriptorSets(device, &upscaleDsAi, &g_context->upscaleDsSet) != VK_SUCCESS) {
+    if (vkAllocateDescriptorSets(device, &upscaleDsAi, upscaleSets) != VK_SUCCESS) {
         LOGE("stage3.3u: vkAllocateDescriptorSets failed");
         return false;
     }
+    g_context->upscaleDsSet = upscaleSets[0];
+    g_context->upscaleRcasDsSet = upscaleSets[1];
 
-    VkDescriptorImageInfo upscaleSrcInfo{
-        .sampler = g_context->rgbaSampler,
-        .imageView = g_context->lsfgOutputView,
-        .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    VkDescriptorImageInfo upscaleInfos[4]{
+        { g_context->rgbaSampler, g_context->lsfgOutputView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+        { VK_NULL_HANDLE, g_context->fsrIntermediateView, VK_IMAGE_LAYOUT_GENERAL },
+        { g_context->rgbaSampler, g_context->fsrIntermediateView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+        { VK_NULL_HANDLE, g_context->interpOutputView, VK_IMAGE_LAYOUT_GENERAL },
     };
-    VkDescriptorImageInfo upscaleDstInfo{
-        .sampler = VK_NULL_HANDLE,
-        .imageView = g_context->interpOutputView,
-        .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-    };
-    VkWriteDescriptorSet upscaleWrites[2]{};
-    upscaleWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    upscaleWrites[0].dstSet = g_context->upscaleDsSet;
-    upscaleWrites[0].dstBinding = 0;
-    upscaleWrites[0].descriptorCount = 1;
-    upscaleWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    upscaleWrites[0].pImageInfo = &upscaleSrcInfo;
-    upscaleWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    upscaleWrites[1].dstSet = g_context->upscaleDsSet;
-    upscaleWrites[1].dstBinding = 1;
-    upscaleWrites[1].descriptorCount = 1;
-    upscaleWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    upscaleWrites[1].pImageInfo = &upscaleDstInfo;
-    vkUpdateDescriptorSets(device, 2, upscaleWrites, 0, nullptr);
+    VkWriteDescriptorSet upscaleWrites[4]{};
+    for (uint32_t i = 0; i < 2; ++i) {
+        upscaleWrites[i * 2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        upscaleWrites[i * 2].dstSet = upscaleSets[i];
+        upscaleWrites[i * 2].dstBinding = 0;
+        upscaleWrites[i * 2].descriptorCount = 1;
+        upscaleWrites[i * 2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        upscaleWrites[i * 2].pImageInfo = &upscaleInfos[i * 2];
+        upscaleWrites[(i * 2) + 1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        upscaleWrites[(i * 2) + 1].dstSet = upscaleSets[i];
+        upscaleWrites[(i * 2) + 1].dstBinding = 1;
+        upscaleWrites[(i * 2) + 1].descriptorCount = 1;
+        upscaleWrites[(i * 2) + 1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        upscaleWrites[(i * 2) + 1].pImageInfo = &upscaleInfos[(i * 2) + 1];
+    }
+    vkUpdateDescriptorSets(device, 4, upscaleWrites, 0, nullptr);
 
     g_context->boundExternalFormat = fp.externalFormat;
     LOGI("stage3.3a-iii.b.1: ycbcr conversion + sampler + pipeline ready "
@@ -2232,9 +2374,11 @@ bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDR
          g_context->hdrMode,
          static_cast<int>(g_context->hdrFullRange),
          static_cast<int>(cvtCi.chromaFilter));
-    LOGI("stage3.3u: rgba upscale pipeline ready src=%ux%u dst=%ux%u filter=catmull sharp=1",
+    LOGI("stage3.3u: rgba upscale pipeline ready src=%ux%u mid=%ux%u dst=%ux%u filter=fsr1-easu+rcas sharp=%.2f",
          g_context->width, g_context->height,
-         g_context->presentWidth, g_context->presentHeight);
+         g_context->presentWidth, g_context->presentHeight,
+         g_context->presentWidth, g_context->presentHeight,
+         static_cast<double>(FsrUpscaler::kDefaultRcasSharpnessStops));
     return true;
 }
 
@@ -2459,7 +2603,9 @@ bool upscaleInterpLocked(bool logThisFrame, int64_t* outWaitMs) {
     }
     if (g_context == nullptr || g_vk == nullptr ||
         g_context->upscalePipeline == VK_NULL_HANDLE ||
-        g_context->upscaleDsSet == VK_NULL_HANDLE) {
+        g_context->upscaleRcasPipeline == VK_NULL_HANDLE ||
+        g_context->upscaleDsSet == VK_NULL_HANDLE ||
+        g_context->upscaleRcasDsSet == VK_NULL_HANDLE) {
         return false;
     }
     if (!ensureUpscaleObjectsLocked()) {
@@ -2480,7 +2626,7 @@ bool upscaleInterpLocked(bool logThisFrame, int64_t* outWaitMs) {
     };
     vkBeginCommandBuffer(cmd, &cmdBi);
 
-    VkImageMemoryBarrier barriers[2]{};
+    VkImageMemoryBarrier barriers[3]{};
     barriers[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     barriers[0].srcAccessMask = 0;
     barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -2498,8 +2644,18 @@ bool upscaleInterpLocked(bool logThisFrame, int64_t* outWaitMs) {
     barriers[1].newLayout = VK_IMAGE_LAYOUT_GENERAL;
     barriers[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barriers[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barriers[1].image = g_context->interpOutputImage;
+    barriers[1].image = g_context->fsrIntermediateImage;
     barriers[1].subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+
+    barriers[2].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barriers[2].srcAccessMask = 0;
+    barriers[2].dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    barriers[2].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    barriers[2].newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    barriers[2].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barriers[2].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barriers[2].image = g_context->interpOutputImage;
+    barriers[2].subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
     vkCmdPipelineBarrier(cmd,
                          VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
@@ -2507,14 +2663,50 @@ bool upscaleInterpLocked(bool logThisFrame, int64_t* outWaitMs) {
                          0,
                          0, nullptr,
                          0, nullptr,
-                         2, barriers);
+                         3, barriers);
 
+    const FsrUpscaler::EasuPushConstants easuConstants = FsrUpscaler::buildEasuConstants(
+        g_context->width,
+        g_context->height,
+        g_context->presentWidth,
+        g_context->presentHeight);
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, g_context->upscalePipeline);
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
                             g_context->upscalePipelineLayout, 0, 1, &g_context->upscaleDsSet,
                             0, nullptr);
-    const uint32_t gx = (g_context->presentWidth + 7U) / 8U;
-    const uint32_t gy = (g_context->presentHeight + 7U) / 8U;
+    vkCmdPushConstants(cmd, g_context->upscalePipelineLayout,
+                       VK_SHADER_STAGE_COMPUTE_BIT, 0,
+                       sizeof(easuConstants), &easuConstants);
+    const uint32_t gx = FsrUpscaler::dispatchGroupCount(g_context->presentWidth);
+    const uint32_t gy = FsrUpscaler::dispatchGroupCount(g_context->presentHeight);
+    vkCmdDispatch(cmd, gx, gy, 1);
+
+    VkImageMemoryBarrier rcasBarrier{};
+    rcasBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    rcasBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    rcasBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    rcasBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+    rcasBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    rcasBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    rcasBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    rcasBarrier.image = g_context->fsrIntermediateImage;
+    rcasBarrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    vkCmdPipelineBarrier(cmd,
+                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                         0,
+                         0, nullptr,
+                         0, nullptr,
+                         1, &rcasBarrier);
+
+    const FsrUpscaler::RcasPushConstants rcasConstants = FsrUpscaler::buildRcasConstants();
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, g_context->upscaleRcasPipeline);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
+                            g_context->upscalePipelineLayout, 0, 1,
+                            &g_context->upscaleRcasDsSet, 0, nullptr);
+    vkCmdPushConstants(cmd, g_context->upscalePipelineLayout,
+                       VK_SHADER_STAGE_COMPUTE_BIT, 0,
+                       sizeof(rcasConstants), &rcasConstants);
     vkCmdDispatch(cmd, gx, gy, 1);
 
     VkImageMemoryBarrier releaseBarrier{};
