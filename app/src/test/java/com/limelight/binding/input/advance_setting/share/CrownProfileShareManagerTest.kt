@@ -1,6 +1,7 @@
 package com.limelight.binding.input.advance_setting.share
 
 import com.limelight.utils.MathUtils
+import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -93,6 +94,61 @@ class CrownProfileShareManagerTest {
         payload.put("settings", """{"config_name":"changed"}""")
 
         CrownProfileShareManager.validatePayload(payload.toString())
+    }
+
+    @Test
+    fun parseStoreIndexAcceptsProfiles() {
+        val index = JSONObject()
+            .put("kind", CrownProfileShareManager.INDEX_KIND)
+            .put("schemaVersion", CrownProfileShareManager.SCHEMA_VERSION)
+            .put(
+                "profiles",
+                JSONArray()
+                    .put(
+                        JSONObject()
+                            .put("bundleId", "crown.apex.fps")
+                            .put("name", "Apex FPS Layout")
+                            .put("summary", "Fast access abilities and movement")
+                            .put("author", "WA Crown")
+                            .put("game", "Apex Legends")
+                            .put("tags", JSONArray().put("fps").put("movement"))
+                            .put("updatedAt", "2026-06-18T00:00:00Z")
+                            .put("url", "profiles/apex/fps.crown.json")
+                    )
+            )
+
+        val profiles = CrownProfileShareManager.parseStoreIndex(index.toString())
+
+        assertEquals(1, profiles.size)
+        assertEquals("crown.apex.fps", profiles[0].bundleId)
+        assertEquals("Apex FPS Layout", profiles[0].name)
+        assertEquals("WA Crown", profiles[0].author)
+        assertEquals("Apex Legends", profiles[0].game)
+        assertEquals(listOf("fps", "movement"), profiles[0].tags)
+        assertEquals("profiles/apex/fps.crown.json", profiles[0].url)
+    }
+
+    @Test
+    fun resolveStoreProfileUrlAcceptsRelativeUrls() {
+        val resolved = CrownProfileShareManager.resolveStoreProfileUrl(
+            indexUrl = "https://raw.githubusercontent.com/qiin2333/crown-profiles/main/index/v1.json",
+            profileUrl = "../profiles/apex/fps.crown.json"
+        )
+
+        assertEquals(
+            "https://raw.githubusercontent.com/qiin2333/crown-profiles/main/profiles/apex/fps.crown.json",
+            resolved
+        )
+    }
+
+    @Test(expected = CrownProfileShareManager.CrownProfileShareException::class)
+    fun parseStoreIndexRejectsWrongKind() {
+        val index = JSONObject()
+            .put("kind", CrownProfileShareManager.BUNDLE_KIND)
+            .put("schemaVersion", CrownProfileShareManager.SCHEMA_VERSION)
+            .put("profiles", JSONArray())
+
+        CrownProfileShareManager.parseStoreIndex(index.toString())
     }
 
     private fun validPayload(elementCount: Int = 1): String {

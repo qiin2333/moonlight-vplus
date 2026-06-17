@@ -70,6 +70,7 @@ import com.limelight.R
 import com.limelight.ExternalDisplayManager
 import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.share.CrownProfileShareManager
+import com.limelight.binding.input.advance_setting.share.GitHubCrownProfileStorePublisher
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper
 import com.limelight.binding.video.MediaCodecHelper
 import com.limelight.utils.AspectRatioConverter
@@ -83,9 +84,13 @@ import jp.wasabeef.glide.transformations.BlurTransformation
 import jp.wasabeef.glide.transformations.ColorFilterTransformation
 
 import java.io.BufferedReader
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
 import java.text.DateFormat
 import java.util.*
 
@@ -121,6 +126,9 @@ class StreamSettings : AppCompatActivity() {
         private const val REQUEST_CODE_OPEN_CONFIG_SYNC_DIRECTORY = 7
         private const val REQUEST_CODE_CREATE_CROWN_SHARE = 8
         private const val REQUEST_CODE_OPEN_CROWN_SHARE = 9
+        private const val CROWN_STORE_INDEX_URL = "https://raw.githubusercontent.com/qiin2333/crown-profiles/main/index/v1.json"
+        private const val CROWN_STORE_MAX_INDEX_BYTES = 256 * 1024
+        private const val CROWN_SHARE_MAX_DOWNLOAD_BYTES = 512 * 1024
 
         // HACK for Android 9
         var displayCutoutP: DisplayCutout? = null
@@ -1887,7 +1895,10 @@ class StreamSettings : AppCompatActivity() {
 
         private fun showCrownConfigManagementDialog() {
             val options = arrayOf(
+                    getString(R.string.crown_store_action_browse),
+                    getString(R.string.crown_store_action_publish),
                     getString(R.string.crown_share_action_import),
+                    getString(R.string.crown_share_action_import_url),
                     getString(R.string.crown_share_action_export),
                     getString(R.string.crown_config_action_import_legacy),
                     getString(R.string.crown_config_action_export_legacy),
@@ -1898,11 +1909,14 @@ class StreamSettings : AppCompatActivity() {
                     .setTitle(R.string.title_crown_config_management)
                     .setItems(options) { _, which ->
                         when (which) {
-                            0 -> openCrownShareDocument()
-                            1 -> showCrownShareExportConfigDialog()
-                            2 -> openConfigDocument(2)
-                            3 -> showCrownExportConfigDialog()
-                            4 -> showCrownMergeConfigDialog()
+                            0 -> openCrownStore()
+                            1 -> showCrownStorePublishProfileDialog()
+                            2 -> openCrownShareDocument()
+                            3 -> showCrownShareUrlImportDialog()
+                            4 -> showCrownShareExportConfigDialog()
+                            5 -> openConfigDocument(2)
+                            6 -> showCrownExportConfigDialog()
+                            7 -> showCrownMergeConfigDialog()
                         }
                     }
                     .show()
@@ -1977,6 +1991,420 @@ class StreamSettings : AppCompatActivity() {
                 Log.e("CrownShare", "Failed to read Crown share package", e)
                 Toast.makeText(context, R.string.toast_crown_share_import_failed, Toast.LENGTH_LONG).show()
             }
+        }
+
+        private fun openCrownStore() {
+            val appContext = requireContext().applicationContext
+            Toast.makeText(context, R.string.toast_crown_store_loading, Toast.LENGTH_SHORT).show()
+            thread(name = "CrownStoreIndex") {
+                val result = runCatching {
+                    val indexText = downloadRemoteText(CROWN_STORE_INDEX_URL, CROWN_STORE_MAX_INDEX_BYTES)
+                    CrownProfileShareManager.parseStoreIndex(indexText)
+                }
+
+                Handler(Looper.getMainLooper()).post {
+                    if (!isAdded) return@post
+                    result
+                            .onSuccess { profiles ->
+                                if (profiles.isEmpty()) {
+                                    Toast.makeText(
+                                            appContext,
+                                            R.string.toast_crown_store_empty,
+                                            Toast.LENGTH_LONG
+                                    ).show()
+                                } else {
+                                    showCrownStoreDialog(profiles)
+                                }
+                            }
+                            .onFailure {
+                                Log.e("CrownStore", "Failed to load Crown profile store", it)
+                                Toast.makeText(
+                                        appContext,
+                                        R.string.toast_crown_store_failed,
+                                        Toast.LENGTH_LONG
+                                ).show()
+                            }
+                }
+            }
+        }
+
+        private fun showCrownStoreDialog(profiles: List<CrownProfileShareManager.StoreProfile>) {
+            val labels = profiles.map { crownStoreProfileLabel(it) }.toTypedArray<CharSequence>()
+            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
+                    .setTitle(R.string.crown_store_action_browse)
+                    .setItems(labels) { _, which ->
+                        val profile = profiles[which]
+                        val profileUrl = try {
+                            CrownProfileShareManager.resolveStoreProfileUrl(CROWN_STORE_INDEX_URL, profile.url)
+                        } catch (e: Exception) {
+                            Log.e("CrownStore", "Invalid Crown store profile URL", e)
+                            Toast.makeText(context, R.string.toast_crown_store_profile_failed, Toast.LENGTH_LONG).show()
+                            return@setItems
+                        }
+                        importCrownShareFromUrl(
+                                profileUrl,
+                                sourceLabelOverride = getString(R.string.crown_store_source_label, profile.name),
+                                failureToastRes = R.string.toast_crown_store_profile_failed
+                        )
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+        }
+
+        private fun crownStoreProfileLabel(profile: CrownProfileShareManager.StoreProfile): String {
+            val details = arrayOf(profile.game, profile.author)
+                    .filter { it.isNotBlank() }
+                    .joinToString(" - ")
+            return buildString {
+                append(profile.name)
+                if (details.isNotBlank()) {
+                    append('\n')
+                    append(details)
+                }
+                if (profile.summary.isNotBlank()) {
+                    append('\n')
+                    append(profile.summary)
+                }
+            }
+        }
+
+        private fun showCrownStorePublishProfileDialog() {
+            val ctx = requireContext()
+            if (!GitHubStarVerifier.isConfigured()) {
+                Toast.makeText(ctx, R.string.toast_developer_oauth_unconfigured, Toast.LENGTH_LONG).show()
+                return
+            }
+
+            val accessToken = PreferenceManager.getDefaultSharedPreferences(ctx)
+                    .getString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, null)
+            if (accessToken.isNullOrBlank()) {
+                showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken = false)
+                return
+            }
+
+            val helper = SuperConfigDatabaseHelper(context)
+            val configMap = loadConfigMap(helper)
+            if (configMap.isEmpty()) {
+                Toast.makeText(context, R.string.crown_config_no_profiles, Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val ids = configMap.keys.toTypedArray()
+            val names = configMap.values.toTypedArray<CharSequence>()
+            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
+                    .setTitle(R.string.crown_store_action_publish)
+                    .setItems(names) { _, which ->
+                        showCrownStorePublishMetadataDialog(ids[which], configMap[ids[which]] ?: "Crown Profile")
+                    }
+                    .show()
+        }
+
+        private fun showCrownStorePublishMetadataDialog(configId: String, defaultName: String) {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
+            val defaultAuthor = prefs.getString(DeveloperUnlockSettings.PREF_USER_LOGIN, null).orEmpty()
+            val nameInput = crownStorePublishInput(defaultName, R.string.hint_crown_store_profile_name)
+            val gameInput = crownStorePublishInput("", R.string.hint_crown_store_game)
+            val authorInput = crownStorePublishInput(defaultAuthor, R.string.hint_crown_store_author)
+            val tagsInput = crownStorePublishInput("", R.string.hint_crown_store_tags)
+            val summaryInput = crownStorePublishInput("", R.string.hint_crown_store_summary).apply {
+                setSingleLine(false)
+                minLines = 2
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            }
+
+            val container = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                val inset = (24 * resources.displayMetrics.density).toInt()
+                setPadding(inset, 0, inset, 0)
+                addCrownStorePublishField(R.string.label_crown_store_profile_name, nameInput)
+                addCrownStorePublishField(R.string.label_crown_store_game, gameInput)
+                addCrownStorePublishField(R.string.label_crown_store_author, authorInput)
+                addCrownStorePublishField(R.string.label_crown_store_tags, tagsInput)
+                addCrownStorePublishField(R.string.label_crown_store_summary, summaryInput)
+            }
+
+            val dialog = AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
+                    .setTitle(R.string.title_crown_store_publish_metadata)
+                    .setMessage(R.string.message_crown_store_publish_metadata)
+                    .setView(container)
+                    .setPositiveButton(R.string.crown_store_action_publish, null)
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .create()
+            dialog.setOnShowListener {
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                    val profileName = nameInput.text?.toString().orEmpty().trim()
+                    if (profileName.isBlank()) {
+                        nameInput.error = getString(R.string.hint_crown_store_profile_name)
+                        return@setOnClickListener
+                    }
+
+                    val game = gameInput.text?.toString().orEmpty().trim()
+                    val author = authorInput.text?.toString().orEmpty().trim()
+                    val summary = summaryInput.text?.toString().orEmpty().trim()
+                    val tags = tagsInput.text?.toString().orEmpty()
+                            .split(Regex("[,\\s\\uFF0C]+"))
+                            .map { it.trim() }
+                            .filter { it.isNotBlank() }
+                            .distinct()
+
+                    try {
+                        val payload = SuperConfigDatabaseHelper(context).exportConfig(configId.toLong())
+                        val bundle = CrownProfileShareManager.createBundle(
+                                profileName = profileName,
+                                payload = payload,
+                                metadata = currentCrownShareExportMetadata(),
+                                displayMetadata = CrownProfileShareManager.BundleDisplayMetadata(
+                                        summary = summary,
+                                        authorName = author,
+                                        gameName = game,
+                                        tags = tags
+                                )
+                        )
+                        dialog.dismiss()
+                        publishCrownStoreProfile(
+                                GitHubCrownProfileStorePublisher.PublishRequest(
+                                        profileName = profileName,
+                                        summary = summary,
+                                        author = author,
+                                        game = game,
+                                        tags = tags,
+                                        bundleJson = bundle
+                                )
+                        )
+                    } catch (e: Exception) {
+                        Log.e("CrownStore", "Failed to prepare Crown Store profile", e)
+                        Toast.makeText(context, R.string.toast_crown_store_publish_failed, Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+            dialog.show()
+        }
+
+        private fun crownStorePublishInput(value: String, hintRes: Int): EditText {
+            return EditText(requireContext()).apply {
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+                setSingleLine(true)
+                setText(value)
+                hint = getString(hintRes)
+            }
+        }
+
+        private fun LinearLayout.addCrownStorePublishField(labelRes: Int, input: EditText) {
+            addView(TextView(context).apply {
+                text = getString(labelRes)
+            })
+            addView(input)
+        }
+
+        private fun publishCrownStoreProfile(request: GitHubCrownProfileStorePublisher.PublishRequest) {
+            val appContext = requireContext().applicationContext
+            val accessToken = PreferenceManager.getDefaultSharedPreferences(appContext)
+                    .getString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, null)
+            if (accessToken.isNullOrBlank()) {
+                showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken = false)
+                return
+            }
+
+            Toast.makeText(context, R.string.toast_crown_store_publish_started, Toast.LENGTH_LONG).show()
+            thread(name = "CrownStorePublish") {
+                val result = runCatching {
+                    GitHubCrownProfileStorePublisher.publish(accessToken, request)
+                }
+
+                Handler(Looper.getMainLooper()).post {
+                    if (!isAdded) return@post
+                    result
+                            .onSuccess { publishResult ->
+                                showCrownStorePublishSuccessDialog(publishResult)
+                            }
+                            .onFailure { error ->
+                                Log.e("CrownStore", "Failed to publish Crown Store profile", error)
+                                if (error is GitHubCrownProfileStorePublisher.GitHubCrownStoreException &&
+                                        error.authorizationFailure) {
+                                    showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken = true)
+                                } else {
+                                    Toast.makeText(
+                                            appContext,
+                                            getString(
+                                                    R.string.toast_crown_store_publish_failed_with_error,
+                                                    error.message ?: error.javaClass.simpleName
+                                            ),
+                                            Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
+                }
+            }
+        }
+
+        private fun showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken: Boolean) {
+            val ctx = requireContext()
+            if (clearSavedToken) {
+                PreferenceManager.getDefaultSharedPreferences(ctx).edit {
+                    remove(DeveloperUnlockSettings.PREF_ACCESS_TOKEN)
+                    remove(DeveloperUnlockSettings.PREF_UNLOCKED)
+                    remove(DeveloperUnlockSettings.PREF_VERIFIED_AT_MS)
+                }
+                refreshDeveloperFeatureGateState()
+            }
+
+            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
+                    .setTitle(R.string.title_crown_store_github_authorization)
+                    .setMessage(
+                            if (clearSavedToken) {
+                                R.string.message_crown_store_github_reauthorization_required
+                            } else {
+                                R.string.message_crown_store_github_authorization_required
+                            }
+                    )
+                    .setPositiveButton(R.string.action_crown_store_authorize_github) { _, _ ->
+                        startDeveloperUnlockVerification()
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+        }
+
+        private fun showCrownStorePublishSuccessDialog(result: GitHubCrownProfileStorePublisher.PublishResult) {
+            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
+                    .setTitle(R.string.title_crown_store_publish_success)
+                    .setMessage(
+                            getString(
+                                    R.string.message_crown_store_publish_success,
+                                    result.profilePath,
+                                    result.pullRequestUrl
+                            )
+                    )
+                    .setPositiveButton(R.string.action_open_pull_request) { _, _ ->
+                        openDeveloperUrl(result.pullRequestUrl)
+                    }
+                    .setNegativeButton(android.R.string.ok, null)
+                    .show()
+        }
+
+        private fun showCrownShareUrlImportDialog() {
+            val input = EditText(requireContext()).apply {
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+                setSingleLine(true)
+                hint = getString(R.string.hint_crown_share_import_url)
+            }
+            val container = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                val inset = (24 * resources.displayMetrics.density).toInt()
+                setPadding(inset, 0, inset, 0)
+                addView(input)
+            }
+
+            val dialog = AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
+                    .setTitle(R.string.crown_share_action_import_url)
+                    .setMessage(R.string.message_crown_share_import_url)
+                    .setView(container)
+                    .setPositiveButton(R.string.crown_share_action_import, null)
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .create()
+            dialog.setOnShowListener {
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                    val url = input.text?.toString().orEmpty().trim()
+                    if (url.isBlank()) {
+                        input.error = getString(R.string.hint_crown_share_import_url)
+                        return@setOnClickListener
+                    }
+                    dialog.dismiss()
+                    importCrownShareFromUrl(url)
+                }
+                input.requestFocus()
+                dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
+            }
+            dialog.show()
+        }
+
+        private fun importCrownShareFromUrl(
+            url: String,
+            sourceLabelOverride: String? = null,
+            failureToastRes: Int = R.string.toast_crown_share_url_failed
+        ) {
+            val normalizedUrl = url.trim()
+            if (!normalizedUrl.startsWith("https://", ignoreCase = true) &&
+                    !normalizedUrl.startsWith("http://", ignoreCase = true)) {
+                Toast.makeText(context, R.string.toast_crown_share_url_invalid, Toast.LENGTH_LONG).show()
+                return
+            }
+
+            val appContext = requireContext().applicationContext
+            Toast.makeText(context, R.string.toast_crown_share_url_loading, Toast.LENGTH_SHORT).show()
+            thread(name = "CrownShareUrlImport") {
+                val result = runCatching {
+                    val importText = downloadRemoteText(normalizedUrl, CROWN_SHARE_MAX_DOWNLOAD_BYTES)
+                    CrownProfileShareManager.parseImportText(importText)
+                        .copy(sourceLabel = sourceLabelOverride ?: crownShareSourceLabel(normalizedUrl))
+                }
+
+                Handler(Looper.getMainLooper()).post {
+                    if (!isAdded) return@post
+                    result
+                            .onSuccess { importedProfile ->
+                                pendingCrownShareImport = importedProfile
+                                showCrownShareImportPreview(importedProfile)
+                            }
+                            .onFailure {
+                                Log.e("CrownShare", "Failed to import Crown share package from URL", it)
+                                Toast.makeText(
+                                        appContext,
+                                        failureToastRes,
+                                        Toast.LENGTH_LONG
+                                ).show()
+                            }
+                }
+            }
+        }
+
+        private fun crownShareSourceLabel(url: String): String {
+            return runCatching {
+                URL(url).host
+                    .takeIf { it.isNotBlank() }
+                    ?.let { "Link: $it" }
+            }.getOrNull() ?: "Link"
+        }
+
+        private fun downloadRemoteText(url: String, maxBytes: Int): String {
+            val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 10000
+                readTimeout = 15000
+                instanceFollowRedirects = true
+                requestMethod = "GET"
+                setRequestProperty("Accept", "application/json,text/plain,*/*")
+            }
+
+            try {
+                val responseCode = connection.responseCode
+                if (responseCode !in 200..299) {
+                    throw IOException("HTTP $responseCode")
+                }
+                val contentLength = connection.contentLengthLong
+                if (contentLength > maxBytes) {
+                    throw IOException("Remote Crown profile response is too large")
+                }
+                return connection.inputStream.use { input ->
+                    readLimitedText(input, maxBytes)
+                }
+            } finally {
+                connection.disconnect()
+            }
+        }
+
+        private fun readLimitedText(input: InputStream, maxBytes: Int): String {
+            val output = ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            var total = 0
+            while (true) {
+                val read = input.read(buffer)
+                if (read == -1) break
+                total += read
+                if (total > maxBytes) {
+                    throw IOException("Remote Crown profile response is too large")
+                }
+                output.write(buffer, 0, read)
+            }
+            return output.toString(Charsets.UTF_8.name())
         }
 
         private fun showCrownShareImportPreview(profile: CrownProfileShareManager.ImportedProfile) {

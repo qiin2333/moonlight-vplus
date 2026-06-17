@@ -15,6 +15,7 @@ object GitHubStarVerifier {
     private const val API_VERSION = "2022-11-28"
     private const val REPO_OWNER = "qiin2333"
     private const val REPO_NAME = "moonlight-vplus"
+    private const val OAUTH_SCOPE = "public_repo"
 
     data class DeviceCode(
         val deviceCode: String,
@@ -47,7 +48,7 @@ object GitHubStarVerifier {
             DEVICE_CODE_URL,
             mapOf(
                 "client_id" to BuildConfig.GITHUB_OAUTH_CLIENT_ID,
-                "scope" to ""
+                "scope" to OAUTH_SCOPE
             )
         )
         if (response.code != HttpURLConnection.HTTP_OK) {

@@ -9,9 +9,12 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import java.net.MalformedURLException
+import java.net.URL
 
 object CrownProfileShareManager {
     const val BUNDLE_KIND = "crown-profile-bundle"
+    const val INDEX_KIND = "crown-profile-index"
     const val SCHEMA_VERSION = 1
     const val FILE_EXTENSION = ".crown.json"
 
@@ -20,6 +23,13 @@ object CrownProfileShareManager {
         val appVersionCode: Long,
         val appVersionName: String,
         val exportedAtMillis: Long = System.currentTimeMillis()
+    )
+
+    data class BundleDisplayMetadata(
+        val summary: String = "",
+        val authorName: String = "",
+        val gameName: String = "",
+        val tags: List<String> = emptyList()
     )
 
     data class PayloadInfo(
@@ -39,9 +49,25 @@ object CrownProfileShareManager {
         val payloadInfo: PayloadInfo
     )
 
+    data class StoreProfile(
+        val bundleId: String,
+        val name: String,
+        val summary: String,
+        val author: String,
+        val game: String,
+        val tags: List<String>,
+        val updatedAt: String,
+        val url: String
+    )
+
     class CrownProfileShareException(message: String) : IllegalArgumentException(message)
 
-    fun createBundle(profileName: String, payload: String, metadata: ExportMetadata): String {
+    fun createBundle(
+        profileName: String,
+        payload: String,
+        metadata: ExportMetadata,
+        displayMetadata: BundleDisplayMetadata = BundleDisplayMetadata()
+    ): String {
         val cleanName = profileName.trim().ifBlank { "Crown Profile" }
         val payloadInfo = validatePayload(payload)
         val timestamp = formatIso8601(metadata.exportedAtMillis)
@@ -52,7 +78,7 @@ object CrownProfileShareManager {
             .put("schemaVersion", SCHEMA_VERSION)
             .put("bundleId", bundleId)
             .put("name", cleanName)
-            .put("summary", "")
+            .put("summary", displayMetadata.summary.trim())
             .put(
                 "compatibility",
                 JSONObject()
@@ -70,6 +96,22 @@ object CrownProfileShareManager {
             .put("createdAt", timestamp)
             .put("updatedAt", timestamp)
             .put("packageName", metadata.packageName)
+
+        displayMetadata.authorName.trim()
+            .takeIf { it.isNotBlank() }
+            ?.let { root.put("author", JSONObject().put("name", it)) }
+        displayMetadata.gameName.trim()
+            .takeIf { it.isNotBlank() }
+            ?.let { root.put("game", JSONObject().put("name", it)) }
+        displayMetadata.tags
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .takeIf { it.isNotEmpty() }
+            ?.let { tags ->
+                val jsonTags = JSONArray()
+                tags.forEach { jsonTags.put(it) }
+                root.put("tags", jsonTags)
+            }
 
         metadata.appVersionName
             .takeIf { it.isNotBlank() }
@@ -144,6 +186,51 @@ object CrownProfileShareManager {
         return suggestedFileStem(profileName) + FILE_EXTENSION
     }
 
+    fun parseStoreIndex(text: String): List<StoreProfile> {
+        val trimmed = text.trim()
+        if (trimmed.isBlank()) {
+            throw CrownProfileShareException("Crown store index is empty")
+        }
+
+        val root = try {
+            JSONObject(trimmed)
+        } catch (e: JSONException) {
+            throw CrownProfileShareException("Crown store index is not valid JSON")
+        }
+
+        if (root.optString("kind") != INDEX_KIND) {
+            throw CrownProfileShareException("Crown store index has an unsupported kind")
+        }
+        val schemaVersion = root.optInt("schemaVersion", -1)
+        if (schemaVersion != SCHEMA_VERSION) {
+            throw CrownProfileShareException("Unsupported Crown store index version")
+        }
+
+        val profiles = root.optJSONArray("profiles")
+            ?: throw CrownProfileShareException("Crown store index is missing profiles")
+        val result = ArrayList<StoreProfile>(profiles.length())
+        for (index in 0 until profiles.length()) {
+            val profile = profiles.optJSONObject(index)
+                ?: throw CrownProfileShareException("Crown store index contains an invalid profile")
+            result.add(parseStoreProfile(profile))
+        }
+        return result
+    }
+
+    fun resolveStoreProfileUrl(indexUrl: String, profileUrl: String): String {
+        val resolvedUrl = try {
+            URL(URL(indexUrl), profileUrl.trim())
+        } catch (e: MalformedURLException) {
+            throw CrownProfileShareException("Crown store profile URL is invalid")
+        }
+
+        val protocol = resolvedUrl.protocol.lowercase(Locale.US)
+        if (protocol != "http" && protocol != "https") {
+            throw CrownProfileShareException("Crown store profile URL must use HTTP or HTTPS")
+        }
+        return resolvedUrl.toString()
+    }
+
     private fun parseBundle(root: JSONObject): ImportedProfile {
         val schemaVersion = root.optInt("schemaVersion", -1)
         if (schemaVersion != SCHEMA_VERSION) {
@@ -192,6 +279,37 @@ object CrownProfileShareManager {
             payload = payload,
             payloadInfo = payloadInfo
         )
+    }
+
+    private fun parseStoreProfile(profile: JSONObject): StoreProfile {
+        val name = profile.optString("name", "").trim()
+        val url = profile.optString("url", "").trim()
+        if (name.isBlank() || url.isBlank()) {
+            throw CrownProfileShareException("Crown store profile is missing a name or URL")
+        }
+
+        return StoreProfile(
+            bundleId = profile.optString("bundleId", profile.optString("id", "")).trim(),
+            name = name,
+            summary = profile.optString("summary", "").trim(),
+            author = profile.optString("author", "").trim(),
+            game = profile.optString("game", "").trim(),
+            tags = parseStringArray(profile.optJSONArray("tags")),
+            updatedAt = profile.optString("updatedAt", "").trim(),
+            url = url
+        )
+    }
+
+    private fun parseStringArray(array: JSONArray?): List<String> {
+        if (array == null) return emptyList()
+        val result = ArrayList<String>(array.length())
+        for (index in 0 until array.length()) {
+            val value = array.optString(index, "").trim()
+            if (value.isNotBlank()) {
+                result.add(value)
+            }
+        }
+        return result
     }
 
     private fun suggestedFileStem(profileName: String): String {
