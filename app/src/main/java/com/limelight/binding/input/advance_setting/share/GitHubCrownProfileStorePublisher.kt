@@ -48,12 +48,12 @@ object GitHubCrownProfileStorePublisher {
         }
 
         val userLogin = fetchLogin(accessToken)
-        val forkOwner = ensureUserFork(accessToken, userLogin)
-        syncFork(accessToken, forkOwner)
+        val publishOwner = ensurePublishRepository(accessToken, userLogin)
+        syncFork(accessToken, publishOwner)
 
-        val baseSha = getRefSha(accessToken, forkOwner, STORE_BRANCH)
+        val baseSha = getRefSha(accessToken, publishOwner, STORE_BRANCH)
         val branchName = "crown-profile/${slug(request.profileName)}-${System.currentTimeMillis()}"
-        createBranch(accessToken, forkOwner, branchName, baseSha)
+        createBranch(accessToken, publishOwner, branchName, baseSha)
 
         val profilePath = buildProfilePath(request)
         val upstreamIndex = getContent(accessToken, STORE_OWNER, STORE_REPO, INDEX_PATH, STORE_BRANCH)
@@ -62,7 +62,7 @@ object GitHubCrownProfileStorePublisher {
 
         putContent(
             accessToken = accessToken,
-            owner = forkOwner,
+            owner = publishOwner,
             path = profilePath,
             branch = branchName,
             content = request.bundleJson,
@@ -70,10 +70,10 @@ object GitHubCrownProfileStorePublisher {
             message = "Add ${request.profileName} Crown profile"
         )
 
-        val forkIndex = getContent(accessToken, forkOwner, STORE_REPO, INDEX_PATH, branchName)
+        val forkIndex = getContent(accessToken, publishOwner, STORE_REPO, INDEX_PATH, branchName)
         putContent(
             accessToken = accessToken,
-            owner = forkOwner,
+            owner = publishOwner,
             path = INDEX_PATH,
             branch = branchName,
             content = updatedIndex,
@@ -81,7 +81,7 @@ object GitHubCrownProfileStorePublisher {
             message = "Update Crown profile index"
         )
 
-        val pullRequestUrl = createPullRequest(accessToken, forkOwner, branchName, request)
+        val pullRequestUrl = createPullRequest(accessToken, publishOwner, branchName, request)
         return PublishResult(
             pullRequestUrl = pullRequestUrl,
             branchName = branchName,
@@ -157,7 +157,11 @@ object GitHubCrownProfileStorePublisher {
     }
 
     @Throws(IOException::class)
-    private fun ensureUserFork(accessToken: String, login: String): String {
+    private fun ensurePublishRepository(accessToken: String, login: String): String {
+        if (login == STORE_OWNER) {
+            return STORE_OWNER
+        }
+
         val existing = request(accessToken, "GET", repoUrl(login))
         if (existing.code == HttpURLConnection.HTTP_OK) {
             val repo = JSONObject(existing.body)
@@ -185,6 +189,10 @@ object GitHubCrownProfileStorePublisher {
 
     @Throws(IOException::class)
     private fun syncFork(accessToken: String, owner: String) {
+        if (owner == STORE_OWNER) {
+            return
+        }
+
         val response = request(
             accessToken,
             "POST",
