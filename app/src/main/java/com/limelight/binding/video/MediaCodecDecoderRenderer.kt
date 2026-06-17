@@ -60,6 +60,11 @@ class MediaCodecDecoderRenderer(
         private const val EXCEPTION_REPORT_DELAY_MS = 3000
         private const val FRAMEGEN_SURFACE_SWITCH_MAX_RETRIES = 20
         private const val FRAMEGEN_SURFACE_SWITCH_RETRY_DELAY_MS = 50L
+        private const val DECODER_HANG_RECOVERY_THRESHOLD_MS = 5000
+        private const val DECODER_COMPAT_NORMAL = 0
+        private const val DECODER_COMPAT_NO_AGGRESSIVE_VENDOR_PARAMS = 1
+        private const val DECODER_COMPAT_NO_VENDOR_PARAMS = 2
+        private const val DECODER_COMPAT_PLAIN_FORMAT = 3
     }
 
     // Used on versions < 5.0
@@ -134,6 +139,10 @@ class MediaCodecDecoderRenderer(
     private val codecRecoveryMonitor = Any()
     private var codecRecoveryThreadQuiescedFlags = 0
     private var codecRecoveryAttempts = 0
+    private var decoderHangRecoveryAttempts = 0
+    private var decoderCompatibilityLevel = DECODER_COMPAT_NORMAL
+    private var configuredDecoderTryNumber = 0
+    private var configuredDecoderCompatibilityLevel = DECODER_COMPAT_NORMAL
 
     private var inputFormat: MediaFormat? = null
     private var outputFormat: MediaFormat? = null
@@ -522,6 +531,7 @@ class MediaCodecDecoderRenderer(
         if (consecutiveCrashCount % 2 == 1) {
             refFrameInvalidationAvc = false
             refFrameInvalidationHevc = false
+            refFrameInvalidationAv1 = false
             LimeLog.warning("Disabling RFI due to previous crash")
         }
     }
@@ -723,6 +733,50 @@ class MediaCodecDecoderRenderer(
         }
 
         return videoFormat
+    }
+
+    private fun getActiveDecoderSelection(): Pair<String, MediaCodecInfo>? {
+        return when {
+            (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0 && avcDecoder != null ->
+                "video/avc" to avcDecoder
+            (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H265) != 0 && hevcDecoder != null ->
+                "video/hevc" to hevcDecoder
+            (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_AV1) != 0 && av1Decoder != null ->
+                "video/av01" to av1Decoder
+            else -> null
+        }
+    }
+
+    private fun createConfiguredMediaFormat(
+        mimeType: String,
+        selectedDecoderInfo: MediaCodecInfo,
+        tryNumber: Int
+    ): Pair<MediaFormat, Boolean> {
+        val mediaFormat = createBaseMediaFormat(mimeType)
+        val newFormat = MediaCodecHelper.setDecoderLowLatencyOptions(
+            mediaFormat,
+            selectedDecoderInfo,
+            tryNumber,
+            prefs.forceMtkMaxOperatingRate,
+            decoderCompatibilityLevel
+        )
+        return mediaFormat to newFormat
+    }
+
+    private fun getRecoveryMediaFormat(): MediaFormat {
+        val configured = configuredFormat
+        if (configured != null && decoderCompatibilityLevel == configuredDecoderCompatibilityLevel) {
+            return configured
+        }
+
+        val (mimeType, selectedDecoderInfo) = getActiveDecoderSelection()
+            ?: throw IllegalStateException("No active decoder for format $videoFormat")
+        val (mediaFormat, _) = createConfiguredMediaFormat(
+            mimeType,
+            selectedDecoderInfo,
+            configuredDecoderTryNumber
+        )
+        return mediaFormat
     }
 
     private fun configureAndStartDecoder(format: MediaFormat) {
@@ -955,19 +1009,18 @@ class MediaCodecDecoderRenderer(
         while (true) {
             LimeLog.info("Decoder configuration try: $tryNumber")
 
-            val mediaFormat = createBaseMediaFormat(mimeType)
-
             // This will try low latency options until we find one that works (or we give up).
-            val newFormat = MediaCodecHelper.setDecoderLowLatencyOptions(
-                mediaFormat,
+            val (mediaFormat, newFormat) = createConfiguredMediaFormat(
+                mimeType,
                 selectedDecoderInfo,
-                tryNumber,
-                prefs.forceMtkMaxOperatingRate
+                tryNumber
             )
 
             // Throw the underlying codec exception on the last attempt if the caller requested it
             if (tryConfigureDecoder(selectedDecoderInfo, mediaFormat, !newFormat && throwOnCodecError)) {
                 // Success!
+                configuredDecoderTryNumber = tryNumber
+                configuredDecoderCompatibilityLevel = decoderCompatibilityLevel
 
                 // Check LinearBlock copy-free compatibility (API 30+)
                 // Disabled: Many vendor HEVC/HDR decoders have LinearBlock bugs causing crashes
@@ -1090,11 +1143,12 @@ class MediaCodecDecoderRenderer(
 
                 // For "recoverable" exceptions, we can just stop, reconfigure, and restart.
                 if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESTART) {
-                    LimeLog.warning("Trying to restart decoder after CodecException")
+                    LimeLog.warning("Trying to restart decoder after codec failure")
                     try {
                         videoDecoder!!.stop()
                         setupAsyncCallback() // Re-set callback after stop() for reliable async mode
-                        configureAndStartDecoder(configuredFormat!!)
+                        configureAndStartDecoder(getRecoveryMediaFormat())
+                        configuredDecoderCompatibilityLevel = decoderCompatibilityLevel
                         codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
                     } catch (e: IllegalArgumentException) {
                         e.printStackTrace()
@@ -1114,11 +1168,12 @@ class MediaCodecDecoderRenderer(
                 // For "non-recoverable" exceptions on L+, we can call reset() to recover
                 // without having to recreate the entire decoder again.
                 if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESET) {
-                    LimeLog.warning("Trying to reset decoder after CodecException")
+                    LimeLog.warning("Trying to reset decoder after codec failure")
                     try {
                         videoDecoder!!.reset()
                         setupAsyncCallback() // reset() clears callback, must re-set before configure
-                        configureAndStartDecoder(configuredFormat!!)
+                        configureAndStartDecoder(getRecoveryMediaFormat())
+                        configuredDecoderCompatibilityLevel = decoderCompatibilityLevel
                         codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
                     } catch (e: IllegalArgumentException) {
                         e.printStackTrace()
@@ -1489,6 +1544,11 @@ class MediaCodecDecoderRenderer(
 
         startTime = SystemClock.uptimeMillis()
 
+        if (codecRecoveryType.get() != CR_RECOVERY_TYPE_NONE) {
+            doCodecRecoveryIfRequired(CR_FLAG_INPUT_THREAD)
+            return false
+        }
+
         try {
             // If we don't have an input buffer index yet, fetch one now
             if (asyncModeEnabled) {
@@ -1499,6 +1559,9 @@ class MediaCodecDecoderRenderer(
                         if (index != null) {
                             nextInputBufferIndex = index
                         }
+                        if (SystemClock.uptimeMillis() - startTime >= DECODER_HANG_RECOVERY_THRESHOLD_MS) {
+                            break
+                        }
                     } catch (e: InterruptedException) {
                         Thread.currentThread().interrupt()
                         return false
@@ -1508,6 +1571,9 @@ class MediaCodecDecoderRenderer(
                 // Sync mode: poll the decoder directly
                 while (nextInputBufferIndex < 0 && !stopping) {
                     nextInputBufferIndex = videoDecoder!!.dequeueInputBuffer(5000)
+                    if (SystemClock.uptimeMillis() - startTime >= DECODER_HANG_RECOVERY_THRESHOLD_MS) {
+                        break
+                    }
                 }
             }
 
@@ -1545,8 +1611,12 @@ class MediaCodecDecoderRenderer(
         if (nextInputBuffer == null) {
             // We've been hung for 5 seconds and no other exception was reported,
             // so generate a decoder hung exception
-            if (deltaMs >= 5000 && initialException == null) {
+            if (deltaMs >= DECODER_HANG_RECOVERY_THRESHOLD_MS) {
                 val decoderHungException = DecoderHungException(deltaMs)
+                if (scheduleDecoderHangRecovery(deltaMs)) {
+                    return false
+                }
+
                 if (!reportedCrash) {
                     reportedCrash = true
                     crashListener.notifyCrash(decoderHungException)
@@ -1683,6 +1753,42 @@ class MediaCodecDecoderRenderer(
                 codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_FLUSH, CR_RECOVERY_TYPE_RESTART)
             }
         }
+    }
+
+    private fun disableActiveRfiAfterDecoderHang() {
+        when {
+            (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0 -> refFrameInvalidationAvc = false
+            (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H265) != 0 -> refFrameInvalidationHevc = false
+            (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_AV1) != 0 -> refFrameInvalidationAv1 = false
+        }
+        refFrameInvalidationActive = false
+    }
+
+    private fun scheduleDecoderHangRecovery(deltaMs: Int): Boolean {
+        if (stopping || codecRecoveryAttempts >= CR_MAX_TRIES) {
+            return false
+        }
+
+        decoderHangRecoveryAttempts++
+        val nextCompatibilityLevel = when (decoderHangRecoveryAttempts) {
+            1 -> DECODER_COMPAT_NO_AGGRESSIVE_VENDOR_PARAMS
+            2 -> DECODER_COMPAT_NO_VENDOR_PARAMS
+            else -> DECODER_COMPAT_PLAIN_FORMAT
+        }
+        decoderCompatibilityLevel = maxOf(decoderCompatibilityLevel, nextCompatibilityLevel)
+        disableActiveRfiAfterDecoderHang()
+
+        LimeLog.warning(
+            "Decoder hung for ${deltaMs}ms; scheduling recovery " +
+                "attempt=$decoderHangRecoveryAttempts compat=$decoderCompatibilityLevel"
+        )
+
+        if (!codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_NONE, CR_RECOVERY_TYPE_RESET)) {
+            codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_FLUSH, CR_RECOVERY_TYPE_RESET)
+            codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_RESTART, CR_RECOVERY_TYPE_RESET)
+        }
+
+        return true
     }
 
     private fun queueNextInputBuffer(timestampUs: Long, codecFlags: Int): Boolean {

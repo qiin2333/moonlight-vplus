@@ -335,14 +335,24 @@ object MediaCodecHelper {
     // When adding new vendor params here, also add the most representative key to
     // knownVendorLowLatencyOptions above.
 
-    private fun applyQualcommVendorParams(videoFormat: MediaFormat, tryNumber: Int) {
+    private fun applyQualcommVendorParams(
+        videoFormat: MediaFormat,
+        tryNumber: Int,
+        compatibilityLevel: Int
+    ): Boolean {
+        var setNewOption = false
+
         // https://cs.android.com/android/platform/superproject/+/master:hardware/qcom/sdm845/media/mm-video-v4l2/vidc/vdec/src/omx_vdec_extensions.hpp
         if (tryNumber < 4) {
             videoFormat.setInteger("vendor.qti-ext-dec-picture-order.enable", 1)
+            setNewOption = true
         }
         if (tryNumber < 5) {
             videoFormat.setInteger("vendor.qti-ext-dec-low-latency.enable", 1)
+            setNewOption = true
+        }
 
+        if (tryNumber < 5 && compatibilityLevel == 0) {
             // CONFIRMED WORKING: Snapdragon Elite, SD8 gen 3, SD8 gen 2
             videoFormat.setInteger("vendor.qti-ext-output-sw-fence-enable.value", 1)
             videoFormat.setInteger("vendor.qti-ext-output-fence.enable", 1)
@@ -352,7 +362,10 @@ object MediaCodecHelper {
             videoFormat.setInteger("vendor.qti-ext-dec-instant-decode.enable", 1)
             videoFormat.setInteger("vendor.qti-ext-dec-error-correction.conceal", 1)
             videoFormat.setInteger("vendor.qti-ext-extradata-enable.types", 0)
+            setNewOption = true
         }
+
+        return setNewOption
     }
 
     private fun applyMtkVendorParams(
@@ -476,7 +489,8 @@ object MediaCodecHelper {
         videoFormat: MediaFormat,
         decoderInfo: MediaCodecInfo,
         tryNumber: Int,
-        allowMtkMaxOperatingRate: Boolean
+        allowMtkMaxOperatingRate: Boolean,
+        compatibilityLevel: Int = 0
     ): Boolean {
         // Options are tried in order of most to least risky. The decoder will use
         // the first MediaFormat that doesn't fail in configure().
@@ -484,7 +498,7 @@ object MediaCodecHelper {
 
         // --- Layer 1: Standard Android low-latency APIs ---
 
-        if (tryNumber < 1) {
+        if (tryNumber < 1 && compatibilityLevel < 3) {
             // Official Android 11+ low latency option (KEY_LOW_LATENCY)
             videoFormat.setInteger("low-latency", 1)
             setNewOption = true
@@ -493,6 +507,7 @@ object MediaCodecHelper {
         }
 
         if (tryNumber < 2 &&
+            compatibilityLevel < 3 &&
             (!Build.MANUFACTURER.equals("xiaomi", ignoreCase = true) ||
                 Build.VERSION.SDK_INT > Build.VERSION_CODES.M)
         ) {
@@ -505,10 +520,10 @@ object MediaCodecHelper {
         if (tryNumber < 3) {
             // Qualcomm: KEY_OPERATING_RATE=MAX for aggressive clock boosting
             // Others: KEY_PRIORITY=0 (realtime) as a safer alternative
-            if (decoderSupportsMaxOperatingRate(decoderInfo.name)) {
+            if (decoderSupportsMaxOperatingRate(decoderInfo.name) && compatibilityLevel == 0) {
                 videoFormat.setInteger(MediaFormat.KEY_OPERATING_RATE, Short.MAX_VALUE.toInt())
                 setNewOption = true
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && compatibilityLevel < 3) {
                 videoFormat.setInteger(MediaFormat.KEY_PRIORITY, 0)
                 setNewOption = true
             }
@@ -520,27 +535,30 @@ object MediaCodecHelper {
             val decoderName = decoderInfo.name
 
             when {
-                isDecoderInList(qualcommDecoderPrefixes, decoderName) -> {
-                    applyQualcommVendorParams(videoFormat, tryNumber)
-                    setNewOption = true
+                isDecoderInList(qualcommDecoderPrefixes, decoderName) -> if (compatibilityLevel < 2) {
+                    setNewOption = applyQualcommVendorParams(
+                        videoFormat,
+                        tryNumber,
+                        compatibilityLevel
+                    ) || setNewOption
                 }
-                isDecoderInList(mtkDecoderPrefixes, decoderName) -> if (tryNumber < 4) {
+                isDecoderInList(mtkDecoderPrefixes, decoderName) -> if (tryNumber < 4 && compatibilityLevel < 2) {
                     applyMtkVendorParams(videoFormat, tryNumber, allowMtkMaxOperatingRate)
                     setNewOption = true
                 }
-                isDecoderInList(kirinDecoderPrefixes, decoderName) -> if (tryNumber < 4) {
+                isDecoderInList(kirinDecoderPrefixes, decoderName) -> if (tryNumber < 4 && compatibilityLevel < 2) {
                     applyKirinVendorParams(videoFormat)
                     setNewOption = true
                 }
-                isDecoderInList(exynosDecoderPrefixes, decoderName) -> if (tryNumber < 4) {
+                isDecoderInList(exynosDecoderPrefixes, decoderName) -> if (tryNumber < 4 && compatibilityLevel < 2) {
                     applyExynosVendorParams(videoFormat)
                     setNewOption = true
                 }
-                isDecoderInList(amlogicDecoderPrefixes, decoderName) -> if (tryNumber < 4) {
+                isDecoderInList(amlogicDecoderPrefixes, decoderName) -> if (tryNumber < 4 && compatibilityLevel < 2) {
                     applyAmlogicVendorParams(videoFormat)
                     setNewOption = true
                 }
-                isDecoderInList(tegraDecoderPrefixes, decoderName) -> if (tryNumber < 4) {
+                isDecoderInList(tegraDecoderPrefixes, decoderName) -> if (tryNumber < 4 && compatibilityLevel < 2) {
                     applyTegraVendorParams(videoFormat)
                     setNewOption = true
                 }
