@@ -642,8 +642,21 @@
     <string name="summary_crown_config_management">Import, export, or merge Crown profiles</string>
     <string name="crown_config_action_import">Import Configuration</string>
     <string name="crown_config_action_export">Export Configuration</string>
+    <string name="crown_config_action_import_legacy">Import Legacy .mdat</string>
+    <string name="crown_config_action_export_legacy">Export Legacy .mdat</string>
     <string name="crown_config_action_merge">Merge Configuration</string>
     <string name="crown_config_no_profiles">No Crown profiles available</string>
+    <string name="crown_share_action_import">Import Share Package</string>
+    <string name="crown_share_action_export">Export Share Package</string>
+    <string name="crown_share_install_as_new">Install as New</string>
+    <string name="crown_share_merge_into_existing">Merge into Existing</string>
+    <string name="crown_share_unknown_value">Unknown</string>
+    <string name="message_crown_share_import_preview">Name: %1$s\nAuthor: %2$s\nGame: %3$s\nSource: %4$s\nPayload version: %5$d\nButtons/elements: %6$d\nSettings: %7$d\n\nThis package only imports Crown profile data.</string>
+    <string name="toast_crown_share_export_success">Crown share package exported</string>
+    <string name="toast_crown_share_export_failed">Unable to export Crown share package</string>
+    <string name="toast_crown_share_import_success">Crown profile installed</string>
+    <string name="toast_crown_share_merge_success">Crown profile merged</string>
+    <string name="toast_crown_share_import_failed">Unable to import Crown share package</string>
     
     <!-- Crown feature toggle -->
     <string name="crown_toggle_button">Crown</string>

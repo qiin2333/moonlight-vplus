@@ -69,6 +69,7 @@ import com.limelight.PcView
 import com.limelight.R
 import com.limelight.ExternalDisplayManager
 import com.limelight.binding.input.advance_setting.config.PageConfigController
+import com.limelight.binding.input.advance_setting.share.CrownProfileShareManager
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper
 import com.limelight.binding.video.MediaCodecHelper
 import com.limelight.utils.AspectRatioConverter
@@ -118,6 +119,8 @@ class StreamSettings : AppCompatActivity() {
         private const val REQUEST_CODE_CREATE_CONFIG_SYNC = 5
         private const val REQUEST_CODE_OPEN_CONFIG_SYNC = 6
         private const val REQUEST_CODE_OPEN_CONFIG_SYNC_DIRECTORY = 7
+        private const val REQUEST_CODE_CREATE_CROWN_SHARE = 8
+        private const val REQUEST_CODE_OPEN_CROWN_SHARE = 9
 
         // HACK for Android 9
         var displayCutoutP: DisplayCutout? = null
@@ -753,6 +756,8 @@ class StreamSettings : AppCompatActivity() {
         private var nativeFramerateShown = false
 
         private var exportConfigString: String = ""
+        private var pendingCrownShareExportString: String = ""
+        private var pendingCrownShareImport: CrownProfileShareManager.ImportedProfile? = null
         private var pendingSyncExportString: String = ""
         private var pendingSyncImportString: String = ""
         private val configSyncSnapshotHandler = Handler(Looper.getMainLooper())
@@ -1200,6 +1205,27 @@ class StreamSettings : AppCompatActivity() {
             intent.putExtra(Intent.EXTRA_TITLE, "$fileName.mdat")
             @Suppress("DEPRECATION")
             startActivityForResult(intent, 1)
+        }
+
+        private fun createCrownShareDocument(fileName: String) {
+            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT)
+            intent.addCategory(Intent.CATEGORY_OPENABLE)
+            intent.type = "application/json"
+            intent.putExtra(Intent.EXTRA_TITLE, CrownProfileShareManager.suggestedFileName(fileName))
+            @Suppress("DEPRECATION")
+            startActivityForResult(intent, REQUEST_CODE_CREATE_CROWN_SHARE)
+        }
+
+        private fun openCrownShareDocument() {
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+            intent.addCategory(Intent.CATEGORY_OPENABLE)
+            intent.type = "*/*"
+            intent.putExtra(
+                Intent.EXTRA_MIME_TYPES,
+                arrayOf("application/json", "text/json", "text/plain", "application/octet-stream")
+            )
+            @Suppress("DEPRECATION")
+            startActivityForResult(intent, REQUEST_CODE_OPEN_CROWN_SHARE)
         }
 
         private fun createSyncDocument() {
@@ -1861,8 +1887,10 @@ class StreamSettings : AppCompatActivity() {
 
         private fun showCrownConfigManagementDialog() {
             val options = arrayOf(
-                    getString(R.string.crown_config_action_import),
-                    getString(R.string.crown_config_action_export),
+                    getString(R.string.crown_share_action_import),
+                    getString(R.string.crown_share_action_export),
+                    getString(R.string.crown_config_action_import_legacy),
+                    getString(R.string.crown_config_action_export_legacy),
                     getString(R.string.crown_config_action_merge)
             )
 
@@ -1870,9 +1898,152 @@ class StreamSettings : AppCompatActivity() {
                     .setTitle(R.string.title_crown_config_management)
                     .setItems(options) { _, which ->
                         when (which) {
-                            0 -> openConfigDocument(2)
-                            1 -> showCrownExportConfigDialog()
-                            2 -> showCrownMergeConfigDialog()
+                            0 -> openCrownShareDocument()
+                            1 -> showCrownShareExportConfigDialog()
+                            2 -> openConfigDocument(2)
+                            3 -> showCrownExportConfigDialog()
+                            4 -> showCrownMergeConfigDialog()
+                        }
+                    }
+                    .show()
+        }
+
+        private fun showCrownShareExportConfigDialog() {
+            val helper = SuperConfigDatabaseHelper(context)
+            val configMap = loadConfigMap(helper)
+            if (configMap.isEmpty()) {
+                Toast.makeText(context, R.string.crown_config_no_profiles, Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val ids = configMap.keys.toTypedArray()
+            val names = configMap.values.toTypedArray<CharSequence>()
+            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
+                    .setTitle(R.string.crown_share_action_export)
+                    .setItems(names) { _, which ->
+                        val id = ids[which]
+                        val profileName = configMap[id] ?: "Crown Profile"
+                        val payload = helper.exportConfig(id.toLong())
+                        try {
+                            pendingCrownShareExportString = CrownProfileShareManager.createBundle(
+                                profileName = profileName,
+                                payload = payload,
+                                metadata = currentCrownShareExportMetadata()
+                            )
+                            createCrownShareDocument(profileName)
+                        } catch (e: Exception) {
+                            Log.e("CrownShare", "Failed to export Crown share package", e)
+                            Toast.makeText(context, R.string.toast_crown_share_export_failed, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                    .show()
+        }
+
+        private fun currentCrownShareExportMetadata(): CrownProfileShareManager.ExportMetadata {
+            val ctx = requireContext()
+            val packageInfo = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
+            val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                packageInfo.longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                packageInfo.versionCode.toLong()
+            }
+            return CrownProfileShareManager.ExportMetadata(
+                packageName = ctx.packageName,
+                appVersionCode = versionCode,
+                appVersionName = packageInfo.versionName ?: ""
+            )
+        }
+
+        private fun handleCrownShareExportResult(data: Intent?) {
+            val uri = data?.data ?: return
+            try {
+                writeDocumentText(uri, pendingCrownShareExportString)
+                Toast.makeText(context, R.string.toast_crown_share_export_success, Toast.LENGTH_SHORT).show()
+            } catch (e: IOException) {
+                Log.e("CrownShare", "Failed to write Crown share package", e)
+                Toast.makeText(context, R.string.toast_crown_share_export_failed, Toast.LENGTH_LONG).show()
+            }
+        }
+
+        private fun handleCrownShareImportResult(data: Intent?) {
+            val uri = data?.data ?: return
+            try {
+                val importText = readDocumentText(uri)
+                val importedProfile = CrownProfileShareManager.parseImportText(importText)
+                pendingCrownShareImport = importedProfile
+                showCrownShareImportPreview(importedProfile)
+            } catch (e: Exception) {
+                Log.e("CrownShare", "Failed to read Crown share package", e)
+                Toast.makeText(context, R.string.toast_crown_share_import_failed, Toast.LENGTH_LONG).show()
+            }
+        }
+
+        private fun showCrownShareImportPreview(profile: CrownProfileShareManager.ImportedProfile) {
+            val details = getString(
+                R.string.message_crown_share_import_preview,
+                profile.name,
+                profile.author.ifBlank { getString(R.string.crown_share_unknown_value) },
+                profile.game.ifBlank { getString(R.string.crown_share_unknown_value) },
+                profile.sourceLabel,
+                profile.payloadInfo.version,
+                profile.payloadInfo.elementCount,
+                profile.payloadInfo.settingsCount
+            )
+
+            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
+                    .setTitle(R.string.crown_share_action_import)
+                    .setMessage(details)
+                    .setPositiveButton(R.string.crown_share_install_as_new) { _, _ ->
+                        importPendingCrownShareAsNew()
+                    }
+                    .setNeutralButton(R.string.crown_share_merge_into_existing) { _, _ ->
+                        showCrownShareMergeTargetDialog()
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+        }
+
+        private fun importPendingCrownShareAsNew() {
+            val profile = pendingCrownShareImport ?: return
+            val helper = SuperConfigDatabaseHelper(context)
+            val errorCode = helper.importConfig(profile.payload)
+            if (errorCode == 0) {
+                pendingCrownShareImport = null
+                requestConfigSyncAutoSnapshot(delayMs = 0L)
+                Toast.makeText(context, R.string.toast_crown_share_import_success, Toast.LENGTH_SHORT).show()
+                Handler(Looper.getMainLooper()).post {
+                    (activity as? StreamSettings)?.reloadSettings()
+                }
+            } else {
+                Toast.makeText(context, R.string.toast_crown_share_import_failed, Toast.LENGTH_LONG).show()
+            }
+        }
+
+        private fun showCrownShareMergeTargetDialog() {
+            val profile = pendingCrownShareImport ?: return
+            val configMap = loadConfigMap(SuperConfigDatabaseHelper(context))
+            if (configMap.isEmpty()) {
+                Toast.makeText(context, R.string.crown_config_no_profiles, Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val ids = configMap.keys.toTypedArray()
+            val names = configMap.values.toTypedArray<CharSequence>()
+            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
+                    .setTitle(R.string.crown_share_merge_into_existing)
+                    .setItems(names) { _, which ->
+                        val helper = SuperConfigDatabaseHelper(context)
+                        val errorCode = helper.mergeConfig(profile.payload, ids[which].toLong())
+                        if (errorCode == 0) {
+                            pendingCrownShareImport = null
+                            requestConfigSyncAutoSnapshot(delayMs = 0L)
+                            Toast.makeText(context, R.string.toast_crown_share_merge_success, Toast.LENGTH_SHORT).show()
+                            Handler(Looper.getMainLooper()).post {
+                                (activity as? StreamSettings)?.reloadSettings()
+                            }
+                        } else {
+                            Toast.makeText(context, R.string.toast_crown_share_import_failed, Toast.LENGTH_LONG).show()
                         }
                     }
                     .show()
@@ -2672,6 +2843,14 @@ class StreamSettings : AppCompatActivity() {
             }
             if (requestCode == REQUEST_CODE_OPEN_CONFIG_SYNC && resultCode == RESULT_OK) {
                 handleSyncImportResult(data)
+                return
+            }
+            if (requestCode == REQUEST_CODE_CREATE_CROWN_SHARE && resultCode == RESULT_OK) {
+                handleCrownShareExportResult(data)
+                return
+            }
+            if (requestCode == REQUEST_CODE_OPEN_CROWN_SHARE && resultCode == RESULT_OK) {
+                handleCrownShareImportResult(data)
                 return
             }
             //导出配置文件
