@@ -176,6 +176,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     lateinit var inputCaptureProvider: InputCaptureProvider
     var grabbedInput = true
     var cursorVisible = false
+    private var useUnbufferedTouchDispatch = false
     lateinit var streamView: StreamView
     private var externalStreamView: StreamView? = null
     private var previousTimeMillis: Long = 0
@@ -295,6 +296,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         NativeTouchContext.ENHANCED_TOUCH_ON_RIGHT = if (prefConfig.enhancedTouchOnWhichSide) -1 else 1
         NativeTouchContext.ENHANCED_TOUCH_ZONE_DIVIDER = prefConfig.enhanceTouchZoneDivider * 0.01f
         NativeTouchContext.POINTER_VELOCITY_FACTOR = prefConfig.pointerVelocityFactor * 0.01f
+        useUnbufferedTouchDispatch = shouldUseUnbufferedTouchDispatch()
 
         orientationManager.setPreferredOrientation()
 
@@ -321,7 +323,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         val backgroundTouchView = findViewById<View>(R.id.backgroundTouchView)
         backgroundTouchView.setOnTouchListener(this)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        if (useUnbufferedTouchDispatch) {
             val sourceFlags = InputDevice.SOURCE_CLASS_BUTTON or
                     InputDevice.SOURCE_CLASS_JOYSTICK or
                     InputDevice.SOURCE_CLASS_POINTER or
@@ -1432,7 +1434,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouch(view: View, event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_DOWN) {
-            if (!prefConfig.syncTouchEventWithDisplay && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (useUnbufferedTouchDispatch) {
                 view.requestUnbufferedDispatch(event)
             }
         }
@@ -2242,6 +2244,19 @@ class Game : Activity(), SurfaceHolder.Callback,
         }
     }
 
+    private fun shouldUseUnbufferedTouchDispatch(): Boolean {
+        if (prefConfig.syncTouchEventWithDisplay || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            return false
+        }
+
+        if (isVivoAndroid16OrNewer()) {
+            LimeLog.info("Disabling unbuffered touch dispatch on vivo/iQOO Android 16+ device")
+            return false
+        }
+
+        return true
+    }
+
     companion object {
         val REFERENCE_HORIZ_RES = 1280
         val REFERENCE_VERT_RES = 720
@@ -2265,5 +2280,18 @@ class Game : Activity(), SurfaceHolder.Callback,
         val EXTRA_FORCE_RESUME_CURRENT_SESSION = "ForceResumeCurrentSession"
 
         private const val KEEP_ALIVE_NOTIFICATION_ID = 1001
+
+        fun isVivoAndroid16OrNewer(): Boolean {
+            if (Build.VERSION.SDK_INT < 36) {
+                return false
+            }
+
+            return listOfNotNull(Build.MANUFACTURER, Build.BRAND).any {
+                it.equals("vivo", ignoreCase = true) ||
+                    it.equals("iQOO", ignoreCase = true) ||
+                    it.contains("vivo", ignoreCase = true) ||
+                    it.contains("iqoo", ignoreCase = true)
+            }
+        }
     }
 }

@@ -62,6 +62,10 @@ class TouchInputHandler(private val game: Game) {
 
     // ---- 公共入口 ----
 
+    private val coalesceFingerTouchMoves = Game.isVivoAndroid16OrNewer()
+    private val lastTouchMoveEventTime = LongArray(TOUCH_CONTEXT_LENGTH) { Long.MIN_VALUE }
+    private val lastNativeTouchMoveEventTime = HashMap<Int, Long>()
+
     @RequiresApi(Build.VERSION_CODES.O)
     fun handleMotionEvent(view: View?, event: MotionEvent): Boolean {
         if (!game.grabbedInput) return false
@@ -433,6 +437,7 @@ class TouchInputHandler(private val game: Game) {
                             twoFingerMoved = false
                             twoFingerTapPending = false
                         }
+                        resetTouchMoveCoalescing(actionIndex)
                         context.touchDownEvent(coords[0].toInt(), coords[1].toInt(), event.eventTime, true)
                     }
                     MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_UP -> {
@@ -486,6 +491,7 @@ class TouchInputHandler(private val game: Game) {
                         }
 
                         for (tc in touchContextMap) tc?.setPointerCount(event.pointerCount - 1)
+                        resetTouchMoveCoalescing(actionIndex)
                         if (actionIndex == 0 && event.pointerCount > 1 && !context.isCancelled()) {
                             val secondCoords = getNormalizedCoordinates(game.streamView, event.getX(1), event.getY(1))
                             context.touchDownEvent(secondCoords[0].toInt(), secondCoords[1].toInt(), event.eventTime, false)
@@ -503,14 +509,19 @@ class TouchInputHandler(private val game: Game) {
                             for (tc in touchContextMap) {
                                 if (tc != null && tc.getActionIndex() < event.pointerCount) {
                                     val hc = getNormalizedCoordinates(game.streamView, event.getHistoricalX(tc.getActionIndex(), i), event.getHistoricalY(tc.getActionIndex(), i))
-                                    tc.touchMoveEvent(hc[0].toInt(), hc[1].toInt(), event.getHistoricalEventTime(i))
+                                    val eventTime = event.getHistoricalEventTime(i)
+                                    if (shouldSendTouchMove(tc.getActionIndex(), eventTime)) {
+                                        tc.touchMoveEvent(hc[0].toInt(), hc[1].toInt(), eventTime)
+                                    }
                                 }
                             }
                         }
                         for (tc in touchContextMap) {
                             if (tc != null && tc.getActionIndex() < event.pointerCount) {
                                 val cc = getNormalizedCoordinates(game.streamView, event.getX(tc.getActionIndex()), event.getY(tc.getActionIndex()))
-                                tc.touchMoveEvent(cc[0].toInt(), cc[1].toInt(), event.eventTime)
+                                if (shouldSendTouchMove(tc.getActionIndex(), event.eventTime)) {
+                                    tc.touchMoveEvent(cc[0].toInt(), cc[1].toInt(), event.eventTime)
+                                }
                             }
                         }
                     }
@@ -518,6 +529,9 @@ class TouchInputHandler(private val game: Game) {
                         for (tc in touchContextMap) {
                             tc?.cancelTouch()
                             tc?.setPointerCount(0)
+                        }
+                        for (i in lastTouchMoveEventTime.indices) {
+                            resetTouchMoveCoalescing(i)
                         }
                     }
                     else -> return false
@@ -769,14 +783,19 @@ class TouchInputHandler(private val game: Game) {
         when (event.actionMasked) {
             MotionEvent.ACTION_MOVE -> {
                 for (i in 0 until event.pointerCount) {
+                    val pointerId = event.getPointerId(i)
                     if (game.prefConfig.enableEnhancedTouch) {
-                        nativeTouchPointerMap[event.getPointerId(i)]?.updatePointerCoords(event, i)
+                        nativeTouchPointerMap[pointerId]?.updatePointerCoords(event, i)
+                    }
+                    if (!shouldSendNativeTouchMove(pointerId, event.eventTime)) {
+                        continue
                     }
                     if (!sendTouchEventForPointer(view, event, eventType, i)) return false
                 }
                 return true
             }
             MotionEvent.ACTION_CANCEL -> {
+                lastNativeTouchMoveEventTime.clear()
                 return game.conn?.sendTouchEvent(
                     MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, 0,
                     0f, 0f, 0f, 0f, 0f,
@@ -788,6 +807,7 @@ class TouchInputHandler(private val game: Game) {
                 when (event.actionMasked) {
                     MotionEvent.ACTION_POINTER_DOWN -> {
                         multiFingerTapChecker(event)
+                        resetNativeTouchMoveCoalescing(event.getPointerId(actionIndex))
                         if (game.prefConfig.enableEnhancedTouch) {
                             val pointer = NativeTouchContext.Pointer(event)
                             nativeTouchPointerMap[pointer.pointerId] = pointer
@@ -795,6 +815,7 @@ class TouchInputHandler(private val game: Game) {
                     }
 
                     MotionEvent.ACTION_DOWN -> {
+                        resetNativeTouchMoveCoalescing(event.getPointerId(actionIndex))
                         if (game.prefConfig.enableEnhancedTouch) {
                             val pointer = NativeTouchContext.Pointer(event)
                             nativeTouchPointerMap[pointer.pointerId] = pointer
@@ -802,12 +823,14 @@ class TouchInputHandler(private val game: Game) {
                     }
 
                     MotionEvent.ACTION_UP -> {
+                        resetNativeTouchMoveCoalescing(event.getPointerId(actionIndex))
                         if (event.eventTime - multiFingerDownTime < MULTI_FINGER_TAP_THRESHOLD) {
                             game.toggleKeyboard()
                         }
                     }
 
                     MotionEvent.ACTION_POINTER_UP -> {
+                        resetNativeTouchMoveCoalescing(event.getPointerId(actionIndex))
                         if (game.prefConfig.enableEnhancedTouch) {
                             nativeTouchPointerMap.remove(event.getPointerId(actionIndex))
                         }
@@ -855,6 +878,47 @@ class TouchInputHandler(private val game: Game) {
 
     private fun getTouchContext(actionIndex: Int): TouchContext? =
         if (actionIndex < touchContextMap.size) touchContextMap[actionIndex] else null
+
+    private fun getTouchMoveMinIntervalMs(): Long {
+        val targetFps = game.prefConfig.fps.coerceIn(60, MAX_TOUCH_MOVE_COALESCING_FPS)
+        return (1000L / targetFps).coerceAtLeast(1L)
+    }
+
+    private fun resetTouchMoveCoalescing(actionIndex: Int) {
+        if (actionIndex in lastTouchMoveEventTime.indices) {
+            lastTouchMoveEventTime[actionIndex] = Long.MIN_VALUE
+        }
+    }
+
+    private fun shouldSendTouchMove(actionIndex: Int, eventTime: Long): Boolean {
+        if (!coalesceFingerTouchMoves || actionIndex !in lastTouchMoveEventTime.indices) {
+            return true
+        }
+
+        val lastEventTime = lastTouchMoveEventTime[actionIndex]
+        if (lastEventTime == Long.MIN_VALUE || eventTime - lastEventTime >= getTouchMoveMinIntervalMs()) {
+            lastTouchMoveEventTime[actionIndex] = eventTime
+            return true
+        }
+        return false
+    }
+
+    private fun resetNativeTouchMoveCoalescing(pointerId: Int) {
+        lastNativeTouchMoveEventTime.remove(pointerId)
+    }
+
+    private fun shouldSendNativeTouchMove(pointerId: Int, eventTime: Long): Boolean {
+        if (!coalesceFingerTouchMoves) {
+            return true
+        }
+
+        val lastEventTime = lastNativeTouchMoveEventTime[pointerId]
+        if (lastEventTime == null || eventTime - lastEventTime >= getTouchMoveMinIntervalMs()) {
+            lastNativeTouchMoveEventTime[pointerId] = eventTime
+            return true
+        }
+        return false
+    }
 
     private fun logIgnoredStylusBranchToolType(event: MotionEvent, pointerIndex: Int, phase: String) {
         LimeLog.warning(
@@ -912,6 +976,7 @@ class TouchInputHandler(private val game: Game) {
         private const val STYLUS_UP_DEAD_ZONE_DELAY = 150L
         private const val STYLUS_UP_DEAD_ZONE_RADIUS = 50f
         private const val MULTI_FINGER_TAP_THRESHOLD = 300L
+        private const val MAX_TOUCH_MOVE_COALESCING_FPS = 120
 
         private fun normalizeValueInRange(value: Float, range: InputDevice.MotionRange): Float =
             (value - range.min) / range.range
