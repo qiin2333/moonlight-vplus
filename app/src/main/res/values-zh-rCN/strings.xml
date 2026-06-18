@@ -1340,6 +1340,7 @@
     <string name="crown_store_my_summary">这里是你的王冠小工坊：整理本地配置、打包分享，也可以投稿到 GitHub Store。</string>
     <string name="crown_store_action_refresh">刷新一下</string>
     <string name="crown_store_action_import_profile">收下这套</string>
+    <string name="crown_store_action_report_profile">举报</string>
     <string name="crown_store_action_edit_publish">补充信息并投稿</string>
     <string name="crown_store_action_publish_profile">投稿</string>
     <string name="crown_store_action_export_share">打包分享</string>
@@ -1368,10 +1369,13 @@
     <string name="hint_crown_store_author">你想显示的名字</string>
     <string name="hint_crown_store_tags">fps, racing, handheld</string>
     <string name="hint_crown_store_summary">这套布局哪里好用？</string>
-    <string name="message_crown_store_publish_metadata">这些信息会显示在 Store 里。Moonlight V+ 会用你的 GitHub 账号创建 Pull Request。</string>
+    <string name="message_crown_store_publish_metadata">这些信息会显示在公开 GitHub Store 里。Moonlight V+ 会用你的 GitHub 账号创建 Pull Request，等待维护者确认。</string>
+    <string name="message_crown_store_publish_terms">我确认这套配置是我自己的，或已获得分享许可；里面没有隐私信息、token、密码、配对身份、受版权保护的媒体或不友好的内容，也接受它被公开审核或下架。</string>
     <string name="message_crown_store_github_authorization_required">投稿前先连接 GitHub。Moonlight V+ 会帮你 fork 王冠 Store、提交配置，并打开一个 Pull Request。</string>
     <string name="message_crown_store_github_reauthorization_required">投稿需要 GitHub public repository 权限。重新连接 GitHub、授权仓库访问后，再来投一次吧。</string>
     <string name="message_crown_store_publish_success">这套王冠配置的投稿 PR 已创建：\n%1$s\n\n%2$s</string>
+    <string name="crown_store_report_issue_title">举报王冠 Store 配置：%1$s</string>
+    <string name="crown_store_report_issue_body">配置：%1$s\n来源：%2$s\n\n原因：\n请说明它看起来哪里不安全、包含隐私、侵权或不友好。</string>
     <string name="action_crown_store_authorize_github">连接 GitHub</string>
     <string name="action_open_pull_request">打开 Pull Request</string>
     <string name="crown_share_action_import">导入分享包</string>
@@ -1398,4 +1402,15 @@
     <string name="toast_crown_store_publish_started">正在把王冠配置送去 GitHub</string>
     <string name="toast_crown_store_publish_failed">没能准备好这套王冠配置</string>
     <string name="toast_crown_store_publish_failed_with_error">投稿失败：%1$s</string>
+    <string name="toast_crown_store_publish_terms_required">先确认投稿规则再发送哦</string>
+    <string name="toast_crown_store_publish_invalid_metadata">检查一下投稿信息：%1$s</string>
+    <string name="crown_store_validation_name_too_long">配置名太长了</string>
+    <string name="crown_store_validation_game_too_long">游戏名太长了</string>
+    <string name="crown_store_validation_author_too_long">作者昵称太长了</string>
+    <string name="crown_store_validation_summary_too_long">一句介绍太长了</string>
+    <string name="crown_store_validation_too_many_tags">小标签太多了</string>
+    <string name="crown_store_validation_tag_too_long">有个小标签太长了</string>
+    <string name="crown_store_validation_external_locator">Store 信息里先不要放链接或邮箱</string>
+    <string name="crown_store_validation_sensitive_metadata">不能公开隐私、token、密码或配对身份</string>
+    <string name="crown_store_validation_invalid_bundle">这不是公开用的纯王冠分享包</string>
 </resources>

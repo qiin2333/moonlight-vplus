@@ -19,6 +19,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -37,9 +38,11 @@ import com.limelight.binding.input.advance_setting.share.CrownProfileShareManage
 import com.limelight.binding.input.advance_setting.share.GitHubCrownProfileStorePublisher
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper
 import com.limelight.utils.ConfigurationSyncScheduler
+import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.URLEncoder
 import java.net.URL
 import java.text.DateFormat
 import java.text.SimpleDateFormat
@@ -361,6 +364,9 @@ class CrownStoreActivity : AppCompatActivity() {
                 listOf(
                     cardActionButton(R.string.crown_store_action_import_profile, primary = true) {
                         importStoreProfile(profile)
+                    },
+                    cardActionButton(R.string.crown_store_action_report_profile) {
+                        reportStoreProfile(profile)
                     }
                 )
             ))
@@ -379,6 +385,18 @@ class CrownStoreActivity : AppCompatActivity() {
             profileUrl,
             sourceLabelOverride = getString(R.string.crown_store_source_label, profile.name),
             failureToastRes = R.string.toast_crown_store_profile_failed
+        )
+    }
+
+    private fun reportStoreProfile(profile: CrownProfileShareManager.StoreProfile) {
+        val profileUrl = runCatching {
+            CrownProfileShareManager.resolveStoreProfileUrl(CROWN_STORE_INDEX_URL, profile.url)
+        }.getOrDefault(profile.url)
+        val title = getString(R.string.crown_store_report_issue_title, profile.name)
+        val body = getString(R.string.crown_store_report_issue_body, profile.name, profileUrl)
+        openUrl(
+            "${CROWN_STORE_REPORT_URL}?template=crown_store_report.md" +
+                "&title=${urlParam(title)}&body=${urlParam(body)}"
         )
     }
 
@@ -539,6 +557,15 @@ class CrownStoreActivity : AppCompatActivity() {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
             gravity = Gravity.START or Gravity.TOP
         }
+        val termsCheckBox = CheckBox(this).apply {
+            text = getString(R.string.message_crown_store_publish_terms)
+            textSize = 12f
+            includeFontPadding = true
+            setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.app_dialog_title_color))
+            buttonTintList = ColorStateList.valueOf(
+                ContextCompat.getColor(this@CrownStoreActivity, R.color.app_dialog_accent_color)
+            )
+        }
 
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -549,6 +576,12 @@ class CrownStoreActivity : AppCompatActivity() {
             addCrownStorePublishField(R.string.label_crown_store_author, authorInput)
             addCrownStorePublishField(R.string.label_crown_store_tags, tagsInput)
             addCrownStorePublishField(R.string.label_crown_store_summary, summaryInput)
+            addView(termsCheckBox, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dp(14)
+            })
         }
 
         val scrollView = ScrollView(this).apply {
@@ -570,6 +603,14 @@ class CrownStoreActivity : AppCompatActivity() {
                     nameInput.error = getString(R.string.hint_crown_store_profile_name)
                     return@setOnClickListener
                 }
+                if (!termsCheckBox.isChecked) {
+                    Toast.makeText(
+                        this,
+                        R.string.toast_crown_store_publish_terms_required,
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return@setOnClickListener
+                }
 
                 val game = gameInput.text?.toString().orEmpty().trim()
                 val author = authorInput.text?.toString().orEmpty().trim()
@@ -579,6 +620,14 @@ class CrownStoreActivity : AppCompatActivity() {
                     .map { it.trim() }
                     .filter { it.isNotBlank() }
                     .distinct()
+                validateCrownStoreSubmission(profileName, game, author, summary, tags)?.let { reason ->
+                    Toast.makeText(
+                        this,
+                        getString(R.string.toast_crown_store_publish_invalid_metadata, reason),
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return@setOnClickListener
+                }
 
                 try {
                     val payload = helper.exportConfig(configId.toLong())
@@ -593,6 +642,14 @@ class CrownStoreActivity : AppCompatActivity() {
                             tags = tags
                         )
                     )
+                    validateCrownStoreBundleForPublishing(bundle)?.let { reason ->
+                        Toast.makeText(
+                            this,
+                            getString(R.string.toast_crown_store_publish_invalid_metadata, reason),
+                            Toast.LENGTH_LONG
+                        ).show()
+                        return@setOnClickListener
+                    }
                     dialog.dismiss()
                     publishCrownStoreProfile(
                         GitHubCrownProfileStorePublisher.PublishRequest(
@@ -611,6 +668,59 @@ class CrownStoreActivity : AppCompatActivity() {
             }
         }
         dialog.show()
+    }
+
+    private fun validateCrownStoreSubmission(
+        profileName: String,
+        game: String,
+        author: String,
+        summary: String,
+        tags: List<String>
+    ): String? {
+        if (profileName.length > 80) return getString(R.string.crown_store_validation_name_too_long)
+        if (game.length > 80) return getString(R.string.crown_store_validation_game_too_long)
+        if (author.length > 60) return getString(R.string.crown_store_validation_author_too_long)
+        if (summary.length > 240) return getString(R.string.crown_store_validation_summary_too_long)
+        if (tags.size > 8) return getString(R.string.crown_store_validation_too_many_tags)
+        if (tags.any { it.length > 24 }) return getString(R.string.crown_store_validation_tag_too_long)
+
+        val metadataText = buildString {
+            append(profileName).append('\n')
+            append(game).append('\n')
+            append(author).append('\n')
+            append(summary).append('\n')
+            append(tags.joinToString("\n"))
+        }
+        if (CROWN_STORE_EXTERNAL_LOCATOR_PATTERN.containsMatchIn(metadataText)) {
+            return getString(R.string.crown_store_validation_external_locator)
+        }
+        if (CROWN_STORE_SENSITIVE_PATTERN.containsMatchIn(metadataText)) {
+            return getString(R.string.crown_store_validation_sensitive_metadata)
+        }
+        return null
+    }
+
+    private fun validateCrownStoreBundleForPublishing(bundle: String): String? {
+        return try {
+            CrownProfileShareManager.parseImportText(bundle)
+            val root = JSONObject(bundle)
+            if (!root.hasOnlyKeys(CROWN_STORE_PUBLIC_BUNDLE_KEYS)) {
+                return getString(R.string.crown_store_validation_invalid_bundle)
+            }
+            val profile = root.optJSONObject("profile")
+                ?: return getString(R.string.crown_store_validation_invalid_bundle)
+            if (!profile.hasOnlyKeys(CROWN_STORE_PUBLIC_PROFILE_KEYS)) {
+                return getString(R.string.crown_store_validation_invalid_bundle)
+            }
+            val profilePayload = profile.optString("payload", "")
+            if (CROWN_STORE_SENSITIVE_PATTERN.containsMatchIn(profilePayload)) {
+                return getString(R.string.crown_store_validation_sensitive_metadata)
+            }
+            null
+        } catch (e: Exception) {
+            Log.e("CrownStore", "Invalid Crown Store bundle", e)
+            getString(R.string.crown_store_validation_invalid_bundle)
+        }
     }
 
     private fun crownStorePublishInput(value: String, hintRes: Int): EditText {
@@ -1691,6 +1801,10 @@ class CrownStoreActivity : AppCompatActivity() {
         }
     }
 
+    private fun urlParam(value: String): String {
+        return URLEncoder.encode(value, Charsets.UTF_8.name())
+    }
+
     private fun tintedDrawable(iconRes: Int, colorRes: Int): Drawable? {
         return ContextCompat.getDrawable(this, iconRes)?.mutate()?.apply {
             setTint(ContextCompat.getColor(this@CrownStoreActivity, colorRes))
@@ -1744,6 +1858,16 @@ class CrownStoreActivity : AppCompatActivity() {
         }
     }
 
+    private fun JSONObject.hasOnlyKeys(allowedKeys: Set<String>): Boolean {
+        val iterator = keys()
+        while (iterator.hasNext()) {
+            if (iterator.next() !in allowedKeys) {
+                return false
+            }
+        }
+        return true
+    }
+
     private fun dp(value: Int): Int {
         return (value * resources.displayMetrics.density).toInt()
     }
@@ -1758,5 +1882,33 @@ class CrownStoreActivity : AppCompatActivity() {
             "https://raw.githubusercontent.com/qiin2333/crown-profiles/main/index/v1.json"
         private const val CROWN_STORE_MAX_INDEX_BYTES = 256 * 1024
         private const val CROWN_SHARE_MAX_DOWNLOAD_BYTES = 512 * 1024
+        private const val CROWN_STORE_REPORT_URL =
+            "https://github.com/qiin2333/crown-profiles/issues/new"
+        private val CROWN_STORE_EXTERNAL_LOCATOR_PATTERN =
+            Regex("https?://|www\\.|[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}", RegexOption.IGNORE_CASE)
+        private val CROWN_STORE_SENSITIVE_PATTERN =
+            Regex("ghp_|github_pat_|-----BEGIN|password|passwd|token|secret|private key|pairing|clientcert|clientkey", RegexOption.IGNORE_CASE)
+        private val CROWN_STORE_PUBLIC_BUNDLE_KEYS = setOf(
+            "kind",
+            "schemaVersion",
+            "bundleId",
+            "name",
+            "summary",
+            "compatibility",
+            "profile",
+            "createdAt",
+            "updatedAt",
+            "packageName",
+            "author",
+            "game",
+            "tags",
+            "appVersionName"
+        )
+        private val CROWN_STORE_PUBLIC_PROFILE_KEYS = setOf(
+            "profileId",
+            "name",
+            "payload",
+            "payloadSha256"
+        )
     }
 }
