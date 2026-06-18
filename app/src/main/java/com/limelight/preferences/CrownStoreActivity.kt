@@ -479,6 +479,10 @@ class CrownStoreActivity : AppCompatActivity() {
 
     private fun localProfileView(profile: LocalCrownProfile): View {
         return profileCardLayout().apply {
+            setOnLongClickListener {
+                showDeleteLocalProfileDialog(profile)
+                true
+            }
             addView(profileCardTitle(profile.name))
             addView(metaText(getString(R.string.crown_store_local_profile_id, profile.id)))
             addView(cardActionArea(
@@ -497,6 +501,49 @@ class CrownStoreActivity : AppCompatActivity() {
                     }
                 )
             ))
+        }
+    }
+
+    private fun showDeleteLocalProfileDialog(profile: LocalCrownProfile) {
+        val configId = profile.id.toLongOrNull()
+        if (configId == null) {
+            Toast.makeText(this, R.string.toast_crown_store_delete_failed, Toast.LENGTH_LONG).show()
+            return
+        }
+        if (configId == DEFAULT_CROWN_CONFIG_ID) {
+            Toast.makeText(this, R.string.toast_crown_store_delete_default_blocked, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        AlertDialog.Builder(this, R.style.AppDialogStyle)
+            .setTitle(R.string.title_crown_store_delete_profile)
+            .setMessage(getString(R.string.message_crown_store_delete_profile, profile.name))
+            .setPositiveButton(R.string.action_crown_store_delete_profile) { _, _ ->
+                deleteLocalProfile(configId, profile.name)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun deleteLocalProfile(configId: Long, profileName: String) {
+        runCatching {
+            helper.deleteConfig(configId)
+            val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+            if (prefs.getLong(CURRENT_CROWN_CONFIG_ID_KEY, DEFAULT_CROWN_CONFIG_ID) == configId) {
+                prefs.edit {
+                    putLong(CURRENT_CROWN_CONFIG_ID_KEY, DEFAULT_CROWN_CONFIG_ID)
+                }
+            }
+        }.onSuccess {
+            onLocalProfilesChanged()
+            Toast.makeText(
+                this,
+                getString(R.string.toast_crown_store_delete_success, profileName),
+                Toast.LENGTH_SHORT
+            ).show()
+        }.onFailure { error ->
+            Log.e("CrownStore", "Failed to delete local Crown profile", error)
+            Toast.makeText(this, R.string.toast_crown_store_delete_failed, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -2004,6 +2051,8 @@ class CrownStoreActivity : AppCompatActivity() {
         private const val CROWN_STORE_MAX_INDEX_BYTES = 256 * 1024
         private const val CROWN_SHARE_MAX_DOWNLOAD_BYTES = 512 * 1024
         private const val LAYOUT_DPI_TOLERANCE = 8
+        private const val DEFAULT_CROWN_CONFIG_ID = 0L
+        private const val CURRENT_CROWN_CONFIG_ID_KEY = "current_config_id"
         private const val CROWN_STORE_REPORT_URL =
             "https://github.com/qiin2333/crown-profiles/issues/new"
         private val CROWN_STORE_EXTERNAL_LOCATOR_PATTERN =

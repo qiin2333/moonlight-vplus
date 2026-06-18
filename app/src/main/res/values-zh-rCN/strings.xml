@@ -1346,6 +1346,7 @@
     <string name="crown_store_action_export_share">打包分享</string>
     <string name="crown_store_action_export_legacy_short">旧版 .mdat</string>
     <string name="crown_store_action_merge_short">合并进去</string>
+    <string name="action_crown_store_delete_profile">删除</string>
     <string name="crown_store_action_back">返回</string>
     <string name="crown_store_empty_state_title">这里还没有王冠</string>
     <string name="crown_store_empty_state_message">等配置被合并进 GitHub Store 后，就会乖乖出现在这里。</string>
@@ -1368,6 +1369,7 @@
     <string name="title_crown_store_publish_metadata">让大家认识这套配置</string>
     <string name="title_crown_store_github_authorization">需要连接 GitHub</string>
     <string name="title_crown_store_publish_success">投稿 PR 已送出</string>
+    <string name="title_crown_store_delete_profile">删掉这顶王冠？</string>
     <string name="label_crown_store_profile_name">配置名</string>
     <string name="label_crown_store_game">适配游戏</string>
     <string name="label_crown_store_author">作者昵称</string>
@@ -1384,6 +1386,7 @@
     <string name="message_crown_store_github_reauthorization_required">投稿需要 GitHub public repository 权限。重新连接 GitHub、授权仓库访问后，再来投一次吧。</string>
     <string name="message_crown_store_device_code">授权码已帮你复制好：%1$s\n\n1. 打开授权页，直接粘贴授权码。\n2. 同意 public repository 权限，Moonlight V+ 才能帮你 fork 王冠 Store 并创建 Pull Request。\n3. 授权完成后回到本页，点击“已授权，检查”。\n\n授权页：%2$s</string>
     <string name="message_crown_store_publish_success">这套王冠配置的投稿 PR 已创建：\n%1$s\n\n%2$s</string>
+    <string name="message_crown_store_delete_profile">要从“我的王冠”里删除“%1$s”吗？只会移除本地配置和里面的按钮。</string>
     <string name="crown_store_report_issue_title">举报王冠 Store 配置：%1$s</string>
     <string name="crown_store_report_issue_body">配置：%1$s\n来源：%2$s\n\n原因：\n请说明它看起来哪里不安全、包含隐私、侵权或不友好。</string>
     <string name="action_crown_store_authorize_github">连接 GitHub</string>
@@ -1417,6 +1420,9 @@
     <string name="toast_crown_store_publish_failed_with_error">投稿失败：%1$s</string>
     <string name="toast_crown_store_publish_terms_required">先确认投稿规则再发送哦</string>
     <string name="toast_crown_store_publish_invalid_metadata">检查一下投稿信息：%1$s</string>
+    <string name="toast_crown_store_delete_success">已删除 %1$s</string>
+    <string name="toast_crown_store_delete_failed">这顶王冠没删掉，再试一次吧</string>
+    <string name="toast_crown_store_delete_default_blocked">默认王冠先留着，它是小小的安全垫</string>
     <string name="crown_store_validation_name_too_long">配置名太长了</string>
     <string name="crown_store_validation_game_too_long">游戏名太长了</string>
     <string name="crown_store_validation_author_too_long">作者昵称太长了</string>
