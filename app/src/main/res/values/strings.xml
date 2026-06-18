@@ -1035,6 +1035,16 @@ Tap again to replace it.</string>
 
     <!-- Fix mouse middle button -->
     <string name="title_fix_mouse_middle">Fix mouse middle button</string>
+    <string name="title_hardware_key_mappings">Hardware key mappings</string>
+    <string name="summary_hardware_key_mappings">Learn a physical key and map it to a PC key</string>
+    <string name="hardware_key_mapping_add">Add mapping</string>
+    <string name="hardware_key_mapping_clear">Clear all mappings</string>
+    <string name="hardware_key_mapping_empty">No hardware key mappings</string>
+    <string name="hardware_key_mapping_press_source">Press the physical key to map</string>
+    <string name="hardware_key_mapping_choose_target">Choose the PC key to send</string>
+    <string name="hardware_key_mapping_saved">Key mapping saved</string>
+    <string name="hardware_key_mapping_delete">Delete this mapping?</string>
+    <string name="hardware_key_mapping_accessibility_hint">Enable the Moonlight V+ keyboard accessibility service to learn system-reserved keys.</string>
     <string name="summary_fix_mouse_middle">On some devices the mouse middle button may be recognized as the back key. Enable this to try to fix the issue.</string>
 
     <!-- Fix mouse scroll wheel -->

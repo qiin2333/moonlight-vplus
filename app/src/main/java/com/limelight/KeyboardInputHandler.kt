@@ -10,6 +10,7 @@ import android.view.KeyEvent
 import android.widget.Toast
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.KeyboardTranslator
+import com.limelight.binding.input.HardwareKeyMappingStore
 import com.limelight.nvstream.input.KeyboardPacket
 import com.limelight.nvstream.input.MouseButtonPacket
 import com.limelight.nvstream.jni.MoonBridge
@@ -130,6 +131,10 @@ class KeyboardInputHandler(private val game: Game) {
     }
 
     fun handleKeyDown(event: KeyEvent): Boolean {
+        return handleKeyDownMapped(HardwareKeyMappingStore.remap(game, event))
+    }
+
+    private fun handleKeyDownMapped(event: KeyEvent): Boolean {
         when (event.keyCode) {
             KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_HOME, KeyEvent.KEYCODE_APP_SWITCH,
             KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN,
@@ -302,6 +307,10 @@ class KeyboardInputHandler(private val game: Game) {
     }
 
     fun handleKeyUp(event: KeyEvent): Boolean {
+        return handleKeyUpMapped(HardwareKeyMappingStore.remap(game, event))
+    }
+
+    private fun handleKeyUpMapped(event: KeyEvent): Boolean {
         when (event.keyCode) {
             KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_HOME, KeyEvent.KEYCODE_APP_SWITCH -> {
                 // 系统导航键直接跳过去重逻辑

@@ -670,6 +670,10 @@
             android:title="@string/title_special_key_map"
             android:summary="@string/summary_special_key_map"
             android:defaultValue="false" />
+        <Preference
+            android:key="hardware_key_mappings"
+            android:title="@string/title_hardware_key_mappings"
+            android:summary="@string/summary_hardware_key_mappings" />
         <CheckBoxPreference
             android:key="checkbox_mouse_middle"
             android:title="@string/title_fix_mouse_middle"
