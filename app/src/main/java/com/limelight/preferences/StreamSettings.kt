@@ -70,7 +70,10 @@ import com.limelight.R
 import com.limelight.ExternalDisplayManager
 import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper
+import com.limelight.binding.input.HardwareKeyMapping
+import com.limelight.binding.input.HardwareKeyMappingStore
 import com.limelight.binding.video.MediaCodecHelper
+import com.limelight.services.KeyboardAccessibilityService
 import com.limelight.utils.AspectRatioConverter
 import com.limelight.utils.ConfigurationSyncManager
 import com.limelight.utils.ConfigurationSyncScheduler
@@ -92,7 +95,7 @@ import kotlin.concurrent.thread
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-class StreamSettings : AppCompatActivity() {
+class StreamSettings : AppCompatActivity(), KeyboardAccessibilityService.KeyEventCallback {
 
     private lateinit var previousPrefs: PreferenceConfiguration
     private var previousDisplayPixelCount = 0
@@ -110,6 +113,8 @@ class StreamSettings : AppCompatActivity() {
     private var searchInput: EditText? = null
     private var searchToggle: ImageView? = null
     private var menuToggleView: ImageView? = null
+    private var hardwareKeyCapture: ((KeyEvent) -> Unit)? = null
+    private var hardwareKeyCaptureDialog: AlertDialog? = null
 
     // 状态保存键
     companion object {
@@ -206,6 +211,157 @@ class StreamSettings : AppCompatActivity() {
 
         // 设置版本号
         setupVersionInfo()
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val capture = hardwareKeyCapture
+        if (capture != null && event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+            capture(event)
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun onKeyEvent(event: KeyEvent) {
+        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+            runOnUiThread { hardwareKeyCapture?.invoke(event) }
+        }
+    }
+
+    override fun onPause() {
+        stopHardwareKeyCapture()
+        super.onPause()
+    }
+
+    private fun stopHardwareKeyCapture() {
+        hardwareKeyCapture = null
+        hardwareKeyCaptureDialog?.dismiss()
+        hardwareKeyCaptureDialog = null
+        KeyboardAccessibilityService.captureAllKeys = false
+        KeyboardAccessibilityService.setIntercepting(false)
+        if (KeyboardAccessibilityService.instance?.keyEventCallback === this) {
+            KeyboardAccessibilityService.instance?.keyEventCallback = null
+        }
+    }
+
+    fun showHardwareKeyMappings() {
+        val mappings = HardwareKeyMappingStore.load(this)
+        val builder = AlertDialog.Builder(this)
+            .setTitle(R.string.title_hardware_key_mappings)
+        if (mappings.isEmpty()) {
+            builder
+                .setMessage(R.string.hardware_key_mapping_empty)
+                .setPositiveButton(R.string.hardware_key_mapping_add) { _, _ ->
+                    beginHardwareKeyCapture()
+                }
+        } else {
+            val labels = mappings.map(::mappingLabel).toMutableList()
+            labels.add(getString(R.string.hardware_key_mapping_add))
+            labels.add(getString(R.string.hardware_key_mapping_clear))
+            builder.setItems(labels.toTypedArray()) { _, index ->
+                when {
+                    index < mappings.size -> confirmDeleteMapping(mappings[index])
+                    index == mappings.size -> beginHardwareKeyCapture()
+                    else -> {
+                        HardwareKeyMappingStore.clear(this)
+                        showHardwareKeyMappings()
+                    }
+                }
+            }
+        }
+        builder
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun beginHardwareKeyCapture() {
+        val service = KeyboardAccessibilityService.instance
+        val message = if (service == null) {
+            getString(R.string.hardware_key_mapping_press_source) + "\n\n" +
+                getString(R.string.hardware_key_mapping_accessibility_hint)
+        } else {
+            getString(R.string.hardware_key_mapping_press_source)
+        }
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.hardware_key_mapping_add)
+            .setMessage(message)
+            .setNegativeButton(android.R.string.cancel) { _, _ -> stopHardwareKeyCapture() }
+            .create()
+        hardwareKeyCaptureDialog = dialog
+        hardwareKeyCapture = { event ->
+            hardwareKeyCapture = null
+            hardwareKeyCaptureDialog = null
+            dialog.dismiss()
+            KeyboardAccessibilityService.captureAllKeys = false
+            KeyboardAccessibilityService.setIntercepting(false)
+            service?.keyEventCallback = null
+            showHardwareKeyTargetPicker(event)
+        }
+        if (service != null) {
+            service.keyEventCallback = this
+            KeyboardAccessibilityService.captureAllKeys = true
+            KeyboardAccessibilityService.setIntercepting(true)
+        }
+        dialog.setOnDismissListener {
+            if (hardwareKeyCapture != null) stopHardwareKeyCapture()
+        }
+        dialog.show()
+    }
+
+    private fun showHardwareKeyTargetPicker(sourceEvent: KeyEvent) {
+        val targets = buildList {
+            for (keyCode in KeyEvent.KEYCODE_F1..KeyEvent.KEYCODE_F12) add(keyCode)
+            addAll(
+                listOf(
+                    KeyEvent.KEYCODE_ESCAPE,
+                    KeyEvent.KEYCODE_TAB,
+                    KeyEvent.KEYCODE_INSERT,
+                    KeyEvent.KEYCODE_FORWARD_DEL,
+                    KeyEvent.KEYCODE_MOVE_HOME,
+                    KeyEvent.KEYCODE_MOVE_END,
+                    KeyEvent.KEYCODE_PAGE_UP,
+                    KeyEvent.KEYCODE_PAGE_DOWN,
+                    KeyEvent.KEYCODE_SYSRQ,
+                    KeyEvent.KEYCODE_BREAK
+                )
+            )
+        }
+        val labels = targets.map { keyCodeLabel(it) }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.hardware_key_mapping_choose_target)
+            .setItems(labels) { _, index ->
+                HardwareKeyMappingStore.save(
+                    this,
+                    HardwareKeyMappingStore.mappingFrom(sourceEvent, targets[index])
+                )
+                Toast.makeText(this, R.string.hardware_key_mapping_saved, Toast.LENGTH_SHORT).show()
+                showHardwareKeyMappings()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun confirmDeleteMapping(mapping: HardwareKeyMapping) {
+        AlertDialog.Builder(this)
+            .setTitle(mappingLabel(mapping))
+            .setMessage(R.string.hardware_key_mapping_delete)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                HardwareKeyMappingStore.remove(this, mapping)
+                showHardwareKeyMappings()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun mappingLabel(mapping: HardwareKeyMapping): String {
+        val source = KeyEvent.keyCodeToString(mapping.sourceKeyCode).removePrefix("KEYCODE_")
+        return "${mapping.deviceName}: $source [${mapping.sourceScanCode}] -> ${keyCodeLabel(mapping.targetKeyCode)}"
+    }
+
+    private fun keyCodeLabel(keyCode: Int): String {
+        return com.limelight.utils.KeyCodeMapper.getDisplayName(keyCode)
+            ?: KeyEvent.keyCodeToString(keyCode).removePrefix("KEYCODE_")
     }
 
     /**
@@ -2557,6 +2713,12 @@ class StreamSettings : AppCompatActivity() {
             findPreference<Preference>(PreferenceConfiguration.CROWN_CONFIG_MANAGEMENT_STRING)!!.onPreferenceClickListener =
                     Preference.OnPreferenceClickListener {
                         showCrownConfigManagementDialog()
+                        true
+                    }
+
+            findPreference<Preference>("hardware_key_mappings")!!.onPreferenceClickListener =
+                    Preference.OnPreferenceClickListener {
+                        (requireActivity() as StreamSettings).showHardwareKeyMappings()
                         true
                     }
 

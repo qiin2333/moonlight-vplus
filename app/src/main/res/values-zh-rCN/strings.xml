@@ -1327,4 +1327,14 @@
     <string name="summary_framegen_slow_threshold_ms">仅自定义模式显示。插帧变慢时会自动回退直通渲染，默认：18 ms。</string>
     <string name="title_framegen_present_real_first">运动节奏修正</string>
     <string name="summary_framegen_present_real_first">仅在画面节奏不稳时尝试，默认关闭。</string>
+    <string name="title_hardware_key_mappings">硬件按键映射</string>
+    <string name="summary_hardware_key_mappings">学习实体按键并映射为电脑按键</string>
+    <string name="hardware_key_mapping_add">添加映射</string>
+    <string name="hardware_key_mapping_clear">清空全部映射</string>
+    <string name="hardware_key_mapping_empty">暂无硬件按键映射</string>
+    <string name="hardware_key_mapping_press_source">请按下需要映射的实体按键</string>
+    <string name="hardware_key_mapping_choose_target">选择要发送到电脑的按键</string>
+    <string name="hardware_key_mapping_saved">按键映射已保存</string>
+    <string name="hardware_key_mapping_delete">确定删除此映射吗？</string>
+    <string name="hardware_key_mapping_accessibility_hint">如需学习系统保留键，请启用 Moonlight V+ 键盘无障碍服务。</string>
 </resources>
