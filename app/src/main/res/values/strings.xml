@@ -1035,6 +1035,18 @@ Tap again to replace it.</string>
 
     <!-- Fix mouse middle button -->
     <string name="title_fix_mouse_middle">Fix mouse middle button</string>
+    <string name="title_touchpad_compatibility_devices">Touchpad compatibility devices</string>
+    <string name="summary_touchpad_compatibility_devices">Select touchpads that stop working with pointer capture</string>
+    <string name="touchpad_compatibility_add">Add connected device</string>
+    <string name="touchpad_compatibility_clear">Clear all devices</string>
+    <string name="touchpad_compatibility_choose_device">Choose a connected touchpad</string>
+    <string name="touchpad_compatibility_no_devices">No unconfigured pointer devices are connected</string>
+    <string name="touchpad_compatibility_saved">Touchpad compatibility device saved</string>
+    <string name="touchpad_compatibility_delete">Remove this compatibility device?</string>
+    <string name="title_touchpad_tap_timeout">Touchpad tap timeout</string>
+    <string name="summary_touchpad_tap_timeout">Maximum contact duration recognized as a tap. Increase it if light taps are sometimes ignored.</string>
+    <string name="title_touchpad_movement_threshold">Touchpad tap movement tolerance</string>
+    <string name="summary_touchpad_movement_threshold">Maximum movement allowed before a contact becomes scrolling. Increase it if slightly moving taps are ignored.</string>
     <string name="summary_fix_mouse_middle">On some devices the mouse middle button may be recognized as the back key. Enable this to try to fix the issue.</string>
 
     <!-- Fix mouse scroll wheel -->
@@ -1399,4 +1411,21 @@ Tap again to replace it.</string>
     <string name="seekbar_decrease">Decrease</string>
     <string name="seekbar_increase">Increase</string>
 
+    <string name="title_touchpad_tap_enabled">Tap to click</string>
+    <string name="summary_touchpad_tap_enabled">Use a one-finger tap as a left click</string>
+    <string name="title_touchpad_two_finger_tap">Two-finger right click</string>
+    <string name="summary_touchpad_two_finger_tap">Use a two-finger tap as a right click</string>
+    <string name="title_touchpad_reverse_scrolling">Reverse scrolling direction</string>
+    <string name="summary_touchpad_reverse_scrolling">Invert two-finger horizontal and vertical scrolling</string>
+    <string name="title_touchpad_pinch_enabled">Pinch to zoom</string>
+    <string name="summary_touchpad_pinch_enabled">Send Ctrl+wheel when pinching with two fingers</string>
+    <string name="title_touchpad_three_finger_swipe">Three-finger swipes</string>
+    <string name="title_touchpad_three_finger_tap">Three-finger tap</string>
+    <string name="touchpad_swipe_switch_apps">Switch apps and show desktop</string>
+    <string name="touchpad_swipe_virtual_desktops">Switch virtual desktops</string>
+    <string name="touchpad_tap_middle_click">Middle mouse button</string>
+    <string name="touchpad_tap_search">Open search</string>
+    <string name="touchpad_tap_notifications">Open notifications</string>
+    <string name="touchpad_tap_play_pause">Play/pause</string>
+    <string name="touchpad_action_none">Nothing</string>
 </resources>

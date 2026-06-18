@@ -65,6 +65,14 @@ class PreferenceConfiguration {
 
     var enableDoubleClickDrag = false
     var doubleTapTimeThreshold = 0
+    var touchpadTapTimeoutMs = 0
+    var touchpadMovementThresholdPx = 0
+    var touchpadTapEnabled = true
+    var touchpadTwoFingerTapEnabled = true
+    var touchpadReverseScrolling = false
+    var touchpadPinchEnabled = true
+    var touchpadThreeFingerSwipeMode = "switch_apps"
+    var touchpadThreeFingerTapAction = "middle_click"
     var enableLocalCursorRendering = false
     //自定义按键映射
     var enableCustomKeyMap = false
@@ -375,6 +383,14 @@ class PreferenceConfiguration {
         copy.enableNativeMousePointer = this.enableNativeMousePointer
         copy.forceMtkMaxOperatingRate = this.forceMtkMaxOperatingRate
         copy.enableDoubleClickDrag = this.enableDoubleClickDrag
+        copy.touchpadTapTimeoutMs = this.touchpadTapTimeoutMs
+        copy.touchpadMovementThresholdPx = this.touchpadMovementThresholdPx
+        copy.touchpadTapEnabled = this.touchpadTapEnabled
+        copy.touchpadTwoFingerTapEnabled = this.touchpadTwoFingerTapEnabled
+        copy.touchpadReverseScrolling = this.touchpadReverseScrolling
+        copy.touchpadPinchEnabled = this.touchpadPinchEnabled
+        copy.touchpadThreeFingerSwipeMode = this.touchpadThreeFingerSwipeMode
+        copy.touchpadThreeFingerTapAction = this.touchpadThreeFingerTapAction
         copy.enableLocalCursorRendering = this.enableLocalCursorRendering
         copy.gyroToRightStick = this.gyroToRightStick
         copy.gyroToMouse = this.gyroToMouse
@@ -395,6 +411,14 @@ class PreferenceConfiguration {
         // ---- Private pref key constants ----
         private const val ENABLE_DOUBLE_CLICK_DRAG_PREF_STRING = "pref_enable_double_click_drag"
         private const val DOUBLE_TAP_TIME_THRESHOLD_PREF_STRING = "seekbar_double_tap_time_threshold"
+        private const val TOUCHPAD_TAP_TIMEOUT_PREF_STRING = "seekbar_touchpad_tap_timeout"
+        private const val TOUCHPAD_MOVEMENT_THRESHOLD_PREF_STRING = "seekbar_touchpad_movement_threshold"
+        private const val TOUCHPAD_TAP_ENABLED_PREF_STRING = "checkbox_touchpad_tap_enabled"
+        private const val TOUCHPAD_TWO_FINGER_TAP_PREF_STRING = "checkbox_touchpad_two_finger_tap"
+        private const val TOUCHPAD_REVERSE_SCROLLING_PREF_STRING = "checkbox_touchpad_reverse_scrolling"
+        private const val TOUCHPAD_PINCH_ENABLED_PREF_STRING = "checkbox_touchpad_pinch_enabled"
+        private const val TOUCHPAD_THREE_FINGER_SWIPE_PREF_STRING = "list_touchpad_three_finger_swipe"
+        private const val TOUCHPAD_THREE_FINGER_TAP_PREF_STRING = "list_touchpad_three_finger_tap"
         private const val ENABLE_LOCAL_CURSOR_RENDERING_PREF_STRING = "pref_enable_local_cursor_rendering"
 
         private const val LEGACY_RES_FPS_PREF_STRING = "list_resolution_fps"
@@ -689,6 +713,8 @@ class PreferenceConfiguration {
 
         private const val DEFAULT_ENABLE_DOUBLE_CLICK_DRAG = false
         private const val DEFAULT_DOUBLE_TAP_TIME_THRESHOLD = 125 // 默认125ms
+        private const val DEFAULT_TOUCHPAD_TAP_TIMEOUT_MS = 500
+        private const val DEFAULT_TOUCHPAD_MOVEMENT_THRESHOLD_PX = 24
         private const val DEFAULT_ENABLE_LOCAL_CURSOR_RENDERING = true
 
         private const val DEFAULT_REVERSE_RESOLUTION = false
@@ -1148,6 +1174,14 @@ class PreferenceConfiguration {
             config.disableWarnings = prefs.getBoolean(DISABLE_TOASTS_PREF_STRING, DEFAULT_DISABLE_TOASTS)
             config.enableDoubleClickDrag = prefs.getBoolean(ENABLE_DOUBLE_CLICK_DRAG_PREF_STRING, DEFAULT_ENABLE_DOUBLE_CLICK_DRAG)
             config.doubleTapTimeThreshold = prefs.getInt(DOUBLE_TAP_TIME_THRESHOLD_PREF_STRING, DEFAULT_DOUBLE_TAP_TIME_THRESHOLD)
+            config.touchpadTapTimeoutMs = prefs.getInt(TOUCHPAD_TAP_TIMEOUT_PREF_STRING, DEFAULT_TOUCHPAD_TAP_TIMEOUT_MS)
+            config.touchpadMovementThresholdPx = prefs.getInt(TOUCHPAD_MOVEMENT_THRESHOLD_PREF_STRING, DEFAULT_TOUCHPAD_MOVEMENT_THRESHOLD_PX)
+            config.touchpadTapEnabled = prefs.getBoolean(TOUCHPAD_TAP_ENABLED_PREF_STRING, true)
+            config.touchpadTwoFingerTapEnabled = prefs.getBoolean(TOUCHPAD_TWO_FINGER_TAP_PREF_STRING, true)
+            config.touchpadReverseScrolling = prefs.getBoolean(TOUCHPAD_REVERSE_SCROLLING_PREF_STRING, false)
+            config.touchpadPinchEnabled = prefs.getBoolean(TOUCHPAD_PINCH_ENABLED_PREF_STRING, true)
+            config.touchpadThreeFingerSwipeMode = prefs.getString(TOUCHPAD_THREE_FINGER_SWIPE_PREF_STRING, "switch_apps") ?: "switch_apps"
+            config.touchpadThreeFingerTapAction = prefs.getString(TOUCHPAD_THREE_FINGER_TAP_PREF_STRING, "middle_click") ?: "middle_click"
             config.enableLocalCursorRendering = prefs.getBoolean(ENABLE_LOCAL_CURSOR_RENDERING_PREF_STRING, DEFAULT_ENABLE_LOCAL_CURSOR_RENDERING)
             config.enableCustomKeyMap = prefs.getBoolean("checkbox_special_key_map", false)
             config.fixMouseMiddle = prefs.getBoolean("checkbox_mouse_middle", false)

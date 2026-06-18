@@ -670,6 +670,68 @@
             android:title="@string/title_special_key_map"
             android:summary="@string/summary_special_key_map"
             android:defaultValue="false" />
+        <Preference
+            android:key="touchpad_compatibility_devices"
+            android:title="@string/title_touchpad_compatibility_devices"
+            android:summary="@string/summary_touchpad_compatibility_devices" />
+        <CheckBoxPreference
+            android:key="checkbox_touchpad_tap_enabled"
+            android:title="@string/title_touchpad_tap_enabled"
+            android:summary="@string/summary_touchpad_tap_enabled"
+            android:defaultValue="true" />
+        <CheckBoxPreference
+            android:key="checkbox_touchpad_two_finger_tap"
+            android:title="@string/title_touchpad_two_finger_tap"
+            android:summary="@string/summary_touchpad_two_finger_tap"
+            android:defaultValue="true" />
+        <CheckBoxPreference
+            android:key="checkbox_touchpad_reverse_scrolling"
+            android:title="@string/title_touchpad_reverse_scrolling"
+            android:summary="@string/summary_touchpad_reverse_scrolling"
+            android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_touchpad_pinch_enabled"
+            android:title="@string/title_touchpad_pinch_enabled"
+            android:summary="@string/summary_touchpad_pinch_enabled"
+            android:defaultValue="true" />
+        <ListPreference
+            android:key="list_touchpad_three_finger_swipe"
+            android:title="@string/title_touchpad_three_finger_swipe"
+            android:summary="%s"
+            android:entries="@array/touchpad_three_finger_swipe_names"
+            android:entryValues="@array/touchpad_three_finger_swipe_values"
+            android:defaultValue="switch_apps" />
+        <ListPreference
+            android:key="list_touchpad_three_finger_tap"
+            android:title="@string/title_touchpad_three_finger_tap"
+            android:summary="%s"
+            android:entries="@array/touchpad_three_finger_tap_names"
+            android:entryValues="@array/touchpad_three_finger_tap_values"
+            android:defaultValue="middle_click" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_touchpad_tap_timeout"
+            android:dialogMessage="@string/summary_touchpad_tap_timeout"
+            seekbar:min="100"
+            android:max="1000"
+            seekbar:step="25"
+            seekbar:keyStep="50"
+            seekbar:divisor="1"
+            android:defaultValue="500"
+            android:summary="@string/summary_touchpad_tap_timeout"
+            android:text="ms"
+            android:title="@string/title_touchpad_tap_timeout" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_touchpad_movement_threshold"
+            android:dialogMessage="@string/summary_touchpad_movement_threshold"
+            seekbar:min="4"
+            android:max="64"
+            seekbar:step="2"
+            seekbar:keyStep="4"
+            seekbar:divisor="1"
+            android:defaultValue="24"
+            android:summary="@string/summary_touchpad_movement_threshold"
+            android:text="px"
+            android:title="@string/title_touchpad_movement_threshold" />
         <CheckBoxPreference
             android:key="checkbox_mouse_middle"
             android:title="@string/title_fix_mouse_middle"

@@ -24,6 +24,13 @@ class AndroidNativePointerCaptureProvider(
         }
     }
 
+    private fun shouldSkipPointerCapture(): Boolean {
+        val devices = InputDevice.getDeviceIds().asSequence()
+            .mapNotNull { InputDevice.getDevice(it) }
+            .toList()
+        return TouchpadCompatibilityStore.shouldSkipPointerCapture(targetView.context, devices)
+    }
+
     private fun hasCaptureCompatibleInputDevice(): Boolean {
         for (id in InputDevice.getDeviceIds()) {
             val device = InputDevice.getDevice(id) ?: continue
@@ -53,7 +60,7 @@ class AndroidNativePointerCaptureProvider(
     override fun hideCursor() {
         super.hideCursor()
         inputManager.registerInputDeviceListener(this, null)
-        if (hasCaptureCompatibleInputDevice()) {
+        if (hasCaptureCompatibleInputDevice() && !shouldSkipPointerCapture()) {
             targetView.requestPointerCapture()
         }
     }
@@ -64,7 +71,7 @@ class AndroidNativePointerCaptureProvider(
         }
 
         Handler(Looper.getMainLooper()).postDelayed({
-            if (hasCaptureCompatibleInputDevice()) {
+            if (hasCaptureCompatibleInputDevice() && !shouldSkipPointerCapture()) {
                 targetView.requestPointerCapture()
             }
         }, 500)
@@ -97,7 +104,10 @@ class AndroidNativePointerCaptureProvider(
     }
 
     override fun onInputDeviceAdded(deviceId: Int) {
-        if (!targetView.hasPointerCapture() && hasCaptureCompatibleInputDevice()) {
+        if (!targetView.hasPointerCapture() &&
+            hasCaptureCompatibleInputDevice() &&
+            !shouldSkipPointerCapture()
+        ) {
             targetView.requestPointerCapture()
         }
     }

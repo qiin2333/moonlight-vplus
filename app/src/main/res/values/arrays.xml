@@ -482,4 +482,28 @@
         <item>open_keyboard</item>
         <item>open_menu</item>
     </string-array>
+    <string-array name="touchpad_three_finger_swipe_names">
+        <item>@string/touchpad_swipe_switch_apps</item>
+        <item>@string/touchpad_swipe_virtual_desktops</item>
+        <item>@string/touchpad_action_none</item>
+    </string-array>
+    <string-array name="touchpad_three_finger_swipe_values" translatable="false">
+        <item>switch_apps</item>
+        <item>virtual_desktops</item>
+        <item>none</item>
+    </string-array>
+    <string-array name="touchpad_three_finger_tap_names">
+        <item>@string/touchpad_tap_middle_click</item>
+        <item>@string/touchpad_tap_search</item>
+        <item>@string/touchpad_tap_notifications</item>
+        <item>@string/touchpad_tap_play_pause</item>
+        <item>@string/touchpad_action_none</item>
+    </string-array>
+    <string-array name="touchpad_three_finger_tap_values" translatable="false">
+        <item>middle_click</item>
+        <item>search</item>
+        <item>notifications</item>
+        <item>play_pause</item>
+        <item>none</item>
+    </string-array>
 </resources>

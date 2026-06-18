@@ -7,6 +7,10 @@ import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
 import androidx.annotation.RequiresApi
+import com.limelight.binding.input.KeyboardTranslator
+import com.limelight.binding.input.capture.TouchpadCompatibilityStore
+import com.limelight.binding.input.capture.TouchpadGestureTranslator
+import com.limelight.binding.input.capture.TouchpadMultiFingerGestureTranslator
 import com.limelight.binding.input.touch.AbsoluteTouchContext
 import com.limelight.binding.input.touch.NativeTouchContext
 import com.limelight.binding.input.touch.RelativeTouchContext
@@ -14,6 +18,7 @@ import com.limelight.binding.input.touch.TouchContext
 import com.limelight.binding.input.virtual_controller.VirtualController
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.input.MouseButtonPacket
+import com.limelight.nvstream.input.KeyboardPacket
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.ui.StreamView
@@ -59,14 +64,80 @@ class TouchInputHandler(private val game: Game) {
     private var detectScrolling = false
     var detectMouseMiddle = false         // 键盘处理也会读写
     var detectMouseMiddleDown = false     // 键盘处理也会读写
+    private val touchpadGestureTranslator = TouchpadGestureTranslator(
+        tapTimeoutMs = game.prefConfig.touchpadTapTimeoutMs,
+        movementThresholdPx = game.prefConfig.touchpadMovementThresholdPx.toFloat()
+    )
+    private val compatibilityTouchpadCache = mutableMapOf<Int, Boolean>()
+    private val touchpadMultiFingerTranslator = TouchpadMultiFingerGestureTranslator()
+    private val touchpadActionExecutor = StreamActionExecutor(game, { game.conn })
+    private var drainingCompatibilityMultiGesture = false
+    private var pinchCtrlDown = false
+    private var pinchAccumulator = 0.0
+    private var appSwitchAltDown = false
+    private var threeFingerVerticalActionSent = false
 
     // ---- 公共入口 ----
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun handleMotionEvent(view: View?, event: MotionEvent): Boolean {
-        if (!game.grabbedInput) return false
+        if (!game.grabbedInput) {
+            cancelCompatibilityTouchpadGestures()
+            return false
+        }
 
         val eventSource = event.source
+        val inputDevice = event.device
+        val isCompatibilityTouchpad = inputDevice != null &&
+            compatibilityTouchpadCache.getOrPut(event.deviceId) {
+                TouchpadCompatibilityStore.isConfigured(game, inputDevice)
+            }
+        val isFingerEvent = event.pointerCount >= 1 &&
+            event.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER
+        if (isCompatibilityTouchpad && isFingerEvent &&
+            (event.pointerCount >= 2 || touchpadMultiFingerTranslator.isActive ||
+                drainingCompatibilityMultiGesture)
+        ) {
+            handleCompatibilityMultiFingerEvent(event)
+            return true
+        }
+        if (isCompatibilityTouchpad &&
+            event.pointerCount == 1 &&
+            isFingerEvent
+        ) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    touchpadGestureTranslator.begin(event.x, event.y, event.eventTime)
+                    return true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    for (index in 0 until event.historySize) {
+                        sendCompatibilityTouchpadScroll(
+                            touchpadGestureTranslator.move(
+                                event.getHistoricalX(0, index),
+                                event.getHistoricalY(0, index)
+                            )
+                        )
+                    }
+                    sendCompatibilityTouchpadScroll(touchpadGestureTranslator.move(event.x, event.y))
+                    return true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    val result = if (event.actionMasked == MotionEvent.ACTION_UP) {
+                        touchpadGestureTranslator.end(event.x, event.y, event.eventTime)
+                    } else {
+                        touchpadGestureTranslator.end(eventTime = Long.MAX_VALUE)
+                    }
+                    if (result == TouchpadGestureTranslator.EndResult.TAP &&
+                        game.prefConfig.touchpadTapEnabled
+                    ) {
+                        game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
+                        game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
+                    }
+                    return true
+                }
+            }
+        }
 
         // 华为平板原生鼠标下的滚动逻辑
         if (game.prefConfig.fixMouseWheel && game.cursorVisible &&
@@ -528,6 +599,186 @@ class TouchInputHandler(private val game: Game) {
         return false
     }
 
+    private fun sendCompatibilityTouchpadScroll(delta: TouchpadGestureTranslator.ScrollDelta?) {
+        if (delta == null) return
+        val multiplier = if (game.prefConfig.touchpadReverseScrolling) -1 else 1
+        if (delta.vertical.toInt() != 0) {
+            game.conn?.sendMouseHighResScroll((delta.vertical * multiplier).toShort())
+        }
+        if (delta.horizontal.toInt() != 0) {
+            game.conn?.sendMouseHighResHScroll((delta.horizontal * multiplier).toShort())
+        }
+    }
+
+    private fun handleCompatibilityMultiFingerEvent(event: MotionEvent) {
+        val points = (0 until event.pointerCount).map {
+            TouchpadMultiFingerGestureTranslator.Point(event.getX(it), event.getY(it))
+        }
+        val actions = when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
+                drainingCompatibilityMultiGesture = event.pointerCount >= 2 || drainingCompatibilityMultiGesture
+                if (event.pointerCount == 2) {
+                    releasePinchCtrl()
+                    pinchAccumulator = 0.0
+                } else if (event.pointerCount >= 3) {
+                    finishAppSwitchSelection()
+                    threeFingerVerticalActionSent = false
+                }
+                touchpadMultiFingerTranslator.pointerDown(points, event.eventTime)
+            }
+            MotionEvent.ACTION_MOVE -> touchpadMultiFingerTranslator.move(points)
+            MotionEvent.ACTION_POINTER_UP -> {
+                val result = touchpadMultiFingerTranslator.pointerUp(points, event.eventTime)
+                releasePinchCtrl()
+                finishAppSwitchSelection()
+                result
+            }
+            MotionEvent.ACTION_UP -> {
+                val result = touchpadMultiFingerTranslator.pointerUp(points, event.eventTime)
+                finishCompatibilityMultiGesture()
+                result
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                finishCompatibilityMultiGesture()
+                emptyList()
+            }
+            else -> emptyList()
+        }
+        actions.forEach(::sendCompatibilityMultiFingerAction)
+    }
+
+    private fun sendCompatibilityMultiFingerAction(action: TouchpadMultiFingerGestureTranslator.Action) {
+        when (action) {
+            is TouchpadMultiFingerGestureTranslator.Action.Scroll -> {
+                val multiplier = if (game.prefConfig.touchpadReverseScrolling) -1 else 1
+                val vertical = (action.vertical * multiplier).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+                val horizontal = (action.horizontal * multiplier).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+                if (vertical != 0) game.conn?.sendMouseHighResScroll(vertical.toShort())
+                if (horizontal != 0) game.conn?.sendMouseHighResHScroll(horizontal.toShort())
+            }
+            is TouchpadMultiFingerGestureTranslator.Action.Pinch -> {
+                if (game.prefConfig.touchpadPinchEnabled) sendCompatibilityPinch(action.scale)
+            }
+            TouchpadMultiFingerGestureTranslator.Action.TwoFingerTap -> {
+                if (!game.prefConfig.touchpadTwoFingerTapEnabled) return
+                game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
+                game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
+            }
+            is TouchpadMultiFingerGestureTranslator.Action.ThreeFingerSwipe ->
+                sendThreeFingerSwipe(action.direction)
+            TouchpadMultiFingerGestureTranslator.Action.ThreeFingerTap -> sendThreeFingerTap()
+        }
+    }
+
+    private fun sendThreeFingerSwipe(direction: TouchpadMultiFingerGestureTranslator.Direction) {
+        when (game.prefConfig.touchpadThreeFingerSwipeMode) {
+            "switch_apps" -> when (direction) {
+                TouchpadMultiFingerGestureTranslator.Direction.LEFT -> sendAppSwitchStep(reverse = true)
+                TouchpadMultiFingerGestureTranslator.Direction.RIGHT -> sendAppSwitchStep(reverse = false)
+                TouchpadMultiFingerGestureTranslator.Direction.UP -> sendThreeFingerVerticalShortcut(
+                    shortArrayOf(KeyboardTranslator.VK_LWIN.toShort(), KeyboardTranslator.VK_TAB.toShort()))
+                TouchpadMultiFingerGestureTranslator.Direction.DOWN -> sendThreeFingerVerticalShortcut(
+                    shortArrayOf(KeyboardTranslator.VK_LWIN.toShort(), KeyboardTranslator.VK_D.toShort()))
+            }
+            "virtual_desktops" -> when (direction) {
+                TouchpadMultiFingerGestureTranslator.Direction.LEFT -> touchpadActionExecutor.sendKeys(shortArrayOf(
+                    KeyboardTranslator.VK_LCONTROL.toShort(), KeyboardTranslator.VK_LWIN.toShort(),
+                    KeyboardTranslator.VK_LEFT.toShort()))
+                TouchpadMultiFingerGestureTranslator.Direction.RIGHT -> touchpadActionExecutor.sendKeys(shortArrayOf(
+                    KeyboardTranslator.VK_LCONTROL.toShort(), KeyboardTranslator.VK_LWIN.toShort(),
+                    KeyboardTranslator.VK_RIGHT.toShort()))
+                TouchpadMultiFingerGestureTranslator.Direction.UP -> sendThreeFingerVerticalShortcut(
+                    shortArrayOf(KeyboardTranslator.VK_LWIN.toShort(), KeyboardTranslator.VK_TAB.toShort()))
+                TouchpadMultiFingerGestureTranslator.Direction.DOWN -> sendThreeFingerVerticalShortcut(
+                    shortArrayOf(KeyboardTranslator.VK_LWIN.toShort(), KeyboardTranslator.VK_D.toShort()))
+            }
+        }
+    }
+
+    private fun sendAppSwitchStep(reverse: Boolean) {
+        val conn = game.conn ?: return
+        if (!appSwitchAltDown) {
+            conn.sendKeyboardInput(KeyboardTranslator.VK_MENU.toShort(), KeyboardPacket.KEY_DOWN, 0, 0)
+            appSwitchAltDown = true
+        }
+        if (reverse) {
+            conn.sendKeyboardInput(KeyboardTranslator.VK_LSHIFT.toShort(), KeyboardPacket.KEY_DOWN, KeyboardPacket.MODIFIER_ALT, 0)
+        }
+        val modifiers = if (reverse) {
+            (KeyboardPacket.MODIFIER_ALT.toInt() or KeyboardPacket.MODIFIER_SHIFT.toInt()).toByte()
+        } else {
+            KeyboardPacket.MODIFIER_ALT
+        }
+        conn.sendKeyboardInput(KeyboardTranslator.VK_TAB.toShort(), KeyboardPacket.KEY_DOWN, modifiers, 0)
+        conn.sendKeyboardInput(KeyboardTranslator.VK_TAB.toShort(), KeyboardPacket.KEY_UP, modifiers, 0)
+        if (reverse) {
+            conn.sendKeyboardInput(KeyboardTranslator.VK_LSHIFT.toShort(), KeyboardPacket.KEY_UP, KeyboardPacket.MODIFIER_ALT, 0)
+        }
+    }
+
+    private fun sendThreeFingerVerticalShortcut(keys: ShortArray) {
+        if (threeFingerVerticalActionSent) return
+        threeFingerVerticalActionSent = true
+        touchpadActionExecutor.sendKeys(keys)
+    }
+
+    private fun sendThreeFingerTap() {
+        when (game.prefConfig.touchpadThreeFingerTapAction) {
+            "middle_click" -> {
+                game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_MIDDLE)
+                game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE)
+            }
+            "search" -> touchpadActionExecutor.sendKeys(shortArrayOf(
+                KeyboardTranslator.VK_LWIN.toShort(), 83.toShort()))
+            "notifications" -> touchpadActionExecutor.sendKeys(shortArrayOf(
+                KeyboardTranslator.VK_LWIN.toShort(), KeyboardTranslator.VK_N.toShort()))
+            "play_pause" -> touchpadActionExecutor.sendKeys(shortArrayOf(VK_MEDIA_PLAY_PAUSE))
+        }
+    }
+
+    private fun sendCompatibilityPinch(scale: Float) {
+        if (!scale.isFinite() || scale <= 0f) return
+        if (!pinchCtrlDown) {
+            game.conn?.sendKeyboardInput(
+                KeyboardTranslator.VK_LCONTROL.toShort(), KeyboardPacket.KEY_DOWN, 0, 0)
+            pinchCtrlDown = true
+        }
+        pinchAccumulator += ln(scale.toDouble())
+        while (abs(pinchAccumulator) >= PINCH_STEP) {
+            val direction = if (pinchAccumulator > 0) 120 else -120
+            game.conn?.sendMouseHighResScroll(direction.toShort())
+            pinchAccumulator -= if (pinchAccumulator > 0) PINCH_STEP else -PINCH_STEP
+        }
+    }
+
+    private fun finishCompatibilityMultiGesture() {
+        touchpadMultiFingerTranslator.cancel()
+        releasePinchCtrl()
+        finishAppSwitchSelection()
+        pinchAccumulator = 0.0
+        drainingCompatibilityMultiGesture = false
+        threeFingerVerticalActionSent = false
+    }
+
+    fun cancelCompatibilityTouchpadGestures() {
+        touchpadGestureTranslator.cancel()
+        finishCompatibilityMultiGesture()
+    }
+
+    private fun releasePinchCtrl() {
+        if (!pinchCtrlDown) return
+        game.conn?.sendKeyboardInput(
+            KeyboardTranslator.VK_LCONTROL.toShort(), KeyboardPacket.KEY_UP, 0, 0)
+        pinchCtrlDown = false
+    }
+
+    private fun finishAppSwitchSelection() {
+        if (!appSwitchAltDown) return
+        game.conn?.sendKeyboardInput(
+            KeyboardTranslator.VK_MENU.toShort(), KeyboardPacket.KEY_UP, 0, 0)
+        appSwitchAltDown = false
+    }
+
     // ---- updateMousePosition ----
 
     private fun updateMousePosition(touchedView: View?, event: MotionEvent) {
@@ -912,6 +1163,8 @@ class TouchInputHandler(private val game: Game) {
         private const val STYLUS_UP_DEAD_ZONE_DELAY = 150L
         private const val STYLUS_UP_DEAD_ZONE_RADIUS = 50f
         private const val MULTI_FINGER_TAP_THRESHOLD = 300L
+        private const val PINCH_STEP = 0.04
+        private const val VK_MEDIA_PLAY_PAUSE: Short = 0xB3
 
         private fun normalizeValueInRange(value: Float, range: InputDevice.MotionRange): Float =
             (value - range.min) / range.range
