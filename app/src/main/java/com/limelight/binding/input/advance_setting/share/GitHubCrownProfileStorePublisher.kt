@@ -114,6 +114,7 @@ object GitHubCrownProfileStorePublisher {
 
         val bundle = JSONObject(request.bundleJson)
         val bundleId = bundle.optString("bundleId", "").trim()
+        val layoutBasis = bundle.optJSONObject("layoutBasis")
         val url = "../$profilePath"
         val profiles = root.optJSONArray("profiles") ?: JSONArray().also { root.put("profiles", it) }
         for (index in 0 until profiles.length()) {
@@ -143,6 +144,9 @@ object GitHubCrownProfileStorePublisher {
                 .put("tags", tags)
                 .put("updatedAt", updatedAt)
                 .put("url", url)
+                .apply {
+                    layoutBasis?.let { put("layoutBasis", it) }
+                }
         )
         root.put("generatedAt", updatedAt)
         return root.toString(2)

@@ -1352,6 +1352,10 @@
     <string name="crown_store_my_empty_message">这里还空空的。先创建或导入一套王冠配置，再回来分享吧。</string>
     <string name="crown_store_local_tools">本地小工具</string>
     <string name="crown_store_local_profile_id">本地 ID：%1$s</string>
+    <string name="crown_store_layout_basis">适配：%1$s</string>
+    <string name="crown_store_layout_orientation_landscape">横屏</string>
+    <string name="crown_store_layout_orientation_portrait">竖屏</string>
+    <string name="crown_store_layout_orientation_unknown">屏幕</string>
     <string name="crown_store_updated_at">最近更新：%1$s</string>
     <string name="crown_store_action_browse">逛逛王冠 Store</string>
     <string name="crown_store_action_publish">投稿到王冠 Store</string>

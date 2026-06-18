@@ -665,6 +665,10 @@
     <string name="crown_store_my_empty_message">It is empty here. Create or import a Crown profile first, then come back to share it.</string>
     <string name="crown_store_local_tools">Local toolkit</string>
     <string name="crown_store_local_profile_id">Local ID: %1$s</string>
+    <string name="crown_store_layout_basis">Fit: %1$s</string>
+    <string name="crown_store_layout_orientation_landscape">landscape</string>
+    <string name="crown_store_layout_orientation_portrait">portrait</string>
+    <string name="crown_store_layout_orientation_unknown">screen</string>
     <string name="crown_store_updated_at">Last updated: %1$s</string>
     <string name="crown_store_action_browse">Visit Crown Store</string>
     <string name="crown_store_action_publish">Submit to Crown Store</string>

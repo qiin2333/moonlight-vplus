@@ -1965,7 +1965,24 @@ class StreamSettings : AppCompatActivity() {
             return CrownProfileShareManager.ExportMetadata(
                 packageName = ctx.packageName,
                 appVersionCode = versionCode,
-                appVersionName = packageInfo.versionName ?: ""
+                appVersionName = packageInfo.versionName ?: "",
+                layoutBasis = currentLayoutBasis()
+            )
+        }
+
+        private fun currentLayoutBasis(): CrownProfileShareManager.LayoutBasis {
+            val metrics = resources.displayMetrics
+            val orientation = when (resources.configuration.orientation) {
+                Configuration.ORIENTATION_LANDSCAPE -> "landscape"
+                Configuration.ORIENTATION_PORTRAIT -> "portrait"
+                else -> "unknown"
+            }
+            return CrownProfileShareManager.LayoutBasis(
+                widthPx = metrics.widthPixels,
+                heightPx = metrics.heightPixels,
+                densityDpi = metrics.densityDpi,
+                density = metrics.density,
+                orientation = orientation
             )
         }
 

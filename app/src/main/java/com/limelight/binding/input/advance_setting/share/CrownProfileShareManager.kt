@@ -22,8 +22,21 @@ object CrownProfileShareManager {
         val packageName: String,
         val appVersionCode: Long,
         val appVersionName: String,
+        val layoutBasis: LayoutBasis? = null,
         val exportedAtMillis: Long = System.currentTimeMillis()
     )
+
+    data class LayoutBasis(
+        val widthPx: Int,
+        val heightPx: Int,
+        val densityDpi: Int,
+        val density: Float,
+        val orientation: String
+    ) {
+        fun isPresent(): Boolean {
+            return widthPx > 0 && heightPx > 0
+        }
+    }
 
     data class BundleDisplayMetadata(
         val summary: String = "",
@@ -44,6 +57,7 @@ object CrownProfileShareManager {
         val summary: String,
         val author: String,
         val game: String,
+        val layoutBasis: LayoutBasis?,
         val sourceLabel: String,
         val payload: String,
         val payloadInfo: PayloadInfo
@@ -56,6 +70,7 @@ object CrownProfileShareManager {
         val author: String,
         val game: String,
         val tags: List<String>,
+        val layoutBasis: LayoutBasis?,
         val updatedAt: String,
         val url: String
     )
@@ -96,6 +111,10 @@ object CrownProfileShareManager {
             .put("createdAt", timestamp)
             .put("updatedAt", timestamp)
             .put("packageName", metadata.packageName)
+
+        metadata.layoutBasis
+            ?.takeIf { it.isPresent() }
+            ?.let { root.put("layoutBasis", layoutBasisToJson(it)) }
 
         displayMetadata.authorName.trim()
             .takeIf { it.isNotBlank() }
@@ -253,6 +272,7 @@ object CrownProfileShareManager {
         val payloadInfo = validatePayload(payload)
         val author = root.optJSONObject("author")?.optString("name", "").orEmpty()
         val game = root.optJSONObject("game")?.optString("name", "").orEmpty()
+        val layoutBasis = parseLayoutBasis(root.optJSONObject("layoutBasis"))
         val name = profile.optString("name", "")
             .takeIf { it.isNotBlank() }
             ?: root.optString("name", "Crown Profile")
@@ -262,6 +282,7 @@ object CrownProfileShareManager {
             summary = root.optString("summary", ""),
             author = author,
             game = game,
+            layoutBasis = layoutBasis,
             sourceLabel = "Crown share package",
             payload = payload,
             payloadInfo = payloadInfo
@@ -275,6 +296,7 @@ object CrownProfileShareManager {
             summary = "",
             author = "",
             game = "",
+            layoutBasis = null,
             sourceLabel = "Legacy .mdat",
             payload = payload,
             payloadInfo = payloadInfo
@@ -295,8 +317,32 @@ object CrownProfileShareManager {
             author = profile.optString("author", "").trim(),
             game = profile.optString("game", "").trim(),
             tags = parseStringArray(profile.optJSONArray("tags")),
+            layoutBasis = parseLayoutBasis(profile.optJSONObject("layoutBasis")),
             updatedAt = profile.optString("updatedAt", "").trim(),
             url = url
+        )
+    }
+
+    fun layoutBasisToJson(layoutBasis: LayoutBasis): JSONObject {
+        return JSONObject()
+            .put("widthPx", layoutBasis.widthPx)
+            .put("heightPx", layoutBasis.heightPx)
+            .put("densityDpi", layoutBasis.densityDpi)
+            .put("density", layoutBasis.density.toDouble())
+            .put("orientation", layoutBasis.orientation)
+    }
+
+    private fun parseLayoutBasis(json: JSONObject?): LayoutBasis? {
+        if (json == null) return null
+        val widthPx = json.optInt("widthPx", 0)
+        val heightPx = json.optInt("heightPx", 0)
+        if (widthPx <= 0 || heightPx <= 0) return null
+        return LayoutBasis(
+            widthPx = widthPx,
+            heightPx = heightPx,
+            densityDpi = json.optInt("densityDpi", 0),
+            density = json.optDouble("density", 0.0).toFloat(),
+            orientation = json.optString("orientation", "").trim()
         )
     }
 

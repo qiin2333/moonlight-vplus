@@ -4,6 +4,7 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
@@ -349,6 +350,12 @@ class CrownStoreActivity : AppCompatActivity() {
             if (profile.tags.isNotEmpty()) {
                 addViewWithTopMargin(storeTagsView(profile.tags), dp(9))
             }
+            formatLayoutBasis(profile.layoutBasis)?.let { layoutText ->
+                addViewWithTopMargin(
+                    storeFootnoteText(getString(R.string.crown_store_layout_basis, layoutText)),
+                    dp(8)
+                )
+            }
             if (profile.updatedAt.isNotBlank()) {
                 addViewWithTopMargin(
                     storeFootnoteText(
@@ -529,7 +536,24 @@ class CrownStoreActivity : AppCompatActivity() {
         return CrownProfileShareManager.ExportMetadata(
             packageName = packageName,
             appVersionCode = versionCode,
-            appVersionName = packageInfo.versionName ?: ""
+            appVersionName = packageInfo.versionName ?: "",
+            layoutBasis = currentLayoutBasis()
+        )
+    }
+
+    private fun currentLayoutBasis(): CrownProfileShareManager.LayoutBasis {
+        val metrics = resources.displayMetrics
+        val orientation = when (resources.configuration.orientation) {
+            Configuration.ORIENTATION_LANDSCAPE -> "landscape"
+            Configuration.ORIENTATION_PORTRAIT -> "portrait"
+            else -> "unknown"
+        }
+        return CrownProfileShareManager.LayoutBasis(
+            widthPx = metrics.widthPixels,
+            heightPx = metrics.heightPixels,
+            densityDpi = metrics.densityDpi,
+            density = metrics.density,
+            orientation = orientation
         )
     }
 
@@ -1664,6 +1688,21 @@ class CrownStoreActivity : AppCompatActivity() {
         }
     }
 
+    private fun formatLayoutBasis(layoutBasis: CrownProfileShareManager.LayoutBasis?): String? {
+        if (layoutBasis == null || !layoutBasis.isPresent()) return null
+        val orientationText = when (layoutBasis.orientation.lowercase(Locale.US)) {
+            "landscape" -> getString(R.string.crown_store_layout_orientation_landscape)
+            "portrait" -> getString(R.string.crown_store_layout_orientation_portrait)
+            else -> getString(R.string.crown_store_layout_orientation_unknown)
+        }
+        val dpiText = if (layoutBasis.densityDpi > 0) {
+            " · ${layoutBasis.densityDpi} dpi"
+        } else {
+            ""
+        }
+        return "${layoutBasis.widthPx}x${layoutBasis.heightPx}$dpiText · $orientationText"
+    }
+
     private fun formatStoreUpdatedAt(updatedAt: String): String {
         val trimmed = updatedAt.trim()
         if (trimmed.isBlank()) return trimmed
@@ -1923,6 +1962,7 @@ class CrownStoreActivity : AppCompatActivity() {
             "createdAt",
             "updatedAt",
             "packageName",
+            "layoutBasis",
             "author",
             "game",
             "tags",

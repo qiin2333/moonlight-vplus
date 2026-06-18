@@ -19,7 +19,15 @@ class GitHubCrownProfileStorePublisherTest {
 
     @Test
     fun appendProfileToIndexAddsStoreEntry() {
-        val request = publishRequest()
+        val request = publishRequest(
+            layoutBasis = CrownProfileShareManager.LayoutBasis(
+                widthPx = 2400,
+                heightPx = 1080,
+                densityDpi = 440,
+                density = 2.75f,
+                orientation = "landscape"
+            )
+        )
         val updatedIndex = GitHubCrownProfileStorePublisher.appendProfileToIndex(
             indexText = """
                 {
@@ -42,6 +50,10 @@ class GitHubCrownProfileStorePublisherTest {
         assertEquals("WA Crown", profile.getString("author"))
         assertEquals("../profiles/apex-legends/apex-fps-layout.crown.json", profile.getString("url"))
         assertEquals("fps", profile.getJSONArray("tags").getString(0))
+        assertEquals(2400, profile.getJSONObject("layoutBasis").getInt("widthPx"))
+        assertEquals(1080, profile.getJSONObject("layoutBasis").getInt("heightPx"))
+        assertEquals(440, profile.getJSONObject("layoutBasis").getInt("densityDpi"))
+        assertEquals("landscape", profile.getJSONObject("layoutBasis").getString("orientation"))
     }
 
     @Test
@@ -71,7 +83,8 @@ class GitHubCrownProfileStorePublisherTest {
 
     private fun publishRequest(
         profileName: String = "Apex FPS Layout",
-        game: String = "Apex Legends"
+        game: String = "Apex Legends",
+        layoutBasis: CrownProfileShareManager.LayoutBasis? = null
     ): GitHubCrownProfileStorePublisher.PublishRequest {
         val bundle = CrownProfileShareManager.createBundle(
             profileName = profileName,
@@ -79,7 +92,8 @@ class GitHubCrownProfileStorePublisherTest {
             metadata = CrownProfileShareManager.ExportMetadata(
                 packageName = "com.limelight.test",
                 appVersionCode = 390,
-                appVersionName = "12.9.8"
+                appVersionName = "12.9.8",
+                layoutBasis = layoutBasis
             )
         )
         return GitHubCrownProfileStorePublisher.PublishRequest(

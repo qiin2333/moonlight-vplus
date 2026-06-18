@@ -20,6 +20,13 @@ class CrownProfileShareManagerTest {
                 packageName = "com.limelight.test",
                 appVersionCode = 390,
                 appVersionName = "12.9.8",
+                layoutBasis = CrownProfileShareManager.LayoutBasis(
+                    widthPx = 2400,
+                    heightPx = 1080,
+                    densityDpi = 440,
+                    density = 2.75f,
+                    orientation = "landscape"
+                ),
                 exportedAtMillis = 1781712000000L
             )
         )
@@ -30,6 +37,10 @@ class CrownProfileShareManagerTest {
         assertEquals("Apex Layout", root.getString("name"))
         assertEquals(payload, root.getJSONObject("profile").getString("payload"))
         assertTrue(root.getJSONObject("profile").getString("profileId").startsWith("public-payload-"))
+        assertEquals(2400, root.getJSONObject("layoutBasis").getInt("widthPx"))
+        assertEquals(1080, root.getJSONObject("layoutBasis").getInt("heightPx"))
+        assertEquals(440, root.getJSONObject("layoutBasis").getInt("densityDpi"))
+        assertEquals("landscape", root.getJSONObject("layoutBasis").getString("orientation"))
         assertFalse(bundle.contains("deviceId"))
         assertFalse(bundle.contains("backupDeviceKey"))
         assertFalse(bundle.contains("pairing"))
@@ -56,6 +67,34 @@ class CrownProfileShareManagerTest {
         assertEquals(9, imported.payloadInfo.version)
         assertEquals(2, imported.payloadInfo.elementCount)
         assertEquals(2, imported.payloadInfo.settingsCount)
+    }
+
+    @Test
+    fun parseImportTextPreservesLayoutBasis() {
+        val bundle = CrownProfileShareManager.createBundle(
+            profileName = "Tablet Layout",
+            payload = validPayload(),
+            metadata = CrownProfileShareManager.ExportMetadata(
+                packageName = "com.limelight.test",
+                appVersionCode = 390,
+                appVersionName = "12.9.8",
+                layoutBasis = CrownProfileShareManager.LayoutBasis(
+                    widthPx = 2560,
+                    heightPx = 1600,
+                    densityDpi = 320,
+                    density = 2f,
+                    orientation = "landscape"
+                )
+            )
+        )
+
+        val imported = CrownProfileShareManager.parseImportText(bundle)
+
+        assertEquals(2560, imported.layoutBasis?.widthPx)
+        assertEquals(1600, imported.layoutBasis?.heightPx)
+        assertEquals(320, imported.layoutBasis?.densityDpi)
+        assertEquals(2f, imported.layoutBasis?.density)
+        assertEquals("landscape", imported.layoutBasis?.orientation)
     }
 
     @Test
@@ -112,6 +151,15 @@ class CrownProfileShareManagerTest {
                             .put("author", "WA Crown")
                             .put("game", "Apex Legends")
                             .put("tags", JSONArray().put("fps").put("movement"))
+                            .put(
+                                "layoutBasis",
+                                JSONObject()
+                                    .put("widthPx", 2400)
+                                    .put("heightPx", 1080)
+                                    .put("densityDpi", 440)
+                                    .put("density", 2.75)
+                                    .put("orientation", "landscape")
+                            )
                             .put("updatedAt", "2026-06-18T00:00:00Z")
                             .put("url", "profiles/apex/fps.crown.json")
                     )
@@ -125,6 +173,10 @@ class CrownProfileShareManagerTest {
         assertEquals("WA Crown", profiles[0].author)
         assertEquals("Apex Legends", profiles[0].game)
         assertEquals(listOf("fps", "movement"), profiles[0].tags)
+        assertEquals(2400, profiles[0].layoutBasis?.widthPx)
+        assertEquals(1080, profiles[0].layoutBasis?.heightPx)
+        assertEquals(440, profiles[0].layoutBasis?.densityDpi)
+        assertEquals("landscape", profiles[0].layoutBasis?.orientation)
         assertEquals("profiles/apex/fps.crown.json", profiles[0].url)
     }
 
