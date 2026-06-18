@@ -246,13 +246,19 @@ class StreamSettings : AppCompatActivity(), KeyboardAccessibilityService.KeyEven
 
     fun showHardwareKeyMappings() {
         val mappings = HardwareKeyMappingStore.load(this)
-        val labels = mappings.map(::mappingLabel).toMutableList()
-        labels.add(getString(R.string.hardware_key_mapping_add))
-        if (mappings.isNotEmpty()) labels.add(getString(R.string.hardware_key_mapping_clear))
-
-        AlertDialog.Builder(this)
+        val builder = AlertDialog.Builder(this)
             .setTitle(R.string.title_hardware_key_mappings)
-            .setItems(labels.toTypedArray()) { _, index ->
+        if (mappings.isEmpty()) {
+            builder
+                .setMessage(R.string.hardware_key_mapping_empty)
+                .setPositiveButton(R.string.hardware_key_mapping_add) { _, _ ->
+                    beginHardwareKeyCapture()
+                }
+        } else {
+            val labels = mappings.map(::mappingLabel).toMutableList()
+            labels.add(getString(R.string.hardware_key_mapping_add))
+            labels.add(getString(R.string.hardware_key_mapping_clear))
+            builder.setItems(labels.toTypedArray()) { _, index ->
                 when {
                     index < mappings.size -> confirmDeleteMapping(mappings[index])
                     index == mappings.size -> beginHardwareKeyCapture()
@@ -262,6 +268,8 @@ class StreamSettings : AppCompatActivity(), KeyboardAccessibilityService.KeyEven
                     }
                 }
             }
+        }
+        builder
             .setNegativeButton(android.R.string.cancel, null)
             .show()
     }

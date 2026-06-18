@@ -23,9 +23,36 @@ data class HardwareKeyMapping(
     }
 }
 
+internal class HardwareKeyMappingCache {
+    private var initialized = false
+    private var cachedJson: String? = null
+    private var cachedMappings: List<HardwareKeyMapping> = emptyList()
+
+    @Synchronized
+    fun load(
+        json: String?,
+        decoder: (String) -> List<HardwareKeyMapping>
+    ): List<HardwareKeyMapping> {
+        if (!initialized || json != cachedJson) {
+            cachedJson = json
+            cachedMappings = json?.let(decoder) ?: emptyList()
+            initialized = true
+        }
+        return cachedMappings
+    }
+
+    @Synchronized
+    fun update(json: String?, mappings: List<HardwareKeyMapping>) {
+        cachedJson = json
+        cachedMappings = mappings
+        initialized = true
+    }
+}
+
 object HardwareKeyMappingStore {
     private const val PREFS_NAME = "hardware_key_mappings"
     private const val KEY_MAPPINGS = "mappings_v1"
+    private val cache = HardwareKeyMappingCache()
 
     fun mappingFrom(event: KeyEvent, targetKeyCode: Int): HardwareKeyMapping {
         val device = event.device
@@ -82,12 +109,13 @@ object HardwareKeyMappingStore {
             .edit()
             .remove(KEY_MAPPINGS)
             .apply()
+        cache.update(null, emptyList())
     }
 
     fun load(context: Context): List<HardwareKeyMapping> {
         val json = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getString(KEY_MAPPINGS, null) ?: return emptyList()
-        return decode(json)
+            .getString(KEY_MAPPINGS, null)
+        return cache.load(json, ::decode)
     }
 
     internal fun encode(mappings: List<HardwareKeyMapping>): String {
@@ -110,14 +138,23 @@ object HardwareKeyMappingStore {
             buildList {
                 for (index in 0 until array.length()) {
                     val item = array.optJSONObject(index) ?: continue
+                    val deviceKey = item.optString("deviceKey")
+                    val sourceScanCode = item.optInt("sourceScanCode")
+                    val sourceKeyCode = item.optInt("sourceKeyCode", KeyEvent.KEYCODE_UNKNOWN)
                     val target = item.optInt("targetKeyCode", KeyEvent.KEYCODE_UNKNOWN)
-                    if (target == KeyEvent.KEYCODE_UNKNOWN) continue
+                    if (
+                        deviceKey.isBlank() ||
+                        (sourceScanCode <= 0 && sourceKeyCode <= KeyEvent.KEYCODE_UNKNOWN) ||
+                        target <= KeyEvent.KEYCODE_UNKNOWN
+                    ) {
+                        continue
+                    }
                     add(
                         HardwareKeyMapping(
-                            deviceKey = item.optString("deviceKey"),
+                            deviceKey = deviceKey,
                             deviceName = item.optString("deviceName", "Unknown keyboard"),
-                            sourceScanCode = item.optInt("sourceScanCode"),
-                            sourceKeyCode = item.optInt("sourceKeyCode"),
+                            sourceScanCode = sourceScanCode,
+                            sourceKeyCode = sourceKeyCode,
                             targetKeyCode = target
                         )
                     )
@@ -138,9 +175,12 @@ object HardwareKeyMappingStore {
     }
 
     private fun write(context: Context, mappings: List<HardwareKeyMapping>) {
+        val storedMappings = mappings.toList()
+        val json = encode(storedMappings)
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
-            .putString(KEY_MAPPINGS, encode(mappings))
+            .putString(KEY_MAPPINGS, json)
             .apply()
+        cache.update(json, storedMappings)
     }
 }

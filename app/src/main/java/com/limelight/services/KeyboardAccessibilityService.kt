@@ -8,6 +8,10 @@ import android.view.accessibility.AccessibilityEvent
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.binding.input.HardwareKeyMappingStore
 
+internal fun shouldConsumeKeyEvent(interceptingEnabled: Boolean, hasCallback: Boolean): Boolean {
+    return interceptingEnabled && hasCallback
+}
+
 /**
  * 一个无障碍服务，用于在系统级别拦截硬件键盘事件。
  * 主要目的是捕获像 Win 键、Alt+Tab 等被 Android 系统默认行为占用的按键，
@@ -29,14 +33,12 @@ class KeyboardAccessibilityService : AccessibilityService() {
     }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
-        if (captureAllKeys && interceptingEnabled) {
-            keyEventCallback?.onKeyEvent(event)
+        if (captureAllKeys && forwardIfReady(event)) {
             return true
         }
 
         val mappedEvent = HardwareKeyMappingStore.remap(this, event)
-        if (mappedEvent !== event && interceptingEnabled) {
-            keyEventCallback?.onKeyEvent(mappedEvent)
+        if (mappedEvent !== event && forwardIfReady(mappedEvent)) {
             return true
         }
 
@@ -49,43 +51,39 @@ class KeyboardAccessibilityService : AccessibilityService() {
                 KeyEvent.KEYCODE_MEDIA_NEXT -> fixedKeyCode = KeyEvent.KEYCODE_F11
             }
             if (fixedKeyCode == KeyEvent.KEYCODE_SYSRQ || fixedKeyCode != mappedEvent.keyCode) {
-                if (keyEventCallback != null) {
-                    val fixedEvent = KeyEvent(
-                        event.downTime,
-                        event.eventTime,
-                        event.action,
-                        fixedKeyCode,
-                        event.repeatCount,
-                        event.metaState,
-                        event.deviceId,
-                        event.scanCode,
-                        event.flags,
-                        event.source
-                    )
-                    keyEventCallback!!.onKeyEvent(fixedEvent)
+                val fixedEvent = KeyEvent(
+                    event.downTime,
+                    event.eventTime,
+                    event.action,
+                    fixedKeyCode,
+                    event.repeatCount,
+                    event.metaState,
+                    event.deviceId,
+                    event.scanCode,
+                    event.flags,
+                    event.source
+                )
+                if (forwardIfReady(fixedEvent)) {
+                    return true
                 }
-                return true
             }
         }
 
         // 小米平板将物理 ESC 键（ScanCode=1）映射为 Android 的 BACK 键（Code=4）。
-        if (event.scanCode == 1) {
-            if (interceptingEnabled) {
-                if (keyEventCallback != null) {
-                    val fixedEvent = KeyEvent(
-                        event.downTime,
-                        event.eventTime,
-                        event.action,
-                        KeyEvent.KEYCODE_ESCAPE,
-                        event.repeatCount,
-                        event.metaState,
-                        event.deviceId,
-                        event.scanCode,
-                        event.flags,
-                        event.source
-                    )
-                    keyEventCallback!!.onKeyEvent(fixedEvent)
-                }
+        if (event.scanCode == 1 && interceptingEnabled) {
+            val fixedEvent = KeyEvent(
+                event.downTime,
+                event.eventTime,
+                event.action,
+                KeyEvent.KEYCODE_ESCAPE,
+                event.repeatCount,
+                event.metaState,
+                event.deviceId,
+                event.scanCode,
+                event.flags,
+                event.source
+            )
+            if (forwardIfReady(fixedEvent)) {
                 return true
             }
         }
@@ -100,12 +98,20 @@ class KeyboardAccessibilityService : AccessibilityService() {
             KeyEvent.KEYCODE_POWER -> return false
         }
 
-        if (interceptingEnabled) {
-            keyEventCallback?.onKeyEvent(event)
+        if (forwardIfReady(event)) {
             return true
         }
 
         return super.onKeyEvent(event)
+    }
+
+    private fun forwardIfReady(event: KeyEvent): Boolean {
+        val callback = keyEventCallback
+        if (!shouldConsumeKeyEvent(interceptingEnabled, callback != null)) {
+            return false
+        }
+        callback!!.onKeyEvent(event)
+        return true
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
