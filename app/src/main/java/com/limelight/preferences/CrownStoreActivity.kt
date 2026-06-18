@@ -4,6 +4,7 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.graphics.Canvas
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.net.Uri
@@ -11,6 +12,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
+import android.text.TextUtils
 import android.util.Log
 import android.view.Gravity
 import android.view.View
@@ -39,7 +41,12 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+import java.text.DateFormat
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.LinkedHashMap
+import java.util.Locale
+import java.util.TimeZone
 import kotlin.concurrent.thread
 
 class CrownStoreActivity : AppCompatActivity() {
@@ -55,6 +62,7 @@ class CrownStoreActivity : AppCompatActivity() {
 
     private lateinit var storeTabView: TextView
     private lateinit var mineTabView: TextView
+    private lateinit var toolbarTitleView: TextView
     private lateinit var contentView: LinearLayout
 
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -137,32 +145,23 @@ class CrownStoreActivity : AppCompatActivity() {
             }
             addView(back, LinearLayout.LayoutParams(dp(40), dp(40)))
 
-            val crown = ImageView(this@CrownStoreActivity).apply {
-                setImageResource(R.drawable.ic_super_crown)
-                contentDescription = null
-            }
-            addView(
-                crown,
-                LinearLayout.LayoutParams(dp(30), dp(30)).apply {
-                    marginStart = dp(6)
-                    marginEnd = dp(9)
-                }
-            )
-
-            val title = TextView(this@CrownStoreActivity).apply {
+            toolbarTitleView = TextView(this@CrownStoreActivity).apply {
                 text = getString(R.string.title_crown_store_view)
-                textSize = 23f
+                textSize = 20f
                 typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+                includeFontPadding = false
                 setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_text_primary))
             }
             addView(
-                title,
+                toolbarTitleView,
                 LinearLayout.LayoutParams(
                     0,
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     1f
                 )
             )
+            addView(View(this@CrownStoreActivity), LinearLayout.LayoutParams(dp(40), dp(40)))
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -179,10 +178,10 @@ class CrownStoreActivity : AppCompatActivity() {
             setBackgroundResource(R.drawable.crown_store_bottom_nav_bg)
             setPadding(dp(12), dp(7), dp(12), dp(8))
 
-            storeTabView = createTabView(R.string.crown_store_tab_store, R.drawable.crown_store_tab_store_icon) {
+            storeTabView = createTabView(R.string.crown_store_tab_store, R.drawable.phc_crown) {
                 selectTab(CrownTab.STORE)
             }
-            mineTabView = createTabView(R.string.crown_store_tab_mine, R.drawable.crown_store_tab_mine_icon) {
+            mineTabView = createTabView(R.string.crown_store_tab_mine, R.drawable.phc_list) {
                 selectTab(CrownTab.MINE)
             }
             addView(
@@ -203,6 +202,7 @@ class CrownStoreActivity : AppCompatActivity() {
     private fun createTabView(labelRes: Int, iconRes: Int, click: () -> Unit): TextView {
         return TextView(this).apply {
             text = getString(labelRes)
+            contentDescription = getString(labelRes)
             tag = iconRes
             textSize = 12f
             typeface = Typeface.DEFAULT_BOLD
@@ -229,8 +229,17 @@ class CrownStoreActivity : AppCompatActivity() {
     }
 
     private fun updateTabStyles() {
+        updateToolbarTitle()
         updateTabStyle(storeTabView, selectedTab == CrownTab.STORE)
         updateTabStyle(mineTabView, selectedTab == CrownTab.MINE)
+    }
+
+    private fun updateToolbarTitle() {
+        val tabTitle = when (selectedTab) {
+            CrownTab.STORE -> getString(R.string.crown_store_tab_store)
+            CrownTab.MINE -> getString(R.string.crown_store_tab_mine)
+        }
+        toolbarTitleView.text = tabTitle
     }
 
     private fun updateTabStyle(view: TextView, selected: Boolean) {
@@ -238,13 +247,12 @@ class CrownStoreActivity : AppCompatActivity() {
         view.setTextColor(ContextCompat.getColor(this, textColor))
         view.setBackgroundResource(if (selected) R.drawable.crown_store_tab_selected_bg else R.drawable.crown_store_tab_idle_bg)
         (view.tag as? Int)?.let { iconRes ->
-            view.setTopIcon(iconRes, textColor, 20)
+            view.setTopIcon(iconRes, textColor, 24)
         }
     }
 
     private fun renderStoreTab() {
         contentView.removeAllViews()
-        contentView.addView(headerText(R.string.crown_store_tab_store))
         contentView.addView(bodyText(R.string.crown_store_store_summary))
 
         val actionRow = LinearLayout(this).apply {
@@ -260,7 +268,7 @@ class CrownStoreActivity : AppCompatActivity() {
             }
         )
         actionRow.addView(
-            secondaryActionButton(R.string.crown_share_action_import_url, R.drawable.ic_link) {
+            secondaryActionButton(R.string.crown_share_action_import_url, R.drawable.phc_plug) {
                 showCrownShareUrlImportDialog()
             },
             LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
@@ -289,9 +297,7 @@ class CrownStoreActivity : AppCompatActivity() {
                 buttonText = getString(R.string.crown_store_action_refresh),
                 buttonAction = { loadStoreProfiles(force = true) }
             )
-            else -> storeProfiles!!.forEach { profile ->
-                contentView.addView(storeProfileView(profile))
-            }
+            else -> contentView.addView(storeProfilesGrid(storeProfiles!!))
         }
     }
 
@@ -331,29 +337,33 @@ class CrownStoreActivity : AppCompatActivity() {
     }
 
     private fun storeProfileView(profile: CrownProfileShareManager.StoreProfile): View {
-        return cardLayout().apply {
-            addView(iconTitleRow(R.drawable.ic_super_crown, profile.name))
-            val details = listOf(profile.game, profile.author)
-                .filter { it.isNotBlank() }
-                .joinToString(" - ")
-            if (details.isNotBlank()) {
-                addView(metaText(details))
-            }
+        return profileCardLayout().apply {
+            addView(profileCardTitle(profile.name))
+            addView(storeProfileMeta(profile))
             if (profile.summary.isNotBlank()) {
-                addView(bodyText(profile.summary))
+                addViewWithTopMargin(storeSummaryText(profile.summary), dp(8))
             }
             if (profile.tags.isNotEmpty()) {
-                addView(metaText(profile.tags.joinToString(prefix = "#", separator = " #")))
+                addViewWithTopMargin(storeTagsView(profile.tags), dp(9))
             }
             if (profile.updatedAt.isNotBlank()) {
-                addView(metaText(getString(R.string.crown_store_updated_at, profile.updatedAt)))
+                addViewWithTopMargin(
+                    storeFootnoteText(
+                        getString(
+                            R.string.crown_store_updated_at,
+                            formatStoreUpdatedAt(profile.updatedAt)
+                        )
+                    ),
+                    dp(8)
+                )
             }
-            addView(
-                primaryActionButton(R.string.crown_store_action_import_profile, R.drawable.phc_action_plus) {
-                    importStoreProfile(profile)
-                },
-                fullWidthButtonParams()
-            )
+            addView(cardActionArea(
+                listOf(
+                    cardActionButton(R.string.crown_store_action_import_profile, primary = true) {
+                        importStoreProfile(profile)
+                    }
+                )
+            ))
         }
     }
 
@@ -374,7 +384,6 @@ class CrownStoreActivity : AppCompatActivity() {
 
     private fun renderMineTab() {
         contentView.removeAllViews()
-        contentView.addView(headerText(R.string.crown_store_tab_mine))
         contentView.addView(bodyText(R.string.crown_store_my_summary))
 
         val importRow = LinearLayout(this).apply {
@@ -390,7 +399,7 @@ class CrownStoreActivity : AppCompatActivity() {
             }
         )
         importRow.addView(
-            secondaryActionButton(R.string.crown_share_action_import_url, R.drawable.ic_link) {
+            secondaryActionButton(R.string.crown_share_action_import_url, R.drawable.phc_plug) {
                 showCrownShareUrlImportDialog()
             },
             LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
@@ -408,14 +417,12 @@ class CrownStoreActivity : AppCompatActivity() {
                 buttonAction = { openLegacyImportDocument() }
             )
         } else {
-            profiles.forEach { profile ->
-                contentView.addView(localProfileView(profile))
-            }
+            contentView.addView(localProfilesGrid(profiles))
         }
 
         contentView.addView(sectionLabel(R.string.crown_store_local_tools))
         contentView.addView(
-            secondaryActionButton(R.string.crown_config_action_import_legacy, R.drawable.ic_export) {
+            secondaryActionButton(R.string.crown_config_action_import_legacy, R.drawable.phc_list) {
                 openLegacyImportDocument()
             },
             fullWidthButtonParams()
@@ -423,31 +430,25 @@ class CrownStoreActivity : AppCompatActivity() {
     }
 
     private fun localProfileView(profile: LocalCrownProfile): View {
-        return cardLayout().apply {
-            addView(iconTitleRow(R.drawable.ic_list_view, profile.name))
+        return profileCardLayout().apply {
+            addView(profileCardTitle(profile.name))
             addView(metaText(getString(R.string.crown_store_local_profile_id, profile.id)))
-            addView(
-                primaryActionButton(R.string.crown_store_action_publish_profile, R.drawable.ic_super_crown) {
-                    showCrownStorePublishMetadataDialog(profile.id, profile.name)
-                },
-                fullWidthButtonParams()
-            )
-            addView(
-                actionButtonRow(
-                    secondaryActionButton(R.string.crown_store_action_export_share, R.drawable.ic_export) {
+            addView(cardActionArea(
+                listOf(
+                    cardActionButton(R.string.crown_store_action_publish_profile, primary = true) {
+                        showCrownStorePublishMetadataDialog(profile.id, profile.name)
+                    },
+                    cardActionButton(R.string.crown_store_action_export_share) {
                         exportCrownSharePackage(profile.id, profile.name)
                     },
-                    secondaryActionButton(R.string.crown_store_action_export_legacy_short, R.drawable.ic_export) {
+                    cardActionButton(R.string.crown_store_action_export_legacy_short) {
                         exportLegacyConfig(profile.id, profile.name)
+                    },
+                    cardActionButton(R.string.crown_store_action_merge_short) {
+                        openLegacyMergeDocument(profile.id)
                     }
                 )
-            )
-            addView(
-                secondaryActionButton(R.string.crown_store_action_merge_short, R.drawable.ic_change) {
-                    openLegacyMergeDocument(profile.id)
-                },
-                fullWidthButtonParams()
-            )
+            ))
         }
     }
 
@@ -1251,19 +1252,10 @@ class CrownStoreActivity : AppCompatActivity() {
         buttonAction: () -> Unit
     ) {
         val state = cardLayout()
-        state.addView(iconTitleRow(R.drawable.ic_info, title))
+        state.addView(iconTitleRow(R.drawable.phc_info, title))
         state.addView(bodyText(message))
         state.addView(secondaryActionButton(buttonText, R.drawable.phc_action_reset, buttonAction), fullWidthButtonParams())
         contentView.addView(state)
-    }
-
-    private fun headerText(textRes: Int): TextView {
-        return TextView(this).apply {
-            text = getString(textRes)
-            textSize = 21f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_text_primary))
-        }
     }
 
     private fun titleText(text: String): TextView {
@@ -1344,12 +1336,307 @@ class CrownStoreActivity : AppCompatActivity() {
         }
     }
 
-    private fun primaryActionButton(textRes: Int, iconRes: Int, action: () -> Unit): Button {
-        return actionButton(getString(textRes), iconRes, primary = true, action = action)
+    private fun storeProfilesGrid(profiles: List<CrownProfileShareManager.StoreProfile>): View {
+        return masonryGrid(
+            items = profiles,
+            estimateHeight = { profile ->
+                5 + profile.summary.length.coerceAtMost(110) / 30 + profile.tags.size.coerceAtMost(4) / 2
+            },
+            itemView = { storeProfileView(it) }
+        )
     }
 
-    private fun primaryActionButton(text: String, iconRes: Int, action: () -> Unit): Button {
-        return actionButton(text, iconRes, primary = true, action = action)
+    private fun localProfilesGrid(profiles: List<LocalCrownProfile>): View {
+        return masonryGrid(
+            items = profiles,
+            estimateHeight = { 4 + it.name.length / 12 },
+            itemView = { localProfileView(it) }
+        )
+    }
+
+    private fun <T> masonryGrid(
+        items: List<T>,
+        estimateHeight: (T) -> Int,
+        itemView: (T) -> View
+    ): View {
+        val columns = List(2) {
+            LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+            }
+        }
+        val weights = IntArray(columns.size)
+        items.forEach { item ->
+            val targetIndex = weights.indices.minByOrNull { weights[it] } ?: 0
+            columns[targetIndex].addView(
+                itemView(item),
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    bottomMargin = dp(10)
+                }
+            )
+            weights[targetIndex] += estimateHeight(item).coerceAtLeast(1)
+        }
+
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            isBaselineAligned = false
+            setPadding(0, dp(10), 0, dp(2))
+            columns.forEachIndexed { index, column ->
+                addView(
+                    column,
+                    LinearLayout.LayoutParams(
+                        0,
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        1f
+                    ).apply {
+                        if (index == 0) {
+                            marginEnd = dp(5)
+                        } else {
+                            marginStart = dp(5)
+                        }
+                    }
+                )
+            }
+        }
+    }
+
+    private fun profileCardLayout(): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundResource(R.drawable.crown_store_profile_card_bg)
+            setPadding(dp(12), dp(12), dp(12), dp(11))
+        }
+    }
+
+    private fun profileCardTitle(text: String): TextView {
+        return TextView(this).apply {
+            this.text = text
+            textSize = 15.4f
+            typeface = Typeface.DEFAULT_BOLD
+            includeFontPadding = false
+            maxLines = 2
+            ellipsize = TextUtils.TruncateAt.END
+            setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_text_primary))
+            setLineSpacing(0f, 1.08f)
+        }
+    }
+
+    private fun storeProfileMeta(profile: CrownProfileShareManager.StoreProfile): View {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(7), 0, 0)
+            if (profile.game.isNotBlank()) {
+                addView(storeMetaText(profile.game, strong = true))
+            }
+            if (profile.author.isNotBlank()) {
+                addView(storeMetaText(profile.author, strong = false).apply {
+                    if (profile.game.isNotBlank()) {
+                        setPadding(0, dp(2), 0, 0)
+                    }
+                })
+            }
+        }
+    }
+
+    private fun storeMetaText(text: String, strong: Boolean): TextView {
+        return TextView(this).apply {
+            this.text = text
+            textSize = if (strong) 12.2f else 11.6f
+            includeFontPadding = false
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+            if (strong) {
+                typeface = Typeface.DEFAULT_BOLD
+            }
+            setTextColor(
+                ContextCompat.getColor(
+                    this@CrownStoreActivity,
+                    if (strong) R.color.crown_text_primary else R.color.crown_text_secondary
+                )
+            )
+            alpha = if (strong) 0.84f else 0.76f
+        }
+    }
+
+    private fun storeSummaryText(text: String): TextView {
+        return TextView(this).apply {
+            this.text = text
+            textSize = 12.6f
+            includeFontPadding = false
+            maxLines = 3
+            ellipsize = TextUtils.TruncateAt.END
+            setLineSpacing(dp(1).toFloat(), 1.08f)
+            setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_text_secondary))
+        }
+    }
+
+    private fun storeTagsView(tags: List<String>): View {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            val visibleTags = tags.filter { it.isNotBlank() }.take(2)
+            visibleTags.forEachIndexed { index, tag ->
+                addView(
+                    storeTagChip(tag),
+                    LinearLayout.LayoutParams(
+                        0,
+                        dp(25),
+                        1f
+                    ).apply {
+                        if (index > 0) {
+                            marginStart = dp(5)
+                        }
+                    }
+                )
+            }
+            val overflowCount = tags.size - visibleTags.size
+            if (overflowCount > 0) {
+                addView(
+                    storeTagChip("+$overflowCount"),
+                    LinearLayout.LayoutParams(dp(36), dp(25)).apply {
+                        marginStart = dp(5)
+                    }
+                )
+            }
+        }
+    }
+
+    private fun storeTagChip(text: String): TextView {
+        return TextView(this).apply {
+            this.text = text
+            gravity = Gravity.CENTER
+            textSize = 10.4f
+            includeFontPadding = false
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+            setPadding(dp(7), 0, dp(7), 0)
+            setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_text_secondary))
+            setBackgroundResource(R.drawable.crown_store_tag_chip_bg)
+            alpha = 0.9f
+        }
+    }
+
+    private fun storeFootnoteText(text: String): TextView {
+        return TextView(this).apply {
+            this.text = text
+            textSize = 10.8f
+            includeFontPadding = false
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+            setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_text_secondary))
+            alpha = 0.62f
+        }
+    }
+
+    private fun formatStoreUpdatedAt(updatedAt: String): String {
+        val trimmed = updatedAt.trim()
+        if (trimmed.isBlank()) return trimmed
+
+        val parsedDate = parseStoreUpdatedAt(trimmed) ?: return trimmed
+        return DateFormat
+            .getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
+            .format(parsedDate)
+    }
+
+    private fun parseStoreUpdatedAt(updatedAt: String): Date? {
+        val utcPatterns = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+        )
+        for (pattern in utcPatterns) {
+            val date = runCatching {
+                SimpleDateFormat(pattern, Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                    isLenient = false
+                }.parse(updatedAt)
+            }.getOrNull()
+            if (date != null) return date
+        }
+
+        return runCatching {
+            SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+                isLenient = false
+            }.parse(updatedAt)
+        }.getOrNull()
+    }
+
+    private fun LinearLayout.addViewWithTopMargin(view: View, topMargin: Int) {
+        addView(
+            view,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                this.topMargin = topMargin
+            }
+        )
+    }
+
+    private fun cardActionArea(actions: List<View>): View {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(9), 0, 0)
+            actions.chunked(2).forEachIndexed { rowIndex, rowActions ->
+                val row = LinearLayout(this@CrownStoreActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    isBaselineAligned = false
+                }
+                rowActions.forEachIndexed { actionIndex, action ->
+                    row.addView(
+                        action,
+                        LinearLayout.LayoutParams(
+                            0,
+                            dp(38),
+                            1f
+                        ).apply {
+                            if (actionIndex > 0) {
+                                marginStart = dp(6)
+                            }
+                        }
+                    )
+                }
+                addView(
+                    row,
+                    LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        if (rowIndex > 0) {
+                            topMargin = dp(6)
+                        }
+                    }
+                )
+            }
+        }
+    }
+
+    private fun cardActionButton(
+        textRes: Int,
+        primary: Boolean = false,
+        action: () -> Unit
+    ): TextView {
+        val textColor = if (primary) R.color.app_dialog_title_color else R.color.crown_text_primary
+        return TextView(this).apply {
+            text = getString(textRes)
+            contentDescription = text
+            gravity = Gravity.CENTER
+            textSize = if (primary) 11.3f else 10.8f
+            typeface = Typeface.DEFAULT_BOLD
+            includeFontPadding = false
+            setLineSpacing(0f, 1.0f)
+            setPadding(dp(4), 0, dp(4), 0)
+            setTextColor(ContextCompat.getColor(this@CrownStoreActivity, textColor))
+            setBackgroundResource(
+                if (primary) {
+                    R.drawable.crown_store_card_action_primary_bg
+                } else {
+                    R.drawable.crown_store_card_action_bg
+                }
+            )
+            setOnClickListener { action() }
+        }
     }
 
     private fun secondaryActionButton(textRes: Int, iconRes: Int, action: () -> Unit): Button {
@@ -1362,39 +1649,24 @@ class CrownStoreActivity : AppCompatActivity() {
 
     private fun actionButton(text: String, iconRes: Int, primary: Boolean, action: () -> Unit): Button {
         val textColor = if (primary) R.color.app_dialog_title_color else R.color.crown_text_primary
-        return Button(this).apply {
+        return BackgroundIconButton(this).apply {
             this.text = text
             isAllCaps = false
+            gravity = Gravity.CENTER
             textSize = 13.5f
             minHeight = dp(40)
             minWidth = 0
             includeFontPadding = false
-            compoundDrawablePadding = dp(6)
-            setPadding(dp(10), 0, dp(10), 0)
+            setPadding(dp(12), 0, dp(12), 0)
             setTextColor(ContextCompat.getColor(this@CrownStoreActivity, textColor))
             setBackgroundResource(if (primary) R.drawable.crown_store_primary_action_bg else R.drawable.crown_config_action_button_bg)
-            setStartIcon(iconRes, textColor, 19)
+            setBackgroundIcon(
+                icon = tintedDrawable(iconRes, textColor),
+                sizePx = dp(76),
+                insetPx = -dp(8),
+                alpha = if (primary) 38 else 32
+            )
             setOnClickListener { action() }
-        }
-    }
-
-    private fun actionButtonRow(left: Button, right: Button): View {
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            addView(
-                left,
-                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    topMargin = dp(8)
-                    marginEnd = dp(5)
-                }
-            )
-            addView(
-                right,
-                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    topMargin = dp(8)
-                    marginStart = dp(5)
-                }
-            )
         }
     }
 
@@ -1439,6 +1711,37 @@ class CrownStoreActivity : AppCompatActivity() {
             setBounds(0, 0, size, size)
         }
         setCompoundDrawables(null, icon, null, null)
+    }
+
+    private class BackgroundIconButton(context: Context) : Button(context) {
+        private var backgroundIcon: Drawable? = null
+        private var backgroundIconSize = 0
+        private var backgroundIconInset = 0
+        private var backgroundIconAlpha = 36
+
+        fun setBackgroundIcon(icon: Drawable?, sizePx: Int, insetPx: Int, alpha: Int) {
+            backgroundIcon = icon
+            backgroundIconSize = sizePx
+            backgroundIconInset = insetPx
+            backgroundIconAlpha = alpha
+            invalidate()
+        }
+
+        override fun onDraw(canvas: Canvas) {
+            backgroundIcon?.let { icon ->
+                val size = backgroundIconSize.coerceAtLeast(height)
+                val left = if (layoutDirection == View.LAYOUT_DIRECTION_RTL) {
+                    backgroundIconInset
+                } else {
+                    width - size - backgroundIconInset
+                }
+                val top = (height - size) / 2
+                icon.alpha = backgroundIconAlpha
+                icon.setBounds(left, top, left + size, top + size)
+                icon.draw(canvas)
+            }
+            super.onDraw(canvas)
+        }
     }
 
     private fun dp(value: Int): Int {

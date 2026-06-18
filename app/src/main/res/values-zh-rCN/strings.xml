@@ -1334,8 +1334,8 @@
     <string name="crown_config_action_import_legacy">导入旧版 .mdat</string>
     <string name="crown_config_action_export_legacy">导出旧版 .mdat</string>
     <string name="title_crown_store_view">王冠</string>
-    <string name="crown_store_tab_store">Store</string>
-    <string name="crown_store_tab_mine">我的</string>
+    <string name="crown_store_tab_store">超市王冠</string>
+    <string name="crown_store_tab_mine">我的王冠</string>
     <string name="crown_store_store_summary">来看看大家晒在 GitHub 上的王冠配置，喜欢哪套就带回本地。</string>
     <string name="crown_store_my_summary">这里是你的王冠小工坊：整理本地配置、打包分享，也可以投稿到 GitHub Store。</string>
     <string name="crown_store_action_refresh">刷新一下</string>

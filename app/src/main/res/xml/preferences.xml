@@ -309,7 +309,8 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_ui_settings"
         android:key="category_ui_settings"
-        android:layout="@layout/preference_category_material">
+        android:layout="@layout/preference_category_material"
+        app:initialExpandedChildrenCount="6">
         <com.limelight.preferences.LanguagePreference
             android:key="list_languages"
             android:title="@string/title_language_list"
@@ -396,60 +397,10 @@
             android:summary="@string/summary_enable_post_stream_toast"
             android:defaultValue="false"/>
     </PreferenceCategory>
-    <PreferenceCategory android:title="@string/category_backup_restore"
-        android:key="category_backup_restore"
-        android:layout="@layout/preference_category_material">
-        <Preference
-            android:key="config_sync_export"
-            android:title="@string/title_config_sync_export"
-            android:summary="@string/summary_config_sync_export" />
-        <Preference
-            android:key="config_sync_import"
-            android:title="@string/title_config_sync_import"
-            android:summary="@string/summary_config_sync_import" />
-        <CheckBoxPreference
-            android:key="checkbox_config_sync_auto_snapshot"
-            android:title="@string/title_config_sync_auto_snapshot"
-            android:summary="@string/summary_config_sync_auto_snapshot"
-            android:defaultValue="false" />
-        <Preference
-            android:key="config_sync_snapshot_now"
-            android:title="@string/title_config_sync_snapshot_now"
-            android:summary="@string/summary_config_sync_snapshot_never" />
-        <Preference
-            android:key="config_sync_select_directory"
-            android:title="@string/title_config_sync_select_directory"
-            android:summary="@string/summary_config_sync_select_directory_none" />
-        <Preference
-            android:key="config_sync_backup_password"
-            android:title="@string/title_config_sync_backup_password"
-            android:summary="@string/summary_config_sync_backup_password_missing" />
-        <CheckBoxPreference
-            android:key="checkbox_config_sync_external_snapshot"
-            android:title="@string/title_config_sync_external_snapshot"
-            android:summary="@string/summary_config_sync_external_snapshot"
-            android:defaultValue="false"
-            android:enabled="false" />
-        <CheckBoxPreference
-            android:key="checkbox_config_sync_background_sync"
-            android:title="@string/title_config_sync_background_sync"
-            android:summary="@string/summary_config_sync_background_sync"
-            android:defaultValue="false"
-            android:enabled="false" />
-        <Preference
-            android:key="config_sync_status"
-            android:title="@string/title_config_sync_status"
-            android:summary="@string/summary_config_sync_status_disabled"
-            android:selectable="false" />
-        <Preference
-            android:key="config_sync_import_external_snapshot"
-            android:title="@string/title_config_sync_import_external_snapshot"
-            android:summary="@string/summary_config_sync_import_external_snapshot"
-            android:enabled="false" />
-    </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_audio_settings"
         android:key="category_audio_settings"
-        android:layout="@layout/preference_category_material">
+        android:layout="@layout/preference_category_material"
+        app:initialExpandedChildrenCount="4">
         <ListPreference
             android:key="list_audio_config"
             android:title="@string/title_audio_config_list"
@@ -925,6 +876,58 @@
             android:key="crown_config_management"
             android:title="@string/title_crown_config_management"
             android:summary="@string/summary_crown_config_management" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="@string/category_backup_restore"
+        android:key="category_backup_restore"
+        android:layout="@layout/preference_category_material"
+        app:initialExpandedChildrenCount="2">
+        <CheckBoxPreference
+            android:key="checkbox_config_sync_auto_snapshot"
+            android:title="@string/title_config_sync_auto_snapshot"
+            android:summary="@string/summary_config_sync_auto_snapshot"
+            android:defaultValue="false" />
+        <Preference
+            android:key="config_sync_snapshot_now"
+            android:title="@string/title_config_sync_snapshot_now"
+            android:summary="@string/summary_config_sync_snapshot_never" />
+        <Preference
+            android:key="config_sync_export"
+            android:title="@string/title_config_sync_export"
+            android:summary="@string/summary_config_sync_export" />
+        <Preference
+            android:key="config_sync_import"
+            android:title="@string/title_config_sync_import"
+            android:summary="@string/summary_config_sync_import" />
+        <Preference
+            android:key="config_sync_select_directory"
+            android:title="@string/title_config_sync_select_directory"
+            android:summary="@string/summary_config_sync_select_directory_none" />
+        <Preference
+            android:key="config_sync_backup_password"
+            android:title="@string/title_config_sync_backup_password"
+            android:summary="@string/summary_config_sync_backup_password_missing" />
+        <CheckBoxPreference
+            android:key="checkbox_config_sync_external_snapshot"
+            android:title="@string/title_config_sync_external_snapshot"
+            android:summary="@string/summary_config_sync_external_snapshot"
+            android:defaultValue="false"
+            android:enabled="false" />
+        <CheckBoxPreference
+            android:key="checkbox_config_sync_background_sync"
+            android:title="@string/title_config_sync_background_sync"
+            android:summary="@string/summary_config_sync_background_sync"
+            android:defaultValue="false"
+            android:enabled="false" />
+        <Preference
+            android:key="config_sync_status"
+            android:title="@string/title_config_sync_status"
+            android:summary="@string/summary_config_sync_status_disabled"
+            android:selectable="false" />
+        <Preference
+            android:key="config_sync_import_external_snapshot"
+            android:title="@string/title_config_sync_import_external_snapshot"
+            android:summary="@string/summary_config_sync_import_external_snapshot"
+            android:enabled="false" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_help"
         android:key="category_help"

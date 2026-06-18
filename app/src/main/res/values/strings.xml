@@ -647,8 +647,8 @@
     <string name="crown_config_action_merge">Merge Configuration</string>
     <string name="crown_config_no_profiles">No Crown profiles available</string>
     <string name="title_crown_store_view">Crown</string>
-    <string name="crown_store_tab_store">Store</string>
-    <string name="crown_store_tab_mine">My Profiles</string>
+    <string name="crown_store_tab_store">Crown Market</string>
+    <string name="crown_store_tab_mine">My Crowns</string>
     <string name="crown_store_store_summary">Browse Crown layouts shared on GitHub. Pick one you like and bring it home.</string>
     <string name="crown_store_my_summary">Your Crown workshop: manage local profiles, pack shares, and submit favorites to the GitHub Store.</string>
     <string name="crown_store_action_refresh">Refresh</string>
