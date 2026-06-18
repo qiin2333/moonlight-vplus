@@ -540,12 +540,16 @@ class CrownStoreActivity : AppCompatActivity() {
         }
         val accessToken = PreferenceManager.getDefaultSharedPreferences(this)
             .getString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, null)
-        if (accessToken.isNullOrBlank()) {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        if (accessToken.isNullOrBlank() ||
+            !DeveloperUnlockSettings.hasAccessTokenScope(
+                prefs,
+                GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH
+            )) {
             showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken = false)
             return
         }
 
-        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
         val defaultAuthor = prefs.getString(DeveloperUnlockSettings.PREF_USER_LOGIN, null).orEmpty()
         val nameInput = crownStorePublishInput(defaultName, R.string.hint_crown_store_profile_name)
         val gameInput = crownStorePublishInput("", R.string.hint_crown_store_game)
@@ -773,7 +777,12 @@ class CrownStoreActivity : AppCompatActivity() {
         val appContext = applicationContext
         val accessToken = PreferenceManager.getDefaultSharedPreferences(appContext)
             .getString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, null)
-        if (accessToken.isNullOrBlank()) {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(appContext)
+        if (accessToken.isNullOrBlank() ||
+            !DeveloperUnlockSettings.hasAccessTokenScope(
+                prefs,
+                GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH
+            )) {
             showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken = false)
             return
         }
@@ -813,6 +822,7 @@ class CrownStoreActivity : AppCompatActivity() {
         if (clearSavedToken) {
             PreferenceManager.getDefaultSharedPreferences(this).edit {
                 remove(DeveloperUnlockSettings.PREF_ACCESS_TOKEN)
+                remove(DeveloperUnlockSettings.PREF_ACCESS_TOKEN_SCOPE)
                 remove(DeveloperUnlockSettings.PREF_UNLOCKED)
                 remove(DeveloperUnlockSettings.PREF_VERIFIED_AT_MS)
             }
@@ -828,7 +838,7 @@ class CrownStoreActivity : AppCompatActivity() {
                 }
             )
             .setPositiveButton(R.string.action_crown_store_authorize_github) { _, _ ->
-                startDeveloperUnlockVerification()
+                startDeveloperUnlockVerification(GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH)
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
@@ -851,7 +861,7 @@ class CrownStoreActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun startDeveloperUnlockVerification() {
+    private fun startDeveloperUnlockVerification(scope: GitHubStarVerifier.OAuthScope) {
         if (!GitHubStarVerifier.isConfigured()) {
             Toast.makeText(this, R.string.toast_developer_oauth_unconfigured, Toast.LENGTH_LONG).show()
             return
@@ -866,7 +876,7 @@ class CrownStoreActivity : AppCompatActivity() {
         val appContext = applicationContext
         thread(name = "CrownStoreGitHubDeviceCode") {
             try {
-                val deviceCode = GitHubStarVerifier.requestDeviceCode()
+                val deviceCode = GitHubStarVerifier.requestDeviceCode(scope)
                 developerPendingDeviceCode = deviceCode
                 GitHubDeviceAuthorization.savePendingDeviceCode(appContext, deviceCode)
                 mainHandler.post {
@@ -883,10 +893,20 @@ class CrownStoreActivity : AppCompatActivity() {
         developerDeviceCodeDialog?.dismiss()
         GitHubDeviceAuthorization.copyDeviceCodeToClipboard(this, deviceCode)
         val dialog = AlertDialog.Builder(this, R.style.AppDialogStyle)
-            .setTitle(R.string.title_developer_unlock)
+            .setTitle(
+                if (deviceCode.scope == GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH) {
+                    R.string.title_crown_store_github_authorization
+                } else {
+                    R.string.title_developer_unlock
+                }
+            )
             .setMessage(
                 getString(
-                    R.string.message_developer_device_code,
+                    if (deviceCode.scope == GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH) {
+                        R.string.message_crown_store_device_code
+                    } else {
+                        R.string.message_developer_device_code
+                    },
                     deviceCode.userCode,
                     deviceCode.verificationUri
                 )
@@ -937,7 +957,8 @@ class CrownStoreActivity : AppCompatActivity() {
                         completeDeveloperUnlockVerification(
                             appContext,
                             poll.accessToken,
-                            GitHubStarVerifier.checkStar(poll.accessToken)
+                            GitHubStarVerifier.checkStar(poll.accessToken),
+                            deviceCode.scope
                         )
                     }
                     GitHubStarVerifier.TokenPollResult.Pending -> {
@@ -975,14 +996,17 @@ class CrownStoreActivity : AppCompatActivity() {
     private fun completeDeveloperUnlockVerification(
         ctx: Context,
         accessToken: String,
-        starCheck: GitHubStarVerifier.StarCheck
+        starCheck: GitHubStarVerifier.StarCheck,
+        scope: GitHubStarVerifier.OAuthScope
     ) {
         developerUnlockVerificationRunning = false
         clearDeveloperPendingDeviceCode(ctx)
-        GitHubDeviceAuthorization.saveAuthorizedAccount(ctx, accessToken, starCheck)
+        GitHubDeviceAuthorization.saveAuthorizedAccount(ctx, accessToken, starCheck, scope)
         mainHandler.post {
             developerDeviceCodeDialog?.dismiss()
-            if (starCheck.starred) {
+            if (scope == GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH) {
+                Toast.makeText(this, R.string.toast_crown_store_github_connected, Toast.LENGTH_LONG).show()
+            } else if (starCheck.starred) {
                 Toast.makeText(this, R.string.toast_developer_unlocked, Toast.LENGTH_LONG).show()
             } else {
                 AlertDialog.Builder(this, R.style.AppDialogStyle)
@@ -1091,8 +1115,8 @@ class CrownStoreActivity : AppCompatActivity() {
         return runCatching {
             URL(url).host
                 .takeIf { it.isNotBlank() }
-                ?.let { "Link: $it" }
-        }.getOrNull() ?: "Link"
+                ?.let { getString(R.string.crown_share_source_link_host, it) }
+        }.getOrNull() ?: getString(R.string.crown_share_source_link)
     }
 
     private fun showCrownShareImportPreview(profile: CrownProfileShareManager.ImportedProfile) {

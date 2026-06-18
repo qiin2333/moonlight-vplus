@@ -22,6 +22,10 @@ object GitHubDeviceAuthorization {
                 DeveloperUnlockSettings.PREF_PENDING_VERIFICATION_URI_COMPLETE,
                 deviceCode.verificationUriComplete
             )
+            putString(
+                DeveloperUnlockSettings.PREF_PENDING_SCOPE,
+                deviceCode.scope.preferenceValue
+            )
             putLong(DeveloperUnlockSettings.PREF_PENDING_EXPIRES_AT_MS, expiresAtMs)
             putInt(DeveloperUnlockSettings.PREF_PENDING_INTERVAL_SECONDS, deviceCode.intervalSeconds)
         }
@@ -55,7 +59,10 @@ object GitHubDeviceAuthorization {
             )?.takeIf { it.isNotBlank() },
             expiresInSeconds = remainingSeconds,
             intervalSeconds = prefs.getInt(DeveloperUnlockSettings.PREF_PENDING_INTERVAL_SECONDS, 5)
-                .coerceAtLeast(1)
+                .coerceAtLeast(1),
+            scope = GitHubStarVerifier.OAuthScope.fromPreference(
+                prefs.getString(DeveloperUnlockSettings.PREF_PENDING_SCOPE, null)
+            ) ?: GitHubStarVerifier.OAuthScope.STAR_VERIFICATION
         )
     }
 
@@ -65,6 +72,7 @@ object GitHubDeviceAuthorization {
             remove(DeveloperUnlockSettings.PREF_PENDING_USER_CODE)
             remove(DeveloperUnlockSettings.PREF_PENDING_VERIFICATION_URI)
             remove(DeveloperUnlockSettings.PREF_PENDING_VERIFICATION_URI_COMPLETE)
+            remove(DeveloperUnlockSettings.PREF_PENDING_SCOPE)
             remove(DeveloperUnlockSettings.PREF_PENDING_EXPIRES_AT_MS)
             remove(DeveloperUnlockSettings.PREF_PENDING_INTERVAL_SECONDS)
         }
@@ -99,10 +107,12 @@ object GitHubDeviceAuthorization {
     fun saveAuthorizedAccount(
         ctx: Context,
         accessToken: String,
-        starCheck: GitHubStarVerifier.StarCheck
+        starCheck: GitHubStarVerifier.StarCheck,
+        scope: GitHubStarVerifier.OAuthScope
     ) {
         PreferenceManager.getDefaultSharedPreferences(ctx).edit {
             putString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, accessToken)
+            putString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN_SCOPE, scope.preferenceValue)
             starCheck.login?.let { putString(DeveloperUnlockSettings.PREF_USER_LOGIN, it) }
             if (starCheck.starred) {
                 putBoolean(DeveloperUnlockSettings.PREF_UNLOCKED, true)

@@ -2077,7 +2077,12 @@ class StreamSettings : AppCompatActivity() {
 
             val accessToken = PreferenceManager.getDefaultSharedPreferences(ctx)
                     .getString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, null)
-            if (accessToken.isNullOrBlank()) {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
+            if (accessToken.isNullOrBlank() ||
+                    !DeveloperUnlockSettings.hasAccessTokenScope(
+                            prefs,
+                            GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH
+                    )) {
                 showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken = false)
                 return
             }
@@ -2200,7 +2205,12 @@ class StreamSettings : AppCompatActivity() {
             val appContext = requireContext().applicationContext
             val accessToken = PreferenceManager.getDefaultSharedPreferences(appContext)
                     .getString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, null)
-            if (accessToken.isNullOrBlank()) {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(appContext)
+            if (accessToken.isNullOrBlank() ||
+                    !DeveloperUnlockSettings.hasAccessTokenScope(
+                            prefs,
+                            GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH
+                    )) {
                 showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken = false)
                 return
             }
@@ -2242,6 +2252,7 @@ class StreamSettings : AppCompatActivity() {
             if (clearSavedToken) {
                 PreferenceManager.getDefaultSharedPreferences(ctx).edit {
                     remove(DeveloperUnlockSettings.PREF_ACCESS_TOKEN)
+                    remove(DeveloperUnlockSettings.PREF_ACCESS_TOKEN_SCOPE)
                     remove(DeveloperUnlockSettings.PREF_UNLOCKED)
                     remove(DeveloperUnlockSettings.PREF_VERIFIED_AT_MS)
                 }
@@ -2258,7 +2269,7 @@ class StreamSettings : AppCompatActivity() {
                             }
                     )
                     .setPositiveButton(R.string.action_crown_store_authorize_github) { _, _ ->
-                        startDeveloperUnlockVerification()
+                        startDeveloperUnlockVerification(GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH)
                     }
                     .setNegativeButton(android.R.string.cancel, null)
                     .show()
@@ -2361,8 +2372,8 @@ class StreamSettings : AppCompatActivity() {
             return runCatching {
                 URL(url).host
                     .takeIf { it.isNotBlank() }
-                    ?.let { "Link: $it" }
-            }.getOrNull() ?: "Link"
+                    ?.let { getString(R.string.crown_share_source_link_host, it) }
+            }.getOrNull() ?: getString(R.string.crown_share_source_link)
         }
 
         private fun downloadRemoteText(url: String, maxBytes: Int): String {
@@ -3635,7 +3646,7 @@ class StreamSettings : AppCompatActivity() {
 
             if (!alreadyUnlocked) {
                 val pendingDeviceCode = GitHubDeviceAuthorization.loadPendingDeviceCode(ctx.applicationContext)
-                if (pendingDeviceCode != null) {
+                if (pendingDeviceCode?.scope == GitHubStarVerifier.OAuthScope.STAR_VERIFICATION) {
                     developerPendingDeviceCode = pendingDeviceCode
                     showDeveloperDeviceCodeDialog(pendingDeviceCode)
                     pollDeveloperPendingDeviceCode(showPendingToast = false, enforceThrottle = true)
@@ -3662,7 +3673,9 @@ class StreamSettings : AppCompatActivity() {
                 .show()
         }
 
-        private fun startDeveloperUnlockVerification() {
+        private fun startDeveloperUnlockVerification(
+            scope: GitHubStarVerifier.OAuthScope = GitHubStarVerifier.OAuthScope.STAR_VERIFICATION
+        ) {
             val ctx = requireContext().applicationContext
             val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
             if (developerUnlockVerificationRunning) {
@@ -3675,9 +3688,11 @@ class StreamSettings : AppCompatActivity() {
             }
 
             val savedToken = prefs.getString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, null)
-            if (savedToken.isNullOrBlank()) {
+            val savedTokenCanBeUsed = !savedToken.isNullOrBlank() &&
+                    DeveloperUnlockSettings.hasAccessTokenScope(prefs, scope)
+            if (!savedTokenCanBeUsed) {
                 val pendingDeviceCode = GitHubDeviceAuthorization.loadPendingDeviceCode(ctx)
-                if (pendingDeviceCode != null) {
+                if (pendingDeviceCode?.scope == scope) {
                     developerPendingDeviceCode = pendingDeviceCode
                     showDeveloperDeviceCodeDialog(pendingDeviceCode)
                     pollDeveloperPendingDeviceCode(showPendingToast = false, enforceThrottle = true)
@@ -3689,16 +3704,17 @@ class StreamSettings : AppCompatActivity() {
             Toast.makeText(ctx, R.string.toast_developer_verification_started, Toast.LENGTH_LONG).show()
             thread(name = "DeveloperGitHubStarVerify") {
                 try {
-                    if (!savedToken.isNullOrBlank()) {
+                    if (savedTokenCanBeUsed) {
                         completeDeveloperUnlockVerification(
                             ctx = ctx,
                             accessToken = savedToken,
-                            starCheck = GitHubStarVerifier.checkStar(savedToken)
+                            starCheck = GitHubStarVerifier.checkStar(savedToken),
+                            scope = scope
                         )
                         return@thread
                     }
 
-                    val deviceCode = GitHubStarVerifier.requestDeviceCode()
+                    val deviceCode = GitHubStarVerifier.requestDeviceCode(scope)
                     developerPendingDeviceCode = deviceCode
                     GitHubDeviceAuthorization.savePendingDeviceCode(ctx, deviceCode)
                     Log.i(
@@ -3757,7 +3773,8 @@ class StreamSettings : AppCompatActivity() {
                             completeDeveloperUnlockVerification(
                                 ctx = ctx,
                                 accessToken = poll.accessToken,
-                                starCheck = GitHubStarVerifier.checkStar(poll.accessToken)
+                                starCheck = GitHubStarVerifier.checkStar(poll.accessToken),
+                                scope = deviceCode.scope
                             )
                         }
                         GitHubStarVerifier.TokenPollResult.Pending -> {
@@ -3805,10 +3822,20 @@ class StreamSettings : AppCompatActivity() {
             developerDeviceCodeDialog?.dismiss()
             GitHubDeviceAuthorization.copyDeviceCodeToClipboard(requireContext(), deviceCode)
             val dialog = AlertDialog.Builder(requireContext())
-                .setTitle(R.string.title_developer_unlock)
+                .setTitle(
+                    if (deviceCode.scope == GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH) {
+                        R.string.title_crown_store_github_authorization
+                    } else {
+                        R.string.title_developer_unlock
+                    }
+                )
                 .setMessage(
                     getString(
-                        R.string.message_developer_device_code,
+                        if (deviceCode.scope == GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH) {
+                            R.string.message_crown_store_device_code
+                        } else {
+                            R.string.message_developer_device_code
+                        },
                         deviceCode.userCode,
                         deviceCode.verificationUri
                     )
@@ -3845,11 +3872,12 @@ class StreamSettings : AppCompatActivity() {
         private fun completeDeveloperUnlockVerification(
             ctx: Context,
             accessToken: String,
-            starCheck: GitHubStarVerifier.StarCheck
+            starCheck: GitHubStarVerifier.StarCheck,
+            scope: GitHubStarVerifier.OAuthScope
         ) {
             developerUnlockVerificationRunning = false
             clearDeveloperPendingDeviceCode(ctx)
-            GitHubDeviceAuthorization.saveAuthorizedAccount(ctx, accessToken, starCheck)
+            GitHubDeviceAuthorization.saveAuthorizedAccount(ctx, accessToken, starCheck, scope)
             Log.i(
                 "DeveloperUnlock",
                 "GitHub star verification completed: starred=${starCheck.starred}, login=${starCheck.login ?: "unknown"}"
@@ -3861,7 +3889,9 @@ class StreamSettings : AppCompatActivity() {
                 developerDeviceCodeDialog?.dismiss()
                 refreshDeveloperFeatureGateState()
 
-                if (starCheck.starred) {
+                if (scope == GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH) {
+                    Toast.makeText(requireContext(), R.string.toast_crown_store_github_connected, Toast.LENGTH_LONG).show()
+                } else if (starCheck.starred) {
                     Toast.makeText(requireContext(), R.string.toast_developer_unlocked, Toast.LENGTH_LONG).show()
                 } else {
                     AlertDialog.Builder(requireContext())

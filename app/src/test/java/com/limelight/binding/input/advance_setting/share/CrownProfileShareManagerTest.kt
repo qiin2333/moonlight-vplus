@@ -142,6 +142,14 @@ class CrownProfileShareManagerTest {
     }
 
     @Test(expected = CrownProfileShareManager.CrownProfileShareException::class)
+    fun resolveStoreProfileUrlRejectsHttpUrls() {
+        CrownProfileShareManager.resolveStoreProfileUrl(
+            indexUrl = "https://raw.githubusercontent.com/qiin2333/crown-profiles/main/index/v1.json",
+            profileUrl = "http://example.com/profiles/apex/fps.crown.json"
+        )
+    }
+
+    @Test(expected = CrownProfileShareManager.CrownProfileShareException::class)
     fun parseStoreIndexRejectsWrongKind() {
         val index = JSONObject()
             .put("kind", CrownProfileShareManager.BUNDLE_KIND)

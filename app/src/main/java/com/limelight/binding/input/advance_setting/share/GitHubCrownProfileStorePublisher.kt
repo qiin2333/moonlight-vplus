@@ -56,9 +56,9 @@ object GitHubCrownProfileStorePublisher {
         createBranch(accessToken, publishOwner, branchName, baseSha)
 
         val profilePath = buildProfilePath(request)
-        val upstreamIndex = getContent(accessToken, STORE_OWNER, STORE_REPO, INDEX_PATH, STORE_BRANCH)
+        val baseIndex = getContent(accessToken, publishOwner, STORE_REPO, INDEX_PATH, STORE_BRANCH)
         val updatedAt = formatIso8601(System.currentTimeMillis())
-        val updatedIndex = appendProfileToIndex(upstreamIndex.text, request, profilePath, updatedAt)
+        val updatedIndex = appendProfileToIndex(baseIndex.text, request, profilePath, updatedAt)
 
         putContent(
             accessToken = accessToken,

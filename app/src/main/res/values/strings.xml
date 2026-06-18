@@ -686,6 +686,7 @@
     <string name="message_crown_store_publish_terms">I confirm this profile is mine or shared with permission, contains no private data, tokens, passwords, pairing identity, copyrighted media, or abusive content, and may be reviewed or removed from the public GitHub Store.</string>
     <string name="message_crown_store_github_authorization_required">Connect GitHub before submitting. Moonlight V+ will fork the Crown Store, commit the profile, and open a pull request for you.</string>
     <string name="message_crown_store_github_reauthorization_required">Submitting needs GitHub public repository access. Reconnect GitHub, approve repository access, then send it again.</string>
+    <string name="message_crown_store_device_code">Code copied for you: %1$s\n\n1. Open the authorization page and paste the code.\n2. Approve public repository access so Moonlight V+ can fork the Crown Store and open a pull request.\n3. Return here after authorization, then tap I have authorized.\n\nAuthorization page: %2$s</string>
     <string name="message_crown_store_publish_success">Your Crown profile submission PR is ready:\n%1$s\n\n%2$s</string>
     <string name="crown_store_report_issue_title">Report Crown Store profile: %1$s</string>
     <string name="crown_store_report_issue_body">Profile: %1$s\nSource: %2$s\n\nReason:\nPlease describe what looks unsafe, private, infringing, or abusive.</string>
@@ -697,6 +698,8 @@
     <string name="crown_share_install_as_new">Install as New</string>
     <string name="crown_share_merge_into_existing">Merge into Existing</string>
     <string name="crown_share_unknown_value">Unknown</string>
+    <string name="crown_share_source_link">Link</string>
+    <string name="crown_share_source_link_host">Link: %1$s</string>
     <string name="hint_crown_share_import_url">GitHub raw, Gist, or Pages URL</string>
     <string name="message_crown_share_import_url">Paste a direct link to a Crown share package. GitHub raw, Gist, and GitHub Pages links are all welcome.</string>
     <string name="message_crown_share_import_preview">Ready to import this Crown:\nName: %1$s\nCreator: %2$s\nGame: %3$s\nSource: %4$s\nPayload version: %5$d\nButtons/elements: %6$d\nSettings: %7$d\n\nOnly Crown profile data will be changed.</string>
@@ -713,6 +716,7 @@
     <string name="toast_crown_store_failed">Could not open Crown Store</string>
     <string name="toast_crown_store_profile_failed">This Crown profile did not import</string>
     <string name="toast_crown_store_publish_started">Sending Crown profile to GitHub</string>
+    <string name="toast_crown_store_github_connected">GitHub is connected for Crown Store submissions</string>
     <string name="toast_crown_store_publish_failed">Could not prepare this Crown profile</string>
     <string name="toast_crown_store_publish_failed_with_error">Submission failed: %1$s</string>
     <string name="toast_crown_store_publish_terms_required">Confirm the publishing rules before submitting</string>

@@ -225,8 +225,8 @@ object CrownProfileShareManager {
         }
 
         val protocol = resolvedUrl.protocol.lowercase(Locale.US)
-        if (protocol != "http" && protocol != "https") {
-            throw CrownProfileShareException("Crown store profile URL must use HTTP or HTTPS")
+        if (protocol != "https") {
+            throw CrownProfileShareException("Crown store profile URL must use HTTPS")
         }
         return resolvedUrl.toString()
     }

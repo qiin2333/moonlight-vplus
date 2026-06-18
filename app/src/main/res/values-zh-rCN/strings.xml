@@ -1373,6 +1373,7 @@
     <string name="message_crown_store_publish_terms">我确认这套配置是我自己的，或已获得分享许可；里面没有隐私信息、token、密码、配对身份、受版权保护的媒体或不友好的内容，也接受它被公开审核或下架。</string>
     <string name="message_crown_store_github_authorization_required">投稿前先连接 GitHub。Moonlight V+ 会帮你 fork 王冠 Store、提交配置，并打开一个 Pull Request。</string>
     <string name="message_crown_store_github_reauthorization_required">投稿需要 GitHub public repository 权限。重新连接 GitHub、授权仓库访问后，再来投一次吧。</string>
+    <string name="message_crown_store_device_code">授权码已帮你复制好：%1$s\n\n1. 打开授权页，直接粘贴授权码。\n2. 同意 public repository 权限，Moonlight V+ 才能帮你 fork 王冠 Store 并创建 Pull Request。\n3. 授权完成后回到本页，点击“已授权，检查”。\n\n授权页：%2$s</string>
     <string name="message_crown_store_publish_success">这套王冠配置的投稿 PR 已创建：\n%1$s\n\n%2$s</string>
     <string name="crown_store_report_issue_title">举报王冠 Store 配置：%1$s</string>
     <string name="crown_store_report_issue_body">配置：%1$s\n来源：%2$s\n\n原因：\n请说明它看起来哪里不安全、包含隐私、侵权或不友好。</string>
@@ -1384,6 +1385,8 @@
     <string name="crown_share_install_as_new">作为新配置安装</string>
     <string name="crown_share_merge_into_existing">合并到已有配置</string>
     <string name="crown_share_unknown_value">未知</string>
+    <string name="crown_share_source_link">链接</string>
+    <string name="crown_share_source_link_host">链接：%1$s</string>
     <string name="hint_crown_share_import_url">GitHub raw、Gist 或 Pages 链接</string>
     <string name="message_crown_share_import_url">粘贴王冠分享包的直链。GitHub raw、Gist 和 GitHub Pages 都可以，交给我来拆包。</string>
     <string name="message_crown_share_import_preview">准备导入这套王冠：\n名称：%1$s\n作者：%2$s\n游戏：%3$s\n来源：%4$s\n负载版本：%5$d\n按钮/元素：%6$d\n设置项：%7$d\n\n只会写入王冠配置数据，不会碰其它设置。</string>
@@ -1400,6 +1403,7 @@
     <string name="toast_crown_store_failed">没能打开王冠 Store</string>
     <string name="toast_crown_store_profile_failed">这套王冠配置导入失败了</string>
     <string name="toast_crown_store_publish_started">正在把王冠配置送去 GitHub</string>
+    <string name="toast_crown_store_github_connected">GitHub 已准备好接收王冠投稿</string>
     <string name="toast_crown_store_publish_failed">没能准备好这套王冠配置</string>
     <string name="toast_crown_store_publish_failed_with_error">投稿失败：%1$s</string>
     <string name="toast_crown_store_publish_terms_required">先确认投稿规则再发送哦</string>
