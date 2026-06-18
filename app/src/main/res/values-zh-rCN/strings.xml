@@ -1356,6 +1356,11 @@
     <string name="crown_store_layout_orientation_landscape">横屏</string>
     <string name="crown_store_layout_orientation_portrait">竖屏</string>
     <string name="crown_store_layout_orientation_unknown">屏幕</string>
+    <string name="title_crown_store_layout_check">先看一下适配</string>
+    <string name="message_crown_store_layout_match">适配：这套王冠刚好适合当前屏幕（%1$s）。</string>
+    <string name="message_crown_store_layout_missing">适配：这套王冠没有屏幕信息。当前屏幕是 %1$s，导入后可能要轻轻挪一下按钮。</string>
+    <string name="message_crown_store_layout_mismatch">适配：这套王冠来自 %1$s。当前屏幕是 %2$s，导入后可能要轻轻挪一下按钮。</string>
+    <string name="action_crown_store_continue_import">继续导入</string>
     <string name="crown_store_updated_at">最近更新：%1$s</string>
     <string name="crown_store_action_browse">逛逛王冠 Store</string>
     <string name="crown_store_action_publish">投稿到王冠 Store</string>

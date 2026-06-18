@@ -669,6 +669,11 @@
     <string name="crown_store_layout_orientation_landscape">landscape</string>
     <string name="crown_store_layout_orientation_portrait">portrait</string>
     <string name="crown_store_layout_orientation_unknown">screen</string>
+    <string name="title_crown_store_layout_check">Check the fit</string>
+    <string name="message_crown_store_layout_match">Fit: tuned for this screen (%1$s).</string>
+    <string name="message_crown_store_layout_missing">Fit: this Crown has no screen info. Your screen is %1$s, so you may need a tiny button nudge after import.</string>
+    <string name="message_crown_store_layout_mismatch">Fit: this Crown was tuned for %1$s. Your screen is %2$s, so buttons may need a tiny nudge after import.</string>
+    <string name="action_crown_store_continue_import">Import Anyway</string>
     <string name="crown_store_updated_at">Last updated: %1$s</string>
     <string name="crown_store_action_browse">Visit Crown Store</string>
     <string name="crown_store_action_publish">Submit to Crown Store</string>

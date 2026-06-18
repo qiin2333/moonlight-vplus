@@ -52,6 +52,7 @@ import java.util.LinkedHashMap
 import java.util.Locale
 import java.util.TimeZone
 import kotlin.concurrent.thread
+import kotlin.math.abs
 
 class CrownStoreActivity : AppCompatActivity() {
     private enum class CrownTab {
@@ -381,6 +382,16 @@ class CrownStoreActivity : AppCompatActivity() {
     }
 
     private fun importStoreProfile(profile: CrownProfileShareManager.StoreProfile) {
+        if (!isLayoutBasisCompatible(profile.layoutBasis, currentLayoutBasis())) {
+            showStoreLayoutCompatibilityDialog(profile) {
+                importStoreProfileUnchecked(profile)
+            }
+            return
+        }
+        importStoreProfileUnchecked(profile)
+    }
+
+    private fun importStoreProfileUnchecked(profile: CrownProfileShareManager.StoreProfile) {
         val profileUrl = try {
             CrownProfileShareManager.resolveStoreProfileUrl(CROWN_STORE_INDEX_URL, profile.url)
         } catch (e: Exception) {
@@ -393,6 +404,18 @@ class CrownStoreActivity : AppCompatActivity() {
             sourceLabelOverride = getString(R.string.crown_store_source_label, profile.name),
             failureToastRes = R.string.toast_crown_store_profile_failed
         )
+    }
+
+    private fun showStoreLayoutCompatibilityDialog(
+        profile: CrownProfileShareManager.StoreProfile,
+        onContinue: () -> Unit
+    ) {
+        AlertDialog.Builder(this, R.style.AppDialogStyle)
+            .setTitle(R.string.title_crown_store_layout_check)
+            .setMessage(layoutCompatibilityMessage(profile.layoutBasis))
+            .setPositiveButton(R.string.action_crown_store_continue_import) { _, _ -> onContinue() }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun reportStoreProfile(profile: CrownProfileShareManager.StoreProfile) {
@@ -1153,7 +1176,7 @@ class CrownStoreActivity : AppCompatActivity() {
             profile.payloadInfo.version,
             profile.payloadInfo.elementCount,
             profile.payloadInfo.settingsCount
-        )
+        ) + "\n\n" + layoutCompatibilityMessage(profile.layoutBasis)
 
         AlertDialog.Builder(this, R.style.AppDialogStyle)
             .setTitle(R.string.crown_share_action_import)
@@ -1703,6 +1726,41 @@ class CrownStoreActivity : AppCompatActivity() {
         return "${layoutBasis.widthPx}x${layoutBasis.heightPx}$dpiText · $orientationText"
     }
 
+    private fun layoutCompatibilityMessage(layoutBasis: CrownProfileShareManager.LayoutBasis?): String {
+        val currentLayout = currentLayoutBasis()
+        val currentText = formatLayoutBasis(currentLayout)
+            ?: getString(R.string.crown_store_layout_orientation_unknown)
+        val profileText = formatLayoutBasis(layoutBasis)
+        return when {
+            layoutBasis == null || !layoutBasis.isPresent() -> {
+                getString(R.string.message_crown_store_layout_missing, currentText)
+            }
+            isLayoutBasisCompatible(layoutBasis, currentLayout) -> {
+                getString(R.string.message_crown_store_layout_match, currentText)
+            }
+            else -> {
+                getString(R.string.message_crown_store_layout_mismatch, profileText, currentText)
+            }
+        }
+    }
+
+    private fun isLayoutBasisCompatible(
+        profileLayout: CrownProfileShareManager.LayoutBasis?,
+        currentLayout: CrownProfileShareManager.LayoutBasis
+    ): Boolean {
+        if (profileLayout == null || !profileLayout.isPresent() || !currentLayout.isPresent()) return false
+        val sameSize = profileLayout.widthPx == currentLayout.widthPx &&
+            profileLayout.heightPx == currentLayout.heightPx
+        val sameDpi = profileLayout.densityDpi <= 0 ||
+            currentLayout.densityDpi <= 0 ||
+            abs(profileLayout.densityDpi - currentLayout.densityDpi) <= LAYOUT_DPI_TOLERANCE
+        val sameOrientation = profileLayout.orientation.isBlank() ||
+            profileLayout.orientation.equals("unknown", ignoreCase = true) ||
+            currentLayout.orientation.equals("unknown", ignoreCase = true) ||
+            profileLayout.orientation.equals(currentLayout.orientation, ignoreCase = true)
+        return sameSize && sameDpi && sameOrientation
+    }
+
     private fun formatStoreUpdatedAt(updatedAt: String): String {
         val trimmed = updatedAt.trim()
         if (trimmed.isBlank()) return trimmed
@@ -1945,6 +2003,7 @@ class CrownStoreActivity : AppCompatActivity() {
             "https://raw.githubusercontent.com/qiin2333/crown-profiles/main/index/v1.json"
         private const val CROWN_STORE_MAX_INDEX_BYTES = 256 * 1024
         private const val CROWN_SHARE_MAX_DOWNLOAD_BYTES = 512 * 1024
+        private const val LAYOUT_DPI_TOLERANCE = 8
         private const val CROWN_STORE_REPORT_URL =
             "https://github.com/qiin2333/crown-profiles/issues/new"
         private val CROWN_STORE_EXTERNAL_LOCATOR_PATTERN =
