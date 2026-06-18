@@ -3152,7 +3152,7 @@ class StreamSettings : AppCompatActivity() {
                     }
             findPreference<Preference>(PreferenceConfiguration.CROWN_CONFIG_MANAGEMENT_STRING)!!.onPreferenceClickListener =
                     Preference.OnPreferenceClickListener {
-                        showCrownConfigManagementDialog()
+                        startActivity(Intent(requireActivity(), CrownStoreActivity::class.java))
                         true
                     }
 
@@ -3634,7 +3634,7 @@ class StreamSettings : AppCompatActivity() {
             }
 
             if (!alreadyUnlocked) {
-                val pendingDeviceCode = loadDeveloperPendingDeviceCode(ctx.applicationContext)
+                val pendingDeviceCode = GitHubDeviceAuthorization.loadPendingDeviceCode(ctx.applicationContext)
                 if (pendingDeviceCode != null) {
                     developerPendingDeviceCode = pendingDeviceCode
                     showDeveloperDeviceCodeDialog(pendingDeviceCode)
@@ -3676,7 +3676,7 @@ class StreamSettings : AppCompatActivity() {
 
             val savedToken = prefs.getString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, null)
             if (savedToken.isNullOrBlank()) {
-                val pendingDeviceCode = loadDeveloperPendingDeviceCode(ctx)
+                val pendingDeviceCode = GitHubDeviceAuthorization.loadPendingDeviceCode(ctx)
                 if (pendingDeviceCode != null) {
                     developerPendingDeviceCode = pendingDeviceCode
                     showDeveloperDeviceCodeDialog(pendingDeviceCode)
@@ -3700,7 +3700,7 @@ class StreamSettings : AppCompatActivity() {
 
                     val deviceCode = GitHubStarVerifier.requestDeviceCode()
                     developerPendingDeviceCode = deviceCode
-                    saveDeveloperPendingDeviceCode(ctx, deviceCode)
+                    GitHubDeviceAuthorization.savePendingDeviceCode(ctx, deviceCode)
                     Log.i(
                         "DeveloperUnlock",
                         "GitHub star device code requested: userCode=${deviceCode.userCode}, " +
@@ -3725,7 +3725,7 @@ class StreamSettings : AppCompatActivity() {
 
         private fun pollDeveloperPendingDeviceCode(showPendingToast: Boolean, enforceThrottle: Boolean) {
             val ctx = requireContext().applicationContext
-            val deviceCode = developerPendingDeviceCode ?: loadDeveloperPendingDeviceCode(ctx)
+            val deviceCode = developerPendingDeviceCode ?: GitHubDeviceAuthorization.loadPendingDeviceCode(ctx)
             if (deviceCode == null) {
                 if (showPendingToast) {
                     Toast.makeText(ctx, R.string.toast_developer_verification_expired, Toast.LENGTH_LONG).show()
@@ -3796,67 +3796,14 @@ class StreamSettings : AppCompatActivity() {
             }
         }
 
-        private fun saveDeveloperPendingDeviceCode(ctx: Context, deviceCode: GitHubStarVerifier.DeviceCode) {
-            val expiresAtMs = System.currentTimeMillis() + deviceCode.expiresInSeconds * 1000L
-            PreferenceManager.getDefaultSharedPreferences(ctx).edit {
-                putString(DeveloperUnlockSettings.PREF_PENDING_DEVICE_CODE, deviceCode.deviceCode)
-                putString(DeveloperUnlockSettings.PREF_PENDING_USER_CODE, deviceCode.userCode)
-                putString(DeveloperUnlockSettings.PREF_PENDING_VERIFICATION_URI, deviceCode.verificationUri)
-                putString(
-                    DeveloperUnlockSettings.PREF_PENDING_VERIFICATION_URI_COMPLETE,
-                    deviceCode.verificationUriComplete
-                )
-                putLong(DeveloperUnlockSettings.PREF_PENDING_EXPIRES_AT_MS, expiresAtMs)
-                putInt(DeveloperUnlockSettings.PREF_PENDING_INTERVAL_SECONDS, deviceCode.intervalSeconds)
-            }
-        }
-
-        private fun loadDeveloperPendingDeviceCode(ctx: Context): GitHubStarVerifier.DeviceCode? {
-            val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
-            val expiresAtMs = prefs.getLong(DeveloperUnlockSettings.PREF_PENDING_EXPIRES_AT_MS, 0L)
-            val remainingSeconds = ((expiresAtMs - System.currentTimeMillis()) / 1000L).toInt()
-            if (remainingSeconds <= 0) {
-                clearDeveloperPendingDeviceCode(ctx)
-                return null
-            }
-
-            val deviceCode = prefs.getString(DeveloperUnlockSettings.PREF_PENDING_DEVICE_CODE, null)
-            val userCode = prefs.getString(DeveloperUnlockSettings.PREF_PENDING_USER_CODE, null)
-            val verificationUri = prefs.getString(DeveloperUnlockSettings.PREF_PENDING_VERIFICATION_URI, null)
-            if (deviceCode.isNullOrBlank() || userCode.isNullOrBlank() || verificationUri.isNullOrBlank()) {
-                clearDeveloperPendingDeviceCode(ctx)
-                return null
-            }
-
-            Log.i("DeveloperUnlock", "GitHub star verification restored pending device code: userCode=$userCode")
-            return GitHubStarVerifier.DeviceCode(
-                deviceCode = deviceCode,
-                userCode = userCode,
-                verificationUri = verificationUri,
-                verificationUriComplete = prefs.getString(
-                    DeveloperUnlockSettings.PREF_PENDING_VERIFICATION_URI_COMPLETE,
-                    null
-                )?.takeIf { it.isNotBlank() },
-                expiresInSeconds = remainingSeconds,
-                intervalSeconds = prefs.getInt(DeveloperUnlockSettings.PREF_PENDING_INTERVAL_SECONDS, 5)
-                    .coerceAtLeast(1)
-            )
-        }
-
         private fun clearDeveloperPendingDeviceCode(ctx: Context) {
             developerPendingDeviceCode = null
-            PreferenceManager.getDefaultSharedPreferences(ctx).edit {
-                remove(DeveloperUnlockSettings.PREF_PENDING_DEVICE_CODE)
-                remove(DeveloperUnlockSettings.PREF_PENDING_USER_CODE)
-                remove(DeveloperUnlockSettings.PREF_PENDING_VERIFICATION_URI)
-                remove(DeveloperUnlockSettings.PREF_PENDING_VERIFICATION_URI_COMPLETE)
-                remove(DeveloperUnlockSettings.PREF_PENDING_EXPIRES_AT_MS)
-                remove(DeveloperUnlockSettings.PREF_PENDING_INTERVAL_SECONDS)
-            }
+            GitHubDeviceAuthorization.clearPendingDeviceCode(ctx)
         }
 
         private fun showDeveloperDeviceCodeDialog(deviceCode: GitHubStarVerifier.DeviceCode) {
             developerDeviceCodeDialog?.dismiss()
+            GitHubDeviceAuthorization.copyDeviceCodeToClipboard(requireContext(), deviceCode)
             val dialog = AlertDialog.Builder(requireContext())
                 .setTitle(R.string.title_developer_unlock)
                 .setMessage(
@@ -3875,7 +3822,12 @@ class StreamSettings : AppCompatActivity() {
                 .create()
             dialog.setOnShowListener {
                 dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                    openDeveloperUrl(deviceCode.verificationUriComplete ?: deviceCode.verificationUri)
+                    GitHubDeviceAuthorization.copyDeviceCodeToClipboard(
+                        requireContext(),
+                        deviceCode,
+                        showToast = false
+                    )
+                    openDeveloperUrl(GitHubDeviceAuthorization.authorizationUrl(deviceCode))
                 }
                 dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
                     pollDeveloperPendingDeviceCode(showPendingToast = true, enforceThrottle = false)
@@ -3897,18 +3849,7 @@ class StreamSettings : AppCompatActivity() {
         ) {
             developerUnlockVerificationRunning = false
             clearDeveloperPendingDeviceCode(ctx)
-            val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
-            prefs.edit {
-                putString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, accessToken)
-                starCheck.login?.let { putString(DeveloperUnlockSettings.PREF_USER_LOGIN, it) }
-                if (starCheck.starred) {
-                    putBoolean(DeveloperUnlockSettings.PREF_UNLOCKED, true)
-                    putLong(DeveloperUnlockSettings.PREF_VERIFIED_AT_MS, System.currentTimeMillis())
-                } else {
-                    putBoolean(DeveloperUnlockSettings.PREF_UNLOCKED, false)
-                    putLong(DeveloperUnlockSettings.PREF_VERIFIED_AT_MS, 0L)
-                }
-            }
+            GitHubDeviceAuthorization.saveAuthorizedAccount(ctx, accessToken, starCheck)
             Log.i(
                 "DeveloperUnlock",
                 "GitHub star verification completed: starred=${starCheck.starred}, login=${starCheck.login ?: "unknown"}"
