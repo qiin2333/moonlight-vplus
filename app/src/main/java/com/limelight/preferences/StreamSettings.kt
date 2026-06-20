@@ -806,10 +806,40 @@ class StreamSettings : AppCompatActivity() {
          */
         private fun getTargetDisplay(): Display {
             val settingsActivity = activity as? StreamSettings
-            if (settingsActivity?.externalDisplayManager != null) {
-                return settingsActivity.externalDisplayManager?.getTargetDisplay()!!
-            }
-            return requireActivity().windowManager.defaultDisplay
+            return settingsActivity?.externalDisplayManager?.getTargetDisplay()
+                ?: requireActivity().windowManager.defaultDisplay
+        }
+
+        private fun appDialogBuilder(context: Context = requireContext()): AlertDialog.Builder {
+            return AlertDialog.Builder(context, R.style.AppDialogStyle)
+        }
+
+        private fun AlertDialog.Builder.showStyled(): AlertDialog {
+            return showStyledDialog(create())
+        }
+
+        private fun showStyledDialog(dialog: AlertDialog): AlertDialog {
+            hideKeyboardBeforeDialog()
+            dialog.show()
+            dialog.window?.setBackgroundDrawableResource(R.drawable.app_dialog_bg_cute)
+            tintSettingsDialogButtons(dialog)
+            return dialog
+        }
+
+        private fun hideKeyboardBeforeDialog() {
+            val hostActivity = activity ?: return
+            val focusedView = hostActivity.currentFocus ?: view ?: return
+            val imm = hostActivity.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+            imm?.hideSoftInputFromWindow(focusedView.windowToken, 0)
+            focusedView.clearFocus()
+        }
+
+        private fun tintSettingsDialogButtons(dialog: AlertDialog) {
+            val accentColor = ContextCompat.getColor(requireContext(), R.color.app_dialog_accent_color)
+            listOf(AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEGATIVE, AlertDialog.BUTTON_NEUTRAL)
+                .forEach { buttonId ->
+                    dialog.getButton(buttonId)?.setTextColor(accentColor)
+                }
         }
 
         private fun setValue(preferenceKey: String, value: String) {
@@ -3284,6 +3314,18 @@ class StreamSettings : AppCompatActivity() {
                     f.setTargetFragment(this, 0)
                     f.show(parentFragmentManager, "IconListPreference")
                 }
+                is EditTextPreference -> {
+                    val f = StyledEditTextPreferenceDialogFragment.newInstance(preference.key)
+                    @Suppress("DEPRECATION")
+                    f.setTargetFragment(this, 0)
+                    f.show(parentFragmentManager, "StyledEditTextPreference")
+                }
+                is ListPreference -> {
+                    val f = StyledListPreferenceDialogFragment.newInstance(preference.key)
+                    @Suppress("DEPRECATION")
+                    f.setTargetFragment(this, 0)
+                    f.show(parentFragmentManager, "StyledListPreference")
+                }
                 else -> super.onDisplayPreferenceDialog(preference)
             }
         }
@@ -3519,7 +3561,7 @@ class StreamSettings : AppCompatActivity() {
                     return@setOnPreferenceClickListener true
                 }
 
-                AlertDialog.Builder(ctx)
+                appDialogBuilder(ctx)
                     .setTitle(R.string.title_framegen_pick_lossless_dll)
                     .setMessage(R.string.message_framegen_lossless_dll_source)
                     .setPositiveButton(R.string.action_framegen_select_lossless_dll) { _, _ ->
@@ -3531,7 +3573,7 @@ class StreamSettings : AppCompatActivity() {
                         startActivityForResult(intent, REQUEST_CODE_PICK_FRAMEGEN_DLL)
                     }
                     .setNegativeButton(android.R.string.cancel, null)
-                    .show()
+                    .showStyled()
                 true
             }
         }
@@ -3653,14 +3695,14 @@ class StreamSettings : AppCompatActivity() {
             val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
             val alreadyUnlocked = DeveloperUnlockSettings.isUnlocked(prefs)
             if (!GitHubStarVerifier.isConfigured()) {
-                AlertDialog.Builder(ctx)
+                appDialogBuilder(ctx)
                     .setTitle(R.string.title_developer_unlock)
                     .setMessage(R.string.message_developer_oauth_unconfigured)
                     .setPositiveButton(R.string.action_developer_open_project) { _, _ ->
                         openDeveloperProjectPage()
                     }
                     .setNegativeButton(android.R.string.cancel, null)
-                    .show()
+                    .showStyled()
                 return
             }
 
@@ -3674,7 +3716,7 @@ class StreamSettings : AppCompatActivity() {
                 }
             }
 
-            AlertDialog.Builder(ctx)
+            appDialogBuilder(ctx)
                 .setTitle(R.string.title_developer_unlock)
                 .setMessage(
                     if (alreadyUnlocked) {
@@ -3690,7 +3732,7 @@ class StreamSettings : AppCompatActivity() {
                     openDeveloperProjectPage()
                 }
                 .setNegativeButton(android.R.string.cancel, null)
-                .show()
+                .showStyled()
         }
 
         private fun startDeveloperUnlockVerification(
@@ -3841,7 +3883,7 @@ class StreamSettings : AppCompatActivity() {
         private fun showDeveloperDeviceCodeDialog(deviceCode: GitHubStarVerifier.DeviceCode) {
             developerDeviceCodeDialog?.dismiss()
             GitHubDeviceAuthorization.copyDeviceCodeToClipboard(requireContext(), deviceCode)
-            val dialog = AlertDialog.Builder(requireContext())
+            val dialog = appDialogBuilder()
                 .setTitle(
                     if (deviceCode.scope == GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH) {
                         R.string.title_crown_store_github_authorization
@@ -3886,7 +3928,7 @@ class StreamSettings : AppCompatActivity() {
                 }
             }
             developerDeviceCodeDialog = dialog
-            dialog.show()
+            showStyledDialog(dialog)
         }
 
         private fun completeDeveloperUnlockVerification(
@@ -3914,14 +3956,14 @@ class StreamSettings : AppCompatActivity() {
                 } else if (starCheck.starred) {
                     Toast.makeText(requireContext(), R.string.toast_developer_unlocked, Toast.LENGTH_LONG).show()
                 } else {
-                    AlertDialog.Builder(requireContext())
+                    appDialogBuilder()
                         .setTitle(R.string.title_developer_unlock)
                         .setMessage(R.string.message_developer_star_not_found)
                         .setPositiveButton(R.string.action_developer_open_project) { _, _ ->
                             openDeveloperProjectPage()
                         }
                         .setNegativeButton(android.R.string.cancel, null)
-                        .show()
+                        .showStyled()
                 }
             }
         }

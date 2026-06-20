@@ -52,6 +52,18 @@
     <!-- 主题蓝色 -->
     <color name="theme_blue_primary">#3CA4E0</color>
 
+    <!-- Shared immersive UI shell -->
+    <color name="ui_shell_surface">#E61C1D22</color>
+    <color name="ui_shell_surface_elevated">#F223242B</color>
+    <color name="ui_shell_surface_pressed">#3328323A</color>
+    <color name="ui_shell_surface_focused">#3DFFFFFF</color>
+    <color name="ui_shell_outline">#2EFFFFFF</color>
+    <color name="ui_shell_outline_strong">#4DFFFFFF</color>
+    <color name="ui_shell_text_primary">#F7F3F7</color>
+    <color name="ui_shell_text_secondary">#C9D0D8</color>
+    <color name="ui_shell_accent_soft">#33FF6B9D</color>
+    <color name="ui_shell_accent_focus">#66FF6B9D</color>
+
     <!-- Crown side panel -->
     <color name="crown_panel_background">#F21B1B22</color>
     <color name="crown_panel_border">#3DFFFFFF</color>
@@ -68,7 +80,7 @@
     <color name="crown_button_focused">#22FFFFFF</color>
     
     <!-- 通用对话框颜色 -->
-    <color name="app_dialog_title_color">#2C2C2E</color>
-    <color name="app_dialog_subtitle_color">#48484A</color>
+    <color name="app_dialog_title_color">@color/ui_shell_text_primary</color>
+    <color name="app_dialog_subtitle_color">@color/ui_shell_text_secondary</color>
     <color name="app_dialog_accent_color">#FF6B9D</color>
 </resources>

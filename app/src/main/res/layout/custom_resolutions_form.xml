@@ -10,6 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/custom_resolution_input_title"
+        android:textColor="@color/ui_shell_text_primary"
         android:textStyle="bold"
         android:layout_marginBottom="16dp"
         android:textSize="18sp"
@@ -18,44 +19,65 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
+        android:orientation="vertical"
         android:layout_marginBottom="16dp">
 
-        <TextView
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/width_label"
-            android:layout_marginEnd="12dp"
-            android:textSize="16sp" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="10dp">
 
-        <EditText
-            android:id="@+id/custom_resolution_width_field"
-            android:inputType="number"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1"
-            android:hint="@string/width_hint"
-            android:layout_marginEnd="16dp"
-            android:paddingHorizontal="12dp"
-            android:textSize="16sp" />
+            <TextView
+                android:layout_width="78dp"
+                android:layout_height="wrap_content"
+                android:text="@string/width_label"
+                android:textColor="@color/ui_shell_text_secondary"
+                android:textSize="16sp" />
 
-        <TextView
-            android:layout_width="wrap_content"
+            <EditText
+                android:id="@+id/custom_resolution_width_field"
+                android:inputType="number"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:hint="@string/width_hint"
+                android:background="@drawable/custom_resolution_input_bg"
+                android:paddingHorizontal="12dp"
+                android:textColor="@color/ui_shell_text_primary"
+                android:textColorHint="@color/ui_shell_text_secondary"
+                android:textSize="16sp" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/height_label"
-            android:layout_marginEnd="12dp"
-            android:textSize="16sp" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-        <EditText
-            android:id="@+id/custom_resolution_height_field"
-            android:inputType="number"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1"
-            android:hint="@string/height_hint"
-            android:paddingHorizontal="12dp"
-            android:textSize="16sp" />
+            <TextView
+                android:layout_width="78dp"
+                android:layout_height="wrap_content"
+                android:text="@string/height_label"
+                android:textColor="@color/ui_shell_text_secondary"
+                android:textSize="16sp" />
+
+            <EditText
+                android:id="@+id/custom_resolution_height_field"
+                android:inputType="number"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:hint="@string/height_hint"
+                android:background="@drawable/custom_resolution_input_bg"
+                android:paddingHorizontal="12dp"
+                android:textColor="@color/ui_shell_text_primary"
+                android:textColorHint="@color/ui_shell_text_secondary"
+                android:textSize="16sp" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
@@ -68,12 +90,14 @@
 
         <Button
             android:id="@+id/add_resolution_button"
-            android:layout_width="wrap_content"
+            android:layout_width="240dp"
             android:layout_height="48dp"
             android:text="@string/add_resolution"
+            android:background="@drawable/game_menu_button_bg"
             android:textSize="16sp"
-            android:minWidth="120dp"
-            android:textColor="@android:color/white" />
+            android:paddingHorizontal="18dp"
+            android:singleLine="true"
+            android:textColor="@color/ui_shell_text_primary" />
 
     </LinearLayout>
 
