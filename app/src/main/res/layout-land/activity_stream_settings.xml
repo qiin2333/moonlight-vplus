@@ -17,9 +17,10 @@
     
     <!-- 全屏半透明遮罩 -->
     <View
+        android:id="@+id/settingsBackgroundOverlay"
         android:layout_width="match_parent" 
         android:layout_height="match_parent"
-        android:background="#B3333333" />
+        android:background="@color/settings_background_overlay" />
 
     <!-- 内容层：菜单和设置并排 -->
     <LinearLayout

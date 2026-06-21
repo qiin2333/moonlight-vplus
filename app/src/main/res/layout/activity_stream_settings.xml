@@ -20,9 +20,10 @@
             android:scaleType="centerCrop"/>
         
         <View
+            android:id="@+id/settingsBackgroundOverlay"
             android:layout_width="match_parent" 
             android:layout_height="match_parent"
-            android:background="#B3333333" />
+            android:background="@color/settings_background_overlay" />
 
         <!-- 设置内容区域（顶部留出菜单按钮空间） -->
         <FrameLayout
@@ -97,8 +98,8 @@
                 android:layout_weight="1"
                 android:background="@android:color/transparent"
                 android:hint="@string/settings_search_hint"
-                android:textColor="#FFFFFF"
-                android:textColorHint="#88FFFFFF"
+                android:textColor="@color/ui_shell_text_primary"
+                android:textColorHint="@color/ui_shell_text_secondary"
                 android:textSize="14sp"
                 android:imeOptions="actionSearch"
                 android:inputType="text"

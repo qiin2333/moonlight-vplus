@@ -163,6 +163,8 @@
         <item name="colorControlNormal">@color/ui_shell_text_secondary</item>
         <item name="android:colorControlHighlight">@color/ui_shell_accent_soft</item>
         <item name="colorControlHighlight">@color/ui_shell_accent_soft</item>
+        <item name="android:textColorPrimary">@color/ui_shell_text_primary</item>
+        <item name="android:textColorSecondary">@color/ui_shell_text_secondary</item>
         <item name="preferenceTheme">@style/MyPreferenceThemeOverlay</item>
     </style>
 
@@ -182,6 +184,7 @@
     </style>
     <style name="MyCheckBoxPreferenceCompact" parent="@style/Preference.CheckBoxPreference.Material">
         <item name="iconSpaceReserved">false</item>
+        <item name="widgetLayout">@layout/preference_widget_app_checkbox</item>
     </style>
     <style name="MySwitchPreferenceCompact" parent="@style/Preference.SwitchPreferenceCompat.Material">
         <item name="iconSpaceReserved">false</item>
@@ -206,13 +209,14 @@
         <item name="android:textAppearanceListItemSecondary">@style/PreferenceSummaryWithShadow</item>
         <item name="android:textAppearanceListItemSmall">@style/PreferenceSummaryWithShadow</item>
         <item name="android:colorAccent">@color/theme_pink_secondary</item>
-        <item name="android:textColorPrimary">@color/theme_pink_secondary</item>
-        <item name="android:listDivider">@color/theme_pink_secondary</item>
+        <item name="android:textColorPrimary">@color/ui_shell_text_primary</item>
+        <item name="android:textColorSecondary">@color/ui_shell_text_secondary</item>
+        <item name="android:listDivider">@color/ui_shell_outline</item>
     </style>
 
     <style name="PreferenceTextWithShadow">
-        <item name="android:textColor">@android:color/white</item>
-        <item name="android:shadowColor">#88000000</item>
+        <item name="android:textColor">@color/ui_shell_text_primary</item>
+        <item name="android:shadowColor">@color/ui_shell_text_shadow</item>
         <item name="android:shadowDx">1</item>
         <item name="android:shadowDy">1</item>
         <item name="android:shadowRadius">3</item>
@@ -222,21 +226,20 @@
     <style name="PreferenceTitleWithShadow" parent="PreferenceTextWithShadow">
         <item name="android:textSize">18sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textColor">@color/ui_shell_text_primary</item>
     </style>
 
     <style name="PreferenceSummaryWithShadow">
         <item name="android:textSize">11sp</item>
-        <item name="android:textColor">?android:attr/textColorSecondary</item>
-        <!-- 使用系统默认的次要文字颜色 -->
+        <item name="android:textColor">@color/ui_shell_text_secondary</item>
     </style>
 
     <style name="PreferenceCategoryWithShadow" parent="PreferenceTextWithShadow">
         <item name="android:textSize">20sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textColor">@color/theme_pink_secondary</item> 
-        <item name="android:shadowColor">#AA000000</item> <!-- 更强的阴影 -->
-        <item name="android:shadowRadius">5</item> <!-- 更大的阴影半径 -->
+        <item name="android:shadowColor">@color/ui_shell_text_shadow_strong</item>
+        <item name="android:shadowRadius">5</item>
     </style>
 
     <!-- GameMenu 对话框样式 -->
