@@ -41,7 +41,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import androidx.core.graphics.toColorInt
 import androidx.core.widget.doAfterTextChanged
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.preference.CheckBoxPreference
@@ -118,6 +117,7 @@ class StreamSettings : AppCompatActivity() {
     private var searchInput: EditText? = null
     private var searchToggle: ImageView? = null
     private var menuToggleView: ImageView? = null
+    private var lastNightMode = false
 
     // 状态保存键
     companion object {
@@ -193,16 +193,13 @@ class StreamSettings : AppCompatActivity() {
 
         // 设置自定义布局
         setContentView(R.layout.activity_stream_settings)
+        lastNightMode = isNightMode()
 
         // 启用沉浸式顶栏：内容延伸到状态栏/导航栏下方，系统栏完全透明
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
-        // 深色背景图 → 状态栏 / 导航栏图标使用浅色
-        androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars = false
-            isAppearanceLightNavigationBars = false
-        }
+        applySettingsThemeSurfaces()
 
         UiHelper.notifyNewRootView(this)
 
@@ -219,6 +216,22 @@ class StreamSettings : AppCompatActivity() {
 
         // 设置版本号
         setupVersionInfo()
+    }
+
+    private fun isNightMode(): Boolean {
+        return (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+                Configuration.UI_MODE_NIGHT_YES
+    }
+
+    private fun applySettingsThemeSurfaces() {
+        findViewById<View>(R.id.settingsBackgroundOverlay)?.setBackgroundColor(
+                ContextCompat.getColor(this, R.color.settings_background_overlay)
+        )
+        val useDarkSystemIcons = !isNightMode()
+        androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = useDarkSystemIcons
+            isAppearanceLightNavigationBars = useDarkSystemIcons
+        }
     }
 
     /**
@@ -449,9 +462,9 @@ class StreamSettings : AppCompatActivity() {
         private fun updateItemAppearance(holder: ViewHolder, isSelected: Boolean, hasFocus: Boolean) {
             // 使用项目公共粉色主题
             val pinkPrimary = androidx.core.content.ContextCompat.getColor(this@StreamSettings, R.color.theme_pink_primary)    // #FF6B9D
-            val white = Color.WHITE
-            val lightGray = "#BBBBBB".toColorInt()
-            val dimGray = "#888888".toColorInt()
+            val primaryText = ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_text_primary)
+            val secondaryText = ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_text_secondary)
+            val subtleText = ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_outline_strong)
 
             // 指示器显示（小圆点）
             holder.indicator.visibility = if (isSelected) View.VISIBLE else View.INVISIBLE
@@ -459,9 +472,9 @@ class StreamSettings : AppCompatActivity() {
             // 文字 + 图标颜色三态切换
             val textColor: Int; val textAlpha: Float; val iconColor: Int; val iconAlpha: Float
             when {
-                isSelected -> { textColor = white;       textAlpha = 1.0f; iconColor = pinkPrimary; iconAlpha = 1.0f }
+                isSelected -> { textColor = primaryText; textAlpha = 1.0f; iconColor = pinkPrimary; iconAlpha = 1.0f }
                 hasFocus   -> { textColor = pinkPrimary; textAlpha = 1.0f; iconColor = pinkPrimary; iconAlpha = 0.95f }
-                else       -> { textColor = lightGray;   textAlpha = 0.9f; iconColor = lightGray;   iconAlpha = 0.7f }
+                else       -> { textColor = secondaryText; textAlpha = 0.9f; iconColor = secondaryText; iconAlpha = 0.7f }
             }
             holder.title.setTextColor(textColor)
             holder.title.alpha = textAlpha
@@ -479,7 +492,7 @@ class StreamSettings : AppCompatActivity() {
                     arrow.setColorFilter(pinkPrimary)
                 } else {
                     arrow.alpha = 0.4f
-                    arrow.setColorFilter(dimGray)
+                    arrow.setColorFilter(subtleText)
                 }
             }
         }
@@ -600,6 +613,14 @@ class StreamSettings : AppCompatActivity() {
 
         // 更新抽屉模式
         updateDrawerMode()
+        val nightModeChanged = lastNightMode != isNightMode()
+        lastNightMode = isNightMode()
+        applySettingsThemeSurfaces()
+        loadBackgroundImage()
+        var shouldReloadSettings = nightModeChanged
+        if (nightModeChanged) {
+            theme.applyStyle(R.style.PreferenceThemeWithShadow, true)
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val mode = windowManager.defaultDisplay.mode
@@ -610,8 +631,11 @@ class StreamSettings : AppCompatActivity() {
             // NB: We aren't using displayId here because that stays the same (DEFAULT_DISPLAY) when
             // switching between screens on a foldable device.
             if (mode.physicalWidth * mode.physicalHeight != previousDisplayPixelCount) {
-                reloadSettings()
+                shouldReloadSettings = true
             }
+        }
+        if (shouldReloadSettings) {
+            reloadSettings()
         }
     }
 
@@ -4091,11 +4115,16 @@ class StreamSettings : AppCompatActivity() {
         val size = computeBackgroundDecodeSize() ?: return
         val (width, height) = size
 
-        // 模糊 + 半透明黑色蒙版，单次解码完成（合并到一个 Glide pipeline）
+        // 模糊 + theme-aware 蒙版，单次解码完成（合并到一个 Glide pipeline）
         // 强制 RGB_565：每像素 2 字节，整张图内存减半，模糊背景视觉无损
+        val filterColor = if (isNightMode()) {
+            Color.argb(120, 0, 0, 0)
+        } else {
+            Color.argb(72, 255, 255, 255)
+        }
         val transformations = MultiTransformation<Bitmap>(
                 BlurTransformation(2, 3),
-                ColorFilterTransformation(Color.argb(120, 0, 0, 0))
+                ColorFilterTransformation(filterColor)
         )
         val options = RequestOptions()
                 .override(width, height)

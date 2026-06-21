@@ -52,17 +52,23 @@
     <!-- 主题蓝色 -->
     <color name="theme_blue_primary">#3CA4E0</color>
 
-    <!-- Shared immersive UI shell -->
-    <color name="ui_shell_surface">#E61C1D22</color>
-    <color name="ui_shell_surface_elevated">#F223242B</color>
-    <color name="ui_shell_surface_pressed">#3328323A</color>
-    <color name="ui_shell_surface_focused">#3DFFFFFF</color>
-    <color name="ui_shell_outline">#2EFFFFFF</color>
-    <color name="ui_shell_outline_strong">#4DFFFFFF</color>
-    <color name="ui_shell_text_primary">#F7F3F7</color>
-    <color name="ui_shell_text_secondary">#C9D0D8</color>
-    <color name="ui_shell_accent_soft">#33FF6B9D</color>
-    <color name="ui_shell_accent_focus">#66FF6B9D</color>
+    <!-- Shared immersive UI shell (light by default, night overrides in values-night) -->
+    <color name="ui_shell_surface">#EFFFFFFF</color>
+    <color name="ui_shell_surface_elevated">#F7FFFFFF</color>
+    <color name="ui_shell_surface_pressed">#142B2F35</color>
+    <color name="ui_shell_surface_focused">#1AFF6B9D</color>
+    <color name="ui_shell_outline">#261D1B20</color>
+    <color name="ui_shell_outline_strong">#3D1D1B20</color>
+    <color name="ui_shell_text_primary">#DE1F2026</color>
+    <color name="ui_shell_text_secondary">#B3242830</color>
+    <color name="ui_shell_text_shadow">#00000000</color>
+    <color name="ui_shell_text_shadow_strong">#00000000</color>
+    <color name="ui_shell_accent_soft">#1AFF6B9D</color>
+    <color name="ui_shell_accent_focus">#33FF6B9D</color>
+    <color name="settings_background_overlay">#99FFFFFF</color>
+
+    <color name="app_dialog_choice_control_normal">#59242830</color>
+    <color name="app_dialog_choice_control_active">#CCFF6B9D</color>
 
     <!-- App dialog palette (light by default, night overrides in values-night) -->
     <color name="app_dialog_surface">#FAFFFBFE</color>
