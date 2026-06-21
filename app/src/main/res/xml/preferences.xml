@@ -49,6 +49,21 @@
                 android:key="custom_resolutions"
                 android:summary="@string/summary_custom_resolutions"
                 android:title="@string/title_custom_resolutions" />
+        <CheckBoxPreference
+            android:key="checkbox_follow_rotation_resolution"
+            android:title="@string/title_follow_rotation_resolution"
+            android:summary="@string/summary_follow_rotation_resolution"
+            android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_follow_external_display_resolution"
+            android:title="@string/title_follow_external_display_resolution"
+            android:summary="@string/summary_follow_external_display_resolution"
+            android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_follow_surface_resize_resolution"
+            android:title="@string/title_follow_surface_resize_resolution"
+            android:summary="@string/summary_follow_surface_resize_resolution"
+            android:defaultValue="false" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_advanced_features"
         android:key="category_advanced_features"

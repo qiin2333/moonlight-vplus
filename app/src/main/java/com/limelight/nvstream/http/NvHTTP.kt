@@ -297,6 +297,10 @@ class NvHTTP(
 
         details.nvidiaServer = getXmlString(serverInfo, "state", true)!!.contains("MJOLNIR")
         details.supportsDesktopSpecialApp = getXmlString(serverInfo, "DesktopSpecialAppSupport", false) == "1"
+        // ASSUMPTION: host emits <ClientResolutionChange>1</ClientResolutionChange> when it supports
+        // receiving client-driven resolution requests (0x5506 paramType=0). Tag name assumed from
+        // Foundation PR #424; maintainer must verify the actual emitted tag matches.
+        details.supportsClientResolutionChange = getXmlString(serverInfo, "ClientResolutionChange", false) == "1"
 
         try {
             details.sunshineVersion = getSunshineVersion(serverInfo)

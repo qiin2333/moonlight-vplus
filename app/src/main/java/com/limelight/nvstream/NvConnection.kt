@@ -215,6 +215,7 @@ open class NvConnection(
         details.serverCert = context.serverCert
         context.isNvidiaServerSoftware = details.nvidiaServer
         context.supportsDesktopSpecialApp = details.supportsDesktopSpecialApp
+        context.supportsClientResolutionChange = details.supportsClientResolutionChange
 
         context.serverGfeVersion = h.getGfeVersion(serverInfo)
 
@@ -602,6 +603,20 @@ open class NvConnection(
     fun sendUtf8Text(text: String) {
         if (!isMonkey) {
             MoonBridge.sendUtf8Text(text)
+        }
+    }
+
+    /**
+     * Request a server-side resolution change (client-driven dynamic resolution).
+     * Returns 0 on success; -1 invalid dims, -2 host lacks support, -3 not connected, -4 send error.
+     * Gated on host capability flag from serverinfo so we don't attempt the call on unsupported hosts.
+     */
+    fun sendResolutionChangeRequest(width: Int, height: Int): Int {
+        if (!context.supportsClientResolutionChange) return -2
+        return if (!isMonkey) {
+            MoonBridge.sendResolutionChangeRequest(width, height)
+        } else {
+            MoonBridge.LI_ERR_UNSUPPORTED
         }
     }
 

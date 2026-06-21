@@ -63,6 +63,9 @@ class ComputerDetails {
     var useVdd = false
     var sunshineVersion: String? = null
     var supportsDesktopSpecialApp = false
+    // ASSUMPTION: Foundation Sunshine advertises this feature via <ClientResolutionChange>1</ClientResolutionChange>
+    // in /serverinfo XML. Tag name must match what AlkaidLab/foundation-sunshine actually emits.
+    var supportsClientResolutionChange = false
 
     constructor()
 
@@ -120,6 +123,7 @@ class ComputerDetails {
             this.sunshineVersion = details.sunshineVersion
         }
         this.supportsDesktopSpecialApp = details.supportsDesktopSpecialApp
+        this.supportsClientResolutionChange = details.supportsClientResolutionChange
 
         this.availableAddresses = ArrayList(details.availableAddresses)
     }
