@@ -2,29 +2,40 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:minHeight="48dp"
+    android:background="@drawable/app_dialog_list_item_bg"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:padding="16dp"
-    android:background="?android:attr/selectableItemBackground">
+    android:paddingStart="12dp"
+    android:paddingTop="7dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="7dp">
 
     <FrameLayout
-        android:layout_width="42dp"
-        android:layout_height="42dp"
-        android:layout_marginEnd="16dp"
+        android:id="@+id/icon_container"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:layout_marginEnd="12dp"
         android:background="@drawable/icon_background">
-        
+
         <ImageView
             android:id="@+id/icon"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
             android:layout_gravity="center" />
     </FrameLayout>
 
-    <TextView
+    <CheckedTextView
         android:id="@+id/text"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textSize="16sp"
-        android:textColor="?android:attr/textColorPrimary" />
+        android:layout_weight="1"
+        android:checkMark="?android:attr/listChoiceIndicatorSingle"
+        android:checkMarkTint="@color/app_dialog_accent_color"
+        android:ellipsize="end"
+        android:gravity="center_vertical"
+        android:maxLines="2"
+        android:textColor="@color/app_dialog_text_primary"
+        android:textSize="15sp" />
 
-</LinearLayout> 
+</LinearLayout>
