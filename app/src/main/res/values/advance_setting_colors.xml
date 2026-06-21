@@ -69,12 +69,10 @@
     <color name="app_dialog_surface_elevated">#FFFFFBFE</color>
     <color name="app_dialog_surface_gradient_start">#FFFFFFFF</color>
     <color name="app_dialog_surface_gradient_center">#FFFFFBFE</color>
-    <color name="app_dialog_surface_gradient_end">#FFF8F1F7</color>
-    <color name="app_dialog_surface_shadow">#24000000</color>
-    <color name="app_dialog_surface_highlight">#80FFFFFF</color>
+    <color name="app_dialog_surface_gradient_end">#FFFDF7FB</color>
     <color name="app_dialog_surface_pressed">#142B2F35</color>
     <color name="app_dialog_surface_focused">#1AFF6B9D</color>
-    <color name="app_dialog_outline">#241D1B20</color>
+    <color name="app_dialog_outline">#1F1D1B20</color>
     <color name="app_dialog_outline_strong">#381D1B20</color>
     <color name="app_dialog_text_primary">#DE1F2026</color>
     <color name="app_dialog_text_secondary">#A6242830</color>
@@ -85,13 +83,9 @@
     <color name="about_dialog_window_start">#F2F8F5FC</color>
     <color name="about_dialog_window_center">#F2FEF7FB</color>
     <color name="about_dialog_window_end">#F2FFF0F8</color>
-    <color name="about_dialog_window_shadow">#2E1D1B20</color>
     <color name="about_dialog_window_outline">#30FF6B9D</color>
-    <color name="about_dialog_panel_start">#FFFFFFFF</color>
-    <color name="about_dialog_panel_center">#FFFFFBFE</color>
-    <color name="about_dialog_panel_end">#FFFFF7FB</color>
-    <color name="about_dialog_panel_shadow">#1A1D1B20</color>
-    <color name="about_dialog_panel_outline">#1FFF6B9D</color>
+    <color name="about_dialog_panel_surface">#FFFFFFFF</color>
+    <color name="about_dialog_panel_outline">#FFE8DDE6</color>
 
     <!-- Crown side panel -->
     <color name="crown_panel_background">#F21B1B22</color>
