@@ -2539,10 +2539,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 .setNeutralButton(R.string.about_dialog_github) { _, _ -> openUrl("https://github.com/qiin2333/moonlight-vplus") }
                 .setNegativeButton(R.string.about_dialog_qq) { _, _ -> joinQQGroup("LlbLDIF_YolaM4HZyLx0xAXXo04ZmoBM") }
                 .create()
-        if (dialog.window != null) {
-            dialog.window?.setBackgroundDrawableResource(R.drawable.app_dialog_bg_cute)
-        }
         dialog.show()
+        dialog.window?.setBackgroundDrawableResource(R.drawable.dialog_about_window_bg)
         tintAboutDialogButtons(dialog)
     }
 
