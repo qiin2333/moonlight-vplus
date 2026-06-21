@@ -3,9 +3,9 @@
     android:shape="oval">
     <!-- 外层光晕效果 - 梦幻扩散 -->
     <gradient
-        android:startColor="#40FF6B9D"
-        android:centerColor="#25FF8FA3"
-        android:endColor="#15FFA3C7"
+        android:startColor="@color/pc_item_icon_glow_start"
+        android:centerColor="@color/pc_item_icon_glow_center"
+        android:endColor="@color/pc_item_icon_glow_end"
         android:angle="135"
         android:type="radial"
         android:centerX="0.5"

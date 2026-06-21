@@ -7,9 +7,9 @@
             <item android:bottom="20dp" android:left="0dp">
                 <shape android:shape="rectangle">
                     <gradient
-                        android:startColor="#FFE91E63"
-                        android:centerColor="#C0F06292"
-                        android:endColor="#80F8BBD9"
+                        android:startColor="@color/pc_item_stack_state_back_start"
+                        android:centerColor="@color/pc_item_stack_state_back_center"
+                        android:endColor="@color/pc_item_stack_state_back_end"
                         android:angle="-45" />
                     <corners android:radius="12dp" />
                 </shape>
@@ -19,9 +19,9 @@
             <item android:bottom="10dp" android:left="0dp">
                 <shape android:shape="rectangle">
                     <gradient
-                        android:startColor="#FFF06292"
-                        android:centerColor="#A0F48FB1"
-                        android:endColor="#80F8BBD9"
+                        android:startColor="@color/pc_item_stack_state_mid_start"
+                        android:centerColor="@color/pc_item_stack_state_mid_center"
+                        android:endColor="@color/pc_item_stack_state_mid_end"
                         android:angle="-45" />
                     <corners android:radius="12dp" />
                 </shape>
@@ -31,12 +31,12 @@
             <item>
                 <shape android:shape="rectangle">
                     <gradient
-                        android:startColor="#FFF8BBD9"
-                        android:centerColor="#E6FCE4EC"
-                        android:endColor="#80F3E5F5"
+                        android:startColor="@color/pc_item_stack_state_front_start"
+                        android:centerColor="@color/pc_item_stack_state_front_center"
+                        android:endColor="@color/pc_item_stack_state_front_end"
                         android:angle="-45" />
                     <corners android:radius="12dp" />
-                    <stroke android:width="2dp" android:color="#3CA4E0" />
+                    <stroke android:width="2dp" android:color="@color/pc_item_outline_focused" />
                 </shape>
             </item>
         </layer-list>
@@ -49,9 +49,9 @@
             <item android:bottom="20dp" android:left="0dp">
                 <shape android:shape="rectangle">
                     <gradient
-                        android:startColor="#FFE91E63"
-                        android:centerColor="#B0F06292"
-                        android:endColor="#80F8BBD9"
+                        android:startColor="@color/pc_item_stack_state_back_start"
+                        android:centerColor="@color/pc_item_stack_state_back_center"
+                        android:endColor="@color/pc_item_stack_state_back_end"
                         android:angle="-45" />
                     <corners android:radius="12dp" />
                 </shape>
@@ -61,9 +61,9 @@
             <item android:bottom="10dp" android:left="0dp">
                 <shape android:shape="rectangle">
                     <gradient
-                        android:startColor="#FFF06292"
-                        android:centerColor="#90F48FB1"
-                        android:endColor="#80F8BBD9"
+                        android:startColor="@color/pc_item_stack_state_mid_start"
+                        android:centerColor="@color/pc_item_stack_state_mid_center"
+                        android:endColor="@color/pc_item_stack_state_mid_end"
                         android:angle="-45" />
                     <corners android:radius="12dp" />
                 </shape>
@@ -73,12 +73,12 @@
             <item>
                 <shape android:shape="rectangle">
                     <gradient
-                        android:startColor="#FFF8BBD9"
-                        android:centerColor="#E6FCE4EC"
-                        android:endColor="#80F3E5F5"
+                        android:startColor="@color/pc_item_stack_state_front_start"
+                        android:centerColor="@color/pc_item_stack_state_front_center"
+                        android:endColor="@color/pc_item_stack_state_front_end"
                         android:angle="-45" />
                     <corners android:radius="12dp" />
-                    <stroke android:width="2dp" android:color="#3CA4E0" />
+                    <stroke android:width="2dp" android:color="@color/pc_item_outline_focused" />
                 </shape>
             </item>
         </layer-list>
@@ -91,9 +91,9 @@
             <item android:bottom="20dp" android:left="0dp">
                 <shape android:shape="rectangle">
                     <gradient
-                        android:startColor="#FFE91E63"
-                        android:centerColor="#B0F06292"
-                        android:endColor="#80F8BBD9"
+                        android:startColor="@color/pc_item_stack_state_back_start"
+                        android:centerColor="@color/pc_item_stack_state_back_center"
+                        android:endColor="@color/pc_item_stack_state_back_end"
                         android:angle="-45" />
                     <corners android:radius="12dp" />
                 </shape>
@@ -103,9 +103,9 @@
             <item android:bottom="10dp" android:left="0dp">
                 <shape android:shape="rectangle">
                     <gradient
-                        android:startColor="#FFF06292"
-                        android:centerColor="#90F48FB1"
-                        android:endColor="#80F8BBD9"
+                        android:startColor="@color/pc_item_stack_state_mid_start"
+                        android:centerColor="@color/pc_item_stack_state_mid_center"
+                        android:endColor="@color/pc_item_stack_state_mid_end"
                         android:angle="-45" />
                     <corners android:radius="12dp" />
                 </shape>
@@ -115,12 +115,12 @@
             <item>
                 <shape android:shape="rectangle">
                     <gradient
-                        android:startColor="#FFF8BBD9"
-                        android:centerColor="#E6FCE4EC"
-                        android:endColor="#80F3E5F5"
+                        android:startColor="@color/pc_item_stack_state_front_start"
+                        android:centerColor="@color/pc_item_stack_state_front_center"
+                        android:endColor="@color/pc_item_stack_state_front_end"
                         android:angle="-45" />
                     <corners android:radius="12dp" />
-                    <stroke android:width="2dp" android:color="#3CA4E0" />
+                    <stroke android:width="2dp" android:color="@color/pc_item_outline_focused" />
                 </shape>
             </item>
         </layer-list>
@@ -133,9 +133,9 @@
             <item android:bottom="20dp" android:left="0dp">
                 <shape android:shape="rectangle">
                     <gradient
-                        android:startColor="#FFE91E63"
-                        android:centerColor="#80F06292"
-                        android:endColor="#40F8BBD9"
+                        android:startColor="@color/pc_item_stack_default_back_start"
+                        android:centerColor="@color/pc_item_stack_default_back_center"
+                        android:endColor="@color/pc_item_stack_default_back_end"
                         android:angle="-45" />
                     <corners android:radius="12dp" />
                 </shape>
@@ -145,9 +145,9 @@
             <item android:bottom="10dp" android:left="0dp">
                 <shape android:shape="rectangle">
                     <gradient
-                        android:startColor="#FFF06292"
-                        android:centerColor="#60F48FB1"
-                        android:endColor="#40F8BBD9"
+                        android:startColor="@color/pc_item_stack_default_mid_start"
+                        android:centerColor="@color/pc_item_stack_default_mid_center"
+                        android:endColor="@color/pc_item_stack_default_mid_end"
                         android:angle="-45" />
                     <corners android:radius="12dp" />
                 </shape>
@@ -157,9 +157,9 @@
             <item>
                 <shape android:shape="rectangle">
                     <gradient
-                        android:startColor="#FFF8BBD9"
-                        android:centerColor="#99FCE4EC"
-                        android:endColor="#40F3E5F5"
+                        android:startColor="@color/pc_item_stack_default_front_start"
+                        android:centerColor="@color/pc_item_stack_default_front_center"
+                        android:endColor="@color/pc_item_stack_default_front_end"
                         android:angle="-45" />
                     <corners android:radius="12dp" />
                 </shape>

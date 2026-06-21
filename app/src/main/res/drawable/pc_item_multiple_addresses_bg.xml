@@ -4,27 +4,27 @@
     <!-- 第三层背景 (最底层) - 深色阴影 -->
     <item android:top="8dp" android:left="8dp">
         <shape android:shape="rectangle">
-            <solid android:color="#80FF6B9D" />
+            <solid android:color="@color/pc_item_stack_shadow_back" />
             <corners android:radius="6dp" />
-            <stroke android:width="1dp" android:color="#A0FF6B9D" />
+            <stroke android:width="1dp" android:color="@color/pc_item_stack_shadow_back_stroke" />
         </shape>
     </item>
     
     <!-- 第二层背景 (中间层) - 中等阴影 -->
     <item android:top="4dp" android:left="4dp">
         <shape android:shape="rectangle">
-            <solid android:color="#60FF8FA3" />
+            <solid android:color="@color/pc_item_stack_shadow_mid" />
             <corners android:radius="6dp" />
-            <stroke android:width="1dp" android:color="#80FF8FA3" />
+            <stroke android:width="1dp" android:color="@color/pc_item_stack_shadow_mid_stroke" />
         </shape>
     </item>
     
     <!-- 第一层背景 (最上层) - 主背景 -->
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#99EDE7F6" />
+            <solid android:color="@color/pc_item_stack_shadow_front" />
             <corners android:radius="4dp" />
-            <stroke android:width="2dp" android:color="#FF6B9D" />
+            <stroke android:width="2dp" android:color="@color/pc_item_stack_shadow_front_stroke" />
         </shape>
     </item>
     
