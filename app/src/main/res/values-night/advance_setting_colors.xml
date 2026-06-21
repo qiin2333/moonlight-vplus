@@ -6,8 +6,6 @@
     <color name="app_dialog_surface_gradient_start">#F22A2B34</color>
     <color name="app_dialog_surface_gradient_center">#F223242B</color>
     <color name="app_dialog_surface_gradient_end">#E61C1D22</color>
-    <color name="app_dialog_surface_shadow">#66000000</color>
-    <color name="app_dialog_surface_highlight">#1FFFFFFF</color>
     <color name="app_dialog_surface_pressed">#3328323A</color>
     <color name="app_dialog_surface_focused">#3DFFFFFF</color>
     <color name="app_dialog_outline">#2EFFFFFF</color>
@@ -21,11 +19,7 @@
     <color name="about_dialog_window_start">#F229242F</color>
     <color name="about_dialog_window_center">#F222222B</color>
     <color name="about_dialog_window_end">#E61B1C22</color>
-    <color name="about_dialog_window_shadow">#99000000</color>
     <color name="about_dialog_window_outline">#45FF8FA3</color>
-    <color name="about_dialog_panel_start">#F22E303A</color>
-    <color name="about_dialog_panel_center">#F2262730</color>
-    <color name="about_dialog_panel_end">#E61F2027</color>
-    <color name="about_dialog_panel_shadow">#80000000</color>
+    <color name="about_dialog_panel_surface">#F223242B</color>
     <color name="about_dialog_panel_outline">#33FFFFFF</color>
 </resources>
