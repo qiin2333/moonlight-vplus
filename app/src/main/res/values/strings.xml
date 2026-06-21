@@ -481,19 +481,21 @@
     <string name="summary_checkbox_clipboard_sync_text">Forward text copied on this device to the PC and vice versa. Warning: anything you copy (including passwords and 2FA codes) will leave this device.</string>
     <string name="title_checkbox_clipboard_sync_image">Sync clipboard images with PC</string>
     <string name="summary_checkbox_clipboard_sync_image">Forward images copied on this device to the PC. Large screenshots may use significant bandwidth.</string>
-    <string name="title_screen_combination_mode">Screen combination mode (Sunshine Foundation)</string>
-    <string name="summary_screen_combination_mode">Control how Sunshine manages your monitors when starting a stream, this configuration will override the host configuration.</string>
-    <string name="screen_mode_host_default">Use Sunshine host configuration (default)</string>
-    <string name="screen_mode_no_operation">Do not change monitor configuration</string>
-    <string name="screen_mode_ensure_active">Ensure streaming display is active</string>
-    <string name="screen_mode_ensure_primary">Ensure streaming display is primary</string>
-    <string name="screen_mode_ensure_only_display">Use streaming display only (turn off other displays)</string>
-
-    <string name="vdd_screen_mode_host_default">Use Sunshine host configuration (default)</string>
-    <string name="vdd_screen_mode_no_operation">Keep current layout</string>
-    <string name="vdd_screen_mode_vdd_as_primary">VDD primary + Physical extended</string>
-    <string name="vdd_screen_mode_vdd_as_secondary">Physical primary + VDD extended</string>
-    <string name="vdd_screen_mode_display_off">VDD only (disable physical displays)</string>
+    <string name="title_screen_combination_mode">Display Combination Settings</string>
+    <string name="summary_screen_combination_mode">Sunshine Foundation display control</string>
+    <string name="screen_combination_mode_dialog_subtitle">Applies to Sunshine Foundation display control</string>
+    <string name="screen_mode_host_default">Follow host</string>
+    <string name="screen_mode_no_operation">No operation mode</string>
+    <string name="screen_mode_auto_activate">Activate mode</string>
+    <string name="screen_mode_primary_streaming">Primary streaming mode</string>
+    <string name="screen_mode_secondary_streaming">Secondary streaming mode</string>
+    <string name="screen_mode_exclusive_streaming">Screen-off streaming mode</string>
+    <string name="screen_mode_host_default_desc">Use the Sunshine host setting without overriding it.</string>
+    <string name="screen_mode_no_operation_desc">Send no-operation mode and keep the current display layout.</string>
+    <string name="screen_mode_auto_activate_desc">Activate the selected display for streaming.</string>
+    <string name="screen_mode_primary_streaming_desc">Activate the selected display and set it as primary.</string>
+    <string name="screen_mode_secondary_streaming_desc">Keep the physical display primary and use the Foundation display as secondary.</string>
+    <string name="screen_mode_exclusive_streaming_desc">Use only the selected display and disable other displays.</string>
     <string name="screen_combination_mode_label">Mode: %1$s</string>
 
     <string name="category_advanced_settings">Advanced Settings</string>
@@ -1062,6 +1064,7 @@ Tap again to replace it.</string>
     <string name="appview_background_mode_artwork">App artwork</string>
     <string name="appview_background_mode_soft_color">Soft color</string>
     <string name="appview_display_selection_title">Display Selection</string>
+    <string name="appview_display_selection_clear">Clear</string>
 
 
     <!-- Layout hardcoded Chinese strings (auto-extracted) -->

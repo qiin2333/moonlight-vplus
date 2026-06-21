@@ -281,4 +281,10 @@
     <string name="toast_controller_type_changed">Тип геймпада може бути змінений через емуляцію датчика руху</string>
     <string name="pcview_menu_eol">Закриття сервісів NVIDIA GameStream</string>
     <string name="perf_overlay_hostprocessinglatency">Затримка обробки хостом мін./макс./середня: %1$.1f/%2$.1f/%3$.1f мс</string>
+    <string name="screen_mode_host_default">Використовувати конфігурацію хоста Sunshine (за замовчуванням)</string>
+    <string name="screen_mode_no_operation">Не змінювати конфігурацію екранів</string>
+    <string name="screen_mode_auto_activate">Автоматично активувати вибраний дисплей для стримінгу</string>
+    <string name="screen_mode_primary_streaming">Стримінг з основного дисплея (активувати вибраний дисплей і зробити його основним)</string>
+    <string name="screen_mode_secondary_streaming">Стримінг з вторинного дисплея (лише дисплей Foundation)</string>
+    <string name="screen_mode_exclusive_streaming">Стримінг лише з вибраного дисплея (вимкнути інші дисплеї)</string>
 </resources>

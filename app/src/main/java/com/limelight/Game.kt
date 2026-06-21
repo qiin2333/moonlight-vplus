@@ -285,11 +285,6 @@ class Game : Activity(), SurfaceHolder.Callback,
         if (customScreenMode != -1) {
             prefConfig.screenCombinationMode = customScreenMode
         }
-        val customVddScreenMode = intent.getIntExtra(EXTRA_VDD_SCREEN_COMBINATION_MODE, -1)
-        if (customVddScreenMode != -1) {
-            prefConfig.vddScreenCombinationMode = customVddScreenMode
-        }
-
         NativeTouchContext.INTIAL_ZONE_PIXELS = prefConfig.longPressflatRegionPixels.toFloat()
         NativeTouchContext.ENABLE_ENHANCED_TOUCH = prefConfig.enableEnhancedTouch
         NativeTouchContext.ENHANCED_TOUCH_ON_RIGHT = if (prefConfig.enhancedTouchOnWhichSide) -1 else 1
@@ -634,7 +629,11 @@ class Game : Activity(), SurfaceHolder.Callback,
         val httpsPort = intent.getIntExtra(EXTRA_HTTPS_PORT, 0)
         val uniqueId = intent.getStringExtra(EXTRA_UNIQUEID) ?: ""
         val pairName = intent.getStringExtra(EXTRA_PAIR_NAME) ?: ""
-        val pcUseVdd = intent.getBooleanExtra(EXTRA_PC_USEVDD, false)
+        val pcUseVdd = if (intent.hasExtra(EXTRA_PC_USEVDD)) {
+            intent.getBooleanExtra(EXTRA_PC_USEVDD, false)
+        } else {
+            null
+        }
         val displayName = intent.getStringExtra(EXTRA_DISPLAY_NAME)
         val forceResumeCurrentSession = intent.getBooleanExtra(EXTRA_FORCE_RESUME_CURRENT_SESSION, false)
         val serverCert = parseServerCert()
@@ -674,7 +673,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     private fun buildStreamConfiguration(
         host: String?, port: Int, httpsPort: Int,
         uniqueId: String?, pairName: String?,
-        pcUseVdd: Boolean, serverCert: X509Certificate?,
+        pcUseVdd: Boolean?, serverCert: X509Certificate?,
         displayName: String?
     ): StreamConfigResult {
         val glPrefs = GlPreferences.readPreferences(this)
@@ -824,7 +823,6 @@ class Game : Activity(), SurfaceHolder.Callback,
             .setEnableMic(prefConfig.enableMic)
             .setControlOnly(prefConfig.controlOnly)
             .setCustomScreenMode(prefConfig.screenCombinationMode)
-            .setCustomVddScreenMode(prefConfig.vddScreenCombinationMode)
             .build()
 
         LimeLog.info("Stream config: hdr=$willStreamHdr hdrMode=${prefConfig.hdrMode} fullRange=${prefConfig.fullRange}")
@@ -2261,7 +2259,6 @@ class Game : Activity(), SurfaceHolder.Callback,
         val EXTRA_APP_CMD = "CmdList"
         val EXTRA_DISPLAY_NAME = "DisplayName"
         val EXTRA_SCREEN_COMBINATION_MODE = "Screen combination mode"
-        val EXTRA_VDD_SCREEN_COMBINATION_MODE = "VDD screen combination mode"
         val EXTRA_FORCE_RESUME_CURRENT_SESSION = "ForceResumeCurrentSession"
 
         private const val KEEP_ALIVE_NOTIFICATION_ID = 1001

@@ -252,4 +252,10 @@
     <string name="title_frame_pacing">Скорость вывода/отрисовки кадра</string>
     <string name="pacing_balanced_alt">Сбалансированно с лимитом FPS</string>
     <string name="resolution_480p">480p</string>
+    <string name="screen_mode_host_default">Использовать конфигурацию хоста Sunshine (по умолчанию)</string>
+    <string name="screen_mode_no_operation">Не изменять конфигурацию экранов</string>
+    <string name="screen_mode_auto_activate">Автоматически активировать выбранный дисплей для стриминга</string>
+    <string name="screen_mode_primary_streaming">Стриминг с основного дисплея (активировать выбранный дисплей и сделать его основным)</string>
+    <string name="screen_mode_secondary_streaming">Стриминг со вторичного дисплея (только дисплей Foundation)</string>
+    <string name="screen_mode_exclusive_streaming">Стриминг только с выбранного дисплея (отключить остальные дисплеи)</string>
 </resources>

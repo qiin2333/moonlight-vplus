@@ -270,4 +270,10 @@
     <string name="analogscroll_right">Höger analogspak</string>
     <string name="suffix_seekbar_vibrate_fallback_strength">%</string>
     <string name="title_analog_scrolling">Använd en analog spak för att bläddra</string>
+    <string name="screen_mode_host_default">Använd Sunshine-värdens konfiguration (standard)</string>
+    <string name="screen_mode_no_operation">Ändra inte skärmlayouten</string>
+    <string name="screen_mode_auto_activate">Aktivera den valda skärmen automatiskt för streaming</string>
+    <string name="screen_mode_primary_streaming">Streaming från primär skärm (aktivera den valda skärmen och gör den primär)</string>
+    <string name="screen_mode_secondary_streaming">Streaming från sekundär skärm (endast Foundation-skärm)</string>
+    <string name="screen_mode_exclusive_streaming">Streaming endast från vald skärm (inaktivera andra skärmar)</string>
 </resources>

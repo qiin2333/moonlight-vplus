@@ -287,4 +287,10 @@
     <string name="summary_list_audio_vibration_mode">진동 전달 방법 선택</string>
     <string name="title_list_audio_vibration_scene">장면 모드</string>
     <string name="summary_list_audio_vibration_scene">콘텐츠 유형에 맞춰 진동 패턴 최적화</string>
+    <string name="screen_mode_host_default">Sunshine 호스트 설정 사용(기본값)</string>
+    <string name="screen_mode_no_operation">화면 구성 변경 안 함</string>
+    <string name="screen_mode_auto_activate">선택한 디스플레이를 자동으로 활성화하여 스트리밍</string>
+    <string name="screen_mode_primary_streaming">주 디스플레이 스트리밍(선택한 디스플레이를 활성화하고 주 디스플레이로 설정)</string>
+    <string name="screen_mode_secondary_streaming">보조 디스플레이 스트리밍(Foundation 디스플레이 전용)</string>
+    <string name="screen_mode_exclusive_streaming">선택한 디스플레이만 스트리밍(다른 디스플레이 비활성화)</string>
 </resources>

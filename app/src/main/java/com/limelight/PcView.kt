@@ -1840,7 +1840,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             return
         }
 
-        quickStartStreamWithScreenMode(computer, null, true, 2)
+        quickStartStreamWithScreenMode(computer, null, true, 4)
     }
 
     // Quick Start Stream Methods
@@ -1880,8 +1880,6 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 showToast(getString(R.string.error_pc_offline))
                 return@launch
             }
-            targetComputer.useVdd = false
-
             if (targetComputer.hasMultipleLanAddresses()) {
                 showAddressSelectionDialog(targetComputer)
                 return@launch
@@ -1927,8 +1925,6 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 showToast(getString(R.string.error_pc_offline))
                 return@launch
             }
-            targetComputer.useVdd = isSecondaryScreen
-
             if (targetComputer.hasMultipleLanAddresses()) {
                 showAddressSelectionDialog(targetComputer)
                 return@launch
@@ -1939,14 +1935,11 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 targetApp,
                 targetComputer,
                 managerBinder!!,
-                lastSettings = null
+                lastSettings = null,
+                useVdd = if (isSecondaryScreen) true else null
             )
             if (screenMode != -1) {
-                if (targetComputer.useVdd) {
-                    intent.putExtra(Game.EXTRA_VDD_SCREEN_COMBINATION_MODE, screenMode)
-                } else {
-                    intent.putExtra(Game.EXTRA_SCREEN_COMBINATION_MODE, screenMode)
-                }
+                intent.putExtra(Game.EXTRA_SCREEN_COMBINATION_MODE, screenMode)
             }
             startActivity(intent)
         }

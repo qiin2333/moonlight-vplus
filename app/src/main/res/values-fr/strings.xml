@@ -283,4 +283,10 @@
     <string name="title_seekbar_vibrate_fallback_strength">Ajuster l\'intensité de la vibration émulée</string>
     <string name="summary_seekbar_vibrate_fallback_strength">Amplifie ou réduit l\'intensité de la vibration sur votre appareil</string>
     <string name="suffix_seekbar_vibrate_fallback_strength">%</string>
+    <string name="screen_mode_host_default">Utiliser la configuration de l’hôte Sunshine (par défaut)</string>
+    <string name="screen_mode_no_operation">Ne pas modifier la disposition des écrans</string>
+    <string name="screen_mode_auto_activate">Activer automatiquement l’écran sélectionné pour le streaming</string>
+    <string name="screen_mode_primary_streaming">Streaming sur l’écran principal (activer l’écran sélectionné et le définir comme principal)</string>
+    <string name="screen_mode_secondary_streaming">Streaming sur écran secondaire (écran Foundation uniquement)</string>
+    <string name="screen_mode_exclusive_streaming">Streaming uniquement sur l’écran sélectionné (désactiver les autres écrans)</string>
 </resources>

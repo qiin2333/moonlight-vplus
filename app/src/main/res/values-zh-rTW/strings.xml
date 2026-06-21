@@ -367,4 +367,10 @@
     <string name="summary_framegen_slow_threshold_ms">僅自訂模式顯示。插幀變慢時會自動回退直通渲染，預設：18 ms。</string>
     <string name="title_framegen_present_real_first">運動節奏修正</string>
     <string name="summary_framegen_present_real_first">僅在畫面節奏不穩時嘗試，預設關閉。</string>
+    <string name="screen_mode_host_default">使用 Sunshine 主機端設定（預設）</string>
+    <string name="screen_mode_no_operation">不修改螢幕組合設定</string>
+    <string name="screen_mode_auto_activate">自動啟用指定顯示器進行串流</string>
+    <string name="screen_mode_primary_streaming">主螢幕串流（自動啟用指定顯示器並設為主顯示器）</string>
+    <string name="screen_mode_secondary_streaming">副螢幕串流（僅支援基地顯示器）</string>
+    <string name="screen_mode_exclusive_streaming">僅啟用指定顯示器串流（停用其他顯示器）</string>
 </resources>

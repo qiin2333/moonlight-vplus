@@ -695,19 +695,17 @@ class NvHTTP(
             "&remoteControllersBitmap=${streamConfig.attachedGamepadMask}" +
             "&gcmap=${streamConfig.attachedGamepadMask}" +
             "&gcpersist=${if (streamConfig.getPersistGamepadsAfterDisconnect()) 1 else 0}" +
-            "&useVdd=${if (streamConfig.getUseVdd()) 1 else 0}" +
             "&minBrightness=${context.minBrightness}" +
             "&maxBrightness=${context.maxBrightness}" +
             "&maxAverageBrightness=${context.maxAverageBrightness}"
 
+        streamConfig.getUseVdd()?.let { useVdd ->
+            queryParams += "&useVdd=${if (useVdd) 1 else 0}"
+        }
+
         val customScreenMode = streamConfig.customScreenMode
         if (customScreenMode != -1) {
             queryParams += "&customScreenMode=$customScreenMode"
-        }
-
-        val customVddScreenMode = streamConfig.customVddScreenMode
-        if (customVddScreenMode != -1) {
-            queryParams += "&customVddScreenMode=$customVddScreenMode"
         }
 
         context.displayName?.takeIf { it.isNotEmpty() }?.let { displayName ->

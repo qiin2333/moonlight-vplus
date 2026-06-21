@@ -277,31 +277,25 @@
     <string-array name="screen_combination_mode_names">
         <item>@string/screen_mode_host_default</item>
         <item>@string/screen_mode_no_operation</item>
-        <item>@string/screen_mode_ensure_active</item>
-        <item>@string/screen_mode_ensure_primary</item>
-        <item>@string/screen_mode_ensure_only_display</item>
+        <item>@string/screen_mode_auto_activate</item>
+        <item>@string/screen_mode_primary_streaming</item>
+        <item>@string/screen_mode_secondary_streaming</item>
+        <item>@string/screen_mode_exclusive_streaming</item>
+    </string-array>
+    <string-array name="screen_combination_mode_descriptions">
+        <item>@string/screen_mode_host_default_desc</item>
+        <item>@string/screen_mode_no_operation_desc</item>
+        <item>@string/screen_mode_auto_activate_desc</item>
+        <item>@string/screen_mode_primary_streaming_desc</item>
+        <item>@string/screen_mode_secondary_streaming_desc</item>
+        <item>@string/screen_mode_exclusive_streaming_desc</item>
     </string-array>
     <string-array name="screen_combination_mode_values" translatable="false">
         <item>-1</item>
         <item>0</item>
         <item>1</item>
         <item>2</item>
-        <item>3</item>
-    </string-array>
-
-    <!-- VDD screen combination mode -->
-    <string-array name="vdd_screen_combination_mode_names">
-        <item>@string/vdd_screen_mode_host_default</item>
-        <item>@string/vdd_screen_mode_no_operation</item>
-        <item>@string/vdd_screen_mode_vdd_as_primary</item>
-        <item>@string/vdd_screen_mode_vdd_as_secondary</item>
-        <item>@string/vdd_screen_mode_display_off</item>
-    </string-array>
-    <string-array name="vdd_screen_combination_mode_values" translatable="false">
-        <item>-1</item>
-        <item>0</item>
-        <item>1</item>
-        <item>2</item>
+        <item>4</item>
         <item>3</item>
     </string-array>
 

@@ -12,6 +12,7 @@ import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Paint
@@ -24,11 +25,13 @@ import android.os.Looper
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.RelativeSizeSpan
+import android.util.TypedValue
 import android.view.ContextMenu
 import android.view.ContextMenu.ContextMenuInfo
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
 import android.widget.AbsListView
 import android.widget.AdapterView.AdapterContextMenuInfo
 import android.widget.CheckBox
@@ -36,11 +39,13 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RadioButton
 import android.widget.RadioGroup
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.core.content.ContextCompat
 
 import org.xmlpull.v1.XmlPullParserException
 
@@ -79,6 +84,7 @@ import kotlinx.coroutines.withContext
 import androidx.core.content.edit
 import androidx.core.view.isVisible
 import androidx.core.view.isNotEmpty
+import androidx.preference.PreferenceManager
 import kotlin.math.ceil
 
 class AppView : Activity(), AdapterFragmentCallbacks {
@@ -116,6 +122,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         private const val VIRTUAL_DISPLAY_ID = 212333
         private const val APPVIEW_PREFS_NAME = "AppView"
         private const val KEY_APP_BACKGROUND_MODE = "app_background_mode"
+        private const val SCREEN_COMBINATION_MODE_PREF_KEY = "list_screen_combination_mode"
     }
 
     // ==================== 核心数据 ====================
@@ -167,7 +174,8 @@ class AppView : Activity(), AdapterFragmentCallbacks {
     private lateinit var useLastSettingsCheckbox: CheckBox
 
     // ==================== UI 组件 - 顶部下拉面板 & 显示器选择 ====================
-    private lateinit var topDropdownPanel: LinearLayout
+    private lateinit var topPanelScrim: View
+    private lateinit var topDropdownPanel: ScrollView
     private var isPanelOpen = false
     private lateinit var displaySelectionInfo: LinearLayout
     private lateinit var displayRadioGroup: RadioGroup
@@ -412,6 +420,10 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         useLastSettingsCheckbox = findViewById(R.id.useLastSettingsCheckbox)
 
         // Initialize top dropdown panel
+        topPanelScrim = findViewById(R.id.topPanelScrim)
+        topPanelScrim.setOnClickListener {
+            closeTopPanel()
+        }
         topDropdownPanel = findViewById(R.id.topDropdownPanel)
         appBackgroundMode = readAppBackgroundMode()
         appBackgroundModeGroup = findViewById(R.id.appBackgroundModeGroup)
@@ -421,30 +433,21 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         displaySelectionInfo = findViewById(R.id.displaySelectionInfo)
         displayRadioGroup = findViewById(R.id.displayRadioGroup)
         screenCombinationModeLabel = findViewById(R.id.screenCombinationModeLabel)
+        findViewById<TextView>(R.id.clearDisplaySelectionButton).setOnClickListener {
+            clearDisplaySelection()
+        }
         screenCombinationModeLabel.let { label ->
             label.paintFlags = label.paintFlags or Paint.UNDERLINE_TEXT_FLAG
 
             // 点击组合模式标签时弹出选择对话框
             label.setOnClickListener { showScreenCombinationModeDialog() }
         }
+        refreshScreenCombinationModeFromPreferences()
 
         // 监听 RadioGroup 选中变化，动态更新组合模式选项
-        displayRadioGroup.setOnCheckedChangeListener { _, checkedId ->
-            if (checkedId == -1) {
-                screenCombinationModeLabel.visibility = View.GONE
-                selectedScreenCombinationMode = -1
-                return@setOnCheckedChangeListener
-            }
-
-            val isVdd = (checkedId == VIRTUAL_DISPLAY_ID)
-            val namesArrayId = if (isVdd) R.array.vdd_screen_combination_mode_names else R.array.screen_combination_mode_names
-            val valuesArrayId = if (isVdd) R.array.vdd_screen_combination_mode_values else R.array.screen_combination_mode_values
-
-            currentModeNames = resources.getStringArray(namesArrayId)
-            currentModeValues = resources.getStringArray(valuesArrayId)
-            selectedScreenCombinationMode = -1
+        displayRadioGroup.setOnCheckedChangeListener { _, _ ->
+            refreshScreenCombinationModeOptions()
             updateScreenCombinationModeLabel()
-            screenCombinationModeLabel.visibility = View.VISIBLE
         }
 
         // Set up event listeners
@@ -792,7 +795,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
      */
     private fun startStreamWithLastSettingsIfEnabled(app: AppObject, forceResumeCurrentSession: Boolean = false) {
         var displayGuid: String? = null
-        var useVdd = false
+        var useVdd: Boolean? = null
 
         if (displaySelectionInfo.isVisible && availableDisplays != null) {
             val selectedId = displayRadioGroup.checkedRadioButtonId
@@ -801,11 +804,9 @@ class AppView : Activity(), AdapterFragmentCallbacks {
             } else if (selectedId >= 0 && selectedId < (availableDisplays?.size ?: 0)) {
                 val selectedDisplay = availableDisplays!![selectedId]
                 displayGuid = selectedDisplay.guid.ifEmpty { selectedDisplay.name }
+                useVdd = false
             }
         }
-
-        // 设置useVdd标志
-        computer?.useVdd = useVdd
 
             doStartStream(app, displayGuid, useVdd, forceResumeCurrentSession)
     }
@@ -835,9 +836,15 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         val toggle = findViewById<TextView>(R.id.topPanelToggle)
         toggle?.text = "\u2699 \u25B4"
 
+        topPanelScrim.visibility = View.VISIBLE
+        topPanelScrim.bringToFront()
+        toggle?.bringToFront()
+        topDropdownPanel.bringToFront()
+        topDropdownPanel.scrollTo(0, 0)
         topDropdownPanel.alpha = 0f
         topDropdownPanel.translationY = -20f
         topDropdownPanel.visibility = View.VISIBLE
+        constrainTopPanelHeight()
         topDropdownPanel.animate()
                 .alpha(1f)
                 .translationY(0f)
@@ -871,11 +878,37 @@ class AppView : Activity(), AdapterFragmentCallbacks {
                 .withEndAction {
                     topDropdownPanel.visibility = View.GONE
                     topDropdownPanel.translationY = 0f
+                    topPanelScrim.visibility = View.GONE
                     // 关闭后将焦点还给触发手柄
                     val toggleView = findViewById<View>(R.id.topPanelToggle)
                     toggleView?.requestFocus()
                 }
                 .start()
+    }
+
+    private fun constrainTopPanelHeight() {
+        topDropdownPanel.post {
+            val rootView = findViewById<View>(android.R.id.content) ?: return@post
+            val availableHeight = rootView.height - topDropdownPanel.top - dp(16)
+            val preferredMaxHeight = if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                (rootView.height * 0.68f).toInt()
+            } else {
+                (rootView.height * 0.42f).toInt()
+            }
+            val maxHeight = kotlin.math.min(availableHeight, preferredMaxHeight).coerceAtLeast(dp(120))
+            val contentHeight = (topDropdownPanel.getChildAt(0)?.measuredHeight ?: 0) +
+                    topDropdownPanel.paddingTop + topDropdownPanel.paddingBottom
+            val targetHeight = if (contentHeight > maxHeight) {
+                maxHeight
+            } else {
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            }
+            val params = topDropdownPanel.layoutParams
+            if (params.height != targetHeight) {
+                params.height = targetHeight
+                topDropdownPanel.layoutParams = params
+            }
+        }
     }
 
     private fun setupAppBackgroundModeControls() {
@@ -948,6 +981,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
     private fun checkDisplaysAndUpdateUI() {
         if (computer == null || computer?.activeAddress == null || managerBinder == null) {
             displaySelectionInfo.visibility = View.GONE
+            constrainTopPanelHeight()
             return
         }
 
@@ -960,10 +994,12 @@ class AppView : Activity(), AdapterFragmentCallbacks {
                     updateDisplaySelectionUI(displays)
                 } else {
                     displaySelectionInfo.visibility = View.GONE
+                    constrainTopPanelHeight()
                 }
             } catch (e: Exception) {
                 LimeLog.warning("Failed to get displays: " + e.message)
                 displaySelectionInfo.visibility = View.GONE
+                constrainTopPanelHeight()
             }
         }
     }
@@ -992,8 +1028,10 @@ class AppView : Activity(), AdapterFragmentCallbacks {
                 VIRTUAL_DISPLAY_ID,
                 resources.getString(R.string.applist_menu_start_with_vdd)))
 
-        displayRadioGroup.clearCheck()
         displaySelectionInfo.visibility = View.VISIBLE
+        displayRadioGroup.clearCheck()
+        refreshScreenCombinationModeFromPreferences()
+        constrainTopPanelHeight()
     }
 
     /**
@@ -1006,6 +1044,10 @@ class AppView : Activity(), AdapterFragmentCallbacks {
     private fun createDisplayRadioButton(id: Int, text: String): RadioButton {
         val radioButton = RadioButton(this)
         radioButton.id = id
+        radioButton.layoutParams = RadioGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT)
+        radioButton.minHeight = dp(32)
         radioButton.text = text
         radioButton.setTextColor(0xCCFFFFFF.toInt())
         radioButton.textSize = 12f
@@ -1022,7 +1064,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
      * @param displayName 选择的显示器名称，如果为null则不指定显示器
      * @param useVdd 是否使用VDD虚拟显示器
      */
-    private fun doStartStream(app: AppObject, displayName: String?, useVdd: Boolean, forceResumeCurrentSession: Boolean = false) {
+    private fun doStartStream(app: AppObject, displayName: String?, useVdd: Boolean?, forceResumeCurrentSession: Boolean = false) {
         val comp = computer ?: run {
             Toast.makeText(this, resources.getText(R.string.lost_connection), Toast.LENGTH_SHORT).show()
             return
@@ -1036,43 +1078,63 @@ class AppView : Activity(), AdapterFragmentCallbacks {
             // 使用AppSettingsManager统一管理启动逻辑
             val startIntent = appSettingsManager?.createStartIntentWithLastSettingsIfEnabled(
                     this, app.app, comp, binder,
+                    useVdd = useVdd,
                     forceResumeCurrentSession = forceResumeCurrentSession)
             if (displayName != null) {
                 startIntent?.putExtra(Game.EXTRA_DISPLAY_NAME, displayName)
             }
             // 传递屏幕组合模式
-            startIntent?.let { addScreenCombinationModeToIntent(it, useVdd) }
+            startIntent?.let { addScreenCombinationModeToIntent(it) }
             startIntent?.let { startActivity(it) }
         } else {
             // 回退到默认方式启动
             val startIntent = ServerHelper.createStartIntent(
                     this, app.app, comp, binder,
+                    useVdd = useVdd,
                     forceResumeCurrentSession = forceResumeCurrentSession)
             if (displayName != null) {
                 startIntent.putExtra(Game.EXTRA_DISPLAY_NAME, displayName)
             }
-            addScreenCombinationModeToIntent(startIntent, useVdd)
+            addScreenCombinationModeToIntent(startIntent)
             startActivity(startIntent)
         }
     }
 
     /**
      * 将屏幕组合模式添加到 Intent
-     * 根据 useVdd 决定使用 EXTRA_VDD_SCREEN_COMBINATION_MODE 还是 EXTRA_SCREEN_COMBINATION_MODE
      */
-    private fun addScreenCombinationModeToIntent(intent: Intent, useVdd: Boolean) {
+    private fun addScreenCombinationModeToIntent(intent: Intent) {
         if (selectedScreenCombinationMode != -1) {
-            if (useVdd) {
-                intent.putExtra(Game.EXTRA_VDD_SCREEN_COMBINATION_MODE, selectedScreenCombinationMode)
-            } else {
-                intent.putExtra(Game.EXTRA_SCREEN_COMBINATION_MODE, selectedScreenCombinationMode)
-            }
+            intent.putExtra(Game.EXTRA_SCREEN_COMBINATION_MODE, selectedScreenCombinationMode)
         }
     }
 
     /**
      * 更新屏幕组合模式标签显示文本
      */
+    private fun refreshScreenCombinationModeOptions() {
+        currentModeNames = resources.getStringArray(R.array.screen_combination_mode_names)
+        currentModeValues = resources.getStringArray(R.array.screen_combination_mode_values)
+    }
+
+    private fun refreshScreenCombinationModeFromPreferences() {
+        refreshScreenCombinationModeOptions()
+        selectedScreenCombinationMode = PreferenceConfiguration.readPreferences(this).screenCombinationMode
+        updateScreenCombinationModeLabel()
+        screenCombinationModeLabel.visibility = View.VISIBLE
+    }
+
+    private fun persistScreenCombinationMode() {
+        PreferenceManager.getDefaultSharedPreferences(this).edit {
+            putString(SCREEN_COMBINATION_MODE_PREF_KEY, selectedScreenCombinationMode.toString())
+        }
+    }
+
+    private fun clearDisplaySelection() {
+        displayRadioGroup.clearCheck()
+        refreshScreenCombinationModeFromPreferences()
+    }
+
     private fun updateScreenCombinationModeLabel() {
         if (currentModeNames == null || currentModeNames?.isEmpty() == true) {
             return
@@ -1109,19 +1171,95 @@ class AppView : Activity(), AdapterFragmentCallbacks {
             }
         }
 
-        AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog)
+        lateinit var dialog: AlertDialog
+        val dialogView = createScreenCombinationModeDialogView(checkedIndex) { which ->
+            selectedScreenCombinationMode = try {
+                currentModeValues!![which].toInt()
+            } catch (_: NumberFormatException) {
+                -1
+            }
+            persistScreenCombinationMode()
+            updateScreenCombinationModeLabel()
+            dialog.dismiss()
+        }
+
+        dialog = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog)
                 .setTitle(R.string.title_screen_combination_mode)
-                .setSingleChoiceItems(currentModeNames, checkedIndex) { dialog, which ->
-                    selectedScreenCombinationMode = try {
-                        currentModeValues!![which].toInt()
-                    } catch (_: NumberFormatException) {
-                        -1
-                    }
-                    updateScreenCombinationModeLabel()
-                    dialog.dismiss()
-                }
+                .setView(dialogView)
                 .setNegativeButton(android.R.string.cancel, null)
-                .show()
+                .create()
+        dialog.show()
+    }
+
+    private fun createScreenCombinationModeDialogView(
+        checkedIndex: Int,
+        onItemSelected: (Int) -> Unit
+    ): View {
+        val descriptions = resources.getStringArray(R.array.screen_combination_mode_descriptions)
+        val horizontalPadding = dp(24)
+        val verticalPadding = dp(10)
+        val primaryTextColor = ContextCompat.getColor(this, R.color.appview_text_primary)
+        val secondaryTextColor = ContextCompat.getColor(this, R.color.appview_text_secondary)
+        val radioTint = ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+            intArrayOf(primaryTextColor, secondaryTextColor)
+        )
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(horizontalPadding, dp(4), horizontalPadding, dp(4))
+        }
+
+        content.addView(TextView(this).apply {
+            text = getString(R.string.screen_combination_mode_dialog_subtitle)
+            setTextColor(secondaryTextColor)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            setPadding(0, 0, 0, dp(8))
+        })
+
+        currentModeNames?.forEachIndexed { index, name ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                isClickable = true
+                isFocusable = true
+                val typedValue = TypedValue()
+                theme.resolveAttribute(android.R.attr.selectableItemBackground, typedValue, true)
+                setBackgroundResource(typedValue.resourceId)
+                setPadding(0, verticalPadding, 0, verticalPadding)
+                setOnClickListener { onItemSelected(index) }
+            }
+
+            row.addView(RadioButton(this).apply {
+                isChecked = index == checkedIndex
+                isClickable = false
+                isFocusable = false
+                buttonTintList = radioTint
+            }, LinearLayout.LayoutParams(dp(48), ViewGroup.LayoutParams.WRAP_CONTENT))
+
+            row.addView(LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(TextView(this@AppView).apply {
+                    text = name
+                    setTextColor(primaryTextColor)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+                })
+                addView(TextView(this@AppView).apply {
+                    text = descriptions.getOrNull(index).orEmpty()
+                    setTextColor(secondaryTextColor)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                    setPadding(0, dp(2), 0, 0)
+                })
+            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+
+            content.addView(row)
+        }
+
+        return ScrollView(this).apply {
+            addView(content)
+        }
+    }
+
+    private fun dp(value: Int): Int {
+        return (value * resources.displayMetrics.density + 0.5f).toInt()
     }
 
     /**
@@ -1256,6 +1394,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
 
         inForeground = true
         managerBinder?.setForegroundComputer(uuidString)
+        refreshScreenCombinationModeFromPreferences()
         startComputerUpdates()
     }
 
@@ -1941,6 +2080,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
             if (!isTouchInsideView(topDropdownPanel, x, y)
                     && !isTouchInsideView(findViewById(R.id.topPanelToggle), x, y)) {
                 closeTopPanel()
+                return true
             }
         }
         return super.dispatchTouchEvent(ev)

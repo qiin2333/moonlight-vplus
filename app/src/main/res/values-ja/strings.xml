@@ -151,4 +151,10 @@
     <string name="summary_list_audio_vibration_mode">振動の伝達方法を選択</string>
     <string name="title_list_audio_vibration_scene">シーンモード</string>
     <string name="summary_list_audio_vibration_scene">コンテンツタイプに合わせて振動パターンを最適化</string>
+    <string name="screen_mode_host_default">Sunshine ホスト側の設定を使用（既定）</string>
+    <string name="screen_mode_no_operation">画面構成を変更しない</string>
+    <string name="screen_mode_auto_activate">指定したディスプレイを自動的に有効化してストリーミング</string>
+    <string name="screen_mode_primary_streaming">プライマリディスプレイでストリーミング（指定したディスプレイを有効化してプライマリに設定）</string>
+    <string name="screen_mode_secondary_streaming">セカンダリディスプレイでストリーミング（Foundation ディスプレイのみ）</string>
+    <string name="screen_mode_exclusive_streaming">指定したディスプレイのみでストリーミング（他のディスプレイを無効化）</string>
 </resources>

@@ -245,4 +245,10 @@
     <string name="title_frame_pacing">Frame pacing videa</string>
     <string name="summary_frame_pacing">Zvolte, jak vyvážit zpoždění videa a jeho plynulost</string>
     <string name="pacing_latency">Preferovat nejnižší zpoždění</string>
+    <string name="screen_mode_host_default">Použít konfiguraci hostitele Sunshine (výchozí)</string>
+    <string name="screen_mode_no_operation">Neměnit uspořádání obrazovek</string>
+    <string name="screen_mode_auto_activate">Automaticky aktivovat vybraný displej pro streamování</string>
+    <string name="screen_mode_primary_streaming">Streamování z hlavního displeje (aktivovat vybraný displej a nastavit jej jako hlavní)</string>
+    <string name="screen_mode_secondary_streaming">Streamování ze sekundárního displeje (pouze displej Foundation)</string>
+    <string name="screen_mode_exclusive_streaming">Streamování pouze z vybraného displeje (deaktivovat ostatní displeje)</string>
 </resources>

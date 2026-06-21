@@ -834,18 +834,21 @@
     <string name="suffix_seekbar_output_buffer_queue_limit">帧</string>
 
     <!-- 屏幕组合模式 -->
-    <string name="title_screen_combination_mode">屏幕组合模式 (Sunshine 基地适用)</string>
-    <string name="summary_screen_combination_mode">控制主机在启动串流时如何管理屏幕组合，此处配置将覆盖主机端配置。</string>
-    <string name="screen_mode_host_default">使用 Sunshine 主机端配置（默认）</string>
-    <string name="screen_mode_no_operation">不修改屏幕组合配置</string>
-    <string name="screen_mode_ensure_active">确保串流屏幕已开启</string>
-    <string name="screen_mode_ensure_primary">确保串流屏幕为主屏幕</string>
-    <string name="screen_mode_ensure_only_display">仅启用串流屏幕（关闭其他屏幕）</string>
-    <string name="vdd_screen_mode_host_default">使用 Sunshine 主机端配置（默认）</string>
-    <string name="vdd_screen_mode_no_operation">保持当前布局</string>
-    <string name="vdd_screen_mode_vdd_as_primary">VDD主屏 + 物理副屏</string>
-    <string name="vdd_screen_mode_vdd_as_secondary">物理主屏 + VDD副屏</string>
-    <string name="vdd_screen_mode_display_off">仅VDD（关闭物理显示器）</string>
+    <string name="title_screen_combination_mode">屏幕组合设置</string>
+    <string name="summary_screen_combination_mode">Sunshine 基地适用</string>
+    <string name="screen_combination_mode_dialog_subtitle">Sunshine 基地适用</string>
+    <string name="screen_mode_host_default">跟随主机</string>
+    <string name="screen_mode_no_operation">无操作模式</string>
+    <string name="screen_mode_auto_activate">激活模式</string>
+    <string name="screen_mode_primary_streaming">主屏串流模式</string>
+    <string name="screen_mode_secondary_streaming">副屏串流模式</string>
+    <string name="screen_mode_exclusive_streaming">息屏串流模式</string>
+    <string name="screen_mode_host_default_desc">使用 Sunshine 主机端配置，不覆盖屏幕组合设置。</string>
+    <string name="screen_mode_no_operation_desc">保持当前屏幕布局，不调整显示器拓扑。</string>
+    <string name="screen_mode_auto_activate_desc">自动激活指定显示器用于串流。</string>
+    <string name="screen_mode_primary_streaming_desc">自动激活指定显示器并设为主显示器。</string>
+    <string name="screen_mode_secondary_streaming_desc">物理屏为主屏，基地显示器作为副屏扩展。</string>
+    <string name="screen_mode_exclusive_streaming_desc">仅保留指定显示器输出，关闭其他显示器。</string>
     <string name="screen_combination_mode_label">组合模式: %1$s</string>
     <string name="unpaired_devices_shown">已显示未配对设备</string>
     <string name="unpaired_devices_hidden">已隐藏未配对设备</string>
@@ -915,6 +918,7 @@
     <string name="appview_background_mode_artwork">应用封面</string>
     <string name="appview_background_mode_soft_color">柔和纯色</string>
     <string name="appview_display_selection_title">显示器选择</string>
+    <string name="appview_display_selection_clear">清空选择</string>
 
     <!-- Layout hardcoded Chinese strings (auto-extracted) -->
     <string name="layout_capability_diagnostic_text_a5e80">能力检测</string>

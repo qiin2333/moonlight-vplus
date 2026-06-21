@@ -55,6 +55,7 @@ object ServerHelper {
         managerBinder: ComputerManagerService.ComputerManagerBinder,
         lastSettings: PreferenceConfiguration? = null,
         screenCombinationMode: Int = -1,
+        useVdd: Boolean? = null,
         forceResumeCurrentSession: Boolean = false
     ): Intent {
         return Intent(parent, Game::class.java).apply {
@@ -68,7 +69,7 @@ object ServerHelper {
             putExtra(Game.EXTRA_PC_UUID, computer.uuid)
             putExtra(Game.EXTRA_PC_NAME, computer.name)
             putExtra(Game.EXTRA_PAIR_NAME, computer.getPairName(parent))
-            putExtra(Game.EXTRA_PC_USEVDD, computer.useVdd)
+            useVdd?.let { putExtra(Game.EXTRA_PC_USEVDD, it) }
             app.cmdList?.let { putExtra(Game.EXTRA_APP_CMD, it.toString()) }
             try {
                 computer.serverCert?.let { putExtra(Game.EXTRA_SERVER_CERT, it.encoded) }

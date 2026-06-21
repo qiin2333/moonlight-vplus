@@ -277,4 +277,10 @@
     <string name="pair_pairing_help">Se il tuo PC host sta eseguendo Sunshine, vai nella pagina web locale di Sunshine ed inserisci il PIN.</string>
     <string name="title_checkbox_gamepad_touchpad_as_mouse">Controlla sempre il mouse col touchpad</string>
     <string name="perf_overlay_hostprocessinglatency">Latenza di codifica da parte dell\'host min/max/average: %1$.1f/%2$.1f/%3$.1f ms</string>
+    <string name="screen_mode_host_default">Usa la configurazione dell’host Sunshine (predefinito)</string>
+    <string name="screen_mode_no_operation">Non modificare la disposizione degli schermi</string>
+    <string name="screen_mode_auto_activate">Attiva automaticamente il display selezionato per lo streaming</string>
+    <string name="screen_mode_primary_streaming">Streaming sul display principale (attiva il display selezionato e impostalo come principale)</string>
+    <string name="screen_mode_secondary_streaming">Streaming sul display secondario (solo display Foundation)</string>
+    <string name="screen_mode_exclusive_streaming">Streaming solo dal display selezionato (disattiva gli altri display)</string>
 </resources>

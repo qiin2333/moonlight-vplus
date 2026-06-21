@@ -288,6 +288,7 @@ class AppSettingsManager(private val context: Context) {
             parent: Activity, app: NvApp,
             computer: ComputerDetails?,
             managerBinder: ComputerManagerService.ComputerManagerBinder,
+            useVdd: Boolean? = null,
             forceResumeCurrentSession: Boolean = false
     ): Intent {
         val useLastSettingsEnabled = isUseLastSettingsEnabled
@@ -301,6 +302,7 @@ class AppSettingsManager(private val context: Context) {
                     computer,
                     managerBinder,
                     lastSettings,
+                    useVdd = useVdd,
                     forceResumeCurrentSession = forceResumeCurrentSession
                 )
             }
@@ -311,6 +313,7 @@ class AppSettingsManager(private val context: Context) {
             app,
             computer!!,
             managerBinder,
+            useVdd = useVdd,
             forceResumeCurrentSession = forceResumeCurrentSession
         )
     }

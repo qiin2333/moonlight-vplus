@@ -42,7 +42,7 @@ class StreamConfiguration private constructor() {
         private set
     private var persistGamepadsAfterDisconnect: Boolean = false
     private var enableMic: Boolean = false
-    private var useVdd: Boolean = false
+    private var useVdd: Boolean? = null
     private var controlOnly: Boolean = false
     /** Requested audio codec — see [MoonBridge.AUDIO_CODEC_OPUS]/AC3/EAC3. Default = OPUS. */
     var audioCodec: Int = MoonBridge.AUDIO_CODEC_OPUS
@@ -52,8 +52,6 @@ class StreamConfiguration private constructor() {
         private set
     var customScreenMode: Int = -1
         private set
-    var customVddScreenMode: Int = 0
-        private set
 
     val reqWidth: Int get() = width * hostResolutionScaleX100 / 100
     val reqHeight: Int get() = height * hostResolutionScaleX100 / 100
@@ -62,7 +60,7 @@ class StreamConfiguration private constructor() {
     fun getPlayLocalAudio(): Boolean = playLocalAudio
     fun getPersistGamepadsAfterDisconnect(): Boolean = persistGamepadsAfterDisconnect
     fun getEnableMic(): Boolean = enableMic
-    fun getUseVdd(): Boolean = useVdd
+    fun getUseVdd(): Boolean? = useVdd
     fun getControlOnly(): Boolean = controlOnly
 
     class Builder {
@@ -102,13 +100,12 @@ class StreamConfiguration private constructor() {
          * @param hdrMode 0 = SDR (default), 1 = HDR10/PQ (SMPTE ST 2084), 2 = HLG (Hybrid Log-Gamma, ARIB STD-B67)
          */
         fun setHdrMode(hdrMode: Int): Builder = apply { config.hdrMode = hdrMode }
-        fun setUseVdd(value: Boolean): Builder = apply { config.useVdd = value }
+        fun setUseVdd(value: Boolean?): Builder = apply { config.useVdd = value }
         fun setEnableMic(enable: Boolean): Builder = apply { config.enableMic = enable }
         fun setControlOnly(controlOnly: Boolean): Builder = apply { config.controlOnly = controlOnly }
         fun setAudioCodec(codec: Int): Builder = apply { config.audioCodec = codec }
         fun setAudioBitrate(bitrate: Int): Builder = apply { config.audioBitrate = bitrate }
         fun setCustomScreenMode(customScreenMode: Int): Builder = apply { config.customScreenMode = customScreenMode }
-        fun setCustomVddScreenMode(customVddScreenMode: Int): Builder = apply { config.customVddScreenMode = customVddScreenMode }
 
         fun build(): StreamConfiguration = config
     }

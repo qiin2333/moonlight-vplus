@@ -118,8 +118,7 @@ class PreferenceConfiguration {
     var enableSimplifyPerfOverlay = false
     var enableLatencyToast = false
     var enableStun = false
-    var screenCombinationMode = 0
-    var vddScreenCombinationMode = 0
+    var screenCombinationMode = -1
     var lockScreenAfterDisconnect = false
     var swapQuitAndDisconnect = false
     var bindAllUsb = false
@@ -1219,10 +1218,6 @@ class PreferenceConfiguration {
             } catch (e: NumberFormatException) {
                 -1
             }
-
-            // VDD screen combination mode defaults to -1 (use host config)
-            // This is set dynamically from AppView based on display selection
-            config.vddScreenCombinationMode = -1
 
             config.lockScreenAfterDisconnect = prefs.getBoolean(LOCK_SCREEN_AFTER_DISCONNECT_PREF_STRING, DEFAULT_LATENCY_TOAST)
             config.swapQuitAndDisconnect = prefs.getBoolean(SWAP_QUIT_AND_DISCONNECT_PERF_STRING, DEFAULT_LATENCY_TOAST)

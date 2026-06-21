@@ -392,11 +392,12 @@
     <!-- Host settings -->
     <string name="title_screen_combination_mode">Modo de combinação de tela (Sunshine Foundation)</string>
     <string name="summary_screen_combination_mode">Controle como o Sunshine gerencia seus monitores ao iniciar um stream</string>
-    <string name="screen_mode_host_default">Usar configuração do host Sunshine (padrão)</string>
-    <string name="screen_mode_no_operation">Não alterar configuração do monitor</string>
-    <string name="screen_mode_ensure_active">Garantir que a tela de streaming esteja ativa</string>
-    <string name="screen_mode_ensure_primary">Garantir que a tela de streaming seja principal</string>
-    <string name="screen_mode_ensure_only_display">Usar apenas a tela de streaming (desligar outros displays)</string>
+    <string name="screen_mode_host_default">Usar a configuração do host Sunshine (predefinição)</string>
+    <string name="screen_mode_no_operation">Não alterar a disposição dos ecrãs</string>
+    <string name="screen_mode_auto_activate">Ativar automaticamente o ecrã selecionado para streaming</string>
+    <string name="screen_mode_primary_streaming">Streaming no ecrã principal (ativar o ecrã selecionado e defini-lo como principal)</string>
+    <string name="screen_mode_secondary_streaming">Streaming em ecrã secundário (apenas ecrã Foundation)</string>
+    <string name="screen_mode_exclusive_streaming">Streaming apenas no ecrã selecionado (desativar os outros ecrãs)</string>
     
     <!-- Advanced settings -->
     <string name="title_enable_hdr_high_brightness">Ativar HDR com alto brilho</string>
@@ -678,7 +679,7 @@
     <string name="host_resolution_changed">Resolução do host alterada para %1$dx%2$d</string>
     
     <!-- PC view menu -->
-    <string name="pcview_menu_secondary_screen">Stream de tela secundária (compatível com Foundation Sunshine)</string>
+    <string name="pcview_menu_secondary_screen">Configurações de combinação de telas</string>
     <string name="pcview_menu_eol">Fim de serviço do NVIDIA GameStream</string>
     <string name="pcview_menu_sleep_success">Suspensão do host bem-sucedida</string>
     <string name="pcview_menu_sleep_fail">Falha na suspensão do host</string>

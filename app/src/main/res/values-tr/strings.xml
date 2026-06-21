@@ -173,4 +173,10 @@
     <string name="summary_checkbox_usb_bind_all">Yerel Xbox oyun kumandası desteği mevcut olsa bile desteklenen tüm oyun kumandaları için Moonlight\'ın USB sürücüsünü kullan</string>
     <string name="summary_checkbox_flip_face_buttons">Oyun kumandaları ve ekran kontrolleri için A/B ve X/Y yüz düğmelerini değiştirir</string>
     <string name="summary_checkbox_absolute_mouse_mode">Bu fare hızlandırmanın uzak masaüstü kullanımı için daha doğal davranmasını sağlayabilir, ancak birçok oyunla uyumsuzdur.</string>
+    <string name="screen_mode_host_default">Sunshine ana makine yapılandırmasını kullan (varsayılan)</string>
+    <string name="screen_mode_no_operation">Ekran düzenini değiştirme</string>
+    <string name="screen_mode_auto_activate">Seçili ekranı akış için otomatik olarak etkinleştir</string>
+    <string name="screen_mode_primary_streaming">Birincil ekran akışı (seçili ekranı etkinleştir ve birincil yap)</string>
+    <string name="screen_mode_secondary_streaming">İkincil ekran akışı (yalnızca Foundation ekranı)</string>
+    <string name="screen_mode_exclusive_streaming">Yalnızca seçili ekrandan akış yap (diğer ekranları devre dışı bırak)</string>
 </resources>

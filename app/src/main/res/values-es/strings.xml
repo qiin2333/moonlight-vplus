@@ -516,4 +516,10 @@
     <string name="width_hint">ej. 1920</string>
     <string name="width_label">Ancho:</string>
 
+    <string name="screen_mode_host_default">Usar la configuración del host Sunshine (predeterminado)</string>
+    <string name="screen_mode_no_operation">No cambiar la disposición de pantallas</string>
+    <string name="screen_mode_auto_activate">Activar automáticamente la pantalla seleccionada para transmitir</string>
+    <string name="screen_mode_primary_streaming">Transmisión en pantalla principal (activar la pantalla seleccionada y establecerla como principal)</string>
+    <string name="screen_mode_secondary_streaming">Transmisión en pantalla secundaria (solo pantalla Foundation)</string>
+    <string name="screen_mode_exclusive_streaming">Transmitir solo desde la pantalla seleccionada (desactivar las demás pantallas)</string>
 </resources>

@@ -273,4 +273,10 @@
     <string name="analogscroll_none">Keine (beide Sticks bewegen die Maus)</string>
     <string name="analogscroll_right">Rechter Analogstick</string>
     <string name="analogscroll_left">Linker Analogstick</string>
+    <string name="screen_mode_host_default">Sunshine-Hostkonfiguration verwenden (Standard)</string>
+    <string name="screen_mode_no_operation">Bildschirm Anordnung nicht ändern</string>
+    <string name="screen_mode_auto_activate">Ausgewählte Anzeige automatisch zum Streaming aktivieren</string>
+    <string name="screen_mode_primary_streaming">Streaming über die Hauptanzeige (ausgewählte Anzeige aktivieren und als Hauptanzeige festlegen)</string>
+    <string name="screen_mode_secondary_streaming">Streaming über sekundäre Anzeige (nur Foundation-Anzeige)</string>
+    <string name="screen_mode_exclusive_streaming">Nur ausgewählte Anzeige streamen (andere Anzeigen deaktivieren)</string>
 </resources>

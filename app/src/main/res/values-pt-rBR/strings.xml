@@ -252,4 +252,10 @@
     <string name="analogscroll_left">Stick analógico esquerdo</string>
     <string name="title_analog_scrolling">Usar um stick analógico para fazer scroll</string>
     <string name="summary_analog_scrolling">Selecciona um stick analógico para fazer scroll quando a emulação de rato está ativada</string>
+    <string name="screen_mode_host_default">Usar a configuração do host Sunshine (padrão)</string>
+    <string name="screen_mode_no_operation">Não alterar a organização das telas</string>
+    <string name="screen_mode_auto_activate">Ativar automaticamente a tela selecionada para streaming</string>
+    <string name="screen_mode_primary_streaming">Streaming na tela principal (ativar a tela selecionada e defini-la como principal)</string>
+    <string name="screen_mode_secondary_streaming">Streaming em tela secundária (somente tela Foundation)</string>
+    <string name="screen_mode_exclusive_streaming">Streaming somente na tela selecionada (desativar as outras telas)</string>
 </resources>

@@ -270,4 +270,10 @@
     <string name="videoformat_auto">Automatycznie (zalecane)</string>
     <string name="videoformat_av1always">Preferowany AV1 (eksperymentalny)</string>
     <string name="summary_setup_guide">Wyświetl instrukcje, jak skonfigurować komputer do gier do streamowania</string>
+    <string name="screen_mode_host_default">Użyj konfiguracji hosta Sunshine (domyślnie)</string>
+    <string name="screen_mode_no_operation">Nie zmieniaj układu ekranów</string>
+    <string name="screen_mode_auto_activate">Automatycznie aktywuj wybrany ekran do strumieniowania</string>
+    <string name="screen_mode_primary_streaming">Strumieniowanie z ekranu głównego (aktywuj wybrany ekran i ustaw go jako główny)</string>
+    <string name="screen_mode_secondary_streaming">Strumieniowanie z ekranu dodatkowego (tylko ekran Foundation)</string>
+    <string name="screen_mode_exclusive_streaming">Strumieniowanie tylko z wybranego ekranu (wyłącz inne ekrany)</string>
 </resources>
