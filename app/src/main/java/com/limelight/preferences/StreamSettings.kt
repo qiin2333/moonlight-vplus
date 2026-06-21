@@ -51,6 +51,7 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.preference.CheckBoxPreference
 import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
+import androidx.preference.MultiSelectListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
@@ -830,8 +831,7 @@ class StreamSettings : AppCompatActivity() {
             hideKeyboardBeforeDialog()
             dialog.show()
             dialog.window?.setBackgroundDrawableResource(R.drawable.app_dialog_bg_cute)
-            AppDialogStyler.tintTitle(dialog, requireContext())
-            tintSettingsDialogButtons(dialog)
+            AppDialogStyler.styleAlertDialog(dialog, requireContext())
             return dialog
         }
 
@@ -841,14 +841,6 @@ class StreamSettings : AppCompatActivity() {
             val imm = hostActivity.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
             imm?.hideSoftInputFromWindow(focusedView.windowToken, 0)
             focusedView.clearFocus()
-        }
-
-        private fun tintSettingsDialogButtons(dialog: AlertDialog) {
-            val accentColor = ContextCompat.getColor(requireContext(), R.color.app_dialog_accent_color)
-            listOf(AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEGATIVE, AlertDialog.BUTTON_NEUTRAL)
-                .forEach { buttonId ->
-                    dialog.getButton(buttonId)?.setTextColor(accentColor)
-                }
         }
 
         private fun setValue(preferenceKey: String, value: String) {
@@ -1858,7 +1850,7 @@ class StreamSettings : AppCompatActivity() {
                 input.requestFocus()
                 dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
             }
-            dialog.show()
+            showStyledDialog(dialog)
         }
 
         private fun showSyncImportPreview(preview: ConfigurationSyncManager.PackagePreview) {
@@ -1885,7 +1877,7 @@ class StreamSettings : AppCompatActivity() {
                 )
                 .setPositiveButton(R.string.config_sync_action_import) { _, _ -> importPendingSyncPackage() }
                 .setNegativeButton(android.R.string.cancel, null)
-                .show()
+                .showStyled()
         }
 
         private fun importPendingSyncPackage() {
@@ -1932,7 +1924,7 @@ class StreamSettings : AppCompatActivity() {
                 .setTitle(R.string.title_config_sync_restart_required)
                 .setMessage(message)
                 .setPositiveButton(android.R.string.ok, null)
-                .show()
+                .showStyled()
         }
 
         private fun showCrownConfigManagementDialog() {
@@ -1961,7 +1953,7 @@ class StreamSettings : AppCompatActivity() {
                             7 -> showCrownMergeConfigDialog()
                         }
                     }
-                    .show()
+                    .showStyled()
         }
 
         private fun showCrownShareExportConfigDialog() {
@@ -1992,7 +1984,7 @@ class StreamSettings : AppCompatActivity() {
                             Toast.makeText(context, R.string.toast_crown_share_export_failed, Toast.LENGTH_LONG).show()
                         }
                     }
-                    .show()
+                    .showStyled()
         }
 
         private fun currentCrownShareExportMetadata(): CrownProfileShareManager.ExportMetadata {
@@ -2107,7 +2099,7 @@ class StreamSettings : AppCompatActivity() {
                         )
                     }
                     .setNegativeButton(android.R.string.cancel, null)
-                    .show()
+                    .showStyled()
         }
 
         private fun crownStoreProfileLabel(profile: CrownProfileShareManager.StoreProfile): String {
@@ -2160,7 +2152,7 @@ class StreamSettings : AppCompatActivity() {
                     .setItems(names) { _, which ->
                         showCrownStorePublishMetadataDialog(ids[which], configMap[ids[which]] ?: "Crown Profile")
                     }
-                    .show()
+                    .showStyled()
         }
 
         private fun showCrownStorePublishMetadataDialog(configId: String, defaultName: String) {
@@ -2241,7 +2233,7 @@ class StreamSettings : AppCompatActivity() {
                     }
                 }
             }
-            dialog.show()
+            showStyledDialog(dialog)
         }
 
         private fun crownStorePublishInput(value: String, hintRes: Int): EditText {
@@ -2331,7 +2323,7 @@ class StreamSettings : AppCompatActivity() {
                         startDeveloperUnlockVerification(GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH)
                     }
                     .setNegativeButton(android.R.string.cancel, null)
-                    .show()
+                    .showStyled()
         }
 
         private fun showCrownStorePublishSuccessDialog(result: GitHubCrownProfileStorePublisher.PublishResult) {
@@ -2348,7 +2340,7 @@ class StreamSettings : AppCompatActivity() {
                         openDeveloperUrl(result.pullRequestUrl)
                     }
                     .setNegativeButton(android.R.string.ok, null)
-                    .show()
+                    .showStyled()
         }
 
         private fun showCrownShareUrlImportDialog() {
@@ -2384,7 +2376,7 @@ class StreamSettings : AppCompatActivity() {
                 input.requestFocus()
                 dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
             }
-            dialog.show()
+            showStyledDialog(dialog)
         }
 
         private fun importCrownShareFromUrl(
@@ -2499,7 +2491,7 @@ class StreamSettings : AppCompatActivity() {
                         showCrownShareMergeTargetDialog()
                     }
                     .setNegativeButton(android.R.string.cancel, null)
-                    .show()
+                    .showStyled()
         }
 
         private fun importPendingCrownShareAsNew() {
@@ -2544,7 +2536,7 @@ class StreamSettings : AppCompatActivity() {
                             Toast.makeText(context, R.string.toast_crown_share_import_failed, Toast.LENGTH_LONG).show()
                         }
                     }
-                    .show()
+                    .showStyled()
         }
 
         private fun showCrownExportConfigDialog() {
@@ -2564,7 +2556,7 @@ class StreamSettings : AppCompatActivity() {
                         exportConfigString = helper.exportConfig(id.toLong())
                         createConfigDocument(configMap[id] ?: "crown_config")
                     }
-                    .show()
+                    .showStyled()
         }
 
         private fun showCrownMergeConfigDialog() {
@@ -2582,7 +2574,7 @@ class StreamSettings : AppCompatActivity() {
                         exportConfigString = ids[which]
                         openConfigDocument(3)
                     }
-                    .show()
+                    .showStyled()
         }
 
         /**
@@ -3328,6 +3320,12 @@ class StreamSettings : AppCompatActivity() {
                     @Suppress("DEPRECATION")
                     f.setTargetFragment(this, 0)
                     f.show(parentFragmentManager, "StyledEditTextPreference")
+                }
+                is MultiSelectListPreference -> {
+                    val f = StyledMultiSelectListPreferenceDialogFragment.newInstance(preference.key)
+                    @Suppress("DEPRECATION")
+                    f.setTargetFragment(this, 0)
+                    f.show(parentFragmentManager, "StyledMultiSelectListPreference")
                 }
                 is ListPreference -> {
                     if (preference.key == SCREEN_COMBINATION_MODE_PREF_KEY) {
