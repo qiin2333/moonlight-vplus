@@ -15,6 +15,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
 
 import com.limelight.LimeLog
@@ -286,7 +287,7 @@ class PcGridAdapter(
 
         txtView.text = context.getString(R.string.title_add_pc)
         txtView.alpha = 0.7f
-        txtView.setTextColor(ONLINE_TEXT_COLOR)
+        txtView.setTextColor(ContextCompat.getColor(context, R.color.pc_item_text_primary))
     }
 
     private fun populateComputerCard(parentView: View, imgView: ImageView, spinnerView: View, txtView: TextView, overlayView: ImageView, details: ComputerDetails) {
@@ -317,7 +318,12 @@ class PcGridAdapter(
         }
         txtView.text = displayName
         txtView.alpha = if (isOffline) 0.5f else 1.0f
-        txtView.setTextColor(if (isOffline) OFFLINE_TEXT_COLOR else ONLINE_TEXT_COLOR)
+        txtView.setTextColor(
+            ContextCompat.getColor(
+                context,
+                if (isOffline) R.color.pc_item_text_disabled else R.color.pc_item_text_primary
+            )
+        )
 
         updateOverlay(overlayView, details, isOnline, isOffline)
     }
@@ -362,8 +368,6 @@ class PcGridAdapter(
         private const val TARGET_SIZE = 128
         private const val ONLINE_ALPHA = 0.95f
         private const val OFFLINE_ALPHA = 0.45f
-        private const val ONLINE_TEXT_COLOR = 0xFF1C1C1E.toInt()
-        private const val OFFLINE_TEXT_COLOR = 0xFF8E8E93.toInt()
 
         fun isAddComputerCard(obj: PcView.ComputerObject?): Boolean {
             return obj != null && ADD_COMPUTER_UUID == obj.details.uuid
