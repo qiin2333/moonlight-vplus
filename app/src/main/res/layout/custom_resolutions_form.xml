@@ -10,7 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/custom_resolution_input_title"
-        android:textColor="@color/ui_shell_text_primary"
+        android:textColor="@color/app_dialog_text_primary"
         android:textStyle="bold"
         android:layout_marginBottom="16dp"
         android:textSize="18sp"
@@ -33,7 +33,7 @@
                 android:layout_width="78dp"
                 android:layout_height="wrap_content"
                 android:text="@string/width_label"
-                android:textColor="@color/ui_shell_text_secondary"
+                android:textColor="@color/app_dialog_text_secondary"
                 android:textSize="16sp" />
 
             <EditText
@@ -45,8 +45,8 @@
                 android:hint="@string/width_hint"
                 android:background="@drawable/custom_resolution_input_bg"
                 android:paddingHorizontal="12dp"
-                android:textColor="@color/ui_shell_text_primary"
-                android:textColorHint="@color/ui_shell_text_secondary"
+                android:textColor="@color/app_dialog_text_primary"
+                android:textColorHint="@color/app_dialog_text_secondary"
                 android:textSize="16sp" />
 
         </LinearLayout>
@@ -61,7 +61,7 @@
                 android:layout_width="78dp"
                 android:layout_height="wrap_content"
                 android:text="@string/height_label"
-                android:textColor="@color/ui_shell_text_secondary"
+                android:textColor="@color/app_dialog_text_secondary"
                 android:textSize="16sp" />
 
             <EditText
@@ -73,8 +73,8 @@
                 android:hint="@string/height_hint"
                 android:background="@drawable/custom_resolution_input_bg"
                 android:paddingHorizontal="12dp"
-                android:textColor="@color/ui_shell_text_primary"
-                android:textColorHint="@color/ui_shell_text_secondary"
+                android:textColor="@color/app_dialog_text_primary"
+                android:textColorHint="@color/app_dialog_text_secondary"
                 android:textSize="16sp" />
 
         </LinearLayout>
@@ -97,7 +97,7 @@
             android:textSize="16sp"
             android:paddingHorizontal="18dp"
             android:singleLine="true"
-            android:textColor="@color/ui_shell_text_primary" />
+            android:textColor="@color/app_dialog_text_primary" />
 
     </LinearLayout>
 

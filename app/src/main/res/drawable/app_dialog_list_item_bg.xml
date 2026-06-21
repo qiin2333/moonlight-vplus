@@ -2,13 +2,13 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
-            <solid android:color="@color/ui_shell_surface_pressed" />
+            <solid android:color="@color/app_dialog_surface_pressed" />
         </shape>
     </item>
 
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="@color/ui_shell_surface_focused" />
+            <solid android:color="@color/app_dialog_surface_focused" />
         </shape>
     </item>
 

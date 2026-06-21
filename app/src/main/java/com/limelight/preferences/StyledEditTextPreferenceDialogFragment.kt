@@ -9,6 +9,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.setPadding
 import androidx.preference.EditTextPreferenceDialogFragmentCompat
 import com.limelight.R
+import com.limelight.utils.AppDialogStyler
 
 class StyledEditTextPreferenceDialogFragment : EditTextPreferenceDialogFragmentCompat() {
 
@@ -30,6 +31,7 @@ class StyledEditTextPreferenceDialogFragment : EditTextPreferenceDialogFragmentC
             setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         }
         val alert = dialog as? AlertDialog ?: return
+        AppDialogStyler.tintTitle(alert, requireContext())
         tintDialogButtons(alert)
     }
 
@@ -44,8 +46,8 @@ class StyledEditTextPreferenceDialogFragment : EditTextPreferenceDialogFragmentC
     private fun styleEditText(editText: EditText?) {
         editText ?: return
         val context = editText.context
-        editText.setTextColor(ContextCompat.getColor(context, R.color.ui_shell_text_primary))
-        editText.setHintTextColor(ContextCompat.getColor(context, R.color.ui_shell_text_secondary))
+        editText.setTextColor(ContextCompat.getColor(context, R.color.app_dialog_text_primary))
+        editText.setHintTextColor(ContextCompat.getColor(context, R.color.app_dialog_text_secondary))
         editText.setBackgroundResource(R.drawable.custom_resolution_input_bg)
         editText.setPadding(dpToPx(12))
         editText.minHeight = dpToPx(48)
