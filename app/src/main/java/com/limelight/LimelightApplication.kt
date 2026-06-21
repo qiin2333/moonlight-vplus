@@ -6,6 +6,7 @@ import android.util.Log
 import com.google.firebase.FirebaseApp
 import com.limelight.binding.crypto.AndroidCryptoProvider
 import com.limelight.crash.CrashReporter
+import com.limelight.utils.ConfigurationSyncScheduler
 
 /**
  * Custom Application that wires up crash diagnostics as early as possible.
@@ -28,6 +29,7 @@ class LimelightApplication : Application() {
         super.onCreate()
         initializeFirebaseSafely()
         CrashReporter.install(this)
+        ConfigurationSyncScheduler.runNow(this)
         warmUpClientCertificate()
     }
 

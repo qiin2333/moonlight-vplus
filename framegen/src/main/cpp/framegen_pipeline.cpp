@@ -1,5 +1,6 @@
 #include "framegen_pipeline.hpp"
 
+#include <android/data_space.h>
 #include <android/log.h>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
@@ -8,11 +9,11 @@
 
 #include "extract/extract.hpp"
 #include "extract/trans.hpp"
+#include "fsr_upscaler.hpp"
 
 #include "yuv_to_rgba.comp.spv.h"
-#include "rgba_upscale.comp.spv.h"
 #include "yuv_to_rgba16f.comp.spv.h"
-#include "rgba_upscale16f.comp.spv.h"
+#include "yuv_to_rgb10a2.comp.spv.h"
 
 #include <algorithm>
 #include <atomic>
@@ -45,9 +46,11 @@ constexpr int32_t kHdrModeSdr = 0;
 constexpr int32_t kHdrModeHdr10 = 1;
 constexpr int32_t kHdrModeHlg = 2;
 
-constexpr int32_t kDataspaceSrgbFull = 142671872;
-constexpr int32_t kDataspaceBt2020HlgFull = 0x09C60000;
-constexpr int32_t kDataspaceBt2020PqFull = 0x09860000;
+constexpr int32_t kDataspaceSrgbFull = static_cast<int32_t>(ADATASPACE_SRGB);
+constexpr int32_t kDataspaceBt2020HlgFull = static_cast<int32_t>(ADATASPACE_BT2020_HLG);
+constexpr int32_t kDataspaceBt2020HlgLimited = static_cast<int32_t>(ADATASPACE_BT2020_ITU_HLG);
+constexpr int32_t kDataspaceBt2020PqFull = static_cast<int32_t>(ADATASPACE_BT2020_PQ);
+constexpr int32_t kDataspaceBt2020PqLimited = static_cast<int32_t>(ADATASPACE_BT2020_ITU_PQ);
 
 enum class ProbeState : uint8_t {
     kUninitialized = 0,
@@ -60,6 +63,16 @@ enum class ContextBootState : uint8_t {
     kReady,
     kFailed,
 };
+
+int32_t hdrDataspaceForMode(int32_t hdrMode, bool fullRange) {
+    if (hdrMode == kHdrModeHlg) {
+        return fullRange ? kDataspaceBt2020HlgFull : kDataspaceBt2020HlgLimited;
+    }
+    if (hdrMode == kHdrModeHdr10) {
+        return fullRange ? kDataspaceBt2020PqFull : kDataspaceBt2020PqLimited;
+    }
+    return kDataspaceSrgbFull;
+}
 
 struct AhbDeleter {
     void operator()(AHardwareBuffer* buffer) const {
@@ -123,8 +136,11 @@ struct ContextResources {
     float srcUvScaleX{1.0F};
     float srcUvScaleY{1.0F};
     bool hdrPassthrough{false};
+    bool hdrFullRange{false};
     uint32_t ahbFormat{AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM};
     VkFormat vkFormat{VK_FORMAT_R8G8B8A8_UNORM};
+    uint32_t presentAhbFormat{AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM};
+    VkFormat presentVkFormat{VK_FORMAT_R8G8B8A8_UNORM};
     int32_t windowFormat{WINDOW_FORMAT_RGBA_8888};
     int32_t windowDataspace{kDataspaceSrgbFull};
     uint32_t bytesPerPixel{4};
@@ -149,11 +165,16 @@ struct ContextResources {
     VkImage lsfgOutputImage{VK_NULL_HANDLE};
     VkDeviceMemory lsfgOutputMemory{VK_NULL_HANDLE};
     VkImageView lsfgOutputView{VK_NULL_HANDLE};
+    VkImage fsrIntermediateImage{VK_NULL_HANDLE};
+    VkDeviceMemory fsrIntermediateMemory{VK_NULL_HANDLE};
+    VkImageView fsrIntermediateView{VK_NULL_HANDLE};
 
     // 阶段 3.3a-iii.a：YUV→RGBA compute pipeline（不含 ycbcr conversion；
     // conversion 与 decoder external format 绑定，要等首帧到达后才在 3.3a-iii.b 创建）。
     VkShaderModule shaderModule{VK_NULL_HANDLE};
+    VkShaderModule presentShaderModule{VK_NULL_HANDLE};
     VkShaderModule upscaleShaderModule{VK_NULL_HANDLE};
+    VkShaderModule upscaleRcasShaderModule{VK_NULL_HANDLE};
 
     // 阶段 3.3a-iii.b.1：首帧到达后才创建的 ycbcr conversion + descriptor 套件 + compute pipeline。
     // conversion 绑 decoder externalFormat，所以必须延后到第一帧才能建。
@@ -163,6 +184,7 @@ struct ContextResources {
     VkDescriptorSetLayout dsLayout{VK_NULL_HANDLE};
     VkPipelineLayout pipelineLayout{VK_NULL_HANDLE};
     VkPipeline pipeline{VK_NULL_HANDLE};
+    VkPipeline presentPipeline{VK_NULL_HANDLE};
 
     // 阶段 3.3a-iii.b.2：descriptor pool + 2 个 ping-pong descriptor sets。
     // binding 1 (storage image dst) 在 pipeline 创建时一次性 pre-write 到 input0/input1View；
@@ -173,8 +195,10 @@ struct ContextResources {
     VkDescriptorSetLayout upscaleDsLayout{VK_NULL_HANDLE};
     VkPipelineLayout upscalePipelineLayout{VK_NULL_HANDLE};
     VkPipeline upscalePipeline{VK_NULL_HANDLE};
+    VkPipeline upscaleRcasPipeline{VK_NULL_HANDLE};
     VkDescriptorPool upscaleDsPool{VK_NULL_HANDLE};
     VkDescriptorSet upscaleDsSet{VK_NULL_HANDLE};
+    VkDescriptorSet upscaleRcasDsSet{VK_NULL_HANDLE};
     VkCommandBuffer upscaleCmd{VK_NULL_HANDLE};
     VkFence upscaleFence{VK_NULL_HANDLE};
     uint32_t pingPongIndex{0};
@@ -223,8 +247,14 @@ struct ContextResources {
         if (pipeline != VK_NULL_HANDLE) {
             vkDestroyPipeline(ownerDevice, pipeline, nullptr);
         }
+        if (presentPipeline != VK_NULL_HANDLE) {
+            vkDestroyPipeline(ownerDevice, presentPipeline, nullptr);
+        }
         if (upscalePipeline != VK_NULL_HANDLE) {
             vkDestroyPipeline(ownerDevice, upscalePipeline, nullptr);
+        }
+        if (upscaleRcasPipeline != VK_NULL_HANDLE) {
+            vkDestroyPipeline(ownerDevice, upscaleRcasPipeline, nullptr);
         }
         if (pipelineLayout != VK_NULL_HANDLE) {
             vkDestroyPipelineLayout(ownerDevice, pipelineLayout, nullptr);
@@ -250,8 +280,14 @@ struct ContextResources {
         if (shaderModule != VK_NULL_HANDLE) {
             vkDestroyShaderModule(ownerDevice, shaderModule, nullptr);
         }
+        if (presentShaderModule != VK_NULL_HANDLE) {
+            vkDestroyShaderModule(ownerDevice, presentShaderModule, nullptr);
+        }
         if (upscaleShaderModule != VK_NULL_HANDLE) {
             vkDestroyShaderModule(ownerDevice, upscaleShaderModule, nullptr);
+        }
+        if (upscaleRcasShaderModule != VK_NULL_HANDLE) {
+            vkDestroyShaderModule(ownerDevice, upscaleRcasShaderModule, nullptr);
         }
         if (input0View != VK_NULL_HANDLE) {
             vkDestroyImageView(ownerDevice, input0View, nullptr);
@@ -268,6 +304,9 @@ struct ContextResources {
         if (lsfgOutputView != VK_NULL_HANDLE) {
             vkDestroyImageView(ownerDevice, lsfgOutputView, nullptr);
         }
+        if (fsrIntermediateView != VK_NULL_HANDLE) {
+            vkDestroyImageView(ownerDevice, fsrIntermediateView, nullptr);
+        }
         if (input0Image != VK_NULL_HANDLE) {
             vkDestroyImage(ownerDevice, input0Image, nullptr);
         }
@@ -282,6 +321,9 @@ struct ContextResources {
         }
         if (lsfgOutputImage != VK_NULL_HANDLE) {
             vkDestroyImage(ownerDevice, lsfgOutputImage, nullptr);
+        }
+        if (fsrIntermediateImage != VK_NULL_HANDLE) {
+            vkDestroyImage(ownerDevice, fsrIntermediateImage, nullptr);
         }
         if (input0Memory != VK_NULL_HANDLE) {
             vkFreeMemory(ownerDevice, input0Memory, nullptr);
@@ -298,6 +340,9 @@ struct ContextResources {
         if (lsfgOutputMemory != VK_NULL_HANDLE) {
             vkFreeMemory(ownerDevice, lsfgOutputMemory, nullptr);
         }
+        if (fsrIntermediateMemory != VK_NULL_HANDLE) {
+            vkFreeMemory(ownerDevice, fsrIntermediateMemory, nullptr);
+        }
     }
 };
 
@@ -305,6 +350,7 @@ std::atomic<ProbeState> g_probeState{ProbeState::kUninitialized};
 std::atomic<ContextBootState> g_contextBootState{ContextBootState::kUninitialized};
 std::atomic<bool> g_hdrEnabled{false};
 std::atomic<int32_t> g_hdrMode{kHdrModeSdr};
+std::atomic<bool> g_hdrFullRange{false};
 std::mutex g_contextMutex;
 std::unique_ptr<VulkanContext> g_vk;
 std::unique_ptr<ContextResources> g_context;
@@ -318,7 +364,7 @@ int32_t g_outputWindowConfiguredFormat = 0;
 int32_t g_outputWindowConfiguredDataspace = 0;
 int32_t g_outputWindowHintedFps = 0;
 bool g_outputWindowBuffersRequested = false;
-std::atomic<uint64_t> g_blitCount{0};
+std::atomic<uint64_t> g_presentCount{0};
 
 struct PresentFrame {
     ANativeWindow* window{nullptr};
@@ -333,6 +379,19 @@ struct PresentFrame {
     std::string tag;
 };
 
+struct LastPresentedFrame {
+    ANativeWindow* window{nullptr};
+    std::vector<uint8_t> rgba;
+    int32_t width{0};
+    int32_t height{0};
+    int32_t displayWidth{0};
+    int32_t displayHeight{0};
+    uint32_t bytesPerPixel{4};
+    uint64_t sourceFrame{0};
+    uint32_t fallbackCount{0};
+    std::chrono::steady_clock::time_point presentedAt{};
+};
+
 std::mutex g_presentMutex;
 std::condition_variable g_presentCv;
 std::deque<PresentFrame> g_presentQueue;
@@ -341,6 +400,7 @@ bool g_presentStop = false;
 uint64_t g_presentEnqueued = 0;
 uint64_t g_presentDropped = 0;
 std::atomic<int32_t> g_presentQueueMax{2};
+LastPresentedFrame g_lastPresentedFrame;
 
 struct AdaptiveFramegenState {
     int64_t lastTimestampNs{0};
@@ -351,7 +411,7 @@ struct AdaptiveFramegenState {
     uint32_t slowLsfgFrames{0};
     uint32_t slowCooldownFrames{0};
     uint32_t cadenceBreakFrames{0};
-    uint32_t cadenceSuppressFrames{0};
+    uint32_t interpSuppressFrames{0};
 };
 
 struct YuvToRgbaPushConstants {
@@ -366,15 +426,109 @@ std::atomic<int32_t> g_slowLsfgThresholdMs{18};
 std::atomic<bool> g_allowHighInputBypass{false};
 AdaptiveFramegenState g_adaptive;
 
+enum FramegenRuntimeMode : int32_t {
+    kModeNormal = 0,
+    kModeHighInputBypass = 1,
+    kModeSlowCooldown = 2,
+    kModeCadenceRecover = 3,
+};
+
+std::atomic<uint64_t> g_statsRealFrames{0};
+std::atomic<uint64_t> g_statsInterpolatedFrames{0};
+std::atomic<uint64_t> g_statsBypassFrames{0};
+std::atomic<uint64_t> g_statsRealOnlyFrames{0};
+std::atomic<uint64_t> g_statsPresenterDrops{0};
+std::atomic<uint64_t> g_statsFallbackFrames{0};
+std::atomic<int32_t> g_statsQueueDepth{0};
+std::atomic<int32_t> g_statsInputFpsTenths{0};
+std::atomic<int32_t> g_statsMode{kModeNormal};
+std::atomic<int32_t> g_statsLastLsfgWaitMs{0};
+std::atomic<int32_t> g_statsLastBlitMs{0};
+
+std::mutex g_presentBufferPoolMutex;
+std::vector<std::vector<uint8_t>> g_presentBufferPool;
+
 constexpr uint64_t kFirstAvailableDeviceUuid = 0x1463ABACULL;
 constexpr uint32_t kGenerationCount = 1; // 2x 插帧：每两帧之间生成 1 帧。
 constexpr int64_t kSlowFrameMs = 16;
-constexpr int64_t kSlowBlitMs = 8;
-constexpr uint32_t kCadenceRecoverySuppressFrames = 2;
+constexpr int64_t kSlowPresentMs = 8;
+constexpr uint32_t kCadenceRecoverySuppressFrames = 1;
+constexpr size_t kPresentBufferPoolMax = 3;
+constexpr size_t kPresentBufferPoolMaxBytes = 96ULL * 1024ULL * 1024ULL;
+constexpr bool kPreferHdrRgb10Present = true;
 
 int64_t elapsedMs(std::chrono::steady_clock::time_point start,
                   std::chrono::steady_clock::time_point end) {
     return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+}
+
+std::chrono::nanoseconds presenterIntervalForTarget(int32_t targetFps) {
+    if (targetFps < 90) {
+        return std::chrono::nanoseconds::zero();
+    }
+    const int32_t clampedFps = std::clamp(targetFps, 1, 240);
+    return std::chrono::nanoseconds(1'000'000'000LL / clampedFps);
+}
+
+bool isUnsetTimePoint(std::chrono::steady_clock::time_point value) {
+    return value.time_since_epoch().count() == 0;
+}
+
+void pacePresenterFrame(std::chrono::steady_clock::time_point& nextPresentAt,
+                        std::chrono::nanoseconds interval) {
+    if (interval <= std::chrono::nanoseconds::zero()) {
+        nextPresentAt = {};
+        return;
+    }
+
+    const auto maxLag = interval * 3;
+    const auto now = std::chrono::steady_clock::now();
+    if (isUnsetTimePoint(nextPresentAt) || now - nextPresentAt > maxLag) {
+        nextPresentAt = now;
+    }
+    if (now < nextPresentAt) {
+        std::this_thread::sleep_until(nextPresentAt);
+    }
+
+    const auto afterSleep = std::chrono::steady_clock::now();
+    if (afterSleep - nextPresentAt > maxLag) {
+        nextPresentAt = afterSleep + interval;
+    } else {
+        nextPresentAt += interval;
+    }
+}
+
+void recordPresentedFrame(const PresentFrame& frame, int64_t totalMs) {
+    g_statsLastBlitMs.store(static_cast<int32_t>(std::clamp<int64_t>(totalMs, 0, 60'000)),
+                            std::memory_order_release);
+    if (frame.tag.rfind("interp", 0) == 0) {
+        g_statsInterpolatedFrames.fetch_add(1, std::memory_order_relaxed);
+    } else if (frame.tag == "real-bypass") {
+        g_statsBypassFrames.fetch_add(1, std::memory_order_relaxed);
+    } else if (frame.tag == "real-fallback") {
+        g_statsFallbackFrames.fetch_add(1, std::memory_order_relaxed);
+    } else if (frame.tag == "real") {
+        g_statsRealOnlyFrames.fetch_add(1, std::memory_order_relaxed);
+        g_statsRealFrames.fetch_add(1, std::memory_order_relaxed);
+    } else if (frame.tag == "real-pair") {
+        g_statsRealFrames.fetch_add(1, std::memory_order_relaxed);
+    } else {
+        g_statsRealFrames.fetch_add(1, std::memory_order_relaxed);
+    }
+}
+
+void resetStats() {
+    g_statsRealFrames.store(0, std::memory_order_release);
+    g_statsInterpolatedFrames.store(0, std::memory_order_release);
+    g_statsBypassFrames.store(0, std::memory_order_release);
+    g_statsRealOnlyFrames.store(0, std::memory_order_release);
+    g_statsPresenterDrops.store(0, std::memory_order_release);
+    g_statsFallbackFrames.store(0, std::memory_order_release);
+    g_statsQueueDepth.store(0, std::memory_order_release);
+    g_statsInputFpsTenths.store(0, std::memory_order_release);
+    g_statsMode.store(kModeNormal, std::memory_order_release);
+    g_statsLastLsfgWaitMs.store(0, std::memory_order_release);
+    g_statsLastBlitMs.store(0, std::memory_order_release);
 }
 
 void applyOutputWindowHintsLocked(bool requestBuffers) {
@@ -419,11 +573,133 @@ void applyOutputWindowHintsLocked(bool requestBuffers) {
     g_outputWindowBuffersRequested = true;
 }
 
+std::vector<uint8_t> acquirePresentBuffer(size_t bytes) {
+    std::vector<uint8_t> buffer;
+    {
+        std::lock_guard<std::mutex> lock(g_presentBufferPoolMutex);
+        auto found = std::find_if(
+            g_presentBufferPool.begin(),
+            g_presentBufferPool.end(),
+            [bytes](const std::vector<uint8_t>& candidate) {
+                return candidate.capacity() >= bytes;
+            });
+        if (found != g_presentBufferPool.end()) {
+            buffer = std::move(*found);
+            g_presentBufferPool.erase(found);
+        }
+    }
+    buffer.resize(bytes);
+    return buffer;
+}
+
+void releasePresentBuffer(std::vector<uint8_t>& buffer) {
+    if (buffer.empty() && buffer.capacity() == 0) {
+        return;
+    }
+
+    buffer.clear();
+    if (buffer.capacity() > kPresentBufferPoolMaxBytes) {
+        std::vector<uint8_t>().swap(buffer);
+        return;
+    }
+
+    std::lock_guard<std::mutex> lock(g_presentBufferPoolMutex);
+    if (g_presentBufferPool.size() < kPresentBufferPoolMax) {
+        g_presentBufferPool.emplace_back(std::move(buffer));
+    } else {
+        std::vector<uint8_t>().swap(buffer);
+    }
+}
+
+void clearPresentBufferPool() {
+    std::lock_guard<std::mutex> lock(g_presentBufferPoolMutex);
+    g_presentBufferPool.clear();
+}
+
 void releasePresentFrame(PresentFrame& frame) {
+    releasePresentBuffer(frame.rgba);
     if (frame.window != nullptr) {
         ANativeWindow_release(frame.window);
         frame.window = nullptr;
     }
+}
+
+void releaseLastPresentedFrameLocked() {
+    if (g_lastPresentedFrame.window != nullptr) {
+        ANativeWindow_release(g_lastPresentedFrame.window);
+    }
+    releasePresentBuffer(g_lastPresentedFrame.rgba);
+    g_lastPresentedFrame = LastPresentedFrame{};
+}
+
+void rememberFrameForFallbackLocked(PresentFrame& frame,
+                                    std::chrono::steady_clock::time_point presentedAt) {
+    if (frame.window == nullptr || frame.rgba.empty() || frame.tag == "real-fallback") {
+        return;
+    }
+
+    if (g_lastPresentedFrame.window != nullptr) {
+        ANativeWindow_release(g_lastPresentedFrame.window);
+    }
+    releasePresentBuffer(g_lastPresentedFrame.rgba);
+    ANativeWindow_acquire(frame.window);
+    g_lastPresentedFrame.window = frame.window;
+    g_lastPresentedFrame.rgba = std::move(frame.rgba);
+    g_lastPresentedFrame.width = frame.width;
+    g_lastPresentedFrame.height = frame.height;
+    g_lastPresentedFrame.displayWidth = frame.displayWidth;
+    g_lastPresentedFrame.displayHeight = frame.displayHeight;
+    g_lastPresentedFrame.bytesPerPixel = frame.bytesPerPixel;
+    g_lastPresentedFrame.sourceFrame = frame.sourceFrame;
+    g_lastPresentedFrame.fallbackCount = 0;
+    g_lastPresentedFrame.presentedAt = presentedAt;
+}
+
+bool makeFallbackFrameLocked(PresentFrame& out) {
+    constexpr uint32_t kMaxFallbackRepeats = 2;
+    const int32_t targetFps = g_outputFrameRate.load(std::memory_order_acquire);
+    if (targetFps < 90 ||
+        g_lastPresentedFrame.window == nullptr ||
+        g_lastPresentedFrame.rgba.empty() ||
+        g_lastPresentedFrame.fallbackCount >= kMaxFallbackRepeats) {
+        return false;
+    }
+
+    // The caller only asks for fallback when a display slot is due. Leave room for
+    // the ANativeWindow copy/post cost, otherwise 120 Hz misses the next slot.
+    const double slotMs = 1000.0 / static_cast<double>(targetFps);
+    const double minMissingMs = slotMs * 0.65;
+    const auto now = std::chrono::steady_clock::now();
+    const double sinceLastMs =
+        static_cast<double>(
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                now - g_lastPresentedFrame.presentedAt).count()) / 1000.0;
+    if (sinceLastMs < minMissingMs) {
+        return false;
+    }
+
+    ANativeWindow_acquire(g_lastPresentedFrame.window);
+    out.window = g_lastPresentedFrame.window;
+    try {
+        out.rgba = acquirePresentBuffer(g_lastPresentedFrame.rgba.size());
+        std::memcpy(out.rgba.data(), g_lastPresentedFrame.rgba.data(), out.rgba.size());
+    } catch (const std::exception& e) {
+        ANativeWindow_release(out.window);
+        out.window = nullptr;
+        LOGW("stage3.3c: fallback buffer unavailable: %s", e.what());
+        return false;
+    }
+    out.width = g_lastPresentedFrame.width;
+    out.height = g_lastPresentedFrame.height;
+    out.displayWidth = g_lastPresentedFrame.displayWidth;
+    out.displayHeight = g_lastPresentedFrame.displayHeight;
+    out.bytesPerPixel = g_lastPresentedFrame.bytesPerPixel;
+    out.sourceFrame = g_lastPresentedFrame.sourceFrame;
+    out.sourceOrder = 99;
+    out.tag = "real-fallback";
+    g_lastPresentedFrame.fallbackCount += 1;
+    g_lastPresentedFrame.presentedAt = now;
+    return true;
 }
 
 uint64_t clearPresenterQueue(const char* reason) {
@@ -435,7 +711,10 @@ uint64_t clearPresenterQueue(const char* reason) {
             releasePresentFrame(frame);
         }
         g_presentQueue.clear();
+        releaseLastPresentedFrameLocked();
         g_presentDropped += cleared;
+        g_statsPresenterDrops.fetch_add(cleared, std::memory_order_relaxed);
+        g_statsQueueDepth.store(0, std::memory_order_release);
     }
     if (cleared > 0) {
         LOGW("stage3.3c: presenter queue clear reason=%s cleared=%llu",
@@ -536,17 +815,22 @@ void presentFrameToWindow(PresentFrame frame) {
         LOGE("stage3.3c: presenter ANativeWindow_unlockAndPost(%s) rc=%d",
              frame.tag.c_str(), postRc);
     }
-    releasePresentFrame(frame);
     const auto totalEnd = std::chrono::steady_clock::now();
-
-    const uint64_t blitCount = g_blitCount.fetch_add(1, std::memory_order_relaxed) + 1;
     const int64_t totalMs = elapsedMs(totalStart, totalEnd);
-    const bool logSample = (blitCount == 1 || (blitCount % 120) == 0);
-    if (logSample || totalMs >= kSlowBlitMs) {
+    if (postRc == 0) {
+        recordPresentedFrame(frame, totalMs);
+        std::lock_guard<std::mutex> lock(g_presentMutex);
+        rememberFrameForFallbackLocked(frame, totalEnd);
+    }
+    releasePresentFrame(frame);
+
+    const uint64_t presentCount = g_presentCount.fetch_add(1, std::memory_order_relaxed) + 1;
+    const bool logSample = (presentCount == 1 || (presentCount % 120) == 0);
+    if (logSample || totalMs >= kSlowPresentMs) {
         LOGI("stage3.3c: presenter timing tag=%s count=%llu src=%llu/%u total=%lldms "
              "winLock=%lldms copy=%lldms post=%lldms src=%dx%d display=%dx%d dst=%dx%d/stride=%d",
              frame.tag.c_str(),
-             static_cast<unsigned long long>(blitCount),
+             static_cast<unsigned long long>(presentCount),
              static_cast<unsigned long long>(frame.sourceFrame),
              frame.sourceOrder,
              static_cast<long long>(totalMs),
@@ -560,19 +844,64 @@ void presentFrameToWindow(PresentFrame frame) {
 }
 
 void presenterLoop() {
+    std::chrono::steady_clock::time_point nextPresentAt{};
     for (;;) {
         PresentFrame frame;
         {
             std::unique_lock<std::mutex> lock(g_presentMutex);
-            g_presentCv.wait(lock, [] {
-                return g_presentStop || !g_presentQueue.empty();
-            });
-            if (g_presentStop && g_presentQueue.empty()) {
+            while (g_presentQueue.empty() && !g_presentStop && frame.window == nullptr) {
+                const int32_t targetFps = g_outputFrameRate.load(std::memory_order_acquire);
+                const auto interval = presenterIntervalForTarget(targetFps);
+                if (interval <= std::chrono::nanoseconds::zero()) {
+                    nextPresentAt = {};
+                    g_presentCv.wait(lock, [] {
+                        return g_presentStop || !g_presentQueue.empty();
+                    });
+                    continue;
+                }
+
+                const auto now = std::chrono::steady_clock::now();
+                if (isUnsetTimePoint(nextPresentAt) || now - nextPresentAt > interval * 3) {
+                    nextPresentAt = now + interval;
+                }
+                if (now >= nextPresentAt) {
+                    if (makeFallbackFrameLocked(frame)) {
+                        break;
+                    }
+                    g_presentCv.wait_for(lock, std::chrono::milliseconds(1), [] {
+                        return g_presentStop || !g_presentQueue.empty();
+                    });
+                    continue;
+                }
+                g_presentCv.wait_until(lock, nextPresentAt, [] {
+                    return g_presentStop || !g_presentQueue.empty();
+                });
+                if (!g_presentQueue.empty()) {
+                    break;
+                }
+                if (g_presentStop) {
+                    break;
+                }
+                if (std::chrono::steady_clock::now() >= nextPresentAt &&
+                    makeFallbackFrameLocked(frame)) {
+                    break;
+                }
+                if (std::chrono::steady_clock::now() - nextPresentAt > interval * 3) {
+                    nextPresentAt = std::chrono::steady_clock::now();
+                }
+            }
+            if (g_presentStop && g_presentQueue.empty() && frame.window == nullptr) {
                 break;
             }
-            frame = std::move(g_presentQueue.front());
-            g_presentQueue.pop_front();
+            if (frame.window == nullptr) {
+                frame = std::move(g_presentQueue.front());
+                g_presentQueue.pop_front();
+                g_statsQueueDepth.store(static_cast<int32_t>(g_presentQueue.size()),
+                                        std::memory_order_release);
+            }
         }
+        const int32_t targetFps = g_outputFrameRate.load(std::memory_order_acquire);
+        pacePresenterFrame(nextPresentAt, presenterIntervalForTarget(targetFps));
         presentFrameToWindow(std::move(frame));
     }
 }
@@ -595,6 +924,8 @@ void stopPresenterThread() {
             releasePresentFrame(frame);
         }
         g_presentQueue.clear();
+        releaseLastPresentedFrameLocked();
+        g_statsQueueDepth.store(0, std::memory_order_release);
         presenter = std::move(g_presentThread);
     }
     g_presentCv.notify_all();
@@ -608,6 +939,7 @@ void stopPresenterThread() {
         g_presentEnqueued = 0;
         g_presentDropped = 0;
     }
+    clearPresentBufferPool();
 }
 
 uint32_t alignDown(uint32_t value, uint32_t alignment) {
@@ -784,6 +1116,98 @@ ImportedImage importOwnedColorAhb(VkDevice device,
         vkFreeMemory(device, out.memory, nullptr);
         vkDestroyImage(device, out.image, nullptr);
         throw std::runtime_error("vkCreateImageView (owned RGBA AHB) failed");
+    }
+    return out;
+}
+
+uint32_t findMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& memProps,
+                             uint32_t typeBits,
+                             VkMemoryPropertyFlags preferredFlags) {
+    uint32_t fallback = UINT32_MAX;
+    for (uint32_t i = 0; i < memProps.memoryTypeCount; ++i) {
+        if ((typeBits & (1u << i)) == 0) {
+            continue;
+        }
+        if ((memProps.memoryTypes[i].propertyFlags & preferredFlags) == preferredFlags) {
+            return i;
+        }
+        if (fallback == UINT32_MAX) {
+            fallback = i;
+        }
+    }
+    return fallback;
+}
+
+ImportedImage createDeviceColorImage(VkDevice device,
+                                     const VkPhysicalDeviceMemoryProperties& memProps,
+                                     uint32_t width, uint32_t height,
+                                     VkFormat vkFormat) {
+    VkImageCreateInfo imgCi{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = vkFormat,
+        .extent = { width, height, 1 },
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .usage = VK_IMAGE_USAGE_STORAGE_BIT |
+                 VK_IMAGE_USAGE_SAMPLED_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .queueFamilyIndexCount = 0,
+        .pQueueFamilyIndices = nullptr,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    };
+
+    ImportedImage out{};
+    if (vkCreateImage(device, &imgCi, nullptr, &out.image) != VK_SUCCESS) {
+        throw std::runtime_error("vkCreateImage (FSR intermediate) failed");
+    }
+
+    VkMemoryRequirements req{};
+    vkGetImageMemoryRequirements(device, out.image, &req);
+    const uint32_t typeIndex = findMemoryTypeIndex(
+        memProps,
+        req.memoryTypeBits,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    if (typeIndex == UINT32_MAX) {
+        vkDestroyImage(device, out.image, nullptr);
+        throw std::runtime_error("no compatible memory type for FSR intermediate");
+    }
+
+    VkMemoryAllocateInfo alloc{
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .pNext = nullptr,
+        .allocationSize = req.size,
+        .memoryTypeIndex = typeIndex,
+    };
+    if (vkAllocateMemory(device, &alloc, nullptr, &out.memory) != VK_SUCCESS) {
+        vkDestroyImage(device, out.image, nullptr);
+        throw std::runtime_error("vkAllocateMemory (FSR intermediate) failed");
+    }
+    if (vkBindImageMemory(device, out.image, out.memory, 0) != VK_SUCCESS) {
+        vkFreeMemory(device, out.memory, nullptr);
+        vkDestroyImage(device, out.image, nullptr);
+        throw std::runtime_error("vkBindImageMemory (FSR intermediate) failed");
+    }
+
+    VkImageViewCreateInfo viewCi{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .image = out.image,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = vkFormat,
+        .components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
+                       VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY},
+        .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
+    };
+    if (vkCreateImageView(device, &viewCi, nullptr, &out.view) != VK_SUCCESS) {
+        vkFreeMemory(device, out.memory, nullptr);
+        vkDestroyImage(device, out.image, nullptr);
+        throw std::runtime_error("vkCreateImageView (FSR intermediate) failed");
     }
     return out;
 }
@@ -1121,16 +1545,29 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
         resources->presentWidth = streamWidth;
         resources->presentHeight = streamHeight;
         const int32_t hdrMode = g_hdrMode.load(std::memory_order_acquire);
+        const bool hdrFullRange = g_hdrFullRange.load(std::memory_order_acquire);
         resources->hdrMode = hdrMode;
+        resources->hdrFullRange = hdrFullRange;
         resources->hdrPassthrough =
             g_hdrEnabled.load(std::memory_order_acquire) && hdrMode != kHdrModeSdr;
+        resources->presentAhbFormat = resources->ahbFormat;
+        resources->presentVkFormat = resources->vkFormat;
         if (resources->hdrPassthrough) {
             resources->ahbFormat = AHARDWAREBUFFER_FORMAT_R16G16B16A16_FLOAT;
             resources->vkFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
-            resources->windowFormat = WINDOW_FORMAT_RGBA_FP16;
-            resources->windowDataspace =
-                hdrMode == kHdrModeHlg ? kDataspaceBt2020HlgFull : kDataspaceBt2020PqFull;
-            resources->bytesPerPixel = 8;
+            resources->windowDataspace = hdrDataspaceForMode(hdrMode, hdrFullRange);
+            if (kPreferHdrRgb10Present) {
+                resources->presentAhbFormat = AHARDWAREBUFFER_FORMAT_R10G10B10A2_UNORM;
+                resources->presentVkFormat = VK_FORMAT_A2B10G10R10_UNORM_PACK32;
+                resources->windowFormat =
+                    static_cast<int32_t>(AHARDWAREBUFFER_FORMAT_R10G10B10A2_UNORM);
+                resources->bytesPerPixel = 4;
+            } else {
+                resources->presentAhbFormat = resources->ahbFormat;
+                resources->presentVkFormat = resources->vkFormat;
+                resources->windowFormat = WINDOW_FORMAT_RGBA_FP16;
+                resources->bytesPerPixel = 8;
+            }
         }
         if (decoderDesc.width > 0 && streamWidth > 0) {
             resources->srcUvScaleX = std::min(
@@ -1146,21 +1583,25 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
         resources->input0 = allocateOwnedColorAhb(ctxWidth, ctxHeight, resources->ahbFormat);
         resources->input1 = allocateOwnedColorAhb(ctxWidth, ctxHeight, resources->ahbFormat);
         resources->realOutput = allocateOwnedColorAhb(
-            resources->presentWidth, resources->presentHeight, resources->ahbFormat);
+            resources->presentWidth, resources->presentHeight, resources->presentAhbFormat);
         resources->interpOutput = allocateOwnedColorAhb(
-            resources->presentWidth, resources->presentHeight, resources->ahbFormat);
-        resources->outputs.emplace_back(allocateOwnedColorAhb(ctxWidth, ctxHeight, resources->ahbFormat));
+            resources->presentWidth, resources->presentHeight, resources->presentAhbFormat);
+        resources->outputs.emplace_back(
+            allocateOwnedColorAhb(ctxWidth, ctxHeight, resources->ahbFormat));
         const auto allocateEnd = std::chrono::steady_clock::now();
-        LOGI("stage3.2 bootstrap timing: allocateOwnedAhb=%lldms total=%lldms fg=%ux%u present=%ux%u hdrPass=%d hdrMode=%d dataspace=0x%x vkFmt=%d ahbFmt=0x%x bpp=%u",
+        LOGI("stage3.2 bootstrap timing: allocateOwnedAhb=%lldms total=%lldms fg=%ux%u present=%ux%u hdrPass=%d hdrMode=%d fullRange=%d dataspace=0x%x vkFmt=%d ahbFmt=0x%x presentVkFmt=%d presentAhbFmt=0x%x bpp=%u",
              static_cast<long long>(elapsedMs(allocateStart, allocateEnd)),
              static_cast<long long>(elapsedMs(bootStart, allocateEnd)),
              ctxWidth, ctxHeight,
              resources->presentWidth, resources->presentHeight,
              static_cast<int>(resources->hdrPassthrough),
              hdrMode,
+             static_cast<int>(hdrFullRange),
              resources->windowDataspace,
              static_cast<int>(resources->vkFormat),
              resources->ahbFormat,
+             static_cast<int>(resources->presentVkFormat),
+             resources->presentAhbFormat,
              resources->bytesPerPixel);
 
         std::vector<AHardwareBuffer*> outputAhbs;
@@ -1223,7 +1664,7 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
                                             resources->realOutput.get(),
                                             resources->presentWidth,
                                             resources->presentHeight,
-                                            resources->vkFormat);
+                                            resources->presentVkFormat);
             resources->realOutputImage = real.image;
             resources->realOutputMemory = real.memory;
             resources->realOutputView = real.view;
@@ -1231,7 +1672,7 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
                                               resources->interpOutput.get(),
                                               resources->presentWidth,
                                               resources->presentHeight,
-                                              resources->vkFormat);
+                                              resources->presentVkFormat);
             resources->interpOutputImage = interp.image;
             resources->interpOutputMemory = interp.memory;
             resources->interpOutputView = interp.view;
@@ -1241,6 +1682,15 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
             resources->lsfgOutputImage = lsfgOut.image;
             resources->lsfgOutputMemory = lsfgOut.memory;
             resources->lsfgOutputView = lsfgOut.view;
+            auto fsrIntermediate = createDeviceColorImage(
+                g_vk->device,
+                g_vk->memProps,
+                resources->presentWidth,
+                resources->presentHeight,
+                resources->vkFormat);
+            resources->fsrIntermediateImage = fsrIntermediate.image;
+            resources->fsrIntermediateMemory = fsrIntermediate.memory;
+            resources->fsrIntermediateView = fsrIntermediate.view;
         }
         const auto ownedImportEnd = std::chrono::steady_clock::now();
         LOGI("stage3.2 bootstrap timing: importOwnedRgbaAhb=%lldms total=%lldms",
@@ -1269,21 +1719,45 @@ bool ensureContextBootstrapped(AHardwareBuffer* decoderAhb, int width, int heigh
             }
         }
         {
-            const size_t shaderSize = resources->hdrPassthrough
-                ? k_rgba_upscale16f_spv_size
-                : k_rgba_upscale_spv_size;
-            const uint32_t* shaderCode = resources->hdrPassthrough
-                ? k_rgba_upscale16f_spv
-                : k_rgba_upscale_spv;
+            if (resources->presentVkFormat != resources->vkFormat) {
+                VkShaderModuleCreateInfo smCi{
+                    .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+                    .pNext = nullptr,
+                    .flags = 0,
+                    .codeSize = k_yuv_to_rgb10a2_spv_size,
+                    .pCode = k_yuv_to_rgb10a2_spv,
+                };
+                if (vkCreateShaderModule(g_vk->device, &smCi, nullptr,
+                                         &resources->presentShaderModule) != VK_SUCCESS) {
+                    throw std::runtime_error("vkCreateShaderModule (yuv_to_rgb10a2) failed");
+                }
+            }
+        }
+        {
+            const auto shader = FsrUpscaler::easuShaderForIntermediateFormat(resources->vkFormat);
             VkShaderModuleCreateInfo smCi{
                 .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
                 .pNext = nullptr,
                 .flags = 0,
-                .codeSize = shaderSize,
-                .pCode = shaderCode,
+                .codeSize = shader.size,
+                .pCode = shader.code,
             };
             if (vkCreateShaderModule(g_vk->device, &smCi, nullptr, &resources->upscaleShaderModule) != VK_SUCCESS) {
-                throw std::runtime_error("vkCreateShaderModule (rgba_upscale) failed");
+                throw std::runtime_error(std::string("vkCreateShaderModule (") + shader.name + ") failed");
+            }
+        }
+        {
+            const auto shader = FsrUpscaler::rcasShaderForOutputFormat(resources->presentVkFormat);
+            VkShaderModuleCreateInfo smCi{
+                .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .codeSize = shader.size,
+                .pCode = shader.code,
+            };
+            if (vkCreateShaderModule(g_vk->device, &smCi, nullptr,
+                                     &resources->upscaleRcasShaderModule) != VK_SUCCESS) {
+                throw std::runtime_error(std::string("vkCreateShaderModule (") + shader.name + ") failed");
             }
         }
         const auto shaderModuleEnd = std::chrono::steady_clock::now();
@@ -1366,9 +1840,27 @@ bool prewarmContext(int width, int height) {
         AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM);
 }
 
+StatsSnapshot getStatsSnapshot() {
+    StatsSnapshot snapshot{};
+    snapshot.realFrames = g_statsRealFrames.load(std::memory_order_acquire);
+    snapshot.interpolatedFrames = g_statsInterpolatedFrames.load(std::memory_order_acquire);
+    snapshot.bypassFrames = g_statsBypassFrames.load(std::memory_order_acquire);
+    snapshot.realOnlyFrames = g_statsRealOnlyFrames.load(std::memory_order_acquire);
+    snapshot.presenterDrops = g_statsPresenterDrops.load(std::memory_order_acquire);
+    snapshot.fallbackFrames = g_statsFallbackFrames.load(std::memory_order_acquire);
+    snapshot.queueDepth = g_statsQueueDepth.load(std::memory_order_acquire);
+    snapshot.outputFrameRate = g_outputFrameRate.load(std::memory_order_acquire);
+    snapshot.inputFpsTenths = g_statsInputFpsTenths.load(std::memory_order_acquire);
+    snapshot.mode = g_statsMode.load(std::memory_order_acquire);
+    snapshot.lastLsfgWaitMs = g_statsLastLsfgWaitMs.load(std::memory_order_acquire);
+    snapshot.lastBlitMs = g_statsLastBlitMs.load(std::memory_order_acquire);
+    return snapshot;
+}
+
 void reset() {
     std::lock_guard<std::mutex> lock(g_contextMutex);
     stopPresenterThread();
+    resetStats();
     if (g_context != nullptr) {
         LOGI("stage3.2 reset: deleting lsfg context id=%d", g_context->contextId);
     }
@@ -1390,26 +1882,11 @@ void reset() {
         g_outputWindowConfiguredDataspace = 0;
         g_outputWindowHintedFps = 0;
         g_outputWindowBuffersRequested = false;
-        g_blitCount.store(0, std::memory_order_relaxed);
+        g_presentCount.store(0, std::memory_order_relaxed);
     }
 }
 
-void setHdrEnabled(bool enabled) {
-    const bool prev = g_hdrEnabled.exchange(enabled, std::memory_order_acq_rel);
-    if (!enabled) {
-        g_hdrMode.store(kHdrModeSdr, std::memory_order_release);
-    } else if (g_hdrMode.load(std::memory_order_acquire) == kHdrModeSdr) {
-        g_hdrMode.store(kHdrModeHdr10, std::memory_order_release);
-    }
-    if (prev != enabled) {
-        LOGI("setHdrEnabled: %d -> %d mode=%d (effective on next bootstrap)",
-             static_cast<int>(prev),
-             static_cast<int>(enabled),
-             g_hdrMode.load(std::memory_order_acquire));
-    }
-}
-
-void setHdrMode(int32_t mode) {
+void setHdrMode(int32_t mode, bool fullRange) {
     const int32_t clampedMode =
         mode == kHdrModeHlg ? kHdrModeHlg :
         mode == kHdrModeHdr10 ? kHdrModeHdr10 :
@@ -1417,11 +1894,16 @@ void setHdrMode(int32_t mode) {
     const int32_t prevMode = g_hdrMode.exchange(clampedMode, std::memory_order_acq_rel);
     const bool enabled = clampedMode != kHdrModeSdr;
     const bool prevEnabled = g_hdrEnabled.exchange(enabled, std::memory_order_acq_rel);
-    if (prevMode != clampedMode || prevEnabled != enabled) {
-        LOGI("setHdrMode: %d -> %d enabled=%d (effective on next bootstrap)",
+    const bool clampedFullRange = enabled && fullRange;
+    const bool prevFullRange = g_hdrFullRange.exchange(clampedFullRange, std::memory_order_acq_rel);
+    if (prevMode != clampedMode ||
+        prevEnabled != enabled ||
+        prevFullRange != clampedFullRange) {
+        LOGI("setHdrMode: %d -> %d enabled=%d fullRange=%d (effective on next bootstrap)",
              prevMode,
              clampedMode,
-             static_cast<int>(enabled));
+             static_cast<int>(enabled),
+             static_cast<int>(clampedFullRange));
     }
 }
 
@@ -1471,7 +1953,9 @@ void setTuningConfig(int32_t internalWidth,
 
 void setOutputWindow(ANativeWindow* nativeWindow) {
     std::lock_guard<std::mutex> lock(g_contextMutex);
-    if (g_outputWindow == nativeWindow) return;
+    if (g_outputWindow == nativeWindow) {
+        return;
+    }
     stopPresenterThread();
     if (g_outputWindow != nullptr) {
         ANativeWindow_release(g_outputWindow);
@@ -1483,7 +1967,7 @@ void setOutputWindow(ANativeWindow* nativeWindow) {
     g_outputWindowConfiguredDataspace = 0;
     g_outputWindowHintedFps = 0;
     g_outputWindowBuffersRequested = false;
-    g_blitCount.store(0, std::memory_order_relaxed);
+    g_presentCount.store(0, std::memory_order_relaxed);
     LOGI("stage3.3c: setOutputWindow window=%p", nativeWindow);
     applyOutputWindowHintsLocked(false);
 }
@@ -1517,13 +2001,14 @@ bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDR
         .pNext = nullptr,
         .externalFormat = fp.externalFormat,
     };
-    const bool forceHlgFullRange =
-        g_context->hdrPassthrough && g_context->hdrMode == kHdrModeHlg;
-    const VkSamplerYcbcrModelConversion ycbcrModel = forceHlgFullRange
+    const bool hdrYcbcr = g_context->hdrPassthrough;
+    const VkSamplerYcbcrModelConversion ycbcrModel = hdrYcbcr
         ? VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_2020
         : fp.suggestedYcbcrModel;
-    const VkSamplerYcbcrRange ycbcrRange = forceHlgFullRange
-        ? VK_SAMPLER_YCBCR_RANGE_ITU_FULL
+    const VkSamplerYcbcrRange ycbcrRange = hdrYcbcr
+        ? (g_context->hdrFullRange
+            ? VK_SAMPLER_YCBCR_RANGE_ITU_FULL
+            : VK_SAMPLER_YCBCR_RANGE_ITU_NARROW)
         : fp.suggestedYcbcrRange;
 
     VkSamplerYcbcrConversionCreateInfo cvtCi{
@@ -1658,7 +2143,18 @@ bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDR
         LOGE("stage3.3a-iii.b.1: vkCreateComputePipelines failed");
         return false;
     }
-    LOGI("stage3.3a-iii.b.1: pipeline ready IS_HDR=%d", isHdrSpec);
+    if (g_context->presentShaderModule != VK_NULL_HANDLE) {
+        pipeCi.stage.module = g_context->presentShaderModule;
+        if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipeCi, nullptr,
+                                     &g_context->presentPipeline) != VK_SUCCESS) {
+            LOGE("stage3.3a-iii.b.1: vkCreateComputePipelines present failed");
+            return false;
+        }
+    }
+    LOGI("stage3.3a-iii.b.1: pipeline ready IS_HDR=%d presentPipeline=%d presentVkFmt=%d",
+         isHdrSpec,
+         static_cast<int>(g_context->presentPipeline != VK_NULL_HANDLE),
+         static_cast<int>(g_context->presentVkFormat));
 
     // 6. descriptor pool + 2 个 ping-pong 集合，并预绑 binding 1 = input{0,1}View（GENERAL）。
     // binding 0 (combined sampler with immutable ycbcr sampler) 每帧 dispatch 时再覆盖。
@@ -1767,42 +2263,56 @@ bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDR
         .pushConstantRangeCount = 0,
         .pPushConstantRanges = nullptr,
     };
+    VkPushConstantRange fsrPushRange = FsrUpscaler::pushConstantRange();
+    upscalePlCi.pushConstantRangeCount = 1;
+    upscalePlCi.pPushConstantRanges = &fsrPushRange;
     if (vkCreatePipelineLayout(device, &upscalePlCi, nullptr, &g_context->upscalePipelineLayout) != VK_SUCCESS) {
         LOGE("stage3.3u: vkCreatePipelineLayout failed");
         return false;
     }
 
-    VkComputePipelineCreateInfo upscalePipeCi{
-        .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = 0,
-        .stage = {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+    auto createUpscalePipeline = [&](VkShaderModule module, VkPipeline* pipeline, const char* tag) -> bool {
+        VkComputePipelineCreateInfo pipeCi{
+            .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
             .pNext = nullptr,
             .flags = 0,
-            .stage = VK_SHADER_STAGE_COMPUTE_BIT,
-            .module = g_context->upscaleShaderModule,
-            .pName = "main",
-            .pSpecializationInfo = nullptr,
-        },
-        .layout = g_context->upscalePipelineLayout,
-        .basePipelineHandle = VK_NULL_HANDLE,
-        .basePipelineIndex = -1,
+            .stage = {
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                .module = module,
+                .pName = "main",
+                .pSpecializationInfo = nullptr,
+            },
+            .layout = g_context->upscalePipelineLayout,
+            .basePipelineHandle = VK_NULL_HANDLE,
+            .basePipelineIndex = -1,
+        };
+        if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipeCi, nullptr, pipeline) != VK_SUCCESS) {
+            LOGE("stage3.3u: vkCreateComputePipelines(%s) failed", tag);
+            return false;
+        }
+        return true;
     };
-    if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &upscalePipeCi, nullptr, &g_context->upscalePipeline) != VK_SUCCESS) {
-        LOGE("stage3.3u: vkCreateComputePipelines failed");
+    if (!createUpscalePipeline(g_context->upscaleShaderModule,
+                               &g_context->upscalePipeline,
+                               "fsr-easu") ||
+        !createUpscalePipeline(g_context->upscaleRcasShaderModule,
+                               &g_context->upscaleRcasPipeline,
+                               "fsr-rcas")) {
         return false;
     }
 
     VkDescriptorPoolSize upscalePoolSizes[2]{
-        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
-        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 },
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2 },
     };
     VkDescriptorPoolCreateInfo upscaleDpCi{
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
         .pNext = nullptr,
         .flags = 0,
-        .maxSets = 1,
+        .maxSets = 2,
         .poolSizeCount = 2,
         .pPoolSizes = upscalePoolSizes,
     };
@@ -1810,171 +2320,66 @@ bool ensureYcbcrPipelineLocked(const VkAndroidHardwareBufferFormatPropertiesANDR
         LOGE("stage3.3u: vkCreateDescriptorPool failed");
         return false;
     }
+    VkDescriptorSetLayout upscaleSetLayouts[2]{
+        g_context->upscaleDsLayout,
+        g_context->upscaleDsLayout,
+    };
+    VkDescriptorSet upscaleSets[2]{VK_NULL_HANDLE, VK_NULL_HANDLE};
     VkDescriptorSetAllocateInfo upscaleDsAi{
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
         .pNext = nullptr,
         .descriptorPool = g_context->upscaleDsPool,
-        .descriptorSetCount = 1,
-        .pSetLayouts = &g_context->upscaleDsLayout,
+        .descriptorSetCount = 2,
+        .pSetLayouts = upscaleSetLayouts,
     };
-    if (vkAllocateDescriptorSets(device, &upscaleDsAi, &g_context->upscaleDsSet) != VK_SUCCESS) {
+    if (vkAllocateDescriptorSets(device, &upscaleDsAi, upscaleSets) != VK_SUCCESS) {
         LOGE("stage3.3u: vkAllocateDescriptorSets failed");
         return false;
     }
+    g_context->upscaleDsSet = upscaleSets[0];
+    g_context->upscaleRcasDsSet = upscaleSets[1];
 
-    VkDescriptorImageInfo upscaleSrcInfo{
-        .sampler = g_context->rgbaSampler,
-        .imageView = g_context->lsfgOutputView,
-        .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    VkDescriptorImageInfo upscaleInfos[4]{
+        { g_context->rgbaSampler, g_context->lsfgOutputView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+        { VK_NULL_HANDLE, g_context->fsrIntermediateView, VK_IMAGE_LAYOUT_GENERAL },
+        { g_context->rgbaSampler, g_context->fsrIntermediateView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+        { VK_NULL_HANDLE, g_context->interpOutputView, VK_IMAGE_LAYOUT_GENERAL },
     };
-    VkDescriptorImageInfo upscaleDstInfo{
-        .sampler = VK_NULL_HANDLE,
-        .imageView = g_context->interpOutputView,
-        .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-    };
-    VkWriteDescriptorSet upscaleWrites[2]{};
-    upscaleWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    upscaleWrites[0].dstSet = g_context->upscaleDsSet;
-    upscaleWrites[0].dstBinding = 0;
-    upscaleWrites[0].descriptorCount = 1;
-    upscaleWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    upscaleWrites[0].pImageInfo = &upscaleSrcInfo;
-    upscaleWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    upscaleWrites[1].dstSet = g_context->upscaleDsSet;
-    upscaleWrites[1].dstBinding = 1;
-    upscaleWrites[1].descriptorCount = 1;
-    upscaleWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    upscaleWrites[1].pImageInfo = &upscaleDstInfo;
-    vkUpdateDescriptorSets(device, 2, upscaleWrites, 0, nullptr);
+    VkWriteDescriptorSet upscaleWrites[4]{};
+    for (uint32_t i = 0; i < 2; ++i) {
+        upscaleWrites[i * 2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        upscaleWrites[i * 2].dstSet = upscaleSets[i];
+        upscaleWrites[i * 2].dstBinding = 0;
+        upscaleWrites[i * 2].descriptorCount = 1;
+        upscaleWrites[i * 2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        upscaleWrites[i * 2].pImageInfo = &upscaleInfos[i * 2];
+        upscaleWrites[(i * 2) + 1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        upscaleWrites[(i * 2) + 1].dstSet = upscaleSets[i];
+        upscaleWrites[(i * 2) + 1].dstBinding = 1;
+        upscaleWrites[(i * 2) + 1].descriptorCount = 1;
+        upscaleWrites[(i * 2) + 1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        upscaleWrites[(i * 2) + 1].pImageInfo = &upscaleInfos[(i * 2) + 1];
+    }
+    vkUpdateDescriptorSets(device, 4, upscaleWrites, 0, nullptr);
 
     g_context->boundExternalFormat = fp.externalFormat;
     LOGI("stage3.3a-iii.b.1: ycbcr conversion + sampler + pipeline ready "
          "externalFormat=0x%llx model=%u range=%u suggestedModel=%u suggestedRange=%u "
-         "hdrMode=%d chromaFilter=%d",
+         "hdrMode=%d fullRange=%d chromaFilter=%d",
          static_cast<unsigned long long>(fp.externalFormat),
          static_cast<unsigned>(ycbcrModel),
          static_cast<unsigned>(ycbcrRange),
          static_cast<unsigned>(fp.suggestedYcbcrModel),
          static_cast<unsigned>(fp.suggestedYcbcrRange),
          g_context->hdrMode,
+         static_cast<int>(g_context->hdrFullRange),
          static_cast<int>(cvtCi.chromaFilter));
-    LOGI("stage3.3u: rgba upscale pipeline ready src=%ux%u dst=%ux%u",
+    LOGI("stage3.3u: rgba upscale pipeline ready src=%ux%u mid=%ux%u dst=%ux%u filter=fsr1-easu+rcas sharp=%.2f",
          g_context->width, g_context->height,
-         g_context->presentWidth, g_context->presentHeight);
+         g_context->presentWidth, g_context->presentHeight,
+         g_context->presentWidth, g_context->presentHeight,
+         static_cast<double>(FsrUpscaler::kDefaultRcasSharpnessStops));
     return true;
-}
-
-// 阶段 3.3c：把指定 RGBA8888 AHB 通过 CPU 拷贝回贴到 SurfaceView 的 ANativeWindow。
-// 调用方必须持 g_contextMutex 且 AHB 内容已 GPU 完成（dispatch 后 vkWaitForFences /
-// LSFG waitIdle）。失败只打日志，不影响后续帧。tag 仅用于日志区分。
-void blitAhbToWindowLocked(AHardwareBuffer* srcAhb, const char* tag) {
-    if (g_outputWindow == nullptr || srcAhb == nullptr) {
-        return;
-    }
-    const auto totalStart = std::chrono::steady_clock::now();
-
-    AHardwareBuffer_Desc desc{};
-    AHardwareBuffer_describe(srcAhb, &desc);
-    const int32_t srcW = static_cast<int32_t>(desc.width);
-    const int32_t srcH = static_cast<int32_t>(desc.height);
-    const int32_t srcStridePx = static_cast<int32_t>(desc.stride);
-    if (srcW <= 0 || srcH <= 0) return;
-
-    // 首次或尺寸变化时重配窗口。WINDOW_FORMAT_RGBA_8888 与 output AHB 格式一致。
-    const uint32_t bytesPerPixel = g_context != nullptr ? g_context->bytesPerPixel : 4U;
-    const int32_t windowFormat = g_context != nullptr ? g_context->windowFormat : WINDOW_FORMAT_RGBA_8888;
-    const int32_t windowDataspace =
-        g_context != nullptr ? g_context->windowDataspace : kDataspaceSrgbFull;
-
-    if (g_outputWindowConfiguredW != srcW ||
-        g_outputWindowConfiguredH != srcH ||
-        g_outputWindowConfiguredFormat != windowFormat ||
-        g_outputWindowConfiguredDataspace != windowDataspace) {
-        const int32_t rc = ANativeWindow_setBuffersGeometry(
-            g_outputWindow, srcW, srcH, windowFormat);
-        if (rc != 0) {
-            LOGE("stage3.3c: ANativeWindow_setBuffersGeometry rc=%d w=%d h=%d fmt=%d",
-                 rc, srcW, srcH, windowFormat);
-            return;
-        }
-        // 显式声明数据空间为标准 sRGB，让 SurfaceFlinger 把 buffer 当 sRGB→display
-        // 做色域管理；否则宽色域 OLED 屏会把 sRGB 数据按 native gamut 直显，
-        // 视觉上颜色过饱和。ADATASPACE_SRGB = STANDARD_BT709 | TRANSFER_SRGB | RANGE_FULL。
-        ANativeWindow_setBuffersDataSpace(g_outputWindow, windowDataspace);
-        g_outputWindowConfiguredW = srcW;
-        g_outputWindowConfiguredH = srcH;
-        g_outputWindowConfiguredFormat = windowFormat;
-        g_outputWindowConfiguredDataspace = windowDataspace;
-        g_outputWindowBuffersRequested = false;
-        applyOutputWindowHintsLocked(true);
-        LOGI("stage3.3c: configured output window %dx%d fmt=%d dataspace=%d bpp=%u (src stride=%d px)",
-             srcW, srcH, windowFormat, windowDataspace, bytesPerPixel, srcStridePx);
-    }
-
-    void* srcPtr = nullptr;
-    const auto ahbLockStart = std::chrono::steady_clock::now();
-    const int lockResult = AHardwareBuffer_lock(
-        srcAhb, AHARDWAREBUFFER_USAGE_CPU_READ_OFTEN, -1, nullptr, &srcPtr);
-    const auto ahbLockEnd = std::chrono::steady_clock::now();
-    if (lockResult != 0 || srcPtr == nullptr) {
-        LOGE("stage3.3c: AHardwareBuffer_lock(%s) rc=%d ptr=%p", tag, lockResult, srcPtr);
-        return;
-    }
-
-    ANativeWindow_Buffer dst{};
-    const auto windowLockStart = std::chrono::steady_clock::now();
-    const int32_t rc = ANativeWindow_lock(g_outputWindow, &dst, nullptr);
-    const auto windowLockEnd = std::chrono::steady_clock::now();
-    if (rc != 0) {
-        LOGE("stage3.3c: ANativeWindow_lock(%s) rc=%d", tag, rc);
-        AHardwareBuffer_unlock(srcAhb, nullptr);
-        return;
-    }
-
-    const auto copyStart = std::chrono::steady_clock::now();
-    const int32_t copyW = std::min(srcW, dst.width);
-    const int32_t copyH = std::min(srcH, dst.height);
-    const uint8_t* srcRow = static_cast<const uint8_t*>(srcPtr);
-    uint8_t* dstRow = static_cast<uint8_t*>(dst.bits);
-    const size_t srcRowBytes = static_cast<size_t>(srcStridePx) * bytesPerPixel;
-    const size_t dstRowBytes = static_cast<size_t>(dst.stride) * bytesPerPixel;
-    const size_t copyRowBytes = static_cast<size_t>(copyW) * bytesPerPixel;
-    for (int32_t y = 0; y < copyH; ++y) {
-        std::memcpy(dstRow, srcRow, copyRowBytes);
-        srcRow += srcRowBytes;
-        dstRow += dstRowBytes;
-    }
-    const auto copyEnd = std::chrono::steady_clock::now();
-
-    const auto postStart = std::chrono::steady_clock::now();
-    const int32_t postRc = ANativeWindow_unlockAndPost(g_outputWindow);
-    const auto postEnd = std::chrono::steady_clock::now();
-    if (postRc != 0) {
-        LOGE("stage3.3c: ANativeWindow_unlockAndPost(%s) rc=%d", tag, postRc);
-    }
-
-    const auto ahbUnlockStart = std::chrono::steady_clock::now();
-    AHardwareBuffer_unlock(srcAhb, nullptr);
-    const auto totalEnd = std::chrono::steady_clock::now();
-
-    const uint64_t blitCount = g_blitCount.fetch_add(1, std::memory_order_relaxed) + 1;
-    const int64_t totalMs = elapsedMs(totalStart, totalEnd);
-    const bool logSample = (blitCount == 1 || (blitCount % 120) == 0);
-    if (logSample || totalMs >= kSlowBlitMs) {
-        LOGI("stage3.3c: blit timing tag=%s count=%llu total=%lldms "
-             "ahbLock=%lldms winLock=%lldms copy=%lldms post=%lldms ahbUnlock=%lldms "
-             "src=%dx%d/stride=%d dst=%dx%d/stride=%d",
-             tag,
-             static_cast<unsigned long long>(blitCount),
-             static_cast<long long>(totalMs),
-             static_cast<long long>(elapsedMs(ahbLockStart, ahbLockEnd)),
-             static_cast<long long>(elapsedMs(windowLockStart, windowLockEnd)),
-             static_cast<long long>(elapsedMs(copyStart, copyEnd)),
-             static_cast<long long>(elapsedMs(postStart, postEnd)),
-             static_cast<long long>(elapsedMs(ahbUnlockStart, totalEnd)),
-             srcW, srcH, srcStridePx,
-             dst.width, dst.height, dst.stride);
-    }
 }
 
 bool enqueueAhbToPresenterLocked(AHardwareBuffer* srcAhb,
@@ -1995,12 +2400,8 @@ bool enqueueAhbToPresenterLocked(AHardwareBuffer* srcAhb,
         return false;
     }
 
-    const int32_t displayW = (g_context != nullptr && g_context->presentWidth > 0)
-        ? static_cast<int32_t>(g_context->presentWidth)
-        : srcW;
-    const int32_t displayH = (g_context != nullptr && g_context->presentHeight > 0)
-        ? static_cast<int32_t>(g_context->presentHeight)
-        : srcH;
+    const int32_t displayW = srcW;
+    const int32_t displayH = srcH;
     const uint32_t bytesPerPixel = g_context != nullptr ? g_context->bytesPerPixel : 4U;
     const int32_t windowFormat = g_context != nullptr ? g_context->windowFormat : WINDOW_FORMAT_RGBA_8888;
     const int32_t windowDataspace =
@@ -2046,7 +2447,8 @@ bool enqueueAhbToPresenterLocked(AHardwareBuffer* srcAhb,
     frame.bytesPerPixel = bytesPerPixel;
     frame.tag = tag != nullptr ? tag : "";
     try {
-        frame.rgba.resize(static_cast<size_t>(srcW) * static_cast<size_t>(srcH) * bytesPerPixel);
+        frame.rgba = acquirePresentBuffer(
+            static_cast<size_t>(srcW) * static_cast<size_t>(srcH) * bytesPerPixel);
     } catch (const std::exception& e) {
         AHardwareBuffer_unlock(srcAhb, nullptr);
         LOGE("stage3.3c: staging allocation failed tag=%s err=%s", tag, e.what());
@@ -2083,6 +2485,7 @@ bool enqueueAhbToPresenterLocked(AHardwareBuffer* srcAhb,
             g_presentQueue.pop_front();
             releasePresentFrame(dropped);
             g_presentDropped += 1;
+            g_statsPresenterDrops.fetch_add(1, std::memory_order_relaxed);
             if (g_presentDropped == 1 || (g_presentDropped % 120) == 0) {
                 LOGW("stage3.3c: presenter queue drop count=%llu depth=%zu",
                      static_cast<unsigned long long>(g_presentDropped),
@@ -2093,6 +2496,7 @@ bool enqueueAhbToPresenterLocked(AHardwareBuffer* srcAhb,
         g_presentEnqueued += 1;
         enqueued = g_presentEnqueued;
         queueDepth = g_presentQueue.size();
+        g_statsQueueDepth.store(static_cast<int32_t>(queueDepth), std::memory_order_release);
     }
     g_presentCv.notify_one();
 
@@ -2199,7 +2603,9 @@ bool upscaleInterpLocked(bool logThisFrame, int64_t* outWaitMs) {
     }
     if (g_context == nullptr || g_vk == nullptr ||
         g_context->upscalePipeline == VK_NULL_HANDLE ||
-        g_context->upscaleDsSet == VK_NULL_HANDLE) {
+        g_context->upscaleRcasPipeline == VK_NULL_HANDLE ||
+        g_context->upscaleDsSet == VK_NULL_HANDLE ||
+        g_context->upscaleRcasDsSet == VK_NULL_HANDLE) {
         return false;
     }
     if (!ensureUpscaleObjectsLocked()) {
@@ -2220,7 +2626,7 @@ bool upscaleInterpLocked(bool logThisFrame, int64_t* outWaitMs) {
     };
     vkBeginCommandBuffer(cmd, &cmdBi);
 
-    VkImageMemoryBarrier barriers[2]{};
+    VkImageMemoryBarrier barriers[3]{};
     barriers[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     barriers[0].srcAccessMask = 0;
     barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -2238,8 +2644,18 @@ bool upscaleInterpLocked(bool logThisFrame, int64_t* outWaitMs) {
     barriers[1].newLayout = VK_IMAGE_LAYOUT_GENERAL;
     barriers[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barriers[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barriers[1].image = g_context->interpOutputImage;
+    barriers[1].image = g_context->fsrIntermediateImage;
     barriers[1].subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+
+    barriers[2].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barriers[2].srcAccessMask = 0;
+    barriers[2].dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    barriers[2].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    barriers[2].newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    barriers[2].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barriers[2].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barriers[2].image = g_context->interpOutputImage;
+    barriers[2].subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
     vkCmdPipelineBarrier(cmd,
                          VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
@@ -2247,14 +2663,50 @@ bool upscaleInterpLocked(bool logThisFrame, int64_t* outWaitMs) {
                          0,
                          0, nullptr,
                          0, nullptr,
-                         2, barriers);
+                         3, barriers);
 
+    const FsrUpscaler::EasuPushConstants easuConstants = FsrUpscaler::buildEasuConstants(
+        g_context->width,
+        g_context->height,
+        g_context->presentWidth,
+        g_context->presentHeight);
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, g_context->upscalePipeline);
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
                             g_context->upscalePipelineLayout, 0, 1, &g_context->upscaleDsSet,
                             0, nullptr);
-    const uint32_t gx = (g_context->presentWidth + 7U) / 8U;
-    const uint32_t gy = (g_context->presentHeight + 7U) / 8U;
+    vkCmdPushConstants(cmd, g_context->upscalePipelineLayout,
+                       VK_SHADER_STAGE_COMPUTE_BIT, 0,
+                       sizeof(easuConstants), &easuConstants);
+    const uint32_t gx = FsrUpscaler::dispatchGroupCount(g_context->presentWidth);
+    const uint32_t gy = FsrUpscaler::dispatchGroupCount(g_context->presentHeight);
+    vkCmdDispatch(cmd, gx, gy, 1);
+
+    VkImageMemoryBarrier rcasBarrier{};
+    rcasBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    rcasBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    rcasBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    rcasBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+    rcasBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    rcasBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    rcasBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    rcasBarrier.image = g_context->fsrIntermediateImage;
+    rcasBarrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    vkCmdPipelineBarrier(cmd,
+                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                         0,
+                         0, nullptr,
+                         0, nullptr,
+                         1, &rcasBarrier);
+
+    const FsrUpscaler::RcasPushConstants rcasConstants = FsrUpscaler::buildRcasConstants();
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, g_context->upscaleRcasPipeline);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
+                            g_context->upscalePipelineLayout, 0, 1,
+                            &g_context->upscaleRcasDsSet, 0, nullptr);
+    vkCmdPushConstants(cmd, g_context->upscalePipelineLayout,
+                       VK_SHADER_STAGE_COMPUTE_BIT, 0,
+                       sizeof(rcasConstants), &rcasConstants);
     vkCmdDispatch(cmd, gx, gy, 1);
 
     VkImageMemoryBarrier releaseBarrier{};
@@ -2350,6 +2802,9 @@ bool shouldBypassFramegenLocked(int64_t timestampNs, float observedInputFps, boo
             g_adaptive.inputFpsEma = (g_adaptive.inputFpsEma * 0.88) +
                                      (sampleFps * 0.12);
         }
+        g_statsInputFpsTenths.store(
+            static_cast<int32_t>(std::clamp(g_adaptive.inputFpsEma * 10.0, 0.0, 10'000.0)),
+            std::memory_order_release);
     }
     if (g_adaptive.inputFpsEma > 0.0) {
         if (targetFps >= 100 && !allowHighInputBypass) {
@@ -2405,6 +2860,11 @@ bool shouldBypassFramegenLocked(int64_t timestampNs, float observedInputFps, boo
     }
 
     const bool bypass = g_adaptive.highInputBypass || g_adaptive.slowCooldownFrames > 0;
+    const int32_t mode =
+        g_adaptive.slowCooldownFrames > 0 ? kModeSlowCooldown :
+        g_adaptive.highInputBypass ? kModeHighInputBypass :
+        kModeNormal;
+    g_statsMode.store(mode, std::memory_order_release);
     if (logThisFrame) {
         LOGI("stage3.3d: adaptive target=%d inputEma=%.1f sample=%.1f bypass=%d high=%d cooldown=%u",
              targetFps,
@@ -2442,6 +2902,9 @@ void recordLsfgCostLocked(int64_t waitIdleMs, bool logThisFrame) {
     } else {
         g_adaptive.slowLsfgFrames = 0;
     }
+    g_statsLastLsfgWaitMs.store(
+        static_cast<int32_t>(std::clamp<int64_t>(waitIdleMs, 0, 60'000)),
+        std::memory_order_release);
 
     if (logThisFrame) {
         LOGI("stage3.3d: lsfg cost waitIdle=%lldms threshold=%.1f slowFrames=%u cooldown=%u",
@@ -2678,7 +3141,7 @@ bool dispatchYuvToRgbaLocked(DecoderAhbImport& decoderImport,
             const double expectedGapMs = 1000.0 / expectedSourceFps;
             const double breakGapMs = allowHighInputBypass
                 ? std::max(90.0, expectedGapMs * 10.0)
-                : std::max(28.0, expectedGapMs * 1.65);
+                : std::max(60.0, expectedGapMs * 3.5);
             cadenceBreak = inputGapMs > breakGapMs;
         }
     }
@@ -2694,9 +3157,10 @@ bool dispatchYuvToRgbaLocked(DecoderAhbImport& decoderImport,
         }
         g_adaptive.cadenceBreakFrames += 1;
         const bool allowHighInputBypass = g_allowHighInputBypass.load(std::memory_order_acquire);
-        g_adaptive.cadenceSuppressFrames = std::max(
-            g_adaptive.cadenceSuppressFrames,
+        g_adaptive.interpSuppressFrames = std::max(
+            g_adaptive.interpSuppressFrames,
             allowHighInputBypass ? 1U : kCadenceRecoverySuppressFrames);
+        g_statsMode.store(kModeCadenceRecover, std::memory_order_release);
         if (!allowHighInputBypass || inputGapMs >= 140.0) {
             clearPresenterQueue("cadence");
         }
@@ -2706,13 +3170,13 @@ bool dispatchYuvToRgbaLocked(DecoderAhbImport& decoderImport,
             LOGW("stage3.3d: cadence break suppress interp gap=%.2fms count=%u recover=%u inputEma=%.1f",
                  inputGapMs,
                  g_adaptive.cadenceBreakFrames,
-                 g_adaptive.cadenceSuppressFrames,
+                 g_adaptive.interpSuppressFrames,
                  g_adaptive.inputFpsEma);
         }
     } else {
         g_adaptive.cadenceBreakFrames = 0;
     }
-    const bool cadenceSuppressInterp = g_adaptive.cadenceSuppressFrames > 0;
+    const bool suppressInterp = g_adaptive.interpSuppressFrames > 0;
     const uint32_t slot = g_context->pingPongIndex & 1U;
     const VkImage decoderImage = decoderImport.image;
     const VkImageView decoderView = decoderImport.view;
@@ -2824,6 +3288,10 @@ bool dispatchYuvToRgbaLocked(DecoderAhbImport& decoderImport,
     const uint32_t gy = (g_context->height + 7U) / 8U;
     vkCmdDispatch(cmd, gx, gy, 1);
 
+    if (g_context->presentPipeline != VK_NULL_HANDLE) {
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
+                          g_context->presentPipeline);
+    }
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
                             g_context->pipelineLayout, 0, 1, &g_context->dsSets[2],
                             0, nullptr);
@@ -2912,6 +3380,9 @@ bool dispatchYuvToRgbaLocked(DecoderAhbImport& decoderImport,
     // 视觉无副作用；只要不报 vulkan error / 不 crash 就算通过。
     AHardwareBuffer* realAhb = g_context->realOutput.get();
     if (bypassFramegen) {
+        // LSFG state is not advanced during bypass. Suppress the first generated
+        // output after recovery so it can re-prime on consecutive fresh inputs.
+        g_adaptive.interpSuppressFrames = std::max(g_adaptive.interpSuppressFrames, 1U);
         const auto b0 = std::chrono::steady_clock::now();
         enqueueAhbToPresenterLocked(realAhb, "real-bypass", g_context->dispatchCount, 0);
         const auto b1 = std::chrono::steady_clock::now();
@@ -2957,16 +3428,16 @@ bool dispatchYuvToRgbaLocked(DecoderAhbImport& decoderImport,
     }
 
     const bool hasValidInterp = g_context->lsfgPresentCount > 1 && !g_context->outputs.empty();
-    const bool showInterp = hasValidInterp && !cadenceSuppressInterp;
-    const uint32_t cadenceSuppressBefore = g_adaptive.cadenceSuppressFrames;
-    if (hasValidInterp && cadenceSuppressInterp &&
-        (cadenceBreak || cadenceSuppressBefore == 1 || logThisFrame)) {
-        LOGI("stage3.3d: cadence recovery real-only break=%d suppress=%u",
+    const bool showInterp = hasValidInterp && !suppressInterp;
+    const uint32_t interpSuppressBefore = g_adaptive.interpSuppressFrames;
+    if (hasValidInterp && suppressInterp &&
+        (cadenceBreak || interpSuppressBefore == 1 || logThisFrame)) {
+        LOGI("stage3.3d: interp recovery real-only break=%d suppress=%u",
              static_cast<int>(cadenceBreak),
-             cadenceSuppressBefore);
+             interpSuppressBefore);
     }
-    if (g_adaptive.cadenceSuppressFrames > 0) {
-        g_adaptive.cadenceSuppressFrames -= 1;
+    if (g_adaptive.interpSuppressFrames > 0) {
+        g_adaptive.interpSuppressFrames -= 1;
     }
     int64_t upscaleWaitMs = -1;
     AHardwareBuffer* interpAhb = !g_context->outputs.empty() ? g_context->outputs[0].get() : nullptr;
@@ -2979,11 +3450,11 @@ bool dispatchYuvToRgbaLocked(DecoderAhbImport& decoderImport,
     if (showInterp) {
         const int32_t presentMode = g_presentMode.load(std::memory_order_acquire);
         if (presentMode == 1) {
-            enqueueAhbToPresenterLocked(realAhb, "real", g_context->dispatchCount, 0);
+            enqueueAhbToPresenterLocked(realAhb, "real-pair", g_context->dispatchCount, 0);
             enqueueAhbToPresenterLocked(interpAhb, interpUpscaled ? "interp-up" : "interp", g_context->dispatchCount, 1);
         } else {
             enqueueAhbToPresenterLocked(interpAhb, interpUpscaled ? "interp-up" : "interp", g_context->dispatchCount, 0);
-            enqueueAhbToPresenterLocked(realAhb, "real", g_context->dispatchCount, 1);
+            enqueueAhbToPresenterLocked(realAhb, "real-pair", g_context->dispatchCount, 1);
         }
     } else {
         enqueueAhbToPresenterLocked(realAhb, "real", g_context->dispatchCount, 0);
@@ -2995,8 +3466,10 @@ bool dispatchYuvToRgbaLocked(DecoderAhbImport& decoderImport,
         const char* enqueueTag = "real";
         if (showInterp) {
             const int32_t presentMode = g_presentMode.load(std::memory_order_acquire);
-            enqueueTag = presentMode == 1 ? "real+interp" : "interp+real";
-        } else if (hasValidInterp && cadenceSuppressInterp) {
+            enqueueTag = presentMode == 1
+                ? "real+interp"
+                : "interp+real";
+        } else if (hasValidInterp && suppressInterp) {
             enqueueTag = cadenceBreak ? "real-cadence" : "real-recover";
         }
         LOGI("stage3.3c: enqueue tag=%s elapsed=%lldms",
@@ -3005,13 +3478,13 @@ bool dispatchYuvToRgbaLocked(DecoderAhbImport& decoderImport,
     }
     if (logThisFrame || totalMs >= kSlowFrameMs) {
         LOGI("stage3.3e: dispatch total count=%llu bypass=0 validInterp=%d showInterp=%d cadenceBreak=%d "
-             "cadenceSuppress=%u total=%lldms "
+             "interpSuppress=%u total=%lldms "
              "fence=%lldms lsfgPresent=%lldms lsfgWaitIdle=%lldms upscale=%lldms enqueue=%lldms inputEma=%.1f",
              static_cast<unsigned long long>(g_context->dispatchCount),
              static_cast<int>(hasValidInterp),
              static_cast<int>(showInterp),
              static_cast<int>(cadenceBreak),
-             cadenceSuppressBefore,
+             interpSuppressBefore,
              static_cast<long long>(totalMs),
              static_cast<long long>(waitFenceMs),
              static_cast<long long>(lsfgPresentMs),

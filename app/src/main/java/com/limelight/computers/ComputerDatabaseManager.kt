@@ -9,6 +9,7 @@ import com.limelight.LimeLog
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.http.PairingManager
+import com.limelight.utils.ConfigurationSyncManager
 
 import org.json.JSONException
 import org.json.JSONObject
@@ -26,6 +27,7 @@ import java.util.Locale
  * Uses SQLiteOpenHelper for proper version management and migration handling.
  */
 class ComputerDatabaseManager(c: Context) {
+    private val context: Context = c.applicationContext
 
     private interface AddressFields {
         companion object {
@@ -82,10 +84,14 @@ class ComputerDatabaseManager(c: Context) {
     }
 
     fun deleteComputer(details: ComputerDetails) {
-        computerDb.delete(COMPUTER_TABLE_NAME, "$COMPUTER_UUID_COLUMN_NAME=?", arrayOf(details.uuid))
+        val deleted = computerDb.delete(COMPUTER_TABLE_NAME, "$COMPUTER_UUID_COLUMN_NAME=?", arrayOf(details.uuid))
+        if (deleted > 0) {
+            ConfigurationSyncManager.recordPairingStateChanged(context)
+        }
     }
 
     fun updateComputer(details: ComputerDetails): Boolean {
+        val previousDetails = details.uuid?.let { getComputerByUUID(it) }
         val values = ContentValues()
         values.put(COMPUTER_UUID_COLUMN_NAME, details.uuid)
         values.put(COMPUTER_NAME_COLUMN_NAME, details.name)
@@ -120,9 +126,46 @@ class ComputerDatabaseManager(c: Context) {
             values.put(SERVER_CERT_COLUMN_NAME, null as ByteArray?)
             e.printStackTrace()
         }
-        return -1L != computerDb.insertWithOnConflict(
+        val updated = -1L != computerDb.insertWithOnConflict(
             COMPUTER_TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_REPLACE
         )
+        if (updated && hasPersistentComputerChanged(previousDetails, details)) {
+            ConfigurationSyncManager.recordPairingStateChanged(context)
+        }
+        return updated
+    }
+
+    private fun hasPersistentComputerChanged(previous: ComputerDetails?, current: ComputerDetails): Boolean {
+        if (previous == null) return true
+        return previous.uuid != current.uuid ||
+                previous.name != current.name ||
+                previous.localAddress != current.localAddress ||
+                previous.remoteAddress != current.remoteAddress ||
+                previous.manualAddress != current.manualAddress ||
+                previous.ipv6Address != current.ipv6Address ||
+                previous.ipv6Disabled != current.ipv6Disabled ||
+                previous.activeAddress != current.activeAddress ||
+                previous.httpsPort != current.httpsPort ||
+                previous.macAddress != current.macAddress ||
+                !sameCertificate(previous, current)
+    }
+
+    private fun sameCertificate(left: ComputerDetails, right: ComputerDetails): Boolean {
+        val leftBytes = encodedCertificate(left)
+        val rightBytes = encodedCertificate(right)
+        return when {
+            leftBytes == null && rightBytes == null -> true
+            leftBytes == null || rightBytes == null -> false
+            else -> leftBytes.contentEquals(rightBytes)
+        }
+    }
+
+    private fun encodedCertificate(details: ComputerDetails): ByteArray? {
+        return try {
+            details.serverCert?.encoded
+        } catch (_: CertificateEncodingException) {
+            null
+        }
     }
 
     private fun getComputerFromCursor(c: android.database.Cursor): ComputerDetails {

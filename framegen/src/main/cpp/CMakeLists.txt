@@ -53,6 +53,7 @@ add_subdirectory("${LSFGVK_ROOT}/framegen" framegen_build EXCLUDE_FROM_ALL)
 add_library(moonlight-framegen SHARED
     jni_bridge.cpp
     framegen_pipeline.cpp
+    fsr_upscaler.cpp
     "${LSFGVK_ROOT}/src/config/config.cpp"
     "${LSFGVK_ROOT}/src/extract/extract.cpp"
     "${LSFGVK_ROOT}/src/extract/trans.cpp")
@@ -76,6 +77,10 @@ message(STATUS "framegen: glslc = ${GLSLC_EXECUTABLE}")
 set(SHADER_GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated_shaders")
 file(MAKE_DIRECTORY "${SHADER_GEN_DIR}")
 
+file(GLOB FRAMEGEN_SHADER_INCLUDES CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.glsl"
+    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/amd_fsr/*.h")
+
 function(framegen_compile_shader SHADER_NAME)
     set(SRC "${CMAKE_CURRENT_SOURCE_DIR}/shaders/${SHADER_NAME}.comp")
     set(SPV "${SHADER_GEN_DIR}/${SHADER_NAME}.comp.spv")
@@ -88,6 +93,7 @@ function(framegen_compile_shader SHADER_NAME)
                 -DSYMBOL_NAME=k_${SHADER_NAME}_spv
                 -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/EmbedSpv.cmake"
         DEPENDS "${SRC}"
+                ${FRAMEGEN_SHADER_INCLUDES}
                 "${CMAKE_CURRENT_SOURCE_DIR}/cmake/EmbedSpv.cmake"
         COMMENT "Compiling SPIR-V ${SHADER_NAME}"
         VERBATIM)
@@ -95,9 +101,13 @@ function(framegen_compile_shader SHADER_NAME)
 endfunction()
 
 framegen_compile_shader(yuv_to_rgba)
-framegen_compile_shader(rgba_upscale)
 framegen_compile_shader(yuv_to_rgba16f)
-framegen_compile_shader(rgba_upscale16f)
+framegen_compile_shader(yuv_to_rgb10a2)
+framegen_compile_shader(rgba_fsr_easu)
+framegen_compile_shader(rgba_fsr_easu16f)
+framegen_compile_shader(rgba_fsr_rcas)
+framegen_compile_shader(rgba_fsr_rcas16f)
+framegen_compile_shader(rgba_fsr_rcas10a2)
 
 target_include_directories(moonlight-framegen PRIVATE "${SHADER_GEN_DIR}")
 

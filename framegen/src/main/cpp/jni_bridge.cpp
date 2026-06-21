@@ -134,6 +134,33 @@ Java_com_limelight_framegen_FramegenInterceptor_nativeResetFrameCounter(
     LOGI("frame counter reset (was %llu)", (unsigned long long)prev);
 }
 
+extern "C" JNIEXPORT jlongArray JNICALL
+Java_com_limelight_framegen_FramegenInterceptor_nativeGetStats(
+        JNIEnv *env, jclass /* clazz */) {
+    const FramegenPipeline::StatsSnapshot stats = FramegenPipeline::getStatsSnapshot();
+    jlong values[] = {
+        static_cast<jlong>(stats.realFrames),
+        static_cast<jlong>(stats.interpolatedFrames),
+        static_cast<jlong>(stats.bypassFrames),
+        static_cast<jlong>(stats.realOnlyFrames),
+        static_cast<jlong>(stats.presenterDrops),
+        static_cast<jlong>(stats.fallbackFrames),
+        static_cast<jlong>(stats.queueDepth),
+        static_cast<jlong>(stats.outputFrameRate),
+        static_cast<jlong>(stats.inputFpsTenths),
+        static_cast<jlong>(stats.mode),
+        static_cast<jlong>(stats.lastLsfgWaitMs),
+        static_cast<jlong>(stats.lastBlitMs),
+    };
+    constexpr jsize valueCount = static_cast<jsize>(sizeof(values) / sizeof(values[0]));
+    jlongArray result = env->NewLongArray(valueCount);
+    if (result == nullptr) {
+        return nullptr;
+    }
+    env->SetLongArrayRegion(result, 0, valueCount, values);
+    return result;
+}
+
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_limelight_framegen_FramegenInterceptor_nativePrewarmContext(
         JNIEnv * /* env */, jclass /* clazz */, jint width, jint height) {
@@ -162,15 +189,11 @@ Java_com_limelight_framegen_FramegenInterceptor_nativeSetLosslessDllPath(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_limelight_framegen_FramegenInterceptor_nativeSetHdrEnabled(
-        JNIEnv * /*env*/, jclass /* clazz */, jboolean enabled) {
-    FramegenPipeline::setHdrEnabled(enabled == JNI_TRUE);
-}
-
-extern "C" JNIEXPORT void JNICALL
 Java_com_limelight_framegen_FramegenInterceptor_nativeSetHdrMode(
-        JNIEnv * /*env*/, jclass /* clazz */, jint mode) {
-    FramegenPipeline::setHdrMode(static_cast<int32_t>(mode));
+        JNIEnv * /*env*/, jclass /* clazz */, jint mode, jboolean fullRange) {
+    FramegenPipeline::setHdrMode(
+        static_cast<int32_t>(mode),
+        fullRange == JNI_TRUE);
 }
 
 extern "C" JNIEXPORT void JNICALL

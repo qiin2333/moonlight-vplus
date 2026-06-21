@@ -1,0 +1,4 @@
+#version 450
+
+#define FSR_OUTPUT_FORMAT rgba16f
+#include "fsr1_easu_common.glsl"

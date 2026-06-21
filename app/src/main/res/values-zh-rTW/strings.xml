@@ -339,10 +339,10 @@
     <string name="title_framegen_adaptive_enabled">弱網補幀</string>
     <string name="summary_framegen_adaptive_enabled">網路丟幀或實際幀率不穩時，啟用插幀補償到接近目前目標幀率；不要求串流幀率設為 60 FPS。</string>
     <string name="title_framegen_quality_preset">插幀畫質</string>
-    <string name="summary_framegen_quality_preset">選擇流暢度與清晰度的平衡。</string>
-    <string name="framegen_quality_performance">性能優先（推薦）</string>
-    <string name="framegen_quality_balanced">均衡</string>
-    <string name="framegen_quality_clarity">清晰優先</string>
+    <string name="summary_framegen_quality_preset">按串流解析度比例縮放插幀渲染解析度。</string>
+    <string name="framegen_quality_performance">性能優先（25%，推薦）</string>
+    <string name="framegen_quality_balanced">均衡（50%）</string>
+    <string name="framegen_quality_clarity">清晰優先（75%）</string>
     <string name="framegen_quality_custom">自訂</string>
     <string name="title_framegen_selftest">檢查裝置支援</string>
     <string name="summary_framegen_selftest">插幀無法啟用或畫面異常時使用。</string>
@@ -360,9 +360,9 @@
     <string name="toast_framegen_lossless_dll_copying">正在匯入插幀引擎…</string>
     <string name="toast_framegen_lossless_dll_probe_result">插幀引擎檢查：%1$s</string>
     <string name="toast_framegen_lossless_dll_pick_failed">無法匯入 Lossless.dll：%1$s</string>
-    <string name="title_framegen_internal_width">自訂渲染寬度</string>
-    <string name="summary_framegen_internal_width">進階調校項。數值越低越穩定，數值越高越清晰。</string>
-    <string name="suffix_framegen_pixels">px</string>
+    <string name="title_framegen_internal_width">自訂渲染比例</string>
+    <string name="summary_framegen_internal_width">進階調校項。比例越低越穩定，比例越高越清晰。</string>
+    <string name="suffix_framegen_scale">x</string>
     <string name="title_framegen_slow_threshold_ms">流暢度保護</string>
     <string name="summary_framegen_slow_threshold_ms">僅自訂模式顯示。插幀變慢時會自動回退直通渲染，預設：18 ms。</string>
     <string name="title_framegen_present_real_first">運動節奏修正</string>

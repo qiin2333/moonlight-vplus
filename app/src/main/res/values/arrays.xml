@@ -362,6 +362,14 @@
         <item>battery</item>
         <item>one_percent_low</item>
     </string-array>
+    <string-array name="mic_menu_action_mode_entries">
+        <item>@string/mic_menu_action_show_button</item>
+        <item>@string/mic_menu_action_toggle_microphone</item>
+    </string-array>
+    <string-array name="mic_menu_action_mode_values" translatable="false">
+        <item>show_button</item>
+        <item>toggle_microphone</item>
+    </string-array>
     <string-array name="mic_icon_color_entries">
         <item>Gradient Blue</item>
         <item>Gradient Purple</item>

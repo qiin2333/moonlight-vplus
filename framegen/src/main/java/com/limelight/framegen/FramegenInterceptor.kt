@@ -3,6 +3,34 @@ package com.limelight.framegen
 import android.os.Build
 import android.util.Log
 
+data class FramegenStats(
+    val realFrames: Long,
+    val interpolatedFrames: Long,
+    val bypassFrames: Long,
+    val realOnlyFrames: Long,
+    val presenterDrops: Long,
+    val fallbackFrames: Long,
+    val queueDepth: Int,
+    val outputFrameRate: Int,
+    val inputFps: Float,
+    val mode: Int,
+    val lastLsfgWaitMs: Int,
+    val lastBlitMs: Int
+) {
+    val presentedFrames: Long
+        get() = realFrames + interpolatedFrames + bypassFrames + fallbackFrames
+
+    val isGenerating: Boolean
+        get() = interpolatedFrames > 0
+
+    companion object {
+        const val MODE_NORMAL = 0
+        const val MODE_HIGH_INPUT_BYPASS = 1
+        const val MODE_SLOW_COOLDOWN = 2
+        const val MODE_CADENCE_RECOVER = 3
+    }
+}
+
 /**
  * Java entry point for the Android frame generation pipeline.
  *
@@ -79,20 +107,10 @@ class FramegenInterceptor {
         }
 
         @JvmStatic
-        fun configureHdrEnabled(enabled: Boolean) {
+        fun configureHdrMode(mode: Int, fullRange: Boolean) {
             if (!isAvailable()) return
             try {
-                nativeSetHdrEnabled(enabled)
-            } catch (t: Throwable) {
-                Log.w(TAG, "failed to configure framegen HDR flag", t)
-            }
-        }
-
-        @JvmStatic
-        fun configureHdrMode(mode: Int) {
-            if (!isAvailable()) return
-            try {
-                nativeSetHdrMode(mode.coerceIn(0, 2))
+                nativeSetHdrMode(mode.coerceIn(0, 2), fullRange)
             } catch (t: Throwable) {
                 Log.w(TAG, "failed to configure framegen HDR mode", t)
             }
@@ -169,16 +187,27 @@ class FramegenInterceptor {
         external fun nativeResetFrameCounter()
 
         @JvmStatic
+        fun getStats(): FramegenStats? {
+            if (!isAvailable()) return null
+            return try {
+                nativeGetStats().toFramegenStats()
+            } catch (t: Throwable) {
+                Log.w(TAG, "failed to read framegen stats", t)
+                null
+            }
+        }
+
+        @JvmStatic
         private external fun nativePrewarmContext(width: Int, height: Int): Boolean
+
+        @JvmStatic
+        private external fun nativeGetStats(): LongArray
 
         @JvmStatic
         private external fun nativeSetLosslessDllPath(dllPath: String)
 
         @JvmStatic
-        private external fun nativeSetHdrEnabled(enabled: Boolean)
-
-        @JvmStatic
-        private external fun nativeSetHdrMode(mode: Int)
+        private external fun nativeSetHdrMode(mode: Int, fullRange: Boolean)
 
         @JvmStatic
         private external fun nativeSetOutputFrameRate(fps: Int)
@@ -194,5 +223,23 @@ class FramegenInterceptor {
 
         @JvmStatic
         private external fun nativeSetOutputSurface(surface: android.view.Surface?)
+
+        private fun LongArray.toFramegenStats(): FramegenStats? {
+            if (size < 12) return null
+            return FramegenStats(
+                realFrames = this[0],
+                interpolatedFrames = this[1],
+                bypassFrames = this[2],
+                realOnlyFrames = this[3],
+                presenterDrops = this[4],
+                fallbackFrames = this[5],
+                queueDepth = this[6].toInt(),
+                outputFrameRate = this[7].toInt(),
+                inputFps = this[8].toFloat() / 10f,
+                mode = this[9].toInt(),
+                lastLsfgWaitMs = this[10].toInt(),
+                lastBlitMs = this[11].toInt()
+            )
+        }
     }
 }

@@ -16,13 +16,29 @@ object GitHubStarVerifier {
     private const val REPO_OWNER = "qiin2333"
     private const val REPO_NAME = "moonlight-vplus"
 
+    enum class OAuthScope(val preferenceValue: String, val requestValue: String) {
+        STAR_VERIFICATION("star", ""),
+        CROWN_STORE_PUBLISH("crown_store_publish", "public_repo");
+
+        fun grants(requiredScope: OAuthScope): Boolean {
+            return this == requiredScope || this == CROWN_STORE_PUBLISH
+        }
+
+        companion object {
+            fun fromPreference(value: String?): OAuthScope? {
+                return values().firstOrNull { it.preferenceValue == value }
+            }
+        }
+    }
+
     data class DeviceCode(
         val deviceCode: String,
         val userCode: String,
         val verificationUri: String,
         val verificationUriComplete: String?,
         val expiresInSeconds: Int,
-        val intervalSeconds: Int
+        val intervalSeconds: Int,
+        val scope: OAuthScope = OAuthScope.STAR_VERIFICATION
     )
 
     data class StarCheck(
@@ -41,14 +57,17 @@ object GitHubStarVerifier {
         BuildConfig.GITHUB_OAUTH_CLIENT_ID.isNotBlank()
 
     @Throws(IOException::class)
-    fun requestDeviceCode(): DeviceCode {
+    fun requestDeviceCode(scope: OAuthScope = OAuthScope.STAR_VERIFICATION): DeviceCode {
         ensureConfigured()
+        val formValues = mutableMapOf(
+            "client_id" to BuildConfig.GITHUB_OAUTH_CLIENT_ID
+        )
+        if (scope.requestValue.isNotBlank()) {
+            formValues["scope"] = scope.requestValue
+        }
         val response = postForm(
             DEVICE_CODE_URL,
-            mapOf(
-                "client_id" to BuildConfig.GITHUB_OAUTH_CLIENT_ID,
-                "scope" to ""
-            )
+            formValues
         )
         if (response.code != HttpURLConnection.HTTP_OK) {
             throw IOException(errorMessage(response.body, "GitHub device code request failed (${response.code})"))
@@ -61,7 +80,8 @@ object GitHubStarVerifier {
             verificationUri = json.getString("verification_uri"),
             verificationUriComplete = json.optString("verification_uri_complete").takeIf { it.isNotBlank() },
             expiresInSeconds = json.optInt("expires_in", 900),
-            intervalSeconds = max(1, json.optInt("interval", 5))
+            intervalSeconds = max(1, json.optInt("interval", 5)),
+            scope = scope
         )
     }
 

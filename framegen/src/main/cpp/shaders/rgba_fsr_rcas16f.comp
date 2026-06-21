@@ -1,0 +1,5 @@
+#version 450
+
+#define FSR_OUTPUT_FORMAT rgba16f
+#define FSR_CLAMP_OUTPUT 0
+#include "fsr1_rcas_common.glsl"

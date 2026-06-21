@@ -1,19 +1,13 @@
 #version 450
 
-// 阶段 3.3a-iii: 把 decoder YUV AHB（externalFormat 走 VkSamplerYcbcrConversion）
-// 采样转 RGBA 写到 LSFG owned input AHB（VK_FORMAT_R8G8B8A8_UNORM）。
-//
-// sampler2D 在 host 侧用 immutable sampler 绑定 ycbcr conversion，
-// 因此 texture() 返回的就是已经做完 ITU-R BT.601/709/2020 矩阵和 narrow-range
-// 解码的 RGB —— shader 里不需要手写转换矩阵。
-//
-// 阶段 3.3c-tonemap：当 IS_HDR=1（HDR 串流，BT.2020 PQ 编码）时，
-// 对 ycbcr conversion 输出做 PQ EOTF → BT.2020→BT.709 → Hable tonemap → sRGB OETF，
-// 输出 8-bit sRGB 喂回贴。SDR (IS_HDR=0) 走直通路径（已是 sRGB-ish gamma）。
+// Convert decoder YUV AHBs into RGBA storage images through the immutable
+// Vulkan YCbCr sampler. REAL_PASS is used only for the full-resolution frame
+// that is presented to the display; the LSFG input path keeps the raw sample.
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout(constant_id = 0) const int IS_HDR = 0;
+layout(constant_id = 1) const int REAL_PASS = 0;
 
 layout(set = 0, binding = 0) uniform sampler2D uYuvSrc;
 layout(set = 0, binding = 1, rgba8) uniform writeonly image2D uRgbaDst;
@@ -22,8 +16,8 @@ layout(push_constant) uniform PushConstants {
     vec2 srcUvScale;
 } pc;
 
-// SMPTE ST.2084 (PQ) inverse EOTF — 把 [0,1] PQ 码值还原为 [0,1] 归一化的亮度
-// （1.0 = 10000 nits 峰值）。
+// SMPTE ST.2084 (PQ) inverse EOTF. Input and output are normalized where
+// 1.0 means 10000 nits.
 vec3 pq_to_linear(vec3 pq) {
     const float m1 = 0.1593017578125;
     const float m2 = 78.84375;
@@ -36,7 +30,6 @@ vec3 pq_to_linear(vec3 pq) {
     return pow(num / den, vec3(1.0 / m1));
 }
 
-// BT.2020 RGB → BT.709 RGB 线性矩阵（来自 Rec.2087 / Rec.2020 Annex E）。
 vec3 bt2020_to_bt709(vec3 c) {
     return vec3(
         dot(c, vec3( 1.6605, -0.5876, -0.0728)),
@@ -45,17 +38,6 @@ vec3 bt2020_to_bt709(vec3 c) {
     );
 }
 
-// ACES Narkowicz 拟合（高性能 1 项式逼近），输入归一化线性 → 输出 [0,1] 显示线性。
-vec3 aces_approx(vec3 v) {
-    const float a = 2.51;
-    const float b = 0.03;
-    const float c = 2.43;
-    const float d = 0.59;
-    const float e = 0.14;
-    return clamp((v * (a * v + b)) / (v * (c * v + d) + e), 0.0, 1.0);
-}
-
-// 线性 → sRGB OETF（IEC 61966-2-1）。
 vec3 linear_to_srgb(vec3 c) {
     c = clamp(c, vec3(0.0), vec3(1.0));
     return mix(12.92 * c,
@@ -69,24 +51,44 @@ vec3 soften_hdr_chroma(vec3 c) {
     return mix(vec3(y), c, 0.88);
 }
 
+vec3 sampleSource(vec2 uv) {
+    return texture(uYuvSrc, clamp(uv, vec2(0.0), pc.srcUvScale)).rgb;
+}
+
+vec3 sharpenRealPass(vec2 uv, vec3 c, vec2 texel) {
+    vec3 n = sampleSource(uv + vec2(0.0, -texel.y));
+    vec3 s = sampleSource(uv + vec2(0.0,  texel.y));
+    vec3 e = sampleSource(uv + vec2( texel.x, 0.0));
+    vec3 w = sampleSource(uv + vec2(-texel.x, 0.0));
+
+    const vec3 lumaWeight = vec3(0.299, 0.587, 0.114);
+    float lumaC = dot(c, lumaWeight);
+    float edge = max(
+        max(abs(lumaC - dot(n, lumaWeight)), abs(lumaC - dot(s, lumaWeight))),
+        max(abs(lumaC - dot(e, lumaWeight)), abs(lumaC - dot(w, lumaWeight))));
+
+    vec3 blur = (n + s + e + w) * 0.25;
+    float amount = mix(0.045, 0.20, smoothstep(0.008, 0.12, edge));
+    vec3 sharp = c + (c - blur) * amount;
+
+    vec3 lo = min(c, min(n, min(s, min(e, w))));
+    vec3 hi = max(c, max(n, max(s, max(e, w))));
+    vec3 range = max(hi - lo, vec3(0.02));
+    return clamp(clamp(sharp, lo - range * 0.10, hi + range * 0.10), 0.0, 1.0);
+}
+
 void main() {
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
     ivec2 size = imageSize(uRgbaDst);
     if (coord.x >= size.x || coord.y >= size.y) {
         return;
     }
+
     vec2 uv = ((vec2(coord) + vec2(0.5)) / vec2(size)) * pc.srcUvScale;
-    vec3 rgb = texture(uYuvSrc, uv).rgb;
+    vec3 rgb = sampleSource(uv);
 
     if (IS_HDR != 0) {
-        // 色相保留 Reinhard：先算 BT.709 亮度 Y，对 Y 做 Reinhard 滚降，
-        // 然后按 Y_out/Y_in 比例缩放 RGB，避免对每通道独立 tone map 导致的
-        // 暗部偏色和高光褪色。
-        // 1) PQ EOTF → 归一化亮度（1.0=10000nits）
-        // 2) BT.2020 → BT.709 矩阵；clamp >= 0 防色域外负值脏暗部
-        // 3) Exposure：100nits 当 ~18% 中灰（PQ 内容大部分位于 50~400nits）
-        // 4) 色相保留 Reinhard tone map
-        // 5) sRGB OETF
+        // Preserve hue while rolling PQ HDR down to SDR.
         vec3 lin = pq_to_linear(rgb);
         lin = bt2020_to_bt709(lin);
         lin = max(lin, vec3(0.0));
@@ -96,6 +98,9 @@ void main() {
         lin = lin * (yOut / max(yIn, 1e-4));
         lin = soften_hdr_chroma(lin);
         rgb = linear_to_srgb(lin);
+    } else if (REAL_PASS != 0) {
+        vec2 texel = pc.srcUvScale / vec2(size);
+        rgb = sharpenRealPass(uv, rgb, texel);
     }
 
     imageStore(uRgbaDst, coord, vec4(rgb, 1.0));

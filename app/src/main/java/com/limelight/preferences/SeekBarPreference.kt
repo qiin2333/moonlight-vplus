@@ -79,7 +79,13 @@ class SeekBarPreference(context: Context, attrs: AttributeSet) : DialogPreferenc
 
     fun formatDisplayValue(value: Int): String {
         return if (divisor != 1) {
-            String.format(null as Locale?, "%.1f", value / divisor.toDouble())
+            if (divisor == 100) {
+                String.format(null as Locale?, "%.2f", value / divisor.toDouble())
+                    .trimEnd('0')
+                    .trimEnd('.')
+            } else {
+                String.format(null as Locale?, "%.1f", value / divisor.toDouble())
+            }
         } else {
             value.toString()
         }

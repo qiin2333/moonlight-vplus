@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="mic_menu_action_mode_entries">
+        <item>显示/隐藏悬浮麦克风按钮</item>
+        <item>直接开关麦克风</item>
+    </string-array>
     <string-array name="mic_icon_color_entries">
         <item>星川蓝</item>
         <item>云锦紫</item>

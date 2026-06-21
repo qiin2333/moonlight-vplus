@@ -2,6 +2,7 @@ package com.limelight.preferences
 
 import android.content.SharedPreferences
 import java.io.File
+import kotlin.math.roundToInt
 
 object FramegenSettings {
     const val PREF_ENABLED = "checkbox_framegen_enabled"
@@ -20,10 +21,16 @@ object FramegenSettings {
     const val DEFAULT_INTERNAL_WIDTH = 864
     const val DEFAULT_SLOW_THRESHOLD_MS = 18
     const val DEFAULT_PRESENT_QUEUE_MAX = 2
-    const val MAX_CAPTURE_PIXELS = 2560 * 1440
+    const val MAX_CAPTURE_PIXELS = 2560 * 2560
 
-    private const val MIN_INTERNAL_WIDTH = 640
+    private const val MIN_INTERNAL_WIDTH = 320
     private const val MAX_INTERNAL_WIDTH = 1920
+    private const val PERFORMANCE_SCALE = 0.25f
+    private const val BALANCED_SCALE = 0.50f
+    private const val CLARITY_SCALE = 0.75f
+    private const val DEFAULT_CUSTOM_SCALE_PERCENT = 50
+    private const val MIN_CUSTOM_SCALE_PERCENT = 20
+    private const val MAX_CUSTOM_SCALE_PERCENT = 100
 
     fun isUserEnabled(prefs: SharedPreferences): Boolean =
         prefs.getBoolean(PREF_ENABLED, false)
@@ -49,14 +56,48 @@ object FramegenSettings {
     fun isCaptureResolutionSupported(width: Int, height: Int): Boolean =
         width > 0 && height > 0 && width.toLong() * height.toLong() <= MAX_CAPTURE_PIXELS.toLong()
 
-    fun resolveInternalWidth(prefs: SharedPreferences): Int {
+    fun resolveInternalWidth(prefs: SharedPreferences, streamWidth: Int): Int {
         val width = when (prefs.getString(PREF_QUALITY_PRESET, null)) {
-            QUALITY_PERFORMANCE -> 864
-            QUALITY_BALANCED -> 960
-            QUALITY_CLARITY -> 1200
-            QUALITY_CUSTOM -> prefs.getInt(PREF_INTERNAL_WIDTH, DEFAULT_INTERNAL_WIDTH)
-            else -> prefs.getInt(PREF_INTERNAL_WIDTH, DEFAULT_INTERNAL_WIDTH)
+            QUALITY_PERFORMANCE -> scaledInternalWidth(streamWidth, PERFORMANCE_SCALE)
+            QUALITY_BALANCED -> scaledInternalWidth(streamWidth, BALANCED_SCALE)
+            QUALITY_CLARITY -> scaledInternalWidth(streamWidth, CLARITY_SCALE)
+            QUALITY_CUSTOM -> scaledInternalWidth(
+                streamWidth,
+                resolveCustomScale(prefs, streamWidth)
+            )
+            else -> scaledInternalWidth(streamWidth, PERFORMANCE_SCALE)
         }
         return width.coerceIn(MIN_INTERNAL_WIDTH, MAX_INTERNAL_WIDTH)
+    }
+
+    fun migrateLegacyCustomScale(prefs: SharedPreferences, streamWidth: Int) {
+        val stored = prefs.getInt(PREF_INTERNAL_WIDTH, DEFAULT_CUSTOM_SCALE_PERCENT)
+        if (stored <= MAX_CUSTOM_SCALE_PERCENT || streamWidth <= 0) {
+            return
+        }
+
+        val percent = (stored.toFloat() / streamWidth.toFloat() * 100f)
+            .roundToInt()
+            .coerceIn(MIN_CUSTOM_SCALE_PERCENT, MAX_CUSTOM_SCALE_PERCENT)
+        prefs.edit().putInt(PREF_INTERNAL_WIDTH, percent).apply()
+    }
+
+    private fun scaledInternalWidth(streamWidth: Int, scale: Float): Int {
+        if (streamWidth <= 0) {
+            return DEFAULT_INTERNAL_WIDTH
+        }
+        return ((streamWidth * scale).toInt() / 16) * 16
+    }
+
+    private fun resolveCustomScale(prefs: SharedPreferences, streamWidth: Int): Float {
+        val stored = prefs.getInt(PREF_INTERNAL_WIDTH, DEFAULT_CUSTOM_SCALE_PERCENT)
+        if (stored > MAX_CUSTOM_SCALE_PERCENT && streamWidth > 0) {
+            return (stored.toFloat() / streamWidth.toFloat())
+                .coerceIn(
+                    MIN_CUSTOM_SCALE_PERCENT / 100f,
+                    MAX_CUSTOM_SCALE_PERCENT / 100f
+                )
+        }
+        return stored.coerceIn(MIN_CUSTOM_SCALE_PERCENT, MAX_CUSTOM_SCALE_PERCENT) / 100f
     }
 }
