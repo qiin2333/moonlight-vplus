@@ -15,8 +15,6 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 
 import com.limelight.R
-import com.limelight.utils.AppDialogStyler
-
 class AboutDialogPreference : Preference {
 
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int, defStyleRes: Int)
@@ -68,8 +66,7 @@ class AboutDialogPreference : Preference {
 
         val dialog = builder.create()
         dialog.show()
-        dialog.window?.setBackgroundDrawableResource(R.drawable.app_dialog_bg_cute)
-        AppDialogStyler.tintTitle(dialog, context)
+        dialog.window?.setBackgroundDrawableResource(R.drawable.dialog_about_window_bg)
         tintAboutDialogButtons(dialog)
     }
 
