@@ -4225,7 +4225,7 @@ class StreamSettings : AppCompatActivity() {
         val filterColor = if (isNightMode()) {
             Color.argb(120, 0, 0, 0)
         } else {
-            Color.argb(72, 255, 255, 255)
+            Color.argb(96, 255, 255, 255)
         }
         val transformations = MultiTransformation<Bitmap>(
                 BlurTransformation(2, 3),
