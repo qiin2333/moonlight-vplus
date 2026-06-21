@@ -296,7 +296,7 @@ class CustomResolutionsAdapter(private val context: Context) : BaseAdapter() {
                 leftMargin = dpToPx(8)
             }
             textSize = 16f
-            setTextColor(ContextCompat.getColor(context, R.color.ui_shell_text_primary))
+            setTextColor(ContextCompat.getColor(context, R.color.app_dialog_text_primary))
         }
 
         val deleteButton = ImageButton(context).apply {
@@ -304,7 +304,7 @@ class CustomResolutionsAdapter(private val context: Context) : BaseAdapter() {
                 gravity = Gravity.CENTER_VERTICAL
             }
             setImageResource(R.drawable.ic_delete)
-            setColorFilter(ContextCompat.getColor(context, R.color.theme_pink_primary))
+            setColorFilter(ContextCompat.getColor(context, R.color.app_dialog_accent_color))
             setBackgroundResource(android.R.color.transparent)
             setPadding(dpToPx(8), dpToPx(8), dpToPx(8), dpToPx(8))
         }

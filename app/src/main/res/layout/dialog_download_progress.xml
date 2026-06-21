@@ -16,7 +16,7 @@
         android:layout_height="wrap_content"
         android:max="100"
         android:progress="0"
-        android:progressTint="@color/theme_pink_primary" />
+        android:progressTint="@color/app_dialog_accent_color" />
 
     <!-- 进度文本 -->
     <TextView

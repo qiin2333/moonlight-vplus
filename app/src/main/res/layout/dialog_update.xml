@@ -14,7 +14,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="14sp"
-        android:textColor="@color/theme_pink_primary"
+        android:textColor="@color/app_dialog_accent_color"
         android:textStyle="bold"
         android:shadowRadius="0"
         android:paddingBottom="8dp" />

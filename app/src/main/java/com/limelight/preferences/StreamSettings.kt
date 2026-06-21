@@ -77,6 +77,7 @@ import com.limelight.utils.AspectRatioConverter
 import com.limelight.utils.ConfigurationSyncManager
 import com.limelight.utils.ConfigurationSyncScheduler
 import com.limelight.utils.Dialog
+import com.limelight.utils.AppDialogStyler
 import com.limelight.utils.UiHelper
 import com.limelight.utils.UpdateManager
 
@@ -822,6 +823,7 @@ class StreamSettings : AppCompatActivity() {
             hideKeyboardBeforeDialog()
             dialog.show()
             dialog.window?.setBackgroundDrawableResource(R.drawable.app_dialog_bg_cute)
+            AppDialogStyler.tintTitle(dialog, requireContext())
             tintSettingsDialogButtons(dialog)
             return dialog
         }

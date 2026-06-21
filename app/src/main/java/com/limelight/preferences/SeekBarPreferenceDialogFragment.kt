@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceDialogFragmentCompat
 
 import com.limelight.R
+import com.limelight.utils.AppDialogStyler
 import kotlin.math.roundToInt
 
 class SeekBarPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
@@ -187,6 +188,7 @@ class SeekBarPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
 
     private fun tintDialogButtons() {
         val alert = dialog as? AlertDialog ?: return
+        AppDialogStyler.tintTitle(alert, requireContext())
         val accentColor = ContextCompat.getColor(requireContext(), R.color.app_dialog_accent_color)
         listOf(AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEGATIVE, AlertDialog.BUTTON_NEUTRAL)
             .forEach { buttonId ->

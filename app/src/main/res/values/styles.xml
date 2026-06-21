@@ -300,11 +300,11 @@
         <item name="colorAccent">@color/app_dialog_accent_color</item>
         <item name="android:colorControlActivated">@color/app_dialog_accent_color</item>
         <item name="colorControlActivated">@color/app_dialog_accent_color</item>
-        <item name="android:colorControlNormal">@color/ui_shell_text_secondary</item>
-        <item name="colorControlNormal">@color/ui_shell_text_secondary</item>
-        <item name="android:colorControlHighlight">@color/ui_shell_accent_soft</item>
-        <item name="colorControlHighlight">@color/ui_shell_accent_soft</item>
-        <item name="android:listDivider">@color/app_dialog_accent_color</item>
+        <item name="android:colorControlNormal">@color/app_dialog_text_secondary</item>
+        <item name="colorControlNormal">@color/app_dialog_text_secondary</item>
+        <item name="android:colorControlHighlight">@color/app_dialog_accent_soft</item>
+        <item name="colorControlHighlight">@color/app_dialog_accent_soft</item>
+        <item name="android:listDivider">@color/app_dialog_outline</item>
         <!-- 标题样式 -->
         <item name="android:windowTitleStyle">@style/AppDialogTitleStyle</item>
     </style>
