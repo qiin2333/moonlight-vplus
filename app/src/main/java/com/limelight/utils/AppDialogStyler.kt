@@ -18,6 +18,7 @@ object AppDialogStyler {
         tintTitle(dialog, context)
         tintButtons(dialog, context)
         styleList(dialog.findViewById(android.R.id.list), context)
+        clearTextShadows(dialog.window?.decorView)
     }
 
     fun tintTitle(dialog: Dialog, context: Context) {
@@ -51,6 +52,17 @@ object AppDialogStyler {
         textView.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
     }
 
+    fun clearTextShadows(view: View?) {
+        when (view) {
+            is TextView -> view.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
+            is ViewGroup -> {
+                for (index in 0 until view.childCount) {
+                    clearTextShadows(view.getChildAt(index))
+                }
+            }
+        }
+    }
+
     fun styleList(listView: ListView?, context: Context) {
         listView ?: return
         listView.setBackgroundColor(Color.TRANSPARENT)
@@ -72,6 +84,7 @@ object AppDialogStyler {
             for (index in 0 until listView.childCount) {
                 styleListRow(listView.getChildAt(index), context)
             }
+            clearTextShadows(listView)
         }
     }
 
