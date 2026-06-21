@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 
+import androidx.core.content.ContextCompat
 import androidx.preference.DialogPreference
 
 import com.limelight.R
@@ -295,6 +296,7 @@ class CustomResolutionsAdapter(private val context: Context) : BaseAdapter() {
                 leftMargin = dpToPx(8)
             }
             textSize = 16f
+            setTextColor(ContextCompat.getColor(context, R.color.ui_shell_text_primary))
         }
 
         val deleteButton = ImageButton(context).apply {
@@ -302,6 +304,7 @@ class CustomResolutionsAdapter(private val context: Context) : BaseAdapter() {
                 gravity = Gravity.CENTER_VERTICAL
             }
             setImageResource(R.drawable.ic_delete)
+            setColorFilter(ContextCompat.getColor(context, R.color.theme_pink_primary))
             setBackgroundResource(android.R.color.transparent)
             setPadding(dpToPx(8), dpToPx(8), dpToPx(8), dpToPx(8))
         }

@@ -6,7 +6,7 @@
     android:paddingStart="20dp"
     android:paddingEnd="20dp"
     android:paddingTop="8dp"
-    android:paddingBottom="8dp">
+    android:paddingBottom="16dp">
 
     <!-- 版本号 -->
     <TextView
@@ -24,6 +24,11 @@
         android:id="@+id/update_notes_scroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:clipToPadding="false"
+        android:fadingEdge="vertical"
+        android:paddingBottom="8dp"
+        android:requiresFadingEdge="vertical"
+        android:scrollbars="vertical"
         android:visibility="gone">
 
         <TextView
@@ -43,7 +48,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="12sp"
-        android:textColor="#AAAAAA"
+        android:textColor="@color/app_dialog_subtitle_color"
         android:shadowRadius="0"
         android:paddingTop="8dp"
         android:visibility="gone" />

@@ -7,12 +7,14 @@ object DeveloperUnlockSettings {
     const val PREF_ENTRY = "pref_developer_unlock"
     const val PREF_UNLOCKED = "pref_developer_features_unlocked"
     const val PREF_ACCESS_TOKEN = "pref_developer_features_access_token"
+    const val PREF_ACCESS_TOKEN_SCOPE = "pref_developer_features_access_token_scope"
     const val PREF_USER_LOGIN = "pref_developer_features_user_login"
     const val PREF_VERIFIED_AT_MS = "pref_developer_features_verified_at_ms"
     const val PREF_PENDING_DEVICE_CODE = "pref_developer_features_pending_device_code"
     const val PREF_PENDING_USER_CODE = "pref_developer_features_pending_user_code"
     const val PREF_PENDING_VERIFICATION_URI = "pref_developer_features_pending_verification_uri"
     const val PREF_PENDING_VERIFICATION_URI_COMPLETE = "pref_developer_features_pending_verification_uri_complete"
+    const val PREF_PENDING_SCOPE = "pref_developer_features_pending_scope"
     const val PREF_PENDING_EXPIRES_AT_MS = "pref_developer_features_pending_expires_at_ms"
     const val PREF_PENDING_INTERVAL_SECONDS = "pref_developer_features_pending_interval_seconds"
 
@@ -101,5 +103,24 @@ object DeveloperUnlockSettings {
         val verifiedAtMs = prefs.getLong(PREF_VERIFIED_AT_MS, 0L)
         val ageMs = System.currentTimeMillis() - verifiedAtMs
         return verifiedAtMs > 0L && ageMs in 0L..VERIFICATION_MAX_AGE_MS
+    }
+
+    fun hasAccessTokenScope(
+        prefs: SharedPreferences,
+        requiredScope: GitHubStarVerifier.OAuthScope
+    ): Boolean {
+        migrateLegacyPrefs(prefs)
+        if (prefs.getString(PREF_ACCESS_TOKEN, null).isNullOrBlank()) {
+            return false
+        }
+
+        val savedScope = GitHubStarVerifier.OAuthScope.fromPreference(
+            prefs.getString(PREF_ACCESS_TOKEN_SCOPE, null)
+        )
+        if (savedScope == null) {
+            // Tokens created before scope tracking used public_repo in this branch.
+            return true
+        }
+        return savedScope.grants(requiredScope)
     }
 }

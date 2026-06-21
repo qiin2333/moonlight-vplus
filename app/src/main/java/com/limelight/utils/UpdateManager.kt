@@ -16,6 +16,7 @@ import android.provider.Settings
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
@@ -344,6 +345,7 @@ object UpdateManager {
                 notesScroll.visibility = View.VISIBLE
                 val notes = view.findViewById<TextView>(R.id.update_notes)
                 notes.text = SimpleMarkdownRenderer.render(releaseNotes, accentColor)
+                constrainUpdateNotesScroll(context, notesScroll, releaseNotes)
             }
 
             builder.setView(view)
@@ -371,6 +373,7 @@ object UpdateManager {
                 notesScroll.visibility = View.VISIBLE
                 val notesView = view.findViewById<TextView>(R.id.update_notes)
                 notesView.text = SimpleMarkdownRenderer.render(updateInfo.releaseNotes, accentColor)
+                constrainUpdateNotesScroll(context, notesScroll, updateInfo.releaseNotes)
             }
 
             if (updateInfo.apkName != null) {
@@ -1100,6 +1103,27 @@ object UpdateManager {
 
     private fun dpToPx(context: Context, dp: Int): Int {
         return (dp * context.resources.displayMetrics.density).toInt()
+    }
+
+    private fun constrainUpdateNotesScroll(context: Context, notesScroll: ScrollView, rawNotes: String) {
+        val lineCount = rawNotes.count { it == '\n' } + 1
+        if (rawNotes.length < 700 && lineCount < 12) {
+            return
+        }
+
+        val metrics = context.resources.displayMetrics
+        val isLandscape = metrics.widthPixels > metrics.heightPixels
+        val maxFraction = if (isLandscape) 0.42f else 0.48f
+        val maxHeight = (metrics.heightPixels * maxFraction).toInt()
+            .coerceAtLeast(dpToPx(context, if (isLandscape) 180 else 260))
+
+        notesScroll.layoutParams = (notesScroll.layoutParams ?: ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )).apply {
+            height = maxHeight
+        }
+        notesScroll.isVerticalScrollBarEnabled = true
     }
 
     private fun joinStrings(list: List<String>): String {

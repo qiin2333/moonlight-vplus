@@ -73,6 +73,8 @@ import com.limelight.PcView
 import com.limelight.R
 import com.limelight.ExternalDisplayManager
 import com.limelight.binding.input.advance_setting.config.PageConfigController
+import com.limelight.binding.input.advance_setting.share.CrownProfileShareManager
+import com.limelight.binding.input.advance_setting.share.GitHubCrownProfileStorePublisher
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper
 import com.limelight.binding.video.MediaCodecHelper
 import com.limelight.utils.AspectRatioConverter
@@ -86,9 +88,13 @@ import jp.wasabeef.glide.transformations.BlurTransformation
 import jp.wasabeef.glide.transformations.ColorFilterTransformation
 
 import java.io.BufferedReader
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
 import java.text.DateFormat
 import java.util.*
 
@@ -122,6 +128,11 @@ class StreamSettings : AppCompatActivity() {
         private const val REQUEST_CODE_CREATE_CONFIG_SYNC = 5
         private const val REQUEST_CODE_OPEN_CONFIG_SYNC = 6
         private const val REQUEST_CODE_OPEN_CONFIG_SYNC_DIRECTORY = 7
+        private const val REQUEST_CODE_CREATE_CROWN_SHARE = 8
+        private const val REQUEST_CODE_OPEN_CROWN_SHARE = 9
+        private const val CROWN_STORE_INDEX_URL = "https://raw.githubusercontent.com/qiin2333/crown-profiles/main/index/v1.json"
+        private const val CROWN_STORE_MAX_INDEX_BYTES = 256 * 1024
+        private const val CROWN_SHARE_MAX_DOWNLOAD_BYTES = 512 * 1024
 
         // HACK for Android 9
         var displayCutoutP: DisplayCutout? = null
@@ -760,6 +771,8 @@ class StreamSettings : AppCompatActivity() {
         private var nativeFramerateShown = false
 
         private var exportConfigString: String = ""
+        private var pendingCrownShareExportString: String = ""
+        private var pendingCrownShareImport: CrownProfileShareManager.ImportedProfile? = null
         private var pendingSyncExportString: String = ""
         private var pendingSyncImportString: String = ""
         private val configSyncSnapshotHandler = Handler(Looper.getMainLooper())
@@ -800,10 +813,40 @@ class StreamSettings : AppCompatActivity() {
          */
         private fun getTargetDisplay(): Display {
             val settingsActivity = activity as? StreamSettings
-            if (settingsActivity?.externalDisplayManager != null) {
-                return settingsActivity.externalDisplayManager?.getTargetDisplay()!!
-            }
-            return requireActivity().windowManager.defaultDisplay
+            return settingsActivity?.externalDisplayManager?.getTargetDisplay()
+                ?: requireActivity().windowManager.defaultDisplay
+        }
+
+        private fun appDialogBuilder(context: Context = requireContext()): AlertDialog.Builder {
+            return AlertDialog.Builder(context, R.style.AppDialogStyle)
+        }
+
+        private fun AlertDialog.Builder.showStyled(): AlertDialog {
+            return showStyledDialog(create())
+        }
+
+        private fun showStyledDialog(dialog: AlertDialog): AlertDialog {
+            hideKeyboardBeforeDialog()
+            dialog.show()
+            dialog.window?.setBackgroundDrawableResource(R.drawable.app_dialog_bg_cute)
+            tintSettingsDialogButtons(dialog)
+            return dialog
+        }
+
+        private fun hideKeyboardBeforeDialog() {
+            val hostActivity = activity ?: return
+            val focusedView = hostActivity.currentFocus ?: view ?: return
+            val imm = hostActivity.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+            imm?.hideSoftInputFromWindow(focusedView.windowToken, 0)
+            focusedView.clearFocus()
+        }
+
+        private fun tintSettingsDialogButtons(dialog: AlertDialog) {
+            val accentColor = ContextCompat.getColor(requireContext(), R.color.app_dialog_accent_color)
+            listOf(AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEGATIVE, AlertDialog.BUTTON_NEUTRAL)
+                .forEach { buttonId ->
+                    dialog.getButton(buttonId)?.setTextColor(accentColor)
+                }
         }
 
         private fun setValue(preferenceKey: String, value: String) {
@@ -1210,6 +1253,27 @@ class StreamSettings : AppCompatActivity() {
             intent.putExtra(Intent.EXTRA_TITLE, "$fileName.mdat")
             @Suppress("DEPRECATION")
             startActivityForResult(intent, 1)
+        }
+
+        private fun createCrownShareDocument(fileName: String) {
+            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT)
+            intent.addCategory(Intent.CATEGORY_OPENABLE)
+            intent.type = "application/json"
+            intent.putExtra(Intent.EXTRA_TITLE, CrownProfileShareManager.suggestedFileName(fileName))
+            @Suppress("DEPRECATION")
+            startActivityForResult(intent, REQUEST_CODE_CREATE_CROWN_SHARE)
+        }
+
+        private fun openCrownShareDocument() {
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+            intent.addCategory(Intent.CATEGORY_OPENABLE)
+            intent.type = "*/*"
+            intent.putExtra(
+                Intent.EXTRA_MIME_TYPES,
+                arrayOf("application/json", "text/json", "text/plain", "application/octet-stream")
+            )
+            @Suppress("DEPRECATION")
+            startActivityForResult(intent, REQUEST_CODE_OPEN_CROWN_SHARE)
         }
 
         private fun createSyncDocument() {
@@ -1871,8 +1935,13 @@ class StreamSettings : AppCompatActivity() {
 
         private fun showCrownConfigManagementDialog() {
             val options = arrayOf(
-                    getString(R.string.crown_config_action_import),
-                    getString(R.string.crown_config_action_export),
+                    getString(R.string.crown_store_action_browse),
+                    getString(R.string.crown_store_action_publish),
+                    getString(R.string.crown_share_action_import),
+                    getString(R.string.crown_share_action_import_url),
+                    getString(R.string.crown_share_action_export),
+                    getString(R.string.crown_config_action_import_legacy),
+                    getString(R.string.crown_config_action_export_legacy),
                     getString(R.string.crown_config_action_merge)
             )
 
@@ -1880,9 +1949,597 @@ class StreamSettings : AppCompatActivity() {
                     .setTitle(R.string.title_crown_config_management)
                     .setItems(options) { _, which ->
                         when (which) {
-                            0 -> openConfigDocument(2)
-                            1 -> showCrownExportConfigDialog()
-                            2 -> showCrownMergeConfigDialog()
+                            0 -> openCrownStore()
+                            1 -> showCrownStorePublishProfileDialog()
+                            2 -> openCrownShareDocument()
+                            3 -> showCrownShareUrlImportDialog()
+                            4 -> showCrownShareExportConfigDialog()
+                            5 -> openConfigDocument(2)
+                            6 -> showCrownExportConfigDialog()
+                            7 -> showCrownMergeConfigDialog()
+                        }
+                    }
+                    .show()
+        }
+
+        private fun showCrownShareExportConfigDialog() {
+            val helper = SuperConfigDatabaseHelper(context)
+            val configMap = loadConfigMap(helper)
+            if (configMap.isEmpty()) {
+                Toast.makeText(context, R.string.crown_config_no_profiles, Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val ids = configMap.keys.toTypedArray()
+            val names = configMap.values.toTypedArray<CharSequence>()
+            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
+                    .setTitle(R.string.crown_share_action_export)
+                    .setItems(names) { _, which ->
+                        val id = ids[which]
+                        val profileName = configMap[id] ?: "Crown Profile"
+                        val payload = helper.exportConfig(id.toLong())
+                        try {
+                            pendingCrownShareExportString = CrownProfileShareManager.createBundle(
+                                profileName = profileName,
+                                payload = payload,
+                                metadata = currentCrownShareExportMetadata()
+                            )
+                            createCrownShareDocument(profileName)
+                        } catch (e: Exception) {
+                            Log.e("CrownShare", "Failed to export Crown share package", e)
+                            Toast.makeText(context, R.string.toast_crown_share_export_failed, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                    .show()
+        }
+
+        private fun currentCrownShareExportMetadata(): CrownProfileShareManager.ExportMetadata {
+            val ctx = requireContext()
+            val packageInfo = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
+            val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                packageInfo.longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                packageInfo.versionCode.toLong()
+            }
+            return CrownProfileShareManager.ExportMetadata(
+                packageName = ctx.packageName,
+                appVersionCode = versionCode,
+                appVersionName = packageInfo.versionName ?: "",
+                layoutBasis = currentLayoutBasis()
+            )
+        }
+
+        private fun currentLayoutBasis(): CrownProfileShareManager.LayoutBasis {
+            val metrics = resources.displayMetrics
+            val orientation = when (resources.configuration.orientation) {
+                Configuration.ORIENTATION_LANDSCAPE -> "landscape"
+                Configuration.ORIENTATION_PORTRAIT -> "portrait"
+                else -> "unknown"
+            }
+            return CrownProfileShareManager.LayoutBasis(
+                widthPx = metrics.widthPixels,
+                heightPx = metrics.heightPixels,
+                densityDpi = metrics.densityDpi,
+                density = metrics.density,
+                orientation = orientation
+            )
+        }
+
+        private fun handleCrownShareExportResult(data: Intent?) {
+            val uri = data?.data ?: return
+            try {
+                writeDocumentText(uri, pendingCrownShareExportString)
+                Toast.makeText(context, R.string.toast_crown_share_export_success, Toast.LENGTH_SHORT).show()
+            } catch (e: IOException) {
+                Log.e("CrownShare", "Failed to write Crown share package", e)
+                Toast.makeText(context, R.string.toast_crown_share_export_failed, Toast.LENGTH_LONG).show()
+            }
+        }
+
+        private fun handleCrownShareImportResult(data: Intent?) {
+            val uri = data?.data ?: return
+            try {
+                val importText = readDocumentText(uri)
+                val importedProfile = CrownProfileShareManager.parseImportText(importText)
+                pendingCrownShareImport = importedProfile
+                showCrownShareImportPreview(importedProfile)
+            } catch (e: Exception) {
+                Log.e("CrownShare", "Failed to read Crown share package", e)
+                Toast.makeText(context, R.string.toast_crown_share_import_failed, Toast.LENGTH_LONG).show()
+            }
+        }
+
+        private fun openCrownStore() {
+            val appContext = requireContext().applicationContext
+            Toast.makeText(context, R.string.toast_crown_store_loading, Toast.LENGTH_SHORT).show()
+            thread(name = "CrownStoreIndex") {
+                val result = runCatching {
+                    val indexText = downloadRemoteText(CROWN_STORE_INDEX_URL, CROWN_STORE_MAX_INDEX_BYTES)
+                    CrownProfileShareManager.parseStoreIndex(indexText)
+                }
+
+                Handler(Looper.getMainLooper()).post {
+                    if (!isAdded) return@post
+                    result
+                            .onSuccess { profiles ->
+                                if (profiles.isEmpty()) {
+                                    Toast.makeText(
+                                            appContext,
+                                            R.string.toast_crown_store_empty,
+                                            Toast.LENGTH_LONG
+                                    ).show()
+                                } else {
+                                    showCrownStoreDialog(profiles)
+                                }
+                            }
+                            .onFailure {
+                                Log.e("CrownStore", "Failed to load Crown profile store", it)
+                                Toast.makeText(
+                                        appContext,
+                                        R.string.toast_crown_store_failed,
+                                        Toast.LENGTH_LONG
+                                ).show()
+                            }
+                }
+            }
+        }
+
+        private fun showCrownStoreDialog(profiles: List<CrownProfileShareManager.StoreProfile>) {
+            val labels = profiles.map { crownStoreProfileLabel(it) }.toTypedArray<CharSequence>()
+            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
+                    .setTitle(R.string.crown_store_action_browse)
+                    .setItems(labels) { _, which ->
+                        val profile = profiles[which]
+                        val profileUrl = try {
+                            CrownProfileShareManager.resolveStoreProfileUrl(CROWN_STORE_INDEX_URL, profile.url)
+                        } catch (e: Exception) {
+                            Log.e("CrownStore", "Invalid Crown store profile URL", e)
+                            Toast.makeText(context, R.string.toast_crown_store_profile_failed, Toast.LENGTH_LONG).show()
+                            return@setItems
+                        }
+                        importCrownShareFromUrl(
+                                profileUrl,
+                                sourceLabelOverride = getString(R.string.crown_store_source_label, profile.name),
+                                failureToastRes = R.string.toast_crown_store_profile_failed
+                        )
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+        }
+
+        private fun crownStoreProfileLabel(profile: CrownProfileShareManager.StoreProfile): String {
+            val details = arrayOf(profile.game, profile.author)
+                    .filter { it.isNotBlank() }
+                    .joinToString(" - ")
+            return buildString {
+                append(profile.name)
+                if (details.isNotBlank()) {
+                    append('\n')
+                    append(details)
+                }
+                if (profile.summary.isNotBlank()) {
+                    append('\n')
+                    append(profile.summary)
+                }
+            }
+        }
+
+        private fun showCrownStorePublishProfileDialog() {
+            val ctx = requireContext()
+            if (!GitHubStarVerifier.isConfigured()) {
+                Toast.makeText(ctx, R.string.toast_developer_oauth_unconfigured, Toast.LENGTH_LONG).show()
+                return
+            }
+
+            val accessToken = PreferenceManager.getDefaultSharedPreferences(ctx)
+                    .getString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, null)
+            val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
+            if (accessToken.isNullOrBlank() ||
+                    !DeveloperUnlockSettings.hasAccessTokenScope(
+                            prefs,
+                            GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH
+                    )) {
+                showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken = false)
+                return
+            }
+
+            val helper = SuperConfigDatabaseHelper(context)
+            val configMap = loadConfigMap(helper)
+            if (configMap.isEmpty()) {
+                Toast.makeText(context, R.string.crown_config_no_profiles, Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val ids = configMap.keys.toTypedArray()
+            val names = configMap.values.toTypedArray<CharSequence>()
+            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
+                    .setTitle(R.string.crown_store_action_publish)
+                    .setItems(names) { _, which ->
+                        showCrownStorePublishMetadataDialog(ids[which], configMap[ids[which]] ?: "Crown Profile")
+                    }
+                    .show()
+        }
+
+        private fun showCrownStorePublishMetadataDialog(configId: String, defaultName: String) {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
+            val defaultAuthor = prefs.getString(DeveloperUnlockSettings.PREF_USER_LOGIN, null).orEmpty()
+            val nameInput = crownStorePublishInput(defaultName, R.string.hint_crown_store_profile_name)
+            val gameInput = crownStorePublishInput("", R.string.hint_crown_store_game)
+            val authorInput = crownStorePublishInput(defaultAuthor, R.string.hint_crown_store_author)
+            val tagsInput = crownStorePublishInput("", R.string.hint_crown_store_tags)
+            val summaryInput = crownStorePublishInput("", R.string.hint_crown_store_summary).apply {
+                setSingleLine(false)
+                minLines = 2
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            }
+
+            val container = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                val inset = (24 * resources.displayMetrics.density).toInt()
+                setPadding(inset, 0, inset, 0)
+                addCrownStorePublishField(R.string.label_crown_store_profile_name, nameInput)
+                addCrownStorePublishField(R.string.label_crown_store_game, gameInput)
+                addCrownStorePublishField(R.string.label_crown_store_author, authorInput)
+                addCrownStorePublishField(R.string.label_crown_store_tags, tagsInput)
+                addCrownStorePublishField(R.string.label_crown_store_summary, summaryInput)
+            }
+
+            val dialog = AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
+                    .setTitle(R.string.title_crown_store_publish_metadata)
+                    .setMessage(R.string.message_crown_store_publish_metadata)
+                    .setView(container)
+                    .setPositiveButton(R.string.crown_store_action_publish, null)
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .create()
+            dialog.setOnShowListener {
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                    val profileName = nameInput.text?.toString().orEmpty().trim()
+                    if (profileName.isBlank()) {
+                        nameInput.error = getString(R.string.hint_crown_store_profile_name)
+                        return@setOnClickListener
+                    }
+
+                    val game = gameInput.text?.toString().orEmpty().trim()
+                    val author = authorInput.text?.toString().orEmpty().trim()
+                    val summary = summaryInput.text?.toString().orEmpty().trim()
+                    val tags = tagsInput.text?.toString().orEmpty()
+                            .split(Regex("[,\\s\\uFF0C]+"))
+                            .map { it.trim() }
+                            .filter { it.isNotBlank() }
+                            .distinct()
+
+                    try {
+                        val payload = SuperConfigDatabaseHelper(context).exportConfig(configId.toLong())
+                        val bundle = CrownProfileShareManager.createBundle(
+                                profileName = profileName,
+                                payload = payload,
+                                metadata = currentCrownShareExportMetadata(),
+                                displayMetadata = CrownProfileShareManager.BundleDisplayMetadata(
+                                        summary = summary,
+                                        authorName = author,
+                                        gameName = game,
+                                        tags = tags
+                                )
+                        )
+                        dialog.dismiss()
+                        publishCrownStoreProfile(
+                                GitHubCrownProfileStorePublisher.PublishRequest(
+                                        profileName = profileName,
+                                        summary = summary,
+                                        author = author,
+                                        game = game,
+                                        tags = tags,
+                                        bundleJson = bundle
+                                )
+                        )
+                    } catch (e: Exception) {
+                        Log.e("CrownStore", "Failed to prepare Crown Store profile", e)
+                        Toast.makeText(context, R.string.toast_crown_store_publish_failed, Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+            dialog.show()
+        }
+
+        private fun crownStorePublishInput(value: String, hintRes: Int): EditText {
+            return EditText(requireContext()).apply {
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+                setSingleLine(true)
+                setText(value)
+                hint = getString(hintRes)
+            }
+        }
+
+        private fun LinearLayout.addCrownStorePublishField(labelRes: Int, input: EditText) {
+            addView(TextView(context).apply {
+                text = getString(labelRes)
+            })
+            addView(input)
+        }
+
+        private fun publishCrownStoreProfile(request: GitHubCrownProfileStorePublisher.PublishRequest) {
+            val appContext = requireContext().applicationContext
+            val accessToken = PreferenceManager.getDefaultSharedPreferences(appContext)
+                    .getString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, null)
+            val prefs = PreferenceManager.getDefaultSharedPreferences(appContext)
+            if (accessToken.isNullOrBlank() ||
+                    !DeveloperUnlockSettings.hasAccessTokenScope(
+                            prefs,
+                            GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH
+                    )) {
+                showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken = false)
+                return
+            }
+
+            Toast.makeText(context, R.string.toast_crown_store_publish_started, Toast.LENGTH_LONG).show()
+            thread(name = "CrownStorePublish") {
+                val result = runCatching {
+                    GitHubCrownProfileStorePublisher.publish(accessToken, request)
+                }
+
+                Handler(Looper.getMainLooper()).post {
+                    if (!isAdded) return@post
+                    result
+                            .onSuccess { publishResult ->
+                                showCrownStorePublishSuccessDialog(publishResult)
+                            }
+                            .onFailure { error ->
+                                Log.e("CrownStore", "Failed to publish Crown Store profile", error)
+                                if (error is GitHubCrownProfileStorePublisher.GitHubCrownStoreException &&
+                                        error.authorizationFailure) {
+                                    showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken = true)
+                                } else {
+                                    Toast.makeText(
+                                            appContext,
+                                            getString(
+                                                    R.string.toast_crown_store_publish_failed_with_error,
+                                                    error.message ?: error.javaClass.simpleName
+                                            ),
+                                            Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
+                }
+            }
+        }
+
+        private fun showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken: Boolean) {
+            val ctx = requireContext()
+            if (clearSavedToken) {
+                PreferenceManager.getDefaultSharedPreferences(ctx).edit {
+                    remove(DeveloperUnlockSettings.PREF_ACCESS_TOKEN)
+                    remove(DeveloperUnlockSettings.PREF_ACCESS_TOKEN_SCOPE)
+                    remove(DeveloperUnlockSettings.PREF_UNLOCKED)
+                    remove(DeveloperUnlockSettings.PREF_VERIFIED_AT_MS)
+                }
+                refreshDeveloperFeatureGateState()
+            }
+
+            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
+                    .setTitle(R.string.title_crown_store_github_authorization)
+                    .setMessage(
+                            if (clearSavedToken) {
+                                R.string.message_crown_store_github_reauthorization_required
+                            } else {
+                                R.string.message_crown_store_github_authorization_required
+                            }
+                    )
+                    .setPositiveButton(R.string.action_crown_store_authorize_github) { _, _ ->
+                        startDeveloperUnlockVerification(GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH)
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+        }
+
+        private fun showCrownStorePublishSuccessDialog(result: GitHubCrownProfileStorePublisher.PublishResult) {
+            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
+                    .setTitle(R.string.title_crown_store_publish_success)
+                    .setMessage(
+                            getString(
+                                    R.string.message_crown_store_publish_success,
+                                    result.profilePath,
+                                    result.pullRequestUrl
+                            )
+                    )
+                    .setPositiveButton(R.string.action_open_pull_request) { _, _ ->
+                        openDeveloperUrl(result.pullRequestUrl)
+                    }
+                    .setNegativeButton(android.R.string.ok, null)
+                    .show()
+        }
+
+        private fun showCrownShareUrlImportDialog() {
+            val input = EditText(requireContext()).apply {
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+                setSingleLine(true)
+                hint = getString(R.string.hint_crown_share_import_url)
+            }
+            val container = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                val inset = (24 * resources.displayMetrics.density).toInt()
+                setPadding(inset, 0, inset, 0)
+                addView(input)
+            }
+
+            val dialog = AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
+                    .setTitle(R.string.crown_share_action_import_url)
+                    .setMessage(R.string.message_crown_share_import_url)
+                    .setView(container)
+                    .setPositiveButton(R.string.crown_share_action_import, null)
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .create()
+            dialog.setOnShowListener {
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                    val url = input.text?.toString().orEmpty().trim()
+                    if (url.isBlank()) {
+                        input.error = getString(R.string.hint_crown_share_import_url)
+                        return@setOnClickListener
+                    }
+                    dialog.dismiss()
+                    importCrownShareFromUrl(url)
+                }
+                input.requestFocus()
+                dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
+            }
+            dialog.show()
+        }
+
+        private fun importCrownShareFromUrl(
+            url: String,
+            sourceLabelOverride: String? = null,
+            failureToastRes: Int = R.string.toast_crown_share_url_failed
+        ) {
+            val normalizedUrl = url.trim()
+            if (!normalizedUrl.startsWith("https://", ignoreCase = true) &&
+                    !normalizedUrl.startsWith("http://", ignoreCase = true)) {
+                Toast.makeText(context, R.string.toast_crown_share_url_invalid, Toast.LENGTH_LONG).show()
+                return
+            }
+
+            val appContext = requireContext().applicationContext
+            Toast.makeText(context, R.string.toast_crown_share_url_loading, Toast.LENGTH_SHORT).show()
+            thread(name = "CrownShareUrlImport") {
+                val result = runCatching {
+                    val importText = downloadRemoteText(normalizedUrl, CROWN_SHARE_MAX_DOWNLOAD_BYTES)
+                    CrownProfileShareManager.parseImportText(importText)
+                        .copy(sourceLabel = sourceLabelOverride ?: crownShareSourceLabel(normalizedUrl))
+                }
+
+                Handler(Looper.getMainLooper()).post {
+                    if (!isAdded) return@post
+                    result
+                            .onSuccess { importedProfile ->
+                                pendingCrownShareImport = importedProfile
+                                showCrownShareImportPreview(importedProfile)
+                            }
+                            .onFailure {
+                                Log.e("CrownShare", "Failed to import Crown share package from URL", it)
+                                Toast.makeText(
+                                        appContext,
+                                        failureToastRes,
+                                        Toast.LENGTH_LONG
+                                ).show()
+                            }
+                }
+            }
+        }
+
+        private fun crownShareSourceLabel(url: String): String {
+            return runCatching {
+                URL(url).host
+                    .takeIf { it.isNotBlank() }
+                    ?.let { getString(R.string.crown_share_source_link_host, it) }
+            }.getOrNull() ?: getString(R.string.crown_share_source_link)
+        }
+
+        private fun downloadRemoteText(url: String, maxBytes: Int): String {
+            val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 10000
+                readTimeout = 15000
+                instanceFollowRedirects = true
+                requestMethod = "GET"
+                setRequestProperty("Accept", "application/json,text/plain,*/*")
+            }
+
+            try {
+                val responseCode = connection.responseCode
+                if (responseCode !in 200..299) {
+                    throw IOException("HTTP $responseCode")
+                }
+                val contentLength = connection.contentLengthLong
+                if (contentLength > maxBytes) {
+                    throw IOException("Remote Crown profile response is too large")
+                }
+                return connection.inputStream.use { input ->
+                    readLimitedText(input, maxBytes)
+                }
+            } finally {
+                connection.disconnect()
+            }
+        }
+
+        private fun readLimitedText(input: InputStream, maxBytes: Int): String {
+            val output = ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            var total = 0
+            while (true) {
+                val read = input.read(buffer)
+                if (read == -1) break
+                total += read
+                if (total > maxBytes) {
+                    throw IOException("Remote Crown profile response is too large")
+                }
+                output.write(buffer, 0, read)
+            }
+            return output.toString(Charsets.UTF_8.name())
+        }
+
+        private fun showCrownShareImportPreview(profile: CrownProfileShareManager.ImportedProfile) {
+            val details = getString(
+                R.string.message_crown_share_import_preview,
+                profile.name,
+                profile.author.ifBlank { getString(R.string.crown_share_unknown_value) },
+                profile.game.ifBlank { getString(R.string.crown_share_unknown_value) },
+                profile.sourceLabel,
+                profile.payloadInfo.version,
+                profile.payloadInfo.elementCount,
+                profile.payloadInfo.settingsCount
+            )
+
+            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
+                    .setTitle(R.string.crown_share_action_import)
+                    .setMessage(details)
+                    .setPositiveButton(R.string.crown_share_install_as_new) { _, _ ->
+                        importPendingCrownShareAsNew()
+                    }
+                    .setNeutralButton(R.string.crown_share_merge_into_existing) { _, _ ->
+                        showCrownShareMergeTargetDialog()
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+        }
+
+        private fun importPendingCrownShareAsNew() {
+            val profile = pendingCrownShareImport ?: return
+            val helper = SuperConfigDatabaseHelper(context)
+            val errorCode = helper.importConfig(profile.payload)
+            if (errorCode == 0) {
+                pendingCrownShareImport = null
+                requestConfigSyncAutoSnapshot(delayMs = 0L)
+                Toast.makeText(context, R.string.toast_crown_share_import_success, Toast.LENGTH_SHORT).show()
+                Handler(Looper.getMainLooper()).post {
+                    (activity as? StreamSettings)?.reloadSettings()
+                }
+            } else {
+                Toast.makeText(context, R.string.toast_crown_share_import_failed, Toast.LENGTH_LONG).show()
+            }
+        }
+
+        private fun showCrownShareMergeTargetDialog() {
+            val profile = pendingCrownShareImport ?: return
+            val configMap = loadConfigMap(SuperConfigDatabaseHelper(context))
+            if (configMap.isEmpty()) {
+                Toast.makeText(context, R.string.crown_config_no_profiles, Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val ids = configMap.keys.toTypedArray()
+            val names = configMap.values.toTypedArray<CharSequence>()
+            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
+                    .setTitle(R.string.crown_share_merge_into_existing)
+                    .setItems(names) { _, which ->
+                        val helper = SuperConfigDatabaseHelper(context)
+                        val errorCode = helper.mergeConfig(profile.payload, ids[which].toLong())
+                        if (errorCode == 0) {
+                            pendingCrownShareImport = null
+                            requestConfigSyncAutoSnapshot(delayMs = 0L)
+                            Toast.makeText(context, R.string.toast_crown_share_merge_success, Toast.LENGTH_SHORT).show()
+                            Handler(Looper.getMainLooper()).post {
+                                (activity as? StreamSettings)?.reloadSettings()
+                            }
+                        } else {
+                            Toast.makeText(context, R.string.toast_crown_share_import_failed, Toast.LENGTH_LONG).show()
                         }
                     }
                     .show()
@@ -2563,7 +3220,7 @@ class StreamSettings : AppCompatActivity() {
                     }
             findPreference<Preference>(PreferenceConfiguration.CROWN_CONFIG_MANAGEMENT_STRING)!!.onPreferenceClickListener =
                     Preference.OnPreferenceClickListener {
-                        showCrownConfigManagementDialog()
+                        startActivity(Intent(requireActivity(), CrownStoreActivity::class.java))
                         true
                     }
 
@@ -2664,11 +3321,20 @@ class StreamSettings : AppCompatActivity() {
                     f.setTargetFragment(this, 0)
                     f.show(parentFragmentManager, "IconListPreference")
                 }
+                is EditTextPreference -> {
+                    val f = StyledEditTextPreferenceDialogFragment.newInstance(preference.key)
+                    @Suppress("DEPRECATION")
+                    f.setTargetFragment(this, 0)
+                    f.show(parentFragmentManager, "StyledEditTextPreference")
+                }
                 is ListPreference -> {
                     if (preference.key == SCREEN_COMBINATION_MODE_PREF_KEY) {
                         showScreenCombinationModeDialog(preference)
                     } else {
-                        super.onDisplayPreferenceDialog(preference)
+                        val f = StyledListPreferenceDialogFragment.newInstance(preference.key)
+                        @Suppress("DEPRECATION")
+                        f.setTargetFragment(this, 0)
+                        f.show(parentFragmentManager, "StyledListPreference")
                     }
                 }
                 else -> super.onDisplayPreferenceDialog(preference)
@@ -2691,12 +3357,12 @@ class StreamSettings : AppCompatActivity() {
                 dialog.dismiss()
             }
 
-            dialog = AlertDialog.Builder(requireContext(), android.R.style.Theme_DeviceDefault_Dialog)
+            dialog = appDialogBuilder()
                     .setTitle(preference.title)
                     .setView(dialogView)
                     .setNegativeButton(android.R.string.cancel, null)
                     .create()
-            dialog.show()
+            showStyledDialog(dialog)
         }
 
         private fun createScreenCombinationModeDialogView(
@@ -2706,9 +3372,9 @@ class StreamSettings : AppCompatActivity() {
         ): View {
             val entries = preference.entries ?: return View(requireContext())
             val descriptions = resources.getStringArray(R.array.screen_combination_mode_descriptions)
-            val primaryTextColor = ContextCompat.getColor(requireContext(), R.color.appview_text_primary)
-            val secondaryTextColor = ContextCompat.getColor(requireContext(), R.color.appview_text_secondary)
-            val accentColor = ContextCompat.getColor(requireContext(), R.color.theme_pink_secondary)
+            val primaryTextColor = ContextCompat.getColor(requireContext(), R.color.ui_shell_text_primary)
+            val secondaryTextColor = ContextCompat.getColor(requireContext(), R.color.ui_shell_text_secondary)
+            val accentColor = ContextCompat.getColor(requireContext(), R.color.app_dialog_accent_color)
             val radioTint = ColorStateList(
                     arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
                     intArrayOf(accentColor, secondaryTextColor)
@@ -2783,6 +3449,14 @@ class StreamSettings : AppCompatActivity() {
             }
             if (requestCode == REQUEST_CODE_OPEN_CONFIG_SYNC && resultCode == RESULT_OK) {
                 handleSyncImportResult(data)
+                return
+            }
+            if (requestCode == REQUEST_CODE_CREATE_CROWN_SHARE && resultCode == RESULT_OK) {
+                handleCrownShareExportResult(data)
+                return
+            }
+            if (requestCode == REQUEST_CODE_OPEN_CROWN_SHARE && resultCode == RESULT_OK) {
+                handleCrownShareImportResult(data)
                 return
             }
             //导出配置文件
@@ -2992,7 +3666,7 @@ class StreamSettings : AppCompatActivity() {
                     return@setOnPreferenceClickListener true
                 }
 
-                AlertDialog.Builder(ctx)
+                appDialogBuilder(ctx)
                     .setTitle(R.string.title_framegen_pick_lossless_dll)
                     .setMessage(R.string.message_framegen_lossless_dll_source)
                     .setPositiveButton(R.string.action_framegen_select_lossless_dll) { _, _ ->
@@ -3004,7 +3678,7 @@ class StreamSettings : AppCompatActivity() {
                         startActivityForResult(intent, REQUEST_CODE_PICK_FRAMEGEN_DLL)
                     }
                     .setNegativeButton(android.R.string.cancel, null)
-                    .show()
+                    .showStyled()
                 true
             }
         }
@@ -3126,20 +3800,20 @@ class StreamSettings : AppCompatActivity() {
             val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
             val alreadyUnlocked = DeveloperUnlockSettings.isUnlocked(prefs)
             if (!GitHubStarVerifier.isConfigured()) {
-                AlertDialog.Builder(ctx)
+                appDialogBuilder(ctx)
                     .setTitle(R.string.title_developer_unlock)
                     .setMessage(R.string.message_developer_oauth_unconfigured)
                     .setPositiveButton(R.string.action_developer_open_project) { _, _ ->
                         openDeveloperProjectPage()
                     }
                     .setNegativeButton(android.R.string.cancel, null)
-                    .show()
+                    .showStyled()
                 return
             }
 
             if (!alreadyUnlocked) {
-                val pendingDeviceCode = loadDeveloperPendingDeviceCode(ctx.applicationContext)
-                if (pendingDeviceCode != null) {
+                val pendingDeviceCode = GitHubDeviceAuthorization.loadPendingDeviceCode(ctx.applicationContext)
+                if (pendingDeviceCode?.scope == GitHubStarVerifier.OAuthScope.STAR_VERIFICATION) {
                     developerPendingDeviceCode = pendingDeviceCode
                     showDeveloperDeviceCodeDialog(pendingDeviceCode)
                     pollDeveloperPendingDeviceCode(showPendingToast = false, enforceThrottle = true)
@@ -3147,7 +3821,7 @@ class StreamSettings : AppCompatActivity() {
                 }
             }
 
-            AlertDialog.Builder(ctx)
+            appDialogBuilder(ctx)
                 .setTitle(R.string.title_developer_unlock)
                 .setMessage(
                     if (alreadyUnlocked) {
@@ -3163,10 +3837,12 @@ class StreamSettings : AppCompatActivity() {
                     openDeveloperProjectPage()
                 }
                 .setNegativeButton(android.R.string.cancel, null)
-                .show()
+                .showStyled()
         }
 
-        private fun startDeveloperUnlockVerification() {
+        private fun startDeveloperUnlockVerification(
+            scope: GitHubStarVerifier.OAuthScope = GitHubStarVerifier.OAuthScope.STAR_VERIFICATION
+        ) {
             val ctx = requireContext().applicationContext
             val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
             if (developerUnlockVerificationRunning) {
@@ -3179,9 +3855,11 @@ class StreamSettings : AppCompatActivity() {
             }
 
             val savedToken = prefs.getString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, null)
-            if (savedToken.isNullOrBlank()) {
-                val pendingDeviceCode = loadDeveloperPendingDeviceCode(ctx)
-                if (pendingDeviceCode != null) {
+            val savedTokenCanBeUsed = !savedToken.isNullOrBlank() &&
+                    DeveloperUnlockSettings.hasAccessTokenScope(prefs, scope)
+            if (!savedTokenCanBeUsed) {
+                val pendingDeviceCode = GitHubDeviceAuthorization.loadPendingDeviceCode(ctx)
+                if (pendingDeviceCode?.scope == scope) {
                     developerPendingDeviceCode = pendingDeviceCode
                     showDeveloperDeviceCodeDialog(pendingDeviceCode)
                     pollDeveloperPendingDeviceCode(showPendingToast = false, enforceThrottle = true)
@@ -3193,18 +3871,19 @@ class StreamSettings : AppCompatActivity() {
             Toast.makeText(ctx, R.string.toast_developer_verification_started, Toast.LENGTH_LONG).show()
             thread(name = "DeveloperGitHubStarVerify") {
                 try {
-                    if (!savedToken.isNullOrBlank()) {
+                    if (savedTokenCanBeUsed) {
                         completeDeveloperUnlockVerification(
                             ctx = ctx,
                             accessToken = savedToken,
-                            starCheck = GitHubStarVerifier.checkStar(savedToken)
+                            starCheck = GitHubStarVerifier.checkStar(savedToken),
+                            scope = scope
                         )
                         return@thread
                     }
 
-                    val deviceCode = GitHubStarVerifier.requestDeviceCode()
+                    val deviceCode = GitHubStarVerifier.requestDeviceCode(scope)
                     developerPendingDeviceCode = deviceCode
-                    saveDeveloperPendingDeviceCode(ctx, deviceCode)
+                    GitHubDeviceAuthorization.savePendingDeviceCode(ctx, deviceCode)
                     Log.i(
                         "DeveloperUnlock",
                         "GitHub star device code requested: userCode=${deviceCode.userCode}, " +
@@ -3229,7 +3908,7 @@ class StreamSettings : AppCompatActivity() {
 
         private fun pollDeveloperPendingDeviceCode(showPendingToast: Boolean, enforceThrottle: Boolean) {
             val ctx = requireContext().applicationContext
-            val deviceCode = developerPendingDeviceCode ?: loadDeveloperPendingDeviceCode(ctx)
+            val deviceCode = developerPendingDeviceCode ?: GitHubDeviceAuthorization.loadPendingDeviceCode(ctx)
             if (deviceCode == null) {
                 if (showPendingToast) {
                     Toast.makeText(ctx, R.string.toast_developer_verification_expired, Toast.LENGTH_LONG).show()
@@ -3261,7 +3940,8 @@ class StreamSettings : AppCompatActivity() {
                             completeDeveloperUnlockVerification(
                                 ctx = ctx,
                                 accessToken = poll.accessToken,
-                                starCheck = GitHubStarVerifier.checkStar(poll.accessToken)
+                                starCheck = GitHubStarVerifier.checkStar(poll.accessToken),
+                                scope = deviceCode.scope
                             )
                         }
                         GitHubStarVerifier.TokenPollResult.Pending -> {
@@ -3300,72 +3980,29 @@ class StreamSettings : AppCompatActivity() {
             }
         }
 
-        private fun saveDeveloperPendingDeviceCode(ctx: Context, deviceCode: GitHubStarVerifier.DeviceCode) {
-            val expiresAtMs = System.currentTimeMillis() + deviceCode.expiresInSeconds * 1000L
-            PreferenceManager.getDefaultSharedPreferences(ctx).edit {
-                putString(DeveloperUnlockSettings.PREF_PENDING_DEVICE_CODE, deviceCode.deviceCode)
-                putString(DeveloperUnlockSettings.PREF_PENDING_USER_CODE, deviceCode.userCode)
-                putString(DeveloperUnlockSettings.PREF_PENDING_VERIFICATION_URI, deviceCode.verificationUri)
-                putString(
-                    DeveloperUnlockSettings.PREF_PENDING_VERIFICATION_URI_COMPLETE,
-                    deviceCode.verificationUriComplete
-                )
-                putLong(DeveloperUnlockSettings.PREF_PENDING_EXPIRES_AT_MS, expiresAtMs)
-                putInt(DeveloperUnlockSettings.PREF_PENDING_INTERVAL_SECONDS, deviceCode.intervalSeconds)
-            }
-        }
-
-        private fun loadDeveloperPendingDeviceCode(ctx: Context): GitHubStarVerifier.DeviceCode? {
-            val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
-            val expiresAtMs = prefs.getLong(DeveloperUnlockSettings.PREF_PENDING_EXPIRES_AT_MS, 0L)
-            val remainingSeconds = ((expiresAtMs - System.currentTimeMillis()) / 1000L).toInt()
-            if (remainingSeconds <= 0) {
-                clearDeveloperPendingDeviceCode(ctx)
-                return null
-            }
-
-            val deviceCode = prefs.getString(DeveloperUnlockSettings.PREF_PENDING_DEVICE_CODE, null)
-            val userCode = prefs.getString(DeveloperUnlockSettings.PREF_PENDING_USER_CODE, null)
-            val verificationUri = prefs.getString(DeveloperUnlockSettings.PREF_PENDING_VERIFICATION_URI, null)
-            if (deviceCode.isNullOrBlank() || userCode.isNullOrBlank() || verificationUri.isNullOrBlank()) {
-                clearDeveloperPendingDeviceCode(ctx)
-                return null
-            }
-
-            Log.i("DeveloperUnlock", "GitHub star verification restored pending device code: userCode=$userCode")
-            return GitHubStarVerifier.DeviceCode(
-                deviceCode = deviceCode,
-                userCode = userCode,
-                verificationUri = verificationUri,
-                verificationUriComplete = prefs.getString(
-                    DeveloperUnlockSettings.PREF_PENDING_VERIFICATION_URI_COMPLETE,
-                    null
-                )?.takeIf { it.isNotBlank() },
-                expiresInSeconds = remainingSeconds,
-                intervalSeconds = prefs.getInt(DeveloperUnlockSettings.PREF_PENDING_INTERVAL_SECONDS, 5)
-                    .coerceAtLeast(1)
-            )
-        }
-
         private fun clearDeveloperPendingDeviceCode(ctx: Context) {
             developerPendingDeviceCode = null
-            PreferenceManager.getDefaultSharedPreferences(ctx).edit {
-                remove(DeveloperUnlockSettings.PREF_PENDING_DEVICE_CODE)
-                remove(DeveloperUnlockSettings.PREF_PENDING_USER_CODE)
-                remove(DeveloperUnlockSettings.PREF_PENDING_VERIFICATION_URI)
-                remove(DeveloperUnlockSettings.PREF_PENDING_VERIFICATION_URI_COMPLETE)
-                remove(DeveloperUnlockSettings.PREF_PENDING_EXPIRES_AT_MS)
-                remove(DeveloperUnlockSettings.PREF_PENDING_INTERVAL_SECONDS)
-            }
+            GitHubDeviceAuthorization.clearPendingDeviceCode(ctx)
         }
 
         private fun showDeveloperDeviceCodeDialog(deviceCode: GitHubStarVerifier.DeviceCode) {
             developerDeviceCodeDialog?.dismiss()
-            val dialog = AlertDialog.Builder(requireContext())
-                .setTitle(R.string.title_developer_unlock)
+            GitHubDeviceAuthorization.copyDeviceCodeToClipboard(requireContext(), deviceCode)
+            val dialog = appDialogBuilder()
+                .setTitle(
+                    if (deviceCode.scope == GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH) {
+                        R.string.title_crown_store_github_authorization
+                    } else {
+                        R.string.title_developer_unlock
+                    }
+                )
                 .setMessage(
                     getString(
-                        R.string.message_developer_device_code,
+                        if (deviceCode.scope == GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH) {
+                            R.string.message_crown_store_device_code
+                        } else {
+                            R.string.message_developer_device_code
+                        },
                         deviceCode.userCode,
                         deviceCode.verificationUri
                     )
@@ -3379,7 +4016,12 @@ class StreamSettings : AppCompatActivity() {
                 .create()
             dialog.setOnShowListener {
                 dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                    openDeveloperUrl(deviceCode.verificationUriComplete ?: deviceCode.verificationUri)
+                    GitHubDeviceAuthorization.copyDeviceCodeToClipboard(
+                        requireContext(),
+                        deviceCode,
+                        showToast = false
+                    )
+                    openDeveloperUrl(GitHubDeviceAuthorization.authorizationUrl(deviceCode))
                 }
                 dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
                     pollDeveloperPendingDeviceCode(showPendingToast = true, enforceThrottle = false)
@@ -3391,28 +4033,18 @@ class StreamSettings : AppCompatActivity() {
                 }
             }
             developerDeviceCodeDialog = dialog
-            dialog.show()
+            showStyledDialog(dialog)
         }
 
         private fun completeDeveloperUnlockVerification(
             ctx: Context,
             accessToken: String,
-            starCheck: GitHubStarVerifier.StarCheck
+            starCheck: GitHubStarVerifier.StarCheck,
+            scope: GitHubStarVerifier.OAuthScope
         ) {
             developerUnlockVerificationRunning = false
             clearDeveloperPendingDeviceCode(ctx)
-            val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
-            prefs.edit {
-                putString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, accessToken)
-                starCheck.login?.let { putString(DeveloperUnlockSettings.PREF_USER_LOGIN, it) }
-                if (starCheck.starred) {
-                    putBoolean(DeveloperUnlockSettings.PREF_UNLOCKED, true)
-                    putLong(DeveloperUnlockSettings.PREF_VERIFIED_AT_MS, System.currentTimeMillis())
-                } else {
-                    putBoolean(DeveloperUnlockSettings.PREF_UNLOCKED, false)
-                    putLong(DeveloperUnlockSettings.PREF_VERIFIED_AT_MS, 0L)
-                }
-            }
+            GitHubDeviceAuthorization.saveAuthorizedAccount(ctx, accessToken, starCheck, scope)
             Log.i(
                 "DeveloperUnlock",
                 "GitHub star verification completed: starred=${starCheck.starred}, login=${starCheck.login ?: "unknown"}"
@@ -3424,17 +4056,19 @@ class StreamSettings : AppCompatActivity() {
                 developerDeviceCodeDialog?.dismiss()
                 refreshDeveloperFeatureGateState()
 
-                if (starCheck.starred) {
+                if (scope == GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH) {
+                    Toast.makeText(requireContext(), R.string.toast_crown_store_github_connected, Toast.LENGTH_LONG).show()
+                } else if (starCheck.starred) {
                     Toast.makeText(requireContext(), R.string.toast_developer_unlocked, Toast.LENGTH_LONG).show()
                 } else {
-                    AlertDialog.Builder(requireContext())
+                    appDialogBuilder()
                         .setTitle(R.string.title_developer_unlock)
                         .setMessage(R.string.message_developer_star_not_found)
                         .setPositiveButton(R.string.action_developer_open_project) { _, _ ->
                             openDeveloperProjectPage()
                         }
                         .setNegativeButton(android.R.string.cancel, null)
-                        .show()
+                        .showStyled()
                 }
             }
         }

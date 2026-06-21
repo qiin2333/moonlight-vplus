@@ -14,7 +14,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textSize="13sp"
-        android:textColor="#666666"
+        android:textColor="@color/ui_shell_text_secondary"
         android:paddingBottom="12dp"
         android:visibility="gone" />
 
@@ -107,7 +107,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="11sp"
-            android:textColor="#999999" />
+            android:textColor="@color/ui_shell_text_secondary" />
 
         <View
             android:layout_width="0dp"
@@ -119,7 +119,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="11sp"
-            android:textColor="#999999" />
+            android:textColor="@color/ui_shell_text_secondary" />
 
     </LinearLayout>
 

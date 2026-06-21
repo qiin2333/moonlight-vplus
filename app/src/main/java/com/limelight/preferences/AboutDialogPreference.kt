@@ -63,7 +63,18 @@ class AboutDialogPreference : Preference {
             dialog.dismiss()
         }
 
-        builder.create().show()
+        val dialog = builder.create()
+        dialog.show()
+        dialog.window?.setBackgroundDrawableResource(R.drawable.app_dialog_bg_cute)
+        tintAboutDialogButtons(dialog)
+    }
+
+    private fun tintAboutDialogButtons(dialog: AlertDialog) {
+        val accentColor = context.resources.getColor(R.color.app_dialog_accent_color)
+        listOf(AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEGATIVE, AlertDialog.BUTTON_NEUTRAL)
+            .forEach { buttonId ->
+                dialog.getButton(buttonId)?.setTextColor(accentColor)
+            }
     }
 
     @SuppressLint("DefaultLocale")

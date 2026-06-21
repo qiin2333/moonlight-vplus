@@ -12,6 +12,8 @@ import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.TextView
 
+import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceDialogFragmentCompat
 
 import com.limelight.R
@@ -24,6 +26,17 @@ class SeekBarPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
 
     private val pref: SeekBarPreference
         get() = preference as SeekBarPreference
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setStyle(STYLE_NORMAL, R.style.AppDialogStyle)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        dialog?.window?.setBackgroundDrawableResource(R.drawable.app_dialog_bg_cute)
+        tintDialogButtons()
+    }
 
     @SuppressLint("UseCompatLoadingForDrawables")
     override fun onBindDialogView(layout: View) {
@@ -170,6 +183,15 @@ class SeekBarPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
             }
             false
         }
+    }
+
+    private fun tintDialogButtons() {
+        val alert = dialog as? AlertDialog ?: return
+        val accentColor = ContextCompat.getColor(requireContext(), R.color.app_dialog_accent_color)
+        listOf(AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEGATIVE, AlertDialog.BUTTON_NEUTRAL)
+            .forEach { buttonId ->
+                alert.getButton(buttonId)?.setTextColor(accentColor)
+            }
     }
 
     override fun onDialogClosed(positiveResult: Boolean) {

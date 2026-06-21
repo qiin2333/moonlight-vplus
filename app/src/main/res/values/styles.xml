@@ -155,6 +155,14 @@
         <item name="android:windowTranslucentStatus">false</item>
         <item name="android:windowTranslucentNavigation">false</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:colorAccent">@color/theme_pink_primary</item>
+        <item name="colorAccent">@color/theme_pink_primary</item>
+        <item name="android:colorControlActivated">@color/theme_pink_primary</item>
+        <item name="colorControlActivated">@color/theme_pink_primary</item>
+        <item name="android:colorControlNormal">@color/ui_shell_text_secondary</item>
+        <item name="colorControlNormal">@color/ui_shell_text_secondary</item>
+        <item name="android:colorControlHighlight">@color/ui_shell_accent_soft</item>
+        <item name="colorControlHighlight">@color/ui_shell_accent_soft</item>
         <item name="preferenceTheme">@style/MyPreferenceThemeOverlay</item>
     </style>
 
@@ -278,7 +286,7 @@
     </style>
 
     <!-- 通用弹窗样式 -->
-    <style name="AppDialogStyle" parent="Theme.AppCompat.Light.Dialog.Alert">
+    <style name="AppDialogStyle" parent="Theme.AppCompat.Dialog.Alert">
         <item name="android:windowBackground">@drawable/app_dialog_bg_cute</item>
         <item name="android:windowMinWidthMajor">60%</item>
         <item name="android:windowMinWidthMinor">80%</item>
@@ -289,6 +297,13 @@
         <item name="android:textColorPrimary">@color/app_dialog_title_color</item>
         <item name="android:textColorSecondary">@color/app_dialog_subtitle_color</item>
         <item name="android:colorAccent">@color/app_dialog_accent_color</item>
+        <item name="colorAccent">@color/app_dialog_accent_color</item>
+        <item name="android:colorControlActivated">@color/app_dialog_accent_color</item>
+        <item name="colorControlActivated">@color/app_dialog_accent_color</item>
+        <item name="android:colorControlNormal">@color/ui_shell_text_secondary</item>
+        <item name="colorControlNormal">@color/ui_shell_text_secondary</item>
+        <item name="android:colorControlHighlight">@color/ui_shell_accent_soft</item>
+        <item name="colorControlHighlight">@color/ui_shell_accent_soft</item>
         <item name="android:listDivider">@color/app_dialog_accent_color</item>
         <!-- 标题样式 -->
         <item name="android:windowTitleStyle">@style/AppDialogTitleStyle</item>
