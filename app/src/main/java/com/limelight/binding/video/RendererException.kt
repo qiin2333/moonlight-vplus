@@ -4,7 +4,6 @@ import android.media.MediaCodec.CodecException
 import android.media.MediaCodecInfo
 import android.os.Build
 import com.limelight.BuildConfig
-import java.util.Objects
 
 /**
  * Diagnostic state snapshot captured when a renderer exception occurs.
@@ -135,15 +134,12 @@ internal class RendererException(
         d: String,
     ) {
         if (decoder == null) return
-        val widthRange = Objects.requireNonNull(
-            decoder.getCapabilitiesForType(mimeType).videoCapabilities
-        ).supportedWidths
+        val videoCapabilities = decoder.getCapabilitiesForType(mimeType).videoCapabilities ?: return
+        val widthRange = videoCapabilities.supportedWidths
         sb.append("$label supported width range: $widthRange$d")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             try {
-                val fpsRange = Objects.requireNonNull(
-                    decoder.getCapabilitiesForType(mimeType).videoCapabilities
-                ).getAchievableFrameRatesFor(r.initialWidth, r.initialHeight)
+                val fpsRange = videoCapabilities.getAchievableFrameRatesFor(r.initialWidth, r.initialHeight)
                 sb.append("$label achievable FPS range: $fpsRange$d")
             } catch (_: IllegalArgumentException) {
                 sb.append("$label achievable FPS range: UNSUPPORTED!$d")

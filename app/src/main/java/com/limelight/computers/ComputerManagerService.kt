@@ -18,6 +18,7 @@ import com.limelight.binding.PlatformBinding
 import com.limelight.discovery.DiscoveryService
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.http.ComputerDetails
+import com.limelight.nvstream.http.HostHttpResponseException
 import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.http.PairingManager
@@ -1105,6 +1106,14 @@ class ComputerManagerService : Service() {
                                 LimeLog.warning("Null app list received from ${computer.uuid}")
                             }
                         }
+                    } catch (e: HostHttpResponseException) {
+                        if (e.getErrorCode() == 401) {
+                            LimeLog.warning("App list request unauthorized for ${computer.name}; marking host not paired")
+                            computer.pairState = PairingManager.PairState.NOT_PAIRED
+                            emitComputerUpdate(computer)
+                            break
+                        }
+                        e.printStackTrace()
                     } catch (e: IOException) {
                         e.printStackTrace()
                     } catch (e: XmlPullParserException) {

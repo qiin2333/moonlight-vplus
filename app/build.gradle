@@ -34,7 +34,7 @@ if (hasGoogleServicesJson && (project.hasProperty('enableAnalytics') || gradle.s
 android {
     ndkVersion "28.2.13676358"
 
-    compileSdkVersion 36
+    compileSdkVersion 37
 
     namespace 'com.limelight'
 
@@ -42,8 +42,8 @@ android {
         minSdk 22
         targetSdk 35
 
-        versionName "12.9.8"
-        versionCode = 390
+        versionName "12.10.2"
+        versionCode = 391
 
         // Optional GitHub OAuth App client ID. Enable Device Flow on the OAuth app,
         // then set githubOAuthClientId in local.properties, pass -PgithubOAuthClientId=...,

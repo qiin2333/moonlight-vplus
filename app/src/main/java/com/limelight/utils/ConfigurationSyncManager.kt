@@ -28,10 +28,12 @@ import java.io.RandomAccessFile
 import java.nio.channels.FileLock
 import java.nio.channels.OverlappingFileLockException
 import java.security.KeyStore
+import java.security.KeyFactory
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
+import java.security.spec.PKCS8EncodedKeySpec
 import java.util.Arrays
 import java.util.Base64 as JavaBase64
 import java.util.TreeSet
@@ -1727,10 +1729,61 @@ class ConfigurationSyncManager(private val context: Context) {
         if (!pairing.has(key)) return PairingImportResult(0, 0)
         val encoded = pairing.optString(key).takeIf { it.isNotBlank() }
             ?: return PairingImportResult(0, 1)
-        val decoded = runCatching { Base64.decode(encoded, Base64.NO_WRAP) }.getOrNull()
+        val decoded = decodeIdentityFileBytes(encoded, fileName)
             ?: return PairingImportResult(0, 1)
+        if (!isValidIdentityFile(fileName, decoded)) {
+            return PairingImportResult(0, 1)
+        }
         writePrivateFileBytes(fileName, decoded)
         return PairingImportResult(1, 0)
+    }
+
+    private fun decodeIdentityFileBytes(value: String, fileName: String): ByteArray? {
+        val trimmed = value.trim()
+        if (trimmed.startsWith(PEM_BEGIN_PREFIX)) {
+            return normalizeIdentityFileBytes(fileName, trimmed.toByteArray(Charsets.UTF_8))
+        }
+
+        val decoded = runCatching { Base64.decode(trimmed, Base64.DEFAULT) }.getOrNull()
+            ?: return null
+        return normalizeIdentityFileBytes(fileName, decoded)
+    }
+
+    private fun normalizeIdentityFileBytes(fileName: String, bytes: ByteArray): ByteArray? {
+        val text = runCatching { String(bytes, Charsets.UTF_8).trim() }.getOrNull()
+        if (text != null && text.startsWith(PEM_BEGIN_PREFIX)) {
+            return if (fileName == CLIENT_PRIVATE_KEY_FILE_NAME) {
+                decodePemBody(text)
+            } else {
+                text.replace("\r", "").toByteArray(Charsets.UTF_8)
+            }
+        }
+        return bytes
+    }
+
+    private fun decodePemBody(pem: String): ByteArray? {
+        val body = pem.lineSequence()
+            .map { it.trim() }
+            .filter { it.isNotBlank() && !it.startsWith(PEM_BEGIN_PREFIX) && !it.startsWith(PEM_END_PREFIX) }
+            .joinToString(separator = "")
+        if (body.isBlank()) return null
+        return runCatching { Base64.decode(body, Base64.DEFAULT) }.getOrNull()
+    }
+
+    private fun isValidIdentityFile(fileName: String, bytes: ByteArray): Boolean {
+        return when (fileName) {
+            CLIENT_CERTIFICATE_FILE_NAME -> runCatching {
+                CertificateFactory.getInstance("X.509")
+                    .generateCertificate(ByteArrayInputStream(bytes))
+            }.isSuccess
+
+            CLIENT_PRIVATE_KEY_FILE_NAME -> runCatching {
+                KeyFactory.getInstance("RSA")
+                    .generatePrivate(PKCS8EncodedKeySpec(bytes))
+            }.isSuccess
+
+            else -> bytes.isNotEmpty()
+        }
     }
 
     private fun encodeComputer(details: ComputerDetails, pairName: String): JSONObject {
@@ -2927,6 +2980,8 @@ class ConfigurationSyncManager(private val context: Context) {
         private const val CLIENT_CERTIFICATE_FILE_NAME = "client.crt"
         private const val CLIENT_PRIVATE_KEY_FILE_NAME = "client.key"
         private const val COMPUTERS_DATABASE_FILE_NAME = "computers.db"
+        private const val PEM_BEGIN_PREFIX = "-----BEGIN "
+        private const val PEM_END_PREFIX = "-----END "
         private const val UNIQUE_ID_FILE_NAME = "uniqueid"
         private const val UNIQUE_ID_LENGTH = 16
 
