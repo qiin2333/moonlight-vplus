@@ -718,7 +718,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         }
         backgroundSourceDialogShowing = true
         dialog.show()
-        AppDialogStyler.apply(dialog, this)
+        AppDialogStyler.applySystemChoiceList(dialog, this)
     }
 
     private fun createBackgroundSourceDialogHeader(): View {
@@ -1664,7 +1664,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             }
             .create()
         dialog.show()
-        AppDialogStyler.apply(dialog, this)
+        AppDialogStyler.applySystemChoiceList(dialog, this)
     }
 
     private fun startQrScan() {

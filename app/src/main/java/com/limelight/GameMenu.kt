@@ -701,7 +701,7 @@ class GameMenu(
             .setNegativeButton("Cancel", null)
             .create()
         dialog.show()
-        AppDialogStyler.apply(dialog, game)
+        AppDialogStyler.applySystemChoiceList(dialog, game)
     }
 
     private fun createCustomView(builder: AlertDialog.Builder): View {
@@ -1077,7 +1077,7 @@ class GameMenu(
             }
             .create()
         dialog.show()
-        AppDialogStyler.apply(dialog, game)
+        AppDialogStyler.applySystemChoiceList(dialog, game)
     }
 
     /** 布局完成后将按钮均分到 ScrollView 可见宽度 */
@@ -1522,7 +1522,7 @@ class GameMenu(
                 .setNegativeButton(R.string.dialog_button_cancel, null)
                 .create()
             dialog.show()
-            AppDialogStyler.apply(dialog, game)
+            AppDialogStyler.applySystemChoiceList(dialog, game)
         } catch (e: Exception) {
             LimeLog.warning("Exception while loading key list${e.message}")
             Toast.makeText(game, R.string.toast_load_key_list_failed, Toast.LENGTH_SHORT).show()

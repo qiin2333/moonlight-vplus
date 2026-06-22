@@ -88,6 +88,7 @@ class StyledMultiSelectListPreferenceDialogFragment : PreferenceDialogFragmentCo
             listView?.setItemChecked(index, selectedValues.contains(value.toString()))
         }
         AppDialogStyler.apply(alert, requireContext())
+        AppDialogStyler.styleChoiceListContainer(listView, requireContext())
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

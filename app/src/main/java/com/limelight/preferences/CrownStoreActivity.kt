@@ -1275,7 +1275,7 @@ class CrownStoreActivity : AppCompatActivity() {
             }
             .create()
         dialog.show()
-        AppDialogStyler.apply(dialog, this)
+        AppDialogStyler.applySystemChoiceList(dialog, this)
     }
 
     @Deprecated("Deprecated in Java")

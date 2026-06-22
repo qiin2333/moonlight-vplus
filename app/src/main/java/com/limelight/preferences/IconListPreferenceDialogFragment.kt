@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.CheckedTextView
 import android.widget.ImageView
+import android.widget.ListView
 import androidx.appcompat.app.AlertDialog
 import androidx.preference.ListPreference
 import androidx.preference.PreferenceDialogFragmentCompat
@@ -70,6 +71,7 @@ class IconListPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
         super.onStart()
         val alert = dialog as? AlertDialog ?: return
         AppDialogStyler.apply(alert, requireContext())
+        AppDialogStyler.styleChoiceListContainer(alert.findViewById<ListView>(android.R.id.list), requireContext())
     }
 
     override fun onDialogClosed(positiveResult: Boolean) {

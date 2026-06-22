@@ -1461,7 +1461,7 @@ public class WheelPad extends Element {
                         }
                     })
                     .show();
-            AppDialogStyler.INSTANCE.apply(groupSelectionDialog, context);
+            AppDialogStyler.INSTANCE.applySystemChoiceList(groupSelectionDialog, context);
         });
 
         addButton.setOnClickListener(v -> {

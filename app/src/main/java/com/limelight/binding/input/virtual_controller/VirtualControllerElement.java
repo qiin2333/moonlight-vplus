@@ -223,7 +223,7 @@ public abstract class VirtualControllerElement extends View {
         AlertDialog alert = alertBuilder.create();
         // show menu
         alert.show();
-        AppDialogStyler.INSTANCE.apply(alert, getContext());
+        AppDialogStyler.INSTANCE.applySystemChoiceList(alert, getContext());
     }
 
     @Override

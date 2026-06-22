@@ -146,7 +146,7 @@ class GyroCardController(private val game: Game) {
             .setNegativeButton(R.string.dialog_button_cancel, null)
             .create()
         dialog.show()
-        AppDialogStyler.apply(dialog, game)
+        AppDialogStyler.applySystemChoiceList(dialog, game)
     }
 
     private fun updateActivationKeyText(activationKeyText: TextView) {

@@ -851,10 +851,18 @@ class StreamSettings : AppCompatActivity() {
             return showStyledDialog(create())
         }
 
-        private fun showStyledDialog(dialog: AlertDialog): AlertDialog {
+        private fun AlertDialog.Builder.showStyledChoiceList(): AlertDialog {
+            return showStyledDialog(create(), styleSystemChoiceList = true)
+        }
+
+        private fun showStyledDialog(dialog: AlertDialog, styleSystemChoiceList: Boolean = false): AlertDialog {
             hideKeyboardBeforeDialog()
             dialog.show()
-            AppDialogStyler.apply(dialog, requireContext())
+            if (styleSystemChoiceList) {
+                AppDialogStyler.applySystemChoiceList(dialog, requireContext())
+            } else {
+                AppDialogStyler.apply(dialog, requireContext())
+            }
             return dialog
         }
 
@@ -1978,7 +1986,7 @@ class StreamSettings : AppCompatActivity() {
                             7 -> showCrownMergeConfigDialog()
                         }
                     }
-                    .showStyled()
+                    .showStyledChoiceList()
         }
 
         private fun showCrownShareExportConfigDialog() {
@@ -2009,7 +2017,7 @@ class StreamSettings : AppCompatActivity() {
                             Toast.makeText(context, R.string.toast_crown_share_export_failed, Toast.LENGTH_LONG).show()
                         }
                     }
-                    .showStyled()
+                    .showStyledChoiceList()
         }
 
         private fun currentCrownShareExportMetadata(): CrownProfileShareManager.ExportMetadata {
@@ -2124,7 +2132,7 @@ class StreamSettings : AppCompatActivity() {
                         )
                     }
                     .setNegativeButton(android.R.string.cancel, null)
-                    .showStyled()
+                    .showStyledChoiceList()
         }
 
         private fun crownStoreProfileLabel(profile: CrownProfileShareManager.StoreProfile): String {
@@ -2177,7 +2185,7 @@ class StreamSettings : AppCompatActivity() {
                     .setItems(names) { _, which ->
                         showCrownStorePublishMetadataDialog(ids[which], configMap[ids[which]] ?: "Crown Profile")
                     }
-                    .showStyled()
+                    .showStyledChoiceList()
         }
 
         private fun showCrownStorePublishMetadataDialog(configId: String, defaultName: String) {
@@ -2561,7 +2569,7 @@ class StreamSettings : AppCompatActivity() {
                             Toast.makeText(context, R.string.toast_crown_share_import_failed, Toast.LENGTH_LONG).show()
                         }
                     }
-                    .showStyled()
+                    .showStyledChoiceList()
         }
 
         private fun showCrownExportConfigDialog() {
@@ -2581,7 +2589,7 @@ class StreamSettings : AppCompatActivity() {
                         exportConfigString = helper.exportConfig(id.toLong())
                         createConfigDocument(configMap[id] ?: "crown_config")
                     }
-                    .showStyled()
+                    .showStyledChoiceList()
         }
 
         private fun showCrownMergeConfigDialog() {
@@ -2599,7 +2607,7 @@ class StreamSettings : AppCompatActivity() {
                         exportConfigString = ids[which]
                         openConfigDocument(3)
                     }
-                    .showStyled()
+                    .showStyledChoiceList()
         }
 
         /**

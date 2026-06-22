@@ -17,14 +17,22 @@ import com.limelight.R
 object AppDialogStyler {
     fun apply(dialog: Dialog, context: Context) {
         dialog.window?.setBackgroundDrawableResource(R.drawable.app_dialog_bg_cute)
-        styleAlertDialog(dialog, context)
+        applyChrome(dialog, context)
+    }
+
+    fun applySystemChoiceList(dialog: Dialog, context: Context) {
+        apply(dialog, context)
+        styleSystemChoiceList(findAlertListView(dialog), context)
+    }
+
+    fun applyChrome(dialog: Dialog, context: Context) {
+        tintTitle(dialog, context)
+        tintButtons(dialog, context)
+        clearTextShadows(dialog.window?.decorView)
     }
 
     fun styleAlertDialog(dialog: Dialog, context: Context) {
-        tintTitle(dialog, context)
-        tintButtons(dialog, context)
-        styleList(dialog.findViewById(android.R.id.list) ?: findListView(dialog.window?.decorView), context)
-        clearTextShadows(dialog.window?.decorView)
+        apply(dialog, context)
     }
 
     fun tintTitle(dialog: Dialog, context: Context) {
@@ -77,7 +85,7 @@ object AppDialogStyler {
         }
     }
 
-    fun styleList(listView: ListView?, context: Context) {
+    fun styleChoiceListContainer(listView: ListView?, context: Context) {
         listView ?: return
         listView.setBackgroundColor(Color.TRANSPARENT)
         listView.cacheColorHint = Color.TRANSPARENT
@@ -87,6 +95,11 @@ object AppDialogStyler {
         listView.setPadding(dpToPx(context, 10), dpToPx(context, 2), dpToPx(context, 10), dpToPx(context, 8))
         listView.clipToPadding = false
         listView.overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+    }
+
+    fun styleSystemChoiceList(listView: ListView?, context: Context) {
+        listView ?: return
+        styleChoiceListContainer(listView, context)
         listView.setOnHierarchyChangeListener(object : ViewGroup.OnHierarchyChangeListener {
             override fun onChildViewAdded(parent: View?, child: View?) {
                 child?.let { styleListRow(it, context) }
@@ -108,6 +121,10 @@ object AppDialogStyler {
             is androidx.appcompat.app.AlertDialog -> dialog.getButton(buttonId)
             else -> null
         }
+    }
+
+    private fun findAlertListView(dialog: Dialog): ListView? {
+        return dialog.findViewById(android.R.id.list) ?: findListView(dialog.window?.decorView)
     }
 
     private fun findListView(view: View?): ListView? {

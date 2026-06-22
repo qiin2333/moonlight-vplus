@@ -1521,7 +1521,7 @@ public class ElementController {
                                 })
                                 .setNegativeButton(R.string.game_menu_cancel, null)
                                 .show();
-                        AppDialogStyler.INSTANCE.apply(dialog, context);
+                        AppDialogStyler.INSTANCE.applySystemChoiceList(dialog, context);
                     } catch (Exception e) {
                         Toast.makeText(context, "无法加载配置列表", Toast.LENGTH_SHORT).show();
                     }
