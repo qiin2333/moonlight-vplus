@@ -36,12 +36,13 @@ class ScreenCombinationModePickerView(
         val primaryTextColor = ContextCompat.getColor(context, R.color.appview_text_primary)
         val secondaryTextColor = ContextCompat.getColor(context, R.color.appview_text_secondary)
         val accentColor = ContextCompat.getColor(context, R.color.theme_pink_primary)
+        val topSafePadding = resources.getDimensionPixelSize(R.dimen.activity_safearea_top)
 
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(
                 dp(if (isLandscape) 28 else 20),
-                dp(if (isLandscape) 22 else 28),
+                topSafePadding + dp(if (isLandscape) 14 else 16),
                 dp(if (isLandscape) 28 else 20),
                 dp(if (isLandscape) 14 else 18)
             )
