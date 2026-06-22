@@ -17,6 +17,7 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
+import com.google.gson.annotations.SerializedName;
 import com.limelight.binding.input.advance_setting.config.PageConfigController;
 import com.limelight.binding.input.advance_setting.element.DigitalSwitchButton;
 import com.limelight.binding.input.advance_setting.element.Element;
@@ -33,9 +34,13 @@ import java.util.regex.Pattern;
 
 public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
     private class ExportFile {
+        @SerializedName("version")
         private int version;
+        @SerializedName("settings")
         private String settings;
+        @SerializedName("elements")
         private String elements;
+        @SerializedName("md5")
         private String md5;
 
         public ExportFile(int version, String settings, String elements) {
