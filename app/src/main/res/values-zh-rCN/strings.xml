@@ -852,6 +852,8 @@
     <string name="screen_mode_secondary_streaming_desc">物理屏为主屏，基地显示器作为副屏扩展。</string>
     <string name="screen_mode_exclusive_streaming_desc">仅保留指定显示器输出，关闭其他显示器。</string>
     <string name="screen_combination_mode_label">组合模式: %1$s</string>
+    <string name="screen_combination_mode_action_close">关闭</string>
+    <string name="screen_combination_mode_selected">已选择</string>
     <string name="unpaired_devices_shown">已显示未配对设备</string>
     <string name="unpaired_devices_hidden">已隐藏未配对设备</string>
     <string name="new_unpaired_device_shown">检测到新的未配对设备，已自动显示未配对设备</string>

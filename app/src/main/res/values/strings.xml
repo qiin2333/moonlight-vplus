@@ -499,6 +499,8 @@
     <string name="screen_mode_secondary_streaming_desc">Keep the physical display primary and use the Foundation display as secondary.</string>
     <string name="screen_mode_exclusive_streaming_desc">Use only the selected display and disable other displays.</string>
     <string name="screen_combination_mode_label">Mode: %1$s</string>
+    <string name="screen_combination_mode_action_close">Close</string>
+    <string name="screen_combination_mode_selected">Selected</string>
 
     <string name="category_advanced_settings">Advanced Settings</string>
     <string name="title_unlock_fps">Unlock all possible frame rates</string>

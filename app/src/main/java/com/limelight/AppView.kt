@@ -8,11 +8,9 @@ import java.util.concurrent.ConcurrentHashMap
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
-import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Paint
@@ -25,7 +23,6 @@ import android.os.Looper
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.RelativeSizeSpan
-import android.util.TypedValue
 import android.view.ContextMenu
 import android.view.ContextMenu.ContextMenuInfo
 import android.view.Menu
@@ -35,6 +32,7 @@ import android.view.ViewGroup
 import android.widget.AbsListView
 import android.widget.AdapterView.AdapterContextMenuInfo
 import android.widget.CheckBox
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RadioButton
@@ -45,7 +43,6 @@ import android.widget.Toast
 
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.core.content.ContextCompat
 
 import org.xmlpull.v1.XmlPullParserException
 
@@ -62,9 +59,9 @@ import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.ui.AdapterFragment
 import com.limelight.ui.AdapterFragmentCallbacks
 import com.limelight.ui.AdapterRecyclerBridge
+import com.limelight.ui.ScreenCombinationModePickerView
 import com.limelight.ui.SelectionIndicatorAnimator
 import com.limelight.utils.AppSettingsManager
-import com.limelight.utils.AppDialogStyler
 import com.limelight.utils.BackgroundImageManager
 import com.limelight.utils.CacheHelper
 import com.limelight.utils.Dialog
@@ -181,6 +178,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
     private lateinit var displaySelectionInfo: LinearLayout
     private lateinit var displayRadioGroup: RadioGroup
     private lateinit var screenCombinationModeLabel: TextView
+    private lateinit var screenCombinationModeOverlay: FrameLayout
     private var selectedScreenCombinationMode = -1
     private var currentModeNames: Array<String>? = null
     private var currentModeValues: Array<String>? = null
@@ -434,14 +432,15 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         displaySelectionInfo = findViewById(R.id.displaySelectionInfo)
         displayRadioGroup = findViewById(R.id.displayRadioGroup)
         screenCombinationModeLabel = findViewById(R.id.screenCombinationModeLabel)
+        screenCombinationModeOverlay = findViewById(R.id.screenCombinationModeOverlay)
         findViewById<TextView>(R.id.clearDisplaySelectionButton).setOnClickListener {
             clearDisplaySelection()
         }
         screenCombinationModeLabel.let { label ->
             label.paintFlags = label.paintFlags or Paint.UNDERLINE_TEXT_FLAG
 
-            // 点击组合模式标签时弹出选择对话框
-            label.setOnClickListener { showScreenCombinationModeDialog() }
+            // 点击组合模式标签时打开全屏选择视图
+            label.setOnClickListener { showScreenCombinationModeView() }
         }
         refreshScreenCombinationModeFromPreferences()
 
@@ -1155,109 +1154,54 @@ class AppView : Activity(), AdapterFragmentCallbacks {
     }
 
     /**
-     * 弹出屏幕组合模式选择对话框
+     * 打开屏幕组合模式全屏选择视图。
      */
-    private fun showScreenCombinationModeDialog() {
+    private fun showScreenCombinationModeView() {
         if (currentModeNames == null || currentModeValues == null) {
             return
         }
 
-        // 找到当前选中项的索引
-        var checkedIndex = 0
-        val targetValue = selectedScreenCombinationMode.toString()
-        for (i in currentModeValues?.indices ?: IntRange.EMPTY) {
-            if (currentModeValues!![i] == targetValue) {
-                checkedIndex = i
-                break
-            }
+        if (isPanelOpen) {
+            closeTopPanel()
         }
 
-        lateinit var dialog: AlertDialog
-        val dialogView = createScreenCombinationModeDialogView(checkedIndex) { which ->
-            selectedScreenCombinationMode = try {
-                currentModeValues!![which].toInt()
-            } catch (_: NumberFormatException) {
-                -1
-            }
-            persistScreenCombinationMode()
-            updateScreenCombinationModeLabel()
-            dialog.dismiss()
-        }
-
-        dialog = AlertDialog.Builder(this, R.style.AppDialogStyle)
-                .setTitle(R.string.title_screen_combination_mode)
-                .setView(dialogView)
-                .setNegativeButton(android.R.string.cancel, null)
-                .create()
-        dialog.show()
-        AppDialogStyler.apply(dialog, this)
+        val checkedIndex = findScreenCombinationModeIndex()
+        val descriptions = resources.getStringArray(R.array.screen_combination_mode_descriptions)
+        screenCombinationModeOverlay.removeAllViews()
+        screenCombinationModeOverlay.addView(
+            ScreenCombinationModePickerView(
+                context = this,
+                names = currentModeNames!!,
+                descriptions = descriptions,
+                values = currentModeValues!!,
+                checkedIndex = checkedIndex,
+                onClose = { hideScreenCombinationModeView() },
+                onModeSelected = { modeValue ->
+                    selectedScreenCombinationMode = modeValue
+                    persistScreenCombinationMode()
+                    updateScreenCombinationModeLabel()
+                    hideScreenCombinationModeView()
+                }
+            ),
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+        screenCombinationModeOverlay.visibility = View.VISIBLE
+        screenCombinationModeOverlay.requestFocus()
     }
 
-    private fun createScreenCombinationModeDialogView(
-        checkedIndex: Int,
-        onItemSelected: (Int) -> Unit
-    ): View {
-        val descriptions = resources.getStringArray(R.array.screen_combination_mode_descriptions)
-        val horizontalPadding = dp(24)
-        val verticalPadding = dp(10)
-        val primaryTextColor = ContextCompat.getColor(this, R.color.appview_text_primary)
-        val secondaryTextColor = ContextCompat.getColor(this, R.color.appview_text_secondary)
-        val radioTint = ColorStateList(
-            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-            intArrayOf(primaryTextColor, secondaryTextColor)
-        )
-        val content = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(horizontalPadding, dp(4), horizontalPadding, dp(4))
-        }
+    private fun hideScreenCombinationModeView() {
+        screenCombinationModeOverlay.visibility = View.GONE
+        screenCombinationModeOverlay.removeAllViews()
+        screenCombinationModeLabel.requestFocus()
+    }
 
-        content.addView(TextView(this).apply {
-            text = getString(R.string.screen_combination_mode_dialog_subtitle)
-            setTextColor(secondaryTextColor)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            setPadding(0, 0, 0, dp(8))
-        })
-
-        currentModeNames?.forEachIndexed { index, name ->
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                isClickable = true
-                isFocusable = true
-                val typedValue = TypedValue()
-                theme.resolveAttribute(android.R.attr.selectableItemBackground, typedValue, true)
-                setBackgroundResource(typedValue.resourceId)
-                setPadding(0, verticalPadding, 0, verticalPadding)
-                setOnClickListener { onItemSelected(index) }
-            }
-
-            row.addView(RadioButton(this).apply {
-                isChecked = index == checkedIndex
-                isClickable = false
-                isFocusable = false
-                buttonTintList = radioTint
-            }, LinearLayout.LayoutParams(dp(48), ViewGroup.LayoutParams.WRAP_CONTENT))
-
-            row.addView(LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                addView(TextView(this@AppView).apply {
-                    text = name
-                    setTextColor(primaryTextColor)
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-                })
-                addView(TextView(this@AppView).apply {
-                    text = descriptions.getOrNull(index).orEmpty()
-                    setTextColor(secondaryTextColor)
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-                    setPadding(0, dp(2), 0, 0)
-                })
-            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-
-            content.addView(row)
-        }
-
-        return ScrollView(this).apply {
-            addView(content)
-        }
+    private fun findScreenCombinationModeIndex(): Int {
+        val values = currentModeValues ?: return 0
+        val targetValue = selectedScreenCombinationMode.toString()
+        return values.indexOfFirst { it == targetValue }.takeIf { it >= 0 } ?: 0
     }
 
     private fun dp(value: Int): Int {
@@ -2089,6 +2033,12 @@ class AppView : Activity(), AdapterFragmentCallbacks {
     }
 
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent): Boolean {
+        if (screenCombinationModeOverlay.isVisible && (keyCode == android.view.KeyEvent.KEYCODE_BACK
+                || keyCode == android.view.KeyEvent.KEYCODE_BUTTON_B)) {
+            hideScreenCombinationModeView()
+            return true
+        }
+
         // 面板打开时按返回键/B键关闭面板而非退出界面
         if (isPanelOpen && (keyCode == android.view.KeyEvent.KEYCODE_BACK
                 || keyCode == android.view.KeyEvent.KEYCODE_BUTTON_B)) {
