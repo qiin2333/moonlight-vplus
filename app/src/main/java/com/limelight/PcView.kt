@@ -36,6 +36,7 @@ import com.limelight.services.KeyboardAccessibilityService
 import com.limelight.ui.AdapterFragment
 import com.limelight.ui.AdapterFragmentCallbacks
 import com.limelight.utils.AnalyticsManager
+import com.limelight.utils.AppDialogStyler
 import com.limelight.utils.AppCacheManager
 import com.limelight.utils.CacheHelper
 import com.limelight.utils.ConfigurationSyncScheduler
@@ -83,6 +84,7 @@ import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.Typeface
 import android.hardware.SensorManager
 import android.net.Uri
 import android.net.VpnService
@@ -105,6 +107,7 @@ import android.util.LruCache
 import android.view.ContextMenu
 import android.view.ContextMenu.ContextMenuInfo
 import android.view.GestureDetector
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
@@ -118,6 +121,7 @@ import android.widget.AdapterView.AdapterContextMenuInfo
 import android.widget.GridView
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.RelativeLayout
 import android.widget.Space
 import android.widget.TextView
@@ -129,6 +133,7 @@ import javax.microedition.khronos.opengles.GL10
 
 import jp.wasabeef.glide.transformations.BlurTransformation
 import jp.wasabeef.glide.transformations.ColorFilterTransformation
+import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.content.pm.PackageInfoCompat
 import androidx.core.net.toUri
@@ -692,14 +697,9 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             BackgroundSource.Pipw   to R.string.background_source_pipw,
             BackgroundSource.None   to R.string.background_source_none,
         )
-        // NOTE: AlertDialog drops items if setMessage is also set (they fight for
-        // the same content slot). Inline the explanation into the title and keep
-        // the dialog cancellable so users can always back out.
-        val title = getString(R.string.background_source_dialog_title) + "\n\n" +
-                getString(R.string.background_source_dialog_message)
 
         val dialog = AlertDialog.Builder(this, R.style.AppDialogStyle)
-            .setTitle(title)
+            .setCustomTitle(createBackgroundSourceDialogHeader())
             .setItems(choices.map { getString(it.second) }.toTypedArray()) { _, which ->
                 BackgroundSource.setActive(this, choices[which].first)
             }
@@ -718,6 +718,40 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         }
         backgroundSourceDialogShowing = true
         dialog.show()
+        dialog.window?.setBackgroundDrawableResource(R.drawable.app_dialog_bg_cute)
+        AppDialogStyler.styleAlertDialog(dialog, this)
+    }
+
+    private fun createBackgroundSourceDialogHeader(): View {
+        val density = resources.displayMetrics.density
+        fun dp(value: Int) = (value * density + 0.5f).toInt()
+        fun matchWrapParams() = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        )
+
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(28), dp(22), dp(28), dp(8))
+            addView(TextView(this@PcView).apply {
+                text = getString(R.string.background_source_dialog_title)
+                gravity = Gravity.CENTER
+                setTypeface(typeface, Typeface.BOLD)
+                textSize = 20f
+                setTextColor(ContextCompat.getColor(this@PcView, R.color.app_dialog_title_color))
+                setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
+            }, matchWrapParams())
+            addView(TextView(this@PcView).apply {
+                text = getString(R.string.background_source_dialog_message)
+                gravity = Gravity.CENTER
+                textSize = 14f
+                setLineSpacing(dp(2).toFloat(), 1f)
+                setPadding(0, dp(8), 0, 0)
+                setTextColor(ContextCompat.getColor(this@PcView, R.color.app_dialog_subtitle_color))
+                setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
+            }, matchWrapParams())
+        }
     }
 
     private fun refreshBackgroundImage(isFromShake: Boolean) {

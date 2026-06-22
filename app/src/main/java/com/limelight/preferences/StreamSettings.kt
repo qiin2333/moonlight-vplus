@@ -1190,22 +1190,23 @@ class StreamSettings : AppCompatActivity() {
          */
         private fun applyListPreferenceCurrentValueSummary(group: PreferenceGroup) {
             val accent = ContextCompat.getColor(group.context, R.color.theme_pink_secondary)
-            applyHighlightedSummariesRecursively(group, accent)
+            val disabledAccent = ContextCompat.getColor(group.context, R.color.ui_shell_text_disabled_primary)
+            applyHighlightedSummariesRecursively(group, accent, disabledAccent)
         }
 
-        private fun applyHighlightedSummariesRecursively(group: PreferenceGroup, accent: Int) {
+        private fun applyHighlightedSummariesRecursively(group: PreferenceGroup, accent: Int, disabledAccent: Int) {
             for (i in 0 until group.preferenceCount) {
                 val child = group.getPreference(i)
                 when {
-                    child is PreferenceGroup -> applyHighlightedSummariesRecursively(child, accent)
+                    child is PreferenceGroup -> applyHighlightedSummariesRecursively(child, accent, disabledAccent)
                     // IconListPreference 自己重写 setSummary 维护 "(当前：xxx)"，
                     // 装 SummaryProvider 会与其 super.setSummary 调用互斥，跳过。
                     child is IconListPreference -> Unit
-                    child is ListPreference -> applyHighlightedSummary(child, accent) {
+                    child is ListPreference -> applyHighlightedSummary(child, accent, disabledAccent) {
                         val entry = it.entry?.toString()
                         if (entry.isNullOrBlank()) "—" else entry
                     }
-                    child is SeekBarPreference -> applyHighlightedSummary(child, accent) {
+                    child is SeekBarPreference -> applyHighlightedSummary(child, accent, disabledAccent) {
                         val display = it.formatDisplayValue(it.currentValue)
                         val suffix = it.suffix?.takeIf { s -> s.isNotBlank() }
                         if (suffix != null) "$display $suffix" else display
@@ -1222,6 +1223,7 @@ class StreamSettings : AppCompatActivity() {
         private inline fun <reified T : Preference> applyHighlightedSummary(
                 pref: T,
                 accent: Int,
+                disabledAccent: Int,
                 crossinline currentValueProvider: (T) -> String
         ) {
             val originalSummary = pref.summary?.toString()?.takeIf { it.isNotBlank() }
@@ -1230,7 +1232,7 @@ class StreamSettings : AppCompatActivity() {
                 val builder = SpannableStringBuilder()
                 builder.append(current)
                 builder.setSpan(
-                        ForegroundColorSpan(accent),
+                        ForegroundColorSpan(if (p.isEnabled) accent else disabledAccent),
                         0, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 builder.setSpan(
                         StyleSpan(Typeface.BOLD),

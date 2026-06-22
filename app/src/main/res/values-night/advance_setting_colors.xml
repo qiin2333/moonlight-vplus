@@ -9,6 +9,8 @@
     <color name="ui_shell_outline_strong">#4DFFFFFF</color>
     <color name="ui_shell_text_primary">#F7F3F7</color>
     <color name="ui_shell_text_secondary">#C9D0D8</color>
+    <color name="ui_shell_text_disabled_primary">#66F7F3F7</color>
+    <color name="ui_shell_text_disabled_secondary">#55C9D0D8</color>
     <color name="ui_shell_text_shadow">#88000000</color>
     <color name="ui_shell_text_shadow_strong">#AA000000</color>
     <color name="ui_shell_accent_soft">#33FF6B9D</color>

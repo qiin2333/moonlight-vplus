@@ -17,7 +17,7 @@ object AppDialogStyler {
     fun styleAlertDialog(dialog: Dialog, context: Context) {
         tintTitle(dialog, context)
         tintButtons(dialog, context)
-        styleList(dialog.findViewById(android.R.id.list), context)
+        styleList(dialog.findViewById(android.R.id.list) ?: findListView(dialog.window?.decorView), context)
         clearTextShadows(dialog.window?.decorView)
     }
 
@@ -92,6 +92,19 @@ object AppDialogStyler {
         return when (dialog) {
             is android.app.AlertDialog -> dialog.getButton(buttonId)
             is androidx.appcompat.app.AlertDialog -> dialog.getButton(buttonId)
+            else -> null
+        }
+    }
+
+    private fun findListView(view: View?): ListView? {
+        return when (view) {
+            is ListView -> view
+            is ViewGroup -> {
+                for (index in 0 until view.childCount) {
+                    findListView(view.getChildAt(index))?.let { return it }
+                }
+                null
+            }
             else -> null
         }
     }

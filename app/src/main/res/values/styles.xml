@@ -163,8 +163,8 @@
         <item name="colorControlNormal">@color/ui_shell_text_secondary</item>
         <item name="android:colorControlHighlight">@color/ui_shell_accent_soft</item>
         <item name="colorControlHighlight">@color/ui_shell_accent_soft</item>
-        <item name="android:textColorPrimary">@color/ui_shell_text_primary</item>
-        <item name="android:textColorSecondary">@color/ui_shell_text_secondary</item>
+        <item name="android:textColorPrimary">@color/settings_preference_title_text</item>
+        <item name="android:textColorSecondary">@color/settings_preference_summary_text</item>
         <item name="preferenceTheme">@style/MyPreferenceThemeOverlay</item>
     </style>
 
@@ -209,13 +209,13 @@
         <item name="android:textAppearanceListItemSecondary">@style/PreferenceSummaryWithShadow</item>
         <item name="android:textAppearanceListItemSmall">@style/PreferenceSummaryWithShadow</item>
         <item name="android:colorAccent">@color/theme_pink_secondary</item>
-        <item name="android:textColorPrimary">@color/ui_shell_text_primary</item>
-        <item name="android:textColorSecondary">@color/ui_shell_text_secondary</item>
+        <item name="android:textColorPrimary">@color/settings_preference_title_text</item>
+        <item name="android:textColorSecondary">@color/settings_preference_summary_text</item>
         <item name="android:listDivider">@color/ui_shell_outline</item>
     </style>
 
     <style name="PreferenceTextWithShadow">
-        <item name="android:textColor">@color/ui_shell_text_primary</item>
+        <item name="android:textColor">@color/settings_preference_title_text</item>
         <item name="android:shadowColor">@color/ui_shell_text_shadow</item>
         <item name="android:shadowDx">1</item>
         <item name="android:shadowDy">1</item>
@@ -226,12 +226,12 @@
     <style name="PreferenceTitleWithShadow" parent="PreferenceTextWithShadow">
         <item name="android:textSize">18sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">@color/ui_shell_text_primary</item>
+        <item name="android:textColor">@color/settings_preference_title_text</item>
     </style>
 
     <style name="PreferenceSummaryWithShadow">
         <item name="android:textSize">11sp</item>
-        <item name="android:textColor">@color/ui_shell_text_secondary</item>
+        <item name="android:textColor">@color/settings_preference_summary_text</item>
     </style>
 
     <style name="PreferenceCategoryWithShadow" parent="PreferenceTextWithShadow">

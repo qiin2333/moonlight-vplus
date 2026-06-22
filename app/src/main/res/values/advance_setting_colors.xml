@@ -61,6 +61,8 @@
     <color name="ui_shell_outline_strong">#3D1D1B20</color>
     <color name="ui_shell_text_primary">#F21F2026</color>
     <color name="ui_shell_text_secondary">#D1242830</color>
+    <color name="ui_shell_text_disabled_primary">#661F2026</color>
+    <color name="ui_shell_text_disabled_secondary">#4D242830</color>
     <color name="ui_shell_text_shadow">#00000000</color>
     <color name="ui_shell_text_shadow_strong">#00000000</color>
     <color name="ui_shell_accent_soft">#1AFF6B9D</color>
