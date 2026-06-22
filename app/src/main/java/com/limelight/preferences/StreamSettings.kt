@@ -466,9 +466,9 @@ class StreamSettings : AppCompatActivity() {
         private fun updateItemAppearance(holder: ViewHolder, isSelected: Boolean, hasFocus: Boolean) {
             // 使用项目公共粉色主题
             val pinkPrimary = androidx.core.content.ContextCompat.getColor(this@StreamSettings, R.color.theme_pink_primary)    // #FF6B9D
-            val primaryText = ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_text_primary)
-            val secondaryText = ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_text_secondary)
-            val subtleText = ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_outline_strong)
+            val primaryText = ContextCompat.getColor(this@StreamSettings, R.color.settings_drawer_text_primary)
+            val secondaryText = ContextCompat.getColor(this@StreamSettings, R.color.settings_drawer_text_secondary)
+            val subtleText = ContextCompat.getColor(this@StreamSettings, R.color.settings_drawer_text_subtle)
 
             // 指示器显示（小圆点）
             holder.indicator.visibility = if (isSelected) View.VISIBLE else View.INVISIBLE
@@ -478,7 +478,7 @@ class StreamSettings : AppCompatActivity() {
             when {
                 isSelected -> { textColor = primaryText; textAlpha = 1.0f; iconColor = pinkPrimary; iconAlpha = 1.0f }
                 hasFocus   -> { textColor = pinkPrimary; textAlpha = 1.0f; iconColor = pinkPrimary; iconAlpha = 0.95f }
-                else       -> { textColor = secondaryText; textAlpha = 0.9f; iconColor = secondaryText; iconAlpha = 0.7f }
+                else       -> { textColor = secondaryText; textAlpha = 1.0f; iconColor = secondaryText; iconAlpha = 0.86f }
             }
             holder.title.setTextColor(textColor)
             holder.title.alpha = textAlpha

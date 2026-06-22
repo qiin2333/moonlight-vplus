@@ -16,6 +16,9 @@
     <color name="ui_shell_accent_soft">#33FF6B9D</color>
     <color name="ui_shell_accent_focus">#66FF6B9D</color>
     <color name="settings_background_overlay">#B3333333</color>
+    <color name="settings_drawer_text_primary">#F7F3F7</color>
+    <color name="settings_drawer_text_secondary">#DCE2EA</color>
+    <color name="settings_drawer_text_subtle">#99DCE2EA</color>
 
     <color name="app_dialog_choice_control_normal">#7AC9D0D8</color>
     <color name="app_dialog_choice_control_active">#D9FF8FA3</color>
