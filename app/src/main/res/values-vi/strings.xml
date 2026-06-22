@@ -231,4 +231,5 @@
     <string name="title_checkbox_enable_audiofx">Hỗ trợ bộ cân bằng của hệ thống</string>
     <string name="summary_checkbox_enable_audiofx">Cho phép hiệu ứng âm thanh hoạt động khi stream, nhưng có thể tăng độ trễ âm thanh</string>
     <string name="resolution_prefix_native_portrait">(Dọc)</string>
+    <string name="title_config_sync_backup_password">Mật khẩu mã hóa bản sao lưu</string>
 </resources>

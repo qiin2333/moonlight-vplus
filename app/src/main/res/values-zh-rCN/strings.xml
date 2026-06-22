@@ -844,7 +844,7 @@
     <string name="screen_mode_auto_activate">激活模式</string>
     <string name="screen_mode_primary_streaming">主屏串流模式</string>
     <string name="screen_mode_secondary_streaming">副屏串流模式</string>
-    <string name="screen_mode_exclusive_streaming">息屏串流模式</string>
+    <string name="screen_mode_exclusive_streaming">仅启用指定显示器模式</string>
     <string name="screen_mode_host_default_desc">使用 Sunshine 主机端配置，不覆盖屏幕组合设置。</string>
     <string name="screen_mode_no_operation_desc">保持当前屏幕布局，不调整显示器拓扑。</string>
     <string name="screen_mode_auto_activate_desc">自动激活指定显示器用于串流。</string>
@@ -1438,4 +1438,5 @@
     <string name="crown_store_validation_external_locator">Store 信息里先不要放链接或邮箱</string>
     <string name="crown_store_validation_sensitive_metadata">不能公开隐私、token、密码或配对身份</string>
     <string name="crown_store_validation_invalid_bundle">这不是公开用的纯王冠分享包</string>
+    <string name="title_config_sync_backup_password">备份加密密码</string>
 </resources>

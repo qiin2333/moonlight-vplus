@@ -252,10 +252,21 @@
     <string name="analogscroll_left">Stick analógico esquerdo</string>
     <string name="title_analog_scrolling">Usar um stick analógico para fazer scroll</string>
     <string name="summary_analog_scrolling">Selecciona um stick analógico para fazer scroll quando a emulação de rato está ativada</string>
-    <string name="screen_mode_host_default">Usar a configuração do host Sunshine (padrão)</string>
-    <string name="screen_mode_no_operation">Não alterar a organização das telas</string>
-    <string name="screen_mode_auto_activate">Ativar automaticamente a tela selecionada para streaming</string>
-    <string name="screen_mode_primary_streaming">Streaming na tela principal (ativar a tela selecionada e defini-la como principal)</string>
-    <string name="screen_mode_secondary_streaming">Streaming em tela secundária (somente tela Foundation)</string>
-    <string name="screen_mode_exclusive_streaming">Streaming somente na tela selecionada (desativar as outras telas)</string>
+    <string name="title_screen_combination_mode">Configurações de combinação de telas</string>
+    <string name="summary_screen_combination_mode">Controle de telas do Sunshine Foundation</string>
+    <string name="screen_combination_mode_dialog_subtitle">Aplica-se ao controle de telas do Sunshine Foundation</string>
+    <string name="screen_mode_host_default">Seguir host</string>
+    <string name="screen_mode_no_operation">Modo sem operação</string>
+    <string name="screen_mode_auto_activate">Modo de ativação</string>
+    <string name="screen_mode_primary_streaming">Modo de streaming na tela principal</string>
+    <string name="screen_mode_secondary_streaming">Modo de streaming na tela secundária</string>
+    <string name="screen_mode_exclusive_streaming">Modo de streaming em tela exclusiva</string>
+    <string name="screen_mode_host_default_desc">Usa a configuração do host Sunshine sem substituí-la.</string>
+    <string name="screen_mode_no_operation_desc">Mantém a organização atual das telas.</string>
+    <string name="screen_mode_auto_activate_desc">Ativa a tela selecionada para streaming.</string>
+    <string name="screen_mode_primary_streaming_desc">Ativa a tela selecionada e a define como principal.</string>
+    <string name="screen_mode_secondary_streaming_desc">Mantém a tela física como principal e usa a tela Foundation como secundária.</string>
+    <string name="screen_mode_exclusive_streaming_desc">Usa somente a tela selecionada e desativa as outras telas.</string>
+    <string name="screen_combination_mode_label">Modo: %1$s</string>
+    <string name="title_config_sync_backup_password">Senha de criptografia do backup</string>
 </resources>

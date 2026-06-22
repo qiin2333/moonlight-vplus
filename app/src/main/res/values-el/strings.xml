@@ -210,4 +210,5 @@
 \nΔοκιμάστε να απενεργοποιήσετε τη λειτουργία HDR, να αλλάξετε την ανάλυση ροής ή να αλλάξετε την ανάλυση οθόνης του υπολογιστή φιλοξενίας.</string>
     <string name="pcview_menu_eol">Λήξη Υποστήριξης NVIDA GameStream</string>
     <string name="pair_pairing_help">Εάν ο υπολογιστής οικοδεσπότης χρησιμοποιεί το Sunshine, πλοηγηθείτε στην διαδικτυακή διεπαφή χρήστη του Sunshine για να εισάγετε το PIN.</string>
+    <string name="title_config_sync_backup_password">Κωδικός κρυπτογράφησης αντιγράφου ασφαλείας</string>
 </resources>

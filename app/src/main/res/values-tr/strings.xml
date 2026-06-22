@@ -173,10 +173,21 @@
     <string name="summary_checkbox_usb_bind_all">Yerel Xbox oyun kumandası desteği mevcut olsa bile desteklenen tüm oyun kumandaları için Moonlight\'ın USB sürücüsünü kullan</string>
     <string name="summary_checkbox_flip_face_buttons">Oyun kumandaları ve ekran kontrolleri için A/B ve X/Y yüz düğmelerini değiştirir</string>
     <string name="summary_checkbox_absolute_mouse_mode">Bu fare hızlandırmanın uzak masaüstü kullanımı için daha doğal davranmasını sağlayabilir, ancak birçok oyunla uyumsuzdur.</string>
-    <string name="screen_mode_host_default">Sunshine ana makine yapılandırmasını kullan (varsayılan)</string>
-    <string name="screen_mode_no_operation">Ekran düzenini değiştirme</string>
-    <string name="screen_mode_auto_activate">Seçili ekranı akış için otomatik olarak etkinleştir</string>
-    <string name="screen_mode_primary_streaming">Birincil ekran akışı (seçili ekranı etkinleştir ve birincil yap)</string>
-    <string name="screen_mode_secondary_streaming">İkincil ekran akışı (yalnızca Foundation ekranı)</string>
-    <string name="screen_mode_exclusive_streaming">Yalnızca seçili ekrandan akış yap (diğer ekranları devre dışı bırak)</string>
+    <string name="title_screen_combination_mode">Ekran birleşimi ayarları</string>
+    <string name="summary_screen_combination_mode">Sunshine Foundation ekran denetimi</string>
+    <string name="screen_combination_mode_dialog_subtitle">Sunshine Foundation ekran denetimi için geçerlidir</string>
+    <string name="screen_mode_host_default">Ana makineyi takip et</string>
+    <string name="screen_mode_no_operation">İşlem yok modu</string>
+    <string name="screen_mode_auto_activate">Etkinleştirme modu</string>
+    <string name="screen_mode_primary_streaming">Birincil ekran akışı modu</string>
+    <string name="screen_mode_secondary_streaming">İkincil ekran akışı modu</string>
+    <string name="screen_mode_exclusive_streaming">Özel ekran akışı modu</string>
+    <string name="screen_mode_host_default_desc">Sunshine ana makine ayarını üzerine yazmadan kullanır.</string>
+    <string name="screen_mode_no_operation_desc">Geçerli ekran düzenini korur.</string>
+    <string name="screen_mode_auto_activate_desc">Seçili ekranı akış için etkinleştirir.</string>
+    <string name="screen_mode_primary_streaming_desc">Seçili ekranı etkinleştirir ve birincil olarak ayarlar.</string>
+    <string name="screen_mode_secondary_streaming_desc">Fiziksel ekranı birincil tutar ve Foundation ekranını ikincil olarak kullanır.</string>
+    <string name="screen_mode_exclusive_streaming_desc">Yalnızca seçili ekranı kullanır ve diğer ekranları devre dışı bırakır.</string>
+    <string name="screen_combination_mode_label">Mod: %1$s</string>
+    <string name="title_config_sync_backup_password">Yedek şifreleme parolası</string>
 </resources>

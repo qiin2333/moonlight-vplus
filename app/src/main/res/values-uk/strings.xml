@@ -281,10 +281,21 @@
     <string name="toast_controller_type_changed">Тип геймпада може бути змінений через емуляцію датчика руху</string>
     <string name="pcview_menu_eol">Закриття сервісів NVIDIA GameStream</string>
     <string name="perf_overlay_hostprocessinglatency">Затримка обробки хостом мін./макс./середня: %1$.1f/%2$.1f/%3$.1f мс</string>
-    <string name="screen_mode_host_default">Використовувати конфігурацію хоста Sunshine (за замовчуванням)</string>
-    <string name="screen_mode_no_operation">Не змінювати конфігурацію екранів</string>
-    <string name="screen_mode_auto_activate">Автоматично активувати вибраний дисплей для стримінгу</string>
-    <string name="screen_mode_primary_streaming">Стримінг з основного дисплея (активувати вибраний дисплей і зробити його основним)</string>
-    <string name="screen_mode_secondary_streaming">Стримінг з вторинного дисплея (лише дисплей Foundation)</string>
-    <string name="screen_mode_exclusive_streaming">Стримінг лише з вибраного дисплея (вимкнути інші дисплеї)</string>
+    <string name="title_screen_combination_mode">Налаштування комбінації екранів</string>
+    <string name="summary_screen_combination_mode">Керування дисплеями Sunshine Foundation</string>
+    <string name="screen_combination_mode_dialog_subtitle">Застосовується до керування дисплеями Sunshine Foundation</string>
+    <string name="screen_mode_host_default">Слідувати хосту</string>
+    <string name="screen_mode_no_operation">Режим без операції</string>
+    <string name="screen_mode_auto_activate">Режим активації</string>
+    <string name="screen_mode_primary_streaming">Режим стримінгу з основного дисплея</string>
+    <string name="screen_mode_secondary_streaming">Режим стримінгу з вторинного дисплея</string>
+    <string name="screen_mode_exclusive_streaming">Режим ексклюзивного стримінгу дисплея</string>
+    <string name="screen_mode_host_default_desc">Використовує налаштування хоста Sunshine без його перевизначення.</string>
+    <string name="screen_mode_no_operation_desc">Зберігає поточну конфігурацію дисплеїв.</string>
+    <string name="screen_mode_auto_activate_desc">Активує вибраний дисплей для стримінгу.</string>
+    <string name="screen_mode_primary_streaming_desc">Активує вибраний дисплей і робить його основним.</string>
+    <string name="screen_mode_secondary_streaming_desc">Залишає фізичний дисплей основним і використовує дисплей Foundation як вторинний.</string>
+    <string name="screen_mode_exclusive_streaming_desc">Використовує лише вибраний дисплей і вимикає інші дисплеї.</string>
+    <string name="screen_combination_mode_label">Режим: %1$s</string>
+    <string name="title_config_sync_backup_password">Пароль шифрування резервної копії</string>
 </resources>

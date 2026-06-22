@@ -151,10 +151,21 @@
     <string name="summary_list_audio_vibration_mode">振動の伝達方法を選択</string>
     <string name="title_list_audio_vibration_scene">シーンモード</string>
     <string name="summary_list_audio_vibration_scene">コンテンツタイプに合わせて振動パターンを最適化</string>
-    <string name="screen_mode_host_default">Sunshine ホスト側の設定を使用（既定）</string>
-    <string name="screen_mode_no_operation">画面構成を変更しない</string>
-    <string name="screen_mode_auto_activate">指定したディスプレイを自動的に有効化してストリーミング</string>
-    <string name="screen_mode_primary_streaming">プライマリディスプレイでストリーミング（指定したディスプレイを有効化してプライマリに設定）</string>
-    <string name="screen_mode_secondary_streaming">セカンダリディスプレイでストリーミング（Foundation ディスプレイのみ）</string>
-    <string name="screen_mode_exclusive_streaming">指定したディスプレイのみでストリーミング（他のディスプレイを無効化）</string>
+    <string name="title_screen_combination_mode">ディスプレイ構成設定</string>
+    <string name="summary_screen_combination_mode">Sunshine Foundation のディスプレイ制御</string>
+    <string name="screen_combination_mode_dialog_subtitle">Sunshine Foundation のディスプレイ制御に適用</string>
+    <string name="screen_mode_host_default">ホストに従う</string>
+    <string name="screen_mode_no_operation">操作なしモード</string>
+    <string name="screen_mode_auto_activate">有効化モード</string>
+    <string name="screen_mode_primary_streaming">プライマリストリーミングモード</string>
+    <string name="screen_mode_secondary_streaming">セカンダリストリーミングモード</string>
+    <string name="screen_mode_exclusive_streaming">排他ディスプレイストリーミングモード</string>
+    <string name="screen_mode_host_default_desc">Sunshine ホスト側の設定を上書きせずに使用します。</string>
+    <string name="screen_mode_no_operation_desc">現在のディスプレイ構成を維持します。</string>
+    <string name="screen_mode_auto_activate_desc">選択したディスプレイをストリーミング用に有効化します。</string>
+    <string name="screen_mode_primary_streaming_desc">選択したディスプレイを有効化し、プライマリに設定します。</string>
+    <string name="screen_mode_secondary_streaming_desc">物理ディスプレイをプライマリのままにし、Foundation ディスプレイをセカンダリとして使用します。</string>
+    <string name="screen_mode_exclusive_streaming_desc">選択したディスプレイのみを使用し、他のディスプレイを無効化します。</string>
+    <string name="screen_combination_mode_label">モード: %1$s</string>
+    <string name="title_config_sync_backup_password">バックアップ暗号化パスワード</string>
 </resources>

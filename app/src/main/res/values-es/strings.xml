@@ -516,10 +516,21 @@
     <string name="width_hint">ej. 1920</string>
     <string name="width_label">Ancho:</string>
 
-    <string name="screen_mode_host_default">Usar la configuración del host Sunshine (predeterminado)</string>
-    <string name="screen_mode_no_operation">No cambiar la disposición de pantallas</string>
-    <string name="screen_mode_auto_activate">Activar automáticamente la pantalla seleccionada para transmitir</string>
-    <string name="screen_mode_primary_streaming">Transmisión en pantalla principal (activar la pantalla seleccionada y establecerla como principal)</string>
-    <string name="screen_mode_secondary_streaming">Transmisión en pantalla secundaria (solo pantalla Foundation)</string>
-    <string name="screen_mode_exclusive_streaming">Transmitir solo desde la pantalla seleccionada (desactivar las demás pantallas)</string>
+    <string name="title_screen_combination_mode">Configuración de combinación de pantallas</string>
+    <string name="summary_screen_combination_mode">Control de pantallas de Sunshine Foundation</string>
+    <string name="screen_combination_mode_dialog_subtitle">Se aplica al control de pantallas de Sunshine Foundation</string>
+    <string name="screen_mode_host_default">Seguir host</string>
+    <string name="screen_mode_no_operation">Modo sin operación</string>
+    <string name="screen_mode_auto_activate">Modo de activación</string>
+    <string name="screen_mode_primary_streaming">Modo de transmisión principal</string>
+    <string name="screen_mode_secondary_streaming">Modo de transmisión secundaria</string>
+    <string name="screen_mode_exclusive_streaming">Modo de transmisión de pantalla exclusiva</string>
+    <string name="screen_mode_host_default_desc">Usa la configuración del host Sunshine sin sobrescribirla.</string>
+    <string name="screen_mode_no_operation_desc">Mantiene la disposición actual de pantallas.</string>
+    <string name="screen_mode_auto_activate_desc">Activa la pantalla seleccionada para transmitir.</string>
+    <string name="screen_mode_primary_streaming_desc">Activa la pantalla seleccionada y la establece como principal.</string>
+    <string name="screen_mode_secondary_streaming_desc">Mantiene la pantalla física como principal y usa la pantalla Foundation como secundaria.</string>
+    <string name="screen_mode_exclusive_streaming_desc">Usa solo la pantalla seleccionada y desactiva las demás pantallas.</string>
+    <string name="screen_combination_mode_label">Modo: %1$s</string>
+    <string name="title_config_sync_backup_password">Contraseña de cifrado de copia de seguridad</string>
 </resources>

@@ -152,4 +152,5 @@
     <string name="title_checkbox_enable_audiofx">הפעל תמיכה באקולייזר</string>
     <string name="category_input_settings">הגדרות קלט</string>
     <string name="title_checkbox_touchscreen_trackpad">השתמש במסך מגע כמשטח מגע</string>
+    <string name="title_config_sync_backup_password">סיסמת הצפנת גיבוי</string>
 </resources>

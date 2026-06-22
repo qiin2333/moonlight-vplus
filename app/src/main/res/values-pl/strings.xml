@@ -270,10 +270,21 @@
     <string name="videoformat_auto">Automatycznie (zalecane)</string>
     <string name="videoformat_av1always">Preferowany AV1 (eksperymentalny)</string>
     <string name="summary_setup_guide">Wyświetl instrukcje, jak skonfigurować komputer do gier do streamowania</string>
-    <string name="screen_mode_host_default">Użyj konfiguracji hosta Sunshine (domyślnie)</string>
-    <string name="screen_mode_no_operation">Nie zmieniaj układu ekranów</string>
-    <string name="screen_mode_auto_activate">Automatycznie aktywuj wybrany ekran do strumieniowania</string>
-    <string name="screen_mode_primary_streaming">Strumieniowanie z ekranu głównego (aktywuj wybrany ekran i ustaw go jako główny)</string>
-    <string name="screen_mode_secondary_streaming">Strumieniowanie z ekranu dodatkowego (tylko ekran Foundation)</string>
-    <string name="screen_mode_exclusive_streaming">Strumieniowanie tylko z wybranego ekranu (wyłącz inne ekrany)</string>
+    <string name="title_screen_combination_mode">Ustawienia kombinacji ekranów</string>
+    <string name="summary_screen_combination_mode">Sterowanie ekranami Sunshine Foundation</string>
+    <string name="screen_combination_mode_dialog_subtitle">Dotyczy sterowania ekranami Sunshine Foundation</string>
+    <string name="screen_mode_host_default">Zgodnie z hostem</string>
+    <string name="screen_mode_no_operation">Tryb bez operacji</string>
+    <string name="screen_mode_auto_activate">Tryb aktywacji</string>
+    <string name="screen_mode_primary_streaming">Tryb strumieniowania z ekranu głównego</string>
+    <string name="screen_mode_secondary_streaming">Tryb strumieniowania z ekranu dodatkowego</string>
+    <string name="screen_mode_exclusive_streaming">Tryb strumieniowania z wyłącznego ekranu</string>
+    <string name="screen_mode_host_default_desc">Używa ustawienia hosta Sunshine bez jego zastępowania.</string>
+    <string name="screen_mode_no_operation_desc">Zachowuje bieżący układ ekranów.</string>
+    <string name="screen_mode_auto_activate_desc">Aktywuje wybrany ekran do strumieniowania.</string>
+    <string name="screen_mode_primary_streaming_desc">Aktywuje wybrany ekran i ustawia go jako główny.</string>
+    <string name="screen_mode_secondary_streaming_desc">Pozostawia fizyczny ekran jako główny i używa ekranu Foundation jako dodatkowego.</string>
+    <string name="screen_mode_exclusive_streaming_desc">Używa tylko wybranego ekranu i wyłącza pozostałe ekrany.</string>
+    <string name="screen_combination_mode_label">Tryb: %1$s</string>
+    <string name="title_config_sync_backup_password">Hasło szyfrowania kopii zapasowej</string>
 </resources>

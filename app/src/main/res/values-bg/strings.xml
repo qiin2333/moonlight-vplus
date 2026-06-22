@@ -140,10 +140,21 @@
     <string name="title_checkbox_touchscreen_trackpad">Използване на сензорния екран като тракпад</string>
     <string name="title_checkbox_multi_controller">Автоматично откриване на наличен контролер</string>
     <string name="summary_checkbox_multi_controller">Премахването на отметката от тази опция принуждава контролер винаги да присъства</string>
-    <string name="screen_mode_host_default">Използване на конфигурацията на Sunshine хоста (по подразбиране)</string>
-    <string name="screen_mode_no_operation">Без промяна на подредбата на екраните</string>
-    <string name="screen_mode_auto_activate">Автоматично активиране на избрания дисплей за стрийминг</string>
-    <string name="screen_mode_primary_streaming">Стрийминг от основния дисплей (активира избрания дисплей и го задава като основен)</string>
-    <string name="screen_mode_secondary_streaming">Стрийминг от вторичен дисплей (само Foundation дисплей)</string>
-    <string name="screen_mode_exclusive_streaming">Стрийминг само от избрания дисплей (деактивира другите дисплеи)</string>
+    <string name="title_screen_combination_mode">Настройки за комбинация на екрани</string>
+    <string name="summary_screen_combination_mode">Управление на дисплеите на Sunshine Foundation</string>
+    <string name="screen_combination_mode_dialog_subtitle">Отнася се за управлението на дисплеите на Sunshine Foundation</string>
+    <string name="screen_mode_host_default">Следване на хоста</string>
+    <string name="screen_mode_no_operation">Режим без действие</string>
+    <string name="screen_mode_auto_activate">Режим на активиране</string>
+    <string name="screen_mode_primary_streaming">Режим на стрийминг от основен дисплей</string>
+    <string name="screen_mode_secondary_streaming">Режим на стрийминг от вторичен дисплей</string>
+    <string name="screen_mode_exclusive_streaming">Режим на стрийминг с ексклузивен дисплей</string>
+    <string name="screen_mode_host_default_desc">Използва настройката на Sunshine хоста, без да я презаписва.</string>
+    <string name="screen_mode_no_operation_desc">Запазва текущото оформление на дисплеите.</string>
+    <string name="screen_mode_auto_activate_desc">Активира избрания дисплей за стрийминг.</string>
+    <string name="screen_mode_primary_streaming_desc">Активира избрания дисплей и го задава като основен.</string>
+    <string name="screen_mode_secondary_streaming_desc">Запазва физическия дисплей като основен и използва Foundation дисплея като вторичен.</string>
+    <string name="screen_mode_exclusive_streaming_desc">Използва само избрания дисплей и изключва другите дисплеи.</string>
+    <string name="screen_combination_mode_label">Режим: %1$s</string>
+    <string name="title_config_sync_backup_password">Парола за шифроване на резервно копие</string>
 </resources>

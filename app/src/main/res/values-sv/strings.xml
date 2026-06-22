@@ -270,10 +270,21 @@
     <string name="analogscroll_right">Höger analogspak</string>
     <string name="suffix_seekbar_vibrate_fallback_strength">%</string>
     <string name="title_analog_scrolling">Använd en analog spak för att bläddra</string>
-    <string name="screen_mode_host_default">Använd Sunshine-värdens konfiguration (standard)</string>
-    <string name="screen_mode_no_operation">Ändra inte skärmlayouten</string>
-    <string name="screen_mode_auto_activate">Aktivera den valda skärmen automatiskt för streaming</string>
-    <string name="screen_mode_primary_streaming">Streaming från primär skärm (aktivera den valda skärmen och gör den primär)</string>
-    <string name="screen_mode_secondary_streaming">Streaming från sekundär skärm (endast Foundation-skärm)</string>
-    <string name="screen_mode_exclusive_streaming">Streaming endast från vald skärm (inaktivera andra skärmar)</string>
+    <string name="title_screen_combination_mode">Inställningar för skärmkombination</string>
+    <string name="summary_screen_combination_mode">Skärmkontroll för Sunshine Foundation</string>
+    <string name="screen_combination_mode_dialog_subtitle">Gäller skärmkontroll för Sunshine Foundation</string>
+    <string name="screen_mode_host_default">Följ värd</string>
+    <string name="screen_mode_no_operation">Läge utan åtgärd</string>
+    <string name="screen_mode_auto_activate">Aktiveringsläge</string>
+    <string name="screen_mode_primary_streaming">Primärt streamingläge</string>
+    <string name="screen_mode_secondary_streaming">Sekundärt streamingläge</string>
+    <string name="screen_mode_exclusive_streaming">Exklusivt skärmstreamingläge</string>
+    <string name="screen_mode_host_default_desc">Använder Sunshine-värdens inställning utan att åsidosätta den.</string>
+    <string name="screen_mode_no_operation_desc">Behåller aktuell skärmlayout.</string>
+    <string name="screen_mode_auto_activate_desc">Aktiverar den valda skärmen för streaming.</string>
+    <string name="screen_mode_primary_streaming_desc">Aktiverar den valda skärmen och gör den primär.</string>
+    <string name="screen_mode_secondary_streaming_desc">Behåller den fysiska skärmen som primär och använder Foundation-skärmen som sekundär.</string>
+    <string name="screen_mode_exclusive_streaming_desc">Använder endast den valda skärmen och inaktiverar andra skärmar.</string>
+    <string name="screen_combination_mode_label">Läge: %1$s</string>
+    <string name="title_config_sync_backup_password">Lösenord för säkerhetskopieringskryptering</string>
 </resources>

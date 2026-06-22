@@ -390,14 +390,22 @@
     <string name="summary_checkbox_resume_stream">Retomar automaticamente o stream ao retornar ao Moonlight do segundo plano</string>
     
     <!-- Host settings -->
-    <string name="title_screen_combination_mode">Modo de combinação de tela (Sunshine Foundation)</string>
-    <string name="summary_screen_combination_mode">Controle como o Sunshine gerencia seus monitores ao iniciar um stream</string>
-    <string name="screen_mode_host_default">Usar a configuração do host Sunshine (predefinição)</string>
-    <string name="screen_mode_no_operation">Não alterar a disposição dos ecrãs</string>
-    <string name="screen_mode_auto_activate">Ativar automaticamente o ecrã selecionado para streaming</string>
-    <string name="screen_mode_primary_streaming">Streaming no ecrã principal (ativar o ecrã selecionado e defini-lo como principal)</string>
-    <string name="screen_mode_secondary_streaming">Streaming em ecrã secundário (apenas ecrã Foundation)</string>
-    <string name="screen_mode_exclusive_streaming">Streaming apenas no ecrã selecionado (desativar os outros ecrãs)</string>
+    <string name="title_screen_combination_mode">Definições de combinação de ecrãs</string>
+    <string name="summary_screen_combination_mode">Controlo de ecrãs do Sunshine Foundation</string>
+    <string name="screen_combination_mode_dialog_subtitle">Aplica-se ao controlo de ecrãs do Sunshine Foundation</string>
+    <string name="screen_mode_host_default">Seguir anfitrião</string>
+    <string name="screen_mode_no_operation">Modo sem operação</string>
+    <string name="screen_mode_auto_activate">Modo de ativação</string>
+    <string name="screen_mode_primary_streaming">Modo de streaming no ecrã principal</string>
+    <string name="screen_mode_secondary_streaming">Modo de streaming no ecrã secundário</string>
+    <string name="screen_mode_exclusive_streaming">Modo de streaming em ecrã exclusivo</string>
+    <string name="screen_mode_host_default_desc">Usa a definição do anfitrião Sunshine sem a substituir.</string>
+    <string name="screen_mode_no_operation_desc">Mantém a disposição atual dos ecrãs.</string>
+    <string name="screen_mode_auto_activate_desc">Ativa o ecrã selecionado para streaming.</string>
+    <string name="screen_mode_primary_streaming_desc">Ativa o ecrã selecionado e define-o como principal.</string>
+    <string name="screen_mode_secondary_streaming_desc">Mantém o ecrã físico como principal e usa o ecrã Foundation como secundário.</string>
+    <string name="screen_mode_exclusive_streaming_desc">Usa apenas o ecrã selecionado e desativa os outros ecrãs.</string>
+    <string name="screen_combination_mode_label">Modo: %1$s</string>
     
     <!-- Advanced settings -->
     <string name="title_enable_hdr_high_brightness">Ativar HDR com alto brilho</string>
@@ -688,4 +696,5 @@
     <!-- Drawer Menu -->
     <string name="menu">Menu</string>
     <string name="title_settings">Configurações</string>
+    <string name="title_config_sync_backup_password">Palavra-passe de encriptação da cópia de segurança</string>
 </resources>

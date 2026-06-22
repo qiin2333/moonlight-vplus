@@ -221,4 +221,5 @@
     <string name="applist_menu_tv_channel">Toevoegen aan Kanaal</string>
     <!-- Array strings -->
     <string name="videoformat_hevcalways">Gebruik HEVC altijd (mogelijkheid tot crashes)</string>
+    <string name="title_config_sync_backup_password">Wachtwoord voor back-upversleuteling</string>
 </resources>

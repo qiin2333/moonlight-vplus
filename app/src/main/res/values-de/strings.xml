@@ -273,10 +273,21 @@
     <string name="analogscroll_none">Keine (beide Sticks bewegen die Maus)</string>
     <string name="analogscroll_right">Rechter Analogstick</string>
     <string name="analogscroll_left">Linker Analogstick</string>
-    <string name="screen_mode_host_default">Sunshine-Hostkonfiguration verwenden (Standard)</string>
-    <string name="screen_mode_no_operation">Bildschirm Anordnung nicht ändern</string>
-    <string name="screen_mode_auto_activate">Ausgewählte Anzeige automatisch zum Streaming aktivieren</string>
-    <string name="screen_mode_primary_streaming">Streaming über die Hauptanzeige (ausgewählte Anzeige aktivieren und als Hauptanzeige festlegen)</string>
-    <string name="screen_mode_secondary_streaming">Streaming über sekundäre Anzeige (nur Foundation-Anzeige)</string>
-    <string name="screen_mode_exclusive_streaming">Nur ausgewählte Anzeige streamen (andere Anzeigen deaktivieren)</string>
+    <string name="title_screen_combination_mode">Einstellungen für Displaykombination</string>
+    <string name="summary_screen_combination_mode">Displaysteuerung für Sunshine Foundation</string>
+    <string name="screen_combination_mode_dialog_subtitle">Gilt für die Displaysteuerung von Sunshine Foundation</string>
+    <string name="screen_mode_host_default">Host folgen</string>
+    <string name="screen_mode_no_operation">Modus ohne Aktion</string>
+    <string name="screen_mode_auto_activate">Aktivierungsmodus</string>
+    <string name="screen_mode_primary_streaming">Primärer Streaming-Modus</string>
+    <string name="screen_mode_secondary_streaming">Sekundärer Streaming-Modus</string>
+    <string name="screen_mode_exclusive_streaming">Exklusiver Display-Streaming-Modus</string>
+    <string name="screen_mode_host_default_desc">Verwendet die Sunshine-Hosteinstellung, ohne sie zu überschreiben.</string>
+    <string name="screen_mode_no_operation_desc">Behält das aktuelle Displaylayout bei.</string>
+    <string name="screen_mode_auto_activate_desc">Aktiviert das ausgewählte Display für Streaming.</string>
+    <string name="screen_mode_primary_streaming_desc">Aktiviert das ausgewählte Display und legt es als primär fest.</string>
+    <string name="screen_mode_secondary_streaming_desc">Behält das physische Display als primär bei und verwendet das Foundation-Display als sekundär.</string>
+    <string name="screen_mode_exclusive_streaming_desc">Verwendet nur das ausgewählte Display und deaktiviert andere Displays.</string>
+    <string name="screen_combination_mode_label">Modus: %1$s</string>
+    <string name="title_config_sync_backup_password">Passwort für Backup-Verschlüsselung</string>
 </resources>

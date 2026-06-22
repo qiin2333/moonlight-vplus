@@ -287,10 +287,21 @@
     <string name="summary_list_audio_vibration_mode">진동 전달 방법 선택</string>
     <string name="title_list_audio_vibration_scene">장면 모드</string>
     <string name="summary_list_audio_vibration_scene">콘텐츠 유형에 맞춰 진동 패턴 최적화</string>
-    <string name="screen_mode_host_default">Sunshine 호스트 설정 사용(기본값)</string>
-    <string name="screen_mode_no_operation">화면 구성 변경 안 함</string>
-    <string name="screen_mode_auto_activate">선택한 디스플레이를 자동으로 활성화하여 스트리밍</string>
-    <string name="screen_mode_primary_streaming">주 디스플레이 스트리밍(선택한 디스플레이를 활성화하고 주 디스플레이로 설정)</string>
-    <string name="screen_mode_secondary_streaming">보조 디스플레이 스트리밍(Foundation 디스플레이 전용)</string>
-    <string name="screen_mode_exclusive_streaming">선택한 디스플레이만 스트리밍(다른 디스플레이 비활성화)</string>
+    <string name="title_screen_combination_mode">디스플레이 조합 설정</string>
+    <string name="summary_screen_combination_mode">Sunshine Foundation 디스플레이 제어</string>
+    <string name="screen_combination_mode_dialog_subtitle">Sunshine Foundation 디스플레이 제어에 적용</string>
+    <string name="screen_mode_host_default">호스트 따르기</string>
+    <string name="screen_mode_no_operation">작업 없음 모드</string>
+    <string name="screen_mode_auto_activate">활성화 모드</string>
+    <string name="screen_mode_primary_streaming">주 디스플레이 스트리밍 모드</string>
+    <string name="screen_mode_secondary_streaming">보조 디스플레이 스트리밍 모드</string>
+    <string name="screen_mode_exclusive_streaming">전용 디스플레이 스트리밍 모드</string>
+    <string name="screen_mode_host_default_desc">Sunshine 호스트 설정을 덮어쓰지 않고 사용합니다.</string>
+    <string name="screen_mode_no_operation_desc">현재 디스플레이 구성을 유지합니다.</string>
+    <string name="screen_mode_auto_activate_desc">선택한 디스플레이를 스트리밍용으로 활성화합니다.</string>
+    <string name="screen_mode_primary_streaming_desc">선택한 디스플레이를 활성화하고 주 디스플레이로 설정합니다.</string>
+    <string name="screen_mode_secondary_streaming_desc">물리 디스플레이를 주 디스플레이로 유지하고 Foundation 디스플레이를 보조로 사용합니다.</string>
+    <string name="screen_mode_exclusive_streaming_desc">선택한 디스플레이만 사용하고 다른 디스플레이를 비활성화합니다.</string>
+    <string name="screen_combination_mode_label">모드: %1$s</string>
+    <string name="title_config_sync_backup_password">백업 암호화 비밀번호</string>
 </resources>

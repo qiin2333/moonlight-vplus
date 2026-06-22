@@ -491,7 +491,7 @@
     <string name="screen_mode_auto_activate">Activate mode</string>
     <string name="screen_mode_primary_streaming">Primary streaming mode</string>
     <string name="screen_mode_secondary_streaming">Secondary streaming mode</string>
-    <string name="screen_mode_exclusive_streaming">Screen-off streaming mode</string>
+    <string name="screen_mode_exclusive_streaming">Exclusive display streaming mode</string>
     <string name="screen_mode_host_default_desc">Use the Sunshine host setting without overriding it.</string>
     <string name="screen_mode_no_operation_desc">Send no-operation mode and keep the current display layout.</string>
     <string name="screen_mode_auto_activate_desc">Activate the selected display for streaming.</string>

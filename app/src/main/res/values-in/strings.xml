@@ -211,4 +211,5 @@
     <string name="title_checkbox_enable_pip">Aktifkan mode pengamat Gambar-dalam-Gambar</string>
     <string name="summary_language_list">Bahasa yang digunakan untuk Moonlight</string>
     <string name="summary_checkbox_enable_sops">Izinkan GFE mengubah setelan game untuk streaming yang optimal</string>
+    <string name="title_config_sync_backup_password">Kata sandi enkripsi cadangan</string>
 </resources>
