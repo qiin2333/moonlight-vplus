@@ -136,6 +136,7 @@ class CrownStoreActivity : AppCompatActivity() {
     }
 
     private fun createToolbar(): View {
+        val safeTopMargin = resources.getDimensionPixelSize(R.dimen.activity_safearea_top)
         return LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -172,7 +173,7 @@ class CrownStoreActivity : AppCompatActivity() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply {
-                setMargins(dp(10), dp(14), dp(10), 0)
+                setMargins(dp(10), safeTopMargin, dp(10), 0)
             }
         }
     }
