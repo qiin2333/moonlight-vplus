@@ -51,7 +51,7 @@
             android:layout_weight="1"
             android:layout_marginRight="6dp"
             android:textSize="13sp"
-            android:textColor="@color/settings_drawer_text_secondary"
+            android:textColor="#BBBBBB"
             android:singleLine="true"
             android:ellipsize="end"
             android:includeFontPadding="false"
@@ -64,7 +64,7 @@
             android:layout_width="8dp"
             android:layout_height="8dp"
             android:src="@drawable/ic_chevron_right"
-            android:tint="@color/settings_drawer_text_subtle" />
+            android:tint="#44FF6B9D" />
 
     </LinearLayout>
 
