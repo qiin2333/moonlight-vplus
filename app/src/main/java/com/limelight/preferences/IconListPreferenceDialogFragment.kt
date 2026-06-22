@@ -38,11 +38,9 @@ class IconListPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
         ) {
             override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
                 val view = super.getView(position, convertView, parent)
-                view.isActivated = position == clickedIndex
 
                 view.findViewById<CheckedTextView>(R.id.text)?.let { textView ->
-                    textView.isChecked = position == clickedIndex
-                    AppDialogStyler.tintChoiceText(textView, context)
+                    AppDialogStyler.bindChoiceRow(view, textView, context, position == clickedIndex)
                 }
 
                 val iconContainer = view.findViewById<View>(R.id.icon_container)
@@ -70,9 +68,8 @@ class IconListPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
 
     override fun onStart() {
         super.onStart()
-        dialog?.window?.setBackgroundDrawableResource(R.drawable.app_dialog_bg_cute)
         val alert = dialog as? AlertDialog ?: return
-        AppDialogStyler.styleAlertDialog(alert, requireContext())
+        AppDialogStyler.apply(alert, requireContext())
     }
 
     override fun onDialogClosed(positiveResult: Boolean) {

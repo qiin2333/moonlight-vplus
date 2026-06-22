@@ -51,10 +51,8 @@ class StyledMultiSelectListPreferenceDialogFragment : PreferenceDialogFragmentCo
             override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
                 val view = super.getView(position, convertView, parent)
                 val checked = selectedValues.contains(values[position].toString())
-                view.isActivated = checked
                 view.findViewById<CheckedTextView>(android.R.id.text1)?.let { textView ->
-                    textView.isChecked = checked
-                    AppDialogStyler.tintChoiceText(textView, context)
+                    AppDialogStyler.bindChoiceRow(view, textView, context, checked)
                 }
                 return view
             }
@@ -84,13 +82,12 @@ class StyledMultiSelectListPreferenceDialogFragment : PreferenceDialogFragmentCo
 
     override fun onStart() {
         super.onStart()
-        dialog?.window?.setBackgroundDrawableResource(R.drawable.app_dialog_bg_cute)
         val alert = dialog as? AlertDialog ?: return
         val listView = choiceListView ?: alert.findViewById(android.R.id.list)
         entryValues?.forEachIndexed { index, value ->
             listView?.setItemChecked(index, selectedValues.contains(value.toString()))
         }
-        AppDialogStyler.styleAlertDialog(alert, requireContext())
+        AppDialogStyler.apply(alert, requireContext())
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

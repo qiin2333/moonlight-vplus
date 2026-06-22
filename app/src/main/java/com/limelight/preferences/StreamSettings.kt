@@ -854,8 +854,7 @@ class StreamSettings : AppCompatActivity() {
         private fun showStyledDialog(dialog: AlertDialog): AlertDialog {
             hideKeyboardBeforeDialog()
             dialog.show()
-            dialog.window?.setBackgroundDrawableResource(R.drawable.app_dialog_bg_cute)
-            AppDialogStyler.styleAlertDialog(dialog, requireContext())
+            AppDialogStyler.apply(dialog, requireContext())
             return dialog
         }
 

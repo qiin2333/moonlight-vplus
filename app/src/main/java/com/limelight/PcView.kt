@@ -718,8 +718,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         }
         backgroundSourceDialogShowing = true
         dialog.show()
-        dialog.window?.setBackgroundDrawableResource(R.drawable.app_dialog_bg_cute)
-        AppDialogStyler.styleAlertDialog(dialog, this)
+        AppDialogStyler.apply(dialog, this)
     }
 
     private fun createBackgroundSourceDialogHeader(): View {
