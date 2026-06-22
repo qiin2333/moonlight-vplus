@@ -34,6 +34,7 @@ import com.limelight.binding.input.advance_setting.PageDeviceController;
 import com.limelight.binding.input.advance_setting.superpage.ElementEditText;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
+import com.limelight.utils.AppDialogStyler;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1327,7 +1328,7 @@ public class WheelPad extends Element {
     }
 
     private void showKeyCombinationDialog(Context context, final int index, final TextView valueText) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        AlertDialog.Builder builder = new AlertDialog.Builder(context, R.style.AppDialogStyle);
         builder.setTitle("编辑按键(可组合) (分区 " + (index + 1) + ")");
 
         LinearLayout dialogLayout = new LinearLayout(context);
@@ -1420,7 +1421,7 @@ public class WheelPad extends Element {
             options.add("创建新的组按键...");
 
             // 3. 显示选择对话框
-            new AlertDialog.Builder(context)
+            AlertDialog groupSelectionDialog = new AlertDialog.Builder(context, R.style.AppDialogStyle)
                     .setTitle("选择一个组按键")
                     .setItems(options.toArray(new String[0]), (selectionDialog, which) -> {
 
@@ -1460,6 +1461,7 @@ public class WheelPad extends Element {
                         }
                     })
                     .show();
+            AppDialogStyler.INSTANCE.apply(groupSelectionDialog, context);
         });
 
         addButton.setOnClickListener(v -> {
@@ -1476,6 +1478,7 @@ public class WheelPad extends Element {
         });
 
         dialog.show();
+        AppDialogStyler.INSTANCE.apply(dialog, context);
     }
 
     private void updateValuesContainerUI() {

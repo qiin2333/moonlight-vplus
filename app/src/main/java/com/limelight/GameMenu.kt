@@ -34,6 +34,7 @@ import com.limelight.binding.input.advance_setting.element.ElementController
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.http.NvApp
 import com.limelight.preferences.PreferenceConfiguration
+import com.limelight.utils.AppDialogStyler
 import com.limelight.utils.KeyCodeMapper
 import org.json.JSONArray
 import org.json.JSONObject
@@ -669,7 +670,7 @@ class GameMenu(
             game.prefConfig.showQuickKeyCard
         )
 
-        AlertDialog.Builder(game, R.style.AppDialogStyle)
+        val dialog = AlertDialog.Builder(game, R.style.AppDialogStyle)
             .setTitle(getString(R.string.game_menu_card_config_title))
             .setMultiChoiceItems(items, checked) { _, which, isChecked -> checked[which] = isChecked }
             .setPositiveButton("OK") { _, _ ->
@@ -698,7 +699,9 @@ class GameMenu(
                 }
             }
             .setNegativeButton("Cancel", null)
-            .show()
+            .create()
+        dialog.show()
+        AppDialogStyler.apply(dialog, game)
     }
 
     private fun createCustomView(builder: AlertDialog.Builder): View {
@@ -1045,7 +1048,7 @@ class GameMenu(
         }.toTypedArray()
         val checked = BooleanArray(allIds.size) { currentIds.contains(allIds[it]) }
 
-        AlertDialog.Builder(game, R.style.AppDialogStyle)
+        val dialog = AlertDialog.Builder(game, R.style.AppDialogStyle)
             .setTitle(getString(R.string.quick_button_editor_title))
             .setMultiChoiceItems(allLabels, checked) { dlg, which, isChecked ->
                 val selectedCount = checked.count { it }
@@ -1072,7 +1075,9 @@ class GameMenu(
                 val ad = activeDialog
                 if (cv != null && ad != null) setupQuickButtons(cv, ad)
             }
-            .show()
+            .create()
+        dialog.show()
+        AppDialogStyler.apply(dialog, game)
     }
 
     /** 布局完成后将按钮均分到 ScrollView 可见宽度 */
@@ -1496,7 +1501,7 @@ class GameMenu(
             }
             val checkedItems = BooleanArray(keyNames.size)
 
-            AlertDialog.Builder(game, R.style.AppDialogStyle)
+            val dialog = AlertDialog.Builder(game, R.style.AppDialogStyle)
                 .setTitle(R.string.dialog_title_select_keys_to_delete)
                 .setMultiChoiceItems(keyNames.toTypedArray<CharSequence>(), checkedItems) { _, which, isChecked ->
                     checkedItems[which] = isChecked
@@ -1516,7 +1521,8 @@ class GameMenu(
                 }
                 .setNegativeButton(R.string.dialog_button_cancel, null)
                 .create()
-                .show()
+            dialog.show()
+            AppDialogStyler.apply(dialog, game)
         } catch (e: Exception) {
             LimeLog.warning("Exception while loading key list${e.message}")
             Toast.makeText(game, R.string.toast_load_key_list_failed, Toast.LENGTH_SHORT).show()

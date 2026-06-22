@@ -90,7 +90,7 @@ class EasyTierController(
     // ==================== 对话框管理 ====================
 
     private fun createAndShowDialog() {
-        val builder = AlertDialog.Builder(activity)
+        val builder = AlertDialog.Builder(activity, R.style.AppDialogStyle)
         val inflater = LayoutInflater.from(activity)
         val dialogView = inflater.inflate(R.layout.dialog_easytier_panel, null)
         builder.setView(dialogView)
@@ -110,6 +110,7 @@ class EasyTierController(
         }
 
         currentDialog?.show()
+        currentDialog?.let { AppDialogStyler.apply(it, activity) }
     }
 
     private fun setupDialogButtons(dialogView: View) {

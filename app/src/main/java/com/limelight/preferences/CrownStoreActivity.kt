@@ -38,6 +38,7 @@ import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.share.CrownProfileShareManager
 import com.limelight.binding.input.advance_setting.share.GitHubCrownProfileStorePublisher
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper
+import com.limelight.utils.AppDialogStyler
 import com.limelight.utils.ConfigurationSyncScheduler
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
@@ -1260,7 +1261,7 @@ class CrownStoreActivity : AppCompatActivity() {
 
         val ids = configMap.keys.toTypedArray()
         val names = configMap.values.toTypedArray<CharSequence>()
-        AlertDialog.Builder(this, R.style.AppDialogStyle)
+        val dialog = AlertDialog.Builder(this, R.style.AppDialogStyle)
             .setTitle(R.string.crown_share_merge_into_existing)
             .setItems(names) { _, which ->
                 val errorCode = helper.mergeConfig(profile.payload, ids[which].toLong())
@@ -1272,7 +1273,9 @@ class CrownStoreActivity : AppCompatActivity() {
                     Toast.makeText(this, R.string.toast_crown_share_import_failed, Toast.LENGTH_LONG).show()
                 }
             }
-            .show()
+            .create()
+        dialog.show()
+        AppDialogStyler.apply(dialog, this)
     }
 
     @Deprecated("Deprecated in Java")

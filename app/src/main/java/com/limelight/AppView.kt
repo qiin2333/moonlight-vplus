@@ -64,6 +64,7 @@ import com.limelight.ui.AdapterFragmentCallbacks
 import com.limelight.ui.AdapterRecyclerBridge
 import com.limelight.ui.SelectionIndicatorAnimator
 import com.limelight.utils.AppSettingsManager
+import com.limelight.utils.AppDialogStyler
 import com.limelight.utils.BackgroundImageManager
 import com.limelight.utils.CacheHelper
 import com.limelight.utils.Dialog
@@ -1183,12 +1184,13 @@ class AppView : Activity(), AdapterFragmentCallbacks {
             dialog.dismiss()
         }
 
-        dialog = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog)
+        dialog = AlertDialog.Builder(this, R.style.AppDialogStyle)
                 .setTitle(R.string.title_screen_combination_mode)
                 .setView(dialogView)
                 .setNegativeButton(android.R.string.cancel, null)
                 .create()
         dialog.show()
+        AppDialogStyler.apply(dialog, this)
     }
 
     private fun createScreenCombinationModeDialogView(

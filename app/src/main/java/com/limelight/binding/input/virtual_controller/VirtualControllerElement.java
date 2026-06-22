@@ -15,6 +15,7 @@ import android.view.View;
 import android.widget.FrameLayout;
 
 import com.limelight.R;
+import com.limelight.utils.AppDialogStyler;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -222,6 +223,7 @@ public abstract class VirtualControllerElement extends View {
         AlertDialog alert = alertBuilder.create();
         // show menu
         alert.show();
+        AppDialogStyler.INSTANCE.apply(alert, getContext());
     }
 
     @Override

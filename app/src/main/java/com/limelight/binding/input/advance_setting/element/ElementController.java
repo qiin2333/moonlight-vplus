@@ -43,6 +43,7 @@ import com.limelight.binding.input.advance_setting.ControllerManager;
 import com.limelight.binding.input.advance_setting.PageDeviceController;
 import com.limelight.binding.input.advance_setting.config.PageConfigController;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
+import com.limelight.utils.AppDialogStyler;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
 import com.limelight.binding.input.advance_setting.superpage.SuperPagesController;
 
@@ -1495,7 +1496,7 @@ public class ElementController {
 
                         // 弹出选择对话框
                         AlertDialog.Builder builder = new AlertDialog.Builder(context, R.style.AppDialogStyle);
-                        builder.setTitle("选择配置")
+                        AlertDialog dialog = builder.setTitle("选择配置")
                                 .setItems(configNames.toArray(new String[0]), new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface dialog, int which) {
@@ -1520,6 +1521,7 @@ public class ElementController {
                                 })
                                 .setNegativeButton(R.string.game_menu_cancel, null)
                                 .show();
+                        AppDialogStyler.INSTANCE.apply(dialog, context);
                     } catch (Exception e) {
                         Toast.makeText(context, "无法加载配置列表", Toast.LENGTH_SHORT).show();
                     }

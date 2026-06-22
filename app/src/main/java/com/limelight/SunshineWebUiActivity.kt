@@ -23,6 +23,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.Toast
+import com.limelight.utils.AppDialogStyler
 import com.limelight.utils.UiHelper
 import java.io.ByteArrayInputStream
 import java.security.MessageDigest
@@ -83,13 +84,14 @@ class SunshineWebUiActivity : Activity() {
                     handler.proceed()
                     return
                 }
-                AlertDialog.Builder(this@SunshineWebUiActivity)
+                val dialog = AlertDialog.Builder(this@SunshineWebUiActivity, R.style.AppDialogStyle)
                     .setTitle(R.string.sunshine_webui_ssl_warning_title)
                     .setMessage(getString(R.string.sunshine_webui_ssl_warning_msg, error.url ?: ""))
                     .setPositiveButton(R.string.sunshine_webui_ssl_proceed) { _, _ -> handler.proceed() }
                     .setNegativeButton(android.R.string.cancel) { _, _ -> handler.cancel() }
                     .setOnCancelListener { handler.cancel() }
                     .show()
+                AppDialogStyler.apply(dialog, this@SunshineWebUiActivity)
             }
 
             override fun onReceivedHttpAuthRequest(
@@ -155,7 +157,7 @@ class SunshineWebUiActivity : Activity() {
         container.addView(userEdit)
         container.addView(passEdit)
 
-        AlertDialog.Builder(this)
+        val dialog = AlertDialog.Builder(this, R.style.AppDialogStyle)
             .setTitle(getString(R.string.sunshine_webui_auth_title, host, realm))
             .setView(container)
             .setPositiveButton(android.R.string.ok) { _, _ ->
@@ -167,6 +169,7 @@ class SunshineWebUiActivity : Activity() {
             .setNegativeButton(android.R.string.cancel) { _, _ -> handler.cancel() }
             .setOnCancelListener { handler.cancel() }
             .show()
+        AppDialogStyler.apply(dialog, this)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

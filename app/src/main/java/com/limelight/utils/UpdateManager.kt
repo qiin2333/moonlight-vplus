@@ -450,7 +450,7 @@ object UpdateManager {
             return
         }
 
-        val builder = AlertDialog.Builder(context)
+        val builder = AlertDialog.Builder(context, R.style.AppDialogStyle)
         builder.setTitle(context.getString(R.string.update_install_permission_title))
         builder.setMessage(context.getString(R.string.update_install_permission_msg))
         builder.setPositiveButton(android.R.string.ok) { _, _ ->
@@ -472,7 +472,8 @@ object UpdateManager {
         }
         builder.setNegativeButton(android.R.string.cancel) { _, _ -> pendingUpdateInfo = null }
         builder.setCancelable(false)
-        builder.show()
+        val dialog = builder.show()
+        AppDialogStyler.apply(dialog, context)
     }
 
     // ------------------------------------------------------------------

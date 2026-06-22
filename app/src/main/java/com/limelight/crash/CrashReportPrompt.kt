@@ -19,6 +19,7 @@ import androidx.core.content.FileProvider
 
 import com.limelight.R
 import com.limelight.preferences.BackgroundSource
+import com.limelight.utils.AppDialogStyler
 
 import java.security.MessageDigest
 import java.util.Locale
@@ -44,7 +45,7 @@ object CrashReportPrompt {
             .let { if (it.length > 600) it.substring(0, 600) + "…" else it }
         val isTv = BackgroundSource.isTvDevice(activity)
 
-        val builder = AlertDialog.Builder(activity)
+        val builder = AlertDialog.Builder(activity, R.style.AppDialogStyle)
             .setTitle(R.string.crash_report_dialog_title)
             .setMessage(activity.getString(R.string.crash_report_dialog_message, preview))
             .setPositiveButton(R.string.crash_report_share) { _, _ ->
@@ -69,7 +70,8 @@ object CrashReportPrompt {
             }
         }
 
-        builder.show()
+        val dialog = builder.show()
+        AppDialogStyler.apply(dialog, activity)
     }
 
     private fun showPhotoSummary(activity: Activity) {
@@ -99,11 +101,12 @@ object CrashReportPrompt {
             addView(textView)
         }
 
-        AlertDialog.Builder(activity)
+        val dialog = AlertDialog.Builder(activity, R.style.AppDialogStyle)
             .setTitle(R.string.crash_report_photo_title)
             .setView(scrollView)
             .setPositiveButton(android.R.string.ok, null)
             .show()
+        AppDialogStyler.apply(dialog, activity)
     }
 
     private fun buildPhotoSummary(activity: Activity): String? {

@@ -13,6 +13,7 @@ import android.widget.ListView
 import android.widget.TextView
 import com.limelight.R
 import com.limelight.nvstream.http.ComputerDetails
+import com.limelight.utils.AppDialogStyler
 
 class AddressSelectionDialog(
     context: Context,
@@ -62,6 +63,7 @@ class AddressSelectionDialog(
 
         try {
             dialog.show()
+            AppDialogStyler.apply(dialog, dialog.context)
         } catch (e: IllegalArgumentException) {
             // Window token 或视图状态异常时安全忽略
         } catch (e: RuntimeException) {

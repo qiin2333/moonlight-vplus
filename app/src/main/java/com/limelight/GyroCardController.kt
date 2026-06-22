@@ -10,6 +10,7 @@ import android.widget.Toast
 import java.util.Locale
 
 import com.limelight.binding.input.ControllerHandler
+import com.limelight.utils.AppDialogStyler
 import kotlin.math.roundToInt
 
 /**
@@ -130,7 +131,7 @@ class GyroCardController(private val game: Game) {
             KeyEvent.KEYCODE_BUTTON_R2 -> 2
             else -> 1
         }
-        AlertDialog.Builder(game, R.style.AppDialogStyle)
+        val dialog = AlertDialog.Builder(game, R.style.AppDialogStyle)
             .setTitle(R.string.gyro_activation_method)
             .setSingleChoiceItems(items, checked) { d, which ->
                 game.prefConfig.gyroActivationKeyCode = when (which) {
@@ -143,7 +144,9 @@ class GyroCardController(private val game: Game) {
                 d.dismiss()
             }
             .setNegativeButton(R.string.dialog_button_cancel, null)
-            .show()
+            .create()
+        dialog.show()
+        AppDialogStyler.apply(dialog, game)
     }
 
     private fun updateActivationKeyText(activationKeyText: TextView) {
