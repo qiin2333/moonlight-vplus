@@ -1427,10 +1427,11 @@ class StreamSettings : AppCompatActivity() {
                 updateExternalSyncDirectorySummary()
                 updateConfigSyncStatusSummary()
                 val ctx = context ?: return
-                if (PreferenceManager.getDefaultSharedPreferences(ctx)
-                        .getBoolean(ConfigurationSyncManager.PREF_BACKGROUND_SYNC_ENABLED, false) &&
+                val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
+                val enabled = prefs.getBoolean(ConfigurationSyncManager.PREF_BACKGROUND_SYNC_ENABLED, false)
+                if (enabled &&
                     !ConfigurationSyncManager.hasExternalSyncPassword(ctx)) {
-                    PreferenceManager.getDefaultSharedPreferences(ctx).edit {
+                    prefs.edit {
                         putBoolean(ConfigurationSyncManager.PREF_BACKGROUND_SYNC_ENABLED, false)
                     }
                     Toast.makeText(context, R.string.toast_config_sync_password_required, Toast.LENGTH_LONG).show()
@@ -1438,11 +1439,17 @@ class StreamSettings : AppCompatActivity() {
                     updateExternalSyncDirectorySummary()
                     return
                 }
-                if (ConfigurationSyncManager.isBackgroundSyncEnabled(ctx)) {
+                prefs.edit {
+                    putBoolean(ConfigurationSyncManager.PREF_AUTO_SNAPSHOT_ENABLED, enabled)
+                    putBoolean(ConfigurationSyncManager.PREF_EXTERNAL_SNAPSHOT_ENABLED, enabled)
+                }
+                if (enabled) {
+                    requestConfigSyncAutoSnapshot(delayMs = 0L)
                     ConfigurationSyncScheduler.runNow(ctx)
                 } else {
                     ConfigurationSyncScheduler.cancel(ctx)
                 }
+                updateExternalSyncDirectorySummary()
                 return
             }
 

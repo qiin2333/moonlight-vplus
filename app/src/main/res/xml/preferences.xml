@@ -885,16 +885,7 @@
     <PreferenceCategory android:title="@string/category_backup_restore"
         android:key="category_backup_restore"
         android:layout="@layout/preference_category_material"
-        app:initialExpandedChildrenCount="2">
-        <CheckBoxPreference
-            android:key="checkbox_config_sync_auto_snapshot"
-            android:title="@string/title_config_sync_auto_snapshot"
-            android:summary="@string/summary_config_sync_auto_snapshot"
-            android:defaultValue="false" />
-        <Preference
-            android:key="config_sync_snapshot_now"
-            android:title="@string/title_config_sync_snapshot_now"
-            android:summary="@string/summary_config_sync_snapshot_never" />
+        app:initialExpandedChildrenCount="5">
         <Preference
             android:key="config_sync_export"
             android:title="@string/title_config_sync_export"
@@ -907,27 +898,12 @@
             android:key="config_sync_select_directory"
             android:title="@string/title_config_sync_select_directory"
             android:summary="@string/summary_config_sync_select_directory_none" />
-        <Preference
-            android:key="config_sync_backup_password"
-            android:title="@string/title_config_sync_backup_password"
-            android:summary="@string/summary_config_sync_backup_password_missing" />
-        <CheckBoxPreference
-            android:key="checkbox_config_sync_external_snapshot"
-            android:title="@string/title_config_sync_external_snapshot"
-            android:summary="@string/summary_config_sync_external_snapshot"
-            android:defaultValue="false"
-            android:enabled="false" />
         <CheckBoxPreference
             android:key="checkbox_config_sync_background_sync"
             android:title="@string/title_config_sync_background_sync"
             android:summary="@string/summary_config_sync_background_sync"
             android:defaultValue="false"
             android:enabled="false" />
-        <Preference
-            android:key="config_sync_status"
-            android:title="@string/title_config_sync_status"
-            android:summary="@string/summary_config_sync_status_disabled"
-            android:selectable="false" />
         <Preference
             android:key="config_sync_import_external_snapshot"
             android:title="@string/title_config_sync_import_external_snapshot"
