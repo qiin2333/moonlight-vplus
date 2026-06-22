@@ -1653,7 +1653,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             getString(R.string.addpc_manual),
             getString(R.string.addpc_qr_scan)
         )
-        AlertDialog.Builder(this, R.style.AppDialogStyle)
+        val dialog = AlertDialog.Builder(this, R.style.AppDialogStyle)
             .setTitle(getString(R.string.title_add_pc_choose))
             .setItems(items) { _, which ->
                 if (which == 0) {
@@ -1662,7 +1662,9 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                     startQrScan()
                 }
             }
-            .show()
+            .create()
+        dialog.show()
+        AppDialogStyler.apply(dialog, this)
     }
 
     private fun startQrScan() {
