@@ -1,6 +1,7 @@
 package com.limelight.ui
 
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -27,6 +28,7 @@ class ScreenCombinationModePickerView(
     private val onModeSelected: (Int) -> Unit
 ) : ScrollView(context) {
     private var selectedOptionView: View? = null
+    private val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     init {
         isFillViewport = true
@@ -37,7 +39,12 @@ class ScreenCombinationModePickerView(
 
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(28), dp(20), dp(18))
+            setPadding(
+                dp(if (isLandscape) 28 else 20),
+                dp(if (isLandscape) 22 else 28),
+                dp(if (isLandscape) 28 else 20),
+                dp(if (isLandscape) 14 else 18)
+            )
         }
 
         val header = LinearLayout(context).apply {
@@ -49,13 +56,13 @@ class ScreenCombinationModePickerView(
             addView(TextView(context).apply {
                 text = context.getString(R.string.title_screen_combination_mode)
                 setTextColor(primaryTextColor)
-                textSize = 24f
+                textSize = if (isLandscape) 22f else 24f
                 typeface = Typeface.DEFAULT_BOLD
             })
             addView(TextView(context).apply {
                 text = context.getString(R.string.screen_combination_mode_dialog_subtitle)
                 setTextColor(secondaryTextColor)
-                textSize = 13f
+                textSize = if (isLandscape) 12f else 13f
                 setPadding(0, dp(4), 0, 0)
             })
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
@@ -65,8 +72,8 @@ class ScreenCombinationModePickerView(
             setTextColor(primaryTextColor)
             textSize = 14f
             gravity = Gravity.CENTER
-            minHeight = dp(44)
-            minWidth = dp(76)
+            minHeight = dp(if (isLandscape) 40 else 44)
+            minWidth = dp(if (isLandscape) 72 else 76)
             background = roundedBackground(Color.argb(40, 255, 255, 255), Color.argb(46, 255, 255, 255), dp(18))
             isClickable = true
             isFocusable = true
@@ -83,21 +90,51 @@ class ScreenCombinationModePickerView(
 
         val list = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(18), 0, dp(24))
+            setPadding(0, dp(if (isLandscape) 14 else 18), 0, dp(if (isLandscape) 0 else 24))
         }
 
-        names.forEachIndexed { index, name ->
-            val modeValue = values.getOrNull(index)?.toIntOrNull() ?: -1
-            val selected = index == checkedIndex
-            list.addView(createOption(
-                title = name,
-                description = descriptions.getOrNull(index).orEmpty(),
-                modeValue = modeValue,
-                selected = selected,
-                primaryTextColor = primaryTextColor,
-                secondaryTextColor = secondaryTextColor,
-                accentColor = accentColor
-            ))
+        if (isLandscape) {
+            val columns = 2
+            val columnGap = dp(10)
+            names.indices.chunked(columns).forEach { rowIndexes ->
+                val row = LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                }
+                rowIndexes.forEachIndexed { column, index ->
+                    row.addView(createOption(
+                        title = names[index],
+                        description = descriptions.getOrNull(index).orEmpty(),
+                        modeValue = values.getOrNull(index)?.toIntOrNull() ?: -1,
+                        selected = index == checkedIndex,
+                        primaryTextColor = primaryTextColor,
+                        secondaryTextColor = secondaryTextColor,
+                        accentColor = accentColor,
+                        compact = true
+                    ), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                        marginStart = if (column == 0) 0 else columnGap / 2
+                        marginEnd = if (column == 0) columnGap / 2 else 0
+                    })
+                }
+                if (rowIndexes.size < columns) {
+                    row.addView(View(context), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
+                        marginStart = columnGap / 2
+                    })
+                }
+                list.addView(row)
+            }
+        } else {
+            names.forEachIndexed { index, name ->
+                list.addView(createOption(
+                    title = name,
+                    description = descriptions.getOrNull(index).orEmpty(),
+                    modeValue = values.getOrNull(index)?.toIntOrNull() ?: -1,
+                    selected = index == checkedIndex,
+                    primaryTextColor = primaryTextColor,
+                    secondaryTextColor = secondaryTextColor,
+                    accentColor = accentColor,
+                    compact = false
+                ))
+            }
         }
         root.addView(list)
         addView(root, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
@@ -112,12 +149,18 @@ class ScreenCombinationModePickerView(
         selected: Boolean,
         primaryTextColor: Int,
         secondaryTextColor: Int,
-        accentColor: Int
+        accentColor: Int,
+        compact: Boolean
     ): View {
         val row = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(14), dp(12), dp(14), dp(12))
+            setPadding(
+                dp(if (compact) 12 else 14),
+                dp(if (compact) 10 else 12),
+                dp(if (compact) 12 else 14),
+                dp(if (compact) 10 else 12)
+            )
             background = optionBackground(selected, false)
             isClickable = true
             isFocusable = true
@@ -131,32 +174,32 @@ class ScreenCombinationModePickerView(
         }
 
         row.addView(ScreenCombinationPreviewView(context, modeValue, selected), LinearLayout.LayoutParams(
-            dp(118),
-            dp(78)
+            dp(if (compact) 92 else 118),
+            dp(if (compact) 58 else 78)
         ))
 
         row.addView(LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(14), 0, 0, 0)
+            setPadding(dp(if (compact) 12 else 14), 0, 0, 0)
             addView(TextView(context).apply {
                 text = title
                 setTextColor(primaryTextColor)
-                textSize = 16f
+                textSize = if (compact) 15f else 16f
                 typeface = Typeface.DEFAULT_BOLD
                 maxLines = 2
             })
             addView(TextView(context).apply {
                 text = description
                 setTextColor(secondaryTextColor)
-                textSize = 13f
-                setPadding(0, dp(4), 0, 0)
+                textSize = if (compact) 12f else 13f
+                setPadding(0, dp(if (compact) 3 else 4), 0, 0)
             })
             if (selected) {
                 addView(TextView(context).apply {
                     text = context.getString(R.string.screen_combination_mode_selected)
                     setTextColor(accentColor)
                     textSize = 12f
-                    setPadding(0, dp(8), 0, 0)
+                    setPadding(0, dp(if (compact) 4 else 8), 0, 0)
                 })
             }
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
@@ -164,7 +207,7 @@ class ScreenCombinationModePickerView(
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             addView(row)
-            setPadding(0, 0, 0, dp(10))
+            setPadding(0, 0, 0, dp(if (compact) 8 else 10))
         }
     }
 
