@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Theme-aware drawer surface. -->
+<!-- Theme-aware translucent drawer surface. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <solid android:color="@color/ui_shell_surface_elevated" />
+    <solid android:color="@color/settings_drawer_background" />
 </shape>

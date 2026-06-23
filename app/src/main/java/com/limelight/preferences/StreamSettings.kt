@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -35,10 +34,9 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.RadioButton
-import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 
@@ -82,6 +80,7 @@ import com.limelight.utils.ConfigurationSyncManager
 import com.limelight.utils.ConfigurationSyncScheduler
 import com.limelight.utils.Dialog
 import com.limelight.utils.AppDialogStyler
+import com.limelight.ui.ScreenCombinationModePickerView
 import com.limelight.utils.UiHelper
 import com.limelight.utils.UpdateManager
 
@@ -408,6 +407,53 @@ class StreamSettings : AppCompatActivity() {
     private fun focusPreferenceList() {
         val preferenceContainer = findViewById<View>(R.id.preference_container)
         preferenceContainer?.requestFocus()
+    }
+
+    fun showScreenCombinationModePicker(preference: ListPreference) {
+        val entries = preference.entries ?: return
+        val values = preference.entryValues ?: return
+        val overlay = findViewById<FrameLayout>(R.id.screen_combination_mode_overlay) ?: return
+        val currentValue = preference.value ?: values.firstOrNull()?.toString().orEmpty()
+        val checkedIndex = values.indexOfFirst { it.toString() == currentValue }.let { index ->
+            if (index >= 0) index else 0
+        }
+
+        overlay.removeAllViews()
+        overlay.addView(
+            ScreenCombinationModePickerView(
+                context = this,
+                names = Array(entries.size) { index -> entries[index].toString() },
+                descriptions = resources.getStringArray(R.array.screen_combination_mode_descriptions),
+                values = Array(values.size) { index -> values[index].toString() },
+                checkedIndex = checkedIndex,
+                onClose = { hideScreenCombinationModePicker() },
+                onModeSelected = { modeValue ->
+                    val newValue = modeValue.toString()
+                    if (preference.callChangeListener(newValue)) {
+                        preference.value = newValue
+                    }
+                    hideScreenCombinationModePicker()
+                }
+            ),
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+        overlay.visibility = View.VISIBLE
+        overlay.requestFocus()
+    }
+
+    private fun hideScreenCombinationModePicker(): Boolean {
+        val overlay = findViewById<FrameLayout>(R.id.screen_combination_mode_overlay) ?: return false
+        if (overlay.visibility != View.VISIBLE) {
+            return false
+        }
+
+        overlay.visibility = View.GONE
+        overlay.removeAllViews()
+        focusPreferenceList()
+        return true
     }
 
     /**
@@ -744,6 +790,10 @@ class StreamSettings : AppCompatActivity() {
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
+        if (hideScreenCombinationModePicker()) {
+            return
+        }
+
         // 搜索栏可见时，优先关闭搜索而不是退出
         if (isSearchBarVisible) {
             hideSearchBar()
@@ -3369,7 +3419,7 @@ class StreamSettings : AppCompatActivity() {
                 }
                 is ListPreference -> {
                     if (preference.key == SCREEN_COMBINATION_MODE_PREF_KEY) {
-                        showScreenCombinationModeDialog(preference)
+                        (requireActivity() as? StreamSettings)?.showScreenCombinationModePicker(preference)
                     } else {
                         val f = StyledListPreferenceDialogFragment.newInstance(preference.key)
                         @Suppress("DEPRECATION")
@@ -3378,100 +3428,6 @@ class StreamSettings : AppCompatActivity() {
                     }
                 }
                 else -> super.onDisplayPreferenceDialog(preference)
-            }
-        }
-
-        private fun showScreenCombinationModeDialog(preference: ListPreference) {
-            val values = preference.entryValues ?: return
-            val currentValue = preference.value ?: values.firstOrNull()?.toString().orEmpty()
-            val checkedIndex = values.indexOfFirst { it.toString() == currentValue }.let { index ->
-                if (index >= 0) index else 0
-            }
-
-            lateinit var dialog: AlertDialog
-            val dialogView = createScreenCombinationModeDialogView(preference, checkedIndex) { index ->
-                val newValue = values.getOrNull(index)?.toString() ?: return@createScreenCombinationModeDialogView
-                if (preference.callChangeListener(newValue)) {
-                    preference.value = newValue
-                }
-                dialog.dismiss()
-            }
-
-            dialog = appDialogBuilder()
-                    .setTitle(preference.title)
-                    .setView(dialogView)
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .create()
-            showStyledDialog(dialog)
-        }
-
-        private fun createScreenCombinationModeDialogView(
-                preference: ListPreference,
-                checkedIndex: Int,
-                onItemSelected: (Int) -> Unit
-        ): View {
-            val entries = preference.entries ?: return View(requireContext())
-            val descriptions = resources.getStringArray(R.array.screen_combination_mode_descriptions)
-            val primaryTextColor = ContextCompat.getColor(requireContext(), R.color.ui_shell_text_primary)
-            val secondaryTextColor = ContextCompat.getColor(requireContext(), R.color.ui_shell_text_secondary)
-            val accentColor = ContextCompat.getColor(requireContext(), R.color.app_dialog_accent_color)
-            val radioTint = ColorStateList(
-                    arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                    intArrayOf(accentColor, secondaryTextColor)
-            )
-            val content = LinearLayout(requireContext()).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(dpToPx(24), dpToPx(4), dpToPx(24), dpToPx(4))
-                setBackgroundColor(Color.TRANSPARENT)
-            }
-
-            content.addView(TextView(requireContext()).apply {
-                text = getString(R.string.screen_combination_mode_dialog_subtitle)
-                setTextColor(secondaryTextColor)
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-                setPadding(0, 0, 0, dpToPx(8))
-            })
-
-            entries.forEachIndexed { index, entry ->
-                val row = LinearLayout(requireContext()).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    isClickable = true
-                    isFocusable = true
-                    val typedValue = TypedValue()
-                    requireContext().theme.resolveAttribute(android.R.attr.selectableItemBackground, typedValue, true)
-                    setBackgroundResource(typedValue.resourceId)
-                    setPadding(0, dpToPx(10), 0, dpToPx(10))
-                    setOnClickListener { onItemSelected(index) }
-                }
-
-                row.addView(RadioButton(requireContext()).apply {
-                    isChecked = index == checkedIndex
-                    isClickable = false
-                    isFocusable = false
-                    buttonTintList = radioTint
-                }, LinearLayout.LayoutParams(dpToPx(48), ViewGroup.LayoutParams.WRAP_CONTENT))
-
-                row.addView(LinearLayout(requireContext()).apply {
-                    orientation = LinearLayout.VERTICAL
-                    addView(TextView(requireContext()).apply {
-                        text = entry
-                        setTextColor(primaryTextColor)
-                        setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-                    })
-                    addView(TextView(requireContext()).apply {
-                        text = descriptions.getOrNull(index).orEmpty()
-                        setTextColor(secondaryTextColor)
-                        setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-                        setPadding(0, dpToPx(2), 0, 0)
-                    })
-                }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-
-                content.addView(row)
-            }
-
-            return ScrollView(requireContext()).apply {
-                setBackgroundColor(Color.TRANSPARENT)
-                addView(content)
             }
         }
 

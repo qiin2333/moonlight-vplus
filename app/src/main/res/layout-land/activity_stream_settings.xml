@@ -3,114 +3,130 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/drawer_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".preferences.StreamSettings">
 
-    <!-- 全屏背景图片 -->
-    <ImageView
-        android:id="@+id/settingsBackgroundImage"
+    <FrameLayout
+        android:id="@+id/drawer_layout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:scaleType="centerCrop"/>
-    
-    <!-- 全屏半透明遮罩 -->
-    <View
-        android:id="@+id/settingsBackgroundOverlay"
-        android:layout_width="match_parent" 
-        android:layout_height="match_parent"
-        android:background="@color/settings_background_overlay" />
+        android:layout_height="match_parent">
 
-    <!-- 内容层：菜单和设置并排 -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="horizontal"
-        android:baselineAligned="false">
-
-        <!-- 左侧菜单（固定显示） -->
-        <LinearLayout
-            android:id="@+id/drawer_menu"
-            android:layout_width="@dimen/drawer_width"
+        <!-- 全屏背景图片 -->
+        <ImageView
+            android:id="@+id/settingsBackgroundImage"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:background="@drawable/drawer_background"
-            android:paddingTop="@dimen/activity_safearea_top"
-            android:fitsSystemWindows="true"
-            android:elevation="4dp">
+            android:scaleType="centerCrop"/>
 
-            <!-- 顶部品牌区域（紧凑） -->
+        <!-- 全屏半透明遮罩 -->
+        <View
+            android:id="@+id/settingsBackgroundOverlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/settings_background_overlay" />
+
+        <!-- 内容层：菜单和设置并排 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:baselineAligned="false">
+
+            <!-- 左侧菜单（固定显示） -->
             <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:id="@+id/drawer_menu"
+                android:layout_width="@dimen/drawer_width"
+                android:layout_height="match_parent"
                 android:orientation="vertical"
-                android:gravity="center_horizontal"
-                android:paddingTop="16dp"
-                android:paddingBottom="12dp">
+                android:background="@drawable/drawer_background"
+                android:paddingTop="@dimen/activity_safearea_top"
+                android:fitsSystemWindows="true"
+                android:elevation="4dp">
 
-                <!-- 圆形品牌图标 -->
-                <androidx.cardview.widget.CardView
-                    android:layout_width="52dp"
-                    android:layout_height="52dp"
-                    app:cardCornerRadius="26dp"
-                    app:cardElevation="4dp"
-                    app:cardBackgroundColor="#222222">
+                <!-- 顶部品牌区域（紧凑） -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center_horizontal"
+                    android:paddingTop="16dp"
+                    android:paddingBottom="12dp">
 
-                    <ImageView
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:src="@drawable/vplus"
-                        android:scaleType="centerCrop" />
+                    <!-- 圆形品牌图标 -->
+                    <androidx.cardview.widget.CardView
+                        android:layout_width="52dp"
+                        android:layout_height="52dp"
+                        app:cardCornerRadius="26dp"
+                        app:cardElevation="4dp"
+                        app:cardBackgroundColor="#222222">
 
-                </androidx.cardview.widget.CardView>
+                        <ImageView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:src="@drawable/vplus"
+                            android:scaleType="centerCrop" />
+
+                    </androidx.cardview.widget.CardView>
+
+                </LinearLayout>
+
+                <!-- 分类列表 -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/category_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:scrollbars="none"
+                    android:overScrollMode="never"
+                    android:clipToPadding="false"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp" />
+
+                <!-- 版本号 -->
+                <TextView
+                    android:id="@+id/drawer_version"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:paddingBottom="12dp"
+                    android:paddingTop="8dp"
+                    android:textSize="10sp"
+                    android:textColor="#44FF6B9D"
+                    android:letterSpacing="0.05"
+                    android:fontFamily="monospace" />
 
             </LinearLayout>
 
-            <!-- 分类列表 -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/category_list"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:scrollbars="none"
-                android:overScrollMode="never"
-                android:clipToPadding="false"
-                android:paddingTop="4dp"
-                android:paddingBottom="4dp" />
+            <!-- 右侧主内容区域 -->
+            <RelativeLayout
+                android:id="@+id/stream_settings"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1">
 
-            <!-- 版本号 -->
-            <TextView
-                android:id="@+id/drawer_version"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:paddingBottom="12dp"
-                android:paddingTop="8dp"
-                android:textSize="10sp"
-                android:textColor="#44FF6B9D"
-                android:letterSpacing="0.05"
-                android:fontFamily="monospace" />
+                <!-- 设置内容区域（横屏无顶部标题，直接顶到安全区） -->
+                <FrameLayout
+                    android:id="@+id/preference_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@android:color/transparent"
+                    android:paddingTop="@dimen/activity_safearea_top"/>
+
+            </RelativeLayout>
 
         </LinearLayout>
 
-        <!-- 右侧主内容区域 -->
-        <RelativeLayout
-            android:id="@+id/stream_settings"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1">
+    </FrameLayout>
 
-            <!-- 设置内容区域（横屏无顶部标题，直接顶到安全区） -->
-            <FrameLayout
-                android:id="@+id/preference_container"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@android:color/transparent"
-                android:paddingTop="@dimen/activity_safearea_top"/>
-
-        </RelativeLayout>
-
-    </LinearLayout>
+    <FrameLayout
+        android:id="@+id/screen_combination_mode_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/screen_combination_mode_picker_background"
+        android:clickable="true"
+        android:elevation="24dp"
+        android:focusable="true"
+        android:visibility="gone" />
 
 </FrameLayout>

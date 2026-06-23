@@ -16,5 +16,6 @@
     <!-- AppView 文字颜色 -->
     <color name="appview_text_primary">#FFFFFF</color>
     <color name="appview_text_secondary">#CCFFFFFF</color>
+    <color name="screen_combination_mode_picker_background">#E61C1D22</color>
     <color name="appview_text_shadow">#80000000</color>
 </resources>

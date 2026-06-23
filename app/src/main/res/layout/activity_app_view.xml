@@ -393,7 +393,7 @@
         android:id="@+id/screenCombinationModeOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#E61C1D22"
+        android:background="@color/screen_combination_mode_picker_background"
         android:clickable="true"
         android:focusable="true"
         android:elevation="24dp"
