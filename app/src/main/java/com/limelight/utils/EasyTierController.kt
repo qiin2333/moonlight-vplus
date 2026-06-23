@@ -17,6 +17,7 @@ import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 
 import com.easytier.jni.EasyTierManager
 import com.limelight.LimeLog
@@ -399,6 +400,7 @@ class EasyTierController(
             val placeholder = TextView(activity)
             placeholder.text = "服务未运行或正在连接...\n请点击刷新按钮获取最新状态。"
             placeholder.gravity = Gravity.CENTER
+            placeholder.setTextColor(dialogSecondaryTextColor())
             val padding = (40 * activity.resources.displayMetrics.density).toInt()
             placeholder.setPadding(0, padding, 0, padding)
             container.addView(placeholder)
@@ -420,6 +422,7 @@ class EasyTierController(
         if (displayInfo.finalPeerList.isEmpty()) {
             val noPeersText = TextView(activity)
             noPeersText.text = "暂无其他节点"
+            noPeersText.setTextColor(dialogSecondaryTextColor())
             val padding = (20 * activity.resources.displayMetrics.density).toInt()
             noPeersText.setPadding(padding, padding / 2, 0, padding / 2)
             container.addView(noPeersText)
@@ -443,6 +446,9 @@ class EasyTierController(
                     hostname.setTextColor(Color.RED)
                 } else if (!peer.isDirectConnection) {
                     title += " (中转)"
+                    hostname.setTextColor(dialogPrimaryTextColor())
+                } else {
+                    hostname.setTextColor(dialogPrimaryTextColor())
                 }
                 hostname.text = title
 
@@ -574,6 +580,7 @@ class EasyTierController(
         val labelView = TextView(activity)
         labelView.text = label
         labelView.setTypeface(null, Typeface.BOLD)
+        labelView.setTextColor(dialogSecondaryTextColor())
 
         val labelParams = LinearLayout.LayoutParams(
                 (120 * activity.resources.displayMetrics.density).toInt(), // 120dp
@@ -584,6 +591,7 @@ class EasyTierController(
         val valueView = TextView(activity)
         valueView.text = value ?: "N/A"
         valueView.setTextIsSelectable(true)
+        valueView.setTextColor(dialogPrimaryTextColor())
 
         rowLayout.addView(labelView)
         rowLayout.addView(valueView)
@@ -595,6 +603,7 @@ class EasyTierController(
         titleView.text = title
         titleView.textSize = 16f
         titleView.setTypeface(null, Typeface.BOLD)
+        titleView.setTextColor(dialogPrimaryTextColor())
 
         val params = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -606,6 +615,14 @@ class EasyTierController(
         titleView.layoutParams = params
 
         parent.addView(titleView)
+    }
+
+    private fun dialogPrimaryTextColor(): Int {
+        return ContextCompat.getColor(activity, R.color.app_dialog_text_primary)
+    }
+
+    private fun dialogSecondaryTextColor(): Int {
+        return ContextCompat.getColor(activity, R.color.app_dialog_text_secondary)
     }
 
     // ==================== 工具方法 ====================

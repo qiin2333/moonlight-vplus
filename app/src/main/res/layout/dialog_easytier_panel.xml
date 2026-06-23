@@ -16,6 +16,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:textColor="@color/app_dialog_accent_color"
             android:text="@string/layout_dlg_easytier_panel_text_7ae64" />
 
         <Button
@@ -24,6 +25,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:textColor="@color/app_dialog_accent_color"
             android:text="@string/layout_dlg_easytier_panel_text_5117b" />
     </LinearLayout>
 
@@ -63,7 +65,8 @@
                     android:layout_gravity="top|end"
                     android:background="?android:attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/layout_dlg_easytier_panel_cd_4f8d4"
-                    android:src="@android:drawable/ic_menu_rotate" />
+                    android:src="@android:drawable/ic_menu_rotate"
+                    android:tint="@color/app_dialog_accent_color" />
 
             </FrameLayout>
         </ScrollView>
@@ -143,6 +146,7 @@
                         android:layout_height="wrap_content"
                         android:layout_alignParentStart="true"
                         android:layout_centerVertical="true"
+                        android:textColor="@color/app_dialog_text_secondary"
                         android:text="@string/layout_dlg_easytier_panel_text_537e0" />
 
                     <ImageView
@@ -151,7 +155,8 @@
                         android:layout_height="24dp"
                         android:layout_alignParentEnd="true"
                         android:layout_centerVertical="true"
-                        android:src="@android:drawable/arrow_down_float" />
+                        android:src="@android:drawable/arrow_down_float"
+                        android:tint="@color/app_dialog_text_secondary" />
                 </RelativeLayout>
 
                 <!-- 包含所有 Switch 的容器，默认隐藏 -->
