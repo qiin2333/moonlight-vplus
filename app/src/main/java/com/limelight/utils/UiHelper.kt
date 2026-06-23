@@ -10,6 +10,7 @@ import android.app.UiModeManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.BatteryManager
 import android.os.Build
@@ -212,20 +213,76 @@ object UiHelper {
             .show()
     }
 
+    fun isTvDevice(context: Context): Boolean {
+        val uiModeManager = context.getSystemService(Context.UI_MODE_SERVICE) as? UiModeManager
+        val packageManager = context.packageManager
+        return uiModeManager?.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION ||
+                packageManager.hasSystemFeature(PackageManager.FEATURE_TELEVISION) ||
+                packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) ||
+                packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK_ONLY)
+    }
+
+    fun hasDisplayableBattery(context: Context): Boolean {
+        if (isTvDevice(context)) {
+            return false
+        }
+
+        val batteryStatus = getBatteryStatusIntent(context) ?: return false
+        if (!batteryStatus.getBooleanExtra(BatteryManager.EXTRA_PRESENT, true)) {
+            return false
+        }
+
+        return getBatteryLevelFromIntent(batteryStatus) != null
+    }
+
     fun getBatteryLevel(context: Context): Int {
-        try {
+        val propertyLevel = getBatteryCapacityProperty(context)
+        if (propertyLevel != null && propertyLevel > 0) {
+            return propertyLevel
+        }
+
+        getBatteryStatusIntent(context)?.let { batteryStatus ->
+            getBatteryLevelFromIntent(batteryStatus)?.let { return it }
+        }
+
+        return propertyLevel ?: 0
+    }
+
+    private fun getBatteryCapacityProperty(context: Context): Int? {
+        return try {
             val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
             val level = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
 
             if (level !in 0..100) {
                 LimeLog.warning("Invalid battery level: $level")
-                return 0
+                null
+            } else {
+                level
             }
-            return level
         } catch (e: Exception) {
             LimeLog.warning("Error getting battery level: ${e.message}")
-            return 0
+            null
         }
+    }
+
+    private fun getBatteryStatusIntent(context: Context): Intent? {
+        return try {
+            context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        } catch (e: Exception) {
+            LimeLog.warning("Error reading battery status: ${e.message}")
+            null
+        }
+    }
+
+    private fun getBatteryLevelFromIntent(batteryStatus: Intent): Int? {
+        val level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+        val scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+        if (level < 0 || scale <= 0) {
+            return null
+        }
+
+        val batteryLevel = (level * 100f / scale).toInt().coerceIn(0, 100)
+        return batteryLevel
     }
 
     fun isCharging(context: Context): Boolean {

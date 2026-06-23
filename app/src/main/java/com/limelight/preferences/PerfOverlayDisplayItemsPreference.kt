@@ -1,12 +1,13 @@
 package com.limelight.preferences
 
 import android.content.Context
-import android.content.SharedPreferences
-import androidx.preference.MultiSelectListPreference
-import androidx.preference.PreferenceManager
 import android.util.AttributeSet
 
+import androidx.preference.MultiSelectListPreference
+import androidx.preference.PreferenceManager
+
 import com.limelight.R
+import com.limelight.utils.UiHelper
 
 class PerfOverlayDisplayItemsPreference : MultiSelectListPreference {
 
@@ -21,57 +22,73 @@ class PerfOverlayDisplayItemsPreference : MultiSelectListPreference {
     constructor(context: Context) : super(context) { initialize() }
 
     private fun initialize() {
-        setEntries(R.array.perf_overlay_display_items_names)
-        setEntryValues(R.array.perf_overlay_display_items_values)
+        val nameEntries = context.resources.getTextArray(R.array.perf_overlay_display_items_names)
+        val valueEntries = context.resources.getTextArray(R.array.perf_overlay_display_items_values)
 
-        // 设置默认值（所有项目都默认选中）
-        val defaultValues = DEFAULT_ITEMS.split(",")
-        val defaultSet = HashSet(defaultValues)
-        setDefaultValue(defaultSet)
+        if (UiHelper.hasDisplayableBattery(context)) {
+            entries = nameEntries
+            entryValues = valueEntries
+        } else {
+            val filteredNames = ArrayList<CharSequence>()
+            val filteredValues = ArrayList<CharSequence>()
+
+            valueEntries.forEachIndexed { index, value ->
+                if (value.toString() != BATTERY_ITEM) {
+                    filteredNames.add(nameEntries[index])
+                    filteredValues.add(value)
+                }
+            }
+
+            entries = filteredNames.toTypedArray()
+            entryValues = filteredValues.toTypedArray()
+        }
+
+        setDefaultValue(getDefaultDisplayItems(context))
     }
 
     override fun onAttachedToHierarchy(preferenceManager: PreferenceManager) {
         super.onAttachedToHierarchy(preferenceManager)
 
-        // 如果没有保存的值，设置默认值
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         if (!prefs.contains(key)) {
-            val defaultValues = DEFAULT_ITEMS.split(",")
-            val defaultSet = HashSet(defaultValues)
-            values = defaultSet
+            values = getDefaultDisplayItems(context)
+        } else if (!UiHelper.hasDisplayableBattery(context)) {
+            val selectedItems = prefs.getStringSet(key, emptySet()) ?: emptySet()
+            if (selectedItems.contains(BATTERY_ITEM)) {
+                val filteredItems = selectedItems.filterNot { it == BATTERY_ITEM }.toSet()
+                prefs.edit().putStringSet(key, filteredItems).apply()
+                values = filteredItems
+            }
         }
     }
 
     companion object {
+        private const val BATTERY_ITEM = "battery"
         private const val DEFAULT_ITEMS = "resolution,decoder,render_fps,network_latency,decode_latency,host_latency,packet_loss,battery"
 
-        /**
-         * 获取默认的显示项目
-         */
-        fun getDefaultDisplayItems(): Set<String> {
-            return HashSet(DEFAULT_ITEMS.split(","))
+        fun getDefaultDisplayItems(context: Context): Set<String> {
+            val defaultItems = DEFAULT_ITEMS.split(",").toMutableSet()
+            if (!UiHelper.hasDisplayableBattery(context)) {
+                defaultItems.remove(BATTERY_ITEM)
+            }
+            return defaultItems
         }
 
-        /**
-         * 检查特定项目是否被选中显示
-         */
         fun isItemEnabled(context: Context, itemKey: String): Boolean {
+            if (itemKey == BATTERY_ITEM && !UiHelper.hasDisplayableBattery(context)) {
+                return false
+            }
+
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-            val selectedItems = prefs.getStringSet("perf_overlay_display_items", getDefaultDisplayItems())
+            val selectedItems = prefs.getStringSet("perf_overlay_display_items", getDefaultDisplayItems(context))
             return selectedItems?.contains(itemKey) == true
         }
 
-        /**
-         * 测试用：获取当前选中的所有显示项目
-         */
         fun getSelectedItems(context: Context): Set<String>? {
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-            return prefs.getStringSet("perf_overlay_display_items", getDefaultDisplayItems())
+            return prefs.getStringSet("perf_overlay_display_items", getDefaultDisplayItems(context))
         }
 
-        /**
-         * 测试用：手动设置显示项目
-         */
         fun setDisplayItems(context: Context, items: Set<String>) {
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
             prefs.edit().putStringSet("perf_overlay_display_items", items).apply()

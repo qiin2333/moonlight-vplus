@@ -103,6 +103,7 @@ class PerformanceOverlayManager(
 
     // 电量更新相关
     private var lastBatteryUpdateTime = 0L
+    private var hasDisplayableBattery = false
 
     // 串流电量统计
     private var streamStartBatteryLevel = -1
@@ -282,7 +283,12 @@ class PerformanceOverlayManager(
     }
 
     fun recordStreamStart() {
-        streamStartBatteryLevel = UiHelper.getBatteryLevel(activity)
+        hasDisplayableBattery = UiHelper.hasDisplayableBattery(activity)
+        streamStartBatteryLevel = if (hasDisplayableBattery) {
+            UiHelper.getBatteryLevel(activity)
+        } else {
+            -1
+        }
         streamStartTime = System.currentTimeMillis()
         lastBatteryUpdateTime = streamStartTime
         activity.runOnUiThread { updateBatteryViewIfVisible() }
@@ -441,7 +447,7 @@ class PerformanceOverlayManager(
             PerformanceItem.NETWORK_LATENCY -> updateNetworkLatencyText(itemInfo.view!!, performanceInfo)
             PerformanceItem.DECODE_LATENCY -> updateDecodeLatencyText(itemInfo.view!!, performanceInfo)
             PerformanceItem.HOST_LATENCY -> updateHostLatencyText(itemInfo.view!!, performanceInfo)
-            PerformanceItem.BATTERY -> updateBatteryText(itemInfo.view!!)
+            PerformanceItem.BATTERY -> Unit
             PerformanceItem.ONE_PERCENT_LOW -> updateOnePercentLowText(itemInfo.view!!, performanceInfo)
         }
     }
@@ -515,6 +521,11 @@ class PerformanceOverlayManager(
     }
 
     private fun updateBatteryText(view: TextView) {
+        if (!hasDisplayableBattery) {
+            view.visibility = View.GONE
+            return
+        }
+
         val batteryLevel = UiHelper.getBatteryLevel(activity)
         val isCharging = UiHelper.isCharging(activity)
         val batteryColor = when {
@@ -551,6 +562,10 @@ class PerformanceOverlayManager(
     }
 
     private fun showBatteryInfo() {
+        if (!hasDisplayableBattery) {
+            return
+        }
+
         val batteryLevel = UiHelper.getBatteryLevel(activity)
         val isCharging = UiHelper.isCharging(activity)
         val status = activity.getString(
