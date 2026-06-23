@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
 }
 
 def localProperties = new Properties()
@@ -67,6 +68,7 @@ android {
 
     buildFeatures {
         buildConfig = true
+        compose = true
     }
 
     productFlavors {
@@ -236,6 +238,12 @@ dependencies {
     implementation libs.flexbox
     implementation libs.tvprovider
     implementation libs.zxing.embedded
+    implementation libs.androidx.activity.compose
+    implementation platform(libs.androidx.compose.bom)
+    implementation libs.androidx.compose.foundation
+    implementation libs.androidx.compose.material3
+    implementation libs.androidx.compose.ui
+    implementation libs.androidx.compose.ui.tooling.preview
 
     // Firebase Analytics + Crashlytics
     // BOM 版本说明: https://firebase.google.com/support/release-notes/android

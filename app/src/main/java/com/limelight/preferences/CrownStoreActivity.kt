@@ -5,31 +5,72 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.content.res.Configuration
-import android.graphics.Canvas
 import android.graphics.Typeface
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
-import android.text.TextUtils
 import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
-import android.widget.ImageButton
-import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button as ComposeButton
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
@@ -66,10 +107,13 @@ class CrownStoreActivity : AppCompatActivity() {
         val name: String
     )
 
-    private lateinit var storeTabView: TextView
-    private lateinit var mineTabView: TextView
-    private lateinit var toolbarTitleView: TextView
-    private lateinit var contentView: LinearLayout
+    private data class CrownStoreUiState(
+        val selectedTab: CrownTab = CrownTab.STORE,
+        val storeProfiles: List<CrownProfileShareManager.StoreProfile>? = null,
+        val storeLoading: Boolean = false,
+        val storeError: String? = null,
+        val localProfiles: List<LocalCrownProfile> = emptyList()
+    )
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val helper: SuperConfigDatabaseHelper by lazy { SuperConfigDatabaseHelper(this) }
@@ -87,10 +131,13 @@ class CrownStoreActivity : AppCompatActivity() {
     @Volatile
     private var developerPendingDeviceCode: GitHubStarVerifier.DeviceCode? = null
     private var developerDeviceCodeDialog: AlertDialog? = null
+    private val composeUiState = mutableStateOf(CrownStoreUiState())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(createContentView())
+        setContent {
+            CrownStoreScreen(composeUiState.value)
+        }
         selectTab(CrownTab.STORE)
     }
 
@@ -101,128 +148,9 @@ class CrownStoreActivity : AppCompatActivity() {
         }
     }
 
-    private fun createContentView(): View {
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.advance_setting_background))
-        }
-
-        root.addView(createToolbar())
-
-        val scrollView = ScrollView(this).apply {
-            isFillViewport = true
-        }
-        contentView = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(8), dp(16), dp(16))
-        }
-        scrollView.addView(
-            contentView,
-            ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            )
-        )
-        root.addView(
-            scrollView,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            )
-        )
-        root.addView(createTabs())
-        return root
-    }
-
-    private fun createToolbar(): View {
-        val safeTopMargin = resources.getDimensionPixelSize(R.dimen.activity_safearea_top)
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(10), dp(8), dp(12), dp(8))
-
-            val back = ImageButton(this@CrownStoreActivity).apply {
-                contentDescription = getString(R.string.crown_store_action_back)
-                setImageDrawable(tintedDrawable(R.drawable.ic_arrow_right, R.color.crown_text_primary))
-                rotation = 180f
-                setBackgroundResource(R.drawable.crown_action_icon_button_bg)
-                scaleType = ImageView.ScaleType.CENTER
-                setOnClickListener { finish() }
-            }
-            addView(back, LinearLayout.LayoutParams(dp(40), dp(40)))
-
-            toolbarTitleView = TextView(this@CrownStoreActivity).apply {
-                text = getString(R.string.title_crown_store_view)
-                textSize = 20f
-                typeface = Typeface.DEFAULT_BOLD
-                gravity = Gravity.CENTER
-                includeFontPadding = false
-                setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_text_primary))
-            }
-            addView(
-                toolbarTitleView,
-                LinearLayout.LayoutParams(
-                    0,
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    1f
-                )
-            )
-            addView(View(this@CrownStoreActivity), LinearLayout.LayoutParams(dp(40), dp(40)))
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply {
-                setMargins(dp(10), safeTopMargin, dp(10), 0)
-            }
-        }
-    }
-
-    private fun createTabs(): View {
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            setBackgroundResource(R.drawable.crown_store_bottom_nav_bg)
-            setPadding(dp(12), dp(7), dp(12), dp(8))
-
-            storeTabView = createTabView(R.string.crown_store_tab_store, R.drawable.phc_crown) {
-                selectTab(CrownTab.STORE)
-            }
-            mineTabView = createTabView(R.string.crown_store_tab_mine, R.drawable.phc_list) {
-                selectTab(CrownTab.MINE)
-            }
-            addView(
-                storeTabView,
-                LinearLayout.LayoutParams(0, dp(52), 1f).apply {
-                    marginEnd = dp(6)
-                }
-            )
-            addView(
-                mineTabView,
-                LinearLayout.LayoutParams(0, dp(52), 1f).apply {
-                    marginStart = dp(6)
-                }
-            )
-        }
-    }
-
-    private fun createTabView(labelRes: Int, iconRes: Int, click: () -> Unit): TextView {
-        return TextView(this).apply {
-            text = getString(labelRes)
-            contentDescription = getString(labelRes)
-            tag = iconRes
-            textSize = 12f
-            typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-            compoundDrawablePadding = dp(3)
-            includeFontPadding = false
-            setOnClickListener { click() }
-        }
-    }
-
     private fun selectTab(tab: CrownTab) {
         selectedTab = tab
-        updateTabStyles()
+        composeUiState.value = composeUiState.value.copy(selectedTab = tab)
         when (tab) {
             CrownTab.STORE -> {
                 if (storeProfiles == null && !storeLoading && storeError == null) {
@@ -235,77 +163,13 @@ class CrownStoreActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateTabStyles() {
-        updateToolbarTitle()
-        updateTabStyle(storeTabView, selectedTab == CrownTab.STORE)
-        updateTabStyle(mineTabView, selectedTab == CrownTab.MINE)
-    }
-
-    private fun updateToolbarTitle() {
-        val tabTitle = when (selectedTab) {
-            CrownTab.STORE -> getString(R.string.crown_store_tab_store)
-            CrownTab.MINE -> getString(R.string.crown_store_tab_mine)
-        }
-        toolbarTitleView.text = tabTitle
-    }
-
-    private fun updateTabStyle(view: TextView, selected: Boolean) {
-        val textColor = if (selected) R.color.crown_accent else R.color.crown_text_secondary
-        view.setTextColor(ContextCompat.getColor(this, textColor))
-        view.setBackgroundResource(if (selected) R.drawable.crown_store_tab_selected_bg else R.drawable.crown_store_tab_idle_bg)
-        (view.tag as? Int)?.let { iconRes ->
-            view.setTopIcon(iconRes, textColor, 24)
-        }
-    }
-
     private fun renderStoreTab() {
-        contentView.removeAllViews()
-        contentView.addView(bodyText(R.string.crown_store_store_summary))
-
-        val actionRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dp(10), 0, dp(4))
-        }
-        actionRow.addView(
-            secondaryActionButton(R.string.crown_store_action_refresh, R.drawable.phc_action_reset) {
-                loadStoreProfiles(force = true)
-            },
-            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                marginEnd = dp(6)
-            }
+        composeUiState.value = composeUiState.value.copy(
+            selectedTab = CrownTab.STORE,
+            storeProfiles = storeProfiles,
+            storeLoading = storeLoading,
+            storeError = storeError
         )
-        actionRow.addView(
-            secondaryActionButton(R.string.crown_share_action_import_url, R.drawable.phc_plug) {
-                showCrownShareUrlImportDialog()
-            },
-            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                marginStart = dp(6)
-            }
-        )
-        contentView.addView(actionRow)
-
-        when {
-            storeLoading -> renderProgressState(R.string.toast_crown_store_loading)
-            storeError != null -> renderState(
-                title = getString(R.string.toast_crown_store_failed),
-                message = storeError ?: "",
-                buttonText = getString(R.string.crown_store_action_refresh),
-                buttonAction = { loadStoreProfiles(force = true) }
-            )
-            storeProfiles == null -> renderState(
-                title = getString(R.string.crown_store_empty_state_title),
-                message = getString(R.string.crown_store_empty_state_message),
-                buttonText = getString(R.string.crown_store_action_refresh),
-                buttonAction = { loadStoreProfiles(force = true) }
-            )
-            storeProfiles!!.isEmpty() -> renderState(
-                title = getString(R.string.toast_crown_store_empty),
-                message = getString(R.string.crown_store_empty_state_message),
-                buttonText = getString(R.string.crown_store_action_refresh),
-                buttonAction = { loadStoreProfiles(force = true) }
-            )
-            else -> contentView.addView(storeProfilesGrid(storeProfiles!!))
-        }
     }
 
     private fun loadStoreProfiles(force: Boolean = false) {
@@ -340,46 +204,6 @@ class CrownStoreActivity : AppCompatActivity() {
                     renderStoreTab()
                 }
             }
-        }
-    }
-
-    private fun storeProfileView(profile: CrownProfileShareManager.StoreProfile): View {
-        return profileCardLayout().apply {
-            addView(profileCardTitle(profile.name))
-            addView(storeProfileMeta(profile))
-            if (profile.summary.isNotBlank()) {
-                addViewWithTopMargin(storeSummaryText(profile.summary), dp(8))
-            }
-            if (profile.tags.isNotEmpty()) {
-                addViewWithTopMargin(storeTagsView(profile.tags), dp(9))
-            }
-            formatLayoutBasis(profile.layoutBasis)?.let { layoutText ->
-                addViewWithTopMargin(
-                    storeFootnoteText(getString(R.string.crown_store_layout_basis, layoutText)),
-                    dp(8)
-                )
-            }
-            if (profile.updatedAt.isNotBlank()) {
-                addViewWithTopMargin(
-                    storeFootnoteText(
-                        getString(
-                            R.string.crown_store_updated_at,
-                            formatStoreUpdatedAt(profile.updatedAt)
-                        )
-                    ),
-                    dp(8)
-                )
-            }
-            addView(cardActionArea(
-                listOf(
-                    cardActionButton(R.string.crown_store_action_import_profile, primary = true) {
-                        importStoreProfile(profile)
-                    },
-                    cardActionButton(R.string.crown_store_action_report_profile) {
-                        reportStoreProfile(profile)
-                    }
-                )
-            ))
         }
     }
 
@@ -433,76 +257,551 @@ class CrownStoreActivity : AppCompatActivity() {
     }
 
     private fun renderMineTab() {
-        contentView.removeAllViews()
-        contentView.addView(bodyText(R.string.crown_store_my_summary))
-
-        val importRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dp(10), 0, dp(4))
-        }
-        importRow.addView(
-            secondaryActionButton(R.string.crown_share_action_import, R.drawable.phc_action_plus) {
-                openCrownShareDocument()
-            },
-            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                marginEnd = dp(6)
-            }
-        )
-        importRow.addView(
-            secondaryActionButton(R.string.crown_share_action_import_url, R.drawable.phc_plug) {
-                showCrownShareUrlImportDialog()
-            },
-            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                marginStart = dp(6)
-            }
-        )
-        contentView.addView(importRow)
-
         val profiles = loadLocalProfiles()
-        if (profiles.isEmpty()) {
-            renderState(
-                title = getString(R.string.crown_config_no_profiles),
-                message = getString(R.string.crown_store_my_empty_message),
-                buttonText = getString(R.string.crown_config_action_import_legacy),
-                buttonAction = { openLegacyImportDocument() }
-            )
-        } else {
-            contentView.addView(localProfilesGrid(profiles))
-        }
-
-        contentView.addView(sectionLabel(R.string.crown_store_local_tools))
-        contentView.addView(
-            secondaryActionButton(R.string.crown_config_action_import_legacy, R.drawable.phc_list) {
-                openLegacyImportDocument()
-            },
-            fullWidthButtonParams()
+        composeUiState.value = composeUiState.value.copy(
+            selectedTab = CrownTab.MINE,
+            localProfiles = profiles
         )
     }
 
-    private fun localProfileView(profile: LocalCrownProfile): View {
-        return profileCardLayout().apply {
-            setOnLongClickListener {
-                showDeleteLocalProfileDialog(profile)
-                true
-            }
-            addView(profileCardTitle(profile.name))
-            addView(metaText(getString(R.string.crown_store_local_profile_id, profile.id)))
-            addView(cardActionArea(
-                listOf(
-                    cardActionButton(R.string.crown_store_action_publish_profile, primary = true) {
-                        showCrownStorePublishMetadataDialog(profile.id, profile.name)
-                    },
-                    cardActionButton(R.string.crown_store_action_export_share) {
-                        exportCrownSharePackage(profile.id, profile.name)
-                    },
-                    cardActionButton(R.string.crown_store_action_export_legacy_short) {
-                        exportLegacyConfig(profile.id, profile.name)
-                    },
-                    cardActionButton(R.string.crown_store_action_merge_short) {
-                        openLegacyMergeDocument(profile.id)
+    @Composable
+    private fun CrownStoreScreen(state: CrownStoreUiState) {
+        val background = colorResource(R.color.advance_setting_background)
+        MaterialTheme {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = background
+            ) {
+                Scaffold(
+                    containerColor = Color.Transparent,
+                    topBar = { CrownStoreTopBar(state.selectedTab) },
+                    bottomBar = { CrownStoreBottomBar(state.selectedTab) }
+                ) { innerPadding ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 16.dp, vertical = 10.dp)
+                    ) {
+                        when (state.selectedTab) {
+                            CrownTab.STORE -> CrownStoreTabContent(state)
+                            CrownTab.MINE -> CrownMineTabContent(state.localProfiles)
+                        }
                     }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun CrownStoreTopBar(selectedTab: CrownTab) {
+        val title = when (selectedTab) {
+            CrownTab.STORE -> stringResource(R.string.crown_store_tab_store)
+            CrownTab.MINE -> stringResource(R.string.crown_store_tab_mine)
+        }
+        val textColor = colorResource(R.color.crown_text_primary)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 24.dp)
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { finish() }) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_arrow_right),
+                    contentDescription = stringResource(R.string.crown_store_action_back),
+                    modifier = Modifier.rotate(180f),
+                    tint = textColor
                 )
-            ))
+            }
+            Text(
+                text = title,
+                modifier = Modifier.weight(1f),
+                color = textColor,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.width(48.dp))
+        }
+    }
+
+    @Composable
+    private fun CrownStoreBottomBar(selectedTab: CrownTab) {
+        val container = colorResource(R.color.crown_panel_background)
+        val selected = colorResource(R.color.crown_accent)
+        val unselected = colorResource(R.color.crown_text_secondary)
+        NavigationBar(
+            containerColor = container,
+            tonalElevation = 0.dp,
+            windowInsets = WindowInsets(0.dp)
+        ) {
+            NavigationBarItem(
+                selected = selectedTab == CrownTab.STORE,
+                onClick = { selectTab(CrownTab.STORE) },
+                icon = {
+                    Icon(
+                        painter = painterResource(R.drawable.phc_crown),
+                        contentDescription = null
+                    )
+                },
+                label = { Text(stringResource(R.string.crown_store_tab_store)) },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = selected,
+                    selectedTextColor = selected,
+                    unselectedIconColor = unselected,
+                    unselectedTextColor = unselected,
+                    indicatorColor = colorResource(R.color.crown_accent_pressed)
+                )
+            )
+            NavigationBarItem(
+                selected = selectedTab == CrownTab.MINE,
+                onClick = { selectTab(CrownTab.MINE) },
+                icon = {
+                    Icon(
+                        painter = painterResource(R.drawable.phc_list),
+                        contentDescription = null
+                    )
+                },
+                label = { Text(stringResource(R.string.crown_store_tab_mine)) },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = selected,
+                    selectedTextColor = selected,
+                    unselectedIconColor = unselected,
+                    unselectedTextColor = unselected,
+                    indicatorColor = colorResource(R.color.crown_accent_pressed)
+                )
+            )
+        }
+    }
+
+    @Composable
+    private fun CrownStoreTabContent(state: CrownStoreUiState) {
+        CrownBodyText(stringResource(R.string.crown_store_store_summary))
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            CrownActionButton(
+                text = stringResource(R.string.crown_store_action_refresh),
+                iconRes = R.drawable.phc_action_reset,
+                modifier = Modifier.weight(1f)
+            ) {
+                loadStoreProfiles(force = true)
+            }
+            CrownActionButton(
+                text = stringResource(R.string.crown_share_action_import_url),
+                iconRes = R.drawable.phc_plug,
+                modifier = Modifier.weight(1f)
+            ) {
+                showCrownShareUrlImportDialog()
+            }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        when {
+            state.storeLoading -> CrownLoadingState(stringResource(R.string.toast_crown_store_loading))
+            state.storeError != null -> CrownStateCard(
+                title = stringResource(R.string.toast_crown_store_failed),
+                message = state.storeError,
+                buttonText = stringResource(R.string.crown_store_action_refresh)
+            ) {
+                loadStoreProfiles(force = true)
+            }
+            state.storeProfiles == null -> CrownStateCard(
+                title = stringResource(R.string.crown_store_empty_state_title),
+                message = stringResource(R.string.crown_store_empty_state_message),
+                buttonText = stringResource(R.string.crown_store_action_refresh)
+            ) {
+                loadStoreProfiles(force = true)
+            }
+            state.storeProfiles.isEmpty() -> CrownStateCard(
+                title = stringResource(R.string.toast_crown_store_empty),
+                message = stringResource(R.string.crown_store_empty_state_message),
+                buttonText = stringResource(R.string.crown_store_action_refresh)
+            ) {
+                loadStoreProfiles(force = true)
+            }
+            else -> CrownStoreProfilesGrid(state.storeProfiles)
+        }
+    }
+
+    @Composable
+    private fun CrownMineTabContent(profiles: List<LocalCrownProfile>) {
+        CrownBodyText(stringResource(R.string.crown_store_my_summary))
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            CrownActionButton(
+                text = stringResource(R.string.crown_share_action_import),
+                iconRes = R.drawable.phc_action_plus,
+                modifier = Modifier.weight(1f)
+            ) {
+                openCrownShareDocument()
+            }
+            CrownActionButton(
+                text = stringResource(R.string.crown_share_action_import_url),
+                iconRes = R.drawable.phc_plug,
+                modifier = Modifier.weight(1f)
+            ) {
+                showCrownShareUrlImportDialog()
+            }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        if (profiles.isEmpty()) {
+            CrownStateCard(
+                title = stringResource(R.string.crown_config_no_profiles),
+                message = stringResource(R.string.crown_store_my_empty_message)
+            )
+        } else {
+            CrownLocalProfilesGrid(profiles)
+        }
+        Spacer(modifier = Modifier.height(14.dp))
+        Text(
+            text = stringResource(R.string.crown_store_local_tools),
+            color = colorResource(R.color.crown_text_primary),
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        CrownActionButton(
+            text = stringResource(R.string.crown_config_action_import_legacy),
+            iconRes = R.drawable.phc_list,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            openLegacyImportDocument()
+        }
+    }
+
+    @Composable
+    private fun CrownStoreProfilesGrid(profiles: List<CrownProfileShareManager.StoreProfile>) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            profiles.chunked(2).forEach { rowProfiles ->
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    rowProfiles.forEach { profile ->
+                        CrownStoreProfileCard(profile, Modifier.weight(1f))
+                    }
+                    if (rowProfiles.size == 1) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun CrownStoreProfileCard(
+        profile: CrownProfileShareManager.StoreProfile,
+        modifier: Modifier = Modifier
+    ) {
+        CrownProfileCard(modifier) {
+            CrownCardTitle(profile.name)
+            if (profile.game.isNotBlank()) {
+                CrownMetaText(profile.game, strong = true)
+            }
+            if (profile.author.isNotBlank()) {
+                CrownMetaText(profile.author, strong = false)
+            }
+            if (profile.summary.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                CrownBodyText(profile.summary, maxLines = 3)
+            }
+            if (profile.tags.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(9.dp))
+                CrownTags(profile.tags)
+            }
+            formatLayoutBasis(profile.layoutBasis)?.let {
+                Spacer(modifier = Modifier.height(8.dp))
+                CrownFootnote(getString(R.string.crown_store_layout_basis, it))
+            }
+            if (profile.updatedAt.isNotBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                CrownFootnote(getString(R.string.crown_store_updated_at, formatStoreUpdatedAt(profile.updatedAt)))
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                CrownActionButton(
+                    text = stringResource(R.string.crown_store_action_import_profile),
+                    iconRes = R.drawable.phc_action_plus,
+                    primary = true,
+                    compact = true,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    importStoreProfile(profile)
+                }
+                CrownActionButton(
+                    text = stringResource(R.string.crown_store_action_report_profile),
+                    iconRes = R.drawable.phc_info,
+                    compact = true,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    reportStoreProfile(profile)
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun CrownLocalProfilesGrid(profiles: List<LocalCrownProfile>) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            profiles.chunked(2).forEach { rowProfiles ->
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    rowProfiles.forEach { profile ->
+                        CrownLocalProfileCard(profile, Modifier.weight(1f))
+                    }
+                    if (rowProfiles.size == 1) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+    }
+
+    @OptIn(ExperimentalFoundationApi::class)
+    @Composable
+    private fun CrownLocalProfileCard(
+        profile: LocalCrownProfile,
+        modifier: Modifier = Modifier
+    ) {
+        CrownProfileCard(
+            modifier = modifier.combinedClickable(
+                onClick = {},
+                onLongClick = { showDeleteLocalProfileDialog(profile) }
+            )
+        ) {
+            CrownCardTitle(profile.name)
+            CrownMetaText(getString(R.string.crown_store_local_profile_id, profile.id), strong = false)
+            Spacer(modifier = Modifier.height(10.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                CrownActionButton(
+                    text = stringResource(R.string.crown_store_action_publish_profile),
+                    iconRes = R.drawable.phc_action_check,
+                    primary = true,
+                    compact = true,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    showCrownStorePublishMetadataDialog(profile.id, profile.name)
+                }
+                CrownActionButton(
+                    text = stringResource(R.string.crown_store_action_export_share),
+                    iconRes = R.drawable.phc_action_copy,
+                    compact = true,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    exportCrownSharePackage(profile.id, profile.name)
+                }
+                CrownActionButton(
+                    text = stringResource(R.string.crown_store_action_export_legacy_short),
+                    iconRes = R.drawable.phc_list,
+                    compact = true,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    exportLegacyConfig(profile.id, profile.name)
+                }
+                CrownActionButton(
+                    text = stringResource(R.string.crown_store_action_merge_short),
+                    iconRes = R.drawable.phc_plug,
+                    compact = true,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    openLegacyMergeDocument(profile.id)
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun CrownProfileCard(
+        modifier: Modifier = Modifier,
+        content: @Composable ColumnScope.() -> Unit
+    ) {
+        Card(
+            modifier = modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = colorResource(R.color.crown_section_background)
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                content = content
+            )
+        }
+    }
+
+    @Composable
+    private fun CrownLoadingState(text: String) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 34.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            CircularProgressIndicator(
+                color = colorResource(R.color.crown_accent),
+                strokeWidth = 3.dp
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            CrownBodyText(text)
+        }
+    }
+
+    @Composable
+    private fun CrownStateCard(
+        title: String,
+        message: String,
+        buttonText: String? = null,
+        buttonAction: (() -> Unit)? = null
+    ) {
+        CrownProfileCard {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painter = painterResource(R.drawable.phc_info),
+                    contentDescription = null,
+                    tint = colorResource(R.color.crown_text_primary),
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = title,
+                    color = colorResource(R.color.crown_text_primary),
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            CrownBodyText(message)
+            if (buttonText != null && buttonAction != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+                CrownActionButton(
+                    text = buttonText,
+                    iconRes = R.drawable.phc_action_reset,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = buttonAction
+                )
+            }
+        }
+    }
+
+    @Composable
+    private fun CrownCardTitle(text: String) {
+        Text(
+            text = text,
+            color = colorResource(R.color.crown_text_primary),
+            fontSize = 15.4.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+
+    @Composable
+    private fun CrownBodyText(text: String, maxLines: Int = Int.MAX_VALUE) {
+        Text(
+            text = text,
+            color = colorResource(R.color.crown_text_secondary),
+            fontSize = 13.5.sp,
+            lineHeight = 18.sp,
+            maxLines = maxLines,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+
+    @Composable
+    private fun CrownMetaText(text: String, strong: Boolean) {
+        Text(
+            text = text,
+            color = if (strong) colorResource(R.color.crown_text_primary) else colorResource(R.color.crown_text_secondary),
+            fontSize = if (strong) 12.2.sp else 11.6.sp,
+            fontWeight = if (strong) FontWeight.Bold else FontWeight.Normal,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.alpha(if (strong) 0.84f else 0.76f)
+        )
+    }
+
+    @Composable
+    private fun CrownFootnote(text: String) {
+        Text(
+            text = text,
+            color = colorResource(R.color.crown_text_secondary),
+            fontSize = 10.8.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.alpha(0.62f)
+        )
+    }
+
+    @Composable
+    private fun CrownTags(tags: List<String>) {
+        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            val visibleTags = tags.filter { it.isNotBlank() }.take(2)
+            visibleTags.forEach { tag ->
+                CrownTagChip(tag, Modifier.weight(1f))
+            }
+            val overflowCount = tags.size - visibleTags.size
+            if (overflowCount > 0) {
+                CrownTagChip("+$overflowCount", Modifier.width(36.dp))
+            }
+        }
+    }
+
+    @Composable
+    private fun CrownTagChip(text: String, modifier: Modifier = Modifier) {
+        Box(
+            modifier = modifier
+                .height(25.dp)
+                .background(
+                    color = colorResource(R.color.crown_input_background),
+                    shape = RoundedCornerShape(8.dp)
+                )
+                .padding(horizontal = 7.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                color = colorResource(R.color.crown_text_secondary),
+                fontSize = 10.4.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+
+    @Composable
+    private fun CrownActionButton(
+        text: String,
+        iconRes: Int,
+        modifier: Modifier = Modifier,
+        primary: Boolean = false,
+        compact: Boolean = false,
+        onClick: () -> Unit
+    ) {
+        val container = if (primary) colorResource(R.color.crown_accent) else colorResource(R.color.crown_input_background)
+        val content = if (primary) colorResource(R.color.app_dialog_title_color) else colorResource(R.color.crown_text_primary)
+        ComposeButton(
+            onClick = onClick,
+            modifier = modifier.height(if (compact) 38.dp else 44.dp),
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = container,
+                contentColor = content
+            ),
+            contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+        ) {
+            Icon(
+                painter = painterResource(iconRes),
+                contentDescription = null,
+                tint = content,
+                modifier = Modifier.size(if (compact) 16.dp else 18.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = text,
+                fontSize = if (compact) 11.sp else 13.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 
@@ -1466,302 +1765,6 @@ class CrownStoreActivity : AppCompatActivity() {
         return output.toString(Charsets.UTF_8.name())
     }
 
-    private fun renderProgressState(textRes: Int) {
-        val state = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(0, dp(32), 0, dp(16))
-        }
-        state.addView(ProgressBar(this))
-        state.addView(bodyText(textRes))
-        contentView.addView(state)
-    }
-
-    private fun renderState(
-        title: String,
-        message: String,
-        buttonText: String,
-        buttonAction: () -> Unit
-    ) {
-        val state = cardLayout()
-        state.addView(iconTitleRow(R.drawable.phc_info, title))
-        state.addView(bodyText(message))
-        state.addView(secondaryActionButton(buttonText, R.drawable.phc_action_reset, buttonAction), fullWidthButtonParams())
-        contentView.addView(state)
-    }
-
-    private fun titleText(text: String): TextView {
-        return TextView(this).apply {
-            this.text = text
-            textSize = 17f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_text_primary))
-        }
-    }
-
-    private fun iconTitleRow(iconRes: Int, text: String): View {
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-
-            addView(
-                ImageView(this@CrownStoreActivity).apply {
-                    setImageDrawable(tintedDrawable(iconRes, R.color.crown_text_primary))
-                },
-                LinearLayout.LayoutParams(dp(24), dp(24)).apply {
-                    marginEnd = dp(10)
-                }
-            )
-            addView(
-                titleText(text),
-                LinearLayout.LayoutParams(
-                    0,
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    1f
-                )
-            )
-        }
-    }
-
-    private fun bodyText(textRes: Int): TextView = bodyText(getString(textRes))
-
-    private fun bodyText(text: String): TextView {
-        return TextView(this).apply {
-            this.text = text
-            textSize = 13.5f
-            setLineSpacing(0f, 1.08f)
-            setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_text_secondary))
-            setPadding(0, dp(4), 0, dp(3))
-        }
-    }
-
-    private fun metaText(text: String): TextView {
-        return TextView(this).apply {
-            this.text = text
-            textSize = 13f
-            setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_text_secondary))
-            setPadding(0, dp(3), 0, dp(3))
-        }
-    }
-
-    private fun sectionLabel(textRes: Int): TextView {
-        return TextView(this).apply {
-            text = getString(textRes)
-            textSize = 15f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_text_primary))
-            setPadding(0, dp(16), 0, dp(5))
-        }
-    }
-
-    private fun cardLayout(): LinearLayout {
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundResource(R.drawable.crown_config_section_bg)
-            setPadding(dp(12), dp(11), dp(12), dp(11))
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = dp(8)
-            }
-        }
-    }
-
-    private fun storeProfilesGrid(profiles: List<CrownProfileShareManager.StoreProfile>): View {
-        return masonryGrid(
-            items = profiles,
-            estimateHeight = { profile ->
-                5 + profile.summary.length.coerceAtMost(110) / 30 + profile.tags.size.coerceAtMost(4) / 2
-            },
-            itemView = { storeProfileView(it) }
-        )
-    }
-
-    private fun localProfilesGrid(profiles: List<LocalCrownProfile>): View {
-        return masonryGrid(
-            items = profiles,
-            estimateHeight = { 4 + it.name.length / 12 },
-            itemView = { localProfileView(it) }
-        )
-    }
-
-    private fun <T> masonryGrid(
-        items: List<T>,
-        estimateHeight: (T) -> Int,
-        itemView: (T) -> View
-    ): View {
-        val columns = List(2) {
-            LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-            }
-        }
-        val weights = IntArray(columns.size)
-        items.forEach { item ->
-            val targetIndex = weights.indices.minByOrNull { weights[it] } ?: 0
-            columns[targetIndex].addView(
-                itemView(item),
-                LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    bottomMargin = dp(10)
-                }
-            )
-            weights[targetIndex] += estimateHeight(item).coerceAtLeast(1)
-        }
-
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            isBaselineAligned = false
-            setPadding(0, dp(10), 0, dp(2))
-            columns.forEachIndexed { index, column ->
-                addView(
-                    column,
-                    LinearLayout.LayoutParams(
-                        0,
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        1f
-                    ).apply {
-                        if (index == 0) {
-                            marginEnd = dp(5)
-                        } else {
-                            marginStart = dp(5)
-                        }
-                    }
-                )
-            }
-        }
-    }
-
-    private fun profileCardLayout(): LinearLayout {
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundResource(R.drawable.crown_store_profile_card_bg)
-            setPadding(dp(12), dp(12), dp(12), dp(11))
-        }
-    }
-
-    private fun profileCardTitle(text: String): TextView {
-        return TextView(this).apply {
-            this.text = text
-            textSize = 15.4f
-            typeface = Typeface.DEFAULT_BOLD
-            includeFontPadding = false
-            maxLines = 2
-            ellipsize = TextUtils.TruncateAt.END
-            setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_text_primary))
-            setLineSpacing(0f, 1.08f)
-        }
-    }
-
-    private fun storeProfileMeta(profile: CrownProfileShareManager.StoreProfile): View {
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(7), 0, 0)
-            if (profile.game.isNotBlank()) {
-                addView(storeMetaText(profile.game, strong = true))
-            }
-            if (profile.author.isNotBlank()) {
-                addView(storeMetaText(profile.author, strong = false).apply {
-                    if (profile.game.isNotBlank()) {
-                        setPadding(0, dp(2), 0, 0)
-                    }
-                })
-            }
-        }
-    }
-
-    private fun storeMetaText(text: String, strong: Boolean): TextView {
-        return TextView(this).apply {
-            this.text = text
-            textSize = if (strong) 12.2f else 11.6f
-            includeFontPadding = false
-            maxLines = 1
-            ellipsize = TextUtils.TruncateAt.END
-            if (strong) {
-                typeface = Typeface.DEFAULT_BOLD
-            }
-            setTextColor(
-                ContextCompat.getColor(
-                    this@CrownStoreActivity,
-                    if (strong) R.color.crown_text_primary else R.color.crown_text_secondary
-                )
-            )
-            alpha = if (strong) 0.84f else 0.76f
-        }
-    }
-
-    private fun storeSummaryText(text: String): TextView {
-        return TextView(this).apply {
-            this.text = text
-            textSize = 12.6f
-            includeFontPadding = false
-            maxLines = 3
-            ellipsize = TextUtils.TruncateAt.END
-            setLineSpacing(dp(1).toFloat(), 1.08f)
-            setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_text_secondary))
-        }
-    }
-
-    private fun storeTagsView(tags: List<String>): View {
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            val visibleTags = tags.filter { it.isNotBlank() }.take(2)
-            visibleTags.forEachIndexed { index, tag ->
-                addView(
-                    storeTagChip(tag),
-                    LinearLayout.LayoutParams(
-                        0,
-                        dp(25),
-                        1f
-                    ).apply {
-                        if (index > 0) {
-                            marginStart = dp(5)
-                        }
-                    }
-                )
-            }
-            val overflowCount = tags.size - visibleTags.size
-            if (overflowCount > 0) {
-                addView(
-                    storeTagChip("+$overflowCount"),
-                    LinearLayout.LayoutParams(dp(36), dp(25)).apply {
-                        marginStart = dp(5)
-                    }
-                )
-            }
-        }
-    }
-
-    private fun storeTagChip(text: String): TextView {
-        return TextView(this).apply {
-            this.text = text
-            gravity = Gravity.CENTER
-            textSize = 10.4f
-            includeFontPadding = false
-            maxLines = 1
-            ellipsize = TextUtils.TruncateAt.END
-            setPadding(dp(7), 0, dp(7), 0)
-            setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_text_secondary))
-            setBackgroundResource(R.drawable.crown_store_tag_chip_bg)
-            alpha = 0.9f
-        }
-    }
-
-    private fun storeFootnoteText(text: String): TextView {
-        return TextView(this).apply {
-            this.text = text
-            textSize = 10.8f
-            includeFontPadding = false
-            maxLines = 1
-            ellipsize = TextUtils.TruncateAt.END
-            setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_text_secondary))
-            alpha = 0.62f
-        }
-    }
-
     private fun formatLayoutBasis(layoutBasis: CrownProfileShareManager.LayoutBasis?): String? {
         if (layoutBasis == null || !layoutBasis.isPresent()) return null
         val orientationText = when (layoutBasis.orientation.lowercase(Locale.US)) {
@@ -1844,123 +1847,6 @@ class CrownStoreActivity : AppCompatActivity() {
         }.getOrNull()
     }
 
-    private fun LinearLayout.addViewWithTopMargin(view: View, topMargin: Int) {
-        addView(
-            view,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply {
-                this.topMargin = topMargin
-            }
-        )
-    }
-
-    private fun cardActionArea(actions: List<View>): View {
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(9), 0, 0)
-            actions.chunked(2).forEachIndexed { rowIndex, rowActions ->
-                val row = LinearLayout(this@CrownStoreActivity).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    isBaselineAligned = false
-                }
-                rowActions.forEachIndexed { actionIndex, action ->
-                    row.addView(
-                        action,
-                        LinearLayout.LayoutParams(
-                            0,
-                            dp(38),
-                            1f
-                        ).apply {
-                            if (actionIndex > 0) {
-                                marginStart = dp(6)
-                            }
-                        }
-                    )
-                }
-                addView(
-                    row,
-                    LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        if (rowIndex > 0) {
-                            topMargin = dp(6)
-                        }
-                    }
-                )
-            }
-        }
-    }
-
-    private fun cardActionButton(
-        textRes: Int,
-        primary: Boolean = false,
-        action: () -> Unit
-    ): TextView {
-        val textColor = if (primary) R.color.app_dialog_title_color else R.color.crown_text_primary
-        return TextView(this).apply {
-            text = getString(textRes)
-            contentDescription = text
-            gravity = Gravity.CENTER
-            textSize = if (primary) 11.3f else 10.8f
-            typeface = Typeface.DEFAULT_BOLD
-            includeFontPadding = false
-            setLineSpacing(0f, 1.0f)
-            setPadding(dp(4), 0, dp(4), 0)
-            setTextColor(ContextCompat.getColor(this@CrownStoreActivity, textColor))
-            setBackgroundResource(
-                if (primary) {
-                    R.drawable.crown_store_card_action_primary_bg
-                } else {
-                    R.drawable.crown_store_card_action_bg
-                }
-            )
-            setOnClickListener { action() }
-        }
-    }
-
-    private fun secondaryActionButton(textRes: Int, iconRes: Int, action: () -> Unit): Button {
-        return actionButton(getString(textRes), iconRes, primary = false, action = action)
-    }
-
-    private fun secondaryActionButton(text: String, iconRes: Int, action: () -> Unit): Button {
-        return actionButton(text, iconRes, primary = false, action = action)
-    }
-
-    private fun actionButton(text: String, iconRes: Int, primary: Boolean, action: () -> Unit): Button {
-        val textColor = if (primary) R.color.app_dialog_title_color else R.color.crown_text_primary
-        return BackgroundIconButton(this).apply {
-            this.text = text
-            isAllCaps = false
-            gravity = Gravity.CENTER
-            textSize = 13.5f
-            minHeight = dp(40)
-            minWidth = 0
-            includeFontPadding = false
-            setPadding(dp(12), 0, dp(12), 0)
-            setTextColor(ContextCompat.getColor(this@CrownStoreActivity, textColor))
-            setBackgroundResource(if (primary) R.drawable.crown_store_primary_action_bg else R.drawable.crown_config_action_button_bg)
-            setBackgroundIcon(
-                icon = tintedDrawable(iconRes, textColor),
-                sizePx = dp(76),
-                insetPx = -dp(8),
-                alpha = if (primary) 38 else 32
-            )
-            setOnClickListener { action() }
-        }
-    }
-
-    private fun fullWidthButtonParams(): LinearLayout.LayoutParams {
-        return LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        ).apply {
-            topMargin = dp(8)
-        }
-    }
-
     private fun openUrl(url: String) {
         try {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
@@ -1975,59 +1861,6 @@ class CrownStoreActivity : AppCompatActivity() {
 
     private fun urlParam(value: String): String {
         return URLEncoder.encode(value, Charsets.UTF_8.name())
-    }
-
-    private fun tintedDrawable(iconRes: Int, colorRes: Int): Drawable? {
-        return ContextCompat.getDrawable(this, iconRes)?.mutate()?.apply {
-            setTint(ContextCompat.getColor(this@CrownStoreActivity, colorRes))
-        }
-    }
-
-    private fun TextView.setStartIcon(iconRes: Int, colorRes: Int, sizeDp: Int) {
-        val icon = tintedDrawable(iconRes, colorRes)?.apply {
-            val size = dp(sizeDp)
-            setBounds(0, 0, size, size)
-        }
-        setCompoundDrawables(icon, null, null, null)
-    }
-
-    private fun TextView.setTopIcon(iconRes: Int, colorRes: Int, sizeDp: Int) {
-        val icon = tintedDrawable(iconRes, colorRes)?.apply {
-            val size = dp(sizeDp)
-            setBounds(0, 0, size, size)
-        }
-        setCompoundDrawables(null, icon, null, null)
-    }
-
-    private class BackgroundIconButton(context: Context) : Button(context) {
-        private var backgroundIcon: Drawable? = null
-        private var backgroundIconSize = 0
-        private var backgroundIconInset = 0
-        private var backgroundIconAlpha = 36
-
-        fun setBackgroundIcon(icon: Drawable?, sizePx: Int, insetPx: Int, alpha: Int) {
-            backgroundIcon = icon
-            backgroundIconSize = sizePx
-            backgroundIconInset = insetPx
-            backgroundIconAlpha = alpha
-            invalidate()
-        }
-
-        override fun onDraw(canvas: Canvas) {
-            backgroundIcon?.let { icon ->
-                val size = backgroundIconSize.coerceAtLeast(height)
-                val left = if (layoutDirection == View.LAYOUT_DIRECTION_RTL) {
-                    backgroundIconInset
-                } else {
-                    width - size - backgroundIconInset
-                }
-                val top = (height - size) / 2
-                icon.alpha = backgroundIconAlpha
-                icon.setBounds(left, top, left + size, top + size)
-                icon.draw(canvas)
-            }
-            super.onDraw(canvas)
-        }
     }
 
     private fun JSONObject.hasOnlyKeys(allowedKeys: Set<String>): Boolean {
