@@ -8,6 +8,11 @@ LOCAL_PATH := $(MY_LOCAL_PATH)
 include $(CLEAR_VARS)
 LOCAL_MODULE    := moonlight-core
 
+MOONLIGHT_CORE_RS_WRAPPER_SRC := moonlight-common-c/src/rswrapper.c
+ifneq (,$(filter x86 x86_64,$(TARGET_ARCH_ABI)))
+MOONLIGHT_CORE_RS_WRAPPER_SRC := rswrapper_android_default.c
+endif
+
 LOCAL_SRC_FILES := moonlight-common-c/src/AudioStream.c \
                    moonlight-common-c/src/ByteBuffer.c \
                    moonlight-common-c/src/Connection.c \
@@ -29,7 +34,7 @@ LOCAL_SRC_FILES := moonlight-common-c/src/AudioStream.c \
                    moonlight-common-c/src/VideoDepacketizer.c \
                    moonlight-common-c/src/VideoStream.c \
                    moonlight-common-c/src/MicrophoneStream.c \
-                   moonlight-common-c/src/rswrapper.c \
+                   $(MOONLIGHT_CORE_RS_WRAPPER_SRC) \
                    moonlight-common-c/enet/callbacks.c \
                    moonlight-common-c/enet/compress.c \
                    moonlight-common-c/enet/host.c \

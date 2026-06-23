@@ -20,6 +20,7 @@ def githubOAuthClientId = (
 def escapeBuildConfigString = { value ->
     value.replace("\\", "\\\\").replace("\"", "\\\"")
 }
+def enableX86TestAbi = (project.findProperty("enableX86TestAbi") ?: "false").toString().toBoolean()
 
 // 仅在存在 google-services.json 且满足条件时应用 Google Services 插件
 def hasGoogleServicesJson = file('google-services.json').exists()
@@ -54,7 +55,11 @@ android {
         ndk.debugSymbolLevel = 'FULL'
 
         ndk {
-            abiFilters 'arm64-v8a', 'armeabi-v7a'
+            def supportedAbis = ['arm64-v8a', 'armeabi-v7a']
+            if (enableX86TestAbi) {
+                supportedAbis += 'x86'
+            }
+            abiFilters(*supportedAbis)
         }
     }
 
