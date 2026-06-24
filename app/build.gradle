@@ -44,8 +44,8 @@ android {
         minSdk 22
         targetSdk 35
 
-        versionName "12.10.2"
-        versionCode = 391
+        versionName "12.10.4"
+        versionCode = 392
 
         // Optional GitHub OAuth App client ID. Enable Device Flow on the OAuth app,
         // then set githubOAuthClientId in local.properties, pass -PgithubOAuthClientId=...,

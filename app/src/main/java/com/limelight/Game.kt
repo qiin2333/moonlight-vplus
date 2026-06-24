@@ -1699,7 +1699,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         currentTargetDisplay.getRealSize(screenSize)
 
         val exceedsScreenSize = width > screenSize.x || height > screenSize.y
-        val useFixedSize = (prefConfig.stretchVideo && !exceedsScreenSize) || forceFixedSize
+        val useFixedSize = prefConfig.stretchVideo || (forceFixedSize && !exceedsScreenSize)
 
         if (useFixedSize) {
             streamView.setDesiredAspectRatio(0.0)
