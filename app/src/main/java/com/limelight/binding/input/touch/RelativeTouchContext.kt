@@ -50,14 +50,18 @@ class RelativeTouchContext(
         get() = (targetView.context as? Game)?.isMouseMoveOnlyEnabled == true
 
     // 网络发送代理方法
+    private val forwardedButtonsDown = HashSet<Byte>()
+
     private fun sendMouseButtonDownProxy(button: Byte) {
         if (isMouseMoveOnlyEnabled) return
+        forwardedButtonsDown += button
         conn.sendMouseButtonDown(button)
     }
 
     private fun sendMouseButtonUpProxy(button: Byte) {
-        if (isMouseMoveOnlyEnabled) return
+        if (!forwardedButtonsDown.remove(button)) return
         conn.sendMouseButtonUp(button)
+    }
     }
 
     // 使用代理方法替换原有的 conn 发送
