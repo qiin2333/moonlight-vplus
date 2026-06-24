@@ -25,6 +25,11 @@ object AppDialogStyler {
         styleSystemChoiceList(findAlertListView(dialog), context)
     }
 
+    fun applyCustomContent(dialog: Dialog, context: Context) {
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        applyChrome(dialog, context)
+    }
+
     fun applyChrome(dialog: Dialog, context: Context) {
         tintTitle(dialog, context)
         tintButtons(dialog, context)

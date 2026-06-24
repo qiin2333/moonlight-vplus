@@ -29,6 +29,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -208,7 +209,7 @@ class EasyTierController(
             setContentView(composeView)
         }
         currentDialog?.show()
-        currentDialog?.let { AppDialogStyler.apply(it, activity) }
+        currentDialog?.let { AppDialogStyler.applyCustomContent(it, activity) }
     }
 
     @Composable
@@ -237,105 +238,113 @@ class EasyTierController(
                         onSurfaceVariant = textSecondary
                 )
         ) {
-            Column(
-                    modifier = Modifier
-                            .widthIn(max = 560.dp)
-                            .heightIn(max = 560.dp)
-                            .background(panel, RoundedCornerShape(10.dp))
-                            .padding(18.dp)
-            ) {
-                Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                                text = "EasyTier 控制面板",
-                                color = textPrimary,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                                text = if (state.isRunning) "服务正在运行" else "服务未运行或正在连接",
-                                color = textSecondary,
-                                fontSize = 12.5.sp
-                        )
-                    }
-                    EasyTierStatusPill(state.isRunning)
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                TabRow(
-                        selectedTabIndex = if (state.selectedTab == EasyTierTab.STATUS) 0 else 1,
-                        containerColor = Color.Transparent,
-                        contentColor = accent
-                ) {
-                    Tab(
-                            selected = state.selectedTab == EasyTierTab.STATUS,
-                            onClick = { onTabSelected(EasyTierTab.STATUS) },
-                            text = { Text("状态") }
-                    )
-                    Tab(
-                            selected = state.selectedTab == EasyTierTab.CONFIG,
-                            onClick = { onTabSelected(EasyTierTab.CONFIG) },
-                            text = { Text("配置") }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Box(
+            Box(modifier = Modifier.padding(10.dp)) {
+                Surface(
                         modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f, fill = false)
-                                .heightIn(max = 360.dp)
+                                .widthIn(max = 560.dp)
+                                .heightIn(max = 560.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        color = panel,
+                        tonalElevation = 0.dp,
+                        shadowElevation = 12.dp
                 ) {
-                    when (state.selectedTab) {
-                        EasyTierTab.STATUS -> EasyTierStatusTab(state.statusJson, onRefresh)
-                        EasyTierTab.CONFIG -> EasyTierConfigTab(
-                                config = state.config,
-                                advancedExpanded = state.advancedExpanded,
-                                onConfigChange = onConfigChange,
-                                onAdvancedExpandedChange = onAdvancedExpandedChange
-                        )
-                    }
-                }
+                    Column(
+                            modifier = Modifier.padding(18.dp)
+                    ) {
+                        Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                        text = "EasyTier 控制面板",
+                                        color = textPrimary,
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                        text = if (state.isRunning) "服务正在运行" else "服务未运行或正在连接",
+                                        color = textSecondary,
+                                        fontSize = 12.5.sp
+                                )
+                            }
+                            EasyTierStatusPill(state.isRunning)
+                        }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
 
-                Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(
-                            onClick = onClose,
-                            modifier = Modifier.weight(1f)
-                    ) {
-                        Text("关闭")
-                    }
-                    ComposeButton(
-                            onClick = onSaveConfig,
-                            modifier = Modifier.weight(1.25f),
-                            colors = ButtonDefaults.buttonColors(
-                                    containerColor = input,
-                                    contentColor = textPrimary
-                            ),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
-                    ) {
-                        Text("保存", maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                    ComposeButton(
-                            onClick = onToggleService,
-                            modifier = Modifier.weight(1.25f),
-                            colors = ButtonDefaults.buttonColors(
-                                    containerColor = accent,
-                                    contentColor = colorResource(R.color.app_dialog_text_primary)
-                            ),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
-                    ) {
-                        Text(if (state.isRunning) "停止" else "启动", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        TabRow(
+                                selectedTabIndex = if (state.selectedTab == EasyTierTab.STATUS) 0 else 1,
+                                containerColor = Color.Transparent,
+                                contentColor = accent
+                        ) {
+                            Tab(
+                                    selected = state.selectedTab == EasyTierTab.STATUS,
+                                    onClick = { onTabSelected(EasyTierTab.STATUS) },
+                                    text = { Text("状态") }
+                            )
+                            Tab(
+                                    selected = state.selectedTab == EasyTierTab.CONFIG,
+                                    onClick = { onTabSelected(EasyTierTab.CONFIG) },
+                                    text = { Text("配置") }
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Box(
+                                modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f, fill = false)
+                                        .heightIn(max = 360.dp)
+                        ) {
+                            when (state.selectedTab) {
+                                EasyTierTab.STATUS -> EasyTierStatusTab(state.statusJson, onRefresh)
+                                EasyTierTab.CONFIG -> EasyTierConfigTab(
+                                        config = state.config,
+                                        advancedExpanded = state.advancedExpanded,
+                                        onConfigChange = onConfigChange,
+                                        onAdvancedExpandedChange = onAdvancedExpandedChange
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextButton(
+                                    onClick = onClose,
+                                    modifier = Modifier.weight(1f)
+                            ) {
+                                Text("关闭")
+                            }
+                            ComposeButton(
+                                    onClick = onSaveConfig,
+                                    modifier = Modifier.weight(1.25f),
+                                    colors = ButtonDefaults.buttonColors(
+                                            containerColor = input,
+                                            contentColor = textPrimary
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                            ) {
+                                Text("保存", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            ComposeButton(
+                                    onClick = onToggleService,
+                                    modifier = Modifier.weight(1.25f),
+                                    colors = ButtonDefaults.buttonColors(
+                                            containerColor = accent,
+                                            contentColor = colorResource(R.color.app_dialog_text_primary)
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                            ) {
+                                Text(if (state.isRunning) "停止" else "启动", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
                     }
                 }
             }
