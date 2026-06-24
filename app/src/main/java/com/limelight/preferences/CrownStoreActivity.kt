@@ -24,9 +24,8 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,7 +63,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -304,7 +305,7 @@ class CrownStoreActivity : AppCompatActivity() {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 24.dp)
+                .padding(top = dimensionResource(R.dimen.crown_store_top_bar_padding_top))
                 .padding(horizontal = 12.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -337,7 +338,7 @@ class CrownStoreActivity : AppCompatActivity() {
         NavigationBar(
             containerColor = container,
             tonalElevation = 0.dp,
-            windowInsets = WindowInsets(0.dp)
+            windowInsets = WindowInsets(0, 0, 0, 0)
         ) {
             NavigationBarItem(
                 selected = selectedTab == CrownTab.STORE,
@@ -556,17 +557,15 @@ class CrownStoreActivity : AppCompatActivity() {
         }
     }
 
-    @OptIn(ExperimentalFoundationApi::class)
     @Composable
     private fun CrownLocalProfileCard(
         profile: LocalCrownProfile,
         modifier: Modifier = Modifier
     ) {
         CrownProfileCard(
-            modifier = modifier.combinedClickable(
-                onClick = {},
-                onLongClick = { showDeleteLocalProfileDialog(profile) }
-            )
+            modifier = modifier.pointerInput(profile.id) {
+                detectTapGestures(onLongPress = { showDeleteLocalProfileDialog(profile) })
+            }
         ) {
             CrownCardTitle(profile.name)
             CrownMetaText(getString(R.string.crown_store_local_profile_id, profile.id), strong = false)

@@ -204,10 +204,11 @@ class EasyTierController(
             }
         }
 
-        currentDialog = ComponentDialog(activity).apply {
+        currentDialog = ComponentDialog(activity, R.style.AppDialogStyle).apply {
             setContentView(composeView)
         }
         currentDialog?.show()
+        currentDialog?.let { AppDialogStyler.apply(it, activity) }
     }
 
     @Composable

@@ -16,6 +16,9 @@
     <!-- Drawer width -->
     <dimen name="drawer_width">280dp</dimen>
 
+    <!-- Crown store -->
+    <dimen name="crown_store_top_bar_padding_top">24dp</dimen>
+
     <!-- Widget -->
     <dimen name="widget_margin">8dp</dimen>
 
