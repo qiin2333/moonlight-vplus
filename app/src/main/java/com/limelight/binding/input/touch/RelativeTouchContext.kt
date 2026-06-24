@@ -47,7 +47,16 @@ class RelativeTouchContext(
     // 仅鼠标移动
     // 动态读取 Game 中的“仅鼠标移动”状态
     private val isMouseMoveOnlyEnabled: Boolean
-        get() = (targetView.context as? Game)?.isMouseMoveOnlyEnabled == true
+        get() {
+            var context = targetView.context
+            while (context is android.content.ContextWrapper) {
+                if (context is Game) {
+                    return context.isMouseMoveOnlyEnabled
+                }
+                context = context.baseContext
+            }
+            return (context as? Game)?.isMouseMoveOnlyEnabled == true
+        }
 
     // 网络发送代理方法
     private val forwardedButtonsDown = HashSet<Byte>()
@@ -61,7 +70,6 @@ class RelativeTouchContext(
     private fun sendMouseButtonUpProxy(button: Byte) {
         if (!forwardedButtonsDown.remove(button)) return
         conn.sendMouseButtonUp(button)
-    }
     }
 
     // 使用代理方法替换原有的 conn 发送
@@ -189,6 +197,11 @@ class RelativeTouchContext(
             distanceMoved = 0.0
 
             isPotentialDoubleClick = false // 重置双击待定状态
+
+            if (isMouseMoveOnlyEnabled) {
+                confirmedMove = true
+                return true
+            }
 
             if (prefConfig.enableDoubleClickDrag) {
                 val timeSinceLastTap = eventTime - lastTapUpTime

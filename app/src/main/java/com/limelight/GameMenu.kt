@@ -236,7 +236,7 @@ class GameMenu(
             touchModeOptionsList.add(
                 MenuOption(
                     getString(R.string.game_menu_touch_mode_trackpad) + " - " +
-                            getString(R.string.layout_page_device_text_mmo) + " - " + game.isMouseMoveOnlyEnabled,
+                            if(game.isMouseMoveOnlyEnabled) getString(R.string.layout_page_device_text_mmo_true_text) else getString(R.string.layout_page_device_text_mmo_false_text),
                     false,
                     {
                         game.toggleMouseMoveOnly()
