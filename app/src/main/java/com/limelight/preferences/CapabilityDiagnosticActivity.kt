@@ -2,11 +2,9 @@
 package com.limelight.preferences
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.graphics.Typeface
 import android.hardware.display.DisplayManager
 import android.media.MediaCodecInfo
 import android.media.MediaCodecList
@@ -14,292 +12,317 @@ import android.media.MediaFormat
 import android.os.Build
 import android.os.Bundle
 import android.util.DisplayMetrics
-import android.util.TypedValue
 import android.view.Display
-import android.view.Gravity
-import android.view.View
-import android.view.ViewGroup
 import android.view.Window
 import android.view.WindowManager
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
-
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.limelight.R
 import com.limelight.utils.HdrCapabilityHelper
 import com.limelight.utils.UiHelper
 
 /**
- * 编解码与屏幕能力检测页面
- * 使用卡片式 UI 展示设备的视频解码器能力、HDR 支持信息、屏幕参数等
+ * 编解码与屏幕能力检测页面。
+ *
+ * 检测逻辑生成结构化数据，Compose 只负责渲染，方便后续继续统一页面风格。
  */
-class CapabilityDiagnosticActivity : Activity() {
+class CapabilityDiagnosticActivity : ComponentActivity() {
 
-    private lateinit var container: LinearLayout
     private lateinit var plainTextReport: StringBuilder
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val systemBarColor = 0xFF16162A.toInt()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             val window: Window = window
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-            window.statusBarColor = 0xFF16162A.toInt()
-            window.navigationBarColor = 0xFF16162A.toInt()
+            window.statusBarColor = systemBarColor
+            window.navigationBarColor = systemBarColor
         }
-
-        setContentView(R.layout.activity_capability_diagnostic)
 
         UiHelper.setLocale(this)
-        UiHelper.notifyNewRootView(this)
-
-        container = findViewById(R.id.report_container)
-        val copyButton: View = findViewById(R.id.btn_copy_report)
-        val backButton: View = findViewById(R.id.btn_back)
 
         plainTextReport = StringBuilder()
-        generateReport()
+        val cards = generateReport()
 
-        copyButton.setOnClickListener {
-            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-            clipboard?.setPrimaryClip(ClipData.newPlainText("Capability Report", plainTextReport.toString()))
-            Toast.makeText(this, "已复制到剪贴板", Toast.LENGTH_SHORT).show()
+        setContent {
+            CapabilityDiagnosticScreen(
+                    cards = cards,
+                    onBack = { finish() },
+                    onCopy = {
+                        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                        clipboard?.setPrimaryClip(
+                                ClipData.newPlainText("Capability Report", plainTextReport.toString()))
+                        Toast.makeText(this, R.string.copy_success, Toast.LENGTH_SHORT).show()
+                    }
+            )
         }
 
-        backButton.setOnClickListener { finish() }
+        UiHelper.notifyNewRootView(this)
     }
 
-    private fun generateReport() {
+    private fun generateReport(): List<DiagnosticCard> {
+        val cards = mutableListOf<DiagnosticCard>()
         plainTextReport.append("═══════════════════════════════════\n")
         plainTextReport.append("  设备能力检测报告\n")
         plainTextReport.append("═══════════════════════════════════\n\n")
 
-        buildDeviceCard()
-        buildDisplayCard()
-        buildHdrCard()
-        buildDecoderCards()
+        cards += buildDeviceCard()
+        cards += buildDisplayCard()
+        cards += buildHdrCard()
+        cards += buildDecoderCards()
 
         plainTextReport.append("\n═══════════════════════════════════\n")
         plainTextReport.append("  报告生成完毕\n")
         plainTextReport.append("═══════════════════════════════════\n")
+        return cards
     }
 
-    // ========================== 卡片构建 ==========================
-
-    private fun buildDeviceCard() {
-        val card = createCard("📱", "设备信息")
+    private fun buildDeviceCard(): DiagnosticCard {
+        val card = DiagnosticCard("设备", "设备信息")
         plainTextReport.append("【设备信息】\n")
 
-        addKeyValue(card, "品牌", Build.BRAND)
-        addKeyValue(card, "型号", Build.MODEL)
-        addKeyValue(card, "芯片", Build.HARDWARE)
-        addKeyValue(card, "Android", "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
+        card.keyValue("品牌", Build.BRAND)
+        card.keyValue("型号", Build.MODEL)
+        card.keyValue("芯片", Build.HARDWARE)
+        card.keyValue("Android", "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
 
         plainTextReport.append("  品牌: ").append(Build.BRAND).append("\n")
         plainTextReport.append("  型号: ").append(Build.MODEL).append("\n")
         plainTextReport.append("  芯片: ").append(Build.HARDWARE).append("\n")
         plainTextReport.append("  Android: ").append(Build.VERSION.RELEASE)
-            .append(" (API ").append(Build.VERSION.SDK_INT).append(")\n")
+                .append(" (API ").append(Build.VERSION.SDK_INT).append(")\n")
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            addKeyValue(card, "SOC", "${Build.SOC_MANUFACTURER} ${Build.SOC_MODEL}")
+            card.keyValue("SOC", "${Build.SOC_MANUFACTURER} ${Build.SOC_MODEL}")
             plainTextReport.append("  SOC: ").append(Build.SOC_MANUFACTURER)
-                .append(" ").append(Build.SOC_MODEL).append("\n")
+                    .append(" ").append(Build.SOC_MODEL).append("\n")
         }
 
         plainTextReport.append("\n")
-        container.addView(card)
+        return card
     }
 
     @SuppressLint("NewApi")
-    private fun buildDisplayCard() {
-        val card = createCard("🖥", "屏幕信息")
+    private fun buildDisplayCard(): DiagnosticCard {
+        val card = DiagnosticCard("屏幕", "屏幕信息")
         plainTextReport.append("【屏幕信息】\n")
 
         try {
             val dm = getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
             val display = dm?.getDisplay(Display.DEFAULT_DISPLAY)
             if (display == null) {
-                addBadge(card, "无法获取 Display 信息", COLOR_ERROR)
+                card.badge("无法获取 Display 信息", DiagnosticTone.Error)
                 plainTextReport.append("  无法获取\n\n")
-                container.addView(card)
-                return
+                return card
             }
 
             val metrics = DisplayMetrics()
             display.getRealMetrics(metrics)
             val res = "${metrics.widthPixels} × ${metrics.heightPixels}"
-            addKeyValue(card, "分辨率", res)
-            addKeyValue(card, "密度", "${metrics.densityDpi} dpi")
+            card.keyValue("分辨率", res)
+            card.keyValue("密度", "${metrics.densityDpi} dpi")
             plainTextReport.append("  分辨率: ").append(res).append("\n")
             plainTextReport.append("  密度: ").append(metrics.densityDpi).append(" dpi\n")
 
             val rr = display.refreshRate
-            addKeyValue(card, "刷新率", String.format("%.1f Hz", rr))
+            card.keyValue("刷新率", String.format("%.1f Hz", rr))
             plainTextReport.append("  刷新率: ").append(String.format("%.1f Hz", rr)).append("\n")
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 val modes = display.supportedModes
                 if (modes.size > 1) {
-                    addDivider(card)
-                    addSectionLabel(card, "显示模式")
-                    val flow = createTagFlow()
-                    for (mode in modes) {
-                        val m = "${mode.physicalWidth}×${mode.physicalHeight} ${String.format("%.0fHz", mode.refreshRate)}"
-                        addTagToFlow(flow, m)
-                    }
-                    card.addView(flow)
+                    card.divider()
+                    card.section("显示模式")
+                    card.tags(modes.map {
+                        "${it.physicalWidth}×${it.physicalHeight} ${String.format("%.0fHz", it.refreshRate)}"
+                    })
                 }
             }
         } catch (e: Exception) {
-            addBadge(card, "获取失败: ${e.message}", COLOR_ERROR)
+            card.badge("获取失败: ${e.message}", DiagnosticTone.Error)
         }
 
         plainTextReport.append("\n")
-        container.addView(card)
+        return card
     }
 
     @SuppressLint("NewApi")
-    private fun buildHdrCard() {
-        val card = createCard("🌈", "HDR 能力")
+    private fun buildHdrCard(): DiagnosticCard {
+        val card = DiagnosticCard("HDR", "HDR 能力")
         plainTextReport.append("【HDR 能力】\n")
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
-            addBadge(card, "需要 Android 7.0+", COLOR_WARNING)
+            card.badge("需要 Android 7.0+", DiagnosticTone.Warning)
             plainTextReport.append("  需要 Android 7.0+\n\n")
-            container.addView(card)
-            return
+            return card
         }
 
         val capInfo = HdrCapabilityHelper.getFullCapabilityInfo(this)
         val brightness = capInfo.brightness
         val ts = capInfo.typeSupport
 
-        // 系统检测
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            addStatusRow(card, "屏幕 HDR", capInfo.isScreenHdr, "isScreenHdr()")
-            addStatusRow(card, "广色域", capInfo.isWideColorGamut, null)
+            card.status("屏幕 HDR", capInfo.isScreenHdr, "isScreenHdr()")
+            card.status("广色域", capInfo.isWideColorGamut)
             plainTextReport.append("  isScreenHdr: ").append(capInfo.isScreenHdr).append("\n")
             plainTextReport.append("  广色域: ").append(capInfo.isWideColorGamut).append("\n")
         }
 
-        // HDR 类型
-        addDivider(card)
-        addSectionLabel(card, "HDR 类型")
+        card.divider()
+        card.section("HDR 类型")
 
         if (ts.rawTypes.isEmpty()) {
-            addBadge(card, "设备不支持任何 HDR 类型", COLOR_WARNING)
+            card.badge("设备不支持任何 HDR 类型", DiagnosticTone.Warning)
             plainTextReport.append("  ❌ 无 HDR 类型\n")
         } else {
-            addHdrTypeBadge(card, "Dolby Vision", ts.hasDolbyVision)
-            addHdrTypeBadge(card, "HDR10 / PQ", ts.hasHdr10)
-            addHdrTypeBadge(card, "HLG", ts.hasHlg)
-            addHdrTypeBadge(card, "HDR10+", ts.hasHdr10Plus)
+            card.status("Dolby Vision", ts.hasDolbyVision)
+            card.status("HDR10 / PQ", ts.hasHdr10)
+            card.status("HLG", ts.hasHlg)
+            card.status("HDR10+", ts.hasHdr10Plus)
 
             plainTextReport.append("  DV: ").append(if (ts.hasDolbyVision) "✅" else "❌")
-                .append("  HDR10: ").append(if (ts.hasHdr10) "✅" else "❌")
-                .append("  HLG: ").append(if (ts.hasHlg) "✅" else "❌")
-                .append("  HDR10+: ").append(if (ts.hasHdr10Plus) "✅" else "❌").append("\n")
+                    .append("  HDR10: ").append(if (ts.hasHdr10) "✅" else "❌")
+                    .append("  HLG: ").append(if (ts.hasHlg) "✅" else "❌")
+                    .append("  HDR10+: ").append(if (ts.hasHdr10Plus) "✅" else "❌").append("\n")
 
-            // 串流兼容性
-            addDivider(card)
-            addSectionLabel(card, "串流兼容性")
-            addCompatRow(card, "HLG 直通", ts.hasHlg, "设备支持", "设备未声明")
-            addCompatRow(card, "HDR10/PQ 直通", ts.hasHdr10, "设备支持", "设备未声明")
+            card.divider()
+            card.section("串流兼容性")
+            card.compat("HLG 直通", ts.hasHlg, "设备支持", "设备未声明")
+            card.compat("HDR10/PQ 直通", ts.hasHdr10, "设备支持", "设备未声明")
         }
 
-        // 亮度
-        addDivider(card)
-        addSectionLabel(card, "屏幕亮度")
+        card.divider()
+        card.section("屏幕亮度")
 
         var maxDesc = String.format("%.0f nits", brightness.maxLuminance)
         if (brightness.isDefault) maxDesc += " (默认)"
         else if (brightness.isFromHdrCaps) maxDesc += " (EDID)"
-        addKeyValue(card, "峰值亮度", maxDesc)
-        addKeyValue(card, "最小亮度", String.format("%.4f nits", brightness.minLuminance))
-        addKeyValue(card, "平均亮度", String.format("%.0f nits", brightness.maxAvgLuminance))
+        card.keyValue("峰值亮度", maxDesc)
+        card.keyValue("最小亮度", String.format("%.4f nits", brightness.minLuminance))
+        card.keyValue("平均亮度", String.format("%.0f nits", brightness.maxAvgLuminance))
 
         plainTextReport.append("  峰值: ").append(maxDesc).append("\n")
         plainTextReport.append("  最小: ").append(String.format("%.4f", brightness.minLuminance)).append("\n")
         plainTextReport.append("  平均: ").append(String.format("%.0f", brightness.maxAvgLuminance)).append("\n")
 
-        // 亮度评级
         when {
-            brightness.isDefault ->
-                addBadge(card, "⚠ 驱动未报告 EDID 亮度", COLOR_WARNING)
-            brightness.maxLuminance >= 1000 ->
-                addBadge(card, "✦ 高阶 HDR 面板 ≥1000 nits", COLOR_SUCCESS)
-            brightness.maxLuminance >= 600 ->
-                addBadge(card, "✦ 中等 HDR 面板", COLOR_SUCCESS)
-            brightness.maxLuminance < 400 ->
-                addBadge(card, "⚠ 峰值亮度偏低 <400 nits", COLOR_WARNING)
+            brightness.isDefault -> card.badge("驱动未报告 EDID 亮度", DiagnosticTone.Warning)
+            brightness.maxLuminance >= 1000 -> card.badge("高阶 HDR 面板 ≥1000 nits", DiagnosticTone.Success)
+            brightness.maxLuminance >= 600 -> card.badge("中等 HDR 面板", DiagnosticTone.Success)
+            brightness.maxLuminance < 400 -> card.badge("峰值亮度偏低 <400 nits", DiagnosticTone.Warning)
         }
 
-        // HDR/SDR Ratio
-        addDivider(card)
-        addSectionLabel(card, "HDR/SDR 动态比率")
+        card.divider()
+        card.section("HDR/SDR 动态比率")
 
         if (Build.VERSION.SDK_INT < 34) {
-            addBadge(card, "需要 Android 14+ (API 34)", COLOR_TEXT_MUTED)
+            card.badge("需要 Android 14+ (API 34)", DiagnosticTone.Muted)
             plainTextReport.append("  HDR/SDR Ratio: 需要 API 34+\n")
         } else if (!brightness.isHdrSdrRatioAvailable) {
-            addBadge(card, "设备不支持 ratio 查询", COLOR_WARNING)
+            card.badge("设备不支持 ratio 查询", DiagnosticTone.Warning)
             plainTextReport.append("  HDR/SDR Ratio: 不支持\n")
         } else {
-            addKeyValue(card, "当前比率", String.format("%.2f×", brightness.hdrSdrRatio))
-            addKeyValue(card, "最高比率",
-                String.format("%.2f×", brightness.highestHdrSdrRatio) +
-                    if (Build.VERSION.SDK_INT >= 36) "" else " (≈当前)")
+            card.keyValue("当前比率", String.format("%.2f×", brightness.hdrSdrRatio))
+            card.keyValue(
+                    "最高比率",
+                    String.format("%.2f×", brightness.highestHdrSdrRatio) +
+                            if (Build.VERSION.SDK_INT >= 36) "" else " (≈当前)"
+            )
             plainTextReport.append("  当前 ratio: ").append(String.format("%.2f", brightness.hdrSdrRatio)).append("\n")
             plainTextReport.append("  最高 ratio: ").append(String.format("%.2f", brightness.highestHdrSdrRatio)).append("\n")
 
             if (brightness.isComputedFromRatio && brightness.computedPeakBrightness > 0) {
-                addKeyValue(card, "Ratio 峰值",
-                    String.format("%.0f nits", brightness.computedPeakBrightness))
+                card.keyValue("Ratio 峰值", String.format("%.0f nits", brightness.computedPeakBrightness))
                 plainTextReport.append("  Ratio 峰值: ").append(
-                    String.format("%.0f", brightness.computedPeakBrightness)).append("\n")
+                        String.format("%.0f", brightness.computedPeakBrightness)).append("\n")
             }
-            addBadge(card, "ℹ Android 未公开 sdrNits，精度受限", COLOR_INFO)
+            card.badge("Android 未公开 sdrNits，精度受限", DiagnosticTone.Info)
         }
 
-        // 上报服务端
-        addDivider(card)
-        addSectionLabel(card, "上报服务端")
+        card.divider()
+        card.section("上报服务端")
 
         val sv = HdrCapabilityHelper.getBrightnessRangeAsInts(this)
-        addKeyValue(card, "minBrightness", "${sv[0]} nits")
-        addKeyValue(card, "maxBrightness", "${sv[1]} nits")
-        addKeyValue(card, "maxAvgBrightness", "${sv[2]} nits")
+        card.keyValue("minBrightness", "${sv[0]} nits")
+        card.keyValue("maxBrightness", "${sv[1]} nits")
+        card.keyValue("maxAvgBrightness", "${sv[2]} nits")
         plainTextReport.append("  上报: min=").append(sv[0]).append(" max=").append(sv[1])
-            .append(" avg=").append(sv[2]).append("\n")
+                .append(" avg=").append(sv[2]).append("\n")
 
-        // 系统亮度
-        addDivider(card)
-        addSectionLabel(card, "系统亮度")
+        card.divider()
+        card.section("系统亮度")
 
         val sysBr = HdrCapabilityHelper.getSystemBrightness(this)
         if (sysBr >= 0) {
-            addKeyValue(card, "当前亮度",
-                "$sysBr/255 (${String.format("%.0f%%", sysBr / 255f * 100)})")
+            card.keyValue("当前亮度", "$sysBr/255 (${String.format("%.0f%%", sysBr / 255f * 100)})")
             plainTextReport.append("  系统亮度: ").append(sysBr).append("/255\n")
         }
         val autoBr = HdrCapabilityHelper.isAutoBrightnessEnabled(this)
-        addKeyValue(card, "自动亮度", if (autoBr) "开启" else "关闭")
+        card.keyValue("自动亮度", if (autoBr) "开启" else "关闭")
         plainTextReport.append("  自动亮度: ").append(autoBr).append("\n\n")
 
-        container.addView(card)
+        return card
     }
 
     @SuppressLint("NewApi")
-    private fun buildDecoderCards() {
+    private fun buildDecoderCards(): List<DiagnosticCard> {
         plainTextReport.append("【视频解码器】\n")
 
-        val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
-        val codecInfos = codecList.codecInfos
-
+        val codecInfos = MediaCodecList(MediaCodecList.ALL_CODECS).codecInfos
         val hevc = mutableListOf<MediaCodecInfo>()
         val avc = mutableListOf<MediaCodecInfo>()
         val av1 = mutableListOf<MediaCodecInfo>()
+
         for (info in codecInfos) {
             if (info.isEncoder) continue
             for (type in info.supportedTypes) {
@@ -311,28 +334,31 @@ class CapabilityDiagnosticActivity : Activity() {
             }
         }
 
-        buildOneCodecCard("🎬", "HEVC (H.265)", hevc, "video/hevc")
-        buildOneCodecCard("🎞", "AVC (H.264)", avc, "video/avc")
-        buildOneCodecCard("🔮", "AV1", av1, "video/av01")
+        return listOf(
+                buildOneCodecCard("HEVC", "HEVC (H.265)", hevc, "video/hevc"),
+                buildOneCodecCard("AVC", "AVC (H.264)", avc, "video/avc"),
+                buildOneCodecCard("AV1", "AV1", av1, "video/av01")
+        )
     }
 
     @SuppressLint("NewApi")
-    private fun buildOneCodecCard(icon: String, codecName: String,
-                                  decoders: List<MediaCodecInfo>, mime: String) {
-        val card = createCard(icon, "$codecName  (${decoders.size})")
+    private fun buildOneCodecCard(
+            icon: String,
+            codecName: String,
+            decoders: List<MediaCodecInfo>,
+            mime: String
+    ): DiagnosticCard {
+        val card = DiagnosticCard(icon, "$codecName  (${decoders.size})")
         plainTextReport.append("\n  ").append(codecName).append(" (").append(decoders.size).append("):\n")
 
         if (decoders.isEmpty()) {
-            addBadge(card, "无可用解码器", COLOR_ERROR)
+            card.badge("无可用解码器", DiagnosticTone.Error)
             plainTextReport.append("    ❌ 无\n")
-            container.addView(card)
-            return
+            return card
         }
 
-        var first = true
-        for (info in decoders) {
-            if (!first) addDivider(card)
-            first = false
+        decoders.forEachIndexed { index, info ->
+            if (index > 0) card.divider()
 
             val isHw = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 info.isHardwareAccelerated
@@ -341,148 +367,90 @@ class CapabilityDiagnosticActivity : Activity() {
                 !n.contains("omx.google") && !n.contains("c2.android")
             }
 
-            // 名称 + 硬件/软件标签
-            val nameRow = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { topMargin = dp(4f) }
-            }
-
-            val nameView = TextView(this).apply {
-                text = info.name
-                setTextColor(COLOR_TEXT_PRIMARY)
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-                setTypeface(Typeface.MONOSPACE, Typeface.BOLD)
-                layoutParams = LinearLayout.LayoutParams(
-                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            }
-            nameRow.addView(nameView)
-
-            val hwTag = TextView(this).apply {
-                text = if (isHw) "硬件" else "软件"
-                setTextColor(if (isHw) COLOR_SUCCESS else COLOR_TEXT_SECONDARY)
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
-                setBackgroundResource(R.drawable.diag_tag_background)
-                setPadding(dp(8f), dp(2f), dp(8f), dp(2f))
-            }
-            nameRow.addView(hwTag)
-            card.addView(nameRow)
-
+            card.decoderName(info.name, isHw)
             plainTextReport.append("    ").append(info.name)
-                .append(if (isHw) " [硬件]" else " [软件]").append("\n")
+                    .append(if (isHw) " [硬件]" else " [软件]").append("\n")
 
             try {
                 val caps = info.getCapabilitiesForType(mime)
-
-                // Profile tags
                 var main10 = false
                 var hdr10 = false
                 var hdr10p = false
-                val tagFlow = createTagFlow()
+                val tags = mutableListOf<String>()
+
                 for (pl in caps.profileLevels) {
                     val pn = getProfileName(mime, pl.profile)
                     if (pn != null && isInterestingProfile(mime, pl.profile)) {
-                        addTagToFlow(tagFlow, pn)
+                        tags += pn
                         plainTextReport.append("      ").append(pn).append("\n")
                     }
                     if (mime == "video/hevc") {
                         if (pl.profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10) main10 = true
                         if (pl.profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10) hdr10 = true
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-                            pl.profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10Plus) hdr10p = true
+                                pl.profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10Plus) hdr10p = true
                     }
                 }
-                card.addView(tagFlow)
+                if (tags.isNotEmpty()) card.tags(tags)
 
-                // HDR grid for HEVC
                 if (mime == "video/hevc") {
-                    val hdrRow = LinearLayout(this).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        layoutParams = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT,
-                            LinearLayout.LayoutParams.WRAP_CONTENT
-                        ).apply { topMargin = dp(6f) }
-                    }
-
-                    addMiniStatus(hdrRow, "10bit", main10)
-                    addMiniStatus(hdrRow, "HDR10", hdr10)
-                    addMiniStatus(hdrRow, "HDR10+", hdr10p)
-                    addMiniStatus(hdrRow, "HLG", main10)
-                    card.addView(hdrRow)
-
+                    card.miniStatus(
+                            listOf(
+                                    MiniStatus("10bit", main10),
+                                    MiniStatus("HDR10", hdr10),
+                                    MiniStatus("HDR10+", hdr10p),
+                                    MiniStatus("HLG", main10)
+                            )
+                    )
                     plainTextReport.append("      10bit=").append(if (main10) "✅" else "❌")
-                        .append(" HDR10=").append(if (hdr10) "✅" else "❌")
-                        .append(" HDR10+=").append(if (hdr10p) "✅" else "❌")
-                        .append(" HLG=").append(if (main10) "✅" else "❌").append("\n")
+                            .append(" HDR10=").append(if (hdr10) "✅" else "❌")
+                            .append(" HDR10+=").append(if (hdr10p) "✅" else "❌")
+                            .append(" HLG=").append(if (main10) "✅" else "❌").append("\n")
                 }
 
-                // Capabilities row: 4K, P010, resolution
                 var p010 = false
-                for (cf in caps.colorFormats) { if (cf == 54) p010 = true }
+                for (cf in caps.colorFormats) {
+                    if (cf == 54) p010 = true
+                }
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     val vc = caps.videoCapabilities
                     if (vc != null) {
                         val mw = vc.supportedWidths.upper
                         val mh = vc.supportedHeights.upper
-                        val is4k = try { vc.isSizeSupported(3840, 2160) } catch (_: Exception) { false }
-
-                        val capRow = LinearLayout(this).apply {
-                            orientation = LinearLayout.HORIZONTAL
-                            gravity = Gravity.CENTER_VERTICAL
-                            layoutParams = LinearLayout.LayoutParams(
-                                LinearLayout.LayoutParams.MATCH_PARENT,
-                                LinearLayout.LayoutParams.WRAP_CONTENT
-                            ).apply { topMargin = dp(6f) }
+                        val is4k = try {
+                            vc.isSizeSupported(3840, 2160)
+                        } catch (_: Exception) {
+                            false
                         }
 
-                        addMiniStatus(capRow, "4K", is4k)
+                        val items = mutableListOf(MiniStatus("4K", is4k))
                         if (mime == "video/hevc" || mime == "video/av01") {
-                            addMiniStatus(capRow, "P010", p010)
+                            items += MiniStatus("P010", p010)
                         }
-
-                        val resTag = TextView(this).apply {
-                            text = "Max ${mw}×${mh}"
-                            setTextColor(COLOR_TEXT_MUTED)
-                            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
-                            setPadding(dp(8f), 0, 0, 0)
-                        }
-                        capRow.addView(resTag)
-                        card.addView(capRow)
+                        card.miniStatus(items, "Max ${mw}×${mh}")
 
                         plainTextReport.append("      4K=").append(if (is4k) "✅" else "❌")
-                            .append(" P010=").append(if (p010) "✅" else "❌")
-                            .append(" Max=").append(mw).append("×").append(mh).append("\n")
+                                .append(" P010=").append(if (p010) "✅" else "❌")
+                                .append(" Max=").append(mw).append("×").append(mh).append("\n")
                     }
                 }
 
-                // COLOR_TRANSFER_REQUEST check
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-                    && mime == "video/hevc" && isHw && main10) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                        mime == "video/hevc" && isHw && main10) {
                     buildTransferRequestCheck(card, info, mime)
                 }
-
             } catch (e: Exception) {
-                addBadge(card, "能力查询失败", COLOR_ERROR)
+                card.badge("能力查询失败", DiagnosticTone.Error)
                 plainTextReport.append("      失败: ").append(e.message).append("\n")
             }
         }
-        container.addView(card)
+
+        return card
     }
 
     @SuppressLint("NewApi")
-    private fun buildTransferRequestCheck(card: LinearLayout, info: MediaCodecInfo, mime: String) {
-        val row = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = dp(6f) }
-        }
-
+    private fun buildTransferRequestCheck(card: DiagnosticCard, info: MediaCodecInfo, mime: String) {
         try {
             val codec = android.media.MediaCodec.createByCodecName(info.name)
             try {
@@ -493,8 +461,9 @@ class CapabilityDiagnosticActivity : Activity() {
                 }
                 codec.configure(f1, null, null, 0)
                 val hlgOk = codec.inputFormat
-                    .getInteger("color-transfer-request", 0) == MediaFormat.COLOR_TRANSFER_HLG
-                codec.stop(); codec.reset()
+                        .getInteger("color-transfer-request", 0) == MediaFormat.COLOR_TRANSFER_HLG
+                codec.stop()
+                codec.reset()
 
                 val f2 = MediaFormat.createVideoFormat(mime, 1920, 1080).apply {
                     setInteger(MediaFormat.KEY_COLOR_TRANSFER, MediaFormat.COLOR_TRANSFER_ST2084)
@@ -503,350 +472,20 @@ class CapabilityDiagnosticActivity : Activity() {
                 }
                 codec.configure(f2, null, null, 0)
                 val pqOk = codec.inputFormat
-                    .getInteger("color-transfer-request", 0) == MediaFormat.COLOR_TRANSFER_ST2084
+                        .getInteger("color-transfer-request", 0) == MediaFormat.COLOR_TRANSFER_ST2084
                 codec.stop()
 
-                addMiniStatus(row, "HLG透传", hlgOk)
-                addMiniStatus(row, "PQ透传", pqOk)
+                card.miniStatus(listOf(MiniStatus("HLG透传", hlgOk), MiniStatus("PQ透传", pqOk)))
                 plainTextReport.append("      HLG透传=").append(if (hlgOk) "✅" else "❌")
-                    .append(" PQ透传=").append(if (pqOk) "✅" else "❌").append("\n")
+                        .append(" PQ透传=").append(if (pqOk) "✅" else "❌").append("\n")
             } finally {
                 codec.release()
             }
         } catch (_: Exception) {
-            addBadge(card, "传递函数检测失败", COLOR_WARNING)
+            card.badge("传递函数检测失败", DiagnosticTone.Warning)
             plainTextReport.append("      传递函数检测失败\n")
         }
-        card.addView(row)
     }
-
-    // ========================== UI 工具方法 ==========================
-
-    private fun createCard(icon: String, title: String): LinearLayout {
-        val card = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundResource(R.drawable.diag_card_background)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = dp(12f) }
-            setPadding(dp(16f), dp(14f), dp(16f), dp(14f))
-        }
-
-        val titleRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = dp(10f) }
-        }
-
-        val iconView = TextView(this).apply {
-            text = icon
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
-            setPadding(0, 0, dp(10f), 0)
-        }
-        titleRow.addView(iconView)
-
-        val titleView = TextView(this).apply {
-            text = title
-            setTextColor(COLOR_TEXT_PRIMARY)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            setTypeface(null, Typeface.BOLD)
-        }
-        titleRow.addView(titleView)
-
-        card.addView(titleRow)
-        return card
-    }
-
-    private fun addKeyValue(parent: LinearLayout, key: String, value: String) {
-        val row = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = dp(3f) }
-        }
-
-        val k = TextView(this).apply {
-            text = key
-            setTextColor(COLOR_TEXT_SECONDARY)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            layoutParams = LinearLayout.LayoutParams(
-                dp(110f), LinearLayout.LayoutParams.WRAP_CONTENT)
-        }
-        row.addView(k)
-
-        val v = TextView(this).apply {
-            text = value
-            setTextColor(COLOR_TEXT_PRIMARY)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            layoutParams = LinearLayout.LayoutParams(
-                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        row.addView(v)
-
-        parent.addView(row)
-    }
-
-    private fun addDivider(parent: LinearLayout) {
-        val d = View(this).apply {
-            setBackgroundColor(COLOR_DIVIDER)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(1f)
-            ).apply {
-                topMargin = dp(10f)
-                bottomMargin = dp(10f)
-            }
-        }
-        parent.addView(d)
-    }
-
-    private fun addSectionLabel(parent: LinearLayout, text: String) {
-        val l = TextView(this).apply {
-            this.text = text
-            setTextColor(COLOR_ACCENT)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTypeface(null, Typeface.BOLD)
-            isAllCaps = true
-            letterSpacing = 0.08f
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = dp(6f) }
-        }
-        parent.addView(l)
-    }
-
-    private fun addStatusRow(parent: LinearLayout, label: String, ok: Boolean, note: String?) {
-        val row = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = dp(3f) }
-        }
-
-        val dot = TextView(this).apply {
-            text = if (ok) "●" else "○"
-            setTextColor(if (ok) COLOR_SUCCESS else COLOR_TEXT_MUTED)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
-            setPadding(0, 0, dp(8f), 0)
-        }
-        row.addView(dot)
-
-        val lbl = TextView(this).apply {
-            text = if (note != null) "$label  $note" else label
-            setTextColor(if (ok) COLOR_TEXT_PRIMARY else COLOR_TEXT_SECONDARY)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-        }
-        row.addView(lbl)
-
-        parent.addView(row)
-    }
-
-    private fun addHdrTypeBadge(parent: LinearLayout, name: String, ok: Boolean) {
-        val row = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = dp(3f) }
-        }
-
-        val iconTv = TextView(this).apply {
-            text = if (ok) "✓" else "✗"
-            setTextColor(if (ok) COLOR_SUCCESS else COLOR_TEXT_MUTED)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            setTypeface(null, Typeface.BOLD)
-            setPadding(dp(4f), 0, dp(10f), 0)
-        }
-        row.addView(iconTv)
-
-        val n = TextView(this).apply {
-            text = name
-            setTextColor(if (ok) COLOR_TEXT_PRIMARY else COLOR_TEXT_MUTED)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-        }
-        row.addView(n)
-
-        parent.addView(row)
-    }
-
-    private fun addCompatRow(parent: LinearLayout, feature: String, ok: Boolean,
-                             okMsg: String, failMsg: String) {
-        val row = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = dp(3f) }
-        }
-
-        val feat = TextView(this).apply {
-            text = feature
-            setTextColor(COLOR_TEXT_SECONDARY)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            layoutParams = LinearLayout.LayoutParams(
-                dp(100f), LinearLayout.LayoutParams.WRAP_CONTENT)
-        }
-        row.addView(feat)
-
-        val st = TextView(this).apply {
-            text = if (ok) "✓ $okMsg" else "⚠ $failMsg"
-            setTextColor(if (ok) COLOR_SUCCESS else COLOR_WARNING)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-        }
-        row.addView(st)
-
-        parent.addView(row)
-        plainTextReport.append("  ").append(feature).append(": ")
-            .append(if (ok) "✅ $okMsg" else "⚠️ $failMsg").append("\n")
-    }
-
-    private fun addBadge(parent: LinearLayout, msg: String, color: Int) {
-        val b = TextView(this).apply {
-            text = msg
-            setTextColor(color)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            val bg = when (color) {
-                COLOR_SUCCESS -> R.drawable.diag_badge_success
-                COLOR_WARNING -> R.drawable.diag_badge_warning
-                COLOR_ERROR -> R.drawable.diag_badge_error
-                else -> R.drawable.diag_badge_info
-            }
-            setBackgroundResource(bg)
-            setPadding(dp(10f), dp(6f), dp(10f), dp(6f))
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = dp(4f)
-                bottomMargin = dp(4f)
-            }
-        }
-        parent.addView(b)
-    }
-
-    private fun createTagFlow(): ViewGroup {
-        val flow = FlowLayout(this, dp(6f), dp(6f))
-        flow.layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply { topMargin = dp(4f) }
-        return flow
-    }
-
-    private fun addTagToFlow(flow: ViewGroup, text: String) {
-        val tag = TextView(this).apply {
-            this.text = text
-            setTextColor(COLOR_TEXT_SECONDARY)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
-            setBackgroundResource(R.drawable.diag_tag_background)
-            setPadding(dp(8f), dp(3f), dp(8f), dp(3f))
-        }
-        flow.addView(tag)
-    }
-
-    /**
-     * 自动换行的流式布局
-     */
-    private class FlowLayout(context: Context, private val hGap: Int, private val vGap: Int) : ViewGroup(context) {
-
-        override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-            val widthSize = MeasureSpec.getSize(widthMeasureSpec)
-            val widthMode = MeasureSpec.getMode(widthMeasureSpec)
-            val maxWidth = if (widthMode == MeasureSpec.UNSPECIFIED) Int.MAX_VALUE else widthSize
-
-            var x = paddingLeft
-            var y = paddingTop
-            var rowHeight = 0
-
-            for (i in 0 until childCount) {
-                val child = getChildAt(i)
-                if (child.visibility == GONE) continue
-                child.measure(
-                    MeasureSpec.makeMeasureSpec(maxWidth - paddingLeft - paddingRight, MeasureSpec.AT_MOST),
-                    MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
-                val cw = child.measuredWidth
-                val ch = child.measuredHeight
-
-                if (x + cw + paddingRight > maxWidth && x > paddingLeft) {
-                    x = paddingLeft
-                    y += rowHeight + vGap
-                    rowHeight = 0
-                }
-                x += cw + hGap
-                rowHeight = maxOf(rowHeight, ch)
-            }
-
-            val totalHeight = y + rowHeight + paddingBottom
-            setMeasuredDimension(
-                if (widthMode == MeasureSpec.EXACTLY) widthSize else maxWidth,
-                resolveSize(totalHeight, heightMeasureSpec))
-        }
-
-        override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-            val maxWidth = r - l
-            var x = paddingLeft
-            var y = paddingTop
-            var rowHeight = 0
-
-            for (i in 0 until childCount) {
-                val child = getChildAt(i)
-                if (child.visibility == GONE) continue
-                val cw = child.measuredWidth
-                val ch = child.measuredHeight
-
-                if (x + cw + paddingRight > maxWidth && x > paddingLeft) {
-                    x = paddingLeft
-                    y += rowHeight + vGap
-                    rowHeight = 0
-                }
-                child.layout(x, y, x + cw, y + ch)
-                x += cw + hGap
-                rowHeight = maxOf(rowHeight, ch)
-            }
-        }
-    }
-
-    private fun addMiniStatus(parent: LinearLayout, label: String, ok: Boolean) {
-        val item = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, 0, dp(12f), 0)
-        }
-
-        val dot = TextView(this).apply {
-            text = if (ok) "●" else "○"
-            setTextColor(if (ok) COLOR_SUCCESS else 0x44FFFFFF)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 8f)
-            setPadding(0, 0, dp(4f), 0)
-        }
-        item.addView(dot)
-
-        val txt = TextView(this).apply {
-            text = label
-            setTextColor(if (ok) COLOR_TEXT_PRIMARY else COLOR_TEXT_MUTED)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
-        }
-        item.addView(txt)
-
-        parent.addView(item)
-    }
-
-    private fun dp(dp: Float): Int {
-        return TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP, dp, resources.displayMetrics).toInt()
-    }
-
-    // ========================== Profile 工具 ==========================
 
     private fun getProfileName(mime: String, profile: Int): String? {
         if (mime == "video/hevc") {
@@ -857,9 +496,11 @@ class CapabilityDiagnosticActivity : Activity() {
                 MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10 -> "HDR10"
                 else -> {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-                        profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10Plus)
+                            profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10Plus) {
                         "HDR10+"
-                    else null
+                    } else {
+                        null
+                    }
                 }
             }
         } else if (mime == "video/avc") {
@@ -883,29 +524,429 @@ class CapabilityDiagnosticActivity : Activity() {
 
     private fun isInterestingProfile(mime: String, profile: Int): Boolean {
         if (mime == "video/hevc") {
-            return profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain
-                    || profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10
-                    || profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10
-                    || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-                    profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10Plus)
+            return profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain ||
+                    profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10 ||
+                    profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10 ||
+                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                            profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10Plus)
         } else if (mime == "video/avc") {
-            return profile == MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline
-                    || profile == MediaCodecInfo.CodecProfileLevel.AVCProfileMain
-                    || profile == MediaCodecInfo.CodecProfileLevel.AVCProfileHigh
-                    || profile == MediaCodecInfo.CodecProfileLevel.AVCProfileHigh10
+            return profile == MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline ||
+                    profile == MediaCodecInfo.CodecProfileLevel.AVCProfileMain ||
+                    profile == MediaCodecInfo.CodecProfileLevel.AVCProfileHigh ||
+                    profile == MediaCodecInfo.CodecProfileLevel.AVCProfileHigh10
         }
         return true
     }
 
-    companion object {
-        private const val COLOR_TEXT_PRIMARY = 0xFFEEEEEE.toInt()
-        private const val COLOR_TEXT_SECONDARY = 0xAAFFFFFF.toInt()
-        private const val COLOR_TEXT_MUTED = 0x66FFFFFF
-        private const val COLOR_ACCENT = 0xFFFF6B9D.toInt()
-        private const val COLOR_SUCCESS = 0xFF4CAF50.toInt()
-        private const val COLOR_WARNING = 0xFFFF9800.toInt()
-        private const val COLOR_ERROR = 0xFFE53935.toInt()
-        private const val COLOR_INFO = 0xFF42A5F5.toInt()
-        private const val COLOR_DIVIDER = 0x1AFFFFFF
+    @Composable
+    private fun CapabilityDiagnosticScreen(
+            cards: List<DiagnosticCard>,
+            onBack: () -> Unit,
+            onCopy: () -> Unit
+    ) {
+        val background = Color(0xFF16162A)
+        val panel = Color(0xE6101020)
+        val primary = Color(0xFFEEEEEE)
+        val secondary = Color(0xAAFFFFFF)
+        val accent = colorResource(R.color.crown_accent)
+
+        MaterialTheme(
+                colorScheme = darkColorScheme(
+                        primary = accent,
+                        surface = Color(0xFF202033),
+                        onSurface = primary,
+                        onSurfaceVariant = secondary
+                )
+        ) {
+            Box(
+                    modifier = Modifier
+                            .fillMaxSize()
+                            .background(background)
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    DiagnosticTopBar(
+                            panel = panel,
+                            primary = primary,
+                            secondary = secondary,
+                            accent = accent,
+                            onBack = onBack,
+                            onCopy = onCopy
+                    )
+
+                    LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                    start = 16.dp,
+                                    end = 16.dp,
+                                    top = 12.dp,
+                                    bottom = 80.dp
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(cards) { card ->
+                            DiagnosticCardView(card)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun DiagnosticTopBar(
+            panel: Color,
+            primary: Color,
+            secondary: Color,
+            accent: Color,
+            onBack: () -> Unit,
+            onCopy: () -> Unit
+    ) {
+        Surface(
+                color = panel,
+                tonalElevation = 0.dp,
+                shadowElevation = 6.dp
+        ) {
+            Box(
+                    modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .heightIn(min = 60.dp)
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                IconButton(
+                        onClick = onBack,
+                        modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .size(40.dp)
+                ) {
+                    Icon(
+                            painter = painterResource(R.drawable.ic_arrow_right),
+                            contentDescription = "Back",
+                            tint = primary,
+                            modifier = Modifier
+                                    .size(20.dp)
+                                    .rotate(180f)
+                    )
+                }
+
+                Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                            text = stringResource(R.string.layout_capability_diagnostic_text_a5e80),
+                            color = primary,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                            text = stringResource(R.string.layout_capability_diagnostic_text_41b60),
+                            color = secondary,
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(top = 1.dp)
+                    )
+                }
+
+                TextButton(
+                        onClick = onCopy,
+                        colors = ButtonDefaults.textButtonColors(
+                                containerColor = accent.copy(alpha = 0.18f),
+                                contentColor = primary
+                        ),
+                        shape = RoundedCornerShape(999.dp),
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                ) {
+                    Text(
+                            text = stringResource(R.string.layout_capability_diagnostic_text_79d3a),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun DiagnosticCardView(card: DiagnosticCard) {
+        Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF242436)),
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                ) {
+                    Text(
+                            text = card.icon,
+                            color = colorResource(R.color.crown_accent),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(colorResource(R.color.crown_accent).copy(alpha = 0.18f))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                            text = card.title,
+                            color = Color(0xFFEEEEEE),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                    )
+                }
+
+                card.rows.forEach { row ->
+                    DiagnosticRowView(row)
+                }
+            }
+        }
+    }
+
+    @OptIn(ExperimentalLayoutApi::class)
+    @Composable
+    private fun DiagnosticRowView(row: DiagnosticRow) {
+        when (row) {
+            is DiagnosticRow.KeyValue -> {
+                Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top
+                ) {
+                    Text(
+                            text = row.key,
+                            color = Color(0xAAFFFFFF),
+                            fontSize = 13.sp,
+                            modifier = Modifier.width(110.dp)
+                    )
+                    Text(
+                            text = row.value,
+                            color = Color(0xFFEEEEEE),
+                            fontSize = 13.sp,
+                            modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            is DiagnosticRow.Badge -> {
+                Text(
+                        text = row.message,
+                        color = row.tone.foreground,
+                        fontSize = 12.sp,
+                        modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(row.tone.background)
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                )
+            }
+
+            DiagnosticRow.Divider -> {
+                Box(
+                        modifier = Modifier
+                                .fillMaxWidth()
+                                .height(1.dp)
+                                .background(Color(0x1AFFFFFF))
+                )
+            }
+
+            is DiagnosticRow.Section -> {
+                Text(
+                        text = row.title,
+                        color = colorResource(R.color.crown_accent),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+
+            is DiagnosticRow.Status -> {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StatusDot(row.ok)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                            text = if (row.note != null) "${row.label}  ${row.note}" else row.label,
+                            color = if (row.ok) Color(0xFFEEEEEE) else Color(0xAAFFFFFF),
+                            fontSize = 13.sp
+                    )
+                }
+            }
+
+            is DiagnosticRow.Compat -> {
+                Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top
+                ) {
+                    Text(
+                            text = row.feature,
+                            color = Color(0xAAFFFFFF),
+                            fontSize = 12.sp,
+                            modifier = Modifier.width(100.dp)
+                    )
+                    Text(
+                            text = if (row.ok) "✓ ${row.okMessage}" else "⚠ ${row.failMessage}",
+                            color = if (row.ok) DiagnosticTone.Success.foreground else DiagnosticTone.Warning.foreground,
+                            fontSize = 12.sp
+                    )
+                }
+            }
+
+            is DiagnosticRow.Tags -> {
+                FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    row.tags.forEach { tag ->
+                        Text(
+                                text = tag,
+                                color = Color(0xAAFFFFFF),
+                                fontSize = 10.sp,
+                                modifier = Modifier
+                                        .clip(RoundedCornerShape(999.dp))
+                                        .background(Color(0x14FFFFFF))
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                }
+            }
+
+            is DiagnosticRow.DecoderName -> {
+                Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                            text = row.name,
+                            color = Color(0xFFEEEEEE),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                            text = if (row.hardware) "硬件" else "软件",
+                            color = if (row.hardware) DiagnosticTone.Success.foreground else Color(0xAAFFFFFF),
+                            fontSize = 11.sp,
+                            modifier = Modifier
+                                    .clip(RoundedCornerShape(999.dp))
+                                    .background(Color(0x14FFFFFF))
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            is DiagnosticRow.MiniStatusList -> {
+                Row(
+                        modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    row.items.forEach { item ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            StatusDot(item.ok, small = true)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                    text = item.label,
+                                    color = if (item.ok) Color(0xFFEEEEEE) else Color(0x66FFFFFF),
+                                    fontSize = 11.sp
+                            )
+                        }
+                    }
+                    row.trailingText?.let {
+                        Text(text = it, color = Color(0x66FFFFFF), fontSize = 10.sp)
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun StatusDot(ok: Boolean, small: Boolean = false) {
+        Box(
+                modifier = Modifier
+                        .size(if (small) 7.dp else 9.dp)
+                        .clip(CircleShape)
+                        .background(if (ok) DiagnosticTone.Success.foreground else Color(0x44FFFFFF))
+        )
+    }
+
+    private data class DiagnosticCard(
+            val icon: String,
+            val title: String,
+            val rows: MutableList<DiagnosticRow> = mutableListOf()
+    ) {
+        fun keyValue(key: String, value: String) {
+            rows += DiagnosticRow.KeyValue(key, value)
+        }
+
+        fun badge(message: String, tone: DiagnosticTone) {
+            rows += DiagnosticRow.Badge(message, tone)
+        }
+
+        fun divider() {
+            rows += DiagnosticRow.Divider
+        }
+
+        fun section(title: String) {
+            rows += DiagnosticRow.Section(title)
+        }
+
+        fun status(label: String, ok: Boolean, note: String? = null) {
+            rows += DiagnosticRow.Status(label, ok, note)
+        }
+
+        fun compat(feature: String, ok: Boolean, okMessage: String, failMessage: String) {
+            rows += DiagnosticRow.Compat(feature, ok, okMessage, failMessage)
+        }
+
+        fun tags(tags: List<String>) {
+            rows += DiagnosticRow.Tags(tags)
+        }
+
+        fun decoderName(name: String, hardware: Boolean) {
+            rows += DiagnosticRow.DecoderName(name, hardware)
+        }
+
+        fun miniStatus(items: List<MiniStatus>, trailingText: String? = null) {
+            rows += DiagnosticRow.MiniStatusList(items, trailingText)
+        }
+    }
+
+    private sealed class DiagnosticRow {
+        data class KeyValue(val key: String, val value: String) : DiagnosticRow()
+        data class Badge(val message: String, val tone: DiagnosticTone) : DiagnosticRow()
+        data object Divider : DiagnosticRow()
+        data class Section(val title: String) : DiagnosticRow()
+        data class Status(val label: String, val ok: Boolean, val note: String? = null) : DiagnosticRow()
+        data class Compat(
+                val feature: String,
+                val ok: Boolean,
+                val okMessage: String,
+                val failMessage: String
+        ) : DiagnosticRow()
+        data class Tags(val tags: List<String>) : DiagnosticRow()
+        data class DecoderName(val name: String, val hardware: Boolean) : DiagnosticRow()
+        data class MiniStatusList(val items: List<MiniStatus>, val trailingText: String? = null) : DiagnosticRow()
+    }
+
+    private data class MiniStatus(val label: String, val ok: Boolean)
+
+    private enum class DiagnosticTone(
+            val foreground: Color,
+            val background: Color
+    ) {
+        Success(Color(0xFF4CAF50), Color(0x1A4CAF50)),
+        Warning(Color(0xFFFF9800), Color(0x1AFF9800)),
+        Error(Color(0xFFE53935), Color(0x1AE53935)),
+        Info(Color(0xFF42A5F5), Color(0x1A42A5F5)),
+        Muted(Color(0x66FFFFFF), Color(0x10FFFFFF))
     }
 }
