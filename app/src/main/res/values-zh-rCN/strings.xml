@@ -1016,6 +1016,9 @@
     <string name="layout_page_config_text_9eba2">当前档案</string>
     <string name="layout_page_config_text_83a23">触控输入</string>
     <string name="layout_page_config_text_f4b7c">触控板</string>
+    <string name="layout_page_device_text_mmo">仅鼠标移动</string>
+    <string name="layout_page_device_text_mmo_true_text">仅鼠标移动</string>
+    <string name="layout_page_device_text_mmo_false_text">鼠标移动+点击</string>
     <string name="layout_page_config_text_8ea81">多点触控</string>
     <string name="layout_page_config_text_cd2c1">游戏反馈</string>
     <string name="layout_page_config_text_f4651">按键反馈</string>

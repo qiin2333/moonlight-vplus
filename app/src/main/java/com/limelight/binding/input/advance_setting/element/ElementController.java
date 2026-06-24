@@ -80,6 +80,7 @@ public class ElementController {
     private static final String SPECIAL_KEY_PAN_ZOOM_MODE = "PZM";
     private static final String SPECIAL_KEY_OPEN_GAME_MENU = "OGM";
     private static final String SPECIAL_KEY_EDIT_MODE_SWITCH = "EMS"; // 编辑模式
+    private static final String SPECIAL_KEY_MOUSE_MOVE_ONLY = "MMO"; // 仅鼠标移动
 
 
 
@@ -1591,6 +1592,26 @@ public class ElementController {
                             showToast("开启触控");
                         } else {
                             showToast("关闭触控");
+                        }
+                    }
+                }
+
+                @Override
+                public void sendEvent(int analog1, int analog2) {
+
+                }
+            };
+        }
+        else if (key.equals(SPECIAL_KEY_MOUSE_MOVE_ONLY)) {
+            return new SendEventHandler() {
+                @Override
+                public void sendEvent(boolean down) {
+                    if (down) {
+                        game.toggleMouseMoveOnly();
+                        if (game.isMouseMoveOnlyEnabled()) {
+                            showToast(context.getString(R.string.layout_page_device_text_mmo_true_text));
+                        } else {
+                            showToast(context.getString(R.string.layout_page_device_text_mmo_false_text));
                         }
                     }
                 }

@@ -1251,6 +1251,9 @@ Tap again to replace it.</string>
     <string name="layout_item_key_value_text_0952a">Section 1</string>
     <string name="layout_item_key_value_hint_dd44f">Section name, defaults to key name if empty</string>
     <string name="layout_item_page_super_menu_text_ce0e8">Edit Mode</string>
+    <string name="layout_page_device_text_mmo">M Move</string>
+    <string name="layout_page_device_text_mmo_true_text">Mouse movement only</string>
+    <string name="layout_page_device_text_mmo_false_text">Mouse movement + click</string>
     <string name="layout_keyboard_mini_text_3ae7b">Back to Keyboard</string>
     <string name="layout_number_seekbar_text_e12e7">Mouse Passthrough Sensitivity</string>
     <string name="layout_page_analog_stick_text_dedb8">Type: Analog Stick</string>

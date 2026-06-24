@@ -232,6 +232,14 @@ class Game : Activity(), SurfaceHolder.Callback,
         this.isTouchOverrideEnabled = isTouchOverrideEnabled
     }
 
+    // 仅鼠标移动模式：禁用所有屏幕触摸产生的鼠标点击事件，只保留鼠标移动
+    var isMouseMoveOnlyEnabled = false
+        private set
+
+    fun toggleMouseMoveOnly() {
+        isMouseMoveOnlyEnabled = !isMouseMoveOnlyEnabled
+    }
+
     var usbDriverServiceManager: UsbDriverServiceManager? = null
     var externalDisplayManager: ExternalDisplayManager? = null
 

@@ -205,18 +205,53 @@ class GameMenu(
             },
             null, false
         ))
-        touchModeOptionsList.add(MenuOption(
-            getString(R.string.game_menu_touch_mode_trackpad) + " - " +
-                    if (game.prefConfig.enableDoubleClickDrag) getString(R.string.game_menu_disable_double_click_drag) else getString(R.string.game_menu_enable_double_click_drag),
-            false,
-            {
-                game.prefConfig.enableDoubleClickDrag = !game.prefConfig.enableDoubleClickDrag
-                Toast.makeText(game,
-                    if (game.prefConfig.enableDoubleClickDrag) getString(R.string.toast_double_click_drag_enabled) else getString(R.string.toast_double_click_drag_disabled),
-                    Toast.LENGTH_SHORT).show()
-            },
-            null, false
-        ))
+
+        //触控板双击功能
+        if (isTouchscreenTrackpad) {
+            touchModeOptionsList.add(
+                MenuOption(
+                    getString(R.string.game_menu_touch_mode_trackpad) + " - " +
+                            if (game.prefConfig.enableDoubleClickDrag) getString(R.string.game_menu_disable_double_click_drag) else getString(
+                                R.string.game_menu_enable_double_click_drag
+                            ),
+                    false,
+                    {
+                        game.prefConfig.enableDoubleClickDrag =
+                            !game.prefConfig.enableDoubleClickDrag
+                        Toast.makeText(
+                            game,
+                            if (game.prefConfig.enableDoubleClickDrag) getString(R.string.toast_double_click_drag_enabled) else getString(
+                                R.string.toast_double_click_drag_disabled
+                            ),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    },
+                    null, false
+                )
+            )
+        }
+
+        //触控板仅移动
+        if (isTouchscreenTrackpad) {
+            touchModeOptionsList.add(
+                MenuOption(
+                    getString(R.string.game_menu_touch_mode_trackpad) + " - " +
+                            getString(R.string.layout_page_device_text_mmo) + " - " + game.isMouseMoveOnlyEnabled,
+                    false,
+                    {
+                        game.toggleMouseMoveOnly()
+                        Toast.makeText(
+                            game,
+                            if (game.isMouseMoveOnlyEnabled) getString(R.string.layout_page_device_text_mmo_true_text) else getString(
+                                R.string.layout_page_device_text_mmo_false_text
+                            ),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    },
+                    null, false
+                )
+            )
+        }
 
         // 本地光标渲染选项（仅在触屏触控板模式下显示）
         if (isTouchscreenTrackpad) {
