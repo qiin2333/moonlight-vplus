@@ -670,10 +670,13 @@ public class WheelPad extends Element {
                         for (ElementController.SendEventHandler handler : handlers) {
                             handler.sendEvent(true);
                         }
-                        // 释放
-                        for (int i = handlers.size() - 1; i >= 0; i--) {
-                            handlers.get(i).sendEvent(false);
-                        }
+
+                        // 加入 30 毫秒延迟后再发送释放事件，防止按键时间过短被游戏忽略
+                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                            for (int i = handlers.size() - 1; i >= 0; i--) {
+                                handlers.get(i).sendEvent(false);
+                            }
+                        }, 30); // 30 毫秒的持续时间
                     }
                     isWheelActive = false;
                     activeIndex = -1;
