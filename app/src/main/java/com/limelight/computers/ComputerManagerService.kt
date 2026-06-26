@@ -63,6 +63,11 @@ import android.os.SystemClock
 import org.xmlpull.v1.XmlPullParserException
 
 class ComputerManagerService : Service() {
+    enum class PairStateVerificationResult {
+        VERIFIED_PAIRED,
+        NOT_PAIRED,
+        UNKNOWN
+    }
 
     private val binder = ComputerManagerBinder()
 
@@ -283,6 +288,14 @@ class ComputerManagerService : Service() {
 
         fun updateComputer(computer: ComputerDetails) {
             this@ComputerManagerService.updateComputer(computer)
+        }
+
+        fun markComputerNotPaired(computer: ComputerDetails, source: String) {
+            this@ComputerManagerService.markComputerNotPaired(computer, source)
+        }
+
+        fun verifyCurrentPairState(computer: ComputerDetails, source: String): PairStateVerificationResult {
+            return this@ComputerManagerService.verifyCurrentPairState(computer, source)
         }
 
         fun stopPolling() {
@@ -556,6 +569,140 @@ class ComputerManagerService : Service() {
         releaseLocalDatabaseReference()
     }
 
+    private fun markComputerNotPaired(computer: ComputerDetails, source: String) {
+        val uuid = computer.uuid
+        LimeLog.warning("$source reported not paired for ${computer.name ?: uuid}; marking host not paired")
+
+        var canonicalComputer = computer
+        var canonicalTuple: PollingTuple? = null
+        synchronized(pollingTuples) {
+            if (uuid != null) {
+                for (tuple in pollingTuples) {
+                    if (tuple.computer.uuid == uuid) {
+                        canonicalComputer = tuple.computer
+                        canonicalTuple = tuple
+                        break
+                    }
+                }
+            }
+        }
+
+        val keysToClear = (getPollKeys(computer) + getPollKeys(canonicalComputer)).distinct()
+        val tuple = canonicalTuple
+        if (tuple != null) {
+            synchronized(tuple.networkLock) {
+                tuple.pairStateEpoch++
+                applyNotPairedState(computer)
+                if (canonicalComputer !== computer) {
+                    applyNotPairedState(canonicalComputer)
+                }
+            }
+        } else {
+            applyNotPairedState(computer)
+        }
+
+        for (key in keysToClear) {
+            recentPollResults.remove(key)
+            activePollFlights.remove(key)
+        }
+        uuid?.let {
+            CacheHelper.deleteCacheFile(cacheDir, "applist", it)
+            sendAppListWidgetRefresh(it)
+        }
+
+        if (getLocalDatabaseReference()) {
+            try {
+                dbManager.updateComputer(canonicalComputer)
+            } finally {
+                releaseLocalDatabaseReference()
+            }
+        }
+
+        emitComputerUpdate(canonicalComputer)
+    }
+
+    private fun verifyCurrentPairState(computer: ComputerDetails, source: String): PairStateVerificationResult {
+        return try {
+            val httpConn = NvHTTP(
+                ServerHelper.getCurrentAddressFromComputer(computer),
+                computer.httpsPort,
+                idManager.uniqueId,
+                "",
+                computer.serverCert,
+                PlatformBinding.getCryptoProvider(this)
+            )
+            val polled = httpConn.getComputerDetails(true)
+            when {
+                polled.pairState == PairingManager.PairState.PAIRED && polled.serverInfoTrustedByCert -> {
+                    markComputerVerifiedPaired(computer, polled)
+                    PairStateVerificationResult.VERIFIED_PAIRED
+                }
+                polled.pairState == PairingManager.PairState.NOT_PAIRED -> {
+                    markComputerNotPaired(computer, source)
+                    PairStateVerificationResult.NOT_PAIRED
+                }
+                else -> {
+                    LimeLog.warning("$source pair-state verification was not trusted for ${computer.name}")
+                    PairStateVerificationResult.UNKNOWN
+                }
+            }
+        } catch (e: HostHttpResponseException) {
+            if (e.getErrorCode() == 401) {
+                markComputerNotPaired(computer, source)
+                PairStateVerificationResult.NOT_PAIRED
+            } else {
+                LimeLog.warning("$source pair-state verification failed for ${computer.name}: ${e.message}")
+                PairStateVerificationResult.UNKNOWN
+            }
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            LimeLog.warning("$source pair-state verification interrupted for ${computer.name}")
+            PairStateVerificationResult.UNKNOWN
+        } catch (e: Exception) {
+            LimeLog.warning("$source pair-state verification skipped for ${computer.name}: ${e.message}")
+            PairStateVerificationResult.UNKNOWN
+        }
+    }
+
+    private fun markComputerVerifiedPaired(computer: ComputerDetails, verified: ComputerDetails) {
+        verified.serverCert = computer.serverCert
+        verified.activeAddress = computer.activeAddress
+
+        val uuid = computer.uuid
+        var canonicalComputer = computer
+        synchronized(pollingTuples) {
+            if (uuid != null) {
+                for (tuple in pollingTuples) {
+                    if (tuple.computer.uuid == uuid) {
+                        canonicalComputer = tuple.computer
+                        synchronized(tuple.networkLock) {
+                            tuple.computer.update(verified)
+                        }
+                        break
+                    }
+                }
+            }
+        }
+
+        computer.update(verified)
+        emitComputerUpdate(canonicalComputer)
+    }
+
+    private fun applyNotPairedState(computer: ComputerDetails) {
+        computer.state = ComputerDetails.State.ONLINE
+        computer.pairState = PairingManager.PairState.NOT_PAIRED
+        computer.serverCert = null
+        computer.rawAppList = null
+        computer.serverInfoTrustedByCert = false
+    }
+
+    private fun sendAppListWidgetRefresh(computerUuid: String) {
+        val refreshIntent = Intent(com.limelight.widget.GameListWidgetProvider.ACTION_REFRESH_WIDGET)
+        refreshIntent.component = ComponentName(this, com.limelight.widget.GameListWidgetProvider::class.java)
+        refreshIntent.putExtra(com.limelight.widget.GameListWidgetProvider.EXTRA_COMPUTER_UUID, computerUuid)
+        sendBroadcast(refreshIntent)
+    }
+
     private fun getLocalDatabaseReference(): Boolean {
         if (dbRefCount.get() == 0) return false
         dbRefCount.incrementAndGet()
@@ -636,9 +783,13 @@ class ComputerManagerService : Service() {
         return PollClaim(claimedKeys, flight, true)
     }
 
-    private fun getFreshPollResult(details: ComputerDetails, nowMs: Long): ComputerDetails? {
+    private fun getFreshPollResult(details: ComputerDetails, nowMs: Long, pairStateEpoch: Long): ComputerDetails? {
         for (key in getPollKeys(details)) {
             val recent = recentPollResults[key] ?: continue
+            if (recent.pairStateEpoch != pairStateEpoch) {
+                recentPollResults.remove(key, recent)
+                continue
+            }
             val ageMs = nowMs - recent.pollTimeMs
             if (ageMs > POLL_RESULT_REUSE_MS) {
                 recentPollResults.remove(key, recent)
@@ -669,11 +820,11 @@ class ComputerManagerService : Service() {
         return null
     }
 
-    private fun rememberPollResult(request: ComputerDetails, result: ComputerDetails, pollTimeMs: Long) {
+    private fun rememberPollResult(request: ComputerDetails, result: ComputerDetails, pollTimeMs: Long, pairStateEpoch: Long) {
         val snapshot = ComputerDetails(result)
         val keys = (getPollKeys(request) + getPollKeys(result)).distinct()
         for (key in keys) {
-            recentPollResults[key] = RecentPoll(snapshot, pollTimeMs)
+            recentPollResults[key] = RecentPoll(snapshot, pollTimeMs, pairStateEpoch)
         }
 
         findPollingTuple(result)?.lastNetworkPollMs = pollTimeMs
@@ -864,8 +1015,10 @@ class ComputerManagerService : Service() {
 
     @Throws(InterruptedException::class)
     private fun pollComputer(details: ComputerDetails): Boolean {
+        val tuple = findPollingTuple(details)
+        val pairStateEpoch = tuple?.pairStateEpoch ?: 0L
         val nowMs = SystemClock.elapsedRealtime()
-        val freshResult = getFreshPollResult(details, nowMs)
+        val freshResult = getFreshPollResult(details, nowMs, pairStateEpoch)
         if (freshResult != null) {
             details.update(PairStateTrust.sanitizePollResult(details, freshResult))
             return true
@@ -873,6 +1026,9 @@ class ComputerManagerService : Service() {
 
         val pollClaim = claimPollFlight(details)
         val pollFlight = pollClaim?.flight
+        if (pollClaim?.isOwner == true) {
+            pollFlight?.pairStateEpoch = pairStateEpoch
+        }
 
         if (pollClaim?.isOwner == false) {
             LimeLog.info("Fast poll: waiting for in-flight poll for ${details.name ?: getPrimaryPollKey(details)}")
@@ -880,9 +1036,13 @@ class ComputerManagerService : Service() {
 
             val polledDetails = pollFlight?.result
             if (polledDetails != null) {
+                if ((tuple?.pairStateEpoch ?: 0L) != pollFlight.pairStateEpoch) {
+                    LimeLog.warning("Fast poll: discarding stale in-flight result for ${details.name ?: getPrimaryPollKey(details)}")
+                    return false
+                }
                 val trustedDetails = PairStateTrust.sanitizePollResult(details, polledDetails)
                 details.update(trustedDetails)
-                rememberPollResult(details, trustedDetails, pollFlight.completedAtMs)
+                rememberPollResult(details, trustedDetails, pollFlight.completedAtMs, pollFlight.pairStateEpoch)
                 LimeLog.info("Fast poll: reused in-flight result for ${details.name ?: getPrimaryPollKey(details)}")
                 return true
             }
@@ -897,9 +1057,13 @@ class ComputerManagerService : Service() {
 
             if (polledDetails != null) {
                 val completedAtMs = SystemClock.elapsedRealtime()
+                if ((tuple?.pairStateEpoch ?: 0L) != pairStateEpoch) {
+                    LimeLog.warning("Fast poll: discarding stale poll result for ${details.name ?: getPrimaryPollKey(details)}")
+                    return false
+                }
                 val trustedDetails = PairStateTrust.sanitizePollResult(details, polledDetails)
                 details.update(trustedDetails)
-                rememberPollResult(details, trustedDetails, completedAtMs)
+                rememberPollResult(details, trustedDetails, completedAtMs, pairStateEpoch)
                 pollFlight?.result = ComputerDetails(trustedDetails)
                 pollFlight?.completedAtMs = completedAtMs
                 return true
@@ -1088,11 +1252,7 @@ class ComputerManagerService : Service() {
                                     e.printStackTrace()
                                 }
 
-                                // Trigger widget refresh
-                                val refreshIntent = Intent(com.limelight.widget.GameListWidgetProvider.ACTION_REFRESH_WIDGET)
-                                refreshIntent.component = ComponentName(this@ComputerManagerService, com.limelight.widget.GameListWidgetProvider::class.java)
-                                refreshIntent.putExtra(com.limelight.widget.GameListWidgetProvider.EXTRA_COMPUTER_UUID, computer.uuid!!)
-                                sendBroadcast(refreshIntent)
+                                sendAppListWidgetRefresh(computer.uuid!!)
 
                                 if (list.isNotEmpty()) {
                                     emptyAppListResponses = 0
@@ -1108,9 +1268,7 @@ class ComputerManagerService : Service() {
                         }
                     } catch (e: HostHttpResponseException) {
                         if (e.getErrorCode() == 401) {
-                            LimeLog.warning("App list request unauthorized for ${computer.name}; marking host not paired")
-                            computer.pairState = PairingManager.PairState.NOT_PAIRED
-                            emitComputerUpdate(computer)
+                            markComputerNotPaired(computer, "App list request")
                             break
                         }
                         e.printStackTrace()
@@ -1156,6 +1314,9 @@ private class PollFlight {
     val latch = CountDownLatch(1)
 
     @Volatile
+    var pairStateEpoch: Long = 0
+
+    @Volatile
     var result: ComputerDetails? = null
 
     @Volatile
@@ -1164,7 +1325,8 @@ private class PollFlight {
 
 private data class RecentPoll(
     val details: ComputerDetails,
-    val pollTimeMs: Long
+    val pollTimeMs: Long,
+    val pairStateEpoch: Long
 )
 
 private data class PollClaim(
@@ -1180,6 +1342,8 @@ class PollingTuple(
     val networkLock = Any()
     var lastSuccessfulPollMs: Long = 0
     var lastNetworkPollMs: Long = 0
+    @Volatile
+    var pairStateEpoch: Long = 0
 }
 
 class ReachabilityTuple(

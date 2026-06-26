@@ -18,6 +18,7 @@ import com.bumptech.glide.request.RequestOptions
 import com.limelight.binding.PlatformBinding
 import com.limelight.binding.crypto.AndroidCryptoProvider
 import com.limelight.computers.ComputerManagerService
+import com.limelight.computers.PairStatePreflight
 import com.limelight.dialogs.AddressSelectionDialog
 import com.limelight.grid.PcGridAdapter
 import com.limelight.grid.assets.DiskAssetLoader
@@ -47,6 +48,7 @@ import com.limelight.utils.Iperf3Tester
 import com.limelight.utils.NetHelper
 import com.limelight.utils.ServerHelper
 import com.limelight.utils.ShortcutHelper
+import com.limelight.utils.SpinnerDialog
 import com.limelight.utils.UiHelper
 import com.limelight.utils.UpdateManager
 import com.squareup.seismic.ShakeDetector
@@ -1851,10 +1853,12 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
                     if (httpConn.getPairState() == PairState.PAIRED) {
                         httpConn.unpair()
-                        if (httpConn.getPairState() == PairState.NOT_PAIRED)
+                        if (httpConn.getPairState() == PairState.NOT_PAIRED) {
+                            binder.markComputerNotPaired(computer, "Local unpair")
                             getString(R.string.unpair_success)
-                        else
+                        } else {
                             getString(R.string.unpair_fail)
+                        }
                     } else {
                         getString(R.string.unpair_error)
                     }
@@ -1879,11 +1883,45 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             showToast(getString(R.string.error_pc_offline))
             return
         }
-        if (managerBinder == null) {
+        val binder = managerBinder
+        if (binder == null) {
             showToast(getString(R.string.error_manager_not_running))
             return
         }
 
+        val target = prepareComputerWithAddress(computer)
+        if (target == null || target.activeAddress == null) {
+            showToast(getString(R.string.error_pc_offline))
+            return
+        }
+
+        if (PairStatePreflight.hasTrustedPairState(target)) {
+            openAppList(target, newlyPaired, showHiddenGames)
+            return
+        }
+
+        val spinner = SpinnerDialog.displayDialog(this,
+                resources.getString(R.string.applist_refresh_title),
+                resources.getString(R.string.applist_refresh_msg),
+                false)
+
+        uiScope.launch {
+            val isNotPaired = PairStatePreflight.isConfirmedNotPaired(target, binder, "Opening app list")
+
+            spinner.dismiss()
+            if (isFinishing || isDestroyed) {
+                return@launch
+            }
+
+            if (isNotPaired) {
+                showToast(getString(R.string.scut_not_paired))
+            } else {
+                openAppList(target, newlyPaired, showHiddenGames)
+            }
+        }
+    }
+
+    private fun openAppList(computer: ComputerDetails, newlyPaired: Boolean, showHiddenGames: Boolean) {
         val i = Intent(this, AppView::class.java)
         i.putExtra(AppView.NAME_EXTRA, computer.name)
         i.putExtra(AppView.UUID_EXTRA, computer.uuid)
@@ -1952,6 +1990,10 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 showAddressSelectionDialog(targetComputer)
                 return@launch
             }
+            if (PairStatePreflight.isConfirmedNotPaired(targetComputer, managerBinder!!, "Quick start")) {
+                showToast(getString(R.string.scut_not_paired))
+                return@launch
+            }
 
             ServerHelper.doStart(
                 this@PcView,
@@ -1995,6 +2037,10 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             }
             if (targetComputer.hasMultipleLanAddresses()) {
                 showAddressSelectionDialog(targetComputer)
+                return@launch
+            }
+            if (PairStatePreflight.isConfirmedNotPaired(targetComputer, managerBinder!!, "Secondary screen start")) {
+                showToast(getString(R.string.scut_not_paired))
                 return@launch
             }
 
@@ -2096,7 +2142,13 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         }
 
         showToast(getString(R.string.restoring_session, target.name))
-        ServerHelper.doStart(this, app, target, managerBinder!!, forceResumeCurrentSession = true)
+        uiScope.launch {
+            if (PairStatePreflight.isConfirmedNotPaired(target, managerBinder!!, "Restore session")) {
+                showToast(getString(R.string.scut_not_paired))
+                return@launch
+            }
+            ServerHelper.doStart(this@PcView, app, target, managerBinder!!, forceResumeCurrentSession = true)
+        }
     }
 
     private fun showAddressSelectionDialog(computer: ComputerDetails) {
@@ -2348,7 +2400,14 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         if (app == null) {
             app = NvApp("app", details.runningGameId, false)
         }
-        ServerHelper.doStart(this, app, details, managerBinder!!, forceResumeCurrentSession = true)
+        val binder = managerBinder!!
+        uiScope.launch {
+            if (PairStatePreflight.isConfirmedNotPaired(details, binder, "Resume session")) {
+                showToast(getString(R.string.scut_not_paired))
+                return@launch
+            }
+            ServerHelper.doStart(this@PcView, app, details, binder, forceResumeCurrentSession = true)
+        }
     }
 
     private fun handleQuit(details: ComputerDetails) {

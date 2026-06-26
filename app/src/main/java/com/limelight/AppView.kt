@@ -48,6 +48,7 @@ import org.xmlpull.v1.XmlPullParserException
 
 import com.limelight.binding.PlatformBinding
 import com.limelight.computers.ComputerManagerService
+import com.limelight.computers.PairStatePreflight
 import com.limelight.grid.AppGridAdapter
 import com.limelight.grid.assets.CachedAppAssetLoader
 import com.limelight.nvstream.http.ComputerDetails
@@ -1074,6 +1075,36 @@ class AppView : Activity(), AdapterFragmentCallbacks {
             return
         }
 
+        if (PairStatePreflight.hasTrustedPairState(comp)) {
+            launchStartStream(app, comp, binder, displayName, useVdd, forceResumeCurrentSession)
+            return
+        }
+
+        uiScope.launch {
+            if (PairStatePreflight.isConfirmedNotPaired(comp, binder, "Starting stream")) {
+                if (!isFinishing && !isDestroyed) {
+                    shortcutHelper.disableComputerShortcut(comp,
+                            resources.getString(R.string.scut_not_paired))
+                    Toast.makeText(this@AppView, resources.getText(R.string.scut_not_paired), Toast.LENGTH_SHORT).show()
+                    finish()
+                }
+                return@launch
+            }
+
+            if (!isFinishing && !isDestroyed) {
+                launchStartStream(app, comp, binder, displayName, useVdd, forceResumeCurrentSession)
+            }
+        }
+    }
+
+    private fun launchStartStream(
+        app: AppObject,
+        comp: ComputerDetails,
+        binder: ComputerManagerService.ComputerManagerBinder,
+        displayName: String?,
+        useVdd: Boolean?,
+        forceResumeCurrentSession: Boolean
+    ) {
         if (appSettingsManager != null) {
             // 使用AppSettingsManager统一管理启动逻辑
             val startIntent = appSettingsManager?.createStartIntentWithLastSettingsIfEnabled(
@@ -1461,20 +1492,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
             }
 
             START_WITH_LAST_SETTINGS_ID -> {
-                // Start with last settings (force use last settings for this launch)
-                val comp = computer ?: run {
-                    Toast.makeText(this, resources.getText(R.string.lost_connection), Toast.LENGTH_SHORT).show()
-                    return true
-                }
-                val binder = managerBinder ?: run {
-                    Toast.makeText(this, resources.getText(R.string.lost_connection), Toast.LENGTH_SHORT).show()
-                    return true
-                }
-                if (appSettingsManager != null) {
-                    val startIntent = appSettingsManager?.createStartIntentWithLastSettingsIfEnabled(
-                            this, app.app, comp, binder)
-                    startIntent?.let { startActivity(it) }
-                }
+                startStreamWithLastSettingsIfEnabled(app)
                 return true
             }
 

@@ -57,6 +57,23 @@ class PairStateTrustTest {
     }
 
     @Test
+    fun trustedPairStateRequiresTrustedServerInfo() {
+        val trusted = pairedComputer(hasServerCert = true).apply {
+            serverInfoTrustedByCert = true
+        }
+        val untrusted = pairedComputer(hasServerCert = true).apply {
+            serverInfoTrustedByCert = false
+        }
+        val missingCert = pairedComputer(hasServerCert = false).apply {
+            serverInfoTrustedByCert = true
+        }
+
+        assertEquals(true, PairStateTrust.isTrustedPaired(trusted))
+        assertEquals(false, PairStateTrust.isTrustedPaired(untrusted))
+        assertEquals(false, PairStateTrust.isTrustedPaired(missingCert))
+    }
+
+    @Test
     fun untrustedNotPairedIsAcceptedForUnpairedHost() {
         val current = ComputerDetails()
         val polled = notPairedPoll(trustedByCert = false)

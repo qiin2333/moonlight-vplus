@@ -10,6 +10,7 @@ import android.os.IBinder
 
 import com.limelight.computers.ComputerDatabaseManager
 import com.limelight.computers.ComputerManagerService
+import com.limelight.computers.PairStatePreflight
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
@@ -125,45 +126,22 @@ class ShortcutTrampoline : Activity() {
         }
 
         if (details.state == ComputerDetails.State.ONLINE && details.pairState == PairingManager.PairState.PAIRED) {
-            if (app != null) {
-                if (details.runningGameId == 0 || details.runningGameId == app?.appId) {
-                    intentStack.add(ServerHelper.createStartIntent(this@ShortcutTrampoline, app!!, details, managerBinder!!))
-                    finish()
-                    startActivities(intentStack.toTypedArray())
-                } else {
-                    val startIntent = ServerHelper.createStartIntent(this@ShortcutTrampoline, app!!, details, managerBinder!!)
-
-                    UiHelper.displayQuitConfirmationDialog(this@ShortcutTrampoline, {
-                        intentStack.add(startIntent)
-                        finish()
-                        startActivities(intentStack.toTypedArray())
-                    }, {
-                        finish()
-                    })
-                }
+            val binder = managerBinder!!
+            if (PairStatePreflight.hasTrustedPairState(details)) {
+                launchShortcutForDetails(details, binder)
             } else {
-                finish()
-
-                var i = Intent(this@ShortcutTrampoline, PcView::class.java)
-                i.action = Intent.ACTION_MAIN
-                i.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
-                intentStack.add(i)
-
-                i = Intent(intent)
-                i.setClass(this@ShortcutTrampoline, AppView::class.java)
-                intentStack.add(i)
-
-                if (details.runningGameId != 0) {
-                    val actualApp = getNvAppById(details.runningGameId, uuidString!!)
-                    if (actualApp != null) {
-                        intentStack.add(ServerHelper.createStartIntent(this@ShortcutTrampoline, actualApp, details, managerBinder!!))
+                uiScope.launch {
+                    if (PairStatePreflight.isConfirmedNotPaired(details, binder, "Shortcut start")) {
+                        Dialog.displayDialog(this@ShortcutTrampoline,
+                                resources.getString(R.string.conn_error_title),
+                                resources.getString(R.string.scut_not_paired),
+                                true)
                     } else {
-                        intentStack.add(ServerHelper.createStartIntent(this@ShortcutTrampoline,
-                                NvApp("", details.runningGameId, false), details, managerBinder!!))
+                        launchShortcutForDetails(details, binder)
                     }
+                    cleanupServiceBinding()
                 }
-
-                startActivities(intentStack.toTypedArray())
+                return
             }
         } else if (details.state == ComputerDetails.State.OFFLINE) {
             Dialog.displayDialog(this@ShortcutTrampoline,
@@ -177,6 +155,56 @@ class ShortcutTrampoline : Activity() {
                     true)
         }
 
+        cleanupServiceBinding()
+    }
+
+    private fun launchShortcutForDetails(
+        details: ComputerDetails,
+        binder: ComputerManagerService.ComputerManagerBinder
+    ) {
+        if (app != null) {
+            if (details.runningGameId == 0 || details.runningGameId == app?.appId) {
+                intentStack.add(ServerHelper.createStartIntent(this@ShortcutTrampoline, app!!, details, binder))
+                finish()
+                startActivities(intentStack.toTypedArray())
+            } else {
+                val startIntent = ServerHelper.createStartIntent(this@ShortcutTrampoline, app!!, details, binder)
+
+                UiHelper.displayQuitConfirmationDialog(this@ShortcutTrampoline, {
+                    intentStack.add(startIntent)
+                    finish()
+                    startActivities(intentStack.toTypedArray())
+                }, {
+                    finish()
+                })
+            }
+        } else {
+            finish()
+
+            var i = Intent(this@ShortcutTrampoline, PcView::class.java)
+            i.action = Intent.ACTION_MAIN
+            i.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
+            intentStack.add(i)
+
+            i = Intent(intent)
+            i.setClass(this@ShortcutTrampoline, AppView::class.java)
+            intentStack.add(i)
+
+            if (details.runningGameId != 0) {
+                val actualApp = getNvAppById(details.runningGameId, uuidString!!)
+                if (actualApp != null) {
+                    intentStack.add(ServerHelper.createStartIntent(this@ShortcutTrampoline, actualApp, details, binder))
+                } else {
+                    intentStack.add(ServerHelper.createStartIntent(this@ShortcutTrampoline,
+                            NvApp("", details.runningGameId, false), details, binder))
+                }
+            }
+
+            startActivities(intentStack.toTypedArray())
+        }
+    }
+
+    private fun cleanupServiceBinding() {
         if (managerBinder != null) {
             pollingCollectJob?.cancel()
             pollingCollectJob = null

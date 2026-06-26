@@ -26,6 +26,12 @@ internal object PairStateTrust {
         return hasLocalPairing(current) && isUntrustedNotPaired(incoming)
     }
 
+    fun isTrustedPaired(details: ComputerDetails): Boolean {
+        return details.pairState == PairingManager.PairState.PAIRED &&
+                details.serverInfoTrustedByCert &&
+                details.serverCert != null
+    }
+
     private fun isUntrustedNotPaired(details: ComputerDetails): Boolean {
         return details.state == ComputerDetails.State.ONLINE &&
                 details.pairState == PairingManager.PairState.NOT_PAIRED &&
