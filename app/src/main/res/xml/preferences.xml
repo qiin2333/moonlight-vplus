@@ -755,6 +755,7 @@
             android:text="@string/suffix_osc_opacity"
             android:title="@string/dialog_title_osc_opacity" />
         <com.limelight.preferences.ConfirmDeleteOscPreference
+            android:key="reset_osc"
             android:title="@string/title_reset_osc"
             android:summary="@string/summary_reset_osc"
             android:dialogTitle="@string/dialog_title_reset_osc"
