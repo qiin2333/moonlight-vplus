@@ -369,6 +369,11 @@
     <string name="summary_enable_hdr">当游戏和显卡支持时以HDR模式串流，HDR需要显卡支持 HEVC/AV1 Main 10 编码。⚠注意：串流返回菜单中的HDR开关是切换windows的HDR。</string>
     <string name="title_enable_hdr_high_brightness">启用 HDR 串流高亮度</string>
     <string name="summary_enable_hdr_high_brightness">启用 HDR 串流时强制使用最高屏幕亮度。</string>
+    <string name="title_hdr_brightness_override">手动 HDR 亮度校准</string>
+    <string name="summary_hdr_brightness_override">覆盖上报给 Sunshine 的 HDR 亮度。如果 HDR 看起来发灰或太暗，可以打开这个选项。</string>
+    <string name="title_hdr_peak_brightness_nits">HDR 峰值亮度</string>
+    <string name="summary_hdr_peak_brightness_nits">数值越高，Sunshine 会按更亮的 HDR 屏幕处理。修改后需要重新连接串流。</string>
+    <string name="suffix_hdr_peak_brightness_nits">尼特</string>
     <string name="title_hdr_mode">HDR 模式</string>
     <string name="summary_hdr_mode">选择 HDR 传输函数：HDR10 (PQ) 适用于大多数显示器，HLG 适用于广播内容。</string>
     <string name="hdr_mode_hlg">HLG (混合对数伽马)</string>

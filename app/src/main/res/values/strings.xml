@@ -515,6 +515,11 @@
     <string name="summary_enable_hdr">Stream HDR when the game and PC GPU support it. HDR requires a GPU with HEVC Main 10 encoding support.</string>
     <string name="title_enable_hdr_high_brightness">Enable HDR High Brightness</string>
     <string name="summary_enable_hdr_high_brightness">Force maximum screen brightness when HDR streaming is enabled</string>
+    <string name="title_hdr_brightness_override">Manual HDR brightness calibration</string>
+    <string name="summary_hdr_brightness_override">Override the HDR brightness reported to Sunshine. Turn this on if HDR looks dim or washed out.</string>
+    <string name="title_hdr_peak_brightness_nits">HDR peak brightness</string>
+    <string name="summary_hdr_peak_brightness_nits">Higher values make Sunshine target a brighter HDR display. Reconnect the stream after changing this.</string>
+    <string name="suffix_hdr_peak_brightness_nits">nits</string>
     <string name="title_hdr_mode">HDR Mode</string>
     <string name="summary_hdr_mode">Select HDR transfer function: HDR10 (PQ) for most displays, HLG for broadcast-style content</string>
     <string name="hdr_mode_hdr10">HDR10 (PQ)</string>

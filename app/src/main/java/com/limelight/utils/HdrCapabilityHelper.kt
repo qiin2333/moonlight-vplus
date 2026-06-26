@@ -209,6 +209,13 @@ object HdrCapabilityHelper {
         return intArrayOf(min, max, avg)
     }
 
+    fun applyBrightnessOverride(range: IntArray, peakBrightnessNits: Int): IntArray {
+        val min = range.getOrElse(0) { 1 }.coerceAtLeast(1)
+        val peak = maxOf(min + 1, peakBrightnessNits.coerceIn(300, 4000))
+        val avg = (peak * 0.2f).toInt().coerceIn(100, 1000)
+        return intArrayOf(min, peak, maxOf(min, avg))
+    }
+
     fun getSystemBrightness(context: Context): Int {
         return try {
             Settings.System.getInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS, -1)

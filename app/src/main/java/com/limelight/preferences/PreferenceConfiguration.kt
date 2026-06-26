@@ -109,6 +109,8 @@ class PreferenceConfiguration {
     @JvmField var halfHeightOscPortrait = false
     var enableHdr = false
     var enableHdrHighBrightness = false
+    var hdrBrightnessOverride = false
+    var hdrPeakBrightnessNits = 1000
     var hdrMode = 0 // 0=HDR disabled, 1=HDR10/PQ, 2=HLG
     var enablePip = false
     var enablePerfOverlay = false
@@ -256,6 +258,8 @@ class PreferenceConfiguration {
                 .putString(VIDEO_FORMAT_PREF_STRING, getVideoFormatPreferenceString(videoFormat))
                 .putBoolean(ENABLE_HDR_PREF_STRING, enableHdr)
                 .putBoolean(ENABLE_HDR_HIGH_BRIGHTNESS_PREF_STRING, enableHdrHighBrightness)
+                .putBoolean(HDR_BRIGHTNESS_OVERRIDE_PREF_STRING, hdrBrightnessOverride)
+                .putInt(HDR_PEAK_BRIGHTNESS_NITS_PREF_STRING, hdrPeakBrightnessNits)
                 .putBoolean(ENABLE_PERF_OVERLAY_STRING, enablePerfOverlay)
                 .putBoolean(PERF_OVERLAY_LOCKED_STRING, perfOverlayLocked)
                 .putInt(PERF_OVERLAY_BG_OPACITY_STRING, perfOverlayBgOpacity)
@@ -321,6 +325,8 @@ class PreferenceConfiguration {
                 .putBoolean(FULL_RANGE_PREF_STRING, fullRange)
                 .putBoolean(ENABLE_HDR_PREF_STRING, enableHdr)
                 .putBoolean(ENABLE_HDR_HIGH_BRIGHTNESS_PREF_STRING, enableHdrHighBrightness)
+                .putBoolean(HDR_BRIGHTNESS_OVERRIDE_PREF_STRING, hdrBrightnessOverride)
+                .putInt(HDR_PEAK_BRIGHTNESS_NITS_PREF_STRING, hdrPeakBrightnessNits)
                 .putString(HDR_MODE_PREF_STRING, hdrMode.toString())
                 .putBoolean(ENABLE_PERF_OVERLAY_STRING, enablePerfOverlay)
                 .putBoolean(PERF_OVERLAY_LOCKED_STRING, perfOverlayLocked)
@@ -352,6 +358,8 @@ class PreferenceConfiguration {
         copy.fullRange = this.fullRange
         copy.enableHdr = this.enableHdr
         copy.enableHdrHighBrightness = this.enableHdrHighBrightness
+        copy.hdrBrightnessOverride = this.hdrBrightnessOverride
+        copy.hdrPeakBrightnessNits = this.hdrPeakBrightnessNits
         copy.hdrMode = this.hdrMode
         copy.enablePerfOverlay = this.enablePerfOverlay
         copy.perfOverlayLocked = this.perfOverlayLocked
@@ -424,6 +432,8 @@ class PreferenceConfiguration {
         private const val LEGACY_DISABLE_FRAME_DROP_PREF_STRING = "checkbox_disable_frame_drop"
         private const val ENABLE_HDR_PREF_STRING = "checkbox_enable_hdr"
         private const val ENABLE_HDR_HIGH_BRIGHTNESS_PREF_STRING = "checkbox_enable_hdr_high_brightness"
+        private const val HDR_BRIGHTNESS_OVERRIDE_PREF_STRING = "checkbox_hdr_brightness_override"
+        private const val HDR_PEAK_BRIGHTNESS_NITS_PREF_STRING = "seekbar_hdr_peak_brightness_nits"
         private const val HDR_MODE_PREF_STRING = "list_hdr_mode" // 0=SDR, 1=HDR10, 2=HLG
         private const val ENABLE_PIP_PREF_STRING = "checkbox_enable_pip"
         private const val ENABLE_PERF_OVERLAY_STRING = "checkbox_enable_perf_overlay"
@@ -615,6 +625,8 @@ class PreferenceConfiguration {
         private const val HALF_HEIGHT_OSC_PORTRAIT_DEFAULT = true
         private const val DEFAULT_ENABLE_HDR = false
         private const val DEFAULT_ENABLE_HDR_HIGH_BRIGHTNESS = false
+        private const val DEFAULT_HDR_BRIGHTNESS_OVERRIDE = false
+        private const val DEFAULT_HDR_PEAK_BRIGHTNESS_NITS = 1000
         private const val DEFAULT_HDR_MODE = 1 // 默认 HDR10/PQ 模式 (0=禁用自动HDR切换, 1=HDR10, 2=HLG)
         private const val DEFAULT_ENABLE_PIP = false
         private const val DEFAULT_ENABLE_PERF_OVERLAY = false
@@ -986,6 +998,8 @@ class PreferenceConfiguration {
                 .remove(VIDEO_FORMAT_PREF_STRING)
                 .remove(ENABLE_HDR_PREF_STRING)
                 .remove(ENABLE_HDR_HIGH_BRIGHTNESS_PREF_STRING)
+                .remove(HDR_BRIGHTNESS_OVERRIDE_PREF_STRING)
+                .remove(HDR_PEAK_BRIGHTNESS_NITS_PREF_STRING)
                 .remove(UNLOCK_FPS_STRING)
                 .remove(FULL_RANGE_PREF_STRING)
                 .apply()
@@ -1171,6 +1185,8 @@ class PreferenceConfiguration {
             config.halfHeightOscPortrait = prefs.getBoolean(HALF_HEIGHT_OSC_PORTRAIT_PREF_STRING, HALF_HEIGHT_OSC_PORTRAIT_DEFAULT)
             config.enableHdr = prefs.getBoolean(ENABLE_HDR_PREF_STRING, DEFAULT_ENABLE_HDR) && !isShieldAtvFirmwareWithBrokenHdr()
             config.enableHdrHighBrightness = prefs.getBoolean(ENABLE_HDR_HIGH_BRIGHTNESS_PREF_STRING, DEFAULT_ENABLE_HDR_HIGH_BRIGHTNESS)
+            config.hdrBrightnessOverride = prefs.getBoolean(HDR_BRIGHTNESS_OVERRIDE_PREF_STRING, DEFAULT_HDR_BRIGHTNESS_OVERRIDE)
+            config.hdrPeakBrightnessNits = prefs.getInt(HDR_PEAK_BRIGHTNESS_NITS_PREF_STRING, DEFAULT_HDR_PEAK_BRIGHTNESS_NITS).coerceIn(300, 4000)
             // HDR mode is stored as a String from ListPreference, default to HDR10 (1)
             config.hdrMode = try {
                 (prefs.getString(HDR_MODE_PREF_STRING, DEFAULT_HDR_MODE.toString()) ?: DEFAULT_HDR_MODE.toString()).toInt()

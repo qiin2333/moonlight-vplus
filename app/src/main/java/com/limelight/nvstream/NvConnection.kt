@@ -37,6 +37,7 @@ import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.http.PairingManager
 import com.limelight.nvstream.input.MouseButtonPacket
 import com.limelight.nvstream.jni.MoonBridge
+import com.limelight.utils.HdrCapabilityHelper
 
 open class NvConnection(
     private val appContext: Context,
@@ -71,10 +72,23 @@ open class NvConnection(
         context.riKey = generateRiAesKey()
         context.riKeyId = generateRiKeyId()
 
-        val brightnessRange = com.limelight.utils.HdrCapabilityHelper.getBrightnessRangeAsInts(appContext)
+        val brightnessRange = HdrCapabilityHelper.getBrightnessRangeAsInts(appContext).let {
+            if (config.hdrBrightnessOverride) {
+                HdrCapabilityHelper.applyBrightnessOverride(it, config.hdrPeakBrightnessNits)
+            } else {
+                it
+            }
+        }
         context.minBrightness = brightnessRange[0]
         context.maxBrightness = brightnessRange[1]
         context.maxAverageBrightness = brightnessRange[2]
+
+        if (config.hdrBrightnessOverride) {
+            LimeLog.info(
+                "HDR brightness override: min=${context.minBrightness}, " +
+                    "max=${context.maxBrightness}, avg=${context.maxAverageBrightness} nits"
+            )
+        }
     }
 
     fun stop() {

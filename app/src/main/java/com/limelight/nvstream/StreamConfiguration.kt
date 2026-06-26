@@ -40,6 +40,10 @@ class StreamConfiguration private constructor() {
         private set
     var hdrMode: Int = 0
         private set
+    var hdrBrightnessOverride: Boolean = false
+        private set
+    var hdrPeakBrightnessNits: Int = 1000
+        private set
     private var persistGamepadsAfterDisconnect: Boolean = false
     private var enableMic: Boolean = false
     private var useVdd: Boolean? = null
@@ -100,6 +104,10 @@ class StreamConfiguration private constructor() {
          * @param hdrMode 0 = SDR (default), 1 = HDR10/PQ (SMPTE ST 2084), 2 = HLG (Hybrid Log-Gamma, ARIB STD-B67)
          */
         fun setHdrMode(hdrMode: Int): Builder = apply { config.hdrMode = hdrMode }
+        fun setHdrBrightnessOverride(enabled: Boolean, peakBrightnessNits: Int): Builder = apply {
+            config.hdrBrightnessOverride = enabled
+            config.hdrPeakBrightnessNits = peakBrightnessNits.coerceIn(300, 4000)
+        }
         fun setUseVdd(value: Boolean?): Builder = apply { config.useVdd = value }
         fun setEnableMic(enable: Boolean): Builder = apply { config.enableMic = enable }
         fun setControlOnly(controlOnly: Boolean): Builder = apply { config.controlOnly = controlOnly }

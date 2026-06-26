@@ -3181,6 +3181,14 @@ class StreamSettings : AppCompatActivity() {
                 if (hdrModePref != null) {
                     category.removePreference(hdrModePref)
                 }
+                val hdrPeakBrightnessPref = findPreference<Preference>("seekbar_hdr_peak_brightness_nits")
+                if (hdrPeakBrightnessPref != null) {
+                    category.removePreference(hdrPeakBrightnessPref)
+                }
+                val hdrBrightnessOverridePref = findPreference<Preference>("checkbox_hdr_brightness_override")
+                if (hdrBrightnessOverridePref != null) {
+                    category.removePreference(hdrBrightnessOverridePref)
+                }
                 val hdrHighBrightnessPref = findPreference<Preference>("checkbox_enable_hdr_high_brightness")
                 if (hdrHighBrightnessPref != null) {
                     category.removePreference(hdrHighBrightnessPref)
@@ -3202,6 +3210,8 @@ class StreamSettings : AppCompatActivity() {
                 val category = findPreference<PreferenceCategory>("category_screen_position")!!
                 val hdrPref = findPreference<CheckBoxPreference>("checkbox_enable_hdr")
                 val hdrHighBrightnessPref = findPreference<CheckBoxPreference>("checkbox_enable_hdr_high_brightness")
+                val hdrBrightnessOverridePref = findPreference<CheckBoxPreference>("checkbox_hdr_brightness_override")
+                val hdrPeakBrightnessPref = findPreference<Preference>("seekbar_hdr_peak_brightness_nits")
                 val hdrModePref = findPreference<ListPreference>("list_hdr_mode")
 
                 if (!foundHdr10) {
@@ -3209,6 +3219,12 @@ class StreamSettings : AppCompatActivity() {
                     // 必须先移除依赖项，再移除被依赖的项，否则会崩溃
                     if (hdrModePref != null) {
                         category.removePreference(hdrModePref)
+                    }
+                    if (hdrPeakBrightnessPref != null) {
+                        category.removePreference(hdrPeakBrightnessPref)
+                    }
+                    if (hdrBrightnessOverridePref != null) {
+                        category.removePreference(hdrBrightnessOverridePref)
                     }
                     if (hdrHighBrightnessPref != null) {
                         category.removePreference(hdrHighBrightnessPref)
@@ -3227,6 +3243,13 @@ class StreamSettings : AppCompatActivity() {
                     if (hdrHighBrightnessPref != null) {
                         hdrHighBrightnessPref.isEnabled = false
                         hdrHighBrightnessPref.isChecked = false
+                    }
+                    if (hdrBrightnessOverridePref != null) {
+                        hdrBrightnessOverridePref.isEnabled = false
+                        hdrBrightnessOverridePref.isChecked = false
+                    }
+                    if (hdrPeakBrightnessPref != null) {
+                        hdrPeakBrightnessPref.isEnabled = false
                     }
                     // 同时禁用 HDR 模式选项
                     if (hdrModePref != null) {

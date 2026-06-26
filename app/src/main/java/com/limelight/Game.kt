@@ -818,6 +818,10 @@ class Game : Activity(), SurfaceHolder.Callback,
                 else decoderRenderer?.getPreferredColorRange() ?: 0
             )
             .setHdrMode(if (willStreamHdr) prefConfig.hdrMode else MoonBridge.HDR_MODE_SDR)
+            .setHdrBrightnessOverride(
+                willStreamHdr && prefConfig.hdrBrightnessOverride,
+                prefConfig.hdrPeakBrightnessNits
+            )
             .setPersistGamepadsAfterDisconnect(!prefConfig.multiController)
             .setUseVdd(pcUseVdd)
             .setEnableMic(prefConfig.enableMic)
