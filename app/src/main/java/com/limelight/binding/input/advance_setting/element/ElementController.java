@@ -272,8 +272,12 @@ public class ElementController {
             public void onClick(View v) {
                 changeMode(Mode.Normal);
                 controllerManager.pageSuperMenuController.open();
-                // 退出编辑模式后继续保留王冠返回菜单模式
-                ((Game) context).setcurrentBackKeyMenu(Game.BackKeyMenuMode.CROWN_MODE);
+                // 一次性模式（NO_MENU）退出后回到游戏菜单，否则保持王冠模式
+                if (((Game) context).getCurrentBackKeyMenuMode() == Game.BackKeyMenuMode.NO_MENU) {
+                    ((Game) context).setcurrentBackKeyMenu(Game.BackKeyMenuMode.GAME_MENU);
+                } else {
+                    ((Game) context).setcurrentBackKeyMenu(Game.BackKeyMenuMode.CROWN_MODE);
+                }
             }
         });
         pageEdit.findViewById(R.id.page_edit_auto_color_all).setOnClickListener(new View.OnClickListener() {

@@ -209,12 +209,14 @@ class Game : Activity(), SurfaceHolder.Callback,
     private var audioRenderer: com.limelight.binding.audio.SmartAudioRenderer? = null
 
     enum class BackKeyMenuMode {
-        GAME_MENU, CROWN_MODE, NO_MENU
+        GAME_MENU, CROWN_MODE, NO_MENU, NO_MENU_LOCKED
     }
 
     fun setcurrentBackKeyMenu(currentBackKeyMenu: BackKeyMenuMode) {
         crownSessionController.setBackKeyMenuMode(currentBackKeyMenu)
     }
+
+    fun getCurrentBackKeyMenuMode(): BackKeyMenuMode = crownSessionController.backKeyMenuMode
 
     fun toggleVirtualControllerVisibility() {
         crownSessionController.toggleElementsVisibility()
@@ -2152,7 +2154,12 @@ class Game : Activity(), SurfaceHolder.Callback,
                     controllerManager?.superPagesController?.returnOperation()
                 }
             }
-            BackKeyMenuMode.NO_MENU -> {}
+            BackKeyMenuMode.NO_MENU -> {
+                if (controllerManager != null && prefConfig.enableCrownFeatures) {
+                    controllerManager?.superPagesController?.returnOperation()
+                }
+            }
+            BackKeyMenuMode.NO_MENU_LOCKED -> {}
             BackKeyMenuMode.GAME_MENU -> {
                 activeGameMenu = GameMenu(this, app, conn!!, device)
             }

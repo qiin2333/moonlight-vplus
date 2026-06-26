@@ -157,8 +157,12 @@ public class PageConfigController {
         pageConfig.findViewById(R.id.exit_crown_config_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // 保存/关闭配置页后继续保留王冠返回菜单模式
-                ((Game)context).setcurrentBackKeyMenu(Game.BackKeyMenuMode.CROWN_MODE);
+                // 一次性模式（NO_MENU_LOCKED）退出后回到游戏菜单，否则保持王冠模式
+                if (((Game)context).getCurrentBackKeyMenuMode() == Game.BackKeyMenuMode.NO_MENU_LOCKED) {
+                    ((Game)context).setcurrentBackKeyMenu(Game.BackKeyMenuMode.GAME_MENU);
+                } else {
+                    ((Game)context).setcurrentBackKeyMenu(Game.BackKeyMenuMode.CROWN_MODE);
+                }
 
                 // 关闭当前的高级设置页面，相当于按返回键
                 controllerManager.getSuperPagesController().returnOperation();

@@ -32,7 +32,7 @@ class CrownSessionController(
         when (backKeyMenuMode) {
             Game.BackKeyMenuMode.GAME_MENU -> enterCrownMode()
             Game.BackKeyMenuMode.CROWN_MODE -> exitCrownMode()
-            Game.BackKeyMenuMode.NO_MENU -> backKeyMenuMode = Game.BackKeyMenuMode.GAME_MENU
+            Game.BackKeyMenuMode.NO_MENU, Game.BackKeyMenuMode.NO_MENU_LOCKED -> backKeyMenuMode = Game.BackKeyMenuMode.GAME_MENU
         }
     }
 

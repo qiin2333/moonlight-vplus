@@ -444,8 +444,7 @@ class GameMenu(
                 getString(R.string.crown_control_profiles_subtitle)
             ) {
                 controllerManager?.let { cm ->
-                    game.toggleBackKeyMenuType()
-                    game.setcurrentBackKeyMenu(Game.BackKeyMenuMode.NO_MENU)
+                    game.setcurrentBackKeyMenu(Game.BackKeyMenuMode.NO_MENU_LOCKED)
                     cm.pageConfigController?.open()
                 }
             },
@@ -456,8 +455,14 @@ class GameMenu(
             ) {
                 controllerManager?.let { cm ->
                     game.toggleBackKeyMenuType()
+                    game.setcurrentBackKeyMenu(Game.BackKeyMenuMode.NO_MENU)
                     cm.elementController?.changeMode(ElementController.Mode.Edit)
                     cm.elementController?.open()
+                    cm.superPagesController?.let { spc ->
+                        if (spc.pageNow === spc.pageNull) {
+                            spc.returnOperation()
+                        }
+                    }
                 }
             },
             createCrownOption(
