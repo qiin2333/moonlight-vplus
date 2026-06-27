@@ -2155,7 +2155,7 @@ class Game : Activity(), SurfaceHolder.Callback,
                 }
             }
             BackKeyMenuMode.NO_MENU -> {
-                if (controllerManager != null && prefConfig.enableCrownFeatures) {
+                if (prefConfig.enableCrownFeatures) {
                     controllerManager?.superPagesController?.returnOperation()
                 }
             }
