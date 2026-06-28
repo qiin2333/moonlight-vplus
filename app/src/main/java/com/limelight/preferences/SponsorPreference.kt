@@ -16,6 +16,9 @@ import com.limelight.R
 import com.limelight.utils.HelpLauncher
 
 class SponsorPreference : Preference {
+    private var cachedGithubQrContent: String? = null
+    private var cachedGithubQrBitmap: Bitmap? = null
+
     constructor(context: Context, attrs: AttributeSet, defStyleAttr: Int) :
             super(context, attrs, defStyleAttr) { initialize() }
 
@@ -49,9 +52,21 @@ class SponsorPreference : Preference {
         } else {
             val githubUrl = context.getString(R.string.sponsor_github_url)
             actionView.setText(R.string.sponsor_github_action)
-            qrView.setImageBitmap(createQrBitmap(githubUrl, QR_SIZE_PX))
+            qrView.setImageBitmap(getGithubQrBitmap(githubUrl))
             actionView.visibility = View.VISIBLE
             actionView.setOnClickListener { HelpLauncher.launchUrl(context, githubUrl) }
+        }
+    }
+
+    private fun getGithubQrBitmap(content: String): Bitmap {
+        val cachedBitmap = cachedGithubQrBitmap
+        if (cachedGithubQrContent == content && cachedBitmap != null) {
+            return cachedBitmap
+        }
+
+        return createQrBitmap(content, QR_SIZE_PX).also {
+            cachedGithubQrContent = content
+            cachedGithubQrBitmap = it
         }
     }
 

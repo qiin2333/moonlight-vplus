@@ -1717,7 +1717,7 @@ Tap again to replace it.</string>
     <string name="seekbar_increase">Increase</string>
 
     <!-- Sponsorship -->
-    <string name="sponsor_github_url">https://github.com/sponsors/qiin2333</string>
+    <string name="sponsor_github_url" translatable="false">https://github.com/sponsors/qiin2333</string>
     <string name="sponsor_github_title">Sponsor Moonlight V+</string>
     <string name="sponsor_github_summary">Support continued development through GitHub Sponsors. Scan the code or open the sponsor page.</string>
     <string name="sponsor_github_action">Open GitHub Sponsors</string>

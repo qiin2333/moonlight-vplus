@@ -39,18 +39,18 @@
                 android:textAppearance="@style/PreferenceSummaryWithShadow"
                 android:textSize="14sp" />
 
-            <TextView
+            <Button
                 android:id="@+id/sponsorAction"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:background="@drawable/sponsor_action_background"
-                android:clickable="true"
-                android:focusable="true"
                 android:gravity="center"
+                android:minHeight="36dp"
                 android:minWidth="144dp"
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
+                android:textAllCaps="false"
                 android:textColor="@android:color/white"
                 android:textSize="14sp" />
         </LinearLayout>
