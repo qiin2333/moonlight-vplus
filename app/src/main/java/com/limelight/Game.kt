@@ -340,7 +340,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             streamView.setOnCapturedPointerListener { _, event ->
-                touchInputHandler.handleMotionEvent(null, event)
+                touchInputHandler.handleMotionEvent(getMotionEventTargetView(), event)
             }
         }
 
@@ -505,6 +505,9 @@ class Game : Activity(), SurfaceHolder.Callback,
     /** Resolve the display currently used for rendering (external or built-in). */
     val currentTargetDisplay: Display
         get() = externalDisplayManager?.getTargetDisplay() ?: windowManager.defaultDisplay
+
+    /** Resolve the StreamView coordinate space for motion callbacks that don't pass a view. */
+    private fun getMotionEventTargetView(): StreamView = activeStreamView ?: streamView
 
     /** Re-point all absolute/relative touch contexts at [view]. */
     private fun retargetTouchContexts(view: StreamView?) {
@@ -1430,7 +1433,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {
-        return touchInputHandler.handleMotionEvent(null, event) || super.onGenericMotionEvent(event)
+        return touchInputHandler.handleMotionEvent(getMotionEventTargetView(), event) || super.onGenericMotionEvent(event)
     }
 
     override fun onGenericMotion(view: View, event: MotionEvent): Boolean {

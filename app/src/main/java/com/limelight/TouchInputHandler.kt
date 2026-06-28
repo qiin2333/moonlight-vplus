@@ -71,6 +71,7 @@ class TouchInputHandler(private val game: Game) {
         val eventSource = event.source
 
         if (!BuildConfig.ROOT_BUILD && game.prefConfig.optimizeHardwareTouchpad &&
+            !eventHasStylusTool(event) &&
             NonRootTouchpadHandler.isHardwareTouchpadEvent(event)) {
             if (game.inputCaptureProvider.isCapturingActive()) {
                 nonRootTouchpadHandler.handleMotionEvent(event, game.conn)
@@ -252,6 +253,11 @@ class TouchInputHandler(private val game: Game) {
                         else -> buttonState or (lastButtonState and MotionEvent.BUTTON_PRIMARY)
                     }
                     changedButtons = buttonState xor lastButtonState
+                }
+
+                if (view != null && eventHasStylusTool(event) && trySendPenEvent(view, event)) {
+                    lastButtonState = buttonState
+                    return true
                 }
 
                 if (!game.inputCaptureProvider.isCapturingActive()) {
@@ -990,6 +996,16 @@ class TouchInputHandler(private val game: Game) {
                 ", source=${event.source}" +
                 ", action=${event.actionMasked}"
         )
+    }
+
+    private fun eventHasStylusTool(event: MotionEvent): Boolean {
+        for (i in 0 until event.pointerCount) {
+            when (event.getToolType(i)) {
+                MotionEvent.TOOL_TYPE_STYLUS,
+                MotionEvent.TOOL_TYPE_ERASER -> return true
+            }
+        }
+        return false
     }
 
     fun getRelativeTouchContextMap(): Array<RelativeTouchContext?> =
