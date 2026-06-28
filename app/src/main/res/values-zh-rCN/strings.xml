@@ -1665,4 +1665,5 @@
     <string name="sponsor_wechat_summary">杂鱼维护组还在努力修 bug 呢，扫码投喂一点点，就能变成设备、咖啡和 token 补给。</string>
     <string name="sponsor_wechat_action">使用微信支付扫码</string>
     <string name="sponsor_qr_content_description">赞助二维码</string>
+    <string name="toast_update_integrity_mismatch">更新下载内容不是有效安装包，请切换网络或使用浏览器下载。</string>
 </resources>

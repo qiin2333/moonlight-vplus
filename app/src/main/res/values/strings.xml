@@ -1491,6 +1491,7 @@ Tap again to replace it.</string>
     <string name="update_btn_later">Later</string>
     <string name="toast_update_skipped_version">Skipped v%s. Use “Check for Updates” to enable again.</string>
     <string name="toast_update_sha256_mismatch">Update file integrity check failed (SHA256 mismatch). Aborted for safety.</string>
+    <string name="toast_update_integrity_mismatch">Update download did not match the APK. Please switch networks or use browser download.</string>
     <string name="toast_check_update_in_progress">Already checking, please wait…</string>
     <string name="toast_need_install_permission">Install permission needed for auto-update</string>
     <string name="update_install_permission_title">Install Permission Required</string>
