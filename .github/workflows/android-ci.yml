@@ -163,6 +163,7 @@ jobs:
           V="${VERSION_NAME:-${GITHUB_REF#refs/tags/}}"; V="${V#v}"
           CUR_TAG="${GITHUB_REF#refs/tags/}"
           PREV_TAG=$(git tag --sort=-creatordate | sed -n '2p' || true)
+          APK_SHA256=$(sha256sum "$REL_APK" | awk '{print $1}')
 
           if [ -n "$PREV_TAG" ]; then
             LOG=$(git log --pretty=format:'%s' "${PREV_TAG}..${CUR_TAG}" --no-merges || true)
@@ -231,6 +232,12 @@ jobs:
 
             echo "### 📦 下载"
             echo "- APK 文件：\`Moonlight.V+.${V}.apk\`"
+            echo ""
+            echo "### SHA256"
+            echo ""
+            echo '```text'
+            echo "${APK_SHA256}  Moonlight.V+.${V}.apk"
+            echo '```'
             echo ""
             echo "---"
             echo "如遇到问题，请在 [Issues](../../issues) 反馈。祝你游戏顺利、低延迟满帧！🎮"
