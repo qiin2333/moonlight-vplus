@@ -384,4 +384,13 @@
     <string name="screen_mode_exclusive_streaming_desc">僅保留指定顯示器輸出，關閉其他顯示器。</string>
     <string name="screen_combination_mode_label">組合模式: %1$s</string>
     <string name="title_config_sync_backup_password">備份密碼</string>
+
+    <!-- 贊助 -->
+    <string name="sponsor_github_title">贊助 Moonlight V+</string>
+    <string name="sponsor_github_summary">透過 GitHub Sponsors 支援後續開發。掃描 QR code 或開啟贊助頁面即可。</string>
+    <string name="sponsor_github_action">開啟 GitHub Sponsors</string>
+    <string name="sponsor_wechat_title">贊助 Moonlight V+</string>
+    <string name="sponsor_wechat_summary">使用微信支付掃碼支援後續開發。</string>
+    <string name="sponsor_wechat_action">使用微信支付掃碼</string>
+    <string name="sponsor_qr_content_description">贊助 QR code</string>
 </resources>

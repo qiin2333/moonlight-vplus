@@ -1716,4 +1716,14 @@ Tap again to replace it.</string>
     <string name="seekbar_decrease">Decrease</string>
     <string name="seekbar_increase">Increase</string>
 
+    <!-- Sponsorship -->
+    <string name="sponsor_github_url">https://github.com/sponsors/qiin2333</string>
+    <string name="sponsor_github_title">Sponsor Moonlight V+</string>
+    <string name="sponsor_github_summary">Support continued development through GitHub Sponsors. Scan the code or open the sponsor page.</string>
+    <string name="sponsor_github_action">Open GitHub Sponsors</string>
+    <string name="sponsor_wechat_title">Sponsor Moonlight V+</string>
+    <string name="sponsor_wechat_summary">Scan with WeChat Pay to support continued development.</string>
+    <string name="sponsor_wechat_action">Scan with WeChat Pay</string>
+    <string name="sponsor_qr_content_description">Sponsor QR code</string>
+
 </resources>

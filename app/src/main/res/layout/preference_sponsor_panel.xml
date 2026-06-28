@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingStart="16dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="16dp"
+    android:paddingBottom="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/sponsor_panel_background"
+        android:gravity="center_vertical"
+        android:minHeight="148dp"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/sponsorTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="@style/PreferenceTitleWithShadow"
+                android:textSize="17sp" />
+
+            <TextView
+                android:id="@+id/sponsorSummary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:lineSpacingExtra="2dp"
+                android:textAppearance="@style/PreferenceSummaryWithShadow"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/sponsorAction"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/sponsor_action_background"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:minWidth="144dp"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:textColor="@android:color/white"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:layout_width="116dp"
+            android:layout_height="116dp"
+            android:background="@drawable/sponsor_qr_background"
+            android:padding="8dp">
+
+            <ImageView
+                android:id="@+id/sponsorQr"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:adjustViewBounds="true"
+                android:contentDescription="@string/sponsor_qr_content_description"
+                android:scaleType="fitCenter" />
+        </FrameLayout>
+    </LinearLayout>
+</LinearLayout>

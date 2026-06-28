@@ -1,0 +1,85 @@
+package com.limelight.preferences
+
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Color
+import android.util.AttributeSet
+import android.view.View
+import android.widget.ImageView
+import android.widget.TextView
+import androidx.core.os.ConfigurationCompat
+import androidx.preference.Preference
+import androidx.preference.PreferenceViewHolder
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.qrcode.QRCodeWriter
+import com.limelight.R
+import com.limelight.utils.HelpLauncher
+
+class SponsorPreference : Preference {
+    constructor(context: Context, attrs: AttributeSet, defStyleAttr: Int) :
+            super(context, attrs, defStyleAttr) { initialize() }
+
+    constructor(context: Context, attrs: AttributeSet) :
+            super(context, attrs) { initialize() }
+
+    constructor(context: Context, attrs: AttributeSet, defStyleAttr: Int, defStyleRes: Int) :
+            super(context, attrs, defStyleAttr, defStyleRes) { initialize() }
+
+    private fun initialize() {
+        layoutResource = R.layout.preference_sponsor_panel
+        isSelectable = false
+    }
+
+    override fun onBindViewHolder(holder: PreferenceViewHolder) {
+        super.onBindViewHolder(holder)
+
+        val isChinese = isChineseLocale()
+        val titleView = holder.findViewById(R.id.sponsorTitle) as TextView
+        val summaryView = holder.findViewById(R.id.sponsorSummary) as TextView
+        val actionView = holder.findViewById(R.id.sponsorAction) as TextView
+        val qrView = holder.findViewById(R.id.sponsorQr) as ImageView
+
+        titleView.setText(if (isChinese) R.string.sponsor_wechat_title else R.string.sponsor_github_title)
+        summaryView.setText(if (isChinese) R.string.sponsor_wechat_summary else R.string.sponsor_github_summary)
+
+        if (isChinese) {
+            actionView.setText(R.string.sponsor_wechat_action)
+            qrView.setImageResource(R.drawable.sponsor_wechat_qr)
+            actionView.visibility = View.GONE
+        } else {
+            val githubUrl = context.getString(R.string.sponsor_github_url)
+            actionView.setText(R.string.sponsor_github_action)
+            qrView.setImageBitmap(createQrBitmap(githubUrl, QR_SIZE_PX))
+            actionView.visibility = View.VISIBLE
+            actionView.setOnClickListener { HelpLauncher.launchUrl(context, githubUrl) }
+        }
+    }
+
+    private fun isChineseLocale(): Boolean {
+        val locales = ConfigurationCompat.getLocales(context.resources.configuration)
+        for (i in 0 until locales.size()) {
+            if (locales[i]?.language == "zh") {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun createQrBitmap(content: String, sizePx: Int): Bitmap {
+        val bitMatrix = QRCodeWriter().encode(content, BarcodeFormat.QR_CODE, sizePx, sizePx)
+        val pixels = IntArray(sizePx * sizePx)
+        for (y in 0 until sizePx) {
+            val offset = y * sizePx
+            for (x in 0 until sizePx) {
+                pixels[offset + x] = if (bitMatrix[x, y]) Color.BLACK else Color.WHITE
+            }
+        }
+        return Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888).apply {
+            setPixels(pixels, 0, sizePx, 0, 0, sizePx, sizePx)
+        }
+    }
+
+    private companion object {
+        private const val QR_SIZE_PX = 512
+    }
+}

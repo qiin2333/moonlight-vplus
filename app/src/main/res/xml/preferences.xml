@@ -956,5 +956,7 @@
             android:key="pref_developer_unlock"
             android:title="@string/title_developer_unlock"
             android:summary="@string/summary_developer_unlock_locked" />
+        <com.limelight.preferences.SponsorPreference
+            android:key="sponsor_panel" />
     </PreferenceCategory>
 </PreferenceScreen>

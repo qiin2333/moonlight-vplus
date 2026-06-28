@@ -1656,4 +1656,13 @@
     <string name="diag_transfer_check_failed">传递函数检测失败</string>
     <string name="diag_hlg_transfer">HLG透传</string>
     <string name="diag_pq_transfer">PQ透传</string>
+
+    <!-- 赞助 -->
+    <string name="sponsor_github_title">赞助 Moonlight V+</string>
+    <string name="sponsor_github_summary">通过 GitHub Sponsors 支持后续开发。扫码或打开赞助页面即可。</string>
+    <string name="sponsor_github_action">打开 GitHub Sponsors</string>
+    <string name="sponsor_wechat_title">赞助 Moonlight V+</string>
+    <string name="sponsor_wechat_summary">使用微信支付扫码支持后续开发。</string>
+    <string name="sponsor_wechat_action">使用微信支付扫码</string>
+    <string name="sponsor_qr_content_description">赞助二维码</string>
 </resources>
