@@ -386,11 +386,11 @@
     <string name="title_config_sync_backup_password">備份密碼</string>
 
     <!-- 贊助 -->
-    <string name="sponsor_github_title">贊助 Moonlight V+</string>
-    <string name="sponsor_github_summary">透過 GitHub Sponsors 支援後續開發。掃描 QR code 或開啟贊助頁面即可。</string>
+    <string name="sponsor_github_title">投餵 Moonlight V+</string>
+    <string name="sponsor_github_summary">雜魚維護組還在努力修 bug 呢，投餵一點點就能變成設備、咖啡和 token 補給。掃描 QR code 或開啟 GitHub Sponsors 即可。</string>
     <string name="sponsor_github_action">開啟 GitHub Sponsors</string>
-    <string name="sponsor_wechat_title">贊助 Moonlight V+</string>
-    <string name="sponsor_wechat_summary">使用微信支付掃碼支援後續開發。</string>
+    <string name="sponsor_wechat_title">投餵 Moonlight V+</string>
+    <string name="sponsor_wechat_summary">雜魚維護組還在努力修 bug 呢，掃碼投餵一點點，就能變成設備、咖啡和 token 補給。</string>
     <string name="sponsor_wechat_action">使用微信支付掃碼</string>
     <string name="sponsor_qr_content_description">贊助 QR code</string>
 </resources>

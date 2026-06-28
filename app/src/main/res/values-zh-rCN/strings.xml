@@ -1658,11 +1658,11 @@
     <string name="diag_pq_transfer">PQ透传</string>
 
     <!-- 赞助 -->
-    <string name="sponsor_github_title">赞助 Moonlight V+</string>
-    <string name="sponsor_github_summary">通过 GitHub Sponsors 支持后续开发。扫码或打开赞助页面即可。</string>
+    <string name="sponsor_github_title">投喂 Moonlight V+</string>
+    <string name="sponsor_github_summary">杂鱼维护组还在努力修 bug 呢，投喂一点点就能变成设备、咖啡和 token 补给。扫码或打开 GitHub Sponsors 即可。</string>
     <string name="sponsor_github_action">打开 GitHub Sponsors</string>
-    <string name="sponsor_wechat_title">赞助 Moonlight V+</string>
-    <string name="sponsor_wechat_summary">使用微信支付扫码支持后续开发。</string>
+    <string name="sponsor_wechat_title">投喂 Moonlight V+</string>
+    <string name="sponsor_wechat_summary">杂鱼维护组还在努力修 bug 呢，扫码投喂一点点，就能变成设备、咖啡和 token 补给。</string>
     <string name="sponsor_wechat_action">使用微信支付扫码</string>
     <string name="sponsor_qr_content_description">赞助二维码</string>
 </resources>
