@@ -64,6 +64,42 @@ class GitHubCrownProfileStorePublisherTest {
         )
     }
 
+    @Test(expected = GitHubCrownProfileStorePublisher.GitHubCrownStoreException::class)
+    fun validateProfileNotAlreadyPublishedRejectsExistingPath() {
+        val request = publishRequest()
+
+        GitHubCrownProfileStorePublisher.validateProfileNotAlreadyPublished(
+            indexText = """
+                {
+                  "kind": "crown-profile-index",
+                  "schemaVersion": 1,
+                  "profiles": [
+                    {
+                      "bundleId": "crown.other.profile",
+                      "url": "../profiles/apex-legends/apex-fps-layout.crown.json"
+                    }
+                  ]
+                }
+            """.trimIndent(),
+            request = request,
+            profilePath = "profiles/apex-legends/apex-fps-layout.crown.json"
+        )
+    }
+
+    @Test(expected = GitHubCrownProfileStorePublisher.GitHubCrownStoreException::class)
+    fun validateProfileNotAlreadyPublishedRejectsMissingProfiles() {
+        GitHubCrownProfileStorePublisher.validateProfileNotAlreadyPublished(
+            indexText = """
+                {
+                  "kind": "crown-profile-index",
+                  "schemaVersion": 1
+                }
+            """.trimIndent(),
+            request = publishRequest(),
+            profilePath = "profiles/apex-legends/apex-fps-layout.crown.json"
+        )
+    }
+
     @Test
     fun createBundleIncludesStoreDisplayMetadata() {
         val bundle = CrownProfileShareManager.createBundle(

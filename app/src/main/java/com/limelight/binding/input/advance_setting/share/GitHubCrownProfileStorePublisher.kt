@@ -1,6 +1,5 @@
 package com.limelight.binding.input.advance_setting.share
 
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -98,7 +97,8 @@ object GitHubCrownProfileStorePublisher {
         val bundle = JSONObject(request.bundleJson)
         val bundleId = bundle.optString("bundleId", "").trim()
         val url = "../$profilePath"
-        val profiles = root.optJSONArray("profiles") ?: JSONArray()
+        val profiles = root.optJSONArray("profiles")
+            ?: throw GitHubCrownStoreException("Crown store index is missing profiles")
         for (index in 0 until profiles.length()) {
             val existing = profiles.optJSONObject(index) ?: continue
             if (existing.optString("url") == url) {
