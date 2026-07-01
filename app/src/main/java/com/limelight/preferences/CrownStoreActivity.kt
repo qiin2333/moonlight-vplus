@@ -500,10 +500,7 @@ class CrownStoreActivity : AppCompatActivity() {
                         loadStoreProfiles(force = true)
                     }
                 }
-                else -> items(
-                    items = profiles,
-                    key = { it.bundleId.ifBlank { it.url } }
-                ) { profile ->
+                else -> items(profiles) { profile ->
                     CrownStoreProfileCard(
                         profile = profile,
                         modifier = Modifier.clickable { openStoreProfileDetail(profile) }
