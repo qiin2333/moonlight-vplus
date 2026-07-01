@@ -63,10 +63,46 @@ class CrownProfileShareManagerTest {
         val imported = CrownProfileShareManager.parseImportText(bundle)
 
         assertEquals("My Layout", imported.name)
+        assertEquals("My Layout", imported.installName)
         assertEquals(payload, imported.payload)
         assertEquals(9, imported.payloadInfo.version)
         assertEquals(2, imported.payloadInfo.elementCount)
         assertEquals(2, imported.payloadInfo.settingsCount)
+    }
+
+    @Test
+    fun payloadForInstallAsNewUsesBundleNameAsConfigName() {
+        val bundle = CrownProfileShareManager.createBundle(
+            profileName = "Store Layout",
+            payload = validPayload(),
+            metadata = CrownProfileShareManager.ExportMetadata(
+                packageName = "com.limelight.test",
+                appVersionCode = 390,
+                appVersionName = "12.9.8"
+            )
+        )
+        val imported = CrownProfileShareManager.parseImportText(bundle)
+
+        val payload = CrownProfileShareManager.payloadForInstallAsNew(imported)
+
+        val root = JSONObject(payload)
+        val settings = JSONObject(root.getString("settings"))
+        assertEquals("Store Layout", settings.getString("config_name"))
+        assertEquals(
+            MathUtils.computeMD5("${root.getInt("version")}${root.getString("settings")}${root.getString("elements")}"),
+            root.getString("md5")
+        )
+        CrownProfileShareManager.validatePayload(payload)
+    }
+
+    @Test
+    fun payloadForInstallAsNewKeepsLegacyPayloadName() {
+        val payload = validPayload()
+        val imported = CrownProfileShareManager.parseImportText(payload)
+
+        val installPayload = CrownProfileShareManager.payloadForInstallAsNew(imported)
+
+        assertEquals(payload, installPayload)
     }
 
     @Test

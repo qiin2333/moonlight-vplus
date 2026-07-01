@@ -1,5 +1,6 @@
 package com.limelight.binding.input.advance_setting.share
 
+import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.utils.MathUtils
 import org.json.JSONArray
 import org.json.JSONException
@@ -60,7 +61,8 @@ object CrownProfileShareManager {
         val layoutBasis: LayoutBasis?,
         val sourceLabel: String,
         val payload: String,
-        val payloadInfo: PayloadInfo
+        val payloadInfo: PayloadInfo,
+        val installName: String? = null
     )
 
     data class StoreProfile(
@@ -250,6 +252,35 @@ object CrownProfileShareManager {
         return resolvedUrl.toString()
     }
 
+    fun payloadForInstallAsNew(profile: ImportedProfile): String {
+        val installName = profile.installName?.trim().orEmpty()
+        if (installName.isBlank()) {
+            return profile.payload
+        }
+
+        val root = try {
+            JSONObject(profile.payload)
+        } catch (e: JSONException) {
+            throw CrownProfileShareException("Crown payload is not valid JSON")
+        }
+        val settings = try {
+            JSONObject(root.optString("settings", ""))
+        } catch (e: JSONException) {
+            throw CrownProfileShareException("Crown payload settings are invalid")
+        }
+
+        settings.put(PageConfigController.COLUMN_STRING_CONFIG_NAME, installName)
+        val settingsText = settings.toString()
+        val version = root.optInt("version", -1)
+        val elements = root.optString("elements", "")
+        root.put("settings", settingsText)
+        root.put("md5", MathUtils.computeMD5("$version$settingsText$elements"))
+
+        val payload = root.toString()
+        validatePayload(payload)
+        return payload
+    }
+
     private fun parseBundle(root: JSONObject): ImportedProfile {
         val schemaVersion = root.optInt("schemaVersion", -1)
         if (schemaVersion != SCHEMA_VERSION) {
@@ -285,7 +316,8 @@ object CrownProfileShareManager {
             layoutBasis = layoutBasis,
             sourceLabel = "Crown share package",
             payload = payload,
-            payloadInfo = payloadInfo
+            payloadInfo = payloadInfo,
+            installName = name
         )
     }
 
