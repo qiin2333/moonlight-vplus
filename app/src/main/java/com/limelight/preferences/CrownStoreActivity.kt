@@ -99,6 +99,7 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URLEncoder
 import java.net.URL
+import java.util.Calendar
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -562,28 +563,27 @@ class CrownStoreActivity : AppCompatActivity() {
         modifier: Modifier = Modifier
     ) {
         CrownProfileCard(modifier) {
-            CrownCardTitle(profile.name, maxLines = 3)
-            if (profile.game.isNotBlank()) {
-                CrownMetaText(profile.game, strong = true)
-            }
-            if (profile.author.isNotBlank()) {
-                CrownMetaText(profile.author, strong = false)
+            CrownCardTitle(profile.name, maxLines = 2)
+            val subtitle = listOf(profile.game, profile.author)
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .joinToString(" · ")
+            if (subtitle.isNotBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                CrownMetaText(subtitle, strong = false)
             }
             if (profile.summary.isNotBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
-                CrownBodyText(profile.summary, maxLines = 5)
+                CrownBodyText(profile.summary, maxLines = 2)
             }
-            if (profile.tags.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(9.dp))
-                CrownTags(profile.tags)
-            }
-            formatLayoutBasis(profile.layoutBasis)?.let {
+            val layoutBasis = formatLayoutBasisCompact(profile.layoutBasis)
+            val updatedAt = formatStoreUpdatedAtCompact(profile.updatedAt)
+            if (!layoutBasis.isNullOrBlank() || updatedAt.isNotBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
-                CrownFootnote(stringResource(R.string.crown_store_layout_basis, it))
-            }
-            if (profile.updatedAt.isNotBlank()) {
-                Spacer(modifier = Modifier.height(6.dp))
-                CrownFootnote(stringResource(R.string.crown_store_updated_at, formatStoreUpdatedAt(profile.updatedAt)))
+                CrownStoreCardFooter(
+                    layoutBasis = layoutBasis.orEmpty(),
+                    updatedAt = updatedAt
+                )
             }
             Spacer(modifier = Modifier.height(10.dp))
             Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -884,15 +884,37 @@ class CrownStoreActivity : AppCompatActivity() {
     }
 
     @Composable
-    private fun CrownFootnote(text: String) {
+    private fun CrownFootnote(text: String, modifier: Modifier = Modifier) {
         Text(
             text = text,
             color = colorResource(R.color.crown_text_secondary),
             fontSize = 10.8.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.alpha(0.62f)
+            modifier = modifier.alpha(0.62f)
         )
+    }
+
+    @Composable
+    private fun CrownStoreCardFooter(layoutBasis: String, updatedAt: String) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (layoutBasis.isNotBlank()) {
+                CrownFootnote(
+                    text = layoutBasis,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            if (updatedAt.isNotBlank()) {
+                CrownFootnote(
+                    text = updatedAt,
+                    modifier = if (layoutBasis.isBlank()) Modifier.weight(1f) else Modifier
+                )
+            }
+        }
     }
 
     @Composable
@@ -1962,6 +1984,19 @@ class CrownStoreActivity : AppCompatActivity() {
         }
     }
 
+    private fun formatLayoutBasisCompact(layoutBasis: CrownProfileShareManager.LayoutBasis?): String? {
+        if (layoutBasis == null || !layoutBasis.isPresent()) return null
+        val sizeText = "${layoutBasis.widthPx}x${layoutBasis.heightPx}"
+        val dpiText = if (layoutBasis.densityDpi > 0) {
+            "${layoutBasis.densityDpi} dpi"
+        } else {
+            ""
+        }
+        return listOf(sizeText, dpiText)
+            .filter { it.isNotBlank() }
+            .joinToString(" · ")
+    }
+
     private fun isLayoutBasisCompatible(
         profileLayout: CrownProfileShareManager.LayoutBasis?,
         currentLayout: CrownProfileShareManager.LayoutBasis
@@ -1987,6 +2022,25 @@ class CrownStoreActivity : AppCompatActivity() {
         return DateFormat
             .getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
             .format(parsedDate)
+    }
+
+    private fun formatStoreUpdatedAtCompact(updatedAt: String): String {
+        val trimmed = updatedAt.trim()
+        if (trimmed.isBlank()) return ""
+
+        val parsedDate = parseStoreUpdatedAt(trimmed) ?: return trimmed.take(10)
+        val now = Calendar.getInstance()
+        val updated = Calendar.getInstance().apply { time = parsedDate }
+        val sameYear = now.get(Calendar.YEAR) == updated.get(Calendar.YEAR)
+        val sameDay = sameYear &&
+            now.get(Calendar.DAY_OF_YEAR) == updated.get(Calendar.DAY_OF_YEAR)
+        val hasTime = trimmed.contains('T')
+        val pattern = when {
+            sameDay && hasTime -> "HH:mm"
+            sameYear -> "MMM d"
+            else -> "MMM d, yyyy"
+        }
+        return SimpleDateFormat(pattern, Locale.getDefault()).format(parsedDate)
     }
 
     private fun parseStoreUpdatedAt(updatedAt: String): Date? {
