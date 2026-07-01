@@ -22,6 +22,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.appcompat.app.AppCompatActivity
@@ -289,6 +290,10 @@ class CrownStoreActivity : AppCompatActivity() {
     @Composable
     private fun CrownStoreScreen(state: CrownStoreUiState) {
         val background = colorResource(R.color.advance_setting_background)
+        val selectedProfile = state.selectedStoreProfile
+        BackHandler(enabled = selectedProfile != null) {
+            closeStoreProfileDetail()
+        }
         MaterialTheme {
             Surface(
                 modifier = Modifier.fillMaxSize(),
@@ -303,7 +308,6 @@ class CrownStoreActivity : AppCompatActivity() {
                         }
                     }
                 ) { innerPadding ->
-                    val selectedProfile = state.selectedStoreProfile
                     if (selectedProfile != null) {
                         CrownStoreProfileDetail(
                             profile = selectedProfile,
@@ -572,11 +576,11 @@ class CrownStoreActivity : AppCompatActivity() {
             }
             formatLayoutBasis(profile.layoutBasis)?.let {
                 Spacer(modifier = Modifier.height(8.dp))
-                CrownFootnote(getString(R.string.crown_store_layout_basis, it))
+                CrownFootnote(stringResource(R.string.crown_store_layout_basis, it))
             }
             if (profile.updatedAt.isNotBlank()) {
                 Spacer(modifier = Modifier.height(6.dp))
-                CrownFootnote(getString(R.string.crown_store_updated_at, formatStoreUpdatedAt(profile.updatedAt)))
+                CrownFootnote(stringResource(R.string.crown_store_updated_at, formatStoreUpdatedAt(profile.updatedAt)))
             }
             Spacer(modifier = Modifier.height(10.dp))
             Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -639,10 +643,10 @@ class CrownStoreActivity : AppCompatActivity() {
                         .joinToString(" · ")
                 )
                 formatLayoutBasis(profile.layoutBasis)?.let {
-                    CrownDetailMeta(getString(R.string.crown_store_layout_basis, it))
+                    CrownDetailMeta(stringResource(R.string.crown_store_layout_basis, it))
                 }
                 if (profile.updatedAt.isNotBlank()) {
-                    CrownDetailMeta(getString(R.string.crown_store_updated_at, formatStoreUpdatedAt(profile.updatedAt)))
+                    CrownDetailMeta(stringResource(R.string.crown_store_updated_at, formatStoreUpdatedAt(profile.updatedAt)))
                 }
             }
             Spacer(modifier = Modifier.height(10.dp))
