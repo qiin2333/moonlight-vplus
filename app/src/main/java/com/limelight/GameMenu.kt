@@ -357,15 +357,6 @@ class GameMenu(
                 ) {
                     setCrownFeatureEnabled(true)
                     replaceCrownFunctionMenu()
-                },
-                createCrownOption(
-                    getString(R.string.game_menu_configure_settings),
-                    "crown_profiles",
-                    getString(R.string.crown_control_profiles_subtitle)
-                ) {
-                    setCrownFeatureEnabled(true)
-                    game.setcurrentBackKeyMenu(Game.BackKeyMenuMode.NO_MENU)
-                    game.controllerManager?.pageConfigController?.open()
                 }
             )
             showSubMenu(getString(R.string.game_menu_crown_function_title), disabledOptions)
