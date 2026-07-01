@@ -18,7 +18,7 @@ class GitHubCrownProfileStorePublisherTest {
     }
 
     @Test
-    fun appendProfileToIndexAddsStoreEntry() {
+    fun validateProfileNotAlreadyPublishedAcceptsNewProfile() {
         val request = publishRequest(
             layoutBasis = CrownProfileShareManager.LayoutBasis(
                 widthPx = 2400,
@@ -28,7 +28,7 @@ class GitHubCrownProfileStorePublisherTest {
                 orientation = "landscape"
             )
         )
-        val updatedIndex = GitHubCrownProfileStorePublisher.appendProfileToIndex(
+        GitHubCrownProfileStorePublisher.validateProfileNotAlreadyPublished(
             indexText = """
                 {
                   "kind": "crown-profile-index",
@@ -37,23 +37,31 @@ class GitHubCrownProfileStorePublisherTest {
                 }
             """.trimIndent(),
             request = request,
-            profilePath = "profiles/apex-legends/apex-fps-layout.crown.json",
-            updatedAt = "2026-06-18T00:00:00Z"
+            profilePath = "profiles/apex-legends/apex-fps-layout.crown.json"
         )
+    }
 
-        val root = JSONObject(updatedIndex)
-        val profile = root.getJSONArray("profiles").getJSONObject(0)
-        assertEquals(CrownProfileShareManager.INDEX_KIND, root.getString("kind"))
-        assertEquals("2026-06-18T00:00:00Z", root.getString("generatedAt"))
-        assertEquals("Apex FPS Layout", profile.getString("name"))
-        assertEquals("Apex Legends", profile.getString("game"))
-        assertEquals("WA Crown", profile.getString("author"))
-        assertEquals("../profiles/apex-legends/apex-fps-layout.crown.json", profile.getString("url"))
-        assertEquals("fps", profile.getJSONArray("tags").getString(0))
-        assertEquals(2400, profile.getJSONObject("layoutBasis").getInt("widthPx"))
-        assertEquals(1080, profile.getJSONObject("layoutBasis").getInt("heightPx"))
-        assertEquals(440, profile.getJSONObject("layoutBasis").getInt("densityDpi"))
-        assertEquals("landscape", profile.getJSONObject("layoutBasis").getString("orientation"))
+    @Test(expected = GitHubCrownProfileStorePublisher.GitHubCrownStoreException::class)
+    fun validateProfileNotAlreadyPublishedRejectsExistingBundle() {
+        val request = publishRequest()
+        val bundleId = JSONObject(request.bundleJson).getString("bundleId")
+
+        GitHubCrownProfileStorePublisher.validateProfileNotAlreadyPublished(
+            indexText = """
+                {
+                  "kind": "crown-profile-index",
+                  "schemaVersion": 1,
+                  "profiles": [
+                    {
+                      "bundleId": "$bundleId",
+                      "url": "../profiles/other/other.crown.json"
+                    }
+                  ]
+                }
+            """.trimIndent(),
+            request = request,
+            profilePath = "profiles/apex-legends/apex-fps-layout.crown.json"
+        )
     }
 
     @Test

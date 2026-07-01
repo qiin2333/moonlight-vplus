@@ -6,11 +6,8 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
-import java.text.SimpleDateFormat
 import java.util.Base64
-import java.util.Date
 import java.util.Locale
-import java.util.TimeZone
 
 object GitHubCrownProfileStorePublisher {
     const val STORE_OWNER = "qiin2333"
@@ -49,16 +46,14 @@ object GitHubCrownProfileStorePublisher {
 
         val userLogin = fetchLogin(accessToken)
         val publishOwner = ensurePublishRepository(accessToken, userLogin)
-        syncFork(accessToken, publishOwner)
 
-        val baseSha = getRefSha(accessToken, publishOwner, STORE_BRANCH)
+        val baseSha = getRefSha(accessToken, STORE_OWNER, STORE_BRANCH)
         val branchName = "crown-profile/${slug(request.profileName)}-${System.currentTimeMillis()}"
         createBranch(accessToken, publishOwner, branchName, baseSha)
 
         val profilePath = buildProfilePath(request)
-        val baseIndex = getContent(accessToken, publishOwner, STORE_REPO, INDEX_PATH, STORE_BRANCH)
-        val updatedAt = formatIso8601(System.currentTimeMillis())
-        val updatedIndex = appendProfileToIndex(baseIndex.text, request, profilePath, updatedAt)
+        val baseIndex = getContent(accessToken, STORE_OWNER, STORE_REPO, INDEX_PATH, STORE_BRANCH)
+        validateProfileNotAlreadyPublished(baseIndex.text, request, profilePath)
 
         putContent(
             accessToken = accessToken,
@@ -68,17 +63,6 @@ object GitHubCrownProfileStorePublisher {
             content = request.bundleJson,
             sha = null,
             message = "Add ${request.profileName} Crown profile"
-        )
-
-        val forkIndex = getContent(accessToken, publishOwner, STORE_REPO, INDEX_PATH, branchName)
-        putContent(
-            accessToken = accessToken,
-            owner = publishOwner,
-            path = INDEX_PATH,
-            branch = branchName,
-            content = updatedIndex,
-            sha = forkIndex.sha,
-            message = "Update Crown profile index"
         )
 
         val pullRequestUrl = createPullRequest(accessToken, publishOwner, branchName, request)
@@ -100,12 +84,11 @@ object GitHubCrownProfileStorePublisher {
         return "profiles/$gamePath/$profileName-$suffix${CrownProfileShareManager.FILE_EXTENSION}"
     }
 
-    fun appendProfileToIndex(
+    fun validateProfileNotAlreadyPublished(
         indexText: String,
         request: PublishRequest,
-        profilePath: String,
-        updatedAt: String
-    ): String {
+        profilePath: String
+    ) {
         val root = JSONObject(indexText)
         if (root.optString("kind") != CrownProfileShareManager.INDEX_KIND ||
             root.optInt("schemaVersion", -1) != CrownProfileShareManager.SCHEMA_VERSION) {
@@ -114,9 +97,8 @@ object GitHubCrownProfileStorePublisher {
 
         val bundle = JSONObject(request.bundleJson)
         val bundleId = bundle.optString("bundleId", "").trim()
-        val layoutBasis = bundle.optJSONObject("layoutBasis")
         val url = "../$profilePath"
-        val profiles = root.optJSONArray("profiles") ?: JSONArray().also { root.put("profiles", it) }
+        val profiles = root.optJSONArray("profiles") ?: JSONArray()
         for (index in 0 until profiles.length()) {
             val existing = profiles.optJSONObject(index) ?: continue
             if (existing.optString("url") == url) {
@@ -126,30 +108,6 @@ object GitHubCrownProfileStorePublisher {
                 throw GitHubCrownStoreException("This Crown profile bundle is already published")
             }
         }
-
-        val tags = JSONArray()
-        request.tags
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .forEach { tags.put(it) }
-
-        profiles.put(
-            JSONObject()
-                .put("bundleId", bundleId)
-                .put("name", request.profileName.trim().ifBlank { "Crown Profile" })
-                .put("summary", request.summary.trim())
-                .put("author", request.author.trim())
-                .put("game", request.game.trim())
-                .put("tags", tags)
-                .put("updatedAt", updatedAt)
-                .put("url", url)
-                .apply {
-                    layoutBasis?.let { put("layoutBasis", it) }
-                }
-        )
-        root.put("generatedAt", updatedAt)
-        return root.toString(2)
     }
 
     @Throws(IOException::class)
@@ -189,27 +147,6 @@ object GitHubCrownProfileStorePublisher {
             Thread.sleep(1000L)
         }
         throw GitHubCrownStoreException("GitHub fork is not ready yet")
-    }
-
-    @Throws(IOException::class)
-    private fun syncFork(accessToken: String, owner: String) {
-        if (owner == STORE_OWNER) {
-            return
-        }
-
-        val response = request(
-            accessToken,
-            "POST",
-            "${repoUrl(owner)}/merge-upstream",
-            JSONObject().put("branch", STORE_BRANCH).toString()
-        )
-        if (response.code in 200..299 ||
-            response.code == HttpURLConnection.HTTP_CONFLICT ||
-            response.code == HTTP_UNPROCESSABLE_ENTITY ||
-            response.code == HttpURLConnection.HTTP_NOT_FOUND) {
-            return
-        }
-        throw apiException(response, "Unable to sync Crown Store fork")
     }
 
     @Throws(IOException::class)
@@ -351,12 +288,6 @@ object GitHubCrownProfileStorePublisher {
             .replace(Regex("[^a-z0-9._-]+"), "-")
             .trim('-', '.', '_')
             .ifBlank { "crown-profile" }
-    }
-
-    private fun formatIso8601(timestampMs: Long): String {
-        val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
-        formatter.timeZone = TimeZone.getTimeZone("UTC")
-        return formatter.format(Date(timestampMs))
     }
 
     private fun urlEncode(value: String): String =
