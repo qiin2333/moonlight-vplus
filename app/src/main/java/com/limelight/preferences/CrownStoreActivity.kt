@@ -23,6 +23,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -30,6 +31,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -40,6 +42,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button as ComposeButton
@@ -278,16 +284,19 @@ class CrownStoreActivity : AppCompatActivity() {
                     topBar = { CrownStoreTopBar(state.selectedTab) },
                     bottomBar = { CrownStoreBottomBar(state.selectedTab) }
                 ) { innerPadding ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                            .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 16.dp, vertical = 10.dp)
-                    ) {
-                        when (state.selectedTab) {
-                            CrownTab.STORE -> CrownStoreTabContent(state)
-                            CrownTab.MINE -> CrownMineTabContent(state.localProfiles)
+                    when (state.selectedTab) {
+                        CrownTab.STORE -> CrownStoreTabContent(
+                            state = state,
+                            modifier = Modifier.padding(innerPadding)
+                        )
+                        CrownTab.MINE -> Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding)
+                                .verticalScroll(rememberScrollState())
+                                .padding(horizontal = 16.dp, vertical = 10.dp)
+                        ) {
+                            CrownMineTabContent(state.localProfiles)
                         }
                     }
                 }
@@ -379,51 +388,80 @@ class CrownStoreActivity : AppCompatActivity() {
         }
     }
 
+    @OptIn(ExperimentalFoundationApi::class)
     @Composable
-    private fun CrownStoreTabContent(state: CrownStoreUiState) {
-        CrownBodyText(stringResource(R.string.crown_store_store_summary))
-        Spacer(modifier = Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            CrownActionButton(
-                text = stringResource(R.string.crown_store_action_refresh),
-                iconRes = R.drawable.phc_action_reset,
-                modifier = Modifier.weight(1f)
-            ) {
-                loadStoreProfiles(force = true)
+    private fun CrownStoreTabContent(
+        state: CrownStoreUiState,
+        modifier: Modifier = Modifier
+    ) {
+        val profiles = state.storeProfiles
+        LazyVerticalStaggeredGrid(
+            columns = StaggeredGridCells.Fixed(2),
+            modifier = modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalItemSpacing = 10.dp,
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
+        ) {
+            item(span = StaggeredGridItemSpan.FullLine) {
+                Column {
+                    CrownBodyText(stringResource(R.string.crown_store_store_summary))
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        CrownActionButton(
+                            text = stringResource(R.string.crown_store_action_refresh),
+                            iconRes = R.drawable.phc_action_reset,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            loadStoreProfiles(force = true)
+                        }
+                        CrownActionButton(
+                            text = stringResource(R.string.crown_share_action_import_url),
+                            iconRes = R.drawable.phc_plug,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            showCrownShareUrlImportDialog()
+                        }
+                    }
+                }
             }
-            CrownActionButton(
-                text = stringResource(R.string.crown_share_action_import_url),
-                iconRes = R.drawable.phc_plug,
-                modifier = Modifier.weight(1f)
-            ) {
-                showCrownShareUrlImportDialog()
+            when {
+                state.storeLoading -> item(span = StaggeredGridItemSpan.FullLine) {
+                    CrownLoadingState(stringResource(R.string.toast_crown_store_loading))
+                }
+                state.storeError != null -> item(span = StaggeredGridItemSpan.FullLine) {
+                    CrownStateCard(
+                        title = stringResource(R.string.toast_crown_store_failed),
+                        message = state.storeError,
+                        buttonText = stringResource(R.string.crown_store_action_refresh)
+                    ) {
+                        loadStoreProfiles(force = true)
+                    }
+                }
+                profiles == null -> item(span = StaggeredGridItemSpan.FullLine) {
+                    CrownStateCard(
+                        title = stringResource(R.string.crown_store_empty_state_title),
+                        message = stringResource(R.string.crown_store_empty_state_message),
+                        buttonText = stringResource(R.string.crown_store_action_refresh)
+                    ) {
+                        loadStoreProfiles(force = true)
+                    }
+                }
+                profiles.isEmpty() -> item(span = StaggeredGridItemSpan.FullLine) {
+                    CrownStateCard(
+                        title = stringResource(R.string.toast_crown_store_empty),
+                        message = stringResource(R.string.crown_store_empty_state_message),
+                        buttonText = stringResource(R.string.crown_store_action_refresh)
+                    ) {
+                        loadStoreProfiles(force = true)
+                    }
+                }
+                else -> items(
+                    items = profiles,
+                    key = { it.bundleId.ifBlank { it.url } }
+                ) { profile ->
+                    CrownStoreProfileCard(profile)
+                }
             }
-        }
-        Spacer(modifier = Modifier.height(10.dp))
-        when {
-            state.storeLoading -> CrownLoadingState(stringResource(R.string.toast_crown_store_loading))
-            state.storeError != null -> CrownStateCard(
-                title = stringResource(R.string.toast_crown_store_failed),
-                message = state.storeError,
-                buttonText = stringResource(R.string.crown_store_action_refresh)
-            ) {
-                loadStoreProfiles(force = true)
-            }
-            state.storeProfiles == null -> CrownStateCard(
-                title = stringResource(R.string.crown_store_empty_state_title),
-                message = stringResource(R.string.crown_store_empty_state_message),
-                buttonText = stringResource(R.string.crown_store_action_refresh)
-            ) {
-                loadStoreProfiles(force = true)
-            }
-            state.storeProfiles.isEmpty() -> CrownStateCard(
-                title = stringResource(R.string.toast_crown_store_empty),
-                message = stringResource(R.string.crown_store_empty_state_message),
-                buttonText = stringResource(R.string.crown_store_action_refresh)
-            ) {
-                loadStoreProfiles(force = true)
-            }
-            else -> CrownStoreProfilesGrid(state.storeProfiles)
         }
     }
 
@@ -474,28 +512,12 @@ class CrownStoreActivity : AppCompatActivity() {
     }
 
     @Composable
-    private fun CrownStoreProfilesGrid(profiles: List<CrownProfileShareManager.StoreProfile>) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            profiles.chunked(2).forEach { rowProfiles ->
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    rowProfiles.forEach { profile ->
-                        CrownStoreProfileCard(profile, Modifier.weight(1f))
-                    }
-                    if (rowProfiles.size == 1) {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
-                }
-            }
-        }
-    }
-
-    @Composable
     private fun CrownStoreProfileCard(
         profile: CrownProfileShareManager.StoreProfile,
         modifier: Modifier = Modifier
     ) {
         CrownProfileCard(modifier) {
-            CrownCardTitle(profile.name)
+            CrownCardTitle(profile.name, maxLines = Int.MAX_VALUE)
             if (profile.game.isNotBlank()) {
                 CrownMetaText(profile.game, strong = true)
             }
@@ -504,7 +526,7 @@ class CrownStoreActivity : AppCompatActivity() {
             }
             if (profile.summary.isNotBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
-                CrownBodyText(profile.summary, maxLines = 3)
+                CrownBodyText(profile.summary)
             }
             if (profile.tags.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(9.dp))
@@ -682,13 +704,13 @@ class CrownStoreActivity : AppCompatActivity() {
     }
 
     @Composable
-    private fun CrownCardTitle(text: String) {
+    private fun CrownCardTitle(text: String, maxLines: Int = 2) {
         Text(
             text = text,
             color = colorResource(R.color.crown_text_primary),
             fontSize = 15.4.sp,
             fontWeight = FontWeight.Bold,
-            maxLines = 2,
+            maxLines = maxLines,
             overflow = TextOverflow.Ellipsis
         )
     }
