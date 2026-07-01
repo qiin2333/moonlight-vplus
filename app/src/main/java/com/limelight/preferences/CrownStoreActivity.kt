@@ -45,9 +45,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button as ComposeButton
@@ -291,6 +293,7 @@ class CrownStoreActivity : AppCompatActivity() {
     private fun CrownStoreScreen(state: CrownStoreUiState) {
         val background = colorResource(R.color.advance_setting_background)
         val selectedProfile = state.selectedStoreProfile
+        val storeGridState = rememberLazyStaggeredGridState()
         BackHandler(enabled = selectedProfile != null) {
             closeStoreProfileDetail()
         }
@@ -317,6 +320,7 @@ class CrownStoreActivity : AppCompatActivity() {
                         when (state.selectedTab) {
                             CrownTab.STORE -> CrownStoreTabContent(
                                 state = state,
+                                gridState = storeGridState,
                                 modifier = Modifier.padding(innerPadding)
                             )
                             CrownTab.MINE -> Column(
@@ -431,11 +435,13 @@ class CrownStoreActivity : AppCompatActivity() {
     @Composable
     private fun CrownStoreTabContent(
         state: CrownStoreUiState,
+        gridState: LazyStaggeredGridState,
         modifier: Modifier = Modifier
     ) {
         val profiles = state.storeProfiles
         LazyVerticalStaggeredGrid(
             columns = StaggeredGridCells.Fixed(2),
+            state = gridState,
             modifier = modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalItemSpacing = 10.dp,
