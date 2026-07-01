@@ -1705,7 +1705,7 @@ class CrownStoreActivity : AppCompatActivity() {
 
     private fun importPendingCrownShareAsNew() {
         val profile = pendingCrownShareImport ?: return
-        val errorCode = helper.importConfig(profile.payload)
+        val errorCode = helper.importConfig(CrownProfileShareManager.payloadForInstallAsNew(profile))
         if (errorCode == 0) {
             pendingCrownShareImport = null
             onLocalProfilesChanged()
