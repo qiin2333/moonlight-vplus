@@ -69,16 +69,26 @@ class TouchInputHandler(private val game: Game) {
         if (!game.grabbedInput) return false
 
         val eventSource = event.source
+        val isHardwareTouchpadEvent = NonRootTouchpadHandler.isHardwareTouchpadEvent(event)
+        val nativeMousePointerMode = game.prefConfig.enableNativeMousePointer
+        // Native mouse pointer mode disables pointer capture, so keep hardware touchpads on that path.
+        val nonRootTouchpadOptimizationActive =
+            !BuildConfig.ROOT_BUILD &&
+                game.prefConfig.optimizeHardwareTouchpad &&
+                !nativeMousePointerMode
+        val shouldHandleAsNonRootTouchpad =
+            nonRootTouchpadOptimizationActive &&
+                isHardwareTouchpadEvent &&
+                !eventHasStylusTool(event)
 
-        if (!BuildConfig.ROOT_BUILD && game.prefConfig.optimizeHardwareTouchpad &&
-            !eventHasStylusTool(event) &&
-            NonRootTouchpadHandler.isHardwareTouchpadEvent(event)) {
+        if (shouldHandleAsNonRootTouchpad) {
             if (game.inputCaptureProvider.isCapturingActive()) {
-                nonRootTouchpadHandler.handleMotionEvent(event, game.conn)
+                if (nonRootTouchpadHandler.handleMotionEvent(event, game.conn)) {
+                    return true
+                }
             } else {
                 nonRootTouchpadHandler.cancelAll(game.conn)
             }
-            return true
         }
 
         // 华为平板原生鼠标下的滚动逻辑
@@ -176,8 +186,9 @@ class TouchInputHandler(private val game: Game) {
         val deviceSources = event.device?.sources ?: 0
 
         // 本地鼠标指针模式
-        if (game.prefConfig.enableNativeMousePointer && (eventSource and InputDevice.SOURCE_CLASS_POINTER) != 0) {
-            val isActualMouse = eventSource == InputDevice.SOURCE_MOUSE ||
+        if (nativeMousePointerMode) {
+            val isActualMouse = isHardwareTouchpadEvent ||
+                eventSource == InputDevice.SOURCE_MOUSE ||
                 eventSource == InputDevice.SOURCE_MOUSE_RELATIVE ||
                 (event.pointerCount >= 1 && event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE) ||
                 eventSource == 12290
@@ -188,7 +199,7 @@ class TouchInputHandler(private val game: Game) {
                         ", source: $eventSource, x: ${event.x}, y: ${event.y}" +
                         ", buttons: ${event.buttonState}"
                 )
-                updateMousePosition(view, event)
+                sendNativeMousePosition(view, event, isHardwareTouchpadEvent)
 
                 val buttonState = event.buttonState
                 val changedButtons = buttonState xor lastButtonState
@@ -280,21 +291,7 @@ class TouchInputHandler(private val game: Game) {
                         }
                     }
                 } else if ((eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0) {
-                    val device = event.device
-                    if (device != null) {
-                        val xRange = device.getMotionRange(MotionEvent.AXIS_X, eventSource)
-                        val yRange = device.getMotionRange(MotionEvent.AXIS_Y, eventSource)
-                        if (xRange != null && yRange != null && xRange.min == 0f && yRange.min == 0f) {
-                            val xMax = xRange.max.toInt()
-                            val yMax = yRange.max.toInt()
-                            if (xMax <= Short.MAX_VALUE && yMax <= Short.MAX_VALUE) {
-                                game.conn?.sendMousePosition(
-                                    event.x.toInt().toShort(), event.y.toInt().toShort(),
-                                    xMax.toShort(), yMax.toShort()
-                                )
-                            }
-                        }
-                    }
+                    trySendMousePositionFromInputDeviceRange(event)
                 } else if (view != null && trySendPenEvent(view, event)) {
                     return true
                 } else if (view != null) {
@@ -666,6 +663,42 @@ class TouchInputHandler(private val game: Game) {
     }
 
     // ---- updateMousePosition ----
+
+    private fun sendNativeMousePosition(
+        touchedView: View?,
+        event: MotionEvent,
+        isHardwareTouchpadEvent: Boolean
+    ) {
+        if (isHardwareTouchpadEvent && trySendMousePositionFromInputDeviceRange(event)) {
+            return
+        }
+
+        updateMousePosition(touchedView, event)
+    }
+
+    private fun trySendMousePositionFromInputDeviceRange(event: MotionEvent): Boolean {
+        val device = event.device ?: return false
+        val xRange = device.getMotionRange(MotionEvent.AXIS_X, event.source) ?: return false
+        val yRange = device.getMotionRange(MotionEvent.AXIS_Y, event.source) ?: return false
+
+        if (xRange.min != 0f || yRange.min != 0f) {
+            return false
+        }
+
+        val xMax = xRange.max.toInt()
+        val yMax = yRange.max.toInt()
+        if (xMax > Short.MAX_VALUE || yMax > Short.MAX_VALUE) {
+            return false
+        }
+
+        game.conn?.sendMousePosition(
+            event.x.toInt().toShort(),
+            event.y.toInt().toShort(),
+            xMax.toShort(),
+            yMax.toShort()
+        )
+        return true
+    }
 
     private fun updateMousePosition(touchedView: View?, event: MotionEvent) {
         val activeStreamView = game.activeStreamView ?: return
