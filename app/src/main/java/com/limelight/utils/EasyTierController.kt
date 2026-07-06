@@ -162,8 +162,7 @@ class EasyTierController(
         private val cardFill = ContextCompat.getColor(context, R.color.app_dialog_surface_elevated)
         private val softFill = ContextCompat.getColor(context, R.color.app_dialog_surface_pressed)
         private val focusedFill = ContextCompat.getColor(context, R.color.app_dialog_surface_focused)
-        private val cardStroke = ContextCompat.getColor(context, R.color.app_dialog_outline)
-        private val focusedStroke = ContextCompat.getColor(context, R.color.app_dialog_outline_strong)
+        private val noStroke = AndroidColor.TRANSPARENT
         private val accentTextColor = AndroidColor.rgb(28, 29, 34)
 
         private val statusText = TextView(context)
@@ -176,12 +175,12 @@ class EasyTierController(
 
         init {
             orientation = LinearLayout.VERTICAL
-            background = roundedBackground(panelFill, focusedStroke, dp(22))
+            background = roundedBackground(panelFill, noStroke, dp(22))
             setPadding(
                     dp(if (isLandscape) 24 else 18),
-                    dp(if (isLandscape) 18 else 20),
+                    dp(if (isLandscape) 18 else 18),
                     dp(if (isLandscape) 24 else 18),
-                    dp(if (isLandscape) 14 else 16)
+                    dp(if (isLandscape) 14 else 14)
             )
 
             content.orientation = LinearLayout.VERTICAL
@@ -200,15 +199,15 @@ class EasyTierController(
             }
 
             addView(createHeader(), sectionParams())
-            addView(createTabs(), sectionParams(top = 14))
+            addView(createTabs(), sectionParams(top = 12))
             addView(contentScroll, LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     0,
                     1f
             ).apply {
-                topMargin = dp(12)
+                topMargin = dp(10)
             })
-            addView(createFooter(), sectionParams(top = 12))
+            addView(createFooter(), sectionParams(top = 10))
             refreshChrome()
             renderContent()
         }
@@ -275,14 +274,14 @@ class EasyTierController(
             val tabRow = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                background = roundedBackground(softFill, cardStroke, dp(18))
+                background = roundedBackground(softFill, noStroke, dp(16))
                 setPadding(dp(3), dp(3), dp(3), dp(3))
             }
 
             configureTab(statusTab, EasyTierTab.STATUS, context.getString(R.string.easytier_tab_status))
             configureTab(configTab, EasyTierTab.CONFIG, context.getString(R.string.easytier_tab_config))
-            tabRow.addView(statusTab, LinearLayout.LayoutParams(0, dp(38), 1f))
-            tabRow.addView(configTab, LinearLayout.LayoutParams(0, dp(38), 1f))
+            tabRow.addView(statusTab, LinearLayout.LayoutParams(0, dp(36), 1f))
+            tabRow.addView(configTab, LinearLayout.LayoutParams(0, dp(36), 1f))
             return tabRow
         }
 
@@ -309,18 +308,18 @@ class EasyTierController(
 
             footer.addView(createButton(context.getString(R.string.dialog_button_close), false) {
                 currentDialog?.dismiss()
-            }, LinearLayout.LayoutParams(0, dp(44), 1f))
+            }, LinearLayout.LayoutParams(0, dp(42), 1f))
 
             footer.addView(createButton(context.getString(R.string.config_sync_action_export), false) {
                 saveConfiguration(state.config, showToast = true)
                 state = state.copy(statusJson = easyTierManager?.latestNetworkInfoJson)
                 refreshChrome()
                 renderContent()
-            }, LinearLayout.LayoutParams(0, dp(44), 1.15f).apply {
+            }, LinearLayout.LayoutParams(0, dp(42), 1.15f).apply {
                 marginStart = dp(8)
             })
 
-            footer.addView(toggleButton, LinearLayout.LayoutParams(0, dp(44), 1.15f).apply {
+            footer.addView(toggleButton, LinearLayout.LayoutParams(0, dp(42), 1.15f).apply {
                 marginStart = dp(8)
             })
             toggleButton.gravity = Gravity.CENTER
@@ -353,21 +352,21 @@ class EasyTierController(
             statusPill.setTextColor(primaryTextColor)
             statusPill.background = roundedBackground(
                     if (state.isRunning) accentSoft else softFill,
-                    if (state.isRunning) accentFocus else cardStroke,
+                    noStroke,
                     dp(14)
             )
             updateTab(statusTab, state.selectedTab == EasyTierTab.STATUS)
             updateTab(configTab, state.selectedTab == EasyTierTab.CONFIG)
             toggleButton.text = context.getString(if (state.isRunning) R.string.dialog_button_stop else R.string.dialog_button_start)
-            toggleButton.background = roundedBackground(accentColor, accentFocus, dp(18))
+            toggleButton.background = roundedBackground(accentColor, noStroke, dp(18))
         }
 
         private fun updateTab(tab: TextView, selected: Boolean) {
             tab.setTextColor(if (selected) accentTextColor else primaryTextColor)
             tab.background = if (selected) {
-                roundedBackground(accentColor, accentFocus, dp(16))
+                roundedBackground(accentColor, noStroke, dp(14))
             } else {
-                roundedBackground(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT, dp(16))
+                roundedBackground(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT, dp(14))
             }
         }
 
@@ -395,7 +394,7 @@ class EasyTierController(
                 content.addView(createCard(LinearLayout.VERTICAL).apply {
                     addText(context.getString(R.string.easytier_service_not_running), primaryTextColor, 16f, true)
                     addText(context.getString(R.string.easytier_refresh_hint), secondaryTextColor, 13f, false, topPadding = dp(6))
-                }, sectionParams(top = 10))
+                }, sectionParams(top = 8))
                 return
             }
 
@@ -406,13 +405,13 @@ class EasyTierController(
                 addInfoRow(context.getString(R.string.easytier_virtual_ip), displayInfo.virtualIp)
                 addInfoRow(context.getString(R.string.easytier_public_ip), displayInfo.publicIp)
                 addInfoRow(context.getString(R.string.easytier_nat_type), displayInfo.natType)
-            }, sectionParams(top = 6))
+            }, sectionParams(top = 5))
 
             addSectionTitle(context.getString(R.string.easytier_peers_count, displayInfo.finalPeerList.size))
             if (displayInfo.finalPeerList.isEmpty()) {
                 content.addView(createCard(LinearLayout.VERTICAL).apply {
                     addText(context.getString(R.string.easytier_no_peers), secondaryTextColor, 13f, false)
-                }, sectionParams(top = 6))
+                }, sectionParams(top = 5))
             } else {
                 displayInfo.finalPeerList.forEach { peer ->
                     content.addView(createCard(LinearLayout.VERTICAL).apply {
@@ -425,7 +424,7 @@ class EasyTierController(
                         )
                         addInfoRow(context.getString(R.string.easytier_latency), peer.latency)
                         addInfoRow(context.getString(R.string.easytier_traffic), peer.traffic)
-                    }, sectionParams(top = 6))
+                    }, sectionParams(top = 5))
                 }
             }
         }
@@ -442,27 +441,27 @@ class EasyTierController(
                     value = state.config.networkSecret,
                     hint = "",
                     helper = if (state.config.networkSecret.isBlank()) context.getString(R.string.easytier_network_secret_empty_hint) else ""
-            ) { value -> state = state.copy(config = state.config.copy(networkSecret = value)) }, sectionParams(top = 8))
+            ) { value -> state = state.copy(config = state.config.copy(networkSecret = value)) }, sectionParams(top = 6))
 
             content.addView(createTextField(
                     label = context.getString(R.string.easytier_virtual_ipv4_label),
                     value = state.config.ipv4,
                     hint = context.getString(R.string.easytier_virtual_ipv4_hint)
-            ) { value -> state = state.copy(config = state.config.copy(ipv4 = value)) }, sectionParams(top = 8))
+            ) { value -> state = state.copy(config = state.config.copy(ipv4 = value)) }, sectionParams(top = 6))
 
             content.addView(createTextField(
                     label = context.getString(R.string.easytier_listeners_label),
                     value = state.config.listeners,
                     hint = context.getString(R.string.easytier_listeners_hint),
                     minLines = 2
-            ) { value -> state = state.copy(config = state.config.copy(listeners = value)) }, sectionParams(top = 8))
+            ) { value -> state = state.copy(config = state.config.copy(listeners = value)) }, sectionParams(top = 6))
 
             content.addView(createTextField(
                     label = context.getString(R.string.easytier_peers_label),
                     value = state.config.peers,
                     hint = context.getString(R.string.easytier_peers_hint),
                     minLines = 2
-            ) { value -> state = state.copy(config = state.config.copy(peers = value)) }, sectionParams(top = 8))
+            ) { value -> state = state.copy(config = state.config.copy(peers = value)) }, sectionParams(top = 6))
 
             content.addView(createButton(
                     context.getString(if (state.advancedExpanded) R.string.easytier_hide_advanced_flags else R.string.easytier_show_advanced_flags),
@@ -470,7 +469,7 @@ class EasyTierController(
             ) {
                 state = state.copy(advancedExpanded = !state.advancedExpanded)
                 renderContent()
-            }, sectionParams(top = 10, height = dp(44)))
+            }, sectionParams(top = 8, height = dp(42)))
 
             if (state.advancedExpanded) {
                 addSectionTitle(context.getString(R.string.easytier_core_network_behavior))
@@ -510,7 +509,7 @@ class EasyTierController(
                     setHintTextColor(secondaryTextColor)
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
                     this.hint = hint
-                    minHeight = dp(if (minLines > 1) 70 else 42)
+                    minHeight = dp(if (minLines > 1) 66 else 40)
                     this.minLines = minLines
                     maxLines = if (minLines > 1) 5 else 1
                     gravity = if (minLines > 1) Gravity.TOP or Gravity.START else Gravity.CENTER_VERTICAL
@@ -520,7 +519,7 @@ class EasyTierController(
                         InputType.TYPE_CLASS_TEXT
                     }
                     setSingleLine(minLines == 1)
-                    background = roundedBackground(softFill, cardStroke, dp(10))
+                    background = roundedBackground(softFill, noStroke, dp(10))
                     setPadding(dp(12), dp(8), dp(12), dp(8))
                     addTextChangedListener(object : TextWatcher {
                         override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
@@ -533,10 +532,10 @@ class EasyTierController(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
                 ).apply {
-                    topMargin = dp(6)
+                    topMargin = dp(5)
                 })
                 if (helper.isNotBlank()) {
-                    addText(helper, secondaryTextColor, 12f, false, topPadding = dp(6))
+                    addText(helper, secondaryTextColor, 12f, false, topPadding = dp(5))
                 }
             }
         }
@@ -562,7 +561,7 @@ class EasyTierController(
                     trackTintList = switchTrackTint()
                     setOnCheckedChangeListener { _, isChecked -> onChanged(isChecked) }
                 })
-            }, sectionParams(top = 6))
+            }, sectionParams(top = 5))
         }
 
         private fun createStatusToolbar(onRefresh: () -> Unit): View {
@@ -595,13 +594,13 @@ class EasyTierController(
                 icon?.setBounds(0, 0, dp(17), dp(17))
                 setCompoundDrawables(icon, null, null, null)
                 compoundDrawablePadding = dp(7)
-                background = roundedBackground(softFill, cardStroke, dp(16))
+                background = roundedBackground(softFill, noStroke, dp(16))
                 isClickable = true
                 isFocusable = true
                 setOnFocusChangeListener { view, hasFocus ->
                     view.background = roundedBackground(
                             if (hasFocus) focusedFill else softFill,
-                            if (hasFocus) focusedStroke else cardStroke,
+                            noStroke,
                             dp(16)
                     )
                 }
@@ -618,7 +617,7 @@ class EasyTierController(
                 setTextColor(if (accent) accentTextColor else primaryTextColor)
                 background = roundedBackground(
                         if (accent) accentColor else softFill,
-                        if (accent) accentFocus else cardStroke,
+                        noStroke,
                         dp(18)
                 )
                 isClickable = true
@@ -626,7 +625,7 @@ class EasyTierController(
                 setOnFocusChangeListener { view, hasFocus ->
                     view.background = roundedBackground(
                             if (accent) accentColor else if (hasFocus) focusedFill else softFill,
-                            if (accent) accentFocus else if (hasFocus) focusedStroke else cardStroke,
+                            noStroke,
                             dp(18)
                     )
                 }
@@ -640,7 +639,7 @@ class EasyTierController(
                 setTextColor(secondaryTextColor)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
                 typeface = Typeface.DEFAULT_BOLD
-            }, sectionParams(top = 12))
+            }, sectionParams(top = 10))
         }
 
         private fun LinearLayout.addInfoRow(label: String, value: String?, topPadding: Int = dp(4)) {
@@ -683,13 +682,13 @@ class EasyTierController(
         private fun createCard(orientationValue: Int): LinearLayout {
             return LinearLayout(context).apply {
                 orientation = orientationValue
-                setPadding(dp(12), dp(10), dp(12), dp(10))
-                background = roundedBackground(cardFill, cardStroke, dp(16))
+                setPadding(dp(12), dp(9), dp(12), dp(9))
+                background = roundedBackground(cardFill, noStroke, dp(14))
             }
         }
 
         private fun rowBackground(focused: Boolean): GradientDrawable {
-            return roundedBackground(cardFill, if (focused) focusedStroke else cardStroke, dp(14))
+            return roundedBackground(if (focused) focusedFill else cardFill, noStroke, dp(14))
         }
 
         private fun sectionParams(top: Int = 0, height: Int = ViewGroup.LayoutParams.WRAP_CONTENT): LinearLayout.LayoutParams {
