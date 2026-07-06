@@ -276,11 +276,11 @@ public class MoonBridge {
 
     public static int bridgeDrSubmitDecodeUnit(byte[] decodeUnitData, int decodeUnitLength, int decodeUnitType,
                                                int frameNumber, int frameType, char frameHostProcessingLatency,
-                                               long receiveTimeUs, long enqueueTimeUs, long presentationTimeUs) {
+                                               long receiveTimeUs, long enqueueTimeUs, long hostPresentationTimeUs) {
         if (videoRenderer != null) {
             return videoRenderer.submitDecodeUnit(decodeUnitData, decodeUnitLength,
                     decodeUnitType, frameNumber, frameType, frameHostProcessingLatency, receiveTimeUs, enqueueTimeUs,
-                    presentationTimeUs);
+                    hostPresentationTimeUs);
         }
         else {
             return DR_OK;

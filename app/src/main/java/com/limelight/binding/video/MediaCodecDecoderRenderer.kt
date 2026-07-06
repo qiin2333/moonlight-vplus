@@ -1312,7 +1312,9 @@ class MediaCodecDecoderRenderer(
 
     /**
      * Delivers a decoded frame to the appropriate output path based on frame pacing mode.
-     * Used by both async callbacks and the sync renderer thread.
+     * Called only from the async output callback (onOutputBufferAvailable); the sync
+     * renderer thread in startRendererThread() releases output buffers directly and does
+     * not go through this method.
      */
     private fun deliverDecodedFrame(bufferIndex: Int, hostPtsUs: Long = -1L) {
         if (prefs.framePacing == PreferenceConfiguration.FRAME_PACING_BALANCED ||
@@ -1802,7 +1804,7 @@ class MediaCodecDecoderRenderer(
         frameHostProcessingLatency: Char,
         receiveTimeUs: Long,
         enqueueTimeUs: Long,
-        presentationTimeUs: Long
+        hostPresentationTimeUs: Long
     ): Int {
         if (stopping || isProcessingPaused) {
             // Don't bother if we're stopping or paused
@@ -2047,7 +2049,7 @@ class MediaCodecDecoderRenderer(
         // 记录本地 codec PTS -> host 节奏 PTS 的映射，供输出侧 host-cadence pacing 还原(仅在开启时消费)。
         // 用本地 timestampUs 作 MediaCodec 的 PTS(保持既有延迟统计/去重逻辑不变)，host PTS 另存旁路。
         if (useHostCadencePacing) {
-            timestampToHostPts[timestampUs] = presentationTimeUs
+            timestampToHostPts[timestampUs] = hostPresentationTimeUs
         }
 
         numFramesIn++
