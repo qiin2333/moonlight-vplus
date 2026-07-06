@@ -399,7 +399,7 @@ internal class FramePacingController(
         surfaceFlingerFrameCount++
         callbacks.onFrameRendered()
 
-        if (surfaceFlingerFrameCount % 12000 == 0) {
+        if (BuildConfig.DEBUG && surfaceFlingerFrameCount % 12000 == 0) {
             val avgError = surfaceFlingerTimingError / 1_000_000.0f / surfaceFlingerFrameCount
             LimeLog.info(
                 String.format(
