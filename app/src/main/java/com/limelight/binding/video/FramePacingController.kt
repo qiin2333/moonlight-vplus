@@ -146,7 +146,7 @@ internal class FramePacingController(
         ) {
             // step1: 帧到达即用 host-PI 去抖时钟算目标(时钟内部采样 nowNs=到达时刻)
             hostTargetByIndex[bufferIndex] =
-                preciseHostCadenceClock.presentTimeNs(hostPtsUs, surfaceFlingerFrameInterval)
+                preciseHostCadenceClock.presentTimeNs(hostPtsUs, effectiveFrameIntervalNs())
         }
         outputBufferQueue.add(bufferIndex)
     }
@@ -154,6 +154,11 @@ internal class FramePacingController(
     fun getSurfaceFlingerFrameCount(): Int = surfaceFlingerFrameCount
 
     fun getSurfaceFlingerSkippedFrames(): Int = surfaceFlingerSkippedFrames
+
+    /** 安全的帧间隔（纳秒）：surfaceFlinger 未初始化时回退到 refreshRate 推导，避免除零/0 间隔。 */
+    private fun effectiveFrameIntervalNs(): Long =
+        if (surfaceFlingerFrameInterval > 0) surfaceFlingerFrameInterval
+        else 1_000_000_000L / (if (refreshRate > 0) refreshRate else 60)
 
     /** PRECISE_SYNC 两步 host-cadence 呈现是否处于激活态（需要上游注入 host PTS）。 */
     fun isHostCadencePreciseSyncActive(): Boolean =
@@ -343,12 +348,13 @@ internal class FramePacingController(
     private fun computeHostCadenceSnapTime(
         hostTargetNs: Long, currentTime: Long, vsyncOffsetNs: Long, presentationDeadlineNs: Long
     ): Long {
+        val frameIntervalNs = effectiveFrameIntervalNs()
         // 迟到帧：目标已过去 → 以当前时刻为基准 snap（等价立即呈现语义），绝不把网格拽回到达时刻
         val rawNs = if (hostTargetNs < currentTime) currentTime else hostTargetNs
 
         // step2: snap 向上取整到最近 vsync 边界
-        val nextVsyncNs = ((rawNs - vsyncOffsetNs + surfaceFlingerFrameInterval - 1) /
-            surfaceFlingerFrameInterval) * surfaceFlingerFrameInterval + vsyncOffsetNs
+        val nextVsyncNs = ((rawNs - vsyncOffsetNs + frameIntervalNs - 1) /
+            frameIntervalNs) * frameIntervalNs + vsyncOffsetNs
 
         if (presentationDeadlineNs > 0) {
             val timeUntilDeadline = nextVsyncNs - presentationDeadlineNs - currentTime

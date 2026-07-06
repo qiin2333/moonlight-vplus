@@ -987,7 +987,10 @@ class Game : Activity(), SurfaceHolder.Callback,
         }
 
         performanceOverlayManager?.onConfigurationChanged()
-        jitterMonitorManager?.applyVisibility()
+        // PiP 下不重显浮层：进入 PiP 分支已 hideImmediate()，此处仅在非 PiP 时按偏好显隐
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode) {
+            jitterMonitorManager?.applyVisibility()
+        }
         refreshDisplayPosition()
     }
 

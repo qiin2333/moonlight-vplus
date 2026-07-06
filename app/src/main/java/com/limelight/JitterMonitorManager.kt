@@ -50,7 +50,6 @@ class JitterMonitorManager(
         JitterMonitor.enabled = true
         ensureViewAttached()
         applyVisibility()
-        startTicking()
     }
 
     private fun ensureViewAttached() {
@@ -70,13 +69,16 @@ class JitterMonitorManager(
 
     /** 依据当前偏好显隐浮层（配置变化/退出 PiP 后调用）。 */
     fun applyVisibility() {
-        monitorView?.visibility =
-            if (prefConfig.enableJitterMonitor) View.VISIBLE else View.GONE
+        val show = prefConfig.enableJitterMonitor
+        monitorView?.visibility = if (show) View.VISIBLE else View.GONE
+        // 可见时确保 tick 在跑，隐藏时停 tick，避免空耗主线程
+        if (show && monitorView != null) startTicking() else stopTicking()
     }
 
-    /** 进入 PiP 时立即隐藏。 */
+    /** 进入 PiP 时立即隐藏并停止重绘 tick。 */
     fun hideImmediate() {
         monitorView?.visibility = View.GONE
+        stopTicking()
     }
 
     private fun startTicking() {
