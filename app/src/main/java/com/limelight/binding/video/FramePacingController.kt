@@ -84,6 +84,7 @@ internal class FramePacingController(
         this.videoDecoder = decoder
         this.refreshRate = refreshRate
         this.stopping = false
+        JitterMonitor.reset(refreshRate, framePacingLabel())
         startChoreographerThread()
         startSurfaceFlingerThread()
     }
@@ -159,6 +160,15 @@ internal class FramePacingController(
         useHostCadencePreciseSync &&
             prefs.framePacing == PreferenceConfiguration.FRAME_PACING_PRECISE_SYNC
 
+    /** 抖动图表标题用的 pacing 模式短标签。 */
+    private fun framePacingLabel(): String = when {
+        isHostCadencePreciseSyncActive() -> "精确同步(增强)"
+        prefs.framePacing == PreferenceConfiguration.FRAME_PACING_PRECISE_SYNC -> "精确同步"
+        prefs.framePacing == PreferenceConfiguration.FRAME_PACING_EXPERIMENTAL_LOW_LATENCY -> "低延迟"
+        prefs.framePacing == PreferenceConfiguration.FRAME_PACING_BALANCED -> "均衡"
+        else -> "平滑"
+    }
+
     // ==================== Choreographer mode ====================
 
     override fun doFrame(frameTimeNanos: Long) {
@@ -183,6 +193,7 @@ internal class FramePacingController(
                 try {
                     videoDecoder?.releaseOutputBuffer(nextOutputBuffer, adjustedTime)
                     lastRenderedFrameTimeNanos = adjustedTime
+                    JitterMonitor.recordPresent(adjustedTime)
                     callbacks.onFrameRendered()
                 } catch (_: IllegalStateException) {
                     try {
@@ -310,11 +321,12 @@ internal class FramePacingController(
                     calculatePresentationTime(currentTime, vsyncOffsetNs, presentationDeadlineNs)
                 }
             videoDecoder?.releaseOutputBuffer(nextOutputBuffer, presentationTimeNs)
-            if (presentStats != null) {
+            if (presentStats != null || JitterMonitor.enabled) {
                 // presentationTimeNs==0 表示立即呈现 → 用 currentTime snap 近似 SurfaceFlinger 落点
                 val effectivePresentNs = if (presentationTimeNs > 0) presentationTimeNs
                 else snapUpToVsync(currentTime, vsyncOffsetNs)
-                presentStats.record(effectivePresentNs)
+                presentStats?.record(effectivePresentNs)
+                JitterMonitor.recordPresent(effectivePresentNs)
             }
             updateTimingStats(currentTime)
         } catch (e: IllegalStateException) {

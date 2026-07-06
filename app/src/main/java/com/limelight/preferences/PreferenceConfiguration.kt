@@ -114,6 +114,7 @@ class PreferenceConfiguration {
     var hdrMode = 0 // 0=HDR disabled, 1=HDR10/PQ, 2=HLG
     var enablePip = false
     var enablePerfOverlay = false
+    var enableJitterMonitor = false
     var perfOverlayLocked = false
     var perfOverlayBgOpacity = 0
     var perfOverlayOrientation: PerfOverlayOrientation = PerfOverlayOrientation.HORIZONTAL
@@ -262,6 +263,7 @@ class PreferenceConfiguration {
                 .putBoolean(HDR_BRIGHTNESS_OVERRIDE_PREF_STRING, hdrBrightnessOverride)
                 .putInt(HDR_PEAK_BRIGHTNESS_NITS_PREF_STRING, hdrPeakBrightnessNits)
                 .putBoolean(ENABLE_PERF_OVERLAY_STRING, enablePerfOverlay)
+                .putBoolean(ENABLE_JITTER_MONITOR_STRING, enableJitterMonitor)
                 .putBoolean(PERF_OVERLAY_LOCKED_STRING, perfOverlayLocked)
                 .putInt(PERF_OVERLAY_BG_OPACITY_STRING, perfOverlayBgOpacity)
                 .putBoolean(REVERSE_RESOLUTION_PREF_STRING, reverseResolution)
@@ -331,6 +333,7 @@ class PreferenceConfiguration {
                 .putInt(HDR_PEAK_BRIGHTNESS_NITS_PREF_STRING, hdrPeakBrightnessNits)
                 .putString(HDR_MODE_PREF_STRING, hdrMode.toString())
                 .putBoolean(ENABLE_PERF_OVERLAY_STRING, enablePerfOverlay)
+                .putBoolean(ENABLE_JITTER_MONITOR_STRING, enableJitterMonitor)
                 .putBoolean(PERF_OVERLAY_LOCKED_STRING, perfOverlayLocked)
                 .putInt(PERF_OVERLAY_BG_OPACITY_STRING, perfOverlayBgOpacity)
                 .putString(PERF_OVERLAY_ORIENTATION_STRING, getPerfOverlayOrientationPreferenceString(perfOverlayOrientation))
@@ -365,6 +368,7 @@ class PreferenceConfiguration {
         copy.hdrPeakBrightnessNits = this.hdrPeakBrightnessNits
         copy.hdrMode = this.hdrMode
         copy.enablePerfOverlay = this.enablePerfOverlay
+        copy.enableJitterMonitor = this.enableJitterMonitor
         copy.perfOverlayLocked = this.perfOverlayLocked
         copy.perfOverlayBgOpacity = this.perfOverlayBgOpacity
         copy.perfOverlayOrientation = this.perfOverlayOrientation
@@ -440,6 +444,7 @@ class PreferenceConfiguration {
         private const val HDR_MODE_PREF_STRING = "list_hdr_mode" // 0=SDR, 1=HDR10, 2=HLG
         private const val ENABLE_PIP_PREF_STRING = "checkbox_enable_pip"
         private const val ENABLE_PERF_OVERLAY_STRING = "checkbox_enable_perf_overlay"
+        private const val ENABLE_JITTER_MONITOR_STRING = "checkbox_enable_jitter_monitor"
         private const val PERF_OVERLAY_LOCKED_STRING = "perf_overlay_locked"
         private const val PERF_OVERLAY_BG_OPACITY_STRING = "seekbar_perf_overlay_bg_opacity"
         private const val PERF_OVERLAY_ORIENTATION_STRING = "list_perf_overlay_orientation"
@@ -634,6 +639,7 @@ class PreferenceConfiguration {
         private const val DEFAULT_HDR_MODE = 1 // 默认 HDR10/PQ 模式 (0=禁用自动HDR切换, 1=HDR10, 2=HLG)
         private const val DEFAULT_ENABLE_PIP = false
         private const val DEFAULT_ENABLE_PERF_OVERLAY = false
+        private const val DEFAULT_ENABLE_JITTER_MONITOR = false
         private const val DEFAULT_PERF_OVERLAY_LOCKED = false
         private const val DEFAULT_PERF_OVERLAY_BG_OPACITY = 53
         private const val DEFAULT_PERF_OVERLAY_ORIENTATION = "horizontal"
@@ -1200,6 +1206,7 @@ class PreferenceConfiguration {
             }
             config.enablePip = prefs.getBoolean(ENABLE_PIP_PREF_STRING, DEFAULT_ENABLE_PIP)
             config.enablePerfOverlay = prefs.getBoolean(ENABLE_PERF_OVERLAY_STRING, DEFAULT_ENABLE_PERF_OVERLAY)
+            config.enableJitterMonitor = prefs.getBoolean(ENABLE_JITTER_MONITOR_STRING, DEFAULT_ENABLE_JITTER_MONITOR)
             config.perfOverlayLocked = prefs.getBoolean(PERF_OVERLAY_LOCKED_STRING, DEFAULT_PERF_OVERLAY_LOCKED)
             config.perfOverlayBgOpacity = prefs.getInt(PERF_OVERLAY_BG_OPACITY_STRING, DEFAULT_PERF_OVERLAY_BG_OPACITY).coerceIn(0, 100)
 
