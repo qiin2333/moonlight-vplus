@@ -170,6 +170,9 @@ class MediaCodecDecoderRenderer(
     // 消除"本地 vsync 网格 vs 主机节奏"错拍造成的微判抖；代价是自适应缓冲延迟(净 LAN≈1ms，抖动网络更大)。
     // TODO(on-device): 接入设置项/按网络自适应开启，并在真机上标定 Kp/Ki/cushion。
     private val useHostCadencePacing = false
+    // host PTS 旁路映射是否需要维护：直渲染档(useHostCadencePacing) 或 PRECISE_SYNC 两步呈现激活时都需要。
+    private val needsHostPtsMapping: Boolean
+        get() = useHostCadencePacing || framePacingController.isHostCadencePreciseSyncActive()
     // 直渲染档(MAX_SMOOTHNESS/CAP_FPS)无 vsync snap 兜底：一帧迟到即可见 hitch，故用较大 cushion
     // (3×MAD, floor 1ms)覆盖抖动分布。PRECISE_SYNC 路径(有 snap)将另建低 cushion 实例。
     private val hostCadenceClock =
@@ -1387,7 +1390,7 @@ class MediaCodecDecoderRenderer(
                 }
 
                 // Deliver to frame pacing
-                val hostPtsUs = if (useHostCadencePacing)
+                val hostPtsUs = if (needsHostPtsMapping)
                     (timestampToHostPts.remove(info.presentationTimeUs) ?: -1L) else -1L
                 deliverDecodedFrame(index, hostPtsUs)
 
@@ -2050,7 +2053,7 @@ class MediaCodecDecoderRenderer(
 
         // 记录本地 codec PTS -> host 节奏 PTS 的映射，供输出侧 host-cadence pacing 还原(仅在开启时消费)。
         // 用本地 timestampUs 作 MediaCodec 的 PTS(保持既有延迟统计/去重逻辑不变)，host PTS 另存旁路。
-        if (useHostCadencePacing) {
+        if (needsHostPtsMapping) {
             timestampToHostPts[timestampUs] = hostPresentationTimeUs
         }
 

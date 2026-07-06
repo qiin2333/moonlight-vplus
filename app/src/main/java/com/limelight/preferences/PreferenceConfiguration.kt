@@ -151,6 +151,7 @@ class PreferenceConfiguration {
     /** AC3 passthrough AudioTrack buffer size in bytes — trade jitter resilience for latency. */
     var audioPassthroughBufferBytes: Int = 16 * 1024
     var framePacing = 0
+    var enableHostCadencePreciseSync = false // 精确同步·两步 host-cadence 呈现（仅精确同步模式生效）
     var absoluteMouseMode = false
     var enableNativeMousePointer = false
     var enableAudioFx = false
@@ -318,6 +319,7 @@ class PreferenceConfiguration {
                 .putString(ABR_MODE_PREF_STRING, abrMode)
                 .putString(VIDEO_FORMAT_PREF_STRING, getVideoFormatPreferenceString(videoFormat))
                 .putString(FRAME_PACING_PREF_STRING, getFramePacingPreferenceString(framePacing))
+                .putBoolean(ENABLE_HOST_CADENCE_PRECISE_SYNC_STRING, enableHostCadencePreciseSync)
                 .putBoolean(STRETCH_PREF_STRING, stretchVideo)
                 .putBoolean(SOPS_PREF_STRING, enableSops)
                 .putBoolean(UNLOCK_FPS_STRING, unlockFps)
@@ -351,6 +353,7 @@ class PreferenceConfiguration {
         copy.abrMode = this.abrMode
         copy.videoFormat = this.videoFormat
         copy.framePacing = this.framePacing
+        copy.enableHostCadencePreciseSync = this.enableHostCadencePreciseSync
         copy.stretchVideo = this.stretchVideo
         copy.enableSops = this.enableSops
         copy.unlockFps = this.unlockFps
@@ -461,6 +464,7 @@ class PreferenceConfiguration {
         private const val SWAP_QUIT_AND_DISCONNECT_PERF_STRING = "checkbox_swap_quit_and_disconnect"
         private const val SCREEN_COMBINATION_MODE_PREF_STRING = "list_screen_combination_mode"
         private const val FRAME_PACING_PREF_STRING = "frame_pacing"
+        private const val ENABLE_HOST_CADENCE_PRECISE_SYNC_STRING = "checkbox_enable_host_cadence_precise_sync"
         private const val ABSOLUTE_MOUSE_MODE_PREF_STRING = "checkbox_absolute_mouse_mode"
         // Card visibility preferences
         private const val SHOW_BITRATE_CARD_PREF_STRING = "checkbox_show_bitrate_card"
@@ -1153,6 +1157,7 @@ class PreferenceConfiguration {
 
             config.videoFormat = getVideoFormatValue(context)
             config.framePacing = getFramePacingValue(context)
+            config.enableHostCadencePreciseSync = prefs.getBoolean(ENABLE_HOST_CADENCE_PRECISE_SYNC_STRING, false)
 
             config.analogStickForScrolling = getAnalogStickForScrollingValue(context)
 

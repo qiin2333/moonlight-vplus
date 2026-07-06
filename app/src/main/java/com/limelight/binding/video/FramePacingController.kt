@@ -44,18 +44,24 @@ internal class FramePacingController(
     val outputBufferQueue = LinkedBlockingQueue<Int>()
 
     // ---- PRECISE_SYNC 两步 host-cadence 呈现（step1: host-PI 去抖 → step2: snap 到本地 vsync）----
-    // 默认关闭：置 true 前，PRECISE_SYNC 完全走原有本地网格逻辑，行为零变化。
+    // 由设置项 checkbox_enable_host_cadence_precise_sync 控制（默认关）。
+    // 关闭时 PRECISE_SYNC 完全走原有本地网格逻辑，行为零变化；
     // 开启后仅在 PRECISE_SYNC 用 host PTS 复现主机出帧节奏(step1)，再 snap 到最近 vsync 上沿(step2)，
     // 消除"本地自由网格 vs 主机节奏"错拍的周期性判抖/重复丢帧；因有 snap 兜底，cushion 取低档(0.5×MAD, floor0)，
     // 延迟增量约 +1~3ms(已离线仿真验证)。仅本线程访问，故 HostCadenceClock 无需线程安全。
-    // TODO(on-device): 接入设置项/按网络自适应，并在真机标定 cushion。
-    private val useHostCadencePreciseSync = false
+    private val useHostCadencePreciseSync = prefs.enableHostCadencePreciseSync
     private val preciseHostCadenceClock =
         HostCadenceClock(cushionMul = 0.5, cushionFloorNs = 0L, enableDebugStats = BuildConfig.DEBUG)
 
-    // 旁挂 host PTS(微秒)通道，键为 bufferIndex；不改 outputBufferQueue 的 Int 类型，
+    // 旁挂 host-cadence step1 目标(纳秒,本地单调钟)通道，键为 bufferIndex；不改 outputBufferQueue 的 Int 类型，
     // 故 BALANCED/EXPERIMENTAL 路径零影响。仅上述开关开启且 PRECISE_SYNC 时填充，poll/丢弃/清空时同步移除，无泄漏。
-    private val hostPtsByIndex = ConcurrentHashMap<Int, Long>()
+    // 关键：step1 时钟在"帧到达时"(offerOutputBuffer, 解码回调线程)采样，避免把 pacing 排队抖动注入 instOffset；
+    // loop 出队时只做 step2 的 vsync snap。时钟因此仅被到达线程单线程访问，无需线程安全。
+    private val hostTargetByIndex = ConcurrentHashMap<Int, Long>()
+
+    // present-interval 对照埋点：两步开/关都记录同一指标(相邻呈现间隔，以 vsync 为单位)，
+    // 捕捉"错拍 dup/drop"判抖，供开/关态用同一把尺对比。仅 DEBUG，release 关闭零开销。
+    private val presentStats = if (BuildConfig.DEBUG) PresentStats() else null
 
     // Choreographer state
     private var lastRenderedFrameTimeNanos = 0L
@@ -111,7 +117,7 @@ internal class FramePacingController(
 
     fun clearBuffers() {
         outputBufferQueue.clear()
-        hostPtsByIndex.clear()
+        hostTargetByIndex.clear()
     }
 
     /**
@@ -120,12 +126,13 @@ internal class FramePacingController(
      *
      * @param hostPtsUs host PTS(微秒，以首帧为原点)；仅 PRECISE_SYNC 两步呈现开启时使用，
      *                  其余模式/未传入(-1)时忽略，行为与旧签名一致。
+     *                  此处(帧到达点)即调用 step1 时钟算出目标呈现时刻，避免出队排队抖动污染 instOffset。
      */
     fun offerOutputBuffer(bufferIndex: Int, hostPtsUs: Long = -1L) {
         if (outputBufferQueue.size >= prefs.outputBufferQueueLimit) {
             try {
                 val dropped = outputBufferQueue.take()
-                hostPtsByIndex.remove(dropped)
+                hostTargetByIndex.remove(dropped)
                 videoDecoder?.releaseOutputBuffer(dropped, false)
             } catch (_: InterruptedException) {
                 return
@@ -136,7 +143,9 @@ internal class FramePacingController(
         if (useHostCadencePreciseSync && hostPtsUs >= 0 &&
             prefs.framePacing == PreferenceConfiguration.FRAME_PACING_PRECISE_SYNC
         ) {
-            hostPtsByIndex[bufferIndex] = hostPtsUs
+            // step1: 帧到达即用 host-PI 去抖时钟算目标(时钟内部采样 nowNs=到达时刻)
+            hostTargetByIndex[bufferIndex] =
+                preciseHostCadenceClock.presentTimeNs(hostPtsUs, surfaceFlingerFrameInterval)
         }
         outputBufferQueue.add(bufferIndex)
     }
@@ -144,6 +153,11 @@ internal class FramePacingController(
     fun getSurfaceFlingerFrameCount(): Int = surfaceFlingerFrameCount
 
     fun getSurfaceFlingerSkippedFrames(): Int = surfaceFlingerSkippedFrames
+
+    /** PRECISE_SYNC 两步 host-cadence 呈现是否处于激活态（需要上游注入 host PTS）。 */
+    fun isHostCadencePreciseSyncActive(): Boolean =
+        useHostCadencePreciseSync &&
+            prefs.framePacing == PreferenceConfiguration.FRAME_PACING_PRECISE_SYNC
 
     // ==================== Choreographer mode ====================
 
@@ -285,17 +299,23 @@ internal class FramePacingController(
             surfaceFlingerSkippedFrames++
             return
         }
-        val hostPtsUs = hostPtsByIndex.remove(nextOutputBuffer) ?: -1L
+        val hostTargetNs = hostTargetByIndex.remove(nextOutputBuffer) ?: Long.MIN_VALUE
         try {
             val presentationTimeNs =
-                if (useHostCadencePreciseSync && hostPtsUs >= 0 && vsyncOffsetNs != 0L) {
+                if (useHostCadencePreciseSync && hostTargetNs != Long.MIN_VALUE && vsyncOffsetNs != 0L) {
                     computeHostCadenceSnapTime(
-                        hostPtsUs, currentTime, vsyncOffsetNs, presentationDeadlineNs
+                        hostTargetNs, currentTime, vsyncOffsetNs, presentationDeadlineNs
                     )
                 } else {
                     calculatePresentationTime(currentTime, vsyncOffsetNs, presentationDeadlineNs)
                 }
             videoDecoder?.releaseOutputBuffer(nextOutputBuffer, presentationTimeNs)
+            if (presentStats != null) {
+                // presentationTimeNs==0 表示立即呈现 → 用 currentTime snap 近似 SurfaceFlinger 落点
+                val effectivePresentNs = if (presentationTimeNs > 0) presentationTimeNs
+                else snapUpToVsync(currentTime, vsyncOffsetNs)
+                presentStats.record(effectivePresentNs)
+            }
             updateTimingStats(currentTime)
         } catch (e: IllegalStateException) {
             LimeLog.warning("精确同步模式渲染异常: ${e.message}")
@@ -304,15 +324,13 @@ internal class FramePacingController(
     }
 
     /**
-     * PRECISE_SYNC 两步呈现的呈现时刻计算。
-     * step1: 用 host-PI 去抖时钟由 host PTS 复现主机节奏目标(本地单调钟)；迟到帧回退为立即。
-     * step2: 将该目标 snap 向上取整到最近 vsync 上沿(复用 calculatePresentationTime 的边界/截止判定)。
+     * PRECISE_SYNC 两步呈现的 step2：把已在帧到达时算好的 host-cadence 目标 snap 到最近 vsync 上沿。
+     * step1(host-PI 去抖)已在 offerOutputBuffer 完成，这里不再触碰时钟(保持时钟单线程访问)。
+     * @param hostTargetNs offerOutputBuffer 里由时钟算出的目标呈现时刻(本地单调钟)。
      */
     private fun computeHostCadenceSnapTime(
-        hostPtsUs: Long, currentTime: Long, vsyncOffsetNs: Long, presentationDeadlineNs: Long
+        hostTargetNs: Long, currentTime: Long, vsyncOffsetNs: Long, presentationDeadlineNs: Long
     ): Long {
-        // step1: host-PI 去抖，得到主机出帧节奏目标
-        val hostTargetNs = preciseHostCadenceClock.presentTimeNs(hostPtsUs, surfaceFlingerFrameInterval)
         // 迟到帧：目标已过去 → 以当前时刻为基准 snap（等价立即呈现语义），绝不把网格拽回到达时刻
         val rawNs = if (hostTargetNs < currentTime) currentTime else hostTargetNs
 
@@ -330,6 +348,12 @@ internal class FramePacingController(
             return 0
         }
         return nextVsyncNs
+    }
+
+    private fun snapUpToVsync(rawNs: Long, vsyncOffsetNs: Long): Long {
+        if (surfaceFlingerFrameInterval <= 0) return rawNs
+        return ((rawNs - vsyncOffsetNs + surfaceFlingerFrameInterval - 1) /
+            surfaceFlingerFrameInterval) * surfaceFlingerFrameInterval + vsyncOffsetNs
     }
 
     private fun calculatePresentationTime(
@@ -399,5 +423,47 @@ internal class FramePacingController(
         @Suppress("ControlFlowWithEmptyBody")
         while (System.nanoTime() < surfaceFlingerTargetTime) {
         }
+    }
+
+    /**
+     * present-interval 对照埋点（仅 DEBUG）。统计相邻呈现时间戳间隔（四舍五入到 vsync 个数），
+     * 以直方图形式每 [PERIOD] 帧打一行到 logcat：
+     *   PS[present] n=.. mode=..vsync judder=..%(非众数占比) hist={1:..,2:..,3:..}
+     * 众数即"每帧几个 vsync"(如 60fps@120Hz 应为 2)；非众数占比越低越平滑。
+     * 两步开/关都记录同一指标，用同一把尺对比错拍判抖。单线程(surfaceFlinger)访问。
+     */
+    private inner class PresentStats {
+        private var lastPresentNs = 0L
+        private var frames = 0L
+        private val hist = HashMap<Long, Long>()
+
+        fun record(presentNs: Long) {
+            if (surfaceFlingerFrameInterval <= 0) return
+            if (lastPresentNs != 0L) {
+                val units = Math.round((presentNs - lastPresentNs).toDouble() / surfaceFlingerFrameInterval)
+                if (units in 0..8) {
+                    hist[units] = (hist[units] ?: 0L) + 1
+                    frames++
+                    if (frames % PERIOD == 0L) printAndReset()
+                }
+            }
+            lastPresentNs = presentNs
+        }
+
+        private fun printAndReset() {
+            var mode = 0L; var modeCount = 0L; var total = 0L
+            for ((u, c) in hist) { total += c; if (c > modeCount) { modeCount = c; mode = u } }
+            val judderPct = if (total > 0) 100.0 * (total - modeCount) / total else 0.0
+            val sorted = hist.entries.sortedBy { it.key }.joinToString(",") { "${it.key}:${it.value}" }
+            LimeLog.info(
+                String.format(
+                    "PS[present] n=%d mode=%dvsync judder=%.2f%% hist={%s}",
+                    total, mode, judderPct, sorted
+                )
+            )
+            frames = 0; hist.clear()
+        }
+
+        private val PERIOD = 600L
     }
 }
