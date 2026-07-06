@@ -2210,8 +2210,8 @@ class MediaCodecDecoderRenderer(
             val e = instOffset - pred
             var ec = e
             if (ec > 8_000_000L) ec = 8_000_000L else if (ec < -8_000_000L) ec = -8_000_000L
-            hcEstimatedOffsetNs = pred + (ec shr 6)   // Kp=1/64: 跟踪偏移均值、网格近似刚性
-            hcSkewNs += (ec shr 11)                    // Ki=1/2048: 跟踪频差，消除斜坡滞后
+            hcEstimatedOffsetNs = pred + (ec / 64)    // Kp=1/64: 跟踪偏移均值、网格近似刚性
+            hcSkewNs += (ec / 2048)                    // Ki=1/2048: 跟踪频差，消除斜坡滞后
             val ae = if (e < 0) (-e).toDouble() else e.toDouble()
             hcJitterEstNs += (ae - hcJitterEstNs) / 32.0
         }
