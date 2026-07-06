@@ -15,6 +15,7 @@ import android.os.Process
 import android.os.SystemClock
 import android.view.Surface
 import android.view.SurfaceHolder
+import com.limelight.BuildConfig
 import com.limelight.LimeLog
 import com.limelight.nvstream.av.video.VideoDecoderRenderer
 import com.limelight.nvstream.jni.MoonBridge
@@ -171,7 +172,8 @@ class MediaCodecDecoderRenderer(
     private val useHostCadencePacing = false
     // 直渲染档(MAX_SMOOTHNESS/CAP_FPS)无 vsync snap 兜底：一帧迟到即可见 hitch，故用较大 cushion
     // (3×MAD, floor 1ms)覆盖抖动分布。PRECISE_SYNC 路径(有 snap)将另建低 cushion 实例。
-    private val hostCadenceClock = HostCadenceClock(cushionMul = 3.0, cushionFloorNs = 1_000_000L)
+    private val hostCadenceClock =
+        HostCadenceClock(cushionMul = 3.0, cushionFloorNs = 1_000_000L, enableDebugStats = BuildConfig.DEBUG)
 
     // Frame pacing and performance management (extracted)
     private val framePacingController: FramePacingController

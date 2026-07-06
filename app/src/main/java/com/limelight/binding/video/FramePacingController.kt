@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
 import android.view.Choreographer
+import com.limelight.BuildConfig
 import com.limelight.LimeLog
 import com.limelight.preferences.PreferenceConfiguration
 import java.util.concurrent.ConcurrentHashMap
@@ -49,7 +50,8 @@ internal class FramePacingController(
     // 延迟增量约 +1~3ms(已离线仿真验证)。仅本线程访问，故 HostCadenceClock 无需线程安全。
     // TODO(on-device): 接入设置项/按网络自适应，并在真机标定 cushion。
     private val useHostCadencePreciseSync = false
-    private val preciseHostCadenceClock = HostCadenceClock(cushionMul = 0.5, cushionFloorNs = 0L)
+    private val preciseHostCadenceClock =
+        HostCadenceClock(cushionMul = 0.5, cushionFloorNs = 0L, enableDebugStats = BuildConfig.DEBUG)
 
     // 旁挂 host PTS(微秒)通道，键为 bufferIndex；不改 outputBufferQueue 的 Int 类型，
     // 故 BALANCED/EXPERIMENTAL 路径零影响。仅上述开关开启且 PRECISE_SYNC 时填充，poll/丢弃/清空时同步移除，无泄漏。
