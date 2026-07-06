@@ -16,6 +16,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -46,6 +47,12 @@ class EasyTierController(
     private enum class EasyTierTab {
         STATUS,
         CONFIG
+    }
+
+    private enum class PanelButtonStyle {
+        Text,
+        Neutral,
+        Accent
     }
 
     private data class EasyTierConfigUiState(
@@ -163,6 +170,8 @@ class EasyTierController(
         private val softFill = ContextCompat.getColor(context, R.color.app_dialog_surface_pressed)
         private val focusedFill = ContextCompat.getColor(context, R.color.app_dialog_surface_focused)
         private val noStroke = AndroidColor.TRANSPARENT
+        private val fieldStroke = withAlpha(secondaryTextColor, 0.62f)
+        private val statusIdleFill = AndroidColor.rgb(58, 59, 68)
         private val accentTextColor = AndroidColor.rgb(28, 29, 34)
 
         private val statusText = TextView(context)
@@ -306,11 +315,11 @@ class EasyTierController(
                 gravity = Gravity.CENTER_VERTICAL
             }
 
-            footer.addView(createButton(context.getString(R.string.dialog_button_close), false) {
+            footer.addView(createButton(context.getString(R.string.dialog_button_close), PanelButtonStyle.Text) {
                 currentDialog?.dismiss()
             }, LinearLayout.LayoutParams(0, dp(42), 1f))
 
-            footer.addView(createButton(context.getString(R.string.config_sync_action_export), false) {
+            footer.addView(createButton(context.getString(R.string.config_sync_action_export), PanelButtonStyle.Neutral) {
                 saveConfiguration(state.config, showToast = true)
                 state = state.copy(statusJson = easyTierManager?.latestNetworkInfoJson)
                 refreshChrome()
@@ -327,7 +336,6 @@ class EasyTierController(
             toggleButton.typeface = Typeface.DEFAULT_BOLD
             toggleButton.isClickable = true
             toggleButton.isFocusable = true
-            toggleButton.setTextColor(accentTextColor)
             toggleButton.setOnClickListener {
                 if (state.isRunning) {
                     Toast.makeText(activity, R.string.easytier_stopped, Toast.LENGTH_SHORT).show()
@@ -349,16 +357,16 @@ class EasyTierController(
                     else R.string.easytier_status_stopped
             )
             statusPill.text = context.getString(if (state.isRunning) R.string.easytier_pill_running else R.string.easytier_pill_idle)
-            statusPill.setTextColor(primaryTextColor)
+            statusPill.setTextColor(if (state.isRunning) accentTextColor else primaryTextColor)
             statusPill.background = roundedBackground(
-                    if (state.isRunning) accentSoft else softFill,
+                    if (state.isRunning) accentColor else statusIdleFill,
                     noStroke,
                     dp(14)
             )
             updateTab(statusTab, state.selectedTab == EasyTierTab.STATUS)
             updateTab(configTab, state.selectedTab == EasyTierTab.CONFIG)
             toggleButton.text = context.getString(if (state.isRunning) R.string.dialog_button_stop else R.string.dialog_button_start)
-            toggleButton.background = roundedBackground(accentColor, noStroke, dp(18))
+            applyButtonStyle(toggleButton, PanelButtonStyle.Accent, hasFocus = toggleButton.hasFocus())
         }
 
         private fun updateTab(tab: TextView, selected: Boolean) {
@@ -465,7 +473,7 @@ class EasyTierController(
 
             content.addView(createButton(
                     context.getString(if (state.advancedExpanded) R.string.easytier_hide_advanced_flags else R.string.easytier_show_advanced_flags),
-                    false
+                    PanelButtonStyle.Neutral
             ) {
                 state = state.copy(advancedExpanded = !state.advancedExpanded)
                 renderContent()
@@ -501,9 +509,7 @@ class EasyTierController(
                 minLines: Int = 1,
                 onChanged: (String) -> Unit
         ): View {
-            return createCard(LinearLayout.VERTICAL).apply {
-                addText(label, primaryTextColor, 13f, true)
-                addView(EditText(context).apply {
+            val editText = EditText(context).apply {
                     setText(value)
                     setTextColor(primaryTextColor)
                     setHintTextColor(secondaryTextColor)
@@ -519,8 +525,9 @@ class EasyTierController(
                         InputType.TYPE_CLASS_TEXT
                     }
                     setSingleLine(minLines == 1)
-                    background = roundedBackground(softFill, noStroke, dp(10))
-                    setPadding(dp(12), dp(8), dp(12), dp(8))
+                    background = null
+                    includeFontPadding = false
+                    setPadding(0, 0, 0, 0)
                     addTextChangedListener(object : TextWatcher {
                         override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
                         override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
@@ -528,12 +535,66 @@ class EasyTierController(
                             onChanged(s?.toString().orEmpty())
                         }
                     })
-                }, LinearLayout.LayoutParams(
+            }
+
+            val labelView = TextView(context).apply {
+                text = label
+                setTextColor(secondaryTextColor)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                typeface = Typeface.DEFAULT_BOLD
+                includeFontPadding = false
+                setPadding(dp(6), 0, dp(6), 0)
+                background = roundedBackground(panelFill, noStroke, dp(3))
+            }
+
+            val border = FrameLayout(context).apply {
+                clipChildren = false
+                clipToPadding = false
+                background = roundedBackground(AndroidColor.TRANSPARENT, fieldStroke, dp(10))
+                addView(editText, FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        Gravity.BOTTOM
+                ).apply {
+                    marginStart = dp(18)
+                    marginEnd = dp(18)
+                    topMargin = dp(if (minLines > 1) 28 else 24)
+                    bottomMargin = dp(14)
+                })
+            }
+
+            editText.setOnFocusChangeListener { _, hasFocus ->
+                val stroke = if (hasFocus) accentColor else fieldStroke
+                labelView.setTextColor(if (hasFocus) accentColor else secondaryTextColor)
+                border.background = roundedBackground(AndroidColor.TRANSPARENT, stroke, dp(10))
+            }
+
+            val field = FrameLayout(context).apply {
+                clipChildren = false
+                clipToPadding = false
+                addView(border, FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
                 ).apply {
-                    topMargin = dp(5)
+                    topMargin = dp(8)
                 })
+                addView(labelView, FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    marginStart = dp(18)
+                    topMargin = 0
+                })
+            }
+
+            return LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                clipChildren = false
+                clipToPadding = false
+                addView(field, LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                ))
                 if (helper.isNotBlank()) {
                     addText(helper, secondaryTextColor, 12f, false, topPadding = dp(5))
                 }
@@ -567,69 +628,54 @@ class EasyTierController(
         private fun createStatusToolbar(onRefresh: () -> Unit): View {
             return LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL or Gravity.END
-                addView(createIconButton(
+                gravity = Gravity.CENTER_VERTICAL
+                addView(createButton(
                         context.getString(R.string.easytier_refresh_status),
-                        R.drawable.ic_easytier_refresh,
+                        PanelButtonStyle.Neutral,
                         onRefresh
                 ), LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        dp(36)
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        dp(42)
                 ))
             }
         }
 
-        private fun createIconButton(text: String, iconRes: Int, onClick: () -> Unit): TextView {
+        private fun createButton(text: String, style: PanelButtonStyle, onClick: () -> Unit): TextView {
             return TextView(context).apply {
                 this.text = text
                 gravity = Gravity.CENTER
                 includeFontPadding = false
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
                 typeface = Typeface.DEFAULT_BOLD
-                setTextColor(primaryTextColor)
-                minWidth = dp(104)
-                setPadding(dp(12), 0, dp(14), 0)
-                val icon = ContextCompat.getDrawable(context, iconRes)?.mutate()
-                icon?.setTint(primaryTextColor)
-                icon?.setBounds(0, 0, dp(17), dp(17))
-                setCompoundDrawables(icon, null, null, null)
-                compoundDrawablePadding = dp(7)
-                background = roundedBackground(softFill, noStroke, dp(16))
+                setPadding(dp(10), 0, dp(10), 0)
+                applyButtonStyle(this, style, hasFocus = false)
                 isClickable = true
                 isFocusable = true
                 setOnFocusChangeListener { view, hasFocus ->
-                    view.background = roundedBackground(
-                            if (hasFocus) focusedFill else softFill,
-                            noStroke,
-                            dp(16)
-                    )
+                    applyButtonStyle(view as TextView, style, hasFocus)
                 }
                 setOnClickListener { onClick() }
             }
         }
 
-        private fun createButton(text: String, accent: Boolean, onClick: () -> Unit): TextView {
-            return TextView(context).apply {
-                this.text = text
-                gravity = Gravity.CENTER
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(if (accent) accentTextColor else primaryTextColor)
-                background = roundedBackground(
-                        if (accent) accentColor else softFill,
-                        noStroke,
-                        dp(18)
-                )
-                isClickable = true
-                isFocusable = true
-                setOnFocusChangeListener { view, hasFocus ->
-                    view.background = roundedBackground(
-                            if (accent) accentColor else if (hasFocus) focusedFill else softFill,
+        private fun applyButtonStyle(button: TextView, style: PanelButtonStyle, hasFocus: Boolean) {
+            when (style) {
+                PanelButtonStyle.Text -> {
+                    button.setTextColor(accentColor)
+                    button.background = roundedBackground(AndroidColor.TRANSPARENT, noStroke, dp(18))
+                }
+                PanelButtonStyle.Neutral -> {
+                    button.setTextColor(primaryTextColor)
+                    button.background = roundedBackground(
+                            if (hasFocus) focusedFill else softFill,
                             noStroke,
-                            dp(18)
+                            dp(21)
                     )
                 }
-                setOnClickListener { onClick() }
+                PanelButtonStyle.Accent -> {
+                    button.setTextColor(primaryTextColor)
+                    button.background = roundedBackground(accentColor, noStroke, dp(21))
+                }
             }
         }
 
@@ -712,6 +758,15 @@ class EasyTierController(
                 setColor(fillColor)
                 setStroke(dp(1), strokeColor)
             }
+        }
+
+        private fun withAlpha(color: Int, alpha: Float): Int {
+            return AndroidColor.argb(
+                    (AndroidColor.alpha(color) * alpha).toInt().coerceIn(0, 255),
+                    AndroidColor.red(color),
+                    AndroidColor.green(color),
+                    AndroidColor.blue(color)
+            )
         }
 
         private fun switchThumbTint(): ColorStateList {

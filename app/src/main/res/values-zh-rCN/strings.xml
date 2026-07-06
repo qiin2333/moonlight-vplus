@@ -1586,6 +1586,7 @@
     <string name="easytier_nat_symmetric_udp_firewall">Symmetric UDP Firewall (对称UDP防火墙)</string>
     <string name="easytier_nat_symmetric_easy_inc">Symmetric Easy Inc (对称型-端口递增)</string>
     <string name="easytier_nat_symmetric_easy_dec">Symmetric Easy Dec (对称型-端口递减)</string>
+    <string name="easytier_nat_other_type">Other Type (%1$d) (其他类型)</string>
     <string name="iperf_invalid_server">无效的服务器地址</string>
     <string name="iperf_invalid_port">无效的端口号 (1-65535)</string>
     <string name="iperf_binary_missing">iPerf3 二进制文件未在原生库目录中找到。请确保 libiperf3.so 已打包。</string>
