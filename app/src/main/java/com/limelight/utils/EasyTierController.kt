@@ -357,7 +357,7 @@ class EasyTierController(
                     else R.string.easytier_status_stopped
             )
             statusPill.text = context.getString(if (state.isRunning) R.string.easytier_pill_running else R.string.easytier_pill_idle)
-            statusPill.setTextColor(if (state.isRunning) accentTextColor else primaryTextColor)
+            statusPill.setTextColor(if (state.isRunning) accentTextColor else AndroidColor.WHITE)
             statusPill.background = roundedBackground(
                     if (state.isRunning) accentColor else statusIdleFill,
                     noStroke,
