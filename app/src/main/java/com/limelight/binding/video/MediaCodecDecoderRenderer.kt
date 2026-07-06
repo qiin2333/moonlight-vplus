@@ -1320,7 +1320,7 @@ class MediaCodecDecoderRenderer(
             prefs.framePacing == PreferenceConfiguration.FRAME_PACING_PRECISE_SYNC
         ) {
             // Buffered modes - queue for frame pacing controller
-            framePacingController.offerOutputBuffer(bufferIndex)
+            framePacingController.offerOutputBuffer(bufferIndex, hostPtsUs)
         } else {
             // Direct render modes (MIN_LATENCY, MAX_SMOOTHNESS, CAP_FPS)
             try {
