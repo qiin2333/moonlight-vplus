@@ -116,6 +116,7 @@ android {
     lint {
         disable 'MissingTranslation'
         lintConfig file('lint.xml')
+        baseline file('lint-baseline.xml')
     }
 
     bundle {
