@@ -304,10 +304,7 @@ class AddComputerManually : Activity() {
         addPcButton = findViewById(R.id.addPcButton)
         hostText.imeOptions = EditorInfo.IME_ACTION_NEXT
         hostText.setOnEditorActionListener { _, actionId, keyEvent ->
-            if (actionId == EditorInfo.IME_ACTION_NEXT ||
-                    (keyEvent != null &&
-                            keyEvent.action == KeyEvent.ACTION_DOWN &&
-                            keyEvent.keyCode == KeyEvent.KEYCODE_ENTER)) {
+            if (actionId == EditorInfo.IME_ACTION_NEXT || isEnterKeyDown(keyEvent)) {
                 portText.requestFocus()
                 true
             } else {
@@ -316,10 +313,7 @@ class AddComputerManually : Activity() {
         }
         portText.imeOptions = EditorInfo.IME_ACTION_DONE
         portText.setOnEditorActionListener { _, actionId, keyEvent ->
-            if (actionId == EditorInfo.IME_ACTION_DONE ||
-                    (keyEvent != null &&
-                            keyEvent.action == KeyEvent.ACTION_DOWN &&
-                            keyEvent.keyCode == KeyEvent.KEYCODE_ENTER)) {
+            if (actionId == EditorInfo.IME_ACTION_DONE || isEnterKeyDown(keyEvent)) {
                 handleDoneEvent()
             } else if (actionId == EditorInfo.IME_ACTION_PREVIOUS) {
                 val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
@@ -359,13 +353,36 @@ class AddComputerManually : Activity() {
         }
     }
 
+    private fun isEnterKeyDown(keyEvent: KeyEvent?): Boolean {
+        return keyEvent != null &&
+                keyEvent.action == KeyEvent.ACTION_DOWN &&
+                keyEvent.keyCode == KeyEvent.KEYCODE_ENTER
+    }
+
+    private fun showLongToast(messageResId: Int) {
+        Toast.makeText(this@AddComputerManually, resources.getString(messageResId), Toast.LENGTH_LONG).show()
+    }
+
+    private fun buildConnectionTarget(hostAddress: String, portTextValue: String): String {
+        return if (portTextValue.isEmpty()) {
+            hostAddress
+        } else if (hostAddress.startsWith("[") || hostAddress.count { it == ':' } < 2) {
+            "$hostAddress:$portTextValue"
+        } else {
+            "[$hostAddress]:$portTextValue"
+        }
+    }
+
     private fun handleDoneEvent(): Boolean {
         val hostAddress = hostText.text.toString().trim()
         val portTextValue = portText.text.toString().trim()
 
+        hostText.error = null
+        portText.error = null
+
         if (hostAddress.isEmpty()) {
             hostText.error = resources.getString(R.string.addpc_enter_ip)
-            Toast.makeText(this@AddComputerManually, resources.getString(R.string.addpc_enter_ip), Toast.LENGTH_LONG).show()
+            showLongToast(R.string.addpc_enter_ip)
             return true
         }
 
@@ -373,21 +390,13 @@ class AddComputerManually : Activity() {
             val port = portTextValue.toIntOrNull()
             if (port == null || port !in 1..65535) {
                 portText.error = resources.getString(R.string.addpc_invalid_port)
-                Toast.makeText(this@AddComputerManually, resources.getString(R.string.addpc_invalid_port), Toast.LENGTH_LONG).show()
+                showLongToast(R.string.addpc_invalid_port)
                 return true
             }
         }
 
-        val connectionTarget = if (portTextValue.isEmpty()) {
-            hostAddress
-        } else if (hostAddress.startsWith("[") || hostAddress.count { it == ':' } < 2) {
-            "$hostAddress:$portTextValue"
-        } else {
-            "[$hostAddress]:$portTextValue"
-        }
-
         setAddingState(true)
-        computersToAdd.add(connectionTarget)
+        computersToAdd.add(buildConnectionTarget(hostAddress, portTextValue))
         return false
     }
 

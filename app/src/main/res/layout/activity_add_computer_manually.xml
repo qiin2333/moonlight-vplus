@@ -123,12 +123,12 @@
         </LinearLayout>
 
         <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:background="@drawable/add_pc_panel_bg"
-                android:orientation="vertical"
-                android:padding="20dp">
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/add_pc_panel_bg"
+            android:orientation="vertical"
+            android:padding="20dp">
 
             <TextView
                 android:layout_width="match_parent"
@@ -234,7 +234,7 @@
                         android:layout_height="18dp"
                         android:fontFamily="serif"
                         android:gravity="center"
-                        android:text="⏟"
+                        android:text="@string/addpc_formula_brace"
                         android:textColor="@color/add_pc_accent"
                         android:textSize="28sp" />
 
@@ -262,7 +262,7 @@
                         android:layout_height="18dp"
                         android:fontFamily="serif"
                         android:gravity="center"
-                        android:text="⏟"
+                        android:text="@string/addpc_formula_brace"
                         android:textColor="@color/add_pc_accent"
                         android:textSize="28sp" />
 
@@ -294,6 +294,7 @@
             android:layout_height="56dp"
             android:layout_marginTop="20dp"
             android:background="@drawable/add_pc_primary_button_bg"
+            android:nextFocusDown="@id/hostTextView"
             android:nextFocusForward="@id/hostTextView"
             android:nextFocusLeft="@id/portTextView"
             android:nextFocusRight="@id/hostTextView"

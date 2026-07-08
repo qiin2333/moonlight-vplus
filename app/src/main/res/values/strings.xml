@@ -227,6 +227,7 @@
     <string name="addpc_address_label">Connection formula</string>
     <string name="addpc_host_hint">IP or domain</string>
     <string name="addpc_port_hint">47989</string>
+    <string name="addpc_formula_brace" translatable="false">⏟</string>
     <string name="addpc_host_annotation">host address</string>
     <string name="addpc_port_annotation">port</string>
     <string name="addpc_address_note">Leave port empty to use the default 47989.</string>
