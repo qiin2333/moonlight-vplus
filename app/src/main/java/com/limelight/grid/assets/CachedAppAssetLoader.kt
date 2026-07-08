@@ -12,7 +12,6 @@ import android.widget.ImageView
 import android.widget.TextView
 
 import com.limelight.AppView
-import com.limelight.LimeLog
 import com.limelight.R
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.NvApp
@@ -20,12 +19,11 @@ import com.limelight.utils.AppIconCache
 
 import java.io.IOException
 import java.lang.ref.WeakReference
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import kotlin.math.max
-import kotlin.math.round
-import kotlin.math.sqrt
 
 class CachedAppAssetLoader(
     private val context: Context,
@@ -59,6 +57,7 @@ class CachedAppAssetLoader(
     )
 
     private val placeholderBitmap: Bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+    private val loadLocks = ConcurrentHashMap<LoaderTuple, Any>()
 
     fun cancelBackgroundLoads() {
         var r: Runnable?
@@ -114,41 +113,6 @@ class CachedAppAssetLoader(
 
     fun interface FullBitmapCallback {
         fun onBitmapLoaded(bitmap: Bitmap)
-    }
-
-    /**
-     * 压缩过大的Bitmap
-     */
-    private fun compressLargeBitmap(original: Bitmap?): Bitmap? {
-        if (original == null) return null
-
-        val byteCount = original.byteCount
-        val maxSize = 1024 * 1024 // 1MB限制
-
-        if (byteCount > maxSize) {
-            try {
-                val scale = sqrt(maxSize.toDouble() / byteCount).toFloat()
-                var newWidth = round(original.width * scale).toInt()
-                var newHeight = round(original.height * scale).toInt()
-
-                newWidth = max(newWidth, 300)
-                newHeight = max(newHeight, 400)
-
-                val compressed = Bitmap.createScaledBitmap(original, newWidth, newHeight, true)
-
-                LimeLog.info(
-                    "Compressed bitmap from ${original.width}x${original.height}" +
-                    " to ${newWidth}x${newHeight} (size: $byteCount -> ${compressed.byteCount} bytes)"
-                )
-
-                return compressed
-            } catch (e: Exception) {
-                LimeLog.warning("Failed to compress bitmap: ${e.message}")
-                return original
-            }
-        }
-
-        return original
     }
 
     private fun doNetworkAssetLoad(tuple: LoaderTuple, task: LoaderTask?): ScaledBitmap? {
@@ -242,29 +206,37 @@ class CachedAppAssetLoader(
             }
 
             val localTuple = tuple ?: return null
-            var bmp = diskLoader.loadBitmapFromCache(localTuple, scalingDivider.toInt())
-            if (bmp == null) {
-                if (!diskOnly) {
-                    bmp = doNetworkAssetLoad(localTuple, this)
-                } else {
-                    if (!cancelled) {
-                        mainHandler.post { onProgressUpdate() }
+            val lock = loadLocks.getOrPut(localTuple) { Any() }
+
+            return try {
+                synchronized(lock) {
+                    if (cancelled || imageViewRef.get() == null || textViewRef.get() == null) {
+                        return@synchronized null
                     }
-                }
-            }
 
-            if (bmp != null) {
-                val compressedBitmap = compressLargeBitmap(bmp.bitmap)
-                if (compressedBitmap !== bmp.bitmap) {
-                    val compressedScaledBitmap = ScaledBitmap(bmp.originalWidth, bmp.originalHeight, compressedBitmap!!)
-                    memoryLoader.populateCache(localTuple, compressedScaledBitmap)
-                    return compressedScaledBitmap
-                } else {
-                    memoryLoader.populateCache(localTuple, bmp)
-                }
-            }
+                    val cachedBmp = memoryLoader.loadBitmapFromCache(localTuple)
+                    if (cachedBmp != null) {
+                        return@synchronized cachedBmp
+                    }
 
-            return bmp
+                    var bmp = diskLoader.loadBitmapFromCache(localTuple, scalingDivider.toInt())
+                    if (bmp == null) {
+                        if (!diskOnly) {
+                            bmp = doNetworkAssetLoad(localTuple, this)
+                        } else if (!cancelled) {
+                            mainHandler.post { onProgressUpdate() }
+                        }
+                    }
+
+                    if (bmp != null) {
+                        memoryLoader.populateCache(localTuple, bmp)
+                    }
+
+                    bmp
+                }
+            } finally {
+                loadLocks.remove(localTuple, lock)
+            }
         }
 
         private fun onProgressUpdate() {
