@@ -160,15 +160,14 @@ class EasyTierController(
     ) : LinearLayout(context) {
         private var state = initialState
         private val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        private val primaryTextColor = ContextCompat.getColor(context, R.color.app_dialog_text_primary)
-        private val secondaryTextColor = ContextCompat.getColor(context, R.color.app_dialog_text_secondary)
-        private val accentColor = ContextCompat.getColor(context, R.color.app_dialog_accent_color)
-        private val accentSoft = ContextCompat.getColor(context, R.color.app_dialog_accent_soft)
-        private val accentFocus = ContextCompat.getColor(context, R.color.app_dialog_accent_focus)
-        private val panelFill = ContextCompat.getColor(context, R.color.app_dialog_surface)
-        private val cardFill = ContextCompat.getColor(context, R.color.app_dialog_surface_elevated)
-        private val softFill = ContextCompat.getColor(context, R.color.app_dialog_surface_pressed)
-        private val focusedFill = ContextCompat.getColor(context, R.color.app_dialog_surface_focused)
+        // EasyTier keeps the legacy dark control-panel palette in both system themes.
+        private val primaryTextColor = AndroidColor.rgb(247, 243, 247)
+        private val secondaryTextColor = AndroidColor.rgb(201, 208, 216)
+        private val accentColor = ContextCompat.getColor(context, R.color.crown_accent)
+        private val panelFill = AndroidColor.argb(230, 28, 29, 34)
+        private val cardFill = AndroidColor.argb(242, 35, 36, 43)
+        private val softFill = AndroidColor.rgb(47, 52, 64)
+        private val focusedFill = AndroidColor.argb(61, 255, 255, 255)
         private val noStroke = AndroidColor.TRANSPARENT
         private val fieldStroke = withAlpha(secondaryTextColor, 0.62f)
         private val statusIdleFill = AndroidColor.rgb(58, 59, 68)
@@ -178,6 +177,8 @@ class EasyTierController(
         private val statusPill = TextView(context)
         private val statusTab = TextView(context)
         private val configTab = TextView(context)
+        private val statusIndicator = View(context)
+        private val configIndicator = View(context)
         private val contentScroll = ScrollView(context)
         private val content = LinearLayout(context)
         private val toggleButton = TextView(context)
@@ -214,7 +215,7 @@ class EasyTierController(
                     0,
                     1f
             ).apply {
-                topMargin = dp(10)
+                topMargin = dp(16)
             })
             addView(createFooter(), sectionParams(top = 10))
             refreshChrome()
@@ -280,18 +281,25 @@ class EasyTierController(
         }
 
         private fun createTabs(): View {
+            val container = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+            }
             val tabRow = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                background = roundedBackground(softFill, noStroke, dp(16))
-                setPadding(dp(3), dp(3), dp(3), dp(3))
             }
 
             configureTab(statusTab, EasyTierTab.STATUS, context.getString(R.string.easytier_tab_status))
             configureTab(configTab, EasyTierTab.CONFIG, context.getString(R.string.easytier_tab_config))
-            tabRow.addView(statusTab, LinearLayout.LayoutParams(0, dp(36), 1f))
-            tabRow.addView(configTab, LinearLayout.LayoutParams(0, dp(36), 1f))
-            return tabRow
+            tabRow.addView(statusTab, LinearLayout.LayoutParams(0, dp(42), 1f))
+            tabRow.addView(configTab, LinearLayout.LayoutParams(0, dp(42), 1f))
+            container.addView(tabRow)
+            container.addView(LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                addView(statusIndicator, LinearLayout.LayoutParams(0, dp(2), 1f))
+                addView(configIndicator, LinearLayout.LayoutParams(0, dp(2), 1f))
+            })
+            return container
         }
 
         private fun configureTab(tab: TextView, target: EasyTierTab, title: String) {
@@ -365,17 +373,16 @@ class EasyTierController(
             )
             updateTab(statusTab, state.selectedTab == EasyTierTab.STATUS)
             updateTab(configTab, state.selectedTab == EasyTierTab.CONFIG)
+            statusIndicator.setBackgroundColor(if (state.selectedTab == EasyTierTab.STATUS) accentColor else fieldStroke)
+            configIndicator.setBackgroundColor(if (state.selectedTab == EasyTierTab.CONFIG) accentColor else fieldStroke)
             toggleButton.text = context.getString(if (state.isRunning) R.string.dialog_button_stop else R.string.dialog_button_start)
             applyButtonStyle(toggleButton, PanelButtonStyle.Accent, hasFocus = toggleButton.hasFocus())
         }
 
         private fun updateTab(tab: TextView, selected: Boolean) {
-            tab.setTextColor(if (selected) accentTextColor else primaryTextColor)
-            tab.background = if (selected) {
-                roundedBackground(accentColor, noStroke, dp(14))
-            } else {
-                roundedBackground(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT, dp(14))
-            }
+            tab.setTextColor(accentColor)
+            tab.background = null
+            tab.alpha = if (selected) 1f else 0.86f
         }
 
         private fun renderContent() {
@@ -449,27 +456,27 @@ class EasyTierController(
                     value = state.config.networkSecret,
                     hint = "",
                     helper = if (state.config.networkSecret.isBlank()) context.getString(R.string.easytier_network_secret_empty_hint) else ""
-            ) { value -> state = state.copy(config = state.config.copy(networkSecret = value)) }, sectionParams(top = 6))
+            ) { value -> state = state.copy(config = state.config.copy(networkSecret = value)) }, sectionParams(top = 14))
 
             content.addView(createTextField(
                     label = context.getString(R.string.easytier_virtual_ipv4_label),
                     value = state.config.ipv4,
                     hint = context.getString(R.string.easytier_virtual_ipv4_hint)
-            ) { value -> state = state.copy(config = state.config.copy(ipv4 = value)) }, sectionParams(top = 6))
+            ) { value -> state = state.copy(config = state.config.copy(ipv4 = value)) }, sectionParams(top = 14))
 
             content.addView(createTextField(
                     label = context.getString(R.string.easytier_listeners_label),
                     value = state.config.listeners,
                     hint = context.getString(R.string.easytier_listeners_hint),
                     minLines = 2
-            ) { value -> state = state.copy(config = state.config.copy(listeners = value)) }, sectionParams(top = 6))
+            ) { value -> state = state.copy(config = state.config.copy(listeners = value)) }, sectionParams(top = 14))
 
             content.addView(createTextField(
                     label = context.getString(R.string.easytier_peers_label),
                     value = state.config.peers,
                     hint = context.getString(R.string.easytier_peers_hint),
                     minLines = 2
-            ) { value -> state = state.copy(config = state.config.copy(peers = value)) }, sectionParams(top = 6))
+            ) { value -> state = state.copy(config = state.config.copy(peers = value)) }, sectionParams(top = 14))
 
             content.addView(createButton(
                     context.getString(if (state.advancedExpanded) R.string.easytier_hide_advanced_flags else R.string.easytier_show_advanced_flags),
@@ -477,7 +484,7 @@ class EasyTierController(
             ) {
                 state = state.copy(advancedExpanded = !state.advancedExpanded)
                 renderContent()
-            }, sectionParams(top = 8, height = dp(42)))
+            }, sectionParams(top = 18, height = dp(42)))
 
             if (state.advancedExpanded) {
                 addSectionTitle(context.getString(R.string.easytier_core_network_behavior))
