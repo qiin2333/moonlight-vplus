@@ -25,8 +25,10 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
+import android.widget.CheckBox
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 
 import androidx.appcompat.app.AlertDialog
@@ -52,7 +54,8 @@ import kotlin.math.sqrt
 
 class PerformanceOverlayManager(
     private val activity: Activity,
-    private val prefConfig: PreferenceConfiguration
+    private val prefConfig: PreferenceConfiguration,
+    private val onJitterMonitorChanged: (Boolean) -> Unit = {}
 ) {
 
     private var performanceOverlayView: LinearLayout? = null
@@ -1112,7 +1115,57 @@ class PerformanceOverlayManager(
     }
 
     private fun showFpsInfo() {
-        showPerformanceInfo(R.string.perf_fps_title, R.string.perf_fps_info)
+        val content = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20f), dp(8f), dp(20f), 0)
+        }
+
+        val infoText = TextView(activity).apply {
+            text = activity.getString(R.string.perf_fps_info)
+            setTextColor(ContextCompat.getColor(activity, R.color.app_dialog_title_color))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            setLineSpacing(0f, 1.08f)
+        }
+        content.addView(ScrollView(activity).apply {
+            addView(infoText)
+        }, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ))
+
+        val jitterToggle = CheckBox(activity).apply {
+            text = activity.getString(R.string.title_enable_jitter_monitor)
+            isChecked = prefConfig.enableJitterMonitor
+            setTextColor(ContextCompat.getColor(activity, R.color.app_dialog_title_color))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            setPadding(0, dp(14f), 0, 0)
+            setOnCheckedChangeListener { _, isChecked ->
+                setJitterMonitorEnabled(isChecked)
+            }
+        }
+        content.addView(jitterToggle)
+
+        content.addView(TextView(activity).apply {
+            text = activity.getString(R.string.summary_enable_jitter_monitor)
+            setTextColor(ContextCompat.getColor(activity, R.color.app_dialog_subtitle_color))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setLineSpacing(0f, 1.05f)
+            setPadding(dp(32f), dp(2f), 0, 0)
+        })
+
+        AlertDialog.Builder(activity, R.style.AppDialogStyle)
+            .setTitle(R.string.perf_fps_title)
+            .setView(content)
+            .setPositiveButton(activity.getString(R.string.yes), null)
+            .setCancelable(true)
+            .show()
+    }
+
+    private fun setJitterMonitorEnabled(enabled: Boolean) {
+        if (prefConfig.enableJitterMonitor == enabled) return
+        prefConfig.enableJitterMonitor = enabled
+        prefConfig.writePreferences(activity)
+        onJitterMonitorChanged(enabled)
     }
 
     private fun showPacketLossInfo() {
@@ -1276,6 +1329,12 @@ class PerformanceOverlayManager(
         val parent = view.parent as View
         return intArrayOf(parent.width, parent.height)
     }
+
+    private fun dp(value: Float): Int = TypedValue.applyDimension(
+        TypedValue.COMPLEX_UNIT_DIP,
+        value,
+        activity.resources.displayMetrics
+    ).toInt()
 
     companion object {
         private const val CLICK_THRESHOLD = 10

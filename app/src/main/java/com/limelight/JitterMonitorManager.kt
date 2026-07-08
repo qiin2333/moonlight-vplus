@@ -65,6 +65,22 @@ class JitterMonitorManager(
         applyVisibility()
     }
 
+    /** Enables or disables the monitor while a stream is already running. */
+    fun setEnabled(enabled: Boolean) {
+        prefConfig.enableJitterMonitor = enabled
+        if (!enabled) {
+            hasMonitorData = false
+            monitorView?.visibility = View.GONE
+            stopTicking()
+            JitterMonitor.enabled = false
+            return
+        }
+
+        JitterMonitor.enabled = true
+        ensureViewAttached()
+        applyVisibility()
+    }
+
     /** Applies the requested overlay visibility after settings, PiP, or size changes. */
     fun applyVisibility() {
         val show = prefConfig.enableJitterMonitor
