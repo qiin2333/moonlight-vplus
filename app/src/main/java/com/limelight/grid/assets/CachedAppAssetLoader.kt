@@ -7,7 +7,6 @@ import android.graphics.drawable.BitmapDrawable
 import android.os.Handler
 import android.os.Looper
 import android.view.View
-import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.widget.ImageView
 import android.widget.TextView
@@ -200,7 +199,7 @@ class CachedAppAssetLoader(
         textView: TextView?,
         private val diskOnly: Boolean,
         private val isBackground: Boolean = false,
-        private val onLoadComplete: Runnable? = null
+        private val onLoadComplete: ImageLoadCallback? = null
     ) : Runnable {
 
         val imageViewRef: WeakReference<ImageView> = WeakReference(imageView)
@@ -259,6 +258,7 @@ class CachedAppAssetLoader(
                 if (compressedBitmap !== bmp.bitmap) {
                     val compressedScaledBitmap = ScaledBitmap(bmp.originalWidth, bmp.originalHeight, compressedBitmap!!)
                     memoryLoader.populateCache(localTuple, compressedScaledBitmap)
+                    return compressedScaledBitmap
                 } else {
                     memoryLoader.populateCache(localTuple, bmp)
                 }
@@ -276,8 +276,9 @@ class CachedAppAssetLoader(
                 val task = LoaderTask(imageView!!, textView, false, isBackground)
                 val asyncDrawable = AsyncDrawable(imageView.resources, noAppImageBitmap, task)
                 imageView.setImageDrawable(asyncDrawable)
-                val animationRes = if (isBackground) R.anim.background_fadein else R.anim.boxart_fadein
-                imageView.startAnimation(AnimationUtils.loadAnimation(imageView.context, animationRes))
+                if (isBackground) {
+                    imageView.startAnimation(AnimationUtils.loadAnimation(imageView.context, R.anim.background_fadein))
+                }
                 imageView.visibility = View.VISIBLE
                 textView?.visibility = View.VISIBLE
                 task.executeOnExecutor(networkExecutor, tuple ?: return)
@@ -293,30 +294,29 @@ class CachedAppAssetLoader(
                 if (bitmap != null) {
                     textView?.visibility = if (isBitmapPlaceholder(bitmap)) View.VISIBLE else View.GONE
 
-                    if (imageView?.visibility == View.VISIBLE) {
-                        val fadeOutAnimRes = if (isBackground) R.anim.background_fadeout else R.anim.boxart_fadeout
-                        val fadeOutAnimation = AnimationUtils.loadAnimation(imageView.context, fadeOutAnimRes)
-                        fadeOutAnimation.setAnimationListener(object : Animation.AnimationListener {
-                            override fun onAnimationStart(animation: Animation) {}
+                    val wasVisible = imageView?.visibility == View.VISIBLE
+                    imageView?.clearAnimation()
+                    imageView?.animate()?.cancel()
+                    imageView?.setImageBitmap(bitmap.bitmap)
 
-                            override fun onAnimationEnd(animation: Animation) {
-                                imageView.setImageBitmap(bitmap.bitmap)
-                                val fadeInAnimRes = if (isBackground) R.anim.background_fadein else R.anim.boxart_fadein
-                                imageView.startAnimation(AnimationUtils.loadAnimation(imageView.context, fadeInAnimRes))
-                            }
-
-                            override fun onAnimationRepeat(animation: Animation) {}
-                        })
-                        imageView.startAnimation(fadeOutAnimation)
+                    if (isBackground) {
+                        imageView?.startAnimation(AnimationUtils.loadAnimation(imageView.context, R.anim.background_fadein))
                     } else {
-                        imageView?.setImageBitmap(bitmap.bitmap)
-                        val fadeInAnimRes = if (isBackground) R.anim.background_fadein else R.anim.boxart_fadein
-                        imageView?.startAnimation(AnimationUtils.loadAnimation(imageView.context, fadeInAnimRes))
-                        imageView?.visibility = View.VISIBLE
+                        if (!wasVisible) {
+                            imageView?.alpha = 0f
+                            imageView?.animate()
+                                ?.alpha(1f)
+                                ?.setDuration(BOXART_FADE_IN_DURATION_MS)
+                                ?.start()
+                        } else {
+                            imageView?.alpha = 1f
+                        }
                     }
+
+                    imageView?.visibility = View.VISIBLE
                 }
 
-                onLoadComplete?.run()
+                onLoadComplete?.onImageLoaded(bitmap?.bitmap)
             }
         }
     }
@@ -358,7 +358,7 @@ class CachedAppAssetLoader(
         imgView: ImageView,
         textView: TextView?,
         isBackground: Boolean = false,
-        onLoadComplete: Runnable? = null
+        onLoadComplete: ImageLoadCallback? = null
     ): Boolean {
         val tuple = LoaderTuple(computer, obj.app)
 
@@ -373,7 +373,7 @@ class CachedAppAssetLoader(
             imgView.visibility = View.VISIBLE
             imgView.setImageBitmap(bmp.bitmap)
             textView?.visibility = if (isBitmapPlaceholder(bmp)) View.VISIBLE else View.GONE
-            onLoadComplete?.run()
+            onLoadComplete?.onImageLoaded(bmp.bitmap)
             return true
         }
 
@@ -407,7 +407,12 @@ class CachedAppAssetLoader(
         }
     }
 
+    fun interface ImageLoadCallback {
+        fun onImageLoaded(bitmap: Bitmap?)
+    }
+
     companion object {
+        private const val BOXART_FADE_IN_DURATION_MS = 120L
         private const val MAX_CONCURRENT_DISK_LOADS = 3
         private const val MAX_CONCURRENT_NETWORK_LOADS = 3
         private const val MAX_CONCURRENT_CACHE_LOADS = 1
