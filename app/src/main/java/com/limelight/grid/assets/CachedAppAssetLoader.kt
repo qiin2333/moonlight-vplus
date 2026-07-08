@@ -19,7 +19,6 @@ import com.limelight.utils.AppIconCache
 
 import java.io.IOException
 import java.lang.ref.WeakReference
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
@@ -57,7 +56,7 @@ class CachedAppAssetLoader(
     )
 
     private val placeholderBitmap: Bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
-    private val loadLocks = ConcurrentHashMap<LoaderTuple, Any>()
+    private val loadLocks = Array(LOAD_LOCK_STRIPES) { Any() }
 
     fun cancelBackgroundLoads() {
         var r: Runnable?
@@ -206,36 +205,32 @@ class CachedAppAssetLoader(
             }
 
             val localTuple = tuple ?: return null
-            val lock = loadLocks.getOrPut(localTuple) { Any() }
+            val lock = loadLocks[getLoadLockIndex(localTuple)]
 
-            return try {
-                synchronized(lock) {
-                    if (cancelled || imageViewRef.get() == null || textViewRef.get() == null) {
-                        return@synchronized null
-                    }
-
-                    val cachedBmp = memoryLoader.loadBitmapFromCache(localTuple)
-                    if (cachedBmp != null) {
-                        return@synchronized cachedBmp
-                    }
-
-                    var bmp = diskLoader.loadBitmapFromCache(localTuple, scalingDivider.toInt())
-                    if (bmp == null) {
-                        if (!diskOnly) {
-                            bmp = doNetworkAssetLoad(localTuple, this)
-                        } else if (!cancelled) {
-                            mainHandler.post { onProgressUpdate() }
-                        }
-                    }
-
-                    if (bmp != null) {
-                        memoryLoader.populateCache(localTuple, bmp)
-                    }
-
-                    bmp
+            return synchronized(lock) {
+                if (cancelled || imageViewRef.get() == null || textViewRef.get() == null) {
+                    return@synchronized null
                 }
-            } finally {
-                loadLocks.remove(localTuple, lock)
+
+                val cachedBmp = memoryLoader.loadBitmapFromCache(localTuple)
+                if (cachedBmp != null) {
+                    return@synchronized cachedBmp
+                }
+
+                var bmp = diskLoader.loadBitmapFromCache(localTuple, scalingDivider.toInt())
+                if (bmp == null) {
+                    if (!diskOnly) {
+                        bmp = doNetworkAssetLoad(localTuple, this)
+                    } else if (!cancelled) {
+                        mainHandler.post { onProgressUpdate() }
+                    }
+                }
+
+                if (bmp != null) {
+                    memoryLoader.populateCache(localTuple, bmp)
+                }
+
+                bmp
             }
         }
 
@@ -392,6 +387,11 @@ class CachedAppAssetLoader(
         private const val MAX_PENDING_CACHE_LOADS = 100
         private const val MAX_PENDING_NETWORK_LOADS = 40
         private const val MAX_PENDING_DISK_LOADS = 40
+        private const val LOAD_LOCK_STRIPES = 64
+
+        private fun getLoadLockIndex(tuple: LoaderTuple): Int {
+            return (tuple.hashCode() and Int.MAX_VALUE) % LOAD_LOCK_STRIPES
+        }
 
         private fun getLoaderTask(imageView: ImageView?): LoaderTask? {
             if (imageView == null) return null
