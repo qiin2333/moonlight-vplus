@@ -17,12 +17,13 @@ import com.limelight.binding.video.JitterMonitor
 import com.limelight.binding.video.JitterMonitorView
 import com.limelight.preferences.PreferenceConfiguration
 
+import kotlin.math.abs
+
 /**
- * 抖动监控浮层的生命周期管理器。
+ * Owns the jitter monitor overlay lifecycle.
  *
- * 仅当 `prefConfig.enableJitterMonitor` 开启时才创建 View、置位 [JitterMonitor.enabled]、
- * 并启动 ~300ms 的重绘 tick；关闭时不建 View、不排 Handler、[JitterMonitor.enabled] 保持 false，
- * 对串流零开销。
+ * When disabled, no view is attached and [JitterMonitor.enabled] stays false. When enabled,
+ * the chart only becomes visible after the first valid sample snapshot to avoid empty panels.
  */
 class JitterMonitorManager(
     private val activity: Activity,
@@ -32,6 +33,7 @@ class JitterMonitorManager(
     private val handler = Handler(Looper.getMainLooper())
     private var ticking = false
     private var hasMonitorData = false
+
     private var isDragging = false
     private var dragStartRawX = 0f
     private var dragStartRawY = 0f
@@ -43,74 +45,78 @@ class JitterMonitorManager(
         activity.getSharedPreferences(PREFS_NAME, Activity.MODE_PRIVATE)
     }
 
-    private val refreshIntervalMs = 300L
-
     private val tickRunnable = object : Runnable {
         override fun run() {
             if (!ticking) return
-            val view = monitorView
-            if (view != null) {
-                val snapshot = JitterMonitor.snapshot()
-                hasMonitorData = snapshot != null
-                if (snapshot != null) {
-                    view.update(snapshot)
-                }
-                applyViewVisibility(view)
-            }
-            handler.postDelayed(this, refreshIntervalMs)
+            monitorView?.let { updateFromSnapshot(it) }
+            handler.postDelayed(this, REFRESH_INTERVAL_MS)
         }
     }
 
-    /** 串流启动时调用。开启则挂载浮层并开始采集/重绘。 */
+    /** Called when the stream starts. Attaches and ticks the overlay only if enabled. */
     fun initialize() {
         if (!prefConfig.enableJitterMonitor) {
             JitterMonitor.enabled = false
             return
         }
+
         JitterMonitor.enabled = true
         ensureViewAttached()
         applyVisibility()
     }
 
-    private fun ensureViewAttached() {
-        if (monitorView != null) return
-        val root = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
-        val view = JitterMonitorView(activity)
-        val lp = FrameLayout.LayoutParams(dp(244f), dp(178f)).apply {
-            gravity = Gravity.TOP or Gravity.START
-            leftMargin = dp(12f)
-            topMargin = dp(48f)
-        }
-        view.layoutParams = lp
-        view.elevation = dp(15f).toFloat()
-        view.visibility = View.GONE
-        setupDragging(view)
-        root.addView(view)
-        monitorView = view
-        view.post { applySavedPosition(view) }
-    }
-
-    /** 依据当前偏好显隐浮层（配置变化/退出 PiP 后调用）。 */
+    /** Applies the requested overlay visibility after settings, PiP, or size changes. */
     fun applyVisibility() {
         val show = prefConfig.enableJitterMonitor
         monitorView?.let {
             clampViewWithinParent(it)
             applyViewVisibility(it)
         }
-        // 可见时确保 tick 在跑，隐藏时停 tick，避免空耗主线程
+
+        // Keep polling while enabled; the panel itself remains hidden until data arrives.
         if (show && monitorView != null) startTicking() else stopTicking()
     }
 
-    /** 进入 PiP 时立即隐藏并停止重绘 tick。 */
+    /** Hides immediately for PiP and stops UI polling. */
     fun hideImmediate() {
         monitorView?.visibility = View.GONE
         stopTicking()
     }
 
+    /** Tears down the overlay when the stream ends. */
+    fun destroy() {
+        stopTicking()
+        JitterMonitor.enabled = false
+        monitorView?.let { view ->
+            (view.parent as? ViewGroup)?.removeView(view)
+        }
+        monitorView = null
+    }
+
+    private fun ensureViewAttached() {
+        if (monitorView != null) return
+
+        val root = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
+        val view = JitterMonitorView(activity).apply {
+            layoutParams = FrameLayout.LayoutParams(dp(OVERLAY_WIDTH_DP), dp(OVERLAY_HEIGHT_DP)).apply {
+                gravity = Gravity.TOP or Gravity.START
+                leftMargin = dp(DEFAULT_LEFT_MARGIN_DP)
+                topMargin = dp(DEFAULT_TOP_MARGIN_DP)
+            }
+            elevation = dp(OVERLAY_ELEVATION_DP).toFloat()
+            visibility = View.GONE
+        }
+
+        setupDragging(view)
+        root.addView(view)
+        monitorView = view
+        view.post { applySavedPosition(view) }
+    }
+
     private fun startTicking() {
         if (ticking) return
         ticking = true
-        handler.postDelayed(tickRunnable, refreshIntervalMs)
+        handler.postDelayed(tickRunnable, REFRESH_INTERVAL_MS)
     }
 
     private fun stopTicking() {
@@ -118,14 +124,13 @@ class JitterMonitorManager(
         handler.removeCallbacks(tickRunnable)
     }
 
-    /** 串流结束/销毁时调用：停止 tick、移除 View、关闭采集。 */
-    fun destroy() {
-        stopTicking()
-        JitterMonitor.enabled = false
-        monitorView?.let { v ->
-            (v.parent as? ViewGroup)?.removeView(v)
+    private fun updateFromSnapshot(view: JitterMonitorView) {
+        val snapshot = JitterMonitor.snapshot()
+        hasMonitorData = snapshot != null
+        if (snapshot != null) {
+            view.update(snapshot)
         }
-        monitorView = null
+        applyViewVisibility(view)
     }
 
     private fun applyViewVisibility(view: JitterMonitorView) {
@@ -142,42 +147,49 @@ class JitterMonitorManager(
         view.isFocusable = false
         view.setOnTouchListener { v, event ->
             when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> {
-                    isDragging = false
-                    dragStartRawX = event.rawX
-                    dragStartRawY = event.rawY
-                    val lp = v.layoutParams as FrameLayout.LayoutParams
-                    convertGravityToMargins(v, lp)
-                    dragDeltaX = event.rawX - lp.leftMargin
-                    dragDeltaY = event.rawY - lp.topMargin
-                    v.parent?.requestDisallowInterceptTouchEvent(true)
-                    true
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    val movedFarEnough =
-                        kotlin.math.abs(event.rawX - dragStartRawX) > touchSlop ||
-                                kotlin.math.abs(event.rawY - dragStartRawY) > touchSlop
-                    if (movedFarEnough) {
-                        isDragging = true
-                    }
-                    if (isDragging) {
-                        moveViewWithinParent(v, event.rawX - dragDeltaX, event.rawY - dragDeltaY)
-                        v.alpha = DRAG_ALPHA
-                    }
-                    true
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    v.parent?.requestDisallowInterceptTouchEvent(false)
-                    v.alpha = 1f
-                    if (isDragging) {
-                        savePosition(v)
-                    }
-                    isDragging = false
-                    true
-                }
+                MotionEvent.ACTION_DOWN -> handleDragStart(v, event)
+                MotionEvent.ACTION_MOVE -> handleDragMove(v, event)
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> handleDragEnd(v)
                 else -> false
             }
         }
+    }
+
+    private fun handleDragStart(view: View, event: MotionEvent): Boolean {
+        isDragging = false
+        dragStartRawX = event.rawX
+        dragStartRawY = event.rawY
+
+        val lp = view.layoutParams as FrameLayout.LayoutParams
+        convertGravityToMargins(view, lp)
+        dragDeltaX = event.rawX - lp.leftMargin
+        dragDeltaY = event.rawY - lp.topMargin
+        view.parent?.requestDisallowInterceptTouchEvent(true)
+        return true
+    }
+
+    private fun handleDragMove(view: View, event: MotionEvent): Boolean {
+        val movedFarEnough =
+            abs(event.rawX - dragStartRawX) > touchSlop ||
+                    abs(event.rawY - dragStartRawY) > touchSlop
+        if (movedFarEnough) {
+            isDragging = true
+        }
+        if (isDragging) {
+            moveViewWithinParent(view, event.rawX - dragDeltaX, event.rawY - dragDeltaY)
+            view.alpha = DRAG_ALPHA
+        }
+        return true
+    }
+
+    private fun handleDragEnd(view: View): Boolean {
+        view.parent?.requestDisallowInterceptTouchEvent(false)
+        view.alpha = 1f
+        if (isDragging) {
+            savePosition(view)
+        }
+        isDragging = false
+        return true
     }
 
     private fun convertGravityToMargins(view: View, lp: FrameLayout.LayoutParams) {
@@ -216,8 +228,8 @@ class JitterMonitorManager(
 
         moveViewWithinParent(
             view,
-            overlayPrefs.getInt(KEY_LEFT_MARGIN, dp(12f)).toFloat(),
-            overlayPrefs.getInt(KEY_TOP_MARGIN, dp(48f)).toFloat()
+            overlayPrefs.getInt(KEY_LEFT_MARGIN, dp(DEFAULT_LEFT_MARGIN_DP)).toFloat(),
+            overlayPrefs.getInt(KEY_TOP_MARGIN, dp(DEFAULT_TOP_MARGIN_DP)).toFloat()
         )
     }
 
@@ -230,8 +242,8 @@ class JitterMonitorManager(
             .apply()
     }
 
-    private fun dp(v: Float): Int = TypedValue.applyDimension(
-        TypedValue.COMPLEX_UNIT_DIP, v, activity.resources.displayMetrics
+    private fun dp(value: Float): Int = TypedValue.applyDimension(
+        TypedValue.COMPLEX_UNIT_DIP, value, activity.resources.displayMetrics
     ).toInt()
 
     companion object {
@@ -239,6 +251,12 @@ class JitterMonitorManager(
         private const val KEY_HAS_CUSTOM_POSITION = "has_custom_position"
         private const val KEY_LEFT_MARGIN = "left_margin"
         private const val KEY_TOP_MARGIN = "top_margin"
+        private const val REFRESH_INTERVAL_MS = 300L
+        private const val OVERLAY_WIDTH_DP = 244f
+        private const val OVERLAY_HEIGHT_DP = 178f
+        private const val DEFAULT_LEFT_MARGIN_DP = 12f
+        private const val DEFAULT_TOP_MARGIN_DP = 48f
+        private const val OVERLAY_ELEVATION_DP = 15f
         private const val DRAG_ALPHA = 0.72f
     }
 }
