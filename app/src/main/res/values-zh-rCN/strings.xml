@@ -1546,6 +1546,8 @@
     <string name="easytier_status_refreshed">状态已刷新</string>
     <string name="easytier_stopped">EasyTier服务已停止</string>
     <string name="easytier_config_saved">配置已保存，服务已根据新配置重新初始化。</string>
+    <string name="easytier_show_advanced_flags">显示高级功能标志</string>
+    <string name="easytier_hide_advanced_flags">隐藏高级功能标志</string>
     <string name="easytier_loading">获取中…</string>
     <string name="easytier_unknown">未知</string>
     <string name="easytier_none">无</string>

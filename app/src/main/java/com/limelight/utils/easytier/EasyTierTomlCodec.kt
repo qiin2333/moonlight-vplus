@@ -22,6 +22,8 @@ internal data class EasyTierConfigUiState(
 )
 
 internal object EasyTierTomlCodec {
+    private const val DEFAULT_IPV4 = "10.0.0.1"
+
     fun parseConfig(toml: String): EasyTierConfigUiState {
         val ipv4Full = extractValue(toml, "ipv4", "")
         val ipv4 = if (ipv4Full.contains("/")) {
@@ -59,7 +61,7 @@ internal object EasyTierTomlCodec {
         appendTomlString(sb, "hostname", "moonlight-V+")
         appendTomlString(sb, "instance_name", "Default")
         sb.append("dhcp = false\n")
-        appendTomlString(sb, "ipv4", "${config.ipv4}/24", writeEmpty = true)
+        appendTomlString(sb, "ipv4", "${config.ipv4.ifBlank { DEFAULT_IPV4 }}/24", writeEmpty = true)
 
         appendTomlStringArray(sb, "listeners", nonBlankLines(config.listeners))
 

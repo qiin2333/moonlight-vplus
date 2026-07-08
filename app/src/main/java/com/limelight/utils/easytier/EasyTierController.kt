@@ -449,34 +449,34 @@ class EasyTierController(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             EasyTierTextField(
-                    label = "Network Name",
+                    label = stringResource(R.string.layout_dlg_easytier_panel_text_7095b),
                     value = config.networkName,
                     onValueChange = { onConfigChange(config.copy(networkName = it)) },
-                    placeholder = "e.g. easytier"
+                    placeholder = stringResource(R.string.layout_dlg_easytier_panel_hint_99c30)
             )
             EasyTierTextField(
-                    label = "Network Secret",
+                    label = stringResource(R.string.layout_dlg_easytier_panel_text_89d10),
                     value = config.networkSecret,
                     onValueChange = { onConfigChange(config.copy(networkSecret = it)) }
             )
             EasyTierTextField(
-                    label = "Virtual IPv4",
+                    label = stringResource(R.string.layout_dlg_easytier_panel_text_4af73),
                     value = config.ipv4,
                     onValueChange = { onConfigChange(config.copy(ipv4 = it)) },
-                    placeholder = "e.g. 10.0.0.6, default mask /24"
+                    placeholder = stringResource(R.string.layout_dlg_easytier_panel_hint_8913a)
             )
             EasyTierTextField(
-                    label = "Listeners (one per line)",
+                    label = stringResource(R.string.layout_dlg_easytier_panel_text_ed11e),
                     value = config.listeners,
                     onValueChange = { onConfigChange(config.copy(listeners = it)) },
-                    placeholder = "e.g. udp://0.0.0.0:11010",
+                    placeholder = stringResource(R.string.layout_dlg_easytier_panel_hint_388a0),
                     minLines = 2
             )
             EasyTierTextField(
-                    label = "Peers (one per line)",
+                    label = stringResource(R.string.layout_dlg_easytier_panel_text_89168),
                     value = config.peers,
                     onValueChange = { onConfigChange(config.copy(peers = it)) },
-                    placeholder = "e.g. tcp://1.2.3.4:11010",
+                    placeholder = stringResource(R.string.layout_dlg_easytier_panel_hint_eabff),
                     minLines = 2
             )
 
@@ -484,28 +484,31 @@ class EasyTierController(
                     onClick = { onAdvancedExpandedChange(!advancedExpanded) },
                     modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (advancedExpanded) "Hide Advanced Feature Flags" else "Show Advanced Feature Flags")
+                Text(stringResource(
+                        if (advancedExpanded) R.string.easytier_hide_advanced_flags
+                        else R.string.easytier_show_advanced_flags
+                ))
             }
 
             if (advancedExpanded) {
-                EasyTierSwitchSection("Core Network Behavior")
-                EasyTierSwitchRow("Use Smoltcp", config.useSmoltcp) { onConfigChange(config.copy(useSmoltcp = it)) }
-                EasyTierSwitchRow("Latency Priority", config.latencyFirst) { onConfigChange(config.copy(latencyFirst = it)) }
-                EasyTierSwitchRow("Disable P2P (Force Relay)", config.disableP2p) { onConfigChange(config.copy(disableP2p = it)) }
-                EasyTierSwitchRow("Private Mode", config.privateMode) { onConfigChange(config.copy(privateMode = it)) }
-                EasyTierSwitchRow("Disable IPv6", config.disableIpv6) { onConfigChange(config.copy(disableIpv6 = it)) }
+                EasyTierSwitchSection(stringResource(R.string.layout_dlg_easytier_panel_text_e7e21))
+                EasyTierSwitchRow(stringResource(R.string.layout_dlg_easytier_panel_text_4ad29), config.useSmoltcp) { onConfigChange(config.copy(useSmoltcp = it)) }
+                EasyTierSwitchRow(stringResource(R.string.layout_dlg_easytier_panel_text_6785a), config.latencyFirst) { onConfigChange(config.copy(latencyFirst = it)) }
+                EasyTierSwitchRow(stringResource(R.string.layout_dlg_easytier_panel_text_faebe), config.disableP2p) { onConfigChange(config.copy(disableP2p = it)) }
+                EasyTierSwitchRow(stringResource(R.string.layout_dlg_easytier_panel_text_fd3ab), config.privateMode) { onConfigChange(config.copy(privateMode = it)) }
+                EasyTierSwitchRow(stringResource(R.string.layout_dlg_easytier_panel_text_c2266), config.disableIpv6) { onConfigChange(config.copy(disableIpv6 = it)) }
 
-                EasyTierSwitchSection("Proxy & Protocol")
-                EasyTierSwitchRow("Enable KCP Proxy", config.enableKcpProxy) { onConfigChange(config.copy(enableKcpProxy = it)) }
-                EasyTierSwitchRow("Disable KCP Input", config.disableKcpInput) { onConfigChange(config.copy(disableKcpInput = it)) }
-                EasyTierSwitchRow("Enable QUIC Proxy", config.enableQuicProxy) { onConfigChange(config.copy(enableQuicProxy = it)) }
-                EasyTierSwitchRow("Disable QUIC Input", config.disableQuicInput) { onConfigChange(config.copy(disableQuicInput = it)) }
-                EasyTierSwitchRow("Use System Proxy Forwarding", config.proxyForwardBySystem) { onConfigChange(config.copy(proxyForwardBySystem = it)) }
+                EasyTierSwitchSection(stringResource(R.string.layout_dlg_easytier_panel_text_416db))
+                EasyTierSwitchRow(stringResource(R.string.layout_dlg_easytier_panel_text_93070), config.enableKcpProxy) { onConfigChange(config.copy(enableKcpProxy = it)) }
+                EasyTierSwitchRow(stringResource(R.string.layout_dlg_easytier_panel_text_6ea99), config.disableKcpInput) { onConfigChange(config.copy(disableKcpInput = it)) }
+                EasyTierSwitchRow(stringResource(R.string.layout_dlg_easytier_panel_text_6618e), config.enableQuicProxy) { onConfigChange(config.copy(enableQuicProxy = it)) }
+                EasyTierSwitchRow(stringResource(R.string.layout_dlg_easytier_panel_text_02eb9), config.disableQuicInput) { onConfigChange(config.copy(disableQuicInput = it)) }
+                EasyTierSwitchRow(stringResource(R.string.layout_dlg_easytier_panel_text_4b503), config.proxyForwardBySystem) { onConfigChange(config.copy(proxyForwardBySystem = it)) }
 
-                EasyTierSwitchSection("Security & Connection")
-                EasyTierSwitchRow("Disable Encryption", config.disableEncryption) { onConfigChange(config.copy(disableEncryption = it)) }
-                EasyTierSwitchRow("Disable UDP Hole Punching", config.disableUdpHolePunching) { onConfigChange(config.copy(disableUdpHolePunching = it)) }
-                EasyTierSwitchRow("Disable Symmetric NAT Hole Punching", config.disableSymHolePunching) { onConfigChange(config.copy(disableSymHolePunching = it)) }
+                EasyTierSwitchSection(stringResource(R.string.layout_dlg_easytier_panel_text_9c403))
+                EasyTierSwitchRow(stringResource(R.string.layout_dlg_easytier_panel_text_e7fa3), config.disableEncryption) { onConfigChange(config.copy(disableEncryption = it)) }
+                EasyTierSwitchRow(stringResource(R.string.layout_dlg_easytier_panel_text_c5d9c), config.disableUdpHolePunching) { onConfigChange(config.copy(disableUdpHolePunching = it)) }
+                EasyTierSwitchRow(stringResource(R.string.layout_dlg_easytier_panel_text_8ccac), config.disableSymHolePunching) { onConfigChange(config.copy(disableSymHolePunching = it)) }
             }
         }
     }
@@ -575,7 +578,7 @@ class EasyTierController(
                     modifier = Modifier.width(104.dp)
             )
             Text(
-                    text = value ?: "N/A",
+                    text = value ?: stringResource(R.string.easytier_unknown),
                     color = colorResource(R.color.crown_text_secondary),
                     fontSize = 12.5.sp,
                     modifier = Modifier.weight(1f)
@@ -728,7 +731,7 @@ class EasyTierController(
                 }
                 displayInfo.publicIp = ipBuilder.toString()
             } else {
-                displayInfo.publicIp = "N/A"
+                displayInfo.publicIp = activity.getString(R.string.easytier_unknown)
             }
 
             displayInfo.natType = parseNatType(stunInfo.getInt("udp_nat_type"))
@@ -774,7 +777,7 @@ class EasyTierController(
                             inSameSubnet,
                             activity.getString(R.string.easytier_via_peer, nextHopHostname),
                             activity.getString(R.string.easytier_path_latency, route.pathLatency),
-                            "N/A",
+                            activity.getString(R.string.easytier_unknown),
                             route.version,
                             route.natType,
                             route.cost,
