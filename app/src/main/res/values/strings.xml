@@ -1047,6 +1047,16 @@
     <string name="scene_configured_content_description">Scene %1$d saved. Tap to apply, long press to overwrite.</string>
     <string name="scene_empty_content_description">Scene %1$d empty. Tap to save current settings.</string>
     <string name="config_apply_failed">Configuration apply failed</string>
+    <string name="pcview_toolbar_menu">PC view actions</string>
+    <string name="pcview_toolbar_restore_session">Restore Session</string>
+    <string name="pcview_toolbar_toggle_unpaired_show">Show Unpaired Hosts</string>
+    <string name="pcview_toolbar_toggle_unpaired_hide">Hide Unpaired Hosts</string>
+    <string name="pcview_toolbar_theme">Theme</string>
+    <string name="pcview_theme_dialog_title">Theme</string>
+    <string name="pcview_theme_follow_system">Follow System</string>
+    <string name="pcview_theme_light">Light</string>
+    <string name="pcview_theme_dark">Dark</string>
+    <string name="pcview_theme_applied">Theme set to %1$s</string>
     <string name="save_to_scene">Save to Scene %1$d</string>
     <string name="overwrite_current_config">Overwrite current configuration?</string>
     <string name="overwrite_scene_config">Save the current quality and display settings to Scene %1$d? This will overwrite the saved scene.</string>
