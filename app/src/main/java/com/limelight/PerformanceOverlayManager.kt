@@ -1120,11 +1120,17 @@ class PerformanceOverlayManager(
             setPadding(dp(20f), dp(8f), dp(20f), 0)
         }
 
+        content.addView(createJitterMonitorSwitchRow(), LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ))
+
         val infoText = TextView(activity).apply {
             text = activity.getString(R.string.perf_fps_info)
             setTextColor(ContextCompat.getColor(activity, R.color.app_dialog_title_color))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             setLineSpacing(0f, 1.08f)
+            setPadding(0, dp(14f), 0, 0)
         }
         content.addView(ScrollView(activity).apply {
             addView(infoText)
@@ -1132,8 +1138,6 @@ class PerformanceOverlayManager(
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT
         ))
-
-        content.addView(createJitterMonitorSwitchRow())
 
         AlertDialog.Builder(activity, R.style.AppDialogStyle)
             .setTitle(R.string.perf_fps_title)
@@ -1158,7 +1162,8 @@ class PerformanceOverlayManager(
             gravity = Gravity.CENTER_VERTICAL
             isClickable = true
             isFocusable = true
-            setPadding(0, dp(14f), 0, 0)
+            minimumHeight = dp(58f)
+            setPadding(0, dp(4f), 0, dp(6f))
             setOnClickListener { jitterSwitch.isChecked = !jitterSwitch.isChecked }
 
             addView(LinearLayout(activity).apply {
