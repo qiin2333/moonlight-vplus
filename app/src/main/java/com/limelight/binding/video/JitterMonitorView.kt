@@ -66,6 +66,8 @@ class JitterMonitorView(context: Context) : View(context) {
         textAlign = Paint.Align.CENTER
     }
     private val bgRect = RectF()
+    private val emptyTitleText = context.getString(R.string.jitter_monitor_empty_title)
+    private val emptyMessageText = context.getString(R.string.jitter_monitor_empty_message)
 
     // 本地绘制缓冲（在 update 里从快照拷贝，onDraw 只读本地副本）
     private var count = 0
@@ -122,13 +124,13 @@ class JitterMonitorView(context: Context) : View(context) {
         val centerX = width * 0.5f
         val centerY = height * 0.5f
         canvas.drawText(
-            context.getString(R.string.jitter_monitor_empty_title),
+            emptyTitleText,
             centerX,
             centerY - dp(5f),
             emptyTitlePaint
         )
         canvas.drawText(
-            context.getString(R.string.jitter_monitor_empty_message),
+            emptyMessageText,
             centerX,
             centerY + dp(15f),
             emptyLabelPaint
