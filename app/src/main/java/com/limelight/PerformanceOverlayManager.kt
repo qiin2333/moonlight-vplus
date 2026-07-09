@@ -25,13 +25,13 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
-import android.widget.CheckBox
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.SwitchCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 
@@ -1133,25 +1133,7 @@ class PerformanceOverlayManager(
             LinearLayout.LayoutParams.WRAP_CONTENT
         ))
 
-        val jitterToggle = CheckBox(activity).apply {
-            text = activity.getString(R.string.title_enable_jitter_monitor)
-            isChecked = prefConfig.enableJitterMonitor
-            setTextColor(ContextCompat.getColor(activity, R.color.app_dialog_title_color))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            setPadding(0, dp(14f), 0, 0)
-            setOnCheckedChangeListener { _, isChecked ->
-                setJitterMonitorEnabled(isChecked)
-            }
-        }
-        content.addView(jitterToggle)
-
-        content.addView(TextView(activity).apply {
-            text = activity.getString(R.string.summary_enable_jitter_monitor)
-            setTextColor(ContextCompat.getColor(activity, R.color.app_dialog_subtitle_color))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setLineSpacing(0f, 1.05f)
-            setPadding(dp(32f), dp(2f), 0, 0)
-        })
+        content.addView(createJitterMonitorSwitchRow())
 
         AlertDialog.Builder(activity, R.style.AppDialogStyle)
             .setTitle(R.string.perf_fps_title)
@@ -1159,6 +1141,49 @@ class PerformanceOverlayManager(
             .setPositiveButton(activity.getString(R.string.yes), null)
             .setCancelable(true)
             .show()
+    }
+
+    private fun createJitterMonitorSwitchRow(): View {
+        val jitterSwitch = SwitchCompat(activity).apply {
+            isChecked = prefConfig.enableJitterMonitor
+            showText = false
+            minWidth = dp(52f)
+            setOnCheckedChangeListener { _, isChecked ->
+                setJitterMonitorEnabled(isChecked)
+            }
+        }
+
+        return LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            isClickable = true
+            isFocusable = true
+            setPadding(0, dp(14f), 0, 0)
+            setOnClickListener { jitterSwitch.isChecked = !jitterSwitch.isChecked }
+
+            addView(LinearLayout(activity).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(TextView(activity).apply {
+                    text = activity.getString(R.string.title_enable_jitter_monitor)
+                    setTextColor(ContextCompat.getColor(activity, R.color.app_dialog_title_color))
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                    typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                    includeFontPadding = false
+                })
+                addView(TextView(activity).apply {
+                    text = activity.getString(R.string.summary_enable_jitter_monitor)
+                    setTextColor(ContextCompat.getColor(activity, R.color.app_dialog_subtitle_color))
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                    setLineSpacing(0f, 1.05f)
+                    setPadding(0, dp(4f), dp(12f), 0)
+                })
+            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+
+            addView(jitterSwitch, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ))
+        }
     }
 
     private fun setJitterMonitorEnabled(enabled: Boolean) {
