@@ -23,7 +23,7 @@ import kotlin.math.abs
  * Owns the jitter monitor overlay lifecycle.
  *
  * When disabled, no view is attached and [JitterMonitor.enabled] stays false. When enabled,
- * the chart only becomes visible after the first valid sample snapshot to avoid empty panels.
+ * the chart is shown immediately and displays an empty state until frame samples arrive.
  */
 class JitterMonitorManager(
     private val activity: Activity,
@@ -32,7 +32,6 @@ class JitterMonitorManager(
     private var monitorView: JitterMonitorView? = null
     private val handler = Handler(Looper.getMainLooper())
     private var ticking = false
-    private var hasMonitorData = false
 
     private var isDragging = false
     private var dragStartRawX = 0f
@@ -69,7 +68,6 @@ class JitterMonitorManager(
     fun setEnabled(enabled: Boolean) {
         prefConfig.enableJitterMonitor = enabled
         if (!enabled) {
-            hasMonitorData = false
             monitorView?.visibility = View.GONE
             stopTicking()
             JitterMonitor.enabled = false
@@ -78,6 +76,7 @@ class JitterMonitorManager(
 
         JitterMonitor.enabled = true
         ensureViewAttached()
+        monitorView?.showEmptyState()
         applyVisibility()
     }
 
@@ -142,15 +141,16 @@ class JitterMonitorManager(
 
     private fun updateFromSnapshot(view: JitterMonitorView) {
         val snapshot = JitterMonitor.snapshot()
-        hasMonitorData = snapshot != null
         if (snapshot != null) {
             view.update(snapshot)
+        } else {
+            view.showEmptyState()
         }
         applyViewVisibility(view)
     }
 
     private fun applyViewVisibility(view: JitterMonitorView) {
-        view.visibility = if (prefConfig.enableJitterMonitor && hasMonitorData) {
+        view.visibility = if (prefConfig.enableJitterMonitor) {
             View.VISIBLE
         } else {
             View.GONE
