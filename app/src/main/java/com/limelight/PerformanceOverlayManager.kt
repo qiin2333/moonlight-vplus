@@ -1116,39 +1116,44 @@ class PerformanceOverlayManager(
     }
 
     private fun showFpsInfo() {
-        val content = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(20f), dp(8f), dp(20f), 0)
-        }
-
-        content.addView(createJitterMonitorToggleRow(), LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        ))
-
-        val infoText = TextView(activity).apply {
-            text = activity.getString(R.string.perf_fps_info)
-            setTextColor(ContextCompat.getColor(activity, R.color.app_dialog_title_color))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            setLineSpacing(0f, 1.08f)
-            setPadding(0, dp(14f), 0, 0)
-        }
-        content.addView(ScrollView(activity).apply {
-            addView(infoText)
-        }, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        ))
-
         AlertDialog.Builder(activity, R.style.AppDialogStyle)
             .setTitle(R.string.perf_fps_title)
-            .setView(content)
+            .setView(createFpsInfoContent())
             .setPositiveButton(activity.getString(R.string.yes), null)
             .setCancelable(true)
             .show()
     }
 
-    private fun createJitterMonitorToggleRow(): View {
+    private fun createFpsInfoContent(): View {
+        return LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20f), dp(8f), dp(20f), 0)
+
+            addView(createJitterMonitorCheckboxRow(), LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ))
+
+            addView(createFpsInfoScrollView(), LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ))
+        }
+    }
+
+    private fun createFpsInfoScrollView(): View {
+        return ScrollView(activity).apply {
+            addView(TextView(activity).apply {
+                text = activity.getString(R.string.perf_fps_info)
+                setTextColor(ContextCompat.getColor(activity, R.color.app_dialog_title_color))
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                setLineSpacing(0f, 1.08f)
+                setPadding(0, dp(14f), 0, 0)
+            })
+        }
+    }
+
+    private fun createJitterMonitorCheckboxRow(): View {
         val jitterCheckbox = CheckBox(activity).apply {
             isChecked = prefConfig.enableJitterMonitor
             text = ""
