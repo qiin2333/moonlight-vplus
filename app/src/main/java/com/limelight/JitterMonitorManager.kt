@@ -88,7 +88,7 @@ class JitterMonitorManager(
             applyViewVisibility(it)
         }
 
-        // Keep polling while enabled; the panel itself remains hidden until data arrives.
+        // Keep polling while enabled; the panel shows an empty state until data arrives.
         if (show && monitorView != null) startTicking() else stopTicking()
     }
 

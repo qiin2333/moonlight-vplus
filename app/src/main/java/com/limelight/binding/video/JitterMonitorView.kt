@@ -99,12 +99,12 @@ class JitterMonitorView(context: Context) : View(context) {
     }
 
     fun showEmptyState() {
-        val changed = hasData || count != 0 || histTotal != 0L || histBuckets != 0
+        val hadVisibleData = hasData || count != 0 || histTotal != 0L || histBuckets != 0
         count = 0
         histTotal = 0L
         histBuckets = 0
         hasData = false
-        if (changed) {
+        if (hadVisibleData) {
             invalidate()
         }
     }
