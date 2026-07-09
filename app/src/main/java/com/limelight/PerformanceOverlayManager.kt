@@ -2,6 +2,7 @@ package com.limelight
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.res.ColorStateList
 import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.graphics.Canvas
@@ -1151,7 +1152,10 @@ class PerformanceOverlayManager(
         val jitterSwitch = SwitchCompat(activity).apply {
             isChecked = prefConfig.enableJitterMonitor
             showText = false
-            minWidth = dp(52f)
+            minWidth = dp(56f)
+            minHeight = dp(36f)
+            splitTrack = false
+            applyJitterSwitchTint(this)
             setOnCheckedChangeListener { _, isChecked ->
                 setJitterMonitorEnabled(isChecked)
             }
@@ -1184,11 +1188,29 @@ class PerformanceOverlayManager(
                 })
             }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
 
-            addView(jitterSwitch, LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ))
+            addView(jitterSwitch, LinearLayout.LayoutParams(dp(72f), dp(48f)))
         }
+    }
+
+    private fun applyJitterSwitchTint(jitterSwitch: SwitchCompat) {
+        val checkedState = intArrayOf(android.R.attr.state_checked)
+        val defaultState = intArrayOf()
+        val states = arrayOf(checkedState, defaultState)
+        val accent = ContextCompat.getColor(activity, R.color.app_dialog_accent_color)
+        val secondary = ContextCompat.getColor(activity, R.color.app_dialog_subtitle_color)
+
+        jitterSwitch.thumbTintList = ColorStateList(
+            states,
+            intArrayOf(accent, Color.WHITE)
+        )
+        jitterSwitch.trackTintList = ColorStateList(
+            states,
+            intArrayOf(colorWithAlpha(accent, 120), colorWithAlpha(secondary, 80))
+        )
+    }
+
+    private fun colorWithAlpha(color: Int, alpha: Int): Int {
+        return Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color))
     }
 
     private fun setJitterMonitorEnabled(enabled: Boolean) {
