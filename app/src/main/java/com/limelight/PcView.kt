@@ -2346,7 +2346,11 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             activeStatus = details.state == ComputerDetails.State.ONLINE,
             actions = buildHostPrimaryActions(details),
             onAction = { handleHostAction(it.id, details) },
-            onDismiss = { startComputerUpdates() }
+            onDismiss = { selectedAction ->
+                if (selectedAction?.id != MORE_ACTIONS_ID) {
+                    startComputerUpdates()
+                }
+            }
         )
     }
 

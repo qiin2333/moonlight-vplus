@@ -16,8 +16,6 @@ import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.content.ContextCompat
-
 import com.limelight.R
 
 import java.io.BufferedReader
@@ -72,12 +70,6 @@ class Iperf3Tester(
             AppDialogStyler.apply(dialog, context)
             val startButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             val stopButton = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
-            val closeButton = dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
-            ContextCompat.getColorStateList(context, R.color.app_dialog_button_text)?.let { colors ->
-                startButton.setTextColor(colors)
-                stopButton.setTextColor(colors)
-                closeButton.setTextColor(colors)
-            }
             stopButton.isEnabled = false
 
             startButton.setOnClickListener { executeTest(startButton, stopButton) }

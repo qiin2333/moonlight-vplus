@@ -65,9 +65,10 @@ object AppActionSheet {
         activeStatus: Boolean = false,
         actions: List<Action>,
         onAction: (Action) -> Unit,
-        onDismiss: (() -> Unit)? = null
+        onDismiss: ((Action?) -> Unit)? = null
     ): Dialog {
         val dialog = ComponentDialog(context, R.style.AppActionSheetStyle)
+        var selectedAction: Action? = null
         val composeView = ComposeView(context).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
@@ -78,6 +79,7 @@ object AppActionSheet {
                         activeStatus = activeStatus,
                         actions = actions,
                         onAction = { action ->
+                            selectedAction = action
                             dialog.dismiss()
                             onAction(action)
                         }
@@ -88,7 +90,7 @@ object AppActionSheet {
 
         dialog.setContentView(composeView)
         dialog.setCanceledOnTouchOutside(true)
-        dialog.setOnDismissListener { onDismiss?.invoke() }
+        dialog.setOnDismissListener { onDismiss?.invoke(selectedAction) }
         dialog.show()
         dialog.window?.let { window ->
             window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
