@@ -30,10 +30,21 @@ class GyroCardController(private val game: Game) {
         val sensVal = customView.findViewById<TextView>(R.id.gyroSensitivityValueText)
         val invertXSwitch = customView.findViewById<CompoundButton>(R.id.gyroInvertXSwitch)
         val invertYSwitch = customView.findViewById<CompoundButton>(R.id.gyroInvertYSwitch)
+        val detailViews = listOfNotNull(
+            customView.findViewById<View>(R.id.gyroMouseModeRow),
+            customView.findViewById<View>(R.id.gyroAdvancedRow),
+            sensSeek,
+            customView.findViewById<View>(R.id.gyroSensitivityValueRow)
+        )
+
+        fun updateDetailVisibility(enabled: Boolean) {
+            detailViews.forEach { it.visibility = if (enabled) View.VISIBLE else View.GONE }
+        }
 
         val isAnyGyroOn = game.prefConfig.gyroToRightStick || game.prefConfig.gyroToMouse
         statusText?.text = if (isAnyGyroOn) "ON" else "OFF"
         mouseModeSwitch?.isChecked = game.prefConfig.gyroToMouse
+        updateDetailVisibility(isAnyGyroOn)
 
         toggleSwitch?.apply {
             isChecked = isAnyGyroOn
@@ -48,6 +59,7 @@ class GyroCardController(private val game: Game) {
                     ch.setGyroToMouseEnabled(false)
                 }
                 statusText?.text = if (isChecked) "ON" else "OFF"
+                updateDetailVisibility(isChecked)
             }
         }
 

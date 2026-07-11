@@ -89,7 +89,8 @@ class GameMenu(
         val isShowIcon: Boolean,
         val isKeepDialog: Boolean,
         val subtitle: String? = null,
-        val isCrownControl: Boolean = false
+        val isCrownControl: Boolean = false,
+        val showChevron: Boolean = false
     ) {
         constructor(label: String, runnable: Runnable?) :
                 this(label, false, runnable, null, true, false)
@@ -365,6 +366,7 @@ class GameMenu(
         val customView = activeCustomView ?: return
 
         menuStack.clear()
+        setSubmenuMode(customView, false)
         customView.findViewById<TextView>(R.id.customTitleTextView)?.text = GAME_MENU_TITLE
 
         val normalOptions = mutableListOf<MenuOption>()
@@ -638,6 +640,9 @@ class GameMenu(
         this.activeCustomView = customView
 
         setupCustomTitleBar(customView, title)
+        customView.findViewById<View>(R.id.menuBackButton)?.setOnClickListener {
+            navigateBack(dialog)
+        }
         setupAppNameDisplay(customView)
         setupQuickButtons(customView, dialog)
         setupNormalMenu(customView, normalOptions, dialog)
@@ -668,9 +673,7 @@ class GameMenu(
         // 返回键监听器
         dialog.setOnKeyListener { _, keyCode, event ->
             if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_DOWN) {
-                if (menuStack.isNotEmpty()) {
-                    val previousState = menuStack.pop()
-                    replaceNormalMenuInDialog(dialog, previousState.title, previousState.normalOptions, false)
+                if (navigateBack(dialog)) {
                     return@setOnKeyListener true
                 }
                 return@setOnKeyListener false
@@ -1254,6 +1257,26 @@ class GameMenu(
         }
     }
 
+    private fun navigateBack(dialog: AlertDialog): Boolean {
+        if (menuStack.isEmpty()) return false
+
+        val previousState = menuStack.pop()
+        replaceNormalMenuInDialog(dialog, previousState.title, previousState.normalOptions, false)
+        activeCustomView?.let { setSubmenuMode(it, menuStack.isNotEmpty()) }
+        return true
+    }
+
+    private fun setSubmenuMode(customView: View, enabled: Boolean) {
+        customView.findViewById<View>(R.id.menuBackButton)?.visibility =
+            if (enabled) View.VISIBLE else View.GONE
+        customView.findViewById<View>(R.id.quickButtonScroll)?.visibility =
+            if (enabled) View.GONE else View.VISIBLE
+        customView.findViewById<View>(R.id.secondaryMenuColumn)?.visibility =
+            if (enabled) View.GONE else View.VISIBLE
+        customView.findViewById<View>(R.id.btnCrownToggle)?.visibility =
+            if (enabled) View.GONE else View.VISIBLE
+    }
+
     /**
      * 在当前打开的 dialog 中显示一个子菜单
      */
@@ -1277,6 +1300,7 @@ class GameMenu(
             }
 
             replaceNormalMenuInDialog(dialog, title, subOptions, false)
+            cv?.let { setSubmenuMode(it, true) }
         } else {
             showMenuDialog(title, subOptions, emptyArray())
         }
@@ -1586,7 +1610,8 @@ class GameMenu(
 
         normalOptions.add(MenuOption(
             touchModeDescription, false,
-            { showTouchModeMenu() }, "mouse_mode", isShowIcon = true, isKeepDialog = true
+            { showTouchModeMenu() }, "mouse_mode", isShowIcon = true, isKeepDialog = true,
+            showChevron = true
         ))
 
         normalOptions.add(MenuOption(
@@ -1604,7 +1629,8 @@ class GameMenu(
         // 王冠功能
         normalOptions.add(MenuOption(
             getString(R.string.game_menu_crown_function), false,
-            { showCrownFunctionMenu() }, "crown_function_menu", isShowIcon = true, isKeepDialog = true
+            { showCrownFunctionMenu() }, "crown_function_menu", isShowIcon = true, isKeepDialog = true,
+            showChevron = true
         ))
 
         if (device != null) {
@@ -1623,7 +1649,8 @@ class GameMenu(
 
         normalOptions.add(MenuOption(
             getString(R.string.game_menu_change_resolution), false,
-            { showResolutionMenu() }, "game_menu_change_resolution", isShowIcon = true, isKeepDialog = true
+            { showResolutionMenu() }, "game_menu_change_resolution", isShowIcon = true, isKeepDialog = true,
+            showChevron = true
         ))
 
         if (game.prefConfig.onscreenController) {
@@ -1632,7 +1659,8 @@ class GameMenu(
         }
 
         normalOptions.add(MenuOption(getString(R.string.game_menu_send_keys),
-            false, { showSpecialKeysMenu() }, "game_menu_send_keys", isShowIcon = true, isKeepDialog = true
+            false, { showSpecialKeysMenu() }, "game_menu_send_keys", isShowIcon = true, isKeepDialog = true,
+            showChevron = true
         ))
 
         normalOptions.add(MenuOption(getString(R.string.game_menu_disconnect), true,
@@ -1717,10 +1745,12 @@ class GameMenu(
                 val textView = view.findViewById<TextView>(R.id.menu_item_text)
                 val iconView = view.findViewById<ImageView>(R.id.menu_item_icon)
                 val subtitleView = view.findViewById<TextView?>(R.id.menu_item_subtitle)
+                val chevronView = view.findViewById<ImageView?>(R.id.menu_item_chevron)
 
                 textView.text = option.label
                 subtitleView?.text = option.subtitle.orEmpty()
                 subtitleView?.visibility = if (option.subtitle.isNullOrBlank()) View.GONE else View.VISIBLE
+                chevronView?.visibility = if (option.showChevron) View.VISIBLE else View.GONE
 
                 if (option.isShowIcon) {
                     iconView.setImageResource(getIconForMenuOption(option.iconKey))
@@ -1749,6 +1779,7 @@ class GameMenu(
             if (option != null) {
                 val textView = view.findViewById<TextView>(R.id.menu_item_text)
                 val iconView = view.findViewById<ImageView>(R.id.menu_item_icon)
+                view.findViewById<ImageView?>(R.id.menu_item_chevron)?.visibility = View.GONE
 
                 textView.text = option.label
 
@@ -1767,8 +1798,8 @@ class GameMenu(
     companion object {
         private const val TEST_GAME_FOCUS_DELAY = 10L
         private const val MAX_QUICK_BUTTONS = 6
-        private const val DIALOG_ALPHA = 0.7f
-        private const val DIALOG_DIM_AMOUNT = 0.3f
+        private const val DIALOG_ALPHA = 1.0f
+        private const val DIALOG_DIM_AMOUNT = 0.5f
         private const val GAME_MENU_TITLE = "🍥🍬 V+ GAME MENU"
 
         private const val PREF_NAME = "custom_special_keys"

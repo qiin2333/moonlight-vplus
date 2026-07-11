@@ -25,7 +25,7 @@
     <color name="game_menu_list_item_focused">#F8F8F8</color>
     <color name="game_menu_list_item_border">#FFE0E0E0</color>
     <color name="game_menu_list_item_border_pressed">@color/theme_pink_primary</color>
-    <color name="game_menu_dialog_background">#FFF8F8</color>
+    <color name="game_menu_dialog_background">#D9FFF8F8</color>
     <color name="game_menu_dialog_border">#FFE0E0E0</color>
     <color name="game_menu_list_item_normal">#FFFFFF</color>
 

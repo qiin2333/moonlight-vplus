@@ -19,11 +19,25 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp">
 
+            <ImageView
+                android:id="@+id/menuBackButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:padding="8dp"
+                android:src="@drawable/ic_arrow_back_24"
+                android:contentDescription="@string/addpc_back"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:visibility="gone" />
+
             <TextView
                 android:id="@+id/customTitleTextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
+                android:layout_toEndOf="@id/menuBackButton"
                 android:layout_centerVertical="true"
                 android:text="🍥🍬 V+ GAME MENU"
                 android:textColor="@color/game_menu_text_primary"
@@ -54,6 +68,7 @@
 
         <!-- 快捷按钮区域（动态生成，单行水平滚动） -->
         <HorizontalScrollView
+            android:id="@+id/quickButtonScroll"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
@@ -102,6 +117,7 @@
 
             <!-- 超级菜单区域 -->
             <LinearLayout
+                android:id="@+id/secondaryMenuColumn"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
@@ -289,6 +305,7 @@
 
                     <!-- 模式选择：右摇杆 / 鼠标 -->
                     <LinearLayout
+                        android:id="@+id/gyroMouseModeRow"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
@@ -314,6 +331,7 @@
 
                     <!-- 详细设置 -->
                     <LinearLayout
+                        android:id="@+id/gyroAdvancedRow"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="4dp"
@@ -427,6 +445,7 @@
 
                     <!-- 灵敏度值显示 -->
                     <LinearLayout
+                        android:id="@+id/gyroSensitivityValueRow"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal">
