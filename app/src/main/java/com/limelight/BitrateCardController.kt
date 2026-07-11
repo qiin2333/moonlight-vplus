@@ -29,6 +29,7 @@ class BitrateCardController(
     private val game: Game,
     private val conn: NvConnection
 ) {
+    private var abrListener: ((Int, String) -> Unit)? = null
 
     /** Haptic feedback mode for the bitrate seekbar. */
     enum class HapticMode {
@@ -97,7 +98,7 @@ class BitrateCardController(
         }
     }
 
-    fun setup(customView: View, dialog: AlertDialog) {
+    fun setup(customView: View) {
         val bitrateContainer = customView.findViewById<View>(R.id.bitrateAdjustmentContainer)
         val bitrateSeekBar = customView.findViewById<SeekBar>(R.id.bitrateSeekBar)
         val currentBitrateText = customView.findViewById<TextView>(R.id.currentBitrateText)
@@ -210,13 +211,17 @@ class BitrateCardController(
                     renderCurrentText(kbps, abrService.getStatusText())
                 }
             }
+            abrListener = listener
             abrService.bitrateListener = listener
-            dialog.setOnDismissListener {
-                if (abrService.bitrateListener === listener) {
-                    abrService.bitrateListener = null
-                }
-            }
         }
+    }
+
+    fun dispose() {
+        val listener = abrListener ?: return
+        if (game.adaptiveBitrateService?.bitrateListener === listener) {
+            game.adaptiveBitrateService?.bitrateListener = null
+        }
+        abrListener = null
     }
 
     private fun performHapticFeedback(view: View) {

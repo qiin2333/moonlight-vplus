@@ -18,7 +18,7 @@ import kotlin.math.roundToInt
  */
 class GyroCardController(private val game: Game) {
 
-    fun setup(customView: View, dialog: AlertDialog) {
+    fun setup(customView: View) {
         val container = customView.findViewById<View>(R.id.gyroAdjustmentContainer) ?: return
 
         val statusText = customView.findViewById<TextView>(R.id.gyroStatusText)

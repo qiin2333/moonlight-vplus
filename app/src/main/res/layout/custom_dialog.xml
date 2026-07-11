@@ -15,6 +15,7 @@
 
         <!-- 标题栏 -->
         <RelativeLayout
+            android:id="@+id/menuHeader"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp">
@@ -97,6 +98,7 @@
 
             <!-- 普通菜单 -->
             <LinearLayout
+                android:id="@+id/normalMenuColumn"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
