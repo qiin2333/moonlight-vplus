@@ -8,7 +8,6 @@ import android.content.Context
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.text.Html
 import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.LayoutInflater
@@ -59,13 +58,12 @@ class GameMenu(
 ) {
     // 当前激活的对话框（如果有）
     private var activeDialog: ComponentDialog? = null
-    // 当前激活对话框所用的自定义视图引用（便于内部替换）
-    private var activeCustomView: View? = null
+    private var legacyCardsView: View? = null
     private var composeUiState: MutableState<GameMenuComposeUiState>? = null
     // 标志：上一次运行的选项是否打开了子菜单（由 showSubMenu 设置）
     private var lastActionOpenedSubmenu = false
     // 菜单历史栈，用于二级/多级菜单的回退
-    private val menuStack: ArrayDeque<MenuState> = ArrayDeque()
+    private val menuStack: ArrayDeque<MenuPage> = ArrayDeque()
     private val handler = Handler(Looper.getMainLooper())
     private val actionExecutor = StreamActionExecutor(game, { conn }, handler)
     private var bitrateCardController: BitrateCardController? = null
@@ -107,7 +105,7 @@ class GameMenu(
     /**
      * 菜单状态，用于回退
      */
-    private class MenuState(val title: String?, val normalOptions: Array<MenuOption>)
+    private data class MenuPage(val title: String, val options: List<MenuOption>)
 
     /**
      * 获取字符串资源
@@ -328,13 +326,6 @@ class GameMenu(
     }
 
     /**
-     * 切换麦克风开关
-     */
-    private fun toggleMicrophone() {
-        game.handleMicrophoneMenuAction()
-    }
-
-    /**
      * 切换王冠功能并即时刷新菜单内容
      */
     private fun toggleCrownFeature() {
@@ -348,18 +339,9 @@ class GameMenu(
             getString(R.string.crown_switch_to_crown)
     }
 
-    private fun updateCrownToggleButtonText(crownToggleButton: TextView) {
-        @Suppress("DEPRECATION")
-        crownToggleButton.text = Html.fromHtml("<u>${getCrownToggleText()}</u>")
-    }
-
     private fun updateCrownToggleButton() {
         composeUiState?.let { state ->
             state.value = state.value.copy(crownToggleText = getCrownToggleText())
-        }
-        activeCustomView?.let { view ->
-            val crownToggleButton = view.findViewById<TextView>(R.id.btnCrownToggle) ?: return
-            updateCrownToggleButtonText(crownToggleButton)
         }
     }
 
@@ -437,13 +419,12 @@ class GameMenu(
     }
 
     private fun replaceCrownFunctionMenu() {
-        val dialog = activeDialog
-        if (dialog != null && dialog.isShowing) {
-            replaceNormalMenuInDialog(
-                dialog,
-                getString(R.string.game_menu_crown_function_title),
-                buildEnabledCrownFunctionOptions(game.controllerManager),
-                false
+        if (activeDialog?.isShowing == true) {
+            showMenuPage(
+                MenuPage(
+                    getString(R.string.game_menu_crown_function_title),
+                    buildEnabledCrownFunctionOptions(game.controllerManager).toList()
+                )
             )
         }
     }
@@ -590,47 +571,6 @@ class GameMenu(
     }
 
     /**
-     * 调整码率
-     */
-    private fun adjustBitrate(bitrateKbps: Int) {
-        try {
-            Toast.makeText(game, getString(R.string.toast_adjusting_bitrate), Toast.LENGTH_SHORT).show()
-
-            conn.setBitrate(bitrateKbps, object : NvConnection.BitrateAdjustmentCallback {
-                override fun onSuccess(newBitrate: Int) {
-                    game.runOnUiThread {
-                        try {
-                            val successMessage = String.format(getString(R.string.game_menu_bitrate_adjustment_success), newBitrate / 1000)
-                            Toast.makeText(game, successMessage, Toast.LENGTH_SHORT).show()
-                        } catch (e: Exception) {
-                            LimeLog.warning("Failed to show success toast: ${e.message}")
-                        }
-                    }
-                }
-
-                override fun onFailure(errorMessage: String) {
-                    game.runOnUiThread {
-                        try {
-                            val errorMsg = getString(R.string.game_menu_bitrate_adjustment_failed) + ": " + errorMessage
-                            Toast.makeText(game, errorMsg, Toast.LENGTH_SHORT).show()
-                        } catch (e: Exception) {
-                            LimeLog.warning("Failed to show error toast: ${e.message}")
-                        }
-                    }
-                }
-            })
-        } catch (e: Exception) {
-            game.runOnUiThread {
-                try {
-                    Toast.makeText(game, getString(R.string.game_menu_bitrate_adjustment_failed) + ": " + e.message, Toast.LENGTH_SHORT).show()
-                } catch (toastException: Exception) {
-                    LimeLog.warning("Failed to show error toast: ${toastException.message}")
-                }
-            }
-        }
-    }
-
-    /**
      * 显示菜单对话框
      */
     private fun showMenuDialog(title: String, normalOptions: Array<MenuOption>, superOptions: Array<MenuOption>) {
@@ -648,23 +588,24 @@ class GameMenu(
         )
         composeUiState = state
 
+        val callbacks = GameMenuCallbacks(
+            iconForOption = ::getIconForMenuOption,
+            onBack = { navigateBack() },
+            onCrownToggle = ::toggleCrownFeature,
+            onOptionClick = { handleComposeOptionClick(it, dialog) },
+            onQuickAction = ::runComposeQuickAction,
+            onToggleQuickEdit = ::toggleComposeQuickEdit,
+            onAddQuickAction = ::showQuickButtonEditor,
+            onRemoveQuickAction = ::removeComposeQuickAction,
+            onMoveQuickAction = ::moveComposeQuickAction,
+            createLegacyCards = ::createLegacyCardsView,
+            releaseLegacyCards = ::releaseLegacyCards
+        )
+
         val composeView = ComposeView(game).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
-                GameMenuScreen(
-                    state = state.value,
-                    iconForOption = ::getIconForMenuOption,
-                    onBack = { navigateBack(dialog) },
-                    onCrownToggle = ::toggleCrownFeature,
-                    onOptionClick = { handleComposeOptionClick(it, dialog) },
-                    onQuickAction = ::runComposeQuickAction,
-                    onToggleQuickEdit = ::toggleComposeQuickEdit,
-                    onAddQuickAction = ::showQuickButtonEditor,
-                    onRemoveQuickAction = ::removeComposeQuickAction,
-                    onMoveQuickAction = ::moveComposeQuickAction,
-                    legacyCardsFactory = ::createLegacyCardsView,
-                    onLegacyCardsRelease = ::releaseLegacyCards
-                )
+                GameMenuScreen(state.value, callbacks)
             }
         }
         dialog = ComponentDialog(game, R.style.GameMenuDialogStyle).apply {
@@ -677,7 +618,7 @@ class GameMenu(
         // 返回键监听器
         dialog.setOnKeyListener { _, keyCode, event ->
             if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_DOWN) {
-                if (navigateBack(dialog)) {
+                if (navigateBack()) {
                     return@setOnKeyListener true
                 }
                 return@setOnKeyListener false
@@ -688,7 +629,7 @@ class GameMenu(
         // 关闭时清理状态
         dialog.setOnDismissListener {
             if (this.activeDialog == dialog) this.activeDialog = null
-            this.activeCustomView = null
+            this.legacyCardsView = null
             this.composeUiState = null
             bitrateCardController?.dispose()
             bitrateCardController = null
@@ -717,7 +658,7 @@ class GameMenu(
 
     private fun createLegacyCardsView(): View {
         val customView = game.layoutInflater.inflate(R.layout.custom_dialog, null)
-        activeCustomView = customView
+        legacyCardsView = customView
         customView.findViewById<View>(R.id.menuHeader)?.visibility = View.GONE
         customView.findViewById<View>(R.id.quickButtonScroll)?.visibility = View.GONE
         customView.findViewById<View>(R.id.normalMenuColumn)?.visibility = View.GONE
@@ -740,7 +681,7 @@ class GameMenu(
     }
 
     private fun releaseLegacyCards() {
-        activeCustomView = null
+        legacyCardsView = null
         bitrateCardController?.dispose()
         bitrateCardController = null
     }
@@ -768,7 +709,7 @@ class GameMenu(
 
                 game.prefConfig.writePreferences(game)
 
-                val root = activeCustomView
+                val root = legacyCardsView
 
                 if (root != null) {
                     root.findViewById<View>(R.id.bitrateAdjustmentContainer)?.visibility =
@@ -981,30 +922,23 @@ class GameMenu(
         AppDialogStyler.applySystemChoiceList(dialog, game)
     }
 
-    private fun replaceNormalMenuInDialog(
-        dialog: ComponentDialog,
-        title: String?,
-        newNormalOptions: Array<MenuOption>,
-        pushToStack: Boolean
-    ) {
-        if (!dialog.isShowing && activeDialog !== dialog) return
+    private fun currentMenuPage(): MenuPage? {
+        return composeUiState?.value?.let { MenuPage(it.title, it.options) }
+    }
+
+    private fun showMenuPage(page: MenuPage, pushCurrent: Boolean = false) {
         val state = composeUiState ?: return
-        if (pushToStack) menuStack.push(MenuState(state.value.title, state.value.options.toTypedArray()))
+        if (pushCurrent) currentMenuPage()?.let(menuStack::push)
         state.value = state.value.copy(
-            title = title ?: state.value.title,
-            options = newNormalOptions.toList(),
+            title = page.title,
+            options = page.options,
             isSubmenu = menuStack.isNotEmpty()
         )
     }
 
-    private fun navigateBack(dialog: ComponentDialog): Boolean {
+    private fun navigateBack(): Boolean {
         if (menuStack.isEmpty()) return false
-
-        val previousState = menuStack.pop()
-        replaceNormalMenuInDialog(dialog, previousState.title, previousState.normalOptions, false)
-        composeUiState?.let { state ->
-            state.value = state.value.copy(isSubmenu = menuStack.isNotEmpty())
-        }
+        showMenuPage(menuStack.pop())
         return true
     }
 
@@ -1015,13 +949,7 @@ class GameMenu(
         val dialog = activeDialog
         if (dialog != null && dialog.isShowing) {
             lastActionOpenedSubmenu = true
-            val state = composeUiState ?: return
-            menuStack.push(MenuState(state.value.title, state.value.options.toTypedArray()))
-            state.value = state.value.copy(
-                title = title,
-                options = subOptions.toList(),
-                isSubmenu = true
-            )
+            showMenuPage(MenuPage(title, subOptions.toList()), pushCurrent = true)
         } else {
             showMenuDialog(title, subOptions, emptyArray())
         }

@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,20 +62,24 @@ internal data class GameMenuComposeUiState(
     val isSubmenu: Boolean = false
 )
 
+internal data class GameMenuCallbacks(
+    val iconForOption: (String?) -> Int,
+    val onBack: () -> Unit,
+    val onCrownToggle: () -> Unit,
+    val onOptionClick: (GameMenu.MenuOption) -> Unit,
+    val onQuickAction: (String) -> Unit,
+    val onToggleQuickEdit: () -> Unit,
+    val onAddQuickAction: () -> Unit,
+    val onRemoveQuickAction: (String) -> Unit,
+    val onMoveQuickAction: (String, Int) -> Unit,
+    val createLegacyCards: () -> View,
+    val releaseLegacyCards: () -> Unit
+)
+
 @Composable
 internal fun GameMenuScreen(
     state: GameMenuComposeUiState,
-    iconForOption: (String?) -> Int,
-    onBack: () -> Unit,
-    onCrownToggle: () -> Unit,
-    onOptionClick: (GameMenu.MenuOption) -> Unit,
-    onQuickAction: (String) -> Unit,
-    onToggleQuickEdit: () -> Unit,
-    onAddQuickAction: () -> Unit,
-    onRemoveQuickAction: (String) -> Unit,
-    onMoveQuickAction: (String, Int) -> Unit,
-    legacyCardsFactory: () -> View,
-    onLegacyCardsRelease: () -> Unit
+    callbacks: GameMenuCallbacks
 ) {
     val border = colorResource(R.color.game_menu_dialog_border)
 
@@ -91,17 +96,17 @@ internal fun GameMenuScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                GameMenuHeader(state, onBack, onCrownToggle)
+                GameMenuHeader(state, callbacks.onBack, callbacks.onCrownToggle)
 
                 if (!state.isSubmenu) {
                     QuickActionRow(
                         actions = state.quickActions,
                         editMode = state.quickEditMode,
-                        onAction = onQuickAction,
-                        onToggleEdit = onToggleQuickEdit,
-                        onAdd = onAddQuickAction,
-                        onRemove = onRemoveQuickAction,
-                        onMove = onMoveQuickAction
+                        onAction = callbacks.onQuickAction,
+                        onToggleEdit = callbacks.onToggleQuickEdit,
+                        onAdd = callbacks.onAddQuickAction,
+                        onRemove = callbacks.onRemoveQuickAction,
+                        onMove = callbacks.onMoveQuickAction
                     )
                 }
 
@@ -115,24 +120,36 @@ internal fun GameMenuScreen(
                         ) {
                             MenuOptionColumn(
                                 options = state.options,
-                                iconForOption = iconForOption,
-                                onOptionClick = onOptionClick,
+                                iconForOption = callbacks.iconForOption,
+                                onOptionClick = callbacks.onOptionClick,
                                 modifier = Modifier.weight(1f)
                             )
                             Column(
                                 modifier = Modifier.weight(1f),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                MenuOptionColumn(state.superOptions, iconForOption, onOptionClick)
-                                LegacyCards(legacyCardsFactory, onLegacyCardsRelease)
+                                MenuOptionColumn(
+                                    state.superOptions,
+                                    callbacks.iconForOption,
+                                    callbacks.onOptionClick
+                                )
+                                LegacyCards(callbacks.createLegacyCards, callbacks.releaseLegacyCards)
                             }
                         }
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            MenuOptionColumn(state.options, iconForOption, onOptionClick)
+                            MenuOptionColumn(
+                                state.options,
+                                callbacks.iconForOption,
+                                callbacks.onOptionClick
+                            )
                             if (!state.isSubmenu) {
-                                MenuOptionColumn(state.superOptions, iconForOption, onOptionClick)
-                                LegacyCards(legacyCardsFactory, onLegacyCardsRelease)
+                                MenuOptionColumn(
+                                    state.superOptions,
+                                    callbacks.iconForOption,
+                                    callbacks.onOptionClick
+                                )
+                                LegacyCards(callbacks.createLegacyCards, callbacks.releaseLegacyCards)
                             }
                         }
                     }
@@ -155,7 +172,7 @@ private fun GameMenuHeader(
         if (state.isSubmenu) {
             Icon(
                 painter = painterResource(R.drawable.ic_arrow_back_24),
-                contentDescription = "Back",
+                contentDescription = stringResource(R.string.addpc_back),
                 tint = colorResource(R.color.game_menu_text_primary),
                 modifier = Modifier
                     .size(40.dp)
