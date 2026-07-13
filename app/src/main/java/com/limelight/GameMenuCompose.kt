@@ -13,12 +13,11 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -323,7 +322,6 @@ private fun GameMenuFooter(subtitle: String) {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun QuickActionRow(
     actions: List<GameMenuQuickAction>,
@@ -353,81 +351,91 @@ private fun QuickActionRow(
         }
     }
 
-    FlowRow(
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        actions.forEach { action ->
-            val isDragging = draggingId == action.id
-            val isDropTarget = dropTargetId == action.id
-            val dragModifier = if (editMode) {
-                Modifier
-                    .onGloballyPositioned { coordinates ->
-                        itemBounds[action.id] = coordinates.boundsInParent()
-                    }
-                    .zIndex(if (isDragging) 1f else 0f)
-                    .graphicsLayer {
-                        if (isDragging) {
-                            translationX = dragOffset.x
-                            translationY = dragOffset.y
-                            alpha = 0.42f
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            actions.forEach { action ->
+                val isDragging = draggingId == action.id
+                val isDropTarget = dropTargetId == action.id
+                val dragModifier = if (editMode) {
+                    Modifier
+                        .onGloballyPositioned { coordinates ->
+                            itemBounds[action.id] = coordinates.boundsInParent()
                         }
-                        if (isDropTarget) {
-                            scaleX = 1.12f
-                            scaleY = 1.12f
-                        }
-                    }
-                    .pointerInput(action.id) {
-                        detectDragGesturesAfterLongPress(
-                            onDragStart = {
-                                draggingId = action.id
-                                dragOffset = Offset.Zero
-                                dropTargetId = null
-                                view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                            },
-                            onDragCancel = { finishDrag(commit = false) },
-                            onDragEnd = { finishDrag(commit = true) }
-                        ) { change, amount ->
-                            change.consume()
-                            dragOffset += amount
-                            val sourceBounds = itemBounds[action.id]
-                            val draggedCenter = sourceBounds?.center?.plus(dragOffset)
-                            dropTargetId = draggedCenter?.let { center ->
-                                actions.firstOrNull { candidate ->
-                                    candidate.id != action.id &&
-                                        itemBounds[candidate.id]?.contains(center) == true
-                                }?.id
+                        .zIndex(if (isDragging) 1f else 0f)
+                        .graphicsLayer {
+                            if (isDragging) {
+                                translationX = dragOffset.x
+                                translationY = dragOffset.y
+                                alpha = 0.42f
+                            }
+                            if (isDropTarget) {
+                                scaleX = 1.12f
+                                scaleY = 1.12f
                             }
                         }
-                    }
-                    .onPreviewKeyEvent { event ->
-                        if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                        val index = actions.indexOfFirst { it.id == action.id }
-                        val targetIndex = when (event.key) {
-                            Key.DirectionLeft -> index - 1
-                            Key.DirectionRight -> index + 1
-                            else -> return@onPreviewKeyEvent false
+                        .pointerInput(action.id) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = {
+                                    draggingId = action.id
+                                    dragOffset = Offset.Zero
+                                    dropTargetId = null
+                                    view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                                },
+                                onDragCancel = { finishDrag(commit = false) },
+                                onDragEnd = { finishDrag(commit = true) }
+                            ) { change, amount ->
+                                change.consume()
+                                dragOffset += amount
+                                val sourceBounds = itemBounds[action.id]
+                                val draggedCenter = sourceBounds?.center?.plus(dragOffset)
+                                dropTargetId = draggedCenter?.let { center ->
+                                    actions.firstOrNull { candidate ->
+                                        candidate.id != action.id &&
+                                            itemBounds[candidate.id]?.contains(center) == true
+                                    }?.id
+                                }
+                            }
                         }
-                        actions.getOrNull(targetIndex)?.let { onMove(action.id, it.id) } != null
-                    }
-            } else {
-                Modifier
+                        .onPreviewKeyEvent { event ->
+                            if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                            val index = actions.indexOfFirst { it.id == action.id }
+                            val targetIndex = when (event.key) {
+                                Key.DirectionLeft -> index - 1
+                                Key.DirectionRight -> index + 1
+                                else -> return@onPreviewKeyEvent false
+                            }
+                            actions.getOrNull(targetIndex)?.let { onMove(action.id, it.id) } != null
+                        }
+                } else {
+                    Modifier
+                }
+                QuickActionChip(
+                    action = action,
+                    editMode = editMode,
+                    onClick = { onAction(action.id) },
+                    onRemove = { onRemove(action.id) },
+                    modifier = dragModifier
+                )
             }
-            QuickActionChip(
-                action = action,
-                editMode = editMode,
-                onClick = { onAction(action.id) },
-                onRemove = { onRemove(action.id) },
-                modifier = dragModifier
-            )
+            if (!editMode) {
+                superOptions.forEach { option ->
+                    SuperOptionChip(option) { onSuperOptionClick(option) }
+                }
+            }
         }
-        ToolChip(if (editMode) "✓" else "✎", onToggleEdit)
-        if (editMode) ToolChip("＋", onAdd)
-        if (!editMode) {
-            superOptions.forEach { option ->
-                SuperOptionChip(option) { onSuperOptionClick(option) }
-            }
+        Spacer(Modifier.width(4.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            ToolChip(if (editMode) "✓" else "✎", onToggleEdit)
+            if (editMode) ToolChip("＋", onAdd)
         }
     }
 }
