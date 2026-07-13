@@ -1,6 +1,5 @@
 package com.limelight
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.ContentValues
@@ -8,7 +7,6 @@ import android.content.Context
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
@@ -58,7 +56,6 @@ class GameMenu(
 ) {
     // 当前激活的对话框（如果有）
     private var activeDialog: ComponentDialog? = null
-    private var legacyCardsView: View? = null
     private var composeUiState: MutableState<GameMenuComposeUiState>? = null
     // 标志：上一次运行的选项是否打开了子菜单（由 showSubMenu 设置）
     private var lastActionOpenedSubmenu = false
@@ -66,7 +63,8 @@ class GameMenu(
     private val menuStack: ArrayDeque<MenuPage> = ArrayDeque()
     private val handler = Handler(Looper.getMainLooper())
     private val actionExecutor = StreamActionExecutor(game, { conn }, handler)
-    private var bitrateCardController: BitrateCardController? = null
+    private val bitrateCardController = BitrateCardController(game, conn)
+    private val gyroCardController = GyroCardController(game)
     init {
         showMenu()
     }
@@ -583,10 +581,20 @@ class GameMenu(
                 superOptions = superOptions.toList(),
                 appName = getAppNameDisplay(),
                 crownToggleText = getCrownToggleText(),
-                quickActions = buildComposeQuickActions()
+                quickActions = buildComposeQuickActions(),
+                visibleCards = readVisibleCards(),
+                bitrate = bitrateCardController.snapshot(),
+                gyro = gyroCardController.snapshot(),
+                customKeys = getSavedCustomKeys()
             )
         )
         composeUiState = state
+        bitrateCardController.start { bitrate ->
+            composeUiState?.let { it.value = it.value.copy(bitrate = bitrate) }
+        }
+        gyroCardController.start { gyro ->
+            composeUiState?.let { it.value = it.value.copy(gyro = gyro) }
+        }
 
         val callbacks = GameMenuCallbacks(
             iconForOption = ::getIconForMenuOption,
@@ -598,8 +606,19 @@ class GameMenu(
             onAddQuickAction = ::showQuickButtonEditor,
             onRemoveQuickAction = ::removeComposeQuickAction,
             onMoveQuickAction = ::moveComposeQuickAction,
-            createLegacyCards = ::createLegacyCardsView,
-            releaseLegacyCards = ::releaseLegacyCards
+            onEditCards = ::showCardEditorDialog,
+            onBitrateProgress = bitrateCardController::previewProgress,
+            onBitrateApply = bitrateCardController::applySelectedBitrate,
+            onBitrateTip = bitrateCardController::showTip,
+            onBitrateHapticMode = bitrateCardController::cycleHapticMode,
+            onGyroEnabled = gyroCardController::setEnabled,
+            onGyroMouseMode = gyroCardController::setMouseMode,
+            onGyroActivationKey = gyroCardController::showActivationKeyDialog,
+            onGyroSensitivity = gyroCardController::previewSensitivity,
+            onGyroSensitivityFinished = gyroCardController::persistSensitivity,
+            onGyroInvertX = gyroCardController::setInvertX,
+            onGyroInvertY = gyroCardController::setInvertY,
+            onCustomKey = { sendKeys(it.keys) }
         )
 
         val composeView = ComposeView(game).apply {
@@ -629,10 +648,9 @@ class GameMenu(
         // 关闭时清理状态
         dialog.setOnDismissListener {
             if (this.activeDialog == dialog) this.activeDialog = null
-            this.legacyCardsView = null
             this.composeUiState = null
-            bitrateCardController?.dispose()
-            bitrateCardController = null
+            bitrateCardController.dispose()
+            gyroCardController.dispose()
             menuStack.clear()
         }
 
@@ -656,34 +674,12 @@ class GameMenu(
         }
     }
 
-    private fun createLegacyCardsView(): View {
-        val customView = game.layoutInflater.inflate(R.layout.custom_dialog, null)
-        legacyCardsView = customView
-        customView.findViewById<View>(R.id.menuHeader)?.visibility = View.GONE
-        customView.findViewById<View>(R.id.quickButtonScroll)?.visibility = View.GONE
-        customView.findViewById<View>(R.id.normalMenuColumn)?.visibility = View.GONE
-        customView.findViewById<View>(R.id.superMenuList)?.visibility = View.GONE
-
-        if (game.prefConfig.showBitrateCard) {
-            bitrateCardController?.dispose()
-            bitrateCardController = BitrateCardController(game, conn).also { it.setup(customView) }
-        } else {
-            customView.findViewById<View>(R.id.bitrateAdjustmentContainer)?.visibility = View.GONE
-        }
-        if (game.prefConfig.showGyroCard) {
-            GyroCardController(game).setup(customView)
-        } else {
-            customView.findViewById<View>(R.id.gyroAdjustmentContainer)?.visibility = View.GONE
-        }
-        setupCustomKeysCard(customView)
-        customView.findViewById<View>(R.id.cardEditorButton)?.setOnClickListener { showCardEditorDialog() }
-        return customView
-    }
-
-    private fun releaseLegacyCards() {
-        legacyCardsView = null
-        bitrateCardController?.dispose()
-        bitrateCardController = null
+    private fun readVisibleCards(): GameMenuVisibleCards {
+        return GameMenuVisibleCards(
+            bitrate = game.prefConfig.showBitrateCard,
+            gyro = game.prefConfig.showGyroCard,
+            shortcuts = game.prefConfig.showQuickKeyCard
+        )
     }
 
     private fun showCardEditorDialog() {
@@ -708,23 +704,11 @@ class GameMenu(
                 game.prefConfig.showQuickKeyCard = checked[2]
 
                 game.prefConfig.writePreferences(game)
-
-                val root = legacyCardsView
-
-                if (root != null) {
-                    root.findViewById<View>(R.id.bitrateAdjustmentContainer)?.visibility =
-                        if (game.prefConfig.showBitrateCard) View.VISIBLE else View.GONE
-
-                    root.findViewById<View>(R.id.gyroAdjustmentContainer)?.visibility =
-                        if (game.prefConfig.showGyroCard) View.VISIBLE else View.GONE
-
-                    root.findViewById<View>(R.id.customKeysCardContainer)?.let { keysCard ->
-                        if (game.prefConfig.showQuickKeyCard) {
-                            setupCustomKeysCard(root)
-                        } else {
-                            keysCard.visibility = View.GONE
-                        }
-                    }
+                composeUiState?.let { state ->
+                    state.value = state.value.copy(
+                        visibleCards = readVisibleCards(),
+                        customKeys = getSavedCustomKeys()
+                    )
                 }
             }
             .setNegativeButton("Cancel", null)
@@ -741,70 +725,11 @@ class GameMenu(
         return CustomKeyRepository.load(game, showErrorToast = true)
     }
 
-    /**
-     * 设置自定义按键卡片
-     */
-    @SuppressLint("UseCompatLoadingForDrawables")
-    private fun setupCustomKeysCard(customView: View) {
-        val cardContainer = customView.findViewById<View>(R.id.customKeysCardContainer) ?: return
-        val listLayout = customView.findViewById<LinearLayout>(R.id.customKeysListLayout) ?: return
-
-        if (!game.prefConfig.showQuickKeyCard) {
-            cardContainer.visibility = View.GONE
-            return
-        }
-
-        val keys = getSavedCustomKeys()
-        if (keys.isEmpty()) {
-            cardContainer.visibility = View.GONE
-            return
-        }
-
-        cardContainer.visibility = View.VISIBLE
-        listLayout.removeAllViews()
-
-        for (i in keys.indices) {
-            val keyData = keys[i]
-
-            val itemView = TextView(game).apply {
-                text = keyData.name
-                setTextColor(0xFF333333.toInt())
-                textSize = 14f
-                gravity = android.view.Gravity.CENTER
-
-                val paddingVertical = dpToPx(7f)
-                val paddingHorizontal = dpToPx(10f)
-                setPadding(paddingHorizontal, paddingVertical, paddingHorizontal, paddingVertical)
-
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-
-                background = game.getDrawable(R.drawable.button_selector_background)
-
-                setOnClickListener { v ->
-                    sendKeys(keyData.keys)
-                    v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                }
-            }
-
-            listLayout.addView(itemView)
-
-            // 添加分割线（除了最后一个）
-            if (i < keys.size - 1) {
-                val divider = View(game).apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, 1
-                    ).apply { setMargins(0, 0, 0, 0) }
-                    setBackgroundColor(0x33000000)
-                }
-                listLayout.addView(divider)
-            }
+    private fun refreshComposeCustomKeys() {
+        composeUiState?.let { state ->
+            state.value = state.value.copy(customKeys = getSavedCustomKeys())
         }
     }
-
-    private fun dpToPx(dp: Float): Int = (dp * game.resources.displayMetrics.density + 0.5f).toInt()
 
     private fun dpToPx(dp: Int): Int = (dp * game.resources.displayMetrics.density).toInt()
 
@@ -1042,6 +967,7 @@ class GameMenu(
             preferences.edit { putString(KEY_NAME, root.toString()) }
 
             Toast.makeText(game, game.getString(R.string.toast_custom_key_saved, name), Toast.LENGTH_SHORT).show()
+            refreshComposeCustomKeys()
         } catch (e: Exception) {
             LimeLog.warning("Exception while saving custom key${e.message}")
             Toast.makeText(game, R.string.toast_save_failed, Toast.LENGTH_SHORT).show()
@@ -1188,6 +1114,7 @@ class GameMenu(
                         root.put("data", dataArray)
                         preferences.edit { putString(KEY_NAME, root.toString()) }
                         Toast.makeText(game, R.string.toast_selected_keys_deleted, Toast.LENGTH_SHORT).show()
+                        refreshComposeCustomKeys()
                     } catch (e: Exception) {
                         LimeLog.warning("Exception while deleting keys${e.message}")
                         Toast.makeText(game, R.string.toast_delete_failed, Toast.LENGTH_SHORT).show()

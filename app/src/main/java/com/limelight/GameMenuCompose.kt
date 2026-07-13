@@ -1,17 +1,19 @@
 package com.limelight
 
 import android.view.HapticFeedbackConstants
-import android.view.View
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,7 +28,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -42,7 +46,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
+import java.util.Locale
+import kotlin.math.roundToInt
 
 internal data class GameMenuQuickAction(
     val id: String,
@@ -58,8 +63,18 @@ internal data class GameMenuComposeUiState(
     val appName: String,
     val crownToggleText: String,
     val quickActions: List<GameMenuQuickAction>,
+    val visibleCards: GameMenuVisibleCards,
+    val bitrate: BitrateCardState,
+    val gyro: GyroCardState,
+    val customKeys: List<CustomKeyData>,
     val quickEditMode: Boolean = false,
     val isSubmenu: Boolean = false
+)
+
+internal data class GameMenuVisibleCards(
+    val bitrate: Boolean,
+    val gyro: Boolean,
+    val shortcuts: Boolean
 )
 
 internal data class GameMenuCallbacks(
@@ -72,8 +87,19 @@ internal data class GameMenuCallbacks(
     val onAddQuickAction: () -> Unit,
     val onRemoveQuickAction: (String) -> Unit,
     val onMoveQuickAction: (String, Int) -> Unit,
-    val createLegacyCards: () -> View,
-    val releaseLegacyCards: () -> Unit
+    val onEditCards: () -> Unit,
+    val onBitrateProgress: (Int) -> Boolean,
+    val onBitrateApply: () -> Unit,
+    val onBitrateTip: () -> Unit,
+    val onBitrateHapticMode: () -> Unit,
+    val onGyroEnabled: (Boolean) -> Unit,
+    val onGyroMouseMode: (Boolean) -> Unit,
+    val onGyroActivationKey: () -> Unit,
+    val onGyroSensitivity: (Float) -> Unit,
+    val onGyroSensitivityFinished: () -> Unit,
+    val onGyroInvertX: (Boolean) -> Unit,
+    val onGyroInvertY: (Boolean) -> Unit,
+    val onCustomKey: (CustomKeyData) -> Unit
 )
 
 @Composable
@@ -133,7 +159,7 @@ internal fun GameMenuScreen(
                                     callbacks.iconForOption,
                                     callbacks.onOptionClick
                                 )
-                                LegacyCards(callbacks.createLegacyCards, callbacks.releaseLegacyCards)
+                                GameMenuCards(state, callbacks)
                             }
                         }
                     } else {
@@ -149,7 +175,7 @@ internal fun GameMenuScreen(
                                     callbacks.iconForOption,
                                     callbacks.onOptionClick
                                 )
-                                LegacyCards(callbacks.createLegacyCards, callbacks.releaseLegacyCards)
+                                GameMenuCards(state, callbacks)
                             }
                         }
                     }
@@ -399,10 +425,260 @@ private fun MenuOptionRow(
 }
 
 @Composable
-private fun LegacyCards(factory: () -> View, onRelease: () -> Unit) {
-    AndroidView(
-        factory = { factory() },
-        onRelease = { onRelease() },
+private fun GameMenuCards(state: GameMenuComposeUiState, callbacks: GameMenuCallbacks) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (state.visibleCards.bitrate) {
+            BitrateCard(state.bitrate, callbacks)
+        }
+        if (state.visibleCards.gyro) {
+            GyroCard(state.gyro, callbacks)
+        }
+        if (state.visibleCards.shortcuts && state.customKeys.isNotEmpty()) {
+            ShortcutCard(state.customKeys, callbacks.onCustomKey)
+        }
+        Text(
+            text = "✎ ${stringResource(R.string.game_menu_card_config_title)}",
+            color = colorResource(R.color.theme_pink_primary),
+            fontSize = 12.sp,
+            modifier = Modifier
+                .align(Alignment.End)
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(onClick = callbacks.onEditCards)
+                .padding(horizontal = 8.dp, vertical = 5.dp)
+        )
+    }
+}
+
+@Composable
+private fun GameMenuCard(
+    title: String,
+    status: String? = null,
+    trailing: (@Composable () -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Surface(
+        color = colorResource(R.color.game_menu_card_background),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, colorResource(R.color.game_menu_button_border)),
         modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = title,
+                    color = colorResource(R.color.game_menu_text_primary),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                if (trailing != null) {
+                    trailing()
+                } else status?.let {
+                    Text(
+                        text = it,
+                        color = colorResource(R.color.theme_pink_primary),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            content()
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun BitrateCard(state: BitrateCardState, callbacks: GameMenuCallbacks) {
+    val view = LocalView.current
+    val currentLabel = stringResource(
+        R.string.game_menu_bitrate_current,
+        state.currentBitrateKbps / 1000
     )
+    GameMenuCard(
+        title = stringResource(R.string.game_menu_tab_bitrate),
+        status = state.abrStatus
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = currentLabel,
+                color = colorResource(R.color.game_menu_text_secondary),
+                fontSize = 11.sp,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = "?",
+                color = colorResource(R.color.theme_pink_primary),
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .combinedClickable(
+                        onClick = callbacks.onBitrateTip,
+                        onLongClick = callbacks.onBitrateHapticMode
+                    )
+                    .padding(6.dp)
+            )
+        }
+        Text(
+            text = BitrateCardController.formatBitrateMbps(state.selectedBitrateKbps),
+            color = colorResource(R.color.theme_pink_primary),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+        Slider(
+            value = state.progress.toFloat(),
+            onValueChange = { value ->
+                if (callbacks.onBitrateProgress(value.roundToInt())) {
+                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                }
+            },
+            onValueChangeFinished = callbacks.onBitrateApply,
+            valueRange = 0f..BitrateCardController.MAX_PROGRESS.toFloat(),
+            steps = BitrateCardController.MAX_PROGRESS - 1
+        )
+        Row {
+            Text("0.5 Mbps", color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
+            Spacer(Modifier.weight(1f))
+            Text("200 Mbps", color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
+        }
+    }
+}
+
+@Composable
+private fun GyroCard(state: GyroCardState, callbacks: GameMenuCallbacks) {
+    GameMenuCard(
+        title = stringResource(R.string.game_menu_tab_gyro),
+        trailing = {
+            Text(
+                text = if (state.enabled) "ON" else "OFF",
+                color = colorResource(R.color.theme_pink_primary),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.width(8.dp))
+            Switch(
+                checked = state.enabled,
+                onCheckedChange = callbacks.onGyroEnabled
+            )
+        }
+    ) {
+        if (state.enabled) {
+            SettingSwitchRow(
+                label = stringResource(R.string.gyro_mouse_mode_label),
+                checked = state.mouseMode,
+                onCheckedChange = callbacks.onGyroMouseMode
+            )
+            SettingValueRow(
+                label = stringResource(R.string.gyro_activation_method),
+                value = state.activationKeyLabel,
+                onClick = callbacks.onGyroActivationKey
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.gyro_sensitivity),
+                    color = colorResource(R.color.game_menu_text_secondary),
+                    fontSize = 11.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = String.format(Locale.US, "%.1fx", state.sensitivity),
+                    color = colorResource(R.color.theme_pink_primary),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Slider(
+                value = state.sensitivity,
+                onValueChange = callbacks.onGyroSensitivity,
+                onValueChangeFinished = callbacks.onGyroSensitivityFinished,
+                valueRange = 0.5f..3.0f,
+                steps = 24
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                SettingSwitchRow(
+                    label = stringResource(R.string.gyro_invert_x_axis),
+                    checked = state.invertX,
+                    onCheckedChange = callbacks.onGyroInvertX,
+                    modifier = Modifier.weight(1f)
+                )
+                SettingSwitchRow(
+                    label = stringResource(R.string.gyro_invert_y_axis),
+                    checked = state.invertY,
+                    onCheckedChange = callbacks.onGyroInvertY,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingSwitchRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = label,
+            color = colorResource(R.color.game_menu_text_primary),
+            fontSize = 12.sp,
+            modifier = Modifier.weight(1f)
+        )
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+private fun SettingValueRow(label: String, value: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, color = colorResource(R.color.game_menu_text_secondary), fontSize = 11.sp)
+        Spacer(Modifier.weight(1f))
+        Text(value, color = colorResource(R.color.theme_pink_primary), fontSize = 11.sp)
+        Spacer(Modifier.width(4.dp))
+        Text("›", color = colorResource(R.color.game_menu_text_secondary), fontSize = 16.sp)
+    }
+}
+
+@Composable
+private fun ShortcutCard(keys: List<CustomKeyData>, onKey: (CustomKeyData) -> Unit) {
+    val view = LocalView.current
+    GameMenuCard(title = stringResource(R.string.game_menu_tab_shortcuts)) {
+        keys.forEachIndexed { index, key ->
+            Text(
+                text = key.name,
+                color = colorResource(R.color.game_menu_text_primary),
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable {
+                        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                        onKey(key)
+                    }
+                    .padding(horizontal = 10.dp, vertical = 8.dp)
+            )
+            if (index < keys.lastIndex) {
+                Spacer(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(colorResource(R.color.game_menu_button_border))
+                )
+            }
+        }
+    }
 }
