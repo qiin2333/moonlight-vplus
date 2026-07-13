@@ -1255,7 +1255,7 @@
     <string name="game_menu_tab_bitrate">码率调整 Bitrate</string>
     <string name="game_menu_tab_gyro">体感助手 Gyro</string>
     <string name="game_menu_tab_shortcuts">特殊按键 Shortcuts</string>
-    <string name="game_menu_card_config_title">卡片配置 Visible cards</string>
+    <string name="game_menu_card_config_title">卡片配置</string>
     <string name="toast_enable_mic_redirect">请在设置中开启麦克风重定向</string>
     <string name="game_menu_disable_pan_zoom">关闭平移/缩放</string>
     <string name="game_menu_enable_pan_zoom">开启平移/缩放</string>

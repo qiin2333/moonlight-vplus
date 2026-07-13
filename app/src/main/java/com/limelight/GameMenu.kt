@@ -31,6 +31,7 @@ import com.limelight.binding.input.advance_setting.element.ElementController
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.http.NvApp
 import com.limelight.preferences.PreferenceConfiguration
+import com.limelight.utils.AppActionSheet
 import com.limelight.utils.AppDialogStyler
 import com.limelight.utils.KeyCodeMapper
 import org.json.JSONArray
@@ -698,20 +699,24 @@ class GameMenu(
             getString(R.string.game_menu_tab_shortcuts)
         )
 
-        val checked = booleanArrayOf(
-            game.prefConfig.showBitrateCard,
-            game.prefConfig.showGyroCard,
-            game.prefConfig.showQuickKeyCard
+        val selected = setOfNotNull(
+            0.takeIf { game.prefConfig.showBitrateCard },
+            1.takeIf { game.prefConfig.showGyroCard },
+            2.takeIf { game.prefConfig.showQuickKeyCard }
         )
-
-        val dialog = AlertDialog.Builder(game, R.style.AppDialogStyle)
-            .setTitle(getString(R.string.game_menu_card_config_title))
-            .setMultiChoiceItems(items, checked) { _, which, isChecked -> checked[which] = isChecked }
-            .setPositiveButton("OK") { _, _ ->
-                game.prefConfig.showBitrateCard = checked[0]
-                game.prefConfig.showGyroCard = checked[1]
-                game.prefConfig.showQuickKeyCard = checked[2]
-
+        AppActionSheet.showMultiSelect(
+            context = game,
+            title = getString(R.string.game_menu_card_config_title),
+            actions = items.mapIndexed { index, label ->
+                AppActionSheet.Action(index, label, checked = index in selected)
+            },
+            confirmLabel = getString(R.string.game_menu_ok).trim(),
+            cancelLabel = getString(R.string.game_menu_cancel).trim(),
+            minimumSelectionCount = 1,
+            onConfirm = { selectedIds ->
+                game.prefConfig.showBitrateCard = 0 in selectedIds
+                game.prefConfig.showGyroCard = 1 in selectedIds
+                game.prefConfig.showQuickKeyCard = 2 in selectedIds
                 game.prefConfig.writePreferences(game)
                 composeUiState?.let { state ->
                     state.value = state.value.copy(
@@ -720,10 +725,7 @@ class GameMenu(
                     )
                 }
             }
-            .setNegativeButton("Cancel", null)
-            .create()
-        dialog.show()
-        AppDialogStyler.applySystemChoiceList(dialog, game)
+        )
     }
 
     // --- 简单的按键数据模型 ---
@@ -830,29 +832,29 @@ class GameMenu(
             val a = allActions[id]!!
             if (a.labelRes != 0) getString(a.labelRes) else a.label
         }.toTypedArray()
-        val checked = BooleanArray(allIds.size) { currentIds.contains(allIds[it]) }
-
-        val dialog = AlertDialog.Builder(game, R.style.AppDialogStyle)
-            .setTitle(getString(R.string.quick_button_editor_title))
-            .setMultiChoiceItems(allLabels, checked) { _, which, isChecked ->
-                checked[which] = isChecked
-            }
-            .setPositiveButton(getString(R.string.game_menu_ok)) { _, _ ->
-                val selectedIds = allIds.filterIndexed { i, _ -> checked[i] }.toSet()
+        AppActionSheet.showMultiSelect(
+            context = game,
+            title = getString(R.string.quick_button_editor_title),
+            actions = allLabels.mapIndexed { index, label ->
+                AppActionSheet.Action(index, label, checked = allIds[index] in currentIds)
+            },
+            confirmLabel = getString(R.string.game_menu_ok).trim(),
+            cancelLabel = getString(R.string.game_menu_cancel).trim(),
+            resetLabel = getString(R.string.quick_button_reset_default).trim(),
+            minimumSelectionCount = 1,
+            onConfirm = { selectedPositions ->
+                val selectedIds = selectedPositions.mapTo(linkedSetOf()) { allIds[it] }
                 val newIds = currentIds.filterTo(mutableListOf()) { it in selectedIds }
                 allIds.filterTo(newIds) { it in selectedIds && it !in newIds }
                 if (newIds.isEmpty()) newIds.add("quit")
                 QuickActionRegistry.saveConfig(game, newIds)
                 refreshComposeQuickActions()
-            }
-            .setNegativeButton(getString(R.string.game_menu_cancel), null)
-            .setNeutralButton(getString(R.string.quick_button_reset_default)) { _, _ ->
+            },
+            onReset = {
                 QuickActionRegistry.saveConfig(game, QuickActionRegistry.DEFAULT_IDS.toMutableList())
                 refreshComposeQuickActions()
             }
-            .create()
-        dialog.show()
-        AppDialogStyler.applySystemChoiceList(dialog, game)
+        )
     }
 
     private fun currentMenuPage(): MenuPage? {

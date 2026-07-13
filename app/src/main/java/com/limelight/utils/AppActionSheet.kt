@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.ViewGroup
 import androidx.activity.ComponentDialog
 import androidx.compose.foundation.background
@@ -15,6 +16,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,6 +36,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -88,16 +94,84 @@ object AppActionSheet {
             }
         }
 
-        dialog.setContentView(composeView)
-        dialog.setCanceledOnTouchOutside(true)
         dialog.setOnDismissListener { onDismiss?.invoke(selectedAction) }
+        prepareDialog(dialog, composeView)
+        return dialog
+    }
+
+    fun showMultiSelect(
+        context: Context,
+        title: CharSequence,
+        actions: List<Action>,
+        confirmLabel: CharSequence,
+        cancelLabel: CharSequence,
+        resetLabel: CharSequence? = null,
+        minimumSelectionCount: Int = 0,
+        onConfirm: (Set<Int>) -> Unit,
+        onReset: (() -> Unit)? = null
+    ): Dialog {
+        val dialog = ComponentDialog(context, R.style.AppActionSheetStyle)
+        val composeView = ComposeView(context).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+            setContent {
+                AppActionSheetTheme {
+                    var selectedIds by remember(actions) {
+                        mutableStateOf<Set<Int>>(
+                            actions.filter { it.checked == true }
+                                .mapTo(linkedSetOf()) { it.id }
+                        )
+                    }
+                    MultiSelectActionSheetContent(
+                        title = title.toString(),
+                        actions = actions,
+                        selectedIds = selectedIds,
+                        confirmLabel = confirmLabel.toString(),
+                        cancelLabel = cancelLabel.toString(),
+                        resetLabel = resetLabel?.toString(),
+                        onToggle = { action ->
+                            selectedIds = if (action.id in selectedIds) {
+                                if (selectedIds.size > minimumSelectionCount) selectedIds - action.id
+                                else selectedIds
+                            } else {
+                                selectedIds + action.id
+                            }
+                        },
+                        onConfirm = {
+                            dialog.dismiss()
+                            onConfirm(selectedIds)
+                        },
+                        onCancel = dialog::dismiss,
+                        onReset = onReset?.let { reset ->
+                            {
+                                dialog.dismiss()
+                                reset()
+                            }
+                        }
+                    )
+                }
+            }
+        }
+        prepareDialog(dialog, composeView)
+        return dialog
+    }
+
+    private fun prepareDialog(dialog: ComponentDialog, contentView: ComposeView) {
+        dialog.setContentView(contentView)
+        dialog.setCanceledOnTouchOutside(true)
+        dialog.setOnKeyListener { _, keyCode, event ->
+            if (keyCode == KeyEvent.KEYCODE_BUTTON_B) {
+                if (event.action == KeyEvent.ACTION_UP) dialog.dismiss()
+                true
+            } else {
+                false
+            }
+        }
         dialog.show()
         dialog.window?.let { window ->
             window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             window.attributes = window.attributes.apply { gravity = Gravity.BOTTOM }
         }
-        return dialog
     }
 
     @Composable
@@ -132,6 +206,77 @@ object AppActionSheet {
         actions: List<Action>,
         onAction: (Action) -> Unit
     ) {
+        ActionSheetContainer {
+            ActionSheetHeader(title, subtitle, activeStatus)
+            val maxListHeight = (LocalConfiguration.current.screenHeightDp * 0.62f).dp
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = maxListHeight),
+                contentPadding = PaddingValues(horizontal = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(1.dp)
+            ) {
+                items(actions, key = { it.id }) { action ->
+                    ActionSheetRow(action, onAction)
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun MultiSelectActionSheetContent(
+        title: String,
+        actions: List<Action>,
+        selectedIds: Set<Int>,
+        confirmLabel: String,
+        cancelLabel: String,
+        resetLabel: String?,
+        onToggle: (Action) -> Unit,
+        onConfirm: () -> Unit,
+        onCancel: () -> Unit,
+        onReset: (() -> Unit)?
+    ) {
+        ActionSheetContainer {
+            ActionSheetHeader(title, null, false)
+            val maxListHeight = (LocalConfiguration.current.screenHeightDp * 0.54f).dp
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = maxListHeight),
+                contentPadding = PaddingValues(horizontal = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(1.dp)
+            ) {
+                items(actions, key = { it.id }) { action ->
+                    ActionSheetRow(
+                        action = action.copy(checked = action.id in selectedIds),
+                        onAction = onToggle
+                    )
+                }
+            }
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp),
+                thickness = 1.dp,
+                color = colorResource(R.color.app_action_sheet_divider)
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (resetLabel != null && onReset != null) {
+                    ActionSheetFooterAction(resetLabel, onReset)
+                }
+                Spacer(Modifier.weight(1f))
+                ActionSheetFooterAction(cancelLabel, onCancel)
+                ActionSheetFooterAction(confirmLabel, onConfirm)
+            }
+        }
+    }
+
+    @Composable
+    private fun ActionSheetContainer(content: @Composable ColumnScope.() -> Unit) {
         val shape = RoundedCornerShape(22.dp)
         val outline = colorResource(R.color.app_dialog_outline)
         val gradient = Brush.verticalGradient(
@@ -154,22 +299,29 @@ object AppActionSheet {
                     .clip(shape)
                     .background(gradient)
                     .border(1.dp, outline, shape)
-                    .padding(bottom = 8.dp)
-            ) {
-                ActionSheetHeader(title, subtitle, activeStatus)
-                val maxListHeight = (LocalConfiguration.current.screenHeightDp * 0.62f).dp
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = maxListHeight),
-                    contentPadding = PaddingValues(horizontal = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(1.dp)
-                ) {
-                    items(actions, key = { it.id }) { action ->
-                        ActionSheetRow(action, onAction)
-                    }
-                }
-            }
+                    .padding(bottom = 8.dp),
+                content = content
+            )
+        }
+    }
+
+    @Composable
+    private fun ActionSheetFooterAction(label: String, onClick: () -> Unit) {
+        Box(
+            modifier = Modifier
+                .heightIn(min = 42.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(onClick = onClick)
+                .focusable()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = label,
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 
