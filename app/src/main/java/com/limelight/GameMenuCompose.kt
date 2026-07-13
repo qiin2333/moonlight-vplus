@@ -9,9 +9,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -63,6 +63,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -192,7 +193,7 @@ internal fun GameMenuScreen(
                         state = menuScrollState,
                         enabled = !sliderGestureActive
                     )
-                    .padding(8.dp),
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 GameMenuHeader(state, callbacks.onBack, callbacks.onCrownToggle)
@@ -370,7 +371,7 @@ private fun QuickActionRow(
                 key(action.id) {
                     val isDragging = draggingId == action.id
                     val isDropTarget = dropTargetId == action.id
-                    val dragModifier = if (editMode) {
+                    val itemModifier = if (editMode) {
                         Modifier
                             .onGloballyPositioned { coordinates ->
                                 itemBounds[action.id] = coordinates.boundsInParent()
@@ -387,29 +388,6 @@ private fun QuickActionRow(
                                     scaleY = 1.12f
                                 }
                             }
-                            .pointerInput(action.id) {
-                                detectDragGesturesAfterLongPress(
-                                    onDragStart = {
-                                        draggingId = action.id
-                                        dragOffset = Offset.Zero
-                                        dropTargetId = null
-                                        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                                    },
-                                    onDragCancel = { finishDrag(commit = false) },
-                                    onDragEnd = { finishDrag(commit = true) }
-                                ) { change, amount ->
-                                    change.consume()
-                                    dragOffset += amount
-                                    val sourceBounds = itemBounds[action.id]
-                                    val draggedCenter = sourceBounds?.center?.plus(dragOffset)
-                                    dropTargetId = draggedCenter?.let { center ->
-                                        actions.firstOrNull { candidate ->
-                                            candidate.id != action.id &&
-                                                itemBounds[candidate.id]?.contains(center) == true
-                                        }?.id
-                                    }
-                                }
-                            }
                             .onPreviewKeyEvent { event ->
                                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                                 val index = actions.indexOfFirst { it.id == action.id }
@@ -423,13 +401,60 @@ private fun QuickActionRow(
                     } else {
                         Modifier
                     }
+                    val dragHandleModifier = if (editMode) {
+                        Modifier.pointerInput(action.id) {
+                            awaitEachGesture {
+                                val down = awaitFirstDown(
+                                    requireUnconsumed = false,
+                                    pass = PointerEventPass.Initial
+                                )
+                                down.consume()
+                                draggingId = action.id
+                                dragOffset = Offset.Zero
+                                dropTargetId = null
+                                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+
+                                var previousPosition = down.position
+                                var completed = false
+                                while (true) {
+                                    val change = awaitPointerEvent(PointerEventPass.Initial).changes
+                                        .firstOrNull { it.id == down.id }
+                                        ?: break
+                                    if (!change.pressed) {
+                                        finishDrag(commit = true)
+                                        completed = true
+                                        break
+                                    }
+
+                                    val amount = change.position - previousPosition
+                                    previousPosition = change.position
+                                    change.consume()
+                                    dragOffset += amount
+                                    val sourceBounds = itemBounds[action.id]
+                                    val draggedCenter = sourceBounds?.center?.plus(dragOffset)
+                                    dropTargetId = draggedCenter?.let { center ->
+                                        actions.firstOrNull { candidate ->
+                                            candidate.id != action.id &&
+                                                itemBounds[candidate.id]?.contains(center) == true
+                                        }?.id
+                                    }
+                                }
+                                if (!completed) {
+                                    finishDrag(commit = false)
+                                }
+                            }
+                        }
+                    } else {
+                        Modifier
+                    }
                     QuickActionChip(
                         action = action,
                         editMode = editMode,
                         onClick = { onAction(action.id) },
                         onEnterEdit = onToggleEdit,
                         onRemove = { onRemove(action.id) },
-                        modifier = dragModifier
+                        modifier = itemModifier,
+                        dragHandleModifier = dragHandleModifier
                     )
                 }
             }
@@ -464,22 +489,27 @@ private fun QuickActionChip(
     onClick: () -> Unit,
     onEnterEdit: () -> Unit,
     onRemove: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    dragHandleModifier: Modifier = Modifier
 ) {
     val view = LocalView.current
     val contentAlpha = if (action.enabled) 1f else 0.45f
     ActionPill(
         backgroundColor = colorResource(R.color.game_menu_card_background).copy(alpha = contentAlpha),
         borderColor = colorResource(R.color.game_menu_button_border),
-        onClick = if (editMode) onRemove else onClick,
-        onLongClick = {
-            if (!editMode) {
+        onClick = if (editMode) null else onClick,
+        onLongClick = if (editMode) null else {
+            {
                 view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                 onEnterEdit()
             }
         },
         modifier = modifier
     ) {
+        if (editMode) {
+            QuickActionDragHandle(dragHandleModifier)
+            Spacer(Modifier.width(4.dp))
+        }
         if (action.iconRes != 0) {
             AndroidView(
                 factory = { context ->
@@ -501,9 +531,59 @@ private fun QuickActionChip(
             maxLines = 1
         )
         if (editMode) {
-            Spacer(Modifier.width(5.dp))
-            Text("×", color = Color(0xFFD83A3A), fontWeight = FontWeight.Bold)
+            Spacer(Modifier.width(4.dp))
+            QuickActionRemoveButton(onRemove)
         }
+    }
+}
+
+@Composable
+private fun QuickActionDragHandle(modifier: Modifier = Modifier) {
+    val accent = colorResource(R.color.theme_pink_secondary)
+    Column(
+        modifier = modifier
+            .width(20.dp)
+            .heightIn(min = 40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically)
+    ) {
+        Box(
+            Modifier
+                .width(10.dp)
+                .height(2.dp)
+                .background(accent.copy(alpha = 0.42f), CircleShape)
+        )
+        Box(
+            Modifier
+                .width(15.dp)
+                .height(2.dp)
+                .background(accent.copy(alpha = 0.68f), CircleShape)
+        )
+        Box(
+            Modifier
+                .width(10.dp)
+                .height(2.dp)
+                .background(accent.copy(alpha = 0.42f), CircleShape)
+        )
+    }
+}
+
+@Composable
+private fun QuickActionRemoveButton(onRemove: () -> Unit) {
+    val view = LocalView.current
+    val deleteLabel = stringResource(R.string.dialog_button_delete)
+    Box(
+        modifier = Modifier
+            .size(24.dp)
+            .clip(CircleShape)
+            .semantics { contentDescription = deleteLabel }
+            .clickable {
+                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                onRemove()
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Text("×", color = Color(0xFFD83A3A), fontWeight = FontWeight.Bold)
     }
 }
 
@@ -538,27 +618,27 @@ private fun ToolIconButton(
 private fun ActionPill(
     backgroundColor: Color,
     borderColor: Color,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     onLongClick: (() -> Unit)? = null,
     content: @Composable RowScope.() -> Unit
 ) {
     val view = LocalView.current
-    val interactionModifier = if (onLongClick == null) {
-        Modifier.clickable {
-            view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-            onClick()
-        }
-    } else {
-        Modifier.combinedClickable(
-            onClick = {
+    val interactionModifier = when {
+        onLongClick != null -> Modifier.combinedClickable(
+            onClick = onClick?.let { click ->
+                {
+                    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    click()
+                }
+            } ?: {},
+            onLongClick = onLongClick
+        )
+        onClick != null -> Modifier.clickable {
                 view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                 onClick()
-            },
-            onLongClick = {
-                onLongClick()
-            }
-        )
+        }
+        else -> Modifier.focusable()
     }
 
     Row(
