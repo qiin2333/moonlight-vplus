@@ -659,6 +659,15 @@ class GameMenu(
 
     private fun handleComposeOptionClick(option: MenuOption, dialog: ComponentDialog) {
         lastActionOpenedSubmenu = false
+
+        // Focus-dependent actions must wait until the dialog has released the game window.
+        // Dismissing first also preserves the interaction order of the legacy menu.
+        if (option.isWithGameFocus && !option.isKeepDialog) {
+            dialog.dismiss()
+            option.runnable?.let(::runWithGameFocus)
+            return
+        }
+
         run(option)
         val shouldKeep = option.isKeepDialog || lastActionOpenedSubmenu
         if (!shouldKeep) dialog.dismiss()

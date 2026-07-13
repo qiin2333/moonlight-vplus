@@ -5,15 +5,16 @@ import android.content.Context
 import android.widget.Toast
 import androidx.core.content.edit
 import com.limelight.nvstream.NvConnection
+import kotlin.math.roundToInt
 
 internal data class BitrateCardState(
-    val progress: Int,
+    val progress: Float,
     val currentBitrateKbps: Int,
     val abrStatus: String?,
     val hapticMode: BitrateCardController.HapticMode
 ) {
     val selectedBitrateKbps: Int
-        get() = BitrateCardController.progressToBitrateKbps(progress)
+        get() = BitrateCardController.progressToBitrateKbps(progress.roundToInt())
 }
 
 /** Owns bitrate card state and stream-side effects without depending on Android Views. */
@@ -101,7 +102,7 @@ internal class BitrateCardController(
             game.runOnUiThread {
                 if (!userTracking) {
                     state = state.copy(
-                        progress = bitrateToProgress(kbps),
+                        progress = bitrateToProgress(kbps).toFloat(),
                         currentBitrateKbps = kbps,
                         abrStatus = abrService.getStatusText()
                     )
@@ -114,15 +115,17 @@ internal class BitrateCardController(
     }
 
     /** Returns whether this progress change should produce a haptic tick. */
-    fun previewProgress(progress: Int): Boolean {
-        val bounded = progress.coerceIn(0, MAX_PROGRESS)
-        val changed = bounded != state.progress
+    fun previewProgress(progress: Float): Boolean {
+        val bounded = progress.coerceIn(0f, MAX_PROGRESS.toFloat())
+        val previousStep = state.progress.roundToInt()
+        val currentStep = bounded.roundToInt()
+        val changed = currentStep != previousStep
         userTracking = true
         state = state.copy(progress = bounded)
         emitState()
         return changed && when (state.hapticMode) {
             HapticMode.ALL -> true
-            HapticMode.KEY_NODES -> bounded in SEGMENT_BOUNDARIES
+            HapticMode.KEY_NODES -> currentStep in SEGMENT_BOUNDARIES
             HapticMode.NONE -> false
         }
     }
@@ -160,7 +163,7 @@ internal class BitrateCardController(
     private fun createState(kbps: Int): BitrateCardState {
         val abrService = game.adaptiveBitrateService
         return BitrateCardState(
-            progress = bitrateToProgress(kbps),
+            progress = bitrateToProgress(kbps).toFloat(),
             currentBitrateKbps = kbps,
             abrStatus = abrService?.takeIf { it.enabled }?.getStatusText(),
             hapticMode = getHapticMode(game)
@@ -185,7 +188,7 @@ internal class BitrateCardController(
                         game.prefConfig.bitrate = newBitrate
                         game.adaptiveBitrateService?.notifyManualOverride(newBitrate)
                         state = state.copy(
-                            progress = bitrateToProgress(newBitrate),
+                            progress = bitrateToProgress(newBitrate).toFloat(),
                             currentBitrateKbps = newBitrate,
                             abrStatus = game.adaptiveBitrateService?.takeIf { it.enabled }?.getStatusText()
                         )
@@ -200,7 +203,7 @@ internal class BitrateCardController(
                     game.runOnUiThread {
                         val actualBitrate = conn.currentBitrate
                         state = state.copy(
-                            progress = bitrateToProgress(actualBitrate),
+                            progress = bitrateToProgress(actualBitrate).toFloat(),
                             currentBitrateKbps = actualBitrate
                         )
                         emitState()
