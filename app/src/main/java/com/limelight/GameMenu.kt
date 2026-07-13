@@ -800,15 +800,19 @@ class GameMenu(
         refreshComposeQuickActions()
     }
 
-    private fun moveComposeQuickAction(id: String, direction: Int) {
+    private fun moveComposeQuickAction(id: String, targetId: String) {
         val ids = QuickActionRegistry.loadConfig(game).toMutableList()
         val from = ids.indexOf(id)
-        if (from < 0) return
-        val to = (from + direction).coerceIn(0, ids.lastIndex)
-        if (from == to) return
-        ids.add(to, ids.removeAt(from))
+        val target = ids.indexOf(targetId)
+        if (from < 0 || target < 0 || from == target) return
+        ids.add(target.coerceAtMost(ids.size), ids.removeAt(from))
+        composeUiState?.let { state ->
+            val actionsById = state.value.quickActions.associateBy(GameMenuQuickAction::id)
+            state.value = state.value.copy(
+                quickActions = ids.mapNotNull(actionsById::get)
+            )
+        }
         QuickActionRegistry.saveConfig(game, ids)
-        refreshComposeQuickActions()
     }
 
     /**
@@ -830,18 +834,13 @@ class GameMenu(
 
         val dialog = AlertDialog.Builder(game, R.style.AppDialogStyle)
             .setTitle(getString(R.string.quick_button_editor_title))
-            .setMultiChoiceItems(allLabels, checked) { dlg, which, isChecked ->
-                val selectedCount = checked.count { it }
-                if (isChecked && selectedCount > MAX_QUICK_BUTTONS) {
-                    checked[which] = false
-                    (dlg as AlertDialog).listView.setItemChecked(which, false)
-                    Toast.makeText(game, getString(R.string.quick_btn_max_reached), Toast.LENGTH_SHORT).show()
-                } else {
-                    checked[which] = isChecked
-                }
+            .setMultiChoiceItems(allLabels, checked) { _, which, isChecked ->
+                checked[which] = isChecked
             }
             .setPositiveButton(getString(R.string.game_menu_ok)) { _, _ ->
-                val newIds = allIds.filterIndexed { i, _ -> checked[i] }.toMutableList()
+                val selectedIds = allIds.filterIndexed { i, _ -> checked[i] }.toSet()
+                val newIds = currentIds.filterTo(mutableListOf()) { it in selectedIds }
+                allIds.filterTo(newIds) { it in selectedIds && it !in newIds }
                 if (newIds.isEmpty()) newIds.add("quit")
                 QuickActionRegistry.saveConfig(game, newIds)
                 refreshComposeQuickActions()
@@ -1284,7 +1283,6 @@ class GameMenu(
 
     companion object {
         private const val TEST_GAME_FOCUS_DELAY = 10L
-        private const val MAX_QUICK_BUTTONS = 6
         private const val DIALOG_ALPHA = 1.0f
         private const val DIALOG_DIM_AMOUNT = 0.5f
         private const val GAME_MENU_TITLE = "🍥🍬 V+ GAME MENU"
