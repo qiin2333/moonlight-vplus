@@ -19,14 +19,14 @@
     <color name="game_menu_text_primary">#333333</color>
     <color name="game_menu_text_secondary">#666666</color>
     <color name="game_menu_button_pressed">#FFE3F2FD</color>
-    <color name="game_menu_button_border">#33FF9FBD</color>
+    <color name="game_menu_button_border">#24FF9FBD</color>
     <color name="game_menu_button_border_pressed">@color/theme_pink_primary</color>
     <color name="game_menu_list_item_pressed">#FFF0F8FF</color>
     <color name="game_menu_list_item_focused">#F8F8F8</color>
-    <color name="game_menu_list_item_border">#24FF9FBD</color>
+    <color name="game_menu_list_item_border">#12FF9FBD</color>
     <color name="game_menu_list_item_border_pressed">@color/theme_pink_primary</color>
     <color name="game_menu_dialog_background">#D9FFF8F8</color>
-    <color name="game_menu_dialog_border">#4DFFFFFF</color>
+    <color name="game_menu_dialog_border">#38FFFFFF</color>
     <color name="game_menu_list_item_normal">#CFFFFFFF</color>
 
     <!-- 超级菜单颜色 -->

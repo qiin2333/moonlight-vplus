@@ -85,6 +85,8 @@ import java.util.Locale
 private val GameMenuDialogShape = RoundedCornerShape(16.dp)
 private val GameMenuCardShape = RoundedCornerShape(10.dp)
 private val GameMenuControlShape = RoundedCornerShape(10.dp)
+private val GameMenuSurfaceStroke = 0.75.dp
+private val GameMenuColumnGap = 10.dp
 
 internal data class GameMenuQuickAction(
     val id: String,
@@ -182,7 +184,7 @@ internal fun GameMenuScreen(
         Surface(
             color = Color.Transparent,
             shape = GameMenuDialogShape,
-            border = BorderStroke(1.dp, border),
+            border = BorderStroke(GameMenuSurfaceStroke, border),
             modifier = Modifier
                 .widthIn(max = 760.dp)
                 .heightIn(max = maxMenuHeight)
@@ -216,7 +218,7 @@ internal fun GameMenuScreen(
                 if (wide) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(GameMenuColumnGap),
                         verticalAlignment = Alignment.Top
                     ) {
                         MenuOptionColumn(
@@ -599,7 +601,7 @@ private fun ToolIconButton(
             .size(40.dp)
             .clip(shape)
             .background(colorResource(R.color.theme_pink_primary).copy(alpha = 0.08f))
-            .border(1.dp, colorResource(R.color.theme_pink_primary).copy(alpha = 0.28f), shape)
+            .border(GameMenuSurfaceStroke, colorResource(R.color.theme_pink_primary).copy(alpha = 0.20f), shape)
             .gamepadFocusOutline(shape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
@@ -647,7 +649,7 @@ private fun ActionPill(
             .heightIn(min = 40.dp)
             .clip(GameMenuControlShape)
             .background(backgroundColor)
-            .border(1.dp, borderColor, GameMenuControlShape)
+            .border(GameMenuSurfaceStroke, borderColor, GameMenuControlShape)
             .gamepadFocusOutline(GameMenuControlShape)
             .then(interactionModifier)
             .padding(horizontal = 10.dp),
@@ -691,7 +693,7 @@ private fun MenuOptionRow(
             .fillMaxWidth()
             .clip(shape)
             .background(colorResource(R.color.game_menu_list_item_normal))
-            .border(1.dp, borderColor, shape)
+            .border(GameMenuSurfaceStroke, borderColor, shape)
             .gamepadFocusOutline(shape)
             .clickable {
                 view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
@@ -790,7 +792,7 @@ private fun SuperOptionChip(
     val accent = colorResource(R.color.theme_pink_primary)
     ActionPill(
         backgroundColor = accent.copy(alpha = 0.07f),
-        borderColor = accent.copy(alpha = 0.28f),
+        borderColor = accent.copy(alpha = 0.20f),
         onClick = onClick
     ) {
         ActionInitialBadge(option.label)
@@ -862,7 +864,7 @@ private fun GameMenuCard(
     Surface(
         color = colorResource(R.color.game_menu_card_background),
         shape = GameMenuCardShape,
-        border = BorderStroke(1.dp, colorResource(R.color.game_menu_button_border)),
+        border = BorderStroke(GameMenuSurfaceStroke, colorResource(R.color.game_menu_button_border)),
         modifier = Modifier
             .fillMaxWidth()
             .then(longClickModifier)
@@ -1019,7 +1021,7 @@ private fun BitrateHelpButton(
                 Surface(
                     color = colorResource(R.color.game_menu_card_background),
                     shape = GameMenuCardShape,
-                    border = BorderStroke(1.dp, accent.copy(alpha = 0.32f)),
+                    border = BorderStroke(GameMenuSurfaceStroke, accent.copy(alpha = 0.22f)),
                     modifier = Modifier.widthIn(max = 260.dp)
                 ) {
                     Text(
