@@ -45,6 +45,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.input.pointer.pointerInput
@@ -223,6 +230,7 @@ private fun GameMenuHeader(
                 modifier = Modifier
                     .size(34.dp)
                     .clip(CircleShape)
+                    .gamepadFocusOutline(CircleShape)
                     .clickable(onClick = onBack)
                     .padding(7.dp)
             )
@@ -255,6 +263,7 @@ private fun GameMenuHeader(
                 textDecoration = TextDecoration.Underline,
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
+                    .gamepadFocusOutline(RoundedCornerShape(8.dp))
                     .clickable(onClick = onCrownToggle)
                     .padding(horizontal = 6.dp, vertical = 4.dp)
             )
@@ -315,6 +324,7 @@ private fun QuickActionChip(
             .clip(shape)
             .background(colorResource(R.color.game_menu_card_background).copy(alpha = contentAlpha))
             .border(1.dp, colorResource(R.color.game_menu_button_border), shape)
+            .gamepadFocusOutline(shape)
             .clickable {
                 view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                 if (editMode) onRemove() else onClick()
@@ -362,6 +372,7 @@ private fun ToolChip(label: String, onClick: () -> Unit) {
             .clip(RoundedCornerShape(8.dp))
             .background(colorResource(R.color.game_menu_card_background))
             .border(1.dp, colorResource(R.color.game_menu_button_border), RoundedCornerShape(8.dp))
+            .gamepadFocusOutline(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -404,6 +415,7 @@ private fun MenuOptionRow(
             .clip(shape)
             .background(colorResource(R.color.game_menu_list_item_normal))
             .border(1.dp, borderColor, shape)
+            .gamepadFocusOutline(shape)
             .clickable {
                 view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                 onClick()
@@ -471,6 +483,7 @@ private fun GameMenuCards(
             modifier = Modifier
                 .align(Alignment.End)
                 .clip(RoundedCornerShape(8.dp))
+                .gamepadFocusOutline(RoundedCornerShape(8.dp))
                 .clickable(onClick = callbacks.onEditCards)
                 .padding(horizontal = 6.dp, vertical = 3.dp)
         )
@@ -548,6 +561,7 @@ private fun BitrateCard(
                 modifier = Modifier
                     .size(24.dp)
                     .clip(CircleShape)
+                    .gamepadFocusOutline(CircleShape)
                     .combinedClickable(
                         onClick = callbacks.onBitrateTip,
                         onLongClick = callbacks.onBitrateHapticMode
@@ -573,6 +587,18 @@ private fun BitrateCard(
             valueRange = 0f..BitrateCardController.MAX_PROGRESS.toFloat(),
             modifier = Modifier
                 .fillMaxWidth()
+                .gamepadFocusOutline(RoundedCornerShape(8.dp))
+                .handleSliderDpad(
+                    value = state.progress,
+                    step = 1f,
+                    valueRange = 0f..BitrateCardController.MAX_PROGRESS.toFloat(),
+                    onValueChange = { value ->
+                        if (callbacks.onBitrateProgress(value)) {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                        }
+                    },
+                    onValueChangeFinished = callbacks.onBitrateApply
+                )
                 .lockParentScrollDuringGesture(onSliderGesture)
         )
         Row {
@@ -601,7 +627,8 @@ private fun GyroCard(
             Spacer(Modifier.width(8.dp))
             Switch(
                 checked = state.enabled,
-                onCheckedChange = callbacks.onGyroEnabled
+                onCheckedChange = callbacks.onGyroEnabled,
+                modifier = Modifier.gamepadFocusOutline(RoundedCornerShape(18.dp))
             )
         }
     ) {
@@ -637,6 +664,14 @@ private fun GyroCard(
                 valueRange = 0.5f..3.0f,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .gamepadFocusOutline(RoundedCornerShape(8.dp))
+                    .handleSliderDpad(
+                        value = state.sensitivity,
+                        step = 0.1f,
+                        valueRange = 0.5f..3.0f,
+                        onValueChange = callbacks.onGyroSensitivity,
+                        onValueChangeFinished = callbacks.onGyroSensitivityFinished
+                    )
                     .lockParentScrollDuringGesture(onSliderGesture)
             )
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -672,6 +707,40 @@ private fun Modifier.lockParentScrollDuringGesture(
 }
 
 @Composable
+private fun Modifier.gamepadFocusOutline(shape: Shape): Modifier {
+    var focused by remember { mutableStateOf(false) }
+    val focusColor = colorResource(R.color.theme_pink_primary)
+    return onFocusChanged { focused = it.isFocused }
+        .then(if (focused) Modifier.border(2.dp, focusColor, shape) else Modifier)
+}
+
+private fun Modifier.handleSliderDpad(
+    value: Float,
+    step: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    onValueChange: (Float) -> Unit,
+    onValueChangeFinished: () -> Unit
+): Modifier = onPreviewKeyEvent { event ->
+    val direction = when (event.key) {
+        Key.DirectionLeft -> -1f
+        Key.DirectionRight -> 1f
+        else -> return@onPreviewKeyEvent false
+    }
+    when (event.type) {
+        KeyEventType.KeyDown -> {
+            val adjusted = (value + direction * step).coerceIn(valueRange.start, valueRange.endInclusive)
+            if (adjusted != value) onValueChange(adjusted)
+            true
+        }
+        KeyEventType.KeyUp -> {
+            onValueChangeFinished()
+            true
+        }
+        else -> false
+    }
+}
+
+@Composable
 private fun SettingSwitchRow(
     label: String,
     checked: Boolean,
@@ -687,7 +756,8 @@ private fun SettingSwitchRow(
         )
         Switch(
             checked = checked,
-            onCheckedChange = onCheckedChange
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.gamepadFocusOutline(RoundedCornerShape(18.dp))
         )
     }
 }
@@ -698,6 +768,7 @@ private fun SettingValueRow(label: String, value: String, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
+            .gamepadFocusOutline(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
             .padding(vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -722,6 +793,7 @@ private fun ShortcutCard(keys: List<CustomKeyData>, onKey: (CustomKeyData) -> Un
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
+                    .gamepadFocusOutline(RoundedCornerShape(8.dp))
                     .clickable {
                         view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                         onKey(key)
