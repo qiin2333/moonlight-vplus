@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -116,6 +117,8 @@ internal fun GameMenuScreen(
     callbacks: GameMenuCallbacks
 ) {
     val border = colorResource(R.color.game_menu_dialog_border)
+    val configuration = LocalConfiguration.current
+    val maxMenuHeight = (configuration.screenHeightDp * 0.86f).dp
     var sliderGestureActive by remember { mutableStateOf(false) }
     val menuScrollState = rememberScrollState()
 
@@ -128,7 +131,9 @@ internal fun GameMenuScreen(
             color = Color.Transparent,
             shape = RoundedCornerShape(14.dp),
             border = BorderStroke(1.dp, border),
-            modifier = Modifier.widthIn(max = 920.dp)
+            modifier = Modifier
+                .widthIn(max = 760.dp)
+                .heightIn(max = maxMenuHeight)
         ) {
             Column(
                 modifier = Modifier
@@ -153,7 +158,7 @@ internal fun GameMenuScreen(
                     )
                 }
 
-                val wide = LocalConfiguration.current.screenWidthDp >= 576 && !state.isSubmenu
+                val wide = configuration.screenWidthDp >= 576 && !state.isSubmenu
                 if (wide) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),

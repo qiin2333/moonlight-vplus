@@ -655,6 +655,7 @@ class GameMenu(
         }
 
         dialog.show()
+        applyDialogSize(dialog)
     }
 
     private fun handleComposeOptionClick(option: MenuOption, dialog: ComponentDialog) {
@@ -898,6 +899,15 @@ class GameMenu(
             window.attributes = layoutParams
             window.setBackgroundDrawableResource(R.drawable.game_menu_dialog_bg)
         }
+    }
+
+    private fun applyDialogSize(dialog: ComponentDialog) {
+        val metrics = game.resources.displayMetrics
+        val widthFraction = if (metrics.widthPixels > metrics.heightPixels) 0.72f else 0.94f
+        dialog.window?.setLayout(
+            (metrics.widthPixels * widthFraction).toInt(),
+            WindowManager.LayoutParams.WRAP_CONTENT
+        )
     }
 
     /**
