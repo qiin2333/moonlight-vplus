@@ -422,35 +422,69 @@ private fun QuickActionRow(
                     action = action,
                     editMode = editMode,
                     onClick = { onAction(action.id) },
+                    onEnterEdit = onToggleEdit,
                     onRemove = { onRemove(action.id) },
                     modifier = dragModifier
                 )
             }
             if (!editMode) {
                 superOptions.forEach { option ->
-                    SuperOptionChip(option) { onSuperOptionClick(option) }
+                    SuperOptionChip(
+                        option = option,
+                        onClick = { onSuperOptionClick(option) },
+                        onEnterEdit = onToggleEdit
+                    )
                 }
             }
         }
-        Spacer(Modifier.width(4.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            ToolChip(if (editMode) "✓" else "✎", onToggleEdit)
-            if (editMode) ToolChip("＋", onAdd)
+        if (editMode) {
+            Spacer(Modifier.width(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                ToolIconButton(
+                    iconRes = R.drawable.phc_action_check,
+                    contentDescription = stringResource(R.string.dialog_button_save),
+                    onClick = onToggleEdit
+                )
+                ToolIconButton(
+                    iconRes = R.drawable.ic_add,
+                    contentDescription = stringResource(R.string.game_menu_add_custom_key),
+                    onClick = onAdd
+                )
+            }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun QuickActionChip(
     action: GameMenuQuickAction,
     editMode: Boolean,
     onClick: () -> Unit,
+    onEnterEdit: () -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
     val shape = GameMenuControlShape
     val contentAlpha = if (action.enabled) 1f else 0.45f
+    val clickModifier = if (editMode) {
+        Modifier.clickable {
+            view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            onRemove()
+        }
+    } else {
+        Modifier.combinedClickable(
+            onClick = {
+                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                onClick()
+            },
+            onLongClick = {
+                view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                onEnterEdit()
+            }
+        )
+    }
     Row(
         modifier = modifier
             .widthIn(min = 72.dp)
@@ -458,11 +492,9 @@ private fun QuickActionChip(
             .background(colorResource(R.color.game_menu_card_background).copy(alpha = contentAlpha))
             .border(1.dp, colorResource(R.color.game_menu_button_border), shape)
             .gamepadFocusOutline(shape)
-            .clickable {
-                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                if (editMode) onRemove() else onClick()
-            }
+            .then(clickModifier)
             .padding(horizontal = 7.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (action.iconRes != 0) {
@@ -493,20 +525,28 @@ private fun QuickActionChip(
 }
 
 @Composable
-private fun ToolChip(label: String, onClick: () -> Unit) {
-    val shape = GameMenuControlShape
+private fun ToolIconButton(
+    @DrawableRes iconRes: Int,
+    contentDescription: String,
+    onClick: () -> Unit
+) {
+    val shape = CircleShape
     Box(
         modifier = Modifier
-            .height(32.dp)
-            .widthIn(min = 34.dp)
+            .size(32.dp)
             .clip(shape)
-            .background(colorResource(R.color.game_menu_card_background))
-            .border(1.dp, colorResource(R.color.game_menu_button_border), shape)
+            .background(colorResource(R.color.theme_pink_primary).copy(alpha = 0.08f))
+            .border(1.dp, colorResource(R.color.theme_pink_primary).copy(alpha = 0.28f), shape)
             .gamepadFocusOutline(shape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = colorResource(R.color.theme_pink_primary), fontSize = 14.sp)
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = contentDescription,
+            tint = colorResource(R.color.theme_pink_primary),
+            modifier = Modifier.size(16.dp)
+        )
     }
 }
 
@@ -635,10 +675,12 @@ private fun VisuallyCenteredBadgeText(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SuperOptionChip(
     option: GameMenu.MenuOption,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onEnterEdit: () -> Unit
 ) {
     val view = LocalView.current
     val accent = colorResource(R.color.theme_pink_primary)
@@ -651,11 +693,18 @@ private fun SuperOptionChip(
             .background(accent.copy(alpha = 0.07f))
             .border(1.dp, accent.copy(alpha = 0.28f), shape)
             .gamepadFocusOutline(shape)
-            .clickable {
-                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                onClick()
-            }
+            .combinedClickable(
+                onClick = {
+                    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    onClick()
+                },
+                onLongClick = {
+                    view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                    onEnterEdit()
+                }
+            )
             .padding(horizontal = 7.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
         ActionInitialBadge(option.label)
