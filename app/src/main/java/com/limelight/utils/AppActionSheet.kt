@@ -125,6 +125,7 @@ object AppActionSheet {
                         title = title.toString(),
                         actions = actions,
                         selectedIds = selectedIds,
+                        minimumSelectionCount = minimumSelectionCount,
                         confirmLabel = confirmLabel.toString(),
                         cancelLabel = cancelLabel.toString(),
                         resetLabel = resetLabel?.toString(),
@@ -228,6 +229,7 @@ object AppActionSheet {
         title: String,
         actions: List<Action>,
         selectedIds: Set<Int>,
+        minimumSelectionCount: Int,
         confirmLabel: String,
         cancelLabel: String,
         resetLabel: String?,
@@ -270,7 +272,11 @@ object AppActionSheet {
                 }
                 Spacer(Modifier.weight(1f))
                 ActionSheetFooterAction(cancelLabel, onCancel)
-                ActionSheetFooterAction(confirmLabel, onConfirm)
+                ActionSheetFooterAction(
+                    label = confirmLabel,
+                    onClick = onConfirm,
+                    enabled = selectedIds.size >= minimumSelectionCount
+                )
             }
         }
     }
@@ -306,19 +312,23 @@ object AppActionSheet {
     }
 
     @Composable
-    private fun ActionSheetFooterAction(label: String, onClick: () -> Unit) {
+    private fun ActionSheetFooterAction(
+        label: String,
+        onClick: () -> Unit,
+        enabled: Boolean = true
+    ) {
         Box(
             modifier = Modifier
                 .heightIn(min = 42.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .clickable(onClick = onClick)
-                .focusable()
+                .clickable(enabled = enabled, onClick = onClick)
+                .focusable(enabled)
                 .padding(horizontal = 14.dp, vertical = 10.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = label,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = if (enabled) 1f else 0.38f),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium
             )

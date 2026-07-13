@@ -32,7 +32,6 @@ import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.http.NvApp
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.utils.AppActionSheet
-import com.limelight.utils.AppDialogStyler
 import com.limelight.utils.KeyCodeMapper
 import org.json.JSONArray
 import org.json.JSONObject
@@ -792,6 +791,7 @@ class GameMenu(
                 } else {
                     iconRes
                 },
+                tintableIcon = QuickActionRegistry.getBuiltin(id)?.tintableIcon == true,
                 enabled = id != "toggle_mic" || game.prefConfig.enableMic
             )
         }
@@ -919,17 +919,19 @@ class GameMenu(
             val layoutParams = window.attributes
             layoutParams.alpha = DIALOG_ALPHA
             layoutParams.dimAmount = DIALOG_DIM_AMOUNT
+            layoutParams.width = WindowManager.LayoutParams.MATCH_PARENT
             layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT
+            layoutParams.gravity = android.view.Gravity.BOTTOM
             window.attributes = layoutParams
-            window.setBackgroundDrawableResource(R.drawable.game_menu_dialog_bg)
+            window.setBackgroundDrawable(
+                android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
+            )
         }
     }
 
     private fun applyDialogSize(dialog: ComponentDialog) {
-        val metrics = game.resources.displayMetrics
-        val widthFraction = if (metrics.widthPixels > metrics.heightPixels) 0.72f else 0.94f
         dialog.window?.setLayout(
-            (metrics.widthPixels * widthFraction).toInt(),
+            WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.WRAP_CONTENT
         )
     }
@@ -1031,6 +1033,11 @@ class GameMenu(
         val saveButton = dialogView.findViewById<Button>(R.id.button_save_key)
 
         val dialog = builder.create()
+        dialog.window?.apply {
+            clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            setDimAmount(0f)
+            decorView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        }
 
         dialog.setOnKeyListener { _, keyCode, event ->
             if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_DOWN) {
@@ -1094,6 +1101,7 @@ class GameMenu(
         }
 
         dialog.show()
+        dialog.window?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         dialogContent?.minimumHeight = game.resources.displayMetrics.heightPixels
     }
 
@@ -1142,18 +1150,18 @@ class GameMenu(
             for (i in 0 until dataArray.length()) {
                 keyNames.add(dataArray.getJSONObject(i).optString("name"))
             }
-            val checkedItems = BooleanArray(keyNames.size)
-
-            val dialog = AlertDialog.Builder(game, R.style.AppDialogStyle)
-                .setTitle(R.string.dialog_title_select_keys_to_delete)
-                .setMultiChoiceItems(keyNames.toTypedArray<CharSequence>(), checkedItems) { _, which, isChecked ->
-                    checkedItems[which] = isChecked
-                }
-                .setPositiveButton(R.string.dialog_button_delete) { _, _ ->
+            AppActionSheet.showMultiSelect(
+                context = game,
+                title = getString(R.string.dialog_title_select_keys_to_delete),
+                actions = keyNames.mapIndexed { index, name ->
+                    AppActionSheet.Action(id = index, title = name, checked = false)
+                },
+                confirmLabel = getString(R.string.dialog_button_delete),
+                cancelLabel = getString(R.string.dialog_button_cancel),
+                minimumSelectionCount = 1,
+                onConfirm = { selectedIds ->
                     try {
-                        for (i in checkedItems.indices.reversed()) {
-                            if (checkedItems[i]) dataArray.remove(i)
-                        }
+                        selectedIds.sortedDescending().forEach(dataArray::remove)
                         root.put("data", dataArray)
                         preferences.edit { putString(KEY_NAME, root.toString()) }
                         Toast.makeText(game, R.string.toast_selected_keys_deleted, Toast.LENGTH_SHORT).show()
@@ -1163,10 +1171,7 @@ class GameMenu(
                         Toast.makeText(game, R.string.toast_delete_failed, Toast.LENGTH_SHORT).show()
                     }
                 }
-                .setNegativeButton(R.string.dialog_button_cancel, null)
-                .create()
-            dialog.show()
-            AppDialogStyler.applySystemChoiceList(dialog, game)
+            )
         } catch (e: Exception) {
             LimeLog.warning("Exception while loading key list${e.message}")
             Toast.makeText(game, R.string.toast_load_key_list_failed, Toast.LENGTH_SHORT).show()

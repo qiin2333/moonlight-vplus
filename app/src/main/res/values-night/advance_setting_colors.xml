@@ -23,6 +23,33 @@
     <color name="pc_toolbar_menu_surface_end">#B81A1B21</color>
     <color name="pc_toolbar_menu_outline">#33FFFFFF</color>
 
+    <!-- Game menu palette for system dark theme. -->
+    <color name="game_menu_card_background">#F223242B</color>
+    <color name="game_menu_text_primary">#F7F3F7</color>
+    <color name="game_menu_text_secondary">#C9D0D8</color>
+    <color name="game_menu_button_pressed">#3328323A</color>
+    <color name="game_menu_button_border">#33FF8FA3</color>
+    <color name="game_menu_button_border_pressed">@color/theme_pink_secondary</color>
+    <color name="game_menu_list_item_pressed">#3328323A</color>
+    <color name="game_menu_list_item_focused">#3DFFFFFF</color>
+    <color name="game_menu_list_item_border">#1FFFFFFF</color>
+    <color name="game_menu_list_item_border_pressed">@color/theme_pink_secondary</color>
+    <color name="game_menu_dialog_background">#D91C1D22</color>
+    <color name="game_menu_dialog_border">#2EFFFFFF</color>
+    <color name="game_menu_list_item_normal">#E623242B</color>
+    <color name="game_menu_danger_text">#FFFF9AAA</color>
+    <color name="game_menu_danger_border">#55FF9AAA</color>
+
+    <color name="game_menu_super_card_background">#00000000</color>
+    <color name="game_menu_super_text_primary">@color/theme_pink_secondary</color>
+    <color name="game_menu_super_text_secondary">#FFFFB4C5</color>
+    <color name="game_menu_super_border">@color/theme_pink_secondary</color>
+    <color name="game_menu_super_list_item_pressed">#3328323A</color>
+    <color name="game_menu_super_list_item_selected">#4DFF6B9D</color>
+    <color name="game_menu_super_list_item_focused">#3DFFFFFF</color>
+    <color name="game_menu_super_list_item_border">#2EFFFFFF</color>
+    <color name="game_menu_super_list_item_border_pressed">@color/theme_pink_secondary</color>
+
     <color name="app_dialog_choice_control_normal">#7AC9D0D8</color>
     <color name="app_dialog_choice_control_active">#D9FF8FA3</color>
 
