@@ -236,22 +236,28 @@ private fun GameMenuHeader(
             )
             Spacer(Modifier.width(4.dp))
         }
-        Column(Modifier.weight(1f)) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
                 text = state.title,
                 color = colorResource(R.color.game_menu_text_primary),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = if (state.isSubmenu) Modifier.weight(1f) else Modifier
             )
-            if (!state.isSubmenu) {
+            if (!state.isSubmenu && state.appName.isNotBlank()) {
+                Spacer(Modifier.width(7.dp))
                 Text(
-                    text = state.appName,
+                    text = "· ${state.appName}",
                     color = colorResource(R.color.game_menu_text_secondary),
                     fontSize = 10.sp,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
