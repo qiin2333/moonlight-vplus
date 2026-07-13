@@ -677,8 +677,8 @@ class GameMenu(
 
     private fun getAppNameDisplay(): String {
         return try {
-            val hdr = if (app.isHdrSupported()) "HDR: Supported" else "HDR: Unknown"
-            "${app.appName} ($hdr)"
+            val version = conn.serverVersion?.takeIf { it.isNotBlank() }
+            if (version != null) "${app.appName}  Server $version" else app.appName
         } catch (_: Exception) {
             "Moonlight V+"
         }

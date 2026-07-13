@@ -238,7 +238,7 @@ private fun GameMenuHeader(
         }
         Row(
             modifier = Modifier.weight(1f),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Bottom
         ) {
             Text(
                 text = state.title,
@@ -247,17 +247,20 @@ private fun GameMenuHeader(
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = if (state.isSubmenu) Modifier.weight(1f) else Modifier
+                modifier = (if (state.isSubmenu) Modifier.weight(1f) else Modifier)
+                    .alignByBaseline()
             )
             if (!state.isSubmenu && state.appName.isNotBlank()) {
-                Spacer(Modifier.width(7.dp))
+                Spacer(Modifier.width(10.dp))
                 Text(
-                    text = "· ${state.appName}",
+                    text = state.appName,
                     color = colorResource(R.color.game_menu_text_secondary),
                     fontSize = 10.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .alignByBaseline()
                 )
             }
         }
