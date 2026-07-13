@@ -86,7 +86,8 @@ class GameMenu(
         val isKeepDialog: Boolean,
         val subtitle: String? = null,
         val isCrownControl: Boolean = false,
-        val showChevron: Boolean = false
+        val showChevron: Boolean = false,
+        val inlineControl: InlineControl? = null
     ) {
         constructor(label: String, runnable: Runnable?) :
                 this(label, false, runnable, null, true, false)
@@ -100,6 +101,17 @@ class GameMenu(
         constructor(label: String, withGameFocus: Boolean, runnable: Runnable?, iconKey: String?, showIcon: Boolean) :
                 this(label, withGameFocus, runnable, iconKey, showIcon, false)
     }
+
+    sealed interface InlineControl {
+        data class Toggle(val checked: Boolean) : InlineControl
+        data class Segmented(val segments: List<SegmentOption>) : InlineControl
+    }
+
+    data class SegmentOption(
+        val label: String,
+        val selected: Boolean,
+        val runnable: Runnable
+    )
 
     /**
      * 菜单状态，用于回退
@@ -156,52 +168,10 @@ class GameMenu(
      * 显示触控模式菜单
      */
     private fun showTouchModeMenu() {
-        val isEnhancedTouch = game.prefConfig.enableEnhancedTouch
         val isTouchscreenTrackpad = game.prefConfig.touchscreenTrackpad
-        val isNativeMousePointer = game.prefConfig.enableNativeMousePointer
-
-        val touchModeOptionsList = mutableListOf<MenuOption>()
-
-        touchModeOptionsList.add(MenuOption(
-            getString(R.string.game_menu_touch_mode_enhanced),
-            isEnhancedTouch && !isTouchscreenTrackpad && !isNativeMousePointer,
-            {
-                game.prefConfig.enableEnhancedTouch = true
-                game.prefConfig.enableNativeMousePointer = false
-                game.enableNativeMousePointer(false)
-                game.setTouchMode(false)
-                updateEnhancedTouchSetting(true)
-                updateTouchModeSetting(false)
-                Toast.makeText(game, getString(R.string.toast_touch_mode_enhanced_on), Toast.LENGTH_SHORT).show()
-            },
-            null, false
-        ))
-        touchModeOptionsList.add(MenuOption(
-            getString(R.string.game_menu_touch_mode_classic),
-            !isEnhancedTouch && !isTouchscreenTrackpad && !isNativeMousePointer,
-            {
-                game.prefConfig.enableEnhancedTouch = false
-                game.prefConfig.enableNativeMousePointer = false
-                game.enableNativeMousePointer(false)
-                game.setTouchMode(false)
-                updateEnhancedTouchSetting(false)
-                updateTouchModeSetting(false)
-                Toast.makeText(game, getString(R.string.toast_touch_mode_classic_on), Toast.LENGTH_SHORT).show()
-            },
-            null, false
-        ))
-        touchModeOptionsList.add(MenuOption(
-            getString(R.string.game_menu_touch_mode_trackpad),
-            isTouchscreenTrackpad && !isNativeMousePointer,
-            {
-                game.prefConfig.enableNativeMousePointer = false
-                game.enableNativeMousePointer(false)
-                game.setTouchMode(true)
-                updateTouchModeSetting(true)
-                Toast.makeText(game, getString(R.string.toast_touch_mode_trackpad_on), Toast.LENGTH_SHORT).show()
-            },
-            null, false
-        ))
+        val touchModeOptionsList = buildTouchModeSegments().mapTo(mutableListOf()) { segment ->
+            MenuOption(segment.label, false, segment.runnable, null, false)
+        }
 
         //触控板双击功能
         if (isTouchscreenTrackpad) {
@@ -267,20 +237,6 @@ class GameMenu(
         }
 
         touchModeOptionsList.add(MenuOption(
-            getString(R.string.game_menu_touch_mode_native_mouse),
-            isNativeMousePointer,
-            {
-                game.prefConfig.enableNativeMousePointer = true
-                game.prefConfig.enableEnhancedTouch = false
-                game.setTouchMode(false)
-                game.enableNativeMousePointer(true)
-                updateTouchModeSetting(false)
-                Toast.makeText(game, getString(R.string.toast_touch_mode_native_mouse_on), Toast.LENGTH_SHORT).show()
-            },
-            null, false
-        ))
-
-        touchModeOptionsList.add(MenuOption(
             getString(R.string.game_menu_toggle_remote_mouse),
             false,
             {
@@ -296,6 +252,64 @@ class GameMenu(
         ))
 
         showSubMenu(getString(R.string.game_menu_switch_touch_mode), touchModeOptionsList.toTypedArray())
+    }
+
+    private fun buildTouchModeSegments(): List<SegmentOption> {
+        val isEnhancedTouch = game.prefConfig.enableEnhancedTouch
+        val isTrackpad = game.prefConfig.touchscreenTrackpad
+        val isNativePointer = game.prefConfig.enableNativeMousePointer
+
+        return listOf(
+            SegmentOption(
+                label = getString(R.string.game_menu_touch_mode_enhanced),
+                selected = isEnhancedTouch && !isTrackpad && !isNativePointer,
+                runnable = Runnable {
+                    game.prefConfig.enableEnhancedTouch = true
+                    game.prefConfig.enableNativeMousePointer = false
+                    game.enableNativeMousePointer(false)
+                    game.setTouchMode(false)
+                    updateEnhancedTouchSetting(true)
+                    updateTouchModeSetting(false)
+                    Toast.makeText(game, getString(R.string.toast_touch_mode_enhanced_on), Toast.LENGTH_SHORT).show()
+                }
+            ),
+            SegmentOption(
+                label = getString(R.string.game_menu_touch_mode_classic),
+                selected = !isEnhancedTouch && !isTrackpad && !isNativePointer,
+                runnable = Runnable {
+                    game.prefConfig.enableEnhancedTouch = false
+                    game.prefConfig.enableNativeMousePointer = false
+                    game.enableNativeMousePointer(false)
+                    game.setTouchMode(false)
+                    updateEnhancedTouchSetting(false)
+                    updateTouchModeSetting(false)
+                    Toast.makeText(game, getString(R.string.toast_touch_mode_classic_on), Toast.LENGTH_SHORT).show()
+                }
+            ),
+            SegmentOption(
+                label = getString(R.string.game_menu_touch_mode_trackpad),
+                selected = isTrackpad && !isNativePointer,
+                runnable = Runnable {
+                    game.prefConfig.enableNativeMousePointer = false
+                    game.enableNativeMousePointer(false)
+                    game.setTouchMode(true)
+                    updateTouchModeSetting(true)
+                    Toast.makeText(game, getString(R.string.toast_touch_mode_trackpad_on), Toast.LENGTH_SHORT).show()
+                }
+            ),
+            SegmentOption(
+                label = getString(R.string.game_menu_touch_mode_native_mouse),
+                selected = isNativePointer,
+                runnable = Runnable {
+                    game.prefConfig.enableNativeMousePointer = true
+                    game.prefConfig.enableEnhancedTouch = false
+                    game.setTouchMode(false)
+                    game.enableNativeMousePointer(true)
+                    updateTouchModeSetting(false)
+                    Toast.makeText(game, getString(R.string.toast_touch_mode_native_mouse_on), Toast.LENGTH_SHORT).show()
+                }
+            )
+        )
     }
 
     private fun updateTouchModeSetting(isTrackpadMode: Boolean) {
@@ -602,6 +616,7 @@ class GameMenu(
             onBack = { navigateBack() },
             onCrownToggle = ::toggleCrownFeature,
             onOptionClick = { handleComposeOptionClick(it, dialog) },
+            onSegmentClick = ::handleInlineSegmentClick,
             onQuickAction = ::runComposeQuickAction,
             onToggleQuickEdit = ::toggleComposeQuickEdit,
             onAddQuickAction = ::showQuickButtonEditor,
@@ -672,7 +687,16 @@ class GameMenu(
         run(option)
         val shouldKeep = option.isKeepDialog || lastActionOpenedSubmenu
         if (!shouldKeep) dialog.dismiss()
+        if (option.inlineControl is InlineControl.Toggle && dialog.isShowing) {
+            rebuildAndReplaceMenu()
+        }
         lastActionOpenedSubmenu = false
+    }
+
+    private fun handleInlineSegmentClick(segment: SegmentOption) {
+        if (segment.selected) return
+        segment.runnable.run()
+        rebuildAndReplaceMenu()
     }
 
     private fun getAppNameDisplay(): String {
@@ -1174,21 +1198,29 @@ class GameMenu(
             "game_menu_toggle_host_keyboard", true))
 
         normalOptions.add(MenuOption(
-            touchModeDescription, false,
-            { showTouchModeMenu() }, "mouse_mode", isShowIcon = true, isKeepDialog = true,
-            showChevron = true
+            label = getString(R.string.game_menu_switch_touch_mode).trim(),
+            isWithGameFocus = false,
+            runnable = Runnable { showTouchModeMenu() },
+            iconKey = "mouse_mode",
+            isShowIcon = true,
+            isKeepDialog = true,
+            showChevron = true,
+            inlineControl = InlineControl.Segmented(buildTouchModeSegments())
         ))
 
         normalOptions.add(MenuOption(
-            if (game.getisTouchOverrideEnabled()) getString(R.string.game_menu_disable_pan_zoom) else getString(R.string.game_menu_enable_pan_zoom),
-            false,
-            {
+            label = getString(R.string.game_menu_enable_pan_zoom).trim(),
+            isWithGameFocus = false,
+            runnable = Runnable {
                 Toast.makeText(game,
                     if (game.getisTouchOverrideEnabled()) getString(R.string.toast_pan_zoom_disabled) else getString(R.string.toast_pan_zoom_enabled),
                     Toast.LENGTH_SHORT).show()
                 game.setisTouchOverrideEnabled(!game.getisTouchOverrideEnabled())
             },
-            "game_menu_mouse_emulation", true
+            iconKey = "game_menu_mouse_emulation",
+            isShowIcon = true,
+            isKeepDialog = true,
+            inlineControl = InlineControl.Toggle(game.getisTouchOverrideEnabled())
         ))
 
         // 王冠功能
@@ -1204,12 +1236,13 @@ class GameMenu(
 
         // 性能显示
         normalOptions.add(MenuOption(
-            perfOverlayMenuLabel, false,
-            {
-                game.togglePerformanceOverlay()
-                rebuildAndReplaceMenu()
-            },
-            "game_menu_toggle_performance_overlay", isShowIcon = true, isKeepDialog = true
+            label = getString(R.string.game_menu_toggle_performance_overlay).trim(),
+            isWithGameFocus = false,
+            runnable = null,
+            iconKey = "game_menu_toggle_performance_overlay",
+            isShowIcon = true,
+            isKeepDialog = true,
+            inlineControl = InlineControl.Segmented(buildPerformanceOverlaySegments())
         ))
 
         normalOptions.add(MenuOption(
@@ -1219,8 +1252,15 @@ class GameMenu(
         ))
 
         if (game.prefConfig.onscreenController) {
-            normalOptions.add(MenuOption(getString(R.string.game_menu_toggle_virtual_controller),
-                false, { game.toggleVirtualController() }, "game_menu_toggle_virtual_controller", true))
+            normalOptions.add(MenuOption(
+                label = getString(R.string.game_menu_toggle_virtual_controller).trim(),
+                isWithGameFocus = false,
+                runnable = Runnable { game.toggleVirtualController() },
+                iconKey = "game_menu_toggle_virtual_controller",
+                isShowIcon = true,
+                isKeepDialog = true,
+                inlineControl = InlineControl.Toggle(game.isVirtualControllerVisible())
+            ))
         }
 
         normalOptions.add(MenuOption(getString(R.string.game_menu_send_keys),
@@ -1238,26 +1278,36 @@ class GameMenu(
             }, "game_menu_disconnect_and_quit", true))
     }
 
-    private val touchModeDescription: String
-        get() {
-            val prefix = getString(R.string.game_menu_switch_touch_mode) + ": "
-            return prefix + when {
-                game.prefConfig.enableNativeMousePointer -> getString(R.string.game_menu_touch_mode_native_mouse)
-                game.prefConfig.touchscreenTrackpad -> getString(R.string.game_menu_touch_mode_trackpad)
-                game.prefConfig.enableEnhancedTouch -> getString(R.string.game_menu_touch_mode_enhanced)
-                else -> getString(R.string.game_menu_touch_mode_classic)
-            }
-        }
+    private fun buildPerformanceOverlaySegments(): List<SegmentOption> {
+        val currentMode = game.performanceOverlayMode
+        return listOf(
+            performanceOverlaySegment(
+                label = getString(R.string.perf_overlay_hidden),
+                mode = Game.PerformanceOverlayMode.HIDDEN,
+                currentMode = currentMode
+            ),
+            performanceOverlaySegment(
+                label = getString(R.string.perf_overlay_floating),
+                mode = Game.PerformanceOverlayMode.FLOATING,
+                currentMode = currentMode
+            ),
+            performanceOverlaySegment(
+                label = getString(R.string.perf_overlay_locked),
+                mode = Game.PerformanceOverlayMode.LOCKED,
+                currentMode = currentMode
+            )
+        )
+    }
 
-    private val perfOverlayMenuLabel: String
-        get() {
-            val status = when {
-                !game.prefConfig.enablePerfOverlay -> getString(R.string.perf_overlay_hidden)
-                game.prefConfig.perfOverlayLocked -> getString(R.string.perf_overlay_locked)
-                else -> getString(R.string.perf_overlay_floating)
-            }
-            return getString(R.string.game_menu_toggle_performance_overlay) + ": " + status
-        }
+    private fun performanceOverlaySegment(
+        label: String,
+        mode: Game.PerformanceOverlayMode,
+        currentMode: Game.PerformanceOverlayMode
+    ) = SegmentOption(
+        label = label,
+        selected = mode == currentMode,
+        runnable = Runnable { game.setPerformanceOverlayMode(mode) }
+    )
 
     fun lockAndDisconnectWithDelay() {
         sendKeys(shortArrayOf(KeyboardTranslator.VK_LWIN.s(), KeyboardTranslator.VK_L.s()))

@@ -14,6 +14,8 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -71,6 +73,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -127,6 +130,7 @@ internal data class GameMenuCallbacks(
     val onBack: () -> Unit,
     val onCrownToggle: () -> Unit,
     val onOptionClick: (GameMenu.MenuOption) -> Unit,
+    val onSegmentClick: (GameMenu.SegmentOption) -> Unit,
     val onQuickAction: (String) -> Unit,
     val onToggleQuickEdit: () -> Unit,
     val onAddQuickAction: () -> Unit,
@@ -231,6 +235,7 @@ internal fun GameMenuScreen(
                             options = state.options,
                             iconForOption = callbacks.iconForOption,
                             onOptionClick = callbacks.onOptionClick,
+                            onSegmentClick = callbacks.onSegmentClick,
                             modifier = Modifier.weight(1f)
                         )
                         GameMenuCards(
@@ -245,7 +250,8 @@ internal fun GameMenuScreen(
                         MenuOptionColumn(
                             state.options,
                             callbacks.iconForOption,
-                            callbacks.onOptionClick
+                            callbacks.onOptionClick,
+                            callbacks.onSegmentClick
                         )
                         if (!state.isSubmenu) {
                             GameMenuCards(state, callbacks) { sliderGestureActive = it }
@@ -668,11 +674,17 @@ private fun MenuOptionColumn(
     options: List<GameMenu.MenuOption>,
     iconForOption: (String?) -> Int,
     onOptionClick: (GameMenu.MenuOption) -> Unit,
+    onSegmentClick: (GameMenu.SegmentOption) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)) {
         options.forEach { option ->
-            MenuOptionRow(option, iconForOption(option.iconKey)) { onOptionClick(option) }
+            MenuOptionRow(
+                option = option,
+                iconRes = iconForOption(option.iconKey),
+                onClick = { onOptionClick(option) },
+                onSegmentClick = onSegmentClick
+            )
         }
     }
 }
@@ -681,10 +693,12 @@ private fun MenuOptionColumn(
 private fun MenuOptionRow(
     option: GameMenu.MenuOption,
     @DrawableRes iconRes: Int,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onSegmentClick: (GameMenu.SegmentOption) -> Unit
 ) {
     val view = LocalView.current
     val shape = GameMenuCardShape
+    val inlineControl = option.inlineControl
     val danger = option.iconKey == "game_menu_disconnect" ||
         option.iconKey == "game_menu_disconnect_and_quit"
     val borderColor = when {
@@ -692,58 +706,157 @@ private fun MenuOptionRow(
         option.isCrownControl -> colorResource(R.color.theme_pink_primary).copy(alpha = 0.55f)
         else -> colorResource(R.color.game_menu_list_item_border)
     }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(colorResource(R.color.game_menu_list_item_normal))
-            .border(GameMenuDimens.surfaceStroke, borderColor, shape)
+    val headerInteraction = if (option.runnable != null || inlineControl is GameMenu.InlineControl.Toggle) {
+        Modifier
             .gamepadFocusOutline(shape)
             .clickable {
                 view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                 onClick()
             }
-            .padding(
-                horizontal = GameMenuDimens.section,
-                vertical = GameMenuDimens.compact
-            ),
-        verticalAlignment = Alignment.CenterVertically
+    } else {
+        Modifier
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(colorResource(R.color.game_menu_list_item_normal))
+            .border(GameMenuDimens.surfaceStroke, borderColor, shape)
     ) {
-        if (option.isShowIcon && iconRes != 0) {
-            Icon(
-                painter = painterResource(iconRes),
-                contentDescription = null,
-                tint = Color.Unspecified,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(Modifier.width(GameMenuDimens.section))
-        }
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = option.label,
-                color = if (danger) Color(0xFFD13B3B) else colorResource(R.color.game_menu_text_primary),
-                fontSize = 13.sp,
-                fontWeight = if (option.isCrownControl) FontWeight.Medium else FontWeight.Normal
-            )
-            option.subtitle?.takeIf { it.isNotBlank() }?.let {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(headerInteraction)
+                .padding(
+                    horizontal = GameMenuDimens.section,
+                    vertical = GameMenuDimens.compact
+                ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (option.isShowIcon && iconRes != 0) {
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(GameMenuDimens.section))
+            }
+            Column(Modifier.weight(1f)) {
                 Text(
-                    text = it,
-                    color = colorResource(R.color.game_menu_text_secondary),
-                    fontSize = 11.sp,
-                    maxLines = 2,
+                    text = option.label,
+                    color = if (danger) Color(0xFFD13B3B) else colorResource(R.color.game_menu_text_primary),
+                    fontSize = 13.sp,
+                    fontWeight = if (option.isCrownControl) FontWeight.Medium else FontWeight.Normal
+                )
+                option.subtitle?.takeIf { it.isNotBlank() }?.let {
+                    Text(
+                        text = it,
+                        color = colorResource(R.color.game_menu_text_secondary),
+                        fontSize = 11.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            when (inlineControl) {
+                is GameMenu.InlineControl.Toggle -> Switch(
+                    checked = inlineControl.checked,
+                    onCheckedChange = null
+                )
+                else -> if (option.showChevron) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_arrow_right),
+                        contentDescription = null,
+                        tint = colorResource(R.color.game_menu_text_secondary),
+                        modifier = Modifier.size(13.dp)
+                    )
+                }
+            }
+        }
+
+        if (inlineControl is GameMenu.InlineControl.Segmented) {
+            InlineSegmentedControl(
+                segments = inlineControl.segments,
+                onSegmentClick = onSegmentClick
+            )
+        }
+    }
+}
+
+@Composable
+private fun InlineSegmentedControl(
+    segments: List<GameMenu.SegmentOption>,
+    onSegmentClick: (GameMenu.SegmentOption) -> Unit
+) {
+    val view = LocalView.current
+    val accent = colorResource(R.color.theme_pink_primary)
+    val shape = RoundedCornerShape(8.dp)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                start = GameMenuDimens.section,
+                end = GameMenuDimens.section,
+                bottom = GameMenuDimens.section
+            )
+            .selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)
+    ) {
+        segments.forEach { segment ->
+            val background = if (segment.selected) {
+                accent.copy(alpha = 0.14f)
+            } else {
+                Color.White.copy(alpha = 0.46f)
+            }
+            val border = if (segment.selected) {
+                accent.copy(alpha = 0.48f)
+            } else {
+                colorResource(R.color.game_menu_list_item_border)
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 32.dp)
+                    .clip(shape)
+                    .background(background)
+                    .border(GameMenuDimens.surfaceStroke, border, shape)
+                    .gamepadFocusOutline(shape)
+                    .selectable(
+                        selected = segment.selected,
+                        role = Role.RadioButton,
+                        onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                            onSegmentClick(segment)
+                        }
+                    )
+                    .padding(horizontal = GameMenuDimens.tight, vertical = GameMenuDimens.compact),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = compactSegmentLabel(segment.label),
+                    color = if (segment.selected) accent else colorResource(R.color.game_menu_text_primary),
+                    fontSize = 10.sp,
+                    fontWeight = if (segment.selected) FontWeight.Medium else FontWeight.Normal,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
         }
-        if (option.showChevron) {
-            Icon(
-                painter = painterResource(R.drawable.ic_arrow_right),
-                contentDescription = null,
-                tint = colorResource(R.color.game_menu_text_secondary),
-                modifier = Modifier.size(13.dp)
-            )
-        }
     }
+}
+
+private fun compactSegmentLabel(label: String): String {
+    val text = label.trim()
+    if (' ' in text) return compactActionLabel(text.substringBefore(' '), maxCodePoints = 8)
+
+    val codePointCount = text.codePointCount(0, text.length)
+    if (codePointCount <= 4) return text
+    val prefixEnd = text.offsetByCodePoints(0, 2)
+    val suffixStart = text.offsetByCodePoints(0, codePointCount - 2)
+    return text.substring(0, prefixEnd) + text.substring(suffixStart)
 }
 
 @Composable
