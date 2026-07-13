@@ -85,8 +85,14 @@ import java.util.Locale
 private val GameMenuDialogShape = RoundedCornerShape(16.dp)
 private val GameMenuCardShape = RoundedCornerShape(10.dp)
 private val GameMenuControlShape = RoundedCornerShape(10.dp)
-private val GameMenuSurfaceStroke = 0.75.dp
-private val GameMenuColumnGap = 10.dp
+
+private object GameMenuDimens {
+    val surfaceStroke = 0.75.dp
+    val tight = 4.dp
+    val compact = 6.dp
+    val section = 8.dp
+    val outer = 12.dp
+}
 
 internal data class GameMenuQuickAction(
     val id: String,
@@ -184,7 +190,7 @@ internal fun GameMenuScreen(
         Surface(
             color = Color.Transparent,
             shape = GameMenuDialogShape,
-            border = BorderStroke(GameMenuSurfaceStroke, border),
+            border = BorderStroke(GameMenuDimens.surfaceStroke, border),
             modifier = Modifier
                 .widthIn(max = 760.dp)
                 .heightIn(max = maxMenuHeight)
@@ -195,8 +201,8 @@ internal fun GameMenuScreen(
                         state = menuScrollState,
                         enabled = !sliderGestureActive
                     )
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                    .padding(GameMenuDimens.outer),
+                verticalArrangement = Arrangement.spacedBy(GameMenuDimens.section)
             ) {
                 GameMenuHeader(state, callbacks.onBack, callbacks.onCrownToggle)
 
@@ -218,7 +224,7 @@ internal fun GameMenuScreen(
                 if (wide) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(GameMenuColumnGap),
+                        horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.section),
                         verticalAlignment = Alignment.Top
                     ) {
                         MenuOptionColumn(
@@ -227,15 +233,15 @@ internal fun GameMenuScreen(
                             onOptionClick = callbacks.onOptionClick,
                             modifier = Modifier.weight(1f)
                         )
-                        Column(
+                        GameMenuCards(
+                            state = state,
+                            callbacks = callbacks,
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            GameMenuCards(state, callbacks) { sliderGestureActive = it }
-                        }
+                            onSliderGesture = { sliderGestureActive = it }
+                        )
                     }
                 } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(GameMenuDimens.section)) {
                         MenuOptionColumn(
                             state.options,
                             callbacks.iconForOption,
@@ -271,13 +277,13 @@ private fun GameMenuHeader(
                 contentDescription = stringResource(R.string.addpc_back),
                 tint = colorResource(R.color.game_menu_text_primary),
                 modifier = Modifier
-                    .size(34.dp)
+                    .size(36.dp)
                     .clip(CircleShape)
                     .gamepadFocusOutline(CircleShape)
                     .clickable(onClick = onBack)
-                    .padding(7.dp)
+                    .padding(8.dp)
             )
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(GameMenuDimens.tight))
         }
         Text(
             text = state.title,
@@ -295,17 +301,17 @@ private fun GameMenuHeader(
                 contentDescription = state.crownToggleText,
                 tint = Color.Unspecified,
                 modifier = Modifier
-                    .size(34.dp)
+                    .size(36.dp)
                     .clip(crownShape)
                     .background(colorResource(R.color.theme_pink_primary).copy(alpha = 0.10f))
                     .border(
-                        1.dp,
-                        colorResource(R.color.theme_pink_primary).copy(alpha = 0.32f),
+                        GameMenuDimens.surfaceStroke,
+                        colorResource(R.color.theme_pink_primary).copy(alpha = 0.20f),
                         crownShape
                     )
                     .gamepadFocusOutline(crownShape)
                     .clickable(onClick = onCrownToggle)
-                    .padding(6.dp)
+                    .padding(7.dp)
             )
         }
     }
@@ -314,9 +320,7 @@ private fun GameMenuHeader(
 @Composable
 private fun GameMenuFooter(subtitle: String) {
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 2.dp),
+        modifier = Modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -366,7 +370,7 @@ private fun QuickActionRow(
             modifier = Modifier
                 .weight(1f)
                 .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.tight),
             verticalAlignment = Alignment.CenterVertically
         ) {
             actions.forEach { action ->
@@ -467,8 +471,8 @@ private fun QuickActionRow(
             }
         }
         if (editMode) {
-            Spacer(Modifier.width(4.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Spacer(Modifier.width(GameMenuDimens.tight))
+            Row(horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)) {
                 ToolIconButton(
                     iconRes = R.drawable.phc_action_check,
                     contentDescription = stringResource(R.string.dialog_button_save),
@@ -510,7 +514,7 @@ private fun QuickActionChip(
     ) {
         if (editMode) {
             QuickActionDragHandle(dragHandleModifier)
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(GameMenuDimens.tight))
         }
         if (action.iconRes != 0) {
             AndroidView(
@@ -525,7 +529,7 @@ private fun QuickActionChip(
         } else {
             ActionInitialBadge(action.label)
         }
-        Spacer(Modifier.width(5.dp))
+        Spacer(Modifier.width(GameMenuDimens.compact))
         Text(
             text = compactActionLabel(action.label),
             color = colorResource(R.color.game_menu_text_primary).copy(alpha = contentAlpha),
@@ -533,7 +537,7 @@ private fun QuickActionChip(
             maxLines = 1
         )
         if (editMode) {
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(GameMenuDimens.tight))
             QuickActionRemoveButton(onRemove)
         }
     }
@@ -601,7 +605,7 @@ private fun ToolIconButton(
             .size(40.dp)
             .clip(shape)
             .background(colorResource(R.color.theme_pink_primary).copy(alpha = 0.08f))
-            .border(GameMenuSurfaceStroke, colorResource(R.color.theme_pink_primary).copy(alpha = 0.20f), shape)
+            .border(GameMenuDimens.surfaceStroke, colorResource(R.color.theme_pink_primary).copy(alpha = 0.20f), shape)
             .gamepadFocusOutline(shape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
@@ -649,10 +653,10 @@ private fun ActionPill(
             .heightIn(min = 40.dp)
             .clip(GameMenuControlShape)
             .background(backgroundColor)
-            .border(GameMenuSurfaceStroke, borderColor, GameMenuControlShape)
+            .border(GameMenuDimens.surfaceStroke, borderColor, GameMenuControlShape)
             .gamepadFocusOutline(GameMenuControlShape)
             .then(interactionModifier)
-            .padding(horizontal = 10.dp),
+            .padding(horizontal = GameMenuDimens.outer),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
         content = content
@@ -666,7 +670,7 @@ private fun MenuOptionColumn(
     onOptionClick: (GameMenu.MenuOption) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)) {
         options.forEach { option ->
             MenuOptionRow(option, iconForOption(option.iconKey)) { onOptionClick(option) }
         }
@@ -693,13 +697,16 @@ private fun MenuOptionRow(
             .fillMaxWidth()
             .clip(shape)
             .background(colorResource(R.color.game_menu_list_item_normal))
-            .border(GameMenuSurfaceStroke, borderColor, shape)
+            .border(GameMenuDimens.surfaceStroke, borderColor, shape)
             .gamepadFocusOutline(shape)
             .clickable {
                 view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                 onClick()
             }
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .padding(
+                horizontal = GameMenuDimens.section,
+                vertical = GameMenuDimens.compact
+            ),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (option.isShowIcon && iconRes != 0) {
@@ -709,7 +716,7 @@ private fun MenuOptionRow(
                 tint = Color.Unspecified,
                 modifier = Modifier.size(20.dp)
             )
-            Spacer(Modifier.width(7.dp))
+            Spacer(Modifier.width(GameMenuDimens.section))
         }
         Column(Modifier.weight(1f)) {
             Text(
@@ -796,7 +803,7 @@ private fun SuperOptionChip(
         onClick = onClick
     ) {
         ActionInitialBadge(option.label)
-        Spacer(Modifier.width(6.dp))
+        Spacer(Modifier.width(GameMenuDimens.compact))
         Text(
             text = compactActionLabel(option.label),
             color = colorResource(R.color.game_menu_text_primary),
@@ -824,9 +831,13 @@ private fun firstActionCharacter(label: String): String {
 private fun GameMenuCards(
     state: GameMenuComposeUiState,
     callbacks: GameMenuCallbacks,
+    modifier: Modifier = Modifier,
     onSliderGesture: (Boolean) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)
+    ) {
         if (state.visibleCards.bitrate) {
             BitrateCard(state.bitrate, callbacks, onSliderGesture, callbacks.onEditCards)
         }
@@ -864,14 +875,14 @@ private fun GameMenuCard(
     Surface(
         color = colorResource(R.color.game_menu_card_background),
         shape = GameMenuCardShape,
-        border = BorderStroke(GameMenuSurfaceStroke, colorResource(R.color.game_menu_button_border)),
+        border = BorderStroke(GameMenuDimens.surfaceStroke, colorResource(R.color.game_menu_button_border)),
         modifier = Modifier
             .fillMaxWidth()
             .then(longClickModifier)
     ) {
         Column(
-            modifier = Modifier.padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            modifier = Modifier.padding(GameMenuDimens.section),
+            verticalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -884,7 +895,7 @@ private fun GameMenuCard(
                         overflow = TextOverflow.Ellipsis
                     )
                     titleAccessory?.let {
-                        Spacer(Modifier.width(3.dp))
+                        Spacer(Modifier.width(GameMenuDimens.tight))
                         it()
                     }
                 }
@@ -1021,7 +1032,7 @@ private fun BitrateHelpButton(
                 Surface(
                     color = colorResource(R.color.game_menu_card_background),
                     shape = GameMenuCardShape,
-                    border = BorderStroke(GameMenuSurfaceStroke, accent.copy(alpha = 0.22f)),
+                    border = BorderStroke(GameMenuDimens.surfaceStroke, accent.copy(alpha = 0.22f)),
                     modifier = Modifier.widthIn(max = 260.dp)
                 ) {
                     Text(
@@ -1029,7 +1040,7 @@ private fun BitrateHelpButton(
                         color = colorResource(R.color.game_menu_text_primary),
                         fontSize = 11.sp,
                         lineHeight = 15.sp,
-                        modifier = Modifier.padding(10.dp)
+                        modifier = Modifier.padding(GameMenuDimens.outer)
                     )
                 }
             }
@@ -1053,7 +1064,7 @@ private fun GyroCard(
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(GameMenuDimens.section))
             Switch(
                 checked = state.enabled,
                 onCheckedChange = callbacks.onGyroEnabled,
@@ -1104,7 +1115,7 @@ private fun GyroCard(
                     )
                     .lockParentScrollDuringGesture(onSliderGesture)
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.outer)) {
                 SettingSwitchRow(
                     label = stringResource(R.string.gyro_invert_x_axis),
                     checked = state.invertX,
@@ -1200,13 +1211,13 @@ private fun SettingValueRow(label: String, value: String, onClick: () -> Unit) {
             .clip(GameMenuControlShape)
             .gamepadFocusOutline(GameMenuControlShape)
             .clickable(onClick = onClick)
-            .padding(vertical = 3.dp),
+            .padding(vertical = GameMenuDimens.tight),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(label, color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
         Spacer(Modifier.weight(1f))
         Text(value, color = colorResource(R.color.theme_pink_primary), fontSize = 10.sp)
-        Spacer(Modifier.width(4.dp))
+        Spacer(Modifier.width(GameMenuDimens.tight))
         Text("›", color = colorResource(R.color.game_menu_text_secondary), fontSize = 14.sp)
     }
 }
@@ -1235,7 +1246,10 @@ private fun ShortcutCard(
                         view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                         onKey(key)
                     }
-                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                    .padding(
+                        horizontal = GameMenuDimens.section,
+                        vertical = GameMenuDimens.compact
+                    )
             )
             if (index < keys.lastIndex) {
                 Spacer(
