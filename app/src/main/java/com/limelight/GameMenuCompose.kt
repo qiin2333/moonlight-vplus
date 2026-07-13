@@ -35,6 +35,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -59,11 +60,14 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Locale
+
+private val GameMenuDialogShape = RoundedCornerShape(16.dp)
+private val GameMenuCardShape = RoundedCornerShape(10.dp)
+private val GameMenuControlShape = RoundedCornerShape(10.dp)
 
 internal data class GameMenuQuickAction(
     val id: String,
@@ -124,6 +128,10 @@ internal fun GameMenuScreen(
     callbacks: GameMenuCallbacks
 ) {
     val border = colorResource(R.color.game_menu_dialog_border)
+    val accent = colorResource(R.color.theme_pink_primary)
+    val card = colorResource(R.color.game_menu_card_background)
+    val textPrimary = colorResource(R.color.game_menu_text_primary)
+    val textSecondary = colorResource(R.color.game_menu_text_secondary)
     val configuration = LocalConfiguration.current
     val maxMenuHeight = (configuration.screenHeightDp * 0.86f).dp
     var sliderGestureActive by remember { mutableStateOf(false) }
@@ -133,10 +141,31 @@ internal fun GameMenuScreen(
         menuScrollState.scrollTo(0)
     }
 
-    MaterialTheme {
+    MaterialTheme(
+        colorScheme = lightColorScheme(
+            primary = accent,
+            onPrimary = Color.White,
+            primaryContainer = accent.copy(alpha = 0.12f),
+            onPrimaryContainer = accent,
+            secondary = accent,
+            onSecondary = Color.White,
+            secondaryContainer = accent.copy(alpha = 0.16f),
+            onSecondaryContainer = accent,
+            tertiary = accent,
+            onTertiary = Color.White,
+            tertiaryContainer = accent.copy(alpha = 0.12f),
+            onTertiaryContainer = accent,
+            surface = card,
+            onSurface = textPrimary,
+            surfaceVariant = card,
+            surfaceContainerHighest = accent.copy(alpha = 0.10f),
+            onSurfaceVariant = textSecondary,
+            outline = border
+        )
+    ) {
         Surface(
             color = Color.Transparent,
-            shape = RoundedCornerShape(14.dp),
+            shape = GameMenuDialogShape,
             border = BorderStroke(1.dp, border),
             modifier = Modifier
                 .widthIn(max = 760.dp)
@@ -265,16 +294,23 @@ private fun GameMenuHeader(
             }
         }
         if (!state.isSubmenu) {
-            Text(
-                text = state.crownToggleText,
-                color = colorResource(R.color.theme_pink_primary),
-                fontSize = 12.sp,
-                textDecoration = TextDecoration.Underline,
+            val crownShape = CircleShape
+            Icon(
+                painter = painterResource(R.drawable.ic_super_crown),
+                contentDescription = state.crownToggleText,
+                tint = Color.Unspecified,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .gamepadFocusOutline(RoundedCornerShape(8.dp))
+                    .size(34.dp)
+                    .clip(crownShape)
+                    .background(colorResource(R.color.theme_pink_primary).copy(alpha = 0.10f))
+                    .border(
+                        1.dp,
+                        colorResource(R.color.theme_pink_primary).copy(alpha = 0.32f),
+                        crownShape
+                    )
+                    .gamepadFocusOutline(crownShape)
                     .clickable(onClick = onCrownToggle)
-                    .padding(horizontal = 6.dp, vertical = 4.dp)
+                    .padding(6.dp)
             )
         }
     }
@@ -325,7 +361,7 @@ private fun QuickActionChip(
     onMoveRight: () -> Unit
 ) {
     val view = LocalView.current
-    val shape = RoundedCornerShape(8.dp)
+    val shape = GameMenuControlShape
     val contentAlpha = if (action.enabled) 1f else 0.45f
     Column(
         modifier = Modifier
@@ -374,14 +410,15 @@ private fun QuickActionChip(
 
 @Composable
 private fun ToolChip(label: String, onClick: () -> Unit) {
+    val shape = GameMenuControlShape
     Box(
         modifier = Modifier
             .height(32.dp)
             .widthIn(min = 34.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(shape)
             .background(colorResource(R.color.game_menu_card_background))
-            .border(1.dp, colorResource(R.color.game_menu_button_border), RoundedCornerShape(8.dp))
-            .gamepadFocusOutline(RoundedCornerShape(8.dp))
+            .border(1.dp, colorResource(R.color.game_menu_button_border), shape)
+            .gamepadFocusOutline(shape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -410,7 +447,7 @@ private fun MenuOptionRow(
     onClick: () -> Unit
 ) {
     val view = LocalView.current
-    val shape = RoundedCornerShape(9.dp)
+    val shape = GameMenuCardShape
     val danger = option.iconKey == "game_menu_disconnect" ||
         option.iconKey == "game_menu_disconnect_and_quit"
     val borderColor = when {
@@ -491,8 +528,8 @@ private fun GameMenuCards(
             fontSize = 11.sp,
             modifier = Modifier
                 .align(Alignment.End)
-                .clip(RoundedCornerShape(8.dp))
-                .gamepadFocusOutline(RoundedCornerShape(8.dp))
+                .clip(GameMenuControlShape)
+                .gamepadFocusOutline(GameMenuControlShape)
                 .clickable(onClick = callbacks.onEditCards)
                 .padding(horizontal = 6.dp, vertical = 3.dp)
         )
@@ -508,7 +545,7 @@ private fun GameMenuCard(
 ) {
     Surface(
         color = colorResource(R.color.game_menu_card_background),
-        shape = RoundedCornerShape(10.dp),
+        shape = GameMenuCardShape,
         border = BorderStroke(1.dp, colorResource(R.color.game_menu_button_border)),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -596,7 +633,7 @@ private fun BitrateCard(
             valueRange = 0f..BitrateCardController.MAX_PROGRESS.toFloat(),
             modifier = Modifier
                 .fillMaxWidth()
-                .gamepadFocusOutline(RoundedCornerShape(8.dp))
+                .gamepadFocusOutline(GameMenuControlShape)
                 .handleSliderDpad(
                     value = state.progress,
                     step = 1f,
@@ -673,7 +710,7 @@ private fun GyroCard(
                 valueRange = 0.5f..3.0f,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .gamepadFocusOutline(RoundedCornerShape(8.dp))
+                    .gamepadFocusOutline(GameMenuControlShape)
                     .handleSliderDpad(
                         value = state.sensitivity,
                         step = 0.1f,
@@ -776,8 +813,8 @@ private fun SettingValueRow(label: String, value: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .gamepadFocusOutline(RoundedCornerShape(8.dp))
+            .clip(GameMenuControlShape)
+            .gamepadFocusOutline(GameMenuControlShape)
             .clickable(onClick = onClick)
             .padding(vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -801,8 +838,8 @@ private fun ShortcutCard(keys: List<CustomKeyData>, onKey: (CustomKeyData) -> Un
                 fontSize = 11.sp,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .gamepadFocusOutline(RoundedCornerShape(8.dp))
+                    .clip(GameMenuControlShape)
+                    .gamepadFocusOutline(GameMenuControlShape)
                     .clickable {
                         view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                         onKey(key)
