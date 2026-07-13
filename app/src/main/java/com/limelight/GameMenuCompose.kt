@@ -42,6 +42,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -364,69 +365,71 @@ private fun QuickActionRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             actions.forEach { action ->
-                val isDragging = draggingId == action.id
-                val isDropTarget = dropTargetId == action.id
-                val dragModifier = if (editMode) {
-                    Modifier
-                        .onGloballyPositioned { coordinates ->
-                            itemBounds[action.id] = coordinates.boundsInParent()
-                        }
-                        .zIndex(if (isDragging) 1f else 0f)
-                        .graphicsLayer {
-                            if (isDragging) {
-                                translationX = dragOffset.x
-                                translationY = dragOffset.y
-                                alpha = 0.42f
+                key(action.id) {
+                    val isDragging = draggingId == action.id
+                    val isDropTarget = dropTargetId == action.id
+                    val dragModifier = if (editMode) {
+                        Modifier
+                            .onGloballyPositioned { coordinates ->
+                                itemBounds[action.id] = coordinates.boundsInParent()
                             }
-                            if (isDropTarget) {
-                                scaleX = 1.12f
-                                scaleY = 1.12f
-                            }
-                        }
-                        .pointerInput(action.id) {
-                            detectDragGesturesAfterLongPress(
-                                onDragStart = {
-                                    draggingId = action.id
-                                    dragOffset = Offset.Zero
-                                    dropTargetId = null
-                                    view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                                },
-                                onDragCancel = { finishDrag(commit = false) },
-                                onDragEnd = { finishDrag(commit = true) }
-                            ) { change, amount ->
-                                change.consume()
-                                dragOffset += amount
-                                val sourceBounds = itemBounds[action.id]
-                                val draggedCenter = sourceBounds?.center?.plus(dragOffset)
-                                dropTargetId = draggedCenter?.let { center ->
-                                    actions.firstOrNull { candidate ->
-                                        candidate.id != action.id &&
-                                            itemBounds[candidate.id]?.contains(center) == true
-                                    }?.id
+                            .zIndex(if (isDragging) 1f else 0f)
+                            .graphicsLayer {
+                                if (isDragging) {
+                                    translationX = dragOffset.x
+                                    translationY = dragOffset.y
+                                    alpha = 0.42f
+                                }
+                                if (isDropTarget) {
+                                    scaleX = 1.12f
+                                    scaleY = 1.12f
                                 }
                             }
-                        }
-                        .onPreviewKeyEvent { event ->
-                            if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                            val index = actions.indexOfFirst { it.id == action.id }
-                            val targetIndex = when (event.key) {
-                                Key.DirectionLeft -> index - 1
-                                Key.DirectionRight -> index + 1
-                                else -> return@onPreviewKeyEvent false
+                            .pointerInput(action.id) {
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = {
+                                        draggingId = action.id
+                                        dragOffset = Offset.Zero
+                                        dropTargetId = null
+                                        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                                    },
+                                    onDragCancel = { finishDrag(commit = false) },
+                                    onDragEnd = { finishDrag(commit = true) }
+                                ) { change, amount ->
+                                    change.consume()
+                                    dragOffset += amount
+                                    val sourceBounds = itemBounds[action.id]
+                                    val draggedCenter = sourceBounds?.center?.plus(dragOffset)
+                                    dropTargetId = draggedCenter?.let { center ->
+                                        actions.firstOrNull { candidate ->
+                                            candidate.id != action.id &&
+                                                itemBounds[candidate.id]?.contains(center) == true
+                                        }?.id
+                                    }
+                                }
                             }
-                            actions.getOrNull(targetIndex)?.let { onMove(action.id, it.id) } != null
-                        }
-                } else {
-                    Modifier
+                            .onPreviewKeyEvent { event ->
+                                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                                val index = actions.indexOfFirst { it.id == action.id }
+                                val targetIndex = when (event.key) {
+                                    Key.DirectionLeft -> index - 1
+                                    Key.DirectionRight -> index + 1
+                                    else -> return@onPreviewKeyEvent false
+                                }
+                                actions.getOrNull(targetIndex)?.let { onMove(action.id, it.id) } != null
+                            }
+                    } else {
+                        Modifier
+                    }
+                    QuickActionChip(
+                        action = action,
+                        editMode = editMode,
+                        onClick = { onAction(action.id) },
+                        onEnterEdit = onToggleEdit,
+                        onRemove = { onRemove(action.id) },
+                        modifier = dragModifier
+                    )
                 }
-                QuickActionChip(
-                    action = action,
-                    editMode = editMode,
-                    onClick = { onAction(action.id) },
-                    onEnterEdit = onToggleEdit,
-                    onRemove = { onRemove(action.id) },
-                    modifier = dragModifier
-                )
             }
             if (!editMode) {
                 superOptions.forEach { option ->
@@ -461,12 +464,18 @@ private fun QuickActionChip(
     onRemove: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val view = LocalView.current
     val contentAlpha = if (action.enabled) 1f else 0.45f
     ActionPill(
         backgroundColor = colorResource(R.color.game_menu_card_background).copy(alpha = contentAlpha),
         borderColor = colorResource(R.color.game_menu_button_border),
         onClick = if (editMode) onRemove else onClick,
-        onLongClick = if (editMode) null else onEnterEdit,
+        onLongClick = {
+            if (!editMode) {
+                view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                onEnterEdit()
+            }
+        },
         modifier = modifier
     ) {
         if (action.iconRes != 0) {
@@ -477,7 +486,7 @@ private fun QuickActionChip(
                     }
                 },
                 update = { imageView -> imageView.setImageResource(action.iconRes) },
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(18.dp)
             )
         } else {
             ActionInitialBadge(action.label)
@@ -486,7 +495,7 @@ private fun QuickActionChip(
         Text(
             text = compactActionLabel(action.label),
             color = colorResource(R.color.game_menu_text_primary).copy(alpha = contentAlpha),
-            fontSize = 12.sp,
+            fontSize = 13.sp,
             maxLines = 1
         )
         if (editMode) {
@@ -505,7 +514,7 @@ private fun ToolIconButton(
     val shape = CircleShape
     Box(
         modifier = Modifier
-            .size(32.dp)
+            .size(36.dp)
             .clip(shape)
             .background(colorResource(R.color.theme_pink_primary).copy(alpha = 0.08f))
             .border(1.dp, colorResource(R.color.theme_pink_primary).copy(alpha = 0.28f), shape)
@@ -545,7 +554,6 @@ private fun ActionPill(
                 onClick()
             },
             onLongClick = {
-                view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                 onLongClick()
             }
         )
@@ -553,13 +561,14 @@ private fun ActionPill(
 
     Row(
         modifier = modifier
-            .widthIn(min = 72.dp)
+            .widthIn(min = 80.dp)
+            .heightIn(min = 36.dp)
             .clip(GameMenuControlShape)
             .background(backgroundColor)
             .border(1.dp, borderColor, GameMenuControlShape)
             .gamepadFocusOutline(GameMenuControlShape)
             .then(interactionModifier)
-            .padding(horizontal = 7.dp, vertical = 4.dp),
+            .padding(horizontal = 8.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
         content = content
@@ -707,7 +716,7 @@ private fun SuperOptionChip(
         Text(
             text = compactActionLabel(option.label),
             color = colorResource(R.color.game_menu_text_primary),
-            fontSize = 12.sp,
+            fontSize = 13.sp,
             maxLines = 1
         )
     }
