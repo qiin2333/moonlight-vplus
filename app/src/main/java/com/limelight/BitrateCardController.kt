@@ -1,6 +1,5 @@
 package com.limelight
 
-import android.app.AlertDialog
 import android.content.Context
 import android.widget.Toast
 import androidx.core.content.edit
@@ -133,13 +132,6 @@ internal class BitrateCardController(
     fun applySelectedBitrate() {
         userTracking = false
         adjustBitrate(state.selectedBitrateKbps)
-    }
-
-    fun showTip() {
-        AlertDialog.Builder(game, R.style.AppDialogStyle)
-            .setMessage(game.getString(R.string.game_menu_bitrate_tip))
-            .setPositiveButton(R.string.dialog_button_ok, null)
-            .show()
     }
 
     fun cycleHapticMode() {

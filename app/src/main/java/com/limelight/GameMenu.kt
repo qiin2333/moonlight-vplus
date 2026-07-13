@@ -609,7 +609,6 @@ class GameMenu(
             onEditCards = ::showCardEditorDialog,
             onBitrateProgress = bitrateCardController::previewProgress,
             onBitrateApply = bitrateCardController::applySelectedBitrate,
-            onBitrateTip = bitrateCardController::showTip,
             onBitrateHapticMode = bitrateCardController::cycleHapticMode,
             onGyroEnabled = gyroCardController::setEnabled,
             onGyroMouseMode = gyroCardController::setMouseMode,

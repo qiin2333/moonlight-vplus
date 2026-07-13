@@ -13,6 +13,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -60,14 +61,18 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import java.util.Locale
 
 private val GameMenuDialogShape = RoundedCornerShape(16.dp)
 private val GameMenuCardShape = RoundedCornerShape(10.dp)
 private val GameMenuControlShape = RoundedCornerShape(10.dp)
+private const val SuperOptionGridColumns = 4
 
 internal data class GameMenuQuickAction(
     val id: String,
@@ -110,7 +115,6 @@ internal data class GameMenuCallbacks(
     val onEditCards: () -> Unit,
     val onBitrateProgress: (Float) -> Boolean,
     val onBitrateApply: () -> Unit,
-    val onBitrateTip: () -> Unit,
     val onBitrateHapticMode: () -> Unit,
     val onGyroEnabled: (Boolean) -> Unit,
     val onGyroMouseMode: (Boolean) -> Unit,
@@ -211,12 +215,8 @@ internal fun GameMenuScreen(
                             modifier = Modifier.weight(1f),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            MenuOptionColumn(
-                                state.superOptions,
-                                callbacks.iconForOption,
-                                callbacks.onOptionClick
-                            )
                             GameMenuCards(state, callbacks) { sliderGestureActive = it }
+                            SuperOptionGrid(state.superOptions, callbacks.onOptionClick)
                         }
                     }
                 } else {
@@ -227,12 +227,12 @@ internal fun GameMenuScreen(
                             callbacks.onOptionClick
                         )
                         if (!state.isSubmenu) {
+                            GameMenuCards(state, callbacks) { sliderGestureActive = it }
                             MenuOptionColumn(
                                 state.superOptions,
                                 callbacks.iconForOption,
                                 callbacks.onOptionClick
                             )
-                            GameMenuCards(state, callbacks) { sliderGestureActive = it }
                         }
                     }
                 }
@@ -507,6 +507,85 @@ private fun MenuOptionRow(
 }
 
 @Composable
+private fun SuperOptionGrid(
+    options: List<GameMenu.MenuOption>,
+    onOptionClick: (GameMenu.MenuOption) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        options.chunked(SuperOptionGridColumns).forEach { rowOptions ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                rowOptions.forEach { option ->
+                    SuperOptionTile(
+                        option = option,
+                        onClick = { onOptionClick(option) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                repeat(SuperOptionGridColumns - rowOptions.size) {
+                    Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SuperOptionTile(
+    option: GameMenu.MenuOption,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val view = LocalView.current
+    val accent = colorResource(R.color.theme_pink_primary)
+    val initial = option.label.trim().firstOrNull()?.toString() ?: "?"
+
+    Column(
+        modifier = modifier
+            .aspectRatio(1f)
+            .clip(GameMenuCardShape)
+            .background(colorResource(R.color.game_menu_list_item_normal))
+            .border(1.dp, colorResource(R.color.game_menu_list_item_border), GameMenuCardShape)
+            .gamepadFocusOutline(GameMenuCardShape)
+            .clickable {
+                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                onClick()
+            }
+            .padding(4.dp),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(accent.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = initial,
+                color = accent,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Spacer(Modifier.weight(1f))
+        Text(
+            text = option.label,
+            color = colorResource(R.color.game_menu_text_primary),
+            fontSize = 10.sp,
+            lineHeight = 12.sp,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Start,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
 private fun GameMenuCards(
     state: GameMenuComposeUiState,
     callbacks: GameMenuCallbacks,
@@ -585,6 +664,7 @@ private fun BitrateCard(
     onSliderGesture: (Boolean) -> Unit
 ) {
     val view = LocalView.current
+    var tipVisible by remember { mutableStateOf(false) }
     val currentLabel = stringResource(
         R.string.game_menu_bitrate_current,
         state.currentBitrateKbps / 1000
@@ -600,20 +680,47 @@ private fun BitrateCard(
                 fontSize = 10.sp,
                 modifier = Modifier.weight(1f)
             )
-            Text(
-                text = "?",
-                color = colorResource(R.color.theme_pink_primary),
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(CircleShape)
-                    .gamepadFocusOutline(CircleShape)
-                    .combinedClickable(
-                        onClick = callbacks.onBitrateTip,
-                        onLongClick = callbacks.onBitrateHapticMode
-                    )
-                    .padding(5.dp)
-            )
+            Box {
+                Text(
+                    text = "?",
+                    color = colorResource(R.color.theme_pink_primary),
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .gamepadFocusOutline(CircleShape)
+                        .combinedClickable(
+                            onClick = { tipVisible = !tipVisible },
+                            onLongClick = callbacks.onBitrateHapticMode
+                        )
+                        .padding(5.dp)
+                )
+                if (tipVisible) {
+                    Popup(
+                        alignment = Alignment.TopEnd,
+                        onDismissRequest = { tipVisible = false },
+                        properties = PopupProperties(focusable = true)
+                    ) {
+                        Surface(
+                            color = colorResource(R.color.game_menu_card_background),
+                            shape = GameMenuCardShape,
+                            border = BorderStroke(
+                                1.dp,
+                                colorResource(R.color.theme_pink_primary).copy(alpha = 0.32f)
+                            ),
+                            modifier = Modifier.widthIn(max = 260.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.game_menu_bitrate_tip),
+                                color = colorResource(R.color.game_menu_text_primary),
+                                fontSize = 11.sp,
+                                lineHeight = 15.sp,
+                                modifier = Modifier.padding(10.dp)
+                            )
+                        }
+                    }
+                }
+            }
         }
         Text(
             text = BitrateCardController.formatBitrateMbps(state.selectedBitrateKbps),
