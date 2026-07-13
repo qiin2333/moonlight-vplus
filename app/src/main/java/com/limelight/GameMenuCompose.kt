@@ -69,6 +69,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -486,16 +488,16 @@ private fun QuickActionChip(
                     }
                 },
                 update = { imageView -> imageView.setImageResource(action.iconRes) },
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(20.dp)
             )
         } else {
             ActionInitialBadge(action.label)
         }
-        Spacer(Modifier.width(4.dp))
+        Spacer(Modifier.width(5.dp))
         Text(
             text = compactActionLabel(action.label),
             color = colorResource(R.color.game_menu_text_primary).copy(alpha = contentAlpha),
-            fontSize = 13.sp,
+            fontSize = 14.sp,
             maxLines = 1
         )
         if (editMode) {
@@ -514,7 +516,7 @@ private fun ToolIconButton(
     val shape = CircleShape
     Box(
         modifier = Modifier
-            .size(36.dp)
+            .size(40.dp)
             .clip(shape)
             .background(colorResource(R.color.theme_pink_primary).copy(alpha = 0.08f))
             .border(1.dp, colorResource(R.color.theme_pink_primary).copy(alpha = 0.28f), shape)
@@ -526,7 +528,7 @@ private fun ToolIconButton(
             painter = painterResource(iconRes),
             contentDescription = contentDescription,
             tint = colorResource(R.color.theme_pink_primary),
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(18.dp)
         )
     }
 }
@@ -561,14 +563,14 @@ private fun ActionPill(
 
     Row(
         modifier = modifier
-            .widthIn(min = 80.dp)
-            .heightIn(min = 36.dp)
+            .widthIn(min = 88.dp)
+            .heightIn(min = 40.dp)
             .clip(GameMenuControlShape)
             .background(backgroundColor)
             .border(1.dp, borderColor, GameMenuControlShape)
             .gamepadFocusOutline(GameMenuControlShape)
             .then(interactionModifier)
-            .padding(horizontal = 8.dp),
+            .padding(horizontal = 10.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
         content = content
@@ -660,7 +662,7 @@ private fun ActionInitialBadge(label: String) {
     val accent = colorResource(R.color.theme_pink_primary)
     Box(
         modifier = Modifier
-            .size(20.dp)
+            .size(22.dp)
             .clip(CircleShape)
             .background(accent.copy(alpha = 0.13f)),
         contentAlignment = Alignment.Center
@@ -668,7 +670,7 @@ private fun ActionInitialBadge(label: String) {
         VisuallyCenteredBadgeText(
             text = firstActionCharacter(label),
             color = accent,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Bold
         )
     }
@@ -712,11 +714,11 @@ private fun SuperOptionChip(
         onClick = onClick
     ) {
         ActionInitialBadge(option.label)
-        Spacer(Modifier.width(5.dp))
+        Spacer(Modifier.width(6.dp))
         Text(
             text = compactActionLabel(option.label),
             color = colorResource(R.color.game_menu_text_primary),
-            fontSize = 13.sp,
+            fontSize = 14.sp,
             maxLines = 1
         )
     }
@@ -760,6 +762,7 @@ private fun GameMenuCards(
 private fun GameMenuCard(
     title: String,
     status: String? = null,
+    titleAccessory: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
@@ -789,13 +792,21 @@ private fun GameMenuCard(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = title,
-                    color = colorResource(R.color.game_menu_text_primary),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = title,
+                        color = colorResource(R.color.game_menu_text_primary),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    titleAccessory?.let {
+                        Spacer(Modifier.width(3.dp))
+                        it()
+                    }
+                }
+                Spacer(Modifier.weight(1f))
                 if (trailing != null) {
                     trailing()
                 } else status?.let {
@@ -828,59 +839,14 @@ private fun BitrateCard(
     )
     GameMenuCard(
         title = stringResource(R.string.game_menu_tab_bitrate),
-        trailing = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                state.abrStatus?.let { status ->
-                    Text(
-                        text = status,
-                        color = colorResource(R.color.theme_pink_primary),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(Modifier.width(6.dp))
-                }
-                Box {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_help),
-                        contentDescription = stringResource(R.string.game_menu_bitrate_tip),
-                        tint = colorResource(R.color.theme_pink_primary),
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .gamepadFocusOutline(CircleShape)
-                            .combinedClickable(
-                                onClick = { tipVisible = !tipVisible },
-                                onLongClick = callbacks.onBitrateHapticMode
-                            )
-                            .padding(4.dp)
-                    )
-                    if (tipVisible) {
-                        Popup(
-                            alignment = Alignment.TopEnd,
-                            onDismissRequest = { tipVisible = false },
-                            properties = PopupProperties(focusable = true)
-                        ) {
-                            Surface(
-                                color = colorResource(R.color.game_menu_card_background),
-                                shape = GameMenuCardShape,
-                                border = BorderStroke(
-                                    1.dp,
-                                    colorResource(R.color.theme_pink_primary).copy(alpha = 0.32f)
-                                ),
-                                modifier = Modifier.widthIn(max = 260.dp)
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.game_menu_bitrate_tip),
-                                    color = colorResource(R.color.game_menu_text_primary),
-                                    fontSize = 11.sp,
-                                    lineHeight = 15.sp,
-                                    modifier = Modifier.padding(10.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+        status = state.abrStatus,
+        titleAccessory = {
+            BitrateHelpButton(
+                tipVisible = tipVisible,
+                onToggleTip = { tipVisible = !tipVisible },
+                onDismissTip = { tipVisible = false },
+                onLongClick = callbacks.onBitrateHapticMode
+            )
         },
         onLongClick = onConfigure
     ) {
@@ -925,6 +891,66 @@ private fun BitrateCard(
             Text("0.5 Mbps", color = colorResource(R.color.game_menu_text_secondary), fontSize = 9.sp)
             Spacer(Modifier.weight(1f))
             Text("200 Mbps", color = colorResource(R.color.game_menu_text_secondary), fontSize = 9.sp)
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun BitrateHelpButton(
+    tipVisible: Boolean,
+    onToggleTip: () -> Unit,
+    onDismissTip: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    val accent = colorResource(R.color.theme_pink_primary)
+    val helpDescription = stringResource(R.string.game_menu_bitrate_tip)
+    Box(
+        modifier = Modifier
+            .size(24.dp)
+            .clip(CircleShape)
+            .gamepadFocusOutline(CircleShape)
+            .semantics { contentDescription = helpDescription }
+            .combinedClickable(
+                onClick = onToggleTip,
+                onLongClick = onLongClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(18.dp)
+                .border(1.dp, accent, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            VisuallyCenteredBadgeText(
+                text = "?",
+                color = accent,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        if (tipVisible) {
+            Popup(
+                alignment = Alignment.TopEnd,
+                onDismissRequest = onDismissTip,
+                properties = PopupProperties(focusable = true)
+            ) {
+                Surface(
+                    color = colorResource(R.color.game_menu_card_background),
+                    shape = GameMenuCardShape,
+                    border = BorderStroke(1.dp, accent.copy(alpha = 0.32f)),
+                    modifier = Modifier.widthIn(max = 260.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.game_menu_bitrate_tip),
+                        color = colorResource(R.color.game_menu_text_primary),
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp,
+                        modifier = Modifier.padding(10.dp)
+                    )
+                }
+            }
         }
     }
 }
