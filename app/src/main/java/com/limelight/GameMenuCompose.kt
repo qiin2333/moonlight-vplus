@@ -901,6 +901,7 @@ private fun MenuOptionRow(
     val view = LocalView.current
     val shape = GameMenuCardShape
     val inlineControl = option.inlineControl
+    val showChevronAfterTitle = option.showChevron && inlineControl != null
     val hasDedicatedToggleAction = inlineControl is GameMenu.InlineControl.Toggle &&
         inlineControl.toggleAction != null
     val danger = option.iconKey == "game_menu_disconnect" ||
@@ -963,18 +964,29 @@ private fun MenuOptionRow(
                 .then(labelModifier)
                 .padding(vertical = GameMenuDimens.compact)
         ) {
-            Text(
-                text = option.label,
-                color = if (danger) {
-                    colorResource(R.color.game_menu_danger_text)
-                } else {
-                    colorResource(R.color.game_menu_text_primary)
-                },
-                fontSize = 13.sp,
-                fontWeight = if (option.isCrownControl) FontWeight.Medium else FontWeight.Normal,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = option.label,
+                    color = if (danger) {
+                        colorResource(R.color.game_menu_danger_text)
+                    } else {
+                        colorResource(R.color.game_menu_text_primary)
+                    },
+                    fontSize = 13.sp,
+                    fontWeight = if (option.isCrownControl) FontWeight.Medium else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = if (showChevronAfterTitle) {
+                        Modifier.weight(1f, fill = false)
+                    } else {
+                        Modifier
+                    }
+                )
+                if (showChevronAfterTitle) {
+                    Spacer(Modifier.width(GameMenuDimens.tight))
+                    MenuChevron(size = 12.dp)
+                }
+            }
             option.subtitle?.takeIf { it.isNotBlank() }?.let {
                 Text(
                     text = it,
@@ -988,9 +1000,6 @@ private fun MenuOptionRow(
 
         when (inlineControl) {
             is GameMenu.InlineControl.Toggle -> {
-                if (option.showChevron) {
-                    MenuChevron(withHorizontalPadding = true)
-                }
                 InlineToggle(
                     checked = inlineControl.checked,
                     contentDescription = option.label,
@@ -1005,11 +1014,7 @@ private fun MenuOptionRow(
                 )
             }
             is GameMenu.InlineControl.Segmented -> {
-                if (option.showChevron) {
-                    MenuChevron(withHorizontalPadding = true)
-                } else {
-                    Spacer(Modifier.width(GameMenuDimens.section))
-                }
+                Spacer(Modifier.width(GameMenuDimens.section))
                 InlineSegmentedControl(
                     segments = inlineControl.segments,
                     onSegmentClick = onSegmentClick,
@@ -1024,19 +1029,12 @@ private fun MenuOptionRow(
 }
 
 @Composable
-private fun MenuChevron(withHorizontalPadding: Boolean = false) {
-    val modifier = if (withHorizontalPadding) {
-        Modifier
-            .padding(horizontal = GameMenuDimens.tight)
-            .size(12.dp)
-    } else {
-        Modifier.size(13.dp)
-    }
+private fun MenuChevron(size: Dp = 13.dp) {
     Icon(
         painter = painterResource(R.drawable.ic_arrow_right),
         contentDescription = null,
         tint = colorResource(R.color.game_menu_text_secondary),
-        modifier = modifier
+        modifier = Modifier.size(size)
     )
 }
 
