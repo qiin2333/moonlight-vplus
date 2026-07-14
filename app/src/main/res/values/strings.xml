@@ -1434,6 +1434,9 @@ Tap again to replace it.</string>
     <string name="page_section_text_config">✏️ Text Config</string>
     <string name="page_section_wheel_basic">🎡 Basic Settings</string>
     <string name="page_section_wheel_config">🎯 Wheel Config</string>
+    <string name="wheel_alignment_title">Alignment</string>
+    <string name="wheel_alignment_center">Segment center faces up</string>
+    <string name="wheel_alignment_edge">Segment edge faces up</string>
     <string name="page_section_key_values">🔑 Key Values</string>
     <string name="page_label_combo_keys">Combo Keys</string>
     <string name="page_label_coord_x">X Coord</string>
