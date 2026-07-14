@@ -102,7 +102,10 @@ class GameMenu(
     }
 
     sealed interface InlineControl {
-        data class Toggle(val checked: Boolean) : InlineControl
+        data class Toggle(
+            val checked: Boolean,
+            val toggleAction: Runnable? = null
+        ) : InlineControl
         data class Segmented(val segments: List<SegmentOption>) : InlineControl
     }
 
@@ -341,7 +344,8 @@ class GameMenu(
      * 切换王冠功能并即时刷新菜单内容
      */
     private fun toggleCrownFeature() {
-        setCrownFeatureEnabled(!game.isCrownFeatureEnabled, refreshMenu = true)
+        setCrownFeatureEnabled(!game.isCrownFeatureEnabled)
+        rebuildAndReplaceMenu()
     }
 
     private fun getCrownToggleText(): String {
@@ -349,12 +353,6 @@ class GameMenu(
             getString(R.string.crown_switch_to_normal)
         else
             getString(R.string.crown_switch_to_crown)
-    }
-
-    private fun updateCrownToggleButton() {
-        composeUiState?.let { state ->
-            state.value = state.value.copy(crownToggleText = getCrownToggleText())
-        }
     }
 
     private fun rebuildAndReplaceMenu() {
@@ -378,67 +376,39 @@ class GameMenu(
      * 显示"王冠功能"的二级菜单
      */
     private fun showCrownFunctionMenu() {
-        val controllerManager = game.controllerManager
-
-        if (!game.isCrownFeatureEnabled) {
-            val disabledOptions = arrayOf(
-                createCrownOption(
-                    getString(R.string.crown_switch_to_crown),
-                    "crown_enable",
-                    getString(R.string.crown_control_enable_subtitle),
-                    keepDialog = true
-                ) {
-                    setCrownFeatureEnabled(true)
-                    replaceCrownFunctionMenu()
-                }
-            )
-            showSubMenu(getString(R.string.game_menu_crown_function_title), disabledOptions)
-            return
-        }
-
-        showSubMenu(getString(R.string.game_menu_crown_function_title), buildEnabledCrownFunctionOptions(controllerManager))
+        if (!game.isCrownFeatureEnabled) return
+        showSubMenu(
+            getString(R.string.game_menu_crown_function_title),
+            buildEnabledCrownFunctionOptions(game.controllerManager)
+        )
     }
 
     private fun createCrownOption(
         label: String,
         iconKey: String,
         subtitle: String,
-        keepDialog: Boolean = false,
         action: () -> Unit
     ): MenuOption {
         return MenuOption(
-            label,
-            false,
-            Runnable { action() },
-            iconKey,
+            label = label,
+            isWithGameFocus = false,
+            runnable = Runnable { action() },
+            iconKey = iconKey,
             isShowIcon = true,
-            isKeepDialog = keepDialog,
+            isKeepDialog = false,
             subtitle = subtitle,
             isCrownControl = true
         )
     }
 
-    private fun setCrownFeatureEnabled(enabled: Boolean, refreshMenu: Boolean = false) {
+    private fun setCrownFeatureEnabled(enabled: Boolean) {
         game.isCrownFeatureEnabled = enabled
-        Toast.makeText(game,
-            if (game.isCrownFeatureEnabled) getString(R.string.crown_switch_to_crown)
-            else getString(R.string.crown_switch_to_normal),
-            Toast.LENGTH_SHORT).show()
-        updateCrownToggleButton()
-        if (refreshMenu && activeDialog?.isShowing == true) {
-            rebuildAndReplaceMenu()
+        val message = if (game.isCrownFeatureEnabled) {
+            getString(R.string.crown_mode_crown)
+        } else {
+            getString(R.string.crown_mode_normal)
         }
-    }
-
-    private fun replaceCrownFunctionMenu() {
-        if (activeDialog?.isShowing == true) {
-            showMenuPage(
-                MenuPage(
-                    getString(R.string.game_menu_crown_function_title),
-                    buildEnabledCrownFunctionOptions(game.controllerManager).toList()
-                )
-            )
-        }
+        Toast.makeText(game, message, Toast.LENGTH_SHORT).show()
     }
 
     private fun buildEnabledCrownFunctionOptions(controllerManager: com.limelight.binding.input.advance_setting.ControllerManager?): Array<MenuOption> {
@@ -626,6 +596,7 @@ class GameMenu(
             onBack = { navigateBack() },
             onCrownToggle = ::toggleCrownFeature,
             onOptionClick = { handleComposeOptionClick(it, dialog) },
+            onInlineToggle = ::handleInlineToggle,
             onSegmentClick = ::handleInlineSegmentClick,
             onQuickAction = ::runComposeQuickAction,
             onToggleQuickEdit = ::toggleComposeQuickEdit,
@@ -697,7 +668,10 @@ class GameMenu(
         run(option)
         val shouldKeep = option.isKeepDialog || lastActionOpenedSubmenu
         if (!shouldKeep) dialog.dismiss()
-        if (option.inlineControl is InlineControl.Toggle && dialog.isShowing) {
+        if (option.inlineControl is InlineControl.Toggle &&
+            option.inlineControl.toggleAction == null &&
+            dialog.isShowing
+        ) {
             rebuildAndReplaceMenu()
         }
         lastActionOpenedSubmenu = false
@@ -706,6 +680,12 @@ class GameMenu(
     private fun handleInlineSegmentClick(segment: SegmentOption) {
         if (segment.selected) return
         segment.runnable.run()
+        rebuildAndReplaceMenu()
+    }
+
+    private fun handleInlineToggle(toggle: InlineControl.Toggle) {
+        val action = toggle.toggleAction ?: return
+        action.run()
         rebuildAndReplaceMenu()
     }
 
@@ -1244,10 +1224,19 @@ class GameMenu(
         ))
 
         // 王冠功能
+        val crownEnabled = game.isCrownFeatureEnabled
         normalOptions.add(MenuOption(
-            getString(R.string.game_menu_crown_function), false,
-            { showCrownFunctionMenu() }, "crown_function_menu", isShowIcon = true, isKeepDialog = true,
-            showChevron = true
+            label = getString(R.string.game_menu_crown_function),
+            isWithGameFocus = false,
+            runnable = if (crownEnabled) Runnable { showCrownFunctionMenu() } else null,
+            iconKey = "crown_function_menu",
+            isShowIcon = true,
+            isKeepDialog = true,
+            showChevron = crownEnabled,
+            inlineControl = InlineControl.Toggle(
+                checked = crownEnabled,
+                toggleAction = Runnable { setCrownFeatureEnabled(!game.isCrownFeatureEnabled) }
+            )
         ))
 
         if (device != null) {
@@ -1375,7 +1364,6 @@ class GameMenu(
             "mouse_mode" to R.drawable.ic_mouse_cute,
             "game_menu_mouse_emulation" to R.drawable.ic_mouse_emulation_cute,
             "crown_function_menu" to R.drawable.ic_super_crown,
-            "crown_enable" to R.drawable.ic_super_crown,
             "crown_visibility" to R.drawable.ic_ui_settings,
             "crown_touch" to R.drawable.ic_touch_settings,
             "crown_profiles" to R.drawable.ic_input_settings,

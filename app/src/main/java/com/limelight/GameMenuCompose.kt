@@ -172,6 +172,7 @@ internal data class GameMenuCallbacks(
     val onBack: () -> Unit,
     val onCrownToggle: () -> Unit,
     val onOptionClick: (GameMenu.MenuOption) -> Unit,
+    val onInlineToggle: (GameMenu.InlineControl.Toggle) -> Unit,
     val onSegmentClick: (GameMenu.SegmentOption) -> Unit,
     val onQuickAction: (String) -> Unit,
     val onToggleQuickEdit: () -> Unit,
@@ -330,6 +331,7 @@ private fun GameMenuContent(
                     options = state.options,
                     iconForOption = callbacks.iconForOption,
                     onOptionClick = callbacks.onOptionClick,
+                    onInlineToggle = callbacks.onInlineToggle,
                     onSegmentClick = callbacks.onSegmentClick,
                     modifier = Modifier.weight(1f)
                 )
@@ -346,6 +348,7 @@ private fun GameMenuContent(
                     state.options,
                     callbacks.iconForOption,
                     callbacks.onOptionClick,
+                    callbacks.onInlineToggle,
                     callbacks.onSegmentClick
                 )
                 if (!state.isSubmenu) {
@@ -870,6 +873,7 @@ private fun MenuOptionColumn(
     options: List<GameMenu.MenuOption>,
     iconForOption: (String?) -> Int,
     onOptionClick: (GameMenu.MenuOption) -> Unit,
+    onInlineToggle: (GameMenu.InlineControl.Toggle) -> Unit,
     onSegmentClick: (GameMenu.SegmentOption) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -879,6 +883,7 @@ private fun MenuOptionColumn(
                 option = option,
                 iconRes = iconForOption(option.iconKey),
                 onClick = { onOptionClick(option) },
+                onInlineToggle = onInlineToggle,
                 onSegmentClick = onSegmentClick
             )
         }
@@ -890,11 +895,14 @@ private fun MenuOptionRow(
     option: GameMenu.MenuOption,
     @DrawableRes iconRes: Int,
     onClick: () -> Unit,
+    onInlineToggle: (GameMenu.InlineControl.Toggle) -> Unit,
     onSegmentClick: (GameMenu.SegmentOption) -> Unit
 ) {
     val view = LocalView.current
     val shape = GameMenuCardShape
     val inlineControl = option.inlineControl
+    val hasDedicatedToggleAction = inlineControl is GameMenu.InlineControl.Toggle &&
+        inlineControl.toggleAction != null
     val danger = option.iconKey == "game_menu_disconnect" ||
         option.iconKey == "game_menu_disconnect_and_quit"
     val borderColor = when {
@@ -906,7 +914,7 @@ private fun MenuOptionRow(
         onClick()
     }
     val rowInteraction = when {
-        inlineControl is GameMenu.InlineControl.Toggle -> Modifier
+        inlineControl is GameMenu.InlineControl.Toggle && !hasDedicatedToggleAction -> Modifier
             .gamepadFocusOutline(shape)
             .toggleable(
                 value = inlineControl.checked,
@@ -940,7 +948,9 @@ private fun MenuOptionRow(
             Spacer(Modifier.width(GameMenuDimens.section))
         }
 
-        val labelModifier = if (inlineControl is GameMenu.InlineControl.Segmented && option.runnable != null) {
+        val labelModifier = if (
+            inlineControl is GameMenu.InlineControl.Segmented && option.runnable != null
+        ) {
             Modifier
                 .gamepadFocusOutline(GameMenuControlShape)
                 .clickable(onClick = activate)
@@ -977,17 +987,26 @@ private fun MenuOptionRow(
         }
 
         when (inlineControl) {
-            is GameMenu.InlineControl.Toggle -> InlineToggle(checked = inlineControl.checked)
+            is GameMenu.InlineControl.Toggle -> {
+                if (option.showChevron) {
+                    MenuChevron(withHorizontalPadding = true)
+                }
+                InlineToggle(
+                    checked = inlineControl.checked,
+                    contentDescription = option.label,
+                    onToggle = if (hasDedicatedToggleAction) {
+                        {
+                            view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                            onInlineToggle(inlineControl)
+                        }
+                    } else {
+                        null
+                    }
+                )
+            }
             is GameMenu.InlineControl.Segmented -> {
                 if (option.showChevron) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_arrow_right),
-                        contentDescription = null,
-                        tint = colorResource(R.color.game_menu_text_secondary),
-                        modifier = Modifier
-                            .padding(horizontal = GameMenuDimens.tight)
-                            .size(12.dp)
-                    )
+                    MenuChevron(withHorizontalPadding = true)
                 } else {
                     Spacer(Modifier.width(GameMenuDimens.section))
                 }
@@ -999,45 +1018,79 @@ private fun MenuOptionRow(
                         .height(36.dp)
                 )
             }
-            null -> if (option.showChevron) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_arrow_right),
-                    contentDescription = null,
-                    tint = colorResource(R.color.game_menu_text_secondary),
-                    modifier = Modifier.size(13.dp)
-                )
-            }
+            null -> if (option.showChevron) MenuChevron()
         }
     }
 }
 
 @Composable
-private fun InlineToggle(checked: Boolean) {
+private fun MenuChevron(withHorizontalPadding: Boolean = false) {
+    val modifier = if (withHorizontalPadding) {
+        Modifier
+            .padding(horizontal = GameMenuDimens.tight)
+            .size(12.dp)
+    } else {
+        Modifier.size(13.dp)
+    }
+    Icon(
+        painter = painterResource(R.drawable.ic_arrow_right),
+        contentDescription = null,
+        tint = colorResource(R.color.game_menu_text_secondary),
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun InlineToggle(
+    checked: Boolean,
+    contentDescription: String,
+    onToggle: (() -> Unit)? = null
+) {
     val accent = colorResource(R.color.game_menu_accent)
     val track = if (checked) accent.copy(alpha = 0.82f) else colorResource(R.color.game_menu_button_border)
     val outline = if (checked) accent.copy(alpha = 0.46f) else colorResource(R.color.game_menu_list_item_border)
+    val interactionModifier = if (onToggle != null) {
+        Modifier
+            .semantics { this.contentDescription = contentDescription }
+            .gamepadFocusOutline(CircleShape)
+            .toggleable(
+                value = checked,
+                role = Role.Switch,
+                onValueChange = { onToggle() }
+            )
+    } else {
+        Modifier
+    }
 
     Box(
         modifier = Modifier
-            .width(44.dp)
-            .height(26.dp)
-            .clip(CircleShape)
-            .background(track)
-            .border(GameMenuDimens.surfaceStroke, outline, CircleShape)
-            .padding(3.dp)
+            .width(48.dp)
+            .height(36.dp)
+            .then(interactionModifier),
+        contentAlignment = Alignment.Center
     ) {
         Box(
             modifier = Modifier
-                .size(20.dp)
-                .align(if (checked) Alignment.CenterEnd else Alignment.CenterStart)
+                .width(44.dp)
+                .height(26.dp)
                 .clip(CircleShape)
-                .background(Color.White)
-                .border(
-                    GameMenuDimens.surfaceStroke,
-                    if (checked) accent.copy(alpha = 0.28f) else Color.White,
-                    CircleShape
-                )
-        )
+                .background(track)
+                .border(GameMenuDimens.surfaceStroke, outline, CircleShape)
+                .padding(3.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(20.dp)
+                    .align(if (checked) Alignment.CenterEnd else Alignment.CenterStart)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .border(
+                        GameMenuDimens.surfaceStroke,
+                        if (checked) accent.copy(alpha = 0.28f) else Color.White,
+                        CircleShape
+                    )
+            )
+        }
     }
 }
 

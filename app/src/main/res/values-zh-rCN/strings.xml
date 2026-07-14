@@ -610,7 +610,6 @@
     <string name="game_menu_crown_function_title">♛ 王冠</string>
     <string name="game_menu_toggle_elements_visibility">显示/隐藏按键</string>
     <string name="game_menu_configure_crown_function">返回键打开王冠</string>
-    <string name="crown_control_enable_subtitle">启用王冠档案和控制入口</string>
     <string name="crown_control_visibility_subtitle">临时收起或显示屏幕按键</string>
     <string name="crown_control_touch_subtitle">暂停或恢复当前档案的触控输入</string>
     <string name="crown_control_profiles_subtitle">切换已保存的按键、触控和反馈档案</string>

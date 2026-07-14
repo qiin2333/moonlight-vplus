@@ -796,7 +796,6 @@
     <string name="game_menu_crown_function_title">♛ Crown</string>
     <string name="game_menu_toggle_elements_visibility">Button Visibility</string>
     <string name="game_menu_configure_crown_function">Open Crown with Back</string>
-    <string name="crown_control_enable_subtitle">Turn on Crown profiles and controls</string>
     <string name="crown_control_visibility_subtitle">Keep the on-screen buttons out of the way</string>
     <string name="crown_control_touch_subtitle">Pause or resume touch input</string>
     <string name="crown_control_profiles_subtitle">Switch saved button and touch profiles</string>
