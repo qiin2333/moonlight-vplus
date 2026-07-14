@@ -83,6 +83,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.colorResource
@@ -618,7 +619,6 @@ private fun QuickActionRow(
                                 dropTargetId = null
                                 view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
 
-                                var previousPosition = down.position
                                 var completed = false
                                 while (true) {
                                     val change = awaitPointerEvent(PointerEventPass.Initial).changes
@@ -630,8 +630,7 @@ private fun QuickActionRow(
                                         break
                                     }
 
-                                    val amount = change.position - previousPosition
-                                    previousPosition = change.position
+                                    val amount = change.positionChange()
                                     change.consume()
                                     dragOffset += amount
                                     val sourceBounds = itemBounds[action.id]
@@ -750,7 +749,7 @@ private fun QuickActionDragHandle(modifier: Modifier = Modifier) {
     val accent = colorResource(R.color.game_menu_accent)
     Column(
         modifier = modifier
-            .width(20.dp)
+            .width(36.dp)
             .heightIn(min = 40.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically)
@@ -898,7 +897,6 @@ private fun MenuOptionRow(
     val danger = option.iconKey == "game_menu_disconnect" ||
         option.iconKey == "game_menu_disconnect_and_quit"
     val borderColor = when {
-        danger -> colorResource(R.color.game_menu_danger_border)
         option.isCrownControl -> colorResource(R.color.game_menu_accent).copy(alpha = 0.55f)
         else -> colorResource(R.color.game_menu_list_item_border)
     }

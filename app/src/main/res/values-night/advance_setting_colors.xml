@@ -39,7 +39,6 @@
     <color name="game_menu_dialog_border">#12FFFFFF</color>
     <color name="game_menu_list_item_normal">#F026282F</color>
     <color name="game_menu_danger_text">#FFFF8A8A</color>
-    <color name="game_menu_danger_border">#3DFF8A8A</color>
 
     <color name="game_menu_super_card_background">#00000000</color>
     <color name="game_menu_super_text_primary">@color/game_menu_accent</color>
