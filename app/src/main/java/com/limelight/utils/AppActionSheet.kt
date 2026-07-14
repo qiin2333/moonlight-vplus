@@ -172,6 +172,7 @@ object AppActionSheet {
         }
 
         dialog.window?.let { window ->
+            window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
             window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             (contentView.context as? Activity)?.window?.let { hostWindow ->
                 window.decorView.systemUiVisibility = hostWindow.decorView.systemUiVisibility
@@ -189,6 +190,7 @@ object AppActionSheet {
         }
 
         dialog.show()
+        dialog.window?.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
     }
 
     @Composable
