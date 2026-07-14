@@ -61,12 +61,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
@@ -90,6 +93,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -104,6 +108,7 @@ private val GameMenuDialogShape = RoundedCornerShape(topStart = 16.dp, topEnd = 
 private val GameMenuCardShape = RoundedCornerShape(10.dp)
 private val GameMenuControlShape = RoundedCornerShape(10.dp)
 private const val GAME_MENU_MAX_HEIGHT_FRACTION = 0.90f
+private const val GAME_MENU_WIDE_LAYOUT_MIN_WIDTH_DP = 576
 private const val ORIENTATION_MISMATCH_THRESHOLD = 1.5f
 
 private object GameMenuDimens {
@@ -112,13 +117,30 @@ private object GameMenuDimens {
     val compact = 6.dp
     val section = 8.dp
     val outer = 12.dp
+    val compactScreenInset = 16.dp
+    val wideScreenInset = 28.dp
 }
+
+private object GameMenuFabricSpec {
+    val spacing = 6.dp
+    val strokeWidth = 0.30.dp
+    const val SHADOW_OFFSET_FRACTION = 0.36f
+}
+
+private data class GameMenuPalette(
+    val accent: Color,
+    val card: Color,
+    val textPrimary: Color,
+    val textSecondary: Color,
+    val dialogBackground: Color,
+    val dialogBorder: Color,
+    val darkTheme: Boolean
+)
 
 internal data class GameMenuQuickAction(
     val id: String,
     val label: String,
     @param:DrawableRes val iconRes: Int,
-    val tintableIcon: Boolean = false,
     val enabled: Boolean = true
 )
 
@@ -173,18 +195,178 @@ internal fun GameMenuScreen(
     state: GameMenuComposeUiState,
     callbacks: GameMenuCallbacks
 ) {
-    val border = colorResource(R.color.game_menu_dialog_border)
-    val accent = colorResource(R.color.theme_pink_primary)
-    val card = colorResource(R.color.game_menu_card_background)
-    val textPrimary = colorResource(R.color.game_menu_text_primary)
-    val textSecondary = colorResource(R.color.game_menu_text_secondary)
-    val dialogBackground = colorResource(R.color.game_menu_dialog_background)
+    val palette = gameMenuPalette()
+    val configuration = LocalConfiguration.current
+    val maxMenuHeight = rememberGameMenuMaxHeight()
+    val wideLayout = configuration.screenWidthDp >= GAME_MENU_WIDE_LAYOUT_MIN_WIDTH_DP
+    val horizontalInset = if (wideLayout) {
+        GameMenuDimens.wideScreenInset
+    } else {
+        GameMenuDimens.compactScreenInset
+    }
+
+    GameMenuTheme(palette) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = horizontalInset)
+        ) {
+            Surface(
+                color = Color.Transparent,
+                shape = GameMenuDialogShape,
+                border = BorderStroke(GameMenuDimens.surfaceStroke, palette.dialogBorder),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = maxMenuHeight)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .gameMenuFabricBackground(
+                            baseColor = palette.dialogBackground,
+                            darkTheme = palette.darkTheme
+                        )
+                ) {
+                    GameMenuContent(
+                        state = state,
+                        callbacks = callbacks,
+                        wideLayout = wideLayout && !state.isSubmenu
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun gameMenuPalette() = GameMenuPalette(
+    accent = colorResource(R.color.game_menu_accent),
+    card = colorResource(R.color.game_menu_card_background),
+    textPrimary = colorResource(R.color.game_menu_text_primary),
+    textSecondary = colorResource(R.color.game_menu_text_secondary),
+    dialogBackground = colorResource(R.color.game_menu_dialog_background),
+    dialogBorder = colorResource(R.color.game_menu_dialog_border),
+    darkTheme = isSystemInDarkTheme()
+)
+
+@Composable
+private fun GameMenuTheme(
+    palette: GameMenuPalette,
+    content: @Composable () -> Unit
+) {
+    val baseColorScheme = if (palette.darkTheme) darkColorScheme() else lightColorScheme()
+    MaterialTheme(
+        colorScheme = baseColorScheme.copy(
+            primary = palette.accent,
+            onPrimary = Color.White,
+            primaryContainer = palette.accent.copy(alpha = 0.12f),
+            onPrimaryContainer = palette.accent,
+            secondary = palette.accent,
+            onSecondary = Color.White,
+            secondaryContainer = palette.accent.copy(alpha = 0.16f),
+            onSecondaryContainer = palette.accent,
+            tertiary = palette.accent,
+            onTertiary = Color.White,
+            tertiaryContainer = palette.accent.copy(alpha = 0.12f),
+            onTertiaryContainer = palette.accent,
+            surface = palette.card,
+            onSurface = palette.textPrimary,
+            surfaceVariant = palette.card,
+            surfaceContainerHighest = palette.accent.copy(alpha = 0.10f),
+            onSurfaceVariant = palette.textSecondary,
+            outline = palette.dialogBorder
+        ),
+        content = content
+    )
+}
+
+@Composable
+private fun GameMenuContent(
+    state: GameMenuComposeUiState,
+    callbacks: GameMenuCallbacks,
+    wideLayout: Boolean
+) {
+    var sliderGestureActive by remember { mutableStateOf(false) }
+    val menuScrollState = rememberScrollState()
+
+    LaunchedEffect(state.title, state.isSubmenu) {
+        menuScrollState.scrollTo(0)
+    }
+
+    Column(
+        modifier = Modifier
+            .verticalScroll(
+                state = menuScrollState,
+                enabled = !sliderGestureActive
+            )
+            .padding(GameMenuDimens.outer),
+        verticalArrangement = Arrangement.spacedBy(GameMenuDimens.section)
+    ) {
+        GameMenuHeader(state, callbacks.onBack, callbacks.onCrownToggle)
+
+        if (!state.isSubmenu) {
+            QuickActionRow(
+                actions = state.quickActions,
+                superOptions = state.superOptions,
+                editMode = state.quickEditMode,
+                onAction = callbacks.onQuickAction,
+                onSuperOptionClick = callbacks.onOptionClick,
+                onToggleEdit = callbacks.onToggleQuickEdit,
+                onAdd = callbacks.onAddQuickAction,
+                onRemove = callbacks.onRemoveQuickAction,
+                onMove = callbacks.onMoveQuickAction
+            )
+        }
+
+        if (wideLayout) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.section),
+                verticalAlignment = Alignment.Top
+            ) {
+                MenuOptionColumn(
+                    options = state.options,
+                    iconForOption = callbacks.iconForOption,
+                    onOptionClick = callbacks.onOptionClick,
+                    onSegmentClick = callbacks.onSegmentClick,
+                    modifier = Modifier.weight(1f)
+                )
+                GameMenuCards(
+                    state = state,
+                    callbacks = callbacks,
+                    modifier = Modifier.weight(1f),
+                    onSliderGesture = { sliderGestureActive = it }
+                )
+            }
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(GameMenuDimens.section)) {
+                MenuOptionColumn(
+                    state.options,
+                    callbacks.iconForOption,
+                    callbacks.onOptionClick,
+                    callbacks.onSegmentClick
+                )
+                if (!state.isSubmenu) {
+                    GameMenuCards(state, callbacks) { sliderGestureActive = it }
+                }
+            }
+        }
+
+        if (!state.isSubmenu && state.appName.isNotBlank()) {
+            GameMenuFooter(state.appName)
+        }
+    }
+}
+
+@Composable
+private fun rememberGameMenuMaxHeight(): Dp {
     val configuration = LocalConfiguration.current
     val context = LocalContext.current
     val view = LocalView.current
     var availableHeightPx by remember(configuration.orientation) {
         mutableStateOf(currentWindowContentHeightPx(context, view, configuration.orientation))
     }
+
     LaunchedEffect(configuration.orientation, view) {
         view.post {
             val laidOutHeight = view.rootView.height
@@ -195,116 +377,59 @@ internal fun GameMenuScreen(
             }
         }
     }
-    val maxMenuHeight = with(LocalDensity.current) {
+
+    return with(LocalDensity.current) {
         (availableHeightPx * GAME_MENU_MAX_HEIGHT_FRACTION).toDp()
     }
-    var sliderGestureActive by remember { mutableStateOf(false) }
-    val menuScrollState = rememberScrollState()
+}
 
-    LaunchedEffect(state.title, state.isSubmenu) {
-        menuScrollState.scrollTo(0)
+private fun Modifier.gameMenuFabricBackground(
+    baseColor: Color,
+    darkTheme: Boolean
+): Modifier = drawWithCache {
+    val weaveSpacing = GameMenuFabricSpec.spacing.toPx()
+    val weaveStroke = GameMenuFabricSpec.strokeWidth.toPx()
+    val sheen = Brush.linearGradient(
+        colors = listOf(
+            Color.White.copy(alpha = if (darkTheme) 0.018f else 0.06f),
+            Color.Transparent,
+            Color.Black.copy(alpha = if (darkTheme) 0.032f else 0.014f)
+        ),
+        start = Offset.Zero,
+        end = Offset(size.width, size.height)
+    )
+    val lightThread = Color.White.copy(alpha = if (darkTheme) 0.012f else 0.028f)
+    val shadowThread = Color.Black.copy(alpha = if (darkTheme) 0.018f else 0.010f)
+    val crossThread = Color.White.copy(alpha = if (darkTheme) 0.008f else 0.016f)
+    val lightThreadPath = Path()
+    val shadowThreadPath = Path()
+    val crossThreadPath = Path()
+    val threadStyle = Stroke(width = weaveStroke)
+
+    var threadX = -size.height
+    while (threadX < size.width) {
+        lightThreadPath.moveTo(threadX, 0f)
+        lightThreadPath.lineTo(threadX + size.height, size.height)
+
+        val shadowX = threadX + weaveSpacing * GameMenuFabricSpec.SHADOW_OFFSET_FRACTION
+        shadowThreadPath.moveTo(shadowX, 0f)
+        shadowThreadPath.lineTo(shadowX + size.height, size.height)
+        threadX += weaveSpacing
     }
 
-    val baseColorScheme = if (isSystemInDarkTheme()) {
-        darkColorScheme()
-    } else {
-        lightColorScheme()
+    threadX = 0f
+    while (threadX < size.width + size.height) {
+        crossThreadPath.moveTo(threadX, 0f)
+        crossThreadPath.lineTo(threadX - size.height, size.height)
+        threadX += weaveSpacing
     }
-    MaterialTheme(
-        colorScheme = baseColorScheme.copy(
-            primary = accent,
-            onPrimary = Color.White,
-            primaryContainer = accent.copy(alpha = 0.12f),
-            onPrimaryContainer = accent,
-            secondary = accent,
-            onSecondary = Color.White,
-            secondaryContainer = accent.copy(alpha = 0.16f),
-            onSecondaryContainer = accent,
-            tertiary = accent,
-            onTertiary = Color.White,
-            tertiaryContainer = accent.copy(alpha = 0.12f),
-            onTertiaryContainer = accent,
-            surface = card,
-            onSurface = textPrimary,
-            surfaceVariant = card,
-            surfaceContainerHighest = accent.copy(alpha = 0.10f),
-            onSurfaceVariant = textSecondary,
-            outline = border
-        )
-    ) {
-        Surface(
-            color = dialogBackground,
-            shape = GameMenuDialogShape,
-            border = BorderStroke(GameMenuDimens.surfaceStroke, border),
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = maxMenuHeight)
-        ) {
-            Column(
-                modifier = Modifier
-                    .verticalScroll(
-                        state = menuScrollState,
-                        enabled = !sliderGestureActive
-                    )
-                    .padding(GameMenuDimens.outer),
-                verticalArrangement = Arrangement.spacedBy(GameMenuDimens.section)
-            ) {
-                GameMenuHeader(state, callbacks.onBack, callbacks.onCrownToggle)
 
-                if (!state.isSubmenu) {
-                    QuickActionRow(
-                        actions = state.quickActions,
-                        superOptions = state.superOptions,
-                        editMode = state.quickEditMode,
-                        onAction = callbacks.onQuickAction,
-                        onSuperOptionClick = callbacks.onOptionClick,
-                        onToggleEdit = callbacks.onToggleQuickEdit,
-                        onAdd = callbacks.onAddQuickAction,
-                        onRemove = callbacks.onRemoveQuickAction,
-                        onMove = callbacks.onMoveQuickAction
-                    )
-                }
-
-                val wide = configuration.screenWidthDp >= 576 && !state.isSubmenu
-                if (wide) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.section),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        MenuOptionColumn(
-                            options = state.options,
-                            iconForOption = callbacks.iconForOption,
-                            onOptionClick = callbacks.onOptionClick,
-                            onSegmentClick = callbacks.onSegmentClick,
-                            modifier = Modifier.weight(1f)
-                        )
-                        GameMenuCards(
-                            state = state,
-                            callbacks = callbacks,
-                            modifier = Modifier.weight(1f),
-                            onSliderGesture = { sliderGestureActive = it }
-                        )
-                    }
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(GameMenuDimens.section)) {
-                        MenuOptionColumn(
-                            state.options,
-                            callbacks.iconForOption,
-                            callbacks.onOptionClick,
-                            callbacks.onSegmentClick
-                        )
-                        if (!state.isSubmenu) {
-                            GameMenuCards(state, callbacks) { sliderGestureActive = it }
-                        }
-                    }
-                }
-
-                if (!state.isSubmenu && state.appName.isNotBlank()) {
-                    GameMenuFooter(state.appName)
-                }
-            }
-        }
+    onDrawBehind {
+        drawRect(baseColor)
+        drawRect(sheen)
+        drawPath(lightThreadPath, lightThread, style = threadStyle)
+        drawPath(shadowThreadPath, shadowThread, style = threadStyle)
+        drawPath(crossThreadPath, crossThread, style = threadStyle)
     }
 }
 
@@ -330,7 +455,7 @@ private fun currentWindowContentHeightPx(
         size.y
     }
     val insets = ViewCompat.getRootWindowInsets(view)
-        ?.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.systemBars())
+        ?.getInsets(WindowInsetsCompat.Type.systemBars())
     return (displayHeight - (insets?.top ?: 0) - (insets?.bottom ?: 0)).coerceAtLeast(1)
 }
 
@@ -376,10 +501,10 @@ private fun GameMenuHeader(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(crownShape)
-                    .background(colorResource(R.color.theme_pink_primary).copy(alpha = 0.10f))
+                    .background(colorResource(R.color.game_menu_accent).copy(alpha = 0.10f))
                     .border(
                         GameMenuDimens.surfaceStroke,
-                        colorResource(R.color.theme_pink_primary).copy(alpha = 0.20f),
+                        colorResource(R.color.game_menu_accent).copy(alpha = 0.20f),
                         crownShape
                     )
                     .gamepadFocusOutline(crownShape)
@@ -573,7 +698,6 @@ private fun QuickActionChip(
 ) {
     val view = LocalView.current
     val contentAlpha = if (action.enabled) 1f else 0.45f
-    val iconTint = colorResource(R.color.game_menu_text_primary).copy(alpha = contentAlpha).toArgb()
     ActionPill(
         backgroundColor = colorResource(R.color.game_menu_card_background).copy(alpha = contentAlpha),
         borderColor = colorResource(R.color.game_menu_button_border),
@@ -599,8 +723,8 @@ private fun QuickActionChip(
                 },
                 update = { imageView ->
                     imageView.setImageResource(action.iconRes)
-                    if (action.tintableIcon) imageView.setColorFilter(iconTint)
-                    else imageView.clearColorFilter()
+                    imageView.clearColorFilter()
+                    imageView.imageTintList = null
                 },
                 modifier = Modifier.size(20.dp)
             )
@@ -623,7 +747,7 @@ private fun QuickActionChip(
 
 @Composable
 private fun QuickActionDragHandle(modifier: Modifier = Modifier) {
-    val accent = colorResource(R.color.theme_pink_secondary)
+    val accent = colorResource(R.color.game_menu_accent)
     Column(
         modifier = modifier
             .width(20.dp)
@@ -667,7 +791,7 @@ private fun QuickActionRemoveButton(onRemove: () -> Unit) {
             },
         contentAlignment = Alignment.Center
     ) {
-        Text("×", color = Color(0xFFD83A3A), fontWeight = FontWeight.Bold)
+        Text("×", color = colorResource(R.color.game_menu_danger_text), fontWeight = FontWeight.Bold)
     }
 }
 
@@ -682,8 +806,8 @@ private fun ToolIconButton(
         modifier = Modifier
             .size(40.dp)
             .clip(shape)
-            .background(colorResource(R.color.theme_pink_primary).copy(alpha = 0.08f))
-            .border(GameMenuDimens.surfaceStroke, colorResource(R.color.theme_pink_primary).copy(alpha = 0.20f), shape)
+            .background(colorResource(R.color.game_menu_accent).copy(alpha = 0.08f))
+            .border(GameMenuDimens.surfaceStroke, colorResource(R.color.game_menu_accent).copy(alpha = 0.20f), shape)
             .gamepadFocusOutline(shape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
@@ -691,7 +815,7 @@ private fun ToolIconButton(
         Icon(
             painter = painterResource(iconRes),
             contentDescription = contentDescription,
-            tint = colorResource(R.color.theme_pink_primary),
+            tint = colorResource(R.color.game_menu_accent),
             modifier = Modifier.size(18.dp)
         )
     }
@@ -775,7 +899,7 @@ private fun MenuOptionRow(
         option.iconKey == "game_menu_disconnect_and_quit"
     val borderColor = when {
         danger -> colorResource(R.color.game_menu_danger_border)
-        option.isCrownControl -> colorResource(R.color.theme_pink_primary).copy(alpha = 0.55f)
+        option.isCrownControl -> colorResource(R.color.game_menu_accent).copy(alpha = 0.55f)
         else -> colorResource(R.color.game_menu_list_item_border)
     }
     val activate = {
@@ -799,7 +923,7 @@ private fun MenuOptionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 48.dp)
+            .heightIn(min = 36.dp)
             .clip(shape)
             .background(colorResource(R.color.game_menu_list_item_normal))
             .border(GameMenuDimens.surfaceStroke, borderColor, shape)
@@ -890,7 +1014,7 @@ private fun MenuOptionRow(
 
 @Composable
 private fun InlineToggle(checked: Boolean) {
-    val accent = colorResource(R.color.theme_pink_primary)
+    val accent = colorResource(R.color.game_menu_accent)
     val track = if (checked) accent.copy(alpha = 0.82f) else colorResource(R.color.game_menu_button_border)
     val outline = if (checked) accent.copy(alpha = 0.46f) else colorResource(R.color.game_menu_list_item_border)
 
@@ -925,19 +1049,18 @@ private fun InlineSegmentedControl(
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
-    val accent = colorResource(R.color.theme_pink_primary)
-    val shape = RoundedCornerShape(8.dp)
-
+    val accent = colorResource(R.color.game_menu_accent)
     Row(
         modifier = modifier
-            .clip(shape)
-            .border(GameMenuDimens.surfaceStroke, colorResource(R.color.game_menu_list_item_border), shape)
+            .padding(horizontal = 1.dp)
             .selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(1.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        segments.forEachIndexed { index, segment ->
+        segments.forEach { segment ->
+            val segmentShape = RoundedCornerShape(7.dp)
             val background = if (segment.selected) {
-                accent.copy(alpha = 0.14f)
+                accent.copy(alpha = 0.12f)
             } else {
                 Color.Transparent
             }
@@ -945,8 +1068,9 @@ private fun InlineSegmentedControl(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
+                    .clip(segmentShape)
                     .background(background)
-                    .gamepadFocusOutline(RoundedCornerShape(6.dp))
+                    .gamepadFocusOutline(segmentShape)
                     .selectable(
                         selected = segment.selected,
                         role = Role.RadioButton,
@@ -960,19 +1084,11 @@ private fun InlineSegmentedControl(
             ) {
                 Text(
                     text = compactSegmentLabel(segment.label),
-                    color = if (segment.selected) accent else colorResource(R.color.game_menu_text_primary),
+                    color = if (segment.selected) accent else colorResource(R.color.game_menu_text_secondary),
                     fontSize = 10.sp,
                     fontWeight = if (segment.selected) FontWeight.Medium else FontWeight.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
-                )
-            }
-            if (index < segments.lastIndex) {
-                Spacer(
-                    Modifier
-                        .width(GameMenuDimens.surfaceStroke)
-                        .fillMaxHeight()
-                        .background(colorResource(R.color.game_menu_list_item_border))
                 )
             }
         }
@@ -1010,7 +1126,7 @@ private fun String.containsHanCodePoint(): Boolean {
 
 @Composable
 private fun ActionInitialBadge(label: String) {
-    val accent = colorResource(R.color.theme_pink_primary)
+    val accent = colorResource(R.color.game_menu_accent)
     Box(
         modifier = Modifier
             .size(22.dp)
@@ -1058,7 +1174,7 @@ private fun SuperOptionChip(
     option: GameMenu.MenuOption,
     onClick: () -> Unit
 ) {
-    val accent = colorResource(R.color.theme_pink_primary)
+    val accent = colorResource(R.color.game_menu_accent)
     ActionPill(
         backgroundColor = accent.copy(alpha = 0.07f),
         borderColor = accent.copy(alpha = 0.20f),
@@ -1167,7 +1283,7 @@ private fun GameMenuCard(
                 } else status?.let {
                     Text(
                         text = it,
-                        color = colorResource(R.color.theme_pink_primary),
+                        color = colorResource(R.color.game_menu_accent),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -1212,7 +1328,7 @@ private fun BitrateCard(
         )
         Text(
             text = BitrateCardController.formatBitrateMbps(state.selectedBitrateKbps),
-            color = colorResource(R.color.theme_pink_primary),
+            color = colorResource(R.color.game_menu_accent),
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -1258,7 +1374,7 @@ private fun BitrateHelpButton(
     onDismissTip: () -> Unit,
     onLongClick: () -> Unit
 ) {
-    val accent = colorResource(R.color.theme_pink_primary)
+    val accent = colorResource(R.color.game_menu_accent)
     val helpDescription = stringResource(R.string.game_menu_bitrate_tip)
     Box(
         modifier = Modifier
@@ -1322,7 +1438,7 @@ private fun GyroCard(
         trailing = {
             Text(
                 text = if (state.enabled) "ON" else "OFF",
-                color = colorResource(R.color.theme_pink_primary),
+                color = colorResource(R.color.game_menu_accent),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -1355,7 +1471,7 @@ private fun GyroCard(
                 )
                 Text(
                     text = String.format(Locale.US, "%.1fx", state.sensitivity),
-                    color = colorResource(R.color.theme_pink_primary),
+                    color = colorResource(R.color.game_menu_accent),
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -1412,7 +1528,7 @@ private fun Modifier.lockParentScrollDuringGesture(
 @Composable
 private fun Modifier.gamepadFocusOutline(shape: Shape): Modifier {
     var focused by remember { mutableStateOf(false) }
-    val focusColor = colorResource(R.color.theme_pink_primary)
+    val focusColor = colorResource(R.color.game_menu_accent)
     return onFocusChanged { focused = it.isFocused }
         .then(if (focused) Modifier.border(2.dp, focusColor, shape) else Modifier)
 }
@@ -1478,7 +1594,7 @@ private fun SettingValueRow(label: String, value: String, onClick: () -> Unit) {
     ) {
         Text(label, color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
         Spacer(Modifier.weight(1f))
-        Text(value, color = colorResource(R.color.theme_pink_primary), fontSize = 10.sp)
+        Text(value, color = colorResource(R.color.game_menu_accent), fontSize = 10.sp)
         Spacer(Modifier.width(GameMenuDimens.tight))
         Text("›", color = colorResource(R.color.game_menu_text_secondary), fontSize = 14.sp)
     }

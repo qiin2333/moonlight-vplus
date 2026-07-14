@@ -791,7 +791,6 @@ class GameMenu(
                 } else {
                     iconRes
                 },
-                tintableIcon = QuickActionRegistry.getBuiltin(id)?.tintableIcon == true,
                 enabled = id != "toggle_mic" || game.prefConfig.enableMic
             )
         }

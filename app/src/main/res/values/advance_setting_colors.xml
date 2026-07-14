@@ -15,33 +15,34 @@
     <color name="btn_pressed_color">#4D2196F3</color>
 
     <!-- GameMenu 颜色 -->
-    <color name="game_menu_card_background">#F2FFFCFD</color>
+    <color name="game_menu_accent">#FF6B9D</color>
+    <color name="game_menu_card_background">#F7FFFFFF</color>
     <color name="game_menu_text_primary">#333333</color>
     <color name="game_menu_text_secondary">#666666</color>
-    <color name="game_menu_button_pressed">#FFE3F2FD</color>
-    <color name="game_menu_button_border">#24FF9FBD</color>
-    <color name="game_menu_button_border_pressed">@color/theme_pink_primary</color>
-    <color name="game_menu_list_item_pressed">#FFF0F8FF</color>
+    <color name="game_menu_button_pressed">#FFFFF1F5</color>
+    <color name="game_menu_button_border">#14FF6B9D</color>
+    <color name="game_menu_button_border_pressed">@color/game_menu_accent</color>
+    <color name="game_menu_list_item_pressed">#FFFFF3F7</color>
     <color name="game_menu_list_item_focused">#F8F8F8</color>
-    <color name="game_menu_list_item_border">#12FF9FBD</color>
-    <color name="game_menu_list_item_border_pressed">@color/theme_pink_primary</color>
+    <color name="game_menu_list_item_border">#0D1D1B20</color>
+    <color name="game_menu_list_item_border_pressed">@color/game_menu_accent</color>
     <color name="game_menu_dialog_background">#D9FFF8F8</color>
-    <color name="game_menu_dialog_border">#38FFFFFF</color>
-    <color name="game_menu_list_item_normal">#CFFFFFFF</color>
+    <color name="game_menu_dialog_border">#12FFFFFF</color>
+    <color name="game_menu_list_item_normal">#EEFFFFFF</color>
     <color name="game_menu_danger_text">#D13B3B</color>
-    <color name="game_menu_danger_border">#55D83A3A</color>
+    <color name="game_menu_danger_border">#3DD83A3A</color>
     <color name="custom_key_editor_scrim">#66050A14</color>
 
     <!-- 超级菜单颜色 -->
     <color name="game_menu_super_card_background">#00000000</color>
-    <color name="game_menu_super_text_primary">@color/theme_pink_primary</color>
-    <color name="game_menu_super_text_secondary">@color/theme_pink_secondary</color>
-    <color name="game_menu_super_border">@color/theme_pink_primary</color>
+    <color name="game_menu_super_text_primary">@color/game_menu_accent</color>
+    <color name="game_menu_super_text_secondary">@color/game_menu_accent</color>
+    <color name="game_menu_super_border">@color/game_menu_accent</color>
     <color name="game_menu_super_list_item_pressed">#FFF0F8FF</color>
     <color name="game_menu_super_list_item_selected">@color/theme_pink_light</color>
     <color name="game_menu_super_list_item_focused">#FFF0F8FF</color>
     <color name="game_menu_super_list_item_border">#FFE0E0E0</color>
-    <color name="game_menu_super_list_item_border_pressed">@color/theme_pink_primary</color>
+    <color name="game_menu_super_list_item_border_pressed">@color/game_menu_accent</color>
 
     <!-- 主题粉色 -->
     <color name="theme_pink_primary">#FF6B9D</color>
