@@ -1,5 +1,6 @@
 package com.limelight.utils
 
+import android.app.Activity
 import android.app.Dialog
 import android.content.Context
 import android.graphics.Color
@@ -7,6 +8,7 @@ import android.graphics.drawable.ColorDrawable
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.ViewGroup
+import android.view.WindowManager
 import androidx.activity.ComponentDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -156,6 +158,7 @@ object AppActionSheet {
         return dialog
     }
 
+    @Suppress("DEPRECATION")
     private fun prepareDialog(dialog: ComponentDialog, contentView: ComposeView) {
         dialog.setContentView(contentView)
         dialog.setCanceledOnTouchOutside(true)
@@ -167,12 +170,25 @@ object AppActionSheet {
                 false
             }
         }
-        dialog.show()
+
         dialog.window?.let { window ->
             window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-            window.attributes = window.attributes.apply { gravity = Gravity.BOTTOM }
+            (contentView.context as? Activity)?.window?.let { hostWindow ->
+                window.decorView.systemUiVisibility = hostWindow.decorView.systemUiVisibility
+                if (hostWindow.attributes.flags and
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN != 0
+                ) {
+                    window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+                }
+            }
+            window.attributes = window.attributes.apply {
+                width = ViewGroup.LayoutParams.MATCH_PARENT
+                height = ViewGroup.LayoutParams.WRAP_CONTENT
+                gravity = Gravity.BOTTOM
+            }
         }
+
+        dialog.show()
     }
 
     @Composable
