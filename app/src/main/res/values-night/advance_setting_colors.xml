@@ -6,6 +6,7 @@
     <color name="ui_shell_surface_pressed">#3328323A</color>
     <color name="ui_shell_surface_focused">#3DFFFFFF</color>
     <color name="settings_drawer_background">#CC1A1A1A</color>
+    <color name="settings_drawer_background_landscape">#CC1A1A1A</color>
     <color name="ui_shell_outline">#2EFFFFFF</color>
     <color name="ui_shell_outline_strong">#4DFFFFFF</color>
     <color name="ui_shell_text_primary">#F7F3F7</color>
@@ -78,7 +79,6 @@
     <color name="about_dialog_window_start">#F229242F</color>
     <color name="about_dialog_window_center">#F222222B</color>
     <color name="about_dialog_window_end">#E61B1C22</color>
-    <color name="about_dialog_window_outline">#45FF8FA3</color>
     <color name="about_dialog_panel_surface">#F223242B</color>
     <color name="about_dialog_panel_outline">#33FFFFFF</color>
 
