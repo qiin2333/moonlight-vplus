@@ -142,6 +142,7 @@ internal data class GameMenuQuickAction(
     val id: String,
     val label: String,
     @param:DrawableRes val iconRes: Int,
+    val iconText: String? = null,
     val enabled: Boolean = true
 )
 
@@ -672,12 +673,12 @@ private fun QuickActionRow(
             Row(horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)) {
                 ToolIconButton(
                     iconRes = R.drawable.phc_action_check,
-                    contentDescription = stringResource(R.string.dialog_button_save),
+                    contentDescription = stringResource(R.string.quick_action_done),
                     onClick = onToggleEdit
                 )
                 ToolIconButton(
                     iconRes = R.drawable.ic_add,
-                    contentDescription = stringResource(R.string.game_menu_add_custom_key),
+                    contentDescription = stringResource(R.string.quick_action_edit),
                     onClick = onAdd
                 )
             }
@@ -728,7 +729,7 @@ private fun QuickActionChip(
                 modifier = Modifier.size(20.dp)
             )
         } else {
-            ActionInitialBadge(action.label)
+            ActionTextBadge(action.iconText ?: firstActionCharacter(action.label))
         }
         Spacer(Modifier.width(GameMenuDimens.compact))
         Text(
@@ -1123,7 +1124,7 @@ private fun String.containsHanCodePoint(): Boolean {
 }
 
 @Composable
-private fun ActionInitialBadge(label: String) {
+private fun ActionTextBadge(text: String) {
     val accent = colorResource(R.color.game_menu_accent)
     Box(
         modifier = Modifier
@@ -1133,7 +1134,7 @@ private fun ActionInitialBadge(label: String) {
         contentAlignment = Alignment.Center
     ) {
         VisuallyCenteredBadgeText(
-            text = firstActionCharacter(label),
+            text = text,
             color = accent,
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold
@@ -1178,7 +1179,7 @@ private fun SuperOptionChip(
         borderColor = accent.copy(alpha = 0.20f),
         onClick = onClick
     ) {
-        ActionInitialBadge(option.label)
+        ActionTextBadge(firstActionCharacter(option.label))
         Spacer(Modifier.width(GameMenuDimens.compact))
         Text(
             text = compactActionLabel(option.label),
@@ -1478,14 +1479,14 @@ private fun GyroCard(
                 value = state.sensitivity,
                 onValueChange = callbacks.onGyroSensitivity,
                 onValueChangeFinished = callbacks.onGyroSensitivityFinished,
-                valueRange = 0.5f..3.0f,
+                valueRange = 0.5f..10.0f,
                 modifier = Modifier
                     .fillMaxWidth()
                     .gamepadFocusOutline(GameMenuControlShape)
                     .handleSliderDpad(
                         value = state.sensitivity,
                         step = 0.1f,
-                        valueRange = 0.5f..3.0f,
+                        valueRange = 0.5f..10.0f,
                         onValueChange = callbacks.onGyroSensitivity,
                         onValueChangeFinished = callbacks.onGyroSensitivityFinished
                     )

@@ -67,8 +67,8 @@ internal class GyroCardController(private val game: Game) {
     fun showActivationKeyDialog() {
         val items = arrayOf<CharSequence>(
             game.getString(R.string.gyro_activation_always),
-            "LT (L2)",
-            "RT (R2)"
+            game.getString(R.string.gyro_activation_left_trigger),
+            game.getString(R.string.gyro_activation_right_trigger)
         )
         val checked = when (game.prefConfig.gyroActivationKeyCode) {
             ControllerHandler.GYRO_ACTIVATION_ALWAYS -> 0
@@ -95,7 +95,7 @@ internal class GyroCardController(private val game: Game) {
     }
 
     fun previewSensitivity(sensitivity: Float) {
-        val bounded = sensitivity.coerceIn(0.5f, 3.0f)
+        val bounded = sensitivity.coerceIn(0.5f, 10.0f)
         game.prefConfig.gyroSensitivityMultiplier = bounded
         state = state.copy(sensitivity = bounded)
         emitState()
@@ -130,14 +130,14 @@ internal class GyroCardController(private val game: Game) {
             mouseMode = prefs.gyroToMouse,
             activationKeyLabel = when (prefs.gyroActivationKeyCode) {
                 ControllerHandler.GYRO_ACTIVATION_ALWAYS -> game.getString(R.string.gyro_activation_always)
-                KeyEvent.KEYCODE_BUTTON_R2 -> "RT (R2)"
-                else -> "LT (L2)"
+                KeyEvent.KEYCODE_BUTTON_R2 -> game.getString(R.string.gyro_activation_right_trigger)
+                else -> game.getString(R.string.gyro_activation_left_trigger)
             },
             sensitivity = (if (prefs.gyroSensitivityMultiplier > 0) {
                 prefs.gyroSensitivityMultiplier
             } else {
                 1.0f
-            }).coerceIn(0.5f, 3.0f),
+            }).coerceIn(0.5f, 10.0f),
             invertX = prefs.gyroInvertXAxis,
             invertY = prefs.gyroInvertYAxis
         )

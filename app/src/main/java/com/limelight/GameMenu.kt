@@ -366,7 +366,7 @@ class GameMenu(
         buildNormalMenuOptions(normalOptions)
         composeUiState?.let { state ->
             state.value = state.value.copy(
-                title = GAME_MENU_TITLE,
+                title = getString(R.string.game_menu_title),
                 options = normalOptions,
                 crownToggleText = getCrownToggleText(),
                 isSubmenu = false
@@ -534,7 +534,11 @@ class GameMenu(
 
         // 预设分辨率
         for (res in PreferenceConfiguration.RESOLUTIONS) {
-            val label = if (res == currentResStr) "$res (Current)" else res
+            val label = if (res == currentResStr) {
+                game.getString(R.string.game_menu_resolution_current, res)
+            } else {
+                res
+            }
             options.add(MenuOption(label, false, { changeResolution(res) }, null, false))
         }
 
@@ -559,14 +563,17 @@ class GameMenu(
             for (res in sortedCustom) {
                 if (PreferenceConfiguration.RESOLUTIONS.contains(res)) continue
 
-                var label = "$res (Custom)"
-                if (res == currentResStr) label += " (Current)"
+                val label = if (res == currentResStr) {
+                    game.getString(R.string.game_menu_resolution_custom_current, res)
+                } else {
+                    game.getString(R.string.game_menu_resolution_custom, res)
+                }
 
                 options.add(MenuOption(label, false, { changeResolution(res) }, null, false))
             }
         }
 
-        showSubMenu("Change Resolution", options.toTypedArray())
+        showSubMenu(getString(R.string.game_menu_change_resolution), options.toTypedArray())
     }
 
     private fun changeResolution(resString: String) {
@@ -576,7 +583,11 @@ class GameMenu(
                 putString(PreferenceConfiguration.RESOLUTION_PREF_STRING, resString)
             }
 
-        Toast.makeText(game, "Resolution changed to $resString. Restarting...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(
+            game,
+            game.getString(R.string.game_menu_resolution_restarting, resString),
+            Toast.LENGTH_SHORT
+        ).show()
 
         game.changeResolution()
         activeDialog?.dismiss()
@@ -701,7 +712,11 @@ class GameMenu(
     private fun getAppNameDisplay(): String {
         return try {
             val version = conn.serverVersion?.takeIf { it.isNotBlank() }
-            if (version != null) "${app.appName}  Server $version" else app.appName
+            if (version != null) {
+                game.getString(R.string.game_menu_server_version, app.appName, version)
+            } else {
+                app.appName
+            }
         } catch (_: Exception) {
             "Moonlight V+"
         }
@@ -767,22 +782,22 @@ class GameMenu(
 
     private fun dpToPx(dp: Int): Int = (dp * game.resources.displayMetrics.density).toInt()
 
-    /** 解析 action id → Pair(label, iconRes)，无效返回 null */
-    private fun resolveAction(id: String): Pair<String, Int>? {
+    /** 解析 action id → Triple(label, iconRes, iconText)，无效返回 null。 */
+    private fun resolveAction(id: String): Triple<String, Int, String?>? {
         val action = QuickActionRegistry.getBuiltin(id)
         return when {
             action != null -> {
                 val label = if (action.labelRes != 0) getString(action.labelRes) else action.label
-                label to action.iconRes
+                Triple(label, action.iconRes, action.iconText)
             }
-            id.startsWith("custom_") -> id.substring("custom_".length) to 0
+            id.startsWith("custom_") -> Triple(id.substring("custom_".length), 0, null)
             else -> null
         }
     }
 
     private fun buildComposeQuickActions(): List<GameMenuQuickAction> {
         return QuickActionRegistry.loadConfig(game).mapNotNull { id ->
-            val (label, iconRes) = resolveAction(id) ?: return@mapNotNull null
+            val (label, iconRes, iconText) = resolveAction(id) ?: return@mapNotNull null
             GameMenuQuickAction(
                 id = id,
                 label = label,
@@ -791,6 +806,7 @@ class GameMenu(
                 } else {
                     iconRes
                 },
+                iconText = iconText,
                 enabled = id != "toggle_mic" || game.prefConfig.enableMic
             )
         }
@@ -874,7 +890,7 @@ class GameMenu(
                 refreshComposeQuickActions()
             },
             onReset = {
-                QuickActionRegistry.saveConfig(game, QuickActionRegistry.DEFAULT_IDS.toMutableList())
+                QuickActionRegistry.saveConfig(game, QuickActionRegistry.defaultIds(game))
                 refreshComposeQuickActions()
             }
         )
@@ -1187,7 +1203,7 @@ class GameMenu(
         buildNormalMenuOptions(normalOptions)
         buildSuperMenuOptions(superOptions)
 
-        showMenuDialog(GAME_MENU_TITLE, normalOptions.toTypedArray(), superOptions.toTypedArray())
+        showMenuDialog(getString(R.string.game_menu_title), normalOptions.toTypedArray(), superOptions.toTypedArray())
     }
 
     /**
@@ -1341,8 +1357,6 @@ class GameMenu(
         private const val TEST_GAME_FOCUS_DELAY = 10L
         private const val DIALOG_ALPHA = 1.0f
         private const val DIALOG_DIM_AMOUNT = 0.5f
-        private const val GAME_MENU_TITLE = "🍥🍬 V+ GAME MENU"
-
         private const val PREF_NAME = "custom_special_keys"
         private const val KEY_NAME = "data"
 
