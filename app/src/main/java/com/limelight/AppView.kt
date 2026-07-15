@@ -59,6 +59,7 @@ import com.limelight.ui.ScreenCombinationModePickerView
 import com.limelight.ui.SelectionIndicatorAnimator
 import com.limelight.utils.AppSettingsManager
 import com.limelight.utils.AppActionSheet
+import com.limelight.utils.AppBackgroundMode
 import com.limelight.utils.BackgroundImageManager
 import com.limelight.utils.CacheHelper
 import com.limelight.utils.Dialog
@@ -116,8 +117,6 @@ class AppView : Activity(), AdapterFragmentCallbacks {
         private const val DISPLAY_CHECK_DELAY_MS = 800L
         private const val NOT_PAIRED_EXIT_CONFIRMATION_UPDATES = 2
         private const val VIRTUAL_DISPLAY_ID = 212333
-        private const val APPVIEW_PREFS_NAME = "AppView"
-        private const val KEY_APP_BACKGROUND_MODE = "app_background_mode"
         private const val SCREEN_COMBINATION_MODE_PREF_KEY = "list_screen_combination_mode"
     }
 
@@ -936,10 +935,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
             if (newMode == appBackgroundMode) return@setOnCheckedChangeListener
 
             appBackgroundMode = newMode
-            getSharedPreferences(APPVIEW_PREFS_NAME, MODE_PRIVATE)
-                .edit()
-                .putString(KEY_APP_BACKGROUND_MODE, newMode.prefValue)
-                .apply()
+            AppBackgroundMode.write(this, newMode)
             resolveCurrentBackgroundCandidate()?.let {
                 requestAppBackground(it, debounce = false, force = true)
             }
@@ -947,9 +943,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
     }
 
     private fun readAppBackgroundMode(): AppBackgroundMode {
-        val value = getSharedPreferences(APPVIEW_PREFS_NAME, MODE_PRIVATE)
-            .getString(KEY_APP_BACKGROUND_MODE, null)
-        return AppBackgroundMode.fromPrefValue(value)
+        return AppBackgroundMode.read(this)
     }
 
     private fun scheduleDisplayCheck() {
@@ -2079,17 +2073,6 @@ class AppView : Activity(), AdapterFragmentCallbacks {
     }
 
     // ==================== 内部类 ====================
-
-    private enum class AppBackgroundMode(val prefValue: String) {
-        Artwork("artwork"),
-        Acrylic("acrylic"),
-        SoftColor("soft_color");
-
-        companion object {
-            fun fromPrefValue(value: String?): AppBackgroundMode =
-                values().firstOrNull { it.prefValue == value } ?: Artwork
-        }
-    }
 
     class AppObject(val app: NvApp) {
         var isRunning = false

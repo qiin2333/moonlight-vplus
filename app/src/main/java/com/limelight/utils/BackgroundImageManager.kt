@@ -260,7 +260,7 @@ class BackgroundImageManager(
         private const val BLUR_IMAGE_ALPHA_PAIRED = 100      // ~39%
         private const val RENDER_EFFECT_RADIUS_PAIRED = 60f  // 原 25f
         private const val BLUR_RADIUS_PAIRED = 22            // 原 10
-        const val OVERLAY_IMAGE_ALPHA = 160       // ~63%
+        const val OVERLAY_IMAGE_ALPHA = 180       // ~70%，连接页历史最终参数
         private const val BLUR_RADIUS = 10
         private const val RENDER_EFFECT_RADIUS = 25f
         private const val BG_COLOR = 0xFF4D464A.toInt()

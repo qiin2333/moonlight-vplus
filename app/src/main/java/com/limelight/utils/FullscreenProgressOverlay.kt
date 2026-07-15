@@ -4,6 +4,7 @@ import android.app.Activity
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -29,7 +30,10 @@ class FullscreenProgressOverlay(
     private val rootView: ViewGroup
     private val tips: Array<String>
     private val random = Random()
+    private val backgroundMode = AppBackgroundMode.read(activity)
     private var isShowing = false
+    private var posterRequestSerial = 0
+    private var generatedAcrylicBitmap: Bitmap? = null
     var computer: ComputerDetails? = null
 
     init {
@@ -86,6 +90,7 @@ class FullscreenProgressOverlay(
                 overlayView.visibility = View.VISIBLE
                 isShowing = true
 
+                applySoftColorFallback()
                 loadAppImage()
             }
         }
@@ -116,12 +121,9 @@ class FullscreenProgressOverlay(
 
         activity.runOnUiThread {
             if (poster != null) {
-                BackgroundImageManager.setBlurredBitmap(appPosterBackgroundBlur, poster, BackgroundImageManager.OVERLAY_IMAGE_ALPHA)
-                appPosterBackgroundClear.setImageBitmap(poster)
-                appPosterBackgroundClear.imageAlpha = BackgroundImageManager.OVERLAY_IMAGE_ALPHA
+                applyPoster(poster)
             } else {
-                appPosterBackgroundBlur.setImageResource(R.drawable.no_app_image)
-                appPosterBackgroundClear.setImageBitmap(null)
+                applyMissingPoster()
             }
         }
     }
@@ -130,22 +132,10 @@ class FullscreenProgressOverlay(
         if (activity.isFinishing) return
 
         activity.runOnUiThread {
-            if (poster != null) {
-                BackgroundImageManager.setBlurredDrawable(appPosterBackgroundBlur, poster, BackgroundImageManager.OVERLAY_IMAGE_ALPHA)
-                if (poster is BitmapDrawable) {
-                    val bmp = poster.bitmap
-                    if (bmp != null) {
-                        appPosterBackgroundClear.setImageBitmap(bmp)
-                        appPosterBackgroundClear.imageAlpha = BackgroundImageManager.OVERLAY_IMAGE_ALPHA
-                    } else {
-                        appPosterBackgroundClear.setImageDrawable(poster)
-                    }
-                } else {
-                    appPosterBackgroundClear.setImageDrawable(poster)
-                }
-            } else {
-                appPosterBackgroundBlur.setImageResource(R.drawable.no_app_image)
-                appPosterBackgroundClear.setImageBitmap(null)
+            when {
+                poster == null -> applyMissingPoster()
+                poster is BitmapDrawable -> applyPoster(poster.bitmap)
+                else -> applyDrawablePoster(poster)
             }
         }
     }
@@ -177,8 +167,7 @@ class FullscreenProgressOverlay(
         activity.runOnUiThread {
             if (isShowing) {
                 isShowing = false
-                // 这一刻视频首帧已合成上屏（由 decoderRenderer.firstFrameCallback 保证）。
-                // 短暂淡出让 scrim 暗度过渡到正常画面亮度，避免亮度跳变带来的"闪一下"。
+                posterRequestSerial++
                 overlayView.animate().cancel()
                 overlayView.animate()
                     .alpha(0f)
@@ -187,6 +176,9 @@ class FullscreenProgressOverlay(
                     .withEndAction {
                         overlayView.visibility = View.GONE
                         overlayView.alpha = 1f
+                        appPosterBackgroundBlur.setImageDrawable(null)
+                        appPosterBackgroundClear.setImageDrawable(null)
+                        clearGeneratedAcrylicBitmap()
                         if (overlayView.parent != null) {
                             rootView.removeView(overlayView)
                         }
@@ -206,6 +198,7 @@ class FullscreenProgressOverlay(
             applyPoster(cached)
             return
         }
+
         // 内存 cache miss（冷启动 / 快捷方式 / Trampoline 入口）：fallback 到磁盘缓存
         val uuid = curComputer.uuid ?: return
         val appId = curApp.appId
@@ -214,8 +207,11 @@ class FullscreenProgressOverlay(
         val maxDim = kotlin.math.max(dm.widthPixels, dm.heightPixels).coerceAtMost(1920)
         Thread({
             val bitmap = try {
-                com.limelight.grid.assets.DiskAssetLoader(appCtx).loadFullBitmapFromCache(uuid, appId, maxDim)
-            } catch (t: Throwable) { null } ?: return@Thread
+                com.limelight.grid.assets.DiskAssetLoader(appCtx)
+                    .loadFullBitmapFromCache(uuid, appId, maxDim)
+            } catch (t: Throwable) {
+                null
+            } ?: return@Thread
             AppIconCache.instance.putFullIcon(curComputer, curApp, bitmap)
             activity.runOnUiThread {
                 if (isShowing) applyPoster(bitmap)
@@ -224,10 +220,158 @@ class FullscreenProgressOverlay(
     }
 
     private fun applyPoster(bitmap: Bitmap) {
-        appPosterBackgroundBlur.visibility = View.VISIBLE
+        when (backgroundMode) {
+            AppBackgroundMode.Artwork -> applyArtwork(bitmap)
+            AppBackgroundMode.Acrylic -> applyAcrylic(bitmap)
+            AppBackgroundMode.SoftColor -> applySoftColor(bitmap)
+        }
+    }
+
+    /** 应用封面：显示完整封面，不叠加模糊层。 */
+    private fun applyArtwork(bitmap: Bitmap) {
+        ++posterRequestSerial
+        appPosterBackgroundBlur.tag = null
+        appPosterBackgroundBlur.visibility = View.GONE
         appPosterBackgroundClear.visibility = View.VISIBLE
-        BackgroundImageManager.setBlurredBitmap(appPosterBackgroundBlur, bitmap, BackgroundImageManager.OVERLAY_IMAGE_ALPHA)
+        appPosterBackgroundClear.scaleType = ImageView.ScaleType.CENTER_CROP
+        clearRenderEffect(appPosterBackgroundClear)
+        appPosterBackgroundClear.tag = bitmap
         appPosterBackgroundClear.setImageBitmap(bitmap)
         appPosterBackgroundClear.imageAlpha = BackgroundImageManager.OVERLAY_IMAGE_ALPHA
+        clearGeneratedAcrylicBitmap()
+    }
+
+    /** 亚克力：全屏模糊底图 + 中央半透明完整封面。 */
+    private fun applyAcrylic(bitmap: Bitmap) {
+        val requestId = ++posterRequestSerial
+        appPosterBackgroundBlur.visibility = View.VISIBLE
+        appPosterBackgroundClear.visibility = View.VISIBLE
+        appPosterBackgroundBlur.scaleType = ImageView.ScaleType.CENTER_CROP
+        appPosterBackgroundClear.scaleType = ImageView.ScaleType.FIT_CENTER
+        appPosterBackgroundBlur.tag = bitmap
+        appPosterBackgroundClear.tag = bitmap
+        appPosterBackgroundClear.setImageDrawable(null)
+        clearGeneratedAcrylicBitmap()
+        appPosterBackgroundClear.imageAlpha = 255
+
+        BackgroundImageManager.setBlurredBitmap(
+            appPosterBackgroundBlur,
+            bitmap,
+            BackgroundImageManager.OVERLAY_IMAGE_ALPHA
+        )
+
+        Thread({
+            val acrylicBitmap = BackgroundImageManager.applyAlpha(
+                bitmap,
+                BackgroundImageManager.OVERLAY_IMAGE_ALPHA
+            )
+            activity.runOnUiThread {
+                if (isShowing && requestId == posterRequestSerial && appPosterBackgroundClear.tag === bitmap) {
+                    if (acrylicBitmap != null) {
+                        generatedAcrylicBitmap = acrylicBitmap
+                        appPosterBackgroundClear.setImageBitmap(acrylicBitmap)
+                    }
+                } else if (acrylicBitmap != null && acrylicBitmap !== bitmap && !acrylicBitmap.isRecycled) {
+                    acrylicBitmap.recycle()
+                }
+            }
+        }, "OverlayAcrylicRenderer").start()
+    }
+
+    private fun applySoftColor(bitmap: Bitmap) {
+        val requestId = ++posterRequestSerial
+        val fallbackColor = app?.let { SoftBackgroundColorExtractor.fallbackFor(it) }
+            ?: 0xFF4D464A.toInt()
+        applyColor(fallbackColor)
+
+        Thread({
+            val color = SoftBackgroundColorExtractor.fromBitmap(bitmap, fallbackColor)
+            activity.runOnUiThread {
+                if (isShowing && requestId == posterRequestSerial) {
+                    applyColor(color)
+                }
+            }
+        }, "OverlayColorExtractor").start()
+    }
+
+    private fun applySoftColorFallback() {
+        if (backgroundMode != AppBackgroundMode.SoftColor) return
+        val fallbackColor = app?.let { SoftBackgroundColorExtractor.fallbackFor(it) }
+            ?: 0xFF4D464A.toInt()
+        applyColor(fallbackColor)
+    }
+
+    private fun applyColor(color: Int) {
+        appPosterBackgroundBlur.tag = null
+        appPosterBackgroundClear.tag = null
+        appPosterBackgroundClear.setImageDrawable(null)
+        clearGeneratedAcrylicBitmap()
+        appPosterBackgroundBlur.visibility = View.VISIBLE
+        appPosterBackgroundClear.visibility = View.GONE
+        clearRenderEffect(appPosterBackgroundBlur)
+        appPosterBackgroundBlur.setImageDrawable(android.graphics.drawable.ColorDrawable(color))
+        appPosterBackgroundBlur.imageAlpha = 255
+    }
+
+    private fun applyDrawablePoster(drawable: Drawable) {
+        if (backgroundMode == AppBackgroundMode.SoftColor) {
+            applySoftColorFallback()
+            return
+        }
+
+        ++posterRequestSerial
+        appPosterBackgroundBlur.tag = null
+        appPosterBackgroundClear.tag = drawable
+        clearGeneratedAcrylicBitmap()
+        appPosterBackgroundClear.visibility = View.VISIBLE
+        appPosterBackgroundClear.scaleType = if (backgroundMode == AppBackgroundMode.Acrylic) {
+            ImageView.ScaleType.FIT_CENTER
+        } else {
+            ImageView.ScaleType.CENTER_CROP
+        }
+        appPosterBackgroundClear.setImageDrawable(drawable)
+        appPosterBackgroundClear.imageAlpha = BackgroundImageManager.OVERLAY_IMAGE_ALPHA
+
+        if (backgroundMode == AppBackgroundMode.Acrylic) {
+            appPosterBackgroundBlur.visibility = View.VISIBLE
+            BackgroundImageManager.setBlurredDrawable(
+                appPosterBackgroundBlur,
+                drawable,
+                BackgroundImageManager.OVERLAY_IMAGE_ALPHA
+            )
+        } else {
+            appPosterBackgroundBlur.visibility = View.GONE
+        }
+    }
+
+    private fun applyMissingPoster() {
+        ++posterRequestSerial
+        appPosterBackgroundBlur.tag = null
+        appPosterBackgroundClear.tag = null
+        appPosterBackgroundBlur.setImageDrawable(null)
+        appPosterBackgroundClear.setImageDrawable(null)
+        clearGeneratedAcrylicBitmap()
+
+        if (backgroundMode == AppBackgroundMode.SoftColor) {
+            applySoftColorFallback()
+            return
+        }
+
+        appPosterBackgroundBlur.visibility = View.VISIBLE
+        appPosterBackgroundClear.visibility = View.GONE
+        appPosterBackgroundBlur.setImageResource(R.drawable.no_app_image)
+    }
+
+    private fun clearGeneratedAcrylicBitmap() {
+        generatedAcrylicBitmap?.let {
+            if (!it.isRecycled) it.recycle()
+        }
+        generatedAcrylicBitmap = null
+    }
+
+    private fun clearRenderEffect(imageView: ImageView) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            imageView.setRenderEffect(null)
+        }
     }
 }
