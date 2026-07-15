@@ -190,9 +190,7 @@ class BackgroundImageManager(
     }
 
     private fun clearGeneratedAcrylicBitmap() {
-        currentAcrylicBitmap?.let {
-            if (!it.isRecycled) it.recycle()
-        }
+        // 已交给 ImageView 的 Bitmap 可能仍被硬件渲染线程使用，不能主动 recycle。
         currentAcrylicBitmap = null
     }
 
