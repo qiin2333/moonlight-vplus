@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.view.View
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.widget.ImageView
@@ -15,49 +16,60 @@ import com.limelight.R
 
 /**
  * 背景图片管理器，用于处理AppView背景图片的平滑切换。
- * - 横屏：模糊层(blurImageView) + 清晰层(clearImageView) 双层视觉。
- * - 竖屏 / 单层模式：blurImageView 传 null + blurOnly=true，使用 clearImageView 作为
- *   唯一画布并对其应用模糊效果，铺满屏幕。
- * 仅通过 imageAlpha 调整透明度，不再为每张图复制 Bitmap。
+ * - “应用封面”：横屏使用模糊层 + 清晰层，竖屏使用单层模糊封面。
+ * - “亚克力”：恢复旧版的全屏模糊底图 + 中央半透明完整封面。
+ * - “柔和纯色”：使用从应用封面提取的纯色。
  */
 class BackgroundImageManager(
     private val context: Context,
-    private val blurImageView: ImageView?,
+    private val blurImageView: ImageView,
     private val clearImageView: ImageView,
-    private val blurOnly: Boolean = false
+    private val artworkBlurOnly: Boolean = false
 ) {
+    private enum class BitmapStyle {
+        Artwork,
+        Acrylic
+    }
+
     var currentBackground: Bitmap? = null
         private set
     private var currentSolidColor: Int? = null
+    private var currentBitmapStyle: BitmapStyle? = null
+    private var currentAcrylicBitmap: Bitmap? = null
     val hasBackground: Boolean
         get() = currentBackground != null || currentSolidColor != null
 
-    /**
-     * 平滑地切换到新的背景图片
-     * @param newBackground 新的背景图片
-     */
+    /** 应用封面模式：保留当前版本的渲染方式。 */
     fun setBackgroundSmoothly(newBackground: Bitmap?) {
+        setBitmapBackgroundSmoothly(newBackground, BitmapStyle.Artwork)
+    }
+
+    /** 亚克力模式：全屏模糊底图 + 中央半透明完整封面。 */
+    fun setAcrylicBackgroundSmoothly(newBackground: Bitmap?) {
+        setBitmapBackgroundSmoothly(newBackground, BitmapStyle.Acrylic)
+    }
+
+    private fun setBitmapBackgroundSmoothly(newBackground: Bitmap?, style: BitmapStyle) {
         if (newBackground == null || newBackground.isRecycled) {
             return
         }
 
-        // 如果背景图片相同，不需要切换
-        if (currentBackground == newBackground) {
+        if (currentBackground == newBackground && currentBitmapStyle == style) {
             return
         }
 
-        // 如果当前没有背景图片，直接设置
         if (currentBackground == null) {
             currentBackground = newBackground
             currentSolidColor = null
-            applyBitmap(newBackground)
-            val fadeIn = AnimationUtils.loadAnimation(context, R.anim.background_fadein)
-            blurImageView?.startAnimation(fadeIn)
-            clearImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadein))
+            currentBitmapStyle = style
+            applyBitmap(newBackground, style)
+            blurImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadein))
+            if (clearImageView.visibility == View.VISIBLE) {
+                clearImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadein))
+            }
             return
         }
 
-        // 执行平滑切换动画
         val fadeOutAnimation = AnimationUtils.loadAnimation(context, R.anim.background_fadeout)
         fadeOutAnimation.setAnimationListener(object : Animation.AnimationListener {
             override fun onAnimationStart(animation: Animation) {}
@@ -65,17 +77,19 @@ class BackgroundImageManager(
             override fun onAnimationEnd(animation: Animation) {
                 currentBackground = newBackground
                 currentSolidColor = null
-                applyBitmap(newBackground)
-                val fadeIn = AnimationUtils.loadAnimation(context, R.anim.background_fadein)
-                blurImageView?.startAnimation(fadeIn)
-                clearImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadein))
+                currentBitmapStyle = style
+                applyBitmap(newBackground, style)
+                blurImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadein))
+                if (clearImageView.visibility == View.VISIBLE) {
+                    clearImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadein))
+                }
             }
 
             override fun onAnimationRepeat(animation: Animation) {}
         })
 
-        (blurImageView ?: clearImageView).startAnimation(fadeOutAnimation)
-        if (blurImageView != null) {
+        blurImageView.startAnimation(fadeOutAnimation)
+        if (clearImageView.visibility == View.VISIBLE) {
             clearImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadeout))
         }
     }
@@ -88,10 +102,12 @@ class BackgroundImageManager(
         if (!hasBackground) {
             currentBackground = null
             currentSolidColor = color
+            currentBitmapStyle = null
             applyColor(color)
-            val fadeIn = AnimationUtils.loadAnimation(context, R.anim.background_fadein)
-            blurImageView?.startAnimation(fadeIn)
-            clearImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadein))
+            blurImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadein))
+            if (clearImageView.visibility == View.VISIBLE) {
+                clearImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadein))
+            }
             return
         }
 
@@ -102,44 +118,101 @@ class BackgroundImageManager(
             override fun onAnimationEnd(animation: Animation) {
                 currentBackground = null
                 currentSolidColor = color
+                currentBitmapStyle = null
                 applyColor(color)
-                val fadeIn = AnimationUtils.loadAnimation(context, R.anim.background_fadein)
-                blurImageView?.startAnimation(fadeIn)
-                clearImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadein))
+                blurImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadein))
+                if (clearImageView.visibility == View.VISIBLE) {
+                    clearImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadein))
+                }
             }
 
             override fun onAnimationRepeat(animation: Animation) {}
         })
 
-        (blurImageView ?: clearImageView).startAnimation(fadeOutAnimation)
-        if (blurImageView != null) {
+        blurImageView.startAnimation(fadeOutAnimation)
+        if (clearImageView.visibility == View.VISIBLE) {
             clearImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadeout))
         }
     }
 
-    /** 同一张 Bitmap 同时驱动模糊层与清晰层；仅通过 imageAlpha 调整透明度，零额外 Bitmap 分配。 */
-    private fun applyBitmap(bitmap: Bitmap) {
-        // 横屏双层：blur 层用更大半径与更低 alpha，让中间清晰大图更突出
-        blurImageView?.let {
-            setBlurredBitmap(it, bitmap, BLUR_IMAGE_ALPHA_PAIRED, RENDER_EFFECT_RADIUS_PAIRED, BLUR_RADIUS_PAIRED)
-        }
-        if (blurOnly) {
-            // 单层模式：clearImageView 作为唯一画布并应用默认强度模糊
-            setBlurredBitmap(clearImageView, bitmap, BLUR_IMAGE_ALPHA)
-        } else {
-            clearImageView.setImageBitmap(bitmap)
-            clearImageView.imageAlpha = CLEAR_IMAGE_ALPHA
+    /** 同一张 Bitmap 驱动不同背景模式；亚克力模式复用旧版的合成效果。 */
+    private fun applyBitmap(bitmap: Bitmap, style: BitmapStyle) {
+        when (style) {
+            BitmapStyle.Artwork -> {
+                if (artworkBlurOnly) {
+                    clearImageView.tag = null
+                    clearGeneratedAcrylicBitmap()
+                    clearImageView.visibility = View.GONE
+                    blurImageView.visibility = View.VISIBLE
+                    setBlurredBitmap(blurImageView, bitmap, BLUR_IMAGE_ALPHA)
+                } else {
+                    blurImageView.visibility = View.VISIBLE
+                    clearImageView.visibility = View.VISIBLE
+                    setBlurredBitmap(
+                        blurImageView,
+                        bitmap,
+                        BLUR_IMAGE_ALPHA_PAIRED,
+                        RENDER_EFFECT_RADIUS_PAIRED,
+                        BLUR_RADIUS_PAIRED
+                    )
+                    clearImageView.tag = null
+                    clearGeneratedAcrylicBitmap()
+                    clearImageView.setImageBitmap(bitmap)
+                    clearImageView.imageAlpha = CLEAR_IMAGE_ALPHA
+                }
+            }
+            BitmapStyle.Acrylic -> {
+                blurImageView.visibility = View.VISIBLE
+                clearImageView.visibility = View.VISIBLE
+                setBlurredBitmap(blurImageView, bitmap, BLUR_IMAGE_ALPHA)
+                clearImageView.tag = bitmap
+                clearGeneratedAcrylicBitmap()
+                clearImageView.setImageDrawable(null)
+                clearImageView.imageAlpha = 255
+                blurExecutor.execute {
+                    val acrylicBitmap = applyAlpha(bitmap, CLEAR_IMAGE_ALPHA)
+                    mainHandler.post {
+                        if (clearImageView.tag !== bitmap) {
+                            if (acrylicBitmap != null && acrylicBitmap !== bitmap && !acrylicBitmap.isRecycled) {
+                                acrylicBitmap.recycle()
+                            }
+                            return@post
+                        }
+                        if (acrylicBitmap != null) {
+                            currentAcrylicBitmap = acrylicBitmap
+                            clearImageView.setImageBitmap(acrylicBitmap)
+                            clearImageView.imageAlpha = 255
+                        }
+                    }
+                }
+            }
         }
     }
 
-    private fun applyColor(color: Int) {
-        blurImageView?.let {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                it.setRenderEffect(null)
-            }
-            it.setImageDrawable(ColorDrawable(color))
-            it.imageAlpha = 255
+    private fun clearGeneratedAcrylicBitmap() {
+        currentAcrylicBitmap?.let {
+            if (!it.isRecycled) it.recycle()
         }
+        currentAcrylicBitmap = null
+    }
+
+    private fun applyColor(color: Int) {
+        blurImageView.tag = null
+        clearImageView.tag = null
+        clearGeneratedAcrylicBitmap()
+        blurImageView.visibility = View.VISIBLE
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            blurImageView.setRenderEffect(null)
+        }
+        blurImageView.setImageDrawable(ColorDrawable(color))
+        blurImageView.imageAlpha = 255
+
+        if (artworkBlurOnly) {
+            clearImageView.visibility = View.GONE
+            return
+        }
+
+        clearImageView.visibility = View.VISIBLE
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             clearImageView.setRenderEffect(null)
         }
@@ -157,20 +230,24 @@ class BackgroundImageManager(
                 override fun onAnimationStart(animation: Animation) {}
 
                 override fun onAnimationEnd(animation: Animation) {
-                    blurImageView?.setImageBitmap(null)
+                    blurImageView.tag = null
+                    blurImageView.setImageDrawable(null)
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        blurImageView?.setRenderEffect(null)
+                        blurImageView.setRenderEffect(null)
                     }
-                    clearImageView.setImageBitmap(null)
+                    clearImageView.tag = null
+                    clearGeneratedAcrylicBitmap()
+                    clearImageView.setImageDrawable(null)
                     currentBackground = null
                     currentSolidColor = null
+                    currentBitmapStyle = null
                 }
 
                 override fun onAnimationRepeat(animation: Animation) {}
             })
 
-            (blurImageView ?: clearImageView).startAnimation(fadeOutAnimation)
-            if (blurImageView != null) {
+            blurImageView.startAnimation(fadeOutAnimation)
+            if (clearImageView.visibility == View.VISIBLE) {
                 clearImageView.startAnimation(AnimationUtils.loadAnimation(context, R.anim.background_fadeout))
             }
         }
@@ -252,6 +329,33 @@ class BackgroundImageManager(
             } else {
                 imageView.setImageDrawable(drawable)
                 imageView.imageAlpha = alpha
+            }
+        }
+
+        /**
+         * 给亚克力模式的中央封面叠加半透明效果，并填充固定底色，避免 fitCenter
+         * 的图片区域透出底层模糊图；这是旧版背景模式的核心合成步骤。
+         */
+        fun applyAlpha(original: Bitmap, alpha: Int): Bitmap? {
+            if (original.isRecycled) return null
+            return try {
+                val src = if (Build.VERSION.SDK_INT >= 26 &&
+                    original.config == Bitmap.Config.HARDWARE) {
+                    original.copy(Bitmap.Config.ARGB_8888, false) ?: return null
+                } else {
+                    original
+                }
+                val result = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
+                val canvas = android.graphics.Canvas(result)
+                canvas.drawColor(BG_COLOR)
+                val paint = android.graphics.Paint()
+                paint.alpha = alpha
+                paint.isFilterBitmap = true
+                canvas.drawBitmap(src, 0f, 0f, paint)
+                if (src !== original) src.recycle()
+                result
+            } catch (_: Throwable) {
+                null
             }
         }
 
