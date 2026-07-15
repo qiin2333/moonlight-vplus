@@ -52,7 +52,8 @@ class GameMenu(
     private val game: Game,
     private val app: NvApp,
     private val conn: NvConnection,
-    private val device: GameInputDevice?
+    private val device: GameInputDevice?,
+    private val onDismiss: (GameMenu) -> Unit = {}
 ) {
     // 当前激活的对话框（如果有）
     private var activeDialog: ComponentDialog? = null
@@ -71,6 +72,10 @@ class GameMenu(
 
     fun dismiss() {
         activeDialog?.dismiss()
+    }
+
+    fun isShowing(): Boolean {
+        return activeDialog?.isShowing == true
     }
 
     /**
@@ -633,12 +638,23 @@ class GameMenu(
 
         // 返回键监听器
         dialog.setOnKeyListener { _, keyCode, event ->
-            if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_DOWN) {
-                if (navigateBack()) {
-                    return@setOnKeyListener true
-                }
+            if (event.action != KeyEvent.ACTION_DOWN) {
                 return@setOnKeyListener false
             }
+
+            when (keyCode) {
+                KeyEvent.KEYCODE_BACK -> {
+                    if (navigateBack()) {
+                        return@setOnKeyListener true
+                    }
+                    return@setOnKeyListener false
+                }
+                KeyEvent.KEYCODE_ESCAPE -> {
+                    dialog.dismiss()
+                    return@setOnKeyListener true
+                }
+            }
+
             false
         }
 
@@ -649,6 +665,7 @@ class GameMenu(
             bitrateCardController.dispose()
             gyroCardController.dispose()
             menuStack.clear()
+            onDismiss(this)
         }
 
         dialog.show()
