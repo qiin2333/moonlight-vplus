@@ -322,7 +322,8 @@ class Game : Activity(), SurfaceHolder.Callback,
         streamView.setOnKeyListener(this)
         streamView.setInputCallbacks(this)
 
-        panZoomHandler = PanZoomHandler(this, this, streamView, prefConfig)
+        val cursorOverlayView = findViewById<CursorView>(R.id.cursorOverlay)
+        panZoomHandler = PanZoomHandler(this, this, streamView, cursorOverlayView, prefConfig)
 
         val backgroundTouchView = findViewById<View>(R.id.backgroundTouchView)
         backgroundTouchView.setOnTouchListener(this)
@@ -432,7 +433,6 @@ class Game : Activity(), SurfaceHolder.Callback,
         touchInputHandler = TouchInputHandler(this)
         touchInputHandler.initTouchContexts(conn!!, streamView, prefConfig)
 
-        val cursorOverlayView = findViewById<CursorView>(R.id.cursorOverlay)
         cursorServiceManager = CursorServiceManager(
             streamView, cursorOverlayView, prefConfig, touchInputHandler.relativeTouchContextMap,
             object : CursorServiceManager.UiCallback {
