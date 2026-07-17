@@ -227,18 +227,24 @@ class FullscreenProgressOverlay(
         }
     }
 
-    /** 应用封面：显示完整封面，不叠加模糊层。 */
+    /** 应用封面：保留连接页原有的模糊背景 + 完整封面双层显示。 */
     private fun applyArtwork(bitmap: Bitmap) {
         ++posterRequestSerial
-        appPosterBackgroundBlur.tag = null
-        appPosterBackgroundBlur.visibility = View.GONE
+        clearGeneratedAcrylicBitmap()
+        appPosterBackgroundBlur.visibility = View.VISIBLE
         appPosterBackgroundClear.visibility = View.VISIBLE
-        appPosterBackgroundClear.scaleType = ImageView.ScaleType.CENTER_CROP
-        clearRenderEffect(appPosterBackgroundClear)
+        appPosterBackgroundBlur.scaleType = ImageView.ScaleType.CENTER_CROP
+        appPosterBackgroundClear.scaleType = ImageView.ScaleType.FIT_CENTER
+        appPosterBackgroundBlur.tag = bitmap
         appPosterBackgroundClear.tag = bitmap
+        clearRenderEffect(appPosterBackgroundClear)
+        BackgroundImageManager.setBlurredBitmap(
+            appPosterBackgroundBlur,
+            bitmap,
+            BackgroundImageManager.OVERLAY_IMAGE_ALPHA
+        )
         appPosterBackgroundClear.setImageBitmap(bitmap)
         appPosterBackgroundClear.imageAlpha = BackgroundImageManager.OVERLAY_IMAGE_ALPHA
-        clearGeneratedAcrylicBitmap()
     }
 
     /** 亚克力：全屏模糊底图 + 中央半透明完整封面。 */
