@@ -75,7 +75,6 @@ internal class FramePacingController(
     private var lastRenderedFrameTimeNanos = 0L
     private var choreographerHandlerThread: HandlerThread? = null
     private var choreographerHandler: Handler? = null
-    private var choreographer: Choreographer? = null
     private var appVsyncOffsetNs = 0L
     private var presentationDeadlineNs = 0L
 
@@ -108,16 +107,15 @@ internal class FramePacingController(
         choreographerHandlerThread != null || surfaceFlingerThread != null
 
     fun prepareForStop() {
+        if (stopping) return
         stopping = true
         surfaceFlingerActive = false
 
         surfaceFlingerThread?.interrupt()
 
-        val currentChoreographer = choreographer
         val currentChoreographerThread = choreographerHandlerThread
-        choreographer = null
         choreographerHandler?.post {
-            currentChoreographer?.removeFrameCallback(this)
+            Choreographer.getInstance().removeFrameCallback(this)
             currentChoreographerThread?.quit()
         }
 
@@ -234,10 +232,11 @@ internal class FramePacingController(
         }
 
         // Attempt codec recovery even if we have nothing to render right now.
+        if (stopping) return
         callbacks.onCodecRecoveryCheck(MediaCodecDecoderRenderer.CR_FLAG_CHOREOGRAPHER)
 
         // Request another callback for next frame
-        choreographer?.postFrameCallback(this)
+        if (!stopping) Choreographer.getInstance().postFrameCallback(this)
     }
 
     private fun startChoreographerThread() {
@@ -257,10 +256,7 @@ internal class FramePacingController(
 
         choreographerHandlerThread = thread
         choreographerHandler = Handler(thread.looper).also { handler ->
-            handler.post {
-                choreographer = Choreographer.getInstance()
-                choreographer?.postFrameCallback(this)
-            }
+            handler.post { Choreographer.getInstance().postFrameCallback(this) }
         }
     }
 
