@@ -6,7 +6,6 @@ import android.app.Activity
 import android.app.Presentation
 import android.content.Context
 import android.hardware.display.DisplayManager
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -14,13 +13,10 @@ import android.util.TypedValue
 import android.view.Display
 import android.view.Gravity
 import android.view.View
-import android.view.Window
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
-import com.limelight.binding.video.MediaCodecDecoderRenderer
-import com.limelight.nvstream.NvConnection
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.ui.StreamView
 import com.limelight.utils.UiHelper
@@ -32,17 +28,13 @@ import com.limelight.utils.UiHelper
 class ExternalDisplayManager(
     private val activity: Activity,
     private val prefConfig: PreferenceConfiguration,
-    private val conn: NvConnection?,
-    private val decoderRenderer: MediaCodecDecoderRenderer?,
-    private val pcName: String?,
-    private val appName: String?,
     private val targetDisplayResolver: TargetDisplayResolver
 ) {
-    private var displayManager: DisplayManager? = null
+    private val displayManager =
+        activity.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
     private var displayListener: DisplayManager.DisplayListener? = null
     private var externalPresentation: ExternalDisplayPresentation? = null
-    private var displayModeResult: DisplayModeManager.DisplayModeResult? = null
-    private var displayModeDisplayId: Int = Display.DEFAULT_DISPLAY
+    private var displayModeSelection: DisplayModeManager.DisplayModeSelection? = null
 
     interface ExternalDisplayCallback {
         fun onExternalDisplayConnected(display: Display)
@@ -52,8 +44,8 @@ class ExternalDisplayManager(
 
     var callback: ExternalDisplayCallback? = null
 
-    fun initialize() {
-        displayManager = activity.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+    fun initialize(initialDisplayMode: DisplayModeManager.DisplayModeSelection? = null) {
+        displayModeSelection = initialDisplayMode
         targetDisplayResolver.resolve(prefConfig.useExternalDisplay)
 
         setupDisplayListener()
@@ -71,13 +63,10 @@ class ExternalDisplayManager(
     }
 
     fun cleanup() {
-        if (externalPresentation != null) {
-            externalPresentation?.dismiss()
-            externalPresentation = null
-        }
+        dismissExternalPresentation()
 
-        if (displayListener != null && displayManager != null) {
-            displayManager?.unregisterDisplayListener(displayListener)
+        displayListener?.let {
+            displayManager.unregisterDisplayListener(it)
             displayListener = null
         }
     }
@@ -93,17 +82,16 @@ class ExternalDisplayManager(
      * that display is rendered. The display id prevents a stale mode id from being used after a
      * hotplug event changes the target display.
      */
-    fun setDisplayMode(result: DisplayModeManager.DisplayModeResult, displayId: Int) {
-        displayModeResult = result
-        displayModeDisplayId = displayId
+    fun updateDisplayMode(selection: DisplayModeManager.DisplayModeSelection) {
+        displayModeSelection = selection
 
-        if (externalPresentation?.isForDisplay(displayId) == true) {
-            applyDisplayMode(externalPresentation?.window, result)
+        if (externalPresentation?.isForDisplay(selection.displayId) == true) {
+            externalPresentation?.window?.let { DisplayModeWindowApplier.apply(it, selection) }
         }
     }
 
     private fun setupDisplayListener() {
-        displayListener = object : DisplayManager.DisplayListener {
+        val listener = object : DisplayManager.DisplayListener {
             override fun onDisplayAdded(displayId: Int) {
                 LimeLog.info("Display added: $displayId")
                 if (prefConfig.useExternalDisplay && displayId != Display.DEFAULT_DISPLAY) {
@@ -117,13 +105,9 @@ class ExternalDisplayManager(
             override fun onDisplayRemoved(displayId: Int) {
                 LimeLog.info("Display removed: $displayId")
                 val wasTargetDisplay = displayId != Display.DEFAULT_DISPLAY &&
-                    targetDisplayResolver.isTargetDisplay(displayId)
-                targetDisplayResolver.onDisplayRemoved(displayId)
+                    targetDisplayResolver.onDisplayRemoved(displayId)
                 if (wasTargetDisplay) {
-                    if (externalPresentation != null) {
-                        externalPresentation?.dismiss()
-                        externalPresentation = null
-                    }
+                    dismissExternalPresentation()
 
                     val surfaceView = activity.findViewById<View>(R.id.surfaceView)
                     surfaceView?.visibility = View.VISIBLE
@@ -138,7 +122,13 @@ class ExternalDisplayManager(
             }
         }
 
-        displayManager?.registerDisplayListener(displayListener, null)
+        displayListener = listener
+        displayManager.registerDisplayListener(listener, null)
+    }
+
+    private fun dismissExternalPresentation() {
+        externalPresentation?.dismiss()
+        externalPresentation = null
     }
 
     private fun checkForExternalDisplay() {
@@ -174,8 +164,9 @@ class ExternalDisplayManager(
                         View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
                         View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
 
-            if (displayModeDisplayId == presentationDisplayId) {
-                displayModeResult?.let { applyDisplayMode(window, it) }
+            val selection = displayModeSelection
+            if (selection != null && selection.displayId == presentationDisplayId) {
+                window?.let { DisplayModeWindowApplier.apply(it, selection) }
             }
 
             setContentView(R.layout.activity_game)
@@ -192,21 +183,6 @@ class ExternalDisplayManager(
         }
 
         fun isForDisplay(displayId: Int): Boolean = presentationDisplayId == displayId
-    }
-
-    private fun applyDisplayMode(window: Window?, result: DisplayModeManager.DisplayModeResult) {
-        if (window == null) {
-            return
-        }
-
-        val layoutParams = window.attributes
-        if (result.preferredModeId >= 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            layoutParams.preferredDisplayModeId = result.preferredModeId
-            window.attributes = layoutParams
-        } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            layoutParams.preferredRefreshRate = result.refreshRate
-            window.attributes = layoutParams
-        }
     }
 
     @SuppressLint("ResourceAsColor", "SetTextI18n")

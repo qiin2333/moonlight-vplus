@@ -192,10 +192,6 @@ class StreamSettings : AppCompatActivity() {
             externalDisplayManager = ExternalDisplayManager(
                 this,
                 previousPrefs,
-                null,
-                null,
-                null,
-                null,
                 TargetDisplayResolver(this)
             )
             externalDisplayManager?.initialize()

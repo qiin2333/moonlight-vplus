@@ -51,12 +51,14 @@ class TargetDisplayResolver(context: Context) {
             displayManager.getDisplay(targetDisplayId) != null
     }
 
-    fun isTargetDisplay(displayId: Int): Boolean = targetDisplayId == displayId
-
-    fun onDisplayRemoved(displayId: Int) {
-        if (targetDisplayId == displayId) {
-            targetDisplayId = Display.DEFAULT_DISPLAY
+    /** Clears the selected target when it is removed and reports whether it was selected. */
+    fun onDisplayRemoved(displayId: Int): Boolean {
+        if (targetDisplayId != displayId) {
+            return false
         }
+
+        targetDisplayId = Display.DEFAULT_DISPLAY
+        return true
     }
 
     private fun getDefaultDisplay(): Display {
