@@ -7,7 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
-import android.widget.ImageView
+import androidx.appcompat.widget.AppCompatImageView
 import kotlin.math.min
 
 /** ImageView that composites the acrylic foreground at draw time without a bitmap copy. */
@@ -15,7 +15,7 @@ class AcrylicImageView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
-) : ImageView(context, attrs, defStyleAttr) {
+) : AppCompatImageView(context, attrs, defStyleAttr) {
     private var acrylicDrawable: Drawable? = null
     private var acrylicAlpha = 255
     private var acrylicEnabled = false
