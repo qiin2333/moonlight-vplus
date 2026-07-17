@@ -35,7 +35,6 @@ class BackgroundImageManager(
         private set
     private var currentSolidColor: Int? = null
     private var currentBitmapStyle: BitmapStyle? = null
-    private var currentAcrylicBitmap: Bitmap? = null
     val hasBackground: Boolean
         get() = currentBackground != null || currentSolidColor != null
 
@@ -139,9 +138,9 @@ class BackgroundImageManager(
     private fun applyBitmap(bitmap: Bitmap, style: BitmapStyle) {
         when (style) {
             BitmapStyle.Artwork -> {
+                clearAcrylicMode()
                 if (artworkBlurOnly) {
                     clearImageView.tag = null
-                    clearGeneratedAcrylicBitmap()
                     clearImageView.setImageDrawable(null)
                     clearImageView.visibility = View.GONE
                     blurImageView.visibility = View.VISIBLE
@@ -157,7 +156,6 @@ class BackgroundImageManager(
                         BLUR_RADIUS_PAIRED
                     )
                     clearImageView.tag = null
-                    clearGeneratedAcrylicBitmap()
                     clearImageView.setImageBitmap(bitmap)
                     clearImageView.imageAlpha = CLEAR_IMAGE_ALPHA
                 }
@@ -167,38 +165,29 @@ class BackgroundImageManager(
                 clearImageView.visibility = View.VISIBLE
                 setBlurredBitmap(blurImageView, bitmap, BLUR_IMAGE_ALPHA)
                 clearImageView.tag = bitmap
-                clearGeneratedAcrylicBitmap()
-                clearImageView.setImageDrawable(null)
-                clearImageView.imageAlpha = 255
-                blurExecutor.execute {
-                    val acrylicBitmap = applyAlpha(bitmap, CLEAR_IMAGE_ALPHA)
-                    mainHandler.post {
-                        if (clearImageView.tag !== bitmap) {
-                            if (acrylicBitmap != null && acrylicBitmap !== bitmap && !acrylicBitmap.isRecycled) {
-                                acrylicBitmap.recycle()
-                            }
-                            return@post
-                        }
-                        if (acrylicBitmap != null) {
-                            currentAcrylicBitmap = acrylicBitmap
-                            clearImageView.setImageBitmap(acrylicBitmap)
-                            clearImageView.imageAlpha = 255
-                        }
-                    }
-                }
+                setAcrylicBitmap(bitmap, CLEAR_IMAGE_ALPHA)
             }
         }
     }
 
-    private fun clearGeneratedAcrylicBitmap() {
-        // 已交给 ImageView 的 Bitmap 可能仍被硬件渲染线程使用，不能主动 recycle。
-        currentAcrylicBitmap = null
+    private fun clearAcrylicMode() {
+        (clearImageView as? AcrylicImageView)?.clearAcrylicMode()
+    }
+
+    private fun setAcrylicBitmap(bitmap: Bitmap, alpha: Int) {
+        val acrylicImageView = clearImageView as? AcrylicImageView
+        if (acrylicImageView != null) {
+            acrylicImageView.setAcrylicBitmap(bitmap, alpha)
+        } else {
+            clearImageView.setImageBitmap(bitmap)
+            clearImageView.imageAlpha = alpha
+        }
     }
 
     private fun applyColor(color: Int) {
         blurImageView.tag = null
         clearImageView.tag = null
-        clearGeneratedAcrylicBitmap()
+        clearAcrylicMode()
         clearImageView.setImageDrawable(null)
         blurImageView.visibility = View.VISIBLE
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -236,7 +225,7 @@ class BackgroundImageManager(
                         blurImageView.setRenderEffect(null)
                     }
                     clearImageView.tag = null
-                    clearGeneratedAcrylicBitmap()
+                    clearAcrylicMode()
                     clearImageView.setImageDrawable(null)
                     currentBackground = null
                     currentSolidColor = null
@@ -256,14 +245,13 @@ class BackgroundImageManager(
     companion object {
         private const val CLEAR_IMAGE_ALPHA = 160 // ~63%
         private const val BLUR_IMAGE_ALPHA = 160  // ~63%
-        // 横屏双层下的 blur 背景：更朗弱且更胧胧朝朝，让中间清晰大图更突出
+        // 横屏双层下的 blur 背景：更弱且更朦胧，让中间清晰大图更突出
         private const val BLUR_IMAGE_ALPHA_PAIRED = 100      // ~39%
         private const val RENDER_EFFECT_RADIUS_PAIRED = 60f  // 原 25f
         private const val BLUR_RADIUS_PAIRED = 22            // 原 10
         const val OVERLAY_IMAGE_ALPHA = 180       // ~70%，连接页历史最终参数
         private const val BLUR_RADIUS = 10
         private const val RENDER_EFFECT_RADIUS = 25f
-        private const val BG_COLOR = 0xFF4D464A.toInt()
 
         private val blurExecutor = Executors.newSingleThreadExecutor()
         private val mainHandler = Handler(Looper.getMainLooper())
@@ -329,33 +317,6 @@ class BackgroundImageManager(
             } else {
                 imageView.setImageDrawable(drawable)
                 imageView.imageAlpha = alpha
-            }
-        }
-
-        /**
-         * 给亚克力模式的中央封面叠加半透明效果，并填充固定底色，避免 fitCenter
-         * 的图片区域透出底层模糊图；这是旧版背景模式的核心合成步骤。
-         */
-        fun applyAlpha(original: Bitmap, alpha: Int): Bitmap? {
-            if (original.isRecycled) return null
-            return try {
-                val src = if (Build.VERSION.SDK_INT >= 26 &&
-                    original.config == Bitmap.Config.HARDWARE) {
-                    original.copy(Bitmap.Config.ARGB_8888, false) ?: return null
-                } else {
-                    original
-                }
-                val result = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
-                val canvas = android.graphics.Canvas(result)
-                canvas.drawColor(BG_COLOR)
-                val paint = android.graphics.Paint()
-                paint.alpha = alpha
-                paint.isFilterBitmap = true
-                canvas.drawBitmap(src, 0f, 0f, paint)
-                if (src !== original) src.recycle()
-                result
-            } catch (_: Throwable) {
-                null
             }
         }
 
