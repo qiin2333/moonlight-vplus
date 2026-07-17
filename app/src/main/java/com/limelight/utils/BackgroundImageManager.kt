@@ -142,6 +142,7 @@ class BackgroundImageManager(
                 if (artworkBlurOnly) {
                     clearImageView.tag = null
                     clearGeneratedAcrylicBitmap()
+                    clearImageView.setImageDrawable(null)
                     clearImageView.visibility = View.GONE
                     blurImageView.visibility = View.VISIBLE
                     setBlurredBitmap(blurImageView, bitmap, BLUR_IMAGE_ALPHA)
@@ -198,6 +199,7 @@ class BackgroundImageManager(
         blurImageView.tag = null
         clearImageView.tag = null
         clearGeneratedAcrylicBitmap()
+        clearImageView.setImageDrawable(null)
         blurImageView.visibility = View.VISIBLE
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             blurImageView.setRenderEffect(null)
