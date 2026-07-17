@@ -32,9 +32,7 @@ def enableAudioHapticsOutput = (
                 ?: System.getenv("ENABLE_AUDIO_HAPTICS_OUTPUT")
                 ?: "false"
 ).toString().toBoolean()
-def audioHapticsAppLabel = enableAudioHapticsOutput
-        ? "Moonlight V+ 触觉内测"
-        : "Moonlight V+"
+def audioHapticsAppLabel = "Moonlight V+"
 def audioHapticsSdkDir = (
         project.findProperty("audioHapticsSdkDir")
                 ?: localProperties.getProperty("audioHapticsSdkDir")
@@ -68,7 +66,7 @@ android {
         minSdk 22
         targetSdk 35
 
-        versionName "12.10.4-audio-haptics-0.5.14-beta.1"
+        versionName "12.10.4-audio-haptics-0.5.14"
         versionCode = 393
 
         // Optional GitHub OAuth App client ID. Enable Device Flow on the OAuth app,
@@ -229,9 +227,7 @@ android {
             // TL;DR: Leave the following line alone!
             applicationIdSuffix ".qiin"
             resValue "string", "app_label", audioHapticsAppLabel
-            resValue "string", "app_label_root", enableAudioHapticsOutput
-                    ? "Moonlight Root 触觉内测"
-                    : "Moonlight (Root)"
+            resValue "string", "app_label_root", "Moonlight (Root)"
 
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
