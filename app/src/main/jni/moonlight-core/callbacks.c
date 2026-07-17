@@ -460,16 +460,15 @@ void BridgeClConnectionStatusUpdate(int connectionStatus) {
     }
 }
 
-void BridgeClSetHdrMode(bool enabled) {
+void BridgeClSetHdrMode(bool enabled, void* hdrMetadata) {
     JNIEnv* env = GetThreadEnv();
 
     jbyteArray hdrMetadataByteArray = NULL;
-    SS_HDR_METADATA hdrMetadata;
 
     // Check if HDR metadata was provided
-    if (enabled && LiGetHdrMetadata(&hdrMetadata)) {
+    if (enabled && hdrMetadata != NULL) {
         hdrMetadataByteArray = (*env)->NewByteArray(env, sizeof(SS_HDR_METADATA));
-        (*env)->SetByteArrayRegion(env, hdrMetadataByteArray, 0, sizeof(SS_HDR_METADATA), (jbyte*)&hdrMetadata);
+        (*env)->SetByteArrayRegion(env, hdrMetadataByteArray, 0, sizeof(SS_HDR_METADATA), (jbyte*)hdrMetadata);
     }
 
     (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeClSetHdrModeMethod, enabled, hdrMetadataByteArray);
