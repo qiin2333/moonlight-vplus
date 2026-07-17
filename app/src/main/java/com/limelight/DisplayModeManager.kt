@@ -35,8 +35,13 @@ object DisplayModeManager {
                 (prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_BALANCED && prefConfig.reduceRefreshRate)
     }
 
-    fun shouldIgnoreInsetsForResolution(display: Display, width: Int, height: Int): Boolean {
-        if (!PreferenceConfiguration.isNativeResolution(width, height)) {
+    fun shouldIgnoreInsetsForResolution(
+        display: Display,
+        width: Int,
+        height: Int,
+        isNativeResolution: Boolean = PreferenceConfiguration.isNativeResolution(width, height)
+    ): Boolean {
+        if (!isNativeResolution) {
             return false
         }
 
@@ -61,7 +66,7 @@ object DisplayModeManager {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             var bestMode = display.mode
-            val isNativeResolutionStream = PreferenceConfiguration.isNativeResolution(prefConfig.width, prefConfig.height)
+            val isNativeResolutionStream = prefConfig.usesNativeDisplayMode
             var refreshRateIsGood = isRefreshRateGoodMatch(bestMode.refreshRate, prefConfig.fps)
             var refreshRateIsEqual = isRefreshRateEqualMatch(bestMode.refreshRate, prefConfig.fps)
 
