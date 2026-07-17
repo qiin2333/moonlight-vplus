@@ -638,23 +638,12 @@ class GameMenu(
 
         // 返回键监听器
         dialog.setOnKeyListener { _, keyCode, event ->
-            if (event.action != KeyEvent.ACTION_DOWN) {
-                return@setOnKeyListener false
-            }
-
-            when (keyCode) {
-                KeyEvent.KEYCODE_BACK -> {
-                    if (navigateBack()) {
-                        return@setOnKeyListener true
-                    }
-                    return@setOnKeyListener false
-                }
-                KeyEvent.KEYCODE_ESCAPE -> {
-                    dialog.dismiss()
+            if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_DOWN) {
+                if (navigateBack()) {
                     return@setOnKeyListener true
                 }
+                return@setOnKeyListener false
             }
-
             false
         }
 
