@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 60
     env:
       GITHUB_OAUTH_CLIENT_ID: ${{ vars.OAUTH_CLIENT_ID || secrets.OAUTH_CLIENT_ID }}
-      AUDIO_HAPTICS_SDK_REF: e243a6ce65d6dec35976ca0eace3c5aff0d82cc4 # v0.5.14
+      AUDIO_HAPTICS_SDK_REF: f67e9fabf93264af5f982037e9b870d9578940f6 # 0.5.14 dialogue-aware GAME
       AUDIO_HAPTICS_SDK_DIR: ${{ github.workspace }}/.deps/moonlight-audio-haptics
       ENABLE_AUDIO_HAPTICS_OUTPUT: true
     steps:
