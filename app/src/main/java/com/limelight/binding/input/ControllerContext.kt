@@ -373,6 +373,10 @@ class InputDeviceContext(handler: ControllerHandler) : GenericControllerContext(
         }
         this.gyroReportRateHz = oldContext.gyroReportRateHz
         this.accelReportRateHz = oldContext.accelReportRateHz
+        this.lowFreqMotor = oldContext.lowFreqMotor
+        this.highFreqMotor = oldContext.highFreqMotor
+        this.leftTriggerMotor = oldContext.leftTriggerMotor
+        this.rightTriggerMotor = oldContext.rightTriggerMotor
 
         // Don't release the controller number, because we will carry it over if it is present.
         // We also want to make sure the change is invisible to the host PC to avoid an add/remove

@@ -483,13 +483,13 @@ class GameMenu(
             val on: Short = 0xFFFF.toShort()
             val off: Short = 0
             for (n in 0.toShort()..3.toShort()) {
-                ch.handleRumble(n.toShort(), on, on)
+                ch.handleTestRumble(n.toShort(), on, on)
             }
 
             handler.postDelayed({
                 try {
                     for (n in 0.toShort()..3.toShort()) {
-                        ch.handleRumble(n.toShort(), off, off)
+                        ch.handleTestRumble(n.toShort(), off, off)
                     }
                 } catch (_: Exception) {}
             }, 1000)
