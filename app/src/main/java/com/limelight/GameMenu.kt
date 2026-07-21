@@ -956,7 +956,13 @@ class GameMenu(
         } else {
             DIALOG_PORTRAIT_WIDTH_FRACTION
         }
-        return (game.resources.displayMetrics.widthPixels * widthFraction)
+        val windowWidth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            game.windowManager.currentWindowMetrics.bounds.width()
+        } else {
+            game.window.decorView.width
+        }.takeIf { it > 0 } ?: game.resources.displayMetrics.widthPixels
+
+        return (windowWidth * widthFraction)
             .toInt()
             .coerceAtLeast(1)
     }
