@@ -632,6 +632,7 @@ class GameMenu(
         }
         dialog = ComponentDialog(game, R.style.GameMenuDialogStyle).apply {
             setContentView(composeView)
+            setCanceledOnTouchOutside(true)
         }
         this.activeDialog = dialog
 
@@ -1383,7 +1384,7 @@ class GameMenu(
         // Keep Compose surfaces opaque and blend the dialog once at the window level.
         private const val DIALOG_ALPHA = 0.7f
         private const val DIALOG_DIM_AMOUNT = 0.0f
-        private const val DIALOG_LANDSCAPE_WIDTH_FRACTION = 0.85f
+        private const val DIALOG_LANDSCAPE_WIDTH_FRACTION = 0.88f
         private const val DIALOG_PORTRAIT_WIDTH_FRACTION = 0.95f
         private const val PREF_NAME = "custom_special_keys"
         private const val KEY_NAME = "data"
