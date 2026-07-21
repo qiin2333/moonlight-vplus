@@ -1,18 +1,16 @@
 package com.limelight.binding.input.haptics
 
 /** Sources that may contribute to a controller's final rumble state. */
-enum class RumbleSource {
+internal enum class RumbleSource {
     HOST,
     AUDIO,
     TEST
 }
 
 /** A mixed output together with metadata useful to the Android routing layer. */
-data class MixedRumbleState(
+internal data class MixedRumbleState(
     val controllerNumber: Short,
-    val output: ControllerRumbleState,
-    val hostActive: Boolean,
-    val activeSources: Set<RumbleSource>
+    val output: ControllerRumbleState
 ) {
     val isZero: Boolean
         get() = output.isZero
@@ -28,7 +26,7 @@ data class MixedRumbleState(
  * This class is intentionally not synchronized. All calls should be made from the controller
  * output thread (or otherwise externally serialized).
  */
-class ControllerHapticsMixer(
+internal class ControllerHapticsMixer(
     hostActiveAudioGain: Float = DEFAULT_HOST_ACTIVE_AUDIO_GAIN
 ) {
     private data class TimedState(
@@ -140,12 +138,6 @@ class ControllerHapticsMixer(
         return changed
     }
 
-    /** Removes all state for a disconnected controller and returns the required stop output. */
-    fun clearController(controllerNumber: Short): MixedRumbleState {
-        controllers.remove(controllerNumber)
-        return zeroOutput(controllerNumber)
-    }
-
     /** Removes all controller state and returns one stop output for each previously tracked target. */
     fun clearAll(): List<MixedRumbleState> {
         val stopped = controllers.keys.map(::zeroOutput)
@@ -208,26 +200,16 @@ class ControllerHapticsMixer(
         val hostActive = !host.isZero
         val mixedAudio = if (hostActive) audio.scaled(audioGainWhenHostActive) else audio
 
-        val activeSources = buildSet {
-            if (hostActive) add(RumbleSource.HOST)
-            if (!audio.isZero) add(RumbleSource.AUDIO)
-            if (!test.isZero) add(RumbleSource.TEST)
-        }
-
         return MixedRumbleState(
             controllerNumber = controllerNumber,
-            output = host.maxWith(mixedAudio).maxWith(test),
-            hostActive = hostActive,
-            activeSources = activeSources
+            output = host.maxWith(mixedAudio).maxWith(test)
         )
     }
 
     private fun zeroOutput(controllerNumber: Short): MixedRumbleState =
         MixedRumbleState(
             controllerNumber = controllerNumber,
-            output = ControllerRumbleState.ZERO,
-            hostActive = false,
-            activeSources = emptySet()
+            output = ControllerRumbleState.ZERO
         )
 
     companion object {

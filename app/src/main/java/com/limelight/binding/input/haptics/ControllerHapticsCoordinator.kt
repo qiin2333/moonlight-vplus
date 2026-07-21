@@ -19,11 +19,15 @@ import com.limelight.nvstream.jni.MoonBridge
 internal class ControllerHapticsCoordinator(
     private val handler: ControllerHandler
 ) {
+    private class OutputSlot {
+        var pending: MixedRumbleState? = null
+        var runnable: Runnable? = null
+        var lastDispatchMs: Long? = null
+        var lastOutput: ControllerRumbleState? = null
+    }
+
     private val mixer = ControllerHapticsMixer()
-    private val pendingStates = mutableMapOf<Short, MixedRumbleState>()
-    private val pendingRunnables = mutableMapOf<Short, Runnable>()
-    private val lastDispatchMs = mutableMapOf<Short, Long>()
-    private val lastOutputs = mutableMapOf<Short, ControllerRumbleState>()
+    private val outputSlots = mutableMapOf<Short, OutputSlot>()
 
     @Volatile
     private var primaryControllerNumber = NO_CONTROLLER
@@ -43,7 +47,7 @@ internal class ControllerHapticsCoordinator(
     fun hasRumbleCapableController(): Boolean =
         primaryControllerNumber != NO_CONTROLLER
 
-    fun primaryControllerNumber(): Short? =
+    private fun primaryControllerNumber(): Short? =
         primaryControllerNumber
             .takeUnless { it == NO_CONTROLLER }
             ?.toShort()
@@ -329,10 +333,7 @@ internal class ControllerHapticsCoordinator(
         runOnOutputThread {
             if (stopped || controllerHasRumble(controllerNumber)) return@runOnOutputThread
 
-            pendingRunnables.remove(controllerNumber)?.let(handler.mainThreadHandler::removeCallbacks)
-            pendingStates.remove(controllerNumber)
-            lastDispatchMs.remove(controllerNumber)
-            lastOutputs.remove(controllerNumber)
+            resetOutputSlot(controllerNumber)
             handler.rumbleManager.clearDeviceFallback(controllerNumber)
             scheduleNextExpiry()
         }
@@ -343,10 +344,7 @@ internal class ControllerHapticsCoordinator(
         runOnOutputThread {
             if (isStoppingOrStopped()) return@runOnOutputThread
 
-            pendingRunnables.remove(controllerNumber)?.let(handler.mainThreadHandler::removeCallbacks)
-            pendingStates.remove(controllerNumber)
-            lastDispatchMs.remove(controllerNumber)
-            lastOutputs.remove(controllerNumber)
+            resetOutputSlot(controllerNumber)
 
             val nowMs = SystemClock.elapsedRealtime()
             val mixed = mixer.mixedState(controllerNumber, nowMs)
@@ -428,30 +426,37 @@ internal class ControllerHapticsCoordinator(
         }
     }
 
+    private fun resetOutputSlot(controllerNumber: Short) {
+        outputSlots.remove(controllerNumber)?.runnable?.let(handler.mainThreadHandler::removeCallbacks)
+    }
+
     private fun queue(mixed: MixedRumbleState) {
         if (isStoppingOrStopped()) return
         val controllerNumber = mixed.controllerNumber
-        pendingStates[controllerNumber] = mixed
-        if (pendingRunnables.containsKey(controllerNumber)) return
+        val slot = outputSlots.getOrPut(controllerNumber, ::OutputSlot)
+        slot.pending = mixed
+        if (slot.runnable != null) return
 
         val nowMs = SystemClock.elapsedRealtime()
         val intervalMs = dispatchIntervalMs(controllerNumber)
-        val previousDispatchMs = lastDispatchMs[controllerNumber] ?: (nowMs - intervalMs)
+        val previousDispatchMs = slot.lastDispatchMs ?: (nowMs - intervalMs)
         val delayMs = (intervalMs - (nowMs - previousDispatchMs)).coerceAtLeast(0L)
         val runnable = Runnable {
-            pendingRunnables.remove(controllerNumber)
-            val latest = pendingStates.remove(controllerNumber) ?: return@Runnable
-            dispatch(latest)
+            val currentSlot = outputSlots[controllerNumber] ?: return@Runnable
+            currentSlot.runnable = null
+            val latest = currentSlot.pending ?: return@Runnable
+            currentSlot.pending = null
+            dispatch(latest, currentSlot)
         }
-        pendingRunnables[controllerNumber] = runnable
+        slot.runnable = runnable
         handler.mainThreadHandler.postDelayed(runnable, delayMs)
     }
 
-    private fun dispatch(mixed: MixedRumbleState) {
+    private fun dispatch(mixed: MixedRumbleState, slot: OutputSlot) {
         if (isStoppingOrStopped()) return
         val controllerNumber = mixed.controllerNumber
         val output = mixed.output
-        if (lastOutputs[controllerNumber] == output) return
+        if (slot.lastOutput == output) return
 
         if (controllerHasRumble(controllerNumber)) {
             handler.rumbleManager.handleRumble(
@@ -460,8 +465,8 @@ internal class ControllerHapticsCoordinator(
                 output.highFrequency.toMotorShort(),
                 allowDeviceFallback = false
             )
-            lastOutputs[controllerNumber] = output
-            lastDispatchMs[controllerNumber] = SystemClock.elapsedRealtime()
+            slot.lastOutput = output
+            slot.lastDispatchMs = SystemClock.elapsedRealtime()
         } else if (output.isZero) {
             // A zero HOST value must still cancel a fallback that was started before disconnect.
             handler.rumbleManager.handleRumble(
@@ -470,7 +475,7 @@ internal class ControllerHapticsCoordinator(
                 0,
                 allowDeviceFallback = true
             )
-            lastOutputs.remove(controllerNumber)
+            slot.lastOutput = null
         }
     }
 
@@ -495,20 +500,16 @@ internal class ControllerHapticsCoordinator(
 
     private fun stopAllNow() {
         handler.mainThreadHandler.removeCallbacks(expiryRunnable)
-        pendingRunnables.values.forEach(handler.mainThreadHandler::removeCallbacks)
+        outputSlots.values.mapNotNull { it.runnable }.forEach(handler.mainThreadHandler::removeCallbacks)
 
         val controllerNumbers = linkedSetOf<Short>()
-        controllerNumbers.addAll(lastOutputs.keys)
-        controllerNumbers.addAll(pendingStates.keys)
+        controllerNumbers.addAll(outputSlots.keys)
         controllerNumbers.addAll(mixer.clearAll().map { it.controllerNumber })
         for (controllerNumber in 0 until ControllerHandler.MAX_GAMEPADS.toInt()) {
             controllerNumbers.add(controllerNumber.toShort())
         }
 
-        pendingStates.clear()
-        pendingRunnables.clear()
-        lastDispatchMs.clear()
-        lastOutputs.clear()
+        outputSlots.clear()
         audioController = null
         lastAudioContinuousState = ControllerRumbleState.ZERO
         lastAudioContinuousExpiresAtMs = null

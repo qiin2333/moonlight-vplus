@@ -2249,6 +2249,7 @@ class ControllerHandler(
         val context = usbDeviceContexts.get(controller.getControllerId())
         if (context != null) {
             LimeLog.info("Removed controller: " + controller.getControllerId())
+            rumbleManager.forgetUsbDevice(controller)
             releaseControllerNumber(context)
             context.destroy()
             usbDeviceContexts.remove(controller.getControllerId())
@@ -2373,9 +2374,6 @@ class ControllerHandler(
 
     fun hasRumbleCapableController(): Boolean =
         hapticsCoordinator.hasRumbleCapableController()
-
-    fun getPrimaryRumbleControllerNumber(): Short? =
-        hapticsCoordinator.primaryControllerNumber()
 
     fun handleRumble(controllerNumber: Short, lowFreqMotor: Short, highFreqMotor: Short) =
         hapticsCoordinator.submitHost(controllerNumber, lowFreqMotor, highFreqMotor)

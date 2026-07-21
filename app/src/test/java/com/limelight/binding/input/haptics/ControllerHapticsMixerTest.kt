@@ -1,7 +1,6 @@
 package com.limelight.binding.input.haptics
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -22,18 +21,13 @@ class ControllerHapticsMixerTest {
         )
 
         assertState(withHost, low = 0.7f, high = 0.2f)
-        assertTrue(withHost.hostActive)
-        assertEquals(setOf(RumbleSource.HOST, RumbleSource.AUDIO), withHost.activeSources)
 
         val audioCleared = mixer.clearSource(controller0, RumbleSource.AUDIO, 2)
         assertState(audioCleared, low = 0.7f, high = 0.1f)
-        assertTrue(audioCleared.hostActive)
 
         mixer.submitAudioContinuous(controller0, state(low = 0.6f, high = 0.8f), 3)
         val hostCleared = mixer.clearSource(controller0, RumbleSource.HOST, 4)
         assertState(hostCleared, low = 0.6f, high = 0.8f)
-        assertFalse(hostCleared.hostActive)
-        assertEquals(setOf(RumbleSource.AUDIO), hostCleared.activeSources)
     }
 
     @Test
@@ -82,7 +76,6 @@ class ControllerHapticsMixerTest {
 
         val expired = mixer.pruneExpired(50).single()
         assertState(expired, low = 0.6f)
-        assertFalse(expired.hostActive)
     }
 
     @Test
@@ -115,32 +108,32 @@ class ControllerHapticsMixerTest {
         assertState(mixer.mixedState(controller0, 1), low = 0.8f)
         assertState(mixer.mixedState(controller1, 1), high = 0.7f)
 
-        val disconnected = mixer.clearController(controller0)
-        assertTrue(disconnected.isZero)
         assertState(mixer.mixedState(controller1, 2), high = 0.7f)
     }
 
     @Test
-    fun clampsEveryMotorAndInvalidValues() {
+    fun clampsBaseMotorsAndInvalidValues() {
         val clamped = ControllerRumbleState(
             lowFrequency = -1f,
-            highFrequency = 2f,
-            leftTrigger = Float.NaN,
-            rightTrigger = Float.POSITIVE_INFINITY
+            highFrequency = 2f
+        )
+        val invalid = ControllerRumbleState(
+            lowFrequency = Float.NaN,
+            highFrequency = Float.POSITIVE_INFINITY
         )
 
         assertEquals(0f, clamped.lowFrequency, 0f)
         assertEquals(1f, clamped.highFrequency, 0f)
-        assertEquals(0f, clamped.leftTrigger, 0f)
-        assertEquals(0f, clamped.rightTrigger, 0f)
+        assertEquals(0f, invalid.lowFrequency, 0f)
+        assertEquals(0f, invalid.highFrequency, 0f)
 
         val mixed = ControllerHapticsMixer().submit(
             controller0,
             RumbleSource.TEST,
-            ControllerRumbleState(0.2f, 0.3f, 0.4f, 0.5f),
+            ControllerRumbleState(0.2f, 0.3f),
             0
         )
-        assertState(mixed, low = 0.2f, high = 0.3f, left = 0.4f, right = 0.5f)
+        assertState(mixed, low = 0.2f, high = 0.3f)
     }
 
     @Test
@@ -157,7 +150,6 @@ class ControllerHapticsMixerTest {
         )
 
         assertTrue(cleared.isZero)
-        assertFalse(cleared.hostActive)
     }
 
     @Test
@@ -175,21 +167,15 @@ class ControllerHapticsMixerTest {
 
     private fun state(
         low: Float = 0f,
-        high: Float = 0f,
-        left: Float = 0f,
-        right: Float = 0f
-    ) = ControllerRumbleState(low, high, left, right)
+        high: Float = 0f
+    ) = ControllerRumbleState(low, high)
 
     private fun assertState(
         mixed: MixedRumbleState,
         low: Float = 0f,
-        high: Float = 0f,
-        left: Float = 0f,
-        right: Float = 0f
+        high: Float = 0f
     ) {
         assertEquals(low, mixed.output.lowFrequency, 0.0001f)
         assertEquals(high, mixed.output.highFrequency, 0.0001f)
-        assertEquals(left, mixed.output.leftTrigger, 0.0001f)
-        assertEquals(right, mixed.output.rightTrigger, 0.0001f)
     }
 }

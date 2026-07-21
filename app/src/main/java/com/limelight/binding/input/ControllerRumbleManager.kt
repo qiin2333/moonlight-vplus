@@ -16,19 +16,79 @@ import android.os.Vibrator
 import android.os.VibratorManager
 
 import com.limelight.LimeLog
+import com.limelight.binding.input.driver.AbstractController
 import com.limelight.nvstream.input.ControllerPacket
 import com.limelight.nvstream.jni.MoonBridge
 
 import org.cgutman.shieldcontrollerextensions.SceChargingState
 import org.cgutman.shieldcontrollerextensions.SceConnectionType
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * 振动、LED 与电池状态管理器
  */
 class ControllerRumbleManager(private val handler: ControllerHandler) {
 
+    private data class BaseRumble(val lowFrequency: Short, val highFrequency: Short)
+    private data class TriggerRumble(val left: Short, val right: Short)
+
+    private inner class UsbRumbleOutput(val device: AbstractController) {
+        private val pendingBase = AtomicReference<BaseRumble?>()
+        private val pendingTriggers = AtomicReference<TriggerRumble?>()
+        @Volatile
+        private var closed = false
+        private val runnable = Runnable {
+            if (closed) return@Runnable
+            pendingBase.getAndSet(null)?.let { rumble ->
+                try {
+                    device.rumble(rumble.lowFrequency, rumble.highFrequency)
+                } catch (e: Exception) {
+                    LimeLog.warning("Controller rumble failed: ${e.message}")
+                }
+            }
+            pendingTriggers.getAndSet(null)?.let { rumble ->
+                try {
+                    device.rumbleTriggers(rumble.left, rumble.right)
+                } catch (e: Exception) {
+                    LimeLog.warning("Controller trigger rumble failed: ${e.message}")
+                }
+            }
+        }
+
+        fun submitBase(rumble: BaseRumble) {
+            if (closed) return
+            pendingBase.set(rumble)
+            schedule()
+        }
+
+        fun submitTriggers(rumble: TriggerRumble) {
+            if (closed) return
+            pendingTriggers.set(rumble)
+            schedule()
+        }
+
+        private fun schedule() {
+            if (closed) return
+            // A stable runnable lets the worker keep only this device's latest state.
+            handler.backgroundThreadHandler.removeCallbacks(runnable)
+            if (!handler.backgroundThreadHandler.post(runnable)) {
+                pendingBase.set(null)
+                pendingTriggers.set(null)
+            }
+        }
+
+        fun close() {
+            closed = true
+            pendingBase.set(null)
+            pendingTriggers.set(null)
+            handler.backgroundThreadHandler.removeCallbacks(runnable)
+        }
+    }
+
     @Volatile
     private var deviceFallbackControllerNumber = NO_DEVICE_FALLBACK_CONTROLLER
+    private val usbRumbleOutputsLock = Any()
+    private val usbRumbleOutputs = mutableMapOf<Int, UsbRumbleOutput>()
 
     @TargetApi(31)
     fun hasDualAmplitudeControlledRumbleVibrators(vm: VibratorManager): Boolean {
@@ -231,6 +291,28 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         return Math.min(255, ((lowFreqMotorMSB * 0.80) + (highFreqMotorMSB * 0.33)).toInt())
     }
 
+    private fun usbRumbleOutput(device: AbstractController): UsbRumbleOutput =
+        synchronized(usbRumbleOutputsLock) {
+            val controllerId = device.getControllerId()
+            val existing = usbRumbleOutputs[controllerId]
+            if (existing?.device === device) {
+                existing
+            } else {
+                existing?.close()
+                UsbRumbleOutput(device).also { usbRumbleOutputs[controllerId] = it }
+            }
+        }
+
+    internal fun forgetUsbDevice(device: AbstractController) {
+        val output = synchronized(usbRumbleOutputsLock) {
+            val controllerId = device.getControllerId()
+            usbRumbleOutputs[controllerId]
+                ?.takeIf { it.device === device }
+                ?.also { usbRumbleOutputs.remove(controllerId) }
+        }
+        output?.close()
+    }
+
     fun handleRumble(
         controllerNumber: Short,
         lowFreqMotor: Short,
@@ -294,17 +376,11 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
 
             if (deviceContext.controllerNumber == controllerNumber) {
                 foundMatchingDevice = true
-                val device = deviceContext.device
-                val capabilities = device?.capabilities?.toInt() ?: 0
+                val device = deviceContext.device ?: continue
+                val capabilities = device.capabilities.toInt()
                 if (capabilities and MoonBridge.LI_CCAP_RUMBLE.toInt() != 0) {
                     vibrated = true
-                    handler.backgroundThreadHandler.post {
-                        try {
-                            device?.rumble(lowFreqMotor, highFreqMotor)
-                        } catch (e: Exception) {
-                            LimeLog.warning("Controller rumble failed: ${e.message}")
-                        }
-                    }
+                    usbRumbleOutput(device).submitBase(BaseRumble(lowFreqMotor, highFreqMotor))
                 }
             }
         }
@@ -388,16 +464,12 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
             }
 
             if (deviceContext.controllerNumber == controllerNumber) {
-                val device = deviceContext.device
-                val capabilities = device?.capabilities?.toInt() ?: 0
+                val device = deviceContext.device ?: continue
+                val capabilities = device.capabilities.toInt()
                 if (capabilities and MoonBridge.LI_CCAP_TRIGGER_RUMBLE.toInt() != 0) {
-                    handler.backgroundThreadHandler.post {
-                        try {
-                            device?.rumbleTriggers(leftTrigger, rightTrigger)
-                        } catch (e: Exception) {
-                            LimeLog.warning("Controller trigger rumble failed: ${e.message}")
-                        }
-                    }
+                    usbRumbleOutput(device).submitTriggers(
+                        TriggerRumble(leftTrigger, rightTrigger)
+                    )
                 }
             }
         }
