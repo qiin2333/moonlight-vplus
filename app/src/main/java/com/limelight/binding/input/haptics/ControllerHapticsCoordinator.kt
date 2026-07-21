@@ -84,6 +84,12 @@ internal class ControllerHapticsCoordinator(
     }
 
     fun refreshPrimaryController() {
+        runOnOutputThread { refreshPrimaryControllerOnOutputThread() }
+    }
+
+    private fun refreshPrimaryControllerOnOutputThread() {
+        if (isStoppingOrStopped()) return
+
         val current = primaryControllerNumber()
         if (current != null && controllerHasRumble(current)) {
             return
