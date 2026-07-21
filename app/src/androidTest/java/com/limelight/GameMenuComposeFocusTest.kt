@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -33,6 +34,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
+@OptIn(ExperimentalTestApi::class)
 class GameMenuComposeFocusTest {
     @get:Rule
     val composeTestRule = createComposeRule()
