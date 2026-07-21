@@ -1339,12 +1339,13 @@ private fun GameMenuCards(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun GameMenuCard(
+internal fun GameMenuCard(
     title: String,
     status: String? = null,
     titleAccessory: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val view = LocalView.current
@@ -1364,7 +1365,7 @@ private fun GameMenuCard(
         color = colorResource(R.color.game_menu_card_background),
         shape = GameMenuCardShape,
         border = BorderStroke(GameMenuDimens.surfaceStroke, colorResource(R.color.game_menu_button_border)),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             // Keep long-press configuration on the card without making the whole
             // card consume a controller focus slot before its child controls.
