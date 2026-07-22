@@ -10,7 +10,6 @@ import java.io.StringReader
 import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.Proxy
-import java.net.URLEncoder
 import java.security.KeyManagementException
 import java.security.KeyStore
 import java.security.NoSuchAlgorithmException
@@ -624,7 +623,7 @@ class NvHTTP(
             val query = StringBuilder()
             query.append("angle=").append(angle)
             if (!displayName.isNullOrEmpty()) {
-                query.append("&display_name=").append(java.net.URLEncoder.encode(displayName, "UTF-8"))
+                query.append("&display_name=").append(displayName)
             }
 
             val jsonStr = openHttpConnectionToString(httpClientLongConnectTimeout, getHttpsUrl(true), "rotate-display", query.toString())
@@ -709,7 +708,7 @@ class NvHTTP(
         }
 
         context.displayName?.takeIf { it.isNotEmpty() }?.let { displayName ->
-            queryParams += "&display_name=${URLEncoder.encode(displayName, "UTF-8")}"
+            queryParams += "&display_name=$displayName"
         }
 
         queryParams += MoonBridge.getLaunchUrlQueryParameters()
