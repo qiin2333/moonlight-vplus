@@ -371,6 +371,7 @@ class GameMenu(
             state.value = state.value.copy(
                 title = getString(R.string.game_menu_title),
                 options = normalOptions,
+                deviceQuickOptions = device?.getGameMenuQuickOptions().orEmpty(),
                 crownToggleText = getCrownToggleText(),
                 isSubmenu = false
             )
@@ -581,6 +582,7 @@ class GameMenu(
                 superOptions = superOptions.toList(),
                 appName = getAppNameDisplay(),
                 crownToggleText = getCrownToggleText(),
+                deviceQuickOptions = device?.getGameMenuQuickOptions().orEmpty(),
                 quickActions = buildComposeQuickActions(),
                 visibleCards = readVisibleCards(),
                 bitrate = bitrateCardController.snapshot(),
@@ -1253,10 +1255,6 @@ class GameMenu(
                 toggleAction = Runnable { setCrownFeatureEnabled(!game.isCrownFeatureEnabled) }
             )
         ))
-
-        if (device != null) {
-            normalOptions.addAll(device.getGameMenuOptions())
-        }
 
         // 性能显示
         normalOptions.add(MenuOption(
