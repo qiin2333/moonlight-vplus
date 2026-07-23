@@ -1731,4 +1731,14 @@
     <string name="toast_update_integrity_mismatch">更新下载内容不是有效安装包，请切换网络或使用浏览器下载。</string>
     <string name="iperf_output_title">测试输出</string>
     <string name="iperf_output_empty_hint">测试结果和详细日志将在这里显示。</string>
+
+    <!-- 安全文档手册 -->
+    <string name="title_document_handbook">文档手册</string>
+    <string name="summary_document_handbook">查看 Moonlight V+ 使用指南和文章</string>
+    <string name="handbook_back">返回</string>
+    <string name="handbook_loading">正在加载文档手册…</string>
+    <string name="handbook_error_network">网络不通畅，请稍后再试</string>
+    <string name="handbook_error_timeout">文档加载超时，请点击重试</string>
+    <string name="handbook_error_unavailable">文档手册暂时无法打开，请稍后再试</string>
+    <string name="handbook_retry">点击重试</string>
 </resources>

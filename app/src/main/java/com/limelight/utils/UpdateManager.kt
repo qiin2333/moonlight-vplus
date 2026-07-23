@@ -16,6 +16,7 @@ import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.text.method.LinkMovementMethod
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -29,6 +30,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 
 import com.limelight.R
+import com.limelight.handbook.HandbookLauncher
 
 import org.json.JSONObject
 
@@ -358,7 +360,14 @@ object UpdateManager {
                 val notesScroll = view.findViewById<ScrollView>(R.id.update_notes_scroll)
                 notesScroll.visibility = View.VISIBLE
                 val notes = view.findViewById<TextView>(R.id.update_notes)
-                notes.text = SimpleMarkdownRenderer.render(releaseNotes, accentColor)
+                notes.text = SimpleMarkdownRenderer.render(
+                    releaseNotes,
+                    accentColor
+                ) { url ->
+                    HandbookLauncher.openUrl(context, url)
+                }
+                notes.movementMethod = LinkMovementMethod.getInstance()
+                notes.highlightColor = android.graphics.Color.TRANSPARENT
                 constrainUpdateNotesScroll(context, notesScroll, releaseNotes)
             }
 
@@ -387,7 +396,14 @@ object UpdateManager {
                 val notesScroll = view.findViewById<ScrollView>(R.id.update_notes_scroll)
                 notesScroll.visibility = View.VISIBLE
                 val notesView = view.findViewById<TextView>(R.id.update_notes)
-                notesView.text = SimpleMarkdownRenderer.render(updateInfo.releaseNotes, accentColor)
+                notesView.text = SimpleMarkdownRenderer.render(
+                    updateInfo.releaseNotes,
+                    accentColor
+                ) { url ->
+                    HandbookLauncher.openUrl(context, url)
+                }
+                notesView.movementMethod = LinkMovementMethod.getInstance()
+                notesView.highlightColor = android.graphics.Color.TRANSPARENT
                 constrainUpdateNotesScroll(context, notesScroll, updateInfo.releaseNotes)
             }
 
