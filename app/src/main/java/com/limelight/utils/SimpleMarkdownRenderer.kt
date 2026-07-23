@@ -20,7 +20,12 @@ object SimpleMarkdownRenderer {
     private const val BULLET_SYMBOL = "◦ "
     private const val SECTION_DIVIDER = "· · · ✿ · · ·"
 
-    fun render(markdown: String?, accentColor: Int, baseUrl: String? = null): CharSequence {
+    fun render(
+        markdown: String?,
+        accentColor: Int,
+        baseUrl: String? = null,
+        linksEnabled: Boolean = true
+    ): CharSequence {
         if (markdown.isNullOrEmpty()) return ""
 
         val builder = SpannableStringBuilder()
@@ -44,24 +49,24 @@ object SimpleMarkdownRenderer {
                 line.startsWith("###") -> {
                     if (hadContent) appendDivider(builder, accentColor)
                     val header = line.replaceFirst("^#{1,6}\\s*".toRegex(), "")
-                    appendHeader(builder, processInlineStyles(header, accentColor, baseUrl), 1.0f, accentColor)
+                    appendHeader(builder, processInlineStyles(header, accentColor, baseUrl, linksEnabled), 1.0f, accentColor)
                 }
                 line.startsWith("##") -> {
                     if (hadContent) appendDivider(builder, accentColor)
                     val header = line.replaceFirst("^#{1,6}\\s*".toRegex(), "")
-                    appendHeader(builder, processInlineStyles(header, accentColor, baseUrl), 1.1f, accentColor)
+                    appendHeader(builder, processInlineStyles(header, accentColor, baseUrl, linksEnabled), 1.1f, accentColor)
                 }
                 line.startsWith("#") -> {
                     if (hadContent) appendDivider(builder, accentColor)
                     val header = line.replaceFirst("^#{1,6}\\s*".toRegex(), "")
-                    appendHeader(builder, processInlineStyles(header, accentColor, baseUrl), 1.2f, accentColor)
+                    appendHeader(builder, processInlineStyles(header, accentColor, baseUrl, linksEnabled), 1.2f, accentColor)
                 }
                 line.startsWith("- ") || line.startsWith("* ") -> {
-                    appendBullet(builder, processInlineStyles(line.substring(2).trim(), accentColor, baseUrl), accentColor)
+                    appendBullet(builder, processInlineStyles(line.substring(2).trim(), accentColor, baseUrl, linksEnabled), accentColor)
                 }
                 else -> {
                     if (builder.isNotEmpty()) builder.append("\n")
-                    builder.append(processInlineStyles(line, accentColor, baseUrl))
+                    builder.append(processInlineStyles(line, accentColor, baseUrl, linksEnabled))
                 }
             }
             hadContent = true
@@ -127,9 +132,14 @@ object SimpleMarkdownRenderer {
      * plain http(s) URLs. The TextView displaying the result must install a
      * LinkMovementMethod for those spans to receive clicks.
      */
-    private fun processInlineStyles(text: String, linkColor: Int, baseUrl: String?): CharSequence {
+    private fun processInlineStyles(
+        text: String,
+        linkColor: Int,
+        baseUrl: String?,
+        linksEnabled: Boolean
+    ): CharSequence {
         val result = SpannableStringBuilder()
-        appendInlineContent(result, text, linkColor, baseUrl)
+        appendInlineContent(result, text, linkColor, baseUrl, linksEnabled)
         return result
     }
 
@@ -137,11 +147,12 @@ object SimpleMarkdownRenderer {
         result: SpannableStringBuilder,
         text: String,
         linkColor: Int,
-        baseUrl: String?
+        baseUrl: String?,
+        linksEnabled: Boolean
     ) {
         var i = 0
         while (i < text.length) {
-            val markdownLink = parseMarkdownLinkAt(text, i, baseUrl)
+            val markdownLink = if (linksEnabled) parseMarkdownLinkAt(text, i, baseUrl) else null
             if (markdownLink != null) {
                 val linkStart = result.length
                 result.append(markdownLink.label)
@@ -150,22 +161,28 @@ object SimpleMarkdownRenderer {
                 continue
             }
 
-            val boldStart = text.indexOf("**", i)
-            if (boldStart == i) {
-                val boldEnd = text.indexOf("**", boldStart + 2)
+            if (text.startsWith("**", i)) {
+                val boldEnd = text.indexOf("**", i + 2)
                 if (boldEnd == -1) {
-                    result.append(text, i, text.length)
-                    return
+                    result.append(text, i, i + 2)
+                    i += 2
+                    continue
                 }
 
                 val spanStart = result.length
-                appendInlineContent(result, text.substring(boldStart + 2, boldEnd), linkColor, baseUrl)
+                appendInlineContent(
+                    result,
+                    text.substring(i + 2, boldEnd),
+                    linkColor,
+                    baseUrl,
+                    linksEnabled
+                )
                 result.setSpan(StyleSpan(Typeface.BOLD), spanStart, result.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 i = boldEnd + 2
                 continue
             }
 
-            val bareUrlEnd = findBareUrlEnd(text, i)
+            val bareUrlEnd = if (linksEnabled) findBareUrlEnd(text, i) else null
             if (bareUrlEnd != null) {
                 val linkStart = result.length
                 result.append(text, i, bareUrlEnd)
@@ -246,25 +263,27 @@ object SimpleMarkdownRenderer {
 
     private fun resolveHttpUrl(value: String, baseUrl: String?): String? {
         return try {
-            val resolved = if (value.startsWith("http://", ignoreCase = true) || value.startsWith("https://", ignoreCase = true)) {
-                URI(value)
-            } else if (!baseUrl.isNullOrBlank()) {
-                URI(baseUrl).resolve(value)
-            } else {
-                return null
+            val directUri = Uri.parse(value)
+            if (isHttpUrl(directUri)) {
+                return directUri.toString()
             }
 
-            val uri = Uri.parse(resolved.toString())
-            if ((uri.scheme.equals("http", ignoreCase = true) || uri.scheme.equals("https", ignoreCase = true)) &&
-                !uri.host.isNullOrBlank()
-            ) {
-                resolved.toString()
-            } else {
-                null
-            }
+            if (baseUrl.isNullOrBlank()) return null
+
+            // Uri.parse accepts the relative destinations used by GitHub notes;
+            // encode only characters that java.net.URI.resolve rejects.
+            val normalizedDestination = Uri.encode(value, "/?#@&=+$,;:-._~!()'[]%")
+            val resolved = URI(baseUrl).resolve(normalizedDestination)
+            val resolvedUri = Uri.parse(resolved.toString())
+            resolved.toString().takeIf { isHttpUrl(resolvedUri) }
         } catch (_: Exception) {
             null
         }
+    }
+
+    private fun isHttpUrl(uri: Uri): Boolean {
+        return (uri.scheme.equals("http", ignoreCase = true) || uri.scheme.equals("https", ignoreCase = true)) &&
+            !uri.host.isNullOrBlank()
     }
 
     private data class MarkdownLink(

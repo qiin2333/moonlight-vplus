@@ -223,13 +223,17 @@ object UpdateManager {
                 }
 
                 try {
-                    val json = httpGetWithProxies(context, GITHUB_API_URL)
-                    if (json != null) {
-                        val jsonResponse = JSONObject(json)
+                    val response = httpGetWithProxies(context, GITHUB_API_URL)
+                    if (response != null) {
+                        val jsonResponse = JSONObject(response.body)
                         val latestVersion = jsonResponse.optString("tag_name", "").replaceFirst("^[Vv]".toRegex(), "")
                         val releaseNotes = jsonResponse.optString("body", "")
-                        val releasePageUrl = jsonResponse.optString("html_url", "").takeIf { it.isNotBlank() }
-                            ?: "https://github.com/qiin2333/moonlight-vplus/releases/tag/v$latestVersion"
+                        val releasePageUrl = if (response.fromProxy) {
+                            null
+                        } else {
+                            jsonResponse.optString("html_url", "").takeIf { it.isNotBlank() }
+                                ?: GITHUB_RELEASE_PAGE.removeSuffix("/latest") + "/tag/v$latestVersion"
+                        }
 
                         // 解析资产，优先选择APK
                         var apkUrl: String? = null
@@ -366,8 +370,13 @@ object UpdateManager {
                 val notesScroll = view.findViewById<ScrollView>(R.id.update_notes_scroll)
                 notesScroll.visibility = View.VISIBLE
                 val notes = view.findViewById<TextView>(R.id.update_notes)
-                notes.text = SimpleMarkdownRenderer.render(releaseNotes, accentColor, releasePageUrl)
-                configureUpdateNotesLinks(notes, accentColor)
+                notes.text = SimpleMarkdownRenderer.render(
+                    releaseNotes,
+                    accentColor,
+                    releasePageUrl,
+                    linksEnabled = releasePageUrl != null
+                )
+                if (releasePageUrl != null) configureUpdateNotesLinks(notes, accentColor)
                 constrainUpdateNotesScroll(context, notesScroll, releaseNotes)
             }
 
@@ -396,8 +405,13 @@ object UpdateManager {
                 val notesScroll = view.findViewById<ScrollView>(R.id.update_notes_scroll)
                 notesScroll.visibility = View.VISIBLE
                 val notesView = view.findViewById<TextView>(R.id.update_notes)
-                notesView.text = SimpleMarkdownRenderer.render(updateInfo.releaseNotes, accentColor, updateInfo.releasePageUrl)
-                configureUpdateNotesLinks(notesView, accentColor)
+                notesView.text = SimpleMarkdownRenderer.render(
+                    updateInfo.releaseNotes,
+                    accentColor,
+                    updateInfo.releasePageUrl,
+                    linksEnabled = updateInfo.releasePageUrl != null
+                )
+                if (updateInfo.releasePageUrl != null) configureUpdateNotesLinks(notesView, accentColor)
                 constrainUpdateNotesScroll(context, notesScroll, updateInfo.releaseNotes)
             }
 
@@ -1034,13 +1048,13 @@ object UpdateManager {
         }
     }
 
-    private fun httpGetWithProxies(context: Context, url: String): String? {
+    private fun httpGetWithProxies(context: Context, url: String): FetchResult? {
         val tries = buildProxiedUrls(context, url).take(6)
         if (tries.isEmpty()) return null
         // 并发竞速：同时发起多个候选（代理 + 直连），取首个成功响应
         val pool = Executors.newFixedThreadPool(tries.size)
-        val cs = ExecutorCompletionService<String?>(pool)
-        val futures = ArrayList<Future<String?>>()
+        val cs = ExecutorCompletionService<FetchResult?>(pool)
+        val futures = ArrayList<Future<FetchResult?>>()
         try {
             for (u in tries) {
                 futures.add(cs.submit(Callable { fetchSingleUrl(u) }))
@@ -1062,7 +1076,7 @@ object UpdateManager {
         }
     }
 
-    private fun fetchSingleUrl(u: String): String? {
+    private fun fetchSingleUrl(u: String): FetchResult? {
         var connection: HttpURLConnection? = null
         try {
             connection = URL(u).openConnection() as HttpURLConnection
@@ -1078,7 +1092,7 @@ object UpdateManager {
                     while (reader.readLine().also { line = it } != null) {
                         response.append(line)
                     }
-                    return response.toString()
+                    return FetchResult(response.toString(), u != GITHUB_API_URL)
                 }
             }
         } catch (e: Exception) {
@@ -1398,5 +1412,10 @@ object UpdateManager {
             val apkDownloadUrl: String?,
             val expectedSha256: String? = null,
             val expectedSize: Long? = null
+    )
+
+    private data class FetchResult(
+            val body: String,
+            val fromProxy: Boolean
     )
 }
