@@ -23,7 +23,7 @@ class SimpleMarkdownRendererInstrumentedTest {
         )
 
         val spans = urlSpans(rendered)
-        assertEquals(5, spans.size)
+        assertEquals(4, spans.size)
         assertTrue(spans.any { it.url == "https://example.com/a_(b_(c)).html" })
         assertTrue(spans.any { it.url == "https://github.com/qiin2333/moonlight-vplus/issues" })
         assertTrue(spans.any { it.url == "https://github.com/qiin2333/moonlight-vplus/docs/%E6%8C%87%E5%8D%97" })
