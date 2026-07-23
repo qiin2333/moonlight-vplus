@@ -34,7 +34,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -72,7 +71,6 @@ import java.io.ByteArrayInputStream
 
 class HandbookActivity : ComponentActivity() {
     private val repository by lazy { HandbookRepository(applicationContext) }
-    private val history = ArrayDeque<HandbookPageRef>()
 
     private var currentPage = HandbookUrlPolicy.index
     private var loadJob: Job? = null
@@ -91,7 +89,7 @@ class HandbookActivity : ComponentActivity() {
             HandbookTheme {
                 HandbookScreen(
                     state = uiState,
-                    onBack = ::navigateBack,
+                    onExit = ::finish,
                     onRetry = { loadPage(currentPage) },
                     onNavigate = ::navigateTo,
                     onOpenExternal = { BrowserOnlyLauncher.open(this, it) }
@@ -109,18 +107,8 @@ class HandbookActivity : ComponentActivity() {
 
     private fun navigateTo(page: HandbookPageRef) {
         if (page == currentPage) return
-        history.addLast(currentPage)
         currentPage = page
         loadPage(page)
-    }
-
-    private fun navigateBack() {
-        if (history.isEmpty()) {
-            finish()
-            return
-        }
-        currentPage = history.removeLast()
-        loadPage(currentPage)
     }
 
     private fun loadPage(page: HandbookPageRef) {
@@ -168,12 +156,12 @@ private fun HandbookTheme(content: @Composable () -> Unit) {
 @Composable
 private fun HandbookScreen(
     state: HandbookUiState,
-    onBack: () -> Unit,
+    onExit: () -> Unit,
     onRetry: () -> Unit,
     onNavigate: (HandbookPageRef) -> Unit,
     onOpenExternal: (String) -> Unit
 ) {
-    BackHandler(onBack = onBack)
+    BackHandler(onBack = onExit)
     val background = colorResource(R.color.advance_setting_background)
     val panel = colorResource(R.color.crown_panel_background)
     val primaryText = colorResource(R.color.crown_text_primary)
@@ -194,7 +182,7 @@ private fun HandbookScreen(
                     .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = onExit) {
                     Icon(
                         painter = painterResource(R.drawable.ic_arrow_right),
                         contentDescription = stringResource(R.string.handbook_back),
@@ -216,7 +204,6 @@ private fun HandbookScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .padding(12.dp)
             ) {
                 when (state) {
                     HandbookUiState.Loading -> {
@@ -262,17 +249,11 @@ private fun HandbookScreen(
                         }
                     }
                     is HandbookUiState.Content -> {
-                        Surface(
-                            modifier = Modifier.fillMaxSize(),
-                            shape = RoundedCornerShape(12.dp),
-                            color = Color.White
-                        ) {
-                            HandbookDocument(
-                                content = state,
-                                onNavigate = onNavigate,
-                                onOpenExternal = onOpenExternal
-                            )
-                        }
+                        HandbookDocument(
+                            content = state,
+                            onNavigate = onNavigate,
+                            onOpenExternal = onOpenExternal
+                        )
                     }
                 }
             }

@@ -22,6 +22,7 @@ import com.limelight.computers.PairStatePreflight
 import com.limelight.dialogs.AddressSelectionDialog
 import com.limelight.grid.PcGridAdapter
 import com.limelight.grid.assets.DiskAssetLoader
+import com.limelight.handbook.HandbookLauncher
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
@@ -2827,6 +2828,10 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                     joinQQGroup(QQ_GROUP_KEY)
                 }
                 .create()
+        dialogView.findViewById<View>(R.id.about_handbook_button).setOnClickListener {
+            dialog.dismiss()
+            HandbookLauncher.openIndex(this)
+        }
         dialog.show()
         AppDialogStyler.applyAboutDialog(dialog, this)
     }
