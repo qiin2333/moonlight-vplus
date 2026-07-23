@@ -69,17 +69,27 @@ object BrowserOnlyLauncher {
     }
 
     private fun resolveBrowserIntent(context: Context, browseIntent: Intent): Intent? {
-        val probe = Intent(Intent.ACTION_VIEW, BROWSER_PROBE_URL.toUri()).apply {
-            addCategory(Intent.CATEGORY_BROWSABLE)
+        val browserSelector = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_APP_BROWSER)
         }
-        val browserPackages = context.packageManager
-            .queryIntentActivities(probe, PackageManager.MATCH_DEFAULT_ONLY)
+        val packageManager = context.packageManager
+        val browserPackages = packageManager
+            .queryIntentActivities(browserSelector, PackageManager.MATCH_DEFAULT_ONLY)
             .mapNotNull { it.activityInfo?.packageName }
             .filterNot { it == context.packageName }
             .distinct()
+            .filter { packageName ->
+                packageManager.resolveActivity(
+                    Intent(browseIntent).setPackage(packageName),
+                    PackageManager.MATCH_DEFAULT_ONLY
+                ) != null
+            }
         if (browserPackages.isEmpty()) return null
 
-        val defaultPackage = context.packageManager
+        val probe = Intent(Intent.ACTION_VIEW, BROWSER_PROBE_URL.toUri()).apply {
+            addCategory(Intent.CATEGORY_BROWSABLE)
+        }
+        val defaultPackage = packageManager
             .resolveActivity(probe, PackageManager.MATCH_DEFAULT_ONLY)
             ?.activityInfo
             ?.packageName

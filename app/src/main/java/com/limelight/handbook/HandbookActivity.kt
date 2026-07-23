@@ -1,6 +1,7 @@
 package com.limelight.handbook
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.graphics.Color as AndroidColor
 import android.net.http.SslError
 import android.os.Build
@@ -8,7 +9,9 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.view.ActionMode
 import android.view.MotionEvent
+import android.view.ViewConfiguration
 import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -329,14 +332,14 @@ private fun createLockedHandbookWebView(
     onNavigate: (HandbookPageRef) -> Unit,
     onOpenExternal: (String) -> Unit
 ): WebView {
-    val gestureTracker = UserGestureTracker()
-    return WebView(context).apply {
+    val legacyLinkTapTracker = LegacyLinkTapTracker(context)
+    return LockedHandbookWebView(context).apply {
         setBackgroundColor(AndroidColor.WHITE)
         isFocusable = true
         isFocusableInTouchMode = true
-        isLongClickable = true
+        isLongClickable = false
         setOnTouchListener { _, event ->
-            gestureTracker.record(event)
+            legacyLinkTapTracker.record(this, event)
             false
         }
         applyLockedSettings(this)
@@ -347,8 +350,12 @@ private fun createLockedHandbookWebView(
                 request: WebResourceRequest
             ): Boolean {
                 if (!request.isForMainFrame || request.method != "GET") return true
-                val hasGesture = gestureTracker.isRecent() ||
-                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && request.hasGesture())
+                val hasGesture = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    legacyLinkTapTracker.clear()
+                    request.hasGesture()
+                } else {
+                    legacyLinkTapTracker.consume(request.url.toString())
+                }
                 return routeNavigation(
                     view.url,
                     request.url.toString(),
@@ -363,7 +370,7 @@ private fun createLockedHandbookWebView(
                 return routeNavigation(
                     view.url,
                     url,
-                    gestureTracker.isRecent(),
+                    legacyLinkTapTracker.consume(url),
                     onNavigate,
                     onOpenExternal
                 )
@@ -522,19 +529,92 @@ private fun emptyResponse(): WebResourceResponse {
     )
 }
 
-private class UserGestureTracker {
-    private var lastGestureAt = Long.MIN_VALUE
+private class LegacyLinkTapTracker(context: Context) {
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
+    private val touchSlopSquared = touchSlop * touchSlop
 
-    fun record(event: MotionEvent) {
-        if (event.actionMasked == MotionEvent.ACTION_UP) {
-            lastGestureAt = SystemClock.elapsedRealtime()
+    private var downX = 0f
+    private var downY = 0f
+    private var isTapCandidate = false
+    private var pendingTap: PendingLinkTap? = null
+
+    fun record(view: WebView, event: MotionEvent) {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                downX = event.x
+                downY = event.y
+                isTapCandidate = true
+                pendingTap = null
+            }
+
+            MotionEvent.ACTION_MOVE -> {
+                if (movedBeyondTouchSlop(event)) {
+                    isTapCandidate = false
+                }
+            }
+
+            MotionEvent.ACTION_POINTER_DOWN,
+            MotionEvent.ACTION_CANCEL -> {
+                isTapCandidate = false
+                pendingTap = null
+            }
+
+            MotionEvent.ACTION_UP -> {
+                pendingTap = if (isTapCandidate && !movedBeyondTouchSlop(event)) {
+                    view.hitTestResult
+                        .takeIf {
+                            it.type == WebView.HitTestResult.SRC_ANCHOR_TYPE ||
+                                it.type == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE
+                        }
+                        ?.extra
+                        ?.let { PendingLinkTap(it, event.eventTime) }
+                } else {
+                    null
+                }
+                isTapCandidate = false
+            }
         }
     }
 
-    fun isRecent(): Boolean {
-        return SystemClock.elapsedRealtime() - lastGestureAt in 0..USER_GESTURE_WINDOW_MS
+    fun consume(targetUrl: String): Boolean {
+        val tap = pendingTap ?: return false
+        pendingTap = null
+        val age = SystemClock.uptimeMillis() - tap.eventTime
+        return age in 0..LEGACY_LINK_TAP_TIMEOUT_MS && urlsMatch(tap.url, targetUrl)
+    }
+
+    fun clear() {
+        pendingTap = null
+    }
+
+    private fun movedBeyondTouchSlop(event: MotionEvent): Boolean {
+        val deltaX = event.x - downX
+        val deltaY = event.y - downY
+        return deltaX * deltaX + deltaY * deltaY > touchSlopSquared
+    }
+
+    private fun urlsMatch(first: String, second: String): Boolean {
+        val firstUri = android.net.Uri.parse(first)
+        val secondUri = android.net.Uri.parse(second)
+        return firstUri.scheme.equals(secondUri.scheme, ignoreCase = true) &&
+            firstUri.host.equals(secondUri.host, ignoreCase = true) &&
+            firstUri.port == secondUri.port &&
+            firstUri.encodedPath == secondUri.encodedPath &&
+            firstUri.encodedQuery == secondUri.encodedQuery &&
+            firstUri.encodedFragment == secondUri.encodedFragment
     }
 }
 
-private const val USER_GESTURE_WINDOW_MS = 1_500L
+private data class PendingLinkTap(
+    val url: String,
+    val eventTime: Long
+)
+
+private class LockedHandbookWebView(context: Context) : WebView(context) {
+    override fun startActionMode(callback: ActionMode.Callback): ActionMode? = null
+
+    override fun startActionMode(callback: ActionMode.Callback, type: Int): ActionMode? = null
+}
+
+private const val LEGACY_LINK_TAP_TIMEOUT_MS = 1_000L
 private const val POPUP_CAPTURE_TIMEOUT_MS = 1_500L
