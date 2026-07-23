@@ -47,7 +47,18 @@ class HandbookRepository(
         .readTimeout(ORIGIN_TIMEOUT_MS, TimeUnit.MILLISECONDS)
         .build()
 ) {
+    private val cache = HandbookCache(appContext)
+
     suspend fun load(page: HandbookPageRef): HandbookLoadResult = withContext(Dispatchers.IO) {
+        val cacheStartedAt = SystemClock.elapsedRealtime()
+        cache.get(page)?.let { cached ->
+            LimeLog.info(
+                "Handbook cache loaded in " +
+                    "${SystemClock.elapsedRealtime() - cacheStartedAt} ms"
+            )
+            return@withContext cached
+        }
+
         if (!isNetworkConnected()) {
             return@withContext HandbookLoadResult.Failure(HandbookFailureReason.NETWORK)
         }
@@ -61,6 +72,7 @@ class HandbookRepository(
                     "Handbook source ${sourceIndex + 1} loaded in " +
                         "${SystemClock.elapsedRealtime() - startedAt} ms"
                 )
+                cache.put(page, result)
                 return@withContext result
             } catch (error: Exception) {
                 val failure = classify(error)

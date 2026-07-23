@@ -31,6 +31,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnPreDraw
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import com.limelight.LimeLog
 import com.limelight.R
@@ -43,7 +44,11 @@ import java.io.ByteArrayInputStream
 class HandbookActivity : ComponentActivity() {
     private val repository by lazy { HandbookRepository(applicationContext) }
 
-    private var currentPage = HandbookUrlPolicy.index
+    private val navigationHistory = mutableListOf<HandbookPageRef>()
+    private var navigationIndex = 0
+    private val currentPage: HandbookPageRef
+        get() = navigationHistory[navigationIndex]
+
     private var loadJob: Job? = null
     private var prepareWebViewJob: Job? = null
     private var handbookWebView: LockedHandbookWebView? = null
@@ -53,6 +58,9 @@ class HandbookActivity : ComponentActivity() {
     private lateinit var loadingView: View
     private lateinit var errorView: View
     private lateinit var errorMessage: TextView
+    private lateinit var rootView: View
+    private lateinit var previousPageButton: ImageButton
+    private lateinit var nextPageButton: ImageButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,13 +72,15 @@ class HandbookActivity : ComponentActivity() {
         window.navigationBarColor = systemBarColor
 
         setContentView(R.layout.activity_handbook)
-        val root = findViewById<View>(R.id.handbook_root)
+        rootView = findViewById(R.id.handbook_root)
         contentContainer = findViewById(R.id.handbook_content)
         loadingView = findViewById(R.id.handbook_loading)
         errorView = findViewById(R.id.handbook_error)
         errorMessage = findViewById(R.id.handbook_error_message)
+        previousPageButton = findViewById(R.id.handbook_previous_button)
+        nextPageButton = findViewById(R.id.handbook_next_button)
 
-        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(rootView) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.setPadding(
                 systemBars.left,
@@ -80,13 +90,19 @@ class HandbookActivity : ComponentActivity() {
             )
             insets
         }
-        ViewCompat.requestApplyInsets(root)
+        ViewCompat.requestApplyInsets(rootView)
 
         findViewById<Button>(R.id.handbook_retry).setOnClickListener {
             loadPage(currentPage)
         }
-        findViewById<ImageButton>(R.id.handbook_back_button).setOnClickListener {
+        findViewById<ImageButton>(R.id.handbook_exit_button).setOnClickListener {
             finish()
+        }
+        previousPageButton.setOnClickListener {
+            navigateHistoryBy(-1)
+        }
+        nextPageButton.setOnClickListener {
+            navigateHistoryBy(1)
         }
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -94,12 +110,32 @@ class HandbookActivity : ComponentActivity() {
             }
         })
 
-        currentPage = HandbookLauncher.pageFromIntent(intent)
+        restoreNavigationHistory(savedInstanceState)
+        updateNavigationButtons()
         UiHelper.notifyNewRootView(this)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putStringArrayList(
+            STATE_NAVIGATION_HISTORY,
+            ArrayList(navigationHistory.map(HandbookUrlPolicy::canonicalUrl))
+        )
+        outState.putInt(STATE_NAVIGATION_INDEX, navigationIndex)
+        super.onSaveInstanceState(outState)
+    }
+
+    override fun onStart() {
+        super.onStart()
         loadPage(currentPage)
-        root.doOnPreDraw {
-            root.post {
-                if (isFinishing || isDestroyed) return@post
+        rootView.doOnPreDraw {
+            rootView.post {
+                if (isFinishing ||
+                    isDestroyed ||
+                    !lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) ||
+                    handbookWebView != null
+                ) {
+                    return@post
+                }
                 prepareWebViewJob = lifecycleScope.launch {
                     ensureWebView()
                 }
@@ -107,24 +143,105 @@ class HandbookActivity : ComponentActivity() {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        releaseBackgroundResources()
+    }
+
     override fun onDestroy() {
-        loadJob?.cancel()
-        prepareWebViewJob?.cancel()
-        pendingContent = null
-        handbookWebView?.apply {
-            onDocumentRendered = null
-            stopLoading()
-            loadUrl("about:blank")
-            destroy()
-        }
-        handbookWebView = null
+        releaseBackgroundResources()
         super.onDestroy()
+    }
+
+    private fun releaseBackgroundResources() {
+        loadJob?.cancel()
+        loadJob = null
+        prepareWebViewJob?.cancel()
+        prepareWebViewJob = null
+        pendingContent = null
+        handbookWebView?.let { webView ->
+            handbookWebView = null
+            contentContainer.removeView(webView)
+            webView.apply {
+                onPause()
+                setOnTouchListener(null)
+                setDownloadListener(null)
+                webChromeClient = null
+                webViewClient = WebViewClient()
+                onDocumentRendered = null
+                renderStartedAtMs = 0L
+                stopLoading()
+                clearHistory()
+                removeAllViews()
+                destroy()
+            }
+            LimeLog.info("Handbook WebView released while backgrounded")
+        }
     }
 
     private fun navigateTo(page: HandbookPageRef) {
         if (page == currentPage) return
-        currentPage = page
-        loadPage(page)
+
+        if (navigationIndex < navigationHistory.lastIndex) {
+            navigationHistory.subList(
+                navigationIndex + 1,
+                navigationHistory.size
+            ).clear()
+        }
+        navigationHistory += page
+        navigationIndex = navigationHistory.lastIndex
+        if (navigationHistory.size > MAX_NAVIGATION_HISTORY) {
+            navigationHistory.removeAt(0)
+            navigationIndex--
+        }
+        updateNavigationButtons()
+        loadPage(currentPage)
+    }
+
+    private fun navigateHistoryBy(offset: Int) {
+        val targetIndex = navigationIndex + offset
+        if (targetIndex !in navigationHistory.indices) return
+
+        navigationIndex = targetIndex
+        updateNavigationButtons()
+        loadPage(currentPage)
+    }
+
+    private fun restoreNavigationHistory(savedInstanceState: Bundle?) {
+        val restoredUrls = savedInstanceState
+            ?.getStringArrayList(STATE_NAVIGATION_HISTORY)
+        val restoredPages = restoredUrls?.map(HandbookUrlPolicy::parse)
+        val restoredIndex = savedInstanceState
+            ?.getInt(STATE_NAVIGATION_INDEX, -1)
+            ?: -1
+        if (!restoredPages.isNullOrEmpty() &&
+            restoredPages.size <= MAX_NAVIGATION_HISTORY &&
+            restoredPages.all { it != null } &&
+            restoredIndex in restoredPages.indices
+        ) {
+            navigationHistory += restoredPages.filterNotNull()
+            navigationIndex = restoredIndex
+            return
+        }
+
+        navigationHistory += HandbookLauncher.pageFromIntent(intent)
+        navigationIndex = 0
+    }
+
+    private fun updateNavigationButtons() {
+        setNavigationButtonEnabled(
+            previousPageButton,
+            navigationIndex > 0
+        )
+        setNavigationButtonEnabled(
+            nextPageButton,
+            navigationIndex < navigationHistory.lastIndex
+        )
+    }
+
+    private fun setNavigationButtonEnabled(button: ImageButton, enabled: Boolean) {
+        button.isEnabled = enabled
+        button.alpha = if (enabled) 1f else DISABLED_NAVIGATION_ALPHA
     }
 
     private fun loadPage(page: HandbookPageRef) {
@@ -523,3 +640,7 @@ private class LockedHandbookWebView(context: Context) : WebView(context) {
 
 private const val LEGACY_LINK_TAP_TIMEOUT_MS = 1_000L
 private const val POPUP_CAPTURE_TIMEOUT_MS = 1_500L
+private const val MAX_NAVIGATION_HISTORY = 50
+private const val DISABLED_NAVIGATION_ALPHA = 0.35f
+private const val STATE_NAVIGATION_HISTORY = "handbook_navigation_history"
+private const val STATE_NAVIGATION_INDEX = "handbook_navigation_index"

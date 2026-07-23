@@ -16,17 +16,16 @@
             android:background="@color/crown_panel_background"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingEnd="16dp">
+            android:paddingEnd="8dp">
 
             <ImageButton
-                android:id="@+id/handbook_back_button"
+                android:id="@+id/handbook_exit_button"
                 android:layout_width="56dp"
                 android:layout_height="match_parent"
                 android:background="?android:attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/handbook_back"
+                android:contentDescription="@string/handbook_exit"
                 android:padding="16dp"
-                android:rotation="180"
-                android:src="@drawable/ic_arrow_right"
+                android:src="@drawable/phc_action_exit"
                 android:tint="@color/crown_text_primary" />
 
             <TextView
@@ -38,6 +37,31 @@
                 android:text="@string/title_document_handbook"
                 android:textColor="@color/crown_text_primary"
                 android:textSize="19sp" />
+
+            <ImageButton
+                android:id="@+id/handbook_previous_button"
+                android:layout_width="48dp"
+                android:layout_height="match_parent"
+                android:alpha="0.35"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/handbook_previous_page"
+                android:enabled="false"
+                android:padding="14dp"
+                android:rotation="180"
+                android:src="@drawable/ic_chevron_right"
+                android:tint="@color/crown_text_primary" />
+
+            <ImageButton
+                android:id="@+id/handbook_next_button"
+                android:layout_width="48dp"
+                android:layout_height="match_parent"
+                android:alpha="0.35"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/handbook_next_page"
+                android:enabled="false"
+                android:padding="14dp"
+                android:src="@drawable/ic_chevron_right"
+                android:tint="@color/crown_text_primary" />
 
         </LinearLayout>
 
