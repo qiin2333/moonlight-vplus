@@ -73,6 +73,9 @@ class AudioVibrationService(context: Context) {
     val nativeSessionHandle: Long
         get() = nativeSession?.nativeHandle ?: 0L
 
+    val systemAudioCoupledDeviceActive: Boolean
+        get() = isSystemAudioCoupledDeviceActive
+
     // Gamepad rumble handler (optional, set externally)
     var controllerHandler: ControllerHandler? = null
         set(value) {
@@ -170,6 +173,10 @@ class AudioVibrationService(context: Context) {
         if (!enabled) {
             stopAll()
         }
+    }
+
+    fun setStrength(strength: Int) {
+        this.strength = strength.coerceIn(0, MAX_STRENGTH)
     }
 
     val sceneModeInt: Int
@@ -722,7 +729,7 @@ class AudioVibrationService(context: Context) {
         private const val MIN_INTERVAL_GAME_MS: Long = 25
         private const val MIN_INTERVAL_MUSIC_MS: Long = 15
         private const val MIN_IR_AMPLITUDE = 0.05f
-        private const val MAX_STRENGTH = 200
+        const val MAX_STRENGTH = 200
         private const val DEFAULT_ONSET_SENSITIVITY = 1.0f
         private const val MUSIC_ONSET_SENSITIVITY = 2.5f
 
