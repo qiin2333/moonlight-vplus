@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
+import android.os.SystemClock
+import com.limelight.LimeLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
@@ -51,11 +53,22 @@ class HandbookRepository(
         }
 
         val failures = mutableListOf<AttemptFailure>()
-        for (candidate in HandbookUrlPolicy.originCandidates(page)) {
+        for ((sourceIndex, candidate) in HandbookUrlPolicy.originCandidates(page).withIndex()) {
+            val startedAt = SystemClock.elapsedRealtime()
             try {
-                return@withContext fetchFromOrigin(candidate)
+                val result = fetchFromOrigin(candidate)
+                LimeLog.info(
+                    "Handbook source ${sourceIndex + 1} loaded in " +
+                        "${SystemClock.elapsedRealtime() - startedAt} ms"
+                )
+                return@withContext result
             } catch (error: Exception) {
-                failures += classify(error)
+                val failure = classify(error)
+                failures += failure
+                LimeLog.warning(
+                    "Handbook source ${sourceIndex + 1} failed after " +
+                        "${SystemClock.elapsedRealtime() - startedAt} ms ($failure)"
+                )
             }
         }
 
@@ -194,7 +207,21 @@ class HandbookRepository(
         }
 
         val charset = contentType.charset(StandardCharsets.UTF_8) ?: StandardCharsets.UTF_8
-        return output.toString(charset.name())
+        return hideWebsiteNavigation(output.toString(charset.name()))
+    }
+
+    private fun hideWebsiteNavigation(html: String): String {
+        val style = """
+            <style id="moonlight-handbook-presentation">
+              header.site-header { display: none !important; }
+            </style>
+        """.trimIndent()
+        val headEnd = html.indexOf("</head>", ignoreCase = true)
+        return if (headEnd >= 0) {
+            html.substring(0, headEnd) + style + html.substring(headEnd)
+        } else {
+            style + html
+        }
     }
 
     @Suppress("DEPRECATION")

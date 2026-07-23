@@ -11,7 +11,9 @@ import android.os.Looper
 import android.os.SystemClock
 import android.view.ActionMode
 import android.view.MotionEvent
+import android.view.View
 import android.view.ViewConfiguration
+import android.view.ViewGroup
 import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -19,49 +21,18 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Button
+import android.widget.FrameLayout
+import android.widget.ImageButton
+import android.widget.TextView
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
+import androidx.activity.OnBackPressedCallback
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.doOnPreDraw
 import androidx.lifecycle.lifecycleScope
+import com.limelight.LimeLog
 import com.limelight.R
 import com.limelight.utils.BrowserOnlyLauncher
 import com.limelight.utils.UiHelper
@@ -74,34 +45,79 @@ class HandbookActivity : ComponentActivity() {
 
     private var currentPage = HandbookUrlPolicy.index
     private var loadJob: Job? = null
-    private var uiState by mutableStateOf<HandbookUiState>(HandbookUiState.Loading)
+    private var prepareWebViewJob: Job? = null
+    private var handbookWebView: LockedHandbookWebView? = null
+    private var pendingContent: HandbookLoadResult.Success? = null
+
+    private lateinit var contentContainer: FrameLayout
+    private lateinit var loadingView: View
+    private lateinit var errorView: View
+    private lateinit var errorMessage: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         UiHelper.setLocale(this)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         val systemBarColor = 0xFF16162A.toInt()
         window.statusBarColor = systemBarColor
         window.navigationBarColor = systemBarColor
 
-        currentPage = HandbookLauncher.pageFromIntent(intent)
-        setContent {
-            HandbookTheme {
-                HandbookScreen(
-                    state = uiState,
-                    onExit = ::finish,
-                    onRetry = { loadPage(currentPage) },
-                    onNavigate = ::navigateTo,
-                    onOpenExternal = { BrowserOnlyLauncher.open(this, it) }
-                )
-            }
+        setContentView(R.layout.activity_handbook)
+        val root = findViewById<View>(R.id.handbook_root)
+        contentContainer = findViewById(R.id.handbook_content)
+        loadingView = findViewById(R.id.handbook_loading)
+        errorView = findViewById(R.id.handbook_error)
+        errorMessage = findViewById(R.id.handbook_error_message)
+
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(
+                systemBars.left,
+                systemBars.top,
+                systemBars.right,
+                systemBars.bottom
+            )
+            insets
         }
+        ViewCompat.requestApplyInsets(root)
+
+        findViewById<Button>(R.id.handbook_retry).setOnClickListener {
+            loadPage(currentPage)
+        }
+        findViewById<ImageButton>(R.id.handbook_back_button).setOnClickListener {
+            finish()
+        }
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                finish()
+            }
+        })
+
+        currentPage = HandbookLauncher.pageFromIntent(intent)
         UiHelper.notifyNewRootView(this)
         loadPage(currentPage)
+        root.doOnPreDraw {
+            root.post {
+                if (isFinishing || isDestroyed) return@post
+                prepareWebViewJob = lifecycleScope.launch {
+                    ensureWebView()
+                }
+            }
+        }
     }
 
     override fun onDestroy() {
         loadJob?.cancel()
+        prepareWebViewJob?.cancel()
+        pendingContent = null
+        handbookWebView?.apply {
+            onDocumentRendered = null
+            stopLoading()
+            loadUrl("about:blank")
+            destroy()
+        }
+        handbookWebView = null
         super.onDestroy()
     }
 
@@ -113,198 +129,90 @@ class HandbookActivity : ComponentActivity() {
 
     private fun loadPage(page: HandbookPageRef) {
         loadJob?.cancel()
-        uiState = HandbookUiState.Loading
+        showLoading()
         loadJob = lifecycleScope.launch {
-            uiState = when (val result = repository.load(page)) {
-                is HandbookLoadResult.Success -> HandbookUiState.Content(
-                    html = result.html,
-                    baseUrl = result.baseUrl
-                )
-                is HandbookLoadResult.Failure -> HandbookUiState.Error(result.reason)
+            when (val result = repository.load(page)) {
+                is HandbookLoadResult.Success -> showContent(result)
+                is HandbookLoadResult.Failure -> showError(result.reason)
             }
         }
     }
-}
 
-private sealed class HandbookUiState {
-    data object Loading : HandbookUiState()
-    data class Content(val html: String, val baseUrl: String) : HandbookUiState()
-    data class Error(val reason: HandbookFailureReason) : HandbookUiState()
-}
+    private fun showLoading() {
+        pendingContent = null
+        handbookWebView?.visibility = View.INVISIBLE
+        contentContainer.visibility = View.INVISIBLE
+        errorView.visibility = View.GONE
+        loadingView.visibility = View.VISIBLE
+    }
 
-@Composable
-private fun HandbookTheme(content: @Composable () -> Unit) {
-    val background = colorResource(R.color.advance_setting_background)
-    val panel = colorResource(R.color.crown_panel_background)
-    val accent = colorResource(R.color.crown_accent)
-    val primaryText = colorResource(R.color.crown_text_primary)
-    val secondaryText = colorResource(R.color.crown_text_secondary)
-    MaterialTheme(
-        colorScheme = darkColorScheme(
-            primary = accent,
-            onPrimary = Color(0xFF1B1B22),
-            background = background,
-            onBackground = primaryText,
-            surface = panel,
-            onSurface = primaryText,
-            onSurfaceVariant = secondaryText
-        ),
-        content = content
-    )
-}
+    private fun showError(reason: HandbookFailureReason) {
+        pendingContent = null
+        handbookWebView?.visibility = View.INVISIBLE
+        contentContainer.visibility = View.INVISIBLE
+        loadingView.visibility = View.GONE
+        errorMessage.setText(
+            when (reason) {
+                HandbookFailureReason.NETWORK -> R.string.handbook_error_network
+                HandbookFailureReason.TIMEOUT -> R.string.handbook_error_timeout
+                HandbookFailureReason.UNAVAILABLE -> R.string.handbook_error_unavailable
+            }
+        )
+        errorView.visibility = View.VISIBLE
+    }
 
-@Composable
-private fun HandbookScreen(
-    state: HandbookUiState,
-    onExit: () -> Unit,
-    onRetry: () -> Unit,
-    onNavigate: (HandbookPageRef) -> Unit,
-    onOpenExternal: (String) -> Unit
-) {
-    BackHandler(onBack = onExit)
-    val background = colorResource(R.color.advance_setting_background)
-    val panel = colorResource(R.color.crown_panel_background)
-    val primaryText = colorResource(R.color.crown_text_primary)
-    val secondaryText = colorResource(R.color.crown_text_secondary)
-    val accent = colorResource(R.color.crown_accent)
+    private fun showContent(content: HandbookLoadResult.Success) {
+        pendingContent = content
+        handbookWebView?.let { displayContent(it, content) }
+    }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = background
+    private fun displayContent(
+        webView: LockedHandbookWebView,
+        content: HandbookLoadResult.Success
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(panel)
-                    .statusBarsPadding()
-                    .height(58.dp)
-                    .padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onExit) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_arrow_right),
-                        contentDescription = stringResource(R.string.handbook_back),
-                        modifier = Modifier
-                            .size(24.dp)
-                            .rotate(180f),
-                        tint = primaryText
-                    )
-                }
-                Text(
-                    text = stringResource(R.string.title_document_handbook),
-                    color = primaryText,
-                    fontSize = 19.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            ) {
-                when (state) {
-                    HandbookUiState.Loading -> {
-                        Column(
-                            modifier = Modifier.align(Alignment.Center),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            CircularProgressIndicator(color = accent)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = stringResource(R.string.handbook_loading),
-                                color = secondaryText
-                            )
-                        }
-                    }
-                    is HandbookUiState.Error -> {
-                        val message = when (state.reason) {
-                            HandbookFailureReason.NETWORK -> R.string.handbook_error_network
-                            HandbookFailureReason.TIMEOUT -> R.string.handbook_error_timeout
-                            HandbookFailureReason.UNAVAILABLE -> R.string.handbook_error_unavailable
-                        }
-                        Column(
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .padding(horizontal = 28.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = stringResource(message),
-                                color = primaryText
-                            )
-                            Spacer(modifier = Modifier.height(18.dp))
-                            Button(
-                                onClick = onRetry,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = accent,
-                                    contentColor = Color(0xFF1B1B22)
-                                )
-                            ) {
-                                Text(stringResource(R.string.handbook_retry))
-                            }
-                        }
-                    }
-                    is HandbookUiState.Content -> {
-                        HandbookDocument(
-                            content = state,
-                            onNavigate = onNavigate,
-                            onOpenExternal = onOpenExternal
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
-@Composable
-private fun HandbookDocument(
-    content: HandbookUiState.Content,
-    onNavigate: (HandbookPageRef) -> Unit,
-    onOpenExternal: (String) -> Unit
-) {
-    val latestNavigate by rememberUpdatedState(onNavigate)
-    val latestOpenExternal by rememberUpdatedState(onOpenExternal)
-    var webView by remember { mutableStateOf<WebView?>(null) }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            webView?.apply {
-                stopLoading()
-                loadUrl("about:blank")
-                destroy()
-            }
-            webView = null
-        }
+        pendingContent = null
+        webView.renderStartedAtMs = SystemClock.elapsedRealtime()
+        webView.visibility = View.VISIBLE
+        contentContainer.visibility = View.VISIBLE
+        errorView.visibility = View.GONE
+        webView.loadDataWithBaseURL(
+            content.baseUrl,
+            content.html,
+            "text/html",
+            "UTF-8",
+            content.baseUrl
+        )
     }
 
-    AndroidView(
-        modifier = Modifier.fillMaxSize(),
-        factory = { context ->
-            createLockedHandbookWebView(
-                context = context,
-                onNavigate = { latestNavigate(it) },
-                onOpenExternal = { latestOpenExternal(it) }
-            ).also { webView = it }
-        },
-        update = { view ->
-            if (view.tag != content) {
-                view.tag = content
-                view.loadDataWithBaseURL(
-                    content.baseUrl,
-                    content.html,
-                    "text/html",
-                    "UTF-8",
-                    content.baseUrl
-                )
+    private fun ensureWebView(): LockedHandbookWebView {
+        handbookWebView?.let { return it }
+
+        val startedAt = SystemClock.elapsedRealtime()
+        return createLockedHandbookWebView(
+            context = this,
+            onNavigate = ::navigateTo,
+            onOpenExternal = { BrowserOnlyLauncher.open(this, it) }
+        ).also { webView ->
+            handbookWebView = webView
+            webView.onDocumentRendered = {
+                loadingView.visibility = View.GONE
+                errorView.visibility = View.GONE
             }
+            webView.visibility = View.INVISIBLE
+            contentContainer.addView(
+                webView,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            )
+            LimeLog.info(
+                "Handbook WebView prepared in " +
+                    "${SystemClock.elapsedRealtime() - startedAt} ms"
+            )
+            pendingContent?.let { displayContent(webView, it) }
         }
-    )
+    }
 }
 
 @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
@@ -312,7 +220,7 @@ private fun createLockedHandbookWebView(
     context: android.content.Context,
     onNavigate: (HandbookPageRef) -> Unit,
     onOpenExternal: (String) -> Unit
-): WebView {
+): LockedHandbookWebView {
     val legacyLinkTapTracker = LegacyLinkTapTracker(context)
     return LockedHandbookWebView(context).apply {
         setBackgroundColor(AndroidColor.WHITE)
@@ -365,6 +273,19 @@ private fun createLockedHandbookWebView(
             @Deprecated("Deprecated in Android")
             override fun shouldInterceptRequest(view: WebView, url: String): WebResourceResponse {
                 return emptyResponse()
+            }
+
+            override fun onPageFinished(view: WebView, url: String) {
+                val lockedView = view as? LockedHandbookWebView ?: return
+                val startedAt = lockedView.renderStartedAtMs
+                if (startedAt > 0L) {
+                    LimeLog.info(
+                        "Handbook document rendered in " +
+                            "${SystemClock.elapsedRealtime() - startedAt} ms"
+                    )
+                    lockedView.renderStartedAtMs = 0L
+                    lockedView.onDocumentRendered?.invoke()
+                }
             }
 
             override fun onReceivedSslError(
@@ -592,6 +513,9 @@ private data class PendingLinkTap(
 )
 
 private class LockedHandbookWebView(context: Context) : WebView(context) {
+    var renderStartedAtMs = 0L
+    var onDocumentRendered: (() -> Unit)? = null
+
     override fun startActionMode(callback: ActionMode.Callback): ActionMode? = null
 
     override fun startActionMode(callback: ActionMode.Callback, type: Int): ActionMode? = null
