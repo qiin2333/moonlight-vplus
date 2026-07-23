@@ -1318,8 +1318,14 @@ class Game : Activity(), SurfaceHolder.Callback,
         if (service.systemAudioCoupledDeviceActive) return false
 
         val bounded = strength.coerceIn(0, AudioVibrationService.MAX_STRENGTH)
-        service.setStrength(bounded)
-        appliedAudioHapticsSettings = currentAudioHapticsSettings().copy(strength = bounded)
+        val settings = currentAudioHapticsSettings().copy(strength = bounded)
+        service.setSettings(
+            settings.enabled,
+            settings.strength,
+            settings.mode,
+            settings.scene
+        )
+        appliedAudioHapticsSettings = settings
         return true
     }
 
