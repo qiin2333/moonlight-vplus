@@ -69,49 +69,62 @@ object BrowserOnlyLauncher {
     }
 
     private fun resolveBrowserIntent(context: Context, browseIntent: Intent): Intent? {
+        val packageManager = context.packageManager
+        val probe = Intent(Intent.ACTION_VIEW, BROWSER_PROBE_URL.toUri()).apply {
+            addCategory(Intent.CATEGORY_BROWSABLE)
+        }
+
+        // Some OEM default browsers do not advertise CATEGORY_APP_BROWSER. Resolve a
+        // neutral web URL first so the user's system default browser wins without
+        // allowing a target-domain deep-link handler to intercept the real URL.
+        val defaultPackage = packageManager
+            .resolveActivity(probe, PackageManager.MATCH_DEFAULT_ONLY)
+            ?.activityInfo
+            ?.packageName
+            ?.takeIf { it != context.packageName }
+            ?.takeIf { packageName ->
+                packageManager.canHandle(probe, packageName) &&
+                    packageManager.canHandle(browseIntent, packageName)
+            }
+        if (defaultPackage != null) {
+            return Intent(browseIntent).setPackage(defaultPackage)
+        }
+
         val browserSelector = Intent(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_APP_BROWSER)
         }
-        val packageManager = context.packageManager
         val browserPackages = packageManager
             .queryIntentActivities(browserSelector, PackageManager.MATCH_DEFAULT_ONLY)
             .mapNotNull { it.activityInfo?.packageName }
             .filterNot { it == context.packageName }
             .distinct()
-            .filter { packageName ->
-                packageManager.resolveActivity(
-                    Intent(browseIntent).setPackage(packageName),
-                    PackageManager.MATCH_DEFAULT_ONLY
-                ) != null
-            }
+            .filter { packageName -> packageManager.canHandle(browseIntent, packageName) }
         if (browserPackages.isEmpty()) return null
 
-        val probe = Intent(Intent.ACTION_VIEW, BROWSER_PROBE_URL.toUri()).apply {
-            addCategory(Intent.CATEGORY_BROWSABLE)
-        }
-        val defaultPackage = packageManager
-            .resolveActivity(probe, PackageManager.MATCH_DEFAULT_ONLY)
-            ?.activityInfo
-            ?.packageName
-            ?.takeIf(browserPackages::contains)
         val explicitIntents = browserPackages.map { packageName ->
             Intent(browseIntent).setPackage(packageName)
         }
 
-        return defaultPackage?.let { Intent(browseIntent).setPackage(it) }
-            ?: if (explicitIntents.size == 1) {
-                explicitIntents.first()
-            } else {
-                Intent.createChooser(
-                    explicitIntents.first(),
-                    context.getString(R.string.about_dialog_choose_browser)
-                ).apply {
-                    putExtra(
-                        Intent.EXTRA_INITIAL_INTENTS,
-                        explicitIntents.drop(1).toTypedArray()
-                    )
-                }
+        return if (explicitIntents.size == 1) {
+            explicitIntents.first()
+        } else {
+            Intent.createChooser(
+                explicitIntents.first(),
+                context.getString(R.string.about_dialog_choose_browser)
+            ).apply {
+                putExtra(
+                    Intent.EXTRA_INITIAL_INTENTS,
+                    explicitIntents.drop(1).toTypedArray()
+                )
             }
+        }
+    }
+
+    private fun PackageManager.canHandle(intent: Intent, packageName: String): Boolean {
+        return resolveActivity(
+            Intent(intent).setPackage(packageName),
+            PackageManager.MATCH_DEFAULT_ONLY
+        ) != null
     }
 
     private fun Intent.forContext(context: Context): Intent {
