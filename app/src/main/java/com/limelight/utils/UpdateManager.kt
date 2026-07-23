@@ -223,17 +223,13 @@ object UpdateManager {
                 }
 
                 try {
-                    val response = httpGetWithProxies(context, GITHUB_API_URL)
-                    if (response != null) {
-                        val jsonResponse = JSONObject(response.body)
+                    val json = httpGetWithProxies(context, GITHUB_API_URL)
+                    if (json != null) {
+                        val jsonResponse = JSONObject(json)
                         val latestVersion = jsonResponse.optString("tag_name", "").replaceFirst("^[Vv]".toRegex(), "")
                         val releaseNotes = jsonResponse.optString("body", "")
-                        val releasePageUrl = if (response.fromProxy) {
-                            null
-                        } else {
-                            jsonResponse.optString("html_url", "").takeIf { it.isNotBlank() }
-                                ?: GITHUB_RELEASE_PAGE.removeSuffix("/latest") + "/tag/v$latestVersion"
-                        }
+                        val releasePageUrl = jsonResponse.optString("html_url", "").takeIf { it.isNotBlank() }
+                            ?: GITHUB_RELEASE_PAGE.removeSuffix("/latest") + "/tag/v$latestVersion"
 
                         // 解析资产，优先选择APK
                         var apkUrl: String? = null
@@ -370,13 +366,8 @@ object UpdateManager {
                 val notesScroll = view.findViewById<ScrollView>(R.id.update_notes_scroll)
                 notesScroll.visibility = View.VISIBLE
                 val notes = view.findViewById<TextView>(R.id.update_notes)
-                notes.text = SimpleMarkdownRenderer.render(
-                    releaseNotes,
-                    accentColor,
-                    releasePageUrl,
-                    linksEnabled = releasePageUrl != null
-                )
-                if (releasePageUrl != null) configureUpdateNotesLinks(notes, accentColor)
+                notes.text = SimpleMarkdownRenderer.render(releaseNotes, accentColor, releasePageUrl)
+                configureUpdateNotesLinks(notes, accentColor)
                 constrainUpdateNotesScroll(context, notesScroll, releaseNotes)
             }
 
@@ -408,10 +399,9 @@ object UpdateManager {
                 notesView.text = SimpleMarkdownRenderer.render(
                     updateInfo.releaseNotes,
                     accentColor,
-                    updateInfo.releasePageUrl,
-                    linksEnabled = updateInfo.releasePageUrl != null
+                    updateInfo.releasePageUrl
                 )
-                if (updateInfo.releasePageUrl != null) configureUpdateNotesLinks(notesView, accentColor)
+                configureUpdateNotesLinks(notesView, accentColor)
                 constrainUpdateNotesScroll(context, notesScroll, updateInfo.releaseNotes)
             }
 
@@ -1048,13 +1038,13 @@ object UpdateManager {
         }
     }
 
-    private fun httpGetWithProxies(context: Context, url: String): FetchResult? {
+    private fun httpGetWithProxies(context: Context, url: String): String? {
         val tries = buildProxiedUrls(context, url).take(6)
         if (tries.isEmpty()) return null
         // 并发竞速：同时发起多个候选（代理 + 直连），取首个成功响应
         val pool = Executors.newFixedThreadPool(tries.size)
-        val cs = ExecutorCompletionService<FetchResult?>(pool)
-        val futures = ArrayList<Future<FetchResult?>>()
+        val cs = ExecutorCompletionService<String?>(pool)
+        val futures = ArrayList<Future<String?>>()
         try {
             for (u in tries) {
                 futures.add(cs.submit(Callable { fetchSingleUrl(u) }))
@@ -1076,7 +1066,7 @@ object UpdateManager {
         }
     }
 
-    private fun fetchSingleUrl(u: String): FetchResult? {
+    private fun fetchSingleUrl(u: String): String? {
         var connection: HttpURLConnection? = null
         try {
             connection = URL(u).openConnection() as HttpURLConnection
@@ -1092,7 +1082,7 @@ object UpdateManager {
                     while (reader.readLine().also { line = it } != null) {
                         response.append(line)
                     }
-                    return FetchResult(response.toString(), u != GITHUB_API_URL)
+                    return response.toString()
                 }
             }
         } catch (e: Exception) {
@@ -1414,8 +1404,4 @@ object UpdateManager {
             val expectedSize: Long? = null
     )
 
-    private data class FetchResult(
-            val body: String,
-            val fromProxy: Boolean
-    )
 }
