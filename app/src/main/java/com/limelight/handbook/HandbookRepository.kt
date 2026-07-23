@@ -19,6 +19,7 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.SSLException
 
 sealed class HandbookLoadResult {
     data class Success(
@@ -69,9 +70,38 @@ class HandbookRepository(
     }
 
     private fun fetchFromOrigin(initialUrl: HttpUrl): HandbookLoadResult.Success {
-        val originHost = initialUrl.host
         val deadlineNanos = System.nanoTime() +
             TimeUnit.MILLISECONDS.toNanos(ORIGIN_TIMEOUT_MS)
+        var completedAttempts = 0
+
+        while (true) {
+            completedAttempts++
+            try {
+                return fetchOriginAttempt(initialUrl, deadlineNanos)
+            } catch (error: IOException) {
+                val remainingNanos = deadlineNanos - System.nanoTime()
+                if (!HandbookRetryPolicy.shouldRetry(
+                        error,
+                        completedAttempts,
+                        remainingNanos
+                    )
+                ) {
+                    throw error
+                }
+
+                // A server can close an idle keep-alive connection without the
+                // client noticing. Drop pooled connections before the one
+                // explicit retry so the next request establishes a fresh path.
+                client.connectionPool.evictAll()
+            }
+        }
+    }
+
+    private fun fetchOriginAttempt(
+        initialUrl: HttpUrl,
+        deadlineNanos: Long
+    ): HandbookLoadResult.Success {
+        val originHost = initialUrl.host
         var currentUrl = initialUrl
         var redirectCount = 0
 
@@ -94,7 +124,7 @@ class HandbookRepository(
             if (response.code in REDIRECT_CODES) {
                 response.use {
                     if (++redirectCount > MAX_REDIRECTS) {
-                        throw IOException("Too many handbook redirects")
+                        throw PermanentHandbookException("Too many handbook redirects")
                     }
                     currentUrl = validatedRedirect(it, currentUrl, originHost)
                 }
@@ -103,7 +133,12 @@ class HandbookRepository(
 
             response.use {
                 if (!it.isSuccessful) {
-                    throw IOException("Handbook response was not successful")
+                    if (it.code in RETRYABLE_HTTP_CODES) {
+                        throw IOException("Handbook response was temporarily unavailable")
+                    }
+                    throw PermanentHandbookException(
+                        "Handbook response was not successful"
+                    )
                 }
 
                 val html = readValidatedHtml(it)
@@ -121,11 +156,11 @@ class HandbookRepository(
         originHost: String
     ): HttpUrl {
         val location = response.header("Location")
-            ?: throw IOException("Handbook redirect had no location")
+            ?: throw PermanentHandbookException("Handbook redirect had no location")
         val redirected = currentUrl.resolve(location)
-            ?: throw IOException("Invalid handbook redirect")
+            ?: throw PermanentHandbookException("Invalid handbook redirect")
         if (redirected.host != originHost || HandbookUrlPolicy.parse(redirected.toString()) == null) {
-            throw IOException("Handbook redirect left its allowed origin")
+            throw PermanentHandbookException("Handbook redirect left its allowed origin")
         }
         return redirected.newBuilder().fragment(null).build()
     }
@@ -133,14 +168,14 @@ class HandbookRepository(
     private fun readValidatedHtml(response: Response): String {
         val body = response.body
         val contentType = body.contentType()
-            ?: throw IOException("Handbook response had no content type")
+            ?: throw PermanentHandbookException("Handbook response had no content type")
         val isHtml = (contentType.type == "text" && contentType.subtype == "html") ||
             (contentType.type == "application" && contentType.subtype == "xhtml+xml")
         if (!isHtml) {
-            throw IOException("Handbook response was not HTML")
+            throw PermanentHandbookException("Handbook response was not HTML")
         }
         if (body.contentLength() > MAX_HTML_BYTES) {
-            throw IOException("Handbook response was too large")
+            throw PermanentHandbookException("Handbook response was too large")
         }
 
         val output = ByteArrayOutputStream()
@@ -152,7 +187,7 @@ class HandbookRepository(
                 if (read < 0) break
                 total += read
                 if (total > MAX_HTML_BYTES) {
-                    throw IOException("Handbook response was too large")
+                    throw PermanentHandbookException("Handbook response was too large")
                 }
                 output.write(buffer, 0, read)
             }
@@ -198,5 +233,24 @@ class HandbookRepository(
         const val READ_BUFFER_BYTES = 8 * 1024
         const val MAX_REDIRECTS = 3
         val REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
+        val RETRYABLE_HTTP_CODES = setOf(408, 421, 425, 500, 502, 503, 504)
+    }
+}
+
+internal class PermanentHandbookException(message: String) : IOException(message)
+
+internal object HandbookRetryPolicy {
+    const val MAX_ATTEMPTS = 2
+    private val MIN_RETRY_BUDGET_NANOS = TimeUnit.MILLISECONDS.toNanos(250L)
+
+    fun shouldRetry(
+        error: IOException,
+        completedAttempts: Int,
+        remainingNanos: Long
+    ): Boolean {
+        return completedAttempts < MAX_ATTEMPTS &&
+            remainingNanos >= MIN_RETRY_BUDGET_NANOS &&
+            error !is PermanentHandbookException &&
+            error !is SSLException
     }
 }
