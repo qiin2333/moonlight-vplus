@@ -1,7 +1,9 @@
 package com.limelight.nvstream.http
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Test
+import java.io.IOException
 
 class VddProtocolTest {
     @Test
@@ -42,13 +44,21 @@ class VddProtocolTest {
         assertEquals(NvHTTP.VddState.UNKNOWN, catalog.vddState)
     }
 
+    @Test(expected = IOException::class)
+    fun nonSuccessDisplayCatalogResponseThrowsIOException() {
+        NvHTTP.parseDisplayCatalog(
+            """{"status_code":500,"status_message":"Display query failed"}"""
+        )
+    }
+
     @Test
     fun hostErrorCarriesMachineReadableSunshineErrorCode() {
-        val error = HostHttpResponseException(503, "VDD unavailable")
-            .withSunshineErrorCode("VDD_DRIVER_UNREACHABLE")
+        val original = HostHttpResponseException(503, "VDD unavailable")
+        val error = original.withSunshineErrorCode("VDD_DRIVER_UNREACHABLE")
 
         assertEquals(503, error.getErrorCode())
         assertEquals("VDD_DRIVER_UNREACHABLE", error.getSunshineErrorCode())
+        assertSame(original, error.cause)
     }
 
     @Test

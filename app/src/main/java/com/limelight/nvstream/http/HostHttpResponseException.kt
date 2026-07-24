@@ -19,7 +19,9 @@ class HostHttpResponseException(
     fun getSunshineErrorCode(): String? = sunshineErrorCode
 
     fun withSunshineErrorCode(value: String?): HostHttpResponseException =
-        HostHttpResponseException(errorCode, errorMsg, value)
+        HostHttpResponseException(errorCode, errorMsg, value).apply {
+            initCause(this@HostHttpResponseException)
+        }
 
     override val message: String
         get() = "Host PC returned error: $errorMsg (Error code: $errorCode)"
