@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/handbook_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -26,7 +27,7 @@
                 android:contentDescription="@string/handbook_exit"
                 android:padding="16dp"
                 android:src="@drawable/phc_action_exit"
-                android:tint="@color/crown_text_primary" />
+                app:tint="@color/crown_text_primary" />
 
             <TextView
                 android:layout_width="0dp"
@@ -49,7 +50,7 @@
                 android:padding="14dp"
                 android:rotation="180"
                 android:src="@drawable/ic_chevron_right"
-                android:tint="@color/crown_text_primary" />
+                app:tint="@color/crown_text_primary" />
 
             <ImageButton
                 android:id="@+id/handbook_next_button"
@@ -61,7 +62,7 @@
                 android:enabled="false"
                 android:padding="14dp"
                 android:src="@drawable/ic_chevron_right"
-                android:tint="@color/crown_text_primary" />
+                app:tint="@color/crown_text_primary" />
 
         </LinearLayout>
 
