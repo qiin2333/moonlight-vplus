@@ -171,4 +171,5 @@
     <string name="category_help">ヘルプ</string>
     <string name="title_document_handbook">ドキュメント</string>
     <string name="summary_document_handbook">関連ドキュメントを表示</string>
+    <string name="title_about_us">このアプリについて</string>
 </resources>

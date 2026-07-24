@@ -292,4 +292,5 @@
     <string name="title_config_sync_backup_password">Passwort für Backup-Verschlüsselung</string>
     <string name="title_document_handbook">Dokumentation</string>
     <string name="summary_document_handbook">Zugehörige Dokumentation anzeigen</string>
+    <string name="title_about_us">Über uns</string>
 </resources>

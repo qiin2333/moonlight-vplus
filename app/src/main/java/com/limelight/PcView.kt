@@ -22,7 +22,6 @@ import com.limelight.computers.PairStatePreflight
 import com.limelight.dialogs.AddressSelectionDialog
 import com.limelight.grid.PcGridAdapter
 import com.limelight.grid.assets.DiskAssetLoader
-import com.limelight.handbook.HandbookLauncher
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
@@ -37,11 +36,11 @@ import com.limelight.preferences.StreamSettings
 import com.limelight.services.KeyboardAccessibilityService
 import com.limelight.ui.AdapterFragment
 import com.limelight.ui.AdapterFragmentCallbacks
+import com.limelight.utils.AboutDialogLauncher
 import com.limelight.utils.AnalyticsManager
 import com.limelight.utils.AppDialogStyler
 import com.limelight.utils.AppActionSheet
 import com.limelight.utils.AppCacheManager
-import com.limelight.utils.BrowserOnlyLauncher
 import com.limelight.utils.CacheHelper
 import com.limelight.utils.ConfigurationSyncScheduler
 import com.limelight.utils.Dialog
@@ -84,7 +83,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.content.SharedPreferences
-import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Bitmap
@@ -112,7 +110,6 @@ import android.provider.Settings
 import android.util.LruCache
 import android.view.GestureDetector
 import android.view.Gravity
-import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
@@ -138,7 +135,6 @@ import jp.wasabeef.glide.transformations.BlurTransformation
 import jp.wasabeef.glide.transformations.ColorFilterTransformation
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import androidx.core.content.pm.PackageInfoCompat
 import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -179,9 +175,6 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         private const val OPEN_WEBUI_ID = 16
         private const val MORE_ACTIONS_ID = 17
 
-        private const val OFFICIAL_SITE_URL = "https://www.alkaidlab.com/"
-        private const val GITHUB_URL = "https://github.com/qiin2333/moonlight-vplus"
-        private const val QQ_GROUP_KEY = "LlbLDIF_YolaM4HZyLx0xAXXo04ZmoBM"
     }
 
     // UI Components
@@ -516,7 +509,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
         settingsButton.setOnClickListener { startActivity(Intent(this, StreamSettings::class.java)) }
 
-        aboutButton?.setOnClickListener { showAboutDialog() }
+        aboutButton?.setOnClickListener { AboutDialogLauncher.show(this) }
         easyTierButton?.setOnClickListener { showEasyTierControlDialog() }
         toolbarMenuButton?.setOnClickListener { showPcToolbarMenu(it) }
     }
@@ -2798,82 +2791,6 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
     private fun showEasyTierControlDialog() {
         easyTierController?.showControlDialog()
-    }
-
-    private fun showAboutDialog() {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_about, null)
-
-        val versionText = dialogView.findViewById<TextView>(R.id.text_version)
-        versionText.text = getVersionInfo()
-
-        val appNameText = dialogView.findViewById<TextView>(R.id.text_app_name)
-        appNameText.text = getAppName()
-
-        val descriptionText = dialogView.findViewById<TextView>(R.id.text_description)
-        descriptionText.setText(R.string.about_dialog_description)
-
-        // PcView 继承自 Activity 而非 AppCompatActivity，在 Android 6 等设备上使用
-        // R.style.AppDialogStyle（父主题为 Theme.AppCompat.Light.Dialog.Alert）会触发
-        // "You need to use a Theme.AppCompat theme" 类崩溃，故此处使用系统 Material 对话框主题。
-        val dialogTheme = android.R.style.Theme_Material_Light_Dialog_Alert
-        val dialog = AlertDialog.Builder(this, dialogTheme)
-                .setView(dialogView)
-                .setPositiveButton(R.string.about_dialog_official_site) { _, _ ->
-                    openExternalBrowser(OFFICIAL_SITE_URL)
-                }
-                .setNeutralButton(R.string.about_dialog_github) { _, _ ->
-                    openExternalBrowser(GITHUB_URL)
-                }
-                .setNegativeButton(R.string.about_dialog_qq) { _, _ ->
-                    joinQQGroup(QQ_GROUP_KEY)
-                }
-                .create()
-        dialogView.findViewById<View>(R.id.about_handbook_button).setOnClickListener {
-            dialog.dismiss()
-            HandbookLauncher.openIndex(this)
-        }
-        dialog.show()
-        AppDialogStyler.applyAboutDialog(dialog, this)
-    }
-
-    @SuppressLint("DefaultLocale")
-    private fun getVersionInfo(): String {
-        try {
-            val info = packageManager.getPackageInfo(packageName, 0)
-            return String.format("Version %s (Build %d)", info.versionName, PackageInfoCompat.getLongVersionCode(info))
-        } catch (e: PackageManager.NameNotFoundException) {
-            return "Version Unknown"
-        }
-    }
-
-    private fun getAppName(): String {
-        try {
-            val info = packageManager.getPackageInfo(packageName, 0)
-            if (info.applicationInfo != null) {
-                return info.applicationInfo?.loadLabel(packageManager).toString()
-            }
-        } catch (ignored: PackageManager.NameNotFoundException) {
-        }
-        return "Moonlight V+"
-    }
-
-    private fun openExternalBrowser(url: String) {
-        BrowserOnlyLauncher.open(this, url)
-    }
-
-    private fun joinQQGroup(key: String) {
-        val url = Uri.Builder()
-            .scheme("https")
-            .authority("qm.qq.com")
-            .appendPath("cgi-bin")
-            .appendPath("qm")
-            .appendPath("qr")
-            .appendQueryParameter("from", "app")
-            .appendQueryParameter("p", "android")
-            .appendQueryParameter("jump_from", "webapi")
-            .appendQueryParameter("k", key)
-            .build()
-        openExternalBrowser(url.toString())
     }
 
     // VPN Permission

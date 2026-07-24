@@ -264,4 +264,5 @@
     <string name="title_config_sync_backup_password">Heslo pro šifrování zálohy</string>
     <string name="title_document_handbook">Dokumentace</string>
     <string name="summary_document_handbook">Zobrazit související dokumentaci</string>
+    <string name="title_about_us">O nás</string>
 </resources>

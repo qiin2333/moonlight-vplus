@@ -260,4 +260,5 @@
     <string name="title_config_sync_backup_password">Biztonsági mentés titkosítási jelszava</string>
     <string name="title_document_handbook">Dokumentáció</string>
     <string name="summary_document_handbook">Kapcsolódó dokumentáció megtekintése</string>
+    <string name="title_about_us">Rólunk</string>
 </resources>

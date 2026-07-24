@@ -302,4 +302,5 @@
     <string name="title_config_sync_backup_password">Mot de passe de chiffrement de sauvegarde</string>
     <string name="title_document_handbook">Documentation</string>
     <string name="summary_document_handbook">Consulter la documentation associée</string>
+    <string name="title_about_us">À propos de nous</string>
 </resources>

@@ -535,4 +535,5 @@
     <string name="title_config_sync_backup_password">Contraseña de cifrado de copia de seguridad</string>
     <string name="title_document_handbook">Documentación</string>
     <string name="summary_document_handbook">Ver documentación relacionada</string>
+    <string name="title_about_us">Acerca de nosotros</string>
 </resources>

@@ -1807,4 +1807,5 @@ Tap again to replace it.</string>
     <string name="handbook_error_timeout">The handbook took too long to respond. Please try again.</string>
     <string name="handbook_error_unavailable">The handbook is temporarily unavailable. Please try again later.</string>
     <string name="handbook_retry">Tap to retry</string>
+    <string name="title_about_us">About Us</string>
 </resources>

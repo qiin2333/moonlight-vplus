@@ -289,4 +289,5 @@
     <string name="title_config_sync_backup_password">Hasło szyfrowania kopii zapasowej</string>
     <string name="title_document_handbook">Dokumentacja</string>
     <string name="summary_document_handbook">Wyświetl powiązaną dokumentację</string>
+    <string name="title_about_us">O nas</string>
 </resources>

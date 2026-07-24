@@ -306,4 +306,5 @@
     <string name="title_config_sync_backup_password">백업 암호화 비밀번호</string>
     <string name="title_document_handbook">문서</string>
     <string name="summary_document_handbook">관련 문서 보기</string>
+    <string name="title_about_us">앱 정보</string>
 </resources>
