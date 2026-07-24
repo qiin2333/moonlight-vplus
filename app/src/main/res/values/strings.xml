@@ -1795,8 +1795,8 @@ Tap again to replace it.</string>
     <string name="iperf_output_empty_hint">Test results and detailed logs will appear here.</string>
 
     <!-- Secure document handbook -->
-    <string name="title_document_handbook">Document Handbook</string>
-    <string name="summary_document_handbook">Read Moonlight V+ guides and articles</string>
+    <string name="title_document_handbook">Document</string>
+    <string name="summary_document_handbook">View related documents</string>
     <string name="handbook_back">Back</string>
     <string name="handbook_exit">Exit handbook</string>
     <string name="handbook_previous_page">Previous page</string>
