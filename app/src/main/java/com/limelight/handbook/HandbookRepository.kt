@@ -5,7 +5,9 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.SystemClock
+import android.text.TextUtils
 import com.limelight.LimeLog
+import com.limelight.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
@@ -56,7 +58,7 @@ class HandbookRepository(
                 "Handbook cache loaded in " +
                     "${SystemClock.elapsedRealtime() - cacheStartedAt} ms"
             )
-            return@withContext cached
+            return@withContext applyPresentation(cached)
         }
 
         if (!isNetworkConnected()) {
@@ -73,7 +75,7 @@ class HandbookRepository(
                         "${SystemClock.elapsedRealtime() - startedAt} ms"
                 )
                 cache.put(page, result)
-                return@withContext result
+                return@withContext applyPresentation(result)
             } catch (error: Exception) {
                 val failure = classify(error)
                 failures += failure
@@ -219,21 +221,36 @@ class HandbookRepository(
         }
 
         val charset = contentType.charset(StandardCharsets.UTF_8) ?: StandardCharsets.UTF_8
-        return hideWebsiteNavigation(output.toString(charset.name()))
+        return output.toString(charset.name())
     }
 
-    private fun hideWebsiteNavigation(html: String): String {
+    private fun applyPresentation(
+        content: HandbookLoadResult.Success
+    ): HandbookLoadResult.Success {
+        val localizedTitle = TextUtils.htmlEncode(
+            appContext.getString(R.string.handbook_document_center_title)
+        )
+        val headingMatch = DOCUMENT_CENTER_HEADING.find(content.html)
+        val localizedHtml = headingMatch?.let { match ->
+            content.html.replaceRange(
+                match.range,
+                match.groupValues[1] + localizedTitle + match.groupValues[2]
+            )
+        } ?: content.html
         val style = """
             <style id="moonlight-handbook-presentation">
               header.site-header { display: none !important; }
             </style>
         """.trimIndent()
-        val headEnd = html.indexOf("</head>", ignoreCase = true)
-        return if (headEnd >= 0) {
-            html.substring(0, headEnd) + style + html.substring(headEnd)
+        val headEnd = localizedHtml.indexOf("</head>", ignoreCase = true)
+        val presentedHtml = if (headEnd >= 0) {
+            localizedHtml.substring(0, headEnd) +
+                style +
+                localizedHtml.substring(headEnd)
         } else {
-            style + html
+            style + localizedHtml
         }
+        return content.copy(html = presentedHtml)
     }
 
     @Suppress("DEPRECATION")
@@ -273,6 +290,10 @@ class HandbookRepository(
         const val MAX_REDIRECTS = 3
         val REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
         val RETRYABLE_HTTP_CODES = setOf(408, 421, 425, 500, 502, 503, 504)
+        val DOCUMENT_CENTER_HEADING = Regex(
+            """(<h1\b[^>]*>)\s*文档中心\s*(</h1\s*>)""",
+            RegexOption.IGNORE_CASE
+        )
     }
 }
 

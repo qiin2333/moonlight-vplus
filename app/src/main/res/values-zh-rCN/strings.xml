@@ -1739,6 +1739,7 @@
     <string name="handbook_exit">退出文档手册</string>
     <string name="handbook_previous_page">上一页</string>
     <string name="handbook_next_page">下一页</string>
+    <string name="handbook_document_center_title">文档中心</string>
     <string name="handbook_loading">正在加载文档手册…</string>
     <string name="handbook_error_network">网络不通畅，请稍后再试</string>
     <string name="handbook_error_timeout">文档加载超时，请点击重试</string>

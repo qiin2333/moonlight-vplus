@@ -133,7 +133,7 @@ internal class HandbookCache(
     private companion object {
         const val CACHE_DIRECTORY = "handbook"
         const val CACHE_MAGIC = 0x48424B31
-        const val CACHE_VERSION = 1
+        const val CACHE_VERSION = 2
         const val CACHE_TTL_MS = 10 * 60 * 1_000L
         const val MAX_URL_BYTES = 64 * 1024
         const val MAX_CACHED_HTML_BYTES = 4 * 1024 * 1024
