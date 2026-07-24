@@ -229,6 +229,8 @@ object UpdateManager {
                         val jsonResponse = JSONObject(json)
                         val latestVersion = jsonResponse.optString("tag_name", "").replaceFirst("^[Vv]".toRegex(), "")
                         val releaseNotes = jsonResponse.optString("body", "")
+                        val releasePageUrl = jsonResponse.optString("html_url", "").takeIf { it.isNotBlank() }
+                            ?: GITHUB_RELEASE_PAGE.removeSuffix("/latest") + "/tag/v$latestVersion"
 
                         // 解析资产，优先选择APK
                         var apkUrl: String? = null
@@ -270,7 +272,7 @@ object UpdateManager {
                         val assetSha256 = extractSha256FromDigest(apkAsset?.optString("digest"))
                         val sha256 = assetSha256 ?: extractSha256ForApk(releaseNotes, apkName)
                         val expectedSize = apkAsset?.optLong("size", -1L)?.takeIf { it > 0L }
-                        updateInfo = UpdateInfo(latestVersion, releaseNotes, apkName, apkUrl, sha256, expectedSize)
+                        updateInfo = UpdateInfo(latestVersion, releaseNotes, releasePageUrl, apkName, apkUrl, sha256, expectedSize)
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "检查更新失败", e)
@@ -330,7 +332,7 @@ object UpdateManager {
                 }
                 showUpdateDialog(context, updateInfo)
             } else if (showToast) {
-                showLatestVersionDialog(context, currentVersion, updateInfo.releaseNotes)
+                showLatestVersionDialog(context, currentVersion, updateInfo.releaseNotes, updateInfo.releasePageUrl)
             }
         }
     }
@@ -340,7 +342,12 @@ object UpdateManager {
     // ------------------------------------------------------------------
 
     @SuppressLint("SetTextI18n")
-    private fun showLatestVersionDialog(context: Context, currentVersion: String, releaseNotes: String?) {
+    private fun showLatestVersionDialog(
+        context: Context,
+        currentVersion: String,
+        releaseNotes: String?,
+        releasePageUrl: String?
+    ) {
         if (context !is Activity) {
             Toast.makeText(context, context.getString(R.string.toast_already_latest_version, currentVersion), Toast.LENGTH_SHORT).show()
             return
@@ -362,12 +369,13 @@ object UpdateManager {
                 val notes = view.findViewById<TextView>(R.id.update_notes)
                 notes.text = SimpleMarkdownRenderer.render(
                     releaseNotes,
-                    accentColor
-                ) { url ->
-                    HandbookLauncher.openUrl(context, url)
-                }
-                notes.movementMethod = LinkMovementMethod.getInstance()
-                notes.highlightColor = android.graphics.Color.TRANSPARENT
+                    accentColor,
+                    releasePageUrl,
+                    onLink = { url ->
+                        openReleaseNoteLink(context, url)
+                    }
+                )
+                configureUpdateNotesLinks(notes, accentColor)
                 constrainUpdateNotesScroll(context, notesScroll, releaseNotes)
             }
 
@@ -398,12 +406,13 @@ object UpdateManager {
                 val notesView = view.findViewById<TextView>(R.id.update_notes)
                 notesView.text = SimpleMarkdownRenderer.render(
                     updateInfo.releaseNotes,
-                    accentColor
-                ) { url ->
-                    HandbookLauncher.openUrl(context, url)
-                }
-                notesView.movementMethod = LinkMovementMethod.getInstance()
-                notesView.highlightColor = android.graphics.Color.TRANSPARENT
+                    accentColor,
+                    updateInfo.releasePageUrl,
+                    onLink = { url ->
+                        openReleaseNoteLink(context, url)
+                    }
+                )
+                configureUpdateNotesLinks(notesView, accentColor)
                 constrainUpdateNotesScroll(context, notesScroll, updateInfo.releaseNotes)
             }
 
@@ -1163,6 +1172,18 @@ object UpdateManager {
         return (dp * context.resources.displayMetrics.density).toInt()
     }
 
+    private fun configureUpdateNotesLinks(notesView: TextView, linkColor: Int) {
+        notesView.setLinkTextColor(linkColor)
+        notesView.movementMethod = LinkMovementMethod.getInstance()
+        notesView.linksClickable = true
+    }
+
+    private fun openReleaseNoteLink(context: Context, url: String) {
+        if (!HandbookLauncher.openUrl(context, url)) {
+            BrowserOnlyLauncher.open(context, url)
+        }
+    }
+
     private fun constrainUpdateNotesScroll(context: Context, notesScroll: ScrollView, rawNotes: String) {
         val lineCount = rawNotes.count { it == '\n' } + 1
         if (rawNotes.length < 700 && lineCount < 12) {
@@ -1393,9 +1414,11 @@ object UpdateManager {
     private class UpdateInfo(
             val version: String,
             val releaseNotes: String?,
+            val releasePageUrl: String?,
             val apkName: String?,
             val apkDownloadUrl: String?,
             val expectedSha256: String? = null,
             val expectedSize: Long? = null
     )
+
 }
