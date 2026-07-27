@@ -38,7 +38,7 @@ git init --quiet "$TEST_REPO"
 cd "$TEST_REPO"
 git config user.name "Version Code Test"
 git config user.email "version-code-test@example.invalid"
-printf 'versionCode = 393\n' > build.gradle
+printf 'versionName "0.0.0"\nversionCode = 393\n' > build.gradle
 git add build.gradle
 GIT_AUTHOR_DATE='2026-01-01T00:00:00Z' \
   GIT_COMMITTER_DATE='2026-01-01T00:00:00Z' \
@@ -74,9 +74,9 @@ tag_at v12.08.09-beta.1 2026-01-10T00:00:00Z
 assert_info v12.08.09-beta.1 120809001 121100004 'tag v12.11.0-hotfix.1'
 
 # The checked-in value remains a fallback floor when it is higher than history.
-printf 'versionCode = 130000001\n' > build.gradle
+printf 'versionName "13.0.0"\nversionCode = 130000001\n' > build.gradle
 assert_info v12.11.0-hotfix.1 121100004 130000001 build.gradle
-printf 'versionCode = 393\n' > build.gradle
+printf 'versionName "0.0.0"\nversionCode = 393\n' > build.gradle
 
 tag_at v12.100.0 2026-01-11T00:00:00Z
 if bash "$VERSION_SCRIPT" v12.100.0 build.gradle >/dev/null 2>&1; then
