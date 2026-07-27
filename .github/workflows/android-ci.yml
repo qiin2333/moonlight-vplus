@@ -87,6 +87,10 @@ jobs:
       - name: Run lint and unit tests
         run: ./gradlew :app:lintNonRootDebug :app:testNonRootDebugUnitTest --no-daemon --stacktrace
 
+      - name: Test release versioning
+        shell: bash
+        run: bash .github/release/version-code_test.sh
+
       - name: Compile instrumentation tests
         run: ./gradlew :app:compileNonRootDebugAndroidTestKotlin --no-daemon --stacktrace
 
@@ -108,61 +112,11 @@ jobs:
           VERSION=${TAG#v}
           echo "Updating version to: $VERSION"
 
-          # versionCode 完全由 tag 推导，不再读取 build.gradle 的旧值自增：
-          # CI 不会把自增结果回写提交，所以自增会让每次发版都算出同一个值，
-          # 连续两个版本撞号后 Android 会拒绝覆盖安装。
-          #   稳定版 MAJOR.MINOR.PATCH            -> (MAJOR*10000 + MINOR*100 + PATCH) * 100 + 99
-          #   预发布 ...-alpha.N / -beta.N / -rc.N -> 同上，末两位取 N（保证预发布 < 同版本稳定版）
-          # PATCH 可省略（历史上有 v12.11-beta.5 这样的两段式 tag），缺省按 0 处理。
-          # 各段一律用 10# 强制十进制：08 / 09 这类前导零在 $(( )) 里会被当成非法八进制，
-          # 直接以 "value too great for base" 中断发版。
-          # 返回值：0 成功（结果写入 stdout）、1 无法解析、2 MINOR/PATCH 越界。
-          derive_version_code() {
-            local v=${1#v}
-            local major minor patch pre
-            if [[ ! "$v" =~ ^([0-9]+)\.([0-9]+)(\.([0-9]+))? ]]; then
-              return 1
-            fi
-            major=$((10#${BASH_REMATCH[1]}))
-            minor=$((10#${BASH_REMATCH[2]}))
-            patch=$((10#${BASH_REMATCH[4]:-0}))
-            if [ "$minor" -gt 99 ] || [ "$patch" -gt 99 ]; then
-              return 2
-            fi
-            if [[ "$v" =~ -(alpha|beta|rc)\.?([0-9]+) ]]; then
-              pre=$((10#${BASH_REMATCH[2]}))
-              if [ "$pre" -gt 98 ]; then pre=98; fi
-            else
-              pre=99
-            fi
-            echo $(( (major * 10000 + minor * 100 + patch) * 100 + pre ))
-          }
-
-          RC=0
-          NEW_VERSION_CODE=$(derive_version_code "$VERSION") || RC=$?
-          if [ "$RC" -eq 1 ]; then
-            echo "ERROR: tag '$TAG' 不是以 MAJOR.MINOR[.PATCH] 开头，无法推导 versionCode"
-            exit 1
-          elif [ "$RC" -ne 0 ]; then
-            echo "ERROR: tag '$TAG' 的 MINOR/PATCH 必须 <= 99，否则 versionCode 会串位"
-            exit 1
-          fi
-
-          # 防倒退基准取两者最大值：
-          #   1. build.gradle 里记录的上次发布值（CI 不回写提交，可能已经过时）
-          #   2. 所有 v* tag 按同一规则推导出的最大值 —— 这才是真实的发布历史
-          # 只看 build.gradle 的话，发版后忘了同步那一行，基准就会一直停在旧值。
-          # 无法解析的历史 tag（例如单段的 v11）直接跳过。
-          FLOOR=$(grep -oE 'versionCode = [0-9]+' app/build.gradle | grep -oE '[0-9]+')
-          FLOOR_SRC="build.gradle"
-          while IFS= read -r t; do
-            [ -n "$t" ] || continue
-            TAG_CODE=$(derive_version_code "$t") || continue
-            if [ "$TAG_CODE" -gt "$FLOOR" ]; then
-              FLOOR=$TAG_CODE
-              FLOOR_SRC="tag $t"
-            fi
-          done < <(git tag --list 'v*')
+          # 每个 MAJOR.MINOR.PATCH 基础版本有 999 个发布槽位，按 tag 创建时间分配。
+          # 这样同一基础版本下的稳定版、hotfix 和不同功能预览 tag 也不会撞号。
+          # PATCH 可省略；历史 tag、前导零、Android 上限和回退基准都由脚本统一校验。
+          VERSION_INFO=$(bash .github/release/version-code.sh "$TAG" app/build.gradle)
+          IFS=$'\t' read -r NEW_VERSION_CODE FLOOR FLOOR_SRC <<< "$VERSION_INFO"
           echo "Version floor: $FLOOR (from $FLOOR_SRC)"
 
           # 允许相等（同一个 tag 重跑 CI 应当产出同样的包），只拒绝变小。
