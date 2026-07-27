@@ -2,6 +2,7 @@
 
 readonly ANDROID_VERSION_CODE_MAX=2100000000
 
+# Validates a version pair before it is read from or written to Gradle.
 validate_gradle_version() {
   local version_name=${1-}
   local version_code=${2-}
@@ -23,6 +24,7 @@ validate_gradle_version() {
   fi
 }
 
+# Prints the single canonical versionName/versionCode pair from a Gradle file.
 read_gradle_version() {
   local gradle_file=${1-}
   local -a version_names version_codes
@@ -49,6 +51,7 @@ read_gradle_version() {
   printf '%s\t%s\n' "${version_names[0]}" "$((10#${version_codes[0]}))"
 }
 
+# Atomically replaces the canonical version pair while preserving other lines.
 write_gradle_version() {
   local gradle_file=${1-}
   local version_name=${2-}
@@ -64,12 +67,12 @@ write_gradle_version() {
   if ! awk \
     -v version_name="$version_name" \
     -v version_code="$version_code" '
-      /^[[:space:]]*versionName[[:space:]]+"/ {
+      /^[[:space:]]*versionName[[:space:]]+"[^"]*"[[:space:]]*$/ {
         match($0, /^[[:space:]]*/)
         print substr($0, RSTART, RLENGTH) "versionName \"" version_name "\""
         next
       }
-      /^[[:space:]]*versionCode[[:space:]]*=/ {
+      /^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*[0-9]+[[:space:]]*$/ {
         match($0, /^[[:space:]]*/)
         print substr($0, RSTART, RLENGTH) "versionCode = " version_code
         next
@@ -85,6 +88,7 @@ write_gradle_version() {
     "$gradle_file" "$current_version" "$version_name" "$version_code"
 }
 
+# Dispatches the read/write command-line interface.
 main() {
   local command=${1-}
   shift || true

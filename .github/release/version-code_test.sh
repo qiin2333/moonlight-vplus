@@ -6,11 +6,13 @@ VERSION_SCRIPT="$SCRIPT_DIR/version-code.sh"
 TEST_REPO=$(mktemp -d)
 trap 'rm -rf "$TEST_REPO"' EXIT
 
+# Stops the test with a readable assertion failure.
 fail() {
   echo "FAIL: $*" >&2
   exit 1
 }
 
+# Asserts the target code, floor, and floor source returned by the script.
 assert_info() {
   local tag=$1
   local expected_code=$2
@@ -28,6 +30,7 @@ assert_info() {
     fail "$tag: expected floor source '$expected_source', got '$source'"
 }
 
+# Creates an annotated release tag at a deterministic timestamp.
 tag_at() {
   local tag=$1
   local timestamp=$2

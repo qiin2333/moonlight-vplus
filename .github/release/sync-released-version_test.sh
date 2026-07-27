@@ -8,6 +8,7 @@ trap 'rm -rf "$TEST_DIR"' EXIT
 REMOTE="$TEST_DIR/remote.git"
 SEED="$TEST_DIR/seed"
 
+# Stops the integration test with a readable assertion failure.
 fail() {
   echo "FAIL: $*" >&2
   exit 1
@@ -53,5 +54,32 @@ if (
 ) >/dev/null 2>&1; then
   fail "same versionCode with a different versionName must fail"
 fi
+
+touch "$REMOTE/reject-next-push"
+cat > "$REMOTE/hooks/pre-receive" <<'HOOK'
+#!/usr/bin/env bash
+set -euo pipefail
+
+git_dir=$(git rev-parse --git-dir)
+marker="$git_dir/reject-next-push"
+if [ -f "$marker" ]; then
+  rm -f -- "$marker"
+  echo "Rejecting the first push to exercise retry handling" >&2
+  exit 1
+fi
+HOOK
+chmod +x "$REMOTE/hooks/pre-receive"
+
+retry_output=$(
+  cd "$SEED"
+  bash "$SYNC_SCRIPT" 12.13.0 121300001 origin master app/build.gradle 2>&1
+)
+grep -Fq 'retrying (1/3)' <<< "$retry_output" ||
+  fail "sync did not report retrying after the rejected push"
+retried_file=$(git --git-dir="$REMOTE" show master:app/build.gradle)
+grep -Fq 'versionName "12.13.0"' <<< "$retried_file" ||
+  fail "retry did not push versionName"
+grep -Fq 'versionCode = 121300001' <<< "$retried_file" ||
+  fail "retry did not push versionCode"
 
 echo "sync-released-version tests passed"

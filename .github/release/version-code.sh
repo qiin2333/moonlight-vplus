@@ -10,6 +10,7 @@ source "$SCRIPT_DIR/gradle-version.sh"
 
 readonly RELEASE_SLOTS_PER_BASE=1000
 
+# Converts a supported release tag prefix into its numeric semantic base.
 parse_version_base() {
   local tag=${1-}
   local version=${tag#v}
@@ -34,6 +35,7 @@ parse_version_base() {
   printf '%d\n' "$((major * 10000 + minor * 100 + patch))"
 }
 
+# Derives the target tag's versionCode and the highest published floor.
 calculate_release_version() {
   local target_tag=${1-}
   local gradle_file=${2-}
@@ -113,6 +115,7 @@ calculate_release_version() {
   printf '%s\t%s\t%s\n' "$target_code" "$floor" "$floor_source"
 }
 
+# Validates CLI arguments and prints the calculated release version data.
 main() {
   if [ "$#" -ne 2 ]; then
     echo "Usage: $0 <tag> <build.gradle>" >&2

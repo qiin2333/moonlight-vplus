@@ -9,6 +9,7 @@ RETRY_LIMIT=3
 SYNC_ROOT=
 SYNC_WORKTREE=
 
+# Removes the temporary linked worktree created by the sync attempt.
 cleanup_sync_worktree() {
   local repo_root
 
@@ -24,6 +25,7 @@ cleanup_sync_worktree() {
   fi
 }
 
+# Commits a released version to the target branch without allowing regression.
 sync_released_version() {
   local version_name=$1
   local version_code=$2
@@ -90,6 +92,7 @@ sync_released_version() {
   return 1
 }
 
+# Validates CLI arguments and starts the release synchronization.
 main() {
   if [ "$#" -lt 2 ] || [ "$#" -gt 5 ]; then
     echo "Usage: $0 <version-name> <version-code> [remote] [branch] [build.gradle]" >&2

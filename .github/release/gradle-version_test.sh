@@ -7,6 +7,7 @@ TEST_DIR=$(mktemp -d)
 trap 'rm -rf "$TEST_DIR"' EXIT
 GRADLE_FILE="$TEST_DIR/build.gradle"
 
+# Stops the test with a readable assertion failure.
 fail() {
   echo "FAIL: $*" >&2
   exit 1
@@ -34,6 +35,14 @@ bash "$VERSION_SCRIPT" write \
   fail "write did not persist both version fields"
 grep -Fq '// versionName "comment-must-not-change"' "$GRADLE_FILE" ||
   fail "write changed a commented versionName"
+
+cat >> "$GRADLE_FILE" <<'GRADLE'
+        versionCode = 7 // malformed duplicate must remain untouched
+GRADLE
+bash "$VERSION_SCRIPT" write "$GRADLE_FILE" 12.12.1 121201001 >/dev/null
+grep -Fq 'versionCode = 7 // malformed duplicate must remain untouched' \
+  "$GRADLE_FILE" ||
+  fail "write changed a non-canonical versionCode line"
 
 if bash "$VERSION_SCRIPT" write "$GRADLE_FILE" 'bad"name' 123 >/dev/null 2>&1; then
   fail "unsafe versionName must be rejected"
