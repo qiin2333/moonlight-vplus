@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 # Android accepts versionCode values up to 2,100,000,000. Each semantic
-# MAJOR.MINOR.PATCH base gets 1,000 release slots, assigned in tag creation
-# order. This keeps feature previews, hotfixes, and stable tags for the same
-# base unique without trying to interpret their free-form suffixes.
+# MAJOR.MINOR.PATCH base gets 999 release slots (ordinals 1-999), assigned in
+# tag creation order. This keeps feature previews, hotfixes, and stable tags
+# for the same base unique without trying to interpret their free-form suffixes.
 readonly ANDROID_VERSION_CODE_MAX=2100000000
 readonly RELEASE_SLOTS_PER_BASE=1000
 
