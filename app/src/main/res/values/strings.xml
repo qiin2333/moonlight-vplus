@@ -693,8 +693,8 @@
     <string name="crown_store_my_summary">Manage profiles, import packages, and publish layouts.</string>
     <string name="crown_store_my_workspace_title">Your Crown space</string>
     <string name="crown_store_local_profiles">Local profiles</string>
-    <string name="crown_store_profile_count">%1$d profiles</string>
-    <string name="crown_store_profile_unit">profiles</string>
+    <string name="crown_store_profile_count">Profiles: %1$d</string>
+    <string name="crown_store_profile_unit">Profiles</string>
     <string name="crown_store_profile_active">Active</string>
     <string name="crown_store_legacy_tool_summary">Restore a Crown profile from a legacy .mdat file.</string>
     <string name="crown_store_action_open">Open</string>
