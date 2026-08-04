@@ -112,6 +112,8 @@ class StreamSettings : AppCompatActivity() {
     private var previousDisplayPixelCount = 0
     private var externalDisplayManager: ExternalDisplayManager? = null
     private var settingsBackgroundPrefsListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
+    @Volatile
+    private var backgroundLoadGeneration = 0L
 
     // 抽屉菜单相关
     private var drawerLayout: DrawerLayout? = null // 竖屏时使用，横屏时为 null
@@ -4260,6 +4262,7 @@ class StreamSettings : AppCompatActivity() {
     }
 
     private fun loadBackgroundImage() {
+        val generation = ++backgroundLoadGeneration
         val imageView = findViewById<ImageView>(R.id.settingsBackgroundImage)
         Glide.with(this).clear(imageView)
         imageView.setImageDrawable(null)
@@ -4299,7 +4302,7 @@ class StreamSettings : AppCompatActivity() {
             if (target.startsWith("http")) target else File(target)
         )
 
-        tryCachedThenNetwork(imageView, options, candidates, 0)
+        tryCachedThenNetwork(imageView, options, candidates, 0, generation)
     }
 
     /** Try the selected source from Glide cache before loading it asynchronously. */
@@ -4307,11 +4310,12 @@ class StreamSettings : AppCompatActivity() {
             imageView: ImageView,
             options: RequestOptions,
             candidates: List<Any>,
-            index: Int
+            index: Int,
+            generation: Long
     ) {
-        if (isDestroyed || isFinishing) return
+        if (generation != backgroundLoadGeneration || isDestroyed || isFinishing) return
         if (index >= candidates.size) {
-            loadBackgroundImageFromSource(imageView, options, candidates)
+            loadBackgroundImageFromSource(imageView, options, candidates, generation)
             return
         }
         Glide.with(this)
@@ -4319,11 +4323,12 @@ class StreamSettings : AppCompatActivity() {
                 .apply(options.clone().onlyRetrieveFromCache(true))
                 .into(object : CustomTarget<Drawable>() {
                     override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
+                        if (generation != backgroundLoadGeneration || isDestroyed || isFinishing) return
                         imageView.setImageDrawable(resource)
                     }
                     override fun onLoadCleared(placeholder: Drawable?) {}
                     override fun onLoadFailed(errorDrawable: Drawable?) {
-                        tryCachedThenNetwork(imageView, options, candidates, index + 1)
+                        tryCachedThenNetwork(imageView, options, candidates, index + 1, generation)
                     }
                 })
     }
@@ -4331,12 +4336,15 @@ class StreamSettings : AppCompatActivity() {
     private fun loadBackgroundImageFromSource(
             imageView: ImageView,
             options: RequestOptions,
-            candidates: List<Any>
+            candidates: List<Any>,
+            generation: Long
     ) {
         Thread {
             for (model in candidates) {
                 try {
-                    if (isDestroyed || isFinishing) return@Thread
+                    if (generation != backgroundLoadGeneration || isDestroyed || isFinishing) {
+                        return@Thread
+                    }
                     // 后台同步预热：把图解码到 Glide 缓存中（包含裁切、模糊和蒙版）。
                     val ready = Glide.with(applicationContext)
                             .asDrawable()
@@ -4346,7 +4354,10 @@ class StreamSettings : AppCompatActivity() {
                             .get()
                     if (ready != null) {
                         runOnUiThread {
-                            if (isDestroyed || isFinishing) return@runOnUiThread
+                            if (generation != backgroundLoadGeneration ||
+                                    isDestroyed || isFinishing) {
+                                return@runOnUiThread
+                            }
                             // 用同一份缓存渲染，加 400ms 渐入避免突兀 pop-in
                             Glide.with(this@StreamSettings)
                                     .load(model)
