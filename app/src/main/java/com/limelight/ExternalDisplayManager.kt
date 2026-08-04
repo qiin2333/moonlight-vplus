@@ -372,7 +372,9 @@ class ExternalDisplayManager(
                 activity,
                 resources.configuration.orientation
             ) ?: return
-            val model: Any = if (target.startsWith("http")) target else File(target)
+            val isRemoteTarget = target.startsWith("http://", ignoreCase = true) ||
+                target.startsWith("https://", ignoreCase = true)
+            val model: Any = if (isRemoteTarget) target else File(target)
             Glide.with(activity)
                 .load(model)
                 .centerCrop()
