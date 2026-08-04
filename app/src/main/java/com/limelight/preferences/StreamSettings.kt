@@ -123,6 +123,7 @@ class StreamSettings : AppCompatActivity() {
     private var searchInput: EditText? = null
     private var searchToggle: ImageView? = null
     private var menuToggleView: ImageView? = null
+    private var screenCombinationModeReturnFocus: View? = null
     private var lastNightMode = false
 
     // 状态保存键
@@ -425,6 +426,7 @@ class StreamSettings : AppCompatActivity() {
             if (index >= 0) index else 0
         }
 
+        screenCombinationModeReturnFocus = currentFocus
         overlay.removeAllViews()
         overlay.addView(
             ScreenCombinationModePickerView(
@@ -459,7 +461,13 @@ class StreamSettings : AppCompatActivity() {
 
         overlay.visibility = View.GONE
         overlay.removeAllViews()
-        focusPreferenceList()
+        val returnFocus = screenCombinationModeReturnFocus
+        screenCombinationModeReturnFocus = null
+        if (returnFocus?.isAttachedToWindow == true && returnFocus.isShown && returnFocus.isFocusable) {
+            returnFocus.post { returnFocus.requestFocus() }
+        } else {
+            focusPreferenceList()
+        }
         return true
     }
 

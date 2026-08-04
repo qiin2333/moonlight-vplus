@@ -9,6 +9,7 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -27,8 +28,11 @@ class ScreenCombinationModePickerView(
     private val onClose: () -> Unit,
     private val onModeSelected: (Int) -> Unit
 ) : ScrollView(context) {
-    private var selectedOptionView: View? = null
     private val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    private val columnCount = if (isLandscape) 2 else 1
+    private val optionViews = mutableListOf<View>()
+    private lateinit var closeButton: View
+    private val initialOptionIndex = checkedIndex.coerceIn(0, names.lastIndex.coerceAtLeast(0))
 
     init {
         isFillViewport = true
@@ -68,7 +72,7 @@ class ScreenCombinationModePickerView(
             })
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
 
-        header.addView(TextView(context).apply {
+        closeButton = TextView(context).apply {
             text = context.getString(R.string.screen_combination_mode_action_close)
             setTextColor(primaryTextColor)
             textSize = 14f
@@ -86,7 +90,8 @@ class ScreenCombinationModePickerView(
                 )
             }
             setOnClickListener { onClose() }
-        })
+        }
+        header.addView(closeButton)
         root.addView(header)
 
         val list = LinearLayout(context).apply {
@@ -95,14 +100,13 @@ class ScreenCombinationModePickerView(
         }
 
         if (isLandscape) {
-            val columns = 2
             val columnGap = dp(10)
-            names.indices.chunked(columns).forEach { rowIndexes ->
+            names.indices.chunked(columnCount).forEach { rowIndexes ->
                 val row = LinearLayout(context).apply {
                     orientation = LinearLayout.HORIZONTAL
                 }
                 rowIndexes.forEachIndexed { column, index ->
-                    row.addView(createOption(
+                    val option = createOption(
                         title = names[index],
                         description = descriptions.getOrNull(index).orEmpty(),
                         modeValue = values.getOrNull(index)?.toIntOrNull() ?: -1,
@@ -111,12 +115,15 @@ class ScreenCombinationModePickerView(
                         secondaryTextColor = secondaryTextColor,
                         accentColor = accentColor,
                         compact = true
-                    ), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    )
+                    optionViews += option
+                    row.addView(option, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
                         marginStart = if (column == 0) 0 else columnGap / 2
                         marginEnd = if (column == 0) columnGap / 2 else 0
+                        bottomMargin = dp(8)
                     })
                 }
-                if (rowIndexes.size < columns) {
+                if (rowIndexes.size < columnCount) {
                     row.addView(View(context), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
                         marginStart = columnGap / 2
                     })
@@ -125,7 +132,7 @@ class ScreenCombinationModePickerView(
             }
         } else {
             names.forEachIndexed { index, name ->
-                list.addView(createOption(
+                val option = createOption(
                     title = name,
                     description = descriptions.getOrNull(index).orEmpty(),
                     modeValue = values.getOrNull(index)?.toIntOrNull() ?: -1,
@@ -134,13 +141,22 @@ class ScreenCombinationModePickerView(
                     secondaryTextColor = secondaryTextColor,
                     accentColor = accentColor,
                     compact = false
-                ))
+                )
+                optionViews += option
+                list.addView(option, LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    bottomMargin = dp(10)
+                })
             }
         }
         root.addView(list)
         addView(root, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
-        post { selectedOptionView?.requestFocus() }
+        post {
+            optionViews.getOrNull(initialOptionIndex)?.requestFocus() ?: closeButton.requestFocus()
+        }
     }
 
     private fun createOption(
@@ -170,10 +186,6 @@ class ScreenCombinationModePickerView(
             }
             setOnClickListener { onModeSelected(modeValue) }
         }
-        if (selected) {
-            selectedOptionView = row
-        }
-
         row.addView(ScreenCombinationPreviewView(context, modeValue, selected), LinearLayout.LayoutParams(
             dp(if (compact) 92 else 118),
             dp(if (compact) 58 else 78)
@@ -205,10 +217,83 @@ class ScreenCombinationModePickerView(
             }
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
 
-        return LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(row)
-            setPadding(0, 0, 0, dp(if (compact) 8 else 10))
+        return row
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (handleControllerKeyEvent(event)) {
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    private fun handleControllerKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode == KeyEvent.KEYCODE_BACK || event.keyCode == KeyEvent.KEYCODE_BUTTON_B) {
+            if (event.action == KeyEvent.ACTION_UP) {
+                onClose()
+            }
+            return true
+        }
+
+        val direction = when (event.keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP -> GridFocusDirection.UP
+            KeyEvent.KEYCODE_DPAD_DOWN -> GridFocusDirection.DOWN
+            KeyEvent.KEYCODE_DPAD_LEFT -> GridFocusDirection.LEFT
+            KeyEvent.KEYCODE_DPAD_RIGHT -> GridFocusDirection.RIGHT
+            else -> null
+        }
+        if (direction != null) {
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                moveControllerFocus(direction)
+            }
+            return true
+        }
+
+        val isConfirmKey = event.keyCode == KeyEvent.KEYCODE_BUTTON_A ||
+                event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                event.keyCode == KeyEvent.KEYCODE_ENTER ||
+                event.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
+                event.keyCode == KeyEvent.KEYCODE_SPACE
+        if (!isConfirmKey) {
+            return false
+        }
+
+        if (event.action == KeyEvent.ACTION_UP) {
+            val focusedView = findFocus()
+            when {
+                focusedView === closeButton -> closeButton.performClick()
+                focusedView in optionViews -> focusedView.performClick()
+                else -> optionViews.getOrNull(initialOptionIndex)?.requestFocus()
+            }
+        }
+        return true
+    }
+
+    private fun moveControllerFocus(direction: GridFocusDirection) {
+        val focusedView = findFocus()
+        if (focusedView === closeButton) {
+            if (direction == GridFocusDirection.DOWN) {
+                optionViews.getOrNull(initialOptionIndex)?.requestFocus()
+            }
+            return
+        }
+
+        val currentIndex = optionViews.indexOf(focusedView)
+        if (currentIndex < 0) {
+            optionViews.getOrNull(initialOptionIndex)?.requestFocus()
+            return
+        }
+
+        val targetIndex = GridFocusNavigator.nextIndex(
+            currentIndex = currentIndex,
+            itemCount = optionViews.size,
+            columnCount = columnCount,
+            direction = direction
+        )
+        if (targetIndex == GridFocusNavigator.CLOSE_TARGET) {
+            closeButton.requestFocus()
+        } else {
+            optionViews.getOrNull(targetIndex)?.requestFocus()
         }
     }
 
