@@ -78,6 +78,27 @@ class VddProtocolTest {
         assertTrue(catalog.supportsVdd(1))
     }
 
+    @Test
+    fun negativeXmlCapabilityKeepsLegacyVddCompatibility() {
+        val capability = NvHTTP.parseVddCapabilityVersion("-1")
+
+        assertNull(capability)
+        assertTrue(
+            NvHTTP.DisplayCatalog(emptyList(), null, NvHTTP.VddState.UNKNOWN)
+                .supportsVdd(capability)
+        )
+    }
+
+    @Test
+    fun negativeJsonCapabilityKeepsLegacyVddCompatibility() {
+        val catalog = NvHTTP.parseDisplayCatalog(
+            """{"status_code":200,"displays":[],"vdd":{"capability_version":-1,"state":"driver_unreachable"}}"""
+        )
+
+        assertNull(catalog.vddCapabilityVersion)
+        assertTrue(catalog.supportsVdd(null))
+    }
+
     @Test(expected = IOException::class)
     fun nonSuccessDisplayCatalogResponseThrowsIOException() {
         NvHTTP.parseDisplayCatalog(

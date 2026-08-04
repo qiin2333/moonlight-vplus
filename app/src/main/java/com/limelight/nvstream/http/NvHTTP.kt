@@ -330,8 +330,9 @@ class NvHTTP(
 
         details.nvidiaServer = getXmlString(serverInfo, "state", true)!!.contains("MJOLNIR")
         details.supportsDesktopSpecialApp = getXmlString(serverInfo, "DesktopSpecialAppSupport", false) == "1"
-        details.vddCapabilityVersion =
-            getXmlString(serverInfo, "VddCapabilityVersion", false)?.toIntOrNull()
+        details.vddCapabilityVersion = parseVddCapabilityVersion(
+            getXmlString(serverInfo, "VddCapabilityVersion", false)
+        )
 
         try {
             details.sunshineVersion = getSunshineVersion(serverInfo)
@@ -1067,13 +1068,15 @@ class NvHTTP(
             val vdd = json.optJSONObject("vdd")
             return DisplayCatalog(
                 displays = displays,
-                vddCapabilityVersion = vdd
-                    ?.opt("capability_version")
-                    ?.toString()
-                    ?.toIntOrNull(),
+                vddCapabilityVersion = parseVddCapabilityVersion(
+                    vdd?.opt("capability_version")
+                ),
                 vddState = VddState.fromWireValue(vdd?.optString("state"))
             )
         }
+
+        internal fun parseVddCapabilityVersion(value: Any?): Int? =
+            value?.toString()?.toIntOrNull()?.takeIf { it >= 0 }
 
         private fun getXmlTextIgnoringStatus(str: String, tagname: String): String? {
             val factory = XmlPullParserFactory.newInstance()
