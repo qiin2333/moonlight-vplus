@@ -17,6 +17,14 @@ import com.limelight.utils.AppDialogStyler
 class ExternalDisplayPreference : CheckBoxPreference {
     private val displayManager: DisplayManager
         get() = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+    private val displayListener = object : DisplayManager.DisplayListener {
+        override fun onDisplayAdded(displayId: Int) = updateSummary()
+
+        override fun onDisplayRemoved(displayId: Int) = updateSummary()
+
+        override fun onDisplayChanged(displayId: Int) = updateSummary()
+    }
+    private var displayListenerRegistered = false
 
     constructor(context: Context) : super(context) {
         initialize()
@@ -38,6 +46,23 @@ class ExternalDisplayPreference : CheckBoxPreference {
     override fun onAttachedToHierarchy(preferenceManager: androidx.preference.PreferenceManager) {
         super.onAttachedToHierarchy(preferenceManager)
         updateSummary()
+    }
+
+    override fun onAttached() {
+        super.onAttached()
+        if (!displayListenerRegistered) {
+            displayManager.registerDisplayListener(displayListener, null)
+            displayListenerRegistered = true
+        }
+        updateSummary()
+    }
+
+    override fun onDetached() {
+        if (displayListenerRegistered) {
+            displayManager.unregisterDisplayListener(displayListener)
+            displayListenerRegistered = false
+        }
+        super.onDetached()
     }
 
     override fun onClick() {
