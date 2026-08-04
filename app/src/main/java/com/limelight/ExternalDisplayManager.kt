@@ -287,7 +287,13 @@ class ExternalDisplayManager(
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
 
-            window?.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            window?.addFlags(
+                WindowManager.LayoutParams.FLAG_FULLSCREEN or
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+            )
+            LimeLog.info(
+                "Control display is touchable but non-focusable; physical input stays on stream"
+            )
             @Suppress("DEPRECATION")
             window?.decorView?.systemUiVisibility =
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE or

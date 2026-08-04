@@ -965,6 +965,8 @@ class GameMenu(
             hostWindowToken?.let { token ->
                 layoutParams.type = WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
                 layoutParams.token = token
+                layoutParams.flags =
+                    layoutParams.flags or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
             }
             layoutParams.alpha = renderingProfile.windowAlpha
             layoutParams.dimAmount = DIALOG_DIM_AMOUNT
