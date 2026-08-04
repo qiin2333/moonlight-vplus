@@ -66,16 +66,19 @@
                 </LinearLayout>
 
                 <LinearLayout
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
                     android:gravity="end"
                     android:orientation="vertical">
 
                     <TextView
                         android:id="@+id/dualScreenSessionTitle"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:ellipsize="end"
+                        android:gravity="end"
                         android:maxLines="1"
                         android:textColor="@color/dual_screen_text_primary"
                         android:textSize="14sp"
@@ -83,10 +86,11 @@
 
                     <TextView
                         android:id="@+id/dualScreenTargetDisplay"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:ellipsize="end"
+                        android:gravity="end"
                         android:maxLines="1"
                         android:textColor="@color/dual_screen_text_secondary"
                         android:textSize="11sp" />
