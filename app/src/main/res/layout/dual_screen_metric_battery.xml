@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/DualScreenMetricCard"
+    app:layout_flexGrow="1"
+    app:layout_flexShrink="1"
+    android:orientation="vertical">
+
+    <TextView style="@style/DualScreenMetricLabel" android:text="@string/dual_screen_metric_battery" />
+    <TextView android:id="@+id/dualScreenBatteryValue" style="@style/DualScreenMetricValue" android:text="@string/dual_screen_metric_pending" />
+</LinearLayout>

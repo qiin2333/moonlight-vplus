@@ -62,6 +62,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DecodeFormat
 import com.bumptech.glide.load.MultiTransformation
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.load.resource.bitmap.CenterCrop
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.target.CustomTarget
@@ -110,6 +111,7 @@ class StreamSettings : AppCompatActivity() {
     private lateinit var previousPrefs: PreferenceConfiguration
     private var previousDisplayPixelCount = 0
     private var externalDisplayManager: ExternalDisplayManager? = null
+    private var settingsBackgroundPrefsListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
 
     // 抽屉菜单相关
     private var drawerLayout: DrawerLayout? = null // 竖屏时使用，横屏时为 null
@@ -140,8 +142,6 @@ class StreamSettings : AppCompatActivity() {
 
         // HACK for Android 9
         var displayCutoutP: DisplayCutout? = null
-
-        private const val SETTINGS_BG_URL = "https://raw.githubusercontent.com/qiin2333/qiin.github.io/assets/img/moonlight-bg2.webp"
 
         /**
          * 获取分类对应的 Phosphor 矢量图标资源 ID（与鸿蒙项目一致）。
@@ -222,6 +222,7 @@ class StreamSettings : AppCompatActivity() {
         initDrawerMenu()
 
         // 加载背景图片
+        registerSettingsBackgroundPreferenceListener()
         loadBackgroundImage()
 
         // 设置版本号
@@ -790,9 +791,10 @@ class StreamSettings : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        super.onDestroy()
+        unregisterSettingsBackgroundPreferenceListener()
         externalDisplayManager?.cleanup()
         externalDisplayManager = null
+        super.onDestroy()
     }
 
     @Deprecated("Deprecated in Java")
@@ -4259,6 +4261,13 @@ class StreamSettings : AppCompatActivity() {
 
     private fun loadBackgroundImage() {
         val imageView = findViewById<ImageView>(R.id.settingsBackgroundImage)
+        Glide.with(this).clear(imageView)
+        imageView.setImageDrawable(null)
+
+        val target = BackgroundSource.current(this).resolveTarget(
+            this,
+            resources.configuration.orientation
+        ) ?: return
 
         // 解码尺寸根据当前可用堆按比例约束（详见 computeBackgroundDecodeSize）：
         // - 4K 电视 + 大堆设备保持原分辨率
@@ -4276,6 +4285,7 @@ class StreamSettings : AppCompatActivity() {
             Color.argb(96, 255, 255, 255)
         }
         val transformations = MultiTransformation<Bitmap>(
+                CenterCrop(),
                 BlurTransformation(2, 3),
                 ColorFilterTransformation(filterColor)
         )
@@ -4285,31 +4295,23 @@ class StreamSettings : AppCompatActivity() {
                 .transform(transformations)
                 .diskCacheStrategy(DiskCacheStrategy.ALL)
 
-        // 候选 URL（含原始与所有代理变体）。Glide 缓存键以 URL 为基础，
-        // 因此可能上次走代理 A 命中、原始 URL 在缓存中并不存在；这里逐个尝试，
-        // 任一变体在缓存中就立即贴图，体验等同本地资源。
-        val candidates = mutableListOf<String>().apply {
-            add(SETTINGS_BG_URL)
-            try { addAll(UpdateManager.buildProxiedUrls(SETTINGS_BG_URL)) } catch (_: Exception) {}
-        }.distinct()
+        val candidates: List<Any> = listOf(
+            if (target.startsWith("http")) target else File(target)
+        )
 
         tryCachedThenNetwork(imageView, options, candidates, 0)
     }
 
-    /**
-     * 依次对候选 URL 做 onlyRetrieveFromCache 同步缓存查询：
-     *   - 命中：直接贴图，无线程切换、无渐入，体验秒开
-     *   - 全部未命中：转入网络下载路径，下载完成后带 crossFade 渐入
-     */
+    /** Try the selected source from Glide cache before loading it asynchronously. */
     private fun tryCachedThenNetwork(
             imageView: ImageView,
             options: RequestOptions,
-            candidates: List<String>,
+            candidates: List<Any>,
             index: Int
     ) {
         if (isDestroyed || isFinishing) return
         if (index >= candidates.size) {
-            loadBackgroundImageFromNetwork(imageView, options, candidates)
+            loadBackgroundImageFromSource(imageView, options, candidates)
             return
         }
         Glide.with(this)
@@ -4326,24 +4328,19 @@ class StreamSettings : AppCompatActivity() {
                 })
     }
 
-    private fun loadBackgroundImageFromNetwork(
+    private fun loadBackgroundImageFromSource(
             imageView: ImageView,
             options: RequestOptions,
-            preBuiltCandidates: List<String>?
+            candidates: List<Any>
     ) {
         Thread {
-            // 代理列表可能在调用前还未就绪，需要刷新一次
-            UpdateManager.ensureProxyListUpdated(this)
-            val candidates = preBuiltCandidates?.takeIf { it.isNotEmpty() }
-                    ?: UpdateManager.buildProxiedUrls(SETTINGS_BG_URL)
-            for (url in candidates) {
+            for (model in candidates) {
                 try {
                     if (isDestroyed || isFinishing) return@Thread
-                    // 后台同步预热：把图解码到 Glide 缓存中（包含 blur+mask 变换）；
-                    // 失败则尝试下一条代理，不会污染 UI
+                    // 后台同步预热：把图解码到 Glide 缓存中（包含裁切、模糊和蒙版）。
                     val ready = Glide.with(applicationContext)
                             .asDrawable()
-                            .load(url)
+                            .load(model)
                             .apply(options)
                             .submit()
                             .get()
@@ -4352,7 +4349,7 @@ class StreamSettings : AppCompatActivity() {
                             if (isDestroyed || isFinishing) return@runOnUiThread
                             // 用同一份缓存渲染，加 400ms 渐入避免突兀 pop-in
                             Glide.with(this@StreamSettings)
-                                    .load(url)
+                                    .load(model)
                                     .apply(options)
                                     .transition(DrawableTransitionOptions.withCrossFade(400))
                                     .into(imageView)
@@ -4364,5 +4361,29 @@ class StreamSettings : AppCompatActivity() {
                 }
             }
         }.start()
+    }
+
+    private fun registerSettingsBackgroundPreferenceListener() {
+        if (settingsBackgroundPrefsListener != null) return
+
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == BackgroundSource.KEY_SOURCE ||
+                key == BackgroundSource.KEY_API_URL ||
+                key == BackgroundSource.KEY_LOCAL_PATH
+            ) {
+                runOnUiThread { loadBackgroundImage() }
+            }
+        }
+        settingsBackgroundPrefsListener = listener
+        PreferenceManager.getDefaultSharedPreferences(this)
+            .registerOnSharedPreferenceChangeListener(listener)
+    }
+
+    private fun unregisterSettingsBackgroundPreferenceListener() {
+        settingsBackgroundPrefsListener?.let { listener ->
+            PreferenceManager.getDefaultSharedPreferences(this)
+                .unregisterOnSharedPreferenceChangeListener(listener)
+        }
+        settingsBackgroundPrefsListener = null
     }
 }

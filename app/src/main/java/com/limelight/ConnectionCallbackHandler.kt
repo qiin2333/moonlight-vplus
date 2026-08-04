@@ -21,6 +21,7 @@ class ConnectionCallbackHandler(private val game: Game) {
 
     fun stageStarting(stage: String) {
         game.runOnUiThread {
+            game.dualScreenControlPanelOrNull()?.updateConnectionStage(stage)
             game.progressOverlay?.setMessage(
                 game.resources.getString(R.string.conn_starting) + " " + stage
             )
@@ -39,6 +40,7 @@ class ConnectionCallbackHandler(private val game: Game) {
         )
 
         game.runOnUiThread {
+            game.dualScreenControlPanelOrNull()?.updateConnectionFailed("$stage ($errorCode)")
             game.progressOverlay?.dismiss()
             game.progressOverlay = null
 
@@ -102,6 +104,9 @@ class ConnectionCallbackHandler(private val game: Game) {
                 // Display the error dialog if it was an unexpected termination.
                 // Otherwise, just finish the activity immediately.
                 if (errorCode != MoonBridge.ML_ERROR_GRACEFUL_TERMINATION) {
+                    game.dualScreenControlPanelOrNull()?.updateConnectionFailed(
+                        game.getString(R.string.conn_terminated_msg) + " ($errorCode)"
+                    )
                     val message: String = if (portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE && portTestResult != 0) {
                         game.resources.getString(R.string.nettest_text_blocked)
                     } else {
@@ -146,6 +151,7 @@ class ConnectionCallbackHandler(private val game: Game) {
 
     fun connectionStatusUpdate(connectionStatus: Int) {
         game.runOnUiThread {
+            game.dualScreenControlPanelOrNull()?.updateConnectionQuality(connectionStatus)
             if (game.prefConfig.disableWarnings) {
                 return@runOnUiThread
             }
@@ -186,6 +192,7 @@ class ConnectionCallbackHandler(private val game: Game) {
             game.orientationManager.connected = true
             game.connecting = false
             game.updatePipAutoEnter()
+            game.dualScreenControlPanelOrNull()?.updateConnectionStarted()
 
             // Hide the mouse cursor now after a short delay.
             val h = Handler(Looper.getMainLooper())
@@ -294,6 +301,7 @@ class ConnectionCallbackHandler(private val game: Game) {
             game.connected = false
             game.orientationManager.connected = false
             game.updatePipAutoEnter()
+            game.dualScreenControlPanelOrNull()?.updateConnectionStopped()
 
             // 停止智能码率
             game.stopAdaptiveBitrate()

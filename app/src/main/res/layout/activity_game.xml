@@ -260,6 +260,9 @@
         android:scaleType="centerInside"
         android:padding="8dp" />
 
+    <!-- Default-display dashboard used while the stream is on a secondary display. -->
+    <include layout="@layout/dual_screen_control_panel" />
+
     <!-- 虚拟全键盘占位容器：全屏承载范围，供代码中动态加载或包裹实体键盘组件 -->
     <FrameLayout
         android:id="@+id/virtual_full_keyboard_container"

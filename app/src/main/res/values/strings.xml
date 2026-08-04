@@ -823,8 +823,49 @@
     <string name="game_menu_configure_settings">Crown Profiles</string>
     
     <!-- External display -->
-    <string name="title_use_external_display">Use External Display</string>
-    <string name="summary_use_external_display">If an external display is connected, display the stream on the external display</string>
+    <string name="title_use_external_display">Use Dual-Screen / External Display</string>
+    <string name="summary_use_external_display">Choose the primary display used for streaming; the other display shows connection details and quick controls</string>
+    <string name="external_display_detected">Display detected: %1$s (ID: %2$d)</string>
+    <string name="external_display_not_detected">No secondary display detected</string>
+    <string name="external_display_detection_failed">Display detection failed: %1$s</string>
+    <string name="dual_screen_select_primary_title">Select streaming display</string>
+    <string name="dual_screen_enable">Enable</string>
+    <string name="dual_screen_disable">Disable dual-screen</string>
+    <string name="dual_screen_available_summary">%1$d displays detected. Tap to choose the streaming display.</string>
+    <string name="dual_screen_selection_summary">Stream: %1$s · Controls: %2$s</string>
+    <string name="dual_screen_session_title">%1$s · %2$s</string>
+    <string name="dual_screen_unknown_host">Unknown host</string>
+    <string name="dual_screen_target_display">Stream: %1$s · %2$d×%3$d @ %4$.0f Hz</string>
+    <string name="dual_screen_status_connecting">Connecting</string>
+    <string name="dual_screen_status_connecting_detail">Preparing the stream on the selected display</string>
+    <string name="dual_screen_status_stage">Starting %1$s</string>
+    <string name="dual_screen_status_connected">Connection stable</string>
+    <string name="dual_screen_status_connected_detail">Video is playing on the selected display</string>
+    <string name="dual_screen_status_poor">Connection unstable</string>
+    <string name="dual_screen_status_poor_detail">Packet loss or latency is high; consider lowering the bitrate</string>
+    <string name="dual_screen_status_failed">Connection failed</string>
+    <string name="dual_screen_status_disconnected">Disconnected</string>
+    <string name="dual_screen_status_disconnected_detail">The streaming session has ended</string>
+    <string name="dual_screen_metric_stream">STREAM</string>
+    <string name="dual_screen_metric_fps">RENDER / RECEIVE FPS</string>
+    <string name="dual_screen_metric_rtt">NETWORK RTT</string>
+    <string name="dual_screen_metric_decode">DECODE LATENCY</string>
+    <string name="dual_screen_metric_loss">PACKET LOSS</string>
+    <string name="dual_screen_metric_bandwidth">THROUGHPUT</string>
+    <string name="dual_screen_metric_battery">BATTERY</string>
+    <string name="dual_screen_metric_pending">Waiting…</string>
+    <string name="dual_screen_battery_value">%1$d%%</string>
+    <string name="dual_screen_action_menu">Menu</string>
+    <string name="dual_screen_action_keyboard">Keyboard</string>
+    <string name="dual_screen_action_escape">Esc</string>
+    <string name="dual_screen_action_windows">Win</string>
+    <string name="dual_screen_action_task_switch">Alt+Tab</string>
+    <string name="dual_screen_action_controller">Controller</string>
+    <string name="dual_screen_action_microphone">Mic</string>
+    <string name="dual_screen_action_close_control">Close controls</string>
+    <string name="dual_screen_action_disconnect">Disconnect</string>
+    <string name="game_menu_enable_multi_screen">Enable multi-screen</string>
+    <string name="dual_screen_control_hint">More controls and stream settings are available in Menu</string>
     
     <!-- Background image API -->
     <string name="title_background_image_api">Background Image API</string>
@@ -1581,7 +1622,8 @@ Tap again to replace it.</string>
     <string name="toast_cannot_get_download_file">Cannot access download file, please install manually from downloads</string>
     <string name="toast_install_launch_failed">Failed to launch installer, please install manually from downloads</string>
     <string name="toast_external_display_disconnected">External display disconnected, switching to main screen</string>
-    <string name="toast_switched_to_external_display">Streaming switched to external display. If landscape is not shown correctly, try rotating on host.</string>
+    <string name="toast_switched_to_external_display">Streaming moved to the selected display; controls are ready on the other display.</string>
+    <string name="toast_dual_screen_controls_ready">Streaming is ready on the selected display; controls are ready on the other display.</string>
     <string name="toast_image_picker_open_failed">Cannot open image picker</string>
     <string name="toast_background_image_saved">Background image set</string>
     <string name="toast_image_save_failed">Could not save image. Try again.</string>

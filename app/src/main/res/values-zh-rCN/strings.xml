@@ -629,8 +629,49 @@
     <string name="game_menu_configure_settings">配置档案</string>
 
     <!-- External display -->
-    <string name="title_use_external_display">使用外接显示器</string>
-    <string name="summary_use_external_display">如果连接了外接显示器，则在外接显示器上显示串流画面。</string>
+    <string name="title_use_external_display">使用上下双屏 / 外接显示器</string>
+    <string name="summary_use_external_display">选择用于串流的主显示器，另一块显示器展示连接信息和快捷控制。</string>
+    <string name="external_display_detected">检测到显示器：%1$s（ID：%2$d）</string>
+    <string name="external_display_not_detected">未检测到第二块显示器</string>
+    <string name="external_display_detection_failed">显示器检测失败：%1$s</string>
+    <string name="dual_screen_select_primary_title">选择串流主显示器</string>
+    <string name="dual_screen_enable">启用</string>
+    <string name="dual_screen_disable">关闭双屏</string>
+    <string name="dual_screen_available_summary">检测到 %1$d 块显示器，点击选择串流主显示器。</string>
+    <string name="dual_screen_selection_summary">串流：%1$s · 控制：%2$s</string>
+    <string name="dual_screen_session_title">%1$s · %2$s</string>
+    <string name="dual_screen_unknown_host">未知主机</string>
+    <string name="dual_screen_target_display">串流：%1$s · %2$d×%3$d @ %4$.0f Hz</string>
+    <string name="dual_screen_status_connecting">正在连接</string>
+    <string name="dual_screen_status_connecting_detail">正在准备所选显示器的串流画面</string>
+    <string name="dual_screen_status_stage">正在启动 %1$s</string>
+    <string name="dual_screen_status_connected">连接稳定</string>
+    <string name="dual_screen_status_connected_detail">串流画面正在所选显示器播放</string>
+    <string name="dual_screen_status_poor">连接不稳定</string>
+    <string name="dual_screen_status_poor_detail">丢包或延迟偏高，可尝试降低码率</string>
+    <string name="dual_screen_status_failed">连接失败</string>
+    <string name="dual_screen_status_disconnected">已断开连接</string>
+    <string name="dual_screen_status_disconnected_detail">本次串流已经结束</string>
+    <string name="dual_screen_metric_stream">串流</string>
+    <string name="dual_screen_metric_fps">渲染 / 接收帧率</string>
+    <string name="dual_screen_metric_rtt">网络 RTT</string>
+    <string name="dual_screen_metric_decode">解码延迟</string>
+    <string name="dual_screen_metric_loss">丢包率</string>
+    <string name="dual_screen_metric_bandwidth">实时带宽</string>
+    <string name="dual_screen_metric_battery">设备电量</string>
+    <string name="dual_screen_metric_pending">等待数据…</string>
+    <string name="dual_screen_battery_value">%1$d%%</string>
+    <string name="dual_screen_action_menu">菜单</string>
+    <string name="dual_screen_action_keyboard">键盘</string>
+    <string name="dual_screen_action_escape">Esc</string>
+    <string name="dual_screen_action_windows">Win</string>
+    <string name="dual_screen_action_task_switch">Alt+Tab</string>
+    <string name="dual_screen_action_controller">虚拟手柄</string>
+    <string name="dual_screen_action_microphone">麦克风</string>
+    <string name="dual_screen_action_close_control">关闭控制屏</string>
+    <string name="dual_screen_action_disconnect">断开连接</string>
+    <string name="game_menu_enable_multi_screen">开启多屏</string>
+    <string name="dual_screen_control_hint">更多控制与串流设置可在“菜单”中打开</string>
 
     <!-- Analytics settings -->
     <string name="title_enable_analytics">启用统计分析</string>
@@ -1321,7 +1362,8 @@
     <string name="toast_cannot_get_download_file">无法获取下载文件，请在下载目录中手动安装</string>
     <string name="toast_install_launch_failed">启动安装失败，请在下载目录中手动安装</string>
     <string name="toast_external_display_disconnected">外接显示器已断开，切换到主屏幕</string>
-    <string name="toast_switched_to_external_display">串流已切换到外接显示器, 若某些外接设备不能正常横屏显示，请翻滚主机。</string>
+    <string name="toast_switched_to_external_display">串流已切换到所选显示器，另一块屏幕的快捷控制已就绪。</string>
+    <string name="toast_dual_screen_controls_ready">串流已在所选显示器启动，另一块屏幕的快捷控制已就绪。</string>
 
     <!-- Quick button labels -->
     <string name="quick_btn_mic">麦克风</string>
