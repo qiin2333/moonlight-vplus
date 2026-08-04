@@ -43,6 +43,8 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.doAfterTextChanged
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.preference.CheckBoxPreference
@@ -213,6 +215,7 @@ class StreamSettings : AppCompatActivity() {
         applySettingsThemeSurfaces()
 
         UiHelper.notifyNewRootView(this)
+        applyNavigationBarInsets()
 
         // 恢复保存的状态（屏幕旋转时）
         if (savedInstanceState != null) {
@@ -227,6 +230,29 @@ class StreamSettings : AppCompatActivity() {
 
         // 设置版本号
         setupVersionInfo()
+    }
+
+    private fun applyNavigationBarInsets() {
+        val insetSource = findViewById<View>(R.id.drawer_layout)
+        val preferenceContainer = findViewById<View>(R.id.preference_container)
+        val initialPaddingLeft = preferenceContainer.paddingLeft
+        val initialPaddingTop = preferenceContainer.paddingTop
+        val initialPaddingRight = preferenceContainer.paddingRight
+        val initialPaddingBottom = preferenceContainer.paddingBottom
+
+        ViewCompat.setOnApplyWindowInsetsListener(insetSource) { _, windowInsets ->
+            val navigationBars = windowInsets.getInsets(WindowInsetsCompat.Type.navigationBars())
+            val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+            preferenceContainer.setPadding(
+                initialPaddingLeft,
+                initialPaddingTop,
+                initialPaddingRight + if (isLandscape) navigationBars.right else 0,
+                initialPaddingBottom + if (isLandscape) navigationBars.bottom else 0
+            )
+            windowInsets
+        }
+        ViewCompat.requestApplyInsets(insetSource)
     }
 
     private fun isNightMode(): Boolean {

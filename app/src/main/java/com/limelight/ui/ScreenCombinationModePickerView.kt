@@ -17,6 +17,8 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.limelight.R
 
 class ScreenCombinationModePickerView(
@@ -153,9 +155,34 @@ class ScreenCombinationModePickerView(
         }
         root.addView(list)
         addView(root, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        applyNavigationBarInsets(root)
 
         post {
             optionViews.getOrNull(initialOptionIndex)?.requestFocus() ?: closeButton.requestFocus()
+        }
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        ViewCompat.requestApplyInsets(this)
+    }
+
+    private fun applyNavigationBarInsets(content: View) {
+        val initialPaddingLeft = content.paddingLeft
+        val initialPaddingTop = content.paddingTop
+        val initialPaddingRight = content.paddingRight
+        val initialPaddingBottom = content.paddingBottom
+
+        ViewCompat.setOnApplyWindowInsetsListener(this) { _, windowInsets ->
+            val systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val displayCutout = windowInsets.getInsets(WindowInsetsCompat.Type.displayCutout())
+            content.setPadding(
+                initialPaddingLeft + maxOf(systemBars.left, displayCutout.left),
+                initialPaddingTop,
+                initialPaddingRight + maxOf(systemBars.right, displayCutout.right),
+                initialPaddingBottom + maxOf(systemBars.bottom, displayCutout.bottom)
+            )
+            windowInsets
         }
     }
 
