@@ -1,7 +1,10 @@
 package com.limelight.nvstream.http
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
 
@@ -32,16 +35,47 @@ class VddProtocolTest {
         assertEquals("device-1", catalog.displays.single().guid)
         assertEquals(1, catalog.vddCapabilityVersion)
         assertEquals(NvHTTP.VddState.READY, catalog.vddState)
+        assertTrue(catalog.supportsVdd(1))
     }
 
     @Test
-    fun missingVddMetadataIsNotTreatedAsSupported() {
+    fun missingVddMetadataKeepsLegacyVddCompatibility() {
         val catalog = NvHTTP.parseDisplayCatalog(
             """{"status_code":200,"displays":[]}"""
         )
 
-        assertEquals(0, catalog.vddCapabilityVersion)
+        assertNull(catalog.vddCapabilityVersion)
         assertEquals(NvHTTP.VddState.UNKNOWN, catalog.vddState)
+        assertTrue(catalog.supportsVdd(null))
+    }
+
+    @Test
+    fun missingCapabilityFieldKeepsLegacyVddCompatibility() {
+        val catalog = NvHTTP.parseDisplayCatalog(
+            """{"status_code":200,"displays":[],"vdd":{"state":"driver_unreachable"}}"""
+        )
+
+        assertNull(catalog.vddCapabilityVersion)
+        assertTrue(catalog.supportsVdd(null))
+    }
+
+    @Test
+    fun explicitUnsupportedVddCapabilityIsRejected() {
+        val catalog = NvHTTP.parseDisplayCatalog(
+            """{"status_code":200,"displays":[],"vdd":{"capability_version":0,"state":"unsupported_platform"}}"""
+        )
+
+        assertFalse(catalog.supportsVdd(null))
+    }
+
+    @Test
+    fun nonReadyVddStateDoesNotPreventSelection() {
+        val catalog = NvHTTP.parseDisplayCatalog(
+            """{"status_code":200,"displays":[],"vdd":{"capability_version":1,"state":"driver_unreachable"}}"""
+        )
+
+        assertEquals(NvHTTP.VddState.DRIVER_UNREACHABLE, catalog.vddState)
+        assertTrue(catalog.supportsVdd(1))
     }
 
     @Test(expected = IOException::class)
