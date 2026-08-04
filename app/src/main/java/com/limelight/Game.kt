@@ -2385,13 +2385,19 @@ class Game : Activity(), SurfaceHolder.Callback,
                 existingMenu?.dismiss()
                 activeGameMenu = null
 
+                val hostWindowToken = hostView?.windowToken
+                val hostContext = if (hostWindowToken != null) {
+                    requireNotNull(hostView).context
+                } else {
+                    this
+                }
                 val menu = GameMenu(
                     game = this,
                     app = app,
                     conn = conn!!,
                     device = device,
-                    hostContext = hostView?.context ?: this,
-                    hostWindowToken = hostView?.windowToken
+                    hostContext = hostContext,
+                    hostWindowToken = hostWindowToken
                 ) { dismissedMenu ->
                     if (activeGameMenu === dismissedMenu) {
                         activeGameMenu = null
