@@ -92,7 +92,6 @@ class ExternalDisplayPreference : CheckBoxPreference {
             if (displays.size < 2) {
                 summary = context.getString(R.string.external_display_not_detected)
                 isEnabled = false
-                isChecked = false
                 return
             }
 
@@ -119,7 +118,6 @@ class ExternalDisplayPreference : CheckBoxPreference {
                 e.localizedMessage ?: e.javaClass.simpleName
             )
             isEnabled = false
-            isChecked = false
         }
     }
 }
