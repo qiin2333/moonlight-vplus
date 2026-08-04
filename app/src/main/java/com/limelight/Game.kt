@@ -638,6 +638,12 @@ class Game : Activity(), SurfaceHolder.Callback,
                 )
             }
 
+            override fun onControlDisplayKeyEvent(event: KeyEvent): Boolean =
+                dispatchKeyEvent(event)
+
+            override fun onControlDisplayMotionEvent(event: MotionEvent): Boolean =
+                dispatchGenericMotionEvent(event)
+
             override fun onDualScreenDisconnected() {
                 dualScreenControlPanel.hide()
                 dualScreenControlPanel.initialize()

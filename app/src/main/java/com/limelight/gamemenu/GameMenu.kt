@@ -9,8 +9,10 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -21,6 +23,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentDialog
+import androidx.activity.OnBackPressedCallback
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ComposeView
@@ -34,6 +37,7 @@ import com.limelight.LimeLog
 import com.limelight.QuickActionRegistry
 import com.limelight.R
 import com.limelight.StreamActionExecutor
+import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.GameInputDevice
 import com.limelight.binding.input.KeyboardTranslator
 import com.limelight.binding.input.advance_setting.config.PageConfigController
@@ -658,7 +662,26 @@ class GameMenu(
                 )
             }
         }
-        dialog = ComponentDialog(hostContext, R.style.GameMenuDialogStyle).apply {
+        dialog = object : ComponentDialog(hostContext, R.style.GameMenuDialogStyle) {
+            override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+                if (hostWindowToken != null &&
+                    event.device != null &&
+                    ControllerHandler.isGameControllerDevice(event.device)
+                ) {
+                    return game.dispatchKeyEvent(event)
+                }
+                return super.dispatchKeyEvent(event)
+            }
+
+            override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+                if (hostWindowToken != null &&
+                    event.isFromSource(InputDevice.SOURCE_CLASS_JOYSTICK)
+                ) {
+                    return game.dispatchGenericMotionEvent(event)
+                }
+                return super.dispatchGenericMotionEvent(event)
+            }
+        }.apply {
             setContentView(composeView)
             setCanceledOnTouchOutside(true)
         }
@@ -666,13 +689,22 @@ class GameMenu(
 
         setupDialogProperties(dialog)
 
+        dialog.onBackPressedDispatcher.addCallback(object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (!navigateBack()) {
+                    dialog.dismiss()
+                }
+            }
+        })
+
         // 返回键监听器
         dialog.setOnKeyListener { _, keyCode, event ->
             if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_DOWN) {
                 if (navigateBack()) {
                     return@setOnKeyListener true
                 }
-                return@setOnKeyListener false
+                dialog.dismiss()
+                return@setOnKeyListener true
             }
             false
         }
@@ -965,8 +997,6 @@ class GameMenu(
             hostWindowToken?.let { token ->
                 layoutParams.type = WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
                 layoutParams.token = token
-                layoutParams.flags =
-                    layoutParams.flags or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
             }
             layoutParams.alpha = renderingProfile.windowAlpha
             layoutParams.dimAmount = DIALOG_DIM_AMOUNT

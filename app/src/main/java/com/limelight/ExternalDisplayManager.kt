@@ -8,6 +8,9 @@ import android.content.SharedPreferences
 import android.hardware.display.DisplayManager
 import android.os.Bundle
 import android.view.Display
+import android.view.InputDevice
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.ImageView
@@ -15,6 +18,7 @@ import android.widget.Toast
 import androidx.preference.PreferenceManager
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.limelight.binding.input.ControllerHandler
 import com.limelight.preferences.BackgroundSource
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.ui.StreamView
@@ -48,6 +52,8 @@ class ExternalDisplayManager(
             streamDisplay: Display,
             controlDisplay: Display
         )
+        fun onControlDisplayKeyEvent(event: KeyEvent): Boolean = false
+        fun onControlDisplayMotionEvent(event: MotionEvent): Boolean = false
         fun onDualScreenDisconnected()
     }
 
@@ -287,12 +293,10 @@ class ExternalDisplayManager(
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
 
-            window?.addFlags(
-                WindowManager.LayoutParams.FLAG_FULLSCREEN or
-                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-            )
+            setCancelable(false)
+            window?.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
             LimeLog.info(
-                "Control display is touchable but non-focusable; physical input stays on stream"
+                "Control display forwards physical controller input to the stream"
             )
             @Suppress("DEPRECATION")
             window?.decorView?.systemUiVisibility =
@@ -311,6 +315,25 @@ class ExternalDisplayManager(
                     controlDisplay
                 )
             }
+        }
+
+        override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+            if (event.device != null &&
+                ControllerHandler.isGameControllerDevice(event.device) &&
+                callback?.onControlDisplayKeyEvent(event) == true
+            ) {
+                return true
+            }
+            return super.dispatchKeyEvent(event)
+        }
+
+        override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+            if (event.isFromSource(InputDevice.SOURCE_CLASS_JOYSTICK) &&
+                callback?.onControlDisplayMotionEvent(event) == true
+            ) {
+                return true
+            }
+            return super.dispatchGenericMotionEvent(event)
         }
 
         fun isForDisplay(displayId: Int): Boolean = presentationDisplayId == displayId
