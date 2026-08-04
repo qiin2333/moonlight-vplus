@@ -205,7 +205,7 @@ class AddComputerManually : Activity() {
             invalidInput = true
         }
 
-        if (!success && !wrongSiteLocal && !invalidInput) {
+        if (!success && !wrongSiteLocal && !invalidInput && !activeNetworkIsVpn) {
             portTestResult = MoonBridge.testClientConnectivity(ServerHelper.CONNECTION_TEST_SERVER, 443,
                     MoonBridge.ML_PORT_FLAG_TCP_47984 or MoonBridge.ML_PORT_FLAG_TCP_47989)
         } else {
