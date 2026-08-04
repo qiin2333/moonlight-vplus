@@ -139,6 +139,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     var controllerManager: ControllerManager? = null
     private val crownSessionController = CrownSessionController(this) { controllerManager }
     private var standaloneKeyboardUI: KeyboardUIController? = null
+    private var dualScreenKeyboardUI: KeyboardUIController? = null
     private val performanceInfoDisplays = ArrayList<PerformanceInfoDisplay>()
 
     var microphoneManager: MicrophoneManager? = null
@@ -539,6 +540,29 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     fun toggleVirtualKeyboard() {
         getOrCreateKeyboardUIController()?.toggle()
+    }
+
+    fun bindDualScreenKeyboard(container: FrameLayout) {
+        releaseDualScreenKeyboard()
+        dualScreenKeyboardUI = KeyboardUIController(
+            container,
+            createKeyboardEventListener(),
+            container.context,
+            forceFullscreen = true
+        )
+    }
+
+    fun toggleDualScreenVirtualKeyboard() {
+        dualScreenKeyboardUI?.toggle()
+    }
+
+    fun hideDualScreenVirtualKeyboard() {
+        dualScreenKeyboardUI?.hide()
+    }
+
+    fun releaseDualScreenKeyboard() {
+        dualScreenKeyboardUI?.hide()
+        dualScreenKeyboardUI = null
     }
 
     // region ---- Extracted helpers to reduce duplication ----

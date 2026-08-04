@@ -5,6 +5,7 @@ import android.graphics.Point
 import android.os.Build
 import android.view.Display
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.limelight.binding.video.PerformanceInfo
@@ -66,11 +67,16 @@ class DualScreenControlPanel(private val game: Game) {
         packetLossValue = panelRoot.findViewById(R.id.dualScreenPacketLossValue)
         bandwidthValue = panelRoot.findViewById(R.id.dualScreenBandwidthValue)
         batteryValue = panelRoot.findViewById(R.id.dualScreenBatteryValue)
+        panelRoot.findViewById<FrameLayout>(R.id.dualScreenKeyboardContainer)?.let {
+            game.bindDualScreenKeyboard(it)
+        }
 
         val menu = panelRoot.findViewById<View>(R.id.dualScreenMenuButton)?.also { view ->
             view.setOnClickListener { game.showGameMenuOnControlDisplay(view) }
         }
-        val keyboard = bindAction(R.id.dualScreenKeyboardButton) { game.toggleVirtualKeyboard() }
+        val keyboard = bindAction(R.id.dualScreenKeyboardButton) {
+            game.toggleDualScreenVirtualKeyboard()
+        }
         val escape = bindAction(R.id.dualScreenEscapeButton) { actionExecutor.execute("send_esc") }
         val windows = bindAction(R.id.dualScreenWindowsButton) { actionExecutor.execute("send_win") }
         val taskSwitch = bindAction(R.id.dualScreenTaskSwitchButton) { actionExecutor.execute("send_alt_tab") }
@@ -129,6 +135,7 @@ class DualScreenControlPanel(private val game: Game) {
 
     fun hide() {
         active = false
+        game.hideDualScreenVirtualKeyboard()
         root?.visibility = View.GONE
     }
 
@@ -212,6 +219,7 @@ class DualScreenControlPanel(private val game: Game) {
     }
 
     private fun clearBindings() {
+        game.releaseDualScreenKeyboard()
         root = null
         statusDot = null
         statusText = null

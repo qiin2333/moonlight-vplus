@@ -3,6 +3,7 @@ package com.limelight.binding.input.advance_setting
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -12,12 +13,14 @@ import android.widget.FrameLayout
 import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import com.limelight.R
 
 class KeyboardUIController(
     private val parentContainer: FrameLayout,
     private val listener: OnKeyboardEventListener,
-    context: Context
+    context: Context,
+    private val forceFullscreen: Boolean = false
 ) : KeyboardGestureDetector.GestureListener {
 
     interface OnKeyboardEventListener {
@@ -98,9 +101,42 @@ class KeyboardUIController(
         updateTabStyle(btnNum, false)
         updateTabStyle(btnMini, false)
 
-        loadSettings()
+        if (forceFullscreen) {
+            configureFullscreen(context)
+        } else {
+            loadSettings()
+        }
 
         setupTouchListeners(keyboardLayout)
+    }
+
+    private fun configureFullscreen(context: Context) {
+        layoutMini?.visibility = View.GONE
+        layoutMain?.visibility = View.VISIBLE
+        layoutNav?.visibility = View.GONE
+        layoutNum?.visibility = View.GONE
+        panelAlpha?.visibility = View.VISIBLE
+        panelNumMini?.visibility = View.GONE
+        panelPcMini?.visibility = View.GONE
+
+        (keyboardContent.layoutParams as FrameLayout.LayoutParams).apply {
+            width = ViewGroup.LayoutParams.MATCH_PARENT
+            height = ViewGroup.LayoutParams.MATCH_PARENT
+            gravity = Gravity.FILL
+            setMargins(0, 0, 0, 0)
+        }.also(keyboardContent::setLayoutParams)
+        keyboardContent.translationX = 0f
+        keyboardContent.translationY = 0f
+
+        keyboardLayout.setBackgroundColor(
+            ContextCompat.getColor(context, R.color.dual_screen_background)
+        )
+        opacitySeekbar.progress = 10
+        keyboardLayout.alpha = 1f
+        btnMini.visibility = View.GONE
+        keyboardLayout.findViewById<View>(R.id.btn_keyboard_resize).visibility = View.GONE
+        keyboardLayout.findViewById<View>(R.id.keyboard_resize_handle).visibility = View.GONE
+        keyboardLayout.findViewById<View>(R.id.keyboard_opacity_label).visibility = View.GONE
     }
 
     private fun initModifiers() {
