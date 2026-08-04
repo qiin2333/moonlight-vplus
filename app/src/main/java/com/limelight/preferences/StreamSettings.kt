@@ -234,21 +234,40 @@ class StreamSettings : AppCompatActivity() {
 
     private fun applyNavigationBarInsets() {
         val insetSource = findViewById<View>(R.id.drawer_layout)
+            ?: findViewById(R.id.settings_layout_root)
+        val drawerMenu = findViewById<View>(R.id.drawer_menu)
         val preferenceContainer = findViewById<View>(R.id.preference_container)
+        val initialDrawerPaddingLeft = drawerMenu.paddingLeft
+        val initialDrawerPaddingTop = drawerMenu.paddingTop
+        val initialDrawerPaddingRight = drawerMenu.paddingRight
+        val initialDrawerPaddingBottom = drawerMenu.paddingBottom
         val initialPaddingLeft = preferenceContainer.paddingLeft
         val initialPaddingTop = preferenceContainer.paddingTop
         val initialPaddingRight = preferenceContainer.paddingRight
         val initialPaddingBottom = preferenceContainer.paddingBottom
 
         ViewCompat.setOnApplyWindowInsetsListener(insetSource) { _, windowInsets ->
-            val navigationBars = windowInsets.getInsets(WindowInsetsCompat.Type.navigationBars())
+            val systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val displayCutout = windowInsets.getInsets(WindowInsetsCompat.Type.displayCutout())
             val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+            val safeLeft = maxOf(systemBars.left, displayCutout.left)
+            val safeRight = maxOf(systemBars.right, displayCutout.right)
+            val safeBottom = maxOf(systemBars.bottom, displayCutout.bottom)
+
+            if (isLandscape) {
+                drawerMenu.setPadding(
+                    initialDrawerPaddingLeft + safeLeft,
+                    initialDrawerPaddingTop,
+                    initialDrawerPaddingRight,
+                    initialDrawerPaddingBottom + safeBottom
+                )
+            }
 
             preferenceContainer.setPadding(
                 initialPaddingLeft,
                 initialPaddingTop,
-                initialPaddingRight + if (isLandscape) navigationBars.right else 0,
-                initialPaddingBottom + if (isLandscape) navigationBars.bottom else 0
+                initialPaddingRight + if (isLandscape) safeRight else 0,
+                initialPaddingBottom + if (isLandscape) safeBottom else 0
             )
             windowInsets
         }
@@ -287,12 +306,11 @@ class StreamSettings : AppCompatActivity() {
 
     /**
      * 初始化抽屉菜单
-     * 竖屏使用 DrawerLayout，横屏使用并排的 LinearLayout
+     * 竖屏使用 DrawerLayout，横屏使用并排布局
      */
     private fun initDrawerMenu() {
-        // 横屏时 drawer_layout 是 LinearLayout，不是 DrawerLayout
-        val rootView = findViewById<View>(R.id.drawer_layout)
-        drawerLayout = rootView as? DrawerLayout
+        // 横屏布局使用独立根容器 ID，因此这里只会取得竖屏 DrawerLayout。
+        drawerLayout = findViewById(R.id.drawer_layout)
 
         categoryList = findViewById(R.id.category_list)
 
@@ -557,8 +575,14 @@ class StreamSettings : AppCompatActivity() {
             val secondaryText = ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_text_secondary)
             val subtleText = ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_outline_strong)
 
-            // 指示器显示（小圆点）
-            holder.indicator.visibility = if (isSelected) View.VISIBLE else View.INVISIBLE
+            val isLandscapeSidebar = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+            // 横屏常驻侧栏通过图标和文字颜色表示状态，释放装饰元素占用的标题空间。
+            holder.indicator.visibility = when {
+                isLandscapeSidebar -> View.GONE
+                isSelected -> View.VISIBLE
+                else -> View.INVISIBLE
+            }
 
             // 文字 + 图标颜色三态切换
             val textColor: Int; val textAlpha: Float; val iconColor: Int; val iconAlpha: Float
@@ -575,13 +599,14 @@ class StreamSettings : AppCompatActivity() {
             // 箭头透明度和颜色
             val arrow = holder.root.findViewById<ImageView>(R.id.category_arrow)
             if (arrow != null) {
-                if (isSelected) {
+                arrow.visibility = if (isLandscapeSidebar) View.GONE else View.VISIBLE
+                if (!isLandscapeSidebar && isSelected) {
                     arrow.alpha = 1.0f
                     arrow.setColorFilter(accentColor)
-                } else if (hasFocus) {
+                } else if (!isLandscapeSidebar && hasFocus) {
                     arrow.alpha = 0.9f
                     arrow.setColorFilter(accentColor)
-                } else {
+                } else if (!isLandscapeSidebar) {
                     arrow.alpha = 0.4f
                     arrow.setColorFilter(subtleText)
                 }
@@ -701,6 +726,13 @@ class StreamSettings : AppCompatActivity() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+
+        val isUsingPortraitDrawerLayout = findViewById<View>(R.id.drawer_layout) is DrawerLayout
+        val shouldUsePortraitDrawerLayout = newConfig.orientation != Configuration.ORIENTATION_LANDSCAPE
+        if (isUsingPortraitDrawerLayout != shouldUsePortraitDrawerLayout) {
+            recreate()
+            return
+        }
 
         // 更新抽屉模式
         updateDrawerMode()
