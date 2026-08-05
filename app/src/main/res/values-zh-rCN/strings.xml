@@ -896,7 +896,6 @@
     <string name="screen_mode_primary_streaming_desc">自动激活指定显示器并设为主显示器。</string>
     <string name="screen_mode_secondary_streaming_desc">物理屏为主屏，基地显示器作为副屏扩展。</string>
     <string name="screen_mode_exclusive_streaming_desc">仅保留指定显示器输出，关闭其他显示器。</string>
-    <string name="screen_combination_mode_label">组合模式: %1$s</string>
     <string name="screen_combination_mode_action_close">关闭</string>
     <string name="screen_combination_mode_selected">已选择</string>
     <string name="unpaired_devices_shown">已显示未配对设备</string>
@@ -968,11 +967,21 @@
 
     <!-- AppView Top Panel -->
     <string name="appview_background_mode_title">背景</string>
+    <string name="appview_quick_settings_title">快速设置</string>
+    <string name="appview_full_settings">完整设置</string>
+    <string name="appview_screen_combination_title">屏幕组合</string>
+    <string name="appview_screen_mode_host_short">跟随主机</string>
+    <string name="appview_screen_mode_noop_short">无操作</string>
+    <string name="appview_screen_mode_activate_short">激活模式</string>
+    <string name="appview_screen_mode_primary_short">主屏串流</string>
+    <string name="appview_screen_mode_secondary_short">副屏串流</string>
+    <string name="appview_screen_mode_exclusive_short">独占显示</string>
+    <string name="appview_display_selection_virtual">虚拟显示器</string>
     <string name="appview_background_mode_artwork">应用封面</string>
     <string name="appview_background_mode_acrylic">亚克力</string>
     <string name="appview_background_mode_soft_color">柔和纯色</string>
     <string name="appview_display_selection_title">显示器选择</string>
-    <string name="appview_display_selection_clear">清空选择</string>
+    <string name="appview_display_selection_default">默认</string>
 
     <!-- Layout hardcoded Chinese strings (auto-extracted) -->
     <string name="layout_capability_diagnostic_text_a5e80">能力检测</string>
@@ -1231,7 +1240,6 @@
     <string name="summary_checkbox_enable_background_audio">隐藏整个窗口并在后台播放音频，可一边使用其他应用一边收听。</string>
     <string name="title_checkbox_control_only">仅控制模式</string>
     <string name="title_checkbox_enable_background_audio">后台音频模式</string>
-    <string name="title_settings">设置</string>
 
     <!-- Extracted hardcoded strings -->
     <string name="toast_no_notification_permission">没有通知权限，后台串流可能会中断</string>
