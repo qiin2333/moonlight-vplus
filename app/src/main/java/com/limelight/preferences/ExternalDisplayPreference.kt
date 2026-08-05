@@ -1,32 +1,45 @@
 package com.limelight.preferences
 
+import android.app.AlertDialog
 import android.content.Context
 import android.hardware.display.DisplayManager
-import android.os.Build
-import androidx.preference.CheckBoxPreference
 import android.util.AttributeSet
 import android.view.Display
-
-import com.limelight.ExternalDisplayManager
+import androidx.preference.CheckBoxPreference
+import com.limelight.DisplaySelectionFormatter
+import com.limelight.DisplaySelectionPreferences
+import com.limelight.R
+import com.limelight.utils.AppDialogStyler
 
 /**
- * 外接显示器状态偏好设置
+ * Dual-screen preference that requires the user to select the display used for streaming.
  */
 class ExternalDisplayPreference : CheckBoxPreference {
+    private val displayManager: DisplayManager
+        get() = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+    private val displayListener = object : DisplayManager.DisplayListener {
+        override fun onDisplayAdded(displayId: Int) = updateSummary()
+
+        override fun onDisplayRemoved(displayId: Int) = updateSummary()
+
+        override fun onDisplayChanged(displayId: Int) = updateSummary()
+    }
+    private var displayListenerRegistered = false
 
     constructor(context: Context) : super(context) {
-        init(context)
+        initialize()
     }
 
     constructor(context: Context, attrs: AttributeSet?) : super(context, attrs) {
-        init(context)
+        initialize()
     }
 
-    constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr) {
-        init(context)
+    constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) :
+        super(context, attrs, defStyleAttr) {
+        initialize()
     }
 
-    private fun init(context: Context) {
+    private fun initialize() {
         updateSummary()
     }
 
@@ -35,31 +48,101 @@ class ExternalDisplayPreference : CheckBoxPreference {
         updateSummary()
     }
 
+    override fun onAttached() {
+        super.onAttached()
+        if (!displayListenerRegistered) {
+            displayManager.registerDisplayListener(displayListener, null)
+            displayListenerRegistered = true
+        }
+        updateSummary()
+    }
+
+    override fun onDetached() {
+        if (displayListenerRegistered) {
+            displayManager.unregisterDisplayListener(displayListener)
+            displayListenerRegistered = false
+        }
+        super.onDetached()
+    }
+
+    override fun onClick() {
+        val displays = connectedDisplays()
+        if (displays.size < 2) {
+            updateSummary()
+            return
+        }
+
+        var selectedIndex = findSelectedDisplayIndex(displays)
+        val labels = displays.map(DisplaySelectionFormatter::label).toTypedArray()
+        val dialog = AlertDialog.Builder(context, R.style.AppDialogStyle)
+            .setTitle(R.string.dual_screen_select_primary_title)
+            .setSingleChoiceItems(labels, selectedIndex) { _, which ->
+                selectedIndex = which
+            }
+            .setPositiveButton(R.string.dual_screen_enable) { _, _ ->
+                val selectedDisplay = displays[selectedIndex]
+                if (callChangeListener(true)) {
+                    DisplaySelectionPreferences.setPrimaryStreamDisplayId(
+                        context,
+                        selectedDisplay.displayId
+                    )
+                    isChecked = true
+                    updateSummary()
+                }
+            }
+            .setNeutralButton(R.string.dual_screen_disable) { _, _ ->
+                if (callChangeListener(false)) {
+                    isChecked = false
+                    updateSummary()
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+        dialog.show()
+        AppDialogStyler.applySystemChoiceList(dialog, context)
+    }
+
+    private fun connectedDisplays(): List<Display> =
+        displayManager.displays.sortedBy { it.displayId }
+
+    private fun findSelectedDisplayIndex(displays: List<Display>): Int {
+        val selectedId = DisplaySelectionPreferences.getPrimaryStreamDisplayId(context)
+            ?: Display.DEFAULT_DISPLAY
+        return displays.indexOfFirst { it.displayId == selectedId }.coerceAtLeast(0)
+    }
+
     private fun updateSummary() {
         try {
-            if (ExternalDisplayManager.hasExternalDisplay(context)) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                    val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
-                    if (displayManager != null) {
-                        val displays = displayManager.displays
-                        for (display in displays) {
-                            if (display.displayId != Display.DEFAULT_DISPLAY) {
-                                summary = "检测到外接显示器: ${display.name} (ID: ${display.displayId})"
-                                isEnabled = true
-                                return
-                            }
-                        }
-                    }
-                }
-            } else {
-                summary = "未检测到外接显示器"
+            val displays = connectedDisplays()
+            if (displays.size < 2) {
+                summary = context.getString(R.string.external_display_not_detected)
                 isEnabled = false
-                isChecked = false
+                return
             }
+
+            isEnabled = true
+            if (!isChecked) {
+                summary = context.getString(
+                    R.string.dual_screen_available_summary,
+                    displays.size
+                )
+                return
+            }
+
+            val streamDisplay = displays.getOrNull(findSelectedDisplayIndex(displays))
+                ?: displays.first()
+            val controlDisplay = displays.first { it.displayId != streamDisplay.displayId }
+            summary = context.getString(
+                R.string.dual_screen_selection_summary,
+                DisplaySelectionFormatter.label(streamDisplay),
+                DisplaySelectionFormatter.label(controlDisplay)
+            )
         } catch (e: Exception) {
-            summary = "检测外接显示器失败: $e"
+            summary = context.getString(
+                R.string.external_display_detection_failed,
+                e.localizedMessage ?: e.javaClass.simpleName
+            )
             isEnabled = false
-            isChecked = false
         }
     }
 }

@@ -419,4 +419,69 @@
         <item name="android:textStyle">bold</item>
     </style>
 
+    <style name="DualScreenMetricCard">
+        <item name="android:layout_width">112dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_margin">4dp</item>
+        <item name="android:background">@drawable/dual_screen_metric_bg</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:minHeight">64dp</item>
+        <item name="android:minWidth">112dp</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:paddingBottom">8dp</item>
+    </style>
+
+    <style name="DualScreenMetricLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/dual_screen_text_secondary</item>
+        <item name="android:textSize">11sp</item>
+    </style>
+
+    <style name="DualScreenMetricValue">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">3dp</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textColor">@color/dual_screen_text_primary</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="DualScreenMetricSecondaryValue">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">2dp</item>
+        <item name="android:ellipsize">middle</item>
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textColor">@color/dual_screen_text_secondary</item>
+        <item name="android:textSize">9sp</item>
+    </style>
+
+    <style name="DualScreenActionButton" parent="android:Widget.Button">
+        <item name="android:layout_width">72dp</item>
+        <item name="android:layout_height">72dp</item>
+        <item name="android:layout_margin">3dp</item>
+        <item name="android:background">@drawable/dual_screen_action_bg</item>
+        <item name="android:drawablePadding">2dp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:gravity">center</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:padding">4dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">@color/dual_screen_text_primary</item>
+        <item name="android:textSize">10sp</item>
+    </style>
+
+    <style name="DualScreenDangerButton" parent="DualScreenActionButton">
+        <item name="android:background">@drawable/dual_screen_danger_bg</item>
+        <item name="android:textColor">@color/dual_screen_danger</item>
+    </style>
+
 </resources>

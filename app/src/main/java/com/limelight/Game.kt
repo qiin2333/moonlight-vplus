@@ -139,6 +139,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     var controllerManager: ControllerManager? = null
     private val crownSessionController = CrownSessionController(this) { controllerManager }
     private var standaloneKeyboardUI: KeyboardUIController? = null
+    private var dualScreenKeyboardUI: KeyboardUIController? = null
     private val performanceInfoDisplays = ArrayList<PerformanceInfoDisplay>()
 
     var microphoneManager: MicrophoneManager? = null
@@ -250,7 +251,11 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     var usbDriverServiceManager: UsbDriverServiceManager? = null
     var externalDisplayManager: ExternalDisplayManager? = null
+    lateinit var dualScreenControlPanel: DualScreenControlPanel
     private lateinit var targetDisplayResolver: TargetDisplayResolver
+
+    fun dualScreenControlPanelOrNull(): DualScreenControlPanel? =
+        if (::dualScreenControlPanel.isInitialized) dualScreenControlPanel else null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -509,6 +514,8 @@ class Game : Activity(), SurfaceHolder.Callback,
 
         DisplayPositionManager(this, prefConfig, streamView).setupDisplayPosition()
 
+        dualScreenControlPanel = DualScreenControlPanel(this)
+        dualScreenControlPanel.initialize()
         setupExternalDisplay()
 
         floatBallHandler = FloatBallHandler(this, prefConfig)
@@ -533,6 +540,29 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     fun toggleVirtualKeyboard() {
         getOrCreateKeyboardUIController()?.toggle()
+    }
+
+    fun bindDualScreenKeyboard(container: FrameLayout) {
+        releaseDualScreenKeyboard()
+        dualScreenKeyboardUI = KeyboardUIController(
+            container,
+            createKeyboardEventListener(),
+            container.context,
+            forceFullscreen = true
+        )
+    }
+
+    fun toggleDualScreenVirtualKeyboard() {
+        dualScreenKeyboardUI?.toggle()
+    }
+
+    fun hideDualScreenVirtualKeyboard() {
+        dualScreenKeyboardUI?.hide()
+    }
+
+    fun releaseDualScreenKeyboard() {
+        dualScreenKeyboardUI?.hide()
+        dualScreenKeyboardUI = null
     }
 
     // region ---- Extracted helpers to reduce duplication ----
@@ -568,12 +598,17 @@ class Game : Activity(), SurfaceHolder.Callback,
         return object : ExternalDisplayManager.ExternalDisplayCallback {
             override fun onExternalDisplayConnected(display: Display) {
                 LimeLog.info("External display connected, reinitializing input capture provider")
+                dualScreenControlPanel.initialize()
+                dualScreenControlPanel.show(display)
+                progressOverlay?.dismiss()
+                progressOverlay = null
                 inputCaptureProvider.disableCapture()
                 inputCaptureProvider = InputCaptureManager.getInputCaptureProviderForExternalDisplay(this@Game, this@Game)
             }
 
             override fun onExternalDisplayDisconnected() {
                 externalStreamView = null
+                dualScreenControlPanel.hide()
                 LimeLog.info("External display disconnected, cleared externalStreamView")
                 retargetTouchContexts(this@Game.streamView)
                 inputCaptureProvider.disableCapture()
@@ -585,6 +620,34 @@ class Game : Activity(), SurfaceHolder.Callback,
                 retargetTouchContexts(streamView)
                 setupStreamViewListeners(streamView)
                 LimeLog.info("External display StreamView ready: ${streamView.width}x${streamView.height}")
+            }
+
+            override fun onDualScreenControlPanelReady(
+                rootView: View,
+                streamDisplay: Display,
+                controlDisplay: Display
+            ) {
+                dualScreenControlPanel.initialize(
+                    rootView,
+                    allowCloseControlScreen = true
+                )
+                dualScreenControlPanel.show(streamDisplay)
+                LimeLog.info(
+                    "Dual-screen controls ready; stream display=${streamDisplay.displayId}, " +
+                        "control display=${controlDisplay.displayId}"
+                )
+            }
+
+            override fun onControlDisplayKeyEvent(event: KeyEvent): Boolean =
+                dispatchKeyEvent(event)
+
+            override fun onControlDisplayMotionEvent(event: MotionEvent): Boolean =
+                dispatchGenericMotionEvent(event)
+
+            override fun onDualScreenDisconnected() {
+                dualScreenControlPanel.hide()
+                dualScreenControlPanel.initialize()
+                LimeLog.info("Dual-screen control panel hidden or disconnected")
             }
         }
     }
@@ -697,6 +760,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     /** Create or re-create ExternalDisplayManager with the standard callback. */
     private fun setupExternalDisplay() {
+        externalDisplayManager?.cleanup()
         val manager = ExternalDisplayManager(
             this,
             prefConfig,
@@ -1244,6 +1308,9 @@ class Game : Activity(), SurfaceHolder.Callback,
             inputCaptureProvider.destroy()
         }
         externalDisplayManager?.cleanup()
+        if (::dualScreenControlPanel.isInitialized) {
+            dualScreenControlPanel.release()
+        }
         microphoneManager?.stopMicrophoneStream()
         clipboardSyncManager?.stop()
         clipboardSyncManager = null
@@ -2209,6 +2276,9 @@ class Game : Activity(), SurfaceHolder.Callback,
         }
         enrichFramegenPerformanceInfo(performanceInfo)
         performanceOverlayManager?.updatePerformanceInfo(performanceInfo)
+        if (::dualScreenControlPanel.isInitialized) {
+            dualScreenControlPanel.updatePerformanceInfo(performanceInfo)
+        }
     }
 
     override fun isPerfOverlayVisible(): Boolean {
@@ -2288,6 +2358,21 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     override fun showGameMenu(device: GameInputDevice?) {
+        showGameMenu(device, null)
+    }
+
+    fun showGameMenuOnControlDisplay(hostView: View) {
+        showGameMenu(null, hostView)
+    }
+
+    fun setDualScreenControlsEnabled(enabled: Boolean) {
+        externalDisplayManager?.setDualScreenControlsEnabled(enabled)
+    }
+
+    fun canRestoreDualScreenControls(): Boolean =
+        externalDisplayManager?.canRestoreDualScreenControls() == true
+
+    private fun showGameMenu(device: GameInputDevice?, hostView: View?) {
         when (crownSessionController.backKeyMenuMode) {
             BackKeyMenuMode.CROWN_MODE -> {
                 if (controllerManager != null && prefConfig.enableCrownFeatures) {
@@ -2308,7 +2393,20 @@ class Game : Activity(), SurfaceHolder.Callback,
                 existingMenu?.dismiss()
                 activeGameMenu = null
 
-                val menu = GameMenu(this, app, conn!!, device) { dismissedMenu ->
+                val hostWindowToken = hostView?.windowToken
+                val hostContext = if (hostWindowToken != null) {
+                    requireNotNull(hostView).context
+                } else {
+                    this
+                }
+                val menu = GameMenu(
+                    game = this,
+                    app = app,
+                    conn = conn!!,
+                    device = device,
+                    hostContext = hostContext,
+                    hostWindowToken = hostWindowToken
+                ) { dismissedMenu ->
                     if (activeGameMenu === dismissedMenu) {
                         activeGameMenu = null
                     }
@@ -2328,6 +2426,9 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     fun disconnect() {
+        progressOverlay?.dismiss()
+        progressOverlay = null
+        Dialog.closeDialogs()
         finish()
     }
 

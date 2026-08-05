@@ -7,9 +7,12 @@ import android.content.Context
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Handler
+import android.os.IBinder
 import android.os.Looper
+import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -20,6 +23,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentDialog
+import androidx.activity.OnBackPressedCallback
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ComposeView
@@ -33,6 +37,7 @@ import com.limelight.LimeLog
 import com.limelight.QuickActionRegistry
 import com.limelight.R
 import com.limelight.StreamActionExecutor
+import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.GameInputDevice
 import com.limelight.binding.input.KeyboardTranslator
 import com.limelight.binding.input.advance_setting.config.PageConfigController
@@ -61,6 +66,8 @@ class GameMenu(
     private val app: NvApp,
     private val conn: NvConnection,
     private val device: GameInputDevice?,
+    private val hostContext: Context = game,
+    private val hostWindowToken: IBinder? = null,
     private val onDismiss: (GameMenu) -> Unit = {}
 ) {
     // 当前激活的对话框（如果有）
@@ -645,7 +652,7 @@ class GameMenu(
             onCustomKey = { sendKeys(it.keys) }
         )
 
-        val composeView = ComposeView(game).apply {
+        val composeView = ComposeView(hostContext).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
                 GameMenuScreen(
@@ -655,7 +662,26 @@ class GameMenu(
                 )
             }
         }
-        dialog = ComponentDialog(game, R.style.GameMenuDialogStyle).apply {
+        dialog = object : ComponentDialog(hostContext, R.style.GameMenuDialogStyle) {
+            override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+                if (hostWindowToken != null &&
+                    event.device != null &&
+                    ControllerHandler.isGameControllerDevice(event.device)
+                ) {
+                    return game.dispatchKeyEvent(event)
+                }
+                return super.dispatchKeyEvent(event)
+            }
+
+            override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+                if (hostWindowToken != null &&
+                    event.isFromSource(InputDevice.SOURCE_CLASS_JOYSTICK)
+                ) {
+                    return game.dispatchGenericMotionEvent(event)
+                }
+                return super.dispatchGenericMotionEvent(event)
+            }
+        }.apply {
             setContentView(composeView)
             setCanceledOnTouchOutside(true)
         }
@@ -663,13 +689,22 @@ class GameMenu(
 
         setupDialogProperties(dialog)
 
+        dialog.onBackPressedDispatcher.addCallback(object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (!navigateBack()) {
+                    dialog.dismiss()
+                }
+            }
+        })
+
         // 返回键监听器
         dialog.setOnKeyListener { _, keyCode, event ->
             if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_DOWN) {
                 if (navigateBack()) {
                     return@setOnKeyListener true
                 }
-                return@setOnKeyListener false
+                dialog.dismiss()
+                return@setOnKeyListener true
             }
             false
         }
@@ -959,6 +994,10 @@ class GameMenu(
     private fun setupDialogProperties(dialog: ComponentDialog) {
         dialog.window?.let { window ->
             val layoutParams = window.attributes
+            hostWindowToken?.let { token ->
+                layoutParams.type = WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
+                layoutParams.token = token
+            }
             layoutParams.alpha = renderingProfile.windowAlpha
             layoutParams.dimAmount = DIALOG_DIM_AMOUNT
             layoutParams.width = resolveDialogWidth()
@@ -982,17 +1021,18 @@ class GameMenu(
 
     private fun resolveDialogWidth(): Int {
         val widthFraction = if (
-            game.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+            hostContext.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         ) {
             DIALOG_LANDSCAPE_WIDTH_FRACTION
         } else {
             DIALOG_PORTRAIT_WIDTH_FRACTION
         }
         val windowWidth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            game.windowManager.currentWindowMetrics.bounds.width()
+            val windowManager = hostContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            windowManager.currentWindowMetrics.bounds.width()
         } else {
-            game.window.decorView.width
-        }.takeIf { it > 0 } ?: game.resources.displayMetrics.widthPixels
+            hostContext.resources.displayMetrics.widthPixels
+        }.takeIf { it > 0 } ?: hostContext.resources.displayMetrics.widthPixels
 
         return (windowWidth * widthFraction)
             .toInt()
@@ -1341,6 +1381,14 @@ class GameMenu(
             showChevron = true
         ))
 
+        if (game.canRestoreDualScreenControls()) {
+            normalOptions.add(MenuOption(
+                getString(R.string.game_menu_enable_multi_screen), false,
+                { game.setDualScreenControlsEnabled(true) },
+                "game_menu_enable_multi_screen"
+            ))
+        }
+
         normalOptions.add(MenuOption(getString(R.string.game_menu_disconnect), true,
             { game.disconnect() }, "game_menu_disconnect", true))
 
@@ -1423,6 +1471,7 @@ class GameMenu(
             "game_menu_toggle_virtual_controller" to R.drawable.ic_controller_cute,
             "game_menu_disconnect" to R.drawable.ic_disconnect_cute,
             "game_menu_send_keys" to R.drawable.ic_send_keys_cute,
+            "game_menu_enable_multi_screen" to R.drawable.ic_resolution_cute,
             "game_menu_toggle_host_keyboard" to R.drawable.ic_host_keyboard,
             "game_menu_disconnect_and_quit" to R.drawable.ic_btn_quit,
             "game_menu_cancel" to R.drawable.ic_cancel_cute,

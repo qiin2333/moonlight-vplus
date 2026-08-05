@@ -98,6 +98,21 @@
     <color name="app_dialog_text_disabled">#66242830</color>
     <color name="app_dialog_accent_soft">#1AFF6B9D</color>
     <color name="app_dialog_accent_focus">#33FF6B9D</color>
+
+    <!-- Dual-screen lower display dashboard -->
+    <color name="dual_screen_background">#FF10131A</color>
+    <color name="dual_screen_card_background">#FF1A1F29</color>
+    <color name="dual_screen_card_outline">#334F5B6C</color>
+    <color name="dual_screen_action_background">#FF202733</color>
+    <color name="dual_screen_action_pressed">#FF303B4D</color>
+    <color name="dual_screen_text_primary">#FFF4F7FB</color>
+    <color name="dual_screen_text_secondary">#FFA9B3C2</color>
+    <color name="dual_screen_accent">#FF7CC7FF</color>
+    <color name="dual_screen_danger">#FFFF7887</color>
+    <color name="dual_screen_status_connecting">#FFFFC857</color>
+    <color name="dual_screen_status_good">#FF5DD39E</color>
+    <color name="dual_screen_status_poor">#FFFFA552</color>
+    <color name="dual_screen_status_disconnected">#FFFF6677</color>
     <color name="app_action_sheet_danger">#FFB04A5A</color>
     <color name="app_action_sheet_divider">#141D1B20</color>
     <color name="iperf_output_surface">#FFF8F6FA</color>

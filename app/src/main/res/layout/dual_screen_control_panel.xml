@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/dualScreenControlPanel"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:elevation="18dp"
+    android:visibility="gone">
+
+    <ScrollView
+        android:id="@+id/dualScreenDashboard"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/dual_screen_background"
+        android:clickable="true"
+        android:fillViewport="true"
+        android:focusable="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingStart="24dp"
+            android:paddingTop="18dp"
+            android:paddingEnd="24dp"
+            android:paddingBottom="18dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <View
+                    android:id="@+id/dualScreenStatusDot"
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"
+                    android:background="@drawable/dual_screen_status_dot"
+                    android:backgroundTint="@color/dual_screen_status_connecting" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/dualScreenStatusText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/dual_screen_status_connecting"
+                        android:textColor="@color/dual_screen_text_primary"
+                        android:textSize="19sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/dualScreenStatusDetail"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/dual_screen_status_connecting_detail"
+                        android:textColor="@color/dual_screen_text_secondary"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:gravity="end"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/dualScreenSessionTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:gravity="end"
+                        android:maxLines="1"
+                        android:textColor="@color/dual_screen_text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/dualScreenTargetDisplay"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:ellipsize="end"
+                        android:gravity="end"
+                        android:maxLines="1"
+                        android:textColor="@color/dual_screen_text_secondary"
+                        android:textSize="11sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <com.google.android.flexbox.FlexboxLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:alignItems="stretch"
+                app:flexDirection="row"
+                app:flexWrap="wrap"
+                app:justifyContent="flex_start">
+
+                <include layout="@layout/dual_screen_metric_resolution" />
+                <include layout="@layout/dual_screen_metric_fps" />
+                <include layout="@layout/dual_screen_metric_rtt" />
+                <include layout="@layout/dual_screen_metric_decode" />
+                <include layout="@layout/dual_screen_metric_loss" />
+                <include layout="@layout/dual_screen_metric_bandwidth" />
+                <include layout="@layout/dual_screen_metric_battery" />
+            </com.google.android.flexbox.FlexboxLayout>
+
+            <com.google.android.flexbox.FlexboxLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                app:alignItems="center"
+                app:flexDirection="row"
+                app:flexWrap="wrap"
+                app:justifyContent="center">
+
+                <Button
+                    android:id="@+id/dualScreenMenuButton"
+                    style="@style/DualScreenActionButton"
+                    android:drawableTop="@drawable/ic_menu_item_default"
+                    android:text="@string/dual_screen_action_menu" />
+
+                <Button
+                    android:id="@+id/dualScreenKeyboardButton"
+                    style="@style/DualScreenActionButton"
+                    android:drawableTop="@drawable/ic_keyboard_cute"
+                    android:text="@string/dual_screen_action_keyboard" />
+
+                <Button
+                    android:id="@+id/dualScreenEscapeButton"
+                    style="@style/DualScreenActionButton"
+                    android:drawableTop="@drawable/ic_btn_esc"
+                    android:text="@string/dual_screen_action_escape" />
+
+                <Button
+                    android:id="@+id/dualScreenWindowsButton"
+                    style="@style/DualScreenActionButton"
+                    android:drawableTop="@drawable/ic_btn_win"
+                    android:text="@string/dual_screen_action_windows" />
+
+                <Button
+                    android:id="@+id/dualScreenTaskSwitchButton"
+                    style="@style/DualScreenActionButton"
+                    android:text="@string/dual_screen_action_task_switch" />
+
+                <Button
+                    android:id="@+id/dualScreenControllerButton"
+                    style="@style/DualScreenActionButton"
+                    android:drawableTop="@drawable/ic_controller_cute"
+                    android:text="@string/dual_screen_action_controller" />
+
+                <Button
+                    android:id="@+id/dualScreenMicrophoneButton"
+                    style="@style/DualScreenActionButton"
+                    android:drawableTop="@drawable/ic_mic_gm"
+                    android:text="@string/dual_screen_action_microphone" />
+
+                <Button
+                    android:id="@+id/dualScreenCloseControlButton"
+                    style="@style/DualScreenActionButton"
+                    android:drawableTop="@drawable/ic_close_stylish"
+                    android:text="@string/dual_screen_action_close_control" />
+
+                <Button
+                    android:id="@+id/dualScreenDisconnectButton"
+                    style="@style/DualScreenDangerButton"
+                    android:drawableTop="@drawable/ic_disconnect_cute"
+                    android:text="@string/dual_screen_action_disconnect" />
+            </com.google.android.flexbox.FlexboxLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/dual_screen_control_hint"
+                android:textColor="@color/dual_screen_text_secondary"
+                android:textSize="11sp" />
+        </LinearLayout>
+    </ScrollView>
+
+    <FrameLayout
+        android:id="@+id/dualScreenKeyboardContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="true"
+        android:elevation="40dp"
+        android:focusable="true"
+        android:visibility="gone" />
+</FrameLayout>

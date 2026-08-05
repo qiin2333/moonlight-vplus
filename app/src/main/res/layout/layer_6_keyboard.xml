@@ -91,7 +91,15 @@
                     android:textSize="11sp"
                     android:layout_marginBottom="4dp"/>
                 <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Opacity" android:textColor="#88FFFFFF" android:textSize="8sp" android:gravity="center" android:layout_marginBottom="8dp"/>
+                <TextView
+                    android:id="@+id/keyboard_opacity_label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:gravity="center"
+                    android:text="Opacity"
+                    android:textColor="#88FFFFFF"
+                    android:textSize="8sp" />
                 <SeekBar
                     android:id="@+id/float_keyboard_seekbar"
                     android:layout_width="160dp"
