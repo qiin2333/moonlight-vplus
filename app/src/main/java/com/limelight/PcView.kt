@@ -457,6 +457,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     }
 
     private fun initializeViews() {
+        val loadGeneration = cancelPreviousBackgroundLoad()
         setContentView(R.layout.activity_pc_view)
         UiHelper.notifyNewRootView(this)
 
@@ -494,7 +495,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             ?: "Moonlight V+ Client"
         backgroundImageView = findViewById(R.id.pcBackgroundImage)
 
-        loadBackgroundImage()
+        loadBackgroundImage(loadGeneration)
         setupBackgroundImageLongPress()
         initSceneButtons()
         maybeShowBackgroundSourceDialog()
@@ -744,10 +745,10 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     // source returns, and cancels any in-flight load on reload so a stale
     // request can never overpaint a newer one.
 
-    private fun loadBackgroundImage() {
+    private fun loadBackgroundImage(existingGeneration: Int? = null) {
         if (backgroundImageView == null) return
 
-        val loadGeneration = cancelPreviousBackgroundLoad()
+        val loadGeneration = existingGeneration ?: cancelPreviousBackgroundLoad()
 
         val source = BackgroundSource.current(this)
         val orientation = resources.configuration.orientation
