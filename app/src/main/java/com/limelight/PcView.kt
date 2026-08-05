@@ -13,6 +13,7 @@ import java.util.Locale
 import java.util.concurrent.ExecutionException
 
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DecodeFormat
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import com.limelight.binding.PlatformBinding
@@ -755,15 +756,9 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         backgroundLoadJob = uiScope.launch {
             try {
                 val bitmap = withContext(Dispatchers.IO) {
-                    Glide.with(this@PcView as Context)
-                        .asBitmap()
-                        .load(resolveGlideTarget(target))
-                        .skipMemoryCache(true)
-                        .diskCacheStrategy(DiskCacheStrategy.NONE)
-                        .submit()
-                        .get()
+                    decodeBackgroundBitmap(target)
                 }
-                if (bitmap != null && isActive) {
+                if (isActive) {
                     bitmapLruCache.put(target, bitmap)
                     applyBlurredBackground(bitmap)
                 }
@@ -787,6 +782,32 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         val localFile = File(target)
         return if (localFile.exists()) localFile
         else target // let Glide surface the error
+    }
+
+    /**
+     * Backgrounds never need more pixels than the display. Decoding a gallery
+     * image at its original dimensions can exceed Android's Canvas bitmap limit
+     * before the ImageView has a chance to scale it (issue #447).
+     */
+    private fun backgroundDecodeSize(): Pair<Int, Int> {
+        val metrics = resources.displayMetrics
+        return metrics.widthPixels.coerceAtLeast(1) to metrics.heightPixels.coerceAtLeast(1)
+    }
+
+    private fun decodeBackgroundBitmap(target: String): Bitmap {
+        val (width, height) = backgroundDecodeSize()
+        return Glide.with(this@PcView as Context)
+            .asBitmap()
+            .load(resolveGlideTarget(target))
+            .apply(
+                RequestOptions()
+                    .override(width, height)
+                    .format(DecodeFormat.PREFER_RGB_565)
+            )
+            .skipMemoryCache(true)
+            .diskCacheStrategy(DiskCacheStrategy.NONE)
+            .submit(width, height)
+            .get()
     }
 
     private fun applyBlurredBackground(bitmap: Bitmap) {
@@ -951,22 +972,14 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         backgroundLoadJob = uiScope.launch {
             try {
                 val bitmap = withContext(Dispatchers.IO) {
-                    Glide.with(this@PcView as Context)
-                        .asBitmap()
-                        .load(resolveGlideTarget(target))
-                        .skipMemoryCache(true)
-                        .diskCacheStrategy(DiskCacheStrategy.NONE)
-                        .submit()
-                        .get()
+                    decodeBackgroundBitmap(target)
                 }
-                if (bitmap != null && isActive) {
+                if (isActive) {
                     bitmapLruCache.put(target, bitmap)
                     applyBlurredBackground(bitmap)
                     if (isFromShake) {
                         showToast(getString(R.string.background_refreshed_with_remaining, getRemainingRefreshCount()))
                     }
-                } else if (bitmap == null) {
-                    showToast(getString(R.string.refresh_failed_please_retry))
                 }
             } catch (_: CancellationException) {
                 // superseded
