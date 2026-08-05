@@ -134,6 +134,7 @@
     <string name="ip_hint">IP address of host PC</string>
     <string name="searching_pc">Searching for host PCs on your local network…\n\n
         Ensure Sunshine is running on your host PC or GameStream is enabled in the GeForce Experience SHIELD settings.</string>
+    <string name="searching_pc_title">SEARCHING FOR HOSTS…</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
     <string name="lost_connection">Lost connection to PC</string>
@@ -171,7 +172,6 @@
     <string name="error_desktop_special_app_unsupported">This host does not support Desktop quick start. Open the app list once to load cached apps, or update Foundation Sunshine.</string>
     <string name="error_vdd_unsupported">This host does not support virtual display streaming.</string>
     <string name="error_vdd_unavailable">The host virtual display driver is unavailable. Install or repair ZakoVDD, then try again.</string>
-    <string name="applist_vdd_unavailable">%1$s (unavailable on host)</string>
     <string name="applist_quit_app">Quitting</string>
     <string name="applist_quit_success">Successfully quit</string>
     <string name="applist_quit_fail">Failed to quit</string>
@@ -225,6 +225,7 @@
     <string name="qr_pair_success">Paired successfully!</string>
     <string name="msg_add_pc">Connecting to the PC…</string>
     <string name="addpc_fail">Unable to connect to the specified computer. Make sure the required ports are allowed through the firewall.</string>
+    <string name="addpc_fail_vpn">Unable to connect to the specified computer through the VPN. Check that the VPN routes this private subnet, does not exclude Moonlight, and that the host firewall allows the VPN network.</string>
     <string name="addpc_success">Successfully added computer</string>
     <string name="addpc_unknown_host">Unable to resolve PC address. Make sure you didn\'t make a typo in the address.</string>
     <string name="addpc_enter_ip">You must enter an IP address</string>

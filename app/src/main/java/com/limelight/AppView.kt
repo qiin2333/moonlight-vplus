@@ -24,6 +24,7 @@ import android.os.Looper
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.RelativeSizeSpan
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.PathInterpolator
@@ -524,7 +525,20 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         // Setup top panel toggle handle
         val topPanelToggle = findViewById<TextView>(R.id.topPanelToggle)
         updateTopPanelToggleAppearance(topPanelToggle, 0f)
+        topPanelToggle.setOnFocusChangeListener { _, _ ->
+            updateTopPanelToggleAppearance(topPanelToggle, topPanelToggleProgress)
+        }
         topPanelToggle.setOnClickListener { toggleTopPanel() }
+        topPanelToggle.setOnKeyListener { _, keyCode, event ->
+            if (keyCode != KeyEvent.KEYCODE_DPAD_DOWN || !hasAppsForControllerFocus()) {
+                return@setOnKeyListener false
+            }
+
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                focusSelectedAppFromTopPanel()
+            }
+            true
+        }
 
         // 动态设置手柄 margin 使其精确贴合状态栏底部
         topPanelToggle.setOnApplyWindowInsetsListener { v, insets ->
@@ -886,12 +900,17 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
             bottomRadius, bottomRadius,
             bottomRadius, bottomRadius
         )
+        val showFocusRing = toggle.hasFocus() && fraction < 0.5f
         background.setStroke(
-            density.roundToInt().coerceAtLeast(1),
-            colorWithAlpha(
-                ContextCompat.getColor(this, R.color.ui_shell_outline),
-                chromeAlpha
-            )
+            ((if (showFocusRing) 2f else 1f) * density).roundToInt().coerceAtLeast(1),
+            if (showFocusRing) {
+                ContextCompat.getColor(this, R.color.ui_shell_accent)
+            } else {
+                colorWithAlpha(
+                    ContextCompat.getColor(this, R.color.ui_shell_outline),
+                    chromeAlpha
+                )
+            }
         )
 
         if (fraction < 0.5f) {
@@ -973,7 +992,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
      * 关闭顶部面板 (带动画)
      */
     @SuppressLint("CutPasteId", "SetTextI18n")
-    private fun closeTopPanel() {
+    private fun closeTopPanel(restoreToggleFocus: Boolean = true) {
         if (!isPanelOpen) return
         isPanelOpen = false
         topPanelBackCallback.isEnabled = false
@@ -998,9 +1017,11 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
                     topDropdownPanel.translationY = 0f
                     topPanelScrim.visibility = View.GONE
                     toggle?.translationZ = 0f
-                    // 关闭后将焦点还给触发手柄
-                    val toggleView = findViewById<View>(R.id.topPanelToggle)
-                    toggleView?.requestFocus()
+                    if (restoreToggleFocus) {
+                        // 关闭后将焦点还给触发手柄。打开全屏子页面时由子页面接管焦点。
+                        val toggleView = findViewById<View>(R.id.topPanelToggle)
+                        toggleView?.requestFocus()
+                    }
                 }
                 .start()
     }
@@ -1066,9 +1087,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
                 val catalog = withContext(Dispatchers.IO) {
                     getHostHttpClient()?.getDisplays()
                 }
-                val supportsVdd =
-                    (computer?.vddCapabilityVersion ?: 0) > 0 &&
-                        (catalog?.vddCapabilityVersion ?: 0) > 0
+                val supportsVdd = catalog?.supportsVdd(computer?.vddCapabilityVersion) == true
                 if (catalog != null && (catalog.displays.isNotEmpty() || supportsVdd)) {
                     updateDisplaySelectionUI(catalog, supportsVdd)
                 } else {
@@ -1108,16 +1127,12 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         }
 
         if (supportsVdd) {
-            val vddReady = catalog.vddState == NvHTTP.VddState.READY
-            val vddLabel = if (vddReady) {
-                resources.getString(R.string.applist_menu_start_with_vdd)
-            } else {
-                resources.getString(
-                    R.string.applist_vdd_unavailable,
-                    resources.getString(R.string.applist_menu_start_with_vdd).trim()
+            options.add(
+                AppDisplayOption(
+                    VIRTUAL_DISPLAY_ID,
+                    resources.getString(R.string.applist_menu_start_with_vdd)
                 )
-            }
-            options.add(AppDisplayOption(VIRTUAL_DISPLAY_ID, vddLabel, vddReady))
+            )
         }
 
         displayOptions = options
@@ -1249,7 +1264,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         }
 
         if (isPanelOpen) {
-            closeTopPanel()
+            closeTopPanel(restoreToggleFocus = false)
         }
 
         val checkedIndex = findScreenCombinationModeIndex()
@@ -1282,6 +1297,8 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         screenCombinationBackCallback.isEnabled = false
         screenCombinationModeOverlay.visibility = View.GONE
         screenCombinationModeOverlay.removeAllViews()
+        // The top panel is closed while the picker is shown, so its label is no longer a
+        // valid focus target. Return controller focus to the panel toggle on the app page.
         findViewById<View>(R.id.topPanelToggle)?.requestFocus()
     }
 
@@ -2004,6 +2021,12 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
             return false
         }
 
+        if (keyCode == KeyEvent.KEYCODE_DPAD_UP && isAppInTopVisualRow(position)) {
+            selectionAnimator?.hideIndicator()
+            findViewById<View>(R.id.topPanelToggle).requestFocus()
+            return true
+        }
+
         if (keyCode == android.view.KeyEvent.KEYCODE_BUTTON_X ||
                 keyCode == android.view.KeyEvent.KEYCODE_BUTTON_Y) {
             val app = item as AppObject
@@ -2013,6 +2036,32 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         }
 
         return false
+    }
+
+    private fun isAppInTopVisualRow(position: Int): Boolean {
+        val layoutManager = currentRecyclerView?.layoutManager as? GridLayoutManager ?: return position == 0
+        return layoutManager.spanSizeLookup.getSpanIndex(position, layoutManager.spanCount) == 0
+    }
+
+    private fun hasAppsForControllerFocus(): Boolean {
+        return currentRecyclerView != null && (appGridAdapter?.count ?: 0) > 0
+    }
+
+    private fun focusSelectedAppFromTopPanel() {
+        val recyclerView = currentRecyclerView ?: return
+        val itemCount = appGridAdapter?.count ?: return
+        if (itemCount <= 0) return
+
+        val targetPosition = selectedPosition.takeIf { it in 0 until itemCount } ?: 0
+        val holder = recyclerView.findViewHolderForAdapterPosition(targetPosition)
+        if (holder?.itemView?.requestFocus() == true) {
+            return
+        }
+
+        recyclerView.scrollToPosition(targetPosition)
+        recyclerView.post {
+            recyclerView.findViewHolderForAdapterPosition(targetPosition)?.itemView?.requestFocus()
+        }
     }
 
     private fun handleItemLongClick(position: Int, item: Any): Boolean {
