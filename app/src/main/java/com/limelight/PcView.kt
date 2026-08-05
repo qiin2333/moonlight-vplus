@@ -756,7 +756,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         backgroundLoadJob = uiScope.launch {
             try {
                 val bitmap = withContext(Dispatchers.IO) {
-                    decodeBackgroundBitmap(target)
+                    decodeBackgroundBitmap(target, source)
                 }
                 if (isActive) {
                     bitmapLruCache.put(target, bitmap)
@@ -785,27 +785,35 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     }
 
     /**
-     * Backgrounds never need more pixels than the display. Decoding a gallery
-     * image at its original dimensions can exceed Android's Canvas bitmap limit
-     * before the ImageView has a chance to scale it (issue #447).
+     * Local backgrounds never need more pixels than the display. Decoding a
+     * gallery image at its original dimensions can exceed Android's Canvas
+     * bitmap limit before the ImageView can scale it (issue #447).
      */
     private fun backgroundDecodeSize(): Pair<Int, Int> {
         val metrics = resources.displayMetrics
         return metrics.widthPixels.coerceAtLeast(1) to metrics.heightPixels.coerceAtLeast(1)
     }
 
-    private fun decodeBackgroundBitmap(target: String): Bitmap {
-        val (width, height) = backgroundDecodeSize()
-        return Glide.with(this@PcView as Context)
+    private fun decodeBackgroundBitmap(target: String, source: BackgroundSource): Bitmap {
+        val request = Glide.with(this@PcView as Context)
             .asBitmap()
             .load(resolveGlideTarget(target))
+            .skipMemoryCache(true)
+            .diskCacheStrategy(DiskCacheStrategy.NONE)
+
+        if (source !== BackgroundSource.Local) {
+            // Preserve the existing decode and cache behavior for network
+            // backgrounds, including full-resolution long-press saves.
+            return request.submit().get()
+        }
+
+        val (width, height) = backgroundDecodeSize()
+        return request
             .apply(
                 RequestOptions()
                     .override(width, height)
                     .format(DecodeFormat.PREFER_RGB_565)
             )
-            .skipMemoryCache(true)
-            .diskCacheStrategy(DiskCacheStrategy.NONE)
             .submit(width, height)
             .get()
     }
@@ -972,7 +980,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         backgroundLoadJob = uiScope.launch {
             try {
                 val bitmap = withContext(Dispatchers.IO) {
-                    decodeBackgroundBitmap(target)
+                    decodeBackgroundBitmap(target, source)
                 }
                 if (isActive) {
                     bitmapLruCache.put(target, bitmap)
