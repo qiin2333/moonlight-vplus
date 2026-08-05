@@ -2678,11 +2678,14 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     }
 
     private fun handleSleep(details: ComputerDetails) {
-        if (managerBinder == null) {
+        val binder = managerBinder
+        if (binder == null) {
             showToast(getString(R.string.error_manager_not_running))
             return
         }
-        ServerHelper.pcSleep(this, details, managerBinder!!, null)
+        UiHelper.displaySleepConfirmationDialog(this, details, {
+            ServerHelper.pcSleep(this, details, binder, null)
+        }, null)
     }
 
     private fun handleIperf3Test(details: ComputerDetails) {

@@ -19,6 +19,8 @@
     <string name="pcview_menu_secondary_screen"> 作为副屏串流（基地适用） </string>
     <string name="pcview_menu_sleep_success"> 已催促主机睡眠 </string>
     <string name="pcview_menu_sleep_fail"> 连接主机睡眠失败 </string>
+    <string name="pcview_menu_sleep_sending">正在向 %1$s 发送睡眠指令…</string>
+    <string name="pcview_sleep_confirmation">让 %1$s 进入睡眠？正在进行的串流和未保存工作可能会中断。</string>
     <string name="pcview_menu_disable_ipv6">禁用 IPv6</string>
     <string name="pcview_menu_enable_ipv6">启用 IPv6</string>
     <string name="pcview_ipv6_disabled">已禁用此电脑的 IPv6 连接</string>
@@ -970,6 +972,7 @@
     <string name="appview_quick_settings_title">快速设置</string>
     <string name="appview_full_settings">完整设置</string>
     <string name="appview_screen_combination_title">屏幕组合</string>
+    <string name="appview_open_screen_combination_picker">打开屏幕组合选择器</string>
     <string name="appview_screen_mode_host_short">跟随主机</string>
     <string name="appview_screen_mode_noop_short">无操作</string>
     <string name="appview_screen_mode_activate_short">激活模式</string>

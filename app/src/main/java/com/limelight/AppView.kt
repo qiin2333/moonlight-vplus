@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
@@ -65,6 +66,7 @@ import com.limelight.ui.AppScreenCombinationOption
 import com.limelight.ui.AppSettingsPanel
 import com.limelight.ui.ScreenCombinationModePickerView
 import com.limelight.ui.SelectionIndicatorAnimator
+import com.limelight.ui.VIRTUAL_DISPLAY_ID
 import com.limelight.utils.AppSettingsManager
 import com.limelight.utils.AppActionSheet
 import com.limelight.utils.AppBackgroundMode
@@ -127,7 +129,6 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         private const val BACKGROUND_CHANGE_DELAY = 300 // ms
         private const val DISPLAY_CHECK_DELAY_MS = 800L
         private const val NOT_PAIRED_EXIT_CONFIRMATION_UPDATES = 2
-        private const val VIRTUAL_DISPLAY_ID = 212333
         private const val SCREEN_COMBINATION_MODE_PREF_KEY = "list_screen_combination_mode"
     }
 
@@ -197,6 +198,16 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
     private val hostHttpLock = Any()
     private var hostHttpClient: NvHTTP? = null
     private var hostHttpKey: String? = null
+    private val topPanelBackCallback = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() {
+            closeTopPanel()
+        }
+    }
+    private val screenCombinationBackCallback = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() {
+            hideScreenCombinationModeView()
+        }
+    }
 
     // ==================== 服务连接 ====================
 
@@ -439,8 +450,10 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
 
         // Initialize display selection UI components
         screenCombinationModeOverlay = findViewById(R.id.screenCombinationModeOverlay)
+        onBackPressedDispatcher.addCallback(this, topPanelBackCallback)
+        onBackPressedDispatcher.addCallback(this, screenCombinationBackCallback)
         topDropdownPanel.setViewCompositionStrategy(
-            ViewCompositionStrategy.DisposeOnDetachedFromWindow
+            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
         )
         topDropdownPanel.setContent {
             AppSettingsPanel(
@@ -927,6 +940,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
     private fun openTopPanel() {
         if (isPanelOpen) return
         isPanelOpen = true
+        topPanelBackCallback.isEnabled = true
 
         val toggle = findViewById<TextView>(R.id.topPanelToggle)
         animateTopPanelToggle(expanded = true)
@@ -962,6 +976,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
     private fun closeTopPanel() {
         if (!isPanelOpen) return
         isPanelOpen = false
+        topPanelBackCallback.isEnabled = false
 
         val toggle = findViewById<TextView>(R.id.topPanelToggle)
         animateTopPanelToggle(expanded = false)
@@ -1259,10 +1274,12 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
             )
         )
         screenCombinationModeOverlay.visibility = View.VISIBLE
+        screenCombinationBackCallback.isEnabled = true
         screenCombinationModeOverlay.requestFocus()
     }
 
     private fun hideScreenCombinationModeView() {
+        screenCombinationBackCallback.isEnabled = false
         screenCombinationModeOverlay.visibility = View.GONE
         screenCombinationModeOverlay.removeAllViews()
         findViewById<View>(R.id.topPanelToggle)?.requestFocus()
@@ -2082,15 +2099,14 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
     }
 
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent): Boolean {
-        if (screenCombinationModeOverlay.isVisible && (keyCode == android.view.KeyEvent.KEYCODE_BACK
-                || keyCode == android.view.KeyEvent.KEYCODE_BUTTON_B)) {
+        if (screenCombinationModeOverlay.isVisible &&
+                keyCode == android.view.KeyEvent.KEYCODE_BUTTON_B) {
             hideScreenCombinationModeView()
             return true
         }
 
         // 面板打开时按返回键/B键关闭面板而非退出界面
-        if (isPanelOpen && (keyCode == android.view.KeyEvent.KEYCODE_BACK
-                || keyCode == android.view.KeyEvent.KEYCODE_BUTTON_B)) {
+        if (isPanelOpen && keyCode == android.view.KeyEvent.KEYCODE_BUTTON_B) {
             closeTopPanel()
             return true
         }

@@ -35,6 +35,8 @@
     <string name="pcview_menu_eol">NVIDIA GameStream End-of-Service</string>
     <string name="pcview_menu_sleep_success">Host sleep success</string>
     <string name="pcview_menu_sleep_fail">Host sleep failed</string>
+    <string name="pcview_menu_sleep_sending">Sending sleep command to %1$s…</string>
+    <string name="pcview_sleep_confirmation">Put %1$s to sleep? Active streams and unsaved work may be interrupted.</string>
     <string name="pcview_menu_disable_ipv6">Disable IPv6</string>
     <string name="pcview_menu_enable_ipv6">Enable IPv6</string>
     <string name="pcview_menu_open_webui">Open Web Management (Sunshine)</string>
@@ -1243,6 +1245,7 @@ Tap again to replace it.</string>
     <string name="appview_quick_settings_title">Quick Settings</string>
     <string name="appview_full_settings">Full Settings</string>
     <string name="appview_screen_combination_title">Screen Combination</string>
+    <string name="appview_open_screen_combination_picker">Open screen combination picker</string>
     <string name="appview_screen_mode_host_short">Follow Host</string>
     <string name="appview_screen_mode_noop_short">No Action</string>
     <string name="appview_screen_mode_activate_short">Activate</string>

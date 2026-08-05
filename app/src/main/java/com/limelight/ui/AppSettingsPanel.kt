@@ -35,7 +35,10 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -63,6 +66,10 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import com.limelight.R
 import com.limelight.utils.AppBackgroundMode
 import kotlin.math.min
@@ -96,7 +103,7 @@ private enum class SegmentIcon {
     Exclusive
 }
 
-private const val VIRTUAL_DISPLAY_ID = 212333
+internal const val VIRTUAL_DISPLAY_ID = 212333
 
 private object TopTabPanelShape : Shape {
     override fun createOutline(
@@ -119,12 +126,12 @@ private object TopTabPanelShape : Shape {
                     center - tabHalfWidth, tabHeight,
                     center - tabHalfWidth, tabCorner
                 )
-                quadraticBezierTo(
+                quadraticTo(
                     center - tabHalfWidth, 0f,
                     center - tabHalfWidth + tabCorner, 0f
                 )
                 lineTo(center + tabHalfWidth - tabCorner, 0f)
-                quadraticBezierTo(
+                quadraticTo(
                     center + tabHalfWidth, 0f,
                     center + tabHalfWidth, tabCorner
                 )
@@ -134,13 +141,13 @@ private object TopTabPanelShape : Shape {
                     center + tabHalfWidth + shoulderWidth, tabHeight
                 )
                 lineTo(size.width - corner, tabHeight)
-                quadraticBezierTo(size.width, tabHeight, size.width, tabHeight + corner)
+                quadraticTo(size.width, tabHeight, size.width, tabHeight + corner)
                 lineTo(size.width, size.height - corner)
-                quadraticBezierTo(size.width, size.height, size.width - corner, size.height)
+                quadraticTo(size.width, size.height, size.width - corner, size.height)
                 lineTo(corner, size.height)
-                quadraticBezierTo(0f, size.height, 0f, size.height - corner)
+                quadraticTo(0f, size.height, 0f, size.height - corner)
                 lineTo(0f, tabHeight + corner)
-                quadraticBezierTo(0f, tabHeight, corner, tabHeight)
+                quadraticTo(0f, tabHeight, corner, tabHeight)
                 close()
             }
             return Outline.Generic(path)
@@ -209,6 +216,7 @@ fun AppSettingsPanel(
         min((screenHeight * 0.78f).toInt(), 640)
     }
     val firstItemFocusRequester = remember { FocusRequester() }
+    var isHeaderLaidOut by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val isDarkTheme = isSystemInDarkTheme()
     val panelSurface = colorResource(
@@ -240,6 +248,13 @@ fun AppSettingsPanel(
     LaunchedEffect(isOpen) {
         if (isOpen) {
             listState.scrollToItem(0)
+        } else {
+            isHeaderLaidOut = false
+        }
+    }
+
+    LaunchedEffect(isOpen, isHeaderLaidOut) {
+        if (isOpen && isHeaderLaidOut) {
             firstItemFocusRequester.requestFocus()
         }
     }
@@ -274,7 +289,9 @@ fun AppSettingsPanel(
                 ) {
                 item(key = "panel-header") {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onGloballyPositioned { isHeaderLaidOut = true },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
@@ -684,14 +701,14 @@ private fun SegmentIconView(
 }
 
 @Composable
-private fun screenModeCompactLabel(mode: Int): String = when (mode) {
+private fun screenModeCompactLabel(option: AppScreenCombinationOption): String = when (option.value) {
     -1 -> stringResource(R.string.appview_screen_mode_host_short)
     0 -> stringResource(R.string.appview_screen_mode_noop_short)
     1 -> stringResource(R.string.appview_screen_mode_activate_short)
     2 -> stringResource(R.string.appview_screen_mode_primary_short)
     4 -> stringResource(R.string.appview_screen_mode_secondary_short)
     3 -> stringResource(R.string.appview_screen_mode_exclusive_short)
-    else -> ""
+    else -> option.label
 }
 
 private fun screenModeIcon(mode: Int): SegmentIcon = when (mode) {
@@ -735,7 +752,7 @@ private fun ScreenCombinationSegmentedControl(
             ) {
                 row.forEach { option ->
                     SegmentButton(
-                        label = screenModeCompactLabel(option.value),
+                        label = screenModeCompactLabel(option),
                         selected = selectedMode == option.value,
                         icon = screenModeIcon(option.value),
                         verticalIcon = true,
@@ -754,6 +771,9 @@ private fun ScreenCombinationSegmentedControl(
 
 @Composable
 private fun SectionNavigationTitle(title: String, value: String, onClick: () -> Unit) {
+    val pickerContentDescription = stringResource(
+        R.string.appview_open_screen_combination_picker
+    )
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -783,6 +803,10 @@ private fun SectionNavigationTitle(title: String, value: String, onClick: () -> 
             modifier = Modifier
                 .size(36.dp)
                 .clip(RoundedCornerShape(8.dp))
+                .semantics {
+                    contentDescription = pickerContentDescription
+                    role = Role.Button
+                }
                 .clickable(onClick = onClick),
             contentAlignment = Alignment.Center
         ) {
