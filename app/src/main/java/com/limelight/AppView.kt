@@ -2002,7 +2002,7 @@ class AppView : Activity(), AdapterFragmentCallbacks {
 
     private fun isAppInTopVisualRow(position: Int): Boolean {
         val layoutManager = currentRecyclerView?.layoutManager as? GridLayoutManager ?: return position == 0
-        return layoutManager.spanSizeLookup.getSpanGroupIndex(position, layoutManager.spanCount) == 0
+        return layoutManager.spanSizeLookup.getSpanIndex(position, layoutManager.spanCount) == 0
     }
 
     private fun hasAppsForControllerFocus(): Boolean {
