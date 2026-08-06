@@ -57,7 +57,7 @@
         android:visibility="gone" />
 
     <!-- 顶部下拉手柄标签 -->
-    <com.limelight.ui.TopPanelToggleView
+    <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/topPanelToggle"
         android:layout_width="84dp"
         android:layout_height="36dp"
@@ -65,6 +65,7 @@
         android:layout_alignParentTop="true"
         android:layout_marginTop="@dimen/activity_safearea_top"
         android:elevation="4dp"
+        android:gravity="center"
         android:clickable="true"
         android:focusable="true"
         android:focusableInTouchMode="false" />

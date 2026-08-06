@@ -9,7 +9,10 @@ import android.graphics.PixelFormat
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.os.Build
+import android.view.Gravity
 import android.view.animation.PathInterpolator
+import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import com.limelight.R
@@ -20,7 +23,7 @@ import kotlin.math.sin
 
 /** Owns the top-panel handle's rendering and transition state. */
 internal class TopPanelHandleController(
-    private val toggle: TopPanelToggleView
+    private val toggle: TextView
 ) {
     private val context = toggle.context
     private val density = toggle.resources.displayMetrics.density
@@ -40,10 +43,19 @@ internal class TopPanelHandleController(
 
     private var progress = 0f
     private var animator: ValueAnimator? = null
+    private val useStaticFallback = Build.VERSION.SDK_INT < Build.VERSION_CODES.M
 
     init {
         toggle.text = null
-        toggle.centerDrawable = moonWheel
+        if (useStaticFallback) {
+            toggle.text = "—"
+            toggle.gravity = Gravity.CENTER
+            toggle.setTextColor(primaryColor)
+            toggle.textSize = 24f
+        } else {
+            toggle.foreground = moonWheel
+            toggle.foregroundGravity = Gravity.CENTER
+        }
         background.shape = GradientDrawable.RECTANGLE
         toggle.background = background
         toggle.setOnFocusChangeListener { _, _ -> updateAppearance(progress) }
@@ -51,6 +63,10 @@ internal class TopPanelHandleController(
     }
 
     fun animate(expanded: Boolean, onPanelReveal: (() -> Unit)? = null) {
+        if (useStaticFallback) {
+            if (expanded) onPanelReveal?.invoke()
+            return
+        }
         val target = if (expanded) 1f else 0f
         toggle.animate().cancel()
         toggle.alpha = 1f
@@ -80,7 +96,7 @@ internal class TopPanelHandleController(
         animator = null
         toggle.animate().cancel()
         toggle.onFocusChangeListener = null
-        toggle.centerDrawable = null
+        if (!useStaticFallback) toggle.foreground = null
     }
 
     private fun updateAppearance(value: Float) {

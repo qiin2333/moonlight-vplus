@@ -66,7 +66,6 @@ import com.limelight.ui.FeatureGuideRegistry
 import com.limelight.ui.ScreenCombinationModePickerView
 import com.limelight.ui.SelectionIndicatorAnimator
 import com.limelight.ui.TopPanelHandleController
-import com.limelight.ui.TopPanelToggleView
 import com.limelight.ui.VIRTUAL_DISPLAY_ID
 import com.limelight.ui.ViewFeatureGuide
 import com.limelight.ui.ViewFeatureGuideStep
@@ -523,7 +522,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         }
 
         // Setup top panel toggle handle
-        val topPanelToggle = findViewById<TopPanelToggleView>(R.id.topPanelToggle)
+        val topPanelToggle = findViewById<TextView>(R.id.topPanelToggle)
         topPanelToggle.contentDescription = getString(R.string.appview_quick_settings_title)
         topPanelHandleController = TopPanelHandleController(topPanelToggle)
         topPanelToggle.setOnClickListener { toggleTopPanel() }
