@@ -1,0 +1,158 @@
+package com.limelight.binding.input
+
+import com.limelight.nvstream.input.ControllerPacket
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class UsbControllerShortcutStateMachineTest {
+    @Test
+    fun exitComboHasPriorityAndExitsAfterRelease() {
+        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+
+        machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 100, true)
+        val pressed = machine.onButtonSnapshot(
+            UsbControllerShortcutStateMachine.EXIT_COMBO_FLAGS,
+            200,
+            true
+        )
+
+        assertTrue(pressed.consumeAllInput)
+        assertTrue(pressed.sendNeutralState)
+        assertTrue(pressed.actions.contains(UsbControllerShortcutStateMachine.Action.CANCEL_LONG_PRESS))
+        assertFalse(pressed.actions.contains(UsbControllerShortcutStateMachine.Action.OPEN_GAME_MENU))
+        assertFalse(pressed.actions.contains(UsbControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION))
+        assertTrue(machine.isLocalInputCaptureActive())
+
+        val released = machine.onButtonSnapshot(0, 201, true)
+
+        assertTrue(released.consumeAllInput)
+        assertEquals(
+            listOf(UsbControllerShortcutStateMachine.Action.EXIT_STREAM),
+            released.actions
+        )
+        assertFalse(machine.isLocalInputCaptureActive())
+    }
+
+    @Test
+    fun hintThenBOpensMenuAndStartsLocalCapture() {
+        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+
+        val start = machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 100, true)
+        val hint = machine.onLongPressTimeout(850, true)
+        val menu = machine.onButtonSnapshot(
+            ControllerPacket.PLAY_FLAG or ControllerPacket.B_FLAG,
+            851,
+            true
+        )
+
+        assertEquals(
+            listOf(UsbControllerShortcutStateMachine.Action.SCHEDULE_LONG_PRESS),
+            start.actions
+        )
+        assertEquals(listOf(UsbControllerShortcutStateMachine.Action.SHOW_HINT), hint.actions)
+        assertTrue(menu.actions.contains(UsbControllerShortcutStateMachine.Action.HIDE_HINT))
+        assertTrue(menu.actions.contains(UsbControllerShortcutStateMachine.Action.OPEN_GAME_MENU))
+        assertTrue(menu.consumeAllInput)
+        assertTrue(menu.sendNeutralState)
+        assertTrue(menu.menuButtonChanges.isEmpty())
+        assertTrue(machine.isLocalInputCaptureActive())
+    }
+
+    @Test
+    fun releasingLongHeldStartKeepsMouseToggleBehavior() {
+        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+
+        machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 100, true)
+        val released = machine.onButtonSnapshot(0, 851, true)
+
+        assertTrue(released.actions.contains(UsbControllerShortcutStateMachine.Action.CANCEL_LONG_PRESS))
+        assertTrue(released.actions.contains(UsbControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION))
+        assertFalse(released.consumeAllInput)
+    }
+
+    @Test
+    fun menuTriggerBIsSwallowedUntilReleased() {
+        val machine = openMenu()
+
+        val triggerRelease = machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 852, true)
+        val nextBPress = machine.onButtonSnapshot(
+            ControllerPacket.PLAY_FLAG or ControllerPacket.B_FLAG,
+            853,
+            true
+        )
+        val nextBRelease = machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 854, true)
+
+        assertTrue(triggerRelease.consumeAllInput)
+        assertTrue(triggerRelease.menuButtonChanges.isEmpty())
+        assertEquals(
+            listOf(UsbControllerShortcutStateMachine.ButtonChange(ControllerPacket.B_FLAG, true)),
+            nextBPress.menuButtonChanges
+        )
+        assertEquals(
+            listOf(UsbControllerShortcutStateMachine.ButtonChange(ControllerPacket.B_FLAG, false)),
+            nextBRelease.menuButtonChanges
+        )
+    }
+
+    @Test
+    fun menuConsumesUnsupportedButtonsAndMotionCaptureRemainsActive() {
+        val machine = openMenu()
+        machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 852, true)
+
+        val unsupportedButton = machine.onButtonSnapshot(
+            ControllerPacket.PLAY_FLAG or ControllerPacket.X_FLAG,
+            853,
+            true
+        )
+
+        assertTrue(unsupportedButton.consumeAllInput)
+        assertTrue(unsupportedButton.menuButtonChanges.isEmpty())
+        assertTrue(machine.isLocalInputCaptureActive())
+    }
+
+    @Test
+    fun neutralStateIsRequestedOncePerLocalCapture() {
+        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+
+        val firstOpen = requestMenuOpen(machine, 100)
+        machine.onGameMenuOpenResult(true)
+        val whileOpen = machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 852, true)
+
+        assertTrue(firstOpen.sendNeutralState)
+        assertFalse(whileOpen.sendNeutralState)
+
+        machine.onGameMenuUnavailable()
+        assertTrue(machine.isLocalInputCaptureActive())
+        machine.onButtonSnapshot(0, 853, true)
+        assertFalse(machine.isLocalInputCaptureActive())
+
+        val secondOpen = requestMenuOpen(machine, 1_000)
+        assertTrue(secondOpen.sendNeutralState)
+    }
+
+    private fun openMenu(): UsbControllerShortcutStateMachine {
+        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+        requestMenuOpen(machine, 100)
+        machine.onGameMenuOpenResult(true)
+        return machine
+    }
+
+    private fun requestMenuOpen(
+        machine: UsbControllerShortcutStateMachine,
+        startTimeMs: Long
+    ): UsbControllerShortcutStateMachine.Update {
+        machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, startTimeMs, true)
+        machine.onLongPressTimeout(startTimeMs + TEST_LONG_PRESS_MS, true)
+        return machine.onButtonSnapshot(
+            ControllerPacket.PLAY_FLAG or ControllerPacket.B_FLAG,
+            startTimeMs + TEST_LONG_PRESS_MS + 1,
+            true
+        )
+    }
+
+    companion object {
+        private const val TEST_LONG_PRESS_MS = 750L
+    }
+}
