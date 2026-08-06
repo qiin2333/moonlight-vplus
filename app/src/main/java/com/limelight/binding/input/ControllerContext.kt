@@ -455,10 +455,18 @@ class InputDeviceContext(handler: ControllerHandler) : GenericControllerContext(
 
 class UsbDeviceContext(handler: ControllerHandler) : GenericControllerContext(handler) {
     var device: AbstractController? = null
+    internal val shortcutState = UsbControllerShortcutStateMachine()
+    internal val shortcutLongPressRunnable = Runnable {
+        handler.onUsbShortcutLongPress(this)
+    }
 
     override fun destroy() {
+        handler.releaseUsbShortcutState(this)
         super.destroy()
-        // Nothing for now
+    }
+
+    override fun onGameMenuDismissed() {
+        shortcutState.onGameMenuUnavailable()
     }
 
     override fun sendControllerArrival(): Int {
