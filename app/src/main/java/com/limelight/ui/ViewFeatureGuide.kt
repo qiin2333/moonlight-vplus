@@ -127,8 +127,8 @@ private class FeatureGuideOverlay(
 ) : FrameLayout(activity) {
     private val density = resources.displayMetrics.density
     private val accent = ContextCompat.getColor(activity, R.color.game_menu_accent)
-    private val ink = Color.rgb(64, 58, 58)
-    private val mutedInk = Color.rgb(92, 82, 82)
+    private val ink = Color.rgb(76, 67, 70)
+    private val mutedInk = Color.rgb(108, 96, 99)
     private val paper = Color.rgb(255, 248, 232)
     private val dimPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(184, 0, 0, 0) }
     private val clearPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -171,10 +171,18 @@ private class FeatureGuideOverlay(
         orientation = LinearLayout.VERTICAL
         setPadding(dpInt(24f), dpInt(12f), dpInt(24f), dpInt(8f))
     }
-    private val eyebrow = label(12f, accent, true)
-    private val title = label(22f, ink, true)
-    private val body = label(17f, mutedInk, false).apply {
-        setLineSpacing(0f, 1.08f)
+    private val eyebrow = label(11f, accent, true).apply {
+        letterSpacing = 0.06f
+    }
+    private val title = label(21f, ink, false).apply {
+        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        letterSpacing = 0.025f
+        setLineSpacing(dp(1f), 1.04f)
+    }
+    private val body = label(16f, mutedInk, false).apply {
+        typeface = Typeface.create("sans-serif", Typeface.NORMAL)
+        letterSpacing = 0.018f
+        setLineSpacing(dp(2f), 1.12f)
     }
     private val scroll = ScrollView(activity).apply {
         isFillViewport = false
@@ -447,7 +455,9 @@ private class FeatureGuideOverlay(
         typeface = Typeface.create("sans-serif-rounded", if (bold) Typeface.BOLD else Typeface.NORMAL)
     }
 
-    private fun actionLabel(color: Int, onClick: () -> Unit) = label(16f, color, true).apply {
+    private fun actionLabel(color: Int, onClick: () -> Unit) = label(15f, color, true).apply {
+        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        letterSpacing = 0.035f
         gravity = Gravity.CENTER
         minHeight = dpInt(45f)
         setPadding(dpInt(12f), 0, dpInt(12f), 0)

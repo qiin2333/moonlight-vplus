@@ -45,8 +45,8 @@ internal fun CuteFeatureGuideCard(
     onSkip: () -> Unit
 ) {
     val accent = colorResource(R.color.game_menu_accent)
-    val ink = Color(0xFF403A3A)
-    val mutedInk = Color(0xFF5C5252)
+    val ink = Color(0xFF4C4346)
+    val mutedInk = Color(0xFF6C6063)
     val paper = Color(0xFFFFF8E8)
 
     Box(
@@ -85,22 +85,25 @@ internal fun CuteFeatureGuideCard(
             Text(
                 text = eyebrow,
                 color = accent,
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 0.7.sp
             )
             Text(
                 text = title,
                 color = ink,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 0.5.sp,
+                lineHeight = 29.sp
             )
             HandDrawnUnderline(accent)
             Text(
                 text = body,
                 color = mutedInk,
-                fontSize = 17.sp,
-                lineHeight = 24.sp
+                fontSize = 16.sp,
+                letterSpacing = 0.3.sp,
+                lineHeight = 25.sp
             )
             Spacer(Modifier.height(2.dp))
             Row(
@@ -112,17 +115,25 @@ internal fun CuteFeatureGuideCard(
                     Text(
                         text = stringResource(R.string.feature_guide_skip),
                         color = mutedInk,
-                        fontSize = 16.sp
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 0.5.sp
                     )
                 }
                 Text(
                     text = "│",
                     modifier = Modifier.clearAndSetSemantics { },
                     color = Color(0xFFD8CABC),
-                    fontSize = 16.sp
+                    fontSize = 15.sp
                 )
                 TextButton(onClick = onAction) {
-                    Text(text = actionLabel, color = accent, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = actionLabel,
+                        color = accent,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 0.5.sp
+                    )
                 }
             }
         }
