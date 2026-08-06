@@ -88,6 +88,13 @@ class GameMenu(
         return activeDialog?.isShowing == true
     }
 
+    fun dispatchControllerKeyEvent(event: KeyEvent): Boolean {
+        val dialog = activeDialog ?: return false
+        if (!dialog.isShowing) return false
+        dialog.dispatchKeyEvent(event)
+        return true
+    }
+
     /**
      * 菜单选项类
      */
