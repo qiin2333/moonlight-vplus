@@ -1,6 +1,5 @@
 package com.limelight.gamemenu
 
-import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,23 +28,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.limelight.R
-
-internal object GameMenuFeatureGuide {
-    // Change this ID whenever a new set of game-menu discoveries should be shown.
-    private const val CURRENT_GUIDE_ID = "game_menu_discovery_2026_08"
-    private const val PREFS_NAME = "feature_guides"
-
-    fun hasSeenCurrentGuide(context: Context): Boolean =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getBoolean(CURRENT_GUIDE_ID, false)
-
-    fun markCurrentGuideSeen(context: Context) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putBoolean(CURRENT_GUIDE_ID, true)
-            .apply()
-    }
-}
 
 @Composable
 internal fun CuteFeatureGuideCard(

@@ -62,6 +62,7 @@ import com.limelight.ui.AdapterRecyclerBridge
 import com.limelight.ui.AppDisplayOption
 import com.limelight.ui.AppScreenCombinationOption
 import com.limelight.ui.AppSettingsPanel
+import com.limelight.ui.FeatureGuideRegistry
 import com.limelight.ui.ScreenCombinationModePickerView
 import com.limelight.ui.SelectionIndicatorAnimator
 import com.limelight.ui.TopPanelHandleController
@@ -1371,10 +1372,11 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
     private fun maybeShowAppViewFeatureGuide() {
         if (featureGuideScheduled) return
         featureGuideScheduled = true
-        val root = findViewById<View>(android.R.id.content) ?: return
-        root.postDelayed({
-            if (!inForeground || isFinishing || isDestroyed) return@postDelayed
-            val steps = buildList {
+        ViewFeatureGuide.showWhenReady(
+            activity = this,
+            spec = FeatureGuideRegistry.AppViewDiscovery
+        ) {
+            buildList {
                 findViewById<View>(R.id.topPanelToggle)?.let {
                     add(ViewFeatureGuideStep(
                         it,
@@ -1390,8 +1392,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
                     ))
                 }
             }
-            ViewFeatureGuide.show(this, "appview_discovery_2026_08", steps)
-        }, 1_200L)
+        }
     }
 
     override fun onPause() {

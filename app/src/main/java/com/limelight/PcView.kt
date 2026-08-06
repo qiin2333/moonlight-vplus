@@ -39,6 +39,7 @@ import com.limelight.preferences.StreamSettings
 import com.limelight.services.KeyboardAccessibilityService
 import com.limelight.ui.AdapterFragment
 import com.limelight.ui.AdapterFragmentCallbacks
+import com.limelight.ui.FeatureGuideRegistry
 import com.limelight.ui.ViewFeatureGuide
 import com.limelight.ui.ViewFeatureGuideStep
 import com.limelight.utils.AboutDialogLauncher
@@ -517,19 +518,18 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     }
 
     private fun maybeShowPcViewFeatureGuide() {
-        val root = findViewById<View>(R.id.pcViewRootLayout) ?: return
-        root.postDelayed({
-            if (!inForeground || isFinishing || isDestroyed) return@postDelayed
-            val hostCard = currentGuideHostCard()
+        ViewFeatureGuide.showWhenReady(
+            activity = this,
+            spec = FeatureGuideRegistry.PcViewDiscovery
+        ) {
+            val hostCard = currentGuideHostCard() ?: return@showWhenReady emptyList()
 
-            val steps = buildList {
-                hostCard?.let {
-                    add(ViewFeatureGuideStep(
-                        { currentGuideHostCard() },
-                        getString(R.string.pcview_guide_host_title),
-                        getString(R.string.pcview_guide_host_body)
-                    ))
-                }
+            buildList {
+                add(ViewFeatureGuideStep(
+                    { currentGuideHostCard() },
+                    getString(R.string.pcview_guide_host_title),
+                    getString(R.string.pcview_guide_host_body)
+                ))
                 findViewById<View>(R.id.pcToolbarMenuButton)?.let {
                     add(ViewFeatureGuideStep(
                         it,
@@ -545,8 +545,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                     ))
                 }
             }
-            ViewFeatureGuide.show(this, "pcview_discovery_2026_08", steps)
-        }, 2_000L)
+        }
     }
 
     private fun currentGuideHostCard(): View? {

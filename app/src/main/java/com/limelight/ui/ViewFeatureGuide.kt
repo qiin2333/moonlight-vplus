@@ -1,7 +1,6 @@
 package com.limelight.ui
 
 import android.app.Activity
-import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.DashPathEffect
@@ -12,6 +11,7 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.RectF
+import android.os.SystemClock
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
@@ -33,17 +33,18 @@ data class ViewFeatureGuideStep(
 }
 
 object ViewFeatureGuide {
-    private const val PREFS_NAME = "feature_guides"
     private const val OVERLAY_TAG = "moonlight_view_feature_guide"
+    private const val DEFAULT_READY_TIMEOUT_MS = 5_000L
+    private const val READY_RETRY_MS = 120L
 
     fun show(
         activity: Activity,
-        guideId: String,
+        spec: FeatureGuideSpec,
         steps: List<ViewFeatureGuideStep>
     ): Boolean {
         if (steps.isEmpty() || activity.isFinishing || activity.isDestroyed) return false
-        val prefs = activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        if (prefs.getBoolean(guideId, false)) return false
+        val store = FeatureGuideStore(activity)
+        if (!store.shouldShow(spec)) return false
 
         val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return false
         if (content.findViewWithTag<View>(OVERLAY_TAG) != null) return false
@@ -54,9 +55,11 @@ object ViewFeatureGuide {
         }
         if (visibleSteps.isEmpty()) return false
 
-        val overlay = FeatureGuideOverlay(activity, visibleSteps) {
-            prefs.edit().putBoolean(guideId, true).apply()
-        }.apply { tag = OVERLAY_TAG }
+        val overlay = FeatureGuideOverlay(
+            activity = activity,
+            steps = visibleSteps,
+            onCompleted = { store.markCompleted(spec) }
+        ).apply { tag = OVERLAY_TAG }
         content.addView(
             overlay,
             FrameLayout.LayoutParams(
@@ -66,12 +69,42 @@ object ViewFeatureGuide {
         )
         return true
     }
+
+    /**
+     * Waits for real, visible targets instead of relying on a device-specific startup delay.
+     * A snoozed guide is not retried until its page schedules it again on a future visit.
+     */
+    fun showWhenReady(
+        activity: Activity,
+        spec: FeatureGuideSpec,
+        timeoutMillis: Long = DEFAULT_READY_TIMEOUT_MS,
+        stepsProvider: () -> List<ViewFeatureGuideStep>
+    ) {
+        val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
+        val store = FeatureGuideStore(activity)
+        if (!store.shouldShow(spec)) return
+
+        val deadline = SystemClock.uptimeMillis() + timeoutMillis
+        lateinit var attempt: Runnable
+        attempt = Runnable {
+            if (activity.isFinishing || activity.isDestroyed || !store.shouldShow(spec)) {
+                return@Runnable
+            }
+            if (activity.hasWindowFocus() && show(activity, spec, stepsProvider())) {
+                return@Runnable
+            }
+            if (SystemClock.uptimeMillis() < deadline) {
+                content.postDelayed(attempt, READY_RETRY_MS)
+            }
+        }
+        content.post(attempt)
+    }
 }
 
 private class FeatureGuideOverlay(
     private val activity: Activity,
     private val steps: List<ViewFeatureGuideStep>,
-    private val onFinished: () -> Unit
+    private val onCompleted: () -> Unit
 ) : View(activity) {
     private val density = resources.displayMetrics.density
     private val accent = resources.getColor(R.color.game_menu_accent, activity.theme)
@@ -114,7 +147,7 @@ private class FeatureGuideOverlay(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         if (!updateTargetRect()) {
-            finish()
+            dismiss(completed = false)
             return
         }
 
@@ -336,19 +369,19 @@ private class FeatureGuideOverlay(
         if (event.action != MotionEvent.ACTION_UP) return true
         when {
             actionRect.contains(event.x, event.y) -> {
-                if (currentIndex == steps.lastIndex) finish() else {
+                if (currentIndex == steps.lastIndex) dismiss(completed = true) else {
                     currentIndex++
                     contentDescription = steps[currentIndex].title
                     invalidate()
                 }
             }
-            skipRect.contains(event.x, event.y) -> finish()
+            skipRect.contains(event.x, event.y) -> dismiss(completed = false)
         }
         return true
     }
 
-    private fun finish() {
-        onFinished()
+    private fun dismiss(completed: Boolean) {
+        if (completed) onCompleted()
         (parent as? ViewGroup)?.removeView(this)
     }
 

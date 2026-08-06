@@ -71,6 +71,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.limelight.R
+import com.limelight.ui.FeatureGuideRegistry
+import com.limelight.ui.FeatureGuideStore
 import com.joco.showcase.sequence.SequenceShowcase
 import com.joco.showcase.sequence.rememberSequenceShowcaseState
 import com.joco.showcaseview.BackgroundAlpha
@@ -129,8 +131,9 @@ internal fun GameMenuScreen(
     val palette = gameMenuPalette()
     val context = LocalContext.current
     val showcaseState = rememberSequenceShowcaseState()
-    val shouldShowFeatureGuide = remember(context) {
-        !GameMenuFeatureGuide.hasSeenCurrentGuide(context)
+    val guideStore = remember(context) { FeatureGuideStore(context) }
+    var guidePending by remember(context) {
+        mutableStateOf(guideStore.shouldShow(FeatureGuideRegistry.GameMenuDiscovery))
     }
     val configuration = LocalConfiguration.current
     val maxMenuHeight = rememberGameMenuMaxHeight()
@@ -143,8 +146,13 @@ internal fun GameMenuScreen(
 
     GameMenuTheme(palette) {
         SequenceShowcase(state = showcaseState) {
-            val finishGuide = {
-                GameMenuFeatureGuide.markCurrentGuideSeen(context)
+            val completeGuide = {
+                guideStore.markCompleted(FeatureGuideRegistry.GameMenuDiscovery)
+                guidePending = false
+                showcaseState.dismiss()
+            }
+            val snoozeGuide = {
+                guidePending = false
                 showcaseState.dismiss()
             }
             val quickActionGuideModifier = Modifier.sequenceShowcaseTarget(
@@ -160,7 +168,7 @@ internal fun GameMenuScreen(
                     body = stringResource(R.string.feature_guide_quick_actions_body),
                     actionLabel = stringResource(R.string.feature_guide_next),
                     onAction = showcaseState::next,
-                    onSkip = finishGuide
+                    onSkip = snoozeGuide
                 )
             }
             val crownGuideModifier = Modifier.sequenceShowcaseTarget(
@@ -175,8 +183,8 @@ internal fun GameMenuScreen(
                     title = stringResource(R.string.feature_guide_crown_title),
                     body = stringResource(R.string.feature_guide_crown_body),
                     actionLabel = stringResource(R.string.feature_guide_done),
-                    onAction = finishGuide,
-                    onSkip = finishGuide
+                    onAction = completeGuide,
+                    onSkip = snoozeGuide
                 )
             }
 
@@ -215,8 +223,11 @@ internal fun GameMenuScreen(
         }
     }
 
-    LaunchedEffect(shouldShowFeatureGuide, state.isSubmenu) {
-        if (shouldShowFeatureGuide && !state.isSubmenu) {
+    LaunchedEffect(guidePending, state.isSubmenu) {
+        if (guidePending && !state.isSubmenu) {
+            // Consume the launch in this composition. "Maybe later" remains
+            // incomplete in the store, so it can appear on a future menu visit.
+            guidePending = false
             showcaseState.start()
         }
     }
