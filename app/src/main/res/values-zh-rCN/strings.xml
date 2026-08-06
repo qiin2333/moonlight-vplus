@@ -1779,7 +1779,7 @@
     <string name="feature_guide_done">知道啦</string>
     <string name="feature_guide_skip">下次再说</string>
     <string name="pcview_guide_host_title">卡片和头像，操作不同</string>
-    <string name="pcview_guide_host_body">点击主机卡片会进入应用列表；点击头像会直接开始串流。长按卡片还可以测试网络、选择屏幕、打开 Web UI，以及查看更多操作。</string>
+    <string name="pcview_guide_host_body">点击主机卡片会进入应用列表；点击头像会直接开始串流。长按卡片还可以测试网络、启动副屏串流、打开 Web UI，以及查看更多操作。</string>
     <string name="pcview_guide_more_title">小小三点，藏着实用工具</string>
     <string name="pcview_guide_more_body">从这里恢复上次串流、显示未配对主机，或者切换应用主题。</string>
     <string name="pcview_guide_scene_title">右侧小标签会记住整套场景</string>

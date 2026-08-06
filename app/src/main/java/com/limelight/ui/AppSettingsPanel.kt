@@ -218,6 +218,8 @@ fun AppSettingsPanel(
     }
     val firstItemFocusRequester = remember { FocusRequester() }
     var isHeaderLaidOut by remember { mutableStateOf(false) }
+    var isRevealDelayComplete by remember { mutableStateOf(false) }
+    var hasRequestedInitialFocus by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val isDarkTheme = isSystemInDarkTheme()
     val panelSurface = colorResource(
@@ -248,15 +250,23 @@ fun AppSettingsPanel(
 
     LaunchedEffect(isOpen) {
         if (isOpen) {
+            isRevealDelayComplete = false
+            hasRequestedInitialFocus = false
             // Let the 240 ms reveal finish before scrolling or transferring
             // focus; both operations can trigger extra Compose layout passes.
             delay(260)
             listState.scrollToItem(0)
-            if (isHeaderLaidOut) {
-                firstItemFocusRequester.requestFocus()
-            }
+            isRevealDelayComplete = true
         } else {
+            isRevealDelayComplete = false
+            hasRequestedInitialFocus = false
             isHeaderLaidOut = false
+        }
+    }
+
+    LaunchedEffect(isOpen, isRevealDelayComplete, isHeaderLaidOut) {
+        if (isOpen && isRevealDelayComplete && isHeaderLaidOut && !hasRequestedInitialFocus) {
+            hasRequestedInitialFocus = firstItemFocusRequester.requestFocus()
         }
     }
 

@@ -57,22 +57,13 @@
         android:visibility="gone" />
 
     <!-- 顶部下拉手柄标签 -->
-    <TextView
+    <com.limelight.ui.TopPanelToggleView
         android:id="@+id/topPanelToggle"
         android:layout_width="84dp"
         android:layout_height="36dp"
-        android:gravity="center"
         android:layout_centerHorizontal="true"
         android:layout_alignParentTop="true"
         android:layout_marginTop="@dimen/activity_safearea_top"
-        android:paddingStart="14dp"
-        android:paddingEnd="14dp"
-        android:paddingTop="6dp"
-        android:paddingBottom="6dp"
-        android:textColor="@color/ui_shell_text_primary"
-        android:textSize="14sp"
-        android:fontFamily="sans-serif-light"
-        android:background="@drawable/dropdown_handle_background"
         android:elevation="4dp"
         android:clickable="true"
         android:focusable="true"

@@ -17,13 +17,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -104,12 +110,17 @@ internal fun CuteFeatureGuideCard(
             ) {
                 TextButton(onClick = onSkip) {
                     Text(
-                        text = androidx.compose.ui.res.stringResource(R.string.feature_guide_skip),
+                        text = stringResource(R.string.feature_guide_skip),
                         color = mutedInk,
                         fontSize = 16.sp
                     )
                 }
-                Text(text = "│", color = Color(0xFFD8CABC), fontSize = 16.sp)
+                Text(
+                    text = "│",
+                    modifier = Modifier.clearAndSetSemantics { },
+                    color = Color(0xFFD8CABC),
+                    fontSize = 16.sp
+                )
                 TextButton(onClick = onAction) {
                     Text(text = actionLabel, color = accent, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
@@ -126,7 +137,14 @@ private fun PaperNoteConnector(modifier: Modifier, accent: Color) {
             moveTo(size.width * 0.72f, 8.dp.toPx())
             cubicTo(size.width * 0.72f, 15.dp.toPx(), 132.dp.toPx(), 9.dp.toPx(), 108.dp.toPx(), 16.dp.toPx())
         }
-        drawPath(leader, accent, style = Stroke(2.dp.toPx(), pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 5.dp.toPx()))))
+        drawPath(
+            leader,
+            accent,
+            style = Stroke(
+                2.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 5.dp.toPx()))
+            )
+        )
         val arrowTip = Offset(86.dp.toPx(), leaderBottom)
         val back = Offset(0.860f, -0.511f)
         val side = Offset(0.511f, 0.860f)
@@ -148,8 +166,8 @@ private fun PaperNoteConnector(modifier: Modifier, accent: Color) {
             accent,
             style = Stroke(
                 2.dp.toPx(),
-                cap = androidx.compose.ui.graphics.StrokeCap.Round,
-                join = androidx.compose.ui.graphics.StrokeJoin.Round
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round
             )
         )
 
@@ -158,7 +176,7 @@ private fun PaperNoteConnector(modifier: Modifier, accent: Color) {
                 color = Color(0xFFFF978F),
                 topLeft = Offset(4.dp.toPx(), 28.dp.toPx()),
                 size = Size(52.dp.toPx(), 18.dp.toPx()),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx())
+                cornerRadius = CornerRadius(2.dp.toPx())
             )
             var x = 9.dp.toPx()
             while (x < 52.dp.toPx()) {

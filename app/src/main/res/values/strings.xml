@@ -1841,7 +1841,7 @@ Tap again to replace it.</string>
     <string name="feature_guide_done">Got it!</string>
     <string name="feature_guide_skip">Maybe later</string>
     <string name="pcview_guide_host_title">Card and avatar act differently</string>
-    <string name="pcview_guide_host_body">Tap the PC card to open its app list; tap the avatar to start streaming directly. Long-press the card for network tests, display selection, Web UI, details, and more.</string>
+    <string name="pcview_guide_host_body">Tap the PC card to open its app list; tap the avatar to start streaming directly. Long-press the card for network tests, secondary-screen streaming, Web UI, details, and more.</string>
     <string name="pcview_guide_more_title">A tiny menu for useful extras</string>
     <string name="pcview_guide_more_body">Restore your last session, show unpaired PCs, or switch the app theme from here.</string>
     <string name="pcview_guide_scene_title">These little tabs remember a whole scene</string>

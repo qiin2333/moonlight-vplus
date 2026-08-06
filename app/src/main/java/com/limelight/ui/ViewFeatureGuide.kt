@@ -11,15 +11,25 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.RectF
+import android.os.Build
+import android.os.Bundle
 import android.os.SystemClock
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
 import android.util.TypedValue
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewConfiguration
+import android.view.accessibility.AccessibilityEvent
 import android.widget.FrameLayout
+import android.widget.Button
+import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
+import androidx.customview.widget.ExploreByTouchHelper
 import com.limelight.R
 import kotlin.math.max
 import kotlin.math.min
@@ -85,18 +95,35 @@ object ViewFeatureGuide {
         if (!store.shouldShow(spec)) return
 
         val deadline = SystemClock.uptimeMillis() + timeoutMillis
-        lateinit var attempt: Runnable
-        attempt = Runnable {
-            if (activity.isFinishing || activity.isDestroyed || !store.shouldShow(spec)) {
-                return@Runnable
+        val attempt = object : Runnable, View.OnAttachStateChangeListener {
+            override fun run() {
+                if (activity.isFinishing || activity.isDestroyed || !store.shouldShow(spec)) {
+                    stop()
+                    return
+                }
+                if (activity.hasWindowFocus() && show(activity, spec, stepsProvider())) {
+                    stop()
+                    return
+                }
+                if (SystemClock.uptimeMillis() < deadline) {
+                    content.postDelayed(this, READY_RETRY_MS)
+                } else {
+                    stop()
+                }
             }
-            if (activity.hasWindowFocus() && show(activity, spec, stepsProvider())) {
-                return@Runnable
+
+            override fun onViewAttachedToWindow(view: View) = Unit
+
+            override fun onViewDetachedFromWindow(view: View) {
+                stop()
             }
-            if (SystemClock.uptimeMillis() < deadline) {
-                content.postDelayed(attempt, READY_RETRY_MS)
+
+            private fun stop() {
+                content.removeCallbacks(this)
+                content.removeOnAttachStateChangeListener(this)
             }
         }
+        content.addOnAttachStateChangeListener(attempt)
         content.post(attempt)
     }
 }
@@ -107,7 +134,7 @@ private class FeatureGuideOverlay(
     private val onCompleted: () -> Unit
 ) : View(activity) {
     private val density = resources.displayMetrics.density
-    private val accent = resources.getColor(R.color.game_menu_accent, activity.theme)
+    private val accent = ContextCompat.getColor(activity, R.color.game_menu_accent)
     private val ink = Color.rgb(64, 58, 58)
     private val mutedInk = Color.rgb(92, 82, 82)
     private val paper = Color.rgb(255, 248, 232)
@@ -133,15 +160,79 @@ private class FeatureGuideOverlay(
     private val skipPaint = textPaint(16f, mutedInk, true)
     private val highlightRect = RectF()
     private val cardRect = RectF()
+    private val contentViewport = RectF()
     private val skipRect = RectF()
     private val actionRect = RectF()
     private var currentIndex = 0
+    private var contentScrollOffset = 0f
+    private var contentScrollMax = 0f
+    private var lastTouchY = 0f
+    private var touchStartedInContent = false
+    private var isDraggingContent = false
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+    private val accessibilityHelper = object : ExploreByTouchHelper(this) {
+        override fun getVirtualViewAt(x: Float, y: Float): Int = when {
+            skipRect.contains(x, y) -> VIRTUAL_SKIP
+            actionRect.contains(x, y) -> VIRTUAL_ACTION
+            else -> INVALID_ID
+        }
+
+        override fun getVisibleVirtualViews(virtualViewIds: MutableList<Int>) {
+            virtualViewIds += VIRTUAL_SKIP
+            virtualViewIds += VIRTUAL_ACTION
+        }
+
+        override fun onPopulateEventForVirtualView(virtualViewId: Int, event: AccessibilityEvent) {
+            event.contentDescription = labelFor(virtualViewId)
+        }
+
+        @Suppress("DEPRECATION")
+        override fun onPopulateNodeForVirtualView(
+            virtualViewId: Int,
+            node: AccessibilityNodeInfoCompat
+        ) {
+            node.className = Button::class.java.name
+            node.contentDescription = labelFor(virtualViewId)
+            node.isClickable = true
+            node.isFocusable = true
+            node.addAction(AccessibilityNodeInfoCompat.ACTION_CLICK)
+            val bounds = if (virtualViewId == VIRTUAL_SKIP) skipRect else actionRect
+            node.setBoundsInParent(
+                Rect(
+                    bounds.left.toInt(),
+                    bounds.top.toInt(),
+                    bounds.right.toInt(),
+                    bounds.bottom.toInt()
+                )
+            )
+        }
+
+        override fun onPerformActionForVirtualView(
+            virtualViewId: Int,
+            action: Int,
+            arguments: Bundle?
+        ): Boolean {
+            if (action != AccessibilityNodeInfoCompat.ACTION_CLICK) return false
+            return when (virtualViewId) {
+                VIRTUAL_SKIP -> {
+                    dismiss(completed = false)
+                    true
+                }
+                VIRTUAL_ACTION -> {
+                    performPrimaryAction()
+                    true
+                }
+                else -> false
+            }
+        }
+    }
 
     init {
         setLayerType(LAYER_TYPE_SOFTWARE, null)
         isClickable = true
         isFocusable = true
         contentDescription = steps.first().title
+        ViewCompat.setAccessibilityDelegate(this, accessibilityHelper)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -193,18 +284,24 @@ private class FeatureGuideOverlay(
         val innerWidth = (cardWidth - dp(48f)).toInt()
         val bodyLayout = staticLayout(step.body, bodyPaint, innerWidth)
         val titleLayout = staticLayout(step.title, titlePaint, innerWidth)
-        val cardHeight = dp(40f) + titleLayout.height + dp(13f) +
+        val naturalCardHeight = dp(40f) + titleLayout.height + dp(13f) +
             bodyLayout.height + dp(22f) + dp(46f)
+        val availableCardHeight = (height - edge * 2f).coerceAtLeast(1f)
+        val cardHeight = min(naturalCardHeight, availableCardHeight)
 
         val preferredLeft = highlightRect.centerX() - cardWidth / 2f
         val left = preferredLeft.coerceIn(edge, max(edge, width - edge - cardWidth))
         val belowTop = highlightRect.bottom + dp(64f)
         val aboveTop = highlightRect.top - dp(64f) - cardHeight
-        val top = when {
+        val unconstrainedTop = when {
             belowTop + cardHeight <= height - edge -> belowTop
             aboveTop >= edge -> aboveTop
             else -> ((height - cardHeight) / 2f).coerceAtLeast(edge)
         }
+        val top = unconstrainedTop.coerceIn(
+            edge,
+            (height - edge - cardHeight).coerceAtLeast(edge)
+        )
         cardRect.set(left, top, left + cardWidth, top + cardHeight)
 
         canvas.save()
@@ -217,7 +314,20 @@ private class FeatureGuideOverlay(
         drawTape(canvas)
 
         val textLeft = cardRect.left + dp(24f)
-        var y = cardRect.top + dp(30f)
+        val buttonTop = cardRect.bottom - dp(50f)
+        contentViewport.set(
+            textLeft,
+            cardRect.top + dp(18f),
+            cardRect.right - dp(24f),
+            (buttonTop - dp(4f)).coerceAtLeast(cardRect.top + dp(18f))
+        )
+        val contentHeight = dp(19f) + titleLayout.height + dp(13f) + bodyLayout.height
+        contentScrollMax = (contentHeight - contentViewport.height()).coerceAtLeast(0f)
+        contentScrollOffset = contentScrollOffset.coerceIn(0f, contentScrollMax)
+
+        canvas.save()
+        canvas.clipRect(contentViewport)
+        var y = cardRect.top + dp(30f) - contentScrollOffset
         val eyebrow = activity.getString(R.string.feature_guide_step, currentIndex + 1, steps.size)
         canvas.drawText(eyebrow, textLeft, y, eyebrowPaint)
         y += dp(19f)
@@ -234,8 +344,8 @@ private class FeatureGuideOverlay(
         canvas.translate(textLeft, y)
         bodyLayout.draw(canvas)
         canvas.restore()
+        canvas.restore()
 
-        val buttonTop = cardRect.bottom - dp(50f)
         val actionLabel = activity.getString(
             if (currentIndex == steps.lastIndex) R.string.feature_guide_done else R.string.feature_guide_next
         )
@@ -366,18 +476,66 @@ private class FeatureGuideOverlay(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (event.action != MotionEvent.ACTION_UP) return true
-        when {
-            actionRect.contains(event.x, event.y) -> {
-                if (currentIndex == steps.lastIndex) dismiss(completed = true) else {
-                    currentIndex++
-                    contentDescription = steps[currentIndex].title
-                    invalidate()
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                lastTouchY = event.y
+                touchStartedInContent = contentViewport.contains(event.x, event.y)
+                isDraggingContent = false
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (touchStartedInContent && contentScrollMax > 0f) {
+                    val delta = lastTouchY - event.y
+                    if (kotlin.math.abs(delta) >= touchSlop || isDraggingContent) {
+                        isDraggingContent = true
+                        contentScrollOffset = (contentScrollOffset + delta)
+                            .coerceIn(0f, contentScrollMax)
+                        invalidate()
+                    }
+                    lastTouchY = event.y
                 }
             }
-            skipRect.contains(event.x, event.y) -> dismiss(completed = false)
+            MotionEvent.ACTION_UP -> {
+                if (!isDraggingContent) {
+                    when {
+                        actionRect.contains(event.x, event.y) -> performPrimaryAction()
+                        skipRect.contains(event.x, event.y) -> dismiss(completed = false)
+                    }
+                }
+                touchStartedInContent = false
+                isDraggingContent = false
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                touchStartedInContent = false
+                isDraggingContent = false
+            }
         }
         return true
+    }
+
+    override fun dispatchHoverEvent(event: MotionEvent): Boolean =
+        accessibilityHelper.dispatchHoverEvent(event) || super.dispatchHoverEvent(event)
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean =
+        accessibilityHelper.dispatchKeyEvent(event) || super.dispatchKeyEvent(event)
+
+    private fun performPrimaryAction() {
+        if (currentIndex == steps.lastIndex) {
+            dismiss(completed = true)
+        } else {
+            currentIndex++
+            contentScrollOffset = 0f
+            contentDescription = steps[currentIndex].title
+            accessibilityHelper.invalidateRoot()
+            invalidate()
+        }
+    }
+
+    private fun labelFor(virtualViewId: Int): String = when (virtualViewId) {
+        VIRTUAL_SKIP -> activity.getString(R.string.feature_guide_skip)
+        else -> activity.getString(
+            if (currentIndex == steps.lastIndex) R.string.feature_guide_done
+            else R.string.feature_guide_next
+        )
     }
 
     private fun dismiss(completed: Boolean) {
@@ -394,12 +552,32 @@ private class FeatureGuideOverlay(
         )
     }
 
-    private fun staticLayout(text: String, paint: TextPaint, width: Int): StaticLayout =
-        StaticLayout.Builder.obtain(text, 0, text.length, paint, width)
-            .setAlignment(Layout.Alignment.ALIGN_NORMAL)
-            .setIncludePad(false)
-            .setLineSpacing(0f, 1.08f)
-            .build()
+    @Suppress("DEPRECATION")
+    private fun staticLayout(text: String, paint: TextPaint, width: Int): StaticLayout {
+        val safeWidth = width.coerceAtLeast(1)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            StaticLayout.Builder.obtain(text, 0, text.length, paint, safeWidth)
+                .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                .setIncludePad(false)
+                .setLineSpacing(0f, 1.08f)
+                .build()
+        } else {
+            StaticLayout(
+                text,
+                paint,
+                safeWidth,
+                Layout.Alignment.ALIGN_NORMAL,
+                1.08f,
+                0f,
+                false
+            )
+        }
+    }
 
     private fun dp(value: Float): Float = value * density
+
+    private companion object {
+        const val VIRTUAL_SKIP = 1
+        const val VIRTUAL_ACTION = 2
+    }
 }

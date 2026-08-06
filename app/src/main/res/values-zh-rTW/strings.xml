@@ -419,7 +419,7 @@
     <string name="feature_guide_done">知道啦</string>
     <string name="feature_guide_skip">下次再說</string>
     <string name="pcview_guide_host_title">卡片和頭像，操作不同</string>
-    <string name="pcview_guide_host_body">點擊主機卡片會進入應用程式列表；點擊頭像會直接開始串流。長按卡片還可以測試網路、選擇螢幕、開啟 Web UI，以及查看更多操作。</string>
+    <string name="pcview_guide_host_body">點擊主機卡片會進入應用程式列表；點擊頭像會直接開始串流。長按卡片還可以測試網路、啟動副螢幕串流、開啟 Web UI，以及查看更多操作。</string>
     <string name="pcview_guide_more_title">小小三點，藏著實用工具</string>
     <string name="pcview_guide_more_body">從這裡恢復上次串流、顯示未配對主機，或者切換應用程式主題。</string>
     <string name="pcview_guide_scene_title">右側小標籤會記住整套場景</string>

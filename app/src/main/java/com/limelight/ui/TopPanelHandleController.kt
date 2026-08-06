@@ -9,9 +9,7 @@ import android.graphics.PixelFormat
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
-import android.view.Gravity
 import android.view.animation.PathInterpolator
-import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import com.limelight.R
@@ -22,15 +20,22 @@ import kotlin.math.sin
 
 /** Owns the top-panel handle's rendering and transition state. */
 internal class TopPanelHandleController(
-    private val toggle: TextView
+    private val toggle: TopPanelToggleView
 ) {
     private val context = toggle.context
     private val density = toggle.resources.displayMetrics.density
     private val background = GradientDrawable()
+    private val backgroundColor = color(R.color.settings_drawer_background)
+    private val primaryColor = color(R.color.ui_shell_text_primary)
+    private val secondaryColor = withAlpha(color(R.color.ui_shell_text_secondary), 0.78f)
+    private val accentColor = color(R.color.game_menu_accent)
+    private val outlineColor = color(R.color.ui_shell_outline)
+    private val focusColor = color(R.color.ui_shell_accent)
+    private val cornerRadii = FloatArray(8)
     private val moonWheel = MoonWheelDrawable(
         density = density,
-        graphiteColor = color(R.color.ui_shell_text_primary),
-        accentColor = color(R.color.game_menu_accent)
+        graphiteColor = primaryColor,
+        accentColor = accentColor
     )
 
     private var progress = 0f
@@ -38,8 +43,8 @@ internal class TopPanelHandleController(
 
     init {
         toggle.text = null
-        toggle.foregroundGravity = Gravity.CENTER
-        toggle.foreground = moonWheel
+        toggle.centerDrawable = moonWheel
+        background.shape = GradientDrawable.RECTANGLE
         toggle.background = background
         toggle.setOnFocusChangeListener { _, _ -> updateAppearance(progress) }
         updateAppearance(0f)
@@ -68,42 +73,57 @@ internal class TopPanelHandleController(
         }
     }
 
+    fun release() {
+        animator?.removeAllUpdateListeners()
+        animator?.removeAllListeners()
+        animator?.cancel()
+        animator = null
+        toggle.animate().cancel()
+        toggle.onFocusChangeListener = null
+        toggle.centerDrawable = null
+    }
+
     private fun updateAppearance(value: Float) {
         val fraction = value.coerceIn(0f, 1f)
         progress = fraction
 
         // Render-thread scaling avoids remeasuring the parent layout each frame.
-        toggle.scaleX = 1f - (16f / 84f) * fraction
+        val handleWidth = toggle.width.takeIf { it > 0 }
+            ?: toggle.layoutParams.width.takeIf { it > 0 }
+            ?: (84f * density).roundToInt()
+        toggle.scaleX = 1f - ((16f * density) / handleWidth) * fraction
 
         val topRadius = (18f - 4f * fraction) * density
         val bottomRadius = (18f - 16f * fraction) * density
         val chromeAlpha = ((1f - fraction) / 0.6f).coerceIn(0f, 1f)
-        background.shape = GradientDrawable.RECTANGLE
-        background.setColor(withAlpha(color(R.color.settings_drawer_background), chromeAlpha))
-        background.cornerRadii = floatArrayOf(
-            topRadius, topRadius,
-            topRadius, topRadius,
-            bottomRadius, bottomRadius,
-            bottomRadius, bottomRadius
-        )
+        background.setColor(withAlpha(backgroundColor, chromeAlpha))
+        cornerRadii[0] = topRadius
+        cornerRadii[1] = topRadius
+        cornerRadii[2] = topRadius
+        cornerRadii[3] = topRadius
+        cornerRadii[4] = bottomRadius
+        cornerRadii[5] = bottomRadius
+        cornerRadii[6] = bottomRadius
+        cornerRadii[7] = bottomRadius
+        background.cornerRadii = cornerRadii
 
         val showFocusRing = toggle.hasFocus() && fraction < 0.5f
         background.setStroke(
             ((if (showFocusRing) 2f else 1f) * density).roundToInt().coerceAtLeast(1),
             if (showFocusRing) {
-                color(R.color.ui_shell_accent)
+                focusColor
             } else {
-                withAlpha(color(R.color.ui_shell_outline), chromeAlpha)
+                withAlpha(outlineColor, chromeAlpha)
             }
         )
 
         moonWheel.progress = fraction
         moonWheel.graphiteColor = ColorUtils.blendARGB(
-            color(R.color.ui_shell_text_primary),
-            withAlpha(color(R.color.ui_shell_text_secondary), 0.78f),
+            primaryColor,
+            secondaryColor,
             fraction
         )
-        moonWheel.accentColor = color(R.color.game_menu_accent)
+        moonWheel.accentColor = accentColor
     }
 
     private fun color(resourceId: Int): Int = ContextCompat.getColor(context, resourceId)
