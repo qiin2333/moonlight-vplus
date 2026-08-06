@@ -79,6 +79,8 @@ import com.joco.showcaseview.BackgroundAlpha
 import com.joco.showcaseview.ShowcaseAlignment
 import com.joco.showcaseview.ShowcasePosition
 import com.joco.showcaseview.highlight.ShowcaseHighlight
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private val GameMenuDialogShape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
 internal val GameMenuCardShape = RoundedCornerShape(10.dp)
@@ -129,11 +131,17 @@ internal fun GameMenuScreen(
     useFabricTexture: Boolean = true
 ) {
     val palette = gameMenuPalette()
-    val context = LocalContext.current
+    val appContext = LocalContext.current.applicationContext
     val showcaseState = rememberSequenceShowcaseState()
-    val guideStore = remember(context) { FeatureGuideStore(context) }
-    var guidePending by remember(context) {
-        mutableStateOf(guideStore.shouldShow(FeatureGuideRegistry.GameMenuDiscovery))
+    var guideStore by remember(appContext) { mutableStateOf<FeatureGuideStore?>(null) }
+    var guidePending by remember(appContext) { mutableStateOf(false) }
+    LaunchedEffect(appContext) {
+        val (store, shouldShow) = withContext(Dispatchers.IO) {
+            val loadedStore = FeatureGuideStore(appContext)
+            loadedStore to loadedStore.shouldShow(FeatureGuideRegistry.GameMenuDiscovery)
+        }
+        guideStore = store
+        guidePending = shouldShow
     }
     val configuration = LocalConfiguration.current
     val maxMenuHeight = rememberGameMenuMaxHeight()
@@ -147,7 +155,7 @@ internal fun GameMenuScreen(
     GameMenuTheme(palette) {
         SequenceShowcase(state = showcaseState) {
             val completeGuide = {
-                guideStore.markCompleted(FeatureGuideRegistry.GameMenuDiscovery)
+                guideStore?.markCompleted(FeatureGuideRegistry.GameMenuDiscovery)
                 guidePending = false
                 showcaseState.dismiss()
             }

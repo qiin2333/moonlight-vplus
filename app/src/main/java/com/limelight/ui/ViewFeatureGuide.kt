@@ -2,6 +2,7 @@ package com.limelight.ui
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.DashPathEffect
@@ -13,8 +14,11 @@ import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
+import android.graphics.drawable.Drawable
+import android.os.SystemClock
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -83,7 +87,7 @@ object ViewFeatureGuide {
         val store = FeatureGuideStore(activity)
         if (!store.shouldShow(spec)) return
 
-        val deadline = android.os.SystemClock.uptimeMillis() + timeoutMillis
+        val deadline = SystemClock.uptimeMillis() + timeoutMillis
         val attempt = object : Runnable, View.OnAttachStateChangeListener {
             override fun run() {
                 if (activity.isFinishing || activity.isDestroyed || !store.shouldShow(spec)) {
@@ -94,7 +98,7 @@ object ViewFeatureGuide {
                     stop()
                     return
                 }
-                if (android.os.SystemClock.uptimeMillis() < deadline) {
+                if (SystemClock.uptimeMillis() < deadline) {
                     content.postDelayed(this, READY_RETRY_MS)
                 } else {
                     stop()
@@ -159,6 +163,7 @@ private class FeatureGuideOverlay(
         strokeWidth = dp(1f)
     }
     private val highlightRect = RectF()
+    private val highlightEchoRect = RectF()
     private val cardRect = RectF()
     private var currentIndex = 0
     private var dismissScheduled = false
@@ -290,9 +295,10 @@ private class FeatureGuideOverlay(
 
         borderPaint.alpha = 225
         canvas.drawRoundRect(highlightRect, dp(14f), dp(14f), borderPaint)
-        val echo = RectF(highlightRect).apply { inset(-dp(3f), -dp(2f)) }
+        highlightEchoRect.set(highlightRect)
+        highlightEchoRect.inset(-dp(3f), -dp(2f))
         borderPaint.alpha = 90
-        canvas.drawRoundRect(echo, dp(16f), dp(16f), borderPaint)
+        canvas.drawRoundRect(highlightEchoRect, dp(16f), dp(16f), borderPaint)
         borderPaint.alpha = 255
 
         drawLeader(canvas)
@@ -304,8 +310,8 @@ private class FeatureGuideOverlay(
         drawTape(canvas)
     }
 
-    override fun onTouchEvent(event: android.view.MotionEvent): Boolean {
-        if (event.action == android.view.MotionEvent.ACTION_UP) performClick()
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (event.action == MotionEvent.ACTION_UP) performClick()
         return true
     }
 
@@ -467,7 +473,7 @@ private class FeatureGuideOverlay(
         setOnClickListener { onClick() }
     }
 
-    private fun selectableBackground(): android.graphics.drawable.Drawable? {
+    private fun selectableBackground(): Drawable? {
         val value = TypedValue()
         activity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, value, true)
         return ContextCompat.getDrawable(activity, value.resourceId)
@@ -482,8 +488,9 @@ private class FeatureGuideOverlay(
 }
 
 @SuppressLint("ViewConstructor")
-private class HandDrawnUnderline(context: android.content.Context, color: Int) : View(context) {
+private class HandDrawnUnderline(context: Context, color: Int) : View(context) {
     private val density = resources.displayMetrics.density
+    private val path = Path()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         this.color = color
         style = Paint.Style.STROKE
@@ -494,11 +501,10 @@ private class HandDrawnUnderline(context: android.content.Context, color: Int) :
     override fun onDraw(canvas: Canvas) {
         val y = height * 0.45f
         val right = width.toFloat()
-        val path = Path().apply {
-            moveTo(0f, y)
-            cubicTo(right * 0.22f, y - 2f * density, right * 0.45f, y + 2f * density, right * 0.66f, y)
-            cubicTo(right * 0.79f, y - 1.5f * density, right * 0.91f, y + 1.5f * density, right, y - 0.5f * density)
-        }
+        path.reset()
+        path.moveTo(0f, y)
+        path.cubicTo(right * 0.22f, y - 2f * density, right * 0.45f, y + 2f * density, right * 0.66f, y)
+        path.cubicTo(right * 0.79f, y - 1.5f * density, right * 0.91f, y + 1.5f * density, right, y - 0.5f * density)
         canvas.drawPath(path, paint)
     }
 }
