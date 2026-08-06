@@ -126,23 +126,30 @@ class ControllerDiagnosticActivity : ComponentActivity() {
         simulatorUiState = ShortcutSimulatorUiState()
     }
 
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (handleSimulatorKeyEvent(event, true)) return true
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (handleSimulatorKeyEvent(event, false)) return true
+        return super.onKeyUp(keyCode, event)
+    }
+
+    private fun handleSimulatorKeyEvent(event: KeyEvent, pressed: Boolean): Boolean {
         val inputDevice = event.device
         val sources = inputDevice?.sources ?: event.source
-        val isControllerEvent = inputDevice?.isVirtual != true && (
+        val isControllerEvent = inputDevice != null && !inputDevice.isVirtual && (
             sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
                 sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
             )
-        if (!isControllerEvent) return super.dispatchKeyEvent(event)
+        if (!isControllerEvent) return false
 
-        val buttonFlag = simulatorButtonFlag(event.keyCode) ?: return super.dispatchKeyEvent(event)
-        when (event.action) {
-            KeyEvent.ACTION_DOWN -> if (event.repeatCount == 0) {
-                updateSimulatorButton(event, buttonFlag, true)
-            }
-            KeyEvent.ACTION_UP -> updateSimulatorButton(event, buttonFlag, false)
+        val buttonFlag = simulatorButtonFlag(event.keyCode) ?: return false
+        if (!pressed || event.repeatCount == 0) {
+            updateSimulatorButton(event, buttonFlag, pressed)
         }
-        return true
+        return event.keyCode != KeyEvent.KEYCODE_BACK
     }
 
     override fun onDestroy() {
@@ -626,23 +633,29 @@ private fun ControllerDiagnosticTopBar(
                     .padding(horizontal = GameMenuDimens.section),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_arrow_back_24),
-                    contentDescription = stringResource(R.string.controller_diag_back),
-                    tint = primary,
+                Box(
                     modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(accent.copy(alpha = 0.08f))
-                        .border(
-                            GameMenuDimens.surfaceStroke,
-                            accent.copy(alpha = 0.18f),
-                            CircleShape
-                        )
+                        .size(48.dp)
                         .gamepadFocusOutline(CircleShape)
-                        .clickable(onClick = onBack)
-                        .padding(8.dp)
-                )
+                        .clickable(onClick = onBack),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_arrow_back_24),
+                        contentDescription = stringResource(R.string.controller_diag_back),
+                        tint = primary,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(accent.copy(alpha = 0.08f))
+                            .border(
+                                GameMenuDimens.surfaceStroke,
+                                accent.copy(alpha = 0.18f),
+                                CircleShape
+                            )
+                            .padding(8.dp)
+                    )
+                }
 
                 Spacer(Modifier.width(GameMenuDimens.section))
 
@@ -665,23 +678,29 @@ private fun ControllerDiagnosticTopBar(
                     )
                 }
 
-                Icon(
-                    painter = painterResource(R.drawable.phc_action_reset),
-                    contentDescription = stringResource(R.string.controller_diag_refresh),
-                    tint = accent,
+                Box(
                     modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(accent.copy(alpha = 0.10f))
-                        .border(
-                            GameMenuDimens.surfaceStroke,
-                            accent.copy(alpha = 0.20f),
-                            CircleShape
-                        )
+                        .size(48.dp)
                         .gamepadFocusOutline(CircleShape)
-                        .clickable(onClick = onRefresh)
-                        .padding(8.dp)
-                )
+                        .clickable(onClick = onRefresh),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.phc_action_reset),
+                        contentDescription = stringResource(R.string.controller_diag_refresh),
+                        tint = accent,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(accent.copy(alpha = 0.10f))
+                            .border(
+                                GameMenuDimens.surfaceStroke,
+                                accent.copy(alpha = 0.20f),
+                                CircleShape
+                            )
+                            .padding(8.dp)
+                    )
+                }
             }
         }
     }

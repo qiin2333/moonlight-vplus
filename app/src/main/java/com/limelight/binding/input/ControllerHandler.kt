@@ -2232,9 +2232,18 @@ class ControllerHandler(
                 UsbControllerShortcutStateMachine.Action.CANCEL_LONG_PRESS ->
                     mainThreadHandler.removeCallbacks(context.shortcutLongPressRunnable)
                 UsbControllerShortcutStateMachine.Action.SHOW_HINT -> {
-                    if (usbShortcutHintOwner == null || usbShortcutHintOwner === context) {
-                        usbShortcutHintOwner = context
-                        gestures.showUsbControllerShortcutHint()
+                    val showHint = Runnable {
+                        if (!stopped &&
+                            (usbShortcutHintOwner == null || usbShortcutHintOwner === context)
+                        ) {
+                            usbShortcutHintOwner = context
+                            gestures.showUsbControllerShortcutHint()
+                        }
+                    }
+                    if (Looper.myLooper() == mainThreadHandler.looper) {
+                        showHint.run()
+                    } else {
+                        mainThreadHandler.post(showHint)
                     }
                 }
                 UsbControllerShortcutStateMachine.Action.HIDE_HINT -> {
@@ -2300,6 +2309,10 @@ class ControllerHandler(
         context.physRightStickY = 0
         context.leftTrigger = 0
         context.rightTrigger = 0
+        if (context.gyroHoldActive) {
+            context.gyroHoldActive = false
+            gyroManager.onGyroHoldDeactivated(context)
+        }
         sendControllerInputPacket(context)
     }
 
@@ -2410,6 +2423,7 @@ class ControllerHandler(
 
     override fun reportControllerMotion(controllerId: Int, motionType: Byte, x: Float, y: Float, z: Float) {
         val context = usbDeviceContexts.get(controllerId) ?: return
+        if (context.shortcutState.isLocalInputCaptureActive()) return
 
         // 当启用"陀螺仪模拟右摇杆"或"陀螺仪模拟鼠标"时，拦截陀螺仪数据
         if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO) {

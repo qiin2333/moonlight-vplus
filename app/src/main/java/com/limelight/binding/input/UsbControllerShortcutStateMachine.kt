@@ -203,6 +203,11 @@ internal class UsbControllerShortcutStateMachine(
     @Synchronized
     fun isHintVisible(): Boolean = hintVisible
 
+    /** Returns whether every input from this controller currently belongs to a local action. */
+    @Synchronized
+    fun isLocalInputCaptureActive(): Boolean =
+        menuPending || menuActive || waitForRelease || exitPending
+
     private fun markHostNeutralStateRequired(): Boolean {
         if (hostNeutralStateSent) return false
         hostNeutralStateSent = true

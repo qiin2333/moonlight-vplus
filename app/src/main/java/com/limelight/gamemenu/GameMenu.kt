@@ -91,6 +91,10 @@ class GameMenu(
     fun dispatchControllerKeyEvent(event: KeyEvent): Boolean {
         val dialog = activeDialog ?: return false
         if (!dialog.isShowing) return false
+        if (event.keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_DOWN) {
+            if (!navigateBack()) dialog.dismiss()
+            return true
+        }
         dialog.dispatchKeyEvent(event)
         return true
     }

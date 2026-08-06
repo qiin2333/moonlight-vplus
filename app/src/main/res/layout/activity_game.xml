@@ -255,8 +255,8 @@
         android:visibility="gone"
         android:clickable="false"
         android:focusable="false"
-        android:elevation="24dp"
         android:preferKeepClear="true"
+        tools:ignore="UnusedAttribute"
         app:cardBackgroundColor="#F0202033"
         app:cardCornerRadius="14dp"
         app:cardElevation="12dp">
@@ -276,7 +276,7 @@
                 android:layout_height="24dp"
                 android:contentDescription="@null"
                 android:src="@drawable/phc_gamepad"
-                android:tint="@color/crown_accent" />
+                app:tint="@color/crown_accent" />
 
             <TextView
                 android:layout_width="wrap_content"
