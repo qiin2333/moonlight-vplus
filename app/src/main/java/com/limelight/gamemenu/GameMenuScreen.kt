@@ -71,6 +71,12 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.limelight.R
+import com.joco.showcase.sequence.SequenceShowcase
+import com.joco.showcase.sequence.rememberSequenceShowcaseState
+import com.joco.showcaseview.BackgroundAlpha
+import com.joco.showcaseview.ShowcaseAlignment
+import com.joco.showcaseview.ShowcasePosition
+import com.joco.showcaseview.highlight.ShowcaseHighlight
 
 private val GameMenuDialogShape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
 internal val GameMenuCardShape = RoundedCornerShape(10.dp)
@@ -121,6 +127,11 @@ internal fun GameMenuScreen(
     useFabricTexture: Boolean = true
 ) {
     val palette = gameMenuPalette()
+    val context = LocalContext.current
+    val showcaseState = rememberSequenceShowcaseState()
+    val shouldShowFeatureGuide = remember(context) {
+        !GameMenuFeatureGuide.hasSeenCurrentGuide(context)
+    }
     val configuration = LocalConfiguration.current
     val maxMenuHeight = rememberGameMenuMaxHeight()
     val wideLayout = configuration.screenWidthDp >= GAME_MENU_WIDE_LAYOUT_MIN_WIDTH_DP
@@ -131,35 +142,82 @@ internal fun GameMenuScreen(
     }
 
     GameMenuTheme(palette) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = horizontalInset)
-        ) {
-            Surface(
-                color = Color.Transparent,
-                shape = GameMenuDialogShape,
-                border = BorderStroke(GameMenuDimens.surfaceStroke, palette.dialogBorder),
+        SequenceShowcase(state = showcaseState) {
+            val finishGuide = {
+                GameMenuFeatureGuide.markCurrentGuideSeen(context)
+                showcaseState.dismiss()
+            }
+            val quickActionGuideModifier = Modifier.sequenceShowcaseTarget(
+                index = 0,
+                position = ShowcasePosition.Bottom,
+                alignment = ShowcaseAlignment.Start,
+                highlight = ShowcaseHighlight.Rectangular(12.dp),
+                backgroundAlpha = BackgroundAlpha.Dark
+            ) {
+                CuteFeatureGuideCard(
+                    eyebrow = stringResource(R.string.feature_guide_step, 1, 2),
+                    title = stringResource(R.string.feature_guide_quick_actions_title),
+                    body = stringResource(R.string.feature_guide_quick_actions_body),
+                    actionLabel = stringResource(R.string.feature_guide_next),
+                    onAction = showcaseState::next,
+                    onSkip = finishGuide
+                )
+            }
+            val crownGuideModifier = Modifier.sequenceShowcaseTarget(
+                index = 1,
+                position = ShowcasePosition.Bottom,
+                alignment = ShowcaseAlignment.End,
+                highlight = ShowcaseHighlight.Circular(targetMargin = 8.dp),
+                backgroundAlpha = BackgroundAlpha.Dark
+            ) {
+                CuteFeatureGuideCard(
+                    eyebrow = stringResource(R.string.feature_guide_step, 2, 2),
+                    title = stringResource(R.string.feature_guide_crown_title),
+                    body = stringResource(R.string.feature_guide_crown_body),
+                    actionLabel = stringResource(R.string.feature_guide_done),
+                    onAction = finishGuide,
+                    onSkip = finishGuide
+                )
+            }
+
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = maxMenuHeight)
+                    .padding(horizontal = horizontalInset)
             ) {
-                Box(
+                Surface(
+                    color = Color.Transparent,
+                    shape = GameMenuDialogShape,
+                    border = BorderStroke(GameMenuDimens.surfaceStroke, palette.dialogBorder),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .gameMenuFabricBackground(
-                            baseColor = palette.dialogBackground,
-                            darkTheme = palette.darkTheme,
-                            textureEnabled = useFabricTexture
-                        )
+                        .heightIn(max = maxMenuHeight)
                 ) {
-                    GameMenuContent(
-                        state = state,
-                        callbacks = callbacks,
-                        wideLayout = wideLayout && !state.isSubmenu
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .gameMenuFabricBackground(
+                                baseColor = palette.dialogBackground,
+                                darkTheme = palette.darkTheme,
+                                textureEnabled = useFabricTexture
+                            )
+                    ) {
+                        GameMenuContent(
+                            state = state,
+                            callbacks = callbacks,
+                            wideLayout = wideLayout && !state.isSubmenu,
+                            quickActionGuideModifier = quickActionGuideModifier,
+                            crownGuideModifier = crownGuideModifier
+                        )
+                    }
                 }
             }
+        }
+    }
+
+    LaunchedEffect(shouldShowFeatureGuide, state.isSubmenu) {
+        if (shouldShowFeatureGuide && !state.isSubmenu) {
+            showcaseState.start()
         }
     }
 }
@@ -210,7 +268,9 @@ private fun GameMenuTheme(
 private fun GameMenuContent(
     state: GameMenuComposeUiState,
     callbacks: GameMenuCallbacks,
-    wideLayout: Boolean
+    wideLayout: Boolean,
+    quickActionGuideModifier: Modifier = Modifier,
+    crownGuideModifier: Modifier = Modifier
 ) {
     var sliderGestureActive by remember { mutableStateOf(false) }
     val menuScrollState = rememberScrollState()
@@ -228,7 +288,7 @@ private fun GameMenuContent(
             .padding(GameMenuDimens.outer),
         verticalArrangement = Arrangement.spacedBy(GameMenuDimens.section)
     ) {
-        GameMenuHeader(state, callbacks)
+        GameMenuHeader(state, callbacks, crownGuideModifier)
 
         if (!state.isSubmenu) {
             QuickActionRow(
@@ -241,7 +301,8 @@ private fun GameMenuContent(
                 onToggleEdit = callbacks.onToggleQuickEdit,
                 onAdd = callbacks.onAddQuickAction,
                 onRemove = callbacks.onRemoveQuickAction,
-                onMove = callbacks.onMoveQuickAction
+                onMove = callbacks.onMoveQuickAction,
+                modifier = quickActionGuideModifier
             )
         }
 
@@ -401,7 +462,8 @@ private fun currentWindowContentHeightPx(
 @Composable
 private fun GameMenuHeader(
     state: GameMenuComposeUiState,
-    callbacks: GameMenuCallbacks
+    callbacks: GameMenuCallbacks,
+    crownGuideModifier: Modifier = Modifier
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -445,6 +507,7 @@ private fun GameMenuHeader(
                 contentDescription = state.crownToggleText,
                 tint = Color.Unspecified,
                 modifier = Modifier
+                    .then(crownGuideModifier)
                     .size(36.dp)
                     .clip(crownShape)
                     .background(colorResource(R.color.game_menu_accent).copy(alpha = 0.10f))

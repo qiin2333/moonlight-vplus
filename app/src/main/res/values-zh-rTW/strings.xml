@@ -409,4 +409,25 @@
     <string name="title_document_handbook">說明文件</string>
     <string name="summary_document_handbook">查看相關說明文件</string>
     <string name="title_about_us">關於我們</string>
+    <!-- 功能探索引導 -->
+    <string name="feature_guide_step">悄悄告訴你 · %1$d/%2$d</string>
+    <string name="feature_guide_quick_actions_title">把快捷列變成你的</string>
+    <string name="feature_guide_quick_actions_body">長按任意快捷按鈕，就能新增、移除或拖曳排序，把常用操作放在手邊。</string>
+    <string name="feature_guide_crown_title">讓設定戴上皇冠</string>
+    <string name="feature_guide_crown_body">控制佈局、快捷操作、觸控模式和回饋設定都能存成皇冠設定，一次整套切換。</string>
+    <string name="feature_guide_next">帶我看看</string>
+    <string name="feature_guide_done">知道啦</string>
+    <string name="feature_guide_skip">下次再說</string>
+    <string name="pcview_guide_host_title">卡片和頭像，操作不同</string>
+    <string name="pcview_guide_host_body">點擊主機卡片會進入應用程式列表；點擊頭像會直接開始串流。長按卡片還可以測試網路、選擇螢幕、開啟 Web UI，以及查看更多操作。</string>
+    <string name="pcview_guide_more_title">小小三點，藏著實用工具</string>
+    <string name="pcview_guide_more_body">從這裡恢復上次串流、顯示未配對主機，或者切換應用程式主題。</string>
+    <string name="pcview_guide_scene_title">右側小標籤會記住整套場景</string>
+    <string name="pcview_guide_scene_body">點按即可套用串流預設；長按會儲存目前解析度、位元率、HDR 和監控圖層設定。</string>
+    <string name="appview_guide_panel_title">設定可以從頂部拉下來</string>
+    <string name="appview_guide_panel_body">這裡能選擇背景樣式、螢幕組合和目標顯示器，也能進入完整串流設定。</string>
+    <string name="appview_guide_resume_title">標題也是恢復串流的捷徑</string>
+    <string name="appview_guide_resume_body">已有工作階段執行時，點一下電腦名稱和應用程式名稱，就能直接回到串流。</string>
+    <string name="appview_guide_card_title">長按應用程式，開啟隱藏抽屜</string>
+    <string name="appview_guide_card_body">無需啟動應用程式，就能使用上次設定恢復、建立捷徑、隱藏應用程式或查看詳情。</string>
 </resources>

@@ -68,6 +68,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.semantics.contentDescription
+import kotlinx.coroutines.delay
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import com.limelight.R
@@ -247,15 +248,15 @@ fun AppSettingsPanel(
 
     LaunchedEffect(isOpen) {
         if (isOpen) {
+            // Let the 240 ms reveal finish before scrolling or transferring
+            // focus; both operations can trigger extra Compose layout passes.
+            delay(260)
             listState.scrollToItem(0)
+            if (isHeaderLaidOut) {
+                firstItemFocusRequester.requestFocus()
+            }
         } else {
             isHeaderLaidOut = false
-        }
-    }
-
-    LaunchedEffect(isOpen, isHeaderLaidOut) {
-        if (isOpen && isHeaderLaidOut) {
-            firstItemFocusRequester.requestFocus()
         }
     }
 

@@ -1831,4 +1831,25 @@ Tap again to replace it.</string>
     <string name="handbook_error_unavailable">The handbook is temporarily unavailable. Please try again later.</string>
     <string name="handbook_retry">Tap to retry</string>
     <string name="title_about_us">About Us</string>
+    <!-- Feature discovery -->
+    <string name="feature_guide_step">A LITTLE SECRET · %1$d/%2$d</string>
+    <string name="feature_guide_quick_actions_title">Make this row yours</string>
+    <string name="feature_guide_quick_actions_body">Press and hold a shortcut to add, remove, or rearrange the actions you use most.</string>
+    <string name="feature_guide_crown_title">Your setup can wear a Crown</string>
+    <string name="feature_guide_crown_body">Save controls, shortcuts, touch mode, and feedback as a Crown profile, then switch them together.</string>
+    <string name="feature_guide_next">Show me</string>
+    <string name="feature_guide_done">Got it!</string>
+    <string name="feature_guide_skip">Maybe later</string>
+    <string name="pcview_guide_host_title">Card and avatar act differently</string>
+    <string name="pcview_guide_host_body">Tap the PC card to open its app list; tap the avatar to start streaming directly. Long-press the card for network tests, display selection, Web UI, details, and more.</string>
+    <string name="pcview_guide_more_title">A tiny menu for useful extras</string>
+    <string name="pcview_guide_more_body">Restore your last session, show unpaired PCs, or switch the app theme from here.</string>
+    <string name="pcview_guide_scene_title">These little tabs remember a whole scene</string>
+    <string name="pcview_guide_scene_body">Tap to apply a streaming preset. Long-press to save your current resolution, bitrate, HDR, and overlay settings.</string>
+    <string name="appview_guide_panel_title">Pull settings down from here</string>
+    <string name="appview_guide_panel_body">Choose the background style, screen combination, target display, or open complete stream settings.</string>
+    <string name="appview_guide_resume_title">The title is also a resume shortcut</string>
+    <string name="appview_guide_resume_body">When a session is running, tap the PC and app name to jump straight back into it.</string>
+    <string name="appview_guide_card_title">Long-press an app for its secret drawer</string>
+    <string name="appview_guide_card_body">Resume with saved settings, create a shortcut, hide the app, or open its details without launching it.</string>
 </resources>

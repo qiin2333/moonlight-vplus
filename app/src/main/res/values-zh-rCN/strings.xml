@@ -1769,4 +1769,25 @@
     <string name="handbook_error_unavailable">文档手册暂时无法打开，请稍后再试</string>
     <string name="handbook_retry">点击重试</string>
     <string name="title_about_us">关于我们</string>
+    <!-- 功能发现引导 -->
+    <string name="feature_guide_step">悄悄告诉你 · %1$d/%2$d</string>
+    <string name="feature_guide_quick_actions_title">把快捷栏变成你的</string>
+    <string name="feature_guide_quick_actions_body">长按任意快捷按钮，就能添加、移除或拖动排序，把常用操作放在手边。</string>
+    <string name="feature_guide_crown_title">让配置戴上皇冠</string>
+    <string name="feature_guide_crown_body">控制布局、快捷操作、触控模式和反馈设置都能存成皇冠配置，一次整套切换。</string>
+    <string name="feature_guide_next">带我看看</string>
+    <string name="feature_guide_done">知道啦</string>
+    <string name="feature_guide_skip">下次再说</string>
+    <string name="pcview_guide_host_title">卡片和头像，操作不同</string>
+    <string name="pcview_guide_host_body">点击主机卡片会进入应用列表；点击头像会直接开始串流。长按卡片还可以测试网络、选择屏幕、打开 Web UI，以及查看更多操作。</string>
+    <string name="pcview_guide_more_title">小小三点，藏着实用工具</string>
+    <string name="pcview_guide_more_body">从这里恢复上次串流、显示未配对主机，或者切换应用主题。</string>
+    <string name="pcview_guide_scene_title">右侧小标签会记住整套场景</string>
+    <string name="pcview_guide_scene_body">点按即可应用串流预设；长按会保存当前分辨率、码率、HDR 和监控图层设置。</string>
+    <string name="appview_guide_panel_title">设置可以从顶部拉下来</string>
+    <string name="appview_guide_panel_body">这里能选择背景样式、屏幕组合和目标显示器，也能进入完整串流设置。</string>
+    <string name="appview_guide_resume_title">标题也是恢复串流的捷径</string>
+    <string name="appview_guide_resume_body">已有会话运行时，点一下电脑名和应用名，就能直接回到串流。</string>
+    <string name="appview_guide_card_title">长按应用，打开隐藏抽屉</string>
+    <string name="appview_guide_card_body">无需启动应用，就能使用上次设置恢复、创建快捷方式、隐藏应用或查看详情。</string>
 </resources>

@@ -39,6 +39,8 @@ import com.limelight.preferences.StreamSettings
 import com.limelight.services.KeyboardAccessibilityService
 import com.limelight.ui.AdapterFragment
 import com.limelight.ui.AdapterFragmentCallbacks
+import com.limelight.ui.ViewFeatureGuide
+import com.limelight.ui.ViewFeatureGuideStep
 import com.limelight.utils.AboutDialogLauncher
 import com.limelight.utils.AnalyticsManager
 import com.limelight.utils.AppDialogStyler
@@ -511,6 +513,52 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         addAddComputerCard()
         updateNoPcFoundVisibility()
         handleInitialLoad()
+        maybeShowPcViewFeatureGuide()
+    }
+
+    private fun maybeShowPcViewFeatureGuide() {
+        val root = findViewById<View>(R.id.pcViewRootLayout) ?: return
+        root.postDelayed({
+            if (!inForeground || isFinishing || isDestroyed) return@postDelayed
+            val hostCard = currentGuideHostCard()
+
+            val steps = buildList {
+                hostCard?.let {
+                    add(ViewFeatureGuideStep(
+                        { currentGuideHostCard() },
+                        getString(R.string.pcview_guide_host_title),
+                        getString(R.string.pcview_guide_host_body)
+                    ))
+                }
+                findViewById<View>(R.id.pcToolbarMenuButton)?.let {
+                    add(ViewFeatureGuideStep(
+                        it,
+                        getString(R.string.pcview_guide_more_title),
+                        getString(R.string.pcview_guide_more_body)
+                    ))
+                }
+                findViewById<View>(R.id.scenePresetContainer)?.let {
+                    add(ViewFeatureGuideStep(
+                        it,
+                        getString(R.string.pcview_guide_scene_title),
+                        getString(R.string.pcview_guide_scene_body)
+                    ))
+                }
+            }
+            ViewFeatureGuide.show(this, "pcview_discovery_2026_08", steps)
+        }, 2_000L)
+    }
+
+    private fun currentGuideHostCard(): View? {
+        val list = pcListView ?: return null
+        for (childIndex in 0 until list.childCount) {
+            val adapterPosition = list.firstVisiblePosition + childIndex
+            val item = pcGridAdapter.getItem(adapterPosition) as? ComputerObject ?: continue
+            if (!PcGridAdapter.isAddComputerCard(item)) {
+                return list.getChildAt(childIndex)
+            }
+        }
+        return null
     }
 
     private fun setupButtons() {
