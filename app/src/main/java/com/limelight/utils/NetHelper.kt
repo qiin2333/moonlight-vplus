@@ -6,6 +6,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import com.limelight.LimeLog
+import okhttp3.HttpUrl
 import java.net.InetAddress
 import java.net.NetworkInterface
 import java.net.SocketException
@@ -89,7 +90,7 @@ object NetHelper {
 
     fun isLanAddress(addressStr: String?): Boolean {
         if (addressStr.isNullOrEmpty()) return false
-        val host = addressStr.removePrefix("[").removeSuffix("]")
+        val host = normalizeIpLiteral(addressStr) ?: return false
 
         // 地址分类必须是纯本地操作。域名由 OkHttp/native 在真正建连时按需解析，
         // 不能因为每 1.5 秒一次的候选筛选而额外触发 DNS 查询。
@@ -166,7 +167,7 @@ object NetHelper {
      * Domain names and invalid input return false. Brackets around IPv6 are accepted.
      */
     fun isPrivateAddress(host: String?): Boolean {
-        val h = host?.removePrefix("[")?.removeSuffix("]")?.takeIf { it.isNotEmpty() } ?: return false
+        val h = host?.let(::normalizeIpLiteral) ?: return false
         if (!isIpLiteral(h)) return false  // skip DNS for hostnames
         val addr = try { InetAddress.getByName(h) } catch (_: Exception) { return false }
         return addr.isSiteLocalAddress || addr.isLoopbackAddress || addr.isLinkLocalAddress ||
@@ -180,9 +181,28 @@ object NetHelper {
     }
 
     fun isIpLiteral(h: String): Boolean {
-        if (h.contains(':')) return true  // IPv6 always uses ':'
-        val parts = h.split('.')
+        val host = normalizeIpLiteral(h) ?: return false
+        if (host.contains(':')) {
+            return try {
+                HttpUrl.Builder().scheme("http").host(host).build().host.contains(':')
+            } catch (_: IllegalArgumentException) {
+                false
+            }
+        }
+        val parts = host.split('.')
         return parts.size == 4 && parts.all { (it.toIntOrNull() ?: -1) in 0..255 }
+    }
+
+    private fun normalizeIpLiteral(host: String): String? {
+        val startsWithBracket = host.startsWith('[')
+        val endsWithBracket = host.endsWith(']')
+        if (startsWithBracket != endsWithBracket) return null
+
+        return if (startsWithBracket) {
+            host.substring(1, host.length - 1).takeIf { it.isNotEmpty() }
+        } else {
+            host.takeIf { it.isNotEmpty() }
+        }
     }
 
     /** IPv6 unique-local fc00::/7 → top byte is 0xFC or 0xFD. */
