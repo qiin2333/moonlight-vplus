@@ -23,6 +23,9 @@ public class NetHelperTest {
         assertTrue(NetHelper.INSTANCE.isLanAddress("::1"));
         assertTrue(NetHelper.INSTANCE.isLanAddress("[::1]"));
         assertFalse(NetHelper.INSTANCE.isLanAddress("8.8.8.8"));
+        assertFalse(NetHelper.INSTANCE.isLanAddress("+127.0.0.1"));
+        assertFalse(NetHelper.INSTANCE.isLanAddress("2001%3Adb8::1"));
+        assertFalse(NetHelper.INSTANCE.isLanAddress("[127.0.0.1]"));
     }
 
     @Test
@@ -38,10 +41,14 @@ public class NetHelperTest {
         assertTrue(NetHelper.INSTANCE.isIpLiteral("192.168.1.10"));
         assertTrue(NetHelper.INSTANCE.isIpLiteral("2001:db8::1"));
         assertTrue(NetHelper.INSTANCE.isIpLiteral("[2001:db8::1]"));
+        assertTrue(NetHelper.INSTANCE.isIpLiteral("[::1]"));
         assertFalse(NetHelper.INSTANCE.isIpLiteral("sunshine.example.com"));
         assertFalse(NetHelper.INSTANCE.isIpLiteral("foo:bar"));
         assertFalse(NetHelper.INSTANCE.isIpLiteral("1:2"));
         assertFalse(NetHelper.INSTANCE.isIpLiteral("[2001:db8::1"));
+        assertFalse(NetHelper.INSTANCE.isIpLiteral("+127.0.0.1"));
+        assertFalse(NetHelper.INSTANCE.isIpLiteral("2001%3Adb8::1"));
+        assertFalse(NetHelper.INSTANCE.isIpLiteral("[127.0.0.1]"));
     }
 
     @Test
@@ -52,5 +59,13 @@ public class NetHelperTest {
                 new ComputerDetails.AddressTuple("sunshine.example.com", 47989)));
         assertFalse(ComputerDetails.Companion.isLanIpv4Address(
                 new ComputerDetails.AddressTuple("foo:bar", 47989)));
+        assertFalse(ComputerDetails.Companion.isLanIpv4Address(
+                new ComputerDetails.AddressTuple("+127.0.0.1", 47989)));
+        assertFalse(ComputerDetails.Companion.isLanIpv4Address(
+                new ComputerDetails.AddressTuple("2001%3Adb8::1", 47989)));
+        assertFalse(ComputerDetails.Companion.isLanIpv4Address(
+                new ComputerDetails.AddressTuple("[127.0.0.1]", 47989)));
+        assertFalse(ComputerDetails.Companion.isLanIpv4Address(
+                new ComputerDetails.AddressTuple("[::1]", 47989)));
     }
 }
