@@ -252,6 +252,7 @@ class ComputerDetails {
 
         fun isLanIpv4Address(address: AddressTuple?): Boolean {
             if (address?.address == null) return false
+            if (!NetHelper.isIpLiteral(address.address)) return false
 
             return try {
                 val inetAddress = InetAddress.getByName(address.address)

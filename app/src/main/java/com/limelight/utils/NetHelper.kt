@@ -89,8 +89,14 @@ object NetHelper {
 
     fun isLanAddress(addressStr: String?): Boolean {
         if (addressStr.isNullOrEmpty()) return false
+        val host = addressStr.removePrefix("[").removeSuffix("]")
+
+        // 地址分类必须是纯本地操作。域名由 OkHttp/native 在真正建连时按需解析，
+        // 不能因为每 1.5 秒一次的候选筛选而额外触发 DNS 查询。
+        if (!isIpLiteral(host)) return false
+
         return try {
-            val addr = InetAddress.getByName(addressStr)
+            val addr = InetAddress.getByName(host)
             addr.isSiteLocalAddress || addr.isLoopbackAddress || isPrivateAddress(addr)
         } catch (_: Exception) {
             false
@@ -173,7 +179,7 @@ object NetHelper {
         return isPrivateAddress(host)
     }
 
-    private fun isIpLiteral(h: String): Boolean {
+    fun isIpLiteral(h: String): Boolean {
         if (h.contains(':')) return true  // IPv6 always uses ':'
         val parts = h.split('.')
         return parts.size == 4 && parts.all { (it.toIntOrNull() ?: -1) in 0..255 }
