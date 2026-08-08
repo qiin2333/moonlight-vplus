@@ -694,13 +694,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             PlatformBinding.getCryptoProvider(this), serverCert, displayName, forceResumeCurrentSession
         )
         orientationManager.connection = conn
-        controllerHandler = ControllerHandler(
-            this,
-            conn!!,
-            this,
-            prefConfig,
-            onTogglePerformanceOverlay = ::togglePerformanceOverlay
-        )
+        controllerHandler = ControllerHandler(this, conn!!, this, prefConfig)
     }
 
     /** Create or re-create ExternalDisplayManager with the standard callback. */
