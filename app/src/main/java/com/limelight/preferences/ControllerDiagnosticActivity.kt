@@ -49,6 +49,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.displayCutout
@@ -74,11 +75,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
@@ -938,6 +941,8 @@ private fun ControllerDiagnosticScreen(
     val listState = rememberLazyListState()
     val controllerScrollStep = with(LocalDensity.current) { 64.dp.toPx() }
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val useCompactLandscapeLayout = isLandscape &&
+        LocalConfiguration.current.screenWidthDp < WIDE_LANDSCAPE_MIN_WIDTH_DP
     val layoutDirection = LocalLayoutDirection.current
     val safeArea = WindowInsets.systemBars
         .union(WindowInsets.displayCutout)
@@ -986,8 +991,14 @@ private fun ControllerDiagnosticScreen(
                 ControllerDiagnosticTopBar(
                     primary = primary,
                     accent = accent,
+                    showTestControls = useCompactLandscapeLayout,
+                    testPhase = shortcutTestPhase,
+                    selectedDurationSeconds = selectedTestDurationSeconds,
+                    remainingSeconds = remainingTestSeconds,
                     onBack = onBack,
-                    onRefresh = onRefresh
+                    onRefresh = onRefresh,
+                    onToggleTest = onToggleShortcutTest,
+                    onSelectDuration = onSelectTestDuration
                 )
 
                 LazyColumn(
@@ -1044,45 +1055,73 @@ private fun ShortcutSimulatorCard(
     onSelectDuration: (Int) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(ControllerDiagnosticTab.BUTTONS) }
+    var statusExpanded by remember { mutableStateOf(false) }
     val useWideLandscapeLayout = isLandscape &&
         LocalConfiguration.current.screenWidthDp >= WIDE_LANDSCAPE_MIN_WIDTH_DP
-    DiagnosticCard {
+    Surface(
+        color = colorResource(R.color.game_menu_card_background),
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Column(
+            modifier = Modifier.padding(GameMenuDimens.section),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            ControllerTestControls(
-                testPhase = testPhase,
-                selectedDurationSeconds = selectedDurationSeconds,
-                remainingSeconds = remainingSeconds,
-                onToggleTest = onToggleTest,
-                onSelectDuration = onSelectDuration
-            )
-
             if (useWideLandscapeLayout) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.Top
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    ControllerTestControls(
+                        testPhase = testPhase,
+                        selectedDurationSeconds = selectedDurationSeconds,
+                        remainingSeconds = remainingSeconds,
+                        onToggleTest = onToggleTest,
+                        onSelectDuration = onSelectDuration,
+                        modifier = Modifier.weight(1.25f)
+                    )
                     ControllerTestStatus(
                         state = state,
                         testPhase = testPhase,
                         modifier = Modifier.weight(0.75f)
                     )
-                    Column(
-                        modifier = Modifier.weight(1.25f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        ControllerTestTabs(
-                            selectedTab = selectedTab,
-                            onTabSelected = { selectedTab = it }
-                        )
-                        if (selectedTab == ControllerDiagnosticTab.SHORTCUTS) {
-                            ControllerCurrentPressedPanel(state)
-                        }
-                    }
                 }
+
+                ControllerLandscapeContent(
+                    selectedTab = selectedTab,
+                    onTabSelected = { selectedTab = it },
+                    state = state,
+                    predictedInputPath = predictedInputPath,
+                    startKeyActionEnabled = startKeyActionEnabled,
+                    isLandscape = true,
+                    sidebarWidth = 120.dp
+                )
+            } else if (isLandscape) {
+                ControllerTestStatus(
+                    state = state,
+                    testPhase = testPhase,
+                    collapsible = true,
+                    expanded = statusExpanded,
+                    onToggle = { statusExpanded = !statusExpanded }
+                )
+
+                ControllerLandscapeContent(
+                    selectedTab = selectedTab,
+                    onTabSelected = { selectedTab = it },
+                    state = state,
+                    predictedInputPath = predictedInputPath,
+                    startKeyActionEnabled = startKeyActionEnabled,
+                    isLandscape = true,
+                    sidebarWidth = 96.dp
+                )
             } else {
+                ControllerTestControls(
+                    testPhase = testPhase,
+                    selectedDurationSeconds = selectedDurationSeconds,
+                    remainingSeconds = remainingSeconds,
+                    onToggleTest = onToggleTest,
+                    onSelectDuration = onSelectDuration
+                )
                 Text(
                     text = stringResource(
                         when (testPhase) {
@@ -1108,22 +1147,77 @@ private fun ShortcutSimulatorCard(
                 if (selectedTab == ControllerDiagnosticTab.SHORTCUTS) {
                     ControllerCurrentPressedPanel(state)
                 }
-            }
-
-            when (selectedTab) {
-                ControllerDiagnosticTab.BUTTONS -> ControllerButtonsPanel(
+                ControllerSelectedTabContent(
+                    selectedTab = selectedTab,
                     state = state,
-                    isLandscape = isLandscape
-                )
-                ControllerDiagnosticTab.VISUAL -> GamepadSilhouetteVisualization(state)
-                ControllerDiagnosticTab.SHORTCUTS -> ControllerShortcutGuide(
-                    state = state,
-                    inputPath = state.inputPath ?: predictedInputPath,
+                    predictedInputPath = predictedInputPath,
                     startKeyActionEnabled = startKeyActionEnabled,
-                    isLandscape = isLandscape
+                    isLandscape = false
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ControllerLandscapeContent(
+    selectedTab: ControllerDiagnosticTab,
+    onTabSelected: (ControllerDiagnosticTab) -> Unit,
+    state: ShortcutSimulatorUiState,
+    predictedInputPath: ControllerDiagnostics.InputPath?,
+    startKeyActionEnabled: Boolean,
+    isLandscape: Boolean,
+    sidebarWidth: androidx.compose.ui.unit.Dp
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        ControllerTestTabs(
+            selectedTab = selectedTab,
+            onTabSelected = onTabSelected,
+            vertical = true,
+            modifier = Modifier.width(sidebarWidth)
+        )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            if (selectedTab == ControllerDiagnosticTab.SHORTCUTS) {
+                ControllerCurrentPressedPanel(state)
+            }
+            ControllerSelectedTabContent(
+                selectedTab = selectedTab,
+                state = state,
+                predictedInputPath = predictedInputPath,
+                startKeyActionEnabled = startKeyActionEnabled,
+                isLandscape = isLandscape
+            )
+        }
+    }
+}
+
+@Composable
+private fun ControllerSelectedTabContent(
+    selectedTab: ControllerDiagnosticTab,
+    state: ShortcutSimulatorUiState,
+    predictedInputPath: ControllerDiagnostics.InputPath?,
+    startKeyActionEnabled: Boolean,
+    isLandscape: Boolean
+) {
+    when (selectedTab) {
+        ControllerDiagnosticTab.BUTTONS -> ControllerButtonsPanel(
+            state = state,
+            isLandscape = isLandscape
+        )
+        ControllerDiagnosticTab.VISUAL -> GamepadSilhouetteVisualization(state)
+        ControllerDiagnosticTab.SHORTCUTS -> ControllerShortcutGuide(
+            state = state,
+            inputPath = state.inputPath ?: predictedInputPath,
+            startKeyActionEnabled = startKeyActionEnabled,
+            isLandscape = isLandscape
+        )
     }
 }
 
@@ -1133,24 +1227,29 @@ private fun ControllerTestControls(
     selectedDurationSeconds: Int,
     remainingSeconds: Int,
     onToggleTest: () -> Unit,
-    onSelectDuration: (Int) -> Unit
+    onSelectDuration: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    showLabel: Boolean = true,
+    toggleWidth: androidx.compose.ui.unit.Dp = 92.dp
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = stringResource(R.string.controller_diag_test_label),
-            color = colorResource(R.color.game_menu_text_primary),
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1
-        )
+        if (showLabel) {
+            Text(
+                text = stringResource(R.string.controller_diag_test_label),
+                color = colorResource(R.color.game_menu_text_primary),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+        }
         ShortcutTestToggle(
             testPhase = testPhase,
             onClick = onToggleTest,
-            modifier = Modifier.width(92.dp)
+            modifier = Modifier.width(toggleWidth)
         )
         if (testPhase == ShortcutTestPhase.IDLE) {
             TestDurationSelector(
@@ -1171,22 +1270,28 @@ private fun ControllerTestControls(
 private fun ControllerTestStatus(
     state: ShortcutSimulatorUiState,
     testPhase: ShortcutTestPhase,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    collapsible: Boolean = false,
+    expanded: Boolean = true,
+    onToggle: () -> Unit = {}
 ) {
     val accent = colorResource(R.color.game_menu_accent)
+    val shape = if (collapsible) RectangleShape else GameMenuCardShape
     Surface(
         color = if (state.hintVisible) {
             accent.copy(alpha = 0.14f)
         } else {
             colorResource(R.color.game_menu_dialog_background)
         },
-        shape = GameMenuCardShape,
-        border = BorderStroke(
+        shape = shape,
+        border = if (collapsible) null else BorderStroke(
             GameMenuDimens.surfaceStroke,
             if (state.hintVisible) accent.copy(alpha = 0.42f)
             else colorResource(R.color.game_menu_button_border)
         ),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .then(if (collapsible) Modifier.clickable(onClick = onToggle) else Modifier)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = GameMenuDimens.section, vertical = 10.dp),
@@ -1224,23 +1329,35 @@ private fun ControllerTestStatus(
                     fontWeight = FontWeight.Bold,
                     maxLines = 2
                 )
-                Text(
-                    text = state.controllerName?.let {
-                        stringResource(R.string.controller_diag_simulator_controller, it)
-                    } ?: stringResource(R.string.controller_diag_simulator_waiting_input),
-                    color = colorResource(R.color.game_menu_text_secondary),
-                    fontSize = 10.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                if (!collapsible || expanded) {
+                    Text(
+                        text = state.controllerName?.let {
+                            stringResource(R.string.controller_diag_simulator_controller, it)
+                        } ?: stringResource(R.string.controller_diag_simulator_waiting_input),
+                        color = colorResource(R.color.game_menu_text_secondary),
+                        fontSize = 10.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
-            state.inputPath?.let { inputPath ->
+            if (!collapsible || expanded) state.inputPath?.let { inputPath ->
                 Text(
                     text = inputPathLabel(inputPath),
                     color = inputPathColor(inputPath),
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1
+                )
+            }
+            if (collapsible) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_chevron_right),
+                    contentDescription = null,
+                    tint = colorResource(R.color.game_menu_text_secondary),
+                    modifier = Modifier
+                        .size(18.dp)
+                        .rotate(if (expanded) 90f else 0f)
                 )
             }
         }
@@ -1419,10 +1536,33 @@ private fun TestDurationSegment(
 @Composable
 private fun ControllerTestTabs(
     selectedTab: ControllerDiagnosticTab,
-    onTabSelected: (ControllerDiagnosticTab) -> Unit
+    onTabSelected: (ControllerDiagnosticTab) -> Unit,
+    vertical: Boolean = false,
+    modifier: Modifier = Modifier
 ) {
+    if (vertical) {
+        Column(modifier = modifier.fillMaxWidth()) {
+            ControllerSidebarTab(
+                label = stringResource(R.string.controller_diag_tab_buttons),
+                selected = selectedTab == ControllerDiagnosticTab.BUTTONS,
+                onClick = { onTabSelected(ControllerDiagnosticTab.BUTTONS) }
+            )
+            ControllerSidebarTab(
+                label = stringResource(R.string.controller_diag_tab_visual),
+                selected = selectedTab == ControllerDiagnosticTab.VISUAL,
+                onClick = { onTabSelected(ControllerDiagnosticTab.VISUAL) }
+            )
+            ControllerSidebarTab(
+                label = stringResource(R.string.controller_diag_tab_shortcuts),
+                selected = selectedTab == ControllerDiagnosticTab.SHORTCUTS,
+                onClick = { onTabSelected(ControllerDiagnosticTab.SHORTCUTS) }
+            )
+        }
+        return
+    }
+
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         ControllerTestTab(
@@ -1495,13 +1635,14 @@ private fun ControllerButtonsPanel(
         widthDp >= MEDIUM_LANDSCAPE_MIN_WIDTH_DP -> 3
         else -> 2
     }
+    val cardSpacing = if (isLandscape) 4.dp else 10.dp
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (columnCount == 4) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(IntrinsicSize.Min),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(cardSpacing)
             ) {
                 ControllerDirectionSection(state, Modifier.weight(1f).fillMaxHeight())
                 ControllerSticksSection(state, Modifier.weight(1f).fillMaxHeight())
@@ -1512,7 +1653,7 @@ private fun ControllerButtonsPanel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(IntrinsicSize.Min),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(cardSpacing)
             ) {
                 ControllerFunctionSection(state, Modifier.weight(1f).fillMaxHeight())
                 ControllerExtraSection(state, Modifier.weight(1f).fillMaxHeight())
@@ -1522,7 +1663,7 @@ private fun ControllerButtonsPanel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(IntrinsicSize.Min),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(cardSpacing)
             ) {
                 ControllerDirectionSection(state, Modifier.weight(1f).fillMaxHeight())
                 ControllerSticksSection(state, Modifier.weight(1f).fillMaxHeight())
@@ -1532,7 +1673,7 @@ private fun ControllerButtonsPanel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(IntrinsicSize.Min),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(cardSpacing)
             ) {
                 ControllerShoulderSection(state, Modifier.weight(1f).fillMaxHeight())
                 ControllerFunctionSection(state, Modifier.weight(1f).fillMaxHeight())
@@ -1543,7 +1684,7 @@ private fun ControllerButtonsPanel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(IntrinsicSize.Min),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(cardSpacing)
             ) {
                 ControllerDirectionSection(state, Modifier.weight(1f).fillMaxHeight())
                 ControllerSticksSection(state, Modifier.weight(1f).fillMaxHeight())
@@ -1552,7 +1693,7 @@ private fun ControllerButtonsPanel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(IntrinsicSize.Min),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(cardSpacing)
             ) {
                 ControllerFaceSection(state, Modifier.weight(1f).fillMaxHeight())
                 ControllerShoulderSection(state, Modifier.weight(1f).fillMaxHeight())
@@ -1561,12 +1702,44 @@ private fun ControllerButtonsPanel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(IntrinsicSize.Min),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(cardSpacing)
             ) {
                 ControllerFunctionSection(state, Modifier.weight(1f).fillMaxHeight())
                 ControllerExtraSection(state, Modifier.weight(1f).fillMaxHeight())
             }
         }
+    }
+}
+
+@Composable
+private fun ControllerSidebarTab(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val accent = colorResource(R.color.game_menu_accent)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 44.dp)
+            .background(if (selected) accent.copy(alpha = 0.10f) else Color.Transparent)
+            .gamepadFocusOutline(RectangleShape)
+            .clickable(onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .height(28.dp)
+                .background(if (selected) accent else Color.Transparent)
+        )
+        Text(
+            text = label,
+            color = if (selected) accent else colorResource(R.color.game_menu_text_secondary),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 10.dp)
+        )
     }
 }
 
@@ -1648,21 +1821,23 @@ private fun ControllerButtonSection(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
+    val compact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val shape = if (compact) RectangleShape else GameMenuCardShape
     Surface(
         color = colorResource(R.color.game_menu_dialog_background),
-        shape = GameMenuCardShape,
+        shape = shape,
         border = BorderStroke(
             GameMenuDimens.surfaceStroke,
             colorResource(R.color.game_menu_button_border)
         ),
         modifier = modifier
-            .heightIn(min = 116.dp)
-            .gamepadFocusOutline(GameMenuCardShape)
+            .heightIn(min = if (compact) 88.dp else 116.dp)
+            .gamepadFocusOutline(shape)
             .focusable()
     ) {
         Column(
-            modifier = Modifier.padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(if (compact) 6.dp else 10.dp),
+            verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 8.dp)
         ) {
             Text(
                 text = title,
@@ -1678,6 +1853,9 @@ private fun ControllerButtonSection(
 
 @Composable
 private fun ControllerDpadLayout(state: ShortcutSimulatorUiState) {
+    val keySize = if (
+        LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    ) 32.dp else 42.dp
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -1685,7 +1863,7 @@ private fun ControllerDpadLayout(state: ShortcutSimulatorUiState) {
         ControllerDiagramKey("↑", isPressed(state, ControllerPacket.UP_FLAG))
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             ControllerDiagramKey("←", isPressed(state, ControllerPacket.LEFT_FLAG))
-            Spacer(modifier = Modifier.size(42.dp))
+            Spacer(modifier = Modifier.size(keySize))
             ControllerDiagramKey("→", isPressed(state, ControllerPacket.RIGHT_FLAG))
         }
         ControllerDiagramKey("↓", isPressed(state, ControllerPacket.DOWN_FLAG))
@@ -1694,6 +1872,9 @@ private fun ControllerDpadLayout(state: ShortcutSimulatorUiState) {
 
 @Composable
 private fun ControllerFaceButtonLayout(state: ShortcutSimulatorUiState) {
+    val keySize = if (
+        LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    ) 32.dp else 42.dp
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -1701,7 +1882,7 @@ private fun ControllerFaceButtonLayout(state: ShortcutSimulatorUiState) {
         ControllerDiagramKey("Y", isPressed(state, ControllerPacket.Y_FLAG))
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             ControllerDiagramKey("X", isPressed(state, ControllerPacket.X_FLAG))
-            Spacer(modifier = Modifier.size(42.dp))
+            Spacer(modifier = Modifier.size(keySize))
             ControllerDiagramKey("B", isPressed(state, ControllerPacket.B_FLAG))
         }
         ControllerDiagramKey("A", isPressed(state, ControllerPacket.A_FLAG))
@@ -1710,7 +1891,10 @@ private fun ControllerFaceButtonLayout(state: ShortcutSimulatorUiState) {
 
 @Composable
 private fun ControllerShoulderButtonLayout(state: ShortcutSimulatorUiState) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    val spacing = if (
+        LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    ) 4.dp else 6.dp
+    Column(verticalArrangement = Arrangement.spacedBy(spacing)) {
         ControllerPairedKeys(
             leftLabel = "LT",
             leftPressed = state.leftTrigger > ANALOG_ACTIVE_THRESHOLD,
@@ -1739,19 +1923,25 @@ private fun ControllerPairedKeys(
     rightLabel: String,
     rightPressed: Boolean
 ) {
+    val spacing = if (
+        LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    ) 4.dp else 6.dp
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         ControllerCompactKey(leftLabel, leftPressed, Modifier.weight(1f))
-        Spacer(modifier = Modifier.width(6.dp))
+        Spacer(modifier = Modifier.width(spacing))
         ControllerCompactKey(rightLabel, rightPressed, Modifier.weight(1f))
     }
 }
 
 @Composable
 private fun ControllerFunctionButtonLayout(state: ShortcutSimulatorUiState) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    val spacing = if (
+        LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    ) 4.dp else 6.dp
+    Column(verticalArrangement = Arrangement.spacedBy(spacing)) {
         ControllerPairedKeys(
             leftLabel = "Select",
             leftPressed = isPressed(state, ControllerPacket.BACK_FLAG),
@@ -1786,7 +1976,10 @@ private fun ControllerFunctionButtonLayout(state: ShortcutSimulatorUiState) {
 
 @Composable
 private fun ControllerPaddleButtonLayout(state: ShortcutSimulatorUiState) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    val spacing = if (
+        LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    ) 4.dp else 6.dp
+    Column(verticalArrangement = Arrangement.spacedBy(spacing)) {
         ControllerPairedKeys(
             leftLabel = "P1",
             leftPressed = isPressed(state, ControllerPacket.PADDLE1_FLAG),
@@ -1805,9 +1998,10 @@ private fun ControllerPaddleButtonLayout(state: ShortcutSimulatorUiState) {
 @Composable
 private fun ControllerDiagramKey(label: String, pressed: Boolean) {
     val accent = colorResource(R.color.game_menu_accent)
+    val compact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     Box(
         modifier = Modifier
-            .size(42.dp)
+            .size(if (compact) 32.dp else 42.dp)
             .background(
                 if (pressed) accent else colorResource(R.color.game_menu_card_background),
                 CircleShape
@@ -1822,7 +2016,7 @@ private fun ControllerDiagramKey(label: String, pressed: Boolean) {
         Text(
             text = label,
             color = if (pressed) Color.White else colorResource(R.color.game_menu_text_secondary),
-            fontSize = 13.sp,
+            fontSize = if (compact) 11.sp else 13.sp,
             fontWeight = FontWeight.Bold
         )
     }
@@ -1836,9 +2030,10 @@ private fun ControllerCompactKey(
     fontSize: androidx.compose.ui.unit.TextUnit = 10.sp
 ) {
     val accent = colorResource(R.color.game_menu_accent)
+    val compact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     Box(
         modifier = modifier
-            .height(34.dp)
+            .height(if (compact) 28.dp else 34.dp)
             .background(
                 if (pressed) accent else colorResource(R.color.game_menu_card_background),
                 CircleShape
@@ -1868,6 +2063,7 @@ private fun ControllerAxisIndicator(
     pressed: Boolean
 ) {
     val accent = colorResource(R.color.game_menu_accent)
+    val compact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val active = pressed || kotlin.math.abs(x) > ANALOG_ACTIVE_THRESHOLD ||
         kotlin.math.abs(y) > ANALOG_ACTIVE_THRESHOLD
     Surface(
@@ -1879,7 +2075,10 @@ private fun ControllerAxisIndicator(
         )
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            modifier = Modifier.padding(
+                horizontal = if (compact) 6.dp else 10.dp,
+                vertical = if (compact) 4.dp else 6.dp
+            ),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
@@ -1936,18 +2135,19 @@ private fun ControllerShortcutGuide(
         }
 
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val horizontalGap = 8.dp
-            val useTwoColumns = isLandscape && maxWidth >= MEDIUM_LANDSCAPE_MIN_WIDTH_DP.dp
-            val cardWidth = if (useTwoColumns) {
-                (maxWidth - horizontalGap) / 2
-            } else {
-                maxWidth
+            val horizontalGap = if (isLandscape) 4.dp else 8.dp
+            val columnCount = when {
+                !isLandscape -> 1
+                maxWidth >= 330.dp -> 3
+                maxWidth >= 220.dp -> 2
+                else -> 1
             }
+            val cardWidth = (maxWidth - horizontalGap * (columnCount - 1)) / columnCount
             val cardModifier = Modifier.width(cardWidth)
 
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                maxItemsInEachRow = if (useTwoColumns) 2 else 1,
+                maxItemsInEachRow = columnCount,
                 horizontalArrangement = Arrangement.spacedBy(horizontalGap),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
@@ -2081,6 +2281,8 @@ private fun ControllerShortcutCard(
     modifier: Modifier = Modifier
 ) {
     val accent = colorResource(R.color.game_menu_accent)
+    val compact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val shape = if (compact) RectangleShape else GameMenuCardShape
     val statusColor = when {
         recognized -> accent
         inProgress -> Color(0xFFFFB36B)
@@ -2089,7 +2291,7 @@ private fun ControllerShortcutCard(
     Surface(
         color = if (recognized) accent.copy(alpha = 0.10f)
         else colorResource(R.color.game_menu_dialog_background),
-        shape = GameMenuCardShape,
+        shape = shape,
         border = BorderStroke(
             GameMenuDimens.surfaceStroke,
             if (recognized) accent.copy(alpha = 0.48f)
@@ -2097,17 +2299,17 @@ private fun ControllerShortcutCard(
         ),
         modifier = modifier
             .fillMaxWidth()
-            .gamepadFocusOutline(GameMenuCardShape)
+            .gamepadFocusOutline(shape)
             .focusable()
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(if (compact) 7.dp else 12.dp),
+            verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 8.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 8.dp)
             ) {
                 Text(
                     text = if (pathLabel == null) title else "$title · $pathLabel",
@@ -2130,8 +2332,8 @@ private fun ControllerShortcutCard(
                 )
             }
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp),
+                verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp)
             ) {
                 keys.forEach { (label, active) ->
                     ShortcutKeyChip(label = label, active = active)
@@ -2205,20 +2407,30 @@ private fun currentPressedButtonLabels(state: ShortcutSimulatorUiState): List<St
 
 @Composable
 private fun GamepadSilhouetteVisualization(state: ShortcutSimulatorUiState) {
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val accent = colorResource(R.color.game_menu_accent)
     val bodyColor = colorResource(R.color.game_menu_card_background)
     val outline = colorResource(R.color.game_menu_button_border)
     val idleControl = colorResource(R.color.game_menu_dialog_background)
     val textColor = colorResource(R.color.game_menu_text_secondary)
+    val shape = if (isLandscape) RectangleShape else GameMenuCardShape
+    val visualizationModifier = if (isLandscape) {
+        Modifier
+            .fillMaxWidth()
+            .height((configuration.screenHeightDp.dp - 120.dp).coerceIn(180.dp, 360.dp))
+    } else {
+        Modifier
+            .fillMaxWidth()
+            .aspectRatio(1.67f)
+    }
 
     Surface(
         color = colorResource(R.color.game_menu_dialog_background),
-        shape = GameMenuCardShape,
+        shape = shape,
         border = BorderStroke(GameMenuDimens.surfaceStroke, outline),
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(1.67f)
-            .gamepadFocusOutline(GameMenuCardShape)
+        modifier = visualizationModifier
+            .gamepadFocusOutline(shape)
             .focusable()
     ) {
         Canvas(
@@ -2517,92 +2729,81 @@ private fun simulatorResultLabel(result: ShortcutSimulatorResult): String {
 private fun ControllerDiagnosticTopBar(
     primary: Color,
     accent: Color,
+    showTestControls: Boolean,
+    testPhase: ShortcutTestPhase,
+    selectedDurationSeconds: Int,
+    remainingSeconds: Int,
     onBack: () -> Unit,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    onToggleTest: () -> Unit,
+    onSelectDuration: (Int) -> Unit
 ) {
     Surface(
-        color = colorResource(R.color.game_menu_dialog_background),
+        color = colorResource(R.color.game_menu_card_background),
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
     ) {
-        Surface(
-            color = colorResource(R.color.game_menu_card_background),
-            shape = GameMenuCardShape,
-            border = BorderStroke(
-                GameMenuDimens.surfaceStroke,
-                colorResource(R.color.game_menu_dialog_border)
-            ),
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .heightIn(min = 52.dp)
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Row(
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 52.dp)
-                    .padding(horizontal = GameMenuDimens.section),
-                verticalAlignment = Alignment.CenterVertically
+                    .size(44.dp)
+                    .gamepadFocusOutline(RectangleShape)
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .gamepadFocusOutline(CircleShape)
-                        .clickable(onClick = onBack),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_arrow_back_24),
-                        contentDescription = stringResource(R.string.controller_diag_back),
-                        tint = primary,
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(accent.copy(alpha = 0.08f))
-                            .border(
-                                GameMenuDimens.surfaceStroke,
-                                accent.copy(alpha = 0.18f),
-                                CircleShape
-                            )
-                            .padding(8.dp)
-                    )
-                }
-
-                Spacer(Modifier.width(GameMenuDimens.section))
-
-                Text(
-                    text = stringResource(R.string.controller_diag_title),
-                    color = primary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
+                Icon(
+                    painter = painterResource(R.drawable.ic_arrow_back_24),
+                    contentDescription = stringResource(R.string.controller_diag_back),
+                    tint = primary,
+                    modifier = Modifier.size(24.dp)
                 )
+            }
 
-                Box(
+            Text(
+                text = stringResource(R.string.controller_diag_title),
+                color = primary,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+
+            if (showTestControls) {
+                ControllerTestControls(
+                    testPhase = testPhase,
+                    selectedDurationSeconds = selectedDurationSeconds,
+                    remainingSeconds = remainingSeconds,
+                    onToggleTest = onToggleTest,
+                    onSelectDuration = onSelectDuration,
                     modifier = Modifier
-                        .size(48.dp)
-                        .gamepadFocusOutline(CircleShape)
-                        .clickable(onClick = onRefresh),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.phc_action_reset),
-                        contentDescription = stringResource(R.string.controller_diag_refresh),
-                        tint = accent,
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(accent.copy(alpha = 0.10f))
-                            .border(
-                                GameMenuDimens.surfaceStroke,
-                                accent.copy(alpha = 0.20f),
-                                CircleShape
-                            )
-                            .padding(8.dp)
-                    )
-                }
+                        .widthIn(min = 210.dp, max = 250.dp),
+                    showLabel = false,
+                    toggleWidth = 78.dp
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .gamepadFocusOutline(RectangleShape)
+                    .clickable(onClick = onRefresh),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.phc_action_reset),
+                    contentDescription = stringResource(R.string.controller_diag_refresh),
+                    tint = accent,
+                    modifier = Modifier.size(24.dp)
+                )
             }
         }
     }
