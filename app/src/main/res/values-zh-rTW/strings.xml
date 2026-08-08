@@ -167,6 +167,7 @@
     <string name="controller_diag_stop_test_countdown">停止 %1$s</string>
     <string name="controller_diag_cancel_start">取消</string>
     <string name="controller_diag_stopping_test">正在停止…</string>
+    <string name="controller_diag_duration_thirty_seconds">30 秒</string>
     <string name="controller_diag_duration_one_minute">1 分鐘</string>
     <string name="controller_diag_duration_three_minutes">3 分鐘</string>
     <string name="controller_diag_duration_label">時長</string>

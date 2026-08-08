@@ -353,6 +353,7 @@
     <string name="controller_diag_stop_test_countdown">Stop %1$s</string>
     <string name="controller_diag_cancel_start">Cancel</string>
     <string name="controller_diag_stopping_test">Stopping…</string>
+    <string name="controller_diag_duration_thirty_seconds">30 sec</string>
     <string name="controller_diag_duration_one_minute">1 min</string>
     <string name="controller_diag_duration_three_minutes">3 min</string>
     <string name="controller_diag_duration_label">Duration</string>
