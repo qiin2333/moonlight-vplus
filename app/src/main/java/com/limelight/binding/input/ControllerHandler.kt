@@ -42,7 +42,8 @@ class ControllerHandler(
     internal val activityContext: Activity,
     internal val conn: NvConnection,
     private val gestures: GameGestures,
-    internal val prefConfig: PreferenceConfiguration
+    internal val prefConfig: PreferenceConfiguration,
+    private val onTogglePerformanceOverlay: () -> Unit = {}
 ) : InputManager.InputDeviceListener, UsbDriverListener {
 
     companion object {
@@ -51,6 +52,9 @@ class ControllerHandler(
         const val START_DOWN_TIME_MOUSE_MODE_MS = 750
 
         const val MINIMUM_BUTTON_DOWN_TIME_MS = 25
+
+        const val PERFORMANCE_OVERLAY_COMBO_FLAGS: Int = ControllerPacket.BACK_FLAG or
+            ControllerPacket.LB_FLAG or ControllerPacket.RB_FLAG or ControllerPacket.X_FLAG
 
         private const val EMULATING_SPECIAL = 0x1
         private const val EMULATING_SELECT = 0x2
@@ -1838,9 +1842,12 @@ class ControllerHandler(
             return (keyCode == REMAP_CONSUME)
         }
 
+        val shortcutKeyCode = keyCode
         if (prefConfig.flipFaceButtons) {
             keyCode = handleFlipFaceButtons(keyCode)
         }
+
+        updatePerformanceShortcut(context, shortcutKeyCode, pressed = false)
 
         // If the button hasn't been down long enough, sleep for a bit before sending the up event
         // This allows "instant" button presses (like OUYA's virtual menu button) to work. This
@@ -2014,9 +2021,12 @@ class ControllerHandler(
             return (keyCode == REMAP_CONSUME)
         }
 
+        val shortcutKeyCode = keyCode
         if (prefConfig.flipFaceButtons) {
             keyCode = handleFlipFaceButtons(keyCode)
         }
+
+        updatePerformanceShortcut(context, shortcutKeyCode, pressed = true)
 
         when (keyCode) {
             KeyEvent.KEYCODE_BUTTON_MODE -> {
@@ -2340,6 +2350,7 @@ class ControllerHandler(
         var rightTrigger = rightTrigger
 
         val context = usbDeviceContexts.get(controllerId) ?: return
+        updatePerformanceShortcut(context, buttonFlags)
         val shortcutUpdate = context.shortcutState.onButtonSnapshot(
             buttonFlags,
             android.os.SystemClock.uptimeMillis(),
@@ -2407,6 +2418,40 @@ class ControllerHandler(
         context.inputMap = buttonFlags
 
         sendControllerInputPacket(context)
+    }
+
+    private fun updatePerformanceShortcut(
+        context: GenericControllerContext,
+        keyCode: Int,
+        pressed: Boolean
+    ) {
+        val flag = when (keyCode) {
+            KeyEvent.KEYCODE_BACK,
+            KeyEvent.KEYCODE_BUTTON_SELECT -> ControllerPacket.BACK_FLAG
+            KeyEvent.KEYCODE_BUTTON_L1 -> ControllerPacket.LB_FLAG
+            KeyEvent.KEYCODE_BUTTON_R1 -> ControllerPacket.RB_FLAG
+            KeyEvent.KEYCODE_BUTTON_X -> ControllerPacket.X_FLAG
+            else -> return
+        }
+        val flags = if (pressed) {
+            context.performanceShortcutInputMap or flag
+        } else {
+            context.performanceShortcutInputMap and flag.inv()
+        }
+        updatePerformanceShortcut(context, flags)
+    }
+
+    private fun updatePerformanceShortcut(context: GenericControllerContext, buttonFlags: Int) {
+        context.performanceShortcutInputMap = buttonFlags and PERFORMANCE_OVERLAY_COMBO_FLAGS
+        val comboPressed = context.performanceShortcutInputMap == PERFORMANCE_OVERLAY_COMBO_FLAGS
+        if (comboPressed && !context.performanceShortcutLatched) {
+            context.performanceShortcutLatched = true
+            mainThreadHandler.post {
+                if (!stopped) onTogglePerformanceOverlay()
+            }
+        } else if (!comboPressed) {
+            context.performanceShortcutLatched = false
+        }
     }
 
     override fun deviceRemoved(controller: AbstractController) {

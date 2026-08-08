@@ -46,6 +46,8 @@ open class GenericControllerContext(
     var controllerNumber: Short = 0
 
     var inputMap: Int = 0
+    var performanceShortcutInputMap: Int = 0
+    var performanceShortcutLatched: Boolean = false
     var leftTrigger: Byte = 0x00
     var rightTrigger: Byte = 0x00
     var rightStickX: Short = 0x0000
