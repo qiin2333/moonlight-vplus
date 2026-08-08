@@ -664,7 +664,8 @@ class GameMenu(
                 GameMenuScreen(
                     state = state.value,
                     callbacks = callbacks,
-                    useFabricTexture = renderingProfile.useFabricTexture
+                    useFabricTexture = renderingProfile.useFabricTexture,
+                    requestControllerFocus = device != null
                 )
             }
         }
