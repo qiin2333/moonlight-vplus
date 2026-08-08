@@ -132,6 +132,107 @@ class UsbControllerShortcutStateMachineTest {
         assertTrue(secondOpen.sendNeutralState)
     }
 
+    @Test
+    fun disabledStartActionStillAllowsExitButNotLongPressActions() {
+        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+
+        val start = machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 100, false)
+        val timeout = machine.onLongPressTimeout(850, false)
+        val release = machine.onButtonSnapshot(0, 851, false)
+
+        assertFalse(start.actions.contains(UsbControllerShortcutStateMachine.Action.SCHEDULE_LONG_PRESS))
+        assertFalse(timeout.actions.contains(UsbControllerShortcutStateMachine.Action.SHOW_HINT))
+        assertFalse(release.actions.contains(UsbControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION))
+
+        val exitPressed = machine.onButtonSnapshot(
+            UsbControllerShortcutStateMachine.EXIT_COMBO_FLAGS,
+            900,
+            false
+        )
+        val exitReleased = machine.onButtonSnapshot(0, 901, false)
+
+        assertTrue(exitPressed.consumeAllInput)
+        assertEquals(
+            listOf(UsbControllerShortcutStateMachine.Action.EXIT_STREAM),
+            exitReleased.actions
+        )
+    }
+
+    @Test
+    fun buttonHeldWhileMenuOpensGetsPairedDownAndUpEvents() {
+        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+        requestMenuOpen(machine, 100)
+
+        machine.onButtonSnapshot(
+            ControllerPacket.PLAY_FLAG or ControllerPacket.B_FLAG or ControllerPacket.A_FLAG,
+            852,
+            true
+        )
+        val opened = machine.onGameMenuOpenResult(true)
+        val released = machine.onButtonSnapshot(
+            ControllerPacket.PLAY_FLAG or ControllerPacket.B_FLAG,
+            853,
+            true
+        )
+
+        assertEquals(
+            listOf(
+                UsbControllerShortcutStateMachine.ButtonChange(
+                    ControllerPacket.A_FLAG,
+                    true
+                )
+            ),
+            opened.menuButtonChanges
+        )
+        assertEquals(
+            listOf(
+                UsbControllerShortcutStateMachine.ButtonChange(
+                    ControllerPacket.A_FLAG,
+                    false
+                )
+            ),
+            released.menuButtonChanges
+        )
+    }
+
+    @Test
+    fun buttonAlreadyHeldWhenMenuIsRequestedGetsPairedDownAndUpEvents() {
+        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+        machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 100, true)
+        machine.onLongPressTimeout(100 + TEST_LONG_PRESS_MS, true)
+
+        machine.onButtonSnapshot(
+            ControllerPacket.PLAY_FLAG or ControllerPacket.B_FLAG or ControllerPacket.A_FLAG,
+            100 + TEST_LONG_PRESS_MS + 1,
+            true
+        )
+        val opened = machine.onGameMenuOpenResult(true)
+        val released = machine.onButtonSnapshot(
+            ControllerPacket.PLAY_FLAG or ControllerPacket.B_FLAG,
+            100 + TEST_LONG_PRESS_MS + 2,
+            true
+        )
+
+        assertEquals(
+            listOf(
+                UsbControllerShortcutStateMachine.ButtonChange(
+                    ControllerPacket.A_FLAG,
+                    true
+                )
+            ),
+            opened.menuButtonChanges
+        )
+        assertEquals(
+            listOf(
+                UsbControllerShortcutStateMachine.ButtonChange(
+                    ControllerPacket.A_FLAG,
+                    false
+                )
+            ),
+            released.menuButtonChanges
+        )
+    }
+
     private fun openMenu(): UsbControllerShortcutStateMachine {
         val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
         requestMenuOpen(machine, 100)
