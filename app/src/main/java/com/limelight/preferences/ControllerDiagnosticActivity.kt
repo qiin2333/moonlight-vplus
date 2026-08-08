@@ -1,5 +1,6 @@
 package com.limelight.preferences
 
+import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -246,6 +247,8 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
         simulatorUiState = ShortcutSimulatorUiState()
     }
 
+    // Intercept before focused Compose content so controller input cannot escape the active test.
+    @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (shortcutTestActive && isControllerEvent(event.device, event.source)) {
             when (event.action) {
