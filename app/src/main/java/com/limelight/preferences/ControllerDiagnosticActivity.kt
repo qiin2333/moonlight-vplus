@@ -499,8 +499,7 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
         }
         simulatorUiState = simulatorUiState.copy(
             result = if (
-                pressedFlags and ControllerHandler.PERFORMANCE_OVERLAY_COMBO_FLAGS ==
-                ControllerHandler.PERFORMANCE_OVERLAY_COMBO_FLAGS
+                pressedFlags and PERFORMANCE_SHORTCUT_FLAGS == PERFORMANCE_SHORTCUT_FLAGS
             ) {
                 ShortcutSimulatorResult.PERFORMANCE_OVERLAY
             } else {
@@ -573,7 +572,9 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
                     result = ShortcutSimulatorResult.MOUSE_EMULATION
                 UsbControllerShortcutStateMachine.Action.OPEN_GAME_MENU -> {
                     result = ShortcutSimulatorResult.GAME_MENU
-                    simulatorStateMachine.onGameMenuOpenResult(false)
+                    update.menuOpenRequestId?.let { requestId ->
+                        simulatorStateMachine.onGameMenuOpenResult(requestId, false)
+                    }
                 }
                 UsbControllerShortcutStateMachine.Action.EXIT_STREAM ->
                     result = ShortcutSimulatorResult.EXIT_STREAM
@@ -695,6 +696,8 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
         private val SUPPORTED_TEST_DURATIONS_SECONDS = setOf(60, 180)
         private const val DPAD_FLAGS = ControllerPacket.UP_FLAG or ControllerPacket.DOWN_FLAG or
             ControllerPacket.LEFT_FLAG or ControllerPacket.RIGHT_FLAG
+        private const val PERFORMANCE_SHORTCUT_FLAGS = ControllerPacket.BACK_FLAG or
+            ControllerPacket.LB_FLAG or ControllerPacket.RB_FLAG or ControllerPacket.X_FLAG
     }
 }
 

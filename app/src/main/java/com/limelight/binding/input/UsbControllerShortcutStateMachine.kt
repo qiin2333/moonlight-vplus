@@ -28,7 +28,8 @@ internal class UsbControllerShortcutStateMachine(
         val actions: List<Action> = emptyList(),
         val menuButtonChanges: List<ButtonChange> = emptyList(),
         val consumeAllInput: Boolean = false,
-        val sendNeutralState: Boolean = false
+        val sendNeutralState: Boolean = false,
+        val menuOpenRequestId: Long? = null
     )
 
     private var lastButtonFlags = 0
@@ -40,6 +41,9 @@ internal class UsbControllerShortcutStateMachine(
     private var waitForRelease = false
     private var exitPending = false
     private var ignoreMenuTriggerBUntilRelease = false
+    private var pendingMenuPressedFlags = 0
+    private var nextMenuOpenRequestId = 0L
+    private var pendingMenuOpenRequestId: Long? = null
     private var hostNeutralStateSent = false
 
     @Synchronized
@@ -71,6 +75,8 @@ internal class UsbControllerShortcutStateMachine(
             waitForRelease = false
             exitPending = true
             ignoreMenuTriggerBUntilRelease = false
+            pendingMenuPressedFlags = 0
+            pendingMenuOpenRequestId = null
             return Update(
                 actions = actions,
                 consumeAllInput = true,
@@ -89,12 +95,25 @@ internal class UsbControllerShortcutStateMachine(
 
         if (menuPending || menuActive) {
             val menuChanges = if (menuActive) {
-                buildMenuButtonChanges(changedButtonFlags, buttonFlags)
+                val changes = buildMenuButtonChanges(changedButtonFlags, buttonFlags)
+                if (ignoreMenuTriggerBUntilRelease &&
+                    buttonFlags and ControllerPacket.B_FLAG == 0
+                ) {
+                    ignoreMenuTriggerBUntilRelease = false
+                }
+                changes
             } else {
+                if (ignoreMenuTriggerBUntilRelease &&
+                    buttonFlags and ControllerPacket.B_FLAG == 0
+                ) {
+                    ignoreMenuTriggerBUntilRelease = false
+                }
+                pendingMenuPressedFlags = buttonFlags and MENU_BUTTON_MASK
+                if (ignoreMenuTriggerBUntilRelease) {
+                    pendingMenuPressedFlags =
+                        pendingMenuPressedFlags and ControllerPacket.B_FLAG.inv()
+                }
                 emptyList()
-            }
-            if (ignoreMenuTriggerBUntilRelease && buttonFlags and ControllerPacket.B_FLAG == 0) {
-                ignoreMenuTriggerBUntilRelease = false
             }
             return Update(
                 menuButtonChanges = menuChanges,
@@ -121,12 +140,17 @@ internal class UsbControllerShortcutStateMachine(
             startGestureResolved = true
             menuPending = true
             ignoreMenuTriggerBUntilRelease = true
+            pendingMenuPressedFlags =
+                buttonFlags and MENU_BUTTON_MASK and ControllerPacket.B_FLAG.inv()
+            val menuOpenRequestId = ++nextMenuOpenRequestId
+            pendingMenuOpenRequestId = menuOpenRequestId
             actions += Action.HIDE_HINT
             actions += Action.OPEN_GAME_MENU
             return Update(
                 actions = actions,
                 consumeAllInput = true,
-                sendNeutralState = markHostNeutralStateRequired()
+                sendNeutralState = markHostNeutralStateRequired(),
+                menuOpenRequestId = menuOpenRequestId
             )
         }
 
@@ -161,13 +185,28 @@ internal class UsbControllerShortcutStateMachine(
     }
 
     @Synchronized
-    fun onGameMenuOpenResult(opened: Boolean) {
+    fun onGameMenuOpenResult(requestId: Long, opened: Boolean): Update {
+        if (!menuPending || pendingMenuOpenRequestId != requestId) {
+            return Update(consumeAllInput = isLocalInputCaptureActive())
+        }
+        pendingMenuOpenRequestId = null
         menuPending = false
         menuActive = opened
         if (!opened) {
             waitForRelease = lastButtonFlags != 0
             if (!waitForRelease) hostNeutralStateSent = false
+            pendingMenuPressedFlags = 0
+            return Update(consumeAllInput = waitForRelease)
         }
+        val replayChanges = buildMenuButtonChanges(
+            pendingMenuPressedFlags,
+            pendingMenuPressedFlags
+        )
+        pendingMenuPressedFlags = 0
+        return Update(
+            menuButtonChanges = replayChanges,
+            consumeAllInput = true
+        )
     }
 
     @Synchronized
@@ -175,8 +214,14 @@ internal class UsbControllerShortcutStateMachine(
         menuPending = false
         menuActive = false
         waitForRelease = lastButtonFlags != 0
+        pendingMenuPressedFlags = 0
+        pendingMenuOpenRequestId = null
         if (!waitForRelease) hostNeutralStateSent = false
     }
+
+    @Synchronized
+    fun isMenuOpenRequestPending(requestId: Long): Boolean =
+        menuPending && pendingMenuOpenRequestId == requestId
 
     @Synchronized
     fun reset(): Update {
@@ -193,6 +238,8 @@ internal class UsbControllerShortcutStateMachine(
         waitForRelease = false
         exitPending = false
         ignoreMenuTriggerBUntilRelease = false
+        pendingMenuPressedFlags = 0
+        pendingMenuOpenRequestId = null
         hostNeutralStateSent = false
         return Update(actions = actions)
     }
@@ -237,5 +284,6 @@ internal class UsbControllerShortcutStateMachine(
             ControllerPacket.A_FLAG,
             ControllerPacket.B_FLAG
         )
+        private val MENU_BUTTON_MASK = MENU_BUTTON_FLAGS.fold(0) { mask, flag -> mask or flag }
     }
 }

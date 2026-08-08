@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
+import android.os.SystemClock
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.SparseArray
@@ -2232,18 +2233,13 @@ class ControllerHandler(
                 UsbControllerShortcutStateMachine.Action.CANCEL_LONG_PRESS ->
                     mainThreadHandler.removeCallbacks(context.shortcutLongPressRunnable)
                 UsbControllerShortcutStateMachine.Action.SHOW_HINT -> {
-                    val showHint = Runnable {
+                    mainThreadHandler.post {
                         if (!stopped &&
                             (usbShortcutHintOwner == null || usbShortcutHintOwner === context)
                         ) {
                             usbShortcutHintOwner = context
                             gestures.showUsbControllerShortcutHint()
                         }
-                    }
-                    if (Looper.myLooper() == mainThreadHandler.looper) {
-                        showHint.run()
-                    } else {
-                        mainThreadHandler.post(showHint)
                     }
                 }
                 UsbControllerShortcutStateMachine.Action.HIDE_HINT -> {
@@ -2259,13 +2255,20 @@ class ControllerHandler(
                         if (!stopped) context.toggleMouseEmulation()
                     }
                 UsbControllerShortcutStateMachine.Action.OPEN_GAME_MENU ->
-                    mainThreadHandler.post {
-                        if (stopped) {
-                            context.shortcutState.onGameMenuOpenResult(false)
-                            return@post
+                    mainThreadHandler.post openMenu@{
+                        val requestId = update.menuOpenRequestId ?: return@openMenu
+                        if (stopped ||
+                            !context.shortcutState.isMenuOpenRequestPending(requestId)
+                        ) {
+                            context.shortcutState.onGameMenuOpenResult(requestId, false)
+                            return@openMenu
                         }
-                        context.shortcutState.onGameMenuOpenResult(
-                            gestures.showGameMenuFromUsb(context)
+                        handleUsbShortcutUpdate(
+                            context,
+                            context.shortcutState.onGameMenuOpenResult(
+                                requestId,
+                                gestures.showGameMenuFromUsb(context)
+                            )
                         )
                     }
                 UsbControllerShortcutStateMachine.Action.EXIT_STREAM ->
@@ -2280,7 +2283,16 @@ class ControllerHandler(
             mainThreadHandler.post {
                 if (stopped) return@post
                 val keyAction = if (buttonChange.pressed) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP
-                if (!gestures.dispatchUsbControllerMenuKey(KeyEvent(keyAction, keyCode))) {
+                val eventTime = SystemClock.uptimeMillis()
+                val downTime = if (buttonChange.pressed) {
+                    context.menuKeyDownTimes[buttonChange.buttonFlag] = eventTime
+                    eventTime
+                } else {
+                    context.menuKeyDownTimes.remove(buttonChange.buttonFlag) ?: eventTime
+                }
+                val event = KeyEvent(downTime, eventTime, keyAction, keyCode, 0)
+                if (!gestures.dispatchUsbControllerMenuKey(event)) {
+                    context.menuKeyDownTimes.clear()
                     context.shortcutState.onGameMenuUnavailable()
                 }
             }

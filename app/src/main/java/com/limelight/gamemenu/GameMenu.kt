@@ -91,8 +91,10 @@ class GameMenu(
     fun dispatchControllerKeyEvent(event: KeyEvent): Boolean {
         val dialog = activeDialog ?: return false
         if (!dialog.isShowing) return false
-        if (event.keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_DOWN) {
-            if (!navigateBack()) dialog.dismiss()
+        if (event.keyCode == KeyEvent.KEYCODE_BACK) {
+            if (event.action == KeyEvent.ACTION_DOWN && !navigateBack()) {
+                dialog.dismiss()
+            }
             return true
         }
         dialog.dispatchKeyEvent(event)
@@ -662,7 +664,8 @@ class GameMenu(
                 GameMenuScreen(
                     state = state.value,
                     callbacks = callbacks,
-                    useFabricTexture = renderingProfile.useFabricTexture
+                    useFabricTexture = renderingProfile.useFabricTexture,
+                    requestControllerFocus = device != null
                 )
             }
         }
