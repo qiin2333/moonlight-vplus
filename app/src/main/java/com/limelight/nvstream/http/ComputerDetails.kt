@@ -269,10 +269,5 @@ class ComputerDetails {
         fun isIpv6Address(address: AddressTuple?): Boolean {
             return address?.address?.contains(":") == true
         }
-
-        fun isPublicAddress(address: AddressTuple?): Boolean {
-            if (address?.address == null) return false
-            return !isLanIpv4Address(address) && !isIpv6Address(address)
-        }
     }
 }
