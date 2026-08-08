@@ -2255,14 +2255,18 @@ class ControllerHandler(
                         if (!stopped) context.toggleMouseEmulation()
                     }
                 UsbControllerShortcutStateMachine.Action.OPEN_GAME_MENU ->
-                    mainThreadHandler.post {
-                        if (stopped) {
-                            context.shortcutState.onGameMenuOpenResult(false)
-                            return@post
+                    mainThreadHandler.post openMenu@{
+                        val requestId = update.menuOpenRequestId ?: return@openMenu
+                        if (stopped ||
+                            !context.shortcutState.isMenuOpenRequestPending(requestId)
+                        ) {
+                            context.shortcutState.onGameMenuOpenResult(requestId, false)
+                            return@openMenu
                         }
                         handleUsbShortcutUpdate(
                             context,
                             context.shortcutState.onGameMenuOpenResult(
+                                requestId,
                                 gestures.showGameMenuFromUsb(context)
                             )
                         )

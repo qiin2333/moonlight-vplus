@@ -117,7 +117,7 @@ class UsbControllerShortcutStateMachineTest {
         val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
 
         val firstOpen = requestMenuOpen(machine, 100)
-        machine.onGameMenuOpenResult(true)
+        completeMenuOpen(machine, firstOpen)
         val whileOpen = machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 852, true)
 
         assertTrue(firstOpen.sendNeutralState)
@@ -161,14 +161,14 @@ class UsbControllerShortcutStateMachineTest {
     @Test
     fun buttonHeldWhileMenuOpensGetsPairedDownAndUpEvents() {
         val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
-        requestMenuOpen(machine, 100)
+        val request = requestMenuOpen(machine, 100)
 
         machine.onButtonSnapshot(
             ControllerPacket.PLAY_FLAG or ControllerPacket.B_FLAG or ControllerPacket.A_FLAG,
             852,
             true
         )
-        val opened = machine.onGameMenuOpenResult(true)
+        val opened = completeMenuOpen(machine, request)
         val released = machine.onButtonSnapshot(
             ControllerPacket.PLAY_FLAG or ControllerPacket.B_FLAG,
             853,
@@ -201,12 +201,12 @@ class UsbControllerShortcutStateMachineTest {
         machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 100, true)
         machine.onLongPressTimeout(100 + TEST_LONG_PRESS_MS, true)
 
-        machine.onButtonSnapshot(
+        val request = machine.onButtonSnapshot(
             ControllerPacket.PLAY_FLAG or ControllerPacket.B_FLAG or ControllerPacket.A_FLAG,
             100 + TEST_LONG_PRESS_MS + 1,
             true
         )
-        val opened = machine.onGameMenuOpenResult(true)
+        val opened = completeMenuOpen(machine, request)
         val released = machine.onButtonSnapshot(
             ControllerPacket.PLAY_FLAG or ControllerPacket.B_FLAG,
             100 + TEST_LONG_PRESS_MS + 2,
@@ -233,11 +233,32 @@ class UsbControllerShortcutStateMachineTest {
         )
     }
 
+    @Test
+    fun staleMenuOpenResultAfterResetIsIgnored() {
+        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+        val request = requestMenuOpen(machine, 100)
+        val requestId = requireNotNull(request.menuOpenRequestId)
+
+        machine.reset()
+        val staleResult = machine.onGameMenuOpenResult(requestId, true)
+
+        assertFalse(machine.isMenuOpenRequestPending(requestId))
+        assertFalse(machine.isLocalInputCaptureActive())
+        assertFalse(staleResult.consumeAllInput)
+        assertTrue(staleResult.menuButtonChanges.isEmpty())
+    }
+
     private fun openMenu(): UsbControllerShortcutStateMachine {
         val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
-        requestMenuOpen(machine, 100)
-        machine.onGameMenuOpenResult(true)
+        completeMenuOpen(machine)
         return machine
+    }
+
+    private fun completeMenuOpen(
+        machine: UsbControllerShortcutStateMachine,
+        request: UsbControllerShortcutStateMachine.Update = requestMenuOpen(machine, 100)
+    ): UsbControllerShortcutStateMachine.Update {
+        return machine.onGameMenuOpenResult(requireNotNull(request.menuOpenRequestId), true)
     }
 
     private fun requestMenuOpen(
