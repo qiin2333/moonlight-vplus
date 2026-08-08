@@ -1046,6 +1046,14 @@ private fun ShortcutSimulatorCard(
         Column(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
+            ControllerTestControls(
+                testPhase = testPhase,
+                selectedDurationSeconds = selectedDurationSeconds,
+                remainingSeconds = remainingSeconds,
+                onToggleTest = onToggleTest,
+                onSelectDuration = onSelectDuration
+            )
+
             if (isLandscape) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1068,13 +1076,6 @@ private fun ShortcutSimulatorCard(
                         if (selectedTab == ControllerDiagnosticTab.SHORTCUTS) {
                             ControllerCurrentPressedPanel(state)
                         }
-                        ControllerTestControls(
-                            testPhase = testPhase,
-                            selectedDurationSeconds = selectedDurationSeconds,
-                            remainingSeconds = remainingSeconds,
-                            onToggleTest = onToggleTest,
-                            onSelectDuration = onSelectDuration
-                        )
                     }
                 }
             } else {
@@ -1103,13 +1104,6 @@ private fun ShortcutSimulatorCard(
                 if (selectedTab == ControllerDiagnosticTab.SHORTCUTS) {
                     ControllerCurrentPressedPanel(state)
                 }
-                ControllerTestControls(
-                    testPhase = testPhase,
-                    selectedDurationSeconds = selectedDurationSeconds,
-                    remainingSeconds = remainingSeconds,
-                    onToggleTest = onToggleTest,
-                    onSelectDuration = onSelectDuration
-                )
             }
 
             when (selectedTab) {
