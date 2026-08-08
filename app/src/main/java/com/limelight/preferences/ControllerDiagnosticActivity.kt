@@ -110,6 +110,7 @@ import com.limelight.nvstream.input.ControllerPacket
 import com.limelight.utils.UiHelper
 import java.util.Locale
 import java.util.concurrent.Executors
+import kotlinx.coroutines.delay
 
 class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
     UsbDriverService.UsbDriverStateListener {
@@ -710,6 +711,8 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
     }
 }
 
+private const val CONTROLLER_SCROLL_REPEAT_MS = 90L
+
 private enum class ShortcutSimulatorResult {
     IDLE,
     HINT,
@@ -931,7 +934,7 @@ private fun ControllerDiagnosticScreen(
     val accent = colorResource(R.color.game_menu_accent)
     val baseColorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()
     val listState = rememberLazyListState()
-    val controllerScrollStep = with(LocalDensity.current) { 220.dp.toPx() }
+    val controllerScrollStep = with(LocalDensity.current) { 64.dp.toPx() }
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val layoutDirection = LocalLayoutDirection.current
     val safeArea = WindowInsets.systemBars
@@ -942,11 +945,16 @@ private fun ControllerDiagnosticScreen(
 
     LaunchedEffect(shortcutTestPhase, simulatorState.pressedFlags) {
         if (shortcutTestPhase == ShortcutTestPhase.ACTIVE) {
-            when {
-                isPressed(simulatorState, ControllerPacket.UP_FLAG) ->
-                    listState.scrollBy(-controllerScrollStep)
-                isPressed(simulatorState, ControllerPacket.DOWN_FLAG) ->
-                    listState.scrollBy(controllerScrollStep)
+            val scrollDirection = when {
+                isPressed(simulatorState, ControllerPacket.UP_FLAG) &&
+                    !isPressed(simulatorState, ControllerPacket.DOWN_FLAG) -> -1
+                isPressed(simulatorState, ControllerPacket.DOWN_FLAG) &&
+                    !isPressed(simulatorState, ControllerPacket.UP_FLAG) -> 1
+                else -> 0
+            }
+            while (scrollDirection != 0) {
+                listState.scrollBy(controllerScrollStep * scrollDirection)
+                delay(CONTROLLER_SCROLL_REPEAT_MS)
             }
         }
     }
@@ -986,10 +994,10 @@ private fun ControllerDiagnosticScreen(
                     contentPadding = PaddingValues(
                         start = 16.dp,
                         end = 16.dp,
-                        top = 12.dp,
-                        bottom = 28.dp
+                        top = 0.dp,
+                        bottom = 8.dp
                     ),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     item {
                         ShortcutSimulatorCard(
@@ -1036,7 +1044,7 @@ private fun ShortcutSimulatorCard(
     var selectedTab by remember { mutableStateOf(ControllerDiagnosticTab.BUTTONS) }
     DiagnosticCard {
         Column(
-            verticalArrangement = Arrangement.spacedBy(GameMenuDimens.compact)
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             if (isLandscape) {
                 Row(
@@ -1051,7 +1059,7 @@ private fun ShortcutSimulatorCard(
                     )
                     Column(
                         modifier = Modifier.weight(1.25f),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         ControllerTestTabs(
                             selectedTab = selectedTab,
@@ -1482,7 +1490,7 @@ private fun ControllerButtonsPanel(
     state: ShortcutSimulatorUiState,
     isLandscape: Boolean
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (isLandscape) {
             Row(
                 modifier = Modifier
@@ -1891,7 +1899,7 @@ private fun ControllerShortcutGuide(
         ControllerPacket.RB_FLAG
     ).count { flag -> isPressed(state, flag) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (!startKeyActionEnabled) {
             Text(
                 text = stringResource(R.string.controller_diag_start_shortcut_disabled),
@@ -1914,7 +1922,7 @@ private fun ControllerShortcutGuide(
                 modifier = Modifier.fillMaxWidth(),
                 maxItemsInEachRow = if (isLandscape) 2 else 1,
                 horizontalArrangement = Arrangement.spacedBy(horizontalGap),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 if (startKeyActionEnabled) {
                     ControllerShortcutCard(
