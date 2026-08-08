@@ -1837,17 +1837,15 @@ class ControllerHandler(
     fun handleButtonUp(event: KeyEvent): Boolean {
         val context = getContextForEvent(event) ?: return true
 
+        updatePerformanceShortcut(context, event.keyCode, pressed = false)
         var keyCode = handleRemapping(context, event)
         if (keyCode < 0) {
             return (keyCode == REMAP_CONSUME)
         }
 
-        val shortcutKeyCode = keyCode
         if (prefConfig.flipFaceButtons) {
             keyCode = handleFlipFaceButtons(keyCode)
         }
-
-        updatePerformanceShortcut(context, shortcutKeyCode, pressed = false)
 
         // If the button hasn't been down long enough, sleep for a bit before sending the up event
         // This allows "instant" button presses (like OUYA's virtual menu button) to work. This
@@ -2016,17 +2014,15 @@ class ControllerHandler(
     fun handleButtonDown(event: KeyEvent): Boolean {
         val context = getContextForEvent(event) ?: return true
 
+        updatePerformanceShortcut(context, event.keyCode, pressed = true)
         var keyCode = handleRemapping(context, event)
         if (keyCode < 0) {
             return (keyCode == REMAP_CONSUME)
         }
 
-        val shortcutKeyCode = keyCode
         if (prefConfig.flipFaceButtons) {
             keyCode = handleFlipFaceButtons(keyCode)
         }
-
-        updatePerformanceShortcut(context, shortcutKeyCode, pressed = true)
 
         when (keyCode) {
             KeyEvent.KEYCODE_BUTTON_MODE -> {
@@ -2433,24 +2429,22 @@ class ControllerHandler(
             KeyEvent.KEYCODE_BUTTON_X -> ControllerPacket.X_FLAG
             else -> return
         }
-        val flags = if (pressed) {
-            context.performanceShortcutInputMap or flag
-        } else {
-            context.performanceShortcutInputMap and flag.inv()
-        }
-        updatePerformanceShortcut(context, flags)
+        dispatchPerformanceShortcutIfTriggered(
+            context.performanceOverlayShortcutState.updateButton(flag, pressed)
+        )
     }
 
     private fun updatePerformanceShortcut(context: GenericControllerContext, buttonFlags: Int) {
-        context.performanceShortcutInputMap = buttonFlags and PERFORMANCE_OVERLAY_COMBO_FLAGS
-        val comboPressed = context.performanceShortcutInputMap == PERFORMANCE_OVERLAY_COMBO_FLAGS
-        if (comboPressed && !context.performanceShortcutLatched) {
-            context.performanceShortcutLatched = true
+        dispatchPerformanceShortcutIfTriggered(
+            context.performanceOverlayShortcutState.updateSnapshot(buttonFlags)
+        )
+    }
+
+    private fun dispatchPerformanceShortcutIfTriggered(triggered: Boolean) {
+        if (triggered) {
             mainThreadHandler.post {
                 if (!stopped) onTogglePerformanceOverlay()
             }
-        } else if (!comboPressed) {
-            context.performanceShortcutLatched = false
         }
     }
 
