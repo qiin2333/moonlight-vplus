@@ -26,6 +26,7 @@ class UsbDriverService : Service(), UsbDriverListener {
     private var usbManager: UsbManager? = null
     private var prefConfig: PreferenceConfiguration? = null
     private var started = false
+    private var claimAllAvailableOverride: Boolean? = null
 
     private val receiver = UsbEventReceiver()
     private val binder = UsbDriverBinder()
@@ -102,7 +103,12 @@ class UsbDriverService : Service(), UsbDriverListener {
         }
 
         fun start() {
-            this@UsbDriverService.start()
+            this@UsbDriverService.start(claimAllAvailableOverride = null)
+        }
+
+        /** Temporarily claims every supported USB controller for the shortcut test screen. */
+        fun startForDiagnostics() {
+            this@UsbDriverService.start(claimAllAvailableOverride = true)
         }
 
         fun stop() {
@@ -114,7 +120,7 @@ class UsbDriverService : Service(), UsbDriverListener {
         val mgr = usbManager ?: return
         val config = prefConfig ?: return
 
-        if (shouldClaimDevice(device, config.bindAllUsb)) {
+        if (shouldClaimDevice(device, claimAllAvailableOverride ?: config.bindAllUsb)) {
             if (!mgr.hasPermission(device)) {
                 try {
                     stateListener?.onUsbPermissionPromptStarting()
@@ -129,7 +135,13 @@ class UsbDriverService : Service(), UsbDriverListener {
 
                     mgr.requestPermission(device, PendingIntent.getBroadcast(this, 0, i, intentFlags))
                 } catch (e: SecurityException) {
-                    Toast.makeText(this, this.getText(R.string.error_usb_prohibited), Toast.LENGTH_LONG).show()
+                    Handler(Looper.getMainLooper()).post {
+                        Toast.makeText(
+                            this,
+                            this.getText(R.string.error_usb_prohibited),
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                     stateListener?.onUsbPermissionPromptCompleted()
                 }
                 return
@@ -167,11 +179,12 @@ class UsbDriverService : Service(), UsbDriverListener {
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
-    private fun start() {
+    private fun start(claimAllAvailableOverride: Boolean?) {
         if (started || usbManager == null) {
             return
         }
 
+        this.claimAllAvailableOverride = claimAllAvailableOverride
         started = true
 
         val filter = IntentFilter()
@@ -186,7 +199,7 @@ class UsbDriverService : Service(), UsbDriverListener {
         val mgr = usbManager!!
         val config = prefConfig!!
         for (dev in mgr.deviceList.values) {
-            if (shouldClaimDevice(dev, config.bindAllUsb)) {
+            if (shouldClaimDevice(dev, claimAllAvailableOverride ?: config.bindAllUsb)) {
                 handleUsbDeviceState(dev)
             }
         }
@@ -204,6 +217,7 @@ class UsbDriverService : Service(), UsbDriverListener {
         while (controllers.size > 0) {
             controllers.removeAt(0).stop()
         }
+        claimAllAvailableOverride = null
     }
 
     override fun onCreate() {
