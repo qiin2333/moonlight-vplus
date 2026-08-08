@@ -190,7 +190,7 @@
     <string name="controller_diag_shortcut_waiting">待測試</string>
     <string name="controller_diag_shortcut_in_progress">偵測到輸入</string>
     <string name="controller_diag_shortcut_recognized">已識別</string>
-    <string name="controller_diag_start_shortcut_disabled">長按開始鍵功能已關閉，目前僅支援測試退出串流快捷鍵。</string>
+    <string name="controller_diag_start_shortcut_disabled">長按 Start 功能已關閉，仍可測試退出串流和效能顯示快捷鍵。</string>
     <string name="controller_diag_group_direction">方向鍵</string>
     <string name="controller_diag_group_sticks">搖桿</string>
     <string name="controller_diag_group_face_buttons">操作鍵</string>

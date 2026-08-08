@@ -180,8 +180,15 @@ class UsbDriverService : Service(), UsbDriverListener {
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     private fun start(claimAllAvailableOverride: Boolean?) {
-        if (started || usbManager == null) {
+        if (usbManager == null) {
             return
+        }
+
+        if (started) {
+            if (this.claimAllAvailableOverride == claimAllAvailableOverride) {
+                return
+            }
+            stop()
         }
 
         this.claimAllAvailableOverride = claimAllAvailableOverride

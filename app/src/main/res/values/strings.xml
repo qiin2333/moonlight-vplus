@@ -376,7 +376,7 @@
     <string name="controller_diag_shortcut_waiting">Ready</string>
     <string name="controller_diag_shortcut_in_progress">Input detected</string>
     <string name="controller_diag_shortcut_recognized">Recognized</string>
-    <string name="controller_diag_start_shortcut_disabled">The long-press Start action is disabled. Only the exit shortcut is available.</string>
+    <string name="controller_diag_start_shortcut_disabled">The long-press Start action is disabled. Exit stream and performance display shortcuts remain available.</string>
     <string name="controller_diag_group_direction">D-pad</string>
     <string name="controller_diag_group_sticks">Sticks</string>
     <string name="controller_diag_group_face_buttons">Face buttons</string>
