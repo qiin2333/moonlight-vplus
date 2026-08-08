@@ -712,6 +712,8 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
 }
 
 private const val CONTROLLER_SCROLL_REPEAT_MS = 90L
+private const val MEDIUM_LANDSCAPE_MIN_WIDTH_DP = 600
+private const val WIDE_LANDSCAPE_MIN_WIDTH_DP = 720
 
 private enum class ShortcutSimulatorResult {
     IDLE,
@@ -1042,6 +1044,8 @@ private fun ShortcutSimulatorCard(
     onSelectDuration: (Int) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(ControllerDiagnosticTab.BUTTONS) }
+    val useWideLandscapeLayout = isLandscape &&
+        LocalConfiguration.current.screenWidthDp >= WIDE_LANDSCAPE_MIN_WIDTH_DP
     DiagnosticCard {
         Column(
             verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -1054,7 +1058,7 @@ private fun ShortcutSimulatorCard(
                 onSelectDuration = onSelectDuration
             )
 
-            if (isLandscape) {
+            if (useWideLandscapeLayout) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -1484,8 +1488,15 @@ private fun ControllerButtonsPanel(
     state: ShortcutSimulatorUiState,
     isLandscape: Boolean
 ) {
+    val widthDp = LocalConfiguration.current.screenWidthDp
+    val columnCount = when {
+        !isLandscape -> 2
+        widthDp >= WIDE_LANDSCAPE_MIN_WIDTH_DP -> 4
+        widthDp >= MEDIUM_LANDSCAPE_MIN_WIDTH_DP -> 3
+        else -> 2
+    }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        if (isLandscape) {
+        if (columnCount == 4) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1503,6 +1514,27 @@ private fun ControllerButtonsPanel(
                     .height(IntrinsicSize.Min),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                ControllerFunctionSection(state, Modifier.weight(1f).fillMaxHeight())
+                ControllerExtraSection(state, Modifier.weight(1f).fillMaxHeight())
+            }
+        } else if (columnCount == 3) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ControllerDirectionSection(state, Modifier.weight(1f).fillMaxHeight())
+                ControllerSticksSection(state, Modifier.weight(1f).fillMaxHeight())
+                ControllerFaceSection(state, Modifier.weight(1f).fillMaxHeight())
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ControllerShoulderSection(state, Modifier.weight(1f).fillMaxHeight())
                 ControllerFunctionSection(state, Modifier.weight(1f).fillMaxHeight())
                 ControllerExtraSection(state, Modifier.weight(1f).fillMaxHeight())
             }
@@ -1905,7 +1937,8 @@ private fun ControllerShortcutGuide(
 
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val horizontalGap = 8.dp
-            val cardWidth = if (isLandscape) {
+            val useTwoColumns = isLandscape && maxWidth >= MEDIUM_LANDSCAPE_MIN_WIDTH_DP.dp
+            val cardWidth = if (useTwoColumns) {
                 (maxWidth - horizontalGap) / 2
             } else {
                 maxWidth
@@ -1914,7 +1947,7 @@ private fun ControllerShortcutGuide(
 
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                maxItemsInEachRow = if (isLandscape) 2 else 1,
+                maxItemsInEachRow = if (useTwoColumns) 2 else 1,
                 horizontalArrangement = Arrangement.spacedBy(horizontalGap),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
