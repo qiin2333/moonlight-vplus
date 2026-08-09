@@ -1804,11 +1804,14 @@ class CrownStoreActivity : AppCompatActivity() {
         starCheck: GitHubStarVerifier.StarCheck,
         scope: GitHubStarVerifier.OAuthScope
     ) {
+        val dialogToDismiss = developerDeviceCodeDialog
         developerUnlockVerificationRunning = false
         clearDeveloperPendingDeviceCode(ctx)
         GitHubDeviceAuthorization.saveAuthorizedAccount(ctx, accessToken, starCheck, scope)
         mainHandler.post {
-            developerDeviceCodeDialog?.dismiss()
+            if (developerDeviceCodeDialog === dialogToDismiss) {
+                dialogToDismiss?.dismiss()
+            }
             if (scope == GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH) {
                 Toast.makeText(this, R.string.toast_crown_store_github_connected, Toast.LENGTH_LONG).show()
             } else if (starCheck.starred) {
@@ -1828,11 +1831,14 @@ class CrownStoreActivity : AppCompatActivity() {
     }
 
     private fun failDeveloperUnlockVerification(ctx: Context, message: String) {
+        val dialogToDismiss = developerDeviceCodeDialog
         developerUnlockVerificationRunning = false
         clearDeveloperPendingDeviceCode(ctx)
         Log.w("DeveloperUnlock", "GitHub star verification failed: $message")
         mainHandler.post {
-            developerDeviceCodeDialog?.dismiss()
+            if (developerDeviceCodeDialog === dialogToDismiss) {
+                dialogToDismiss?.dismiss()
+            }
             Toast.makeText(
                 this,
                 getString(R.string.toast_developer_verification_failed, message),

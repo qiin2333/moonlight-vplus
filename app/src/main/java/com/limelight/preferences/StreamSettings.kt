@@ -4212,6 +4212,7 @@ class StreamSettings : AppCompatActivity() {
             starCheck: GitHubStarVerifier.StarCheck,
             scope: GitHubStarVerifier.OAuthScope
         ) {
+            val dialogToDismiss = developerDeviceCodeDialog
             developerUnlockVerificationRunning = false
             clearDeveloperPendingDeviceCode(ctx)
             GitHubDeviceAuthorization.saveAuthorizedAccount(ctx, accessToken, starCheck, scope)
@@ -4223,7 +4224,9 @@ class StreamSettings : AppCompatActivity() {
                 if (!isAdded) {
                     return@runOnUiThread
                 }
-                developerDeviceCodeDialog?.dismiss()
+                if (developerDeviceCodeDialog === dialogToDismiss) {
+                    dialogToDismiss?.dismiss()
+                }
                 refreshDeveloperFeatureGateState()
 
                 if (scope == GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH) {
