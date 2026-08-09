@@ -167,9 +167,16 @@ class MicrophoneCapture(
     fun stop() {
         running.set(false)
 
+        // Stop AudioRecord first so a blocking read can return before its native resources
+        // are released. Releasing while the capture thread is still inside read() can crash
+        // on some Android audio implementations.
+        try {
+            audioRecord?.stop()
+        } catch (_: IllegalStateException) { }
+
         captureThread?.let {
             try {
-                it.join(300)
+                it.join(1000)
             } catch (_: InterruptedException) { }
         }
         captureThread = null
