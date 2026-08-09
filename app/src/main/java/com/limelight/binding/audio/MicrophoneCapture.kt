@@ -174,12 +174,21 @@ class MicrophoneCapture(
             audioRecord?.stop()
         } catch (_: IllegalStateException) { }
 
-        captureThread?.let {
-            try {
-                it.join(1000)
-            } catch (_: InterruptedException) { }
+        var interrupted = false
+        captureThread?.let { thread ->
+            while (thread.isAlive) {
+                try {
+                    thread.join()
+                } catch (_: InterruptedException) {
+                    interrupted = true
+                }
+            }
         }
         captureThread = null
+
+        if (interrupted) {
+            Thread.currentThread().interrupt()
+        }
 
         release()
     }
