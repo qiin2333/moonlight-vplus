@@ -99,6 +99,7 @@ class MicrophoneCapture(
                 } catch (e: Exception) {
                     LimeLog.severe("麦克风捕获出错: ${e.message}")
                 } finally {
+                    running.set(false)
                     if (audioRecord?.state == AudioRecord.STATE_INITIALIZED) {
                         try {
                             audioRecord!!.stop()
@@ -106,6 +107,7 @@ class MicrophoneCapture(
                             LimeLog.warning("停止AudioRecord时出错: ${e.message}")
                         }
                     }
+                    release()
                 }
             }, "MicrophoneCapture")
 
@@ -175,22 +177,25 @@ class MicrophoneCapture(
         } catch (_: IllegalStateException) { }
 
         var interrupted = false
-        captureThread?.let { thread ->
-            while (thread.isAlive) {
-                try {
-                    thread.join()
-                } catch (_: InterruptedException) {
-                    interrupted = true
-                }
+        val thread = captureThread
+        if (thread != null && thread !== Thread.currentThread()) {
+            try {
+                thread.join(1000)
+            } catch (_: InterruptedException) {
+                interrupted = true
             }
         }
-        captureThread = null
+
+        if (thread?.isAlive != true) {
+            captureThread = null
+            release()
+        } else {
+            LimeLog.warning("麦克风采集线程未及时退出，将在线程结束后释放AudioRecord")
+        }
 
         if (interrupted) {
             Thread.currentThread().interrupt()
         }
-
-        release()
     }
 
     private fun initializeAudioEffects() {
