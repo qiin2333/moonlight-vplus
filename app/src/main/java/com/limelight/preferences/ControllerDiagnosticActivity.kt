@@ -142,6 +142,10 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
     private var shortcutAttemptRemainingSeconds by mutableIntStateOf(0)
     private var selectedDiagnosticTab by mutableStateOf(ControllerDiagnosticTab.BUTTONS)
     private var controllerInfoVisible by mutableStateOf(false)
+    private var controllerInfoScrollSequence by mutableIntStateOf(0)
+    private var controllerInfoScrollDirection by mutableIntStateOf(0)
+    private var controllerInfoHatDirection = 0
+    private var controllerInfoLastScrollMs = 0L
     private var selectedTestDurationSeconds by mutableIntStateOf(DEFAULT_TEST_DURATION_SECONDS)
     private var remainingTestSeconds by mutableIntStateOf(0)
     private var testDeadlineMs = 0L
@@ -249,13 +253,21 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
                 shortcutAttemptRemainingSeconds = shortcutAttemptRemainingSeconds,
                 selectedTab = selectedDiagnosticTab,
                 controllerInfoVisible = controllerInfoVisible,
+                controllerInfoScrollSequence = controllerInfoScrollSequence,
+                controllerInfoScrollDirection = controllerInfoScrollDirection,
                 selectedTestDurationSeconds = selectedTestDurationSeconds,
                 remainingTestSeconds = remainingTestSeconds,
                 startKeyActionEnabled = startKeyActionEnabled,
                 onBack = ::exitDiagnosticScreen,
                 onRefresh = ::refreshControllers,
-                onShowControllerInfo = { controllerInfoVisible = true },
-                onDismissControllerInfo = { controllerInfoVisible = false },
+                onShowControllerInfo = {
+                    controllerInfoHatDirection = 0
+                    controllerInfoVisible = true
+                },
+                onDismissControllerInfo = {
+                    controllerInfoHatDirection = 0
+                    controllerInfoVisible = false
+                },
                 onToggleShortcutTest = ::toggleShortcutTest,
                 onToggleShortcutTarget = ::toggleShortcutTarget,
                 onTabSelected = { selectedDiagnosticTab = it },
@@ -303,13 +315,22 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
     // Intercept before focused Compose content so controller input cannot escape the active test.
     @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (controllerInfoVisible && event.action == KeyEvent.ACTION_UP &&
-            (event.keyCode == KeyEvent.KEYCODE_BACK || event.keyCode == KeyEvent.KEYCODE_BUTTON_B)
-        ) {
-            controllerInfoVisible = false
-            return true
-        }
         if (controllerInfoVisible) {
+            if (event.action == KeyEvent.ACTION_UP &&
+                (event.keyCode == KeyEvent.KEYCODE_BACK || event.keyCode == KeyEvent.KEYCODE_BUTTON_B)
+            ) {
+                controllerInfoVisible = false
+                return true
+            }
+            if (isControllerEvent(event.device, event.source)) {
+                if (event.action == KeyEvent.ACTION_DOWN) {
+                    when (event.keyCode) {
+                        KeyEvent.KEYCODE_DPAD_UP -> requestControllerInfoScroll(-1)
+                        KeyEvent.KEYCODE_DPAD_DOWN -> requestControllerInfoScroll(1)
+                    }
+                }
+                return true
+            }
             return super.dispatchKeyEvent(event)
         }
         if (shortcutTestActive && isControllerEvent(event.device, event.source)) {
@@ -327,6 +348,7 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
         if (controllerInfoVisible && isControllerEvent(event.device, event.source)) {
+            handleControllerInfoMotion(event)
             return true
         }
         if (shortcutTestActive && isControllerEvent(event.device, event.source)) {
@@ -335,6 +357,29 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
             return true
         }
         return super.dispatchGenericMotionEvent(event)
+    }
+
+    private fun requestControllerInfoScroll(direction: Int) {
+        controllerInfoScrollDirection = direction
+        controllerInfoScrollSequence++
+    }
+
+    private fun handleControllerInfoMotion(event: MotionEvent) {
+        val hatY = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
+        val stickY = event.getAxisValue(MotionEvent.AXIS_Y)
+        val direction = when {
+            hatY < -DPAD_AXIS_THRESHOLD || stickY < -INFO_SCROLL_AXIS_THRESHOLD -> -1
+            hatY > DPAD_AXIS_THRESHOLD || stickY > INFO_SCROLL_AXIS_THRESHOLD -> 1
+            else -> 0
+        }
+        val now = SystemClock.uptimeMillis()
+        if (direction != 0 && (direction != controllerInfoHatDirection ||
+                now - controllerInfoLastScrollMs >= INFO_SCROLL_REPEAT_MS)
+        ) {
+            requestControllerInfoScroll(direction)
+            controllerInfoLastScrollMs = now
+        }
+        controllerInfoHatDirection = direction
     }
 
     private fun isShortcutNavigationMode(): Boolean {
@@ -394,6 +439,7 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
 
     override fun onStop() {
         controllerInfoVisible = false
+        controllerInfoHatDirection = 0
         if (shortcutTestActive) {
             stopShortcutTest(refreshAfterStop = false)
         }
@@ -866,6 +912,8 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
         private const val SHORTCUT_RESULT_DISPLAY_MS = 900L
         private const val COUNTDOWN_TICK_MS = 250L
         private const val DPAD_AXIS_THRESHOLD = 0.5f
+        private const val INFO_SCROLL_AXIS_THRESHOLD = 0.65f
+        private const val INFO_SCROLL_REPEAT_MS = 120L
         private val SUPPORTED_TEST_DURATIONS_SECONDS = setOf(30, 60, 180)
         private const val DPAD_FLAGS = ControllerPacket.UP_FLAG or ControllerPacket.DOWN_FLAG or
             ControllerPacket.LEFT_FLAG or ControllerPacket.RIGHT_FLAG
@@ -1105,6 +1153,8 @@ private fun ControllerDiagnosticScreen(
     shortcutAttemptRemainingSeconds: Int,
     selectedTab: ControllerDiagnosticTab,
     controllerInfoVisible: Boolean,
+    controllerInfoScrollSequence: Int,
+    controllerInfoScrollDirection: Int,
     selectedTestDurationSeconds: Int,
     remainingTestSeconds: Int,
     startKeyActionEnabled: Boolean,
@@ -1246,6 +1296,8 @@ private fun ControllerDiagnosticScreen(
                     snapshot = snapshot,
                     simulatorState = simulatorState,
                     testPhase = shortcutTestPhase,
+                    scrollSequence = controllerInfoScrollSequence,
+                    scrollDirection = controllerInfoScrollDirection,
                     safeRight = safeRight,
                     safeBottom = safeBottom,
                     onDismiss = onDismissControllerInfo
@@ -3167,6 +3219,8 @@ private fun ControllerInfoOverlay(
     snapshot: ControllerDiagnostics.Snapshot,
     simulatorState: ShortcutSimulatorUiState,
     testPhase: ShortcutTestPhase,
+    scrollSequence: Int,
+    scrollDirection: Int,
     safeRight: androidx.compose.ui.unit.Dp,
     safeBottom: androidx.compose.ui.unit.Dp,
     onDismiss: () -> Unit
@@ -3179,6 +3233,11 @@ private fun ControllerInfoOverlay(
 
     BackHandler(onBack = onDismiss)
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    LaunchedEffect(scrollSequence) {
+        if (scrollSequence > 0 && scrollDirection != 0) {
+            listState.scrollBy(scrollStep * scrollDirection)
+        }
+    }
 
     Box(
         modifier = Modifier
