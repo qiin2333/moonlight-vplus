@@ -61,6 +61,8 @@ import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -1451,7 +1453,9 @@ private fun ControllerDiagnosticScreen(
                 }
             }
 
-            if (shortcutAttemptState != ShortcutAttemptState.INACTIVE) {
+            if (shortcutAttemptState != ShortcutAttemptState.INACTIVE &&
+                shortcutAttemptState != ShortcutAttemptState.PREPARING
+            ) {
                 ShortcutAttemptPopup(
                     state = shortcutAttemptState,
                     remainingSeconds = shortcutAttemptRemainingSeconds,
@@ -2871,6 +2875,8 @@ private fun ControllerShortcutCard(
 ) {
     val accent = colorResource(R.color.game_menu_accent)
     val compact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    val scope = rememberCoroutineScope()
     val shape = if (compact) RectangleShape else GameMenuCardShape
     val statusColor = when {
         recognized -> accent
@@ -2888,6 +2894,7 @@ private fun ControllerShortcutCard(
         ),
         modifier = modifier
             .fillMaxWidth()
+            .bringIntoViewRequester(bringIntoViewRequester)
     ) {
         Column(
             modifier = Modifier.padding(if (compact) 7.dp else 12.dp),
@@ -2907,7 +2914,10 @@ private fun ControllerShortcutCard(
                 )
                 ShortcutCardTestButton(
                     selected = testSelected,
-                    onClick = onToggleTest
+                    onClick = onToggleTest,
+                    onFocused = {
+                        scope.launch { bringIntoViewRequester.bringIntoView() }
+                    }
                 )
             }
             if (testRunning) {
@@ -3389,7 +3399,8 @@ private fun ControllerDiagnosticTopBar(
 @Composable
 private fun ShortcutCardTestButton(
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onFocused: () -> Unit
 ) {
     val accent = colorResource(R.color.game_menu_accent)
     Surface(
@@ -3399,6 +3410,7 @@ private fun ShortcutCardTestButton(
         modifier = Modifier
             .heightIn(min = 34.dp)
             .gamepadFocusOutline(RectangleShape)
+            .onFocusChanged { if (it.isFocused) onFocused() }
             .clickable(onClick = onClick)
     ) {
         Row(
