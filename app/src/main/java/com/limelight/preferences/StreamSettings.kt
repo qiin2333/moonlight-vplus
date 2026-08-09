@@ -4081,46 +4081,68 @@ class StreamSettings : AppCompatActivity() {
                     when (val poll = GitHubStarVerifier.pollAccessToken(deviceCode)) {
                         is GitHubStarVerifier.TokenPollResult.Authorized -> {
                             Log.i("DeveloperUnlock", "GitHub star device flow authorized from foreground poll")
-                            completeDeveloperUnlockVerification(
-                                ctx = ctx,
-                                accessToken = poll.accessToken,
-                                starCheck = GitHubStarVerifier.checkStar(poll.accessToken),
-                                scope = deviceCode.scope
-                            )
+                            val starCheck = GitHubStarVerifier.checkStar(poll.accessToken)
+                            runIfDeveloperAttemptActive(deviceCode) {
+                                completeDeveloperUnlockVerification(
+                                    ctx = ctx,
+                                    accessToken = poll.accessToken,
+                                    starCheck = starCheck,
+                                    scope = deviceCode.scope
+                                )
+                            }
                         }
                         GitHubStarVerifier.TokenPollResult.Pending -> {
                             Log.i("DeveloperUnlock", "GitHub star verification still pending")
                             if (showPendingToast) {
-                                showDeveloperUnlockToast(R.string.toast_developer_authorization_pending)
+                                showDeveloperUnlockToastIfActive(deviceCode)
                             }
                         }
                         is GitHubStarVerifier.TokenPollResult.SlowDown -> {
                             Log.i("DeveloperUnlock", "GitHub star foreground poll slowed down to ${poll.intervalSeconds}s")
                             if (showPendingToast) {
-                                showDeveloperUnlockToast(R.string.toast_developer_authorization_pending)
+                                showDeveloperUnlockToastIfActive(deviceCode)
                             }
                         }
                         is GitHubStarVerifier.TokenPollResult.Failed -> {
-                            failDeveloperUnlockVerification(ctx, poll.message)
+                            runIfDeveloperAttemptActive(deviceCode) {
+                                failDeveloperUnlockVerification(ctx, poll.message)
+                            }
                         }
                     }
                 } catch (e: Exception) {
                     Log.e("DeveloperUnlock", "GitHub star foreground verification failed", e)
-                    failDeveloperUnlockVerification(ctx, e.message ?: e.javaClass.simpleName)
+                    runIfDeveloperAttemptActive(deviceCode) {
+                        failDeveloperUnlockVerification(ctx, e.message ?: e.javaClass.simpleName)
+                    }
                 } finally {
-                    developerForegroundPollRunning = false
-                    if (developerPendingDeviceCode != null) {
-                        developerUnlockVerificationRunning = false
+                    activity?.runOnUiThread {
+                        developerForegroundPollRunning = false
+                        if (developerPendingDeviceCode == deviceCode) {
+                            developerUnlockVerificationRunning = false
+                        }
                     }
                 }
             }
         }
 
-        private fun showDeveloperUnlockToast(messageResId: Int) {
+        private fun runIfDeveloperAttemptActive(
+            deviceCode: GitHubStarVerifier.DeviceCode,
+            action: () -> Unit
+        ) {
             activity?.runOnUiThread {
-                if (isAdded) {
-                    Toast.makeText(requireContext(), messageResId, Toast.LENGTH_LONG).show()
+                if (isAdded && developerPendingDeviceCode == deviceCode) {
+                    action()
                 }
+            }
+        }
+
+        private fun showDeveloperUnlockToastIfActive(deviceCode: GitHubStarVerifier.DeviceCode) {
+            runIfDeveloperAttemptActive(deviceCode) {
+                Toast.makeText(
+                    requireContext(),
+                    R.string.toast_developer_authorization_pending,
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
 

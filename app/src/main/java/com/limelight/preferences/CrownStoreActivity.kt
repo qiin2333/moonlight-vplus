@@ -1737,16 +1737,19 @@ class CrownStoreActivity : AppCompatActivity() {
             try {
                 when (val poll = GitHubStarVerifier.pollAccessToken(deviceCode)) {
                     is GitHubStarVerifier.TokenPollResult.Authorized -> {
-                        completeDeveloperUnlockVerification(
-                            appContext,
-                            poll.accessToken,
-                            GitHubStarVerifier.checkStar(poll.accessToken),
-                            deviceCode.scope
-                        )
+                        val starCheck = GitHubStarVerifier.checkStar(poll.accessToken)
+                        runIfDeveloperAttemptActive(deviceCode) {
+                            completeDeveloperUnlockVerification(
+                                appContext,
+                                poll.accessToken,
+                                starCheck,
+                                deviceCode.scope
+                            )
+                        }
                     }
                     GitHubStarVerifier.TokenPollResult.Pending -> {
                         if (showPendingToast) {
-                            mainHandler.post {
+                            runIfDeveloperAttemptActive(deviceCode) {
                                 Toast.makeText(
                                     appContext,
                                     R.string.toast_developer_authorization_pending,
@@ -1756,22 +1759,41 @@ class CrownStoreActivity : AppCompatActivity() {
                         }
                     }
                     is GitHubStarVerifier.TokenPollResult.SlowDown -> {
-                        GitHubDeviceAuthorization.savePendingDeviceCode(
-                            appContext,
-                            deviceCode.copy(intervalSeconds = poll.intervalSeconds)
-                        )
+                        runIfDeveloperAttemptActive(deviceCode) {
+                            GitHubDeviceAuthorization.savePendingDeviceCode(
+                                appContext,
+                                deviceCode.copy(intervalSeconds = poll.intervalSeconds)
+                            )
+                        }
                     }
                     is GitHubStarVerifier.TokenPollResult.Failed -> {
-                        failDeveloperUnlockVerification(appContext, poll.message)
+                        runIfDeveloperAttemptActive(deviceCode) {
+                            failDeveloperUnlockVerification(appContext, poll.message)
+                        }
                     }
                 }
             } catch (e: Exception) {
                 Log.e("DeveloperUnlock", "GitHub star foreground verification failed", e)
-                failDeveloperUnlockVerification(appContext, e.message ?: e.javaClass.simpleName)
-            } finally {
-                if (developerPendingDeviceCode != null) {
-                    developerUnlockVerificationRunning = false
+                runIfDeveloperAttemptActive(deviceCode) {
+                    failDeveloperUnlockVerification(appContext, e.message ?: e.javaClass.simpleName)
                 }
+            } finally {
+                mainHandler.post {
+                    if (developerPendingDeviceCode == deviceCode) {
+                        developerUnlockVerificationRunning = false
+                    }
+                }
+            }
+        }
+    }
+
+    private fun runIfDeveloperAttemptActive(
+        deviceCode: GitHubStarVerifier.DeviceCode,
+        action: () -> Unit
+    ) {
+        mainHandler.post {
+            if (developerPendingDeviceCode == deviceCode) {
+                action()
             }
         }
     }
