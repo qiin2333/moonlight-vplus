@@ -1859,17 +1859,17 @@ private fun ControllerButtonSection(
 
 @Composable
 private fun ControllerDpadLayout(state: ShortcutSimulatorUiState) {
-    val keySize = if (
+    val centerGap = if (
         LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-    ) 32.dp else 42.dp
+    ) 18.dp else 26.dp
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         ControllerDiagramKey("↑", isPressed(state, ControllerPacket.UP_FLAG))
-        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row {
             ControllerDiagramKey("←", isPressed(state, ControllerPacket.LEFT_FLAG))
-            Spacer(modifier = Modifier.size(keySize))
+            Spacer(modifier = Modifier.width(centerGap))
             ControllerDiagramKey("→", isPressed(state, ControllerPacket.RIGHT_FLAG))
         }
         ControllerDiagramKey("↓", isPressed(state, ControllerPacket.DOWN_FLAG))
@@ -1878,17 +1878,17 @@ private fun ControllerDpadLayout(state: ShortcutSimulatorUiState) {
 
 @Composable
 private fun ControllerFaceButtonLayout(state: ShortcutSimulatorUiState) {
-    val keySize = if (
+    val centerGap = if (
         LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-    ) 32.dp else 42.dp
+    ) 18.dp else 26.dp
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         ControllerDiagramKey("Y", isPressed(state, ControllerPacket.Y_FLAG))
-        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row {
             ControllerDiagramKey("X", isPressed(state, ControllerPacket.X_FLAG))
-            Spacer(modifier = Modifier.size(keySize))
+            Spacer(modifier = Modifier.width(centerGap))
             ControllerDiagramKey("B", isPressed(state, ControllerPacket.B_FLAG))
         }
         ControllerDiagramKey("A", isPressed(state, ControllerPacket.A_FLAG))
