@@ -262,6 +262,7 @@ class CrownStoreActivity : AppCompatActivity() {
             .setPositiveButton(R.string.action_crown_store_continue_import) { _, _ -> onContinue() }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+            .also { AppDialogStyler.installDismissKeys(it) }
     }
 
     private fun reportStoreProfile(profile: CrownProfileShareManager.StoreProfile) {
@@ -1199,6 +1200,7 @@ class CrownStoreActivity : AppCompatActivity() {
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+            .also { AppDialogStyler.installDismissKeys(it) }
     }
 
     private fun deleteLocalProfile(configId: Long, profileName: String) {
@@ -1445,6 +1447,7 @@ class CrownStoreActivity : AppCompatActivity() {
             }
         }
         dialog.show()
+        AppDialogStyler.installDismissKeys(dialog)
     }
 
     private fun validateCrownStoreSubmission(
@@ -1615,6 +1618,7 @@ class CrownStoreActivity : AppCompatActivity() {
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+            .also { AppDialogStyler.installDismissKeys(it) }
     }
 
     private fun showCrownStorePublishSuccessDialog(result: GitHubCrownProfileStorePublisher.PublishResult) {
@@ -1632,6 +1636,7 @@ class CrownStoreActivity : AppCompatActivity() {
             }
             .setNegativeButton(android.R.string.ok, null)
             .show()
+            .also { AppDialogStyler.installDismissKeys(it) }
     }
 
     private fun startDeveloperUnlockVerification(scope: GitHubStarVerifier.OAuthScope) {
@@ -1690,6 +1695,10 @@ class CrownStoreActivity : AppCompatActivity() {
                 developerUnlockVerificationRunning = false
                 clearDeveloperPendingDeviceCode(applicationContext)
             }
+            .setOnCancelListener {
+                developerUnlockVerificationRunning = false
+                clearDeveloperPendingDeviceCode(applicationContext)
+            }
             .create()
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
@@ -1711,6 +1720,7 @@ class CrownStoreActivity : AppCompatActivity() {
         }
         developerDeviceCodeDialog = dialog
         dialog.show()
+        AppDialogStyler.installDismissKeys(dialog)
     }
 
     private fun pollDeveloperPendingDeviceCode(showPendingToast: Boolean) {
@@ -1790,6 +1800,7 @@ class CrownStoreActivity : AppCompatActivity() {
                     }
                     .setNegativeButton(android.R.string.cancel, null)
                     .show()
+                    .also { AppDialogStyler.installDismissKeys(it) }
             }
         }
     }
@@ -1847,6 +1858,7 @@ class CrownStoreActivity : AppCompatActivity() {
             dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
         }
         dialog.show()
+        AppDialogStyler.installDismissKeys(dialog)
     }
 
     private fun importCrownShareFromUrl(
@@ -1915,6 +1927,7 @@ class CrownStoreActivity : AppCompatActivity() {
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+            .also { AppDialogStyler.installDismissKeys(it) }
     }
 
     private fun importPendingCrownShareAsNew() {

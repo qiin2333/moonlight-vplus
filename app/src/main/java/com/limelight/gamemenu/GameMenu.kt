@@ -40,6 +40,7 @@ import com.limelight.binding.input.advance_setting.element.ElementController
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.http.NvApp
 import com.limelight.preferences.PreferenceConfiguration
+import com.limelight.ui.UiDismissKeyHandler
 import com.limelight.utils.AppActionSheet
 import com.limelight.utils.KeyCodeMapper
 import org.json.JSONArray
@@ -91,10 +92,10 @@ class GameMenu(
     fun dispatchControllerKeyEvent(event: KeyEvent): Boolean {
         val dialog = activeDialog ?: return false
         if (!dialog.isShowing) return false
-        if (event.keyCode == KeyEvent.KEYCODE_BACK) {
-            if (event.action == KeyEvent.ACTION_DOWN && !navigateBack()) {
-                dialog.dismiss()
+        if (UiDismissKeyHandler.handle(event.action, event.keyCode) {
+                if (!navigateBack()) dialog.cancel()
             }
+        ) {
             return true
         }
         dialog.dispatchKeyEvent(event)
@@ -679,13 +680,9 @@ class GameMenu(
 
         // 返回键监听器
         dialog.setOnKeyListener { _, keyCode, event ->
-            if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_DOWN) {
-                if (navigateBack()) {
-                    return@setOnKeyListener true
-                }
-                return@setOnKeyListener false
+            UiDismissKeyHandler.handle(event.action, keyCode) {
+                if (!navigateBack()) dialog.cancel()
             }
-            false
         }
 
         // 关闭时清理状态
@@ -1117,11 +1114,7 @@ class GameMenu(
         }
 
         dialog.setOnKeyListener { _, keyCode, event ->
-            if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_DOWN) {
-                dialog.dismiss()
-                return@setOnKeyListener true
-            }
-            false
+            UiDismissKeyHandler.handle(event.action, keyCode, dialog::cancel)
         }
 
         closeButton?.setOnClickListener { dialog.dismiss() }

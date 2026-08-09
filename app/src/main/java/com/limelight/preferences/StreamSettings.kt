@@ -4157,6 +4157,10 @@ class StreamSettings : AppCompatActivity() {
                     developerUnlockVerificationRunning = false
                     clearDeveloperPendingDeviceCode(requireContext().applicationContext)
                 }
+                .setOnCancelListener {
+                    developerUnlockVerificationRunning = false
+                    clearDeveloperPendingDeviceCode(requireContext().applicationContext)
+                }
                 .create()
             dialog.setOnShowListener {
                 dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
