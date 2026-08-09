@@ -193,7 +193,7 @@
     <string name="controller_diag_shortcut_waiting">待測試</string>
     <string name="controller_diag_shortcut_in_progress">偵測到輸入</string>
     <string name="controller_diag_shortcut_recognized">已識別</string>
-    <string name="controller_diag_shortcut_prompt_preparing">正在準備手把輸入…</string>
+    <string name="controller_diag_shortcut_prompt_preparing">正在連線手把…</string>
     <string name="controller_diag_shortcut_prompt_waiting">請在 %1$d 秒內按下此快捷鍵</string>
     <string name="controller_diag_shortcut_prompt_success">快捷鍵識別成功</string>
     <string name="controller_diag_shortcut_prompt_timeout">未偵測到快捷鍵</string>
@@ -207,11 +207,11 @@
     <string name="controller_diag_left_stick">左搖桿</string>
     <string name="controller_diag_right_stick">右搖桿</string>
     <string name="controller_diag_simulator_inactive_summary">點選開始測試後監聽並攔截手把按鍵。</string>
-    <string name="controller_diag_simulator_starting_summary">正在準備手把輸入，可隨時取消。</string>
+    <string name="controller_diag_simulator_starting_summary">正在連線手把，可隨時取消。</string>
     <string name="controller_diag_simulator_active_summary">正在監聽，手把按鍵不會操作目前頁面。</string>
     <string name="controller_diag_simulator_stopping_summary">正在釋放手把輸入…</string>
     <string name="controller_diag_simulator_inactive">尚未開始</string>
-    <string name="controller_diag_simulator_starting">正在準備輸入</string>
+    <string name="controller_diag_simulator_starting">正在連線手把</string>
     <string name="controller_diag_simulator_stopping">正在停止測試</string>
     <string name="controller_diag_simulator_input_path">測試輸入：%1$s</string>
     <string name="controller_diag_simulator_status">結果</string>

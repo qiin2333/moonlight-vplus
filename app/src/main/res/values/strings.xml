@@ -379,7 +379,7 @@
     <string name="controller_diag_shortcut_waiting">Ready</string>
     <string name="controller_diag_shortcut_in_progress">Input detected</string>
     <string name="controller_diag_shortcut_recognized">Recognized</string>
-    <string name="controller_diag_shortcut_prompt_preparing">Preparing controller input…</string>
+    <string name="controller_diag_shortcut_prompt_preparing">Connecting controller…</string>
     <string name="controller_diag_shortcut_prompt_waiting">Press this shortcut within %1$d seconds</string>
     <string name="controller_diag_shortcut_prompt_success">Shortcut recognized</string>
     <string name="controller_diag_shortcut_prompt_timeout">No shortcut detected</string>
@@ -393,11 +393,11 @@
     <string name="controller_diag_left_stick">Left stick</string>
     <string name="controller_diag_right_stick">Right stick</string>
     <string name="controller_diag_simulator_inactive_summary">Tap Start test to listen for and intercept controller input.</string>
-    <string name="controller_diag_simulator_starting_summary">Preparing controller input. You can cancel at any time.</string>
+    <string name="controller_diag_simulator_starting_summary">Connecting controller. You can cancel at any time.</string>
     <string name="controller_diag_simulator_active_summary">Listening. Controller input cannot control this page.</string>
     <string name="controller_diag_simulator_stopping_summary">Releasing controller input…</string>
     <string name="controller_diag_simulator_inactive">Test not started</string>
-    <string name="controller_diag_simulator_starting">Preparing input</string>
+    <string name="controller_diag_simulator_starting">Connecting controller</string>
     <string name="controller_diag_simulator_stopping">Stopping test</string>
     <string name="controller_diag_simulator_input_path">Test input: %1$s</string>
     <string name="controller_diag_simulator_status">Result</string>

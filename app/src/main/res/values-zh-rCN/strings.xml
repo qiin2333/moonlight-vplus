@@ -317,7 +317,7 @@
     <string name="controller_diag_shortcut_waiting">待测试</string>
     <string name="controller_diag_shortcut_in_progress">检测到输入</string>
     <string name="controller_diag_shortcut_recognized">已识别</string>
-    <string name="controller_diag_shortcut_prompt_preparing">正在准备手柄输入…</string>
+    <string name="controller_diag_shortcut_prompt_preparing">正在连接手柄…</string>
     <string name="controller_diag_shortcut_prompt_waiting">请在 %1$d 秒内按下该快捷键</string>
     <string name="controller_diag_shortcut_prompt_success">快捷键识别成功</string>
     <string name="controller_diag_shortcut_prompt_timeout">未检测到快捷键</string>
@@ -331,11 +331,11 @@
     <string name="controller_diag_left_stick">左摇杆</string>
     <string name="controller_diag_right_stick">右摇杆</string>
     <string name="controller_diag_simulator_inactive_summary">点击开始测试后监听并拦截手柄按键。</string>
-    <string name="controller_diag_simulator_starting_summary">正在准备手柄输入，可随时取消。</string>
+    <string name="controller_diag_simulator_starting_summary">正在连接手柄，可随时取消。</string>
     <string name="controller_diag_simulator_active_summary">正在监听，手柄按键不会操作当前页面。</string>
     <string name="controller_diag_simulator_stopping_summary">正在释放手柄输入…</string>
     <string name="controller_diag_simulator_inactive">尚未开始</string>
-    <string name="controller_diag_simulator_starting">正在准备输入</string>
+    <string name="controller_diag_simulator_starting">正在连接手柄</string>
     <string name="controller_diag_simulator_stopping">正在停止测试</string>
     <string name="controller_diag_simulator_input_path">测试输入：%1$s</string>
     <string name="controller_diag_simulator_status">结果</string>

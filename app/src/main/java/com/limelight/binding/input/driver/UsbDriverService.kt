@@ -66,26 +66,30 @@ class UsbDriverService : Service(), UsbDriverListener {
 
     inner class UsbEventReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            val action = intent.action
+            runCatching {
+                val action = intent.action
 
-            if (action == UsbManager.ACTION_USB_DEVICE_ATTACHED) {
-                @Suppress("DEPRECATION")
-                val device: UsbDevice? = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
+                if (action == UsbManager.ACTION_USB_DEVICE_ATTACHED) {
+                    @Suppress("DEPRECATION")
+                    val device: UsbDevice? = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
 
-                Handler(Looper.getMainLooper()).postDelayed({
-                    device?.let { handleUsbDeviceStateSafely(it) }
-                }, 1000)
-            } else if (action == ACTION_USB_PERMISSION) {
-                @Suppress("DEPRECATION")
-                val device: UsbDevice? = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
-
-                try {
-                    if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
+                    Handler(Looper.getMainLooper()).postDelayed({
                         device?.let { handleUsbDeviceStateSafely(it) }
+                    }, 1000)
+                } else if (action == ACTION_USB_PERMISSION) {
+                    try {
+                        @Suppress("DEPRECATION")
+                        val device: UsbDevice? =
+                            intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
+                        if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
+                            device?.let { handleUsbDeviceStateSafely(it) }
+                        }
+                    } finally {
+                        notifyPermissionPromptCompleted()
                     }
-                } finally {
-                    stateListener?.onUsbPermissionPromptCompleted()
                 }
+            }.onFailure {
+                LimeLog.warning("Unable to process USB permission result: ${it.message}")
             }
         }
     }
@@ -109,9 +113,19 @@ class UsbDriverService : Service(), UsbDriverListener {
             this@UsbDriverService.start(claimAllAvailableOverride = null)
         }
 
-        /** Temporarily claims every supported USB controller for the shortcut test screen. */
-        fun startForDiagnostics() {
+        /**
+         * Temporarily claims every supported USB controller for the shortcut test screen.
+         * Returns true when at least one controller has started and will report readiness through
+         * [UsbDriverListener.deviceAdded].
+         */
+        fun startForDiagnostics(): Boolean {
             this@UsbDriverService.start(claimAllAvailableOverride = true)
+            return controllers.isNotEmpty()
+        }
+
+        /** Returns whether a claimed controller is still active or initializing. */
+        fun hasActiveControllers(): Boolean {
+            return controllers.isNotEmpty()
         }
 
         fun stop() {
@@ -126,7 +140,7 @@ class UsbDriverService : Service(), UsbDriverListener {
         if (shouldClaimDevice(device, claimAllAvailableOverride ?: config.bindAllUsb)) {
             if (!mgr.hasPermission(device)) {
                 try {
-                    stateListener?.onUsbPermissionPromptStarting()
+                    notifyPermissionPromptStarting()
 
                     var intentFlags = 0
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -140,13 +154,15 @@ class UsbDriverService : Service(), UsbDriverListener {
                 } catch (e: RuntimeException) {
                     LimeLog.warning("Unable to request USB controller permission: ${e.message}")
                     Handler(Looper.getMainLooper()).post {
-                        Toast.makeText(
-                            this,
-                            this.getText(R.string.error_usb_prohibited),
-                            Toast.LENGTH_LONG
-                        ).show()
+                        runCatching {
+                            Toast.makeText(
+                                this,
+                                this.getText(R.string.error_usb_prohibited),
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
                     }
-                    stateListener?.onUsbPermissionPromptCompleted()
+                    notifyPermissionPromptCompleted()
                 }
                 return
             }
@@ -192,6 +208,18 @@ class UsbDriverService : Service(), UsbDriverListener {
     private fun handleUsbDeviceStateSafely(device: UsbDevice) {
         runCatching { handleUsbDeviceState(device) }.onFailure {
             LimeLog.warning("Unable to process USB controller: ${it.message}")
+        }
+    }
+
+    private fun notifyPermissionPromptStarting() {
+        runCatching { stateListener?.onUsbPermissionPromptStarting() }.onFailure {
+            LimeLog.warning("Unable to notify USB permission start: ${it.message}")
+        }
+    }
+
+    private fun notifyPermissionPromptCompleted() {
+        runCatching { stateListener?.onUsbPermissionPromptCompleted() }.onFailure {
+            LimeLog.warning("Unable to notify USB permission completion: ${it.message}")
         }
     }
 
