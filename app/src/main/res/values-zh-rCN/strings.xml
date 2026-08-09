@@ -270,6 +270,8 @@
     <string name="controller_diag_title">手柄快捷键测试</string>
     <string name="controller_diag_back">返回</string>
     <string name="controller_diag_refresh">刷新</string>
+    <string name="controller_diag_info">手柄信息</string>
+    <string name="controller_diag_close">关闭</string>
     <string name="controller_diag_empty_title">未检测到手柄</string>
     <string name="controller_diag_empty_summary">连接手柄后点击刷新。</string>
     <string name="controller_diag_unknown_device">未知手柄</string>

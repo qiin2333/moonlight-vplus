@@ -146,6 +146,8 @@
     <string name="summary_checkbox_enable_start_key_menu">長按 Start：系統手把開啟選單；USB 接管手把選擇選單或滑鼠模式。</string>
     <string name="controller_diag_back">返回</string>
     <string name="controller_diag_refresh">重新整理</string>
+    <string name="controller_diag_info">手把資訊</string>
+    <string name="controller_diag_close">關閉</string>
     <string name="controller_diag_empty_title">未偵測到手把</string>
     <string name="controller_diag_empty_summary">連接手把後點選重新整理。</string>
     <string name="controller_diag_unknown_device">未知手把</string>

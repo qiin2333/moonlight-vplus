@@ -332,6 +332,8 @@
     <string name="controller_diag_title">Controller shortcut test</string>
     <string name="controller_diag_back">Back</string>
     <string name="controller_diag_refresh">Refresh</string>
+    <string name="controller_diag_info">Controller information</string>
+    <string name="controller_diag_close">Close</string>
     <string name="controller_diag_empty_title">No controller detected</string>
     <string name="controller_diag_empty_summary">Connect a controller, then tap Refresh.</string>
     <string name="controller_diag_unknown_device">Unknown controller</string>

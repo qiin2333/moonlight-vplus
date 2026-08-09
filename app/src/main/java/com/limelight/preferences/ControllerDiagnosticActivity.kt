@@ -45,6 +45,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -75,7 +76,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -97,6 +97,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -125,6 +126,7 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
     private var simulatorUiState by mutableStateOf(ShortcutSimulatorUiState())
     private var shortcutTestActive by mutableStateOf(false)
     private var shortcutTestPhase by mutableStateOf(ShortcutTestPhase.IDLE)
+    private var activeShortcutTarget by mutableStateOf<ShortcutTestTarget?>(null)
     private var selectedTestDurationSeconds by mutableIntStateOf(DEFAULT_TEST_DURATION_SECONDS)
     private var remainingTestSeconds by mutableIntStateOf(0)
     private var testDeadlineMs = 0L
@@ -168,9 +170,7 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
             usbDriverExecutor.execute {
                 val started = runCatching { binder.startForDiagnostics() }.isSuccess
                 simulatorHandler.post {
-                    if (!started && shortcutTestActive && usbDriverBinder === binder) {
-                        stopShortcutTest()
-                    } else if (shortcutTestActive && usbDriverBinder === binder &&
+                    if (started && shortcutTestActive && usbDriverBinder === binder &&
                         !usbPermissionPending
                     ) {
                         markShortcutTestReady()
@@ -211,12 +211,14 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
                 snapshot = snapshot,
                 simulatorState = simulatorUiState,
                 shortcutTestPhase = shortcutTestPhase,
+                activeShortcutTarget = activeShortcutTarget,
                 selectedTestDurationSeconds = selectedTestDurationSeconds,
                 remainingTestSeconds = remainingTestSeconds,
                 startKeyActionEnabled = startKeyActionEnabled,
                 onBack = ::exitDiagnosticScreen,
                 onRefresh = ::refreshControllers,
                 onToggleShortcutTest = ::toggleShortcutTest,
+                onToggleShortcutTarget = ::toggleShortcutTarget,
                 onSelectTestDuration = ::selectTestDuration
             )
         }
@@ -339,15 +341,33 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
 
     private fun toggleShortcutTest() {
         when (shortcutTestPhase) {
-            ShortcutTestPhase.IDLE -> startShortcutTest()
+            ShortcutTestPhase.IDLE -> startShortcutTest(target = null)
             ShortcutTestPhase.STARTING,
             ShortcutTestPhase.ACTIVE -> stopShortcutTest()
             ShortcutTestPhase.STOPPING -> Unit
         }
     }
 
-    private fun startShortcutTest() {
+    private fun toggleShortcutTarget(target: ShortcutTestTarget) {
+        when (shortcutTestPhase) {
+            ShortcutTestPhase.IDLE -> startShortcutTest(target)
+            ShortcutTestPhase.STOPPING -> Unit
+            ShortcutTestPhase.STARTING,
+            ShortcutTestPhase.ACTIVE -> {
+                if (activeShortcutTarget == target) {
+                    stopShortcutTest()
+                } else {
+                    activeShortcutTarget = target
+                    resetShortcutTest()
+                    restartTestCountdown()
+                }
+            }
+        }
+    }
+
+    private fun startShortcutTest(target: ShortcutTestTarget?) {
         resetShortcutTest()
+        activeShortcutTarget = target
         startKeyActionEnabled = PreferenceConfiguration.readPreferences(this).enableStartKeyMenu
         shortcutTestActive = true
         shortcutTestPhase = ShortcutTestPhase.STARTING
@@ -357,11 +377,9 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
             usbServiceConnection,
             Context.BIND_AUTO_CREATE
         )
-        if (!usbDriverBound) {
-            shortcutTestActive = false
-            shortcutTestPhase = ShortcutTestPhase.IDLE
-            remainingTestSeconds = 0
-        }
+        // Android controller events can be intercepted immediately. USB takeover initialization
+        // continues in the background and begins reporting as soon as its driver is ready.
+        markShortcutTestReady()
     }
 
     private fun stopShortcutTest(refreshAfterStop: Boolean = true) {
@@ -400,6 +418,7 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
             usbDriverBound = false
         }
         usbControllerNames.clear()
+        activeShortcutTarget = null
         shortcutTestPhase = ShortcutTestPhase.IDLE
         if (refreshAfterStop && !isFinishing && !isDestroyed) {
             simulatorHandler.postDelayed({
@@ -410,6 +429,11 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
 
     private fun markShortcutTestReady() {
         if (!shortcutTestActive || shortcutTestPhase == ShortcutTestPhase.ACTIVE) return
+        restartTestCountdown()
+    }
+
+    private fun restartTestCountdown() {
+        if (!shortcutTestActive) return
         shortcutTestPhase = ShortcutTestPhase.ACTIVE
         remainingTestSeconds = selectedTestDurationSeconds
         testDeadlineMs = SystemClock.elapsedRealtime() + selectedTestDurationSeconds * 1000L
@@ -661,9 +685,6 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
 
     override fun onUsbPermissionPromptStarting() {
         usbPermissionPending = true
-        simulatorHandler.post {
-            if (shortcutTestActive) shortcutTestPhase = ShortcutTestPhase.STARTING
-        }
     }
 
     override fun onUsbPermissionPromptCompleted() {
@@ -733,6 +754,14 @@ private enum class ShortcutTestPhase {
     STARTING,
     ACTIVE,
     STOPPING
+}
+
+private enum class ShortcutTestTarget {
+    SYSTEM_GAME_MENU,
+    USB_GAME_MENU,
+    USB_MOUSE_MODE,
+    PERFORMANCE_OVERLAY,
+    EXIT_STREAM
 }
 
 private enum class ControllerDiagnosticTab {
@@ -926,12 +955,14 @@ private fun ControllerDiagnosticScreen(
     snapshot: ControllerDiagnostics.Snapshot,
     simulatorState: ShortcutSimulatorUiState,
     shortcutTestPhase: ShortcutTestPhase,
+    activeShortcutTarget: ShortcutTestTarget?,
     selectedTestDurationSeconds: Int,
     remainingTestSeconds: Int,
     startKeyActionEnabled: Boolean,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
     onToggleShortcutTest: () -> Unit,
+    onToggleShortcutTarget: (ShortcutTestTarget) -> Unit,
     onSelectTestDuration: (Int) -> Unit
 ) {
     val background = colorResource(R.color.game_menu_dialog_background)
@@ -940,6 +971,7 @@ private fun ControllerDiagnosticScreen(
     val accent = colorResource(R.color.game_menu_accent)
     val baseColorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()
     val listState = rememberLazyListState()
+    var showControllerInfo by remember { mutableStateOf(false) }
     val controllerScrollStep = with(LocalDensity.current) { 64.dp.toPx() }
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -1001,6 +1033,7 @@ private fun ControllerDiagnosticScreen(
                     remainingSeconds = remainingTestSeconds,
                     onBack = onBack,
                     onRefresh = onRefresh,
+                    onShowInfo = { showControllerInfo = true },
                     onToggleTest = onToggleShortcutTest,
                     onSelectDuration = onSelectTestDuration
                 )
@@ -1020,26 +1053,27 @@ private fun ControllerDiagnosticScreen(
                         ShortcutSimulatorCard(
                             state = simulatorState,
                             testPhase = shortcutTestPhase,
+                            activeShortcutTarget = activeShortcutTarget,
                             selectedDurationSeconds = selectedTestDurationSeconds,
                             remainingSeconds = remainingTestSeconds,
                             predictedInputPath = snapshot.devices.firstOrNull()?.inputPath,
                             isLandscape = isLandscape,
                             startKeyActionEnabled = startKeyActionEnabled,
                             onToggleTest = onToggleShortcutTest,
+                            onToggleShortcutTarget = onToggleShortcutTarget,
                             onSelectDuration = onSelectTestDuration
                         )
                     }
-
-                    if (snapshot.devices.isEmpty()) {
-                        item {
-                            EmptyControllerCard()
-                        }
-                    } else {
-                        items(snapshot.devices) { device ->
-                            ControllerCard(device)
-                        }
-                    }
                 }
+            }
+
+            if (showControllerInfo) {
+                ControllerInfoDialog(
+                    snapshot = snapshot,
+                    simulatorState = simulatorState,
+                    testPhase = shortcutTestPhase,
+                    onDismiss = { showControllerInfo = false }
+                )
             }
         }
     }
@@ -1050,16 +1084,17 @@ private fun ControllerDiagnosticScreen(
 private fun ShortcutSimulatorCard(
     state: ShortcutSimulatorUiState,
     testPhase: ShortcutTestPhase,
+    activeShortcutTarget: ShortcutTestTarget?,
     selectedDurationSeconds: Int,
     remainingSeconds: Int,
     predictedInputPath: ControllerDiagnostics.InputPath?,
     isLandscape: Boolean,
     startKeyActionEnabled: Boolean,
     onToggleTest: () -> Unit,
+    onToggleShortcutTarget: (ShortcutTestTarget) -> Unit,
     onSelectDuration: (Int) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(ControllerDiagnosticTab.BUTTONS) }
-    var statusExpanded by remember { mutableStateOf(false) }
     val configuration = LocalConfiguration.current
     val useWideLandscapeLayout = isLandscape &&
         configuration.screenWidthDp >= WIDE_LANDSCAPE_MIN_WIDTH_DP &&
@@ -1073,25 +1108,13 @@ private fun ShortcutSimulatorCard(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             if (useWideLandscapeLayout) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    ControllerTestControls(
-                        testPhase = testPhase,
-                        selectedDurationSeconds = selectedDurationSeconds,
-                        remainingSeconds = remainingSeconds,
-                        onToggleTest = onToggleTest,
-                        onSelectDuration = onSelectDuration,
-                        modifier = Modifier.weight(1.25f)
-                    )
-                    ControllerTestStatus(
-                        state = state,
-                        testPhase = testPhase,
-                        modifier = Modifier.weight(0.75f)
-                    )
-                }
+                ControllerTestControls(
+                    testPhase = testPhase,
+                    selectedDurationSeconds = selectedDurationSeconds,
+                    remainingSeconds = remainingSeconds,
+                    onToggleTest = onToggleTest,
+                    onSelectDuration = onSelectDuration
+                )
 
                 ControllerLandscapeContent(
                     selectedTab = selectedTab,
@@ -1099,24 +1122,22 @@ private fun ShortcutSimulatorCard(
                     state = state,
                     predictedInputPath = predictedInputPath,
                     startKeyActionEnabled = startKeyActionEnabled,
+                    testPhase = testPhase,
+                    activeShortcutTarget = activeShortcutTarget,
+                    onToggleShortcutTarget = onToggleShortcutTarget,
                     isLandscape = true,
                     sidebarWidth = 120.dp
                 )
             } else if (isLandscape) {
-                ControllerTestStatus(
-                    state = state,
-                    testPhase = testPhase,
-                    collapsible = true,
-                    expanded = statusExpanded,
-                    onToggle = { statusExpanded = !statusExpanded }
-                )
-
                 ControllerLandscapeContent(
                     selectedTab = selectedTab,
                     onTabSelected = { selectedTab = it },
                     state = state,
                     predictedInputPath = predictedInputPath,
                     startKeyActionEnabled = startKeyActionEnabled,
+                    testPhase = testPhase,
+                    activeShortcutTarget = activeShortcutTarget,
+                    onToggleShortcutTarget = onToggleShortcutTarget,
                     isLandscape = true,
                     sidebarWidth = 96.dp
                 )
@@ -1145,19 +1166,18 @@ private fun ShortcutSimulatorCard(
                     fontSize = 12.sp,
                     lineHeight = 18.sp
                 )
-                ControllerTestStatus(state = state, testPhase = testPhase)
                 ControllerTestTabs(
                     selectedTab = selectedTab,
                     onTabSelected = { selectedTab = it }
                 )
-                if (selectedTab == ControllerDiagnosticTab.SHORTCUTS) {
-                    ControllerCurrentPressedPanel(state)
-                }
                 ControllerSelectedTabContent(
                     selectedTab = selectedTab,
                     state = state,
                     predictedInputPath = predictedInputPath,
                     startKeyActionEnabled = startKeyActionEnabled,
+                    testPhase = testPhase,
+                    activeShortcutTarget = activeShortcutTarget,
+                    onToggleShortcutTarget = onToggleShortcutTarget,
                     isLandscape = false
                 )
             }
@@ -1172,6 +1192,9 @@ private fun ControllerLandscapeContent(
     state: ShortcutSimulatorUiState,
     predictedInputPath: ControllerDiagnostics.InputPath?,
     startKeyActionEnabled: Boolean,
+    testPhase: ShortcutTestPhase,
+    activeShortcutTarget: ShortcutTestTarget?,
+    onToggleShortcutTarget: (ShortcutTestTarget) -> Unit,
     isLandscape: Boolean,
     sidebarWidth: androidx.compose.ui.unit.Dp
 ) {
@@ -1190,14 +1213,14 @@ private fun ControllerLandscapeContent(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            if (selectedTab == ControllerDiagnosticTab.SHORTCUTS) {
-                ControllerCurrentPressedPanel(state)
-            }
             ControllerSelectedTabContent(
                 selectedTab = selectedTab,
                 state = state,
                 predictedInputPath = predictedInputPath,
                 startKeyActionEnabled = startKeyActionEnabled,
+                testPhase = testPhase,
+                activeShortcutTarget = activeShortcutTarget,
+                onToggleShortcutTarget = onToggleShortcutTarget,
                 isLandscape = isLandscape
             )
         }
@@ -1210,6 +1233,9 @@ private fun ControllerSelectedTabContent(
     state: ShortcutSimulatorUiState,
     predictedInputPath: ControllerDiagnostics.InputPath?,
     startKeyActionEnabled: Boolean,
+    testPhase: ShortcutTestPhase,
+    activeShortcutTarget: ShortcutTestTarget?,
+    onToggleShortcutTarget: (ShortcutTestTarget) -> Unit,
     isLandscape: Boolean
 ) {
     when (selectedTab) {
@@ -1222,6 +1248,9 @@ private fun ControllerSelectedTabContent(
             state = state,
             inputPath = state.inputPath ?: predictedInputPath,
             startKeyActionEnabled = startKeyActionEnabled,
+            testPhase = testPhase,
+            activeShortcutTarget = activeShortcutTarget,
+            onToggleShortcutTarget = onToggleShortcutTarget,
             isLandscape = isLandscape
         )
     }
@@ -1276,28 +1305,22 @@ private fun ControllerTestControls(
 private fun ControllerTestStatus(
     state: ShortcutSimulatorUiState,
     testPhase: ShortcutTestPhase,
-    modifier: Modifier = Modifier,
-    collapsible: Boolean = false,
-    expanded: Boolean = true,
-    onToggle: () -> Unit = {}
+    modifier: Modifier = Modifier
 ) {
     val accent = colorResource(R.color.game_menu_accent)
-    val shape = if (collapsible) RectangleShape else GameMenuCardShape
     Surface(
         color = if (state.hintVisible) {
             accent.copy(alpha = 0.14f)
         } else {
             colorResource(R.color.game_menu_dialog_background)
         },
-        shape = shape,
-        border = if (collapsible) null else BorderStroke(
+        shape = GameMenuCardShape,
+        border = BorderStroke(
             GameMenuDimens.surfaceStroke,
             if (state.hintVisible) accent.copy(alpha = 0.42f)
             else colorResource(R.color.game_menu_button_border)
         ),
-        modifier = modifier
-            .fillMaxWidth()
-            .then(if (collapsible) Modifier.clickable(onClick = onToggle) else Modifier)
+        modifier = modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier.padding(horizontal = GameMenuDimens.section, vertical = 10.dp),
@@ -1335,35 +1358,23 @@ private fun ControllerTestStatus(
                     fontWeight = FontWeight.Bold,
                     maxLines = 2
                 )
-                if (!collapsible || expanded) {
-                    Text(
-                        text = state.controllerName?.let {
-                            stringResource(R.string.controller_diag_simulator_controller, it)
-                        } ?: stringResource(R.string.controller_diag_simulator_waiting_input),
-                        color = colorResource(R.color.game_menu_text_secondary),
-                        fontSize = 10.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                Text(
+                    text = state.controllerName?.let {
+                        stringResource(R.string.controller_diag_simulator_controller, it)
+                    } ?: stringResource(R.string.controller_diag_simulator_waiting_input),
+                    color = colorResource(R.color.game_menu_text_secondary),
+                    fontSize = 10.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
-            if (!collapsible || expanded) state.inputPath?.let { inputPath ->
+            state.inputPath?.let { inputPath ->
                 Text(
                     text = inputPathLabel(inputPath),
                     color = inputPathColor(inputPath),
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1
-                )
-            }
-            if (collapsible) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_chevron_right),
-                    contentDescription = null,
-                    tint = colorResource(R.color.game_menu_text_secondary),
-                    modifier = Modifier
-                        .size(18.dp)
-                        .rotate(if (expanded) 90f else 0f)
                 )
             }
         }
@@ -1859,39 +1870,76 @@ private fun ControllerButtonSection(
 
 @Composable
 private fun ControllerDpadLayout(state: ShortcutSimulatorUiState) {
-    val centerGap = if (
-        LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-    ) 18.dp else 26.dp
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        ControllerDiagramKey("↑", isPressed(state, ControllerPacket.UP_FLAG))
-        Row {
-            ControllerDiagramKey("←", isPressed(state, ControllerPacket.LEFT_FLAG))
-            Spacer(modifier = Modifier.width(centerGap))
-            ControllerDiagramKey("→", isPressed(state, ControllerPacket.RIGHT_FLAG))
-        }
-        ControllerDiagramKey("↓", isPressed(state, ControllerPacket.DOWN_FLAG))
-    }
+    ControllerCrossLayout(
+        topLabel = "↑",
+        topPressed = isPressed(state, ControllerPacket.UP_FLAG),
+        leftLabel = "←",
+        leftPressed = isPressed(state, ControllerPacket.LEFT_FLAG),
+        rightLabel = "→",
+        rightPressed = isPressed(state, ControllerPacket.RIGHT_FLAG),
+        bottomLabel = "↓",
+        bottomPressed = isPressed(state, ControllerPacket.DOWN_FLAG)
+    )
 }
 
 @Composable
 private fun ControllerFaceButtonLayout(state: ShortcutSimulatorUiState) {
-    val centerGap = if (
-        LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-    ) 18.dp else 26.dp
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
+    ControllerCrossLayout(
+        topLabel = "Y",
+        topPressed = isPressed(state, ControllerPacket.Y_FLAG),
+        leftLabel = "X",
+        leftPressed = isPressed(state, ControllerPacket.X_FLAG),
+        rightLabel = "B",
+        rightPressed = isPressed(state, ControllerPacket.B_FLAG),
+        bottomLabel = "A",
+        bottomPressed = isPressed(state, ControllerPacket.A_FLAG)
+    )
+}
+
+@Composable
+private fun ControllerCrossLayout(
+    topLabel: String,
+    topPressed: Boolean,
+    leftLabel: String,
+    leftPressed: Boolean,
+    rightLabel: String,
+    rightPressed: Boolean,
+    bottomLabel: String,
+    bottomPressed: Boolean
+) {
+    val compact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val keySize = if (compact) 32.dp else 42.dp
+    val centerGap = if (compact) 18.dp else 26.dp
+    val crossOffset = (keySize + centerGap) / 2
+    val clusterSize = keySize * 2 + centerGap
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(clusterSize),
+        contentAlignment = Alignment.TopCenter
     ) {
-        ControllerDiagramKey("Y", isPressed(state, ControllerPacket.Y_FLAG))
-        Row {
-            ControllerDiagramKey("X", isPressed(state, ControllerPacket.X_FLAG))
-            Spacer(modifier = Modifier.width(centerGap))
-            ControllerDiagramKey("B", isPressed(state, ControllerPacket.B_FLAG))
+        Box(modifier = Modifier.size(clusterSize)) {
+            ControllerDiagramKey(
+                topLabel,
+                topPressed,
+                Modifier.offset(x = crossOffset)
+            )
+            ControllerDiagramKey(
+                leftLabel,
+                leftPressed,
+                Modifier.offset(y = crossOffset)
+            )
+            ControllerDiagramKey(
+                rightLabel,
+                rightPressed,
+                Modifier.offset(x = keySize + centerGap, y = crossOffset)
+            )
+            ControllerDiagramKey(
+                bottomLabel,
+                bottomPressed,
+                Modifier.offset(x = crossOffset, y = keySize + centerGap)
+            )
         }
-        ControllerDiagramKey("A", isPressed(state, ControllerPacket.A_FLAG))
     }
 }
 
@@ -2002,11 +2050,15 @@ private fun ControllerPaddleButtonLayout(state: ShortcutSimulatorUiState) {
 }
 
 @Composable
-private fun ControllerDiagramKey(label: String, pressed: Boolean) {
+private fun ControllerDiagramKey(
+    label: String,
+    pressed: Boolean,
+    modifier: Modifier = Modifier
+) {
     val accent = colorResource(R.color.game_menu_accent)
     val compact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     Box(
-        modifier = Modifier
+        modifier = modifier
             .size(if (compact) 32.dp else 42.dp)
             .background(
                 if (pressed) accent else colorResource(R.color.game_menu_card_background),
@@ -2113,6 +2165,9 @@ private fun ControllerShortcutGuide(
     state: ShortcutSimulatorUiState,
     inputPath: ControllerDiagnostics.InputPath?,
     startKeyActionEnabled: Boolean,
+    testPhase: ShortcutTestPhase,
+    activeShortcutTarget: ShortcutTestTarget?,
+    onToggleShortcutTarget: (ShortcutTestTarget) -> Unit,
     isLandscape: Boolean
 ) {
     val systemPathLabel = inputPathLabel(ControllerDiagnostics.InputPath.SYSTEM)
@@ -2123,6 +2178,10 @@ private fun ControllerShortcutGuide(
         ControllerPacket.RB_FLAG,
         ControllerPacket.X_FLAG
     ).count { flag -> isPressed(state, flag) }
+    fun isUnderTest(target: ShortcutTestTarget): Boolean {
+        return testPhase != ShortcutTestPhase.IDLE &&
+            (activeShortcutTarget == null || activeShortcutTarget == target)
+    }
     val pressedExitKeyCount = listOf(
         ControllerPacket.PLAY_FLAG,
         ControllerPacket.BACK_FLAG,
@@ -2163,10 +2222,17 @@ private fun ControllerShortcutGuide(
                         pathLabel = systemPathLabel,
                         summary = stringResource(R.string.controller_diag_shortcut_menu_system),
                         keys = listOf("Start" to isPressed(state, ControllerPacket.PLAY_FLAG)),
-                        recognized = inputPath == ControllerDiagnostics.InputPath.SYSTEM &&
+                        recognized = isUnderTest(ShortcutTestTarget.SYSTEM_GAME_MENU) &&
+                            inputPath == ControllerDiagnostics.InputPath.SYSTEM &&
                             state.result == ShortcutSimulatorResult.GAME_MENU,
-                        inProgress = inputPath == ControllerDiagnostics.InputPath.SYSTEM &&
+                        inProgress = isUnderTest(ShortcutTestTarget.SYSTEM_GAME_MENU) &&
+                            inputPath == ControllerDiagnostics.InputPath.SYSTEM &&
                             isPressed(state, ControllerPacket.PLAY_FLAG),
+                        testRunning = isUnderTest(ShortcutTestTarget.SYSTEM_GAME_MENU),
+                        testSelected = activeShortcutTarget == ShortcutTestTarget.SYSTEM_GAME_MENU,
+                        onToggleTest = {
+                            onToggleShortcutTarget(ShortcutTestTarget.SYSTEM_GAME_MENU)
+                        },
                         modifier = cardModifier
                     )
                     ControllerShortcutCard(
@@ -2177,10 +2243,17 @@ private fun ControllerShortcutGuide(
                             "Start" to isPressed(state, ControllerPacket.PLAY_FLAG),
                             "B" to isPressed(state, ControllerPacket.B_FLAG)
                         ),
-                        recognized = inputPath == ControllerDiagnostics.InputPath.USB_TAKEOVER &&
+                        recognized = isUnderTest(ShortcutTestTarget.USB_GAME_MENU) &&
+                            inputPath == ControllerDiagnostics.InputPath.USB_TAKEOVER &&
                             state.result == ShortcutSimulatorResult.GAME_MENU,
-                        inProgress = inputPath == ControllerDiagnostics.InputPath.USB_TAKEOVER &&
+                        inProgress = isUnderTest(ShortcutTestTarget.USB_GAME_MENU) &&
+                            inputPath == ControllerDiagnostics.InputPath.USB_TAKEOVER &&
                             (state.hintVisible || isPressed(state, ControllerPacket.PLAY_FLAG)),
+                        testRunning = isUnderTest(ShortcutTestTarget.USB_GAME_MENU),
+                        testSelected = activeShortcutTarget == ShortcutTestTarget.USB_GAME_MENU,
+                        onToggleTest = {
+                            onToggleShortcutTarget(ShortcutTestTarget.USB_GAME_MENU)
+                        },
                         modifier = cardModifier
                     )
                     ControllerShortcutCard(
@@ -2188,10 +2261,17 @@ private fun ControllerShortcutGuide(
                         pathLabel = usbPathLabel,
                         summary = stringResource(R.string.controller_diag_shortcut_mouse_usb),
                         keys = listOf("Start" to isPressed(state, ControllerPacket.PLAY_FLAG)),
-                        recognized = inputPath == ControllerDiagnostics.InputPath.USB_TAKEOVER &&
+                        recognized = isUnderTest(ShortcutTestTarget.USB_MOUSE_MODE) &&
+                            inputPath == ControllerDiagnostics.InputPath.USB_TAKEOVER &&
                             state.result == ShortcutSimulatorResult.MOUSE_EMULATION,
-                        inProgress = inputPath == ControllerDiagnostics.InputPath.USB_TAKEOVER &&
+                        inProgress = isUnderTest(ShortcutTestTarget.USB_MOUSE_MODE) &&
+                            inputPath == ControllerDiagnostics.InputPath.USB_TAKEOVER &&
                             (state.hintVisible || isPressed(state, ControllerPacket.PLAY_FLAG)),
+                        testRunning = isUnderTest(ShortcutTestTarget.USB_MOUSE_MODE),
+                        testSelected = activeShortcutTarget == ShortcutTestTarget.USB_MOUSE_MODE,
+                        onToggleTest = {
+                            onToggleShortcutTarget(ShortcutTestTarget.USB_MOUSE_MODE)
+                        },
                         modifier = cardModifier
                     )
                 }
@@ -2205,8 +2285,15 @@ private fun ControllerShortcutGuide(
                         "R1/RB" to isPressed(state, ControllerPacket.RB_FLAG),
                         "X" to isPressed(state, ControllerPacket.X_FLAG)
                     ),
-                    recognized = state.result == ShortcutSimulatorResult.PERFORMANCE_OVERLAY,
-                    inProgress = performancePressedCount >= 2,
+                    recognized = isUnderTest(ShortcutTestTarget.PERFORMANCE_OVERLAY) &&
+                        state.result == ShortcutSimulatorResult.PERFORMANCE_OVERLAY,
+                    inProgress = isUnderTest(ShortcutTestTarget.PERFORMANCE_OVERLAY) &&
+                        performancePressedCount >= 2,
+                    testRunning = isUnderTest(ShortcutTestTarget.PERFORMANCE_OVERLAY),
+                    testSelected = activeShortcutTarget == ShortcutTestTarget.PERFORMANCE_OVERLAY,
+                    onToggleTest = {
+                        onToggleShortcutTarget(ShortcutTestTarget.PERFORMANCE_OVERLAY)
+                    },
                     modifier = cardModifier
                 )
 
@@ -2219,57 +2306,15 @@ private fun ControllerShortcutGuide(
                         "LB" to isPressed(state, ControllerPacket.LB_FLAG),
                         "RB" to isPressed(state, ControllerPacket.RB_FLAG)
                     ),
-                    recognized = state.result == ShortcutSimulatorResult.EXIT_STREAM,
-                    inProgress = pressedExitKeyCount >= 2,
+                    recognized = isUnderTest(ShortcutTestTarget.EXIT_STREAM) &&
+                        state.result == ShortcutSimulatorResult.EXIT_STREAM,
+                    inProgress = isUnderTest(ShortcutTestTarget.EXIT_STREAM) &&
+                        pressedExitKeyCount >= 2,
+                    testRunning = isUnderTest(ShortcutTestTarget.EXIT_STREAM),
+                    testSelected = activeShortcutTarget == ShortcutTestTarget.EXIT_STREAM,
+                    onToggleTest = { onToggleShortcutTarget(ShortcutTestTarget.EXIT_STREAM) },
                     modifier = cardModifier
                 )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ControllerCurrentPressedPanel(state: ShortcutSimulatorUiState) {
-    val pressedButtons = currentPressedButtonLabels(state)
-    Surface(
-        color = colorResource(R.color.game_menu_dialog_background),
-        shape = GameMenuCardShape,
-        border = BorderStroke(
-            GameMenuDimens.surfaceStroke,
-            colorResource(R.color.game_menu_button_border)
-        ),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.controller_diag_current_pressed),
-                color = colorResource(R.color.game_menu_text_primary),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1
-            )
-            if (pressedButtons.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.controller_diag_no_buttons_pressed),
-                    color = colorResource(R.color.game_menu_text_secondary),
-                    fontSize = 10.sp,
-                    modifier = Modifier.weight(1f)
-                )
-            } else {
-                FlowRow(
-                    modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    pressedButtons.forEach { label ->
-                        ShortcutKeyChip(label = label, active = true)
-                    }
-                }
             }
         }
     }
@@ -2284,6 +2329,9 @@ private fun ControllerShortcutCard(
     keys: List<Pair<String, Boolean>>,
     recognized: Boolean,
     inProgress: Boolean,
+    testRunning: Boolean,
+    testSelected: Boolean,
+    onToggleTest: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val accent = colorResource(R.color.game_menu_accent)
@@ -2324,6 +2372,12 @@ private fun ControllerShortcutCard(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
+                ShortcutCardTestButton(
+                    selected = testSelected,
+                    onClick = onToggleTest
+                )
+            }
+            if (testRunning) {
                 Text(
                     text = stringResource(
                         when {
@@ -2375,40 +2429,6 @@ private fun ShortcutKeyChip(label: String, active: Boolean) {
             )
             .padding(horizontal = 9.dp, vertical = 5.dp)
     )
-}
-
-private fun currentPressedButtonLabels(state: ShortcutSimulatorUiState): List<String> {
-    return buildList {
-        if (isPressed(state, ControllerPacket.UP_FLAG)) add("↑")
-        if (isPressed(state, ControllerPacket.DOWN_FLAG)) add("↓")
-        if (isPressed(state, ControllerPacket.LEFT_FLAG)) add("←")
-        if (isPressed(state, ControllerPacket.RIGHT_FLAG)) add("→")
-        if (isPressed(state, ControllerPacket.A_FLAG)) add("A")
-        if (isPressed(state, ControllerPacket.B_FLAG)) add("B")
-        if (isPressed(state, ControllerPacket.X_FLAG)) add("X")
-        if (isPressed(state, ControllerPacket.Y_FLAG)) add("Y")
-        if (isPressed(state, ControllerPacket.LB_FLAG)) add("LB")
-        if (isPressed(state, ControllerPacket.RB_FLAG)) add("RB")
-        if (state.leftTrigger > ANALOG_ACTIVE_THRESHOLD) add("LT")
-        if (state.rightTrigger > ANALOG_ACTIVE_THRESHOLD) add("RT")
-        if (isPressed(state, ControllerPacket.LS_CLK_FLAG)) add("L3")
-        if (isPressed(state, ControllerPacket.RS_CLK_FLAG)) add("R3")
-        if (isPressed(state, ControllerPacket.PLAY_FLAG)) add("Start")
-        if (isPressed(state, ControllerPacket.BACK_FLAG)) add("Select")
-        if (isPressed(state, ControllerPacket.SPECIAL_BUTTON_FLAG)) add("Home")
-        if (isPressed(state, ControllerPacket.TOUCHPAD_FLAG)) add("Touch")
-        if (isPressed(state, ControllerPacket.MISC_FLAG)) add("Share")
-        if (isPressed(state, ControllerPacket.PADDLE1_FLAG)) add("P1")
-        if (isPressed(state, ControllerPacket.PADDLE2_FLAG)) add("P2")
-        if (isPressed(state, ControllerPacket.PADDLE3_FLAG)) add("P3")
-        if (isPressed(state, ControllerPacket.PADDLE4_FLAG)) add("P4")
-        if (kotlin.math.abs(state.leftStickX) > ANALOG_ACTIVE_THRESHOLD ||
-            kotlin.math.abs(state.leftStickY) > ANALOG_ACTIVE_THRESHOLD
-        ) add("LS")
-        if (kotlin.math.abs(state.rightStickX) > ANALOG_ACTIVE_THRESHOLD ||
-            kotlin.math.abs(state.rightStickY) > ANALOG_ACTIVE_THRESHOLD
-        ) add("RS")
-    }
 }
 
 @Composable
@@ -2741,6 +2761,7 @@ private fun ControllerDiagnosticTopBar(
     remainingSeconds: Int,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
+    onShowInfo: () -> Unit,
     onToggleTest: () -> Unit,
     onSelectDuration: (Int) -> Unit
 ) {
@@ -2801,6 +2822,21 @@ private fun ControllerDiagnosticTopBar(
                 modifier = Modifier
                     .size(44.dp)
                     .gamepadFocusOutline(RectangleShape)
+                    .clickable(onClick = onShowInfo),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_info),
+                    contentDescription = stringResource(R.string.controller_diag_info),
+                    tint = accent,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .gamepadFocusOutline(RectangleShape)
                     .clickable(onClick = onRefresh),
                 contentAlignment = Alignment.Center
             ) {
@@ -2810,6 +2846,119 @@ private fun ControllerDiagnosticTopBar(
                     tint = accent,
                     modifier = Modifier.size(24.dp)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ShortcutCardTestButton(
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val accent = colorResource(R.color.game_menu_accent)
+    Surface(
+        color = if (selected) Color(0xFFE34F63) else accent.copy(alpha = 0.12f),
+        shape = RectangleShape,
+        border = BorderStroke(GameMenuDimens.surfaceStroke, accent.copy(alpha = 0.38f)),
+        modifier = Modifier
+            .heightIn(min = 34.dp)
+            .gamepadFocusOutline(RectangleShape)
+            .focusable()
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(
+                    if (selected) R.drawable.ic_stop_test else R.drawable.ic_play
+                ),
+                contentDescription = null,
+                tint = if (selected) Color.White else accent,
+                modifier = Modifier.size(14.dp)
+            )
+            Text(
+                text = stringResource(
+                    if (selected) R.string.controller_diag_stop_test
+                    else R.string.controller_diag_test_label
+                ),
+                color = if (selected) Color.White else accent,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
+private fun ControllerInfoDialog(
+    snapshot: ControllerDiagnostics.Snapshot,
+    simulatorState: ShortcutSimulatorUiState,
+    testPhase: ShortcutTestPhase,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            color = colorResource(R.color.game_menu_card_background),
+            shape = RectangleShape,
+            border = BorderStroke(
+                GameMenuDimens.surfaceStroke,
+                colorResource(R.color.game_menu_dialog_border)
+            ),
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .fillMaxHeight(0.82f)
+                .widthIn(max = 620.dp)
+        ) {
+            Column(modifier = Modifier.padding(GameMenuDimens.section)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.controller_diag_info),
+                        color = colorResource(R.color.game_menu_text_primary),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .gamepadFocusOutline(RectangleShape)
+                            .clickable(onClick = onDismiss),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_close_stylish),
+                            contentDescription = stringResource(R.string.controller_diag_close),
+                            tint = colorResource(R.color.game_menu_text_primary),
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    contentPadding = PaddingValues(bottom = 8.dp)
+                ) {
+                    item {
+                        ControllerTestStatus(
+                            state = simulatorState,
+                            testPhase = testPhase
+                        )
+                    }
+                    if (snapshot.devices.isEmpty()) {
+                        item { EmptyControllerCard() }
+                    } else {
+                        items(snapshot.devices) { device -> ControllerCard(device) }
+                    }
+                }
             }
         }
     }
