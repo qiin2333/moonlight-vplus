@@ -140,12 +140,12 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
     private var activeShortcutTarget by mutableStateOf<ShortcutTestTarget?>(null)
     private var shortcutAttemptState by mutableStateOf(ShortcutAttemptState.INACTIVE)
     private var shortcutAttemptRemainingSeconds by mutableIntStateOf(0)
+    private var selectedDiagnosticTab by mutableStateOf(ControllerDiagnosticTab.BUTTONS)
     private var controllerInfoVisible by mutableStateOf(false)
     private var selectedTestDurationSeconds by mutableIntStateOf(DEFAULT_TEST_DURATION_SECONDS)
     private var remainingTestSeconds by mutableIntStateOf(0)
     private var testDeadlineMs = 0L
     private var shortcutAttemptDeadlineMs = 0L
-    private var expectsUsbTakeover = false
     private var startKeyActionEnabled by mutableStateOf(true)
     private var systemStartDownTimeMs = 0L
     private var systemExitPending = false
@@ -189,14 +189,7 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
             simulatorHandler.postDelayed(this, COUNTDOWN_TICK_MS)
         }
     }
-    private val finishShortcutAttemptRunnable = Runnable {
-        if (activeShortcutTarget != null && shortcutTestActive) stopShortcutTest()
-    }
-    private val usbReadyFallbackRunnable = Runnable {
-        if (shortcutTestActive && shortcutTestPhase == ShortcutTestPhase.STARTING) {
-            markShortcutTestReady()
-        }
-    }
+    private val finishShortcutAttemptRunnable = Runnable { finishShortcutAttempt() }
     private val usbServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
             if (!shortcutTestActive || usbDriverExecutor.isShutdown) return
@@ -209,10 +202,8 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
                 val started = runCatching { binder.startForDiagnostics() }.isSuccess
                 simulatorHandler.post {
                     if (!shortcutTestActive || usbDriverBinder !== binder) return@post
-                    if (!started || !expectsUsbTakeover) {
+                    if (!started || !usbPermissionPending) {
                         markShortcutTestReady()
-                    } else if (!usbPermissionPending) {
-                        scheduleUsbReadyFallback()
                     }
                 }
             }
@@ -256,6 +247,7 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
                 activeShortcutTarget = activeShortcutTarget,
                 shortcutAttemptState = shortcutAttemptState,
                 shortcutAttemptRemainingSeconds = shortcutAttemptRemainingSeconds,
+                selectedTab = selectedDiagnosticTab,
                 controllerInfoVisible = controllerInfoVisible,
                 selectedTestDurationSeconds = selectedTestDurationSeconds,
                 remainingTestSeconds = remainingTestSeconds,
@@ -266,6 +258,7 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
                 onDismissControllerInfo = { controllerInfoVisible = false },
                 onToggleShortcutTest = ::toggleShortcutTest,
                 onToggleShortcutTarget = ::toggleShortcutTarget,
+                onTabSelected = { selectedDiagnosticTab = it },
                 onSelectTestDuration = ::selectTestDuration
             )
         }
@@ -320,6 +313,7 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
             return super.dispatchKeyEvent(event)
         }
         if (shortcutTestActive && isControllerEvent(event.device, event.source)) {
+            if (isShortcutNavigationMode()) return super.dispatchKeyEvent(event)
             when (event.action) {
                 KeyEvent.ACTION_DOWN -> {
                     if (event.repeatCount == 0) handleSimulatorKeyEvent(event, true)
@@ -336,10 +330,17 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
             return true
         }
         if (shortcutTestActive && isControllerEvent(event.device, event.source)) {
+            if (isShortcutNavigationMode()) return super.dispatchGenericMotionEvent(event)
             handleSimulatorMotionEvent(event)
             return true
         }
         return super.dispatchGenericMotionEvent(event)
+    }
+
+    private fun isShortcutNavigationMode(): Boolean {
+        return selectedDiagnosticTab == ControllerDiagnosticTab.SHORTCUTS &&
+            activeShortcutTarget == null &&
+            shortcutAttemptState == ShortcutAttemptState.INACTIVE
     }
 
     private fun handleSimulatorKeyEvent(event: KeyEvent, pressed: Boolean) {
@@ -414,7 +415,7 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
             ShortcutTestPhase.STOPPING -> Unit
             ShortcutTestPhase.STARTING -> {
                 if (activeShortcutTarget == target) {
-                    stopShortcutTest()
+                    finishShortcutAttempt()
                 } else {
                     activeShortcutTarget = target
                     resetShortcutTest()
@@ -424,11 +425,10 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
             }
             ShortcutTestPhase.ACTIVE -> {
                 if (activeShortcutTarget == target) {
-                    stopShortcutTest()
+                    finishShortcutAttempt()
                 } else {
                     activeShortcutTarget = target
                     resetShortcutTest()
-                    restartTestCountdown()
                     startShortcutAttemptCountdown()
                 }
             }
@@ -445,7 +445,6 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
             ShortcutAttemptState.PREPARING
         }
         shortcutAttemptRemainingSeconds = if (target == null) 0 else SHORTCUT_ATTEMPT_SECONDS
-        expectsUsbTakeover = snapshot.devices.any { it.usbTakeoverSupported }
         startKeyActionEnabled = PreferenceConfiguration.readPreferences(this).enableStartKeyMenu
         shortcutTestActive = true
         shortcutTestPhase = ShortcutTestPhase.STARTING
@@ -467,7 +466,6 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
         shortcutTestActive = false
         shortcutTestPhase = ShortcutTestPhase.STOPPING
         simulatorHandler.removeCallbacks(testCountdownRunnable)
-        simulatorHandler.removeCallbacks(usbReadyFallbackRunnable)
         remainingTestSeconds = 0
         testDeadlineMs = 0L
         usbPermissionPending = false
@@ -497,7 +495,6 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
         }
         usbControllerNames.clear()
         activeShortcutTarget = null
-        expectsUsbTakeover = false
         shortcutTestPhase = ShortcutTestPhase.IDLE
         if (refreshAfterStop && !isFinishing && !isDestroyed) {
             simulatorHandler.postDelayed({
@@ -508,14 +505,8 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
 
     private fun markShortcutTestReady() {
         if (!shortcutTestActive || shortcutTestPhase == ShortcutTestPhase.ACTIVE) return
-        simulatorHandler.removeCallbacks(usbReadyFallbackRunnable)
         restartTestCountdown()
         if (activeShortcutTarget != null) startShortcutAttemptCountdown()
-    }
-
-    private fun scheduleUsbReadyFallback() {
-        simulatorHandler.removeCallbacks(usbReadyFallbackRunnable)
-        simulatorHandler.postDelayed(usbReadyFallbackRunnable, USB_READY_FALLBACK_MS)
     }
 
     private fun restartTestCountdown() {
@@ -543,6 +534,13 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
         shortcutAttemptState = ShortcutAttemptState.INACTIVE
         shortcutAttemptRemainingSeconds = 0
         shortcutAttemptDeadlineMs = 0L
+    }
+
+    private fun finishShortcutAttempt() {
+        if (!shortcutTestActive || activeShortcutTarget == null) return
+        activeShortcutTarget = null
+        resetShortcutTest()
+        resetShortcutAttempt()
     }
 
     private fun selectTestDuration(durationSeconds: Int) {
@@ -825,7 +823,9 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
     override fun onUsbPermissionPromptCompleted() {
         usbPermissionPending = false
         simulatorHandler.post {
-            if (shortcutTestActive) scheduleUsbReadyFallback()
+            if (shortcutTestActive && shortcutTestPhase == ShortcutTestPhase.STARTING) {
+                markShortcutTestReady()
+            }
         }
     }
 
@@ -864,7 +864,6 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
         private const val DEFAULT_TEST_DURATION_SECONDS = 30
         private const val SHORTCUT_ATTEMPT_SECONDS = 5
         private const val SHORTCUT_RESULT_DISPLAY_MS = 900L
-        private const val USB_READY_FALLBACK_MS = 3000L
         private const val COUNTDOWN_TICK_MS = 250L
         private const val DPAD_AXIS_THRESHOLD = 0.5f
         private val SUPPORTED_TEST_DURATIONS_SECONDS = setOf(30, 60, 180)
@@ -964,7 +963,6 @@ private object ControllerDiagnostics {
         val name: String,
         val connectionType: ConnectionType,
         val inputPath: InputPath,
-        val usbTakeoverSupported: Boolean,
         val shortcutSupport: ShortcutSupport,
         val vendorId: Int,
         val productId: Int,
@@ -1017,7 +1015,6 @@ private object ControllerDiagnostics {
                 name = usbDisplayName(usbDevice, matchedSystemDevice, context),
                 connectionType = ConnectionType.USB,
                 inputPath = inputPath,
-                usbTakeoverSupported = supportedByUsbDriver,
                 shortcutSupport = shortcutSupport(inputPath, prefs.enableStartKeyMenu),
                 vendorId = usbDevice.vendorId,
                 productId = usbDevice.productId,
@@ -1035,7 +1032,6 @@ private object ControllerDiagnostics {
                     ?: context.getString(R.string.controller_diag_unknown_device),
                 connectionType = connectionType,
                 inputPath = InputPath.SYSTEM,
-                usbTakeoverSupported = false,
                 shortcutSupport = shortcutSupport(InputPath.SYSTEM, prefs.enableStartKeyMenu),
                 vendorId = inputDevice.vendorId,
                 productId = inputDevice.productId,
@@ -1107,6 +1103,7 @@ private fun ControllerDiagnosticScreen(
     activeShortcutTarget: ShortcutTestTarget?,
     shortcutAttemptState: ShortcutAttemptState,
     shortcutAttemptRemainingSeconds: Int,
+    selectedTab: ControllerDiagnosticTab,
     controllerInfoVisible: Boolean,
     selectedTestDurationSeconds: Int,
     remainingTestSeconds: Int,
@@ -1117,6 +1114,7 @@ private fun ControllerDiagnosticScreen(
     onDismissControllerInfo: () -> Unit,
     onToggleShortcutTest: () -> Unit,
     onToggleShortcutTarget: (ShortcutTestTarget) -> Unit,
+    onTabSelected: (ControllerDiagnosticTab) -> Unit,
     onSelectTestDuration: (Int) -> Unit
 ) {
     val background = colorResource(R.color.game_menu_dialog_background)
@@ -1223,9 +1221,11 @@ private fun ControllerDiagnosticScreen(
                             state = simulatorState,
                             testPhase = shortcutTestPhase,
                             activeShortcutTarget = activeShortcutTarget,
+                            selectedTab = selectedTab,
                             predictedInputPath = snapshot.devices.firstOrNull()?.inputPath,
                             isLandscape = isLandscape,
                             startKeyActionEnabled = startKeyActionEnabled,
+                            onTabSelected = onTabSelected,
                             onToggleShortcutTarget = onToggleShortcutTarget
                         )
                     }
@@ -1261,12 +1261,13 @@ private fun ShortcutSimulatorCard(
     state: ShortcutSimulatorUiState,
     testPhase: ShortcutTestPhase,
     activeShortcutTarget: ShortcutTestTarget?,
+    selectedTab: ControllerDiagnosticTab,
     predictedInputPath: ControllerDiagnostics.InputPath?,
     isLandscape: Boolean,
     startKeyActionEnabled: Boolean,
+    onTabSelected: (ControllerDiagnosticTab) -> Unit,
     onToggleShortcutTarget: (ShortcutTestTarget) -> Unit
 ) {
-    var selectedTab by remember { mutableStateOf(ControllerDiagnosticTab.BUTTONS) }
     val configuration = LocalConfiguration.current
     val useWideLandscapeLayout = isLandscape &&
         configuration.screenWidthDp >= WIDE_LANDSCAPE_MIN_WIDTH_DP &&
@@ -1282,7 +1283,7 @@ private fun ShortcutSimulatorCard(
             if (useWideLandscapeLayout) {
                 ControllerLandscapeContent(
                     selectedTab = selectedTab,
-                    onTabSelected = { selectedTab = it },
+                    onTabSelected = onTabSelected,
                     state = state,
                     predictedInputPath = predictedInputPath,
                     startKeyActionEnabled = startKeyActionEnabled,
@@ -1295,7 +1296,7 @@ private fun ShortcutSimulatorCard(
             } else if (isLandscape) {
                 ControllerLandscapeContent(
                     selectedTab = selectedTab,
-                    onTabSelected = { selectedTab = it },
+                    onTabSelected = onTabSelected,
                     state = state,
                     predictedInputPath = predictedInputPath,
                     startKeyActionEnabled = startKeyActionEnabled,
@@ -1325,7 +1326,7 @@ private fun ShortcutSimulatorCard(
                 )
                 ControllerTestTabs(
                     selectedTab = selectedTab,
-                    onTabSelected = { selectedTab = it }
+                    onTabSelected = onTabSelected
                 )
                 ControllerSelectedTabContent(
                     selectedTab = selectedTab,
@@ -3132,7 +3133,6 @@ private fun ShortcutCardTestButton(
         modifier = Modifier
             .heightIn(min = 34.dp)
             .gamepadFocusOutline(RectangleShape)
-            .focusable()
             .clickable(onClick = onClick)
     ) {
         Row(

@@ -78,11 +78,10 @@ class UsbDriverService : Service(), UsbDriverListener {
                 @Suppress("DEPRECATION")
                 val device: UsbDevice? = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
 
-                stateListener?.onUsbPermissionPromptCompleted()
-
                 if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
                     device?.let { handleUsbDeviceState(it) }
                 }
+                stateListener?.onUsbPermissionPromptCompleted()
             }
         }
     }
