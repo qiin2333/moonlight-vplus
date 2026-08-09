@@ -317,6 +317,10 @@
     <string name="controller_diag_shortcut_waiting">待测试</string>
     <string name="controller_diag_shortcut_in_progress">检测到输入</string>
     <string name="controller_diag_shortcut_recognized">已识别</string>
+    <string name="controller_diag_shortcut_prompt_preparing">正在准备手柄输入…</string>
+    <string name="controller_diag_shortcut_prompt_waiting">请在 %1$d 秒内按下该快捷键</string>
+    <string name="controller_diag_shortcut_prompt_success">快捷键识别成功</string>
+    <string name="controller_diag_shortcut_prompt_timeout">未检测到快捷键</string>
     <string name="controller_diag_start_shortcut_disabled">长按 Start 功能已关闭，仍可测试退出串流和性能显示快捷键。</string>
     <string name="controller_diag_group_direction">方向键</string>
     <string name="controller_diag_group_sticks">摇杆</string>

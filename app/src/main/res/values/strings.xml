@@ -379,6 +379,10 @@
     <string name="controller_diag_shortcut_waiting">Ready</string>
     <string name="controller_diag_shortcut_in_progress">Input detected</string>
     <string name="controller_diag_shortcut_recognized">Recognized</string>
+    <string name="controller_diag_shortcut_prompt_preparing">Preparing controller input…</string>
+    <string name="controller_diag_shortcut_prompt_waiting">Press this shortcut within %1$d seconds</string>
+    <string name="controller_diag_shortcut_prompt_success">Shortcut recognized</string>
+    <string name="controller_diag_shortcut_prompt_timeout">No shortcut detected</string>
     <string name="controller_diag_start_shortcut_disabled">The long-press Start action is disabled. Exit stream and performance display shortcuts remain available.</string>
     <string name="controller_diag_group_direction">D-pad</string>
     <string name="controller_diag_group_sticks">Sticks</string>

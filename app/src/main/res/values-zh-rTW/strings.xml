@@ -193,6 +193,10 @@
     <string name="controller_diag_shortcut_waiting">待測試</string>
     <string name="controller_diag_shortcut_in_progress">偵測到輸入</string>
     <string name="controller_diag_shortcut_recognized">已識別</string>
+    <string name="controller_diag_shortcut_prompt_preparing">正在準備手把輸入…</string>
+    <string name="controller_diag_shortcut_prompt_waiting">請在 %1$d 秒內按下此快捷鍵</string>
+    <string name="controller_diag_shortcut_prompt_success">快捷鍵識別成功</string>
+    <string name="controller_diag_shortcut_prompt_timeout">未偵測到快捷鍵</string>
     <string name="controller_diag_start_shortcut_disabled">長按 Start 功能已關閉，仍可測試退出串流和效能顯示快捷鍵。</string>
     <string name="controller_diag_group_direction">方向鍵</string>
     <string name="controller_diag_group_sticks">搖桿</string>
