@@ -1176,10 +1176,6 @@ private fun ControllerDiagnosticScreen(
     val controllerScrollStep = with(LocalDensity.current) { 64.dp.toPx() }
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val useCompactLandscapeLayout = isLandscape && (
-        configuration.screenWidthDp < WIDE_LANDSCAPE_MIN_WIDTH_DP ||
-            configuration.screenHeightDp < COMPACT_LANDSCAPE_MAX_HEIGHT_DP
-        )
     val layoutDirection = LocalLayoutDirection.current
     val safeArea = WindowInsets.systemBars
         .union(WindowInsets.displayCutout)
@@ -1228,7 +1224,7 @@ private fun ControllerDiagnosticScreen(
                 ControllerDiagnosticTopBar(
                     primary = primary,
                     accent = accent,
-                    showTestControls = useCompactLandscapeLayout,
+                    showTestControls = isLandscape,
                     testPhase = shortcutTestPhase,
                     selectedDurationSeconds = selectedTestDurationSeconds,
                     remainingSeconds = remainingTestSeconds,
@@ -1239,7 +1235,7 @@ private fun ControllerDiagnosticScreen(
                     onSelectDuration = onSelectTestDuration
                 )
 
-                if (!useCompactLandscapeLayout) {
+                if (!isLandscape) {
                     Surface(
                         color = colorResource(R.color.game_menu_card_background),
                         modifier = Modifier.fillMaxWidth()
@@ -1286,7 +1282,7 @@ private fun ControllerDiagnosticScreen(
                 ShortcutAttemptPopup(
                     state = shortcutAttemptState,
                     remainingSeconds = shortcutAttemptRemainingSeconds,
-                    compactLandscape = useCompactLandscapeLayout,
+                    compactLandscape = isLandscape,
                     modifier = Modifier.align(Alignment.TopCenter)
                 )
             }
