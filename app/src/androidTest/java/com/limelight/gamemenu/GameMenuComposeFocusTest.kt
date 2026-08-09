@@ -114,7 +114,7 @@ class GameMenuComposeFocusTest {
     }
 
     @Test
-    fun firstMenuOptionCanReceiveInitialFocusAndControllerConfirmation() {
+    fun standardGamepadAConfirmsInitiallyFocusedMenuOption() {
         val activated = AtomicBoolean(false)
         lateinit var initialFocusRequester: FocusRequester
         val firstOption = GameMenu.MenuOption(
@@ -139,8 +139,12 @@ class GameMenuComposeFocusTest {
 
         composeTestRule.runOnIdle { initialFocusRequester.requestFocus() }
         composeTestRule.onNodeWithText("First option").assertIsFocused()
+        val mappedConfirmKey = when (mapGameMenuConfirmKeyCode(KeyEvent.KEYCODE_BUTTON_A)) {
+            KeyEvent.KEYCODE_DPAD_CENTER -> Key.DirectionCenter
+            else -> error("Standard gamepad A must map to the focused UI confirmation key")
+        }
         composeTestRule.onNodeWithText("First option").performKeyInput {
-            pressKey(Key.DirectionCenter)
+            pressKey(mappedConfirmKey)
         }
 
         assertTrue(activated.get())

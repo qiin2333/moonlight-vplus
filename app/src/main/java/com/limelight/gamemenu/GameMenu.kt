@@ -53,6 +53,30 @@ import java.util.ArrayDeque
 /** Int → Short 快捷转换 */
 private fun Int.s(): Short = this.toShort()
 
+internal fun mapGameMenuConfirmKeyCode(keyCode: Int): Int {
+    return if (keyCode == KeyEvent.KEYCODE_BUTTON_A) KeyEvent.KEYCODE_DPAD_CENTER else keyCode
+}
+
+private fun mapGameMenuConfirmKeyEvent(event: KeyEvent): KeyEvent {
+    val mappedKeyCode = mapGameMenuConfirmKeyCode(event.keyCode)
+    return if (mappedKeyCode != event.keyCode) {
+        KeyEvent(
+            event.downTime,
+            event.eventTime,
+            event.action,
+            mappedKeyCode,
+            event.repeatCount,
+            event.metaState,
+            event.deviceId,
+            event.scanCode,
+            event.flags,
+            event.source
+        )
+    } else {
+        event
+    }
+}
+
 /**
  * 提供游戏流媒体进行中的选项菜单
  * 在游戏活动中按返回键时显示
@@ -680,9 +704,16 @@ class GameMenu(
 
         // 返回键监听器
         dialog.setOnKeyListener { _, keyCode, event ->
-            UiDismissKeyHandler.handle(event.action, keyCode) {
+            if (UiDismissKeyHandler.handle(event.action, keyCode) {
                 if (!navigateBack()) dialog.cancel()
+            }) {
+                return@setOnKeyListener true
             }
+            if (keyCode == KeyEvent.KEYCODE_BUTTON_A) {
+                dialog.dispatchKeyEvent(mapGameMenuConfirmKeyEvent(event))
+                return@setOnKeyListener true
+            }
+            false
         }
 
         // 关闭时清理状态
