@@ -717,6 +717,7 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
 private const val CONTROLLER_SCROLL_REPEAT_MS = 90L
 private const val MEDIUM_LANDSCAPE_MIN_WIDTH_DP = 600
 private const val WIDE_LANDSCAPE_MIN_WIDTH_DP = 720
+private const val COMPACT_LANDSCAPE_MAX_HEIGHT_DP = 480
 
 private enum class ShortcutSimulatorResult {
     IDLE,
@@ -940,9 +941,12 @@ private fun ControllerDiagnosticScreen(
     val baseColorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()
     val listState = rememberLazyListState()
     val controllerScrollStep = with(LocalDensity.current) { 64.dp.toPx() }
-    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val useCompactLandscapeLayout = isLandscape &&
-        LocalConfiguration.current.screenWidthDp < WIDE_LANDSCAPE_MIN_WIDTH_DP
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val useCompactLandscapeLayout = isLandscape && (
+        configuration.screenWidthDp < WIDE_LANDSCAPE_MIN_WIDTH_DP ||
+            configuration.screenHeightDp < COMPACT_LANDSCAPE_MAX_HEIGHT_DP
+        )
     val layoutDirection = LocalLayoutDirection.current
     val safeArea = WindowInsets.systemBars
         .union(WindowInsets.displayCutout)
@@ -1056,8 +1060,10 @@ private fun ShortcutSimulatorCard(
 ) {
     var selectedTab by remember { mutableStateOf(ControllerDiagnosticTab.BUTTONS) }
     var statusExpanded by remember { mutableStateOf(false) }
+    val configuration = LocalConfiguration.current
     val useWideLandscapeLayout = isLandscape &&
-        LocalConfiguration.current.screenWidthDp >= WIDE_LANDSCAPE_MIN_WIDTH_DP
+        configuration.screenWidthDp >= WIDE_LANDSCAPE_MIN_WIDTH_DP &&
+        configuration.screenHeightDp >= COMPACT_LANDSCAPE_MAX_HEIGHT_DP
     Surface(
         color = colorResource(R.color.game_menu_card_background),
         modifier = Modifier.fillMaxWidth()
