@@ -206,6 +206,9 @@ class UsbDriverService : Service(), UsbDriverListener {
     }
 
     private fun handleUsbDeviceStateSafely(device: UsbDevice) {
+        if (!started) {
+            return
+        }
         runCatching { handleUsbDeviceState(device) }.onFailure {
             LimeLog.warning("Unable to process USB controller: ${it.message}")
         }

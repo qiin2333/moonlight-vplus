@@ -470,15 +470,16 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
         } else {
             usbNavigationKeyDownTimes.remove(buttonFlag) ?: eventTime
         }
-        super.dispatchKeyEvent(
-            KeyEvent(
-                downTime,
-                eventTime,
-                if (pressed) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP,
-                keyCode,
-                0
-            )
+        val event = KeyEvent(
+            downTime,
+            eventTime,
+            if (pressed) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP,
+            keyCode,
+            0
         )
+        if (!window.superDispatchKeyEvent(event)) {
+            event.dispatch(this, window.decorView.keyDispatcherState, this)
+        }
     }
 
     private fun handleSimulatorKeyEvent(event: KeyEvent, pressed: Boolean) {
