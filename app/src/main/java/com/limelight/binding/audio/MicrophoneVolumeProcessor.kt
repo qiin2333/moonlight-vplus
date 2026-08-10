@@ -4,6 +4,7 @@ import com.limelight.LimeLog
 
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.exp
 import kotlin.math.log10
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -18,7 +19,7 @@ import kotlin.math.sqrt
  * - 音量平衡(BALANCE)：手机游戏开麦式语音链——
  *   80Hz 高通（去喷麦/风噪）→ 2400Hz 中频提升（语音清晰度）
  *   → 压缩器（-18dB 阈值, 3:1, attack 5ms / release 150ms）
- *   → 输出响度补偿（make-up gain）→ 限幅器（-1dBFS）+ 软限幅防瞬态爆音
+ *   → 输出响度补偿（make-up gain）→ 峰值限幅器（-1dBFS）
  *
  * 压缩器是消除"声音忽高忽低"的关键：正常语音（低于阈值）增益恒定，
  * 只有喊叫等大声才被压缩，150ms 慢释放避免抽吸感。
@@ -72,19 +73,16 @@ class MicrophoneVolumeProcessor {
 
     // ---- 压缩器与限幅器状态 ----
     private var compEnv = 0.0
-    private var limitEnv = 0.0
     private var compBlockPeak = 0.0
-    private var limitBlockPeak = 0.0
+    private var signalBlockPeak = 0.0
 
     // 块内滤波输出缓存（复用，零分配），配合增益延迟写回
     private val blockBuffer = DoubleArray(GAIN_UPDATE_INTERVAL)
 
     init {
-        // RBJ 音频EQ协方差公式，采样率 48000Hz
-        val sampleRate = 48000.0
-
+        // RBJ biquad 滤波器系数，采样率 48000Hz
         // 高通滤波器（Butterworth，Q = 1/√2，fc = 80Hz）
-        val hpW0 = 2.0 * Math.PI * HP_FILTER_FREQ / sampleRate
+        val hpW0 = 2.0 * Math.PI * HP_FILTER_FREQ / SAMPLE_RATE
         val hpCosW = cos(hpW0)
         val hpAlpha = sin(hpW0) / sqrt(2.0)
         val hpA0 = 1.0 + hpAlpha
@@ -96,7 +94,7 @@ class MicrophoneVolumeProcessor {
 
         // 峰值均衡（fc = 2400Hz，Q = 1.0，增益 +4dB）
         val peAmp = 10.0.pow(PRESENCE_GAIN_DB / 40.0)
-        val peW0 = 2.0 * Math.PI * PRESENCE_FREQ / sampleRate
+        val peW0 = 2.0 * Math.PI * PRESENCE_FREQ / SAMPLE_RATE
         val peCosW = cos(peW0)
         val peAlpha = sin(peW0) / 2.0
         val peA0 = 1.0 + peAlpha / peAmp
@@ -155,9 +153,8 @@ class MicrophoneVolumeProcessor {
         peY1 = 0.0
         peY2 = 0.0
         compEnv = 0.0
-        limitEnv = 0.0
         compBlockPeak = 0.0
-        limitBlockPeak = 0.0
+        signalBlockPeak = 0.0
     }
 
     /**
@@ -167,13 +164,10 @@ class MicrophoneVolumeProcessor {
      * @param length 帧字节数（必须是偶数）
      */
     fun processFrame(data: ByteArray, offset: Int, length: Int) {
-        if (mode == Mode.OFF || length < 2) return
-
-        // 防御：参数越界时直接跳过，绝不能导致崩溃
-        if (offset < 0 || length > data.size - offset) {
-            LimeLog.severe("音量处理帧参数越界: offset=$offset length=$length dataSize=${data.size}")
-            return
+        require(offset >= 0 && length >= 0 && length % 2 == 0 && offset <= data.size - length) {
+            "Invalid PCM frame range: offset=$offset length=$length dataSize=${data.size}"
         }
+        if (mode == Mode.OFF || length == 0) return
 
         val sampleCount = length / 2
         when (mode) {
@@ -228,7 +222,7 @@ class MicrophoneVolumeProcessor {
     // ================= 音量平衡模式 =================
 
     /**
-     * 音量平衡：人声增强（可选）→ 压缩器 → 输出补偿 → 限幅器 + 软限幅。
+     * 音量平衡：人声增强（可选）→ 压缩器 → 输出补偿 → 限幅器。
      * 每 [GAIN_UPDATE_INTERVAL] 样本（0.67ms）计算一次增益并批量写回本块
      * 的滤波输出（× 增益），块内增益恒定，避免逐样本跳变产生噪声。
      */
@@ -246,7 +240,7 @@ class MicrophoneVolumeProcessor {
             blockBuffer[pendingCount] = processed
             pendingCount++
 
-            // 压缩器/限幅器峰值包络（逐样本平滑，attack 快 / release 慢）
+            // 压缩器峰值包络（逐样本平滑，attack 快 / release 慢）
             val peak = abs(processed)
             if (peak > compEnv) {
                 compEnv += (peak - compEnv) * COMP_ATTACK_COEFF
@@ -254,13 +248,7 @@ class MicrophoneVolumeProcessor {
                 compEnv += (peak - compEnv) * COMP_RELEASE_COEFF
             }
             if (compEnv > compBlockPeak) compBlockPeak = compEnv
-
-            if (peak > limitEnv) {
-                limitEnv += (peak - limitEnv) * LIMIT_ATTACK_COEFF
-            } else {
-                limitEnv += (peak - limitEnv) * LIMIT_RELEASE_COEFF
-            }
-            if (limitEnv > limitBlockPeak) limitBlockPeak = limitEnv
+            if (peak > signalBlockPeak) signalBlockPeak = peak
 
             // 每块计算一次合并增益并写回
             if (pendingCount == GAIN_UPDATE_INTERVAL) {
@@ -279,9 +267,10 @@ class MicrophoneVolumeProcessor {
     /** 基于本块峰值计算合并增益（压缩器 × 限幅器），并复位块峰值 */
     private fun computeBlockGain(): Double {
         val compGain = computeCompressorGain(compBlockPeak)
-        val limitGain = computeLimiterGain(limitBlockPeak)
+        val amplifiedPeak = signalBlockPeak * compGain
+        val limitGain = if (amplifiedPeak > LIMITER_PEAK) LIMITER_PEAK / amplifiedPeak else 1.0
         compBlockPeak = 0.0
-        limitBlockPeak = 0.0
+        signalBlockPeak = 0.0
         return compGain * limitGain
     }
 
@@ -297,35 +286,11 @@ class MicrophoneVolumeProcessor {
         return 10.0.pow((makeupGainDb - reductionDb) / 20.0)
     }
 
-    /** 限幅器增益：峰值超过 -1dBFS 时近砖墙压缩（20:1），防止爆音 */
-    private fun computeLimiterGain(blockPeak: Double): Double {
-        val envDb = 20.0 * log10(blockPeak / 32768.0 + 1e-12)
-        val overDb = envDb - LIMITER_THRESHOLD_DB
-        if (overDb <= 0.0) return 1.0
-        val reductionDb = overDb * (1.0 - 1.0 / LIMITER_RATIO)
-        return 10.0.pow(-reductionDb / 20.0)
-    }
-
-    /**
-     * 将缓存块内的滤波输出乘上块增益并写回。
-     * 写回时逐样本做最终软限幅（-1dBFS），覆盖块增益滞后（attack 瞬态）期间的
-     * 过冲峰值，保证任何情况下都不会满幅硬钳位产生爆音。
-     */
+    /** 将缓存块内的滤波输出乘上块增益并写回。 */
     private fun writeBlock(data: ByteArray, blockStart: Int, blockLength: Int, blockGain: Double) {
         for (i in 0 until blockLength) {
-            writeSample(data, blockStart + i * 2, softLimit(blockBuffer[i] * blockGain))
+            writeSample(data, blockStart + i * 2, blockBuffer[i] * blockGain)
         }
-    }
-
-    /** 软限幅：超过 -1dBFS 峰值的部分按 10% 斜率压缩，避免硬截断失真 */
-    private fun softLimit(value: Double): Double {
-        if (value > LIMITER_PEAK) {
-            return LIMITER_PEAK + (value - LIMITER_PEAK) * SOFT_LIMIT_SLOPE
-        }
-        if (value < -LIMITER_PEAK) {
-            return -LIMITER_PEAK + (value + LIMITER_PEAK) * SOFT_LIMIT_SLOPE
-        }
-        return value
     }
 
     // ================= PCM 读写辅助 =================
@@ -349,7 +314,7 @@ class MicrophoneVolumeProcessor {
         private const val PRESENCE_FREQ = 2400.0 // 中频提升中心频率 (Hz)
         private const val PRESENCE_GAIN_DB = 4.0 // 中频提升增益 (dB)
 
-        // 压缩器参数（参考手机游戏开麦语音处理标准）
+        // 压缩器参数
         private const val COMP_THRESHOLD_DB = -18.0 // 阈值 (dBFS)
         private const val COMP_RATIO = 3.0 // 压缩比
         private const val COMP_ATTACK_S = 0.005 // 启动时间 5ms（快速响应喊叫）
@@ -358,21 +323,14 @@ class MicrophoneVolumeProcessor {
         private const val MAKEUP_GAIN_PER_PERCENT = 0.08 // 50% → +4dB 的映射系数
 
         // 限幅器参数（防爆音）
-        private const val LIMITER_THRESHOLD_DB = -1.0 // 限幅阈值 (dBFS)
-        private const val LIMITER_RATIO = 20.0 // 近砖墙压缩比
-        private const val LIMIT_ATTACK_S = 0.0005 // 0.5ms 快速响应
-        private const val LIMIT_RELEASE_S = 0.03 // 30ms 释放
-        private const val LIMITER_PEAK = 29163.0 // -1dBFS 峰值 (32768 * 10^(-1/20))
-        private const val SOFT_LIMIT_SLOPE = 0.1 // 软限幅斜率：超出部分仅保留 10%
+        private const val LIMITER_PEAK = 29204.0 // -1dBFS 峰值 (32768 * 10^(-1/20))
 
         // 采样率与增益更新间隔
         private const val SAMPLE_RATE = 48000.0
         private const val GAIN_UPDATE_INTERVAL = 32 // 每 32 样本（0.67ms）更新一次增益
 
-        // 逐样本平滑系数（一阶低通，时间常数 τ = 1/(fs*T)）
-        private const val COMP_ATTACK_COEFF = 1.0 - 0.995842 // 1-exp(-1/(48000*5ms)) = 0.004158
-        private const val COMP_RELEASE_COEFF = 1.0 - 0.999861 // 1-exp(-1/(48000*150ms)) = 0.000139
-        private const val LIMIT_ATTACK_COEFF = 1.0 - 0.959203 // 1-exp(-1/(48000*0.5ms)) = 0.040797
-        private const val LIMIT_RELEASE_COEFF = 1.0 - 0.999306 // 1-exp(-1/(48000*30ms)) = 0.000694
+        // 逐样本平滑系数（一阶低通）
+        private val COMP_ATTACK_COEFF = 1.0 - exp(-1.0 / (SAMPLE_RATE * COMP_ATTACK_S))
+        private val COMP_RELEASE_COEFF = 1.0 - exp(-1.0 / (SAMPLE_RATE * COMP_RELEASE_S))
     }
 }

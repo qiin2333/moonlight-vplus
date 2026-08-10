@@ -11,6 +11,7 @@ import android.os.SystemClock
 
 import com.limelight.LimeLog
 
+import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicBoolean
 
 class MicrophoneCapture(
@@ -30,9 +31,6 @@ class MicrophoneCapture(
 
     private val frameBuffer = ByteArray(MicrophoneConfig.BYTES_PER_FRAME)
     private var frameBufferPos = 0
-
-    // 采集读取缓冲区（跨 start/stop 复用，避免反复分配造成 GC 压力）
-    private var captureData = ByteArray(0)
 
     private var lastFrameTime = 0L
     private var frameCount = 0L
@@ -88,21 +86,19 @@ class MicrophoneCapture(
             captureThread = Thread({
                 Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO)
 
-                // 复用采集缓冲区（大小变化时才重新分配）
-                if (captureData.size != bufferSize) {
-                    captureData = ByteArray(bufferSize)
-                }
+                val buffer = ByteBuffer.allocateDirect(bufferSize)
+                val data = ByteArray(bufferSize)
 
                 try {
                     audioRecord!!.startRecording()
                     LimeLog.info("麦克风捕获已启动，缓冲区大小: $bufferSize 字节")
 
                     while (running.get()) {
-                        // 使用 byte[] 重载的 read（所有 API 级别都有），
-                        // 避免 ByteBuffer 重载（API 23+）在 Android 5.1/6.0 上闪退
-                        val bytesRead = audioRecord!!.read(captureData, 0, bufferSize)
+                        val bytesRead = audioRecord!!.read(buffer, bufferSize)
                         if (bytesRead > 0) {
-                            processAudioData(captureData, 0, bytesRead)
+                            buffer.get(data, 0, bytesRead)
+                            buffer.clear()
+                            processAudioData(data, 0, bytesRead)
                         } else if (bytesRead == AudioRecord.ERROR_INVALID_OPERATION) {
                             LimeLog.warning("AudioRecord读取错误: ERROR_INVALID_OPERATION")
                             break
@@ -169,13 +165,8 @@ class MicrophoneCapture(
                     continue
                 }
 
-                // 先应用音量增益及其平衡处理，再交给编码器。
-                // 防御：音量处理异常只记录日志，不能中断串流或导致闪退
-                try {
-                    volumeProcessor.processFrame(frameBuffer, 0, MicrophoneConfig.BYTES_PER_FRAME)
-                } catch (e: Exception) {
-                    LimeLog.severe("音量处理异常: ${e.message}")
-                }
+                // 先应用音量处理，再交给编码器。
+                volumeProcessor.processFrame(frameBuffer, 0, MicrophoneConfig.BYTES_PER_FRAME)
                 dataCallback.onMicrophoneData(frameBuffer, 0, MicrophoneConfig.BYTES_PER_FRAME)
                 frameBufferPos = 0
                 lastFrameTime = currentTime
