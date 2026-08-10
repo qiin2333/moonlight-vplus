@@ -42,6 +42,7 @@ class TouchInputHandler(private val game: Game) {
     val relativeTouchContextMap = arrayOfNulls<TouchContext>(TOUCH_CONTEXT_LENGTH)
 
     // ---- 触控私有状态 ----
+    // Mouse-only baseline. Pen packets carry their full button state independently.
     private var lastButtonState = 0
     private var multiFingerDownTime = 0L
 
@@ -82,7 +83,6 @@ class TouchInputHandler(private val game: Game) {
         val hasStylusTool = eventHasStylusTool(event)
 
         if (view != null && hasStylusTool && trySendPenEvent(view, event)) {
-            lastButtonState = event.buttonState
             return true
         }
 
