@@ -315,7 +315,7 @@ class PreferenceConfiguration {
                 .putBoolean(MIC_VOLUME_PROCESSING_PREF_STRING, micVolumeProcessingEnabled)
                 .putBoolean(MIC_GAIN_ENABLED_PREF_STRING, micGainEnabled)
                 .putInt(MIC_GAIN_DB_PREF_STRING, micGainDb)
-                .putBoolean(MIC_BALANCE_ENABLED_PREF_STRING, micBalanceEnabled)
+                .putBoolean(MIC_BALANCE_ENABLED_PREF_STRING, micBalanceEnabled && !micGainEnabled)
                 .putInt(MIC_BALANCE_TARGET_PERCENT_PREF_STRING, micBalanceTargetPercent)
                 .putBoolean(MIC_VOICE_ENHANCEMENT_PREF_STRING, micVoiceEnhancementEnabled)
                 .putBoolean(ENABLE_ESC_MENU_PREF_STRING, enableEscMenu)
@@ -1408,7 +1408,8 @@ class PreferenceConfiguration {
             config.micVolumeProcessingEnabled = prefs.getBoolean(MIC_VOLUME_PROCESSING_PREF_STRING, DEFAULT_MIC_VOLUME_PROCESSING)
             config.micGainEnabled = prefs.getBoolean(MIC_GAIN_ENABLED_PREF_STRING, DEFAULT_MIC_GAIN_ENABLED)
             config.micGainDb = prefs.getInt(MIC_GAIN_DB_PREF_STRING, DEFAULT_MIC_GAIN_DB).coerceIn(-20, 20)
-            config.micBalanceEnabled = prefs.getBoolean(MIC_BALANCE_ENABLED_PREF_STRING, DEFAULT_MIC_BALANCE_ENABLED)
+            config.micBalanceEnabled = prefs.getBoolean(MIC_BALANCE_ENABLED_PREF_STRING, DEFAULT_MIC_BALANCE_ENABLED) &&
+                    !config.micGainEnabled
             config.micBalanceTargetPercent = prefs.getInt(MIC_BALANCE_TARGET_PERCENT_PREF_STRING, DEFAULT_MIC_BALANCE_TARGET_PERCENT).coerceIn(1, 100)
             config.micVoiceEnhancementEnabled = prefs.getBoolean(MIC_VOICE_ENHANCEMENT_PREF_STRING, DEFAULT_MIC_VOICE_ENHANCEMENT)
 

@@ -3897,6 +3897,12 @@ class StreamSettings : AppCompatActivity() {
             val gainPref = findPreference<CheckBoxPreference>("checkbox_mic_gain")
             val balancePref = findPreference<CheckBoxPreference>("checkbox_mic_balance")
 
+            // Imported or individually synced settings can briefly contain both flags.
+            // Gain has the same precedence as the runtime processor.
+            if (gainPref?.isChecked == true && balancePref?.isChecked == true) {
+                balancePref.isChecked = false
+            }
+
             gainPref?.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
                 if (newValue == true) {
                     balancePref?.setChecked(false)

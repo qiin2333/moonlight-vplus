@@ -146,7 +146,7 @@ object MicrophoneConfig {
      * VOICE_COMMUNICATION会自动启用系统级的AEC、AGC、NS
      */
     fun useVoiceCommunication(): Boolean {
-        return useVoiceComm
+        return useVoiceComm && !softwareVolumeProcessingActive()
     }
 
     /**
@@ -162,14 +162,14 @@ object MicrophoneConfig {
     fun getAudioProcessingConfigSummary(): String {
         return buildString {
             append("音频处理配置:\n")
-            append("音频源: ").append(if (useVoiceComm) "VOICE_COMMUNICATION" else "MIC").append("\n")
+            append("音频源: ").append(if (useVoiceCommunication()) "VOICE_COMMUNICATION" else "MIC").append("\n")
             append("回声消除(AEC): ").append(if (enableAEC) "启用" else "禁用").append("\n")
             append("自动增益(AGC): ").append(if (enableAutomaticGainControl()) "启用" else "禁用").append("\n")
             append("噪声抑制(NS): ").append(if (enableNS) "启用" else "禁用").append("\n")
             append("音量处理: ").append(
                 when {
-                    volumeGainEnabled -> "音量增益($volumeGainDb dB)"
-                    volumeBalanceEnabled -> "音量平衡(输出补偿$volumeBalanceTargetPercent%)"
+                    isVolumeGainEnabled() -> "音量增益($volumeGainDb dB)"
+                    isVolumeBalanceEnabled() -> "音量平衡(输出补偿$volumeBalanceTargetPercent%)"
                     else -> "禁用"
                 }
             )

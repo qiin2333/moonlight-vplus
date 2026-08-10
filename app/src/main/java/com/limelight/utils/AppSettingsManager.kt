@@ -283,8 +283,9 @@ class AppSettingsManager(private val context: Context) {
         settings.micVolumeProcessingEnabled = settingsJson.optBoolean("micVolumeProcessingEnabled", false)
         settings.micGainEnabled = settingsJson.optBoolean("micGainEnabled", false)
         settings.micGainDb = settingsJson.optInt("micGainDb", 0).coerceIn(-20, 20)
-        settings.micBalanceEnabled = settingsJson.optBoolean("micBalanceEnabled", false)
-        settings.micBalanceTargetPercent = settingsJson.optInt("micBalanceTargetPercent", 50)
+        settings.micBalanceEnabled = settingsJson.optBoolean("micBalanceEnabled", false) &&
+                !settings.micGainEnabled
+        settings.micBalanceTargetPercent = settingsJson.optInt("micBalanceTargetPercent", 50).coerceIn(1, 100)
         settings.micVoiceEnhancementEnabled = settingsJson.optBoolean("micVoiceEnhancementEnabled", true)
         settings.enableNativeMousePointer = settingsJson.optBoolean("enableNativeMousePointer", false)
         settings.gyroSensitivityMultiplier = settingsJson.optDouble("gyroSensitivityMultiplier", 1.0).toFloat()
@@ -357,9 +358,10 @@ class AppSettingsManager(private val context: Context) {
             prefConfig.micBitrate = intent.getIntExtra(INTENT_LAST_SETTINGS_MIC_BITRATE, prefConfig.micBitrate)
             prefConfig.micVolumeProcessingEnabled = intent.getBooleanExtra(INTENT_LAST_SETTINGS_MIC_VOLUME_PROCESSING, prefConfig.micVolumeProcessingEnabled)
             prefConfig.micGainEnabled = intent.getBooleanExtra(INTENT_LAST_SETTINGS_MIC_GAIN_ENABLED, prefConfig.micGainEnabled)
-            prefConfig.micGainDb = intent.getIntExtra(INTENT_LAST_SETTINGS_MIC_GAIN_DB, prefConfig.micGainDb)
-            prefConfig.micBalanceEnabled = intent.getBooleanExtra(INTENT_LAST_SETTINGS_MIC_BALANCE_ENABLED, prefConfig.micBalanceEnabled)
-            prefConfig.micBalanceTargetPercent = intent.getIntExtra(INTENT_LAST_SETTINGS_MIC_BALANCE_TARGET, prefConfig.micBalanceTargetPercent)
+            prefConfig.micGainDb = intent.getIntExtra(INTENT_LAST_SETTINGS_MIC_GAIN_DB, prefConfig.micGainDb).coerceIn(-20, 20)
+            prefConfig.micBalanceEnabled = intent.getBooleanExtra(INTENT_LAST_SETTINGS_MIC_BALANCE_ENABLED, prefConfig.micBalanceEnabled) &&
+                    !prefConfig.micGainEnabled
+            prefConfig.micBalanceTargetPercent = intent.getIntExtra(INTENT_LAST_SETTINGS_MIC_BALANCE_TARGET, prefConfig.micBalanceTargetPercent).coerceIn(1, 100)
             prefConfig.micVoiceEnhancementEnabled = intent.getBooleanExtra(INTENT_LAST_SETTINGS_MIC_VOICE_ENHANCEMENT, prefConfig.micVoiceEnhancementEnabled)
             prefConfig.enableNativeMousePointer = intent.getBooleanExtra(INTENT_LAST_SETTINGS_ENABLE_NATIVE_MOUSE, prefConfig.enableNativeMousePointer)
             prefConfig.gyroSensitivityMultiplier = intent.getFloatExtra(INTENT_LAST_SETTINGS_GYRO_SENSITIVITY, prefConfig.gyroSensitivityMultiplier)
