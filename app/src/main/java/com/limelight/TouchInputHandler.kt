@@ -20,6 +20,16 @@ import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.ui.StreamView
 import kotlin.math.*
 
+internal inline fun containsStylusTool(pointerCount: Int, toolTypeAt: (Int) -> Int): Boolean {
+    for (i in 0 until pointerCount) {
+        when (toolTypeAt(i)) {
+            MotionEvent.TOOL_TYPE_STYLUS,
+            MotionEvent.TOOL_TYPE_ERASER -> return true
+        }
+    }
+    return false
+}
+
 /**
  * 处理所有触控/鼠标/触控笔 MotionEvent 逻辑。
  * 从 Game.java 提取，保持行为完全一致。
@@ -69,9 +79,15 @@ class TouchInputHandler(private val game: Game) {
         if (!game.grabbedInput) return false
 
         val eventSource = event.source
+        val hasStylusTool = eventHasStylusTool(event)
+
+        if (view != null && hasStylusTool && trySendPenEvent(view, event)) {
+            lastButtonState = event.buttonState
+            return true
+        }
 
         if (!BuildConfig.ROOT_BUILD && game.prefConfig.optimizeHardwareTouchpad &&
-            !eventHasStylusTool(event) &&
+            !hasStylusTool &&
             NonRootTouchpadHandler.isHardwareTouchpadEvent(event)) {
             if (game.inputCaptureProvider.isCapturingActive()) {
                 nonRootTouchpadHandler.handleMotionEvent(event, game.conn)
@@ -255,11 +271,6 @@ class TouchInputHandler(private val game: Game) {
                     changedButtons = buttonState xor lastButtonState
                 }
 
-                if (view != null && eventHasStylusTool(event) && trySendPenEvent(view, event)) {
-                    lastButtonState = buttonState
-                    return true
-                }
-
                 if (!game.inputCaptureProvider.isCapturingActive()) {
                     return true
                 }
@@ -295,8 +306,6 @@ class TouchInputHandler(private val game: Game) {
                             }
                         }
                     }
-                } else if (view != null && trySendPenEvent(view, event)) {
-                    return true
                 } else if (view != null) {
                     updateMousePosition(view, event)
                 }
@@ -1002,15 +1011,8 @@ class TouchInputHandler(private val game: Game) {
         )
     }
 
-    private fun eventHasStylusTool(event: MotionEvent): Boolean {
-        for (i in 0 until event.pointerCount) {
-            when (event.getToolType(i)) {
-                MotionEvent.TOOL_TYPE_STYLUS,
-                MotionEvent.TOOL_TYPE_ERASER -> return true
-            }
-        }
-        return false
-    }
+    private fun eventHasStylusTool(event: MotionEvent): Boolean =
+        containsStylusTool(event.pointerCount) { event.getToolType(it) }
 
     fun getRelativeTouchContextMap(): Array<RelativeTouchContext?> =
         Array(relativeTouchContextMap.size) { i ->
