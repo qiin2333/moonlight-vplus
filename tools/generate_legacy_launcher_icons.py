@@ -10,8 +10,6 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SOURCE = REPO_ROOT / "app/src/main/res/drawable-nodpi/saba.webp"
 RES_DIR = REPO_ROOT / "app/src/main/res"
 LANCZOS = getattr(Image, "Resampling", Image).LANCZOS
-# Keep the composition aligned with mipmap-anydpi-v26/ic_launcher_saba.xml.
-INSET = 0.18
 ICON_SIZES = {
     "mdpi": 48,
     "hdpi": 72,
@@ -29,15 +27,12 @@ def main() -> None:
         raise ValueError(f"Expected square launcher artwork, got {source.size}")
 
     for density, icon_size in ICON_SIZES.items():
-        inset_pixels = int(icon_size * INSET)
-        artwork_size = icon_size - 2 * inset_pixels
-        artwork = source.resize(
-            (artwork_size, artwork_size),
+        # Legacy launchers render this bitmap as the complete icon, so adaptive
+        # foreground insets must not be baked into the fallback resource.
+        icon = source.resize(
+            (icon_size, icon_size),
             LANCZOS,
         )
-        icon = Image.new("RGB", (icon_size, icon_size), "white")
-        offset = (inset_pixels, inset_pixels)
-        icon.paste(artwork, offset)
 
         output = RES_DIR / f"mipmap-{density}/ic_launcher_saba.png"
         output.parent.mkdir(parents=True, exist_ok=True)
