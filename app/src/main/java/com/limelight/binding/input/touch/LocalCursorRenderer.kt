@@ -61,8 +61,9 @@ class LocalCursorRenderer(
     }
 
     fun destroy() {
-        hide()
+        val view = cursorView
         cursorView = null
+        uiHandler.post { view?.hide() }
     }
 
     fun getCursorAbsolutePosition(): FloatArray = floatArrayOf(cursorX, cursorY)

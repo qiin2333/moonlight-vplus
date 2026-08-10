@@ -15,6 +15,7 @@ import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.ui.CursorView
 import com.limelight.ui.StreamView
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.roundToInt
 
@@ -57,8 +58,12 @@ class CursorServiceManager(
     }
     private val sessionGeneration = AtomicInteger()
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val cursorCache = LruCache<Int, CursorShape>(64)
-    private val renderedCursorCache = LruCache<RenderKey, CursorShape>(32)
+    private val cursorCache = object : LruCache<Int, CursorShape>(SOURCE_CURSOR_CACHE_KB) {
+        override fun sizeOf(key: Int, value: CursorShape): Int = bitmapSizeKb(value.bitmap)
+    }
+    private val renderedCursorCache = object : LruCache<RenderKey, CursorShape>(RENDERED_CURSOR_CACHE_KB) {
+        override fun sizeOf(key: RenderKey, value: CursorShape): Int = bitmapSizeKb(value.bitmap)
+    }
 
     @Volatile
     private var connected = false
@@ -132,34 +137,38 @@ class CursorServiceManager(
         val visible = flags and MoonBridge.LI_CURSOR_UPDATE_FLAG_VISIBLE != 0
         val hasShape = flags and MoonBridge.LI_CURSOR_UPDATE_FLAG_SHAPE != 0
 
-        decodeExecutor.execute {
-            if (destroyed || generation != sessionGeneration.get()) return@execute
+        try {
+            decodeExecutor.execute {
+                if (destroyed || generation != sessionGeneration.get()) return@execute
 
-            val decodedShape = if (hasShape) {
-                decodeShape(width, height, hotspotX, hotspotY, bgraPixels)
-            } else {
-                null
-            }
-
-            uiCallback.runOnUi {
-                if (!uiCallback.isActivityAlive() || destroyed ||
-                    generation != sessionGeneration.get() || !localModeActive) {
-                    return@runOnUi
+                val decodedShape = if (hasShape) {
+                    decodeShape(width, height, hotspotX, hotspotY, bgraPixels)
+                } else {
+                    null
                 }
 
-                if (decodedShape != null) {
-                    cursorCache.put(shapeId, decodedShape)
-                    renderedCursorCache.evictAll()
-                } else if (hasShape) {
-                    LimeLog.warning("Cursor: rejected malformed shape id=$shapeId ${width}x$height")
-                    return@runOnUi
-                }
+                uiCallback.runOnUi {
+                    if (!uiCallback.isActivityAlive() || destroyed ||
+                        generation != sessionGeneration.get() || !localModeActive) {
+                        return@runOnUi
+                    }
 
-                cancelCursorUpdateTimeout()
-                currentShapeId = shapeId
-                hostCursorVisible = visible
-                applyCurrentCursorOnUiThread()
+                    if (decodedShape != null) {
+                        cursorCache.put(shapeId, decodedShape)
+                        renderedCursorCache.evictAll()
+                    } else if (hasShape) {
+                        LimeLog.warning("Cursor: rejected malformed shape id=$shapeId ${width}x$height")
+                        return@runOnUi
+                    }
+
+                    cancelCursorUpdateTimeout()
+                    currentShapeId = shapeId
+                    hostCursorVisible = visible
+                    applyCurrentCursorOnUiThread()
+                }
             }
+        } catch (_: RejectedExecutionException) {
+            LimeLog.info("Cursor: ignored update after decoder shutdown")
         }
     }
 
@@ -211,8 +220,8 @@ class CursorServiceManager(
 
     fun destroy() {
         if (destroyed) return
-        stopService()
         destroyed = true
+        stopService()
         decodeExecutor.shutdownNow()
         destroyLocalCursorRenderers()
     }
@@ -384,11 +393,10 @@ class CursorServiceManager(
         val scaleY = viewHeight.toFloat() / streamHeight.toFloat()
         val targetWidth = (source.bitmap.width * scaleX).roundToInt().coerceAtLeast(1)
         val targetHeight = (source.bitmap.height * scaleY).roundToInt().coerceAtLeast(1)
-        val scaled = if (targetWidth == source.bitmap.width && targetHeight == source.bitmap.height) {
-            source.bitmap
-        } else {
-            Bitmap.createScaledBitmap(source.bitmap, targetWidth, targetHeight, true)
+        if (targetWidth == source.bitmap.width && targetHeight == source.bitmap.height) {
+            return source
         }
+        val scaled = Bitmap.createScaledBitmap(source.bitmap, targetWidth, targetHeight, true)
         val result = CursorShape(
             scaled,
             (source.hotspotX * scaleX).roundToInt().coerceIn(0, targetWidth - 1),
@@ -396,6 +404,12 @@ class CursorServiceManager(
         )
         renderedCursorCache.put(key, result)
         return result
+    }
+
+    private fun bitmapSizeKb(bitmap: Bitmap): Int {
+        return ((bitmap.allocationByteCount.toLong() + 1023L) / 1024L)
+            .coerceIn(1L, Int.MAX_VALUE.toLong())
+            .toInt()
     }
 
     private fun hideLocalPresentation() {
@@ -438,6 +452,8 @@ class CursorServiceManager(
     companion object {
         private const val MAX_CURSOR_DIMENSION = 256
         private const val CURSOR_UPDATE_TIMEOUT_MS = 1500L
+        private const val SOURCE_CURSOR_CACHE_KB = 8 * 1024
+        private const val RENDERED_CURSOR_CACHE_KB = 8 * 1024
     }
 }
 

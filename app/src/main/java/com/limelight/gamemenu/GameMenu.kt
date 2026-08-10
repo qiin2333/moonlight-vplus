@@ -352,6 +352,7 @@ class GameMenu(
                     game.prefConfig.enableEnhancedTouch = false
                     game.setTouchMode(false)
                     game.enableNativeMousePointer(true)
+                    updateEnhancedTouchSetting(false)
                     updateTouchModeSetting(false)
                 },
                 subtitle = getString(R.string.game_menu_touch_mode_native_mouse_summary)

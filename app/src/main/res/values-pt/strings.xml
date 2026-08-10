@@ -559,6 +559,7 @@
     <string name="game_menu_option_enabled">Ativado</string>
     <string name="game_menu_option_disabled">Desativado</string>
     <string name="game_menu_toggle_remote_mouse_summary">Mostrar ou ocultar o rato remoto do anfitrião</string>
+    <string name="toast_local_cursor_fallback">A usar um modo de cursor compatível para este anfitrião</string>
     <string name="toast_touch_mode_enhanced_on">Toque multiponto aprimorado ativado</string>
     <string name="toast_touch_mode_classic_on">Modo de rato clássico ativado</string>
     <string name="toast_touch_mode_trackpad_on">Modo trackpad ativado</string>
