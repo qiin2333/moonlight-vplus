@@ -305,6 +305,20 @@
     <string name="suffix_seekbar_mic_bitrate_kbps">kbps</string>
     <string name="title_list_mic_icon_color">Microphone icon color</string>
     <string name="summary_list_mic_icon_color">Choose the color scheme for the microphone button icon</string>
+    <string name="title_checkbox_mic_volume_processing">Microphone volume gain and balance (experimental)</string>
+    <string name="summary_checkbox_mic_volume_processing">Experimental feature, stability is not guaranteed. Adjust the microphone volume before it is sent to the host. Only one of volume gain or volume balance can be active.</string>
+    <string name="title_checkbox_mic_gain">Volume gain</string>
+    <string name="summary_checkbox_mic_gain">Apply a fixed gain to the microphone. Positive values boost the volume, negative values attenuate it.</string>
+    <string name="title_seekbar_mic_gain">Gain amount</string>
+    <string name="summary_seekbar_mic_gain">Set the fixed gain applied to the microphone in dB. 0dB keeps the original volume, and the middle of the slider is 0dB.</string>
+    <string name="suffix_seekbar_mic_gain_db">dB</string>
+    <string name="title_checkbox_mic_balance">Volume balance</string>
+    <string name="summary_checkbox_mic_balance">Automatically compresses loud sounds (like shouting) to keep the output volume stable without pumping, with built-in voice enhancement (low-frequency noise removal and speech clarity boost).</string>
+    <string name="title_seekbar_mic_balance">Output volume</string>
+    <string name="summary_seekbar_mic_balance">Set the output loudness of volume balance. 50% is the recommended value (+4dB make-up gain).</string>
+    <string name="suffix_seekbar_mic_balance_target">%</string>
+    <string name="title_checkbox_mic_voice_enhancement">Voice enhancement</string>
+    <string name="summary_checkbox_mic_voice_enhancement">Removes low-frequency noise and boosts speech clarity. Works with both volume gain and volume balance modes. Enabling volume balance is recommended.</string>
     <string name="title_checkbox_reduce_refresh_rate">Allow refresh rate reduction</string>
     <string name="summary_checkbox_reduce_refresh_rate">Lower display refresh rates can save power at the expense of some additional video latency</string>
 
