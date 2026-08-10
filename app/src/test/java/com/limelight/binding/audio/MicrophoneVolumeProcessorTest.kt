@@ -68,6 +68,24 @@ class MicrophoneVolumeProcessorTest {
     }
 
     @Test
+    fun balanceLimiterHandlesPartialBlock() {
+        val pcm = pcmOf(Short.MAX_VALUE.toInt())
+        val processor = MicrophoneVolumeProcessor()
+
+        processor.configure(
+            enabled = true,
+            gainEnabled = false,
+            gainDb = 0,
+            balanceEnabled = true,
+            balanceTargetPercent = 100,
+            voiceEnhancementEnabled = false
+        )
+        processor.processFrame(pcm, 0, pcm.size)
+
+        assertTrue(abs(sampleAt(pcm, 0)) <= 29_204)
+    }
+
+    @Test
     fun balanceCompressorSettlesWithoutDuplicateLimiterReduction() {
         var pcm = ByteArray(0)
         val processor = MicrophoneVolumeProcessor()

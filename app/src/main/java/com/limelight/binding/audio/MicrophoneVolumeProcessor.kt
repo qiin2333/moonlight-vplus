@@ -227,7 +227,6 @@ class MicrophoneVolumeProcessor {
      * 的滤波输出（× 增益），块内增益恒定，避免逐样本跳变产生噪声。
      */
     private fun applyVoiceChain(data: ByteArray, offset: Int, sampleCount: Int) {
-        var pendingGain = 1.0
         var pendingCount = 0
         val enhance = voiceEnhancementEnabled
 
@@ -252,15 +251,16 @@ class MicrophoneVolumeProcessor {
 
             // 每块计算一次合并增益并写回
             if (pendingCount == GAIN_UPDATE_INTERVAL) {
-                pendingGain = computeBlockGain()
-                writeBlock(data, offset + (i + 1 - GAIN_UPDATE_INTERVAL) * 2, GAIN_UPDATE_INTERVAL, pendingGain)
+                val blockGain = computeBlockGain()
+                writeBlock(data, offset + (i + 1 - GAIN_UPDATE_INTERVAL) * 2, GAIN_UPDATE_INTERVAL, blockGain)
                 pendingCount = 0
             }
         }
 
-        // 帧尾余数样本：用最后计算的增益写回
+        // 帧尾余数样本也必须按自身峰值计算增益。
         if (pendingCount > 0) {
-            writeBlock(data, offset + (sampleCount - pendingCount) * 2, pendingCount, pendingGain)
+            val tailGain = computeBlockGain()
+            writeBlock(data, offset + (sampleCount - pendingCount) * 2, pendingCount, tailGain)
         }
     }
 
