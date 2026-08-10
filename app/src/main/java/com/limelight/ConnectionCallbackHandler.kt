@@ -271,10 +271,7 @@ class ConnectionCallbackHandler(private val game: Game) {
         game.currentHostAddress = game.intent.getStringExtra(Game.EXTRA_HOST)
 
         // 2. 调用统一的状态管理方法
-        game.cursorServiceManager.updateServiceState(
-            game.prefConfig.enableLocalCursorRendering && game.prefConfig.touchscreenTrackpad,
-            game.currentHostAddress
-        )
+        game.cursorServiceManager.onConnectionStarted()
 
         // 3. 启动智能码率（如设置已开启）
         game.startAdaptiveBitrateIfEnabled()
