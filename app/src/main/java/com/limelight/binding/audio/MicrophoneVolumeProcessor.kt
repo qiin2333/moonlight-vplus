@@ -27,12 +27,11 @@ import kotlin.math.sqrt
  * 人声增强（高通 + 中频提升）为独立开关 [voiceEnhancementEnabled]，
  * 音量增益与音量平衡模式下均可启用。
  *
- * 输入为 PCM 16-bit 小端单声道，按帧（20ms）原地处理，运行期零内存分配。
- * 逐样本仅乘加运算，log10 每 32 样本（0.67ms）一次，单帧耗时远低于 1ms。
+ * 输入为 PCM 16-bit 小端单声道，按帧原地处理。
  */
 class MicrophoneVolumeProcessor {
 
-    enum class Mode {
+    private enum class Mode {
         OFF,
         GAIN,
         BALANCE

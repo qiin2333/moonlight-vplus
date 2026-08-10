@@ -70,12 +70,12 @@ class MicrophoneCapture(
 
             // 从配置加载音量增益及其平衡参数
             volumeProcessor.configure(
-                MicrophoneConfig.isVolumeProcessingEnabled(),
-                MicrophoneConfig.isVolumeGainEnabled(),
-                MicrophoneConfig.getVolumeGainDb(),
-                MicrophoneConfig.isVolumeBalanceEnabled(),
-                MicrophoneConfig.getVolumeBalanceTargetPercent(),
-                MicrophoneConfig.isVoiceEnhancementEnabled()
+                enabled = MicrophoneConfig.isVolumeProcessingEnabled(),
+                gainEnabled = MicrophoneConfig.isVolumeGainEnabled(),
+                gainDb = MicrophoneConfig.getVolumeGainDb(),
+                balanceEnabled = MicrophoneConfig.isVolumeBalanceEnabled(),
+                balanceTargetPercent = MicrophoneConfig.getVolumeBalanceTargetPercent(),
+                voiceEnhancementEnabled = MicrophoneConfig.isVoiceEnhancementEnabled()
             )
 
             initializeAudioEffects()

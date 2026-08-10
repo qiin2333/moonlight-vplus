@@ -223,7 +223,7 @@ object MicrophoneConfig {
     /**
      * 软件音量处理是否实际生效（任一子功能开启时）
      */
-    fun softwareVolumeProcessingActive(): Boolean {
+    private fun softwareVolumeProcessingActive(): Boolean {
         return volumeProcessingEnabled && (volumeGainEnabled || volumeBalanceEnabled)
     }
 }
