@@ -9,6 +9,7 @@ from PIL import Image
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SOURCE = REPO_ROOT / "app/src/main/res/drawable-nodpi/saba.webp"
 RES_DIR = REPO_ROOT / "app/src/main/res"
+LANCZOS = getattr(Image, "Resampling", Image).LANCZOS
 # Keep the composition aligned with mipmap-anydpi-v26/ic_launcher_saba.xml.
 INSET = 0.18
 ICON_SIZES = {
@@ -28,11 +29,11 @@ def main() -> None:
         raise ValueError(f"Expected square launcher artwork, got {source.size}")
 
     for density, icon_size in ICON_SIZES.items():
-        inset_pixels = round(icon_size * INSET)
+        inset_pixels = int(icon_size * INSET)
         artwork_size = icon_size - 2 * inset_pixels
         artwork = source.resize(
             (artwork_size, artwork_size),
-            Image.Resampling.LANCZOS,
+            LANCZOS,
         )
         icon = Image.new("RGB", (icon_size, icon_size), "white")
         offset = (inset_pixels, inset_pixels)
