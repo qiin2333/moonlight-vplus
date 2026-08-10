@@ -24,6 +24,7 @@ import org.jcodec.codecs.h264.io.model.SeqParameterSet
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.util.Locale
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -60,6 +61,22 @@ class MediaCodecDecoderRenderer(
         private const val EXCEPTION_REPORT_DELAY_MS = 3000
         private const val FRAMEGEN_SURFACE_SWITCH_MAX_RETRIES = 20
         private const val FRAMEGEN_SURFACE_SWITCH_RETRY_DELAY_MS = 50L
+
+        /**
+         * Qualcomm's OMX and Codec2 decoders can terminate the app process after an
+         * apparently successful setOutputSurface() call (notably on Snapdragon 865).
+         * Configure those decoders with the capture surface from the start instead.
+         */
+        internal fun supportsDelayedFramegenSurfaceSwitch(
+            decoderName: String,
+            sdkInt: Int = Build.VERSION.SDK_INT
+        ): Boolean {
+            if (sdkInt < Build.VERSION_CODES.M) return false
+
+            val normalizedName = decoderName.lowercase(Locale.ROOT)
+            return !normalizedName.startsWith("omx.qcom") &&
+                !normalizedName.startsWith("c2.qti")
+        }
 
         // Vendor codecs expose far fewer input buffers in practice. The generous fixed capacity
         // keeps the steady-state queue allocation-free without risking normal callback loss.
@@ -142,6 +159,7 @@ class MediaCodecDecoderRenderer(
     private var inputFormat: MediaFormat? = null
     private var outputFormat: MediaFormat? = null
     private var configuredFormat: MediaFormat? = null
+    private var configuredDecoderName: String? = null
 
     private var needsBaselineSpsHack = false
     private var savedSps: SeqParameterSet? = null
@@ -751,6 +769,9 @@ class MediaCodecDecoderRenderer(
     }
 
     private fun configureAndStartDecoder(format: MediaFormat) {
+        val decoderName = checkNotNull(configuredDecoderName) {
+            "Decoder name must be set before configuration"
+        }
         // Set HDR metadata if present
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             if (currentHdrMetadata != null) {
@@ -812,8 +833,8 @@ class MediaCodecDecoderRenderer(
         val pendingFramegenSurface = framegenSurface
         framegenOutputSwitchRequested.set(false)
         framegenOutputSwitchRetryCount.set(0)
-        framegenOutputSwitchPending =
-            pendingFramegenSurface != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+        framegenOutputSwitchPending = pendingFramegenSurface != null &&
+            supportsDelayedFramegenSurfaceSwitch(decoderName)
         val outSurface = if (framegenOutputSwitchPending) {
             LimeLog.info(
                 "Framegen delayed capture active: decoder starts on SurfaceView " +
@@ -822,7 +843,10 @@ class MediaCodecDecoderRenderer(
             renderTarget!!.surface
         } else {
             if (pendingFramegenSurface != null) {
-                LimeLog.info("Framegen capture surface active (decoder output redirected to ImageReader)")
+                LimeLog.info(
+                    "Framegen capture surface active from decoder configure " +
+                        "(dynamic switch disabled for $decoderName)"
+                )
             }
             pendingFramegenSurface ?: renderTarget!!.surface
         }
@@ -847,7 +871,12 @@ class MediaCodecDecoderRenderer(
                 else
                     MoonBridge.DATASPACE_BT2020_PQ_LIMITED
             }
-            applyHdrDataSpace(renderTarget!!.surface, "decoder output")
+            // The decoder producer needs the HDR dataspace on its actual output
+            // surface. The presentation surface also needs it for native framegen.
+            applyHdrDataSpace(outSurface, "decoder output")
+            if (outSurface !== renderTarget!!.surface) {
+                applyHdrDataSpace(renderTarget!!.surface, "framegen presentation")
+            }
         }
 
         configuredFormat = format
@@ -880,6 +909,7 @@ class MediaCodecDecoderRenderer(
         var configured = false
         try {
             videoDecoder = MediaCodec.createByCodecName(selectedDecoderInfo.name)
+            configuredDecoderName = selectedDecoderInfo.name
 
             // Async callback must be set before configure()
             setupAsyncCallback()
