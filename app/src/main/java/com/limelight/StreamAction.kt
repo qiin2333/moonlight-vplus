@@ -236,6 +236,12 @@ class StreamActionExecutor(
 
     fun disconnectAndQuit() {
         try {
+            if (game.prefConfig.lockScreenAfterDisconnect) {
+                sendKeys(shortArrayOf(
+                    KeyboardTranslator.VK_LWIN.toShortKey(),
+                    KeyboardTranslator.VK_L.toShortKey()
+                ))
+            }
             game.disconnect()
             connProvider()?.doStopAndQuit()
         } catch (e: Exception) {
