@@ -1966,7 +1966,22 @@ class Game : Activity(), SurfaceHolder.Callback,
             FramegenInterceptor.configureOutputSurface(outputSurface)
             val ok = FramegenInterceptor.prewarmContext(prefConfig.width, prefConfig.height)
             if (framegenSurfaceGeneration.get() == generation) {
-                decoderRenderer?.setFramegenCaptureSwitchReady(ok)
+                if (ok) {
+                    decoderRenderer?.setFramegenCaptureSwitchReady(true)
+                } else {
+                    // Do not leave MediaCodec writing into an ImageReader that has no
+                    // working native presenter. Clearing the capture surface makes an
+                    // in-flight codec recovery reconfigure against the normal view.
+                    LimeLog.warning(
+                        "Framegen prewarm failed; falling back to direct decoder output"
+                    )
+                    decoderRenderer?.setFramegenCaptureSwitchReady(false)
+                    decoderRenderer?.framegenSurface = null
+                    framegenCapture?.release()
+                    framegenCapture = null
+                    framegenAdaptiveController.reset()
+                    FramegenInterceptor.configureOutputSurface(null)
+                }
             }
             LimeLog.info(
                 "Framegen prewarm ok=$ok elapsed=${SystemClock.uptimeMillis() - startedAtMs}ms"
