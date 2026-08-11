@@ -1895,7 +1895,6 @@
     <string name="appview_guide_card_body">长按应用就能用上次设置恢复、创建快捷方式、隐藏应用或查看详情，不用真的启动它哦。</string>
     <!-- Foundation Sunshine 启动前网络探测 -->
     <string name="network_quality_test_title">串流质量检测</string>
-    <string name="network_quality_not_tested">未检测</string>
     <string name="network_quality_card_summary">%1$.0f ms · %2$.0f Mbps</string>
     <string name="network_quality_menu_summary">%1$s · %2$s</string>
     <string name="network_quality_measuring_response">正在测量响应延迟</string>

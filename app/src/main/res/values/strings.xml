@@ -1957,7 +1957,6 @@ Tap again to replace it.</string>
     <string name="appview_guide_card_body">Long-press an app to resume with saved settings, create a shortcut, hide it, or see details without launching it.</string>
     <!-- Foundation Sunshine startup network probe -->
     <string name="network_quality_test_title">Streaming Quality Test</string>
-    <string name="network_quality_not_tested">Not tested</string>
     <string name="network_quality_card_summary">%1$.0f ms · %2$.0f Mbps</string>
     <string name="network_quality_menu_summary">%1$s · %2$s</string>
     <string name="network_quality_measuring_response">Measuring response time</string>

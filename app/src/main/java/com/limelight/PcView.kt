@@ -137,7 +137,6 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupWindow
-import android.widget.RelativeLayout
 import android.widget.Space
 import android.widget.TextView
 import android.widget.Toast
@@ -164,7 +163,6 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         private const val SHAKE_DEBOUNCE_INTERVAL = 3000L
         private const val MAX_DAILY_REFRESH = 7
         private const val VPN_PERMISSION_REQUEST_CODE = 101
-        private const val QR_SCAN_REQUEST_CODE = 102
 
         private const val REFRESH_PREF_NAME = "RefreshLimit"
         private const val REFRESH_COUNT_KEY = "refresh_count"
@@ -190,6 +188,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         private const val OPEN_WEBUI_ID = 16
         private const val MORE_ACTIONS_ID = 17
         private const val NETWORK_QUALITY_ID = 18
+        private const val ADD_PC_MANUALLY_ID = 19
+        private const val ADD_PC_QR_SCAN_ID = 20
 
     }
 
@@ -501,6 +501,30 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 v.layoutParams.height = insets.top
                 windowInsets
             }
+        }
+
+        // Keep the edge-anchored scene rail clear of navigation bars and display cutouts.
+        findViewById<View>(R.id.scenePresetContainer)?.let { sceneRail ->
+            val initialParams = sceneRail.layoutParams as ViewGroup.MarginLayoutParams
+            val baseBottomMargin = initialParams.bottomMargin
+            val baseEndMargin = initialParams.marginEnd
+            ViewCompat.setOnApplyWindowInsetsListener(sceneRail) { v, windowInsets ->
+                val systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+                val displayCutout = windowInsets.getInsets(WindowInsetsCompat.Type.displayCutout())
+                val safeBottom = maxOf(systemBars.bottom, displayCutout.bottom)
+                val safeEnd = if (ViewCompat.getLayoutDirection(v) == ViewCompat.LAYOUT_DIRECTION_RTL) {
+                    maxOf(systemBars.left, displayCutout.left)
+                } else {
+                    maxOf(systemBars.right, displayCutout.right)
+                }
+                (v.layoutParams as ViewGroup.MarginLayoutParams).apply {
+                    bottomMargin = baseBottomMargin + safeBottom
+                    marginEnd = baseEndMargin + safeEnd
+                    v.layoutParams = this
+                }
+                windowInsets
+            }
+            ViewCompat.requestApplyInsets(sceneRail)
         }
 
         clientName = Settings.Global.getString(contentResolver, "device_name")
@@ -1955,23 +1979,30 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         }
     }
 
-    private fun showAddComputerDialog() {
-        val items = arrayOf(
-            getString(R.string.addpc_manual),
-            getString(R.string.addpc_qr_scan)
-        )
-        val dialog = AlertDialog.Builder(this, R.style.AppDialogStyle)
-            .setTitle(getString(R.string.title_add_pc_choose))
-            .setItems(items) { _, which ->
-                if (which == 0) {
+    private fun showAddComputerActionSheet() {
+        AppActionSheet.show(
+            context = this,
+            title = getString(R.string.title_add_pc_choose),
+            actions = listOf(
+                AppActionSheet.Action(
+                    id = ADD_PC_MANUALLY_ID,
+                    title = getString(R.string.addpc_manual),
+                    opensSubmenu = true
+                ),
+                AppActionSheet.Action(
+                    id = ADD_PC_QR_SCAN_ID,
+                    title = getString(R.string.addpc_qr_scan),
+                    opensSubmenu = true
+                )
+            ),
+            onAction = { action ->
+                when (action.id) {
+                    ADD_PC_MANUALLY_ID ->
                     startActivity(Intent(this, AddComputerManually::class.java))
-                } else {
-                    startQrScan()
+                    ADD_PC_QR_SCAN_ID -> startQrScan()
                 }
             }
-            .create()
-        dialog.show()
-        AppDialogStyler.applySystemChoiceList(dialog, this)
+        )
     }
 
     private fun startQrScan() {
@@ -3057,7 +3088,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             val computer = pcGridAdapter.getItem(pos) as ComputerObject
 
             if (PcGridAdapter.isAddComputerCard(computer)) {
-                showAddComputerDialog()
+                showAddComputerActionSheet()
                 return@setOnItemClickListener
             }
 

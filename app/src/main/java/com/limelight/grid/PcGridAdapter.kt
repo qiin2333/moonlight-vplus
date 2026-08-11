@@ -266,15 +266,16 @@ class PcGridAdapter(
 
         val endpointIdentity = details.activeAddress?.let { "${it.address}:${it.port}" }
         val result = StreamNetworkQualityStore.load(context, details.uuid, endpointIdentity)
-        textView.text = if (result == null) {
-            context.getString(R.string.network_quality_not_tested)
-        } else {
-            context.getString(
-                R.string.network_quality_card_summary,
-                result.responseLatencyMs,
-                result.bandwidthMbps
-            )
+        if (result == null) {
+            container.visibility = View.GONE
+            return
         }
+
+        textView.text = context.getString(
+            R.string.network_quality_card_summary,
+            result.responseLatencyMs,
+            result.bandwidthMbps
+        )
         container.visibility = View.VISIBLE
     }
 
