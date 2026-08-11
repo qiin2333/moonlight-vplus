@@ -2826,6 +2826,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 testingSheet.dismiss()
             } catch (e: Exception) {
                 testingSheet.dismiss()
+                if (!isActive) return@launch
                 if (!isFinishing && !isDestroyed) {
                     NetworkQualitySheet.showError(
                         this@PcView,
