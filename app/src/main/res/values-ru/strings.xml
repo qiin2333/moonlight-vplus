@@ -281,8 +281,8 @@
     <string name="title_checkbox_mic_balance">Выравнивание громкости</string>
     <string name="summary_checkbox_mic_balance">Сжимает громкий входной сигнал, чтобы уменьшить перепады громкости и риск перегрузки.</string>
     <string name="title_seekbar_mic_balance">Компенсация на выходе</string>
-    <string name="summary_seekbar_mic_balance">Задайте компенсирующее усиление после выравнивания громкости. 50% соответствует +4 dB и является рекомендуемым значением.</string>
-    <string name="suffix_seekbar_mic_balance_target">%</string>
+    <string name="summary_seekbar_mic_balance" formatted="false">Задайте компенсирующее усиление после выравнивания громкости. 50% соответствует +4 dB и является рекомендуемым значением.</string>
+    <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Улучшение голоса</string>
     <string name="summary_checkbox_mic_voice_enhancement">Уменьшает низкочастотный шум и повышает разборчивость речи. Доступно при фиксированном усилении и выравнивании громкости.</string>
 </resources>

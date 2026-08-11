@@ -529,8 +529,8 @@
     <string name="title_checkbox_mic_balance">音量平衡</string>
     <string name="summary_checkbox_mic_balance">壓縮過大的聲音，減少音量波動並降低削波風險。</string>
     <string name="title_seekbar_mic_balance">輸出補償</string>
-    <string name="summary_seekbar_mic_balance">設定音量平衡處理後的增益補償。50% 對應 +4 dB，為建議值。</string>
-    <string name="suffix_seekbar_mic_balance_target">%</string>
+    <string name="summary_seekbar_mic_balance" formatted="false">設定音量平衡處理後的增益補償。50% 對應 +4 dB，為建議值。</string>
+    <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">人聲增強</string>
     <string name="summary_checkbox_mic_voice_enhancement">減少低頻雜訊並提升語音清晰度，可用於固定增益和音量平衡模式。</string>
 </resources>

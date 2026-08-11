@@ -316,8 +316,8 @@
     <string name="title_checkbox_mic_balance">볼륨 밸런스</string>
     <string name="summary_checkbox_mic_balance">큰 입력을 압축하여 볼륨 변동과 클리핑 위험을 줄입니다.</string>
     <string name="title_seekbar_mic_balance">출력 보정</string>
-    <string name="summary_seekbar_mic_balance">볼륨 밸런스 처리 후 보정 게인을 설정합니다. 50%는 +4 dB에 해당하며 권장값입니다.</string>
-    <string name="suffix_seekbar_mic_balance_target">%</string>
+    <string name="summary_seekbar_mic_balance" formatted="false">볼륨 밸런스 처리 후 보정 게인을 설정합니다. 50%는 +4 dB에 해당하며 권장값입니다.</string>
+    <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">음성 향상</string>
     <string name="summary_checkbox_mic_voice_enhancement">저주파 소음을 줄이고 음성 선명도를 높입니다. 고정 게인과 볼륨 밸런스 모드에서 모두 사용할 수 있습니다.</string>
 </resources>

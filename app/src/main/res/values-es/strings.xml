@@ -545,8 +545,8 @@
     <string name="title_checkbox_mic_balance">Equilibrado de volumen</string>
     <string name="summary_checkbox_mic_balance">Comprime las entradas altas para reducir las variaciones de volumen y el riesgo de saturación.</string>
     <string name="title_seekbar_mic_balance">Compensación de salida</string>
-    <string name="summary_seekbar_mic_balance">Establece la ganancia de compensación tras equilibrar el volumen. El 50% equivale a +4 dB y es el valor recomendado.</string>
-    <string name="suffix_seekbar_mic_balance_target">%</string>
+    <string name="summary_seekbar_mic_balance" formatted="false">Establece la ganancia de compensación tras equilibrar el volumen. El 50% equivale a +4 dB y es el valor recomendado.</string>
+    <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Mejora de voz</string>
     <string name="summary_checkbox_mic_voice_enhancement">Reduce el ruido de baja frecuencia y mejora la claridad de la voz. Está disponible con ganancia fija y equilibrado de volumen.</string>
 </resources>

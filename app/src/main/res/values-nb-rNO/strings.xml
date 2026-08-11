@@ -220,8 +220,8 @@
     <string name="title_checkbox_mic_balance">Volumbalansering</string>
     <string name="summary_checkbox_mic_balance">Komprimerer høye inngangsnivåer for å redusere volumvariasjoner og risikoen for klipping.</string>
     <string name="title_seekbar_mic_balance">Utgangskompensasjon</string>
-    <string name="summary_seekbar_mic_balance">Angi kompensasjonsforsterkningen etter volumbalansering. 50% tilsvarer +4 dB og er anbefalt verdi.</string>
-    <string name="suffix_seekbar_mic_balance_target">%</string>
+    <string name="summary_seekbar_mic_balance" formatted="false">Angi kompensasjonsforsterkningen etter volumbalansering. 50% tilsvarer +4 dB og er anbefalt verdi.</string>
+    <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Stemmeforbedring</string>
     <string name="summary_checkbox_mic_voice_enhancement">Reduserer lavfrekvent støy og forbedrer taletydeligheten. Tilgjengelig med fast forsterkning og volumbalansering.</string>
 </resources>

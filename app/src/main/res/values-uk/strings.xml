@@ -310,8 +310,8 @@
     <string name="title_checkbox_mic_balance">Балансування гучності</string>
     <string name="summary_checkbox_mic_balance">Стискає гучний вхідний сигнал, щоб зменшити коливання гучності та ризик перевантаження.</string>
     <string name="title_seekbar_mic_balance">Компенсація виходу</string>
-    <string name="summary_seekbar_mic_balance">Установіть компенсаційне підсилення після балансування гучності. 50% відповідає +4 dB і є рекомендованим значенням.</string>
-    <string name="suffix_seekbar_mic_balance_target">%</string>
+    <string name="summary_seekbar_mic_balance" formatted="false">Установіть компенсаційне підсилення після балансування гучності. 50% відповідає +4 dB і є рекомендованим значенням.</string>
+    <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Покращення голосу</string>
     <string name="summary_checkbox_mic_voice_enhancement">Зменшує низькочастотний шум і покращує чіткість мовлення. Доступне з фіксованим підсиленням і балансуванням гучності.</string>
 </resources>

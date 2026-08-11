@@ -236,8 +236,8 @@
     <string name="title_checkbox_mic_balance">Volumebalans</string>
     <string name="summary_checkbox_mic_balance">Comprimeert luide invoer om volumeschommelingen en het risico op oversturing te verminderen.</string>
     <string name="title_seekbar_mic_balance">Uitgangscompensatie</string>
-    <string name="summary_seekbar_mic_balance">Stel de compensatieversterking na volumebalans in. 50% komt overeen met +4 dB en is de aanbevolen waarde.</string>
-    <string name="suffix_seekbar_mic_balance_target">%</string>
+    <string name="summary_seekbar_mic_balance" formatted="false">Stel de compensatieversterking na volumebalans in. 50% komt overeen met +4 dB en is de aanbevolen waarde.</string>
+    <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Spraakverbetering</string>
     <string name="summary_checkbox_mic_voice_enhancement">Vermindert laagfrequente ruis en verbetert de spraakhelderheid. Beschikbaar met vaste versterking en volumebalans.</string>
 </resources>

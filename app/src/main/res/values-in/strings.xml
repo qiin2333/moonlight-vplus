@@ -226,8 +226,8 @@
     <string name="title_checkbox_mic_balance">Penyeimbangan volume</string>
     <string name="summary_checkbox_mic_balance">Mengompresi masukan keras untuk mengurangi perubahan volume dan risiko kliping.</string>
     <string name="title_seekbar_mic_balance">Kompensasi keluaran</string>
-    <string name="summary_seekbar_mic_balance">Atur penguatan kompensasi setelah penyeimbangan volume. 50% setara dengan +4 dB dan merupakan nilai yang disarankan.</string>
-    <string name="suffix_seekbar_mic_balance_target">%</string>
+    <string name="summary_seekbar_mic_balance" formatted="false">Atur penguatan kompensasi setelah penyeimbangan volume. 50% setara dengan +4 dB dan merupakan nilai yang disarankan.</string>
+    <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Peningkatan suara</string>
     <string name="summary_checkbox_mic_voice_enhancement">Mengurangi derau frekuensi rendah dan meningkatkan kejernihan ucapan. Tersedia dalam mode penguatan tetap dan penyeimbangan volume.</string>
 </resources>

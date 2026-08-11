@@ -299,8 +299,8 @@
     <string name="title_checkbox_mic_balance">Balansowanie głośności</string>
     <string name="summary_checkbox_mic_balance">Kompresuje głośny sygnał wejściowy, aby ograniczyć wahania głośności i ryzyko przesterowania.</string>
     <string name="title_seekbar_mic_balance">Kompensacja wyjścia</string>
-    <string name="summary_seekbar_mic_balance">Ustaw wzmocnienie kompensacyjne po zbalansowaniu głośności. 50% odpowiada +4 dB i jest wartością zalecaną.</string>
-    <string name="suffix_seekbar_mic_balance_target">%</string>
+    <string name="summary_seekbar_mic_balance" formatted="false">Ustaw wzmocnienie kompensacyjne po zbalansowaniu głośności. 50% odpowiada +4 dB i jest wartością zalecaną.</string>
+    <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Uwydatnianie głosu</string>
     <string name="summary_checkbox_mic_voice_enhancement">Zmniejsza szum o niskiej częstotliwości i poprawia wyrazistość mowy. Dostępne przy stałym wzmocnieniu i balansowaniu głośności.</string>
 </resources>

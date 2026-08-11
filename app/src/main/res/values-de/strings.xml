@@ -302,8 +302,8 @@
     <string name="title_checkbox_mic_balance">Lautstärkeausgleich</string>
     <string name="summary_checkbox_mic_balance">Komprimiert laute Eingangssignale, um Lautstärkeschwankungen und das Risiko von Übersteuerung zu verringern.</string>
     <string name="title_seekbar_mic_balance">Ausgangskompensation</string>
-    <string name="summary_seekbar_mic_balance">Lege die Nachverstärkung nach dem Lautstärkeausgleich fest. 50% entsprechen +4 dB und sind der empfohlene Wert.</string>
-    <string name="suffix_seekbar_mic_balance_target">%</string>
+    <string name="summary_seekbar_mic_balance" formatted="false">Lege die Nachverstärkung nach dem Lautstärkeausgleich fest. 50% entsprechen +4 dB und sind der empfohlene Wert.</string>
+    <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Sprachoptimierung</string>
     <string name="summary_checkbox_mic_voice_enhancement">Reduziert tieffrequentes Rauschen und verbessert die Sprachverständlichkeit. Verfügbar bei fester Verstärkung und Lautstärkeausgleich.</string>
 </resources>

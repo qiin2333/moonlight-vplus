@@ -312,8 +312,8 @@
     <string name="title_checkbox_mic_balance">Équilibrage du volume</string>
     <string name="summary_checkbox_mic_balance">Compresse les signaux d’entrée trop forts afin de réduire les variations de volume et le risque d’écrêtage.</string>
     <string name="title_seekbar_mic_balance">Compensation de sortie</string>
-    <string name="summary_seekbar_mic_balance">Définissez le gain de compensation après l’équilibrage du volume. 50% correspond à +4 dB et constitue la valeur recommandée.</string>
-    <string name="suffix_seekbar_mic_balance_target">%</string>
+    <string name="summary_seekbar_mic_balance" formatted="false">Définissez le gain de compensation après l’équilibrage du volume. 50% correspond à +4 dB et constitue la valeur recommandée.</string>
+    <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Amélioration de la voix</string>
     <string name="summary_checkbox_mic_voice_enhancement">Réduit le bruit de basse fréquence et améliore la clarté de la voix. Disponible avec le gain fixe et l’équilibrage du volume.</string>
 </resources>

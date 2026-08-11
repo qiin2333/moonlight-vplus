@@ -644,8 +644,8 @@
     <string name="title_checkbox_mic_balance">音量平衡</string>
     <string name="summary_checkbox_mic_balance">压缩过大的声音，减小音量波动并降低削波风险。</string>
     <string name="title_seekbar_mic_balance">输出补偿</string>
-    <string name="summary_seekbar_mic_balance">设置音量平衡处理后的增益补偿。50% 对应 +4 dB，为推荐值。</string>
-    <string name="suffix_seekbar_mic_balance_target">%</string>
+    <string name="summary_seekbar_mic_balance" formatted="false">设置音量平衡处理后的增益补偿。50% 对应 +4 dB，为推荐值。</string>
+    <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">人声增强</string>
     <string name="summary_checkbox_mic_voice_enhancement">减少低频噪声并提升语音清晰度，可用于固定增益和音量平衡模式。</string>
     <string name="title_checkbox_reduce_refresh_rate">允许降低刷新率</string>

@@ -167,8 +167,8 @@
     <string name="title_checkbox_mic_balance">איזון עוצמה</string>
     <string name="summary_checkbox_mic_balance">דחיסת קלט חזק כדי לצמצם תנודות בעוצמה ולהפחית את הסיכון לקיטום.</string>
     <string name="title_seekbar_mic_balance">פיצוי פלט</string>
-    <string name="summary_seekbar_mic_balance">הגדרת הגבר הפיצוי לאחר איזון העוצמה. 50% הם +4 dB והערך המומלץ.</string>
-    <string name="suffix_seekbar_mic_balance_target">%</string>
+    <string name="summary_seekbar_mic_balance" formatted="false">הגדרת הגבר הפיצוי לאחר איזון העוצמה. 50% הם +4 dB והערך המומלץ.</string>
+    <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">שיפור קול</string>
     <string name="summary_checkbox_mic_voice_enhancement">הפחתת רעש בתדר נמוך ושיפור בהירות הדיבור. זמין במצבי הגבר קבוע ואיזון עוצמה.</string>
 </resources>

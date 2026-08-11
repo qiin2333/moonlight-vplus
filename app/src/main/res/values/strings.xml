@@ -315,8 +315,8 @@
     <string name="title_checkbox_mic_balance">Volume balance</string>
     <string name="summary_checkbox_mic_balance">Compress loud input to reduce volume swings and lower the risk of clipping.</string>
     <string name="title_seekbar_mic_balance">Output compensation</string>
-    <string name="summary_seekbar_mic_balance">Set the make-up gain after volume balancing. 50% corresponds to +4 dB and is recommended.</string>
-    <string name="suffix_seekbar_mic_balance_target">%</string>
+    <string name="summary_seekbar_mic_balance" formatted="false">Set the make-up gain after volume balancing. 50% corresponds to +4 dB and is recommended.</string>
+    <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Voice enhancement</string>
     <string name="summary_checkbox_mic_voice_enhancement">Reduce low-frequency noise and improve speech clarity. Available in both fixed gain and volume balance modes.</string>
     <string name="title_checkbox_reduce_refresh_rate">Allow refresh rate reduction</string>

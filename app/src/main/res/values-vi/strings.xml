@@ -246,8 +246,8 @@
     <string name="title_checkbox_mic_balance">Cân bằng âm lượng</string>
     <string name="summary_checkbox_mic_balance">Nén tín hiệu đầu vào lớn để giảm dao động âm lượng và nguy cơ cắt đỉnh.</string>
     <string name="title_seekbar_mic_balance">Bù đầu ra</string>
-    <string name="summary_seekbar_mic_balance">Đặt mức khuếch đại bù sau khi cân bằng âm lượng. 50% tương ứng với +4 dB và là giá trị đề xuất.</string>
-    <string name="suffix_seekbar_mic_balance_target">%</string>
+    <string name="summary_seekbar_mic_balance" formatted="false">Đặt mức khuếch đại bù sau khi cân bằng âm lượng. 50% tương ứng với +4 dB và là giá trị đề xuất.</string>
+    <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Tăng cường giọng nói</string>
     <string name="summary_checkbox_mic_voice_enhancement">Giảm nhiễu tần số thấp và cải thiện độ rõ của giọng nói. Dùng được với khuếch đại cố định và cân bằng âm lượng.</string>
 </resources>

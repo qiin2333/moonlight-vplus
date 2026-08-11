@@ -299,8 +299,8 @@
     <string name="title_checkbox_mic_balance">Volymbalansering</string>
     <string name="summary_checkbox_mic_balance">Komprimerar starka insignaler för att minska volymvariationer och risken för klippning.</string>
     <string name="title_seekbar_mic_balance">Utgångskompensation</string>
-    <string name="summary_seekbar_mic_balance">Ange kompensationsförstärkningen efter volymbalansering. 50% motsvarar +4 dB och är det rekommenderade värdet.</string>
-    <string name="suffix_seekbar_mic_balance_target">%</string>
+    <string name="summary_seekbar_mic_balance" formatted="false">Ange kompensationsförstärkningen efter volymbalansering. 50% motsvarar +4 dB och är det rekommenderade värdet.</string>
+    <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Röstförbättring</string>
     <string name="summary_checkbox_mic_voice_enhancement">Minskar lågfrekvent brus och förbättrar talets tydlighet. Tillgängligt med fast förstärkning och volymbalansering.</string>
 </resources>

@@ -191,8 +191,8 @@
     <string name="title_checkbox_mic_balance">Echilibrare volum</string>
     <string name="summary_checkbox_mic_balance">Comprimă intrările puternice pentru a reduce variațiile de volum și riscul de distorsiune.</string>
     <string name="title_seekbar_mic_balance">Compensare ieșire</string>
-    <string name="summary_seekbar_mic_balance">Setează amplificarea de compensare după echilibrarea volumului. 50% corespunde la +4 dB și este valoarea recomandată.</string>
-    <string name="suffix_seekbar_mic_balance_target">%</string>
+    <string name="summary_seekbar_mic_balance" formatted="false">Setează amplificarea de compensare după echilibrarea volumului. 50% corespunde la +4 dB și este valoarea recomandată.</string>
+    <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Îmbunătățire voce</string>
     <string name="summary_checkbox_mic_voice_enhancement">Reduce zgomotul de joasă frecvență și îmbunătățește claritatea vocii. Disponibilă cu amplificare fixă și echilibrare a volumului.</string>
 </resources>

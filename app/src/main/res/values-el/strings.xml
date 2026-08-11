@@ -225,8 +225,8 @@
     <string name="title_checkbox_mic_balance">Εξισορρόπηση έντασης</string>
     <string name="summary_checkbox_mic_balance">Συμπιέζει τις δυνατές εισόδους για να μειώσει τις διακυμάνσεις έντασης και τον κίνδυνο αποκοπής.</string>
     <string name="title_seekbar_mic_balance">Αντιστάθμιση εξόδου</string>
-    <string name="summary_seekbar_mic_balance">Ορίστε την ενίσχυση αντιστάθμισης μετά την εξισορρόπηση έντασης. Το 50% αντιστοιχεί σε +4 dB και είναι η προτεινόμενη τιμή.</string>
-    <string name="suffix_seekbar_mic_balance_target">%</string>
+    <string name="summary_seekbar_mic_balance" formatted="false">Ορίστε την ενίσχυση αντιστάθμισης μετά την εξισορρόπηση έντασης. Το 50% αντιστοιχεί σε +4 dB και είναι η προτεινόμενη τιμή.</string>
+    <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Βελτίωση φωνής</string>
     <string name="summary_checkbox_mic_voice_enhancement">Μειώνει τον θόρυβο χαμηλών συχνοτήτων και βελτιώνει την καθαρότητα της ομιλίας. Διατίθεται με σταθερή ενίσχυση και εξισορρόπηση έντασης.</string>
 </resources>

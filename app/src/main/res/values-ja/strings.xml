@@ -181,8 +181,8 @@
     <string name="title_checkbox_mic_balance">音量バランス</string>
     <string name="summary_checkbox_mic_balance">大きな入力を圧縮して、音量の変動とクリッピングのリスクを抑えます。</string>
     <string name="title_seekbar_mic_balance">出力補正</string>
-    <string name="summary_seekbar_mic_balance">音量バランス処理後の補正ゲインを設定します。50% は +4 dB に相当し、推奨値です。</string>
-    <string name="suffix_seekbar_mic_balance_target">%</string>
+    <string name="summary_seekbar_mic_balance" formatted="false">音量バランス処理後の補正ゲインを設定します。50% は +4 dB に相当し、推奨値です。</string>
+    <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">音声強調</string>
     <string name="summary_checkbox_mic_voice_enhancement">低周波ノイズを抑え、音声の明瞭度を高めます。固定ゲインと音量バランスの両方で使用できます。</string>
 </resources>

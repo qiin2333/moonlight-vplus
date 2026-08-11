@@ -15,8 +15,8 @@
     <string name="title_checkbox_mic_balance">هاوسەنگکردنی دەنگ</string>
     <string name="summary_checkbox_mic_balance">دەنگی زۆر بەرز کۆمپرێس دەکات بۆ کەمکردنەوەی گۆڕانی ئاستی دەنگ و مەترسی بڕین.</string>
     <string name="title_seekbar_mic_balance">قەرەبووی دەرچوون</string>
-    <string name="summary_seekbar_mic_balance">ڕێژەی قەرەبووکردنەوە دوای هاوسەنگکردنی دەنگ دیاری بکە. 50% یەکسانە بە +4 dB و نرخی پێشنیارکراوە.</string>
-    <string name="suffix_seekbar_mic_balance_target">%</string>
+    <string name="summary_seekbar_mic_balance" formatted="false">ڕێژەی قەرەبووکردنەوە دوای هاوسەنگکردنی دەنگ دیاری بکە. 50% یەکسانە بە +4 dB و نرخی پێشنیارکراوە.</string>
+    <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">باشترکردنی دەنگ</string>
     <string name="summary_checkbox_mic_voice_enhancement">ژاوەژاوی نزم-فریکوێنسی کەم دەکاتەوە و ڕوونی قسەکردن باشتر دەکات. لە دۆخی زیادکردنی جێگیر و هاوسەنگکردنی دەنگ بەردەستە.</string>
 </resources>
