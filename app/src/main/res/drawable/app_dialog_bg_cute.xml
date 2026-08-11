@@ -8,7 +8,7 @@
         android:centerColor="@color/app_dialog_surface_gradient_center"
         android:endColor="@color/app_dialog_surface_gradient_end" />
 
-    <corners android:radius="16dp" />
+    <corners android:radius="@dimen/corner_radius_overlay" />
 
 </shape>
 

@@ -22,6 +22,12 @@ import com.limelight.binding.PlatformBinding
 import com.limelight.binding.crypto.AndroidCryptoProvider
 import com.limelight.computers.ComputerManagerService
 import com.limelight.computers.PairStatePreflight
+import com.limelight.networkquality.NetworkQualitySheet
+import com.limelight.networkquality.StreamDeviceDisplay
+import com.limelight.networkquality.StreamNetworkQuality
+import com.limelight.networkquality.StreamNetworkQualityStore
+import com.limelight.networkquality.StreamNetworkRecommendation
+import com.limelight.networkquality.StreamNetworkTestResult
 import com.limelight.dialogs.AddressSelectionDialog
 import com.limelight.grid.PcGridAdapter
 import com.limelight.grid.assets.DiskAssetLoader
@@ -107,6 +113,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
+import android.text.format.DateUtils
 import androidx.preference.PreferenceManager
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import android.animation.ObjectAnimator
@@ -182,6 +189,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         private const val DISABLE_IPV6_ID = 15
         private const val OPEN_WEBUI_ID = 16
         private const val MORE_ACTIONS_ID = 17
+        private const val NETWORK_QUALITY_ID = 18
 
     }
 
@@ -2296,13 +2304,35 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 return@launch
             }
 
-            ServerHelper.doStart(
-                this@PcView,
-                targetApp,
-                targetComputer,
-                managerBinder!!
-            )
+            startQuickStreamWithNetworkCheck(targetApp, targetComputer)
         }
+    }
+
+    private fun startQuickStreamWithNetworkCheck(app: NvApp, computer: ComputerDetails) {
+        val binder = managerBinder ?: return
+        val endpointIdentity = computer.activeAddress?.let { "${it.address}:${it.port}" }
+        val result = StreamNetworkQualityStore.load(this, computer.uuid, endpointIdentity)
+        val prefs = PreferenceConfiguration.readPreferences(this)
+        val recommendation = result?.recommendationFor(networkDeviceDisplay())
+        if (computer.runningGameId != 0 || result == null || recommendation == null ||
+            !result.shouldWarnForBitrate(prefs.bitrate, recommendation)
+        ) {
+            ServerHelper.doStart(this, app, computer, binder)
+            return
+        }
+
+        NetworkQualitySheet.showStartWarning(
+            context = this,
+            computerName = computer.name.orEmpty(),
+            currentBitrateKbps = prefs.bitrate,
+            recommendation = recommendation,
+            onContinue = { ServerHelper.doStart(this, app, computer, binder) },
+            onUseRecommendation = {
+                if (applyNetworkRecommendation(recommendation, saveToSceneOne = false)) {
+                    ServerHelper.doStart(this, app, computer, binder)
+                }
+            }
+        )
     }
 
     private fun quickStartStreamWithScreenMode(computer: ComputerDetails, itemView: View?, isSecondaryScreen: Boolean, screenMode: Int) {
@@ -2518,7 +2548,35 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             }
         }
 
-        add(TEST_NETWORK_ID, R.string.pcview_menu_test_network, sectionStart = true)
+        if (paired && details.state == ComputerDetails.State.ONLINE && !details.nvidiaServer) {
+            val endpointIdentity = details.activeAddress?.let { "${it.address}:${it.port}" }
+            val cached = StreamNetworkQualityStore.load(this@PcView, details.uuid, endpointIdentity)
+            val trailing = cached?.let {
+                val qualityRes = when (it.quality) {
+                    StreamNetworkQuality.EXCELLENT -> R.string.network_quality_excellent
+                    StreamNetworkQuality.GOOD -> R.string.network_quality_good
+                    StreamNetworkQuality.FAIR -> R.string.network_quality_fair
+                    StreamNetworkQuality.POOR -> R.string.network_quality_poor
+                }
+                getString(
+                    R.string.network_quality_menu_summary,
+                    getString(qualityRes),
+                    DateUtils.getRelativeTimeSpanString(
+                        it.testedAtEpochMs,
+                        System.currentTimeMillis(),
+                        DateUtils.MINUTE_IN_MILLIS
+                    )
+                )
+            }
+            this.add(AppActionSheet.Action(
+                id = NETWORK_QUALITY_ID,
+                title = getString(R.string.network_quality_test_title),
+                sectionStart = true,
+                trailingText = trailing
+            ))
+        } else {
+            add(TEST_NETWORK_ID, R.string.pcview_menu_test_network, sectionStart = true)
+        }
         add(
             MORE_ACTIONS_ID,
             R.string.pcview_menu_more_actions,
@@ -2612,6 +2670,10 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 ServerHelper.doNetworkTest(this)
                 true
             }
+            NETWORK_QUALITY_ID -> {
+                runNetworkQualityTest(details)
+                true
+            }
             IPERF3_TEST_ID -> {
                 handleIperf3Test(details)
                 true
@@ -2638,6 +2700,145 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             }
             else -> false
         }
+    }
+
+    private fun runNetworkQualityTest(computer: ComputerDetails) {
+        val binder = managerBinder
+        if (binder == null || computer.activeAddress == null || computer.uuid.isNullOrBlank()) {
+            showToast(getString(R.string.error_pc_offline))
+            return
+        }
+
+        var testJob: Job? = null
+        val testingSheet = NetworkQualitySheet.showTesting(
+            this,
+            computer.name.orEmpty(),
+            onCancel = { testJob?.cancel() }
+        )
+
+        testJob = uiScope.launch {
+            try {
+                val measurement = withContext(Dispatchers.IO) {
+                    val http = NvHTTP(
+                        ServerHelper.getCurrentAddressFromComputer(computer),
+                        computer.httpsPort,
+                        binder.getUniqueId(),
+                        clientName,
+                        computer.serverCert,
+                        PlatformBinding.getCryptoProvider(this@PcView)
+                    )
+                    http.runNetworkProbe(testingSheet::updateProgress)
+                }
+
+                val result = StreamNetworkTestResult(
+                    bandwidthMbps = measurement.bandwidthMbps,
+                    responseLatencyMs = measurement.responseLatencyMs,
+                    responseJitterMs = measurement.responseJitterMs
+                )
+                val endpointIdentity = computer.activeAddress?.let { "${it.address}:${it.port}" }
+                StreamNetworkQualityStore.save(this@PcView, computer.uuid, endpointIdentity, result)
+                val recommendation = result.recommendationFor(networkDeviceDisplay())
+                pcGridAdapter.notifyDataSetChanged()
+                testingSheet.dismiss()
+                NetworkQualitySheet.showResult(
+                    this@PcView,
+                    computer.name.orEmpty(),
+                    result,
+                    recommendation,
+                    onSaveToSceneOne = {
+                        applyNetworkRecommendation(recommendation, saveToSceneOne = true)
+                    },
+                    onContinue = {
+                        if (applyNetworkRecommendation(recommendation, saveToSceneOne = false)) {
+                            quickStartStream(computer, itemView = null, isSecondaryScreen = false)
+                        }
+                    }
+                )
+            } catch (_: CancellationException) {
+                testingSheet.dismiss()
+            } catch (e: Exception) {
+                testingSheet.dismiss()
+                if (!isFinishing && !isDestroyed) {
+                    NetworkQualitySheet.showError(
+                        this@PcView,
+                        computer.name.orEmpty(),
+                        networkProbeErrorMessage(e)
+                    )
+                }
+            }
+        }
+    }
+
+    private fun networkProbeErrorMessage(error: Exception): String {
+        if (error is FileNotFoundException) {
+            return getString(R.string.network_quality_unsupported)
+        }
+        if (error is NvHTTP.NetworkProbeException) {
+            return when (error.reason) {
+                "stream_active" -> getString(R.string.network_quality_stream_active)
+                "not_paired" -> getString(R.string.scut_not_paired)
+                "rate_limited" -> getString(R.string.network_quality_rate_limited)
+                "unsupported_version", "invalid_capabilities" -> getString(R.string.network_quality_unsupported)
+                else -> getString(R.string.network_quality_test_failed_detail)
+            }
+        }
+        return error.message?.takeIf { it.isNotBlank() }
+            ?: getString(R.string.network_quality_test_failed_detail)
+    }
+
+    private fun applyNetworkRecommendation(
+        recommendation: StreamNetworkRecommendation,
+        saveToSceneOne: Boolean
+    ): Boolean {
+        val prefs = PreferenceConfiguration.readPreferences(this).apply {
+            width = recommendation.width
+            height = recommendation.height
+            isNativeResolution = recommendation.usesNativeResolution
+            isCustomResolution = !recommendation.usesNativeResolution
+            fps = recommendation.fps
+            bitrate = recommendation.bitrateKbps
+            enableAdaptiveBitrate = true
+        }
+        if (!prefs.writeScenePreferences(this)) {
+            showToast(getString(R.string.config_save_failed))
+            return false
+        }
+
+        pcGridAdapter.updateLayoutWithPreferences(this, prefs)
+        if (saveToSceneOne) {
+            saveCurrentConfiguration(1)
+        } else {
+            showToast(getString(R.string.network_quality_recommendation_applied))
+        }
+        return true
+    }
+
+    private fun networkDeviceDisplay(): StreamDeviceDisplay {
+        val targetDisplay = TargetDisplayResolver(this).resolve(
+            PreferenceConfiguration.isExternalDisplayEnabled(this)
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val modes = targetDisplay.supportedModes
+            val nativeMode = modes.maxByOrNull {
+                it.physicalWidth.toLong() * it.physicalHeight.toLong()
+            } ?: targetDisplay.mode
+            val maxRefreshRate = modes.asSequence()
+                .filter {
+                    it.physicalWidth == nativeMode.physicalWidth &&
+                        it.physicalHeight == nativeMode.physicalHeight
+                }
+                .maxOfOrNull { it.refreshRate }
+                ?: nativeMode.refreshRate
+            return StreamDeviceDisplay(
+                nativeWidth = nativeMode.physicalWidth,
+                nativeHeight = nativeMode.physicalHeight,
+                maxFps = maxRefreshRate.toInt()
+            )
+        }
+
+        val size = android.graphics.Point()
+        targetDisplay.getRealSize(size)
+        return StreamDeviceDisplay(size.x, size.y, targetDisplay.refreshRate.toInt())
     }
 
     /**

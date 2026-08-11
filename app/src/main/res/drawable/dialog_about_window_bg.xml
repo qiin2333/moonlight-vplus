@@ -8,7 +8,7 @@
         android:centerColor="@color/about_dialog_window_center"
         android:endColor="@color/about_dialog_window_end" />
 
-    <corners android:radius="24dp" />
+    <corners android:radius="@dimen/corner_radius_overlay" />
 
     <padding
         android:left="2dp"
