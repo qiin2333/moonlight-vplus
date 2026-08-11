@@ -341,6 +341,10 @@
             android:key="checkbox_small_icon_mode"
             android:title="@string/title_checkbox_small_icon_mode"
             android:summary="@string/summary_checkbox_small_icon_mode" />
+        <com.limelight.preferences.GameMenuCardsPreference
+            android:key="game_menu_cards"
+            android:title="@string/title_game_menu_cards"
+            android:summary="@string/summary_game_menu_cards" />
         <ListPreference
             android:key="background_source"
             android:title="@string/title_background_source"
@@ -523,6 +527,56 @@
             android:entries="@array/mic_icon_color_entries"
             android:entryValues="@array/mic_icon_color_values"
             android:defaultValue="solid_white" />
+        <!-- 麦克风音量处理 -->
+        <CheckBoxPreference
+            android:key="checkbox_mic_volume_processing"
+            android:dependency="checkbox_enable_mic"
+            android:title="@string/title_checkbox_mic_volume_processing"
+            android:summary="@string/summary_checkbox_mic_volume_processing"
+            android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_mic_gain"
+            android:dependency="checkbox_mic_volume_processing"
+            android:title="@string/title_checkbox_mic_gain"
+            android:summary="@string/summary_checkbox_mic_gain"
+            android:defaultValue="false" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_mic_gain_db"
+            android:dependency="checkbox_mic_gain"
+            android:dialogMessage="@string/summary_seekbar_mic_gain"
+            seekbar:min="-20"
+            android:max="20"
+            seekbar:step="1"
+            seekbar:divisor="1"
+            android:defaultValue="0"
+            android:summary="@string/summary_seekbar_mic_gain"
+            android:text="@string/suffix_seekbar_mic_gain_db"
+            android:title="@string/title_seekbar_mic_gain" />
+        <CheckBoxPreference
+            android:key="checkbox_mic_balance"
+            android:dependency="checkbox_mic_volume_processing"
+            android:title="@string/title_checkbox_mic_balance"
+            android:summary="@string/summary_checkbox_mic_balance"
+            android:defaultValue="false" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_mic_balance_target"
+            android:dependency="checkbox_mic_balance"
+            android:dialogMessage="@string/summary_seekbar_mic_balance"
+            seekbar:min="1"
+            android:max="100"
+            seekbar:step="1"
+            seekbar:divisor="1"
+            android:defaultValue="50"
+            android:summary="@string/summary_seekbar_mic_balance"
+            android:text="@string/suffix_seekbar_mic_balance_target"
+            android:title="@string/title_seekbar_mic_balance" />
+        <!-- 人声增强：独立开关，音量增益/音量平衡模式下均可生效 -->
+        <CheckBoxPreference
+            android:key="checkbox_mic_voice_enhancement"
+            android:dependency="checkbox_mic_volume_processing"
+            android:title="@string/title_checkbox_mic_voice_enhancement"
+            android:summary="@string/summary_checkbox_mic_voice_enhancement"
+            android:defaultValue="true" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_gamepad_settings"
         android:key="category_gamepad_settings"
@@ -615,7 +669,7 @@
             android:key="checkbox_touchscreen_trackpad"
             android:title="@string/title_checkbox_touchscreen_trackpad"
             android:summary="@string/summary_checkbox_touchscreen_trackpad"
-            android:defaultValue="false" />
+            android:defaultValue="true" />
         <CheckBoxPreference
             android:key="pref_enable_double_click_drag"
             android:title="@string/title_enable_double_click_drag"
@@ -634,11 +688,6 @@
             android:summary="@string/summary_seekbar_double_tap_time_threshold"
             android:text="ms"
             android:title="@string/title_seekbar_double_tap_time_threshold" />
-        <CheckBoxPreference
-            android:key="pref_enable_local_cursor_rendering"
-            android:title="@string/title_local_cursor_rendering"
-            android:summary="@string/summary_local_cursor_rendering"
-            android:defaultValue="false" />
         <CheckBoxPreference
             android:key="checkbox_special_key_map"
             android:title="@string/title_special_key_map"
@@ -688,7 +737,7 @@
             android:summary="@string/summary_list_native_mouse_mode_preset"
             android:entries="@array/native_mouse_mode_preset_names"
             android:entryValues="@array/native_mouse_mode_preset_values"
-            android:defaultValue="classic" />
+            android:defaultValue="trackpad" />
         <CheckBoxPreference
             android:key="checkbox_absolute_mouse_mode"
             android:title="@string/title_checkbox_absolute_mouse_mode"

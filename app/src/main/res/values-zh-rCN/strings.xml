@@ -416,6 +416,11 @@
     <string name="float_ball_action_open_menu">显示游戏菜单</string>
 
     <string name="category_ui_settings">界面设置</string>
+    <string name="title_game_menu_cards">游戏菜单卡片</string>
+    <string name="summary_game_menu_cards">选择串流中游戏菜单显示的功能卡片</string>
+    <string name="summary_game_menu_cards_selected">已显示：%1$s</string>
+    <string name="summary_game_menu_cards_none">未显示任何卡片</string>
+    <string name="game_menu_card_list_separator">、</string>
     <string name="category_backup_restore">备份</string>
     <string name="category_display_behavior">画面设置</string>
     <string name="title_language_list"> 语言 </string>
@@ -634,6 +639,20 @@
     <string name="summary_seekbar_mic_bitrate">调整麦克风重定向的音频质量，更高的比特率提供更好的音频质量，但会使用更多带宽。</string>
     <string name="title_list_mic_icon_color">麦克风图标颜色</string>
     <string name="summary_list_mic_icon_color">选择麦克风按钮图标的颜色。</string>
+    <string name="title_checkbox_mic_volume_processing">麦克风音量处理</string>
+    <string name="summary_checkbox_mic_volume_processing">在发送到主机前调整麦克风音量。固定增益与音量平衡只能选择一种。</string>
+    <string name="title_checkbox_mic_gain">音量增益</string>
+    <string name="summary_checkbox_mic_gain">按固定增益调整麦克风音量：正值放大，负值衰减。</string>
+    <string name="title_seekbar_mic_gain">增益</string>
+    <string name="summary_seekbar_mic_gain">设置固定增益。0 dB 保持原始音量，滑块中点为 0 dB。</string>
+    <string name="suffix_seekbar_mic_gain_db">dB</string>
+    <string name="title_checkbox_mic_balance">音量平衡</string>
+    <string name="summary_checkbox_mic_balance">压缩过大的声音，减小音量波动并降低削波风险。</string>
+    <string name="title_seekbar_mic_balance">输出补偿</string>
+    <string name="summary_seekbar_mic_balance" formatted="false">设置音量平衡处理后的增益补偿。50% 对应 +4 dB，为推荐值。</string>
+    <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
+    <string name="title_checkbox_mic_voice_enhancement">人声增强</string>
+    <string name="summary_checkbox_mic_voice_enhancement">减少低频噪声并提升语音清晰度，可用于固定增益和音量平衡模式。</string>
     <string name="title_checkbox_reduce_refresh_rate">允许降低刷新率</string>
     <string name="summary_checkbox_reduce_refresh_rate">较低的屏幕刷新率可以在增加一些视频延迟的情况下省电。</string>
     <string name="frame_conversion_error">主机 PC 报告了致命的视频编码错误。
@@ -804,24 +823,39 @@
     <string name="tip_cards_show">💡 串流小课堂：游戏菜单最下方可以编辑展示的功能卡片，不需要的卡片可以收起来哦～</string>
 
     <!-- 触控模式切换菜单 -->
-    <string name="game_menu_switch_touch_mode">触控模式</string>
-    <string name="game_menu_touch_mode_enhanced">增强式多点触控</string>
-    <string name="game_menu_touch_mode_classic">经典鼠标模式</string>
-    <string name="game_menu_touch_mode_trackpad">触控板模式</string>
+    <string name="game_menu_switch_touch_mode">操作方式</string>
+    <string name="game_menu_control">操作方式</string>
+    <string name="game_menu_touch_mode_enhanced">直接触控</string>
+    <string name="game_menu_touch_mode_classic">单指鼠标</string>
+    <string name="game_menu_touch_mode_trackpad">触控板</string>
+    <string name="game_menu_touch_mode_enhanced_short">触控</string>
+    <string name="game_menu_touch_mode_classic_short">鼠标</string>
+    <string name="game_menu_touch_mode_trackpad_short">触控板</string>
+    <string name="game_menu_touch_mode_native_mouse_short">外设</string>
     <string name="game_menu_local_cursor_rendering">本地光标渲染</string>
-    <string name="game_menu_touch_mode_native_mouse">本地鼠标指针</string>
+    <string name="game_menu_touch_mode_native_mouse">外接鼠标</string>
+    <string name="game_menu_touch_mode_enhanced_summary">直接触摸主机画面，支持多点触控</string>
+    <string name="game_menu_touch_mode_classic_summary">触摸位置直接控制鼠标</string>
+    <string name="game_menu_touch_mode_trackpad_summary">像笔记本触控板一样滑动，自动使用低延迟指针</string>
+    <string name="game_menu_touch_mode_native_mouse_summary">适合蓝牙、USB 鼠标和键盘触摸板</string>
+    <string name="game_menu_current_selection">当前：%1$s</string>
+    <string name="game_menu_trackpad_double_click_drag">双击并按住拖动</string>
+    <string name="game_menu_trackpad_tap_behavior">单指点击</string>
+    <string name="game_menu_option_enabled">已开启</string>
+    <string name="game_menu_option_disabled">已关闭</string>
+    <string name="game_menu_toggle_remote_mouse_summary">显示或隐藏主机侧远程鼠标</string>
     <string name="toast_touch_mode_enhanced_on">增强式多点触控已开启</string>
     <string name="toast_touch_mode_classic_on">经典鼠标模式已开启</string>
     <string name="toast_touch_mode_trackpad_on">触控板模式已开启</string>
     <string name="toast_touch_mode_native_mouse_on">本地鼠标指针已开启</string>
 
     <!-- 本地鼠标模式预设 -->
-    <string name="title_list_native_mouse_mode_preset">鼠标模式预设</string>
-    <string name="summary_list_native_mouse_mode_preset">选择鼠标/触控模式的配置。</string>
-    <string name="native_mouse_mode_preset_enhanced">增强式多点触控</string>
-    <string name="native_mouse_mode_preset_classic">经典鼠标模式</string>
-    <string name="native_mouse_mode_preset_trackpad">触控板模式</string>
-    <string name="native_mouse_mode_preset_native">本地鼠标指针</string>
+    <string name="title_list_native_mouse_mode_preset">操作方式预设</string>
+    <string name="summary_list_native_mouse_mode_preset">选择你希望如何操作主机。</string>
+    <string name="native_mouse_mode_preset_enhanced">直接触控</string>
+    <string name="native_mouse_mode_preset_classic">单指鼠标</string>
+    <string name="native_mouse_mode_preset_trackpad">触控板</string>
+    <string name="native_mouse_mode_preset_native">外接鼠标</string>
     <string name="toast_preset_applied">预设已应用: %s</string>
 
     <!-- 自定义特殊按键 -->
@@ -1027,6 +1061,7 @@
     <!-- 本地光标 -->
     <string name="title_local_cursor_rendering">显示一个本地光标</string>
     <string name="summary_local_cursor_rendering">显示一个本地光标，可通过触摸板模式控制光标。</string>
+    <string name="toast_local_cursor_fallback">已自动使用兼容指针模式</string>
 
     <!-- 特殊按键映射 -->
     <string name="title_special_key_map">特殊按键映射</string>
