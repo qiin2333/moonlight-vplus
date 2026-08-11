@@ -683,7 +683,7 @@
             android:summary="@string/summary_list_native_mouse_mode_preset"
             android:entries="@array/native_mouse_mode_preset_names"
             android:entryValues="@array/native_mouse_mode_preset_values"
-            android:defaultValue="classic" />
+            android:defaultValue="trackpad" />
         <CheckBoxPreference
             android:key="checkbox_absolute_mouse_mode"
             android:title="@string/title_checkbox_absolute_mouse_mode"
