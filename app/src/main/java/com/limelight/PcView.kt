@@ -1636,6 +1636,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     private data class SceneConfiguration(
             val width: Int,
             val height: Int,
+            val isNativeResolution: Boolean,
+            val isCustomResolution: Boolean,
             val fps: Int,
             val bitrate: Int,
             val enableAdaptiveBitrate: Boolean,
@@ -1659,6 +1661,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         fun applyTo(prefs: PreferenceConfiguration): PreferenceConfiguration {
             prefs.width = width
             prefs.height = height
+            prefs.isNativeResolution = isNativeResolution
+            prefs.isCustomResolution = isCustomResolution
             prefs.fps = fps
             prefs.bitrate = bitrate
             prefs.enableAdaptiveBitrate = enableAdaptiveBitrate
@@ -1685,6 +1689,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             return JSONObject().apply {
                 put("width", width)
                 put("height", height)
+                put("isNativeResolution", isNativeResolution)
+                put("isCustomResolution", isCustomResolution)
                 put("fps", fps)
                 put("bitrate", bitrate)
                 put("enableAdaptiveBitrate", enableAdaptiveBitrate)
@@ -1712,6 +1718,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 return SceneConfiguration(
                         width = prefs.width,
                         height = prefs.height,
+                        isNativeResolution = prefs.isNativeResolution,
+                        isCustomResolution = prefs.isCustomResolution,
                         fps = prefs.fps,
                         bitrate = prefs.bitrate,
                         enableAdaptiveBitrate = prefs.enableAdaptiveBitrate,
@@ -1737,6 +1745,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 return SceneConfiguration(
                         width = json.optInt("width", fallback.width),
                         height = json.optInt("height", fallback.height),
+                        isNativeResolution = json.optBoolean("isNativeResolution", fallback.isNativeResolution),
+                        isCustomResolution = json.optBoolean("isCustomResolution", fallback.isCustomResolution),
                         fps = json.optInt("fps", fallback.fps),
                         bitrate = json.optInt("bitrate", fallback.bitrate),
                         enableAdaptiveBitrate = json.optBoolean("enableAdaptiveBitrate", fallback.enableAdaptiveBitrate),
@@ -1892,8 +1902,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
             if (markActive) {
                 activeSceneNumber = sceneNumber
-                updateSceneButtonStates()
             }
+            updateSceneButtonStates()
             showToast(getString(R.string.scene_saved_successfully, sceneNumber))
             return true
         } catch (e: JSONException) {
@@ -2795,6 +2805,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                         activeProbe.compareAndSet(http, null)
                     }
                 }
+                if (!isActive) return@launch
 
                 val result = StreamNetworkTestResult(
                     bandwidthMbps = measurement.bandwidthMbps,
