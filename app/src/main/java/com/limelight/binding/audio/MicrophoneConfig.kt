@@ -156,26 +156,6 @@ object MicrophoneConfig {
         useVoiceComm = use
     }
 
-    /**
-     * 获取音频处理配置的摘要信息
-     */
-    fun getAudioProcessingConfigSummary(): String {
-        return buildString {
-            append("音频处理配置:\n")
-            append("音频源: ").append(if (useVoiceCommunication()) "VOICE_COMMUNICATION" else "MIC").append("\n")
-            append("回声消除(AEC): ").append(if (enableAEC) "启用" else "禁用").append("\n")
-            append("自动增益(AGC): ").append(if (enableAutomaticGainControl()) "启用" else "禁用").append("\n")
-            append("噪声抑制(NS): ").append(if (enableNS) "启用" else "禁用").append("\n")
-            append("音量处理: ").append(
-                when {
-                    isVolumeGainEnabled() -> "音量增益($volumeGainDb dB)"
-                    isVolumeBalanceEnabled() -> "音量平衡(输出补偿$volumeBalanceTargetPercent%)"
-                    else -> "禁用"
-                }
-            )
-        }
-    }
-
     // ========== 音量增益及其平衡配置方法 ==========
 
     /**

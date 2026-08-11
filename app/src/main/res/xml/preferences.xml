@@ -523,7 +523,7 @@
             android:entries="@array/mic_icon_color_entries"
             android:entryValues="@array/mic_icon_color_values"
             android:defaultValue="solid_white" />
-        <!-- 麦克风音量增益及其平衡 -->
+        <!-- 麦克风音量处理 -->
         <CheckBoxPreference
             android:key="checkbox_mic_volume_processing"
             android:dependency="checkbox_enable_mic"
