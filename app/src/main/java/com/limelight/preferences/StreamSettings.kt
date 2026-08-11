@@ -2976,36 +2976,23 @@ class StreamSettings : AppCompatActivity() {
             val localImagePicker = findPreference<LocalImagePickerPreference>("local_image_picker")
             localImagePicker?.setFragment(this)
 
-            // 为背景图片API URL设置监听器，保存时设置类型为"api"
+            // Route API URL changes through BackgroundSource so source state,
+            // cache invalidation, and the live refresh stay atomic.
             val backgroundImageUrlPref = findPreference<EditTextPreference>("background_image_url")
             backgroundImageUrlPref?.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
-                val url = newValue as String
-                val prefs = PreferenceManager.getDefaultSharedPreferences(requireActivity())
+                val context = requireActivity()
+                val url = (newValue as? String).orEmpty().trim()
 
-                if (url.trim().isNotEmpty()) {
-                    // 设置为API类型，并清除本地文件配置
-                    prefs.edit {
-                        putString("background_image_type", "api")
-                            .putString("background_image_url", url.trim())
-                            .remove("background_image_local_path")
+                if (url.isNotEmpty()) {
+                    PreferenceManager.getDefaultSharedPreferences(context).edit {
+                        putString(BackgroundSource.KEY_API_URL, url)
                     }
-
-                    // 发送广播通知 PcView 更新背景图片
-                    val broadcastIntent = Intent("com.limelight.REFRESH_BACKGROUND_IMAGE")
-                    requireActivity().sendBroadcast(broadcastIntent)
+                    BackgroundSource.setActivePreservingExtras(context, BackgroundSource.Api)
                 } else {
-                    // 恢复默认
-                    prefs.edit {
-                        putString("background_image_type", "default")
-                            .remove("background_image_url")
-                    }
-
-                    // 发送广播通知 PcView 更新背景图片
-                    val broadcastIntent = Intent("com.limelight.REFRESH_BACKGROUND_IMAGE")
-                    requireActivity().sendBroadcast(broadcastIntent)
+                    BackgroundSource.setActive(context, BackgroundSource.Auto)
                 }
 
-                true // 允许保存
+                true
             }
 
             // hide on-screen controls category on non touch screen devices
