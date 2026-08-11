@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -77,8 +78,9 @@ object NetworkQualitySheet {
             setContent {
                 val compact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
                 val cancelFocusRequester = remember { FocusRequester() }
-                LaunchedEffect(Unit) {
-                    cancelFocusRequester.requestFocus()
+                val cancelPlaced = remember { mutableStateOf(false) }
+                LaunchedEffect(cancelPlaced.value) {
+                    if (cancelPlaced.value) cancelFocusRequester.requestFocus()
                 }
                 AppActionSheet.AppActionSheetTheme {
                     AppActionSheet.ActionSheetContainer {
@@ -96,12 +98,11 @@ object NetworkQualitySheet {
                         ) {
                             AppActionSheet.ActionSheetFooterAction(
                                 activity.getString(R.string.dialog_button_cancel),
-                                onClick = {
-                                    dialog.dismiss()
-                                    onCancel()
-                                },
+                                onClick = dialog::cancel,
                                 compact = compact,
-                                modifier = Modifier.focusRequester(cancelFocusRequester)
+                                modifier = Modifier
+                                    .focusRequester(cancelFocusRequester)
+                                    .onGloballyPositioned { cancelPlaced.value = true }
                             )
                         }
                     }
@@ -109,6 +110,7 @@ object NetworkQualitySheet {
             }
         }
         AppActionSheet.prepareDialog(dialog, composeView)
+        dialog.setOnCancelListener { onCancel() }
         return TestingHandle(activity, dialog, progress)
     }
 
@@ -116,7 +118,7 @@ object NetworkQualitySheet {
         context: Context,
         computerName: String,
         result: StreamNetworkTestResult,
-        recommendation: StreamNetworkRecommendation,
+        recommendation: StreamNetworkRecommendation?,
         onSaveToSceneOne: () -> Unit,
         onContinue: () -> Unit
     ) {
@@ -128,8 +130,12 @@ object NetworkQualitySheet {
                 val saveFocusRequester = remember { FocusRequester() }
                 val closeFocusRequester = remember { FocusRequester() }
                 val continueFocusRequester = remember { FocusRequester() }
-                LaunchedEffect(Unit) {
-                    continueFocusRequester.requestFocus()
+                val initialFocusPlaced = remember { mutableStateOf(false) }
+                LaunchedEffect(initialFocusPlaced.value) {
+                    if (initialFocusPlaced.value) {
+                        if (recommendation == null) closeFocusRequester.requestFocus()
+                        else continueFocusRequester.requestFocus()
+                    }
                 }
                 AppActionSheet.AppActionSheetTheme {
                     AppActionSheet.ActionSheetContainer {
@@ -161,32 +167,41 @@ object NetworkQualitySheet {
                             AppActionSheet.ActionSheetFooterAction(
                                 context.getString(R.string.dialog_button_close),
                                 dialog::dismiss,
+                                primary = recommendation == null,
                                 compact = compact,
                                 modifier = Modifier
                                     .focusRequester(closeFocusRequester)
+                                    .then(
+                                        if (recommendation == null) {
+                                            Modifier.onGloballyPositioned { initialFocusPlaced.value = true }
+                                        } else Modifier
+                                    )
                                     .focusProperties {
                                         left = closeFocusRequester
-                                        right = continueFocusRequester
-                                        up = saveFocusRequester
+                                        right = if (recommendation == null) closeFocusRequester else continueFocusRequester
+                                        up = if (recommendation == null) closeFocusRequester else saveFocusRequester
                                     }
                             )
-                            Spacer(Modifier.width(8.dp))
-                            AppActionSheet.ActionSheetFooterAction(
-                                context.getString(R.string.network_quality_use_and_continue),
-                                onClick = {
-                                    dialog.dismiss()
-                                    onContinue()
-                                },
-                                primary = true,
-                                compact = compact,
-                                modifier = Modifier
-                                    .focusRequester(continueFocusRequester)
-                                    .focusProperties {
-                                        left = closeFocusRequester
-                                        right = continueFocusRequester
-                                        up = saveFocusRequester
-                                    }
-                            )
+                            if (recommendation != null) {
+                                Spacer(Modifier.width(8.dp))
+                                AppActionSheet.ActionSheetFooterAction(
+                                    context.getString(R.string.network_quality_use_and_continue),
+                                    onClick = {
+                                        dialog.dismiss()
+                                        onContinue()
+                                    },
+                                    primary = true,
+                                    compact = compact,
+                                    modifier = Modifier
+                                        .focusRequester(continueFocusRequester)
+                                        .onGloballyPositioned { initialFocusPlaced.value = true }
+                                        .focusProperties {
+                                            left = closeFocusRequester
+                                            right = continueFocusRequester
+                                            up = saveFocusRequester
+                                        }
+                                )
+                            }
                         }
                     }
                 }
@@ -219,8 +234,9 @@ object NetworkQualitySheet {
             setContent {
                 val continueFocusRequester = remember { FocusRequester() }
                 val recommendedFocusRequester = remember { FocusRequester() }
-                LaunchedEffect(Unit) {
-                    recommendedFocusRequester.requestFocus()
+                val recommendedPlaced = remember { mutableStateOf(false) }
+                LaunchedEffect(recommendedPlaced.value) {
+                    if (recommendedPlaced.value) recommendedFocusRequester.requestFocus()
                 }
                 AppActionSheet.AppActionSheetTheme {
                     AppActionSheet.ActionSheetContainer {
@@ -252,6 +268,7 @@ object NetworkQualitySheet {
                                 primary = true,
                                 modifier = Modifier
                                     .focusRequester(recommendedFocusRequester)
+                                    .onGloballyPositioned { recommendedPlaced.value = true }
                                     .focusProperties {
                                         left = continueFocusRequester
                                         right = recommendedFocusRequester
@@ -298,7 +315,7 @@ object NetworkQualitySheet {
     private fun ResultContent(
         context: Context,
         result: StreamNetworkTestResult,
-        recommendation: StreamNetworkRecommendation,
+        recommendation: StreamNetworkRecommendation?,
         onSaveToSceneOne: () -> Unit,
         compact: Boolean,
         modifier: Modifier
@@ -327,21 +344,46 @@ object NetworkQualitySheet {
                 Metrics(context, result, Modifier.fillMaxWidth(), compact = false)
                 Spacer(Modifier.height(12.dp))
             }
-            RecommendationPanel(
-                context,
-                recommendation,
-                onSaveToSceneOne,
-                compact,
-                modifier
-            )
+            if (recommendation != null) {
+                RecommendationPanel(
+                    context,
+                    recommendation,
+                    onSaveToSceneOne,
+                    compact,
+                    modifier
+                )
+            } else {
+                NoStableRecommendationPanel(context, compact)
+            }
             Spacer(Modifier.height(if (compact) 6.dp else 10.dp))
             Text(
-                text = context.getString(R.string.network_quality_continue_note),
+                text = context.getString(
+                    if (recommendation == null) R.string.network_quality_no_stable_recommendation_note
+                    else R.string.network_quality_continue_note
+                ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 10.5.sp,
                 lineHeight = 13.sp
             )
             Spacer(Modifier.height(if (compact) 0.dp else 4.dp))
+        }
+    }
+
+    @Composable
+    private fun NoStableRecommendationPanel(context: Context, compact: Boolean) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(AppShapes.large)
+                .background(colorResource(R.color.app_dialog_accent_soft))
+                .padding(if (compact) 10.dp else 14.dp)
+        ) {
+            Text(
+                context.getString(R.string.network_quality_no_stable_recommendation),
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 

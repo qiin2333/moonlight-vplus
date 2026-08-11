@@ -113,7 +113,7 @@
             tools:text="我的电脑" />
         <LinearLayout
             android:id="@+id/grid_network_quality"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
             android:layout_alignParentBottom="true"
@@ -133,9 +133,10 @@
 
             <TextView
                 android:id="@+id/grid_network_quality_text"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
+                android:layout_weight="1"
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="@color/pc_item_text_disabled"

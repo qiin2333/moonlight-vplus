@@ -23,6 +23,7 @@ import com.limelight.LimeLog
 import com.limelight.PcView
 import com.limelight.R
 import com.limelight.networkquality.StreamNetworkQualityStore
+import com.limelight.networkquality.supportsNetworkQualityProbe
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
@@ -258,7 +259,7 @@ class PcGridAdapter(
         val details = computer.details
         val supportsProbe = details.state == ComputerDetails.State.ONLINE &&
                 details.pairState == PairingManager.PairState.PAIRED &&
-                !details.nvidiaServer
+                details.supportsNetworkQualityProbe()
         if (!supportsProbe) {
             container.visibility = View.GONE
             return

@@ -22,6 +22,7 @@ import java.util.Locale
 import java.util.Stack
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.abs
 
 import org.json.JSONObject
@@ -75,6 +76,7 @@ class NvHTTP(
     private lateinit var httpClientLongConnectTimeout: OkHttpClient
     private lateinit var httpClientLongConnectNoReadTimeout: OkHttpClient
     private lateinit var httpClientShortConnectTimeout: OkHttpClient
+    private val activeNetworkProbeCall = AtomicReference<okhttp3.Call?>()
 
     private lateinit var defaultTrustManager: X509TrustManager
     private lateinit var trustManager: X509TrustManager
@@ -864,20 +866,28 @@ class NvHTTP(
         var capabilities: NetworkProbeCapabilities? = null
         repeat(4) {
             val startedAt = System.nanoTime()
-            val response = probeClient.newCall(Request.Builder().url(capabilityUrl).get().build()).execute()
-            response.use {
-                val body = it.body.string()
-                if (!it.isSuccessful) {
-                    throw parseNetworkProbeError(it.code, body)
+            val call = probeClient.newCall(Request.Builder().url(capabilityUrl).get().build())
+            activeNetworkProbeCall.set(call)
+            try {
+                call.execute().use {
+                    val body = it.body.string()
+                    if (!it.isSuccessful) {
+                        throw parseNetworkProbeError(it.code, body)
+                    }
+                    if (capabilities == null) {
+                        capabilities = parseNetworkProbeCapabilities(body)
+                    }
                 }
-                if (capabilities == null) {
-                    capabilities = parseNetworkProbeCapabilities(body)
-                }
+            } finally {
+                activeNetworkProbeCall.compareAndSet(call, null)
             }
             latencySamples += (System.nanoTime() - startedAt) / 1_000_000.0
         }
 
         val caps = capabilities ?: throw NetworkProbeException("invalid_capabilities")
+        if (caps.minBytes > MAX_NETWORK_PROBE_BYTES) {
+            throw NetworkProbeException("invalid_capabilities")
+        }
         val sampleBytes = caps.maxBytes.coerceAtMost(MAX_NETWORK_PROBE_BYTES)
         val nonce = UUID.randomUUID().toString()
         val endpoint = caps.endpoint.trimStart('/')
@@ -887,33 +897,40 @@ class NvHTTP(
             .addQueryParameter("nonce", nonce)
             .build()
 
-        val probeStartedAt = System.nanoTime()
-        val response = probeClient.newCall(Request.Builder().url(probeUrl).get().build()).execute()
+        val call = probeClient.newCall(Request.Builder().url(probeUrl).get().build())
         var receivedBytes = 0L
-        response.use {
-            if (!it.isSuccessful) {
-                throw parseNetworkProbeError(it.code, it.body.string())
-            }
-            if (it.header("X-Bandwidth-Probe-Version") != "1" ||
-                it.header("X-Bandwidth-Probe-Nonce") != nonce
-            ) {
-                throw NetworkProbeException("invalid_response")
-            }
+        var bodyDurationSeconds = 0.0
+        activeNetworkProbeCall.set(call)
+        try {
+            call.execute().use {
+                if (!it.isSuccessful) {
+                    throw parseNetworkProbeError(it.code, it.body.string())
+                }
+                if (it.header("X-Bandwidth-Probe-Version") != "1" ||
+                    it.header("X-Bandwidth-Probe-Nonce") != nonce
+                ) {
+                    throw NetworkProbeException("invalid_response")
+                }
 
-            val buffer = ByteArray(DEFAULT_NETWORK_PROBE_BUFFER_BYTES)
-            val stream = it.body.byteStream()
-            while (true) {
-                val count = stream.read(buffer)
-                if (count < 0) break
-                receivedBytes += count
-                progress?.invoke(receivedBytes, sampleBytes)
+                val probeStartedAt = System.nanoTime()
+                val buffer = ByteArray(DEFAULT_NETWORK_PROBE_BUFFER_BYTES)
+                val stream = it.body.byteStream()
+                while (true) {
+                    if (Thread.currentThread().isInterrupted) throw InterruptedException()
+                    val count = stream.read(buffer)
+                    if (count < 0) break
+                    receivedBytes += count
+                    progress?.invoke(receivedBytes, sampleBytes)
+                }
+                bodyDurationSeconds = (System.nanoTime() - probeStartedAt) / 1_000_000_000.0
             }
+        } finally {
+            activeNetworkProbeCall.compareAndSet(call, null)
         }
 
         if (receivedBytes != sampleBytes) {
             throw NetworkProbeException("incomplete_response")
         }
-        val bodyDurationSeconds = (System.nanoTime() - probeStartedAt) / 1_000_000_000.0
         if (bodyDurationSeconds <= 0.0) {
             throw NetworkProbeException("invalid_duration")
         }
@@ -930,6 +947,10 @@ class NvHTTP(
             responseJitterMs = averageJitter,
             receivedBytes = receivedBytes
         )
+    }
+
+    fun cancelNetworkProbe() {
+        activeNetworkProbeCall.getAndSet(null)?.cancel()
     }
 
     internal fun parseNetworkProbeCapabilities(body: String): NetworkProbeCapabilities {

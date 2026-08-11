@@ -3,6 +3,7 @@ package com.limelight.networkquality
 import android.content.Context
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
+import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.preferences.PreferenceConfiguration
 import org.json.JSONObject
 import kotlin.math.ceil
@@ -17,6 +18,9 @@ enum class StreamNetworkQuality {
     FAIR,
     POOR
 }
+
+fun ComputerDetails.supportsNetworkQualityProbe(): Boolean =
+    !nvidiaServer && sunshineVersion?.endsWith(FOUNDATION_SUNSHINE_VERSION_SUFFIX) == true
 
 data class StreamNetworkRecommendation(
     val width: Int,
@@ -56,10 +60,12 @@ data class StreamNetworkTestResult(
             else -> StreamNetworkQuality.POOR
         }
 
-    fun recommendationFor(display: StreamDeviceDisplay): StreamNetworkRecommendation {
-        val safeKbps = floor(bandwidthMbps * SAFE_BANDWIDTH_FRACTION)
+    fun recommendationFor(display: StreamDeviceDisplay): StreamNetworkRecommendation? {
+        val safeKbps = floor(bandwidthMbps * 1000.0 * SAFE_BANDWIDTH_FRACTION)
             .toInt()
-            .coerceIn(MIN_RECOMMENDED_MBPS, MAX_RECOMMENDED_MBPS) * 1000
+            .coerceAtMost(MAX_RECOMMENDED_KBPS)
+            .let { it / BITRATE_STEP_KBPS * BITRATE_STEP_KBPS }
+        if (safeKbps < MIN_RECOMMENDED_KBPS) return null
         val highFps = display.normalizedMaxFps
         val standardFps = min(highFps, 60)
 
@@ -114,8 +120,9 @@ data class StreamNetworkTestResult(
     companion object {
         const val SAFE_BANDWIDTH_FRACTION = 0.65
         private const val WARNING_THRESHOLD_MULTIPLIER = 1.15
-        private const val MIN_RECOMMENDED_MBPS = 3
-        private const val MAX_RECOMMENDED_MBPS = 150
+        private const val MIN_RECOMMENDED_KBPS = 500
+        private const val MAX_RECOMMENDED_KBPS = 150_000
+        private const val BITRATE_STEP_KBPS = 500
         private const val MAX_DEFAULT_BITRATE_MULTIPLIER = 2.0
         private const val RESULT_MAX_AGE_MS = 30L * 60L * 1000L
 
@@ -136,6 +143,8 @@ data class StreamNetworkTestResult(
             PreferenceConfiguration.getDefaultBitrate("${width}x${height}", fps.toString())
     }
 }
+
+private const val FOUNDATION_SUNSHINE_VERSION_SUFFIX = "杂鱼"
 
 object StreamNetworkQualityStore {
     private const val KEY_PREFIX = "stream_network_quality_"

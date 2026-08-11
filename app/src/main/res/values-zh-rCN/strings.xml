@@ -1916,6 +1916,8 @@
     <string name="network_quality_save_scene_1">保存到场景 1</string>
     <string name="network_quality_use_and_continue">使用此设置继续</string>
     <string name="network_quality_continue_note">将更新当前设置，然后继续快捷启动或选择游戏；不会自动覆盖场景 1。</string>
+    <string name="network_quality_no_stable_recommendation">当前连接低于 Moonlight 可安全使用的最低串流码率。</string>
+    <string name="network_quality_no_stable_recommendation_note">未修改任何设置，请改善网络后重新检测。</string>
     <string name="network_quality_recommendation_applied">已应用推荐串流设置</string>
     <string name="network_quality_warning_title">当前场景可能不稳定</string>
     <string name="network_quality_warning_body">当前码率高于这条网络测得的稳定承载能力，串流时可能出现卡顿。</string>

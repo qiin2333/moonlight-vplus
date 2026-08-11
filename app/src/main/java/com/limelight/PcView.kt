@@ -11,6 +11,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.atomic.AtomicReference
 
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DecodeFormat
@@ -28,6 +29,7 @@ import com.limelight.networkquality.StreamNetworkQuality
 import com.limelight.networkquality.StreamNetworkQualityStore
 import com.limelight.networkquality.StreamNetworkRecommendation
 import com.limelight.networkquality.StreamNetworkTestResult
+import com.limelight.networkquality.supportsNetworkQualityProbe
 import com.limelight.dialogs.AddressSelectionDialog
 import com.limelight.grid.PcGridAdapter
 import com.limelight.grid.assets.DiskAssetLoader
@@ -39,6 +41,7 @@ import com.limelight.nvstream.http.PairingManager.PairState
 import com.limelight.nvstream.wol.WakeOnLanSender
 import com.limelight.preferences.AddComputerManually
 import com.limelight.preferences.BackgroundSource
+import com.limelight.preferences.CustomResolutionsConsts
 import com.limelight.preferences.GlPreferences
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.StreamSettings
@@ -77,6 +80,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
 
 import com.google.zxing.integration.android.IntentIntegrator
@@ -1864,9 +1868,21 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     }
 
     private fun saveCurrentConfiguration(sceneNumber: Int) {
+        saveConfigurationToScene(
+            sceneNumber,
+            PreferenceConfiguration.readPreferences(this),
+            markActive = true
+        )
+    }
+
+    private fun saveConfigurationToScene(
+        sceneNumber: Int,
+        preferences: PreferenceConfiguration,
+        markActive: Boolean
+    ): Boolean {
         try {
             val config = SceneConfiguration
-                    .fromPreferences(PreferenceConfiguration.readPreferences(this))
+                    .fromPreferences(preferences)
                     .toJson()
 
             getSharedPreferences(SCENE_PREF_NAME, MODE_PRIVATE)
@@ -1874,11 +1890,15 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                         putString(SCENE_KEY_PREFIX + sceneNumber, config.toString())
                     }
 
-            activeSceneNumber = sceneNumber
-            updateSceneButtonStates()
+            if (markActive) {
+                activeSceneNumber = sceneNumber
+                updateSceneButtonStates()
+            }
             showToast(getString(R.string.scene_saved_successfully, sceneNumber))
+            return true
         } catch (e: JSONException) {
             showToast(getString(R.string.config_save_failed))
+            return false
         }
     }
 
@@ -2341,6 +2361,10 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
     private fun startQuickStreamWithNetworkCheck(app: NvApp, computer: ComputerDetails) {
         val binder = managerBinder ?: return
+        if (!computer.supportsNetworkQualityProbe()) {
+            ServerHelper.doStart(this, app, computer, binder)
+            return
+        }
         val endpointIdentity = computer.activeAddress?.let { "${it.address}:${it.port}" }
         val result = StreamNetworkQualityStore.load(this, computer.uuid, endpointIdentity)
         val prefs = PreferenceConfiguration.readPreferences(this)
@@ -2359,7 +2383,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             recommendation = recommendation,
             onContinue = { ServerHelper.doStart(this, app, computer, binder) },
             onUseRecommendation = {
-                if (applyNetworkRecommendation(recommendation, saveToSceneOne = false)) {
+                if (applyNetworkRecommendation(recommendation)) {
                     ServerHelper.doStart(this, app, computer, binder)
                 }
             }
@@ -2579,7 +2603,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             }
         }
 
-        if (paired && details.state == ComputerDetails.State.ONLINE && !details.nvidiaServer) {
+        if (paired && details.state == ComputerDetails.State.ONLINE && details.supportsNetworkQualityProbe()) {
             val endpointIdentity = details.activeAddress?.let { "${it.address}:${it.port}" }
             val cached = StreamNetworkQualityStore.load(this@PcView, details.uuid, endpointIdentity)
             val trailing = cached?.let {
@@ -2741,15 +2765,21 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         }
 
         var testJob: Job? = null
+        val activeProbe = AtomicReference<NvHTTP?>()
+        val cancelProbe = {
+            testJob?.cancel()
+            activeProbe.getAndSet(null)?.cancelNetworkProbe()
+            Unit
+        }
         val testingSheet = NetworkQualitySheet.showTesting(
             this,
             computer.name.orEmpty(),
-            onCancel = { testJob?.cancel() }
+            onCancel = cancelProbe
         )
 
         testJob = uiScope.launch {
             try {
-                val measurement = withContext(Dispatchers.IO) {
+                val measurement = runInterruptible(Dispatchers.IO) {
                     val http = NvHTTP(
                         ServerHelper.getCurrentAddressFromComputer(computer),
                         computer.httpsPort,
@@ -2758,7 +2788,12 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                         computer.serverCert,
                         PlatformBinding.getCryptoProvider(this@PcView)
                     )
-                    http.runNetworkProbe(testingSheet::updateProgress)
+                    activeProbe.set(http)
+                    try {
+                        http.runNetworkProbe(testingSheet::updateProgress)
+                    } finally {
+                        activeProbe.compareAndSet(http, null)
+                    }
                 }
 
                 val result = StreamNetworkTestResult(
@@ -2771,20 +2806,22 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 val recommendation = result.recommendationFor(networkDeviceDisplay())
                 pcGridAdapter.notifyDataSetChanged()
                 testingSheet.dismiss()
-                NetworkQualitySheet.showResult(
-                    this@PcView,
-                    computer.name.orEmpty(),
-                    result,
-                    recommendation,
-                    onSaveToSceneOne = {
-                        applyNetworkRecommendation(recommendation, saveToSceneOne = true)
-                    },
-                    onContinue = {
-                        if (applyNetworkRecommendation(recommendation, saveToSceneOne = false)) {
-                            quickStartStream(computer, itemView = null, isSecondaryScreen = false)
+                if (!isFinishing && !isDestroyed) {
+                    NetworkQualitySheet.showResult(
+                        this@PcView,
+                        computer.name.orEmpty(),
+                        result,
+                        recommendation,
+                        onSaveToSceneOne = {
+                            recommendation?.let(::saveNetworkRecommendationToSceneOne)
+                        },
+                        onContinue = {
+                            if (recommendation != null && applyNetworkRecommendation(recommendation)) {
+                                quickStartStream(computer, itemView = null, isSecondaryScreen = false)
+                            }
                         }
-                    }
-                )
+                    )
+                }
             } catch (_: CancellationException) {
                 testingSheet.dismiss()
             } catch (e: Exception) {
@@ -2817,11 +2854,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             ?: getString(R.string.network_quality_test_failed_detail)
     }
 
-    private fun applyNetworkRecommendation(
-        recommendation: StreamNetworkRecommendation,
-        saveToSceneOne: Boolean
-    ): Boolean {
-        val prefs = PreferenceConfiguration.readPreferences(this).apply {
+    private fun recommendedPreferences(recommendation: StreamNetworkRecommendation): PreferenceConfiguration =
+        PreferenceConfiguration.readPreferences(this).apply {
             width = recommendation.width
             height = recommendation.height
             isNativeResolution = recommendation.usesNativeResolution
@@ -2830,18 +2864,47 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             bitrate = recommendation.bitrateKbps
             enableAdaptiveBitrate = true
         }
+
+    private fun saveNetworkRecommendationToSceneOne(recommendation: StreamNetworkRecommendation): Boolean {
+        persistRecommendedCustomResolution(recommendation)
+        return saveConfigurationToScene(
+            sceneNumber = 1,
+            preferences = recommendedPreferences(recommendation),
+            markActive = false
+        )
+    }
+
+    private fun applyNetworkRecommendation(recommendation: StreamNetworkRecommendation): Boolean {
+        val prefs = recommendedPreferences(recommendation)
+        persistRecommendedCustomResolution(recommendation)
         if (!prefs.writeScenePreferences(this)) {
             showToast(getString(R.string.config_save_failed))
             return false
         }
 
         pcGridAdapter.updateLayoutWithPreferences(this, prefs)
-        if (saveToSceneOne) {
-            saveCurrentConfiguration(1)
-        } else {
-            showToast(getString(R.string.network_quality_recommendation_applied))
-        }
+        showToast(getString(R.string.network_quality_recommendation_applied))
         return true
+    }
+
+    private fun persistRecommendedCustomResolution(recommendation: StreamNetworkRecommendation) {
+        if (recommendation.usesNativeResolution) return
+        val resolution = "${recommendation.width}x${recommendation.height}"
+        if (PreferenceConfiguration.RESOLUTIONS.contains(resolution)) return
+
+        val preferences = getSharedPreferences(
+            CustomResolutionsConsts.CUSTOM_RESOLUTIONS_FILE,
+            MODE_PRIVATE
+        )
+        val resolutions = preferences.getStringSet(
+            CustomResolutionsConsts.CUSTOM_RESOLUTIONS_KEY,
+            emptySet()
+        ).orEmpty().toMutableSet()
+        if (resolutions.add(resolution)) {
+            preferences.edit {
+                putStringSet(CustomResolutionsConsts.CUSTOM_RESOLUTIONS_KEY, resolutions)
+            }
+        }
     }
 
     private fun networkDeviceDisplay(): StreamDeviceDisplay {

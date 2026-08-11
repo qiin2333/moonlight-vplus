@@ -184,6 +184,7 @@
         <item name="android:textColorSecondary">@color/settings_preference_summary_text</item>
         <item name="preferenceTheme">@style/MyPreferenceThemeOverlay</item>
         <item name="android:buttonStyle">@style/AppButtonStyle</item>
+        <item name="buttonStyle">@style/AppButtonStyle</item>
     </style>
 
     <!-- 自定义 Preference 主题：紧凑左缩进 (无 icon 不预留空间) -->
@@ -336,6 +337,7 @@
         <!-- 标题样式 -->
         <item name="android:windowTitleStyle">@style/AppDialogTitleStyle</item>
         <item name="android:buttonStyle">@style/AppDialogButtonStyle</item>
+        <item name="buttonStyle">@style/AppDialogButtonStyle</item>
         <item name="buttonBarPositiveButtonStyle">@style/AppDialogButtonStyle</item>
         <item name="buttonBarNegativeButtonStyle">@style/AppDialogButtonStyle</item>
         <item name="buttonBarNeutralButtonStyle">@style/AppDialogButtonStyle</item>

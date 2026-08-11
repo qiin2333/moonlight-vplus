@@ -13,15 +13,15 @@ class StreamNetworkQualityTest {
             responseLatencyMs = 9.0,
             responseJitterMs = 2.1
         )
-        val recommendation = result.recommendationFor(
+        val recommendation = requireNotNull(result.recommendationFor(
             StreamDeviceDisplay(nativeWidth = 1080, nativeHeight = 2340, maxFps = 120)
-        )
+        ))
 
         assertEquals(StreamNetworkQuality.GOOD, result.quality)
         assertEquals(2340, recommendation.width)
         assertEquals(1080, recommendation.height)
         assertEquals(120, recommendation.fps)
-        assertEquals(40_000, recommendation.bitrateKbps)
+        assertEquals(40_500, recommendation.bitrateKbps)
         assertTrue(recommendation.usesNativeResolution)
     }
 
@@ -32,9 +32,9 @@ class StreamNetworkQualityTest {
             responseLatencyMs = 9.0,
             responseJitterMs = 2.1
         )
-        val recommendation = result.recommendationFor(
+        val recommendation = requireNotNull(result.recommendationFor(
             StreamDeviceDisplay(nativeWidth = 1080, nativeHeight = 2340, maxFps = 120)
-        )
+        ))
 
         assertEquals(1170, recommendation.width)
         assertEquals(540, recommendation.height)
@@ -51,9 +51,9 @@ class StreamNetworkQualityTest {
             responseLatencyMs = 10.0,
             responseJitterMs = 1.0
         )
-        val recommendation = result.recommendationFor(
+        val recommendation = requireNotNull(result.recommendationFor(
             StreamDeviceDisplay(nativeWidth = 1080, nativeHeight = 2340, maxFps = 120)
-        )
+        ))
 
         assertEquals(2340, recommendation.width)
         assertEquals(1080, recommendation.height)
@@ -69,9 +69,9 @@ class StreamNetworkQualityTest {
             responseJitterMs = 4.0,
             testedAtEpochMs = 1L
         )
-        val recommendation = stale.recommendationFor(
+        val recommendation = requireNotNull(stale.recommendationFor(
             StreamDeviceDisplay(nativeWidth = 1080, nativeHeight = 2340, maxFps = 120)
-        )
+        ))
 
         assertFalse(stale.shouldWarnForBitrate(80_000, recommendation))
     }
@@ -84,12 +84,28 @@ class StreamNetworkQualityTest {
             responseJitterMs = 2.1
         )
 
-        val recommendation = result.recommendationFor(
+        val recommendation = requireNotNull(result.recommendationFor(
             StreamDeviceDisplay(nativeWidth = 1080, nativeHeight = 2340, maxFps = 120)
-        )
+        ))
 
         assertFalse(result.shouldWarnForBitrate(45_000, recommendation))
         assertTrue(result.shouldWarnForBitrate(50_000, recommendation))
+    }
+
+    @Test
+    fun bandwidthBelowSupportedMinimumHasNoRecommendation() {
+        val result = StreamNetworkTestResult(
+            bandwidthMbps = 0.5,
+            responseLatencyMs = 20.0,
+            responseJitterMs = 4.0
+        )
+
+        assertEquals(
+            null,
+            result.recommendationFor(
+                StreamDeviceDisplay(nativeWidth = 1080, nativeHeight = 2340, maxFps = 120)
+            )
+        )
     }
 
 }

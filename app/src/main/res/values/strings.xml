@@ -1978,6 +1978,8 @@ Tap again to replace it.</string>
     <string name="network_quality_save_scene_1">Save to Scene 1</string>
     <string name="network_quality_use_and_continue">Use settings and continue</string>
     <string name="network_quality_continue_note">Updates the current settings, then continues to quick launch or game selection. Scene 1 is not overwritten.</string>
+    <string name="network_quality_no_stable_recommendation">This connection is below Moonlight’s minimum safe streaming bitrate.</string>
+    <string name="network_quality_no_stable_recommendation_note">No settings were changed. Improve the connection and run the test again.</string>
     <string name="network_quality_recommendation_applied">Recommended streaming settings applied</string>
     <string name="network_quality_warning_title">The current scene may be unstable</string>
     <string name="network_quality_warning_body">Its bitrate is above the stable capacity measured for this network and may cause stutter.</string>

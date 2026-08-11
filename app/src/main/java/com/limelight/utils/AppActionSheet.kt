@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +51,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalInputModeManager
@@ -232,8 +232,11 @@ object AppActionSheet {
     ) {
         val initialFocusRequester = remember { FocusRequester() }
         val shouldRequestFocus = isControllerFocusMode()
-        LaunchedEffect(actions, shouldRequestFocus) {
-            if (shouldRequestFocus && actions.isNotEmpty()) initialFocusRequester.requestFocus()
+        val initialFocusPlaced = remember { mutableStateOf(false) }
+        LaunchedEffect(actions, shouldRequestFocus, initialFocusPlaced.value) {
+            if (shouldRequestFocus && actions.isNotEmpty() && initialFocusPlaced.value) {
+                initialFocusRequester.requestFocus()
+            }
         }
         ActionSheetContainer {
             ActionSheetHeader(title, subtitle, activeStatus)
@@ -249,7 +252,11 @@ object AppActionSheet {
                     ActionSheetRow(
                         action,
                         onAction,
-                        if (index == 0) Modifier.focusRequester(initialFocusRequester) else Modifier
+                        if (index == 0) {
+                            Modifier
+                                .focusRequester(initialFocusRequester)
+                                .onGloballyPositioned { initialFocusPlaced.value = true }
+                        } else Modifier
                     )
                 }
             }
@@ -270,6 +277,14 @@ object AppActionSheet {
         onCancel: () -> Unit,
         onReset: (() -> Unit)?
     ) {
+        val initialFocusRequester = remember { FocusRequester() }
+        val shouldRequestFocus = isControllerFocusMode()
+        val initialFocusPlaced = remember { mutableStateOf(false) }
+        LaunchedEffect(actions, shouldRequestFocus, initialFocusPlaced.value) {
+            if (shouldRequestFocus && initialFocusPlaced.value) {
+                initialFocusRequester.requestFocus()
+            }
+        }
         ActionSheetContainer {
             ActionSheetHeader(title, null, false)
             val maxListHeight = (LocalConfiguration.current.screenHeightDp * 0.54f).dp
@@ -280,10 +295,15 @@ object AppActionSheet {
                 contentPadding = PaddingValues(horizontal = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(1.dp)
             ) {
-                items(actions, key = { it.id }) { action ->
+                itemsIndexed(actions, key = { _, action -> action.id }) { index, action ->
                     ActionSheetRow(
                         action = action.copy(checked = action.id in selectedIds),
-                        onAction = onToggle
+                        onAction = onToggle,
+                        modifier = if (index == 0) {
+                            Modifier
+                                .focusRequester(initialFocusRequester)
+                                .onGloballyPositioned { initialFocusPlaced.value = true }
+                        } else Modifier
                     )
                 }
             }
@@ -303,7 +323,15 @@ object AppActionSheet {
                     ActionSheetFooterAction(resetLabel, onReset)
                 }
                 Spacer(Modifier.weight(1f))
-                ActionSheetFooterAction(cancelLabel, onCancel)
+                ActionSheetFooterAction(
+                    cancelLabel,
+                    onCancel,
+                    modifier = if (actions.isEmpty()) {
+                        Modifier
+                            .focusRequester(initialFocusRequester)
+                            .onGloballyPositioned { initialFocusPlaced.value = true }
+                    } else Modifier
+                )
                 ActionSheetFooterAction(
                     label = confirmLabel,
                     onClick = onConfirm,
