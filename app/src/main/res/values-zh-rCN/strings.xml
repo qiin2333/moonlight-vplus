@@ -1343,7 +1343,7 @@
     <string name="settings_search_no_results">没有匹配的设置</string>
     <string name="no_app_found_for_streaming">未找到可串流的应用</string>
     <string name="notification_icon">通知图标</string>
-    <string name="pacing_precise_sync">精确同步</string>
+    <string name="pacing_precise_sync">精确同步（推荐）</string>
     <string name="summary_checkbox_control_only">仅建立控制流连接，不传输音视频流。适用于远程输入控制场景。需要 Sunshine 服务端支持仅控制模式。</string>
     <string name="summary_checkbox_enable_background_audio">隐藏整个窗口并在后台播放音频，可一边使用其他应用一边收听。</string>
     <string name="title_checkbox_control_only">仅控制模式</string>
