@@ -108,4 +108,30 @@ class StreamNetworkQualityTest {
         )
     }
 
+    @Test
+    fun resultIsFreshAtThirtyMinuteBoundary() {
+        val testedAt = 1_000L
+        val result = StreamNetworkTestResult(
+            bandwidthMbps = 20.0,
+            responseLatencyMs = 20.0,
+            responseJitterMs = 4.0,
+            testedAtEpochMs = testedAt
+        )
+
+        assertTrue(result.isFresh(testedAt + 30L * 60L * 1000L))
+    }
+
+    @Test
+    fun resultIsExpiredBeyondThirtyMinuteBoundary() {
+        val testedAt = 1_000L
+        val result = StreamNetworkTestResult(
+            bandwidthMbps = 20.0,
+            responseLatencyMs = 20.0,
+            responseJitterMs = 4.0,
+            testedAtEpochMs = testedAt
+        )
+
+        assertFalse(result.isFresh(testedAt + 30L * 60L * 1000L + 1L))
+    }
+
 }

@@ -12,6 +12,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.math.roundToInt
 
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DecodeFormat
@@ -1742,11 +1743,19 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             }
 
             fun fromJson(json: JSONObject, fallback: PreferenceConfiguration): SceneConfiguration {
+                val width = json.optInt("width", fallback.width)
+                val height = json.optInt("height", fallback.height)
+                val resolutionMode = resolveSceneResolutionMode(
+                    json,
+                    width,
+                    height,
+                    PreferenceConfiguration.RESOLUTIONS.asList()
+                )
                 return SceneConfiguration(
-                        width = json.optInt("width", fallback.width),
-                        height = json.optInt("height", fallback.height),
-                        isNativeResolution = json.optBoolean("isNativeResolution", fallback.isNativeResolution),
-                        isCustomResolution = json.optBoolean("isCustomResolution", fallback.isCustomResolution),
+                        width = width,
+                        height = height,
+                        isNativeResolution = resolutionMode.isNative,
+                        isCustomResolution = resolutionMode.isCustom,
                         fps = json.optInt("fps", fallback.fps),
                         bitrate = json.optInt("bitrate", fallback.bitrate),
                         enableAdaptiveBitrate = json.optBoolean("enableAdaptiveBitrate", fallback.enableAdaptiveBitrate),
@@ -2616,6 +2625,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         if (paired && details.state == ComputerDetails.State.ONLINE && details.supportsNetworkQualityProbe()) {
             val endpointIdentity = details.activeAddress?.let { "${it.address}:${it.port}" }
             val cached = StreamNetworkQualityStore.load(this@PcView, details.uuid, endpointIdentity)
+                ?.takeIf { it.isFresh() }
             val trailing = cached?.let {
                 val qualityRes = when (it.quality) {
                     StreamNetworkQuality.EXCELLENT -> R.string.network_quality_excellent
@@ -2871,7 +2881,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             width = recommendation.width
             height = recommendation.height
             isNativeResolution = recommendation.usesNativeResolution
-            isCustomResolution = !recommendation.usesNativeResolution
+            isCustomResolution = !recommendation.usesNativeResolution &&
+                !PreferenceConfiguration.RESOLUTIONS.contains("${recommendation.width}x${recommendation.height}")
             fps = recommendation.fps
             bitrate = recommendation.bitrateKbps
             enableAdaptiveBitrate = true
@@ -2938,7 +2949,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             return StreamDeviceDisplay(
                 nativeWidth = nativeMode.physicalWidth,
                 nativeHeight = nativeMode.physicalHeight,
-                maxFps = maxRefreshRate.toInt()
+                maxFps = maxRefreshRate.roundToInt()
             )
         }
 
