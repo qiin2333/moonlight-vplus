@@ -51,10 +51,6 @@ class MediaCodecDecoderRenderer(
         private const val CR_RECOVERY_TYPE_RESTART = 2
         private const val CR_RECOVERY_TYPE_RESET = 3
         private const val MAX_DECODER_CONFIGURATION_TRIES = 8
-        private const val HDR_STREAM_STATE_UNKNOWN = 0
-        private const val HDR_STREAM_STATE_DISABLED = 1
-        private const val HDR_STREAM_STATE_ENABLED = 2
-
         // Each thread that touches the MediaCodec object or any associated buffers must have a flag
         // here and must call doCodecRecoveryIfRequired() on a regular basis.
         private const val CR_FLAG_INPUT_THREAD = 0x1
@@ -65,46 +61,10 @@ class MediaCodecDecoderRenderer(
         private const val EXCEPTION_REPORT_DELAY_MS = 3000
         private const val FRAMEGEN_SURFACE_SWITCH_MAX_RETRIES = 20
         private const val FRAMEGEN_SURFACE_SWITCH_RETRY_DELAY_MS = 50L
-        private const val HDR10_PLUS_INITIAL_PROBE_FRAMES = 120L
-        private const val HDR10_PLUS_SAMPLE_INTERVAL_FRAMES = 60L
-        private const val HDR10_PLUS_QUERY_FAILURE_BACKOFF_FRAMES = 60
-
-        // HDR10+ metadata can cause some decoders to signal an output-format update for every
-        // frame. Only these stable video properties require logging and Surface dataspace repair.
-        private val STABLE_OUTPUT_FORMAT_INTEGER_KEYS = arrayOf(
-            MediaFormat.KEY_WIDTH,
-            MediaFormat.KEY_HEIGHT,
-            "crop-left",
-            "crop-right",
-            "crop-top",
-            "crop-bottom",
-            "color-format",
-            "stride",
-            "slice-height",
-            MediaFormat.KEY_COLOR_STANDARD,
-            MediaFormat.KEY_COLOR_TRANSFER,
-            MediaFormat.KEY_COLOR_RANGE,
-        )
-
         // Vendor codecs expose far fewer input buffers in practice. The generous fixed capacity
         // keeps the steady-state queue allocation-free without risking normal callback loss.
         private const val ASYNC_INPUT_BUFFER_QUEUE_CAPACITY = 256
 
-        @SuppressLint("InlinedApi")
-        private const val HEVC_PROFILE_MAIN10_HDR10 =
-            MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10
-        @SuppressLint("InlinedApi")
-        private const val HEVC_PROFILE_MAIN10_HDR10_PLUS =
-            MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10Plus
-        @SuppressLint("InlinedApi")
-        private const val AV1_PROFILE_MAIN10 =
-            MediaCodecInfo.CodecProfileLevel.AV1ProfileMain10
-        @SuppressLint("InlinedApi")
-        private const val AV1_PROFILE_MAIN10_HDR10 =
-            MediaCodecInfo.CodecProfileLevel.AV1ProfileMain10HDR10
-        @SuppressLint("InlinedApi")
-        private const val AV1_PROFILE_MAIN10_HDR10_PLUS =
-            MediaCodecInfo.CodecProfileLevel.AV1ProfileMain10HDR10Plus
     }
 
     // Used on versions < 5.0
@@ -120,7 +80,6 @@ class MediaCodecDecoderRenderer(
     private val ppsBuffers = ArrayList<ByteArray>()
     private var submittedCsd = false
     private var currentHdrMetadata: ByteArray? = null
-    private val hdrStreamState = AtomicInteger(HDR_STREAM_STATE_UNKNOWN)
     private var hdrDataSpace = 0 // Configured DataSpace for HDR content, re-applied after format changes
 
     private var nextInputBufferIndex = -1
@@ -141,15 +100,13 @@ class MediaCodecDecoderRenderer(
     private var refFrameInvalidationAv1 = false
     private var hevcHdr10PlusEligible = false
     private var av1Hdr10PlusEligible = false
-    @Volatile
-    private var hdr10PlusConfigured = false
-    @Volatile
-    private var hdr10PlusMetadataQueryEnabled = false
-    private val hdr10PlusObservationLock = Any()
-    private val hdr10PlusMetadataTracker = Hdr10PlusMetadataTracker()
-    private var hdr10PlusMetadataObserved = false
-    private var hdr10PlusOutputFramesObserved = 0L
-    private var hdr10PlusQueryBackoffFrames = 0
+    private val hdr10PlusOutputObserver = Hdr10PlusOutputObserver()
+    private val hdrProfileSelector = HdrDecoderProfileSelector(
+        width = prefs.width,
+        height = prefs.height,
+        frameRate = prefs.fps,
+        fullRange = prefs.fullRange,
+    )
     private val optimalSlicesPerFrame: Byte
     private var refFrameInvalidationActive = false
 
@@ -194,7 +151,7 @@ class MediaCodecDecoderRenderer(
 
     private var inputFormat: MediaFormat? = null
     private var outputFormat: MediaFormat? = null
-    private var stableOutputFormatSignature: Int? = null
+    private val stableOutputFormatTracker = StableOutputFormatTracker()
     private var configuredFormat: MediaFormat? = null
 
     private var needsBaselineSpsHack = false
@@ -551,15 +508,13 @@ class MediaCodecDecoderRenderer(
             LimeLog.info("No AV1 decoder found")
         }
 
-        hevcHdr10PlusEligible = requestedHdr10Plus && decoderSupportsHdr10PlusFormat(
+        hevcHdr10PlusEligible = requestedHdr10Plus && hdrProfileSelector.supportsHdr10PlusFormat(
             hevcDecoder,
-            "video/hevc",
-            HEVC_PROFILE_MAIN10_HDR10_PLUS,
+            HdrDecoderProfileSelector.MIME_HEVC,
         )
-        av1Hdr10PlusEligible = requestedHdr10Plus && decoderSupportsHdr10PlusFormat(
+        av1Hdr10PlusEligible = requestedHdr10Plus && hdrProfileSelector.supportsHdr10PlusFormat(
             av1Decoder,
-            "video/av01",
-            AV1_PROFILE_MAIN10_HDR10_PLUS,
+            HdrDecoderProfileSelector.MIME_AV1,
         )
         if (requestedHdr10Plus) {
             LimeLog.info(
@@ -621,169 +576,30 @@ class MediaCodecDecoderRenderer(
 
     fun isAvcSupported(): Boolean = avcDecoder != null
 
-    fun isHevcMain10Supported(): Boolean {
-        if (hevcDecoder == null) {
-            return false
-        }
+    fun isHevcMain10Supported(): Boolean = hdrProfileSelector.supportsHevcMain10(hevcDecoder)
 
-        for (profileLevel in hevcDecoder.getCapabilitiesForType("video/hevc").profileLevels) {
-            if (profileLevel.profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10 ||
-                profileLevel.profile == HEVC_PROFILE_MAIN10_HDR10 ||
-                profileLevel.profile == HEVC_PROFILE_MAIN10_HDR10_PLUS
-            ) {
-                LimeLog.info("HEVC decoder " + hevcDecoder.name + " supports HEVC Main10")
-                return true
-            }
-        }
-        return false
-    }
+    fun isHevcMain10Hdr10Supported(): Boolean = hdrProfileSelector.supportsHevcHdr10(hevcDecoder)
 
-    fun isHevcMain10Hdr10Supported(): Boolean {
-        if (hevcDecoder == null) {
-            return false
-        }
-
-        for (profileLevel in hevcDecoder.getCapabilitiesForType("video/hevc").profileLevels) {
-            if (profileLevel.profile == HEVC_PROFILE_MAIN10_HDR10 ||
-                profileLevel.profile == HEVC_PROFILE_MAIN10_HDR10_PLUS
-            ) {
-                LimeLog.info("HEVC decoder " + hevcDecoder.name + " supports HEVC Main10 HDR10/HDR10+")
-                return true
-            }
-        }
-
-        return false
-    }
-
-    fun isHevcMain10Hdr10PlusSupported(): Boolean = decoderHasProfile(
-        hevcDecoder,
-        "video/hevc",
-        HEVC_PROFILE_MAIN10_HDR10_PLUS,
-    )
+    fun isHevcMain10Hdr10PlusSupported(): Boolean =
+        hdrProfileSelector.supportsHevcHdr10Plus(hevcDecoder)
 
     fun isAv1Supported(): Boolean = av1Decoder != null
 
-    fun isAv1Main10Supported(): Boolean {
-        if (av1Decoder == null) {
-            return false
-        }
+    fun isAv1Main10Supported(): Boolean = hdrProfileSelector.supportsAv1Main10(av1Decoder)
 
-        for (profileLevel in av1Decoder.getCapabilitiesForType("video/av01").profileLevels) {
-            if (profileLevel.profile == AV1_PROFILE_MAIN10 ||
-                profileLevel.profile == AV1_PROFILE_MAIN10_HDR10 ||
-                profileLevel.profile == AV1_PROFILE_MAIN10_HDR10_PLUS
-            ) {
-                LimeLog.info("AV1 decoder " + av1Decoder.name + " supports AV1 Main 10")
-                return true
-            }
-        }
+    fun isAv1Main10Hdr10Supported(): Boolean = hdrProfileSelector.supportsAv1Hdr10(av1Decoder)
 
-        return false
-    }
-
-    fun isAv1Main10Hdr10Supported(): Boolean {
-        if (av1Decoder == null) {
-            return false
-        }
-
-        for (profileLevel in av1Decoder.getCapabilitiesForType("video/av01").profileLevels) {
-            if (profileLevel.profile == AV1_PROFILE_MAIN10_HDR10 ||
-                profileLevel.profile == AV1_PROFILE_MAIN10_HDR10_PLUS
-            ) {
-                LimeLog.info("AV1 decoder " + av1Decoder.name + " supports AV1 Main 10 HDR10/HDR10+")
-                return true
-            }
-        }
-
-        return false
-    }
-
-    fun isAv1Main10Hdr10PlusSupported(): Boolean = decoderHasProfile(
-        av1Decoder,
-        "video/av01",
-        AV1_PROFILE_MAIN10_HDR10_PLUS,
-    )
-
-    private fun decoderHasProfile(
-        decoderInfo: MediaCodecInfo?,
-        mimeType: String,
-        profile: Int,
-    ): Boolean {
-        if (decoderInfo == null) return false
-        return try {
-            decoderInfo.getCapabilitiesForType(mimeType).profileLevels.any { it.profile == profile }
-        } catch (e: RuntimeException) {
-            LimeLog.warning("Failed to query ${decoderInfo.name} profile $profile: ${e.message}")
-            false
-        }
-    }
-
-    private fun calculateStableOutputFormatSignature(format: MediaFormat): Int {
-        var signature = format.getString(MediaFormat.KEY_MIME)?.hashCode() ?: 0
-        for (key in STABLE_OUTPUT_FORMAT_INTEGER_KEYS) {
-            val value = try {
-                if (format.containsKey(key)) format.getInteger(key) else 0
-            } catch (_: RuntimeException) {
-                // Ignore vendor keys with unexpected types. They do not affect HDR dataspace.
-                0
-            }
-            signature = 31 * signature + value
-        }
-        return signature
-    }
+    fun isAv1Main10Hdr10PlusSupported(): Boolean =
+        hdrProfileSelector.supportsAv1Hdr10Plus(av1Decoder)
 
     private fun handleOutputFormatChanged(format: MediaFormat, source: String) {
         outputFormat = format
 
-        val signature = calculateStableOutputFormatSignature(format)
-        if (stableOutputFormatSignature == signature) {
-            return
-        }
-        stableOutputFormatSignature = signature
+        if (!stableOutputFormatTracker.record(format)) return
 
         LimeLog.info("Output format changed ($source): $format")
         renderTarget?.surface?.let {
             reapplyHdrDataSpaceIfChanged(it, "$source format change")
-        }
-    }
-
-    private fun decoderSupportsHdr10PlusFormat(
-        decoderInfo: MediaCodecInfo?,
-        mimeType: String,
-        profile: Int,
-    ): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
-            !decoderHasProfile(decoderInfo, mimeType, profile)
-        ) {
-            return false
-        }
-
-        return try {
-            val probeFormat = MediaFormat.createVideoFormat(mimeType, prefs.width, prefs.height)
-            probeFormat.setInteger(MediaFormat.KEY_PROFILE, profile)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                probeFormat.setInteger(MediaFormat.KEY_FRAME_RATE, prefs.fps)
-            }
-            probeFormat.setInteger(MediaFormat.KEY_COLOR_STANDARD, MediaFormat.COLOR_STANDARD_BT2020)
-            probeFormat.setInteger(MediaFormat.KEY_COLOR_TRANSFER, MediaFormat.COLOR_TRANSFER_ST2084)
-            probeFormat.setInteger(
-                MediaFormat.KEY_COLOR_RANGE,
-                if (prefs.fullRange) MediaFormat.COLOR_RANGE_FULL else MediaFormat.COLOR_RANGE_LIMITED,
-            )
-
-            val supported = decoderInfo!!
-                .getCapabilitiesForType(mimeType)
-                .isFormatSupported(probeFormat)
-            if (!supported) {
-                LimeLog.warning(
-                    "${decoderInfo.name} advertises HDR10+ profile but rejects " +
-                        "${prefs.width}x${prefs.height}@${prefs.fps}"
-                )
-            }
-            supported
-        } catch (e: RuntimeException) {
-            LimeLog.warning("HDR10+ format probe failed for ${decoderInfo?.name}: ${e.message}")
-            false
         }
     }
 
@@ -942,57 +758,21 @@ class MediaCodecDecoderRenderer(
     private fun getDecoderProfileCandidates(
         mimeType: String,
         selectedDecoderInfo: MediaCodecInfo,
-    ): List<Int?> {
-        val hdr10PlusEligible: Boolean
-        val hdr10PlusProfile: Int
-        val hdr10Profile: Int
-        when (mimeType) {
-            "video/hevc" -> {
-                hdr10PlusEligible = hevcHdr10PlusEligible
-                hdr10PlusProfile = HEVC_PROFILE_MAIN10_HDR10_PLUS
-                hdr10Profile = HEVC_PROFILE_MAIN10_HDR10
-            }
-            "video/av01" -> {
-                hdr10PlusEligible = av1Hdr10PlusEligible
-                hdr10PlusProfile = AV1_PROFILE_MAIN10_HDR10_PLUS
-                hdr10Profile = AV1_PROFILE_MAIN10_HDR10
-            }
-            else -> return listOf(null)
-        }
-
-        return HdrDecoderProfilePolicy.buildCandidates(
-            isTenBit = (getActiveVideoFormat() and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0,
-            isPqHdr = prefs.hdrMode == MoonBridge.HDR_MODE_HDR10,
-            hdr10PlusEligible = hdr10PlusEligible,
-            hdr10Advertised = decoderHasProfile(selectedDecoderInfo, mimeType, hdr10Profile),
-            hdr10PlusProfile = hdr10PlusProfile,
-            hdr10Profile = hdr10Profile,
-        )
-    }
-
-    private fun isHdr10PlusProfile(mimeType: String, profile: Int?): Boolean {
-        return when (mimeType) {
-            "video/hevc" -> profile == HEVC_PROFILE_MAIN10_HDR10_PLUS
-            "video/av01" -> profile == AV1_PROFILE_MAIN10_HDR10_PLUS
+    ): List<Int?> = hdrProfileSelector.buildCandidates(
+        mimeType = mimeType,
+        decoderInfo = selectedDecoderInfo,
+        isTenBit = (getActiveVideoFormat() and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0,
+        isPqHdr = prefs.hdrMode == MoonBridge.HDR_MODE_HDR10,
+        hdr10PlusEligible = when (mimeType) {
+            HdrDecoderProfileSelector.MIME_HEVC -> hevcHdr10PlusEligible
+            HdrDecoderProfileSelector.MIME_AV1 -> av1Hdr10PlusEligible
             else -> false
-        }
-    }
-
-    private fun getProfileName(mimeType: String, profile: Int?): String {
-        if (profile == null) return "automatic"
-        return when {
-            isHdr10PlusProfile(mimeType, profile) -> "HDR10+"
-            mimeType == "video/hevc" &&
-                profile == HEVC_PROFILE_MAIN10_HDR10 -> "HDR10"
-            mimeType == "video/av01" &&
-                profile == AV1_PROFILE_MAIN10_HDR10 -> "HDR10"
-            else -> profile.toString()
-        }
-    }
+        },
+    )
 
     private fun configureAndStartDecoder(format: MediaFormat) {
-        resetHdr10PlusObservation()
-        stableOutputFormatSignature = null
+        hdr10PlusOutputObserver.restartCodecConfiguration()
+        stableOutputFormatTracker.reset()
 
         // Set HDR metadata if present
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -1110,7 +890,7 @@ class MediaCodecDecoderRenderer(
 
         // Start the decoder
         videoDecoder!!.start()
-        setHdr10PlusMetadataQueryEnabled(hdr10PlusConfigured)
+        hdr10PlusOutputObserver.onCodecStarted()
         if (framegenOutputSwitchPending && framegenOutputSwitchReady.get()) {
             requestFramegenOutputSurfaceSwitch("decoder started after framegen prewarm")
         }
@@ -1222,14 +1002,13 @@ class MediaCodecDecoderRenderer(
 
         val profileCandidates = getDecoderProfileCandidates(mimeType, selectedDecoderInfo)
         var decoderConfigured = false
-        hdr10PlusConfigured = false
-        setHdr10PlusMetadataQueryEnabled(false)
+        hdr10PlusOutputObserver.beginCodecConfiguration(false)
 
         profileLoop@ for ((profileIndex, profile) in profileCandidates.withIndex()) {
             var tryNumber = 0
             while (true) {
                 LimeLog.info(
-                    "Decoder configuration try: profile=${getProfileName(mimeType, profile)} " +
+                    "Decoder configuration try: profile=${hdrProfileSelector.profileName(mimeType, profile)} " +
                         "options=$tryNumber"
                 )
 
@@ -1237,7 +1016,8 @@ class MediaCodecDecoderRenderer(
                 if (profile != null) {
                     mediaFormat.setInteger(MediaFormat.KEY_PROFILE, profile)
                 }
-                hdr10PlusConfigured = isHdr10PlusProfile(mimeType, profile)
+                val configuringHdr10Plus = hdrProfileSelector.isHdr10PlusProfile(mimeType, profile)
+                hdr10PlusOutputObserver.beginCodecConfiguration(configuringHdr10Plus)
 
                 // Try low latency options from most aggressive to the profile-only baseline.
                 val newFormat = MediaCodecHelper.setDecoderLowLatencyOptions(
@@ -1258,8 +1038,7 @@ class MediaCodecDecoderRenderer(
                     break@profileLoop
                 }
 
-                hdr10PlusConfigured = false
-                setHdr10PlusMetadataQueryEnabled(false)
+                hdr10PlusOutputObserver.beginCodecConfiguration(false)
 
                 if (!newFormat || tryNumber >= MAX_DECODER_CONFIGURATION_TRIES - 1) {
                     break
@@ -1269,8 +1048,8 @@ class MediaCodecDecoderRenderer(
 
             if (profileIndex < profileCandidates.lastIndex) {
                 LimeLog.warning(
-                    "Decoder rejected ${getProfileName(mimeType, profile)} profile; trying " +
-                        getProfileName(mimeType, profileCandidates[profileIndex + 1])
+                    "Decoder rejected ${hdrProfileSelector.profileName(mimeType, profile)} profile; trying " +
+                        hdrProfileSelector.profileName(mimeType, profileCandidates[profileIndex + 1])
                 )
             }
         }
@@ -1279,7 +1058,7 @@ class MediaCodecDecoderRenderer(
             return -5
         }
 
-        if (hdr10PlusConfigured) {
+        if (hdr10PlusOutputObserver.snapshot().configured) {
             LimeLog.info("HDR10+ decoder profile configured for $mimeType")
         } else if (requestedHdr10Plus && mimeType == "video/hevc" && hevcHdr10PlusEligible) {
             LimeLog.warning("HDR10+ profile fallback active; HEVC SEI remains preserved for this connection")
@@ -1644,81 +1423,6 @@ class MediaCodecDecoderRenderer(
         }
     }
 
-    private fun observeHdr10PlusOutput(
-        codec: MediaCodec,
-        bufferIndex: Int,
-        presentationTimeUs: Long,
-    ) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            return
-        }
-
-        synchronized(hdr10PlusObservationLock) {
-            if (!hdr10PlusConfigured || !hdr10PlusMetadataQueryEnabled) {
-                return
-            }
-
-            hdr10PlusOutputFramesObserved++
-            if (hdr10PlusQueryBackoffFrames > 0) {
-                hdr10PlusQueryBackoffFrames--
-                return
-            }
-
-            val shouldProbe = if (hdr10PlusMetadataObserved) {
-                hdr10PlusOutputFramesObserved % HDR10_PLUS_SAMPLE_INTERVAL_FRAMES == 0L
-            } else {
-                hdr10PlusOutputFramesObserved <= HDR10_PLUS_INITIAL_PROBE_FRAMES ||
-                    hdr10PlusOutputFramesObserved % HDR10_PLUS_SAMPLE_INTERVAL_FRAMES == 0L
-            }
-            if (!shouldProbe) {
-                return
-            }
-
-            try {
-                val frameFormat = codec.getOutputFormat(bufferIndex)
-                val metadata = frameFormat.getByteBuffer(MediaFormat.KEY_HDR10_PLUS_INFO)
-                when (hdr10PlusMetadataTracker.recordMetadata(metadata, presentationTimeUs)) {
-                    Hdr10PlusMetadataObservation.FIRST -> {
-                        hdr10PlusMetadataObserved = true
-                        LimeLog.info(
-                            "HDR10+ dynamic metadata active: size=${hdr10PlusMetadataTracker.lastMetadataSize} " +
-                                "hash=0x${Integer.toHexString(hdr10PlusMetadataTracker.lastMetadataHash)}"
-                        )
-                    }
-                    else -> Unit
-                }
-            } catch (e: RuntimeException) {
-                hdr10PlusQueryBackoffFrames = HDR10_PLUS_QUERY_FAILURE_BACKOFF_FRAMES
-                if (hdr10PlusMetadataTracker.recordQueryFailure()) {
-                    LimeLog.warning(
-                        "Failed to query per-frame HDR10+ metadata: " +
-                            "${e.javaClass.simpleName}: ${e.message}"
-                    )
-                }
-            }
-        }
-    }
-
-    private fun resetHdr10PlusObservation() {
-        synchronized(hdr10PlusObservationLock) {
-            resetHdr10PlusObservationLocked()
-        }
-    }
-
-    private fun resetHdr10PlusObservationLocked() {
-        hdr10PlusMetadataQueryEnabled = false
-        hdr10PlusMetadataObserved = false
-        hdr10PlusOutputFramesObserved = 0
-        hdr10PlusQueryBackoffFrames = 0
-        hdr10PlusMetadataTracker.reset()
-    }
-
-    private fun setHdr10PlusMetadataQueryEnabled(enabled: Boolean) {
-        synchronized(hdr10PlusObservationLock) {
-            hdr10PlusMetadataQueryEnabled = enabled
-        }
-    }
-
     /**
      * Sets up the async MediaCodec callback for event-driven input/output buffer handling.
      * Must be called before configure() on API 30+.
@@ -1742,7 +1446,7 @@ class MediaCodecDecoderRenderer(
                 if (stopping) return
 
                 numFramesOut++
-                observeHdr10PlusOutput(codec, index, info.presentationTimeUs)
+                hdr10PlusOutputObserver.observeOutput(codec, index, info.presentationTimeUs)
 
                 // Deliver to frame pacing. Remove the host PTS before decoder-time tracking,
                 // because calculateDecoderTime() removes the paired enqueue entry.
@@ -1795,7 +1499,7 @@ class MediaCodecDecoderRenderer(
                         // Try to output a frame
                         var outIndex = videoDecoder!!.dequeueOutputBuffer(info, 50000)
                         if (outIndex >= 0) {
-                            observeHdr10PlusOutput(videoDecoder!!, outIndex, info.presentationTimeUs)
+                            hdr10PlusOutputObserver.observeOutput(videoDecoder!!, outIndex, info.presentationTimeUs)
                             var presentationTimeUs = info.presentationTimeUs
                             var lastIndex = outIndex
 
@@ -1808,7 +1512,7 @@ class MediaCodecDecoderRenderer(
                             ) {
                                 // Get the last output buffer in the queue
                                 while (videoDecoder!!.dequeueOutputBuffer(info, 0).also { outIndex = it } >= 0) {
-                                    observeHdr10PlusOutput(videoDecoder!!, outIndex, info.presentationTimeUs)
+                                    hdr10PlusOutputObserver.observeOutput(videoDecoder!!, outIndex, info.presentationTimeUs)
                                     videoDecoder!!.releaseOutputBuffer(lastIndex, false)
 
                                     numFramesOut++
@@ -2031,37 +1735,7 @@ class MediaCodecDecoderRenderer(
     override fun setHdrMode(enabled: Boolean, hdrMetadata: ByteArray?) {
         // The enabled flag is the authoritative stream HDR state. Static metadata may be absent
         // for HLG, NVIDIA GameStream, or a valid Sunshine HDR transition.
-        val newHdrStreamState =
-            if (enabled) HDR_STREAM_STATE_ENABLED else HDR_STREAM_STATE_DISABLED
-        synchronized(hdr10PlusObservationLock) {
-            val previousHdrStreamState = hdrStreamState.get()
-            val previousHdrEnabled = when (previousHdrStreamState) {
-                HDR_STREAM_STATE_ENABLED -> true
-                HDR_STREAM_STATE_DISABLED -> false
-                else -> null
-            }
-            val resetObservation = HdrObservationEpochPolicy.shouldReset(
-                previousEnabled = previousHdrEnabled,
-                enabled = enabled,
-            )
-            if (enabled) {
-                // A delayed first ENABLED callback confirms the same stream epoch; preserve any
-                // dynamic metadata that the decoder already observed before the callback arrived.
-                if (resetObservation) {
-                    resetHdr10PlusObservationLocked()
-                }
-                hdrStreamState.set(HDR_STREAM_STATE_ENABLED)
-                hdr10PlusMetadataQueryEnabled = hdr10PlusConfigured
-            } else {
-                // Publish DISABLED first so readers can never promote stale metadata to HDR10+.
-                hdrStreamState.set(HDR_STREAM_STATE_DISABLED)
-                if (resetObservation) {
-                    resetHdr10PlusObservationLocked()
-                } else {
-                    hdr10PlusMetadataQueryEnabled = false
-                }
-            }
-        }
+        hdr10PlusOutputObserver.onHostHdrMode(enabled)
 
         // HDR metadata is only supported in Android 7.0 and later, so don't bother
         // restarting the codec on anything earlier than that.
@@ -2313,22 +1987,15 @@ class MediaCodecDecoderRenderer(
             performanceInfo.lostFrameRate = lostFrameRate
             performanceInfo.rttInfo = rttInfo
             performanceInfo.framesWithHostProcessingLatency = frameHostProcessingLatency.code
-            val (hdrStreamStateSnapshot, hdr10PlusConfiguredSnapshot, hdr10PlusMetadataObserved) =
-                synchronized(hdr10PlusObservationLock) {
-                    Triple(
-                        hdrStreamState.get(),
-                        hdr10PlusConfigured,
-                        hdr10PlusMetadataTracker.snapshot().metadataFrames > 0,
-                    )
-                }
+            val hdr10PlusRuntime = hdr10PlusOutputObserver.snapshot()
             performanceInfo.hdrFormat = StreamHdrFormatPolicy.resolve(
-                hdrEnabled = hdrStreamStateSnapshot == HDR_STREAM_STATE_ENABLED,
-                hdrStateKnown = hdrStreamStateSnapshot != HDR_STREAM_STATE_UNKNOWN,
+                hdrEnabled = hdr10PlusRuntime.streamState == HdrStreamState.ENABLED,
+                hdrStateKnown = hdr10PlusRuntime.streamState != HdrStreamState.UNKNOWN,
                 isTenBitStream = (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0,
                 isPqHdr = prefs.hdrMode == MoonBridge.HDR_MODE_HDR10,
                 isHlg = prefs.hdrMode == MoonBridge.HDR_MODE_HLG,
-                hdr10PlusConfigured = hdr10PlusConfiguredSnapshot,
-                hdr10PlusMetadataObserved = hdr10PlusMetadataObserved,
+                hdr10PlusConfigured = hdr10PlusRuntime.configured,
+                hdr10PlusMetadataObserved = hdr10PlusRuntime.metadataObserved,
             )
             performanceInfo.minHostProcessingLatency = minHostProcessingLatency
             performanceInfo.maxHostProcessingLatency = maxHostProcessingLatency
@@ -2559,7 +2226,8 @@ class MediaCodecDecoderRenderer(
     }
 
     internal fun createDiagnostics(): RendererDiagnostics {
-        val hdr10PlusSnapshot = hdr10PlusMetadataTracker.snapshot()
+        val hdr10PlusRuntime = hdr10PlusOutputObserver.snapshot()
+        val hdr10PlusSnapshot = hdr10PlusRuntime.metadata
         return RendererDiagnostics(
             numVpsIn = numVpsIn,
             numSpsIn = numSpsIn,
@@ -2581,7 +2249,7 @@ class MediaCodecDecoderRenderer(
                 (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_AV1) != 0 -> av1Hdr10PlusEligible
                 else -> false
             },
-            hdr10PlusConfigured = hdr10PlusConfigured,
+            hdr10PlusConfigured = hdr10PlusRuntime.configured,
             hdr10PlusOutputFramesQueried = hdr10PlusSnapshot.outputFramesQueried,
             hdr10PlusMetadataFrames = hdr10PlusSnapshot.metadataFrames,
             hdr10PlusMetadataChanges = hdr10PlusSnapshot.metadataChanges,
