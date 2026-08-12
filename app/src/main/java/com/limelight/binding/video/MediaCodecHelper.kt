@@ -520,7 +520,7 @@ object MediaCodecHelper {
             val decoderName = decoderInfo.name
 
             when {
-                isDecoderInList(qualcommDecoderPrefixes, decoderName) -> {
+                isDecoderInList(qualcommDecoderPrefixes, decoderName) -> if (tryNumber < 5) {
                     applyQualcommVendorParams(videoFormat, tryNumber)
                     setNewOption = true
                 }

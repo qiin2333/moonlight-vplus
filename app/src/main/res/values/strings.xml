@@ -1627,6 +1627,7 @@ Tap again to replace it.</string>
     <string name="toast_virtual_controller_not_enabled">Virtual controller not enabled</string>
     <string name="toast_enable_notification_for_bg">Please enable notification permission in settings to keep streaming in background</string>
     <string name="perf_decoder">Decoder</string>
+    <string name="perf_hdr_format">HDR Format</string>
     <string name="perf_resolution">Resolution</string>
     <string name="perf_fps">FPS</string>
     <string name="perf_rx_fps">Rx</string>

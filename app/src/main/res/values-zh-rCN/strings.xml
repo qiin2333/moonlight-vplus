@@ -1377,6 +1377,7 @@
     <string name="toast_virtual_controller_not_enabled">虚拟手柄未启用</string>
     <string name="toast_enable_notification_for_bg">请在设置中开启通知权限，以便在后台时保持串流连接</string>
     <string name="perf_decoder">解码器</string>
+    <string name="perf_hdr_format">HDR 格式</string>
     <string name="perf_resolution">分辨率</string>
     <string name="perf_fps">帧率</string>
     <string name="perf_rx_fps">Rx</string>
