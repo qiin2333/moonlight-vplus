@@ -89,9 +89,11 @@ object DisplayModeManager {
                 supportedModes.asList()
             }
 
-            var bestMode = eligibleModes.firstOrNull { it.modeId == display.mode.modeId }
-                ?: eligibleModes.firstOrNull()
-                ?: display.mode
+            // Start from the mode Android is actually using. A candidate may be
+            // rejected by the resolution/refresh-rate constraints below; in that
+            // case we must keep the current mode instead of retaining an arbitrary
+            // first HDR-eligible mode that was never validated by those constraints.
+            var bestMode = display.mode
             val isNativeResolutionStream = prefConfig.usesNativeDisplayMode
             var refreshRateIsGood = isRefreshRateGoodMatch(bestMode.refreshRate, prefConfig.fps)
             var refreshRateIsEqual = isRefreshRateEqualMatch(bestMode.refreshRate, prefConfig.fps)

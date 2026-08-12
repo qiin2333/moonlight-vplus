@@ -20,9 +20,11 @@ internal data class Hdr10PlusMetadataSnapshot(
 )
 
 /**
- * Allocation-free HDR10+ metadata statistics for MediaCodec output buffers.
+ * Allocation-free HDR10+ metadata statistics for sampled MediaCodec output buffers.
  *
- * MediaCodec owns the metadata buffer, so only a hash and scalar diagnostics are retained.
+ * The observer deliberately samples after the initial probe window, so these counters describe
+ * queried output buffers rather than every decoded frame. MediaCodec owns the metadata buffer,
+ * so only a hash and scalar diagnostics are retained.
  */
 internal class Hdr10PlusMetadataTracker {
     var outputFramesQueried: Long = 0

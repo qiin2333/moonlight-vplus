@@ -227,7 +227,7 @@ class ConnectionCallbackHandler(private val game: Game) {
         // Prepare the output pipeline when HDR is expected. This is intentionally separate from
         // the host setHdrMode callback so diagnostics don't claim HDR before the stream activates.
         val appSupportsHdr = game.intent.getBooleanExtra(Game.EXTRA_APP_HDR, false)
-        if (appSupportsHdr && game.prefConfig.enableHdr) {
+        if (appSupportsHdr && game.prefConfig.enableHdr && game.isNegotiatedHdrEnabled()) {
             game.prepareInitialHdrOutput()
         }
 

@@ -133,6 +133,19 @@ internal class HdrDecoderProfileSelector(
         }
     }
 
+    /** Creates a probe using the dimensions/rate negotiated for the active stream. */
+    fun forStreamParameters(
+        width: Int,
+        height: Int,
+        frameRate: Int,
+        fullRange: Boolean,
+    ): HdrDecoderProfileSelector = HdrDecoderProfileSelector(
+        width = width,
+        height = height,
+        frameRate = frameRate,
+        fullRange = fullRange,
+    )
+
     fun buildCandidates(
         mimeType: String,
         decoderInfo: MediaCodecInfo,

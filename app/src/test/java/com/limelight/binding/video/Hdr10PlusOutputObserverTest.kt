@@ -8,6 +8,23 @@ import org.junit.Test
 
 class Hdr10PlusOutputObserverTest {
     @Test
+    fun probeScheduleSamplesInitialWindowAndThenIntervals() {
+        assertFalse(Hdr10PlusProbeSchedule.shouldProbe(0, false))
+        assertTrue(Hdr10PlusProbeSchedule.shouldProbe(1, false))
+        assertTrue(Hdr10PlusProbeSchedule.shouldProbe(120, false))
+        assertFalse(Hdr10PlusProbeSchedule.shouldProbe(121, false))
+        assertTrue(Hdr10PlusProbeSchedule.shouldProbe(180, false))
+    }
+
+    @Test
+    fun probeScheduleKeepsSamplingObservedMetadataAtInterval() {
+        assertFalse(Hdr10PlusProbeSchedule.shouldProbe(1, true))
+        assertFalse(Hdr10PlusProbeSchedule.shouldProbe(59, true))
+        assertTrue(Hdr10PlusProbeSchedule.shouldProbe(60, true))
+        assertFalse(Hdr10PlusProbeSchedule.shouldProbe(61, true))
+    }
+
+    @Test
     fun codecConfigurationPreservesSelectedProfileUntilStart() {
         val observer = Hdr10PlusOutputObserver()
 

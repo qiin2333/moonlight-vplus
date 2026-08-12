@@ -36,7 +36,7 @@ class MediaCodecDecoderRenderer(
     private val consecutiveCrashCount: Int,
     meteredData: Boolean,
     requestedHdr: Boolean,
-    private val requestedHdr10Plus: Boolean,
+    private var requestedHdr10Plus: Boolean,
     private val glRenderer: String,
     private val perfListener: PerfOverlayListener
 ) : VideoDecoderRenderer() {
@@ -508,20 +508,7 @@ class MediaCodecDecoderRenderer(
             LimeLog.info("No AV1 decoder found")
         }
 
-        hevcHdr10PlusEligible = requestedHdr10Plus && hdrProfileSelector.supportsHdr10PlusFormat(
-            hevcDecoder,
-            HdrDecoderProfileSelector.MIME_HEVC,
-        )
-        av1Hdr10PlusEligible = requestedHdr10Plus && hdrProfileSelector.supportsHdr10PlusFormat(
-            av1Decoder,
-            HdrDecoderProfileSelector.MIME_AV1,
-        )
-        if (requestedHdr10Plus) {
-            LimeLog.info(
-                "HDR10+ eligibility: HEVC=$hevcHdr10PlusEligible AV1=$av1Hdr10PlusEligible " +
-                    "(API=${Build.VERSION.SDK_INT})"
-            )
-        }
+        setHdr10PlusRequested(requestedHdr10Plus)
 
         // Set attributes that are queried in getCapabilities(). This must be done here
         // because getCapabilities() may be called before setup() in current versions of the common
@@ -582,6 +569,28 @@ class MediaCodecDecoderRenderer(
 
     fun isHevcMain10Hdr10PlusSupported(): Boolean =
         hdrProfileSelector.supportsHevcHdr10Plus(hevcDecoder)
+
+    /** Reconciles the HDR10+ request with the final stream negotiation before capability query. */
+    internal fun setHdr10PlusRequested(enabled: Boolean) {
+        val wasRequested = requestedHdr10Plus
+        requestedHdr10Plus = enabled
+        hevcHdr10PlusEligible = enabled && hdrProfileSelector.supportsHdr10PlusFormat(
+            hevcDecoder,
+            HdrDecoderProfileSelector.MIME_HEVC,
+        )
+        av1Hdr10PlusEligible = enabled && hdrProfileSelector.supportsHdr10PlusFormat(
+            av1Decoder,
+            HdrDecoderProfileSelector.MIME_AV1,
+        )
+        if (enabled) {
+            LimeLog.info(
+                "HDR10+ eligibility: HEVC=$hevcHdr10PlusEligible AV1=$av1Hdr10PlusEligible " +
+                    "(API=${Build.VERSION.SDK_INT})"
+            )
+        } else if (wasRequested) {
+            LimeLog.info("HDR10+ request cleared after final HDR negotiation fallback")
+        }
+    }
 
     fun isAv1Supported(): Boolean = av1Decoder != null
 
@@ -758,17 +767,34 @@ class MediaCodecDecoderRenderer(
     private fun getDecoderProfileCandidates(
         mimeType: String,
         selectedDecoderInfo: MediaCodecInfo,
-    ): List<Int?> = hdrProfileSelector.buildCandidates(
-        mimeType = mimeType,
-        decoderInfo = selectedDecoderInfo,
-        isTenBit = (getActiveVideoFormat() and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0,
-        isPqHdr = prefs.hdrMode == MoonBridge.HDR_MODE_HDR10,
-        hdr10PlusEligible = when (mimeType) {
-            HdrDecoderProfileSelector.MIME_HEVC -> hevcHdr10PlusEligible
-            HdrDecoderProfileSelector.MIME_AV1 -> av1Hdr10PlusEligible
-            else -> false
-        },
-    )
+    ): List<Int?> {
+        val activeHdr10PlusEligible = if (mimeType == HdrDecoderProfileSelector.MIME_HEVC ||
+            mimeType == HdrDecoderProfileSelector.MIME_AV1
+        ) {
+            val activeFullRange = prefs.hdrMode == MoonBridge.HDR_MODE_HLG ||
+                getPreferredColorRange() == MoonBridge.COLOR_RANGE_FULL
+            val activeSelector = hdrProfileSelector.forStreamParameters(
+                width = initialWidth,
+                height = initialHeight,
+                frameRate = if (refreshRate > 0) refreshRate else prefs.fps,
+                fullRange = activeFullRange,
+            )
+            requestedHdr10Plus &&
+                prefs.hdrMode == MoonBridge.HDR_MODE_HDR10 &&
+                (getActiveVideoFormat() and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0 &&
+                activeSelector.supportsHdr10PlusFormat(selectedDecoderInfo, mimeType)
+        } else {
+            false
+        }
+
+        return hdrProfileSelector.buildCandidates(
+            mimeType = mimeType,
+            decoderInfo = selectedDecoderInfo,
+            isTenBit = (getActiveVideoFormat() and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0,
+            isPqHdr = prefs.hdrMode == MoonBridge.HDR_MODE_HDR10,
+            hdr10PlusEligible = activeHdr10PlusEligible,
+        )
+    }
 
     private fun configureAndStartDecoder(format: MediaFormat) {
         hdr10PlusOutputObserver.restartCodecConfiguration()

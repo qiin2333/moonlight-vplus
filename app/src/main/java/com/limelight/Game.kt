@@ -204,6 +204,8 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
     private val framegenSurfaceGeneration = AtomicInteger(0)
     private var framegenInputHdrEnabled = false
+    /** Final HDR decision after display and decoder capability negotiation. */
+    private var negotiatedHdrEnabled = false
     private var framegenEnabledToastShown = false
     private var reportedCrash = false
 
@@ -850,6 +852,11 @@ class Game : Activity(), SurfaceHolder.Callback,
             Toast.makeText(this, "Decoder does not support $requiredProfile profile", Toast.LENGTH_LONG).show()
         }
 
+        // The renderer is constructed before this final decoder gate so that common-c can
+        // query capabilities later. Clear a speculative HDR10+ request before that happens
+        // when display/decoder negotiation ultimately falls back to SDR.
+        decoderRenderer?.setHdr10PlusRequested(willStreamHdr && hdr10PlusRequested)
+
         if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_HEVC && decoderRenderer?.isHevcSupported() != true) {
             Toast.makeText(this, "No HEVC decoder found", Toast.LENGTH_LONG).show()
         }
@@ -903,7 +910,8 @@ class Game : Activity(), SurfaceHolder.Callback,
             }
         }
 
-        framegenInputHdrEnabled = willStreamHdr && prefConfig.hdrMode != MoonBridge.HDR_MODE_SDR
+        negotiatedHdrEnabled = willStreamHdr && prefConfig.hdrMode != MoonBridge.HDR_MODE_SDR
+        framegenInputHdrEnabled = negotiatedHdrEnabled
 
         val config = StreamConfiguration.Builder()
             .setResolution(prefConfig.width, prefConfig.height)
@@ -1800,9 +1808,15 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     /** Prepares the window/framegen path without fabricating a host HDR activation event. */
     internal fun prepareInitialHdrOutput() {
+        if (!prefConfig.enableHdr || !negotiatedHdrEnabled) {
+            LimeLog.info("Skipping initial HDR output preparation: HDR was not negotiated")
+            return
+        }
         LimeLog.info("Preparing initial HDR output state")
         applyHdrOutputState(true)
     }
+
+    internal fun isNegotiatedHdrEnabled(): Boolean = negotiatedHdrEnabled
 
     private fun applyHdrOutputState(enabled: Boolean) {
         framegenInputHdrEnabled = enabled

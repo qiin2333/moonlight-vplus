@@ -20,11 +20,25 @@ internal data class Hdr10PlusRuntimeSnapshot(
     val metadata: Hdr10PlusMetadataSnapshot,
 )
 
+/** Pure cadence policy for the per-buffer metadata probe. */
+internal object Hdr10PlusProbeSchedule {
+    const val INITIAL_PROBE_FRAMES = 120L
+    const val SAMPLE_INTERVAL_FRAMES = 60L
+
+    fun shouldProbe(frameNumber: Long, metadataObserved: Boolean): Boolean {
+        if (frameNumber <= 0L) return false
+        return if (metadataObserved) {
+            frameNumber % SAMPLE_INTERVAL_FRAMES == 0L
+        } else {
+            frameNumber <= INITIAL_PROBE_FRAMES ||
+                frameNumber % SAMPLE_INTERVAL_FRAMES == 0L
+        }
+    }
+}
+
 /** Owns HDR10+ output sampling and stream-state transitions across codec lifecycles. */
 internal class Hdr10PlusOutputObserver {
     private companion object {
-        private const val INITIAL_PROBE_FRAMES = 120L
-        private const val SAMPLE_INTERVAL_FRAMES = 60L
         private const val QUERY_FAILURE_BACKOFF_FRAMES = 60
     }
 
@@ -37,6 +51,7 @@ internal class Hdr10PlusOutputObserver {
     private var metadataObserved = false
     private var outputFramesObserved = 0L
     private var queryBackoffFrames = 0
+    private var observationEpoch = 0L
 
     fun beginCodecConfiguration(configuredAsHdr10Plus: Boolean) = synchronized(lock) {
         configured = configuredAsHdr10Plus
@@ -81,35 +96,52 @@ internal class Hdr10PlusOutputObserver {
     ) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
 
-        synchronized(lock) {
-            if (!configured || !queryEnabled) return
-
-            outputFramesObserved++
-            if (queryBackoffFrames > 0) {
-                queryBackoffFrames--
-                return
-            }
-
-            val shouldProbe = if (metadataObserved) {
-                outputFramesObserved % SAMPLE_INTERVAL_FRAMES == 0L
+        val probeEpoch = synchronized(lock) {
+            if (!configured || !queryEnabled) {
+                null
             } else {
-                outputFramesObserved <= INITIAL_PROBE_FRAMES ||
-                    outputFramesObserved % SAMPLE_INTERVAL_FRAMES == 0L
-            }
-            if (!shouldProbe) return
-
-            try {
-                val metadata = codec.getOutputFormat(bufferIndex)
-                    .getByteBuffer(MediaFormat.KEY_HDR10_PLUS_INFO)
-                recordMetadataLocked(metadata, presentationTimeUs)
-            } catch (e: RuntimeException) {
-                queryBackoffFrames = QUERY_FAILURE_BACKOFF_FRAMES
-                if (metadataTracker.recordQueryFailure()) {
-                    LimeLog.warning(
-                        "Failed to query per-frame HDR10+ metadata: " +
-                            "${e.javaClass.simpleName}: ${e.message}"
-                    )
+                outputFramesObserved++
+                if (queryBackoffFrames > 0) {
+                    queryBackoffFrames--
+                    null
+                } else {
+                    if (Hdr10PlusProbeSchedule.shouldProbe(outputFramesObserved, metadataObserved)) {
+                        observationEpoch
+                    } else {
+                        null
+                    }
                 }
+            }
+        }
+        if (probeEpoch == null) return
+
+        try {
+            // Do not hold the observer lock across a vendor MediaCodec call. Host HDR
+            // transitions and performance snapshots must remain responsive even when a
+            // decoder blocks while producing an output format.
+            val metadata = codec.getOutputFormat(bufferIndex)
+                .getByteBuffer(MediaFormat.KEY_HDR10_PLUS_INFO)
+            synchronized(lock) {
+                // A host toggle or codec restart may have happened while the query was
+                // in flight. Discard a result from the old observation epoch.
+                if (probeEpoch == observationEpoch && configured && queryEnabled) {
+                    recordMetadataLocked(metadata, presentationTimeUs)
+                }
+            }
+        } catch (e: RuntimeException) {
+            val shouldLog = synchronized(lock) {
+                if (probeEpoch != observationEpoch || !configured || !queryEnabled) {
+                    false
+                } else {
+                    queryBackoffFrames = QUERY_FAILURE_BACKOFF_FRAMES
+                    metadataTracker.recordQueryFailure()
+                }
+            }
+            if (shouldLog) {
+                LimeLog.warning(
+                    "Failed to query per-frame HDR10+ metadata: " +
+                        "${e.javaClass.simpleName}: ${e.message}"
+                )
             }
         }
     }
@@ -130,6 +162,7 @@ internal class Hdr10PlusOutputObserver {
     }
 
     private fun resetObservationLocked() {
+        observationEpoch++
         queryEnabled = false
         metadataObserved = false
         outputFramesObserved = 0
