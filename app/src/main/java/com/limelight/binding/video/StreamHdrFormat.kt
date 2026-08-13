@@ -1,6 +1,6 @@
 package com.limelight.binding.video
 
-/** Dynamic-range format currently observed on the decoded input stream. */
+/** Dynamic-range format carried by the decoded input stream, not display-pipeline acceptance. */
 enum class StreamHdrFormat(val displayName: String) {
     SDR("SDR"),
     HDR10("HDR10"),
@@ -10,6 +10,14 @@ enum class StreamHdrFormat(val displayName: String) {
 
     val isHdr: Boolean
         get() = this != SDR
+
+    /** Clarifies the observable boundary used by detailed diagnostics. */
+    val diagnosticName: String
+        get() = if (this == HDR10_PLUS) {
+            "HDR10+ (metadata observed)"
+        } else {
+            displayName
+        }
 }
 
 /** Pure policy that keeps capability/configuration distinct from observed stream state. */
@@ -27,8 +35,9 @@ internal object StreamHdrFormatPolicy {
             isPqHdr &&
             hdr10PlusConfigured &&
             hdr10PlusMetadataObserved
-        // Dynamic metadata is sufficient proof of HDR10+ when the initial host state callback was
-        // missed. An explicit host disable always wins over previously observed metadata.
+        // Decoder-output metadata is sufficient evidence that the stream carries HDR10+ when the
+        // initial host callback was missed. It cannot prove that a vendor display pipeline accepts
+        // the metadata. An explicit host disable always wins over stale observations.
         val effectiveHdrEnabled = hdrEnabled || (!hdrStateKnown && observedHdr10Plus)
 
         if (!effectiveHdrEnabled || !isTenBitStream) {

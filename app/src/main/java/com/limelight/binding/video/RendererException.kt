@@ -110,7 +110,7 @@ internal class RendererException(
         sb.append("Fused IDR frames: ${r.fusedIdrFrame}$d")
         sb.append(
             "HDR10+: eligible=${r.hdr10PlusEligible}, configured=${r.hdr10PlusConfigured}, " +
-                "active=${r.hdr10PlusConfigured && r.hdr10PlusMetadataFrames > 0}, " +
+                "observed=${r.hdr10PlusConfigured && r.hdr10PlusMetadataFrames > 0}, " +
                 "queried=${r.hdr10PlusOutputFramesQueried}, " +
                 "metadata=${r.hdr10PlusMetadataFrames}, changes=${r.hdr10PlusMetadataChanges}, " +
                 "lastSize=${r.hdr10PlusLastMetadataSize}, " +

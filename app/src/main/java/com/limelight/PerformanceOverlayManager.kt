@@ -1084,7 +1084,7 @@ class PerformanceOverlayManager(
             decoderInfo.append("Codec: ").append(perfInfo.decoder).append("\n\n")
             val decoderTypeInfo = getDecoderTypeInfo(perfInfo.decoder)
             decoderInfo.append("Type: ").append(decoderTypeInfo.fullName).append("\n")
-            decoderInfo.append("Dynamic range: ").append(perfInfo.hdrFormat.displayName).append("\n")
+            decoderInfo.append("Dynamic range: ").append(perfInfo.hdrFormat.diagnosticName).append("\n")
         }
         decoderInfo.append(activity.getString(R.string.perf_decoder_info))
         return decoderInfo.toString()

@@ -35,6 +35,7 @@ import com.limelight.binding.video.PerfOverlayListener
 import com.limelight.binding.video.PerformanceInfo
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.StreamConfiguration
+import com.limelight.nvstream.HdrModePolicy
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.AdaptiveBitrateService
 import com.limelight.nvstream.NvConnectionListener
@@ -747,15 +748,17 @@ class Game : Activity(), SurfaceHolder.Callback,
         val acceptableHdrTypes = if (prefConfig.enableHdr &&
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
         ) {
-            if (prefConfig.hdrMode == MoonBridge.HDR_MODE_HLG) {
-                intArrayOf(Display.HdrCapabilities.HDR_TYPE_HLG)
-            } else {
-                // HDR10+ is backward compatible with HDR10. Keep refresh-rate selection free to
-                // choose either mode, then enable dynamic metadata only if the selected mode has it.
-                intArrayOf(
+            when (prefConfig.hdrMode) {
+                MoonBridge.HDR_MODE_HLG ->
+                    intArrayOf(Display.HdrCapabilities.HDR_TYPE_HLG)
+                MoonBridge.HDR_MODE_HDR10_PLUS ->
+                    intArrayOf(Display.HdrCapabilities.HDR_TYPE_HDR10_PLUS)
+                MoonBridge.HDR_MODE_HDR10 -> intArrayOf(
+                    // A mode advertising HDR10+ can also present the static HDR10 base layer.
                     Display.HdrCapabilities.HDR_TYPE_HDR10_PLUS,
                     Display.HdrCapabilities.HDR_TYPE_HDR10,
                 )
+                else -> IntArray(0)
             }
         } else {
             IntArray(0)
@@ -769,13 +772,19 @@ class Game : Activity(), SurfaceHolder.Callback,
         var willStreamHdr = false
         if (prefConfig.enableHdr) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                willStreamHdr = if (prefConfig.hdrMode == MoonBridge.HDR_MODE_HLG) {
-                    hdrTypeSupport.hasHlg
-                } else {
-                    hdrTypeSupport.hasHdr10 || hdrTypeSupport.hasHdr10Plus
+                willStreamHdr = when (prefConfig.hdrMode) {
+                    MoonBridge.HDR_MODE_HLG -> hdrTypeSupport.hasHlg
+                    MoonBridge.HDR_MODE_HDR10_PLUS -> hdrTypeSupport.hasHdr10Plus
+                    MoonBridge.HDR_MODE_HDR10 -> hdrTypeSupport.hasHdr10 || hdrTypeSupport.hasHdr10Plus
+                    else -> false
                 }
                 if (!willStreamHdr) {
-                    val requiredType = if (prefConfig.hdrMode == MoonBridge.HDR_MODE_HLG) "HLG" else "HDR10"
+                    val requiredType = when (prefConfig.hdrMode) {
+                        MoonBridge.HDR_MODE_HLG -> "HLG"
+                        MoonBridge.HDR_MODE_HDR10_PLUS -> "HDR10+"
+                        MoonBridge.HDR_MODE_HDR10 -> "HDR10"
+                        else -> "HDR"
+                    }
                     Toast.makeText(this, "Display mode does not support $requiredType", Toast.LENGTH_LONG).show()
                 }
             } else {
@@ -786,12 +795,14 @@ class Game : Activity(), SurfaceHolder.Callback,
         // HDR10+ metadata cannot survive the ImageReader/frame-generation path yet. Keep that
         // path on static HDR10 until frame generation explicitly supports dynamic metadata.
         val framegenRequested = shouldUseFramegen()
-        val hdr10PlusRequested = willStreamHdr &&
-            prefConfig.hdrMode == MoonBridge.HDR_MODE_HDR10 &&
-            hdrTypeSupport.hasHdr10Plus &&
-            !framegenRequested
+        val hdr10PlusRequested = HdrModePolicy.shouldRequestHdr10Plus(
+            hdrEnabled = willStreamHdr,
+            hdrMode = prefConfig.hdrMode,
+            displaySupportsHdr10Plus = hdrTypeSupport.hasHdr10Plus,
+            framegenRequested = framegenRequested,
+        )
         if (willStreamHdr &&
-            prefConfig.hdrMode == MoonBridge.HDR_MODE_HDR10 &&
+            prefConfig.hdrMode == MoonBridge.HDR_MODE_HDR10_PLUS &&
             hdrTypeSupport.hasHdr10Plus &&
             framegenRequested
         ) {
@@ -830,15 +841,19 @@ class Game : Activity(), SurfaceHolder.Callback,
             }
         }
 
-        val hevcHdrSupported = if (prefConfig.hdrMode == MoonBridge.HDR_MODE_HLG) {
-            decoderRenderer?.isHevcMain10Supported() == true
-        } else {
-            decoderRenderer?.isHevcMain10Hdr10Supported() == true
+        val hevcHdrSupported = when {
+            prefConfig.hdrMode == MoonBridge.HDR_MODE_HLG ->
+                decoderRenderer?.isHevcMain10Supported() == true
+            hdr10PlusRequested ->
+                decoderRenderer?.isHevcHdr10PlusEligible() == true
+            else -> decoderRenderer?.isHevcMain10Hdr10Supported() == true
         }
-        val av1HdrSupported = if (prefConfig.hdrMode == MoonBridge.HDR_MODE_HLG) {
-            decoderRenderer?.isAv1Main10Supported() == true
-        } else {
-            decoderRenderer?.isAv1Main10Hdr10Supported() == true
+        val av1HdrSupported = when {
+            prefConfig.hdrMode == MoonBridge.HDR_MODE_HLG ->
+                decoderRenderer?.isAv1Main10Supported() == true
+            hdr10PlusRequested ->
+                decoderRenderer?.isAv1Hdr10PlusEligible() == true
+            else -> decoderRenderer?.isAv1Main10Hdr10Supported() == true
         }
         val selectedCodecSupportsHdr = when (prefConfig.videoFormat) {
             PreferenceConfiguration.FormatOption.FORCE_HEVC -> hevcHdrSupported
@@ -848,7 +863,11 @@ class Game : Activity(), SurfaceHolder.Callback,
         }
         if (willStreamHdr && !selectedCodecSupportsHdr) {
             willStreamHdr = false
-            val requiredProfile = if (prefConfig.hdrMode == MoonBridge.HDR_MODE_HLG) "Main10/HLG" else "HDR10"
+            val requiredProfile = when (prefConfig.hdrMode) {
+                MoonBridge.HDR_MODE_HLG -> "Main10/HLG"
+                MoonBridge.HDR_MODE_HDR10_PLUS -> if (hdr10PlusRequested) "HDR10+" else "HDR10"
+                else -> "HDR10"
+            }
             Toast.makeText(this, "Decoder does not support $requiredProfile profile", Toast.LENGTH_LONG).show()
         }
 
@@ -939,7 +958,13 @@ class Game : Activity(), SurfaceHolder.Callback,
                     MoonBridge.COLOR_RANGE_FULL
                 else decoderRenderer?.getPreferredColorRange() ?: 0
             )
-            .setHdrMode(if (willStreamHdr) prefConfig.hdrMode else MoonBridge.HDR_MODE_SDR)
+            .setHdrMode(
+                if (willStreamHdr) {
+                    prefConfig.hdrMode
+                } else {
+                    MoonBridge.HDR_MODE_SDR
+                }
+            )
             .setHdrBrightnessOverride(
                 willStreamHdr && prefConfig.hdrBrightnessOverride,
                 prefConfig.hdrPeakBrightnessNits
@@ -951,7 +976,10 @@ class Game : Activity(), SurfaceHolder.Callback,
             .setCustomScreenMode(prefConfig.screenCombinationMode)
             .build()
 
-        LimeLog.info("Stream config: hdr=$willStreamHdr hdrMode=${prefConfig.hdrMode} fullRange=${prefConfig.fullRange}")
+        LimeLog.info(
+            "Stream config: hdr=$willStreamHdr hdrMode=${prefConfig.hdrMode} " +
+                "protocolHdrMode=${config.hdrMode} fullRange=${prefConfig.fullRange}"
+        )
 
         return StreamConfigResult(config, displayRefreshRate, clientRefreshRateX100)
     }
@@ -1820,7 +1848,11 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     private fun applyHdrOutputState(enabled: Boolean) {
         framegenInputHdrEnabled = enabled
-        val framegenHdrMode = if (enabled) prefConfig.hdrMode else MoonBridge.HDR_MODE_SDR
+        val framegenHdrMode = if (enabled) {
+            HdrModePolicy.toProtocolMode(prefConfig.hdrMode)
+        } else {
+            MoonBridge.HDR_MODE_SDR
+        }
         FramegenInterceptor.configureHdrMode(framegenHdrMode, shouldUseFullRangeHdr(framegenHdrMode))
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

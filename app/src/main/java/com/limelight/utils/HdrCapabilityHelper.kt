@@ -149,13 +149,27 @@ object HdrCapabilityHelper {
     }
 
     /**
+     * Returns display-wide HDR capabilities without restricting them to the current display mode.
+     * This is intended for settings shown before a specific streaming mode has been selected.
+     */
+    @SuppressLint("NewApi")
+    fun getDisplayWideHdrTypeSupport(display: Display?): HdrTypeSupport {
+        if (display == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+            return HdrTypeSupport()
+        }
+
+        return parseHdrTypes(display.hdrCapabilities?.supportedHdrTypes ?: IntArray(0))
+    }
+
+    /**
      * Returns HDR types for the selected display mode on Android 14+, where HDR support may vary
      * by mode. Older releases expose only display-wide HDR capabilities.
      */
     @SuppressLint("NewApi")
     fun getHdrTypeSupport(display: Display?, selectedModeId: Int = -1): HdrTypeSupport {
-        val support = HdrTypeSupport()
-        if (display == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return support
+        if (display == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+            return HdrTypeSupport()
+        }
 
         val types = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             val selectedMode = if (selectedModeId >= 0) {
@@ -167,6 +181,13 @@ object HdrCapabilityHelper {
         } else {
             display.hdrCapabilities?.supportedHdrTypes ?: IntArray(0)
         }
+
+        return parseHdrTypes(types)
+    }
+
+    @SuppressLint("InlinedApi")
+    private fun parseHdrTypes(types: IntArray): HdrTypeSupport {
+        val support = HdrTypeSupport()
         support.rawTypes = types
 
         for (type in types) {

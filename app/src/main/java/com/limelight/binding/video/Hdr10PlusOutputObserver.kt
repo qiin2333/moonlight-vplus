@@ -175,7 +175,8 @@ internal class Hdr10PlusOutputObserver {
             Hdr10PlusMetadataObservation.FIRST -> {
                 metadataObserved = true
                 LimeLog.info(
-                    "HDR10+ dynamic metadata active: size=${metadataTracker.lastMetadataSize} " +
+                    "HDR10+ dynamic metadata observed at decoder output: " +
+                        "size=${metadataTracker.lastMetadataSize} " +
                         "hash=0x${Integer.toHexString(metadataTracker.lastMetadataHash)}"
                 )
             }
