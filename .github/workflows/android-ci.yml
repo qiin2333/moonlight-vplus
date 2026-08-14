@@ -322,7 +322,7 @@ jobs:
             app/build/outputs/mapping/nonRootRelease/mapping.txt
 
       - name: Sync released version to master
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') && !contains(github.ref_name, '-rc') && !contains(github.ref_name, '-beta')
         shell: bash
         run: |
           bash .github/release/sync-released-version.sh \
