@@ -851,9 +851,15 @@ class Game : Activity(), SurfaceHolder.Callback,
         val av1HdrSupported = when {
             prefConfig.hdrMode == MoonBridge.HDR_MODE_HLG ->
                 decoderRenderer?.isAv1Main10Supported() == true
-            hdr10PlusRequested ->
-                decoderRenderer?.isAv1Hdr10PlusEligible() == true
             else -> decoderRenderer?.isAv1Main10Hdr10Supported() == true
+        }
+        if (hdr10PlusRequested &&
+            av1HdrSupported &&
+            decoderRenderer?.isAv1Hdr10PlusEligible() != true
+        ) {
+            LimeLog.warning(
+                "HDR10+ AV1 test: allowing Main10 negotiation despite strict format preflight rejection"
+            )
         }
         val selectedCodecSupportsHdr = when (prefConfig.videoFormat) {
             PreferenceConfiguration.FormatOption.FORCE_HEVC -> hevcHdrSupported
