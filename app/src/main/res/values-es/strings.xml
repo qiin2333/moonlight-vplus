@@ -377,7 +377,8 @@
     <string name="game_menu_touch_mode_enhanced_summary">Toca directamente la pantalla del host; admite multitoque</string>
     <string name="game_menu_touch_mode_classic_summary">La posición tocada controla directamente el ratón</string>
     <string name="game_menu_touch_mode_trackpad_summary">Desliza como en un portátil; usa el cursor compatible del host de forma predeterminada</string>
-    <string name="summary_local_cursor_rendering">Solo sigue este panel táctil; desactívalo con el ratón del host, Steam Input o juegos FPS.</string>
+    <string name="title_local_cursor_rendering">Cursor local de baja latencia</string>
+    <string name="summary_local_cursor_rendering">Solo sigue este panel táctil; desactívalo al usar el ratón del host, Steam Input o juegos FPS.</string>
     <string name="game_menu_touch_mode_native_mouse_summary">Para ratones Bluetooth, USB y paneles táctiles de teclado</string>
     <string name="game_menu_current_selection">Actual: %1$s</string>
     <string name="game_menu_trackpad_double_click_drag">Toca dos veces y mantén para arrastrar</string>

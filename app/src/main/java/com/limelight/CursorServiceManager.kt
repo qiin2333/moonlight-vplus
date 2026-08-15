@@ -241,6 +241,7 @@ class CursorServiceManager(
     private fun shouldRenderOverlay(): Boolean {
         return CursorModePolicy.shouldRenderTouchpadOverlay(
             localModeActive = localModeActive,
+            nativePointerSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N,
             touchpadEnabled = prefConfig.touchscreenTrackpad,
             localCursorEnabled = prefConfig.enableLocalCursorRendering,
             nativePointerEnabled = prefConfig.enableNativeMousePointer
@@ -478,12 +479,13 @@ internal object CursorModePolicy {
 
     fun shouldRenderTouchpadOverlay(
         localModeActive: Boolean,
+        nativePointerSupported: Boolean,
         touchpadEnabled: Boolean,
         localCursorEnabled: Boolean,
         nativePointerEnabled: Boolean
     ): Boolean {
         return localModeActive && touchpadEnabled && localCursorEnabled &&
-                !nativePointerEnabled
+                !(nativePointerSupported && nativePointerEnabled)
     }
 }
 

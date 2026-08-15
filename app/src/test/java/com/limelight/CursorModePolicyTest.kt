@@ -19,6 +19,7 @@ class CursorModePolicyTest {
         assertFalse(
             CursorModePolicy.shouldRenderTouchpadOverlay(
                 localModeActive = true,
+                nativePointerSupported = true,
                 touchpadEnabled = true,
                 localCursorEnabled = false,
                 nativePointerEnabled = false
@@ -40,6 +41,7 @@ class CursorModePolicyTest {
         assertTrue(
             CursorModePolicy.shouldRenderTouchpadOverlay(
                 localModeActive = true,
+                nativePointerSupported = true,
                 touchpadEnabled = true,
                 localCursorEnabled = true,
                 nativePointerEnabled = false
@@ -74,6 +76,7 @@ class CursorModePolicyTest {
         assertFalse(
             CursorModePolicy.shouldRenderTouchpadOverlay(
                 localModeActive = true,
+                nativePointerSupported = true,
                 touchpadEnabled = true,
                 localCursorEnabled = true,
                 nativePointerEnabled = true
@@ -90,6 +93,28 @@ class CursorModePolicyTest {
                 touchpadEnabled = false,
                 localCursorEnabled = false,
                 hasCursorOverlay = true
+            )
+        )
+    }
+
+    @Test
+    fun `unsupported native pointer preference does not suppress touchpad overlay`() {
+        assertTrue(
+            CursorModePolicy.shouldUseLocalMode(
+                nativePointerSupported = false,
+                nativePointerEnabled = true,
+                touchpadEnabled = true,
+                localCursorEnabled = true,
+                hasCursorOverlay = true
+            )
+        )
+        assertTrue(
+            CursorModePolicy.shouldRenderTouchpadOverlay(
+                localModeActive = true,
+                nativePointerSupported = false,
+                touchpadEnabled = true,
+                localCursorEnabled = true,
+                nativePointerEnabled = true
             )
         )
     }
