@@ -14,7 +14,7 @@ class QuickActionRegistryTest {
     }
 
     @Test
-    fun onlyLocalKeyboardRequiresGameFocus() {
+    fun onlyLocalKeyboardRunsWithGameFocus() {
         val focusedActionIds = QuickActionRegistry.getAllActions(null)
             .values
             .filter(StreamAction::isWithGameFocus)
