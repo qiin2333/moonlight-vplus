@@ -261,6 +261,39 @@ class GameMenu(
             )
         }
 
+        if (isTouchscreenTrackpad) {
+            touchModeOptionsList.add(
+                MenuOption(
+                    label = getString(R.string.game_menu_local_cursor_rendering),
+                    isWithGameFocus = false,
+                    runnable = Runnable {
+                        game.prefConfig.enableLocalCursorRendering =
+                            !game.prefConfig.enableLocalCursorRendering
+                        game.cursorServiceManager.refreshCursorMode()
+                        game.prefConfig.writePreferences(game)
+                        Toast.makeText(
+                            game,
+                            getString(
+                                if (game.prefConfig.enableLocalCursorRendering) {
+                                    R.string.toast_local_cursor_enabled
+                                } else {
+                                    R.string.toast_local_cursor_disabled
+                                }
+                            ),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    },
+                    iconKey = null,
+                    isShowIcon = false,
+                    isKeepDialog = true,
+                    subtitle = getString(R.string.summary_local_cursor_rendering),
+                    inlineControl = InlineControl.Toggle(
+                        checked = game.prefConfig.enableLocalCursorRendering
+                    )
+                )
+            )
+        }
+
         //触控板仅移动
         if (isTouchscreenTrackpad) {
             touchModeOptionsList.add(
