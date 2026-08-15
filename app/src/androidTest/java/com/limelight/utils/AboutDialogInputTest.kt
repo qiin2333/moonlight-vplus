@@ -1,11 +1,14 @@
 package com.limelight.utils
 
 import android.app.AlertDialog
+import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.view.KeyEvent
 import android.view.View
 import android.widget.GridLayout
+import android.widget.LinearLayout
 import android.widget.ScrollView
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.rules.ActivityScenarioRule
@@ -13,6 +16,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.limelight.HelpActivity
 import com.limelight.R
+import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -26,6 +30,13 @@ class AboutDialogInputTest {
         Intent(ApplicationProvider.getApplicationContext(), HelpActivity::class.java)
             .setData(Uri.parse("about:blank"))
     )
+
+    @After
+    fun releaseDialogs() {
+        activityRule.scenario.onActivity { activity ->
+            AboutDialogLauncher.release(activity)
+        }
+    }
 
     @Test
     fun controllerCanOpenAndCloseEcosystemWithoutClosingAboutDialog() {
@@ -94,10 +105,59 @@ class AboutDialogInputTest {
     }
 
     @Test
-    fun directionalNavigationMovesAcrossGridAndScrollsWhenContentOverflows() {
+    fun nonOwnerCannotRecreateOrReleaseDialog() {
+        lateinit var aboutDialog: AlertDialog
+        lateinit var changedConfiguration: Configuration
+        activityRule.scenario.onActivity { activity ->
+            aboutDialog = AboutDialogLauncher.show(activity)
+            changedConfiguration = Configuration(activity.resources.configuration).apply {
+                orientation = if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                    Configuration.ORIENTATION_PORTRAIT
+                } else {
+                    Configuration.ORIENTATION_LANDSCAPE
+                }
+            }
+        }
+        waitForIdle()
+
+        val applicationContext = ApplicationProvider.getApplicationContext<Context>()
+        AboutDialogLauncher.onConfigurationChanged(applicationContext, changedConfiguration)
+        AboutDialogLauncher.release(applicationContext)
+        waitForIdle()
+
+        activityRule.scenario.onActivity { activity ->
+            assertTrue(aboutDialog.isShowing)
+            AboutDialogLauncher.release(activity)
+            assertFalse(aboutDialog.isShowing)
+        }
+    }
+
+    @Test
+    fun invalidInitialFocusFallsBackToCloseButton() {
+        lateinit var ecosystemDialog: AlertDialog
+        activityRule.scenario.onActivity { activity ->
+            ecosystemDialog = AboutDialogLauncher.showEcosystemDialog(
+                activity,
+                initialFocusIndex = -1
+            )
+        }
+        waitForIdle()
+
+        activityRule.scenario.onActivity {
+            assertTrue(
+                ecosystemDialog.findViewById<View>(R.id.about_ecosystem_close_button).hasFocus()
+            )
+        }
+    }
+
+    @Test
+    fun directionalNavigationWorksInResponsiveEcosystemLayout() {
         lateinit var ecosystemDialog: AlertDialog
         var columnCount = 1
+        var isLandscape = false
         activityRule.scenario.onActivity { activity ->
+            isLandscape = activity.resources.configuration.orientation ==
+                Configuration.ORIENTATION_LANDSCAPE
             columnCount = AboutDialogLauncher.ecosystemColumnCount(
                 activity.resources.configuration.screenWidthDp,
                 activity.resources.configuration.orientation
@@ -107,23 +167,43 @@ class AboutDialogInputTest {
         waitForIdle()
 
         activityRule.scenario.onActivity {
-            val grid = ecosystemDialog.findViewById<GridLayout>(R.id.about_ecosystem_grid)
-            assertTrue(grid.getChildAt(0).hasFocus())
+            if (isLandscape) {
+                val menu = ecosystemDialog.findViewById<LinearLayout>(R.id.about_ecosystem_menu)
+                assertTrue(menu.getChildAt(0).hasFocus())
+            } else {
+                val grid = ecosystemDialog.findViewById<GridLayout>(R.id.about_ecosystem_grid)
+                assertTrue(grid.getChildAt(0).hasFocus())
+            }
         }
 
         sendKey(KeyEvent.KEYCODE_DPAD_DOWN)
         activityRule.scenario.onActivity {
-            val grid = ecosystemDialog.findViewById<GridLayout>(R.id.about_ecosystem_grid)
-            assertTrue(grid.getChildAt(columnCount).hasFocus())
+            if (isLandscape) {
+                val menu = ecosystemDialog.findViewById<LinearLayout>(R.id.about_ecosystem_menu)
+                assertTrue(menu.getChildAt(1).hasFocus())
+            } else {
+                val grid = ecosystemDialog.findViewById<GridLayout>(R.id.about_ecosystem_grid)
+                assertTrue(grid.getChildAt(columnCount).hasFocus())
+            }
         }
 
-        repeat(6) { sendKey(KeyEvent.KEYCODE_DPAD_DOWN) }
-        activityRule.scenario.onActivity {
-            val scroll = ecosystemDialog.findViewById<ScrollView>(R.id.about_ecosystem_scroll)
-            val scrollbar = ecosystemDialog.findViewById<View>(R.id.about_ecosystem_scrollbar)
-            if (scroll.canScrollVertically(-1) || scroll.canScrollVertically(1)) {
-                assertTrue(scroll.scrollY > 0)
-                assertTrue(scrollbar.visibility == View.VISIBLE)
+        if (isLandscape) {
+            sendKey(KeyEvent.KEYCODE_BUTTON_A)
+            activityRule.scenario.onActivity {
+                assertTrue(
+                    ecosystemDialog.findViewById<View>(R.id.about_ecosystem_open_button).hasFocus()
+                )
+            }
+        } else {
+            repeat(6) { sendKey(KeyEvent.KEYCODE_DPAD_DOWN) }
+            activityRule.scenario.onActivity {
+                val scroll = ecosystemDialog.findViewById<ScrollView>(R.id.about_ecosystem_scroll)
+                val scrollbar = ecosystemDialog.findViewById<View>(R.id.about_ecosystem_scrollbar)
+                if (scroll.canScrollVertically(-1) || scroll.canScrollVertically(1)) {
+                    assertTrue(scroll.scrollY > 0)
+                    assertTrue(scrollbar.visibility == View.VISIBLE)
+                    assertTrue(scrollbar.height > 0)
+                }
             }
         }
 

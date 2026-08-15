@@ -26,6 +26,7 @@ import com.limelight.ui.DialogSideScrollbarView
 import com.limelight.ui.GridFocusDirection
 import com.limelight.ui.GridFocusNavigator
 import com.limelight.ui.UiDialogKeyHandler
+import java.lang.ref.WeakReference
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -50,11 +51,19 @@ object AboutDialogLauncher {
     private const val ECOSYSTEM_MENU_MIN_WIDTH_DP = 164
     private const val ECOSYSTEM_MENU_MAX_WIDTH_DP = 232
 
-    private var activeMainDialog: AlertDialog? = null
-    private var activeEcosystemDialog: AlertDialog? = null
-    private var activeOrientation = Configuration.ORIENTATION_UNDEFINED
+    private data class ActiveDialogs(
+        val owner: WeakReference<Context>,
+        val orientation: Int,
+        var main: AlertDialog? = null,
+        var ecosystem: AlertDialog? = null
+    ) {
+        fun isOwnedBy(context: Context): Boolean = owner.get() === context
+    }
+
+    private var activeDialogs: ActiveDialogs? = null
 
     fun show(context: Context): AlertDialog {
+        dismissActiveDialogs()
         val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_about, null)
         val closeButton = dialogView.findViewById<ImageButton>(R.id.about_close_button)
         val handbookButton = dialogView.findViewById<Button>(R.id.about_handbook_button)
@@ -114,11 +123,16 @@ object AboutDialogLauncher {
         }
 
         dialog.show()
-        activeMainDialog = dialog
-        activeOrientation = context.resources.configuration.orientation
+        val state = ActiveDialogs(
+            owner = WeakReference(context),
+            orientation = context.resources.configuration.orientation,
+            main = dialog
+        )
+        activeDialogs = state
         dialog.setOnDismissListener {
-            if (activeMainDialog === dialog) {
-                activeMainDialog = null
+            if (activeDialogs === state && state.main === dialog) {
+                state.main = null
+                clearStateIfEmpty(state)
             }
         }
         AppDialogStyler.applyAboutDialog(dialog, context)
@@ -148,6 +162,16 @@ object AboutDialogLauncher {
         returnFocus: View? = null,
         initialFocusIndex: Int = 0
     ): AlertDialog {
+        val existingState = activeDialogs
+        val state = if (existingState?.isOwnedBy(context) == true) {
+            existingState
+        } else {
+            dismissActiveDialogs()
+            ActiveDialogs(
+                owner = WeakReference(context),
+                orientation = context.resources.configuration.orientation
+            ).also { activeDialogs = it }
+        }
         val dialogView = LayoutInflater.from(context)
             .inflate(R.layout.dialog_about_ecosystem, null)
         val closeButton = dialogView.findViewById<ImageButton>(
@@ -246,19 +270,19 @@ object AboutDialogLauncher {
 
         closeButton.setOnClickListener { dialog.cancel() }
         dialog.setOnDismissListener {
-            if (activeEcosystemDialog === dialog) {
-                activeEcosystemDialog = null
-            }
-            returnFocus?.post {
-                if (returnFocus.isAttachedToWindow && returnFocus.isShown) {
-                    returnFocus.requestFocus()
+            if (activeDialogs === state && state.ecosystem === dialog) {
+                state.ecosystem = null
+                returnFocus?.post {
+                    if (returnFocus.isAttachedToWindow && returnFocus.isShown) {
+                        returnFocus.requestFocus()
+                    }
                 }
+                clearStateIfEmpty(state)
             }
         }
 
         dialog.show()
-        activeEcosystemDialog = dialog
-        activeOrientation = context.resources.configuration.orientation
+        state.ecosystem = dialog
         AppDialogStyler.applyAboutDialog(dialog, context)
         installDialogInput(dialog)
         applyDialogWidth(dialog, context, portraitMaxDp = 650, landscapeMaxDp = 920)
@@ -268,18 +292,18 @@ object AboutDialogLauncher {
             R.id.about_ecosystem_scrollbar
         )
         configureNavigation()
-        items.getOrNull(initialFocusIndex)?.post {
-            items.getOrNull(initialFocusIndex)?.requestFocus() ?: closeButton.requestFocus()
-        }
+        val initialFocus = items.getOrNull(initialFocusIndex) ?: closeButton
+        initialFocus.post { initialFocus.requestFocus() }
         return dialog
     }
 
     /** Re-inflate the orientation-specific layout because PcView handles config changes itself. */
     fun onConfigurationChanged(context: Context, newConfig: Configuration) {
-        if (newConfig.orientation == activeOrientation) return
+        val state = activeDialogs?.takeIf { it.isOwnedBy(context) } ?: return
+        if (newConfig.orientation == state.orientation) return
 
-        val mainDialog = activeMainDialog?.takeIf { it.isShowing }
-        val ecosystemDialog = activeEcosystemDialog?.takeIf { it.isShowing }
+        val mainDialog = state.main?.takeIf { it.isShowing }
+        val ecosystemDialog = state.ecosystem?.takeIf { it.isShowing }
         if (mainDialog == null && ecosystemDialog == null) return
 
         val mainFocusId = mainDialog?.currentFocus?.id ?: View.NO_ID
@@ -287,8 +311,7 @@ object AboutDialogLauncher {
             findEcosystemItemIndex(dialog)
         } ?: 0
 
-        activeMainDialog = null
-        activeEcosystemDialog = null
+        activeDialogs = null
         ecosystemDialog?.dismiss()
         mainDialog?.dismiss()
 
@@ -301,6 +324,12 @@ object AboutDialogLauncher {
             }
         } else {
             showEcosystemDialog(context, initialFocusIndex = ecosystemFocusIndex)
+        }
+    }
+
+    fun release(context: Context) {
+        if (activeDialogs?.isOwnedBy(context) == true) {
+            dismissActiveDialogs()
         }
     }
 
@@ -555,6 +584,19 @@ object AboutDialogLauncher {
     private fun bindScrollbar(root: View, scrollId: Int, scrollbarId: Int) {
         root.findViewById<DialogSideScrollbarView>(scrollbarId)
             .bindTo(root.findViewById<ScrollView>(scrollId))
+    }
+
+    private fun clearStateIfEmpty(state: ActiveDialogs) {
+        if (state.main == null && state.ecosystem == null && activeDialogs === state) {
+            activeDialogs = null
+        }
+    }
+
+    private fun dismissActiveDialogs() {
+        val state = activeDialogs ?: return
+        activeDialogs = null
+        state.ecosystem?.dismiss()
+        state.main?.dismiss()
     }
 
     private fun findEcosystemItemIndex(dialog: AlertDialog): Int? {
