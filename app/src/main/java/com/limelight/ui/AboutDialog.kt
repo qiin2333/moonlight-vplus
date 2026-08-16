@@ -118,21 +118,6 @@ private fun Modifier.focusTarget(
     .testTag(tag)
 
 @Composable
-private fun Modifier.requestInitialFocus(
-    requester: FocusRequester,
-    enabled: Boolean,
-    requestKey: Any
-): Modifier {
-    LaunchedEffect(requester, enabled, requestKey) {
-        if (enabled) {
-            withFrameNanos { }
-            requester.requestFocus()
-        }
-    }
-    return this
-}
-
-@Composable
 private fun dialogBrush(): Brush {
     return Brush.linearGradient(
         colors = listOf(
@@ -282,7 +267,11 @@ internal fun AboutDialogContent(
     val focusRequesters = remember { List(8) { FocusRequester() } }
     val targetIndex = initialFocusIndex.takeIf { it in focusRequesters.indices } ?: 7
 
-    @Composable
+    LaunchedEffect(targetIndex, focusRequestGeneration) {
+        withFrameNanos { }
+        focusRequesters[targetIndex].requestFocus()
+    }
+
     fun focusModifier(index: Int, up: Int, down: Int, left: Int, right: Int): Modifier {
         return Modifier.focusTarget(
             requester = focusRequesters[index],
@@ -301,10 +290,6 @@ internal fun AboutDialogContent(
             down = focusRequesters[down],
             left = focusRequesters[left],
             right = focusRequesters[right]
-        ).requestInitialFocus(
-            requester = focusRequesters[index],
-            enabled = index == targetIndex,
-            requestKey = focusRequestGeneration
         )
     }
 
@@ -454,6 +439,11 @@ internal fun EcosystemDialogContent(
     val openFocus = remember { FocusRequester() }
     val validInitialIndex = initialFocusIndex.takeIf { it in projects.indices }
 
+    LaunchedEffect(validInitialIndex, projects) {
+        withFrameNanos { }
+        validInitialIndex?.let(itemFocus::get)?.requestFocus() ?: closeFocus.requestFocus()
+    }
+
     AboutDialogSurface {
         Box {
             Column(
@@ -492,7 +482,6 @@ internal fun EcosystemDialogContent(
                         onOpen,
                         itemFocus,
                         closeFocus,
-                        validInitialIndex,
                         onFocusChanged
                     )
                 }
@@ -517,11 +506,6 @@ internal fun EcosystemDialogContent(
                         onFocused = { onFocusChanged(-1) },
                         down = itemFocus.firstOrNull() ?: closeFocus
                     )
-                    .requestInitialFocus(
-                        requester = closeFocus,
-                        enabled = validInitialIndex == null,
-                        requestKey = initialFocusIndex
-                    )
                     .handleGamepadConfirm(onClose)
                     .focusable()
             ) {
@@ -541,7 +525,6 @@ private fun PortraitEcosystem(
     onOpen: (EcosystemProject) -> Unit,
     itemFocus: List<FocusRequester>,
     closeFocus: FocusRequester,
-    initialFocusIndex: Int?,
     onFocusChanged: (Int) -> Unit
 ) {
     val widthDp = LocalConfiguration.current.screenWidthDp
@@ -595,10 +578,6 @@ private fun PortraitEcosystem(
                                 down = itemFocus[downIndex],
                                 left = itemFocus[leftIndex],
                                 right = itemFocus[rightIndex]
-                            ).requestInitialFocus(
-                                requester = itemFocus[index],
-                                enabled = index == initialFocusIndex,
-                                requestKey = initialFocusIndex ?: -1
                             )
                     )
                 }
@@ -654,18 +633,12 @@ private fun LandscapeEcosystem(
                             requester = itemFocus[index],
                             tag = AboutDialogTags.ecosystemItem(index),
                             onFocused = {
-                                focused = true
                                 selected = index
                                 onFocusChanged(index)
                             },
                             up = if (index == 0) closeFocus else itemFocus[index - 1],
                             down = itemFocus.getOrElse(index + 1) { itemFocus[index] },
                             right = openFocus
-                        )
-                        .requestInitialFocus(
-                            requester = itemFocus[index],
-                            enabled = index == initialFocusIndex,
-                            requestKey = initialFocusIndex ?: -1
                         )
                         .onFocusChanged { focused = it.isFocused }
                         .handleGamepadConfirm { onOpen(p) }
