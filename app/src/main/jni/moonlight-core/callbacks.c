@@ -470,10 +470,12 @@ void BridgeClSetAdaptiveTriggers(uint16_t controllerNumber, uint8_t eventFlags,
     JNIEnv* env = GetThreadEnv();
     jbyteArray leftArray = (*env)->NewByteArray(env, DS_EFFECT_PAYLOAD_SIZE);
     if (leftArray == NULL) {
+        (*env)->ExceptionClear(env);
         return;
     }
     jbyteArray rightArray = (*env)->NewByteArray(env, DS_EFFECT_PAYLOAD_SIZE);
     if (rightArray == NULL) {
+        (*env)->ExceptionClear(env);
         (*env)->DeleteLocalRef(env, leftArray);
         return;
     }
