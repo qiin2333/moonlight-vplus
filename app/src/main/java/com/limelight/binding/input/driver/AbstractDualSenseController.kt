@@ -159,8 +159,15 @@ abstract class AbstractDualSenseController(
 
         try {
             rumble(0, 0)
+            setAdaptiveTriggers(
+                DualSenseOutputReport.BOTH_TRIGGER_FLAGS.toByte(),
+                0,
+                0,
+                ByteArray(DualSenseOutputReport.EFFECT_PAYLOAD_SIZE),
+                ByteArray(DualSenseOutputReport.EFFECT_PAYLOAD_SIZE)
+            )
         } catch (e: Exception) {
-            Log.d("DualSenseController", "Failed to cancel rumble during stop", e)
+            Log.d("DualSenseController", "Failed to clear controller output during stop", e)
         }
 
         inputThread?.let {

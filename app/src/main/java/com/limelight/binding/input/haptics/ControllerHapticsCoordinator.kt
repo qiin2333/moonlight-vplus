@@ -7,6 +7,7 @@ import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.GenericControllerContext
 import com.limelight.binding.input.InputDeviceContext
 import com.limelight.binding.input.UsbDeviceContext
+import com.limelight.binding.input.driver.DualSenseOutputReport
 import com.limelight.nvstream.jni.MoonBridge
 
 /**
@@ -335,6 +336,30 @@ internal class ControllerHapticsCoordinator(
         }
     }
 
+    fun submitHostAdaptiveTriggers(
+        controllerNumber: Short,
+        eventFlags: Byte,
+        typeLeft: Byte,
+        typeRight: Byte,
+        left: ByteArray,
+        right: ByteArray
+    ) {
+        val leftSnapshot = left.copyOf()
+        val rightSnapshot = right.copyOf()
+        runOnOutputThread {
+            if (!isStoppingOrStopped()) {
+                handler.rumbleManager.handleAdaptiveTriggers(
+                    controllerNumber,
+                    eventFlags,
+                    typeLeft,
+                    typeRight,
+                    leftSnapshot,
+                    rightSnapshot
+                )
+            }
+        }
+    }
+
     fun clearControllerIfUnavailable(controllerNumber: Short) {
         runOnOutputThread {
             if (stopped || controllerHasRumble(controllerNumber)) return@runOnOutputThread
@@ -528,6 +553,14 @@ internal class ControllerHapticsCoordinator(
                 allowDeviceFallback = true
             )
             handler.rumbleManager.handleRumbleTriggers(controllerNumber, 0, 0)
+            handler.rumbleManager.handleAdaptiveTriggers(
+                controllerNumber,
+                DualSenseOutputReport.BOTH_TRIGGER_FLAGS.toByte(),
+                0,
+                0,
+                ByteArray(DualSenseOutputReport.EFFECT_PAYLOAD_SIZE),
+                ByteArray(DualSenseOutputReport.EFFECT_PAYLOAD_SIZE)
+            )
         }
     }
 
