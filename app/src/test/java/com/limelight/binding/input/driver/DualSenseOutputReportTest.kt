@@ -28,13 +28,17 @@ class DualSenseOutputReportTest {
     }
 
     @Test
-    fun clearAdaptiveTriggersUpdatesBothSidesWithoutTouchingMotors() {
+    fun clearAdaptiveTriggersSendsOffOpcodeWithZeroedPayloads() {
         val report = DualSenseOutputReport.clearAdaptiveTriggers()
 
         assertEquals(0x0C, report[1].toInt() and 0xFF)
         assertEquals(0, report[3].toInt())
         assertEquals(0, report[4].toInt())
-        assertArrayEquals(ByteArray(22), report.copyOfRange(11, 33))
+        // 0x05 is the DualSense "effect off" opcode; 0x00 is not a recognized mode.
+        assertEquals(0x05, report[11].toInt() and 0xFF)
+        assertEquals(0x05, report[22].toInt() and 0xFF)
+        assertArrayEquals(ByteArray(10), report.copyOfRange(12, 22))
+        assertArrayEquals(ByteArray(10), report.copyOfRange(23, 33))
     }
 
     @Test

@@ -520,15 +520,9 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
             return
         }
 
-        // common-c owns its callback buffers. Keep immutable snapshots until the USB
-        // output worker consumes the newest state for each controller.
-        val triggers = AdaptiveTriggers(
-            eventFlags,
-            typeLeft,
-            typeRight,
-            left.copyOf(),
-            right.copyOf()
-        )
+        // Callers hand off exclusive payload snapshots, so queue them as-is for the
+        // USB output worker, which only reads them.
+        val triggers = AdaptiveTriggers(eventFlags, typeLeft, typeRight, left, right)
         for (i in 0 until handler.usbDeviceContexts.size()) {
             val deviceContext = handler.usbDeviceContexts.valueAt(i)
             if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
@@ -541,6 +535,17 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
                 }
             }
         }
+    }
+
+    fun clearAdaptiveTriggers(controllerNumber: Short) {
+        handleAdaptiveTriggers(
+            controllerNumber,
+            DualSenseOutputReport.BOTH_TRIGGER_FLAGS.toByte(),
+            DualSenseOutputReport.EFFECT_TYPE_OFF,
+            DualSenseOutputReport.EFFECT_TYPE_OFF,
+            ByteArray(DualSenseOutputReport.EFFECT_PAYLOAD_SIZE),
+            ByteArray(DualSenseOutputReport.EFFECT_PAYLOAD_SIZE)
+        )
     }
 
     @TargetApi(31)

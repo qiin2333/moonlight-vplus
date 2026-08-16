@@ -15,8 +15,6 @@ class DualSenseController(
     listener: UsbDriverListener
 ) : AbstractDualSenseController(device, connection, deviceId, listener) {
 
-    private val outputLock = Any()
-
     override val supportsAdaptiveTriggers: Boolean = true
 
     private fun normalizeThumbStickAxis(value: Int): Float {
@@ -170,6 +168,11 @@ class DualSenseController(
             return
         }
         synchronized(outputLock) {
+            // Re-check under the lock: stop() sets this after sending its final
+            // clear, so no stale report may follow it.
+            if (outputClosed) {
+                return
+            }
             Log.d("DualSenseController", "sendCommand")
             val res = connection.bulkTransfer(outEndpt, data, data.size, 1000)
             if (res != data.size) {
