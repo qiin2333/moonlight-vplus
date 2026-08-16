@@ -483,8 +483,10 @@ void BridgeClSetAdaptiveTriggers(uint16_t controllerNumber, uint8_t eventFlags,
     (*env)->SetByteArrayRegion(env, leftArray, 0, DS_EFFECT_PAYLOAD_SIZE, (const jbyte*)left);
     (*env)->SetByteArrayRegion(env, rightArray, 0, DS_EFFECT_PAYLOAD_SIZE, (const jbyte*)right);
     if (!(*env)->ExceptionCheck(env)) {
+        // Casts to signed types are required for CheckJNI; see BridgeClRumble.
         (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeClSetAdaptiveTriggersMethod,
-                                     controllerNumber, eventFlags, typeLeft, typeRight,
+                                     (jshort)controllerNumber, (jbyte)eventFlags,
+                                     (jbyte)typeLeft, (jbyte)typeRight,
                                      leftArray, rightArray);
     }
 
