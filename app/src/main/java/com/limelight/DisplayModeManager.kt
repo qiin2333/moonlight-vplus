@@ -2,6 +2,7 @@ package com.limelight
 
 import android.os.Build
 import android.view.Display
+import androidx.annotation.RequiresApi
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.utils.UiHelper
 import kotlin.math.abs
@@ -75,9 +76,9 @@ object DisplayModeManager {
             val supportedModes = display.supportedModes
             val isNativeResolutionStream = prefConfig.usesNativeDisplayMode
             val effectiveHdrTypes = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                acceptableHdrTypes
+                acceptableHdrTypes.toList()
             } else {
-                IntArray(0)
+                emptyList()
             }
             val currentMode = display.mode.toPolicyMode()
             val policyResult = DisplayModePolicy.selectBestMode(
@@ -94,6 +95,10 @@ object DisplayModeManager {
             )
             if (effectiveHdrTypes.isNotEmpty() && !policyResult.hdrFilterApplied) {
                 LimeLog.warning("No display mode supports the requested HDR type; using normal mode selection")
+            } else if (effectiveHdrTypes.isNotEmpty() &&
+                policyResult.mode.hdrTypes.none(effectiveHdrTypes::contains)
+            ) {
+                LimeLog.warning("HDR-capable modes exist but none met the display mode constraints")
             }
 
             val bestMode = supportedModes.firstOrNull { it.modeId == policyResult.mode.id } ?: display.mode
@@ -168,7 +173,7 @@ object DisplayModeManager {
         )
     }
 
-    @Suppress("NewApi")
+    @RequiresApi(Build.VERSION_CODES.M)
     private fun Display.Mode.toPolicyMode(): DisplayModePolicy.Mode {
         return DisplayModePolicy.Mode(
             id = modeId,
@@ -176,9 +181,9 @@ object DisplayModeManager {
             height = physicalHeight,
             refreshRate = refreshRate,
             hdrTypes = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                supportedHdrTypes
+                supportedHdrTypes.toList()
             } else {
-                IntArray(0)
+                emptyList()
             },
         )
     }

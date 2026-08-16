@@ -9,7 +9,7 @@ internal object DisplayModePolicy {
         val width: Int,
         val height: Int,
         val refreshRate: Float,
-        val hdrTypes: IntArray = IntArray(0),
+        val hdrTypes: List<Int> = emptyList(),
     )
 
     data class Request(
@@ -18,7 +18,7 @@ internal object DisplayModePolicy {
         val fps: Int,
         val usesNativeDisplayMode: Boolean,
         val mayReduceRefreshRate: Boolean,
-        val acceptableHdrTypes: IntArray = IntArray(0),
+        val acceptableHdrTypes: List<Int> = emptyList(),
     )
 
     data class Result(
@@ -109,7 +109,7 @@ internal object DisplayModePolicy {
         return refreshRate >= targetFps && refreshRate.roundToInt() % targetFps <= 3
     }
 
-    private fun Mode.supportsAny(acceptableHdrTypes: IntArray): Boolean {
-        return hdrTypes.any { supportedType -> acceptableHdrTypes.any { it == supportedType } }
+    private fun Mode.supportsAny(acceptableHdrTypes: List<Int>): Boolean {
+        return hdrTypes.any(acceptableHdrTypes::contains)
     }
 }

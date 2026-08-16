@@ -9,12 +9,12 @@ class DisplayModePolicyTest {
     @Test
     fun selectsLowerRefreshHdrModeWhenCurrentModeDoesNotSupportHdr() {
         val currentSdrMode = mode(id = 1, refreshRate = 120f)
-        val hdrMode = mode(id = 2, refreshRate = 60f, hdrTypes = intArrayOf(HDR10))
+        val hdrMode = mode(id = 2, refreshRate = 60f, hdrTypes = listOf(HDR10))
 
         val result = DisplayModePolicy.selectBestMode(
             currentMode = currentSdrMode,
             supportedModes = listOf(currentSdrMode, hdrMode),
-            request = request(acceptableHdrTypes = intArrayOf(HDR10)),
+            request = request(acceptableHdrTypes = listOf(HDR10)),
         )
 
         assertEquals(hdrMode, result.mode)
@@ -23,13 +23,13 @@ class DisplayModePolicyTest {
 
     @Test
     fun keepsCurrentModeWhenItSupportsRequestedHdrType() {
-        val currentHdrMode = mode(id = 1, refreshRate = 120f, hdrTypes = intArrayOf(HDR10))
-        val lowerRefreshHdrMode = mode(id = 2, refreshRate = 60f, hdrTypes = intArrayOf(HDR10))
+        val currentHdrMode = mode(id = 1, refreshRate = 120f, hdrTypes = listOf(HDR10))
+        val lowerRefreshHdrMode = mode(id = 2, refreshRate = 60f, hdrTypes = listOf(HDR10))
 
         val result = DisplayModePolicy.selectBestMode(
             currentMode = currentHdrMode,
             supportedModes = listOf(currentHdrMode, lowerRefreshHdrMode),
-            request = request(acceptableHdrTypes = intArrayOf(HDR10)),
+            request = request(acceptableHdrTypes = listOf(HDR10)),
         )
 
         assertEquals(currentHdrMode, result.mode)
@@ -44,7 +44,7 @@ class DisplayModePolicyTest {
         val result = DisplayModePolicy.selectBestMode(
             currentMode = currentSdrMode,
             supportedModes = listOf(currentSdrMode, fasterSdrMode),
-            request = request(acceptableHdrTypes = intArrayOf(HDR10)),
+            request = request(acceptableHdrTypes = listOf(HDR10)),
         )
 
         assertEquals(fasterSdrMode, result.mode)
@@ -59,17 +59,25 @@ class DisplayModePolicyTest {
             width = 1920,
             height = 1080,
             refreshRate = 60f,
-            hdrTypes = intArrayOf(HDR10),
+            hdrTypes = listOf(HDR10),
         )
 
         val result = DisplayModePolicy.selectBestMode(
             currentMode = currentSdrMode,
             supportedModes = listOf(currentSdrMode, undersizedHdrMode),
-            request = request(acceptableHdrTypes = intArrayOf(HDR10)),
+            request = request(acceptableHdrTypes = listOf(HDR10)),
         )
 
         assertEquals(currentSdrMode, result.mode)
         assertTrue(result.hdrFilterApplied)
+    }
+
+    @Test
+    fun modeEqualityUsesHdrTypeValues() {
+        assertEquals(
+            mode(id = 1, refreshRate = 60f, hdrTypes = listOf(HDR10)),
+            mode(id = 1, refreshRate = 60f, hdrTypes = listOf(HDR10)),
+        )
     }
 
     private fun mode(
@@ -77,11 +85,11 @@ class DisplayModePolicyTest {
         width: Int = 3840,
         height: Int = 2160,
         refreshRate: Float,
-        hdrTypes: IntArray = IntArray(0),
+        hdrTypes: List<Int> = emptyList(),
     ) = DisplayModePolicy.Mode(id, width, height, refreshRate, hdrTypes)
 
     private fun request(
-        acceptableHdrTypes: IntArray,
+        acceptableHdrTypes: List<Int>,
     ) = DisplayModePolicy.Request(
         width = 3840,
         height = 2160,
