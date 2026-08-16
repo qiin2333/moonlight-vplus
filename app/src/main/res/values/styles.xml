@@ -357,6 +357,15 @@
         <item name="android:windowAnimationStyle">@style/AppActionSheetAnimation</item>
     </style>
 
+    <style name="AppComposeDialogStyle" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.42</item>
+        <item name="android:windowAnimationStyle">@style/AppDialogAnimation</item>
+    </style>
+
     <!-- 通用弹窗动画 -->
     <style name="AppDialogAnimation">
         <item name="android:windowEnterAnimation">@anim/game_menu_dialog_enter</item>
