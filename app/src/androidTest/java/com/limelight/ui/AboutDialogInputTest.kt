@@ -9,12 +9,15 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -83,7 +86,7 @@ class AboutDialogInputTest {
             )
         }
 
-        composeTestRule.onNodeWithTag(AboutDialogTags.ECOSYSTEM_CLOSE).requestFocus()
+        composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag(AboutDialogTags.ECOSYSTEM_CLOSE).assertIsFocused()
     }
 
@@ -111,6 +114,27 @@ class AboutDialogInputTest {
             pressKey(Key.DirectionUp)
         }
         composeTestRule.onNodeWithTag(AboutDialogTags.ECOSYSTEM_CLOSE).assertIsFocused()
+    }
+
+    @Test
+    fun singleColumnPortraitCanNavigateToLastProject() {
+        composeTestRule.setContent {
+            val portrait = Configuration(LocalConfiguration.current).apply {
+                orientation = Configuration.ORIENTATION_PORTRAIT
+                screenWidthDp = 400
+            }
+            CompositionLocalProvider(LocalConfiguration provides portrait) {
+                EcosystemDialogContent(projects(), onOpen = {}, onClose = {})
+            }
+        }
+
+        composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(0)).requestFocus()
+        repeat(5) { index ->
+            composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(index)).performKeyInput {
+                pressKey(Key.DirectionDown)
+            }
+        }
+        composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(5)).assertIsFocused()
     }
 
     @Test
@@ -142,6 +166,31 @@ class AboutDialogInputTest {
             .sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
         composeTestRule.waitForIdle()
         assertTrue(opened.get())
+    }
+
+    @Test
+    fun landscapeProjectRowsSupportTouchSelection() {
+        val opened = AtomicReference<EcosystemProject>()
+        val projects = projects()
+        composeTestRule.setContent {
+            val landscape = Configuration(LocalConfiguration.current).apply {
+                orientation = Configuration.ORIENTATION_LANDSCAPE
+                screenWidthDp = 900
+                screenHeightDp = 360
+            }
+            CompositionLocalProvider(LocalConfiguration provides landscape) {
+                EcosystemDialogContent(
+                    projects = projects,
+                    onOpen = opened::set,
+                    onClose = {}
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(4)).performClick()
+        composeTestRule.onNodeWithTag(AboutDialogTags.ECOSYSTEM_OPEN).performClick()
+
+        assertEquals(projects[4], opened.get())
     }
 
     private fun projects(): List<EcosystemProject> = List(6) { index ->

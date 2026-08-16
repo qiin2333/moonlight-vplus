@@ -33,6 +33,13 @@ import java.util.Locale
  * external-link opening, and the PcView configuration-change contract.
  */
 object AboutDialogLauncher {
+    internal data class DialogSnapshot(
+        val main: Dialog?,
+        val ecosystem: Dialog?,
+        val mainFocusIndex: Int,
+        val ecosystemFocusIndex: Int
+    )
+
     private const val OFFICIAL_SITE_CN_URL = "https://www.alkaidlab.cn/"
     private const val OFFICIAL_SITE_GLOBAL_URL = "https://www.alkaidlab.com/"
     private const val GITHUB_URL = "https://github.com/qiin2333/moonlight-vplus"
@@ -128,6 +135,7 @@ object AboutDialogLauncher {
             ).also { activeDialogs = it }
         }
 
+        state.ecosystem?.dismiss()
         val projects = ecosystemProjects(context)
         state.ecosystemFocusIndex = initialFocusIndex
         val dialog = createDialog(context) { d ->
@@ -186,6 +194,15 @@ object AboutDialogLauncher {
         if (activeDialogs?.isOwnedBy(context) == true) {
             dismissActiveDialogs()
         }
+    }
+
+    internal fun dialogSnapshot(): DialogSnapshot? = activeDialogs?.let { state ->
+        DialogSnapshot(
+            main = state.main,
+            ecosystem = state.ecosystem,
+            mainFocusIndex = state.mainFocusIndex,
+            ecosystemFocusIndex = state.ecosystemFocusIndex
+        )
     }
 
     private fun createDialog(

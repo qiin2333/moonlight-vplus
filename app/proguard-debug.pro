@@ -5,3 +5,9 @@
 -keep class kotlinx.coroutines.** { *; }
 -dontwarn kotlinx.coroutines.**
 -keep class androidx.compose.** { *; }
+
+# Cross-APK instrumentation tests inspect dialog recreation and focus state.
+-keepclassmembers class com.limelight.utils.AboutDialogLauncher {
+	*** dialogSnapshot*(...);
+}
+-keep class com.limelight.utils.AboutDialogLauncher$DialogSnapshot { *; }

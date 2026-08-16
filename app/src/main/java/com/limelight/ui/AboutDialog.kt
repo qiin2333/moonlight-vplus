@@ -3,7 +3,6 @@ package com.limelight.ui
 import android.view.KeyEvent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,13 +12,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -149,8 +145,9 @@ private fun dialogBrush(): Brush {
 
 @Composable
 internal fun AboutDialogSurface(content: @Composable () -> Unit) {
+    val maxHeight = (LocalConfiguration.current.screenHeightDp - 32).coerceAtLeast(240).dp
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().heightIn(max = maxHeight),
         shape = aboutDialogShape,
         color = Color.Transparent,
         border = BorderStroke(1.dp, colorResource(R.color.app_dialog_outline))
@@ -459,7 +456,12 @@ internal fun EcosystemDialogContent(
 
     AboutDialogSurface {
         Box {
-            Column(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(24.dp)
+            ) {
                 Text(
                     stringResource(R.string.about_dialog_ecosystem_title),
                     color = colorResource(R.color.app_dialog_title_color),
@@ -481,7 +483,7 @@ internal fun EcosystemDialogContent(
                         itemFocus,
                         closeFocus,
                         openFocus,
-                        validInitialIndex ?: 0,
+                        validInitialIndex,
                         onFocusChanged
                     )
                 } else {
@@ -490,7 +492,7 @@ internal fun EcosystemDialogContent(
                         onOpen,
                         itemFocus,
                         closeFocus,
-                        validInitialIndex ?: 0,
+                        validInitialIndex,
                         onFocusChanged
                     )
                 }
@@ -539,60 +541,71 @@ private fun PortraitEcosystem(
     onOpen: (EcosystemProject) -> Unit,
     itemFocus: List<FocusRequester>,
     closeFocus: FocusRequester,
-    initialFocusIndex: Int,
+    initialFocusIndex: Int?,
     onFocusChanged: (Int) -> Unit
 ) {
     val widthDp = LocalConfiguration.current.screenWidthDp
     val columns = if (widthDp >= 600) 2 else 1
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(columns),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        modifier = Modifier.fillMaxWidth().height((projects.size * 130).dp.coerceAtMost(420.dp))
-    ) {
-        items(projects.size) { index ->
-            val project = projects[index]
-            val upIndex = GridFocusNavigator.nextIndex(
-                index,
-                projects.size,
-                columns,
-                GridFocusDirection.UP
-            )
-            val downIndex = GridFocusNavigator.nextIndex(
-                index,
-                projects.size,
-                columns,
-                GridFocusDirection.DOWN
-            )
-            val leftIndex = GridFocusNavigator.nextIndex(
-                index,
-                projects.size,
-                columns,
-                GridFocusDirection.LEFT
-            )
-            val rightIndex = GridFocusNavigator.nextIndex(
-                index,
-                projects.size,
-                columns,
-                GridFocusDirection.RIGHT
-            )
-            EcosystemCard(
-                project = project,
-                onOpen = onOpen,
-                focusModifier = Modifier.focusTarget(
-                    requester = itemFocus[index],
-                    tag = AboutDialogTags.ecosystemItem(index),
-                    onFocused = { onFocusChanged(index) },
-                    up = if (upIndex == GridFocusNavigator.CLOSE_TARGET) closeFocus else itemFocus[upIndex],
-                    down = itemFocus[downIndex],
-                    left = itemFocus[leftIndex],
-                    right = itemFocus[rightIndex]
-                ).requestInitialFocus(
-                    requester = itemFocus[index],
-                    enabled = index == initialFocusIndex,
-                    requestKey = initialFocusIndex
-                )
-            )
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        projects.indices.chunked(columns).forEach { rowIndices ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                rowIndices.forEach { index ->
+                    val project = projects[index]
+                    val upIndex = GridFocusNavigator.nextIndex(
+                        index,
+                        projects.size,
+                        columns,
+                        GridFocusDirection.UP
+                    )
+                    val downIndex = GridFocusNavigator.nextIndex(
+                        index,
+                        projects.size,
+                        columns,
+                        GridFocusDirection.DOWN
+                    )
+                    val leftIndex = GridFocusNavigator.nextIndex(
+                        index,
+                        projects.size,
+                        columns,
+                        GridFocusDirection.LEFT
+                    )
+                    val rightIndex = GridFocusNavigator.nextIndex(
+                        index,
+                        projects.size,
+                        columns,
+                        GridFocusDirection.RIGHT
+                    )
+                    EcosystemCard(
+                        project = project,
+                        onOpen = onOpen,
+                        focusModifier = Modifier
+                            .weight(1f)
+                            .focusTarget(
+                                requester = itemFocus[index],
+                                tag = AboutDialogTags.ecosystemItem(index),
+                                onFocused = { onFocusChanged(index) },
+                                up = if (upIndex == GridFocusNavigator.CLOSE_TARGET) {
+                                    closeFocus
+                                } else {
+                                    itemFocus[upIndex]
+                                },
+                                down = itemFocus[downIndex],
+                                left = itemFocus[leftIndex],
+                                right = itemFocus[rightIndex]
+                            ).requestInitialFocus(
+                                requester = itemFocus[index],
+                                enabled = index == initialFocusIndex,
+                                requestKey = initialFocusIndex ?: -1
+                            )
+                    )
+                }
+                repeat(columns - rowIndices.size) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
         }
     }
 }
@@ -604,18 +617,16 @@ private fun LandscapeEcosystem(
     itemFocus: List<FocusRequester>,
     closeFocus: FocusRequester,
     openFocus: FocusRequester,
-    initialFocusIndex: Int,
+    initialFocusIndex: Int?,
     onFocusChanged: (Int) -> Unit
 ) {
-    var selected by remember(initialFocusIndex) { mutableIntStateOf(initialFocusIndex) }
+    var selected by remember(initialFocusIndex) { mutableIntStateOf(initialFocusIndex ?: 0) }
     val project = projects[selected]
 
     Row(modifier = Modifier.fillMaxWidth()) {
         Column(
             verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier
-                .width(180.dp)
-                .verticalScroll(rememberScrollState())
+            modifier = Modifier.width(180.dp)
         ) {
             projects.forEachIndexed { index, p ->
                 var focused by remember { mutableStateOf(false) }
@@ -624,25 +635,21 @@ private fun LandscapeEcosystem(
                 } else {
                     Color.Transparent
                 }
-                Text(
-                    p.title,
-                    color = colorResource(R.color.app_dialog_title_color),
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyMedium,
+                Surface(
+                    onClick = {
+                        selected = index
+                        onFocusChanged(index)
+                        itemFocus[index].requestFocus()
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    color = selectedBg,
+                    border = if (focused) {
+                        BorderStroke(2.dp, colorResource(R.color.app_dialog_accent_color))
+                    } else {
+                        null
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(selectedBg, RoundedCornerShape(12.dp))
-                        .then(
-                            if (focused) {
-                                Modifier.border(
-                                    2.dp,
-                                    colorResource(R.color.app_dialog_accent_color),
-                                    actionShape
-                                )
-                            } else {
-                                Modifier
-                            }
-                        )
                         .focusTarget(
                             requester = itemFocus[index],
                             tag = AboutDialogTags.ecosystemItem(index),
@@ -658,14 +665,25 @@ private fun LandscapeEcosystem(
                         .requestInitialFocus(
                             requester = itemFocus[index],
                             enabled = index == initialFocusIndex,
-                            requestKey = initialFocusIndex
+                            requestKey = initialFocusIndex ?: -1
                         )
                         .onFocusChanged { focused = it.isFocused }
                         .handleGamepadConfirm { onOpen(p) }
                         .focusable()
-                        .background(Color.Transparent)
-                        .padding(start = 12.dp, top = 7.dp, end = 10.dp, bottom = 7.dp)
-                )
+                ) {
+                    Text(
+                        p.title,
+                        color = colorResource(R.color.app_dialog_title_color),
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(
+                            start = 12.dp,
+                            top = 7.dp,
+                            end = 10.dp,
+                            bottom = 7.dp
+                        )
+                    )
+                }
             }
         }
 
