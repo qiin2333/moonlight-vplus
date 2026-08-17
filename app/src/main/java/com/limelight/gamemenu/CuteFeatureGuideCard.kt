@@ -103,6 +103,15 @@ internal fun cuteFeatureGuideLayoutSpec(
     }
 }
 
+internal fun cuteFeatureGuideMaximumHeightDp(
+    safeHeightDp: Float,
+    maximumHeightFraction: Float
+): Float {
+    val availableHeight = (safeHeightDp - 8f).coerceAtLeast(1f)
+    val minimumHeight = minOf(160f, availableHeight)
+    return (safeHeightDp * maximumHeightFraction).coerceIn(minimumHeight, availableHeight)
+}
+
 @Composable
 internal fun CuteFeatureGuideCard(
     eyebrow: String,
@@ -127,7 +136,10 @@ internal fun CuteFeatureGuideCard(
         (LocalWindowInfo.current.containerSize.height - systemBarHeight).coerceAtLeast(1).toDp()
     }
     val layoutSpec = cuteFeatureGuideLayoutSpec(configuration.orientation, safeHeight.value)
-    val maximumCardHeight = (safeHeight * layoutSpec.maximumHeightFraction).coerceAtLeast(160.dp)
+    val maximumCardHeight = cuteFeatureGuideMaximumHeightDp(
+        safeHeightDp = safeHeight.value,
+        maximumHeightFraction = layoutSpec.maximumHeightFraction
+    ).dp
     val bodyScrollState = rememberScrollState()
     val isTelevision = configuration.uiMode and Configuration.UI_MODE_TYPE_MASK ==
         Configuration.UI_MODE_TYPE_TELEVISION
@@ -188,33 +200,37 @@ internal fun CuteFeatureGuideCard(
             ),
             verticalArrangement = Arrangement.spacedBy(if (layoutSpec.compact) 3.dp else 5.dp)
         ) {
-            Text(
-                text = eyebrow,
-                color = accent,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.7.sp
-            )
-            Text(
-                text = title,
-                color = ink,
-                fontSize = layoutSpec.titleSizeSp.sp,
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 0.5.sp,
-                lineHeight = layoutSpec.titleLineHeightSp.sp
-            )
-            HandDrawnUnderline(accent)
-            Text(
-                text = body,
-                color = mutedInk,
-                fontSize = layoutSpec.bodySizeSp.sp,
-                letterSpacing = 0.3.sp,
-                lineHeight = layoutSpec.bodyLineHeightSp.sp,
+            Column(
                 modifier = Modifier
                     .weight(1f, fill = false)
-                    .verticalScroll(bodyScrollState)
-            )
-            Spacer(Modifier.height(2.dp))
+                    .verticalScroll(bodyScrollState),
+                verticalArrangement = Arrangement.spacedBy(if (layoutSpec.compact) 3.dp else 5.dp)
+            ) {
+                Text(
+                    text = eyebrow,
+                    color = accent,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.7.sp
+                )
+                Text(
+                    text = title,
+                    color = ink,
+                    fontSize = layoutSpec.titleSizeSp.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.5.sp,
+                    lineHeight = layoutSpec.titleLineHeightSp.sp
+                )
+                HandDrawnUnderline(accent)
+                Text(
+                    text = body,
+                    color = mutedInk,
+                    fontSize = layoutSpec.bodySizeSp.sp,
+                    letterSpacing = 0.3.sp,
+                    lineHeight = layoutSpec.bodyLineHeightSp.sp
+                )
+                Spacer(Modifier.height(2.dp))
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,

@@ -34,4 +34,15 @@ class CuteFeatureGuideLayoutSpecTest {
             ).compact
         )
     }
+
+    @Test
+    fun maximumHeightNeverExceedsSafeWindow() {
+        val maximumHeight = cuteFeatureGuideMaximumHeightDp(
+            safeHeightDp = 120f,
+            maximumHeightFraction = 0.72f
+        )
+
+        assertTrue(maximumHeight <= 112f)
+        assertTrue(maximumHeight > 0f)
+    }
 }
