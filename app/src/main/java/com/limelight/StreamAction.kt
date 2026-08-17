@@ -91,7 +91,8 @@ object StreamActionRegistry {
         "send_alt_f4",
         "toggle_keyboard",
         "toggle_controller",
-        "toggle_perf"
+        "toggle_perf",
+        "toggle_remote_mouse"
     )
 
     val BUILTIN = linkedMapOf(
@@ -124,6 +125,9 @@ object StreamActionRegistry {
         ),
         "toggle_controller" to StreamAction("toggle_controller", "Pad", R.drawable.ic_controller_cute, 0, R.string.quick_btn_controller),
         "toggle_perf" to StreamAction("toggle_perf", "Perf", R.drawable.ic_performance_cute, 0, R.string.quick_btn_perf),
+        "toggle_remote_mouse" to StreamAction(
+            "toggle_remote_mouse", "Mouse", R.drawable.ic_mouse_cute, 0, R.string.quick_btn_remote_mouse
+        ),
     )
 
     fun getBuiltin(id: String): StreamAction? = BUILTIN[id]
@@ -213,6 +217,18 @@ class StreamActionExecutor(
             "toggle_perf" -> {
                 game.togglePerformanceOverlay()
                 true
+            }
+            "toggle_remote_mouse" -> {
+                val sent = sendKeys(shortArrayOf(
+                    KeyboardTranslator.VK_LCONTROL.toShortKey(),
+                    KeyboardTranslator.VK_MENU.toShortKey(),
+                    KeyboardTranslator.VK_LSHIFT.toShortKey(),
+                    KeyboardTranslator.VK_N.toShortKey()
+                ))
+                if (sent) {
+                    Toast.makeText(game, game.getString(R.string.toast_remote_mouse_toast), Toast.LENGTH_SHORT).show()
+                }
+                sent
             }
             else -> executeCustomAction(actionId)
         }

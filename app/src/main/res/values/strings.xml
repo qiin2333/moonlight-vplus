@@ -1949,6 +1949,7 @@ Tap again to replace it.</string>
     <string name="quick_btn_keyboard">Keyboard</string>
     <string name="quick_btn_controller">Gamepad</string>
     <string name="quick_btn_perf">Stats</string>
+    <string name="quick_btn_remote_mouse">Remote mouse</string>
 
     <!-- Quick action editor -->
     <string name="quick_button_editor_title">Quick Actions</string>
