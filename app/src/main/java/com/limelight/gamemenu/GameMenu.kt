@@ -1336,8 +1336,7 @@ class GameMenu(
             runnable = Runnable { toggleRemoteMouse() },
             iconKey = "game_menu_mouse_emulation",
             isShowIcon = true,
-            isKeepDialog = false,
-            subtitle = getString(R.string.game_menu_toggle_remote_mouse_summary)
+            isKeepDialog = false
         ))
 
         normalOptions.add(MenuOption(
