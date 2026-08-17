@@ -12,7 +12,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -47,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.key.Key
@@ -56,6 +56,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
@@ -74,6 +75,7 @@ import com.limelight.R
 import com.limelight.binding.audio.AudioVibrationService
 import com.limelight.ui.theme.AppShapes
 import java.util.Locale
+import kotlin.math.abs
 
 
 @Composable
@@ -664,16 +666,54 @@ private fun GyroCard(
     }
 }
 
-private fun Modifier.lockParentScrollDuringGesture(
+internal enum class SliderGestureDirection {
+    Undecided,
+    Horizontal,
+    Vertical
+}
+
+internal fun classifySliderGesture(
+    dragOffset: Offset,
+    touchSlop: Float
+): SliderGestureDirection {
+    if (dragOffset.getDistance() < touchSlop) return SliderGestureDirection.Undecided
+    return if (abs(dragOffset.x) > abs(dragOffset.y)) {
+        SliderGestureDirection.Horizontal
+    } else {
+        SliderGestureDirection.Vertical
+    }
+}
+
+internal fun Modifier.lockParentScrollDuringGesture(
     onGestureActive: (Boolean) -> Unit
 ): Modifier = pointerInput(Unit) {
     awaitEachGesture {
-        awaitFirstDown(requireUnconsumed = false)
-        onGestureActive(true)
+        val down = awaitFirstDown(
+            requireUnconsumed = false,
+            pass = PointerEventPass.Initial
+        )
+        var horizontalGesture = false
         try {
-            waitForUpOrCancellation()
+            while (true) {
+                val change = awaitPointerEvent(PointerEventPass.Initial).changes
+                    .firstOrNull { it.id == down.id }
+                    ?: break
+                if (!change.pressed) break
+
+                if (!horizontalGesture) {
+                    val dragOffset = change.position - down.position
+                    when (classifySliderGesture(dragOffset, viewConfiguration.touchSlop)) {
+                        SliderGestureDirection.Undecided -> continue
+                        SliderGestureDirection.Vertical -> break
+                        SliderGestureDirection.Horizontal -> {
+                            horizontalGesture = true
+                            onGestureActive(true)
+                        }
+                    }
+                }
+            }
         } finally {
-            onGestureActive(false)
+            if (horizontalGesture) onGestureActive(false)
         }
     }
 }

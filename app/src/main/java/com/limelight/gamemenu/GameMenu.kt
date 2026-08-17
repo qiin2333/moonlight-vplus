@@ -4,7 +4,6 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.ContentValues
 import android.content.Context
-import android.content.res.Configuration
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -56,6 +55,18 @@ private fun Int.s(): Short = this.toShort()
 internal fun mapGameMenuConfirmKeyCode(keyCode: Int): Int {
     return if (keyCode == KeyEvent.KEYCODE_BUTTON_A) KeyEvent.KEYCODE_DPAD_CENTER else keyCode
 }
+
+internal fun createGameMenuBackOption(
+    label: String,
+    onBack: () -> Unit
+) = GameMenu.MenuOption(
+    label = label,
+    isWithGameFocus = false,
+    runnable = Runnable(onBack),
+    iconKey = null,
+    isShowIcon = false,
+    isKeepDialog = true
+)
 
 private fun mapGameMenuConfirmKeyEvent(event: KeyEvent): KeyEvent {
     val mappedKeyCode = mapGameMenuConfirmKeyCode(event.keyCode)
@@ -685,6 +696,7 @@ class GameMenu(
         }
 
         val callbacks = GameMenuCallbacks(
+            onDismiss = { dialog.cancel() },
             iconForOption = ::getIconForMenuOption,
             onBack = { navigateBack() },
             onCrownToggle = ::toggleCrownFeature,
@@ -1022,9 +1034,9 @@ class GameMenu(
             val layoutParams = window.attributes
             layoutParams.alpha = renderingProfile.windowAlpha
             layoutParams.dimAmount = DIALOG_DIM_AMOUNT
-            layoutParams.width = resolveDialogWidth()
-            layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT
-            layoutParams.gravity = android.view.Gravity.BOTTOM
+            layoutParams.width = WindowManager.LayoutParams.MATCH_PARENT
+            layoutParams.height = WindowManager.LayoutParams.MATCH_PARENT
+            layoutParams.gravity = android.view.Gravity.FILL
             window.attributes = layoutParams
             window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             window.setBackgroundDrawable(
@@ -1036,28 +1048,9 @@ class GameMenu(
 
     private fun applyDialogSize(dialog: ComponentDialog) {
         dialog.window?.setLayout(
-            resolveDialogWidth(),
-            WindowManager.LayoutParams.WRAP_CONTENT
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT
         )
-    }
-
-    private fun resolveDialogWidth(): Int {
-        val widthFraction = if (
-            game.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        ) {
-            DIALOG_LANDSCAPE_WIDTH_FRACTION
-        } else {
-            DIALOG_PORTRAIT_WIDTH_FRACTION
-        }
-        val windowWidth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            game.windowManager.currentWindowMetrics.bounds.width()
-        } else {
-            game.window.decorView.width
-        }.takeIf { it > 0 } ?: game.resources.displayMetrics.widthPixels
-
-        return (windowWidth * widthFraction)
-            .toInt()
-            .coerceAtLeast(1)
     }
 
     /**
@@ -1076,7 +1069,11 @@ class GameMenu(
                 { showDeleteKeysDialog() }, null, false))
         }
 
-        options.add(MenuOption(getString(R.string.game_menu_cancel), false, null, null, false))
+        options.add(
+            createGameMenuBackOption(getString(R.string.game_menu_cancel)) {
+                if (!navigateBack()) activeDialog?.cancel()
+            }
+        )
 
         showSubMenu(getString(R.string.game_menu_send_keys), options.toTypedArray())
     }
@@ -1468,8 +1465,6 @@ class GameMenu(
     companion object {
         private const val GAME_FOCUS_RETRY_DELAY_MS = 10L
         private const val DIALOG_DIM_AMOUNT = 0.0f
-        private const val DIALOG_LANDSCAPE_WIDTH_FRACTION = 0.88f
-        private const val DIALOG_PORTRAIT_WIDTH_FRACTION = 0.95f
         private const val PREF_NAME = "custom_special_keys"
         private const val KEY_NAME = "data"
 

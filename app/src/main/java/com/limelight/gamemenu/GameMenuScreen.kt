@@ -14,6 +14,10 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +26,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -54,11 +59,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -97,6 +104,10 @@ internal val GameMenuControlShape = RoundedCornerShape(GameMenuControlRadius)
 private const val GAME_MENU_MAX_HEIGHT_FRACTION = 0.90f
 private const val GAME_MENU_WIDE_LAYOUT_MIN_WIDTH_DP = 576
 private const val ORIENTATION_MISMATCH_THRESHOLD = 1.5f
+private const val GAME_MENU_LANDSCAPE_WIDTH_FRACTION = 0.88f
+private const val GAME_MENU_PORTRAIT_WIDTH_FRACTION = 0.95f
+internal const val GAME_MENU_BACKDROP_TAG = "gameMenuBackdrop"
+internal const val GAME_MENU_PANEL_TAG = "gameMenuPanel"
 
 internal object GameMenuDimens {
     val surfaceStroke = 0.75.dp
@@ -162,6 +173,11 @@ internal fun GameMenuScreen(
     } else {
         GameMenuDimens.compactScreenInset
     }
+    val menuWidthFraction = if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+        GAME_MENU_LANDSCAPE_WIDTH_FRACTION
+    } else {
+        GAME_MENU_PORTRAIT_WIDTH_FRACTION
+    }
 
     GameMenuTheme(palette) {
         SequenceShowcase(state = showcaseState) {
@@ -203,10 +219,10 @@ internal fun GameMenuScreen(
                 )
             }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = horizontalInset)
+            GameMenuDialogShell(
+                widthFraction = menuWidthFraction,
+                horizontalInset = horizontalInset,
+                onDismissRequest = callbacks.onDismiss
             ) {
                 Surface(
                     color = Color.Transparent,
@@ -252,6 +268,45 @@ internal fun GameMenuScreen(
         if (requestControllerFocus && state.options.isNotEmpty()) {
             inputModeManager.requestInputMode(InputMode.Keyboard)
             initialFocusRequester.requestFocus()
+        }
+    }
+}
+
+@Composable
+internal fun GameMenuDialogShell(
+    widthFraction: Float,
+    horizontalInset: Dp,
+    onDismissRequest: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    val backdropInteraction = remember { MutableInteractionSource() }
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .testTag(GAME_MENU_BACKDROP_TAG)
+                .clickable(
+                    interactionSource = backdropInteraction,
+                    indication = null,
+                    onClick = onDismissRequest
+                )
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(widthFraction)
+                .padding(horizontal = horizontalInset)
+                .testTag(GAME_MENU_PANEL_TAG)
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        waitForUpOrCancellation()
+                    }
+                }
+        ) {
+            content()
         }
     }
 }
