@@ -4,6 +4,7 @@ import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbEndpoint
+import android.hardware.usb.UsbInterface
 import android.os.SystemClock
 
 import com.limelight.LimeLog
@@ -22,6 +23,7 @@ abstract class AbstractXboxController(
 
     private var inputThread: Thread? = null
     private var stopped = false
+    private val claimedInterfaces = mutableListOf<UsbInterface>()
 
     protected var inEndpt: UsbEndpoint? = null
     protected var outEndpt: UsbEndpoint? = null
@@ -78,69 +80,103 @@ abstract class AbstractXboxController(
     }
 
     override fun start(): Boolean {
-        // Force claim all interfaces
-        for (i in 0 until device.interfaceCount) {
-            val iface = device.getInterface(i)
-            if (!connection.claimInterface(iface, true)) {
-                LimeLog.warning("Failed to claim interfaces")
+        claimedInterfaces.clear()
+        var startSucceeded = false
+        try {
+            // Force claim all interfaces
+            for (i in 0 until device.interfaceCount) {
+                val iface = device.getInterface(i)
+                if (!connection.claimInterface(iface, true)) {
+                    LimeLog.warning("Failed to claim interfaces")
+                    return false
+                }
+                claimedInterfaces.add(iface)
+            }
+
+            // Find the endpoints
+            val iface = device.getInterface(0)
+            for (i in 0 until iface.endpointCount) {
+                val endpt = iface.getEndpoint(i)
+                if (endpt.direction == UsbConstants.USB_DIR_IN) {
+                    if (inEndpt != null) {
+                        LimeLog.warning("Found duplicate IN endpoint")
+                        return false
+                    }
+                    inEndpt = endpt
+                } else if (endpt.direction == UsbConstants.USB_DIR_OUT) {
+                    if (outEndpt != null) {
+                        LimeLog.warning("Found duplicate OUT endpoint")
+                        return false
+                    }
+                    outEndpt = endpt
+                }
+            }
+
+            // Make sure the required endpoints were present
+            if (inEndpt == null || outEndpt == null) {
+                LimeLog.warning("Missing required endpoint")
                 return false
             }
-        }
 
-        // Find the endpoints
-        val iface = device.getInterface(0)
-        for (i in 0 until iface.endpointCount) {
-            val endpt = iface.getEndpoint(i)
-            if (endpt.direction == UsbConstants.USB_DIR_IN) {
-                if (inEndpt != null) {
-                    LimeLog.warning("Found duplicate IN endpoint")
-                    return false
-                }
-                inEndpt = endpt
-            } else if (endpt.direction == UsbConstants.USB_DIR_OUT) {
-                if (outEndpt != null) {
-                    LimeLog.warning("Found duplicate OUT endpoint")
-                    return false
-                }
-                outEndpt = endpt
+            // Run the init function
+            if (!doInit()) {
+                return false
+            }
+
+            // Start listening for controller input
+            inputThread = createInputThread()
+            inputThread!!.start()
+            startSucceeded = true
+            return true
+        } finally {
+            if (!startSucceeded) {
+                releaseClaimedInterfaces()
             }
         }
-
-        // Make sure the required endpoints were present
-        if (inEndpt == null || outEndpt == null) {
-            LimeLog.warning("Missing required endpoint")
-            return false
-        }
-
-        // Run the init function
-        if (!doInit()) {
-            return false
-        }
-
-        // Start listening for controller input
-        inputThread = createInputThread()
-        inputThread!!.start()
-
-        return true
     }
 
     override fun stop() {
-        if (stopped) return
-
-        stopped = true
+        synchronized(this) {
+            if (stopped) return
+            stopped = true
+        }
 
         // Cancel any rumble effects
-        rumble(0, 0)
+        runCatching { rumble(0, 0) }.onFailure {
+            LimeLog.warning("Failed to cancel Xbox controller rumble during stop")
+        }
 
         // Stop the input thread
-        inputThread?.interrupt()
+        inputThread?.let { thread ->
+            thread.interrupt()
+            if (thread !== Thread.currentThread()) {
+                try {
+                    thread.join(1000)
+                } catch (e: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                }
+            }
+        }
         inputThread = null
 
+        releaseClaimedInterfaces()
+
         // Close the USB connection
-        connection.close()
+        runCatching { connection.close() }.onFailure {
+            LimeLog.warning("Failed to close Xbox controller USB connection")
+        }
 
         // Report the device removed
         notifyDeviceRemoved()
+    }
+
+    private fun releaseClaimedInterfaces() {
+        for (i in claimedInterfaces.indices.reversed()) {
+            runCatching { connection.releaseInterface(claimedInterfaces[i]) }.onFailure {
+                LimeLog.warning("Failed to release Xbox controller USB interface")
+            }
+        }
+        claimedInterfaces.clear()
     }
 
     protected abstract fun handleRead(buffer: ByteBuffer): Boolean

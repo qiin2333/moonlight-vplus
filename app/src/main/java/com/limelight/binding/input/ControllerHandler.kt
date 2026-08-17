@@ -43,7 +43,8 @@ class ControllerHandler(
     internal val conn: NvConnection,
     private val gestures: GameGestures,
     internal val prefConfig: PreferenceConfiguration,
-    private val onTogglePerformanceOverlay: () -> Unit = {}
+    private val onTogglePerformanceOverlay: () -> Unit = {},
+    private val onExitStream: () -> Unit = { activityContext.finish() }
 ) : InputManager.InputDeviceListener, UsbDriverListener {
 
     companion object {
@@ -2279,7 +2280,7 @@ class ControllerHandler(
                     }
                 UsbControllerShortcutStateMachine.Action.EXIT_STREAM ->
                     mainThreadHandler.post {
-                        if (!activityContext.isFinishing) activityContext.finish()
+                        if (!activityContext.isFinishing) onExitStream()
                     }
             }
         }

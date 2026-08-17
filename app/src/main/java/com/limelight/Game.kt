@@ -710,7 +710,8 @@ class Game : Activity(), SurfaceHolder.Callback,
             conn!!,
             this,
             prefConfig,
-            onTogglePerformanceOverlay = ::togglePerformanceOverlay
+            onTogglePerformanceOverlay = ::togglePerformanceOverlay,
+            onExitStream = ::exitStreamFromUsbShortcut
         )
     }
 
@@ -732,6 +733,14 @@ class Game : Activity(), SurfaceHolder.Callback,
         usbDriverServiceManager = UsbDriverServiceManager(this, this)
         usbDriverServiceManager?.controllerHandler = controllerHandler
         usbDriverServiceManager?.bind()
+    }
+
+    private fun exitStreamFromUsbShortcut() {
+        UsbDriverExitCoordinator.exit(
+            isFinishing = isFinishing,
+            releaseUsb = { usbDriverServiceManager?.stopAndUnbind() },
+            finishActivity = ::finish
+        )
     }
 
     // endregion
@@ -1339,6 +1348,8 @@ class Game : Activity(), SurfaceHolder.Callback,
             connectionCallbackHandler.stopConnection()
         }
 
+        usbDriverServiceManager?.stopAndUnbind()
+
         if (::controllerHandler.isInitialized) {
             controllerHandler.destroy()
         }
@@ -1352,7 +1363,6 @@ class Game : Activity(), SurfaceHolder.Callback,
         highPerfWifiLock?.release()
         jitterMonitorManager?.destroy()
         jitterMonitorManager = null
-        usbDriverServiceManager?.stopAndUnbind()
         if (::inputCaptureProvider.isInitialized) {
             inputCaptureProvider.destroy()
         }
