@@ -506,6 +506,8 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         val label = findViewById<TextView>(R.id.appListText)
         title = computerName
         label.text = computerName
+        label.isClickable = false
+        label.isFocusable = false
 
         // 点击标题恢复串流
         label.setOnClickListener {
@@ -602,6 +604,8 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         val label = findViewById<TextView>(R.id.appListText)
         val hasRunningApp = lastRunningAppId != 0
         val arrow = if (hasRunningApp) " ▸" else ""
+        label.isClickable = hasRunningApp
+        label.isFocusable = hasRunningApp
 
         if (!appName.isNullOrEmpty()) {
             val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -1388,11 +1392,13 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
                     ))
                 }
                 findViewById<View>(R.id.appListText)?.let {
-                    add(ViewFeatureGuideStep(
-                        it,
-                        getString(R.string.appview_guide_resume_title),
-                        getString(R.string.appview_guide_resume_body)
-                    ))
+                    if (lastRunningAppId != 0) {
+                        add(ViewFeatureGuideStep(
+                            it,
+                            getString(R.string.appview_guide_resume_title),
+                            getString(R.string.appview_guide_resume_body)
+                        ))
+                    }
                 }
             }
         }

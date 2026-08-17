@@ -188,7 +188,7 @@ internal fun GameMenuScreen(
             }
             val quickActionGuideModifier = Modifier.sequenceShowcaseTarget(
                 index = 0,
-                position = ShowcasePosition.Bottom,
+                position = ShowcasePosition.Default,
                 alignment = ShowcaseAlignment.Start,
                 highlight = ShowcaseHighlight.Rectangular(12.dp),
                 backgroundAlpha = BackgroundAlpha.Dark
@@ -204,7 +204,7 @@ internal fun GameMenuScreen(
             }
             val crownGuideModifier = Modifier.sequenceShowcaseTarget(
                 index = 1,
-                position = ShowcasePosition.Bottom,
+                position = ShowcasePosition.Default,
                 alignment = ShowcaseAlignment.End,
                 highlight = ShowcaseHighlight.Circular(targetMargin = 8.dp),
                 backgroundAlpha = BackgroundAlpha.Dark

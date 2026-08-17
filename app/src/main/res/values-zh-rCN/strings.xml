@@ -1936,8 +1936,6 @@
     <string name="appview_guide_panel_body">从顶部把手拉下，就能选背景、屏幕组合和目标显示器，也能进入完整串流设置。</string>
     <string name="appview_guide_resume_title">标题可不是摆设啦</string>
     <string name="appview_guide_resume_body">已有会话时，点一下电脑名和应用名就能直接回到串流。别再绕远路啦。</string>
-    <string name="appview_guide_card_title">长按都不会吗？</string>
-    <string name="appview_guide_card_body">长按应用就能用上次设置恢复、创建快捷方式、隐藏应用或查看详情，不用真的启动它哦。</string>
     <!-- Foundation Sunshine 启动前网络探测 -->
     <string name="network_quality_test_title">串流质量检测</string>
     <string name="network_quality_card_summary">%1$.0f ms · %2$.0f Mbps</string>

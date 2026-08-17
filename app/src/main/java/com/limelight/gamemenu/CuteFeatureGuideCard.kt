@@ -3,6 +3,7 @@ package com.limelight.gamemenu
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,8 +12,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -34,7 +39,9 @@ import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -52,6 +59,50 @@ import com.limelight.R
 import com.limelight.ui.UiDismissKeyHandler
 import com.limelight.ui.theme.AppShapes
 
+internal data class CuteFeatureGuideLayoutSpec(
+    val compact: Boolean,
+    val minimumWidthDp: Int,
+    val maximumHeightFraction: Float,
+    val horizontalPaddingDp: Int,
+    val topPaddingDp: Int,
+    val titleSizeSp: Int,
+    val titleLineHeightSp: Int,
+    val bodySizeSp: Int,
+    val bodyLineHeightSp: Int
+)
+
+internal fun cuteFeatureGuideLayoutSpec(
+    orientation: Int,
+    safeHeightDp: Float
+): CuteFeatureGuideLayoutSpec {
+    val compact = orientation == Configuration.ORIENTATION_LANDSCAPE && safeHeightDp < 420f
+    return if (compact) {
+        CuteFeatureGuideLayoutSpec(
+            compact = true,
+            minimumWidthDp = 220,
+            maximumHeightFraction = 0.72f,
+            horizontalPaddingDp = 16,
+            topPaddingDp = 40,
+            titleSizeSp = 18,
+            titleLineHeightSp = 23,
+            bodySizeSp = 14,
+            bodyLineHeightSp = 20
+        )
+    } else {
+        CuteFeatureGuideLayoutSpec(
+            compact = false,
+            minimumWidthDp = 252,
+            maximumHeightFraction = 0.88f,
+            horizontalPaddingDp = 20,
+            topPaddingDp = 56,
+            titleSizeSp = 21,
+            titleLineHeightSp = 29,
+            bodySizeSp = 16,
+            bodyLineHeightSp = 25
+        )
+    }
+}
+
 @Composable
 internal fun CuteFeatureGuideCard(
     eyebrow: String,
@@ -68,7 +119,17 @@ internal fun CuteFeatureGuideCard(
     val skipFocusRequester = remember { FocusRequester() }
     val actionFocusRequester = remember { FocusRequester() }
     val inputModeManager = LocalInputModeManager.current
-    val isTelevision = LocalConfiguration.current.uiMode and Configuration.UI_MODE_TYPE_MASK ==
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val safeDrawingInsets = WindowInsets.safeDrawing
+    val safeHeight = with(density) {
+        val systemBarHeight = safeDrawingInsets.getTop(this) + safeDrawingInsets.getBottom(this)
+        (LocalWindowInfo.current.containerSize.height - systemBarHeight).coerceAtLeast(1).toDp()
+    }
+    val layoutSpec = cuteFeatureGuideLayoutSpec(configuration.orientation, safeHeight.value)
+    val maximumCardHeight = (safeHeight * layoutSpec.maximumHeightFraction).coerceAtLeast(160.dp)
+    val bodyScrollState = rememberScrollState()
+    val isTelevision = configuration.uiMode and Configuration.UI_MODE_TYPE_MASK ==
         Configuration.UI_MODE_TYPE_TELEVISION
     val shouldRequestInitialFocus = isTelevision || inputModeManager.inputMode == InputMode.Keyboard
     var isActionLaidOut by remember { mutableStateOf(false) }
@@ -83,7 +144,8 @@ internal fun CuteFeatureGuideCard(
 
     Box(
         modifier = Modifier
-            .widthIn(min = 252.dp, max = 316.dp)
+            .widthIn(min = layoutSpec.minimumWidthDp.dp, max = 316.dp)
+            .heightIn(max = maximumCardHeight)
             .onPreviewKeyEvent { event ->
                 UiDismissKeyHandler.handle(
                     event.nativeKeyEvent.action,
@@ -118,8 +180,13 @@ internal fun CuteFeatureGuideCard(
     ) {
         PaperNoteConnector(Modifier.fillMaxSize(), accent)
         Column(
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 56.dp, bottom = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(5.dp)
+            modifier = Modifier.padding(
+                start = layoutSpec.horizontalPaddingDp.dp,
+                end = layoutSpec.horizontalPaddingDp.dp,
+                top = layoutSpec.topPaddingDp.dp,
+                bottom = 8.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(if (layoutSpec.compact) 3.dp else 5.dp)
         ) {
             Text(
                 text = eyebrow,
@@ -131,18 +198,21 @@ internal fun CuteFeatureGuideCard(
             Text(
                 text = title,
                 color = ink,
-                fontSize = 21.sp,
+                fontSize = layoutSpec.titleSizeSp.sp,
                 fontWeight = FontWeight.Medium,
                 letterSpacing = 0.5.sp,
-                lineHeight = 29.sp
+                lineHeight = layoutSpec.titleLineHeightSp.sp
             )
             HandDrawnUnderline(accent)
             Text(
                 text = body,
                 color = mutedInk,
-                fontSize = 16.sp,
+                fontSize = layoutSpec.bodySizeSp.sp,
                 letterSpacing = 0.3.sp,
-                lineHeight = 25.sp
+                lineHeight = layoutSpec.bodyLineHeightSp.sp,
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .verticalScroll(bodyScrollState)
             )
             Spacer(Modifier.height(2.dp))
             Row(
