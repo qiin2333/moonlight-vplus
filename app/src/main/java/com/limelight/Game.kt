@@ -343,7 +343,9 @@ class Game : Activity(), SurfaceHolder.Callback,
         streamView.setInputCallbacks(this)
 
         if (prefConfig.screenDs5Touchpad) {
-            ds5TouchpadFeedbackView = Ds5TouchpadFeedbackView(this).also { feedbackView ->
+            ds5TouchpadFeedbackView = Ds5TouchpadFeedbackView(this) {
+                activeStreamView ?: streamView
+            }.also { feedbackView ->
                 (streamView.parent as FrameLayout).addView(
                     feedbackView,
                     FrameLayout.LayoutParams(
@@ -1721,9 +1723,9 @@ class Game : Activity(), SurfaceHolder.Callback,
         connectionCallbackHandler.connectionStarted()
         controllerHandler.retryPendingControllerArrivals {
             if (prefConfig.screenDs5Touchpad) {
-                // Pending owner metadata is decorated first. Only synthesize the default
-                // virtual-controller declaration when no controller owns player 1.
-                controllerHandler.setScreenDs5TouchpadEnabled(true)
+                // Retries run first so pending arrivals populate the metadata cache;
+                // the DS5 declaration then re-declares slot 0 with DualSense capabilities.
+                controllerHandler.declareScreenDs5TouchpadController()
             }
         }
         startClipboardSyncIfEnabled()

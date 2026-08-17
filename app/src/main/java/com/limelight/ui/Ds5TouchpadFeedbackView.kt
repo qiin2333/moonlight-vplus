@@ -14,9 +14,14 @@ import kotlin.math.max
 
 /**
  * Non-interactive visual feedback for screen-backed DualSense touch contacts.
- * Coordinates are normalized so this view stays aligned with letterboxed streams.
+ * Contact coordinates are normalized to the stream content, so [coordinateViewProvider]
+ * must return the view holding that content; its position/scale inside this overlay's
+ * parent map the contacts onto the (possibly letterboxed or zoomed) stream.
  */
-class Ds5TouchpadFeedbackView(context: Context) : View(context) {
+class Ds5TouchpadFeedbackView(
+    context: Context,
+    private val coordinateViewProvider: () -> View?,
+) : View(context) {
     private data class Contact(
         var x: Float,
         var y: Float,
@@ -112,6 +117,7 @@ class Ds5TouchpadFeedbackView(context: Context) : View(context) {
 
     private fun drawContacts(canvas: Canvas, now: Long): Boolean {
         val radius = (if (touchpadPressed) 23f else 18f) * density
+        val coordinateView = coordinateViewProvider()
         var animating = false
         val iterator = contacts.iterator()
         while (iterator.hasNext()) {
@@ -127,8 +133,22 @@ class Ds5TouchpadFeedbackView(context: Context) : View(context) {
                 animating = true
                 1f - fraction
             }
-            val x = contact.x.coerceIn(0f, 1f) * width
-            val y = contact.y.coerceIn(0f, 1f) * height
+            val x: Float
+            val y: Float
+            if (coordinateView != null &&
+                coordinateView.width > 0 && coordinateView.height > 0 &&
+                coordinateView.scaleX > 0f && coordinateView.scaleY > 0f
+            ) {
+                // The stream content is laid out inside this overlay's parent via
+                // x/y and scale, so map normalized contacts through that transform.
+                x = coordinateView.x + contact.x.coerceIn(0f, 1f) *
+                    coordinateView.width * coordinateView.scaleX
+                y = coordinateView.y + contact.y.coerceIn(0f, 1f) *
+                    coordinateView.height * coordinateView.scaleY
+            } else {
+                x = contact.x.coerceIn(0f, 1f) * width
+                y = contact.y.coerceIn(0f, 1f) * height
+            }
             contactFillPaint.color = if (touchpadPressed) 0xFF8AB4F8.toInt() else Color.WHITE
             contactStrokePaint.color = if (touchpadPressed) 0xFF8AB4F8.toInt() else Color.WHITE
             contactFillPaint.alpha = ((if (touchpadPressed) 92 else 42) * alpha).toInt()
@@ -172,9 +192,10 @@ class Ds5TouchpadFeedbackView(context: Context) : View(context) {
         val left = (width - pillWidth) / 2f
         val top = 24f * density
 
-        canvas.saveLayerAlpha(null, (255 * fade).toInt())
+        val pillBounds = RectF(left, top, left + pillWidth, top + pillHeight)
+        canvas.saveLayerAlpha(pillBounds, (255 * fade).toInt())
         canvas.drawRoundRect(
-            RectF(left, top, left + pillWidth, top + pillHeight),
+            pillBounds,
             18f * density,
             18f * density,
             pillPaint,

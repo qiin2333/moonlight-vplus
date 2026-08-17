@@ -324,6 +324,9 @@ class ControllerHandler(
         val capabilities: Short
     )
 
+    // Arrival metadata is written from USB driver threads and read/written from the
+    // main thread, so all access to these arrays must hold this lock.
+    private val arrivalMetadataLock = Any()
     private val controllerArrivalMetadata = arrayOfNulls<ControllerArrivalMetadata>(MAX_GAMEPADS.toInt())
     private val sentControllerArrivalMetadata = arrayOfNulls<ControllerArrivalMetadata>(MAX_GAMEPADS.toInt())
 
@@ -602,7 +605,9 @@ class ControllerHandler(
             val controllerNumber = context.controllerNumber.toInt() and 0xFF
             if ((activeMask.toInt() and (1 shl controllerNumber)) == 0) {
                 // The host removed this slot, so a reconnect must send a fresh arrival event.
-                sentControllerArrivalMetadata[controllerNumber] = null
+                synchronized(arrivalMetadataLock) {
+                    sentControllerArrivalMetadata[controllerNumber] = null
+                }
             }
         }
     }
@@ -1214,26 +1219,17 @@ class ControllerHandler(
     }
 
     /**
-     * Re-declare controller 0 when touchscreen touchpad emulation changes. This is also sent
-     * after the launch-time gamepad mask has reserved player 1, so Sunshine creates a DualSense
-     * with a touchpad instead of its legacy Xbox virtual controller.
+     * Declare controller 0 as a DualSense so the host creates a PlayStation controller
+     * with a touchpad instead of its legacy Xbox virtual controller. If a physical pad
+     * already owns player 1, its cached arrival metadata is re-declared with DS5
+     * capabilities; otherwise a bare default declaration reserves the slot.
      */
-    fun setScreenDs5TouchpadEnabled(enabled: Boolean): Int {
-        if (!enabled) {
-            screenDs5TouchpadPressed = false
+    fun declareScreenDs5TouchpadController(): Int {
+        synchronized(arrivalMetadataLock) {
+            val baseMetadata = controllerArrivalMetadata[0]
+                ?: ControllerArrivalMetadata(MoonBridge.LI_CTYPE_XBOX, 0, 0)
+            return sendControllerArrivalMetadataLocked(0, baseMetadata)
         }
-        val baseMetadata = controllerArrivalMetadata[0]
-        val activeMask = getActiveControllerMask()
-        if (!enabled && baseMetadata == null && (activeMask.toInt() and 1) == 0) {
-            sentControllerArrivalMetadata[0] = null
-            conn.sendControllerInput(0, activeMask, 0, 0, 0, 0, 0, 0, 0)
-            return 0
-        }
-
-        return sendControllerArrivalMetadata(
-            0,
-            baseMetadata ?: ControllerArrivalMetadata(MoonBridge.LI_CTYPE_XBOX, 0, 0)
-        )
     }
 
     /** Merge the screen clickpad state into controller 0 without replacing other inputs. */
@@ -1253,11 +1249,13 @@ class ControllerHandler(
         if (index !in controllerArrivalMetadata.indices) return -1
 
         val metadata = ControllerArrivalMetadata(type, supportedButtonFlags, capabilities)
-        controllerArrivalMetadata[index] = metadata
-        return sendControllerArrivalMetadata(index, metadata)
+        synchronized(arrivalMetadataLock) {
+            controllerArrivalMetadata[index] = metadata
+            return sendControllerArrivalMetadataLocked(index, metadata)
+        }
     }
 
-    private fun sendControllerArrivalMetadata(
+    private fun sendControllerArrivalMetadataLocked(
         controllerNumber: Int,
         baseMetadata: ControllerArrivalMetadata
     ): Int {

@@ -1085,10 +1085,11 @@ class TouchInputHandler(private val game: Game) {
             MotionEvent.ACTION_CANCEL -> {
                 val result = game.conn?.sendControllerTouchEvent(
                     0, MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, 0, 0f, 0f, 0f
-                ) ?: return false
-                val cancelSupported = result != MoonBridge.LI_ERR_UNSUPPORTED
-                if (cancelSupported) game.ds5TouchpadFeedbackView?.cancelAllContacts()
-                cancelSupported
+                )
+                // Clear local feedback even if the send failed, so recorded contacts
+                // don't linger on screen.
+                game.ds5TouchpadFeedbackView?.cancelAllContacts()
+                result != null && result != MoonBridge.LI_ERR_UNSUPPORTED
             }
             else -> sendPointer(event.actionIndex)
         }
