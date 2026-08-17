@@ -6,7 +6,7 @@ import org.junit.Test
 
 class QualcommLowLatencyPolicyTest {
     @Test
-    fun hdr10PlusWithOutputFenceDisablesPictureOrderAcrossAllAggressiveTries() {
+    fun hdr10PlusPreservationDisablesPictureOrderAcrossAllAggressiveTries() {
         for (tryNumber in 0..3) {
             assertFalse(
                 QualcommLowLatencyPolicy.shouldEnablePictureOrder(
@@ -24,19 +24,6 @@ class QualcommLowLatencyPolicyTest {
                 QualcommLowLatencyPolicy.shouldEnablePictureOrder(
                     tryNumber,
                     hdr10PlusModeSelected = false,
-                ),
-            )
-        }
-    }
-
-    @Test
-    fun hdr10PlusKeepsPictureOrderWhenOutputFenceIsDisabled() {
-        for (tryNumber in 0..3) {
-            assertTrue(
-                QualcommLowLatencyPolicy.shouldEnablePictureOrder(
-                    tryNumber,
-                    hdr10PlusModeSelected = true,
-                    outputFenceEnabled = false,
                 ),
             )
         }
