@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.content.edit
+import androidx.core.view.doOnLayout
 import com.google.gson.JsonArray
 import com.limelight.CustomKeyData
 import com.limelight.CustomKeyRepository
@@ -699,7 +700,7 @@ class GameMenu(
                 customKeys = getSavedCustomKeys()
             )
         )
-        val controllerFocusRequest = mutableIntStateOf(if (device != null) 1 else 0)
+        val hardwareFocusRequest = mutableIntStateOf(0)
         composeUiState = state
         bitrateCardController.start { bitrate ->
             composeUiState?.let { it.value = it.value.copy(bitrate = bitrate) }
@@ -712,7 +713,7 @@ class GameMenu(
         }
 
         val callbacks = GameMenuCallbacks(
-            onDismiss = { dialog.cancel() },
+            onDismiss = { handleDismissRequest(dialog) },
             iconForOption = ::getIconForMenuOption,
             onBack = { navigateBack() },
             onCrownToggle = ::toggleCrownFeature,
@@ -746,13 +747,15 @@ class GameMenu(
         )
 
         val composeView = ComposeView(game).apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
                 GameMenuScreen(
                     state = state.value,
                     callbacks = callbacks,
                     useFabricTexture = renderingProfile.useFabricTexture,
-                    controllerFocusRequestToken = controllerFocusRequest.intValue,
+                    hardwareFocusRequestToken = hardwareFocusRequest.intValue,
                     guideDismissController = guideDismissController
                 )
             }
@@ -771,10 +774,19 @@ class GameMenu(
             }
         })
 
+        dialog.setOnShowListener {
+            composeView.doOnLayout {
+                if (dialog.isShowing) {
+                    composeView.requestFocus()
+                    hardwareFocusRequest.intValue++
+                }
+            }
+        }
+
         // 返回键监听器
         dialog.setOnKeyListener { _, keyCode, event ->
             if (event.action == KeyEvent.ACTION_DOWN && isGameMenuNavigationKey(keyCode)) {
-                controllerFocusRequest.intValue++
+                hardwareFocusRequest.intValue++
             }
             if (UiDismissKeyHandler.handle(
                     event.action,

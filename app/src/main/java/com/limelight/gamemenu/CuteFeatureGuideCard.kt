@@ -120,7 +120,7 @@ internal fun CuteFeatureGuideCard(
     actionLabel: String,
     onAction: () -> Unit,
     onSkip: () -> Unit,
-    controllerFocusRequestToken: Int = 0
+    hardwareFocusRequestToken: Int = 0
 ) {
     val accent = colorResource(R.color.game_menu_accent)
     val ink = Color(0xFF4C4346)
@@ -144,13 +144,13 @@ internal fun CuteFeatureGuideCard(
     val bodyScrollState = rememberScrollState()
     val isTelevision = configuration.uiMode and Configuration.UI_MODE_TYPE_MASK ==
         Configuration.UI_MODE_TYPE_TELEVISION
-    val shouldRequestInitialFocus = controllerFocusRequestToken > 0 ||
+    val shouldRequestInitialFocus = hardwareFocusRequestToken > 0 ||
         isTelevision ||
         inputModeManager.inputMode == InputMode.Keyboard
     var isActionLaidOut by remember { mutableStateOf(false) }
 
     BackHandler(onBack = onSkip)
-    LaunchedEffect(isActionLaidOut, shouldRequestInitialFocus, controllerFocusRequestToken) {
+    LaunchedEffect(isActionLaidOut, shouldRequestInitialFocus, hardwareFocusRequestToken) {
         if (isActionLaidOut && shouldRequestInitialFocus) {
             inputModeManager.requestInputMode(InputMode.Keyboard)
             actionFocusRequester.requestFocus()

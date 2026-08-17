@@ -1,9 +1,11 @@
 package com.limelight.gamemenu
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
@@ -58,7 +60,7 @@ class GameMenuComposeTouchTest {
         composeTestRule.onNodeWithTag(GAME_MENU_PANEL_TAG).performTouchInput { click() }
         assertFalse(dismissed.get())
 
-        composeTestRule.onNodeWithTag(GAME_MENU_BACKDROP_TAG).performTouchInput {
+        composeTestRule.onNodeWithTag(GAME_MENU_BACKDROP_TAG, useUnmergedTree = true).performTouchInput {
             click(percentOffset(0.5f, 0.2f))
         }
         assertTrue(dismissed.get())
@@ -96,5 +98,29 @@ class GameMenuComposeTouchTest {
 
         assertTrue(scrollValue > 0)
         assertEquals(0.5f, sliderValue, 0.01f)
+    }
+
+    @Test
+    fun guideInputBlockerPreventsTouchesFromReachingMenu() {
+        val underlyingActionInvoked = AtomicBoolean(false)
+
+        composeTestRule.setContent {
+            Box(Modifier.fillMaxWidth().height(160.dp)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable { underlyingActionInvoked.set(true) }
+                )
+                GameMenuGuideInputBlocker()
+            }
+        }
+
+        composeTestRule.onNodeWithTag(
+            GAME_MENU_GUIDE_INPUT_BLOCKER_TAG,
+            useUnmergedTree = true
+        )
+            .performTouchInput { click() }
+
+        assertFalse(underlyingActionInvoked.get())
     }
 }

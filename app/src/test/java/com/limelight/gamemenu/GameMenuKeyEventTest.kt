@@ -45,6 +45,41 @@ class GameMenuKeyEventTest {
     }
 
     @Test
+    fun menuFocusWaitsUntilContentIsLaidOut() {
+        assertTrue(
+            !shouldRequestGameMenuFocus(
+                hardwareFocusRequestToken = 1,
+                guideActive = false,
+                hasOptions = true,
+                menuContentLaidOut = false,
+                menuHasFocus = false
+            )
+        )
+        assertTrue(
+            shouldRequestGameMenuFocus(
+                hardwareFocusRequestToken = 1,
+                guideActive = false,
+                hasOptions = true,
+                menuContentLaidOut = true,
+                menuHasFocus = false
+            )
+        )
+    }
+
+    @Test
+    fun hardwareNavigationDoesNotResetAnExistingMenuFocus() {
+        assertTrue(
+            !shouldRequestGameMenuFocus(
+                hardwareFocusRequestToken = 2,
+                guideActive = false,
+                hasOptions = true,
+                menuContentLaidOut = true,
+                menuHasFocus = true
+            )
+        )
+    }
+
+    @Test
     fun submenuBackOptionIsClickableAndKeepsDialogOpen() {
         var navigatedBack = false
         val option = createGameMenuBackOption("Back") {
