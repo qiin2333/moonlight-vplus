@@ -43,6 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -147,8 +148,9 @@ private data class GameMenuPalette(
 internal fun GameMenuScreen(
     state: GameMenuComposeUiState,
     callbacks: GameMenuCallbacks,
-    useFabricTexture: Boolean = true,
-    requestControllerFocus: Boolean = false
+    controllerFocusRequestToken: Int,
+    guideDismissController: GameMenuGuideDismissController,
+    useFabricTexture: Boolean = true
 ) {
     val palette = gameMenuPalette()
     val appContext = LocalContext.current.applicationContext
@@ -157,6 +159,7 @@ internal fun GameMenuScreen(
     val inputModeManager = LocalInputModeManager.current
     var guideStore by remember(appContext) { mutableStateOf<FeatureGuideStore?>(null) }
     var guidePending by remember(appContext) { mutableStateOf(false) }
+    var guideActive by remember(appContext) { mutableStateOf(false) }
     LaunchedEffect(appContext) {
         val (store, shouldShow) = withContext(Dispatchers.IO) {
             val loadedStore = FeatureGuideStore(appContext)
@@ -178,14 +181,20 @@ internal fun GameMenuScreen(
     } else {
         GAME_MENU_PORTRAIT_WIDTH_FRACTION
     }
+    val finishGuide = {
+        guideDismissController.clear()
+        guideStore?.markCompleted(FeatureGuideRegistry.GameMenuDiscovery)
+        guidePending = false
+        guideActive = false
+        showcaseState.dismiss()
+    }
+
+    DisposableEffect(guideDismissController) {
+        onDispose { guideDismissController.clear() }
+    }
 
     GameMenuTheme(palette) {
         SequenceShowcase(state = showcaseState) {
-            val finishGuide = {
-                guideStore?.markCompleted(FeatureGuideRegistry.GameMenuDiscovery)
-                guidePending = false
-                showcaseState.dismiss()
-            }
             val quickActionGuideModifier = Modifier.sequenceShowcaseTarget(
                 index = 0,
                 position = ShowcasePosition.Default,
@@ -199,7 +208,8 @@ internal fun GameMenuScreen(
                     body = stringResource(R.string.feature_guide_quick_actions_body),
                     actionLabel = stringResource(R.string.feature_guide_next),
                     onAction = showcaseState::next,
-                    onSkip = finishGuide
+                    onSkip = finishGuide,
+                    controllerFocusRequestToken = controllerFocusRequestToken
                 )
             }
             val crownGuideModifier = Modifier.sequenceShowcaseTarget(
@@ -215,7 +225,8 @@ internal fun GameMenuScreen(
                     body = stringResource(R.string.feature_guide_crown_body),
                     actionLabel = stringResource(R.string.feature_guide_done),
                     onAction = finishGuide,
-                    onSkip = finishGuide
+                    onSkip = finishGuide,
+                    controllerFocusRequestToken = controllerFocusRequestToken
                 )
             }
 
@@ -260,12 +271,14 @@ internal fun GameMenuScreen(
             // Consume the launch in this composition. "Maybe later" remains
             // incomplete in the store, so it can appear on a future menu visit.
             guidePending = false
+            guideActive = true
+            guideDismissController.register(finishGuide)
             showcaseState.start()
         }
     }
 
-    LaunchedEffect(requestControllerFocus, state.title, state.isSubmenu) {
-        if (requestControllerFocus && state.options.isNotEmpty()) {
+    LaunchedEffect(controllerFocusRequestToken, state.title, state.isSubmenu, guideActive) {
+        if (controllerFocusRequestToken > 0 && !guideActive && state.options.isNotEmpty()) {
             inputModeManager.requestInputMode(InputMode.Keyboard)
             initialFocusRequester.requestFocus()
         }

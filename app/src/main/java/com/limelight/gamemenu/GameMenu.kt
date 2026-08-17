@@ -19,7 +19,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentDialog
+import androidx.activity.OnBackPressedCallback
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -54,6 +56,18 @@ private fun Int.s(): Short = this.toShort()
 
 internal fun mapGameMenuConfirmKeyCode(keyCode: Int): Int {
     return if (keyCode == KeyEvent.KEYCODE_BUTTON_A) KeyEvent.KEYCODE_DPAD_CENTER else keyCode
+}
+
+internal fun isGameMenuNavigationKey(keyCode: Int): Boolean {
+    return keyCode == KeyEvent.KEYCODE_DPAD_UP ||
+        keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
+        keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
+        keyCode == KeyEvent.KEYCODE_DPAD_RIGHT ||
+        keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+        keyCode == KeyEvent.KEYCODE_ENTER ||
+        keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
+        keyCode == KeyEvent.KEYCODE_BUTTON_A ||
+        keyCode == KeyEvent.KEYCODE_TAB
 }
 
 internal fun createGameMenuBackOption(
@@ -102,6 +116,7 @@ class GameMenu(
     // 当前激活的对话框（如果有）
     private var activeDialog: ComponentDialog? = null
     private var composeUiState: MutableState<GameMenuComposeUiState>? = null
+    private val guideDismissController = GameMenuGuideDismissController()
     // 标志：上一次运行的选项是否打开了子菜单（由 showSubMenu 设置）
     private var lastActionOpenedSubmenu = false
     // 菜单历史栈，用于二级/多级菜单的回退
@@ -133,7 +148,7 @@ class GameMenu(
         val dialog = activeDialog ?: return false
         if (!dialog.isShowing) return false
         if (UiDismissKeyHandler.handle(event.action, event.keyCode) {
-                if (!navigateBack()) dialog.cancel()
+                handleDismissRequest(dialog)
             }
         ) {
             return true
@@ -684,6 +699,7 @@ class GameMenu(
                 customKeys = getSavedCustomKeys()
             )
         )
+        val controllerFocusRequest = mutableIntStateOf(if (device != null) 1 else 0)
         composeUiState = state
         bitrateCardController.start { bitrate ->
             composeUiState?.let { it.value = it.value.copy(bitrate = bitrate) }
@@ -736,7 +752,8 @@ class GameMenu(
                     state = state.value,
                     callbacks = callbacks,
                     useFabricTexture = renderingProfile.useFabricTexture,
-                    requestControllerFocus = device != null
+                    controllerFocusRequestToken = controllerFocusRequest.intValue,
+                    guideDismissController = guideDismissController
                 )
             }
         }
@@ -748,11 +765,24 @@ class GameMenu(
 
         setupDialogProperties(dialog)
 
+        dialog.onBackPressedDispatcher.addCallback(dialog, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                handleDismissRequest(dialog)
+            }
+        })
+
         // 返回键监听器
         dialog.setOnKeyListener { _, keyCode, event ->
-            if (UiDismissKeyHandler.handle(event.action, keyCode) {
-                if (!navigateBack()) dialog.cancel()
-            }) {
+            if (event.action == KeyEvent.ACTION_DOWN && isGameMenuNavigationKey(keyCode)) {
+                controllerFocusRequest.intValue++
+            }
+            if (UiDismissKeyHandler.handle(
+                    event.action,
+                    keyCode,
+                    onDismiss = { handleDismissRequest(dialog) },
+                    dismissOnBack = false
+                )
+            ) {
                 return@setOnKeyListener true
             }
             if (keyCode == KeyEvent.KEYCODE_BUTTON_A) {
@@ -766,6 +796,7 @@ class GameMenu(
         dialog.setOnDismissListener {
             if (this.activeDialog == dialog) this.activeDialog = null
             this.composeUiState = null
+            guideDismissController.clear()
             bitrateCardController.dispose()
             audioHapticsCardController.dispose()
             gyroCardController.dispose()
@@ -775,6 +806,11 @@ class GameMenu(
 
         dialog.show()
         applyDialogSize(dialog)
+    }
+
+    private fun handleDismissRequest(dialog: ComponentDialog) {
+        if (guideDismissController.dismissIfShowing()) return
+        if (!navigateBack()) dialog.cancel()
     }
 
     private fun handleComposeOptionClick(option: MenuOption, dialog: ComponentDialog) {

@@ -119,7 +119,8 @@ internal fun CuteFeatureGuideCard(
     body: String,
     actionLabel: String,
     onAction: () -> Unit,
-    onSkip: () -> Unit
+    onSkip: () -> Unit,
+    controllerFocusRequestToken: Int = 0
 ) {
     val accent = colorResource(R.color.game_menu_accent)
     val ink = Color(0xFF4C4346)
@@ -143,13 +144,15 @@ internal fun CuteFeatureGuideCard(
     val bodyScrollState = rememberScrollState()
     val isTelevision = configuration.uiMode and Configuration.UI_MODE_TYPE_MASK ==
         Configuration.UI_MODE_TYPE_TELEVISION
-    val shouldRequestInitialFocus = isTelevision || inputModeManager.inputMode == InputMode.Keyboard
+    val shouldRequestInitialFocus = controllerFocusRequestToken > 0 ||
+        isTelevision ||
+        inputModeManager.inputMode == InputMode.Keyboard
     var isActionLaidOut by remember { mutableStateOf(false) }
 
     BackHandler(onBack = onSkip)
-    LaunchedEffect(isActionLaidOut, shouldRequestInitialFocus) {
+    LaunchedEffect(isActionLaidOut, shouldRequestInitialFocus, controllerFocusRequestToken) {
         if (isActionLaidOut && shouldRequestInitialFocus) {
-            if (isTelevision) inputModeManager.requestInputMode(InputMode.Keyboard)
+            inputModeManager.requestInputMode(InputMode.Keyboard)
             actionFocusRequester.requestFocus()
         }
     }
@@ -241,6 +244,7 @@ internal fun CuteFeatureGuideCard(
                     shape = AppShapes.medium,
                     modifier = Modifier
                         .focusRequester(skipFocusRequester)
+                        .gamepadFocusOutline(AppShapes.medium)
                         .focusProperties {
                             left = skipFocusRequester
                             right = actionFocusRequester
@@ -268,6 +272,7 @@ internal fun CuteFeatureGuideCard(
                     modifier = Modifier
                         .focusRequester(actionFocusRequester)
                         .onGloballyPositioned { isActionLaidOut = true }
+                        .gamepadFocusOutline(AppShapes.medium)
                         .focusProperties {
                             left = skipFocusRequester
                             right = actionFocusRequester

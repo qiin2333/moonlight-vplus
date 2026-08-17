@@ -1,6 +1,5 @@
 package com.limelight.gamemenu
 
-import android.content.res.Configuration
 import android.view.KeyEvent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -15,7 +14,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -30,7 +28,6 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -151,24 +148,19 @@ class GameMenuComposeFocusTest {
     }
 
     @Test
-    fun featureGuideKeepsRemoteFocusOnItsActions() {
+    fun featureGuideKeepsControllerFocusOnItsActions() {
         val advanced = AtomicBoolean(false)
 
         composeTestRule.setContent {
-            val tvConfiguration = Configuration(LocalConfiguration.current).apply {
-                uiMode = uiMode and Configuration.UI_MODE_TYPE_MASK.inv() or
-                    Configuration.UI_MODE_TYPE_TELEVISION
-            }
-            CompositionLocalProvider(LocalConfiguration provides tvConfiguration) {
-                CuteFeatureGuideCard(
-                    eyebrow = "Guide",
-                    title = "Remote focus",
-                    body = "The action buttons should own directional focus.",
-                    actionLabel = "Next",
-                    onAction = { advanced.set(true) },
-                    onSkip = {}
-                )
-            }
+            CuteFeatureGuideCard(
+                eyebrow = "Guide",
+                title = "Controller focus",
+                body = "The action buttons should own directional focus.",
+                actionLabel = "Next",
+                onAction = { advanced.set(true) },
+                onSkip = {},
+                controllerFocusRequestToken = 1
+            )
         }
 
         val skipLabel = androidx.test.platform.app.InstrumentationRegistry

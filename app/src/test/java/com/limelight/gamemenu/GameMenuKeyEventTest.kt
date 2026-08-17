@@ -23,6 +23,28 @@ class GameMenuKeyEventTest {
     }
 
     @Test
+    fun controllerAndRemoteNavigationKeysRequestMenuFocus() {
+        assertTrue(isGameMenuNavigationKey(KeyEvent.KEYCODE_DPAD_DOWN))
+        assertTrue(isGameMenuNavigationKey(KeyEvent.KEYCODE_DPAD_CENTER))
+        assertTrue(isGameMenuNavigationKey(KeyEvent.KEYCODE_BUTTON_A))
+        assertTrue(isGameMenuNavigationKey(KeyEvent.KEYCODE_ENTER))
+        assertTrue(!isGameMenuNavigationKey(KeyEvent.KEYCODE_BUTTON_B))
+    }
+
+    @Test
+    fun guideDismissControllerConsumesOnlyTheActiveGuideOnce() {
+        val controller = GameMenuGuideDismissController()
+        var dismissCount = 0
+
+        controller.register { dismissCount++ }
+
+        assertTrue(controller.dismissIfShowing())
+        assertEquals(1, dismissCount)
+        assertTrue(!controller.dismissIfShowing())
+        assertEquals(1, dismissCount)
+    }
+
+    @Test
     fun submenuBackOptionIsClickableAndKeepsDialogOpen() {
         var navigatedBack = false
         val option = createGameMenuBackOption("Back") {
