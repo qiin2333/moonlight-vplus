@@ -98,12 +98,18 @@ import androidx.core.view.isNotEmpty
 import androidx.preference.PreferenceManager
 import kotlin.math.ceil
 
+internal fun shouldScheduleAppViewFeatureGuide(
+    alreadyScheduled: Boolean,
+    initialComputerStateLoaded: Boolean
+): Boolean = !alreadyScheduled && initialComputerStateLoaded
+
 class AppView : ComponentActivity(), AdapterFragmentCallbacks {
 
     // 主线程作用域，用于收集 ComputerManagerService 的 Flow。
     private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var pollingCollectJob: Job? = null
     private var featureGuideScheduled = false
+    private var initialComputerStateLoaded = false
 
     // ==================== 上下文菜单 ID ====================
     companion object {
@@ -353,11 +359,14 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
                 lastRunningAppId = details.runningGameId
                 updateUiWithServerinfo(details)
             }
+            initialComputerStateLoaded = true
+            maybeShowAppViewFeatureGuide()
             return
         }
 
         lastRunningAppId = details.runningGameId
         lastRawApplist = details.rawAppList
+        initialComputerStateLoaded = true
 
         try {
             updateUiWithAppList(NvHTTP.getAppListByReader(StringReader(details.rawAppList)))
@@ -372,6 +381,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         } catch (e: IOException) {
             e.printStackTrace()
         }
+        maybeShowAppViewFeatureGuide()
     }
 
     private fun shouldExitForNotPaired(details: ComputerDetails): Boolean {
@@ -506,9 +516,6 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         val label = findViewById<TextView>(R.id.appListText)
         title = computerName
         label.text = computerName
-        label.isClickable = false
-        label.isFocusable = false
-
         // 点击标题恢复串流
         label.setOnClickListener {
             LimeLog.info("Title clicked, lastRunningAppId=$lastRunningAppId")
@@ -522,6 +529,8 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
                 }
             }
         }
+        label.isClickable = false
+        label.isFocusable = false
 
         // Setup top panel toggle handle
         val topPanelToggle = findViewById<TextView>(R.id.topPanelToggle)
@@ -1377,7 +1386,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
     }
 
     private fun maybeShowAppViewFeatureGuide() {
-        if (featureGuideScheduled) return
+        if (!shouldScheduleAppViewFeatureGuide(featureGuideScheduled, initialComputerStateLoaded)) return
         featureGuideScheduled = true
         ViewFeatureGuide.showWhenReady(
             activity = this,
