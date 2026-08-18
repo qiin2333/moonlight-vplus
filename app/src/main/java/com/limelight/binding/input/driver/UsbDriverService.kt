@@ -33,6 +33,8 @@ class UsbDriverService : Service(), UsbDriverListener {
     private val binder = UsbDriverBinder()
 
     private val controllers = ArrayList<AbstractController>()
+    private val controllersLock = Any()
+    private val sessionOwner = UsbDriverSessionOwner()
 
     private var listener: UsbDriverListener? = null
     private var stateListener: UsbDriverStateListener? = null
@@ -56,7 +58,9 @@ class UsbDriverService : Service(), UsbDriverListener {
     }
 
     override fun deviceRemoved(controller: AbstractController) {
-        controllers.remove(controller)
+        synchronized(controllersLock) {
+            controllers.remove(controller)
+        }
         listener?.deviceRemoved(controller)
     }
 
@@ -99,7 +103,10 @@ class UsbDriverService : Service(), UsbDriverListener {
             this@UsbDriverService.listener = listener
 
             if (listener != null) {
-                for (controller in controllers) {
+                val controllerSnapshot = synchronized(controllersLock) {
+                    controllers.toList()
+                }
+                for (controller in controllerSnapshot) {
                     listener.deviceAdded(controller)
                 }
             }
@@ -113,6 +120,30 @@ class UsbDriverService : Service(), UsbDriverListener {
             this@UsbDriverService.start(claimAllAvailableOverride = null)
         }
 
+        fun attachSession(
+            listener: UsbDriverListener?,
+            stateListener: UsbDriverStateListener
+        ): Long {
+            val token = sessionOwner.acquire()
+            setListener(listener)
+            setStateListener(stateListener)
+            start()
+            return token
+        }
+
+        fun updateSessionListener(token: Long, listener: UsbDriverListener?) {
+            if (sessionOwner.owns(token)) {
+                setListener(listener)
+            }
+        }
+
+        fun releaseSession(token: Long) {
+            if (!sessionOwner.release(token)) return
+            setListener(null)
+            setStateListener(null)
+            stop()
+        }
+
         /**
          * Temporarily claims every supported USB controller for the shortcut test screen.
          * Returns true when at least one controller has started and will report readiness through
@@ -120,12 +151,12 @@ class UsbDriverService : Service(), UsbDriverListener {
          */
         fun startForDiagnostics(): Boolean {
             this@UsbDriverService.start(claimAllAvailableOverride = true)
-            return controllers.isNotEmpty()
+            return synchronized(controllersLock) { controllers.isNotEmpty() }
         }
 
         /** Returns whether a claimed controller is still active or initializing. */
         fun hasActiveControllers(): Boolean {
-            return controllers.isNotEmpty()
+            return synchronized(controllersLock) { controllers.isNotEmpty() }
         }
 
         fun stop() {
@@ -201,7 +232,9 @@ class UsbDriverService : Service(), UsbDriverListener {
                 return
             }
 
-            controllers.add(controller)
+            synchronized(controllersLock) {
+                controllers.add(controller)
+            }
         }
     }
 
@@ -282,8 +315,11 @@ class UsbDriverService : Service(), UsbDriverListener {
             receiverRegistered = false
         }
 
-        while (controllers.size > 0) {
-            runCatching { controllers.removeAt(0).stop() }.onFailure {
+        val controllersToStop = synchronized(controllersLock) {
+            controllers.toList().also { controllers.clear() }
+        }
+        for (controller in controllersToStop) {
+            runCatching { controller.stop() }.onFailure {
                 LimeLog.warning("Unable to stop USB controller: ${it.message}")
             }
         }
@@ -363,5 +399,27 @@ class UsbDriverService : Service(), UsbDriverListener {
                     ((!isRecognizedInputDevice(device) || claimAllAvailable) && DualSenseController.canClaimDevice(device)) ||
                     ((!isRecognizedInputDevice(device) || claimAllAvailable) && Dualshock4Controller.canClaimDevice(device))
         }
+    }
+}
+
+internal class UsbDriverSessionOwner {
+    private var nextToken = 0L
+    private var activeToken: Long? = null
+
+    @Synchronized
+    fun acquire(): Long {
+        val token = ++nextToken
+        activeToken = token
+        return token
+    }
+
+    @Synchronized
+    fun owns(token: Long): Boolean = activeToken == token
+
+    @Synchronized
+    fun release(token: Long): Boolean {
+        if (activeToken != token) return false
+        activeToken = null
+        return true
     }
 }
