@@ -35,7 +35,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -63,6 +62,8 @@ import com.limelight.ui.UiDismissKeyHandler
 import com.limelight.ui.theme.AppShapes
 
 internal const val FEATURE_GUIDE_CARD_TAG = "featureGuideCard"
+internal const val FEATURE_GUIDE_BODY_TAG = "featureGuideBody"
+internal const val FEATURE_GUIDE_ACTIONS_TAG = "featureGuideActions"
 
 internal data class CuteFeatureGuideLayoutSpec(
     val compact: Boolean,
@@ -113,8 +114,8 @@ internal fun cuteFeatureGuideLayoutSpec(
         CuteFeatureGuideLayoutSpec(
             compact = false,
             minimumWidthDp = 252,
-            maximumCardHeightDp = 260,
-            maximumHeightFraction = 0.88f,
+            maximumCardHeightDp = 320,
+            maximumHeightFraction = 0.72f,
             horizontalPaddingDp = 20,
             topPaddingDp = 56,
             titleSizeSp = 21,
@@ -154,7 +155,6 @@ internal fun CuteFeatureGuideCard(
     actionLabel: String,
     onAction: () -> Unit,
     onSkip: () -> Unit,
-    targetRect: Rect = Rect.Zero,
     hardwareFocusRequestToken: Int = 0
 ) {
     val accent = colorResource(R.color.game_menu_accent)
@@ -171,26 +171,10 @@ internal fun CuteFeatureGuideCard(
         val systemBarHeight = safeDrawingInsets.getTop(this) + safeDrawingInsets.getBottom(this)
         (LocalWindowInfo.current.containerSize.height - systemBarHeight).coerceAtLeast(1).toDp()
     }
-    val targetSideAvailableSpace = with(density) {
-        val containerHeight = LocalWindowInfo.current.containerSize.height.toFloat()
-        val edgeSpacing = 24.dp.toPx()
-        val above = targetRect.top - safeDrawingInsets.getTop(this) - edgeSpacing
-        val below = containerHeight - safeDrawingInsets.getBottom(this) - targetRect.bottom - edgeSpacing
-        above to below
-    }
-    val targetSideAvailableHeight = with(density) {
-        maxOf(targetSideAvailableSpace.first, targetSideAvailableSpace.second)
-            .coerceAtLeast(1f)
-            .toDp()
-    }
-    val cardContentAlignment = if (
-        targetSideAvailableSpace.second >= targetSideAvailableSpace.first
-    ) Alignment.TopStart else Alignment.BottomStart
     val layoutSpec = cuteFeatureGuideLayoutSpec(configuration.orientation, safeHeight.value)
     val maximumCardHeight = cuteFeatureGuideMaximumHeightDp(
         safeHeightDp = safeHeight.value,
         maximumHeightFraction = layoutSpec.maximumHeightFraction,
-        targetSideAvailableDp = targetSideAvailableHeight.value,
         preferredMaximumHeightDp = layoutSpec.maximumCardHeightDp.toFloat()
     ).dp
     val maximumBodyHeight = (
@@ -221,7 +205,7 @@ internal fun CuteFeatureGuideCard(
     Box {
         Box(
             modifier = Modifier
-                .align(cardContentAlignment)
+                .align(Alignment.TopStart)
                 .widthIn(min = layoutSpec.minimumWidthDp.dp, max = 316.dp)
                 .heightIn(max = maximumCardHeight)
                 .testTag(FEATURE_GUIDE_CARD_TAG)
@@ -272,6 +256,7 @@ internal fun CuteFeatureGuideCard(
             ) {
                 Column(
                     modifier = Modifier
+                        .testTag(FEATURE_GUIDE_BODY_TAG)
                         .verticalScroll(bodyScrollState)
                         .heightIn(max = maximumBodyHeight),
                     verticalArrangement = Arrangement.spacedBy(if (layoutSpec.compact) 3.dp else 5.dp)
@@ -302,7 +287,9 @@ internal fun CuteFeatureGuideCard(
                     Spacer(Modifier.height(2.dp))
                 }
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(FEATURE_GUIDE_ACTIONS_TAG),
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {

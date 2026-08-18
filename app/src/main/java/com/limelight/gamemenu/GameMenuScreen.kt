@@ -33,6 +33,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -169,6 +172,12 @@ internal fun GameMenuScreen(
     var guidePending by remember(appContext) { mutableStateOf(false) }
     var guideActive by remember(appContext) { mutableStateOf(false) }
     var menuContentLaidOut by remember(state.title, state.isSubmenu) { mutableStateOf(false) }
+    var quickActionGuideTargetLaidOut by remember(state.title, state.isSubmenu) {
+        mutableStateOf(false)
+    }
+    var crownGuideTargetLaidOut by remember(state.title, state.isSubmenu) {
+        mutableStateOf(false)
+    }
     var menuHasFocus by remember { mutableStateOf(false) }
     LaunchedEffect(appContext) {
         val (store, shouldShow) = withContext(Dispatchers.IO) {
@@ -207,11 +216,11 @@ internal fun GameMenuScreen(
         SequenceShowcase(state = showcaseState) {
             val quickActionGuideModifier = Modifier.sequenceShowcaseTarget(
                 index = 0,
-                position = ShowcasePosition.Default,
+                position = ShowcasePosition.Bottom,
                 alignment = ShowcaseAlignment.Start,
                 highlight = ShowcaseHighlight.Rectangular(12.dp),
                 backgroundAlpha = BackgroundAlpha.Dark
-            ) { targetRect ->
+            ) {
                 CuteFeatureGuideCard(
                     eyebrow = stringResource(R.string.feature_guide_step, 1, 2),
                     title = stringResource(R.string.feature_guide_quick_actions_title),
@@ -219,17 +228,18 @@ internal fun GameMenuScreen(
                     actionLabel = stringResource(R.string.feature_guide_next),
                     onAction = showcaseState::next,
                     onSkip = finishGuide,
-                    targetRect = targetRect,
                     hardwareFocusRequestToken = hardwareFocusRequestToken
                 )
+            }.onGloballyPositioned {
+                quickActionGuideTargetLaidOut = it.size.width > 0 && it.size.height > 0
             }
             val crownGuideModifier = Modifier.sequenceShowcaseTarget(
                 index = 1,
-                position = ShowcasePosition.Default,
+                position = ShowcasePosition.Bottom,
                 alignment = ShowcaseAlignment.End,
                 highlight = ShowcaseHighlight.Circular(targetMargin = 8.dp),
                 backgroundAlpha = BackgroundAlpha.Dark
-            ) { targetRect ->
+            ) {
                 CuteFeatureGuideCard(
                     eyebrow = stringResource(R.string.feature_guide_step, 2, 2),
                     title = stringResource(R.string.feature_guide_crown_title),
@@ -237,9 +247,10 @@ internal fun GameMenuScreen(
                     actionLabel = stringResource(R.string.feature_guide_done),
                     onAction = finishGuide,
                     onSkip = finishGuide,
-                    targetRect = targetRect,
                     hardwareFocusRequestToken = hardwareFocusRequestToken
                 )
+            }.onGloballyPositioned {
+                crownGuideTargetLaidOut = it.size.width > 0 && it.size.height > 0
             }
 
             GameMenuDialogShell(
@@ -284,8 +295,21 @@ internal fun GameMenuScreen(
         }
     }
 
-    LaunchedEffect(guidePending, state.isSubmenu) {
-        if (guidePending && !state.isSubmenu) {
+    LaunchedEffect(
+        guidePending,
+        state.isSubmenu,
+        menuContentLaidOut,
+        quickActionGuideTargetLaidOut,
+        crownGuideTargetLaidOut
+    ) {
+        if (shouldStartGameMenuGuide(
+                guidePending = guidePending,
+                isSubmenu = state.isSubmenu,
+                menuContentLaidOut = menuContentLaidOut,
+                quickActionTargetLaidOut = quickActionGuideTargetLaidOut,
+                crownTargetLaidOut = crownGuideTargetLaidOut
+            )
+        ) {
             // Consume the launch in this composition. "Maybe later" remains
             // incomplete in the store, so it can appear on a future menu visit.
             guidePending = false
@@ -315,6 +339,18 @@ internal fun GameMenuScreen(
         }
     }
 }
+
+internal fun shouldStartGameMenuGuide(
+    guidePending: Boolean,
+    isSubmenu: Boolean,
+    menuContentLaidOut: Boolean,
+    quickActionTargetLaidOut: Boolean,
+    crownTargetLaidOut: Boolean
+): Boolean = guidePending &&
+    !isSubmenu &&
+    menuContentLaidOut &&
+    quickActionTargetLaidOut &&
+    crownTargetLaidOut
 
 internal fun shouldRequestGameMenuFocus(
     hardwareFocusRequestToken: Int,
@@ -358,6 +394,7 @@ internal fun GameMenuDialogShell(
         Box(
             modifier = Modifier
                 .fillMaxWidth(widthFraction)
+                .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(horizontal = horizontalInset)
                 .testTag(GAME_MENU_PANEL_TAG)
                 .pointerInput(Unit) {

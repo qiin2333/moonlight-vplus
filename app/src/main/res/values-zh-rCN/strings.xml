@@ -508,6 +508,7 @@
     <string name="pcview_theme_light">浅色</string>
     <string name="pcview_theme_dark">深色</string>
     <string name="pcview_theme_applied">主题已切换为%1$s</string>
+    <string name="pcview_press_back_again_to_exit">再按一次返回键退出</string>
     <string name="title_enable_host_cadence_precise_sync">精确同步更顺滑</string>
     <string name="summary_enable_host_cadence_precise_sync">网络稳定时可减少规律性小卡顿，90/120 FPS 下更容易感觉到。可能增加约 1-3 ms 延迟。</string>
     <string name="title_perf_overlay_orientation">性能图层方向</string>

@@ -158,6 +158,23 @@ import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 
+internal class PcViewExitGate(private val timeoutMillis: Long = 2_000L) {
+    private var armedUntil = 0L
+
+    fun requestExit(nowMillis: Long): Boolean {
+        if (armedUntil != 0L && nowMillis <= armedUntil) {
+            armedUntil = 0L
+            return true
+        }
+        armedUntil = nowMillis + timeoutMillis
+        return false
+    }
+
+    fun cancel() {
+        armedUntil = 0L
+    }
+}
+
 class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, EasyTierController.VpnPermissionCallback {
 
     // Constants
@@ -219,6 +236,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     private var lastShakeTime = 0L
     private var activeSceneNumber: Int? = null
     private var pendingAddedComputerUuid: String? = null
+    private val exitGate = PcViewExitGate()
 
     // Helpers
     private lateinit var shortcutHelper: ShortcutHelper
@@ -380,8 +398,48 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         startShakeDetector()
     }
 
+    @Deprecated("Deprecated in Android")
+    override fun onBackPressed() {
+        requestPcViewExit()
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN &&
+            event.keyCode != KeyEvent.KEYCODE_BUTTON_B &&
+            event.keyCode != KeyEvent.KEYCODE_ESCAPE &&
+            event.keyCode != KeyEvent.KEYCODE_BACK
+        ) {
+            exitGate.cancel()
+        }
+
+        if (event.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
+            event.keyCode == KeyEvent.KEYCODE_ESCAPE
+        ) {
+            if (super.dispatchKeyEvent(event)) {
+                exitGate.cancel()
+                return true
+            }
+            return UiDismissKeyHandler.handle(
+                event.action,
+                event.keyCode,
+                ::requestPcViewExit,
+                dismissOnBack = false
+            )
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    private fun requestPcViewExit() {
+        if (exitGate.requestExit(SystemClock.uptimeMillis())) {
+            finish()
+        } else {
+            showToast(getString(R.string.pcview_press_back_again_to_exit))
+        }
+    }
+
     override fun onPause() {
         super.onPause()
+        exitGate.cancel()
         inForeground = false
         stopComputerUpdates(false)
 

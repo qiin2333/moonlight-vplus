@@ -162,9 +162,7 @@ object AboutDialogLauncher {
         dialog.setOnDismissListener {
             if (activeDialogs === state && state.ecosystem === dialog) {
                 state.ecosystem = null
-                if (state.main?.isShowing == true) {
-                    state.mainFocusRequestGeneration.intValue++
-                }
+                restoreMainDialogFocus(state)
                 clearStateIfEmpty(state)
             }
         }
@@ -371,6 +369,16 @@ object AboutDialogLauncher {
     private fun clearStateIfEmpty(state: ActiveDialogs) {
         if (state.main == null && state.ecosystem == null && activeDialogs === state) {
             activeDialogs = null
+        }
+    }
+
+    private fun restoreMainDialogFocus(state: ActiveDialogs) {
+        val main = state.main?.takeIf { it.isShowing } ?: return
+        main.window?.decorView?.post {
+            if (activeDialogs === state && state.ecosystem == null && main.isShowing) {
+                main.window?.decorView?.requestFocus()
+                state.mainFocusRequestGeneration.intValue++
+            }
         }
     }
 

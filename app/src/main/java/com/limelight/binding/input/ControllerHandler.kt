@@ -2426,6 +2426,23 @@ class ControllerHandler(
         }
     }
 
+    fun onExternalGameMenuOpened() {
+        for (i in 0 until usbDeviceContexts.size()) {
+            val context = usbDeviceContexts.valueAt(i)
+            val update = context.shortcutState.onGameMenuOpenedExternally()
+            handleUsbShortcutUpdate(context, update)
+            if (update.sendNeutralState) {
+                sendNeutralUsbControllerState(context)
+            }
+        }
+    }
+
+    fun onExternalGameMenuDismissed() {
+        for (i in 0 until usbDeviceContexts.size()) {
+            usbDeviceContexts.valueAt(i).onGameMenuDismissed()
+        }
+    }
+
     private fun usbMenuKeyCode(buttonFlag: Int): Int? {
         return when (buttonFlag) {
             ControllerPacket.UP_FLAG -> KeyEvent.KEYCODE_DPAD_UP

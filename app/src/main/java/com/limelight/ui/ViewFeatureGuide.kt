@@ -31,7 +31,10 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.limelight.R
+import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 
@@ -41,6 +44,72 @@ data class ViewFeatureGuideStep(
     val body: String
 ) {
     constructor(target: View, title: String, body: String) : this({ target }, title, body)
+}
+
+internal enum class FeatureGuideCardSide {
+    RIGHT,
+    LEFT,
+    BELOW,
+    ABOVE,
+    CENTER
+}
+
+internal data class FeatureGuideCardPlacement(
+    val left: Float,
+    val top: Float,
+    val side: FeatureGuideCardSide
+)
+
+internal fun calculateFeatureGuideCardPlacement(
+    overlayWidth: Float,
+    overlayHeight: Float,
+    targetLeft: Float,
+    targetTop: Float,
+    targetRight: Float,
+    targetBottom: Float,
+    cardWidth: Float,
+    cardHeight: Float,
+    edge: Float,
+    gap: Float,
+    safeLeft: Float = 0f,
+    safeTop: Float = 0f,
+    safeRight: Float = 0f,
+    safeBottom: Float = 0f
+): FeatureGuideCardPlacement {
+    val minLeft = safeLeft + edge
+    val minTop = safeTop + edge
+    val maxRight = overlayWidth - safeRight - edge
+    val maxBottom = overlayHeight - safeBottom - edge
+    val maxLeft = max(minLeft, maxRight - cardWidth)
+    val maxTop = max(minTop, maxBottom - cardHeight)
+    val centeredTop = ((targetTop + targetBottom - cardHeight) / 2f).coerceIn(minTop, maxTop)
+    val centeredLeft = ((targetLeft + targetRight - cardWidth) / 2f).coerceIn(minLeft, maxLeft)
+
+    val rightLeft = targetRight + gap
+    if (rightLeft + cardWidth <= maxRight) {
+        return FeatureGuideCardPlacement(rightLeft, centeredTop, FeatureGuideCardSide.RIGHT)
+    }
+
+    val leftLeft = targetLeft - gap - cardWidth
+    if (leftLeft >= minLeft) {
+        return FeatureGuideCardPlacement(leftLeft, centeredTop, FeatureGuideCardSide.LEFT)
+    }
+
+    val belowTop = targetBottom + gap
+    if (belowTop + cardHeight <= maxBottom) {
+        return FeatureGuideCardPlacement(centeredLeft, belowTop, FeatureGuideCardSide.BELOW)
+    }
+
+    val aboveTop = targetTop - gap - cardHeight
+    if (aboveTop >= minTop) {
+        return FeatureGuideCardPlacement(centeredLeft, aboveTop, FeatureGuideCardSide.ABOVE)
+    }
+
+    return FeatureGuideCardPlacement(
+        left = ((minLeft + maxRight - cardWidth) / 2f).coerceIn(minLeft, maxLeft),
+        top = ((minTop + maxBottom - cardHeight) / 2f).coerceIn(minTop, maxTop),
+        side = FeatureGuideCardSide.CENTER
+    )
 }
 
 object ViewFeatureGuide {
@@ -170,6 +239,11 @@ private class FeatureGuideOverlay(
     private val highlightRect = RectF()
     private val highlightEchoRect = RectF()
     private val cardRect = RectF()
+    private var cardSide = FeatureGuideCardSide.CENTER
+    private var safeLeft = 0f
+    private var safeTop = 0f
+    private var safeRight = 0f
+    private var safeBottom = 0f
     private val previousFocus = activity.currentFocus
     private val backCallback = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         OnBackInvokedCallback { dismiss(rememberChoice = true) }
@@ -300,14 +374,18 @@ private class FeatureGuideOverlay(
         val overlayHeight = MeasureSpec.getSize(heightMeasureSpec)
         setMeasuredDimension(overlayWidth, overlayHeight)
 
+        updateSafeInsets()
         val edge = dp(16f)
-        val cardWidth = min(dp(316f), overlayWidth - edge * 2f).toInt().coerceAtLeast(1)
+        val safeWidth = overlayWidth - safeLeft - safeRight - edge * 2f
+        val cardWidth = min(dp(316f), safeWidth).toInt().coerceAtLeast(1)
         contentColumn.measure(
             MeasureSpec.makeMeasureSpec(cardWidth, MeasureSpec.EXACTLY),
             MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED)
         )
         val naturalHeight = contentColumn.measuredHeight + dpInt(ACTION_HEIGHT_DP)
-        val availableHeight = (overlayHeight - edge * 2f).toInt().coerceAtLeast(1)
+        val availableHeight = (
+            overlayHeight - safeTop - safeBottom - edge * 2f
+        ).toInt().coerceAtLeast(1)
         val cardHeight = min(naturalHeight, availableHeight).coerceAtLeast(min(dpInt(150f), availableHeight))
         card.measure(
             MeasureSpec.makeMeasureSpec(cardWidth, MeasureSpec.EXACTLY),
@@ -320,24 +398,30 @@ private class FeatureGuideOverlay(
             scheduleDismiss()
             return
         }
-        val edge = dp(16f)
         val cardWidth = card.measuredWidth.toFloat()
         val cardHeight = card.measuredHeight.toFloat()
-        val cardLeft = (highlightRect.centerX() - cardWidth / 2f)
-            .coerceIn(edge, max(edge, width - edge - cardWidth))
-        val belowTop = highlightRect.bottom + dp(64f)
-        val aboveTop = highlightRect.top - dp(64f) - cardHeight
-        val preferredTop = when {
-            belowTop + cardHeight <= height - edge -> belowTop
-            aboveTop >= edge -> aboveTop
-            else -> ((height - cardHeight) / 2f).coerceAtLeast(edge)
-        }
-        val cardTop = preferredTop.coerceIn(edge, max(edge, height - edge - cardHeight))
+        val placement = calculateFeatureGuideCardPlacement(
+            overlayWidth = width.toFloat(),
+            overlayHeight = height.toFloat(),
+            targetLeft = highlightRect.left,
+            targetTop = highlightRect.top,
+            targetRight = highlightRect.right,
+            targetBottom = highlightRect.bottom,
+            cardWidth = cardWidth,
+            cardHeight = cardHeight,
+            edge = dp(16f),
+            gap = dp(64f),
+            safeLeft = safeLeft,
+            safeTop = safeTop,
+            safeRight = safeRight,
+            safeBottom = safeBottom
+        )
+        cardSide = placement.side
         card.layout(
-            cardLeft.toInt(),
-            cardTop.toInt(),
-            (cardLeft + cardWidth).toInt(),
-            (cardTop + cardHeight).toInt()
+            placement.left.toInt(),
+            placement.top.toInt(),
+            (placement.left + cardWidth).toInt(),
+            (placement.top + cardHeight).toInt()
         )
         cardRect.set(card.left.toFloat(), card.top.toFloat(), card.right.toFloat(), card.bottom.toFloat())
     }
@@ -411,6 +495,16 @@ private class FeatureGuideOverlay(
         return true
     }
 
+    private fun updateSafeInsets() {
+        val insets = ViewCompat.getRootWindowInsets(this)?.getInsets(
+            WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+        )
+        safeLeft = insets?.left?.toFloat() ?: 0f
+        safeTop = insets?.top?.toFloat() ?: 0f
+        safeRight = insets?.right?.toFloat() ?: 0f
+        safeBottom = insets?.bottom?.toFloat() ?: 0f
+    }
+
     private fun performPrimaryAction() {
         if (currentIndex == steps.lastIndex) {
             dismiss(rememberChoice = true)
@@ -436,20 +530,59 @@ private class FeatureGuideOverlay(
     }
 
     private fun drawLeader(canvas: Canvas) {
-        val cardBelow = cardRect.top > highlightRect.bottom
-        val startX = highlightRect.centerX()
-        val startY = if (cardBelow) highlightRect.bottom + dp(3f) else highlightRect.top - dp(3f)
-        val endX = cardRect.left + dp(76f)
-        val endY = if (cardBelow) cardRect.top - dp(7f) else cardRect.bottom + dp(7f)
-        val direction = if (cardBelow) 1f else -1f
-        val verticalDistance = kotlin.math.abs(endY - startY)
+        val cardInset = dp(24f)
+        val (startX, startY, endX, endY, horizontal) = when (cardSide) {
+            FeatureGuideCardSide.RIGHT -> LeaderGeometry(
+                highlightRect.right + dp(3f),
+                highlightRect.centerY(),
+                cardRect.left - dp(7f),
+                highlightRect.centerY().coerceIn(cardRect.top + cardInset, cardRect.bottom - cardInset),
+                true
+            )
+            FeatureGuideCardSide.LEFT -> LeaderGeometry(
+                highlightRect.left - dp(3f),
+                highlightRect.centerY(),
+                cardRect.right + dp(7f),
+                highlightRect.centerY().coerceIn(cardRect.top + cardInset, cardRect.bottom - cardInset),
+                true
+            )
+            FeatureGuideCardSide.BELOW -> LeaderGeometry(
+                highlightRect.centerX(),
+                highlightRect.bottom + dp(3f),
+                highlightRect.centerX().coerceIn(cardRect.left + cardInset, cardRect.right - cardInset),
+                cardRect.top - dp(7f),
+                false
+            )
+            FeatureGuideCardSide.ABOVE -> LeaderGeometry(
+                highlightRect.centerX(),
+                highlightRect.top - dp(3f),
+                highlightRect.centerX().coerceIn(cardRect.left + cardInset, cardRect.right - cardInset),
+                cardRect.bottom + dp(7f),
+                false
+            )
+            FeatureGuideCardSide.CENTER -> {
+                val horizontalFallback = kotlin.math.abs(cardRect.centerX() - highlightRect.centerX()) >=
+                    kotlin.math.abs(cardRect.centerY() - highlightRect.centerY())
+                if (horizontalFallback && cardRect.centerX() >= highlightRect.centerX()) {
+                    LeaderGeometry(highlightRect.right, highlightRect.centerY(), cardRect.left, cardRect.centerY(), true)
+                } else if (horizontalFallback) {
+                    LeaderGeometry(highlightRect.left, highlightRect.centerY(), cardRect.right, cardRect.centerY(), true)
+                } else if (cardRect.centerY() >= highlightRect.centerY()) {
+                    LeaderGeometry(highlightRect.centerX(), highlightRect.bottom, cardRect.centerX(), cardRect.top, false)
+                } else {
+                    LeaderGeometry(highlightRect.centerX(), highlightRect.top, cardRect.centerX(), cardRect.bottom, false)
+                }
+            }
+        }
         val path = Path().apply {
             moveTo(startX, startY)
-            cubicTo(
-                startX, startY + max(dp(28f), verticalDistance * 0.58f) * direction,
-                endX + dp(42f), endY - dp(22f) * direction,
-                endX, endY
-            )
+            if (horizontal) {
+                val middleX = (startX + endX) / 2f
+                cubicTo(middleX, startY, middleX, endY, endX, endY)
+            } else {
+                val middleY = (startY + endY) / 2f
+                cubicTo(startX, middleY, endX, middleY, endX, endY)
+            }
         }
         val pathMeasure = PathMeasure(path, false)
         val visibleLeader = Path()
@@ -463,10 +596,14 @@ private class FeatureGuideOverlay(
         canvas.drawPath(visibleLeader, leaderPaint)
         leaderPaint.pathEffect = null
 
-        val backX = 0.886f
-        val backY = -0.464f * direction
-        val sideX = 0.464f * direction
-        val sideY = 0.886f
+        val position = FloatArray(2)
+        val tangent = FloatArray(2)
+        pathMeasure.getPosTan(pathMeasure.length, position, tangent)
+        val magnitude = hypot(tangent[0], tangent[1]).coerceAtLeast(0.001f)
+        val backX = -tangent[0] / magnitude
+        val backY = -tangent[1] / magnitude
+        val sideX = -backY
+        val sideY = backX
         val wingLength = dp(13f)
         val wingSpread = dp(5.5f)
         val arrow = Path().apply {
@@ -476,6 +613,14 @@ private class FeatureGuideOverlay(
         }
         canvas.drawPath(arrow, leaderPaint)
     }
+
+    private data class LeaderGeometry(
+        val startX: Float,
+        val startY: Float,
+        val endX: Float,
+        val endY: Float,
+        val horizontal: Boolean
+    )
 
     private fun paperPath(rect: RectF): Path {
         val wobble = dp(2f)
@@ -563,9 +708,7 @@ private class FeatureGuideOverlay(
     }
 
     private fun selectableBackground(): Drawable? {
-        val value = TypedValue()
-        activity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, value, true)
-        return ContextCompat.getDrawable(activity, value.resourceId)
+        return ContextCompat.getDrawable(activity, R.drawable.feature_guide_action_bg)
     }
 
     private fun dp(value: Float): Float = value * density

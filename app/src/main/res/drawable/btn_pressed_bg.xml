@@ -8,8 +8,8 @@
                     android:viewportWidth="24"
                     android:viewportHeight="24">
                     <path
-                        android:fillColor="@color/ui_shell_accent_soft"
-                        android:pathData="M12,12 L24,0 L24,24 Z"
+                        android:fillColor="@color/ui_shell_accent"
+                        android:pathData="M3,12 L24,0 L24,24 Z"
                         android:strokeColor="@color/scene_btn_stroke"
                         android:strokeWidth="2" />
                 </vector>
@@ -26,8 +26,8 @@
                     android:viewportWidth="24"
                     android:viewportHeight="24">
                     <path
-                        android:fillColor="@color/ui_shell_accent_focus"
-                        android:pathData="M12,12 L24,0 L24,24 Z"
+                        android:fillColor="@color/ui_shell_accent"
+                        android:pathData="M3,12 L24,0 L24,24 Z"
                         android:strokeColor="@color/scene_btn_stroke"
                         android:strokeWidth="2" />
                 </vector>

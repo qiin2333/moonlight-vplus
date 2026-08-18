@@ -27,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.content.edit
+import androidx.core.view.WindowCompat
 import androidx.core.view.doOnLayout
 import com.google.gson.JsonArray
 import com.limelight.CustomKeyData
@@ -1112,12 +1113,17 @@ class GameMenu(
 
     private fun setupDialogProperties(dialog: ComponentDialog) {
         dialog.window?.let { window ->
+            WindowCompat.setDecorFitsSystemWindows(window, false)
             val layoutParams = window.attributes
             layoutParams.alpha = renderingProfile.windowAlpha
             layoutParams.dimAmount = DIALOG_DIM_AMOUNT
             layoutParams.width = WindowManager.LayoutParams.MATCH_PARENT
             layoutParams.height = WindowManager.LayoutParams.MATCH_PARENT
             layoutParams.gravity = android.view.Gravity.FILL
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                layoutParams.layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
             window.attributes = layoutParams
             window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             window.setBackgroundDrawable(

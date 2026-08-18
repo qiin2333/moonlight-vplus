@@ -79,13 +79,40 @@ class CuteFeatureGuideLayoutSpecTest {
 
     @Test
     fun largeWindowUsesReadingHeightCap() {
+        val spec = cuteFeatureGuideLayoutSpec(
+            orientation = Configuration.ORIENTATION_LANDSCAPE,
+            safeHeightDp = 1200f
+        )
         val maximumHeight = cuteFeatureGuideMaximumHeightDp(
             safeHeightDp = 1200f,
-            maximumHeightFraction = 0.88f,
+            maximumHeightFraction = spec.maximumHeightFraction,
             targetSideAvailableDp = 900f,
-            preferredMaximumHeightDp = 260f
+            preferredMaximumHeightDp = spec.maximumCardHeightDp.toFloat()
         )
 
-        assertTrue(maximumHeight <= 260f)
+        assertTrue(maximumHeight <= 320f)
+        assertTrue(maximumHeight < 1200f * 0.5f)
+    }
+
+    @Test
+    fun guideWaitsForMenuAndEveryShowcaseTarget() {
+        assertFalse(
+            shouldStartGameMenuGuide(
+                guidePending = true,
+                isSubmenu = false,
+                menuContentLaidOut = true,
+                quickActionTargetLaidOut = true,
+                crownTargetLaidOut = false
+            )
+        )
+        assertTrue(
+            shouldStartGameMenuGuide(
+                guidePending = true,
+                isSubmenu = false,
+                menuContentLaidOut = true,
+                quickActionTargetLaidOut = true,
+                crownTargetLaidOut = true
+            )
+        )
     }
 }

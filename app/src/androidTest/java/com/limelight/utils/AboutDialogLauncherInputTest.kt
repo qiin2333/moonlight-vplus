@@ -146,7 +146,7 @@ class AboutDialogLauncherInputTest {
         assertEquals(0, recreated.ecosystemFocusIndex)
 
         sendKey(KeyEvent.KEYCODE_BUTTON_B)
-        sendKey(KeyEvent.KEYCODE_DPAD_RIGHT)
+        sendKey(KeyEvent.KEYCODE_DPAD_DOWN)
         assertEquals(2, AboutDialogLauncher.dialogSnapshot()?.mainFocusIndex)
     }
 

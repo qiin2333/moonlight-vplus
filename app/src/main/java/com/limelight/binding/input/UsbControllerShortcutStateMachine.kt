@@ -210,6 +210,31 @@ internal class UsbControllerShortcutStateMachine(
     }
 
     @Synchronized
+    fun onGameMenuOpenedExternally(): Update {
+        val actions = buildList {
+            add(Action.CANCEL_LONG_PRESS)
+            if (hintVisible) add(Action.HIDE_HINT)
+        }
+        hintVisible = false
+        startDownTimeMs = 0L
+        startGestureResolved = true
+        menuPending = false
+        menuActive = true
+        waitForRelease = false
+        exitPending = false
+        ignoreMenuTriggerBUntilRelease = false
+        pendingMenuOpenRequestId = null
+        pendingMenuPressedFlags = 0
+        val heldMenuButtons = lastButtonFlags and MENU_BUTTON_MASK
+        return Update(
+            actions = actions,
+            menuButtonChanges = buildMenuButtonChanges(heldMenuButtons, heldMenuButtons),
+            consumeAllInput = true,
+            sendNeutralState = markHostNeutralStateRequired()
+        )
+    }
+
+    @Synchronized
     fun onGameMenuUnavailable() {
         menuPending = false
         menuActive = false

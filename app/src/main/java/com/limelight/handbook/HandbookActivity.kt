@@ -61,6 +61,8 @@ class HandbookActivity : ComponentActivity() {
     private lateinit var rootView: View
     private lateinit var previousPageButton: ImageButton
     private lateinit var nextPageButton: ImageButton
+    private lateinit var retryButton: Button
+    private lateinit var exitButton: ImageButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -92,10 +94,14 @@ class HandbookActivity : ComponentActivity() {
         }
         ViewCompat.requestApplyInsets(rootView)
 
-        findViewById<Button>(R.id.handbook_retry).setOnClickListener {
+        retryButton = findViewById(R.id.handbook_retry)
+        exitButton = findViewById(R.id.handbook_exit_button)
+        loadingView.isFocusable = true
+        loadingView.isFocusableInTouchMode = true
+        retryButton.setOnClickListener {
             loadPage(currentPage)
         }
-        findViewById<ImageButton>(R.id.handbook_exit_button).setOnClickListener {
+        exitButton.setOnClickListener {
             finish()
         }
         previousPageButton.setOnClickListener {
@@ -103,6 +109,17 @@ class HandbookActivity : ComponentActivity() {
         }
         nextPageButton.setOnClickListener {
             navigateHistoryBy(1)
+        }
+        bindGamepadConfirm(retryButton)
+        bindGamepadConfirm(exitButton)
+        bindGamepadConfirm(previousPageButton)
+        bindGamepadConfirm(nextPageButton)
+        exitButton.nextFocusRightId = previousPageButton.id
+        previousPageButton.nextFocusLeftId = exitButton.id
+        previousPageButton.nextFocusRightId = nextPageButton.id
+        nextPageButton.nextFocusLeftId = previousPageButton.id
+        rootView.post {
+            if (!rootView.isInTouchMode) loadingView.requestFocus()
         }
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -113,6 +130,36 @@ class HandbookActivity : ComponentActivity() {
         restoreNavigationHistory(savedInstanceState)
         updateNavigationButtons()
         UiHelper.notifyNewRootView(this)
+    }
+
+    private fun bindGamepadConfirm(view: View) {
+        view.setOnKeyListener { _, keyCode, event ->
+            if (keyCode != android.view.KeyEvent.KEYCODE_BUTTON_A) {
+                false
+            } else {
+                if (event.action == android.view.KeyEvent.ACTION_UP) view.performClick()
+                true
+            }
+        }
+    }
+
+    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent): Boolean {
+        if (keyCode == android.view.KeyEvent.KEYCODE_BUTTON_B ||
+            keyCode == android.view.KeyEvent.KEYCODE_ESCAPE
+        ) {
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: android.view.KeyEvent): Boolean {
+        if (keyCode == android.view.KeyEvent.KEYCODE_BUTTON_B ||
+            keyCode == android.view.KeyEvent.KEYCODE_ESCAPE
+        ) {
+            finish()
+            return true
+        }
+        return super.onKeyUp(keyCode, event)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -256,14 +303,21 @@ class HandbookActivity : ComponentActivity() {
     }
 
     private fun showLoading() {
+        val moveFocusToLoading = !rootView.isInTouchMode && (
+            currentFocus == null ||
+                currentFocus === handbookWebView ||
+                isDescendantOf(currentFocus, contentContainer)
+            )
         pendingContent = null
         handbookWebView?.visibility = View.INVISIBLE
         contentContainer.visibility = View.INVISIBLE
         errorView.visibility = View.GONE
         loadingView.visibility = View.VISIBLE
+        if (moveFocusToLoading) loadingView.post { loadingView.requestFocus() }
     }
 
     private fun showError(reason: HandbookFailureReason) {
+        val moveFocusToRetry = !rootView.isInTouchMode && loadingView.hasFocus()
         pendingContent = null
         handbookWebView?.visibility = View.INVISIBLE
         contentContainer.visibility = View.INVISIBLE
@@ -276,6 +330,7 @@ class HandbookActivity : ComponentActivity() {
             }
         )
         errorView.visibility = View.VISIBLE
+        if (moveFocusToRetry) retryButton.post { retryButton.requestFocus() }
     }
 
     private fun showContent(content: HandbookLoadResult.Success) {
@@ -287,6 +342,7 @@ class HandbookActivity : ComponentActivity() {
         webView: LockedHandbookWebView,
         content: HandbookLoadResult.Success
     ) {
+        val moveFocusToContent = !rootView.isInTouchMode && loadingView.hasFocus()
         pendingContent = null
         webView.renderStartedAtMs = SystemClock.elapsedRealtime()
         webView.visibility = View.VISIBLE
@@ -299,6 +355,7 @@ class HandbookActivity : ComponentActivity() {
             "UTF-8",
             content.baseUrl
         )
+        if (moveFocusToContent) webView.post { webView.requestFocus() }
     }
 
     private fun ensureWebView(): LockedHandbookWebView {
@@ -311,6 +368,13 @@ class HandbookActivity : ComponentActivity() {
             onOpenExternal = { BrowserOnlyLauncher.open(this, it) }
         ).also { webView ->
             handbookWebView = webView
+            webView.id = View.generateViewId()
+            webView.nextFocusUpId = exitButton.id
+            webView.nextFocusLeftId = webView.id
+            webView.nextFocusRightId = webView.id
+            exitButton.nextFocusDownId = webView.id
+            previousPageButton.nextFocusDownId = webView.id
+            nextPageButton.nextFocusDownId = webView.id
             webView.onDocumentRendered = {
                 loadingView.visibility = View.GONE
                 errorView.visibility = View.GONE
@@ -329,6 +393,15 @@ class HandbookActivity : ComponentActivity() {
             )
             pendingContent?.let { displayContent(webView, it) }
         }
+    }
+
+    private fun isDescendantOf(view: View?, ancestor: ViewGroup): Boolean {
+        var current = view
+        while (current != null) {
+            if (current === ancestor) return true
+            current = current.parent as? View
+        }
+        return false
     }
 }
 
