@@ -3,6 +3,7 @@ package com.limelight
 
 import android.graphics.Point
 import android.os.Build
+import android.view.HapticFeedbackConstants
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
@@ -12,6 +13,7 @@ import com.limelight.binding.input.touch.NativeTouchContext
 import com.limelight.binding.input.touch.RelativeTouchContext
 import com.limelight.binding.input.touch.TouchContext
 import com.limelight.binding.input.touchpad.NonRootTouchpadHandler
+import com.limelight.binding.input.touchpad.ScreenDs5PressureClickDetector
 import com.limelight.binding.input.virtual_controller.VirtualController
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.input.MouseButtonPacket
@@ -91,6 +93,8 @@ class TouchInputHandler(private val game: Game) {
     var detectMouseMiddleDown = false     // 键盘处理也会读写
     private val nonRootTouchpadHandler = NonRootTouchpadHandler()
     private val penPointerCoords = MotionEvent.PointerCoords()
+    private val screenDs5PressureClickDetector = ScreenDs5PressureClickDetector()
+    private var screenDs5PressurePointerId = MotionEvent.INVALID_POINTER_ID
 
     // ---- 公共入口 ----
 
@@ -440,6 +444,10 @@ class TouchInputHandler(private val game: Game) {
                 lastButtonState = buttonState
             } else {
                 // This case is for fingers
+                if (game.prefConfig.screenDs5Touchpad && trySendScreenDs5TouchpadEvent(view, event)) {
+                    return true
+                }
+
                 if (game.getisTouchOverrideEnabled()) {
                     game.panZoomHandler.handleTouchEvent(event)
                     return true
@@ -1043,6 +1051,107 @@ class TouchInputHandler(private val game: Game) {
             }
         }
     }
+
+    /** Forward touchscreen contacts through controller 0 as DualSense touchpad contacts. */
+    private fun trySendScreenDs5TouchpadEvent(view: View?, event: MotionEvent): Boolean {
+        val eventType = getLiTouchTypeFromEvent(event)
+        if (eventType < 0 || eventType == MoonBridge.LI_TOUCH_EVENT_BUTTON_ONLY) return false
+
+        fun sendPointer(pointerIndex: Int): Boolean {
+            val position = getStreamViewRelativeNormalizedXY(view, event, pointerIndex)
+            // Linux's DS5 backend currently uses pressure to distinguish contact/release.
+            val pressure = when (eventType) {
+                MoonBridge.LI_TOUCH_EVENT_DOWN, MoonBridge.LI_TOUCH_EVENT_MOVE -> 1f
+                else -> 0f
+            }
+            val result = game.conn?.sendControllerTouchEvent(
+                0, eventType, event.getPointerId(pointerIndex),
+                position[0], position[1], pressure
+            ) ?: return false
+            val supported = result != MoonBridge.LI_ERR_UNSUPPORTED
+            if (supported) {
+                game.ds5TouchpadFeedbackView?.updateContact(
+                    eventType,
+                    event.getPointerId(pointerIndex),
+                    position[0],
+                    position[1],
+                )
+            }
+            return supported
+        }
+
+        val supported = when (event.actionMasked) {
+            MotionEvent.ACTION_MOVE -> (0 until event.pointerCount).all(::sendPointer)
+            MotionEvent.ACTION_CANCEL -> {
+                val result = game.conn?.sendControllerTouchEvent(
+                    0, MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, 0, 0f, 0f, 0f
+                )
+                // Clear local feedback even if the send failed, so recorded contacts
+                // don't linger on screen.
+                game.ds5TouchpadFeedbackView?.cancelAllContacts()
+                result != null && result != MoonBridge.LI_ERR_UNSUPPORTED
+            }
+            else -> sendPointer(event.actionIndex)
+        }
+        if (supported || event.actionMasked == MotionEvent.ACTION_UP ||
+            event.actionMasked == MotionEvent.ACTION_CANCEL
+        ) {
+            updateScreenDs5TouchpadPress(view ?: game.streamView, event)
+        }
+        if (supported && event.actionMasked == MotionEvent.ACTION_DOWN) {
+            (view ?: game.streamView).performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+        }
+        return supported
+    }
+
+    private fun updateScreenDs5TouchpadPress(view: View, event: MotionEvent) {
+        val transition = when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                screenDs5PressurePointerId = event.getPointerId(event.actionIndex)
+                screenDs5PressureClickDetector.begin(
+                    event.getPressure(event.actionIndex),
+                    event.getSize(event.actionIndex),
+                    event.isDeepPress(),
+                )
+            }
+            MotionEvent.ACTION_MOVE,
+            MotionEvent.ACTION_POINTER_DOWN -> updateTrackedScreenPressure(event)
+            MotionEvent.ACTION_POINTER_UP -> {
+                if (event.getPointerId(event.actionIndex) == screenDs5PressurePointerId) {
+                    screenDs5PressurePointerId = MotionEvent.INVALID_POINTER_ID
+                    screenDs5PressureClickDetector.end()
+                } else {
+                    updateTrackedScreenPressure(event)
+                }
+            }
+            MotionEvent.ACTION_UP,
+            MotionEvent.ACTION_CANCEL -> {
+                screenDs5PressurePointerId = MotionEvent.INVALID_POINTER_ID
+                screenDs5PressureClickDetector.end()
+            }
+            else -> null
+        } ?: return
+
+        game.controllerHandler.setScreenDs5TouchpadPressed(transition)
+        game.ds5TouchpadFeedbackView?.setTouchpadPressed(transition)
+        if (transition) {
+            view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+        }
+    }
+
+    private fun updateTrackedScreenPressure(event: MotionEvent): Boolean? {
+        val pointerIndex = event.findPointerIndex(screenDs5PressurePointerId)
+        if (pointerIndex < 0) return screenDs5PressureClickDetector.end()
+        return screenDs5PressureClickDetector.update(
+            event.getPressure(pointerIndex),
+            event.getSize(pointerIndex),
+            event.isDeepPress(),
+        )
+    }
+
+    private fun MotionEvent.isDeepPress(): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            classification == MotionEvent.CLASSIFICATION_DEEP_PRESS
 
     private fun multiFingerTapChecker(event: MotionEvent) {
         if (event.pointerCount == game.prefConfig.nativeTouchFingersToToggleKeyboard) {
