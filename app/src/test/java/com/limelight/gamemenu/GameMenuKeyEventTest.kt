@@ -29,6 +29,11 @@ class GameMenuKeyEventTest {
         assertTrue(isGameMenuNavigationKey(KeyEvent.KEYCODE_BUTTON_A))
         assertTrue(isGameMenuNavigationKey(KeyEvent.KEYCODE_ENTER))
         assertTrue(!isGameMenuNavigationKey(KeyEvent.KEYCODE_BUTTON_B))
+        assertTrue(isGameMenuNavigationKey(KeyEvent.KEYCODE_DPAD_UP_LEFT))
+        assertEquals(
+            KeyEvent.KEYCODE_DPAD_UP,
+            mapGameMenuConfirmKeyCode(KeyEvent.KEYCODE_DPAD_UP_RIGHT)
+        )
     }
 
     @Test

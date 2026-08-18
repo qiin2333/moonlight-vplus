@@ -249,6 +249,9 @@ internal class UsbControllerShortcutStateMachine(
         menuPending && pendingMenuOpenRequestId == requestId
 
     @Synchronized
+    fun isMenuActive(): Boolean = menuActive
+
+    @Synchronized
     fun reset(): Update {
         val actions = buildList {
             add(Action.CANCEL_LONG_PRESS)

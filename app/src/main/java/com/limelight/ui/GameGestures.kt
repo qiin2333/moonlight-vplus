@@ -8,6 +8,13 @@ interface GameGestures {
     fun showGameMenu(device: GameInputDevice?)
     fun showGameMenuFromUsb(device: GameInputDevice): Boolean
     fun dispatchUsbControllerMenuKey(event: KeyEvent): Boolean
+    fun dispatchUsbControllerMenuAxes(
+        controllerId: Int,
+        leftStickX: Float,
+        leftStickY: Float,
+        rightStickX: Float,
+        rightStickY: Float
+    ): Boolean
     fun showUsbControllerShortcutHint()
     fun hideUsbControllerShortcutHint()
 }

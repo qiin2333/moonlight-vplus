@@ -459,6 +459,7 @@ class InputDeviceContext(handler: ControllerHandler) : GenericControllerContext(
 class UsbDeviceContext(handler: ControllerHandler) : GenericControllerContext(handler) {
     var device: AbstractController? = null
     internal val menuKeyDownTimes = ConcurrentHashMap<Int, Long>()
+    internal val menuAxisNavigationState = MenuAxisNavigationState()
     internal val shortcutState = UsbControllerShortcutStateMachine()
     internal val shortcutLongPressRunnable = Runnable {
         handler.onUsbShortcutLongPress(this)
@@ -466,12 +467,14 @@ class UsbDeviceContext(handler: ControllerHandler) : GenericControllerContext(ha
 
     override fun destroy() {
         menuKeyDownTimes.clear()
+        menuAxisNavigationState.reset()
         handler.releaseUsbShortcutState(this)
         super.destroy()
     }
 
     override fun onGameMenuDismissed() {
         menuKeyDownTimes.clear()
+        menuAxisNavigationState.reset()
         shortcutState.onGameMenuUnavailable()
     }
 

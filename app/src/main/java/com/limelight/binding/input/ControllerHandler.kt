@@ -58,6 +58,9 @@ class ControllerHandler(
         const val PERFORMANCE_OVERLAY_COMBO_FLAGS: Int = ControllerPacket.BACK_FLAG or
             ControllerPacket.LB_FLAG or ControllerPacket.RB_FLAG or ControllerPacket.X_FLAG
 
+        private val USB_MENU_DIRECTION_MASK = ControllerPacket.UP_FLAG or
+            ControllerPacket.DOWN_FLAG or ControllerPacket.LEFT_FLAG or ControllerPacket.RIGHT_FLAG
+
         private const val EMULATING_SPECIAL = 0x1
         private const val EMULATING_SELECT = 0x2
         private const val EMULATING_TOUCHPAD = 0x4
@@ -2537,6 +2540,31 @@ class ControllerHandler(
         )
         handleUsbShortcutUpdate(context, shortcutUpdate)
         if (shortcutUpdate.consumeAllInput) {
+            if (context.shortcutState.isMenuActive()) {
+                val digitalDirectionPressed = buttonFlags and USB_MENU_DIRECTION_MASK != 0
+                val menuLeftX = if (digitalDirectionPressed) 0f else leftStickX
+                val menuLeftY = if (digitalDirectionPressed) 0f else leftStickY
+                val menuRightX = if (digitalDirectionPressed) 0f else rightStickX
+                val menuRightY = if (digitalDirectionPressed) 0f else rightStickY
+                val axisTransition = context.menuAxisNavigationState.update(
+                    listOf(menuLeftX to menuLeftY, menuRightX to menuRightY)
+                )
+                if (axisTransition.changed) {
+                    mainThreadHandler.post {
+                        if (stopped) return@post
+                        if (!gestures.dispatchUsbControllerMenuAxes(
+                                controllerId,
+                                menuLeftX,
+                                menuLeftY,
+                                menuRightX,
+                                menuRightY
+                            )
+                        ) {
+                            context.shortcutState.onGameMenuUnavailable()
+                        }
+                    }
+                }
+            }
             if (shortcutUpdate.sendNeutralState) {
                 sendNeutralUsbControllerState(context)
             }

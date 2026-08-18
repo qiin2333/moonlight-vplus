@@ -8,8 +8,11 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
+import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -39,6 +42,7 @@ import com.limelight.R
 import com.limelight.StreamActionExecutor
 import com.limelight.binding.input.GameInputDevice
 import com.limelight.binding.input.KeyboardTranslator
+import com.limelight.binding.input.MenuAxisNavigationState
 import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.element.ElementController
 import com.limelight.nvstream.NvConnection
@@ -58,7 +62,14 @@ import java.util.ArrayDeque
 private fun Int.s(): Short = this.toShort()
 
 internal fun mapGameMenuConfirmKeyCode(keyCode: Int): Int {
-    return if (keyCode == KeyEvent.KEYCODE_BUTTON_A) KeyEvent.KEYCODE_DPAD_CENTER else keyCode
+    return when (keyCode) {
+        KeyEvent.KEYCODE_BUTTON_A -> KeyEvent.KEYCODE_DPAD_CENTER
+        KeyEvent.KEYCODE_DPAD_UP_LEFT,
+        KeyEvent.KEYCODE_DPAD_UP_RIGHT -> KeyEvent.KEYCODE_DPAD_UP
+        KeyEvent.KEYCODE_DPAD_DOWN_LEFT,
+        KeyEvent.KEYCODE_DPAD_DOWN_RIGHT -> KeyEvent.KEYCODE_DPAD_DOWN
+        else -> keyCode
+    }
 }
 
 internal fun isGameMenuNavigationKey(keyCode: Int): Boolean {
@@ -66,6 +77,10 @@ internal fun isGameMenuNavigationKey(keyCode: Int): Boolean {
         keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
         keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
         keyCode == KeyEvent.KEYCODE_DPAD_RIGHT ||
+        keyCode == KeyEvent.KEYCODE_DPAD_UP_LEFT ||
+        keyCode == KeyEvent.KEYCODE_DPAD_UP_RIGHT ||
+        keyCode == KeyEvent.KEYCODE_DPAD_DOWN_LEFT ||
+        keyCode == KeyEvent.KEYCODE_DPAD_DOWN_RIGHT ||
         keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
         keyCode == KeyEvent.KEYCODE_ENTER ||
         keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
@@ -125,6 +140,24 @@ class GameMenu(
     // 菜单历史栈，用于二级/多级菜单的回退
     private val menuStack: ArrayDeque<MenuPage> = ArrayDeque()
     private val handler = Handler(Looper.getMainLooper())
+    private val axisNavigationStates = mutableMapOf<Int, MenuAxisNavigationState>()
+    private var activeAxisSourceId: Int? = null
+    private var activeAxisKeyCode: Int? = null
+    private var activeAxisDownTime = 0L
+    private var activeAxisRepeatCount = 0
+    private val axisRepeatRunnable = object : Runnable {
+        override fun run() {
+            val keyCode = activeAxisKeyCode ?: return
+            val dialog = activeDialog ?: return
+            if (!dialog.isShowing) return
+            activeAxisRepeatCount++
+            val now = SystemClock.uptimeMillis()
+            dialog.dispatchKeyEvent(
+                KeyEvent(activeAxisDownTime, now, KeyEvent.ACTION_DOWN, keyCode, activeAxisRepeatCount)
+            )
+            handler.postDelayed(this, AXIS_REPEAT_INTERVAL_MS)
+        }
+    }
     private val gameFocusActionRunner = GameFocusActionRunner(
         canRun = { !game.isFinishing },
         hasGameFocus = game::hasWindowFocus,
@@ -158,6 +191,60 @@ class GameMenu(
         }
         dialog.dispatchKeyEvent(event)
         return true
+    }
+
+    fun dispatchControllerAxes(
+        sourceId: Int,
+        axisPairs: List<Pair<Float, Float>>
+    ): Boolean {
+        val dialog = activeDialog ?: return false
+        if (!dialog.isShowing) return false
+        val state = axisNavigationStates.getOrPut(sourceId) { MenuAxisNavigationState() }
+        val transition = state.update(axisPairs)
+        if (!transition.changed) return true
+
+        if (transition.pressedKeyCode != null) {
+            activateAxisSource(sourceId, transition.pressedKeyCode, dialog)
+        } else if (activeAxisSourceId == sourceId) {
+            releaseActiveAxisKey(dialog)
+            val fallback = axisNavigationStates.entries.firstOrNull { it.value.activeKeyCode != null }
+            if (fallback != null) {
+                activateAxisSource(fallback.key, fallback.value.activeKeyCode!!, dialog)
+            }
+        }
+        return true
+    }
+
+    private fun activateAxisSource(sourceId: Int, keyCode: Int, dialog: ComponentDialog) {
+        if (activeAxisSourceId == sourceId && activeAxisKeyCode == keyCode) return
+        releaseActiveAxisKey(dialog)
+        activeAxisSourceId = sourceId
+        activeAxisKeyCode = keyCode
+        activeAxisDownTime = SystemClock.uptimeMillis()
+        activeAxisRepeatCount = 0
+        dialog.dispatchKeyEvent(
+            KeyEvent(activeAxisDownTime, activeAxisDownTime, KeyEvent.ACTION_DOWN, keyCode, 0)
+        )
+        handler.postDelayed(axisRepeatRunnable, AXIS_REPEAT_INITIAL_DELAY_MS)
+    }
+
+    private fun releaseActiveAxisKey(dialog: ComponentDialog? = activeDialog) {
+        handler.removeCallbacks(axisRepeatRunnable)
+        val keyCode = activeAxisKeyCode
+        if (keyCode != null && dialog?.isShowing == true) {
+            val now = SystemClock.uptimeMillis()
+            dialog.dispatchKeyEvent(
+                KeyEvent(activeAxisDownTime, now, KeyEvent.ACTION_UP, keyCode, 0)
+            )
+        }
+        activeAxisSourceId = null
+        activeAxisKeyCode = null
+        activeAxisRepeatCount = 0
+    }
+
+    private fun resetAxisNavigation(dialog: ComponentDialog? = activeDialog) {
+        releaseActiveAxisKey(dialog)
+        axisNavigationStates.clear()
     }
 
     /**
@@ -794,7 +881,28 @@ class GameMenu(
                 )
             }
         }
-        dialog = ComponentDialog(game, R.style.GameMenuDialogStyle).apply {
+        dialog = object : ComponentDialog(game, R.style.GameMenuDialogStyle) {
+            override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+                if (event.source and InputDevice.SOURCE_CLASS_JOYSTICK != 0) {
+                    val rightX = preferredAxisValue(event, MotionEvent.AXIS_Z, MotionEvent.AXIS_RX)
+                    val rightY = preferredAxisValue(event, MotionEvent.AXIS_RZ, MotionEvent.AXIS_RY)
+                    if (dispatchControllerAxes(
+                            sourceId = event.deviceId,
+                            axisPairs = listOf(
+                                event.getAxisValue(MotionEvent.AXIS_HAT_X) to
+                                    event.getAxisValue(MotionEvent.AXIS_HAT_Y),
+                                event.getAxisValue(MotionEvent.AXIS_X) to
+                                    event.getAxisValue(MotionEvent.AXIS_Y),
+                                rightX to rightY
+                            )
+                        )
+                    ) {
+                        return true
+                    }
+                }
+                return super.dispatchGenericMotionEvent(event)
+            }
+        }.apply {
             setContentView(composeView)
             setCanceledOnTouchOutside(true)
         }
@@ -831,7 +939,7 @@ class GameMenu(
             ) {
                 return@setOnKeyListener true
             }
-            if (keyCode == KeyEvent.KEYCODE_BUTTON_A) {
+            if (mapGameMenuConfirmKeyCode(keyCode) != keyCode) {
                 dialog.dispatchKeyEvent(mapGameMenuConfirmKeyEvent(event))
                 return@setOnKeyListener true
             }
@@ -840,6 +948,7 @@ class GameMenu(
 
         // 关闭时清理状态
         dialog.setOnDismissListener {
+            resetAxisNavigation(dialog)
             if (this.activeDialog == dialog) this.activeDialog = null
             this.composeUiState = null
             guideDismissController.clear()
@@ -1541,6 +1650,8 @@ class GameMenu(
 
     companion object {
         private const val GAME_FOCUS_RETRY_DELAY_MS = 10L
+        private const val AXIS_REPEAT_INITIAL_DELAY_MS = 350L
+        private const val AXIS_REPEAT_INTERVAL_MS = 90L
         private const val DIALOG_DIM_AMOUNT = 0.0f
         private const val PREF_NAME = "custom_special_keys"
         private const val KEY_NAME = "data"
@@ -1576,5 +1687,14 @@ class GameMenu(
             // Android versions intentionally hide these vector menu icons.
             return 0
         }
+    }
+}
+
+private fun preferredAxisValue(event: MotionEvent, primaryAxis: Int, fallbackAxis: Int): Float {
+    val device = event.device
+    return if (device?.getMotionRange(primaryAxis, event.source) != null) {
+        event.getAxisValue(primaryAxis)
+    } else {
+        event.getAxisValue(fallbackAxis)
     }
 }

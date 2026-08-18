@@ -2581,6 +2581,27 @@ class Game : Activity(), SurfaceHolder.Callback,
         return activeGameMenu === menu && menu.isShowing()
     }
 
+    override fun dispatchUsbControllerMenuAxes(
+        controllerId: Int,
+        leftStickX: Float,
+        leftStickY: Float,
+        rightStickX: Float,
+        rightStickY: Float
+    ): Boolean {
+        val menu = activeGameMenu ?: return false
+        if (!menu.dispatchControllerAxes(
+                sourceId = Int.MIN_VALUE + controllerId,
+                axisPairs = listOf(
+                    leftStickX to leftStickY,
+                    rightStickX to rightStickY
+                )
+            )
+        ) {
+            return false
+        }
+        return activeGameMenu === menu && menu.isShowing()
+    }
+
     override fun showUsbControllerShortcutHint() {
         controllerShortcutHintView?.apply {
             visibility = View.VISIBLE
