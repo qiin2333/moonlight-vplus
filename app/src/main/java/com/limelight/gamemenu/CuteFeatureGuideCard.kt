@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -45,6 +44,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -62,9 +62,12 @@ import com.limelight.R
 import com.limelight.ui.UiDismissKeyHandler
 import com.limelight.ui.theme.AppShapes
 
+internal const val FEATURE_GUIDE_CARD_TAG = "featureGuideCard"
+
 internal data class CuteFeatureGuideLayoutSpec(
     val compact: Boolean,
     val minimumWidthDp: Int,
+    val maximumCardHeightDp: Int,
     val maximumHeightFraction: Float,
     val horizontalPaddingDp: Int,
     val topPaddingDp: Int,
@@ -84,6 +87,7 @@ internal fun cuteFeatureGuideLayoutSpec(
         CuteFeatureGuideLayoutSpec(
             compact = true,
             minimumWidthDp = if (portrait) 232 else 220,
+            maximumCardHeightDp = 220,
             maximumHeightFraction = if (portrait) 0.62f else 0.72f,
             horizontalPaddingDp = 16,
             topPaddingDp = 40,
@@ -96,6 +100,7 @@ internal fun cuteFeatureGuideLayoutSpec(
         CuteFeatureGuideLayoutSpec(
             compact = false,
             minimumWidthDp = 240,
+            maximumCardHeightDp = 260,
             maximumHeightFraction = 0.72f,
             horizontalPaddingDp = 18,
             topPaddingDp = 48,
@@ -108,6 +113,7 @@ internal fun cuteFeatureGuideLayoutSpec(
         CuteFeatureGuideLayoutSpec(
             compact = false,
             minimumWidthDp = 252,
+            maximumCardHeightDp = 260,
             maximumHeightFraction = 0.88f,
             horizontalPaddingDp = 20,
             topPaddingDp = 56,
@@ -122,11 +128,13 @@ internal fun cuteFeatureGuideLayoutSpec(
 internal fun cuteFeatureGuideMaximumHeightDp(
     safeHeightDp: Float,
     maximumHeightFraction: Float,
-    targetSideAvailableDp: Float = Float.POSITIVE_INFINITY
+    targetSideAvailableDp: Float = Float.POSITIVE_INFINITY,
+    preferredMaximumHeightDp: Float = Float.POSITIVE_INFINITY
 ): Float {
     val availableHeight = minOf(
         (safeHeightDp - 8f).coerceAtLeast(1f),
-        targetSideAvailableDp.coerceAtLeast(1f)
+        targetSideAvailableDp.coerceAtLeast(1f),
+        preferredMaximumHeightDp.coerceAtLeast(1f)
     )
     val minimumHeight = minOf(160f, availableHeight)
     return (safeHeightDp * maximumHeightFraction).coerceIn(minimumHeight, availableHeight)
@@ -163,19 +171,31 @@ internal fun CuteFeatureGuideCard(
         val systemBarHeight = safeDrawingInsets.getTop(this) + safeDrawingInsets.getBottom(this)
         (LocalWindowInfo.current.containerSize.height - systemBarHeight).coerceAtLeast(1).toDp()
     }
-    val targetSideAvailableHeight = with(density) {
+    val targetSideAvailableSpace = with(density) {
         val containerHeight = LocalWindowInfo.current.containerSize.height.toFloat()
         val edgeSpacing = 24.dp.toPx()
         val above = targetRect.top - safeDrawingInsets.getTop(this) - edgeSpacing
         val below = containerHeight - safeDrawingInsets.getBottom(this) - targetRect.bottom - edgeSpacing
-        maxOf(above, below).coerceAtLeast(1f).toDp()
+        above to below
     }
+    val targetSideAvailableHeight = with(density) {
+        maxOf(targetSideAvailableSpace.first, targetSideAvailableSpace.second)
+            .coerceAtLeast(1f)
+            .toDp()
+    }
+    val cardContentAlignment = if (
+        targetSideAvailableSpace.second >= targetSideAvailableSpace.first
+    ) Alignment.TopStart else Alignment.BottomStart
     val layoutSpec = cuteFeatureGuideLayoutSpec(configuration.orientation, safeHeight.value)
     val maximumCardHeight = cuteFeatureGuideMaximumHeightDp(
         safeHeightDp = safeHeight.value,
         maximumHeightFraction = layoutSpec.maximumHeightFraction,
-        targetSideAvailableDp = targetSideAvailableHeight.value
+        targetSideAvailableDp = targetSideAvailableHeight.value,
+        preferredMaximumHeightDp = layoutSpec.maximumCardHeightDp.toFloat()
     ).dp
+    val maximumBodyHeight = (
+        maximumCardHeight - layoutSpec.topPaddingDp.dp - 64.dp
+    ).coerceAtLeast(40.dp)
     val bodyScrollState = rememberScrollState()
     val isTelevision = configuration.uiMode and Configuration.UI_MODE_TYPE_MASK ==
         Configuration.UI_MODE_TYPE_TELEVISION
@@ -198,138 +218,143 @@ internal fun CuteFeatureGuideCard(
         }
     }
 
-    Box(
-        modifier = Modifier
-            .widthIn(min = layoutSpec.minimumWidthDp.dp, max = 316.dp)
-            .heightIn(max = maximumCardHeight)
-            .onFocusChanged { guideHasFocus = it.hasFocus }
-            .focusGroup()
-            .onPreviewKeyEvent { event ->
-                UiDismissKeyHandler.handle(
-                    event.nativeKeyEvent.action,
-                    event.nativeKeyEvent.keyCode,
-                    onSkip
-                )
-            }
-            .drawBehind {
-                val leaderSpace = 34.dp.toPx()
-                val wobble = 2.dp.toPx()
-                val paperPath = Path().apply {
-                    moveTo(7.dp.toPx(), leaderSpace + wobble)
-                    lineTo(size.width * 0.24f, leaderSpace)
-                    lineTo(size.width * 0.49f, leaderSpace + wobble)
-                    lineTo(size.width * 0.75f, leaderSpace - 1.dp.toPx())
-                    lineTo(size.width - 7.dp.toPx(), leaderSpace + wobble)
-                    quadraticTo(size.width, leaderSpace + 8.dp.toPx(), size.width - 1.dp.toPx(), leaderSpace + 16.dp.toPx())
-                    lineTo(size.width, size.height - 9.dp.toPx())
-                    quadraticTo(size.width - 2.dp.toPx(), size.height, size.width - 12.dp.toPx(), size.height)
-                    lineTo(size.width * 0.72f, size.height - 1.dp.toPx())
-                    lineTo(size.width * 0.46f, size.height)
-                    lineTo(size.width * 0.20f, size.height - 2.dp.toPx())
-                    lineTo(7.dp.toPx(), size.height)
-                    quadraticTo(0f, size.height - 6.dp.toPx(), 1.dp.toPx(), size.height - 15.dp.toPx())
-                    lineTo(0f, leaderSpace + 11.dp.toPx())
-                    quadraticTo(1.dp.toPx(), leaderSpace + 4.dp.toPx(), 7.dp.toPx(), leaderSpace + wobble)
-                    close()
+    Box {
+        Box(
+            modifier = Modifier
+                .align(cardContentAlignment)
+                .widthIn(min = layoutSpec.minimumWidthDp.dp, max = 316.dp)
+                .heightIn(max = maximumCardHeight)
+                .testTag(FEATURE_GUIDE_CARD_TAG)
+                .onFocusChanged { guideHasFocus = it.hasFocus }
+                .focusGroup()
+                .onPreviewKeyEvent { event ->
+                    UiDismissKeyHandler.handle(
+                        event.nativeKeyEvent.action,
+                        event.nativeKeyEvent.keyCode,
+                        onSkip
+                    )
                 }
-                drawPath(paperPath, paper)
-                drawPath(paperPath, Color(0xFFD8CABC), style = Stroke(1.1.dp.toPx()))
-            }
-    ) {
-        PaperNoteConnector(Modifier.fillMaxSize(), accent)
-        Column(
-            modifier = Modifier.padding(
-                start = layoutSpec.horizontalPaddingDp.dp,
-                end = layoutSpec.horizontalPaddingDp.dp,
-                top = layoutSpec.topPaddingDp.dp,
-                bottom = 8.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(if (layoutSpec.compact) 3.dp else 5.dp)
+                .drawBehind {
+                    val leaderSpace = 34.dp.toPx()
+                    val wobble = 2.dp.toPx()
+                    val paperPath = Path().apply {
+                        moveTo(7.dp.toPx(), leaderSpace + wobble)
+                        lineTo(size.width * 0.24f, leaderSpace)
+                        lineTo(size.width * 0.49f, leaderSpace + wobble)
+                        lineTo(size.width * 0.75f, leaderSpace - 1.dp.toPx())
+                        lineTo(size.width - 7.dp.toPx(), leaderSpace + wobble)
+                        quadraticTo(size.width, leaderSpace + 8.dp.toPx(), size.width - 1.dp.toPx(), leaderSpace + 16.dp.toPx())
+                        lineTo(size.width, size.height - 9.dp.toPx())
+                        quadraticTo(size.width - 2.dp.toPx(), size.height, size.width - 12.dp.toPx(), size.height)
+                        lineTo(size.width * 0.72f, size.height - 1.dp.toPx())
+                        lineTo(size.width * 0.46f, size.height)
+                        lineTo(size.width * 0.20f, size.height - 2.dp.toPx())
+                        lineTo(7.dp.toPx(), size.height)
+                        quadraticTo(0f, size.height - 6.dp.toPx(), 1.dp.toPx(), size.height - 15.dp.toPx())
+                        lineTo(0f, leaderSpace + 11.dp.toPx())
+                        quadraticTo(1.dp.toPx(), leaderSpace + 4.dp.toPx(), 7.dp.toPx(), leaderSpace + wobble)
+                        close()
+                    }
+                    drawPath(paperPath, paper)
+                    drawPath(paperPath, Color(0xFFD8CABC), style = Stroke(1.1.dp.toPx()))
+                }
         ) {
+            PaperNoteConnector(Modifier.matchParentSize(), accent)
             Column(
                 modifier = Modifier
-                    .weight(1f, fill = false)
-                    .verticalScroll(bodyScrollState),
+                    .padding(
+                        start = layoutSpec.horizontalPaddingDp.dp,
+                        end = layoutSpec.horizontalPaddingDp.dp,
+                        top = layoutSpec.topPaddingDp.dp,
+                        bottom = 8.dp
+                    ),
                 verticalArrangement = Arrangement.spacedBy(if (layoutSpec.compact) 3.dp else 5.dp)
             ) {
-                Text(
-                    text = eyebrow,
-                    color = accent,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.7.sp
-                )
-                Text(
-                    text = title,
-                    color = ink,
-                    fontSize = layoutSpec.titleSizeSp.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = 0.5.sp,
-                    lineHeight = layoutSpec.titleLineHeightSp.sp
-                )
-                HandDrawnUnderline(accent)
-                Text(
-                    text = body,
-                    color = mutedInk,
-                    fontSize = layoutSpec.bodySizeSp.sp,
-                    letterSpacing = 0.3.sp,
-                    lineHeight = layoutSpec.bodyLineHeightSp.sp
-                )
-                Spacer(Modifier.height(2.dp))
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(
-                    onClick = onSkip,
-                    shape = AppShapes.medium,
+                Column(
                     modifier = Modifier
-                        .focusRequester(skipFocusRequester)
-                        .gamepadFocusOutline(AppShapes.medium)
-                        .focusProperties {
-                            left = skipFocusRequester
-                            right = actionFocusRequester
-                            up = skipFocusRequester
-                            down = skipFocusRequester
-                        }
+                        .verticalScroll(bodyScrollState)
+                        .heightIn(max = maximumBodyHeight),
+                    verticalArrangement = Arrangement.spacedBy(if (layoutSpec.compact) 3.dp else 5.dp)
                 ) {
                     Text(
-                        text = stringResource(R.string.feature_guide_skip),
-                        color = mutedInk,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium,
-                        letterSpacing = 0.5.sp
-                    )
-                }
-                Text(
-                    text = "│",
-                    modifier = Modifier.clearAndSetSemantics { },
-                    color = Color(0xFFD8CABC),
-                    fontSize = 15.sp
-                )
-                TextButton(
-                    onClick = onAction,
-                    shape = AppShapes.medium,
-                    modifier = Modifier
-                        .focusRequester(actionFocusRequester)
-                        .onGloballyPositioned { isActionLaidOut = true }
-                        .gamepadFocusOutline(AppShapes.medium)
-                        .focusProperties {
-                            left = skipFocusRequester
-                            right = actionFocusRequester
-                            up = actionFocusRequester
-                            down = actionFocusRequester
-                        }
-                ) {
-                    Text(
-                        text = actionLabel,
+                        text = eyebrow,
                         color = accent,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium,
-                        letterSpacing = 0.5.sp
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.7.sp
                     )
+                    Text(
+                        text = title,
+                        color = ink,
+                        fontSize = layoutSpec.titleSizeSp.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 0.5.sp,
+                        lineHeight = layoutSpec.titleLineHeightSp.sp
+                    )
+                    HandDrawnUnderline(accent)
+                    Text(
+                        text = body,
+                        color = mutedInk,
+                        fontSize = layoutSpec.bodySizeSp.sp,
+                        letterSpacing = 0.3.sp,
+                        lineHeight = layoutSpec.bodyLineHeightSp.sp
+                    )
+                    Spacer(Modifier.height(2.dp))
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(
+                        onClick = onSkip,
+                        shape = AppShapes.medium,
+                        modifier = Modifier
+                            .focusRequester(skipFocusRequester)
+                            .gamepadFocusOutline(AppShapes.medium)
+                            .focusProperties {
+                                left = skipFocusRequester
+                                right = actionFocusRequester
+                                up = skipFocusRequester
+                                down = skipFocusRequester
+                            }
+                    ) {
+                        Text(
+                            text = stringResource(R.string.feature_guide_skip),
+                            color = mutedInk,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                    Text(
+                        text = "│",
+                        modifier = Modifier.clearAndSetSemantics { },
+                        color = Color(0xFFD8CABC),
+                        fontSize = 15.sp
+                    )
+                    TextButton(
+                        onClick = onAction,
+                        shape = AppShapes.medium,
+                        modifier = Modifier
+                            .focusRequester(actionFocusRequester)
+                            .onGloballyPositioned { isActionLaidOut = true }
+                            .gamepadFocusOutline(AppShapes.medium)
+                            .focusProperties {
+                                left = skipFocusRequester
+                                right = actionFocusRequester
+                                up = actionFocusRequester
+                                down = actionFocusRequester
+                            }
+                    ) {
+                        Text(
+                            text = actionLabel,
+                            color = accent,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
                 }
             }
         }

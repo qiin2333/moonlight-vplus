@@ -76,4 +76,16 @@ class CuteFeatureGuideLayoutSpecTest {
         assertTrue(maximumHeight <= 260f)
         assertTrue(maximumHeight > 0f)
     }
+
+    @Test
+    fun largeWindowUsesReadingHeightCap() {
+        val maximumHeight = cuteFeatureGuideMaximumHeightDp(
+            safeHeightDp = 1200f,
+            maximumHeightFraction = 0.88f,
+            targetSideAvailableDp = 900f,
+            preferredMaximumHeightDp = 260f
+        )
+
+        assertTrue(maximumHeight <= 260f)
+    }
 }

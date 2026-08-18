@@ -31,10 +31,12 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
@@ -268,6 +270,39 @@ class GameMenuComposeFocusTest {
             pressKey(Key.Enter)
         }
         assertTrue(advanced.get())
+    }
+
+    @Test
+    fun featureGuideDecorationDoesNotExpandCardToMaximumHeight() {
+        var maximumCardHeightPx = 0f
+        composeTestRule.setContent {
+            maximumCardHeightPx = with(LocalDensity.current) { 260.dp.toPx() }
+            CuteFeatureGuideCard(
+                eyebrow = "Guide",
+                title = "Compact content",
+                body = "Short guide copy should determine the card height.",
+                actionLabel = "Next",
+                onAction = {},
+                onSkip = {}
+            )
+        }
+
+        val cardHeight = composeTestRule
+            .onNodeWithTag(FEATURE_GUIDE_CARD_TAG)
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .height
+        val rootHeight = composeTestRule
+            .onRoot()
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .height
+
+        assertTrue(
+            "Guide decoration must not force the card to fill its height constraint " +
+                "(card=$cardHeight, maximum=$maximumCardHeightPx, root=$rootHeight)",
+            cardHeight <= maximumCardHeightPx + 1f
+        )
     }
 
     @Test
