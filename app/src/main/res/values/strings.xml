@@ -1062,6 +1062,7 @@
     <string name="game_menu_trackpad_tap_behavior">Single-finger tap</string>
     <string name="game_menu_option_enabled">Enabled</string>
     <string name="game_menu_option_disabled">Disabled</string>
+    <string name="game_menu_toggle_remote_mouse_summary">Show or hide the host-side remote mouse</string>
     <string name="toast_touch_mode_enhanced_on">Enhanced multi touch enabled</string>
     <string name="toast_touch_mode_classic_on">Classic mouse mode enabled</string>
     <string name="toast_touch_mode_trackpad_on">Trackpad mode enabled</string>

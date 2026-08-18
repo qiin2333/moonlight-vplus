@@ -384,6 +384,7 @@
     <string name="game_menu_trackpad_tap_behavior">Toque con un dedo</string>
     <string name="game_menu_option_enabled">Activado</string>
     <string name="game_menu_option_disabled">Desactivado</string>
+    <string name="game_menu_toggle_remote_mouse_summary">Muestra u oculta el ratón remoto del host</string>
     <string name="toast_local_cursor_fallback">Se está usando un modo de cursor compatible para este host</string>
     <string name="toast_local_cursor_enabled">Cursor local de baja latencia activado</string>
     <string name="toast_local_cursor_disabled">Cursor local de baja latencia desactivado</string>

@@ -1135,7 +1135,12 @@ class TouchInputHandler(private val game: Game) {
         game.controllerHandler.setScreenDs5TouchpadPressed(transition)
         game.ds5TouchpadFeedbackView?.setTouchpadPressed(transition)
         if (transition) {
-            view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+            val feedbackConstant = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                HapticFeedbackConstants.CONTEXT_CLICK
+            } else {
+                HapticFeedbackConstants.VIRTUAL_KEY
+            }
+            view.performHapticFeedback(feedbackConstant)
         }
     }
 

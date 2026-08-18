@@ -857,6 +857,7 @@
     <string name="game_menu_trackpad_tap_behavior">单指点击</string>
     <string name="game_menu_option_enabled">已开启</string>
     <string name="game_menu_option_disabled">已关闭</string>
+    <string name="game_menu_toggle_remote_mouse_summary">显示或隐藏主机侧远程鼠标</string>
     <string name="toast_touch_mode_enhanced_on">增强式多点触控已开启</string>
     <string name="toast_touch_mode_classic_on">经典鼠标模式已开启</string>
     <string name="toast_touch_mode_trackpad_on">触控板模式已开启</string>
