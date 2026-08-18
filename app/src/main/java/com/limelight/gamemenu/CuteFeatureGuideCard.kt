@@ -34,6 +34,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -75,18 +76,31 @@ internal fun cuteFeatureGuideLayoutSpec(
     orientation: Int,
     safeHeightDp: Float
 ): CuteFeatureGuideLayoutSpec {
-    val compact = orientation == Configuration.ORIENTATION_LANDSCAPE && safeHeightDp < 420f
+    val portrait = orientation == Configuration.ORIENTATION_PORTRAIT
+    val compact = if (portrait) safeHeightDp < 560f else safeHeightDp < 420f
     return if (compact) {
         CuteFeatureGuideLayoutSpec(
             compact = true,
-            minimumWidthDp = 220,
-            maximumHeightFraction = 0.72f,
+            minimumWidthDp = if (portrait) 232 else 220,
+            maximumHeightFraction = if (portrait) 0.62f else 0.72f,
             horizontalPaddingDp = 16,
             topPaddingDp = 40,
             titleSizeSp = 18,
             titleLineHeightSp = 23,
             bodySizeSp = 14,
             bodyLineHeightSp = 20
+        )
+    } else if (portrait) {
+        CuteFeatureGuideLayoutSpec(
+            compact = false,
+            minimumWidthDp = 240,
+            maximumHeightFraction = 0.72f,
+            horizontalPaddingDp = 18,
+            topPaddingDp = 48,
+            titleSizeSp = 20,
+            titleLineHeightSp = 27,
+            bodySizeSp = 15,
+            bodyLineHeightSp = 23
         )
     } else {
         CuteFeatureGuideLayoutSpec(
@@ -105,9 +119,13 @@ internal fun cuteFeatureGuideLayoutSpec(
 
 internal fun cuteFeatureGuideMaximumHeightDp(
     safeHeightDp: Float,
-    maximumHeightFraction: Float
+    maximumHeightFraction: Float,
+    targetSideAvailableDp: Float = Float.POSITIVE_INFINITY
 ): Float {
-    val availableHeight = (safeHeightDp - 8f).coerceAtLeast(1f)
+    val availableHeight = minOf(
+        (safeHeightDp - 8f).coerceAtLeast(1f),
+        targetSideAvailableDp.coerceAtLeast(1f)
+    )
     val minimumHeight = minOf(160f, availableHeight)
     return (safeHeightDp * maximumHeightFraction).coerceIn(minimumHeight, availableHeight)
 }
@@ -120,6 +138,7 @@ internal fun CuteFeatureGuideCard(
     actionLabel: String,
     onAction: () -> Unit,
     onSkip: () -> Unit,
+    targetRect: Rect = Rect.Zero,
     hardwareFocusRequestToken: Int = 0
 ) {
     val accent = colorResource(R.color.game_menu_accent)
@@ -136,10 +155,18 @@ internal fun CuteFeatureGuideCard(
         val systemBarHeight = safeDrawingInsets.getTop(this) + safeDrawingInsets.getBottom(this)
         (LocalWindowInfo.current.containerSize.height - systemBarHeight).coerceAtLeast(1).toDp()
     }
+    val targetSideAvailableHeight = with(density) {
+        val containerHeight = LocalWindowInfo.current.containerSize.height.toFloat()
+        val edgeSpacing = 24.dp.toPx()
+        val above = targetRect.top - safeDrawingInsets.getTop(this) - edgeSpacing
+        val below = containerHeight - safeDrawingInsets.getBottom(this) - targetRect.bottom - edgeSpacing
+        maxOf(above, below).coerceAtLeast(1f).toDp()
+    }
     val layoutSpec = cuteFeatureGuideLayoutSpec(configuration.orientation, safeHeight.value)
     val maximumCardHeight = cuteFeatureGuideMaximumHeightDp(
         safeHeightDp = safeHeight.value,
-        maximumHeightFraction = layoutSpec.maximumHeightFraction
+        maximumHeightFraction = layoutSpec.maximumHeightFraction,
+        targetSideAvailableDp = targetSideAvailableHeight.value
     ).dp
     val bodyScrollState = rememberScrollState()
     val isTelevision = configuration.uiMode and Configuration.UI_MODE_TYPE_MASK ==

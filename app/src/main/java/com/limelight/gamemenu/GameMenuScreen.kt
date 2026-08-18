@@ -211,7 +211,7 @@ internal fun GameMenuScreen(
                 alignment = ShowcaseAlignment.Start,
                 highlight = ShowcaseHighlight.Rectangular(12.dp),
                 backgroundAlpha = BackgroundAlpha.Dark
-            ) {
+            ) { targetRect ->
                 CuteFeatureGuideCard(
                     eyebrow = stringResource(R.string.feature_guide_step, 1, 2),
                     title = stringResource(R.string.feature_guide_quick_actions_title),
@@ -219,6 +219,7 @@ internal fun GameMenuScreen(
                     actionLabel = stringResource(R.string.feature_guide_next),
                     onAction = showcaseState::next,
                     onSkip = finishGuide,
+                    targetRect = targetRect,
                     hardwareFocusRequestToken = hardwareFocusRequestToken
                 )
             }
@@ -228,7 +229,7 @@ internal fun GameMenuScreen(
                 alignment = ShowcaseAlignment.End,
                 highlight = ShowcaseHighlight.Circular(targetMargin = 8.dp),
                 backgroundAlpha = BackgroundAlpha.Dark
-            ) {
+            ) { targetRect ->
                 CuteFeatureGuideCard(
                     eyebrow = stringResource(R.string.feature_guide_step, 2, 2),
                     title = stringResource(R.string.feature_guide_crown_title),
@@ -236,6 +237,7 @@ internal fun GameMenuScreen(
                     actionLabel = stringResource(R.string.feature_guide_done),
                     onAction = finishGuide,
                     onSkip = finishGuide,
+                    targetRect = targetRect,
                     hardwareFocusRequestToken = hardwareFocusRequestToken
                 )
             }
