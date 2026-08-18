@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.ContentValues
 import android.content.Context
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Handler
@@ -215,7 +216,10 @@ class GameMenu(
      * 显示触控模式菜单
      */
     private fun showTouchModeMenu() {
-        val isTouchscreenTrackpad = game.prefConfig.touchscreenTrackpad
+        // While the DS5 touchpad captures screen touches, the trackpad-specific
+        // options below are inert, so treat trackpad mode as inactive.
+        val isTouchscreenTrackpad = game.prefConfig.touchscreenTrackpad &&
+            !game.prefConfig.screenDs5Touchpad
         val touchModeOptionsList = buildTouchModeSegments().mapTo(mutableListOf()) { segment ->
             MenuOption(
                 label = if (segment.selected) {
@@ -348,12 +352,14 @@ class GameMenu(
         val isEnhancedTouch = game.prefConfig.enableEnhancedTouch
         val isTrackpad = game.prefConfig.touchscreenTrackpad
         val isNativePointer = game.prefConfig.enableNativeMousePointer
+        val isScreenDs5Touchpad = game.prefConfig.screenDs5Touchpad
 
-        return listOf(
+        val segments = mutableListOf(
             SegmentOption(
                 label = getString(if (compactLabels) R.string.game_menu_touch_mode_enhanced_short else R.string.game_menu_touch_mode_enhanced),
-                selected = isEnhancedTouch && !isTrackpad && !isNativePointer,
+                selected = isEnhancedTouch && !isTrackpad && !isNativePointer && !isScreenDs5Touchpad,
                 runnable = Runnable {
+                    game.setScreenDs5TouchpadEnabled(false)
                     game.prefConfig.enableEnhancedTouch = true
                     game.prefConfig.enableNativeMousePointer = false
                     game.enableNativeMousePointer(false)
@@ -365,8 +371,9 @@ class GameMenu(
             ),
             SegmentOption(
                 label = getString(if (compactLabels) R.string.game_menu_touch_mode_classic_short else R.string.game_menu_touch_mode_classic),
-                selected = !isEnhancedTouch && !isTrackpad && !isNativePointer,
+                selected = !isEnhancedTouch && !isTrackpad && !isNativePointer && !isScreenDs5Touchpad,
                 runnable = Runnable {
+                    game.setScreenDs5TouchpadEnabled(false)
                     game.prefConfig.enableEnhancedTouch = false
                     game.prefConfig.enableNativeMousePointer = false
                     game.enableNativeMousePointer(false)
@@ -378,8 +385,9 @@ class GameMenu(
             ),
             SegmentOption(
                 label = getString(if (compactLabels) R.string.game_menu_touch_mode_trackpad_short else R.string.game_menu_touch_mode_trackpad),
-                selected = isTrackpad && !isNativePointer,
+                selected = isTrackpad && !isNativePointer && !isScreenDs5Touchpad,
                 runnable = Runnable {
+                    game.setScreenDs5TouchpadEnabled(false)
                     game.prefConfig.enableNativeMousePointer = false
                     game.enableNativeMousePointer(false)
                     game.setTouchMode(true)
@@ -389,8 +397,9 @@ class GameMenu(
             ),
             SegmentOption(
                 label = getString(if (compactLabels) R.string.game_menu_touch_mode_native_mouse_short else R.string.game_menu_touch_mode_native_mouse),
-                selected = isNativePointer,
+                selected = isNativePointer && !isScreenDs5Touchpad,
                 runnable = Runnable {
+                    game.setScreenDs5TouchpadEnabled(false)
                     game.prefConfig.enableNativeMousePointer = true
                     game.prefConfig.enableEnhancedTouch = false
                     game.setTouchMode(false)
@@ -401,6 +410,28 @@ class GameMenu(
                 subtitle = getString(R.string.game_menu_touch_mode_native_mouse_summary)
             )
         )
+
+        // Only offer the segment on touchscreen devices, unless the host already
+        // rejected controller touch this stream and the feature is off; keep it
+        // visible when enabled so it can be turned off. Unsupported hosts are
+        // surfaced by a one-time toast instead.
+        val hasTouchscreen = game.packageManager.hasSystemFeature(
+            PackageManager.FEATURE_TOUCHSCREEN
+        )
+        if (hasTouchscreen &&
+            (isScreenDs5Touchpad ||
+                game.screenDs5TouchpadHostSupport != Game.ScreenDs5HostSupport.UNSUPPORTED)
+        ) {
+            segments.add(
+                SegmentOption(
+                    label = getString(if (compactLabels) R.string.game_menu_touch_mode_ds5_short else R.string.game_menu_touch_mode_ds5),
+                    selected = isScreenDs5Touchpad,
+                    runnable = Runnable { game.setScreenDs5TouchpadEnabled(true) },
+                    subtitle = getString(R.string.game_menu_touch_mode_ds5_summary)
+                )
+            )
+        }
+        return segments
     }
 
     private fun updateTouchModeSetting(isTrackpadMode: Boolean) {

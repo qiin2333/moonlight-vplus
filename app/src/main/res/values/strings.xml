@@ -1057,6 +1057,10 @@
     <string name="game_menu_touch_mode_classic_summary">The touched position directly controls the mouse</string>
     <string name="game_menu_touch_mode_trackpad_summary">Swipe like a laptop touchpad; uses the compatible host cursor by default</string>
     <string name="game_menu_touch_mode_native_mouse_summary">For Bluetooth, USB mice, and keyboard touchpads</string>
+    <string name="game_menu_touch_mode_ds5">DS5 touchpad</string>
+    <string name="game_menu_touch_mode_ds5_short">DS5</string>
+    <string name="game_menu_touch_mode_ds5_summary">Screen becomes a DualSense touchpad; firm press to click</string>
+    <string name="toast_ds5_touchpad_unsupported">Host doesn\'t support DS5 touchpad; touches fall back to the previous mode</string>
     <string name="game_menu_current_selection">Current: %1$s</string>
     <string name="game_menu_trackpad_double_click_drag">Double-tap and hold to drag</string>
     <string name="game_menu_trackpad_tap_behavior">Single-finger tap</string>
@@ -1682,8 +1686,6 @@ Tap again to replace it.</string>
     <string name="toast_local_cursor_disabled">Low-latency local cursor disabled</string>
     <string name="toast_crown_not_enabled">Crown is off</string>
     <string name="game_menu_toggle_touch">Touch Input</string>
-    <string name="title_checkbox_screen_ds5_touchpad">Screen as DS5 touchpad</string>
-    <string name="summary_checkbox_screen_ds5_touchpad">Emulate a DualSense controller and send screen touches to its touchpad. Screen touches are captured by the touchpad while streaming.</string>
     <string name="ds5_touchpad_active_title">DS5 touchpad active</string>
     <string name="ds5_touchpad_active_subtitle">Touch to move · Firm press to click</string>
     <string name="toast_touch_enabled">Touch enabled</string>

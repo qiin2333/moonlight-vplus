@@ -7,6 +7,7 @@ import android.view.HapticFeedbackConstants
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.limelight.binding.input.touch.AbsoluteTouchContext
 import com.limelight.binding.input.touch.NativeTouchContext
@@ -1068,7 +1069,8 @@ class TouchInputHandler(private val game: Game) {
                 0, eventType, event.getPointerId(pointerIndex),
                 position[0], position[1], pressure
             ) ?: return false
-            val supported = result != MoonBridge.LI_ERR_UNSUPPORTED
+            val supported = result == 0
+            noteScreenDs5HostSupport(result)
             if (supported) {
                 game.ds5TouchpadFeedbackView?.updateContact(
                     eventType,
@@ -1086,10 +1088,13 @@ class TouchInputHandler(private val game: Game) {
                 val result = game.conn?.sendControllerTouchEvent(
                     0, MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, 0, 0f, 0f, 0f
                 )
+                if (result != null) {
+                    noteScreenDs5HostSupport(result)
+                }
                 // Clear local feedback even if the send failed, so recorded contacts
                 // don't linger on screen.
                 game.ds5TouchpadFeedbackView?.cancelAllContacts()
-                result != null && result != MoonBridge.LI_ERR_UNSUPPORTED
+                result == 0
             }
             else -> sendPointer(event.actionIndex)
         }
@@ -1099,9 +1104,27 @@ class TouchInputHandler(private val game: Game) {
             updateScreenDs5TouchpadPress(view ?: game.streamView, event)
         }
         if (supported && event.actionMasked == MotionEvent.ACTION_DOWN) {
-            (view ?: game.streamView).performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            // KEYBOARD_TAP/VIRTUAL_KEY map to the touch vibration channel; CLOCK_TICK and
+            // CONTEXT_CLICK map to hardware feedback, which many ROMs ship disabled.
+            (view ?: game.streamView).performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
         }
         return supported
+    }
+
+    /** Record the first definitive host answer for controller touch and surface a one-time hint. */
+    private fun noteScreenDs5HostSupport(result: Int) {
+        if (game.screenDs5TouchpadHostSupport != Game.ScreenDs5HostSupport.UNKNOWN) return
+        when (result) {
+            0 -> game.setScreenDs5TouchpadHostSupport(true)
+            MoonBridge.LI_ERR_UNSUPPORTED -> {
+                game.setScreenDs5TouchpadHostSupport(false)
+                Toast.makeText(
+                    game,
+                    R.string.toast_ds5_touchpad_unsupported,
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
     }
 
     private fun updateScreenDs5TouchpadPress(view: View, event: MotionEvent) {
@@ -1135,7 +1158,7 @@ class TouchInputHandler(private val game: Game) {
         game.controllerHandler.setScreenDs5TouchpadPressed(transition)
         game.ds5TouchpadFeedbackView?.setTouchpadPressed(transition)
         if (transition) {
-            view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+            view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
         }
     }
 

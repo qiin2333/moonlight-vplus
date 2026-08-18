@@ -187,6 +187,19 @@ class Game : Activity(), SurfaceHolder.Callback,
     var cursorVisible = false
     lateinit var streamView: StreamView
     var ds5TouchpadFeedbackView: Ds5TouchpadFeedbackView? = null
+
+    /** Host support for controller touch, learned from the first touch packet of a stream. */
+    enum class ScreenDs5HostSupport { UNKNOWN, SUPPORTED, UNSUPPORTED }
+
+    @Volatile
+    var screenDs5TouchpadHostSupport = ScreenDs5HostSupport.UNKNOWN
+        private set
+
+    fun setScreenDs5TouchpadHostSupport(supported: Boolean) {
+        screenDs5TouchpadHostSupport =
+            if (supported) ScreenDs5HostSupport.SUPPORTED else ScreenDs5HostSupport.UNSUPPORTED
+    }
+
     private var externalStreamView: StreamView? = null
     private var previousTimeMillis: Long = 0
     private var previousRxBytes: Long = 0
@@ -343,17 +356,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         streamView.setInputCallbacks(this)
 
         if (prefConfig.screenDs5Touchpad) {
-            ds5TouchpadFeedbackView = Ds5TouchpadFeedbackView(this) {
-                activeStreamView ?: streamView
-            }.also { feedbackView ->
-                (streamView.parent as FrameLayout).addView(
-                    feedbackView,
-                    FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                    ),
-                )
-            }
+            addDs5TouchpadFeedbackView()
         }
 
         val cursorOverlayView = findViewById<CursorView>(R.id.cursorOverlay)
@@ -1731,14 +1734,53 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     override fun connectionStarted() {
         connectionCallbackHandler.connectionStarted()
+        screenDs5TouchpadHostSupport = ScreenDs5HostSupport.UNKNOWN
         controllerHandler.retryPendingControllerArrivals {
             if (prefConfig.screenDs5Touchpad) {
                 // Retries run first so pending arrivals populate the metadata cache;
                 // the DS5 declaration then re-declares slot 0 with DualSense capabilities.
-                controllerHandler.declareScreenDs5TouchpadController()
+                controllerHandler.setScreenDs5TouchpadEnabled(true)
             }
         }
         startClipboardSyncIfEnabled()
+    }
+
+    private fun addDs5TouchpadFeedbackView() {
+        if (ds5TouchpadFeedbackView != null) return
+        ds5TouchpadFeedbackView = Ds5TouchpadFeedbackView(this) {
+            activeStreamView ?: streamView
+        }.also { feedbackView ->
+            (streamView.parent as FrameLayout).addView(
+                feedbackView,
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                ),
+            )
+        }
+    }
+
+    private fun removeDs5TouchpadFeedbackView() {
+        val view = ds5TouchpadFeedbackView ?: return
+        (view.parent as? FrameLayout)?.removeView(view)
+        ds5TouchpadFeedbackView = null
+    }
+
+    /**
+     * Toggle the screen DS5 touchpad at runtime: persist the preference, attach/detach
+     * the contact feedback overlay, and (un)declare controller 0 on the host. No-op when
+     * the requested state is already active. The game-menu touch-mode segments call this.
+     */
+    fun setScreenDs5TouchpadEnabled(enabled: Boolean) {
+        if (prefConfig.screenDs5Touchpad == enabled) return
+        prefConfig.screenDs5Touchpad = enabled
+        prefConfig.writePreferences(this)
+        if (enabled) {
+            addDs5TouchpadFeedbackView()
+        } else {
+            removeDs5TouchpadFeedbackView()
+        }
+        controllerHandler.setScreenDs5TouchpadEnabled(enabled)
     }
 
     private fun startClipboardSyncIfEnabled() {
