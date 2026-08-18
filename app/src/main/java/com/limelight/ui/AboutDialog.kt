@@ -483,7 +483,10 @@ internal fun EcosystemDialogContent(
     }
 
     AboutDialogSurface(shape = ecosystemDialogShape) {
-        Box {
+        // 列数按对话框整体宽度决定（设计稿：窄屏 1 列，448dp 常规 2 列），需在 28dp 内边距外测量
+        BoxWithConstraints {
+            val columns = if (maxWidth >= 420.dp) 2 else 1
+            Box {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -520,6 +523,7 @@ internal fun EcosystemDialogContent(
                         onOpen,
                         itemFocus,
                         closeFocus,
+                        columns,
                         onFocusChanged
                     )
                 }
@@ -555,6 +559,7 @@ internal fun EcosystemDialogContent(
                 )
             }
         }
+        }
     }
 }
 
@@ -564,12 +569,10 @@ private fun PortraitEcosystem(
     onOpen: (EcosystemProject) -> Unit,
     itemFocus: List<FocusRequester>,
     closeFocus: FocusRequester,
+    columns: Int,
     onFocusChanged: (Int) -> Unit
 ) {
-    // 列数按对话框实际宽度决定（设计稿：窄屏 1 列，448dp 常规 2 列），而非屏幕宽度
-    BoxWithConstraints {
-        val columns = if (maxWidth >= 420.dp) 2 else 1
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         projects.indices.chunked(columns).forEach { rowIndices ->
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -625,7 +628,6 @@ private fun PortraitEcosystem(
                     Spacer(modifier = Modifier.weight(1f))
                 }
             }
-        }
         }
     }
 }

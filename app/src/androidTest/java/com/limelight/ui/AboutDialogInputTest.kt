@@ -146,6 +146,28 @@ class AboutDialogInputTest {
     }
 
     @Test
+    fun regularDialogWidthUsesTwoColumns() {
+        composeTestRule.setContent {
+            val portrait = Configuration(LocalConfiguration.current).apply {
+                orientation = Configuration.ORIENTATION_PORTRAIT
+                screenWidthDp = 448
+            }
+            CompositionLocalProvider(LocalConfiguration provides portrait) {
+                // 448dp 是设计稿常规档对话框宽度，应为双列（下键跨行到 item 2）
+                Box(Modifier.requiredWidth(448.dp)) {
+                    EcosystemDialogContent(projects(), onOpen = {}, onClose = {})
+                }
+            }
+        }
+
+        composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(0)).requestFocus()
+        composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(0)).performKeyInput {
+            pressKey(Key.DirectionDown)
+        }
+        composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(2)).assertIsFocused()
+    }
+
+    @Test
     fun landscapeMenuUpdatesSelectionAndReachesOpenAction() {
         val opened = AtomicBoolean(false)
         composeTestRule.setContent {
