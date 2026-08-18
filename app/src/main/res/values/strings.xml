@@ -740,7 +740,6 @@
     <string name="about_dialog_ecosystem_mac_platform" translatable="false">APPLE SILICON · INTEL</string>
     <string name="about_dialog_ecosystem_mac_description">An enhanced Moonlight client optimized for a native macOS experience.</string>
     <string name="about_dialog_github">GitHub</string>
-    <string name="about_dialog_star">Star Project</string>
     <string name="about_dialog_qq">Join QQ Group</string>
     <string name="about_dialog_close">Close</string>
     <string name="about_dialog_no_browser">No external browser is available</string>
