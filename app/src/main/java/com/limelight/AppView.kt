@@ -544,14 +544,18 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         topPanelHandleController = TopPanelHandleController(topPanelToggle)
         topPanelToggle.setOnClickListener { toggleTopPanel() }
         topPanelToggle.setOnKeyListener { _, keyCode, event ->
-            if (keyCode != KeyEvent.KEYCODE_DPAD_DOWN || !hasAppsForControllerFocus()) {
-                return@setOnKeyListener false
+            when (keyCode) {
+                KeyEvent.KEYCODE_BUTTON_A -> {
+                    if (event.action == KeyEvent.ACTION_UP) topPanelToggle.performClick()
+                    true
+                }
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    if (!hasAppsForControllerFocus()) return@setOnKeyListener false
+                    if (event.action == KeyEvent.ACTION_DOWN) focusSelectedAppFromTopPanel()
+                    true
+                }
+                else -> false
             }
-
-            if (event.action == KeyEvent.ACTION_DOWN) {
-                focusSelectedAppFromTopPanel()
-            }
-            true
         }
 
         // 动态设置手柄 margin 使其精确贴合状态栏底部

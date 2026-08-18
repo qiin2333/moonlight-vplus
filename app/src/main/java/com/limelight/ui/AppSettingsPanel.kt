@@ -2,9 +2,11 @@ package com.limelight.ui
 
 import android.content.res.Configuration
 import android.view.HapticFeedbackConstants
+import android.view.KeyEvent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -42,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.Offset
@@ -66,6 +69,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.semantics.contentDescription
 import kotlinx.coroutines.delay
 import androidx.compose.ui.semantics.role
@@ -419,9 +423,28 @@ private fun SettingsShortcut(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
+    var focused by remember { mutableStateOf(false) }
+    val shape = AppShapes.small
     Row(
         modifier = modifier
-            .clip(AppShapes.small)
+            .onFocusChanged { focused = it.isFocused }
+            .clip(shape)
+            .background(
+                if (focused) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                else Color.Transparent
+            )
+            .then(
+                if (focused) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, shape)
+                else Modifier
+            )
+            .onPreviewKeyEvent { event ->
+                if (event.nativeKeyEvent.keyCode != KeyEvent.KEYCODE_BUTTON_A) {
+                    false
+                } else {
+                    if (event.nativeKeyEvent.action == KeyEvent.ACTION_UP) onClick()
+                    true
+                }
+            }
             .clickable(onClick = onClick)
             .padding(horizontal = 6.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
