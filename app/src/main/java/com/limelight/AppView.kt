@@ -148,6 +148,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
     private var computer: ComputerDetails? = null
     private lateinit var computerName: String
     private var lastRawApplist: String? = null
+    private var hasUsableAppList = false
     private var lastRunningAppId = 0
     private var notPairedExitUpdateCount = 0
     private var suspendGridUpdates = false
@@ -355,8 +356,10 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
 
         computer = details
 
-        // App list is the same or empty
+        // Reuse the last successfully parsed list when this update has no new payload.
         if (details.rawAppList == null || details.rawAppList == lastRawApplist) {
+            if (!hasUsableAppList) return
+
             if (details.runningGameId != lastRunningAppId) {
                 lastRunningAppId = details.runningGameId
                 updateUiWithServerinfo(details)
@@ -366,24 +369,26 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
             return
         }
 
-        lastRunningAppId = details.runningGameId
-        lastRawApplist = details.rawAppList
-        initialComputerStateLoaded = true
-
         try {
-            updateUiWithAppList(NvHTTP.getAppListByReader(StringReader(details.rawAppList)))
+            val parsedAppList = NvHTTP.getAppListByReader(StringReader(details.rawAppList))
+            updateUiWithAppList(parsedAppList)
+
+            lastRunningAppId = details.runningGameId
+            lastRawApplist = details.rawAppList
+            hasUsableAppList = true
+            initialComputerStateLoaded = true
             updateUiWithServerinfo(details)
 
             if (blockingLoadSpinner != null) {
                 blockingLoadSpinner?.dismiss()
                 blockingLoadSpinner = null
             }
+            maybeShowAppViewFeatureGuide()
         } catch (e: XmlPullParserException) {
             e.printStackTrace()
         } catch (e: IOException) {
             e.printStackTrace()
         }
-        maybeShowAppViewFeatureGuide()
     }
 
     private fun shouldExitForNotPaired(details: ComputerDetails): Boolean {
@@ -1307,23 +1312,27 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
     private fun populateAppGridWithCache() {
         try {
             // Try to load from cache
-            lastRawApplist = CacheHelper.readInputStreamToString(CacheHelper.openCacheFileForInput(cacheDir, "applist", uuidString))
-            val applist = NvHTTP.getAppListByReader(StringReader(lastRawApplist!!))
+            val cachedRawAppList = CacheHelper.readInputStreamToString(
+                CacheHelper.openCacheFileForInput(cacheDir, "applist", uuidString)
+            )
+            val applist = NvHTTP.getAppListByReader(StringReader(cachedRawAppList))
             updateUiWithAppList(applist)
+            lastRawApplist = cachedRawAppList
+            hasUsableAppList = true
             LimeLog.info("Loaded applist from cache xxxx")
         } catch (e: IOException) {
-            if (lastRawApplist != null) {
-                LimeLog.warning("Saved applist corrupted: $lastRawApplist")
-                e.printStackTrace()
-            }
+            LimeLog.warning("Unable to load the saved applist; requesting it from the host")
+            e.printStackTrace()
+            lastRawApplist = null
+            hasUsableAppList = false
             LimeLog.info("Loading applist from the network")
             // We'll need to load from the network
             loadAppsBlocking()
         } catch (e: XmlPullParserException) {
-            if (lastRawApplist != null) {
-                LimeLog.warning("Saved applist corrupted: $lastRawApplist")
-                e.printStackTrace()
-            }
+            LimeLog.warning("Saved applist is invalid; requesting it from the host")
+            e.printStackTrace()
+            lastRawApplist = null
+            hasUsableAppList = false
             LimeLog.info("Loading applist from the network")
             loadAppsBlocking()
         }

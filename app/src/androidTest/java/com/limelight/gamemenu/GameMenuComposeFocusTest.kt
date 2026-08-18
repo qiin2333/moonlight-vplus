@@ -222,12 +222,16 @@ class GameMenuComposeFocusTest {
         }
 
         composeTestRule.onNodeWithText("First").assertIsFocused()
-        composeTestRule.runOnIdle { refreshHardwareFocus() }
-        composeTestRule.onNodeWithText("First").assertIsFocused()
         composeTestRule.onNodeWithText("First").performKeyInput {
             pressKey(Key.DirectionDown)
         }
         composeTestRule.onNodeWithText("Second").assertIsFocused()
+        composeTestRule.runOnIdle { refreshHardwareFocus() }
+        composeTestRule.onNodeWithText("Second").assertIsFocused()
+        composeTestRule.onNodeWithText("Second").performKeyInput {
+            pressKey(Key.DirectionUp)
+        }
+        composeTestRule.onNodeWithText("First").assertIsFocused()
     }
 
     @Test
@@ -290,11 +294,11 @@ class GameMenuComposeFocusTest {
             .getString(R.string.feature_guide_skip)
 
         composeTestRule.onNodeWithText("Next").assertIsFocused()
-        composeTestRule.runOnIdle { refreshHardwareFocus() }
-        composeTestRule.onNodeWithText("Next").assertIsFocused()
         composeTestRule.onNodeWithText("Next").performKeyInput {
             pressKey(Key.DirectionLeft)
         }
+        composeTestRule.onNodeWithText(skipLabel).assertIsFocused()
+        composeTestRule.runOnIdle { refreshHardwareFocus() }
         composeTestRule.onNodeWithText(skipLabel).assertIsFocused()
     }
 
