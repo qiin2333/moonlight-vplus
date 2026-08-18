@@ -606,8 +606,7 @@
     <string name="about_dialog_ecosystem_title">基地生态</string>
     <string name="about_dialog_ecosystem_lead">从主机端到手机、平板、电视和桌面客户端，选择适合你的平台。</string>
     <string name="about_dialog_ecosystem_footer">项目将通过安全的外部浏览器打开。</string>
-    <string name="about_dialog_ecosystem_open_action">打开项目</string>
-    <string name="about_dialog_ecosystem_sunshine_platform">WINDOWS · 服务端</string>
+    <string name="about_dialog_ecosystem_sunshine_platform">Windows · 服务端</string>
     <string name="about_dialog_ecosystem_sunshine_description">基地增强串流服务端，支持 HDR、虚拟显示器、远程麦克风与现代控制面板。</string>
     <string name="about_dialog_ecosystem_pc_description">面向桌面与 Steam Link 的跨平台 Moonlight 增强客户端。</string>
     <string name="about_dialog_ecosystem_vplus_description">面向手机、平板和电视的 Android 增强客户端。</string>
@@ -616,7 +615,6 @@
     <string name="about_dialog_ecosystem_harmony_description">面向鸿蒙手机和平板的原生 Moonlight V+ 客户端。</string>
     <string name="about_dialog_ecosystem_mac_description">针对 macOS 原生体验优化的 Moonlight 增强客户端。</string>
     <string name="about_dialog_qq">加入QQ群</string>
-    <string name="about_dialog_star">Star 项目</string>
     <string name="about_dialog_close">关闭</string>
     <string name="about_dialog_no_browser">未找到可用的外部浏览器</string>
     <string name="about_dialog_choose_browser">选择浏览器打开</string>

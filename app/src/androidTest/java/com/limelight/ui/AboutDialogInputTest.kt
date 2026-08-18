@@ -2,8 +2,11 @@ package com.limelight.ui
 
 import android.content.res.Configuration
 import android.view.KeyEvent
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
@@ -13,6 +16,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.util.concurrent.atomic.AtomicBoolean
@@ -38,7 +42,6 @@ class AboutDialogInputTest {
                 versionInfo = "Version test",
                 onHandbook = {},
                 onEcosystem = { ecosystemOpened.set(true) },
-                onStar = {},
                 onBilibili = {},
                 onGithub = {},
                 onQq = {},
@@ -98,7 +101,10 @@ class AboutDialogInputTest {
                 screenWidthDp = 700
             }
             CompositionLocalProvider(LocalConfiguration provides portrait) {
-                EcosystemDialogContent(projects(), onOpen = {}, onClose = {})
+                // 列数按对话框实际宽度决定，requiredWidth 强制真实双列布局
+                Box(Modifier.requiredWidth(700.dp)) {
+                    EcosystemDialogContent(projects(), onOpen = {}, onClose = {})
+                }
             }
         }
 
@@ -124,7 +130,9 @@ class AboutDialogInputTest {
                 screenWidthDp = 400
             }
             CompositionLocalProvider(LocalConfiguration provides portrait) {
-                EcosystemDialogContent(projects(), onOpen = {}, onClose = {})
+                Box(Modifier.requiredWidth(400.dp)) {
+                    EcosystemDialogContent(projects(), onOpen = {}, onClose = {})
+                }
             }
         }
 
@@ -138,8 +146,31 @@ class AboutDialogInputTest {
     }
 
     @Test
-    fun landscapeMenuUpdatesSelectionAndReachesOpenAction() {
-        val opened = AtomicBoolean(false)
+    fun regularDialogWidthUsesTwoColumns() {
+        composeTestRule.setContent {
+            val portrait = Configuration(LocalConfiguration.current).apply {
+                orientation = Configuration.ORIENTATION_PORTRAIT
+                screenWidthDp = 448
+            }
+            CompositionLocalProvider(LocalConfiguration provides portrait) {
+                // 448dp 是设计稿常规档对话框宽度，应为双列（下键跨行到 item 2）
+                Box(Modifier.requiredWidth(448.dp)) {
+                    EcosystemDialogContent(projects(), onOpen = {}, onClose = {})
+                }
+            }
+        }
+
+        composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(0)).requestFocus()
+        composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(0)).performKeyInput {
+            pressKey(Key.DirectionDown)
+        }
+        composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(2)).assertIsFocused()
+    }
+
+    @Test
+    fun landscapeGridNavigatesRowsAndOpensProject() {
+        val opened = AtomicReference<EcosystemProject>()
+        val projects = projects()
         composeTestRule.setContent {
             val landscape = Configuration(LocalConfiguration.current).apply {
                 orientation = Configuration.ORIENTATION_LANDSCAPE
@@ -147,29 +178,27 @@ class AboutDialogInputTest {
             }
             CompositionLocalProvider(LocalConfiguration provides landscape) {
                 EcosystemDialogContent(
-                    projects = projects(),
-                    onOpen = { opened.set(true) },
+                    projects = projects,
+                    onOpen = opened::set,
                     onClose = {}
                 )
             }
         }
 
+        composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(0)).requestFocus()
         composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(0)).performKeyInput {
             pressKey(Key.DirectionDown)
         }
-        composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(1)).assertIsFocused()
-        composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(1)).performKeyInput {
-            pressKey(Key.DirectionRight)
-        }
-        composeTestRule.onNodeWithTag(AboutDialogTags.ECOSYSTEM_OPEN).assertIsFocused()
+        // 横屏为 3 列网格，下键跨行到第二行首列
+        composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(3)).assertIsFocused()
         InstrumentationRegistry.getInstrumentation()
             .sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
         composeTestRule.waitForIdle()
-        assertTrue(opened.get())
+        assertEquals(projects[3], opened.get())
     }
 
     @Test
-    fun landscapeProjectRowsSupportTouchSelection() {
+    fun landscapeGridCardsSupportTouchOpen() {
         val opened = AtomicReference<EcosystemProject>()
         val projects = projects()
         composeTestRule.setContent {
@@ -188,8 +217,6 @@ class AboutDialogInputTest {
         }
 
         composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(4)).performClick()
-        composeTestRule.onNodeWithTag(AboutDialogTags.ECOSYSTEM_OPEN).performClick()
-
         assertEquals(projects[4], opened.get())
     }
 
