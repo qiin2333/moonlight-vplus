@@ -23,6 +23,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
 import android.widget.FrameLayout
@@ -176,6 +177,11 @@ private class FeatureGuideOverlay(
     private var currentIndex = 0
     private var dismissScheduled = false
     private var dismissed = false
+    private val globalFocusListener = ViewTreeObserver.OnGlobalFocusChangeListener { _, newFocus ->
+        if (!dismissed && newFocus != null && !containsGuideFocus(newFocus)) {
+            action.post { requestGuideFocusIfOutside() }
+        }
+    }
 
     private val card = FrameLayout(activity).apply {
         isClickable = true
@@ -259,6 +265,34 @@ private class FeatureGuideOverlay(
         addView(card)
         updateContent()
         action.post { action.requestFocus() }
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        viewTreeObserver.addOnGlobalFocusChangeListener(globalFocusListener)
+        post { requestGuideFocusIfOutside() }
+    }
+
+    override fun onDetachedFromWindow() {
+        if (viewTreeObserver.isAlive) {
+            viewTreeObserver.removeOnGlobalFocusChangeListener(globalFocusListener)
+        }
+        super.onDetachedFromWindow()
+    }
+
+    private fun requestGuideFocusIfOutside() {
+        if (!dismissed && isAttachedToWindow && !containsGuideFocus(activity.currentFocus)) {
+            action.requestFocus()
+        }
+    }
+
+    private fun containsGuideFocus(view: View?): Boolean {
+        var current = view
+        while (current != null) {
+            if (current === this) return true
+            current = current.parent as? View
+        }
+        return false
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -518,6 +552,14 @@ private class FeatureGuideOverlay(
         isFocusableInTouchMode = true
         background = selectableBackground()
         setOnClickListener { onClick() }
+        setOnKeyListener { _, keyCode, event ->
+            if (keyCode != KeyEvent.KEYCODE_BUTTON_A) {
+                false
+            } else {
+                if (event.action == KeyEvent.ACTION_UP) onClick()
+                true
+            }
+        }
     }
 
     private fun selectableBackground(): Drawable? {
