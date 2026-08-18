@@ -80,6 +80,17 @@ class GameMenuKeyEventTest {
     }
 
     @Test
+    fun hardwareRefreshDoesNotResetAnExistingGuideFocus() {
+        assertTrue(
+            !shouldRequestFeatureGuideFocus(
+                actionLaidOut = true,
+                initialFocusRequested = true,
+                guideHasFocus = true
+            )
+        )
+    }
+
+    @Test
     fun submenuBackOptionIsClickableAndKeepsDialogOpen() {
         var navigatedBack = false
         val option = createGameMenuBackOption("Back") {

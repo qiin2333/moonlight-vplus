@@ -267,6 +267,38 @@ class GameMenuComposeFocusTest {
     }
 
     @Test
+    fun featureGuideHardwareRefreshDoesNotLockFocusOnAction() {
+        lateinit var refreshHardwareFocus: () -> Unit
+
+        composeTestRule.setContent {
+            var focusRequestToken by remember { mutableIntStateOf(1) }
+            refreshHardwareFocus = { focusRequestToken++ }
+            CuteFeatureGuideCard(
+                eyebrow = "Guide",
+                title = "Focus refresh",
+                body = "Refreshing hardware focus must preserve the selected action.",
+                actionLabel = "Next",
+                onAction = {},
+                onSkip = {},
+                hardwareFocusRequestToken = focusRequestToken
+            )
+        }
+
+        val skipLabel = androidx.test.platform.app.InstrumentationRegistry
+            .getInstrumentation()
+            .targetContext
+            .getString(R.string.feature_guide_skip)
+
+        composeTestRule.onNodeWithText("Next").assertIsFocused()
+        composeTestRule.runOnIdle { refreshHardwareFocus() }
+        composeTestRule.onNodeWithText("Next").assertIsFocused()
+        composeTestRule.onNodeWithText("Next").performKeyInput {
+            pressKey(Key.DirectionLeft)
+        }
+        composeTestRule.onNodeWithText(skipLabel).assertIsFocused()
+    }
+
+    @Test
     fun featureGuideCanBeDismissedWithGamepadButtonB() {
         val dismissed = AtomicBoolean(false)
 

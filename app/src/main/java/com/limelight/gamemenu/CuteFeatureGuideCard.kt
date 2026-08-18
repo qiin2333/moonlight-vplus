@@ -3,6 +3,7 @@ package com.limelight.gamemenu
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +33,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -130,6 +132,12 @@ internal fun cuteFeatureGuideMaximumHeightDp(
     return (safeHeightDp * maximumHeightFraction).coerceIn(minimumHeight, availableHeight)
 }
 
+internal fun shouldRequestFeatureGuideFocus(
+    actionLaidOut: Boolean,
+    initialFocusRequested: Boolean,
+    guideHasFocus: Boolean
+): Boolean = actionLaidOut && initialFocusRequested && !guideHasFocus
+
 @Composable
 internal fun CuteFeatureGuideCard(
     eyebrow: String,
@@ -175,10 +183,16 @@ internal fun CuteFeatureGuideCard(
         isTelevision ||
         inputModeManager.inputMode == InputMode.Keyboard
     var isActionLaidOut by remember { mutableStateOf(false) }
+    var guideHasFocus by remember { mutableStateOf(false) }
 
     BackHandler(onBack = onSkip)
     LaunchedEffect(isActionLaidOut, shouldRequestInitialFocus, hardwareFocusRequestToken) {
-        if (isActionLaidOut && shouldRequestInitialFocus) {
+        if (shouldRequestFeatureGuideFocus(
+                actionLaidOut = isActionLaidOut,
+                initialFocusRequested = shouldRequestInitialFocus,
+                guideHasFocus = guideHasFocus
+            )
+        ) {
             inputModeManager.requestInputMode(InputMode.Keyboard)
             actionFocusRequester.requestFocus()
         }
@@ -188,6 +202,8 @@ internal fun CuteFeatureGuideCard(
         modifier = Modifier
             .widthIn(min = layoutSpec.minimumWidthDp.dp, max = 316.dp)
             .heightIn(max = maximumCardHeight)
+            .onFocusChanged { guideHasFocus = it.hasFocus }
+            .focusGroup()
             .onPreviewKeyEvent { event ->
                 UiDismissKeyHandler.handle(
                     event.nativeKeyEvent.action,
