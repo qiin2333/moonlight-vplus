@@ -10,6 +10,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.view.ActionMode
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
@@ -36,6 +37,7 @@ import androidx.lifecycle.lifecycleScope
 import com.limelight.LimeLog
 import com.limelight.R
 import com.limelight.utils.BrowserOnlyLauncher
+import org.json.JSONTokener
 import com.limelight.utils.UiHelper
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -61,6 +63,8 @@ class HandbookActivity : ComponentActivity() {
     private lateinit var rootView: View
     private lateinit var previousPageButton: ImageButton
     private lateinit var nextPageButton: ImageButton
+    private lateinit var retryButton: Button
+    private lateinit var exitButton: ImageButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -92,10 +96,14 @@ class HandbookActivity : ComponentActivity() {
         }
         ViewCompat.requestApplyInsets(rootView)
 
-        findViewById<Button>(R.id.handbook_retry).setOnClickListener {
+        retryButton = findViewById(R.id.handbook_retry)
+        exitButton = findViewById(R.id.handbook_exit_button)
+        loadingView.isFocusable = true
+        loadingView.isFocusableInTouchMode = true
+        retryButton.setOnClickListener {
             loadPage(currentPage)
         }
-        findViewById<ImageButton>(R.id.handbook_exit_button).setOnClickListener {
+        exitButton.setOnClickListener {
             finish()
         }
         previousPageButton.setOnClickListener {
@@ -103,6 +111,17 @@ class HandbookActivity : ComponentActivity() {
         }
         nextPageButton.setOnClickListener {
             navigateHistoryBy(1)
+        }
+        bindGamepadConfirm(retryButton)
+        bindGamepadConfirm(exitButton)
+        bindGamepadConfirm(previousPageButton)
+        bindGamepadConfirm(nextPageButton)
+        exitButton.nextFocusRightId = previousPageButton.id
+        previousPageButton.nextFocusLeftId = exitButton.id
+        previousPageButton.nextFocusRightId = nextPageButton.id
+        nextPageButton.nextFocusLeftId = previousPageButton.id
+        rootView.post {
+            if (!rootView.isInTouchMode) loadingView.requestFocus()
         }
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -113,6 +132,36 @@ class HandbookActivity : ComponentActivity() {
         restoreNavigationHistory(savedInstanceState)
         updateNavigationButtons()
         UiHelper.notifyNewRootView(this)
+    }
+
+    private fun bindGamepadConfirm(view: View) {
+        view.setOnKeyListener { _, keyCode, event ->
+            if (keyCode != android.view.KeyEvent.KEYCODE_BUTTON_A) {
+                false
+            } else {
+                if (event.action == android.view.KeyEvent.ACTION_UP) view.performClick()
+                true
+            }
+        }
+    }
+
+    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent): Boolean {
+        if (keyCode == android.view.KeyEvent.KEYCODE_BUTTON_B ||
+            keyCode == android.view.KeyEvent.KEYCODE_ESCAPE
+        ) {
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: android.view.KeyEvent): Boolean {
+        if (keyCode == android.view.KeyEvent.KEYCODE_BUTTON_B ||
+            keyCode == android.view.KeyEvent.KEYCODE_ESCAPE
+        ) {
+            finish()
+            return true
+        }
+        return super.onKeyUp(keyCode, event)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -256,14 +305,21 @@ class HandbookActivity : ComponentActivity() {
     }
 
     private fun showLoading() {
+        val moveFocusToLoading = !rootView.isInTouchMode && (
+            currentFocus == null ||
+                currentFocus === handbookWebView ||
+                isDescendantOf(currentFocus, contentContainer)
+            )
         pendingContent = null
         handbookWebView?.visibility = View.INVISIBLE
         contentContainer.visibility = View.INVISIBLE
         errorView.visibility = View.GONE
         loadingView.visibility = View.VISIBLE
+        if (moveFocusToLoading) loadingView.post { loadingView.requestFocus() }
     }
 
     private fun showError(reason: HandbookFailureReason) {
+        val moveFocusToRetry = !rootView.isInTouchMode && loadingView.hasFocus()
         pendingContent = null
         handbookWebView?.visibility = View.INVISIBLE
         contentContainer.visibility = View.INVISIBLE
@@ -276,6 +332,7 @@ class HandbookActivity : ComponentActivity() {
             }
         )
         errorView.visibility = View.VISIBLE
+        if (moveFocusToRetry) retryButton.post { retryButton.requestFocus() }
     }
 
     private fun showContent(content: HandbookLoadResult.Success) {
@@ -287,6 +344,7 @@ class HandbookActivity : ComponentActivity() {
         webView: LockedHandbookWebView,
         content: HandbookLoadResult.Success
     ) {
+        val moveFocusToContent = !rootView.isInTouchMode && loadingView.hasFocus()
         pendingContent = null
         webView.renderStartedAtMs = SystemClock.elapsedRealtime()
         webView.visibility = View.VISIBLE
@@ -299,6 +357,7 @@ class HandbookActivity : ComponentActivity() {
             "UTF-8",
             content.baseUrl
         )
+        if (moveFocusToContent) webView.post { webView.requestFocus() }
     }
 
     private fun ensureWebView(): LockedHandbookWebView {
@@ -311,6 +370,13 @@ class HandbookActivity : ComponentActivity() {
             onOpenExternal = { BrowserOnlyLauncher.open(this, it) }
         ).also { webView ->
             handbookWebView = webView
+            webView.id = View.generateViewId()
+            webView.nextFocusUpId = exitButton.id
+            webView.nextFocusLeftId = webView.id
+            webView.nextFocusRightId = webView.id
+            exitButton.nextFocusDownId = webView.id
+            previousPageButton.nextFocusDownId = webView.id
+            nextPageButton.nextFocusDownId = webView.id
             webView.onDocumentRendered = {
                 loadingView.visibility = View.GONE
                 errorView.visibility = View.GONE
@@ -330,16 +396,25 @@ class HandbookActivity : ComponentActivity() {
             pendingContent?.let { displayContent(webView, it) }
         }
     }
+
+    private fun isDescendantOf(view: View?, ancestor: ViewGroup): Boolean {
+        var current = view
+        while (current != null) {
+            if (current === ancestor) return true
+            current = current.parent as? View
+        }
+        return false
+    }
 }
 
 @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
-private fun createLockedHandbookWebView(
+internal fun createLockedHandbookWebView(
     context: android.content.Context,
     onNavigate: (HandbookPageRef) -> Unit,
     onOpenExternal: (String) -> Unit
 ): LockedHandbookWebView {
     val legacyLinkTapTracker = LegacyLinkTapTracker(context)
-    return LockedHandbookWebView(context).apply {
+    return LockedHandbookWebView(context, onNavigate, onOpenExternal).apply {
         setBackgroundColor(AndroidColor.WHITE)
         isFocusable = true
         isFocusableInTouchMode = true
@@ -629,13 +704,122 @@ private data class PendingLinkTap(
     val eventTime: Long
 )
 
-private class LockedHandbookWebView(context: Context) : WebView(context) {
+internal class LockedHandbookWebView(
+    context: Context,
+    private val onNavigate: (HandbookPageRef) -> Unit,
+    private val onOpenExternal: (String) -> Unit
+) : WebView(context) {
     var renderStartedAtMs = 0L
     var onDocumentRendered: (() -> Unit)? = null
+    private var controllerEvaluationInProgress = false
+    private var pendingControllerEvaluation: PendingControllerEvaluation? = null
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        return when (event.keyCode) {
+            KeyEvent.KEYCODE_DPAD_DOWN -> consumeKeyUp(event) { focusControllerLink(1) }
+            KeyEvent.KEYCODE_DPAD_UP -> consumeKeyUp(event) { focusControllerLink(-1) }
+            KeyEvent.KEYCODE_BUTTON_A,
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER -> consumeKeyUp(event, ::activateFocusedControllerLink)
+            else -> super.dispatchKeyEvent(event)
+        }
+    }
 
     override fun startActionMode(callback: ActionMode.Callback): ActionMode? = null
 
     override fun startActionMode(callback: ActionMode.Callback, type: Int): ActionMode? = null
+
+    override fun onDetachedFromWindow() {
+        settings.javaScriptEnabled = false
+        super.onDetachedFromWindow()
+    }
+
+    private fun consumeKeyUp(event: KeyEvent, action: () -> Unit): Boolean {
+        if (event.action == KeyEvent.ACTION_UP) action()
+        return true
+    }
+
+    private fun focusControllerLink(direction: Int) {
+        evaluateControllerScript(
+            FOCUS_LINK_SCRIPT.replace("__DIRECTION__", direction.toString())
+        ) { result ->
+            if (result != "true") {
+                if (direction > 0) pageDown(false) else pageUp(false)
+            }
+        }
+    }
+
+    private fun activateFocusedControllerLink() {
+        evaluateControllerScript(FOCUSED_LINK_HREF_SCRIPT) { result ->
+            val targetUrl = runCatching {
+                JSONTokener(result).nextValue() as? String
+            }.getOrNull() ?: return@evaluateControllerScript
+            val handled = routeNavigation(url, targetUrl, true, onNavigate, onOpenExternal)
+            if (!handled) loadUrl(targetUrl)
+        }
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun evaluateControllerScript(
+        script: String,
+        onResult: (String) -> Unit = {}
+    ) {
+        if (controllerEvaluationInProgress) {
+            pendingControllerEvaluation = PendingControllerEvaluation(script, onResult)
+            return
+        }
+        controllerEvaluationInProgress = true
+        settings.javaScriptEnabled = true
+        evaluateJavascript(script) { result ->
+            settings.javaScriptEnabled = false
+            controllerEvaluationInProgress = false
+            onResult(result)
+            pendingControllerEvaluation?.let { pending ->
+                pendingControllerEvaluation = null
+                evaluateControllerScript(pending.script, pending.onResult)
+            }
+        }
+    }
+
+    private data class PendingControllerEvaluation(
+        val script: String,
+        val onResult: (String) -> Unit
+    )
+
+    private companion object {
+        val FOCUS_LINK_SCRIPT = """
+            (function() {
+              var all = document.querySelectorAll('a[href]');
+              var links = [];
+              for (var i = 0; i < all.length; i++) {
+                if (all[i].offsetWidth || all[i].offsetHeight || all[i].getClientRects().length) {
+                  links.push(all[i]);
+                }
+              }
+              if (!links.length) return false;
+              var current = links.indexOf(document.activeElement);
+              var direction = __DIRECTION__;
+              current = current < 0
+                ? (direction > 0 ? 0 : links.length - 1)
+                : (current + direction + links.length) % links.length;
+              links[current].focus();
+              try {
+                links[current].scrollIntoView({block: 'nearest', inline: 'nearest'});
+              } catch (ignored) {
+                links[current].scrollIntoView(false);
+              }
+              return true;
+            })();
+        """.trimIndent()
+        val FOCUSED_LINK_HREF_SCRIPT = """
+            (function() {
+              var element = document.activeElement;
+              while (element && element.tagName !== 'A') element = element.parentElement;
+              return element && element.href ? element.href : null;
+            })();
+        """.trimIndent()
+    }
 }
 
 private const val LEGACY_LINK_TAP_TIMEOUT_MS = 1_000L

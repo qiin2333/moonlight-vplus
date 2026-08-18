@@ -107,12 +107,21 @@ internal class TopPanelHandleController(
         val handleWidth = toggle.width.takeIf { it > 0 }
             ?: toggle.layoutParams.width.takeIf { it > 0 }
             ?: (84f * density).roundToInt()
-        toggle.scaleX = 1f - ((16f * density) / handleWidth) * fraction
+        val showFocusRing = toggle.hasFocus() && fraction < 0.5f
+        val focusScale = if (showFocusRing) 1.08f else 1f
+        toggle.scaleX = (1f - ((16f * density) / handleWidth) * fraction) * focusScale
+        toggle.scaleY = focusScale
 
         val topRadius = (18f - 4f * fraction) * density
         val bottomRadius = (18f - 16f * fraction) * density
         val chromeAlpha = ((1f - fraction) / 0.6f).coerceIn(0f, 1f)
-        background.setColor(withAlpha(backgroundColor, chromeAlpha))
+        background.setColor(
+            if (showFocusRing) {
+                ColorUtils.compositeColors(withAlpha(focusColor, 0.24f), backgroundColor)
+            } else {
+                withAlpha(backgroundColor, chromeAlpha)
+            }
+        )
         cornerRadii[0] = topRadius
         cornerRadii[1] = topRadius
         cornerRadii[2] = topRadius
@@ -123,9 +132,8 @@ internal class TopPanelHandleController(
         cornerRadii[7] = bottomRadius
         background.cornerRadii = cornerRadii
 
-        val showFocusRing = toggle.hasFocus() && fraction < 0.5f
         background.setStroke(
-            ((if (showFocusRing) 2f else 1f) * density).roundToInt().coerceAtLeast(1),
+            ((if (showFocusRing) 3f else 1f) * density).roundToInt().coerceAtLeast(1),
             if (showFocusRing) {
                 focusColor
             } else {
@@ -134,11 +142,11 @@ internal class TopPanelHandleController(
         )
 
         moonWheel.progress = fraction
-        moonWheel.graphiteColor = ColorUtils.blendARGB(
-            primaryColor,
-            secondaryColor,
-            fraction
-        )
+        moonWheel.graphiteColor = if (showFocusRing) {
+            focusColor
+        } else {
+            ColorUtils.blendARGB(primaryColor, secondaryColor, fraction)
+        }
         moonWheel.accentColor = accentColor
     }
 

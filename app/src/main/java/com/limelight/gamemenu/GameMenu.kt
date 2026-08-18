@@ -5,7 +5,6 @@ import android.app.AlertDialog
 import android.content.ContentValues
 import android.content.Context
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -21,11 +20,15 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentDialog
+import androidx.activity.OnBackPressedCallback
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.content.edit
+import androidx.core.view.WindowCompat
+import androidx.core.view.doOnLayout
 import com.google.gson.JsonArray
 import com.limelight.CustomKeyData
 import com.limelight.CustomKeyRepository
@@ -57,6 +60,30 @@ private fun Int.s(): Short = this.toShort()
 internal fun mapGameMenuConfirmKeyCode(keyCode: Int): Int {
     return if (keyCode == KeyEvent.KEYCODE_BUTTON_A) KeyEvent.KEYCODE_DPAD_CENTER else keyCode
 }
+
+internal fun isGameMenuNavigationKey(keyCode: Int): Boolean {
+    return keyCode == KeyEvent.KEYCODE_DPAD_UP ||
+        keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
+        keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
+        keyCode == KeyEvent.KEYCODE_DPAD_RIGHT ||
+        keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+        keyCode == KeyEvent.KEYCODE_ENTER ||
+        keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
+        keyCode == KeyEvent.KEYCODE_BUTTON_A ||
+        keyCode == KeyEvent.KEYCODE_TAB
+}
+
+internal fun createGameMenuBackOption(
+    label: String,
+    onBack: () -> Unit
+) = GameMenu.MenuOption(
+    label = label,
+    isWithGameFocus = false,
+    runnable = Runnable(onBack),
+    iconKey = null,
+    isShowIcon = false,
+    isKeepDialog = true
+)
 
 private fun mapGameMenuConfirmKeyEvent(event: KeyEvent): KeyEvent {
     val mappedKeyCode = mapGameMenuConfirmKeyCode(event.keyCode)
@@ -92,6 +119,7 @@ class GameMenu(
     // 当前激活的对话框（如果有）
     private var activeDialog: ComponentDialog? = null
     private var composeUiState: MutableState<GameMenuComposeUiState>? = null
+    private val guideDismissController = GameMenuGuideDismissController()
     // 标志：上一次运行的选项是否打开了子菜单（由 showSubMenu 设置）
     private var lastActionOpenedSubmenu = false
     // 菜单历史栈，用于二级/多级菜单的回退
@@ -123,7 +151,7 @@ class GameMenu(
         val dialog = activeDialog ?: return false
         if (!dialog.isShowing) return false
         if (UiDismissKeyHandler.handle(event.action, event.keyCode) {
-                if (!navigateBack()) dialog.cancel()
+                handleDismissRequest(dialog)
             }
         ) {
             return true
@@ -706,6 +734,7 @@ class GameMenu(
                 customKeys = getSavedCustomKeys()
             )
         )
+        val hardwareFocusRequest = mutableIntStateOf(0)
         composeUiState = state
         bitrateCardController.start { bitrate ->
             composeUiState?.let { it.value = it.value.copy(bitrate = bitrate) }
@@ -718,6 +747,7 @@ class GameMenu(
         }
 
         val callbacks = GameMenuCallbacks(
+            onDismiss = { handleDismissRequest(dialog) },
             iconForOption = ::getIconForMenuOption,
             onBack = { navigateBack() },
             onCrownToggle = ::toggleCrownFeature,
@@ -751,13 +781,16 @@ class GameMenu(
         )
 
         val composeView = ComposeView(game).apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
                 GameMenuScreen(
                     state = state.value,
                     callbacks = callbacks,
                     useFabricTexture = renderingProfile.useFabricTexture,
-                    requestControllerFocus = device != null
+                    hardwareFocusRequestToken = hardwareFocusRequest.intValue,
+                    guideDismissController = guideDismissController
                 )
             }
         }
@@ -769,11 +802,33 @@ class GameMenu(
 
         setupDialogProperties(dialog)
 
+        dialog.onBackPressedDispatcher.addCallback(dialog, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                handleDismissRequest(dialog)
+            }
+        })
+
+        dialog.setOnShowListener {
+            composeView.doOnLayout {
+                if (dialog.isShowing) {
+                    composeView.requestFocus()
+                    hardwareFocusRequest.intValue++
+                }
+            }
+        }
+
         // 返回键监听器
         dialog.setOnKeyListener { _, keyCode, event ->
-            if (UiDismissKeyHandler.handle(event.action, keyCode) {
-                if (!navigateBack()) dialog.cancel()
-            }) {
+            if (event.action == KeyEvent.ACTION_DOWN && isGameMenuNavigationKey(keyCode)) {
+                hardwareFocusRequest.intValue++
+            }
+            if (UiDismissKeyHandler.handle(
+                    event.action,
+                    keyCode,
+                    onDismiss = { handleDismissRequest(dialog) },
+                    dismissOnBack = false
+                )
+            ) {
                 return@setOnKeyListener true
             }
             if (keyCode == KeyEvent.KEYCODE_BUTTON_A) {
@@ -787,6 +842,7 @@ class GameMenu(
         dialog.setOnDismissListener {
             if (this.activeDialog == dialog) this.activeDialog = null
             this.composeUiState = null
+            guideDismissController.clear()
             bitrateCardController.dispose()
             audioHapticsCardController.dispose()
             gyroCardController.dispose()
@@ -796,6 +852,11 @@ class GameMenu(
 
         dialog.show()
         applyDialogSize(dialog)
+    }
+
+    private fun handleDismissRequest(dialog: ComponentDialog) {
+        if (guideDismissController.dismissIfShowing()) return
+        if (!navigateBack()) dialog.cancel()
     }
 
     private fun handleComposeOptionClick(option: MenuOption, dialog: ComponentDialog) {
@@ -1052,12 +1113,17 @@ class GameMenu(
 
     private fun setupDialogProperties(dialog: ComponentDialog) {
         dialog.window?.let { window ->
+            WindowCompat.setDecorFitsSystemWindows(window, false)
             val layoutParams = window.attributes
             layoutParams.alpha = renderingProfile.windowAlpha
             layoutParams.dimAmount = DIALOG_DIM_AMOUNT
-            layoutParams.width = resolveDialogWidth()
-            layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT
-            layoutParams.gravity = android.view.Gravity.BOTTOM
+            layoutParams.width = WindowManager.LayoutParams.MATCH_PARENT
+            layoutParams.height = WindowManager.LayoutParams.MATCH_PARENT
+            layoutParams.gravity = android.view.Gravity.FILL
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                layoutParams.layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
             window.attributes = layoutParams
             window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             window.setBackgroundDrawable(
@@ -1069,28 +1135,9 @@ class GameMenu(
 
     private fun applyDialogSize(dialog: ComponentDialog) {
         dialog.window?.setLayout(
-            resolveDialogWidth(),
-            WindowManager.LayoutParams.WRAP_CONTENT
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT
         )
-    }
-
-    private fun resolveDialogWidth(): Int {
-        val widthFraction = if (
-            game.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        ) {
-            DIALOG_LANDSCAPE_WIDTH_FRACTION
-        } else {
-            DIALOG_PORTRAIT_WIDTH_FRACTION
-        }
-        val windowWidth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            game.windowManager.currentWindowMetrics.bounds.width()
-        } else {
-            game.window.decorView.width
-        }.takeIf { it > 0 } ?: game.resources.displayMetrics.widthPixels
-
-        return (windowWidth * widthFraction)
-            .toInt()
-            .coerceAtLeast(1)
     }
 
     /**
@@ -1109,7 +1156,11 @@ class GameMenu(
                 { showDeleteKeysDialog() }, null, false))
         }
 
-        options.add(MenuOption(getString(R.string.game_menu_cancel), false, null, null, false))
+        options.add(
+            createGameMenuBackOption(getString(R.string.game_menu_cancel)) {
+                if (!navigateBack()) activeDialog?.cancel()
+            }
+        )
 
         showSubMenu(getString(R.string.game_menu_send_keys), options.toTypedArray())
     }
@@ -1491,8 +1542,6 @@ class GameMenu(
     companion object {
         private const val GAME_FOCUS_RETRY_DELAY_MS = 10L
         private const val DIALOG_DIM_AMOUNT = 0.0f
-        private const val DIALOG_LANDSCAPE_WIDTH_FRACTION = 0.88f
-        private const val DIALOG_PORTRAIT_WIDTH_FRACTION = 0.95f
         private const val PREF_NAME = "custom_special_keys"
         private const val KEY_NAME = "data"
 

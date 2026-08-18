@@ -140,6 +140,39 @@ private fun Modifier.focusTarget(
     .testTag(tag)
 
 @Composable
+private fun FocusAwareCloseButton(
+    onClick: () -> Unit,
+    modifier: Modifier,
+    contentDescription: String
+) {
+    var focused by remember { mutableStateOf(false) }
+    val showFocus = focusIndicationVisible(focused)
+    val shape = RoundedCornerShape(10.dp)
+    IconButton(
+        onClick = onClick,
+        modifier = modifier
+            .onFocusChanged { focused = it.isFocused }
+            .then(
+                if (showFocus) {
+                    Modifier
+                        .background(colorResource(R.color.app_dialog_accent_soft), shape)
+                        .border(2.dp, colorResource(R.color.app_dialog_accent_color), shape)
+                } else {
+                    Modifier
+                }
+            )
+            .handleGamepadConfirm(onClick)
+            .focusable()
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_about_close),
+            contentDescription = contentDescription,
+            tint = colorResource(R.color.app_dialog_title_color)
+        )
+    }
+}
+
+@Composable
 private fun dialogBrush(): Brush {
     return Brush.linearGradient(
         colors = listOf(
@@ -442,22 +475,15 @@ internal fun AboutDialogContent(
                     }
                 }
 
-                IconButton(
+                FocusAwareCloseButton(
                     onClick = onClose,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(10.dp)
                         .size(36.dp)
-                        .then(focusModifier(6, 6, 1, 6, 6))
-                        .handleGamepadConfirm(onClose)
-                        .focusable()
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_about_close),
-                        contentDescription = stringResource(R.string.about_dialog_close),
-                        tint = colorResource(R.color.app_dialog_title_color)
-                    )
-                }
+                        .then(focusModifier(6, 6, 1, 6, 6)),
+                    contentDescription = stringResource(R.string.about_dialog_close)
+                )
             }
 
             // bottom external links bar
@@ -613,6 +639,7 @@ internal fun EcosystemDialogContent(
     onOpen: (EcosystemProject) -> Unit,
     onClose: () -> Unit,
     initialFocusIndex: Int = 0,
+    focusRequestGeneration: Int = 0,
     onFocusChanged: (Int) -> Unit = {}
 ) {
     val isLandscape = LocalConfiguration.current.orientation ==
@@ -621,7 +648,7 @@ internal fun EcosystemDialogContent(
     val closeFocus = remember { FocusRequester() }
     val validInitialIndex = initialFocusIndex.takeIf { it in projects.indices }
 
-    LaunchedEffect(validInitialIndex, projects) {
+    LaunchedEffect(validInitialIndex, projects, focusRequestGeneration) {
         withFrameNanos { }
         validInitialIndex?.let(itemFocus::get)?.requestFocus() ?: closeFocus.requestFocus()
     }
@@ -675,7 +702,7 @@ internal fun EcosystemDialogContent(
                     )
                 }
 
-                IconButton(
+                FocusAwareCloseButton(
                     onClick = onClose,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -686,16 +713,9 @@ internal fun EcosystemDialogContent(
                             tag = AboutDialogTags.ECOSYSTEM_CLOSE,
                             onFocused = { onFocusChanged(-1) },
                             down = itemFocus.firstOrNull() ?: closeFocus
-                        )
-                        .handleGamepadConfirm(onClose)
-                        .focusable()
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_about_close),
-                        contentDescription = stringResource(R.string.about_dialog_close),
-                        tint = colorResource(R.color.app_dialog_title_color)
-                    )
-                }
+                        ),
+                    contentDescription = stringResource(R.string.about_dialog_close)
+                )
             }
         }
     }

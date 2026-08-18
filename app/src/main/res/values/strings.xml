@@ -1232,6 +1232,7 @@
     <string name="pcview_theme_light">Light</string>
     <string name="pcview_theme_dark">Dark</string>
     <string name="pcview_theme_applied">Theme set to %1$s</string>
+    <string name="pcview_press_back_again_to_exit">Press Back again to exit</string>
     <string name="save_to_scene">Save to Scene %1$d</string>
     <string name="overwrite_current_config">Overwrite current configuration?</string>
     <string name="overwrite_scene_config">Save the current quality and display settings to Scene %1$d? This will overwrite the saved scene.</string>
@@ -2020,8 +2021,6 @@ Tap again to replace it.</string>
     <string name="appview_guide_panel_body">Pull down the top handle for background style, screen combinations, target display, and complete streaming settings.</string>
     <string name="appview_guide_resume_title">That title isn’t decoration</string>
     <string name="appview_guide_resume_body">While a session is running, tap the PC and app name to jump straight back in. No more taking the long way around.</string>
-    <string name="appview_guide_card_title">Long-pressing is hard, huh?</string>
-    <string name="appview_guide_card_body">Long-press an app to resume with saved settings, create a shortcut, hide it, or see details without launching it.</string>
     <!-- Foundation Sunshine startup network probe -->
     <string name="network_quality_test_title">Streaming Quality Test</string>
     <string name="network_quality_card_summary">%1$.0f ms · %2$.0f Mbps</string>

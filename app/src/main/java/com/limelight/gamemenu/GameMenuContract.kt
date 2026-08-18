@@ -28,6 +28,25 @@ internal data class GameMenuComposeUiState(
     val isSubmenu: Boolean = false
 )
 
+internal class GameMenuGuideDismissController {
+    private var dismissAction: (() -> Unit)? = null
+
+    fun register(action: () -> Unit) {
+        dismissAction = action
+    }
+
+    fun clear() {
+        dismissAction = null
+    }
+
+    fun dismissIfShowing(): Boolean {
+        val action = dismissAction ?: return false
+        dismissAction = null
+        action()
+        return true
+    }
+}
+
 internal data class GameMenuVisibleCards(
     val bitrate: Boolean,
     val audioHaptics: Boolean,
@@ -36,6 +55,7 @@ internal data class GameMenuVisibleCards(
 )
 
 internal data class GameMenuCallbacks(
+    val onDismiss: () -> Unit,
     val iconForOption: (String?) -> Int,
     val onBack: () -> Unit,
     val onCrownToggle: () -> Unit,

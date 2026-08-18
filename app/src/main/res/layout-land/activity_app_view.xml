@@ -95,6 +95,9 @@
         android:layout_marginStart="@dimen/appview_content_margin"
         android:layout_marginEnd="@dimen/appview_content_margin"
         android:gravity="end"
+        android:paddingStart="8dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="8dp"
         android:paddingBottom="@dimen/appview_content_padding"
         android:preferKeepClear="true"
         android:textSize="24sp"
@@ -104,7 +107,7 @@
         android:autoSizeStepGranularity="1sp"
         android:textStyle="normal"
         android:fontFamily="sans-serif-light"
-        android:textColor="@color/appview_text_primary"
+        android:textColor="@color/appview_focusable_entry_text"
         android:shadowColor="@color/appview_text_shadow"
         android:shadowDx="2"
         android:shadowDy="2"
@@ -116,7 +119,7 @@
         android:hyphenationFrequency="normal"
         android:clickable="true"
         android:focusable="true"
-        android:background="?android:attr/selectableItemBackground" />
+        android:background="@drawable/appview_focusable_entry_bg" />
 
     <!-- 底部信息容器 -->
     <LinearLayout

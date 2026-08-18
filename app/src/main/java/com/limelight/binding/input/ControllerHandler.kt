@@ -37,6 +37,7 @@ import com.limelight.utils.Vector2d
 import org.cgutman.shieldcontrollerextensions.SceManager
 
 import java.lang.reflect.InvocationTargetException
+import java.util.concurrent.ConcurrentSkipListMap
 
 class ControllerHandler(
     internal val activityContext: Activity,
@@ -302,7 +303,8 @@ class ControllerHandler(
     private val inputVector = Vector2d()
 
     internal val inputDeviceContexts = SparseArray<InputDeviceContext>()
-    internal val usbDeviceContexts = SparseArray<UsbDeviceContext>()
+    internal val usbDeviceContexts = ConcurrentSkipListMap<Int, UsbDeviceContext>()
+    private val usbDeviceContextsLifecycleLock = Any()
 
     internal val deviceVibrator: Vibrator
     private val deviceVibratorManager: VibratorManager?
@@ -313,7 +315,7 @@ class ControllerHandler(
     private val backgroundHandlerThread: HandlerThread
     internal val backgroundThreadHandler: Handler
     private var hasGameController = false
-    internal var stopped = false
+    @Volatile internal var stopped = false
 
     private var currentControllers: Short = 0
     private var initialControllers: Short = 0
@@ -519,9 +521,10 @@ class ControllerHandler(
             inputDeviceContexts.valueAt(i).destroy()
         }
 
-        for (i in 0 until usbDeviceContexts.size()) {
-            usbDeviceContexts.valueAt(i).destroy()
+        val usbContextsToDestroy = synchronized(usbDeviceContextsLifecycleLock) {
+            usbDeviceContexts.values.toList().also { usbDeviceContexts.clear() }
         }
+        usbContextsToDestroy.forEach(UsbDeviceContext::destroy)
 
         // 清理 defaultContext 上可能注册的手机陀螺仪传感器
         gyroManager.registerDeviceGyroForDefaultContext(false)
@@ -1381,8 +1384,7 @@ class ControllerHandler(
                 rightStickY = maxByMagnitude(rightStickY, context.rightStickY)
             }
         }
-        for (i in 0 until usbDeviceContexts.size()) {
-            val context: GenericControllerContext = usbDeviceContexts.valueAt(i)
+        for (context: GenericControllerContext in usbDeviceContexts.values) {
             if (context.assignedControllerNumber &&
                 context.controllerNumber == controllerNumber &&
                 context.mouseEmulationActive == originalContext.mouseEmulationActive
@@ -2466,6 +2468,26 @@ class ControllerHandler(
         }
     }
 
+    fun onExternalGameMenuOpened() {
+        synchronized(usbDeviceContextsLifecycleLock) {
+            if (stopped) return
+            for (context in usbDeviceContexts.values) {
+                val update = context.shortcutState.onGameMenuOpenedExternally()
+                handleUsbShortcutUpdate(context, update)
+                if (update.sendNeutralState) {
+                    sendNeutralUsbControllerState(context)
+                }
+            }
+        }
+    }
+
+    fun onExternalGameMenuDismissed() {
+        synchronized(usbDeviceContextsLifecycleLock) {
+            if (stopped) return
+            usbDeviceContexts.values.forEach(UsbDeviceContext::onGameMenuDismissed)
+        }
+    }
+
     private fun usbMenuKeyCode(buttonFlag: Int): Int? {
         return when (buttonFlag) {
             ControllerPacket.UP_FLAG -> KeyEvent.KEYCODE_DPAD_UP
@@ -2506,7 +2528,7 @@ class ControllerHandler(
         @Suppress("NAME_SHADOWING")
         var rightTrigger = rightTrigger
 
-        val context = usbDeviceContexts.get(controllerId) ?: return
+        val context = usbDeviceContexts[controllerId] ?: return
         updatePerformanceShortcut(context, buttonFlags)
         val shortcutUpdate = context.shortcutState.onButtonSnapshot(
             buttonFlags,
@@ -2610,13 +2632,14 @@ class ControllerHandler(
     }
 
     override fun deviceRemoved(controller: AbstractController) {
-        val context = usbDeviceContexts.get(controller.getControllerId())
+        val context = synchronized(usbDeviceContextsLifecycleLock) {
+            usbDeviceContexts.remove(controller.getControllerId())
+        }
         if (context != null) {
             LimeLog.info("Removed controller: " + controller.getControllerId())
             rumbleManager.forgetUsbDevice(controller)
             releaseControllerNumber(context)
             context.destroy()
-            usbDeviceContexts.remove(controller.getControllerId())
             hapticsCoordinator.refreshPrimaryController()
             hapticsCoordinator.clearControllerIfUnavailable(context.controllerNumber)
         }
@@ -2628,13 +2651,19 @@ class ControllerHandler(
         }
 
         val context = createUsbDeviceContextForDevice(controller)
-        usbDeviceContexts.put(controller.getControllerId(), context)
+        synchronized(usbDeviceContextsLifecycleLock) {
+            if (stopped) {
+                context.destroy()
+                return
+            }
+            usbDeviceContexts[controller.getControllerId()] = context
+        }
         hapticsCoordinator.refreshPrimaryController()
         hapticsCoordinator.onSinkChanged(context.controllerNumber)
     }
 
     override fun reportControllerMotion(controllerId: Int, motionType: Byte, x: Float, y: Float, z: Float) {
-        val context = usbDeviceContexts.get(controllerId) ?: return
+        val context = usbDeviceContexts[controllerId] ?: return
         if (context.shortcutState.isLocalInputCaptureActive()) return
 
         // 当启用"陀螺仪模拟右摇杆"或"陀螺仪模拟鼠标"时，拦截陀螺仪数据

@@ -98,12 +98,20 @@ import androidx.core.view.isNotEmpty
 import androidx.preference.PreferenceManager
 import kotlin.math.ceil
 
+internal fun shouldScheduleAppViewFeatureGuide(
+    alreadyScheduled: Boolean,
+    initialComputerStateLoaded: Boolean
+): Boolean = !alreadyScheduled && initialComputerStateLoaded
+
+internal fun shouldEnableAppViewResumeTitle(runningAppId: Int): Boolean = runningAppId != 0
+
 class AppView : ComponentActivity(), AdapterFragmentCallbacks {
 
     // 主线程作用域，用于收集 ComputerManagerService 的 Flow。
     private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var pollingCollectJob: Job? = null
     private var featureGuideScheduled = false
+    private var initialComputerStateLoaded = false
 
     // ==================== 上下文菜单 ID ====================
     companion object {
@@ -140,6 +148,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
     private var computer: ComputerDetails? = null
     private lateinit var computerName: String
     private var lastRawApplist: String? = null
+    private var hasUsableAppList = false
     private var lastRunningAppId = 0
     private var notPairedExitUpdateCount = 0
     private var suspendGridUpdates = false
@@ -347,26 +356,34 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
 
         computer = details
 
-        // App list is the same or empty
+        // Reuse the last successfully parsed list when this update has no new payload.
         if (details.rawAppList == null || details.rawAppList == lastRawApplist) {
+            if (!hasUsableAppList) return
+
             if (details.runningGameId != lastRunningAppId) {
                 lastRunningAppId = details.runningGameId
                 updateUiWithServerinfo(details)
             }
+            initialComputerStateLoaded = true
+            maybeShowAppViewFeatureGuide()
             return
         }
 
-        lastRunningAppId = details.runningGameId
-        lastRawApplist = details.rawAppList
-
         try {
-            updateUiWithAppList(NvHTTP.getAppListByReader(StringReader(details.rawAppList)))
+            val parsedAppList = NvHTTP.getAppListByReader(StringReader(details.rawAppList))
+            updateUiWithAppList(parsedAppList)
+
+            lastRunningAppId = details.runningGameId
+            lastRawApplist = details.rawAppList
+            hasUsableAppList = true
+            initialComputerStateLoaded = true
             updateUiWithServerinfo(details)
 
             if (blockingLoadSpinner != null) {
                 blockingLoadSpinner?.dismiss()
                 blockingLoadSpinner = null
             }
+            maybeShowAppViewFeatureGuide()
         } catch (e: XmlPullParserException) {
             e.printStackTrace()
         } catch (e: IOException) {
@@ -506,7 +523,6 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         val label = findViewById<TextView>(R.id.appListText)
         title = computerName
         label.text = computerName
-
         // 点击标题恢复串流
         label.setOnClickListener {
             LimeLog.info("Title clicked, lastRunningAppId=$lastRunningAppId")
@@ -520,6 +536,27 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
                 }
             }
         }
+        label.setOnKeyListener { _, keyCode, event ->
+            when (keyCode) {
+                KeyEvent.KEYCODE_BUTTON_A -> {
+                    if (event.action == KeyEvent.ACTION_UP) label.performClick()
+                    true
+                }
+                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    if (event.action == KeyEvent.ACTION_DOWN) {
+                        findViewById<View>(R.id.topPanelToggle).requestFocus()
+                    }
+                    true
+                }
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    if (!hasAppsForControllerFocus()) return@setOnKeyListener false
+                    if (event.action == KeyEvent.ACTION_DOWN) focusSelectedAppFromTopPanel()
+                    true
+                }
+                else -> false
+            }
+        }
+        updateResumeTitleInteractivity(label)
 
         // Setup top panel toggle handle
         val topPanelToggle = findViewById<TextView>(R.id.topPanelToggle)
@@ -527,14 +564,24 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         topPanelHandleController = TopPanelHandleController(topPanelToggle)
         topPanelToggle.setOnClickListener { toggleTopPanel() }
         topPanelToggle.setOnKeyListener { _, keyCode, event ->
-            if (keyCode != KeyEvent.KEYCODE_DPAD_DOWN || !hasAppsForControllerFocus()) {
-                return@setOnKeyListener false
+            when (keyCode) {
+                KeyEvent.KEYCODE_BUTTON_A -> {
+                    if (event.action == KeyEvent.ACTION_UP) topPanelToggle.performClick()
+                    true
+                }
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    if (!hasAppsForControllerFocus()) return@setOnKeyListener false
+                    if (event.action == KeyEvent.ACTION_DOWN) focusSelectedAppFromTopPanel()
+                    true
+                }
+                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    val resumeTitle = findViewById<View>(R.id.appListText)
+                    if (!resumeTitle.isFocusable) return@setOnKeyListener false
+                    if (event.action == KeyEvent.ACTION_DOWN) resumeTitle.requestFocus()
+                    true
+                }
+                else -> false
             }
-
-            if (event.action == KeyEvent.ACTION_DOWN) {
-                focusSelectedAppFromTopPanel()
-            }
-            true
         }
 
         // 动态设置手柄 margin 使其精确贴合状态栏底部
@@ -602,6 +649,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         val label = findViewById<TextView>(R.id.appListText)
         val hasRunningApp = lastRunningAppId != 0
         val arrow = if (hasRunningApp) " ▸" else ""
+        updateResumeTitleInteractivity(label)
 
         if (!appName.isNullOrEmpty()) {
             val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -622,6 +670,12 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         } else {
             label.text = "$computerName$arrow"
         }
+    }
+
+    private fun updateResumeTitleInteractivity(label: TextView) {
+        val enabled = shouldEnableAppViewResumeTitle(lastRunningAppId)
+        label.isClickable = enabled
+        label.isFocusable = enabled
     }
 
     private fun changeBackgroundWithDebounce(app: AppObject?) {
@@ -1288,23 +1342,27 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
     private fun populateAppGridWithCache() {
         try {
             // Try to load from cache
-            lastRawApplist = CacheHelper.readInputStreamToString(CacheHelper.openCacheFileForInput(cacheDir, "applist", uuidString))
-            val applist = NvHTTP.getAppListByReader(StringReader(lastRawApplist!!))
+            val cachedRawAppList = CacheHelper.readInputStreamToString(
+                CacheHelper.openCacheFileForInput(cacheDir, "applist", uuidString)
+            )
+            val applist = NvHTTP.getAppListByReader(StringReader(cachedRawAppList))
             updateUiWithAppList(applist)
+            lastRawApplist = cachedRawAppList
+            hasUsableAppList = true
             LimeLog.info("Loaded applist from cache xxxx")
         } catch (e: IOException) {
-            if (lastRawApplist != null) {
-                LimeLog.warning("Saved applist corrupted: $lastRawApplist")
-                e.printStackTrace()
-            }
+            LimeLog.warning("Unable to load the saved applist; requesting it from the host")
+            e.printStackTrace()
+            lastRawApplist = null
+            hasUsableAppList = false
             LimeLog.info("Loading applist from the network")
             // We'll need to load from the network
             loadAppsBlocking()
         } catch (e: XmlPullParserException) {
-            if (lastRawApplist != null) {
-                LimeLog.warning("Saved applist corrupted: $lastRawApplist")
-                e.printStackTrace()
-            }
+            LimeLog.warning("Saved applist is invalid; requesting it from the host")
+            e.printStackTrace()
+            lastRawApplist = null
+            hasUsableAppList = false
             LimeLog.info("Loading applist from the network")
             loadAppsBlocking()
         }
@@ -1373,7 +1431,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
     }
 
     private fun maybeShowAppViewFeatureGuide() {
-        if (featureGuideScheduled) return
+        if (!shouldScheduleAppViewFeatureGuide(featureGuideScheduled, initialComputerStateLoaded)) return
         featureGuideScheduled = true
         ViewFeatureGuide.showWhenReady(
             activity = this,
@@ -1388,11 +1446,13 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
                     ))
                 }
                 findViewById<View>(R.id.appListText)?.let {
-                    add(ViewFeatureGuideStep(
-                        it,
-                        getString(R.string.appview_guide_resume_title),
-                        getString(R.string.appview_guide_resume_body)
-                    ))
+                    if (lastRunningAppId != 0) {
+                        add(ViewFeatureGuideStep(
+                            it,
+                            getString(R.string.appview_guide_resume_title),
+                            getString(R.string.appview_guide_resume_body)
+                        ))
+                    }
                 }
             }
         }

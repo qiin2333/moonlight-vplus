@@ -8,6 +8,7 @@ import android.graphics.drawable.ColorDrawable
 import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
+import android.view.KeyEvent
 import android.widget.CheckedTextView
 import android.widget.ListView
 import android.widget.TextView
@@ -119,6 +120,28 @@ object AppDialogStyler {
     fun styleSystemChoiceList(listView: ListView?, context: Context) {
         listView ?: return
         styleChoiceListContainer(listView, context)
+        listView.isFocusable = true
+        listView.isFocusableInTouchMode = true
+        listView.setOnKeyListener { _, keyCode, event ->
+            if (keyCode != KeyEvent.KEYCODE_BUTTON_A) {
+                false
+            } else {
+                if (event.action == KeyEvent.ACTION_UP) {
+                    val position = listView.selectedItemPosition
+                        .takeIf { it != ListView.INVALID_POSITION }
+                        ?: listView.checkedItemPosition
+                    if (position != ListView.INVALID_POSITION) {
+                        val child = listView.getChildAt(position - listView.firstVisiblePosition)
+                        listView.performItemClick(
+                            child,
+                            position,
+                            listView.adapter.getItemId(position)
+                        )
+                    }
+                }
+                true
+            }
+        }
         listView.setOnHierarchyChangeListener(object : ViewGroup.OnHierarchyChangeListener {
             override fun onChildViewAdded(parent: View?, child: View?) {
                 child?.let { styleListRow(it, context) }
@@ -131,6 +154,11 @@ object AppDialogStyler {
                 styleListRow(listView.getChildAt(index), context)
             }
             clearTextShadows(listView)
+            listView.requestFocusFromTouch()
+            val checkedPosition = listView.checkedItemPosition
+            if (checkedPosition != ListView.INVALID_POSITION) {
+                listView.setSelection(checkedPosition)
+            }
         }
     }
 

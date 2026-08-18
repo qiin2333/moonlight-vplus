@@ -104,6 +104,27 @@ class ViewFeatureGuideFocusTest {
         assertGuideDismissedAndRemembered("gamepad_b_test")
     }
 
+    @Test
+    fun gamepadButtonAConfirmsFocusedGuideAction() {
+        showSingleStepGuide("gamepad_a_test")
+
+        press(KeyEvent.KEYCODE_BUTTON_A)
+
+        assertGuideDismissedAndRemembered("gamepad_a_test")
+    }
+
+    @Test
+    fun guideReclaimsFocusAfterUnderlyingViewRequestsIt() {
+        showSingleStepGuide("focus_reclaim_test")
+
+        activityRule.scenario.onActivity { target.get().requestFocus() }
+        waitForIdle()
+
+        assertFocusedText(R.string.feature_guide_done)
+        press(KeyEvent.KEYCODE_BUTTON_B)
+        assertGuideDismissedAndRemembered("focus_reclaim_test")
+    }
+
     private fun showSingleStepGuide(id: String) {
         activityRule.scenario.onActivity { activity ->
             target.set(Button(activity).apply {
@@ -120,6 +141,10 @@ class ViewFeatureGuideFocusTest {
                 .edit()
                 .remove("${id}_v1")
                 .commit()
+        }
+        waitForIdle()
+
+        activityRule.scenario.onActivity { activity ->
             target.get().requestFocus()
             assertTrue(
                 ViewFeatureGuide.show(

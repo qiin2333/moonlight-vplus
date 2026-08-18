@@ -2,32 +2,18 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
-            <solid android:color="@color/app_dialog_surface_pressed" />
+            <solid android:color="@color/ui_shell_surface_pressed" />
             <corners android:radius="@dimen/corner_radius_medium" />
+            <stroke android:width="2dp" android:color="@color/ui_shell_accent" />
         </shape>
     </item>
-
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="@color/app_dialog_surface_focused" />
+            <solid android:color="@color/settings_drawer_background" />
             <corners android:radius="@dimen/corner_radius_medium" />
+            <stroke android:width="3dp" android:color="@color/ui_shell_accent" />
         </shape>
     </item>
-
-    <item android:state_selected="true">
-        <shape android:shape="rectangle">
-            <solid android:color="@color/app_dialog_surface_focused" />
-            <corners android:radius="@dimen/corner_radius_medium" />
-        </shape>
-    </item>
-
-    <item android:state_activated="true">
-        <shape android:shape="rectangle">
-            <solid android:color="@color/app_dialog_surface_focused" />
-            <corners android:radius="@dimen/corner_radius_medium" />
-        </shape>
-    </item>
-
     <item>
         <shape android:shape="rectangle">
             <solid android:color="@android:color/transparent" />

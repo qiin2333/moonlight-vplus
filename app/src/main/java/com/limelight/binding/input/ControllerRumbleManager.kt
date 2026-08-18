@@ -397,8 +397,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
             }
         }
 
-        for (i in 0 until handler.usbDeviceContexts.size()) {
-            val deviceContext = handler.usbDeviceContexts.valueAt(i)
+        for (deviceContext in handler.usbDeviceContexts.values) {
 
             if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
                 continue
@@ -486,8 +485,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
             }
         }
 
-        for (i in 0 until handler.usbDeviceContexts.size()) {
-            val deviceContext = handler.usbDeviceContexts.valueAt(i)
+        for (deviceContext in handler.usbDeviceContexts.values) {
 
             if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
                 continue
@@ -523,8 +521,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         // Callers hand off exclusive payload snapshots, so queue them as-is for the
         // USB output worker, which only reads them.
         val triggers = AdaptiveTriggers(eventFlags, typeLeft, typeRight, left, right)
-        for (i in 0 until handler.usbDeviceContexts.size()) {
-            val deviceContext = handler.usbDeviceContexts.valueAt(i)
+        for (deviceContext in handler.usbDeviceContexts.values) {
             if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
                 continue
             }

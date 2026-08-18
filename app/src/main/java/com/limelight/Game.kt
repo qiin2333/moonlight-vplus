@@ -2556,9 +2556,16 @@ class Game : Activity(), SurfaceHolder.Callback,
                     if (activeGameMenu === dismissedMenu) {
                         activeGameMenu = null
                     }
-                    device?.onGameMenuDismissed()
+                    if (device == null && ::controllerHandler.isInitialized) {
+                        controllerHandler.onExternalGameMenuDismissed()
+                    } else {
+                        device?.onGameMenuDismissed()
+                    }
                 }
                 activeGameMenu = menu
+                if (device == null && ::controllerHandler.isInitialized) {
+                    controllerHandler.onExternalGameMenuOpened()
+                }
             }
         }
     }

@@ -14,6 +14,11 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,11 +27,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,23 +58,31 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag as semanticsTestTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -97,6 +115,11 @@ internal val GameMenuControlShape = RoundedCornerShape(GameMenuControlRadius)
 private const val GAME_MENU_MAX_HEIGHT_FRACTION = 0.90f
 private const val GAME_MENU_WIDE_LAYOUT_MIN_WIDTH_DP = 576
 private const val ORIENTATION_MISMATCH_THRESHOLD = 1.5f
+private const val GAME_MENU_LANDSCAPE_WIDTH_FRACTION = 0.88f
+private const val GAME_MENU_PORTRAIT_WIDTH_FRACTION = 0.95f
+internal const val GAME_MENU_BACKDROP_TAG = "gameMenuBackdrop"
+internal const val GAME_MENU_PANEL_TAG = "gameMenuPanel"
+internal const val GAME_MENU_GUIDE_INPUT_BLOCKER_TAG = "gameMenuGuideInputBlocker"
 
 internal object GameMenuDimens {
     val surfaceStroke = 0.75.dp
@@ -136,8 +159,9 @@ private data class GameMenuPalette(
 internal fun GameMenuScreen(
     state: GameMenuComposeUiState,
     callbacks: GameMenuCallbacks,
-    useFabricTexture: Boolean = true,
-    requestControllerFocus: Boolean = false
+    hardwareFocusRequestToken: Int,
+    guideDismissController: GameMenuGuideDismissController,
+    useFabricTexture: Boolean = true
 ) {
     val palette = gameMenuPalette()
     val appContext = LocalContext.current.applicationContext
@@ -146,6 +170,15 @@ internal fun GameMenuScreen(
     val inputModeManager = LocalInputModeManager.current
     var guideStore by remember(appContext) { mutableStateOf<FeatureGuideStore?>(null) }
     var guidePending by remember(appContext) { mutableStateOf(false) }
+    var guideActive by remember(appContext) { mutableStateOf(false) }
+    var menuContentLaidOut by remember(state.title, state.isSubmenu) { mutableStateOf(false) }
+    var quickActionGuideTargetLaidOut by remember(state.title, state.isSubmenu) {
+        mutableStateOf(false)
+    }
+    var crownGuideTargetLaidOut by remember(state.title, state.isSubmenu) {
+        mutableStateOf(false)
+    }
+    var menuHasFocus by remember { mutableStateOf(false) }
     LaunchedEffect(appContext) {
         val (store, shouldShow) = withContext(Dispatchers.IO) {
             val loadedStore = FeatureGuideStore(appContext)
@@ -162,14 +195,25 @@ internal fun GameMenuScreen(
     } else {
         GameMenuDimens.compactScreenInset
     }
+    val menuWidthFraction = if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+        GAME_MENU_LANDSCAPE_WIDTH_FRACTION
+    } else {
+        GAME_MENU_PORTRAIT_WIDTH_FRACTION
+    }
+    val finishGuide = {
+        guideDismissController.clear()
+        guideStore?.markCompleted(FeatureGuideRegistry.GameMenuDiscovery)
+        guidePending = false
+        guideActive = false
+        showcaseState.dismiss()
+    }
+
+    DisposableEffect(guideDismissController) {
+        onDispose { guideDismissController.clear() }
+    }
 
     GameMenuTheme(palette) {
         SequenceShowcase(state = showcaseState) {
-            val finishGuide = {
-                guideStore?.markCompleted(FeatureGuideRegistry.GameMenuDiscovery)
-                guidePending = false
-                showcaseState.dismiss()
-            }
             val quickActionGuideModifier = Modifier.sequenceShowcaseTarget(
                 index = 0,
                 position = ShowcasePosition.Bottom,
@@ -183,8 +227,11 @@ internal fun GameMenuScreen(
                     body = stringResource(R.string.feature_guide_quick_actions_body),
                     actionLabel = stringResource(R.string.feature_guide_next),
                     onAction = showcaseState::next,
-                    onSkip = finishGuide
+                    onSkip = finishGuide,
+                    hardwareFocusRequestToken = hardwareFocusRequestToken
                 )
+            }.onGloballyPositioned {
+                quickActionGuideTargetLaidOut = it.size.width > 0 && it.size.height > 0
             }
             val crownGuideModifier = Modifier.sequenceShowcaseTarget(
                 index = 1,
@@ -199,14 +246,17 @@ internal fun GameMenuScreen(
                     body = stringResource(R.string.feature_guide_crown_body),
                     actionLabel = stringResource(R.string.feature_guide_done),
                     onAction = finishGuide,
-                    onSkip = finishGuide
+                    onSkip = finishGuide,
+                    hardwareFocusRequestToken = hardwareFocusRequestToken
                 )
+            }.onGloballyPositioned {
+                crownGuideTargetLaidOut = it.size.width > 0 && it.size.height > 0
             }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = horizontalInset)
+            GameMenuDialogShell(
+                widthFraction = menuWidthFraction,
+                horizontalInset = horizontalInset,
+                onDismissRequest = callbacks.onDismiss
             ) {
                 Surface(
                     color = Color.Transparent,
@@ -219,6 +269,9 @@ internal fun GameMenuScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .onFocusChanged { menuHasFocus = it.hasFocus }
+                            .focusGroup()
+                            .onGloballyPositioned { menuContentLaidOut = true }
                             .gameMenuFabricBackground(
                                 baseColor = palette.dialogBackground,
                                 darkTheme = palette.darkTheme,
@@ -236,24 +289,149 @@ internal fun GameMenuScreen(
                     }
                 }
             }
+            if (guideActive) {
+                GameMenuGuideInputBlocker()
+            }
         }
     }
 
-    LaunchedEffect(guidePending, state.isSubmenu) {
-        if (guidePending && !state.isSubmenu) {
+    LaunchedEffect(
+        guidePending,
+        state.isSubmenu,
+        menuContentLaidOut,
+        quickActionGuideTargetLaidOut,
+        crownGuideTargetLaidOut
+    ) {
+        if (shouldStartGameMenuGuide(
+                guidePending = guidePending,
+                isSubmenu = state.isSubmenu,
+                menuContentLaidOut = menuContentLaidOut,
+                quickActionTargetLaidOut = quickActionGuideTargetLaidOut,
+                crownTargetLaidOut = crownGuideTargetLaidOut
+            )
+        ) {
             // Consume the launch in this composition. "Maybe later" remains
             // incomplete in the store, so it can appear on a future menu visit.
             guidePending = false
+            guideActive = true
+            guideDismissController.register(finishGuide)
             showcaseState.start()
         }
     }
 
-    LaunchedEffect(requestControllerFocus, state.title, state.isSubmenu) {
-        if (requestControllerFocus && state.options.isNotEmpty()) {
+    LaunchedEffect(
+        hardwareFocusRequestToken,
+        state.title,
+        state.isSubmenu,
+        guideActive,
+        menuContentLaidOut
+    ) {
+        if (shouldRequestGameMenuFocus(
+                hardwareFocusRequestToken = hardwareFocusRequestToken,
+                guideActive = guideActive,
+                hasOptions = state.options.isNotEmpty(),
+                menuContentLaidOut = menuContentLaidOut,
+                menuHasFocus = menuHasFocus
+            )
+        ) {
             inputModeManager.requestInputMode(InputMode.Keyboard)
             initialFocusRequester.requestFocus()
         }
     }
+}
+
+internal fun shouldStartGameMenuGuide(
+    guidePending: Boolean,
+    isSubmenu: Boolean,
+    menuContentLaidOut: Boolean,
+    quickActionTargetLaidOut: Boolean,
+    crownTargetLaidOut: Boolean
+): Boolean = guidePending &&
+    !isSubmenu &&
+    menuContentLaidOut &&
+    quickActionTargetLaidOut &&
+    crownTargetLaidOut
+
+internal fun shouldRequestGameMenuFocus(
+    hardwareFocusRequestToken: Int,
+    guideActive: Boolean,
+    hasOptions: Boolean,
+    menuContentLaidOut: Boolean,
+    menuHasFocus: Boolean
+): Boolean {
+    return hardwareFocusRequestToken > 0 &&
+        !guideActive &&
+        hasOptions &&
+        menuContentLaidOut &&
+        !menuHasFocus
+}
+
+@Composable
+internal fun GameMenuDialogShell(
+    widthFraction: Float,
+    horizontalInset: Dp,
+    onDismissRequest: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    val backdropInteraction = remember { MutableInteractionSource() }
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = backdropInteraction,
+                    indication = null,
+                    onClick = onDismissRequest
+                )
+                .focusProperties { canFocus = false }
+                .clearAndSetSemantics {
+                    semanticsTestTag = GAME_MENU_BACKDROP_TAG
+                }
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(widthFraction)
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .padding(horizontal = horizontalInset)
+                .testTag(GAME_MENU_PANEL_TAG)
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        waitForUpOrCancellation()
+                    }
+                }
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
+internal fun GameMenuGuideInputBlocker() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(
+                        requireUnconsumed = false,
+                        pass = PointerEventPass.Initial
+                    )
+                    down.consume()
+                    do {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        event.changes.forEach { it.consume() }
+                    } while (event.changes.any { it.pressed })
+                }
+            }
+            .focusProperties { canFocus = false }
+            .clearAndSetSemantics {
+                semanticsTestTag = GAME_MENU_GUIDE_INPUT_BLOCKER_TAG
+            }
+    )
 }
 
 @Composable

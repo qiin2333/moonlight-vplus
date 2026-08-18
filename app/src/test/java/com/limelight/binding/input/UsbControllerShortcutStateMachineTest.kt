@@ -248,6 +248,32 @@ class UsbControllerShortcutStateMachineTest {
         assertTrue(staleResult.menuButtonChanges.isEmpty())
     }
 
+    @Test
+    fun externallyOpenedMenuCapturesUsbNavigationUntilDismissed() {
+        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+        machine.onButtonSnapshot(ControllerPacket.RIGHT_FLAG, 100, true)
+
+        val opened = machine.onGameMenuOpenedExternally()
+
+        assertTrue(opened.consumeAllInput)
+        assertTrue(opened.sendNeutralState)
+        assertTrue(machine.isLocalInputCaptureActive())
+        assertEquals(
+            listOf(
+                UsbControllerShortcutStateMachine.ButtonChange(
+                    ControllerPacket.RIGHT_FLAG,
+                    true
+                )
+            ),
+            opened.menuButtonChanges
+        )
+
+        machine.onGameMenuUnavailable()
+        assertTrue(machine.isLocalInputCaptureActive())
+        machine.onButtonSnapshot(0, 101, true)
+        assertFalse(machine.isLocalInputCaptureActive())
+    }
+
     private fun openMenu(): UsbControllerShortcutStateMachine {
         val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
         completeMenuOpen(machine)
