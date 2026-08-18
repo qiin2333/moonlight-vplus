@@ -68,7 +68,7 @@
         android:gravity="center"
         android:clickable="true"
         android:focusable="true"
-        android:focusableInTouchMode="true" />
+        android:focusableInTouchMode="false" />
 
     <!-- 顶部下拉面板 -->
 

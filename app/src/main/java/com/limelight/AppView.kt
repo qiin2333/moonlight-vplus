@@ -536,6 +536,26 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
                 }
             }
         }
+        label.setOnKeyListener { _, keyCode, event ->
+            when (keyCode) {
+                KeyEvent.KEYCODE_BUTTON_A -> {
+                    if (event.action == KeyEvent.ACTION_UP) label.performClick()
+                    true
+                }
+                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    if (event.action == KeyEvent.ACTION_DOWN) {
+                        findViewById<View>(R.id.topPanelToggle).requestFocus()
+                    }
+                    true
+                }
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    if (!hasAppsForControllerFocus()) return@setOnKeyListener false
+                    if (event.action == KeyEvent.ACTION_DOWN) focusSelectedAppFromTopPanel()
+                    true
+                }
+                else -> false
+            }
+        }
         updateResumeTitleInteractivity(label)
 
         // Setup top panel toggle handle
@@ -552,6 +572,12 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
                 KeyEvent.KEYCODE_DPAD_DOWN -> {
                     if (!hasAppsForControllerFocus()) return@setOnKeyListener false
                     if (event.action == KeyEvent.ACTION_DOWN) focusSelectedAppFromTopPanel()
+                    true
+                }
+                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    val resumeTitle = findViewById<View>(R.id.appListText)
+                    if (!resumeTitle.isFocusable) return@setOnKeyListener false
+                    if (event.action == KeyEvent.ACTION_DOWN) resumeTitle.requestFocus()
                     true
                 }
                 else -> false
