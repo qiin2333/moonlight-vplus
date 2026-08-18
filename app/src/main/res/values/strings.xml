@@ -2001,6 +2001,7 @@ Tap again to replace it.</string>
     <string name="handbook_error_timeout">The handbook took too long to respond. Please try again.</string>
     <string name="handbook_error_unavailable">The handbook is temporarily unavailable. Please try again later.</string>
     <string name="handbook_retry">Tap to retry</string>
+    <string name="handbook_controller_link_indicator">Link %1$d/%2$d: %3$s</string>
     <string name="title_about_us">About Us</string>
     <!-- Feature discovery -->
     <string name="feature_guide_step">A SECRET EVEN ROOKIES FIND · %1$d/%2$d</string>

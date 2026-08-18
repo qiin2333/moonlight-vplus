@@ -3,6 +3,7 @@ package com.limelight.handbook
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color as AndroidColor
+import android.graphics.Paint
 import android.net.http.SslError
 import android.os.Build
 import android.os.Bundle
@@ -10,10 +11,12 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.view.ActionMode
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
+import android.view.accessibility.AccessibilityEvent
 import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -345,6 +348,7 @@ class HandbookActivity : ComponentActivity() {
         val moveFocusToContent = !rootView.isInTouchMode && loadingView.hasFocus()
         pendingContent = null
         webView.renderStartedAtMs = SystemClock.elapsedRealtime()
+        webView.setControllerLinks(content.controllerLinks)
         webView.visibility = View.VISIBLE
         contentContainer.visibility = View.VISIBLE
         errorView.visibility = View.GONE
@@ -406,13 +410,13 @@ class HandbookActivity : ComponentActivity() {
 }
 
 @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
-private fun createLockedHandbookWebView(
+internal fun createLockedHandbookWebView(
     context: android.content.Context,
     onNavigate: (HandbookPageRef) -> Unit,
     onOpenExternal: (String) -> Unit
 ): LockedHandbookWebView {
     val legacyLinkTapTracker = LegacyLinkTapTracker(context)
-    return LockedHandbookWebView(context).apply {
+    return LockedHandbookWebView(context, onNavigate, onOpenExternal).apply {
         setBackgroundColor(AndroidColor.WHITE)
         isFocusable = true
         isFocusableInTouchMode = true
@@ -702,13 +706,123 @@ private data class PendingLinkTap(
     val eventTime: Long
 )
 
-private class LockedHandbookWebView(context: Context) : WebView(context) {
+internal class LockedHandbookWebView(
+    context: Context,
+    private val onNavigate: (HandbookPageRef) -> Unit,
+    private val onOpenExternal: (String) -> Unit
+) : WebView(context) {
     var renderStartedAtMs = 0L
     var onDocumentRendered: (() -> Unit)? = null
+    private val density = resources.displayMetrics.density
+    private val indicatorFill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.argb(242, 255, 248, 232)
+    }
+    private val indicatorStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.rgb(255, 107, 157)
+        style = Paint.Style.STROKE
+        strokeWidth = 2f * density
+    }
+    private val indicatorText = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.rgb(76, 67, 70)
+        textSize = 15f * density * resources.configuration.fontScale
+    }
+    private var controllerLinks: List<HandbookControllerLink> = emptyList()
+    private var selectedControllerLink = -1
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        return when (event.keyCode) {
+            KeyEvent.KEYCODE_DPAD_RIGHT -> consumeKeyUp(event) { selectControllerLink(1) }
+            KeyEvent.KEYCODE_DPAD_LEFT -> consumeKeyUp(event) { selectControllerLink(-1) }
+            KeyEvent.KEYCODE_BUTTON_A,
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER -> consumeKeyUp(event, ::activateControllerLink)
+            else -> super.dispatchKeyEvent(event)
+        }
+    }
+
+    fun setControllerLinks(links: List<HandbookControllerLink>) {
+        controllerLinks = links
+        selectedControllerLink = -1
+        invalidate()
+    }
 
     override fun startActionMode(callback: ActionMode.Callback): ActionMode? = null
 
     override fun startActionMode(callback: ActionMode.Callback, type: Int): ActionMode? = null
+
+    override fun onDraw(canvas: android.graphics.Canvas) {
+        super.onDraw(canvas)
+        val link = controllerLinks.getOrNull(selectedControllerLink) ?: return
+        val horizontalPadding = 16f * density
+        val verticalPadding = 12f * density
+        val bottomMargin = 16f * density
+        val text = controllerLinkIndicator(link)
+        val availableTextWidth = width - horizontalPadding * 4f
+        val visibleCharacters = indicatorText.breakText(
+            text,
+            true,
+            availableTextWidth.coerceAtLeast(1f),
+            null
+        )
+        val visibleText = if (visibleCharacters < text.length) {
+            text.take((visibleCharacters - 1).coerceAtLeast(0)) + "…"
+        } else {
+            text
+        }
+        val fontMetrics = indicatorText.fontMetrics
+        val chipHeight = fontMetrics.bottom - fontMetrics.top + verticalPadding * 2f
+        val viewportLeft = scrollX.toFloat()
+        val viewportTop = scrollY.toFloat()
+        val chipTop = viewportTop + height - bottomMargin - chipHeight
+        val chipLeft = viewportLeft + horizontalPadding
+        val chipRight = viewportLeft + width - horizontalPadding
+        val chipBottom = viewportTop + height - bottomMargin
+        val radius = 10f * density
+        canvas.drawRoundRect(chipLeft, chipTop, chipRight, chipBottom, radius, radius, indicatorFill)
+        canvas.drawRoundRect(chipLeft, chipTop, chipRight, chipBottom, radius, radius, indicatorStroke)
+        canvas.drawText(
+            visibleText,
+            chipLeft + horizontalPadding,
+            chipTop + verticalPadding - fontMetrics.top,
+            indicatorText
+        )
+    }
+
+    private fun consumeKeyUp(event: KeyEvent, action: () -> Unit): Boolean {
+        if (event.action == KeyEvent.ACTION_UP) action()
+        return true
+    }
+
+    private fun selectControllerLink(direction: Int) {
+        if (controllerLinks.isEmpty()) return
+        selectedControllerLink = if (selectedControllerLink !in controllerLinks.indices) {
+            if (direction > 0) 0 else controllerLinks.lastIndex
+        } else {
+            (selectedControllerLink + direction + controllerLinks.size) % controllerLinks.size
+        }
+        invalidate()
+        announceControllerLink(controllerLinkIndicator(controllerLinks[selectedControllerLink]))
+    }
+
+    private fun activateControllerLink() {
+        val link = controllerLinks.getOrNull(selectedControllerLink) ?: return
+        routeNavigation(url, link.url, true, onNavigate, onOpenExternal)
+    }
+
+    private fun controllerLinkIndicator(link: HandbookControllerLink): String {
+        return context.getString(
+            R.string.handbook_controller_link_indicator,
+            selectedControllerLink + 1,
+            controllerLinks.size,
+            link.label
+        )
+    }
+
+    private fun announceControllerLink(text: String) {
+        contentDescription = text
+        sendAccessibilityEvent(AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED)
+    }
 }
 
 private const val LEGACY_LINK_TAP_TIMEOUT_MS = 1_000L

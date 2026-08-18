@@ -1922,6 +1922,7 @@
     <string name="handbook_error_timeout">文档加载超时，请点击重试</string>
     <string name="handbook_error_unavailable">文档手册暂时无法打开，请稍后再试</string>
     <string name="handbook_retry">点击重试</string>
+    <string name="handbook_controller_link_indicator">链接 %1$d/%2$d：%3$s</string>
     <string name="title_about_us">关于我们</string>
     <!-- 功能发现引导 -->
     <string name="feature_guide_step">杂鱼也能发现的小秘密 · %1$d/%2$d</string>

@@ -5,12 +5,15 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.SystemClock
+import android.text.Html
 import android.text.TextUtils
+import android.text.style.URLSpan
 import com.limelight.LimeLog
 import com.limelight.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -28,7 +31,8 @@ import javax.net.ssl.SSLException
 sealed class HandbookLoadResult {
     data class Success(
         val html: String,
-        val baseUrl: String
+        val baseUrl: String,
+        val controllerLinks: List<HandbookControllerLink> = emptyList()
     ) : HandbookLoadResult()
 
     data class Failure(val reason: HandbookFailureReason) : HandbookLoadResult()
@@ -39,6 +43,39 @@ enum class HandbookFailureReason {
     TIMEOUT,
     UNAVAILABLE
 }
+
+data class HandbookControllerLink(
+    val label: String,
+    val url: String
+)
+
+@Suppress("DEPRECATION")
+internal fun extractHandbookControllerLinks(
+    html: String,
+    baseUrl: String
+): List<HandbookControllerLink> {
+    val base = baseUrl.toHttpUrlOrNull() ?: return emptyList()
+    val spanned = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        Html.fromHtml(html, Html.FROM_HTML_MODE_LEGACY)
+    } else {
+        Html.fromHtml(html)
+    }
+    return spanned.getSpans(0, spanned.length, URLSpan::class.java)
+        .mapNotNull { span ->
+            val resolvedUrl = base.resolve(span.url)?.toString() ?: return@mapNotNull null
+            val label = spanned.subSequence(
+                spanned.getSpanStart(span),
+                spanned.getSpanEnd(span)
+            ).toString().replace(HANDBOOK_WHITESPACE, " ").trim()
+            HandbookControllerLink(
+                label = label.ifEmpty { resolvedUrl },
+                url = resolvedUrl
+            )
+        }
+        .distinctBy { it.url to it.label }
+}
+
+private val HANDBOOK_WHITESPACE = Regex("\\s+")
 
 class HandbookRepository(
     private val appContext: Context,
@@ -240,6 +277,13 @@ class HandbookRepository(
         val style = """
             <style id="moonlight-handbook-presentation">
               header.site-header { display: none !important; }
+              a:focus, a:focus-visible {
+                outline: 3px solid #ff6b9d !important;
+                outline-offset: 3px !important;
+                background: rgba(255, 107, 157, 0.14) !important;
+                border-radius: 4px !important;
+                scroll-margin-block: 24px !important;
+              }
             </style>
         """.trimIndent()
         val headEnd = localizedHtml.indexOf("</head>", ignoreCase = true)
@@ -250,7 +294,10 @@ class HandbookRepository(
         } else {
             style + localizedHtml
         }
-        return content.copy(html = presentedHtml)
+        return content.copy(
+            html = presentedHtml,
+            controllerLinks = extractHandbookControllerLinks(presentedHtml, content.baseUrl)
+        )
     }
 
     @Suppress("DEPRECATION")
