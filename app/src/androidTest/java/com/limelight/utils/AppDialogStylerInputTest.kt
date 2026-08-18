@@ -12,6 +12,7 @@ import com.limelight.HelpActivity
 import com.limelight.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -54,6 +55,34 @@ class AppDialogStylerInputTest {
         assertEquals(1, dismissCount.get())
     }
 
+    @Test
+    fun systemChoiceListFocusesSelectionAndAcceptsGamepadA() {
+        val selectedPosition = AtomicInteger(-1)
+        lateinit var dialog: AlertDialog
+        activityRule.scenario.onActivity { activity ->
+            dialog = AlertDialog.Builder(activity, R.style.AppDialogStyle)
+                .setTitle("Theme")
+                .setSingleChoiceItems(arrayOf("System", "Light", "Dark"), 1) { _, which ->
+                    selectedPosition.set(which)
+                }
+                .create()
+            dialog.show()
+            AppDialogStyler.applySystemChoiceList(dialog, activity)
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+        activityRule.scenario.onActivity {
+            assertTrue(dialog.listView.hasFocus())
+            assertEquals(1, dialog.listView.selectedItemPosition)
+        }
+
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+        assertEquals(1, selectedPosition.get())
+        activityRule.scenario.onActivity { dialog.dismiss() }
+    }
+
     private fun assertDialogClosesWith(keyCode: Int) {
         lateinit var dialog: AlertDialog
         activityRule.scenario.onActivity { activity ->
@@ -65,6 +94,7 @@ class AppDialogStylerInputTest {
             AppDialogStyler.apply(dialog, activity)
             AppDialogStyler.installDismissKeys(dialog, dismissOnBack = true)
         }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(keyCode)
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         activityRule.scenario.onActivity {
