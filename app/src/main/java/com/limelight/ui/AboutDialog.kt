@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -52,8 +53,10 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.limelight.R
@@ -203,7 +206,17 @@ private fun AccentTextButton(
             vertical = if (compact) 10.dp else 13.dp
         )
     ) {
-        Text(text, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+        // material3.Text 会在 Button 内将拉丁文本渲染为全大写，这里用 BasicText 保持原始大小写
+        BasicText(
+            text,
+            style = TextStyle(
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                letterSpacing = 0.1.sp,
+                color = colorResource(R.color.app_dialog_accent_color)
+            )
+        )
     }
 }
 
@@ -804,7 +817,6 @@ private fun EcosystemCard(
     ) {
         Column(
             modifier = Modifier
-                .heightIn(min = if (compact) 130.dp else 128.dp)
                 .padding(if (compact) 12.dp else 15.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -835,7 +847,8 @@ private fun EcosystemCard(
                         color = colorResource(R.color.app_dialog_title_color),
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 2
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         project.platform,
@@ -846,11 +859,13 @@ private fun EcosystemCard(
                     )
                 }
             }
-            Spacer(modifier = Modifier.weight(1f))
             Text(
                 project.description,
                 color = colorResource(R.color.app_dialog_subtitle_color),
                 style = MaterialTheme.typography.labelSmall,
+                minLines = 2,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = if (compact) 8.dp else 12.dp)
             )
         }
