@@ -1236,9 +1236,12 @@ class ControllerHandler(
         synchronized(arrivalMetadataLock) {
             val baseMetadata = controllerArrivalMetadata[0]
             val activeMask = getActiveControllerMask()
-            if (!enabled && baseMetadata == null && (activeMask.toInt() and 1) == 0) {
-                sentControllerArrivalMetadata[0] = null
-                conn.sendControllerInput(0, activeMask, 0, 0, 0, 0, 0, 0, 0)
+            if (!enabled && (activeMask.toInt() and 1) == 0) {
+                if (sentControllerArrivalMetadata[0] != null) {
+                    sentControllerArrivalMetadata[0] = null
+                    conn.sendControllerInput(0, activeMask, 0, 0, 0, 0, 0, 0, 0)
+                }
+                controllerArrivalMetadata[0] = null
                 return 0
             }
             return sendControllerArrivalMetadataLocked(
