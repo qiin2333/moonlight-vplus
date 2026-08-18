@@ -25,8 +25,20 @@ internal data class GameMenuComposeUiState(
     val gyro: GyroCardState,
     val customKeys: List<CustomKeyData>,
     val quickEditMode: Boolean = false,
-    val isSubmenu: Boolean = false
+    val isSubmenu: Boolean = false,
+    val pageLayout: GameMenuPageLayout = GameMenuPageLayout.STANDARD
 )
+
+internal enum class GameMenuPageLayout {
+    STANDARD,
+    TOUCH_MODE
+}
+
+enum class GameMenuOptionPresentation {
+    DEFAULT,
+    PRIMARY_MODE,
+    COMPATIBLE_ACTION
+}
 
 internal class GameMenuGuideDismissController {
     private var dismissAction: (() -> Unit)? = null

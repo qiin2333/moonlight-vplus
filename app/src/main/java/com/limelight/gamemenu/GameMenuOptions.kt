@@ -93,6 +93,7 @@ private fun MenuOptionRow(
     val danger = option.iconKey == "game_menu_disconnect" ||
         option.iconKey == "game_menu_disconnect_and_quit"
     val borderColor = when {
+        option.selected -> colorResource(R.color.game_menu_accent).copy(alpha = 0.70f)
         option.isCrownControl -> colorResource(R.color.game_menu_accent).copy(alpha = 0.55f)
         else -> colorResource(R.color.game_menu_list_item_border)
     }
@@ -213,10 +214,19 @@ private fun MenuOptionRow(
                     onSegmentClick = onSegmentClick,
                     modifier = Modifier
                         .weight(1f)
-                        .height(36.dp)
+                        .height(if (inlineControl.segments.size > 3) 72.dp else 36.dp)
                 )
             }
             null -> if (option.showChevron) MenuChevron()
+        }
+        if (option.selected) {
+            Text(
+                text = "✓",
+                color = colorResource(R.color.game_menu_accent),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = GameMenuDimens.compact)
+            )
         }
     }
 }
@@ -293,46 +303,53 @@ private fun InlineSegmentedControl(
 ) {
     val view = LocalView.current
     val accent = colorResource(R.color.game_menu_accent)
-    Row(
+    Column(
         modifier = modifier
             .padding(horizontal = 1.dp)
             .selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(1.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalArrangement = Arrangement.spacedBy(1.dp)
     ) {
-        segments.forEach { segment ->
-            val segmentShape = AppShapes.small
-            val background = if (segment.selected) {
-                accent.copy(alpha = 0.12f)
-            } else {
-                Color.Transparent
-            }
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .clip(segmentShape)
-                    .background(background)
-                    .gamepadFocusOutline(segmentShape)
-                    .selectable(
-                        selected = segment.selected,
-                        role = Role.RadioButton,
-                        onClick = {
-                            view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                            onSegmentClick(segment)
-                        }
-                    )
-                    .padding(horizontal = 2.dp),
-                contentAlignment = Alignment.Center
+        segments.chunked(if (segments.size > 3) 3 else segments.size.coerceAtLeast(1)).forEach { rowSegments ->
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(1.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = compactSegmentLabel(segment.label),
-                    color = if (segment.selected) accent else colorResource(R.color.game_menu_text_secondary),
-                    fontSize = 10.sp,
-                    fontWeight = if (segment.selected) FontWeight.Medium else FontWeight.Normal,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                rowSegments.forEach { segment ->
+                    val segmentShape = AppShapes.small
+                    val background = if (segment.selected) {
+                        accent.copy(alpha = 0.12f)
+                    } else {
+                        Color.Transparent
+                    }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clip(segmentShape)
+                            .background(background)
+                            .gamepadFocusOutline(segmentShape)
+                            .selectable(
+                                selected = segment.selected,
+                                role = Role.RadioButton,
+                                onClick = {
+                                    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                                    onSegmentClick(segment)
+                                }
+                            )
+                            .padding(horizontal = 2.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = compactSegmentLabel(segment.label),
+                            color = if (segment.selected) accent else colorResource(R.color.game_menu_text_secondary),
+                            fontSize = 10.sp,
+                            fontWeight = if (segment.selected) FontWeight.Medium else FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
         }
     }

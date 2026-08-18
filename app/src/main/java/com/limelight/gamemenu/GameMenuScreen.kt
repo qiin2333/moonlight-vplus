@@ -21,6 +21,8 @@ import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,6 +60,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
@@ -115,8 +118,8 @@ internal val GameMenuControlShape = RoundedCornerShape(GameMenuControlRadius)
 private const val GAME_MENU_MAX_HEIGHT_FRACTION = 0.90f
 private const val GAME_MENU_WIDE_LAYOUT_MIN_WIDTH_DP = 576
 private const val ORIENTATION_MISMATCH_THRESHOLD = 1.5f
-private const val GAME_MENU_LANDSCAPE_WIDTH_FRACTION = 0.88f
-private const val GAME_MENU_PORTRAIT_WIDTH_FRACTION = 0.95f
+private const val GAME_MENU_LANDSCAPE_WIDTH_FRACTION = 0.98f
+private const val GAME_MENU_PORTRAIT_WIDTH_FRACTION = 0.98f
 internal const val GAME_MENU_BACKDROP_TAG = "gameMenuBackdrop"
 internal const val GAME_MENU_PANEL_TAG = "gameMenuPanel"
 internal const val GAME_MENU_GUIDE_INPUT_BLOCKER_TAG = "gameMenuGuideInputBlocker"
@@ -127,8 +130,8 @@ internal object GameMenuDimens {
     val compact = 6.dp
     val section = 8.dp
     val outer = 12.dp
-    val compactScreenInset = 16.dp
-    val wideScreenInset = 28.dp
+    val compactScreenInset = 8.dp
+    val wideScreenInset = 10.dp
 }
 
 private object GameMenuFabricSpec {
@@ -281,7 +284,7 @@ internal fun GameMenuScreen(
                         GameMenuContent(
                             state = state,
                             callbacks = callbacks,
-                            wideLayout = wideLayout && !state.isSubmenu,
+                            wideLayout = wideLayout,
                             initialFocusRequester = initialFocusRequester,
                             quickActionGuideModifier = quickActionGuideModifier,
                             crownGuideModifier = crownGuideModifier
@@ -519,7 +522,13 @@ private fun GameMenuContent(
             )
         }
 
-        if (wideLayout) {
+        if (state.pageLayout == GameMenuPageLayout.TOUCH_MODE && wideLayout) {
+            TouchModeTable(
+                options = state.options,
+                callbacks = callbacks,
+                initialFocusRequester = initialFocusRequester
+            )
+        } else if (wideLayout && !state.isSubmenu) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.section),
@@ -559,6 +568,140 @@ private fun GameMenuContent(
 
         if (!state.isSubmenu && state.appName.isNotBlank()) {
             GameMenuFooter(state.appName)
+        }
+    }
+}
+
+@Composable
+private fun TouchModeTable(
+    options: List<GameMenu.MenuOption>,
+    callbacks: GameMenuCallbacks,
+    initialFocusRequester: FocusRequester
+) {
+    val primaryModes = options.filter {
+        it.presentation == GameMenuOptionPresentation.PRIMARY_MODE
+    }
+    val compatibleActions = options.filter {
+        it.presentation == GameMenuOptionPresentation.COMPATIBLE_ACTION
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(GameMenuDimens.compact)) {
+        Text(
+            text = stringResource(R.string.game_menu_touch_mode_primary_group),
+            color = colorResource(R.color.game_menu_text_secondary),
+            fontSize = 11.sp
+        )
+        Column(
+            modifier = Modifier.selectableGroup(),
+            verticalArrangement = Arrangement.spacedBy(GameMenuDimens.compact)
+        ) {
+            primaryModes.chunked(2).forEachIndexed { rowIndex, rowModes ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.compact)
+                ) {
+                    rowModes.forEachIndexed { columnIndex, option ->
+                        TouchModeChoice(
+                            option = option,
+                            onClick = { callbacks.onOptionClick(option) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .then(
+                                    if (rowIndex == 0 && columnIndex == 0) {
+                                        Modifier.focusRequester(initialFocusRequester)
+                                    } else {
+                                        Modifier
+                                    }
+                                )
+                        )
+                    }
+                    if (rowModes.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+
+        if (compatibleActions.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.game_menu_touch_mode_compatible_group),
+                color = colorResource(R.color.game_menu_text_secondary),
+                fontSize = 11.sp,
+                modifier = Modifier.padding(top = GameMenuDimens.tight)
+            )
+            compatibleActions.chunked(2).forEach { rowOptions ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.compact),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    rowOptions.forEach { option ->
+                        MenuOptionColumn(
+                            options = listOf(option),
+                            iconForOption = callbacks.iconForOption,
+                            onOptionClick = callbacks.onOptionClick,
+                            onInlineToggle = callbacks.onInlineToggle,
+                            onSegmentClick = callbacks.onSegmentClick,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    if (rowOptions.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TouchModeChoice(
+    option: GameMenu.MenuOption,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val view = LocalView.current
+    val accent = colorResource(R.color.game_menu_accent)
+    val shape = GameMenuCardShape
+    Column(
+        modifier = modifier
+            .heightIn(min = 70.dp)
+            .clip(shape)
+            .background(
+                if (option.selected) accent.copy(alpha = 0.12f)
+                else colorResource(R.color.game_menu_list_item_normal)
+            )
+            .border(
+                GameMenuDimens.surfaceStroke,
+                if (option.selected) accent.copy(alpha = 0.70f)
+                else colorResource(R.color.game_menu_list_item_border),
+                shape
+            )
+            .gamepadFocusOutline(shape)
+            .selectable(
+                selected = option.selected,
+                role = Role.RadioButton,
+                onClick = {
+                    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    onClick()
+                }
+            )
+            .padding(GameMenuDimens.outer),
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = option.label + if (option.selected) "  ✓" else "",
+            color = if (option.selected) accent else colorResource(R.color.game_menu_text_primary),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        option.subtitle?.takeIf(String::isNotBlank)?.let { subtitle ->
+            Spacer(Modifier.height(GameMenuDimens.tight))
+            Text(
+                text = subtitle,
+                color = colorResource(R.color.game_menu_text_secondary),
+                fontSize = 11.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -708,6 +851,25 @@ private fun GameMenuHeader(
             modifier = Modifier.weight(1f)
         )
         if (!state.isSubmenu) {
+            val settingsShape = CircleShape
+            Icon(
+                painter = painterResource(R.drawable.ic_ui_settings),
+                contentDescription = stringResource(R.string.game_menu_card_config_title),
+                tint = colorResource(R.color.game_menu_text_primary),
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(settingsShape)
+                    .background(colorResource(R.color.game_menu_card_background))
+                    .border(
+                        GameMenuDimens.surfaceStroke,
+                        colorResource(R.color.game_menu_button_border),
+                        settingsShape
+                    )
+                    .gamepadFocusOutline(settingsShape)
+                    .clickable(onClick = callbacks.onEditCards)
+                    .padding(8.dp)
+            )
+            Spacer(Modifier.width(GameMenuDimens.tight))
             state.deviceQuickOptions.forEach { option ->
                 HeaderDeviceQuickAction(
                     option = option,
