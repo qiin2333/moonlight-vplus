@@ -1780,10 +1780,22 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                     continue
                 }
 
+                btn.isFocusable = true
+                btn.isFocusableInTouchMode = true
+                btn.nextFocusUpId = sceneButtonIds[(i - 1).coerceAtLeast(0)]
+                btn.nextFocusDownId = sceneButtonIds[(i + 1).coerceAtMost(sceneButtonIds.lastIndex)]
                 btn.setOnClickListener { applySceneConfiguration(sceneNumber) }
                 btn.setOnLongClickListener {
                     showSaveConfirmationDialog(sceneNumber)
                     true
+                }
+                btn.setOnKeyListener { _, keyCode, event ->
+                    if (keyCode != KeyEvent.KEYCODE_BUTTON_A) {
+                        false
+                    } else {
+                        if (event.action == KeyEvent.ACTION_UP) btn.performClick()
+                        true
+                    }
                 }
             }
             updateSceneButtonStates()
