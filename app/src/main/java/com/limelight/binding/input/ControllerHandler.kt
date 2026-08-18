@@ -43,7 +43,8 @@ class ControllerHandler(
     internal val conn: NvConnection,
     private val gestures: GameGestures,
     internal val prefConfig: PreferenceConfiguration,
-    private val onTogglePerformanceOverlay: () -> Unit = {}
+    private val onTogglePerformanceOverlay: () -> Unit = {},
+    private val onExitStream: () -> Unit = { activityContext.finish() }
 ) : InputManager.InputDeviceListener, UsbDriverListener {
 
     companion object {
@@ -178,7 +179,10 @@ class ControllerHandler(
         }
 
         @JvmStatic
-        fun getAttachedControllerMask(context: Context): Short {
+        fun getAttachedControllerMask(
+            context: Context,
+            includeScreenDs5Touchpad: Boolean = true
+        ): Short {
             var count = 0
             var mask: Short = 0
 
@@ -210,7 +214,10 @@ class ControllerHandler(
                 }
             }
 
-            if (PreferenceConfiguration.readPreferences(context).onscreenController) {
+            val preferences = PreferenceConfiguration.readPreferences(context)
+            if (preferences.onscreenController ||
+                (includeScreenDs5Touchpad && preferences.screenDs5Touchpad)
+            ) {
                 LimeLog.info("Counting OSC gamepad")
                 mask = (mask.toInt() or 1).toShort()
             }
@@ -312,6 +319,18 @@ class ControllerHandler(
     private var initialControllers: Short = 0
     private var usbShortcutHintOwner: UsbDeviceContext? = null
 
+    internal data class ControllerArrivalMetadata(
+        val type: Byte,
+        val supportedButtonFlags: Int,
+        val capabilities: Short
+    )
+
+    // Arrival metadata is written from USB driver threads and read/written from the
+    // main thread, so all access to these arrays must hold this lock.
+    private val arrivalMetadataLock = Any()
+    private val controllerArrivalMetadata = arrayOfNulls<ControllerArrivalMetadata>(MAX_GAMEPADS.toInt())
+    private val sentControllerArrivalMetadata = arrayOfNulls<ControllerArrivalMetadata>(MAX_GAMEPADS.toInt())
+
     private val stickDeadzone: Double
 
     internal val defaultContext: InputDeviceContext
@@ -320,6 +339,9 @@ class ControllerHandler(
     internal val gyroManager = ControllerGyroManager(this)
     internal val rumbleManager = ControllerRumbleManager(this)
     private val hapticsCoordinator = ControllerHapticsCoordinator(this)
+
+    @Volatile
+    private var screenDs5TouchpadPressed = false
 
     private val REMAP_IGNORE = -1
     private val REMAP_CONSUME = -2
@@ -399,7 +421,10 @@ class ControllerHandler(
         // its initial InputEvent, we will move these from this set onto the
         // currentControllers set which will allow them to properly unplug
         // if they are removed.
-        initialControllers = getAttachedControllerMask(activityContext)
+        initialControllers = getAttachedControllerMask(
+            activityContext,
+            includeScreenDs5Touchpad = false
+        )
 
         // Register ourselves for input device notifications
         inputManager.registerInputDeviceListener(this, null)
@@ -569,13 +594,22 @@ class ControllerHandler(
         // normal input packet. Sending a removal packet for it can create a legacy
         // Xbox controller on hosts that keep controller 0 active.
         if (context.controllerArrival.isReported) {
+            val activeMask = getActiveControllerMask()
             conn.sendControllerInput(
-                context.controllerNumber, getActiveControllerMask(),
+                context.controllerNumber, activeMask,
                 0,
                 0.toByte(), 0.toByte(),
                 0.toShort(), 0.toShort(),
                 0.toShort(), 0.toShort()
             )
+
+            val controllerNumber = context.controllerNumber.toInt() and 0xFF
+            if ((activeMask.toInt() and (1 shl controllerNumber)) == 0) {
+                // The host removed this slot, so a reconnect must send a fresh arrival event.
+                synchronized(arrivalMetadataLock) {
+                    sentControllerArrivalMetadata[controllerNumber] = null
+                }
+            }
         }
     }
 
@@ -722,7 +756,7 @@ class ControllerHandler(
             context.controllerArrival.recordAttempt(context.sendControllerArrival())
         }
 
-    internal fun retryPendingControllerArrivals() {
+    internal fun retryPendingControllerArrivals(afterRetry: (() -> Unit)? = null) {
         mainThreadHandler.post {
             if (stopped) {
                 return@post
@@ -741,6 +775,7 @@ class ControllerHandler(
             // USB contexts are owned by their driver threads and continuously
             // report state, so they retry through sendControllerInputPacket().
             // Don't iterate their SparseArray from the main thread here.
+            afterRetry?.invoke()
         }
     }
 
@@ -1176,11 +1211,76 @@ class ControllerHandler(
 
     internal fun getActiveControllerMask(): Short {
         return if (prefConfig.multiController) {
-            (currentControllers.toInt() or initialControllers.toInt() or (if (prefConfig.onscreenController or prefConfig.enableCrownFeatures) 1 else 0)).toShort()
+            (currentControllers.toInt() or initialControllers.toInt() or
+                (if (prefConfig.onscreenController || prefConfig.enableCrownFeatures || prefConfig.screenDs5Touchpad) 1 else 0)).toShort()
         } else {
             // Only Player 1 is active with multi-controller disabled
             1
         }
+    }
+
+    /**
+     * Declare controller 0 as a DualSense so the host creates a PlayStation controller
+     * with a touchpad instead of its legacy Xbox virtual controller. If a physical pad
+     * already owns player 1, its cached arrival metadata is re-declared with DS5
+     * capabilities; otherwise a bare default declaration reserves the slot.
+     */
+    fun declareScreenDs5TouchpadController(): Int {
+        synchronized(arrivalMetadataLock) {
+            val baseMetadata = controllerArrivalMetadata[0]
+                ?: ControllerArrivalMetadata(MoonBridge.LI_CTYPE_XBOX, 0, 0)
+            return sendControllerArrivalMetadataLocked(0, baseMetadata)
+        }
+    }
+
+    /** Merge the screen clickpad state into controller 0 without replacing other inputs. */
+    fun setScreenDs5TouchpadPressed(pressed: Boolean) {
+        if (screenDs5TouchpadPressed == pressed || stopped) return
+        screenDs5TouchpadPressed = pressed
+        sendControllerInputPacket(defaultContext)
+    }
+
+    internal fun sendControllerArrivalEvent(
+        controllerNumber: Byte,
+        type: Byte,
+        supportedButtonFlags: Int,
+        capabilities: Short
+    ): Int {
+        val index = controllerNumber.toInt() and 0xFF
+        if (index !in controllerArrivalMetadata.indices) return -1
+
+        val metadata = ControllerArrivalMetadata(type, supportedButtonFlags, capabilities)
+        synchronized(arrivalMetadataLock) {
+            controllerArrivalMetadata[index] = metadata
+            return sendControllerArrivalMetadataLocked(index, metadata)
+        }
+    }
+
+    private fun sendControllerArrivalMetadataLocked(
+        controllerNumber: Int,
+        baseMetadata: ControllerArrivalMetadata
+    ): Int {
+        val metadata = if (controllerNumber == 0 && prefConfig.screenDs5Touchpad) {
+            baseMetadata.copy(
+                type = MoonBridge.LI_CTYPE_PS,
+                capabilities = (baseMetadata.capabilities.toInt() or
+                    MoonBridge.LI_CCAP_TOUCHPAD.toInt() or
+                    MoonBridge.LI_CCAP_PREFER_DS5.toInt()).toShort()
+            )
+        } else {
+            baseMetadata
+        }
+
+        if (sentControllerArrivalMetadata[controllerNumber] == metadata) return 0
+
+        val result = conn.sendControllerArrivalEvent(
+            controllerNumber.toByte(), getActiveControllerMask(), metadata.type,
+            metadata.supportedButtonFlags, metadata.capabilities
+        )
+        if (result == 0) {
+            sentControllerArrivalMetadata[controllerNumber] = metadata
+        }
+        return result
     }
 
     internal fun sendControllerInputPacket(originalContext: GenericControllerContext) {
@@ -1246,6 +1346,9 @@ class ControllerHandler(
             leftStickY = maxByMagnitude(leftStickY, defaultContext.leftStickY)
             rightStickX = maxByMagnitude(rightStickX, defaultContext.rightStickX)
             rightStickY = maxByMagnitude(rightStickY, defaultContext.rightStickY)
+        }
+        if (controllerNumber.toInt() == 0 && prefConfig.screenDs5Touchpad && screenDs5TouchpadPressed) {
+            inputMap = inputMap or ControllerPacket.TOUCHPAD_FLAG
         }
 
         if (originalContext.mouseEmulationActive) {
@@ -2279,7 +2382,7 @@ class ControllerHandler(
                     }
                 UsbControllerShortcutStateMachine.Action.EXIT_STREAM ->
                     mainThreadHandler.post {
-                        if (!activityContext.isFinishing) activityContext.finish()
+                        if (!activityContext.isFinishing) onExitStream()
                     }
             }
         }

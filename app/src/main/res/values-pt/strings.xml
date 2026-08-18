@@ -432,7 +432,6 @@
     <string name="about_dialog_project_info">Baseado no projeto de código aberto Moonlight-Android, criado pela comunidade Foundation</string>
     <string name="about_dialog_thanks">Obrigado por escolher o Moonlight V+! Se você achar útil, por favor dê-nos uma estrela no GitHub ⭐</string>
     <string name="about_dialog_github">GitHub</string>
-    <string name="about_dialog_star">Dar estrela ao projeto</string>
     <string name="about_dialog_qq">Entrar no grupo QQ</string>
     <string name="about_dialog_close">Fechar</string>
     <string name="check_for_updates">Verificar atualizações</string>

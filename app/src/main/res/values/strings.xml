@@ -714,33 +714,31 @@
     <string name="about_dialog_ecosystem_title">AlkaidLab Ecosystem</string>
     <string name="about_dialog_ecosystem_lead">From the host to phones, tablets, TVs, and desktops, choose the client that fits your platform.</string>
     <string name="about_dialog_ecosystem_footer">Projects open in a secure external browser.</string>
-    <string name="about_dialog_ecosystem_open_action">Open project</string>
     <string name="about_dialog_ecosystem_sunshine_badge" translatable="false">SUN</string>
     <string name="about_dialog_ecosystem_sunshine_title" translatable="false">Foundation Sunshine</string>
-    <string name="about_dialog_ecosystem_sunshine_platform">WINDOWS · HOST</string>
+    <string name="about_dialog_ecosystem_sunshine_platform">Windows · Host</string>
     <string name="about_dialog_ecosystem_sunshine_description">An enhanced streaming host with HDR, virtual displays, remote microphone support, and a modern control panel.</string>
     <string name="about_dialog_ecosystem_pc_badge" translatable="false">PC</string>
     <string name="about_dialog_ecosystem_pc_title" translatable="false">Moonlight PC</string>
-    <string name="about_dialog_ecosystem_pc_platform" translatable="false">WINDOWS · LINUX · MACOS</string>
+    <string name="about_dialog_ecosystem_pc_platform" translatable="false">Windows · Linux · macOS</string>
     <string name="about_dialog_ecosystem_pc_description">A cross-platform enhanced Moonlight client for desktops and Steam Link.</string>
     <string name="about_dialog_ecosystem_vplus_badge" translatable="false">AND</string>
     <string name="about_dialog_ecosystem_vplus_title" translatable="false">Moonlight V+</string>
-    <string name="about_dialog_ecosystem_vplus_platform" translatable="false">ANDROID · ANDROID TV</string>
+    <string name="about_dialog_ecosystem_vplus_platform" translatable="false">Android · Android TV</string>
     <string name="about_dialog_ecosystem_vplus_description">An enhanced Android client designed for phones, tablets, and TVs.</string>
     <string name="about_dialog_ecosystem_voidlink_badge" translatable="false">iOS</string>
-    <string name="about_dialog_ecosystem_voidlink_title" translatable="false">VoidLink Extreme</string>
-    <string name="about_dialog_ecosystem_voidlink_platform" translatable="false">IPHONE · IPAD</string>
+    <string name="about_dialog_ecosystem_voidlink_title" translatable="false">VoidLink</string>
+    <string name="about_dialog_ecosystem_voidlink_platform" translatable="false">iPhone · iPad</string>
     <string name="about_dialog_ecosystem_voidlink_description">A touch- and controller-friendly streaming client for iOS and iPadOS.</string>
     <string name="about_dialog_ecosystem_harmony_badge" translatable="false">HM</string>
     <string name="about_dialog_ecosystem_harmony_title">Moonlight V+ for HarmonyOS</string>
-    <string name="about_dialog_ecosystem_harmony_platform" translatable="false">HARMONYOS NEXT</string>
+    <string name="about_dialog_ecosystem_harmony_platform" translatable="false">HarmonyOS NEXT</string>
     <string name="about_dialog_ecosystem_harmony_description">A native Moonlight V+ client for HarmonyOS phones and tablets.</string>
     <string name="about_dialog_ecosystem_mac_badge" translatable="false">MAC</string>
     <string name="about_dialog_ecosystem_mac_title" translatable="false">Moonlight macOS Enhanced</string>
-    <string name="about_dialog_ecosystem_mac_platform" translatable="false">APPLE SILICON · INTEL</string>
+    <string name="about_dialog_ecosystem_mac_platform" translatable="false">Apple Silicon · Intel</string>
     <string name="about_dialog_ecosystem_mac_description">An enhanced Moonlight client optimized for a native macOS experience.</string>
     <string name="about_dialog_github">GitHub</string>
-    <string name="about_dialog_star">Star Project</string>
     <string name="about_dialog_qq">Join QQ Group</string>
     <string name="about_dialog_close">Close</string>
     <string name="about_dialog_no_browser">No external browser is available</string>
@@ -1683,6 +1681,10 @@ Tap again to replace it.</string>
     <string name="toast_local_cursor_disabled">Low-latency local cursor disabled</string>
     <string name="toast_crown_not_enabled">Crown is off</string>
     <string name="game_menu_toggle_touch">Touch Input</string>
+    <string name="title_checkbox_screen_ds5_touchpad">Screen as DS5 touchpad</string>
+    <string name="summary_checkbox_screen_ds5_touchpad">Emulate a DualSense controller and send screen touches to its touchpad. Screen touches are captured by the touchpad while streaming.</string>
+    <string name="ds5_touchpad_active_title">DS5 touchpad active</string>
+    <string name="ds5_touchpad_active_subtitle">Touch to move · Firm press to click</string>
     <string name="toast_touch_enabled">Touch enabled</string>
     <string name="toast_touch_disabled">Touch disabled</string>
     <string name="toast_cannot_access_controller">Cannot access controller</string>
@@ -1948,6 +1950,7 @@ Tap again to replace it.</string>
     <string name="quick_btn_keyboard">Keyboard</string>
     <string name="quick_btn_controller">Gamepad</string>
     <string name="quick_btn_perf">Stats</string>
+    <string name="quick_btn_remote_mouse">Remote mouse</string>
 
     <!-- Quick action editor -->
     <string name="quick_button_editor_title">Quick Actions</string>

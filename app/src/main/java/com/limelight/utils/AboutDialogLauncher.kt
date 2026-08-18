@@ -44,8 +44,6 @@ object AboutDialogLauncher {
     private const val OFFICIAL_SITE_CN_URL = "https://www.alkaidlab.cn/"
     private const val OFFICIAL_SITE_GLOBAL_URL = "https://www.alkaidlab.com/"
     private const val GITHUB_URL = "https://github.com/qiin2333/moonlight-vplus"
-    private const val GITHUB_STAR_URL =
-        "https://github.com/qiin2333/moonlight-vplus/stargazers"
     private const val BILIBILI_URL = "https://space.bilibili.com/3690974838524514"
     private const val FOUNDATION_SUNSHINE_URL =
         "https://github.com/AlkaidLab/foundation-sunshine"
@@ -97,7 +95,6 @@ object AboutDialogLauncher {
                     HandbookLauncher.openIndex(context)
                 },
                 onEcosystem = { showEcosystemDialog(context) },
-                onStar = { if (BrowserOnlyLauncher.open(context, GITHUB_STAR_URL)) d.dismiss() },
                 onBilibili = { if (BrowserOnlyLauncher.open(context, BILIBILI_URL)) d.dismiss() },
                 onGithub = { if (BrowserOnlyLauncher.open(context, GITHUB_URL)) d.dismiss() },
                 onQq = { if (openQqGroup(context)) d.dismiss() },
@@ -226,7 +223,13 @@ object AboutDialogLauncher {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent { content(dialog) }
         }
-        dialog.setContentView(composeView)
+        dialog.setContentView(
+            composeView,
+            android.view.ViewGroup.LayoutParams(
+                android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+                android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
         dialog.setCanceledOnTouchOutside(true)
         AppDialogStyler.installDismissKeys(dialog)
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))

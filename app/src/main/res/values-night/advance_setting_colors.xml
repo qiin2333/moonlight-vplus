@@ -82,6 +82,7 @@
     <!-- About dialog keeps its own layered card treatment. -->
     <color name="about_dialog_panel_outline">#33FFFFFF</color>
     <color name="about_dialog_link_surface">#FF32262E</color>
+    <color name="about_dialog_links_bar_surface">#E61C1D22</color>
 
     <!-- Manual add computer screen -->
     <color name="add_pc_background">#FF15161B</color>

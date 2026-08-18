@@ -48,6 +48,7 @@ import com.limelight.preferences.GlPreferences
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.services.StreamNotificationService
 import com.limelight.ui.CursorView
+import com.limelight.ui.Ds5TouchpadFeedbackView
 import com.limelight.ui.GameGestures
 import com.limelight.ui.StreamView
 import com.limelight.utils.Dialog
@@ -185,6 +186,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     var grabbedInput = true
     var cursorVisible = false
     lateinit var streamView: StreamView
+    var ds5TouchpadFeedbackView: Ds5TouchpadFeedbackView? = null
     private var externalStreamView: StreamView? = null
     private var previousTimeMillis: Long = 0
     private var previousRxBytes: Long = 0
@@ -339,6 +341,20 @@ class Game : Activity(), SurfaceHolder.Callback,
         streamView.setOnGenericMotionListener(this)
         streamView.setOnKeyListener(this)
         streamView.setInputCallbacks(this)
+
+        if (prefConfig.screenDs5Touchpad) {
+            ds5TouchpadFeedbackView = Ds5TouchpadFeedbackView(this) {
+                activeStreamView ?: streamView
+            }.also { feedbackView ->
+                (streamView.parent as FrameLayout).addView(
+                    feedbackView,
+                    FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                    ),
+                )
+            }
+        }
 
         val cursorOverlayView = findViewById<CursorView>(R.id.cursorOverlay)
         panZoomHandler = PanZoomHandler(this, this, streamView, cursorOverlayView, prefConfig)
@@ -710,7 +726,8 @@ class Game : Activity(), SurfaceHolder.Callback,
             conn!!,
             this,
             prefConfig,
-            onTogglePerformanceOverlay = ::togglePerformanceOverlay
+            onTogglePerformanceOverlay = ::togglePerformanceOverlay,
+            onExitStream = ::exitStreamFromUsbShortcut
         )
     }
 
@@ -732,6 +749,14 @@ class Game : Activity(), SurfaceHolder.Callback,
         usbDriverServiceManager = UsbDriverServiceManager(this, this)
         usbDriverServiceManager?.controllerHandler = controllerHandler
         usbDriverServiceManager?.bind()
+    }
+
+    private fun exitStreamFromUsbShortcut() {
+        UsbDriverExitCoordinator.exit(
+            isFinishing = isFinishing,
+            releaseUsb = { usbDriverServiceManager?.stopAndUnbind() },
+            finishActivity = ::finish
+        )
     }
 
     // endregion
@@ -1339,6 +1364,8 @@ class Game : Activity(), SurfaceHolder.Callback,
             connectionCallbackHandler.stopConnection()
         }
 
+        usbDriverServiceManager?.stopAndUnbind()
+
         if (::controllerHandler.isInitialized) {
             controllerHandler.destroy()
         }
@@ -1352,7 +1379,6 @@ class Game : Activity(), SurfaceHolder.Callback,
         highPerfWifiLock?.release()
         jitterMonitorManager?.destroy()
         jitterMonitorManager = null
-        usbDriverServiceManager?.stopAndUnbind()
         if (::inputCaptureProvider.isInitialized) {
             inputCaptureProvider.destroy()
         }
@@ -1705,7 +1731,13 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     override fun connectionStarted() {
         connectionCallbackHandler.connectionStarted()
-        controllerHandler.retryPendingControllerArrivals()
+        controllerHandler.retryPendingControllerArrivals {
+            if (prefConfig.screenDs5Touchpad) {
+                // Retries run first so pending arrivals populate the metadata cache;
+                // the DS5 declaration then re-declares slot 0 with DualSense capabilities.
+                controllerHandler.declareScreenDs5TouchpadController()
+            }
+        }
         startClipboardSyncIfEnabled()
     }
 

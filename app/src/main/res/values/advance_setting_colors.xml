@@ -111,6 +111,7 @@
     <!-- About dialog keeps its own layered card treatment. -->
     <color name="about_dialog_panel_outline">#FFE8DDE6</color>
     <color name="about_dialog_link_surface">#FFFFF5F8</color>
+    <color name="about_dialog_links_bar_surface">#FFFFF9FC</color>
 
     <!-- Crown side panel -->
     <color name="crown_panel_background">#F21B1B22</color>

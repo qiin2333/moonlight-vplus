@@ -310,6 +310,18 @@ class GameMenu(
             )
         }
 
+        touchModeOptionsList.add(
+            MenuOption(
+                label = getString(R.string.game_menu_toggle_remote_mouse),
+                isWithGameFocus = false,
+                runnable = Runnable { actionExecutor.execute("toggle_remote_mouse") },
+                iconKey = null,
+                isShowIcon = false,
+                isKeepDialog = false,
+                subtitle = getString(R.string.game_menu_toggle_remote_mouse_summary)
+            )
+        )
+
         //触控板仅移动
         if (isTouchscreenTrackpad) {
             touchModeOptionsList.add(
@@ -416,16 +428,6 @@ class GameMenu(
                 subtitle = getString(R.string.game_menu_touch_mode_native_mouse_summary)
             )
         )
-    }
-
-    private fun toggleRemoteMouse() {
-        sendKeys(shortArrayOf(
-            KeyboardTranslator.VK_LCONTROL.s(),
-            KeyboardTranslator.VK_MENU.s(),
-            KeyboardTranslator.VK_LSHIFT.s(),
-            KeyboardTranslator.VK_N.s()
-        ))
-        Toast.makeText(game, getString(R.string.toast_remote_mouse_toast), Toast.LENGTH_SHORT).show()
     }
 
     private fun updateTouchModeSetting(isTrackpadMode: Boolean) {
@@ -1376,15 +1378,6 @@ class GameMenu(
             isKeepDialog = true,
             showChevron = true,
             inlineControl = InlineControl.Segmented(buildTouchModeSegments(compactLabels = true))
-        ))
-
-        normalOptions.add(MenuOption(
-            label = getString(R.string.game_menu_toggle_remote_mouse),
-            isWithGameFocus = false,
-            runnable = Runnable { toggleRemoteMouse() },
-            iconKey = "game_menu_mouse_emulation",
-            isShowIcon = true,
-            isKeepDialog = false
         ))
 
         normalOptions.add(MenuOption(
