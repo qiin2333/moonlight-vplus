@@ -103,6 +103,8 @@ internal fun shouldScheduleAppViewFeatureGuide(
     initialComputerStateLoaded: Boolean
 ): Boolean = !alreadyScheduled && initialComputerStateLoaded
 
+internal fun shouldEnableAppViewResumeTitle(runningAppId: Int): Boolean = runningAppId != 0
+
 class AppView : ComponentActivity(), AdapterFragmentCallbacks {
 
     // 主线程作用域，用于收集 ComputerManagerService 的 Flow。
@@ -529,8 +531,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
                 }
             }
         }
-        label.isClickable = false
-        label.isFocusable = false
+        updateResumeTitleInteractivity(label)
 
         // Setup top panel toggle handle
         val topPanelToggle = findViewById<TextView>(R.id.topPanelToggle)
@@ -613,8 +614,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         val label = findViewById<TextView>(R.id.appListText)
         val hasRunningApp = lastRunningAppId != 0
         val arrow = if (hasRunningApp) " ▸" else ""
-        label.isClickable = hasRunningApp
-        label.isFocusable = hasRunningApp
+        updateResumeTitleInteractivity(label)
 
         if (!appName.isNullOrEmpty()) {
             val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -635,6 +635,12 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         } else {
             label.text = "$computerName$arrow"
         }
+    }
+
+    private fun updateResumeTitleInteractivity(label: TextView) {
+        val enabled = shouldEnableAppViewResumeTitle(lastRunningAppId)
+        label.isClickable = enabled
+        label.isFocusable = enabled
     }
 
     private fun changeBackgroundWithDebounce(app: AppObject?) {
