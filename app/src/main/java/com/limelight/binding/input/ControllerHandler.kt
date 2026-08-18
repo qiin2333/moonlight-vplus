@@ -1220,16 +1220,31 @@ class ControllerHandler(
     }
 
     /**
-     * Declare controller 0 as a DualSense so the host creates a PlayStation controller
-     * with a touchpad instead of its legacy Xbox virtual controller. If a physical pad
-     * already owns player 1, its cached arrival metadata is re-declared with DS5
-     * capabilities; otherwise a bare default declaration reserves the slot.
+     * Apply a runtime change of the screen DS5 touchpad setting. Callers must update
+     * [PreferenceConfiguration.screenDs5Touchpad] first: it drives both the decoration
+     * in [sendControllerArrivalMetadataLocked] and bit 0 of the active mask.
+     *
+     * Enabling (re-)declares controller 0 as a DualSense, reusing the cached metadata
+     * when a physical pad already owns player 1. Disabling releases the reserved slot
+     * when nothing else keeps player 1 active, or re-declares the base metadata so the
+     * host drops the DualSense identity.
      */
-    fun declareScreenDs5TouchpadController(): Int {
+    fun setScreenDs5TouchpadEnabled(enabled: Boolean): Int {
+        if (!enabled) {
+            screenDs5TouchpadPressed = false
+        }
         synchronized(arrivalMetadataLock) {
             val baseMetadata = controllerArrivalMetadata[0]
-                ?: ControllerArrivalMetadata(MoonBridge.LI_CTYPE_XBOX, 0, 0)
-            return sendControllerArrivalMetadataLocked(0, baseMetadata)
+            val activeMask = getActiveControllerMask()
+            if (!enabled && baseMetadata == null && (activeMask.toInt() and 1) == 0) {
+                sentControllerArrivalMetadata[0] = null
+                conn.sendControllerInput(0, activeMask, 0, 0, 0, 0, 0, 0, 0)
+                return 0
+            }
+            return sendControllerArrivalMetadataLocked(
+                0,
+                baseMetadata ?: ControllerArrivalMetadata(MoonBridge.LI_CTYPE_XBOX, 0, 0)
+            )
         }
     }
 

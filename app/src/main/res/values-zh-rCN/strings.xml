@@ -852,6 +852,11 @@
     <string name="game_menu_touch_mode_classic_summary">触摸位置直接控制鼠标</string>
     <string name="game_menu_touch_mode_trackpad_summary">像笔记本触控板一样滑动，默认使用兼容的主机光标</string>
     <string name="game_menu_touch_mode_native_mouse_summary">适合蓝牙、USB 鼠标和键盘触摸板</string>
+    <string name="game_menu_touch_mode_ds5">DS5 触控板</string>
+    <string name="game_menu_touch_mode_ds5_short">DS5</string>
+    <string name="game_menu_touch_mode_ds5_summary">屏幕作为 DualSense 手柄的触控板，用力按压即可点击</string>
+    <string name="game_menu_touch_mode_ds5_unsupported_summary">主机不支持控制器触摸，触摸仍按原触控方式处理</string>
+    <string name="toast_ds5_touchpad_unsupported">主机不支持 DS5 触控板，触摸将按原触控方式处理</string>
     <string name="game_menu_current_selection">当前：%1$s</string>
     <string name="game_menu_trackpad_double_click_drag">双击并按住拖动</string>
     <string name="game_menu_trackpad_tap_behavior">单指点击</string>

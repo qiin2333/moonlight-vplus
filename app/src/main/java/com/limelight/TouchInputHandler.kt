@@ -7,6 +7,7 @@ import android.view.HapticFeedbackConstants
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.limelight.binding.input.touch.AbsoluteTouchContext
 import com.limelight.binding.input.touch.NativeTouchContext
@@ -1069,6 +1070,7 @@ class TouchInputHandler(private val game: Game) {
                 position[0], position[1], pressure
             ) ?: return false
             val supported = result != MoonBridge.LI_ERR_UNSUPPORTED
+            noteScreenDs5HostSupport(supported)
             if (supported) {
                 game.ds5TouchpadFeedbackView?.updateContact(
                     eventType,
@@ -1086,6 +1088,9 @@ class TouchInputHandler(private val game: Game) {
                 val result = game.conn?.sendControllerTouchEvent(
                     0, MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, 0, 0f, 0f, 0f
                 )
+                if (result != null) {
+                    noteScreenDs5HostSupport(result != MoonBridge.LI_ERR_UNSUPPORTED)
+                }
                 // Clear local feedback even if the send failed, so recorded contacts
                 // don't linger on screen.
                 game.ds5TouchpadFeedbackView?.cancelAllContacts()
@@ -1102,6 +1107,19 @@ class TouchInputHandler(private val game: Game) {
             (view ?: game.streamView).performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
         }
         return supported
+    }
+
+    /** Record the first definitive host answer for controller touch and surface a one-time hint. */
+    private fun noteScreenDs5HostSupport(supported: Boolean) {
+        if (game.screenDs5TouchpadHostSupport != Game.ScreenDs5HostSupport.UNKNOWN) return
+        game.setScreenDs5TouchpadHostSupport(supported)
+        if (!supported) {
+            Toast.makeText(
+                game,
+                R.string.toast_ds5_touchpad_unsupported,
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
 
     private fun updateScreenDs5TouchpadPress(view: View, event: MotionEvent) {
