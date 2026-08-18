@@ -594,19 +594,19 @@ class ControllerHandler(
         // normal input packet. Sending a removal packet for it can create a legacy
         // Xbox controller on hosts that keep controller 0 active.
         if (context.controllerArrival.isReported) {
-            val activeMask = getActiveControllerMask()
-            conn.sendControllerInput(
-                context.controllerNumber, activeMask,
-                0,
-                0.toByte(), 0.toByte(),
-                0.toShort(), 0.toShort(),
-                0.toShort(), 0.toShort()
-            )
+            synchronized(arrivalMetadataLock) {
+                val activeMask = getActiveControllerMask()
+                conn.sendControllerInput(
+                    context.controllerNumber, activeMask,
+                    0,
+                    0.toByte(), 0.toByte(),
+                    0.toShort(), 0.toShort(),
+                    0.toShort(), 0.toShort()
+                )
 
-            val controllerNumber = context.controllerNumber.toInt() and 0xFF
-            if ((activeMask.toInt() and (1 shl controllerNumber)) == 0) {
-                // The host removed this slot, so a reconnect must send a fresh arrival event.
-                synchronized(arrivalMetadataLock) {
+                val controllerNumber = context.controllerNumber.toInt() and 0xFF
+                if ((activeMask.toInt() and (1 shl controllerNumber)) == 0) {
+                    // The host removed this slot, so a reconnect must send a fresh arrival event.
                     sentControllerArrivalMetadata[controllerNumber] = null
                 }
             }
@@ -1236,17 +1236,32 @@ class ControllerHandler(
         synchronized(arrivalMetadataLock) {
             val baseMetadata = controllerArrivalMetadata[0]
             val activeMask = getActiveControllerMask()
+            val arrivalBase = baseMetadata ?: ControllerArrivalMetadata(MoonBridge.LI_CTYPE_XBOX, 0, 0)
+            val targetMetadata = decorateControllerArrivalMetadata(0, arrivalBase)
+
+            // Sunshine rejects an arrival for an allocated controller number. Remove slot 0
+            // before changing its host-visible profile, then allow the fresh arrival below.
+            if (sentControllerArrivalMetadata[0] != targetMetadata &&
+                ScreenDs5ControllerPolicy.shouldRemovePrimaryController(
+                    activeMask,
+                    sentControllerArrivalMetadata[0] != null,
+                )
+            ) {
+                conn.sendControllerInput(
+                    0,
+                    ScreenDs5ControllerPolicy.withoutPrimaryController(activeMask),
+                    0, 0, 0, 0, 0, 0, 0,
+                )
+                sentControllerArrivalMetadata[0] = null
+            }
+
             if (!enabled && (activeMask.toInt() and 1) == 0) {
-                if (sentControllerArrivalMetadata[0] != null) {
-                    sentControllerArrivalMetadata[0] = null
-                    conn.sendControllerInput(0, activeMask, 0, 0, 0, 0, 0, 0, 0)
-                }
                 controllerArrivalMetadata[0] = null
                 return 0
             }
             return sendControllerArrivalMetadataLocked(
                 0,
-                baseMetadata ?: ControllerArrivalMetadata(MoonBridge.LI_CTYPE_XBOX, 0, 0)
+                arrivalBase
             )
         }
     }
@@ -1278,18 +1293,20 @@ class ControllerHandler(
         controllerNumber: Int,
         baseMetadata: ControllerArrivalMetadata
     ): Int {
-        val metadata = if (controllerNumber == 0 && prefConfig.screenDs5Touchpad) {
-            baseMetadata.copy(
-                type = MoonBridge.LI_CTYPE_PS,
-                capabilities = (baseMetadata.capabilities.toInt() or
-                    MoonBridge.LI_CCAP_TOUCHPAD.toInt() or
-                    MoonBridge.LI_CCAP_PREFER_DS5.toInt()).toShort()
-            )
-        } else {
-            baseMetadata
-        }
+        val metadata = decorateControllerArrivalMetadata(controllerNumber, baseMetadata)
 
         if (sentControllerArrivalMetadata[controllerNumber] == metadata) return 0
+
+        // Release an allocated slot before replacing a fallback profile with the
+        // physical controller profile. Sunshine rejects duplicate arrivals.
+        if (controllerNumber == 0 && sentControllerArrivalMetadata[0] != null) {
+            conn.sendControllerInput(
+                0,
+                ScreenDs5ControllerPolicy.withoutPrimaryController(getActiveControllerMask()),
+                0, 0, 0, 0, 0, 0, 0,
+            )
+            sentControllerArrivalMetadata[0] = null
+        }
 
         val result = conn.sendControllerArrivalEvent(
             controllerNumber.toByte(), getActiveControllerMask(), metadata.type,
@@ -1301,7 +1318,30 @@ class ControllerHandler(
         return result
     }
 
+    private fun decorateControllerArrivalMetadata(
+        controllerNumber: Int,
+        baseMetadata: ControllerArrivalMetadata,
+    ): ControllerArrivalMetadata {
+        return if (controllerNumber == 0 && prefConfig.screenDs5Touchpad) {
+            baseMetadata.copy(
+                type = MoonBridge.LI_CTYPE_PS,
+                supportedButtonFlags = baseMetadata.supportedButtonFlags or ControllerPacket.TOUCHPAD_FLAG,
+                capabilities = (baseMetadata.capabilities.toInt() or
+                    MoonBridge.LI_CCAP_TOUCHPAD.toInt() or
+                    MoonBridge.LI_CCAP_PREFER_DS5.toInt()).toShort(),
+            )
+        } else {
+            baseMetadata
+        }
+    }
+
     internal fun sendControllerInputPacket(originalContext: GenericControllerContext) {
+        synchronized(arrivalMetadataLock) {
+            sendControllerInputPacketLocked(originalContext)
+        }
+    }
+
+    private fun sendControllerInputPacketLocked(originalContext: GenericControllerContext) {
         val newlyAssigned = assignControllerNumberIfNeeded(originalContext)
         if (!originalContext.controllerArrival.isReported) {
             // assignControllerNumberIfNeeded() already made the first attempt. If
