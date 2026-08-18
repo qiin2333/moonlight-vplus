@@ -76,10 +76,16 @@ class AppDialogStylerInputTest {
             assertEquals(1, dialog.listView.selectedItemPosition)
         }
 
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN)
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        activityRule.scenario.onActivity {
+            assertEquals(2, dialog.listView.selectedItemPosition)
+        }
+
         InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
 
-        assertEquals(1, selectedPosition.get())
+        assertEquals(2, selectedPosition.get())
         activityRule.scenario.onActivity { dialog.dismiss() }
     }
 
