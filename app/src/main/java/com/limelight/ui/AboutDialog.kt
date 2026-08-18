@@ -551,21 +551,22 @@ private fun LandscapeAboutContent(
                 stringResource(R.string.about_dialog_description),
                 color = colorResource(R.color.app_dialog_title_color),
                 style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
             Text(
                 stringResource(R.string.about_dialog_project_info),
                 color = colorResource(R.color.app_dialog_subtitle_color),
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 10.dp)
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
             )
             Text(
                 stringResource(R.string.about_dialog_thanks),
                 color = colorResource(R.color.app_dialog_subtitle_color),
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 4.dp)
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
             )
 
             Row(
