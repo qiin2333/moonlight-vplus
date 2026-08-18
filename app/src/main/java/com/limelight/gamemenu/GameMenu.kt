@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.ContentValues
 import android.content.Context
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Handler
@@ -410,11 +411,16 @@ class GameMenu(
             )
         )
 
-        // Show the DS5 segment unless the host already rejected controller touch this
-        // stream and the feature is off; keep it visible when enabled so it can be
-        // turned off. Unsupported hosts are surfaced by a one-time toast instead.
-        if (isScreenDs5Touchpad ||
-            game.screenDs5TouchpadHostSupport != Game.ScreenDs5HostSupport.UNSUPPORTED
+        // Only offer the segment on touchscreen devices, unless the host already
+        // rejected controller touch this stream and the feature is off; keep it
+        // visible when enabled so it can be turned off. Unsupported hosts are
+        // surfaced by a one-time toast instead.
+        val hasTouchscreen = game.packageManager.hasSystemFeature(
+            PackageManager.FEATURE_TOUCHSCREEN
+        )
+        if (hasTouchscreen &&
+            (isScreenDs5Touchpad ||
+                game.screenDs5TouchpadHostSupport != Game.ScreenDs5HostSupport.UNSUPPORTED)
         ) {
             segments.add(
                 SegmentOption(

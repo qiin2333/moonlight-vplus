@@ -1686,8 +1686,6 @@ Tap again to replace it.</string>
     <string name="toast_local_cursor_disabled">Low-latency local cursor disabled</string>
     <string name="toast_crown_not_enabled">Crown is off</string>
     <string name="game_menu_toggle_touch">Touch Input</string>
-    <string name="title_checkbox_screen_ds5_touchpad">Screen as DS5 touchpad</string>
-    <string name="summary_checkbox_screen_ds5_touchpad">Emulate a DualSense controller and send screen touches to its touchpad. Screen touches are captured by the touchpad while streaming.</string>
     <string name="ds5_touchpad_active_title">DS5 touchpad active</string>
     <string name="ds5_touchpad_active_subtitle">Touch to move · Firm press to click</string>
     <string name="toast_touch_enabled">Touch enabled</string>

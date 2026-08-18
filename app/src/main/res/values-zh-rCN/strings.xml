@@ -1419,8 +1419,6 @@
     <string name="toast_local_cursor_disabled">低延迟本地光标已关闭</string>
     <string name="toast_crown_not_enabled">王冠未启用</string>
     <string name="game_menu_toggle_touch">触控输入</string>
-    <string name="title_checkbox_screen_ds5_touchpad">使用屏幕作为 DS5 触控板</string>
-    <string name="summary_checkbox_screen_ds5_touchpad">模拟 DualSense 手柄，并将屏幕触摸发送到其触控板。串流时屏幕触摸将被触控板接管</string>
     <string name="ds5_touchpad_active_title">DS5 触控板已激活</string>
     <string name="ds5_touchpad_active_subtitle">触摸移动 · 用力按压即可点击</string>
     <string name="toast_touch_enabled">触控已开启</string>
