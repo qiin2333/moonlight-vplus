@@ -211,7 +211,13 @@ object AboutDialogLauncher {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent { content(dialog) }
         }
-        dialog.setContentView(composeView)
+        dialog.setContentView(
+            composeView,
+            android.view.ViewGroup.LayoutParams(
+                android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+                android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
         dialog.setCanceledOnTouchOutside(true)
         AppDialogStyler.installDismissKeys(dialog)
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))

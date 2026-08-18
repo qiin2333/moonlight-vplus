@@ -2,8 +2,11 @@ package com.limelight.ui
 
 import android.content.res.Configuration
 import android.view.KeyEvent
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
@@ -13,6 +16,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.util.concurrent.atomic.AtomicBoolean
@@ -97,7 +101,10 @@ class AboutDialogInputTest {
                 screenWidthDp = 700
             }
             CompositionLocalProvider(LocalConfiguration provides portrait) {
-                EcosystemDialogContent(projects(), onOpen = {}, onClose = {})
+                // 列数按对话框实际宽度决定，requiredWidth 强制真实双列布局
+                Box(Modifier.requiredWidth(700.dp)) {
+                    EcosystemDialogContent(projects(), onOpen = {}, onClose = {})
+                }
             }
         }
 
@@ -123,7 +130,9 @@ class AboutDialogInputTest {
                 screenWidthDp = 400
             }
             CompositionLocalProvider(LocalConfiguration provides portrait) {
-                EcosystemDialogContent(projects(), onOpen = {}, onClose = {})
+                Box(Modifier.requiredWidth(400.dp)) {
+                    EcosystemDialogContent(projects(), onOpen = {}, onClose = {})
+                }
             }
         }
 

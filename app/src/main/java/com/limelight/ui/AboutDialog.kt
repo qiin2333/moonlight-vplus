@@ -7,6 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -29,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -45,6 +47,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.res.colorResource
@@ -101,6 +104,22 @@ private fun Modifier.handleGamepadConfirm(onClick: () -> Unit): Modifier =
         }
     }
 
+/** 焦点指示仅在手柄/键盘导航（非触摸模式）下显示，避免触摸打开时出现焦点框。 */
+@Composable
+private fun focusIndicationVisible(focused: Boolean): Boolean {
+    val view = LocalView.current
+    var touchMode by remember(view) {
+        mutableStateOf(view.isInTouchMode)
+    }
+    DisposableEffect(view) {
+        val observer = view.viewTreeObserver
+        val listener = android.view.ViewTreeObserver.OnTouchModeChangeListener { touchMode = it }
+        observer.addOnTouchModeChangeListener(listener)
+        onDispose { observer.removeOnTouchModeChangeListener(listener) }
+    }
+    return focused && !touchMode
+}
+
 private fun Modifier.focusTarget(
     requester: FocusRequester,
     tag: String,
@@ -156,6 +175,7 @@ private fun AccentTextButton(
     focusModifier: Modifier = Modifier
 ) {
     var focused by remember { mutableStateOf(false) }
+    val showFocus = focusIndicationVisible(focused)
     Button(
         onClick = onClick,
         modifier = modifier
@@ -164,13 +184,13 @@ private fun AccentTextButton(
             .handleGamepadConfirm(onClick)
             .focusable(),
         shape = actionShape,
-        border = if (focused) {
+        border = if (showFocus) {
             BorderStroke(2.dp, colorResource(R.color.app_dialog_accent_color))
         } else {
             null
         },
         colors = ButtonDefaults.textButtonColors(
-            containerColor = if (focused) {
+            containerColor = if (showFocus) {
                 colorResource(R.color.app_dialog_accent_soft)
             } else {
                 Color.Transparent
@@ -189,6 +209,7 @@ private fun BilibiliCard(
     focusModifier: Modifier
 ) {
     var focused by remember { mutableStateOf(false) }
+    val showFocus = focusIndicationVisible(focused)
     Surface(
         onClick = onClick,
         modifier = Modifier
@@ -198,14 +219,14 @@ private fun BilibiliCard(
             .handleGamepadConfirm(onClick)
             .focusable(),
         shape = cardShape,
-        color = if (focused) {
+        color = if (showFocus) {
             colorResource(R.color.app_dialog_surface_focused)
         } else {
             colorResource(R.color.about_dialog_link_surface)
         },
         border = BorderStroke(
-            if (focused) 2.dp else 1.dp,
-            if (focused) {
+            if (showFocus) 2.dp else 1.dp,
+            if (showFocus) {
                 colorResource(R.color.app_dialog_accent_color)
             } else {
                 colorResource(R.color.about_dialog_panel_outline)
@@ -304,7 +325,7 @@ internal fun AboutDialogContent(
 
     AboutDialogSurface {
         Column {
-            Box(modifier = Modifier.weight(1f)) {
+            Box(modifier = Modifier.weight(1f, fill = false)) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
@@ -343,18 +364,21 @@ internal fun AboutDialogContent(
                     Text(
                         stringResource(R.string.about_dialog_description),
                         color = colorResource(R.color.app_dialog_title_color),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center
                     )
                     Text(
                         stringResource(R.string.about_dialog_project_info),
                         color = colorResource(R.color.app_dialog_subtitle_color),
                         style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center,
                         modifier = Modifier.padding(top = 14.dp)
                     )
                     Text(
                         stringResource(R.string.about_dialog_thanks),
                         color = colorResource(R.color.app_dialog_subtitle_color),
                         style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center,
                         modifier = Modifier.padding(top = 4.dp)
                     )
 
@@ -542,9 +566,10 @@ private fun PortraitEcosystem(
     closeFocus: FocusRequester,
     onFocusChanged: (Int) -> Unit
 ) {
-    val widthDp = LocalConfiguration.current.screenWidthDp
-    val columns = if (widthDp >= 600) 2 else 1
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    // 列数按对话框实际宽度决定（设计稿：窄屏 1 列，448dp 常规 2 列），而非屏幕宽度
+    BoxWithConstraints {
+        val columns = if (maxWidth >= 420.dp) 2 else 1
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         projects.indices.chunked(columns).forEach { rowIndices ->
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -601,6 +626,7 @@ private fun PortraitEcosystem(
                 }
             }
         }
+        }
     }
 }
 
@@ -624,6 +650,7 @@ private fun LandscapeEcosystem(
         ) {
             projects.forEachIndexed { index, p ->
                 var focused by remember { mutableStateOf(false) }
+                val showFocus = focusIndicationVisible(focused)
                 val selectedBg = if (index == selected) {
                     colorResource(R.color.app_dialog_accent_soft)
                 } else {
@@ -637,7 +664,7 @@ private fun LandscapeEcosystem(
                     },
                     shape = RoundedCornerShape(12.dp),
                     color = selectedBg,
-                    border = if (focused) {
+                    border = if (showFocus) {
                         BorderStroke(2.dp, colorResource(R.color.app_dialog_accent_color))
                     } else {
                         null
@@ -742,17 +769,18 @@ private fun EcosystemCard(
     focusModifier: Modifier
 ) {
     var focused by remember { mutableStateOf(false) }
+    val showFocus = focusIndicationVisible(focused)
     Surface(
         onClick = { onOpen(project) },
         shape = cardShape,
-        color = if (focused) {
+        color = if (showFocus) {
             colorResource(R.color.app_dialog_surface_focused)
         } else {
             colorResource(R.color.app_dialog_surface_elevated)
         },
         border = BorderStroke(
-            if (focused) 2.dp else 1.dp,
-            if (focused) {
+            if (showFocus) 2.dp else 1.dp,
+            if (showFocus) {
                 colorResource(R.color.app_dialog_accent_color)
             } else {
                 colorResource(R.color.about_dialog_panel_outline)
