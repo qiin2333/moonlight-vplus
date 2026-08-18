@@ -27,7 +27,7 @@ class HandbookControllerLinkTest {
     )
 
     @Test
-    fun rightThenGamepadAOpensFocusedHandbookLink() {
+    fun downThenGamepadAOpensFocusedHandbookLink() {
         val rendered = AtomicBoolean(false)
         val navigatedPage = AtomicReference<HandbookPageRef>()
 
@@ -66,7 +66,7 @@ class HandbookControllerLinkTest {
         }
 
         waitUntil { rendered.get() }
-        press(KeyEvent.KEYCODE_DPAD_RIGHT)
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
         press(KeyEvent.KEYCODE_BUTTON_A)
         waitUntil { navigatedPage.get() != null }
 

@@ -716,8 +716,8 @@ internal class LockedHandbookWebView(
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         return when (event.keyCode) {
-            KeyEvent.KEYCODE_DPAD_RIGHT -> consumeKeyUp(event) { focusControllerLink(1) }
-            KeyEvent.KEYCODE_DPAD_LEFT -> consumeKeyUp(event) { focusControllerLink(-1) }
+            KeyEvent.KEYCODE_DPAD_DOWN -> consumeKeyUp(event) { focusControllerLink(1) }
+            KeyEvent.KEYCODE_DPAD_UP -> consumeKeyUp(event) { focusControllerLink(-1) }
             KeyEvent.KEYCODE_BUTTON_A,
             KeyEvent.KEYCODE_DPAD_CENTER,
             KeyEvent.KEYCODE_ENTER,
@@ -743,7 +743,11 @@ internal class LockedHandbookWebView(
     private fun focusControllerLink(direction: Int) {
         evaluateControllerScript(
             FOCUS_LINK_SCRIPT.replace("__DIRECTION__", direction.toString())
-        )
+        ) { result ->
+            if (result != "true") {
+                if (direction > 0) pageDown(false) else pageUp(false)
+            }
+        }
     }
 
     private fun activateFocusedControllerLink() {
