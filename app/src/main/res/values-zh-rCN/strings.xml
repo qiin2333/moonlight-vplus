@@ -852,6 +852,10 @@
     <string name="game_menu_touch_mode_classic_summary">触摸位置直接控制鼠标</string>
     <string name="game_menu_touch_mode_trackpad_summary">像笔记本触控板一样滑动，默认使用兼容的主机光标</string>
     <string name="game_menu_touch_mode_native_mouse_summary">适合蓝牙、USB 鼠标和键盘触摸板</string>
+    <string name="game_menu_touch_mode_ds5">DS5 触控板</string>
+    <string name="game_menu_touch_mode_ds5_short">DS5</string>
+    <string name="game_menu_touch_mode_ds5_summary">屏幕作为 DualSense 手柄的触控板，用力按压即可点击</string>
+    <string name="toast_ds5_touchpad_unsupported">主机不支持 DS5 触控板，触摸将按原触控方式处理</string>
     <string name="game_menu_current_selection">当前：%1$s</string>
     <string name="game_menu_trackpad_double_click_drag">双击并按住拖动</string>
     <string name="game_menu_trackpad_tap_behavior">单指点击</string>
@@ -1415,8 +1419,6 @@
     <string name="toast_local_cursor_disabled">低延迟本地光标已关闭</string>
     <string name="toast_crown_not_enabled">王冠未启用</string>
     <string name="game_menu_toggle_touch">触控输入</string>
-    <string name="title_checkbox_screen_ds5_touchpad">使用屏幕作为 DS5 触控板</string>
-    <string name="summary_checkbox_screen_ds5_touchpad">模拟 DualSense 手柄，并将屏幕触摸发送到其触控板。串流时屏幕触摸将被触控板接管</string>
     <string name="ds5_touchpad_active_title">DS5 触控板已激活</string>
     <string name="ds5_touchpad_active_subtitle">触摸移动 · 用力按压即可点击</string>
     <string name="toast_touch_enabled">触控已开启</string>
