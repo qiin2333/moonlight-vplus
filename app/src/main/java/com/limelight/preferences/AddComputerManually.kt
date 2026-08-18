@@ -48,15 +48,18 @@ class AddComputerManually : Activity() {
     private var managerBinder: ComputerManagerService.ComputerManagerBinder? = null
     private val computersToAdd = LinkedBlockingQueue<String>()
     private var addThread: Thread? = null
+    @Volatile private var shuttingDown = false
+    private var serviceBound = false
 
     private val serviceConnection: ServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, binder: IBinder) {
+            if (shuttingDown) return
             managerBinder = binder as ComputerManagerService.ComputerManagerBinder
             startAddThread()
         }
 
         override fun onServiceDisconnected(className: ComponentName) {
-            joinAddThread()
+            cancelAddThread()
             managerBinder = null
         }
     }
@@ -162,6 +165,7 @@ class AddComputerManually : Activity() {
 
     @Throws(InterruptedException::class)
     private fun doAddPc(rawUserInput: String) {
+        if (shuttingDown) throw InterruptedException()
         var wrongSiteLocal = false
         var activeNetworkIsVpn = false
         var invalidInput = false
@@ -190,7 +194,8 @@ class AddComputerManually : Activity() {
                 }
 
                 details.manualAddress = ComputerDetails.AddressTuple(host, port)
-                success = managerBinder!!.addComputerBlocking(details)
+                val binder = managerBinder ?: throw InterruptedException()
+                success = binder.addComputerBlocking(details)
                 if (success) {
                     addedComputerUuid = details.uuid
                 }
@@ -222,6 +227,10 @@ class AddComputerManually : Activity() {
 
         dialog.dismiss()
 
+        if (shuttingDown) {
+            return
+        }
+
         if (invalidInput) {
             setAddingState(false)
             Dialog.displayDialog(this, resources.getString(R.string.conn_error_title), resources.getString(R.string.addpc_unknown_host), false)
@@ -247,6 +256,7 @@ class AddComputerManually : Activity() {
             Dialog.displayDialog(this, resources.getString(R.string.conn_error_title), dialogText, false)
         } else {
             this@AddComputerManually.runOnUiThread {
+                if (shuttingDown || isDestroyed) return@runOnUiThread
                 Toast.makeText(this@AddComputerManually, resources.getString(R.string.addpc_success), Toast.LENGTH_LONG).show()
 
                 if (!isFinishing) {
@@ -261,6 +271,7 @@ class AddComputerManually : Activity() {
     }
 
     private fun startAddThread() {
+        if (addThread?.isAlive == true || shuttingDown) return
         addThread = Thread {
             while (!Thread.currentThread().isInterrupted) {
                 try {
@@ -271,24 +282,15 @@ class AddComputerManually : Activity() {
                 }
             }
         }.apply {
-            name = "UI - AddComputerManually"
+            name = "Network - AddComputerManually"
+            isDaemon = true
             start()
         }
     }
 
-    private fun joinAddThread() {
-        if (addThread != null) {
-            addThread!!.interrupt()
-
-            try {
-                addThread!!.join()
-            } catch (e: InterruptedException) {
-                e.printStackTrace()
-                Thread.currentThread().interrupt()
-            }
-
-            addThread = null
-        }
+    private fun cancelAddThread() {
+        addThread?.interrupt()
+        addThread = null
     }
 
     override fun onStop() {
@@ -299,12 +301,14 @@ class AddComputerManually : Activity() {
     }
 
     override fun onDestroy() {
-        super.onDestroy()
-
-        if (managerBinder != null) {
-            joinAddThread()
-            unbindService(serviceConnection)
+        shuttingDown = true
+        cancelAddThread()
+        managerBinder = null
+        if (serviceBound) {
+            runCatching { unbindService(serviceConnection) }
+            serviceBound = false
         }
+        super.onDestroy()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -354,7 +358,7 @@ class AddComputerManually : Activity() {
             hostText.requestFocus()
         }
 
-        bindService(Intent(this@AddComputerManually,
+        serviceBound = bindService(Intent(this@AddComputerManually,
                 ComputerManagerService::class.java), serviceConnection, Service.BIND_AUTO_CREATE)
     }
 
@@ -420,7 +424,7 @@ class AddComputerManually : Activity() {
 
     private fun setAddingState(adding: Boolean) {
         runOnUiThread {
-            if (!::addPcButton.isInitialized) return@runOnUiThread
+            if (shuttingDown || isDestroyed || !::addPcButton.isInitialized) return@runOnUiThread
             addPcButton.isEnabled = !adding
             addPcButton.text = getString(
                 if (adding) R.string.addpc_action_connecting else R.string.addpc_action_connect
