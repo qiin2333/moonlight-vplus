@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.content.pm.PackageInfoCompat
 import androidx.core.os.ConfigurationCompat
+import androidx.core.view.doOnLayout
 import com.limelight.R
 import com.limelight.handbook.HandbookLauncher
 import com.limelight.ui.AboutDialogContent
@@ -65,7 +66,8 @@ object AboutDialogLauncher {
         var ecosystem: Dialog? = null,
         var mainFocusIndex: Int = 0,
         var ecosystemFocusIndex: Int = 0,
-        val mainFocusRequestGeneration: androidx.compose.runtime.MutableIntState = mutableIntStateOf(0)
+        val mainFocusRequestGeneration: androidx.compose.runtime.MutableIntState = mutableIntStateOf(0),
+        val ecosystemFocusRequestGeneration: androidx.compose.runtime.MutableIntState = mutableIntStateOf(0)
     ) {
         fun isOwnedBy(context: Context): Boolean = owner.get() === context
     }
@@ -83,7 +85,10 @@ object AboutDialogLauncher {
         )
         activeDialogs = state
 
-        val dialog = createDialog(context) { d ->
+        val dialog = createDialog(
+            context = context,
+            onReadyForFocus = { state.mainFocusRequestGeneration.intValue++ }
+        ) { d ->
             AboutDialogContent(
                 appName = getAppName(context),
                 versionInfo = getVersionInfo(context),
@@ -138,7 +143,10 @@ object AboutDialogLauncher {
         state.ecosystem?.dismiss()
         val projects = ecosystemProjects(context)
         state.ecosystemFocusIndex = initialFocusIndex
-        val dialog = createDialog(context) { d ->
+        val dialog = createDialog(
+            context = context,
+            onReadyForFocus = { state.ecosystemFocusRequestGeneration.intValue++ }
+        ) { d ->
             EcosystemDialogContent(
                 projects = projects,
                 onOpen = { project ->
@@ -148,6 +156,7 @@ object AboutDialogLauncher {
                 },
                 onClose = { d.cancel() },
                 initialFocusIndex = state.ecosystemFocusIndex,
+                focusRequestGeneration = state.ecosystemFocusRequestGeneration.intValue,
                 onFocusChanged = { state.ecosystemFocusIndex = it }
             )
         }
@@ -207,10 +216,13 @@ object AboutDialogLauncher {
 
     private fun createDialog(
         context: Context,
+        onReadyForFocus: () -> Unit,
         content: @Composable (Dialog) -> Unit
     ): Dialog {
         val dialog = ComponentDialog(context, R.style.AppComposeDialogStyle)
         val composeView = ComposeView(context).apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent { content(dialog) }
         }
@@ -218,6 +230,14 @@ object AboutDialogLauncher {
         dialog.setCanceledOnTouchOutside(true)
         AppDialogStyler.installDismissKeys(dialog)
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.setOnShowListener {
+            composeView.doOnLayout {
+                if (dialog.isShowing) {
+                    composeView.requestFocus()
+                    onReadyForFocus()
+                }
+            }
+        }
         return dialog
     }
 

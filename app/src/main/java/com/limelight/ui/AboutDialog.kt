@@ -430,6 +430,7 @@ internal fun EcosystemDialogContent(
     onOpen: (EcosystemProject) -> Unit,
     onClose: () -> Unit,
     initialFocusIndex: Int = 0,
+    focusRequestGeneration: Int = 0,
     onFocusChanged: (Int) -> Unit = {}
 ) {
     val isLandscape = LocalConfiguration.current.orientation ==
@@ -439,7 +440,7 @@ internal fun EcosystemDialogContent(
     val openFocus = remember { FocusRequester() }
     val validInitialIndex = initialFocusIndex.takeIf { it in projects.indices }
 
-    LaunchedEffect(validInitialIndex, projects) {
+    LaunchedEffect(validInitialIndex, projects, focusRequestGeneration) {
         withFrameNanos { }
         validInitialIndex?.let(itemFocus::get)?.requestFocus() ?: closeFocus.requestFocus()
     }
