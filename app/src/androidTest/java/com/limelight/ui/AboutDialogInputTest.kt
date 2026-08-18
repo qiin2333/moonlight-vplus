@@ -168,8 +168,9 @@ class AboutDialogInputTest {
     }
 
     @Test
-    fun landscapeMenuUpdatesSelectionAndReachesOpenAction() {
-        val opened = AtomicBoolean(false)
+    fun landscapeGridNavigatesRowsAndOpensProject() {
+        val opened = AtomicReference<EcosystemProject>()
+        val projects = projects()
         composeTestRule.setContent {
             val landscape = Configuration(LocalConfiguration.current).apply {
                 orientation = Configuration.ORIENTATION_LANDSCAPE
@@ -177,29 +178,27 @@ class AboutDialogInputTest {
             }
             CompositionLocalProvider(LocalConfiguration provides landscape) {
                 EcosystemDialogContent(
-                    projects = projects(),
-                    onOpen = { opened.set(true) },
+                    projects = projects,
+                    onOpen = opened::set,
                     onClose = {}
                 )
             }
         }
 
+        composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(0)).requestFocus()
         composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(0)).performKeyInput {
             pressKey(Key.DirectionDown)
         }
-        composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(1)).assertIsFocused()
-        composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(1)).performKeyInput {
-            pressKey(Key.DirectionRight)
-        }
-        composeTestRule.onNodeWithTag(AboutDialogTags.ECOSYSTEM_OPEN).assertIsFocused()
+        // 横屏为 3 列网格，下键跨行到第二行首列
+        composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(3)).assertIsFocused()
         InstrumentationRegistry.getInstrumentation()
             .sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
         composeTestRule.waitForIdle()
-        assertTrue(opened.get())
+        assertEquals(projects[3], opened.get())
     }
 
     @Test
-    fun landscapeProjectRowsSupportTouchSelection() {
+    fun landscapeGridCardsSupportTouchOpen() {
         val opened = AtomicReference<EcosystemProject>()
         val projects = projects()
         composeTestRule.setContent {
@@ -218,8 +217,6 @@ class AboutDialogInputTest {
         }
 
         composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(4)).performClick()
-        composeTestRule.onNodeWithTag(AboutDialogTags.ECOSYSTEM_OPEN).performClick()
-
         assertEquals(projects[4], opened.get())
     }
 

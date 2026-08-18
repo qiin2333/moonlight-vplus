@@ -714,7 +714,6 @@
     <string name="about_dialog_ecosystem_title">AlkaidLab Ecosystem</string>
     <string name="about_dialog_ecosystem_lead">From the host to phones, tablets, TVs, and desktops, choose the client that fits your platform.</string>
     <string name="about_dialog_ecosystem_footer">Projects open in a secure external browser.</string>
-    <string name="about_dialog_ecosystem_open_action">Open project</string>
     <string name="about_dialog_ecosystem_sunshine_badge" translatable="false">SUN</string>
     <string name="about_dialog_ecosystem_sunshine_title" translatable="false">Foundation Sunshine</string>
     <string name="about_dialog_ecosystem_sunshine_platform">WINDOWS · HOST</string>
