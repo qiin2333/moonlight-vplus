@@ -1060,7 +1060,6 @@
     <string name="game_menu_touch_mode_ds5">DS5 touchpad</string>
     <string name="game_menu_touch_mode_ds5_short">DS5</string>
     <string name="game_menu_touch_mode_ds5_summary">Screen becomes a DualSense touchpad; firm press to click</string>
-    <string name="game_menu_touch_mode_ds5_unsupported_summary">Host doesn\'t support controller touch; touches keep the previous mode</string>
     <string name="toast_ds5_touchpad_unsupported">Host doesn\'t support DS5 touchpad; touches fall back to the previous mode</string>
     <string name="game_menu_current_selection">Current: %1$s</string>
     <string name="game_menu_trackpad_double_click_drag">Double-tap and hold to drag</string>

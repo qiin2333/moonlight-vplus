@@ -412,24 +412,16 @@ class GameMenu(
 
         // Show the DS5 segment unless the host already rejected controller touch this
         // stream and the feature is off; keep it visible when enabled so it can be
-        // turned off, with a subtitle reflecting the unsupported host.
+        // turned off. Unsupported hosts are surfaced by a one-time toast instead.
         if (isScreenDs5Touchpad ||
             game.screenDs5TouchpadHostSupport != Game.ScreenDs5HostSupport.UNSUPPORTED
         ) {
-            val ds5Unsupported = isScreenDs5Touchpad &&
-                game.screenDs5TouchpadHostSupport == Game.ScreenDs5HostSupport.UNSUPPORTED
             segments.add(
                 SegmentOption(
                     label = getString(if (compactLabels) R.string.game_menu_touch_mode_ds5_short else R.string.game_menu_touch_mode_ds5),
                     selected = isScreenDs5Touchpad,
                     runnable = Runnable { game.setScreenDs5TouchpadEnabled(true) },
-                    subtitle = getString(
-                        if (ds5Unsupported) {
-                            R.string.game_menu_touch_mode_ds5_unsupported_summary
-                        } else {
-                            R.string.game_menu_touch_mode_ds5_summary
-                        }
-                    )
+                    subtitle = getString(R.string.game_menu_touch_mode_ds5_summary)
                 )
             )
         }
