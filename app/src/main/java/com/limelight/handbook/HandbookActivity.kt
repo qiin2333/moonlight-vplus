@@ -3,7 +3,6 @@ package com.limelight.handbook
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color as AndroidColor
-import android.graphics.Paint
 import android.net.http.SslError
 import android.os.Build
 import android.os.Bundle
@@ -16,7 +15,6 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
-import android.view.accessibility.AccessibilityEvent
 import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -39,6 +37,7 @@ import androidx.lifecycle.lifecycleScope
 import com.limelight.LimeLog
 import com.limelight.R
 import com.limelight.utils.BrowserOnlyLauncher
+import org.json.JSONTokener
 import com.limelight.utils.UiHelper
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -348,7 +347,6 @@ class HandbookActivity : ComponentActivity() {
         val moveFocusToContent = !rootView.isInTouchMode && loadingView.hasFocus()
         pendingContent = null
         webView.renderStartedAtMs = SystemClock.elapsedRealtime()
-        webView.setControllerLinks(content.controllerLinks)
         webView.visibility = View.VISIBLE
         contentContainer.visibility = View.VISIBLE
         errorView.visibility = View.GONE
@@ -713,80 +711,28 @@ internal class LockedHandbookWebView(
 ) : WebView(context) {
     var renderStartedAtMs = 0L
     var onDocumentRendered: (() -> Unit)? = null
-    private val density = resources.displayMetrics.density
-    private val indicatorFill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = AndroidColor.argb(242, 255, 248, 232)
-    }
-    private val indicatorStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = AndroidColor.rgb(255, 107, 157)
-        style = Paint.Style.STROKE
-        strokeWidth = 2f * density
-    }
-    private val indicatorText = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = AndroidColor.rgb(76, 67, 70)
-        textSize = 15f * density * resources.configuration.fontScale
-    }
-    private var controllerLinks: List<HandbookControllerLink> = emptyList()
-    private var selectedControllerLink = -1
+    private var controllerEvaluationInProgress = false
+    private var pendingControllerEvaluation: PendingControllerEvaluation? = null
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         return when (event.keyCode) {
-            KeyEvent.KEYCODE_DPAD_RIGHT -> consumeKeyUp(event) { selectControllerLink(1) }
-            KeyEvent.KEYCODE_DPAD_LEFT -> consumeKeyUp(event) { selectControllerLink(-1) }
+            KeyEvent.KEYCODE_DPAD_RIGHT -> consumeKeyUp(event) { focusControllerLink(1) }
+            KeyEvent.KEYCODE_DPAD_LEFT -> consumeKeyUp(event) { focusControllerLink(-1) }
             KeyEvent.KEYCODE_BUTTON_A,
             KeyEvent.KEYCODE_DPAD_CENTER,
             KeyEvent.KEYCODE_ENTER,
-            KeyEvent.KEYCODE_NUMPAD_ENTER -> consumeKeyUp(event, ::activateControllerLink)
+            KeyEvent.KEYCODE_NUMPAD_ENTER -> consumeKeyUp(event, ::activateFocusedControllerLink)
             else -> super.dispatchKeyEvent(event)
         }
-    }
-
-    fun setControllerLinks(links: List<HandbookControllerLink>) {
-        controllerLinks = links
-        selectedControllerLink = -1
-        invalidate()
     }
 
     override fun startActionMode(callback: ActionMode.Callback): ActionMode? = null
 
     override fun startActionMode(callback: ActionMode.Callback, type: Int): ActionMode? = null
 
-    override fun onDraw(canvas: android.graphics.Canvas) {
-        super.onDraw(canvas)
-        val link = controllerLinks.getOrNull(selectedControllerLink) ?: return
-        val horizontalPadding = 16f * density
-        val verticalPadding = 12f * density
-        val bottomMargin = 16f * density
-        val text = controllerLinkIndicator(link)
-        val availableTextWidth = width - horizontalPadding * 4f
-        val visibleCharacters = indicatorText.breakText(
-            text,
-            true,
-            availableTextWidth.coerceAtLeast(1f),
-            null
-        )
-        val visibleText = if (visibleCharacters < text.length) {
-            text.take((visibleCharacters - 1).coerceAtLeast(0)) + "…"
-        } else {
-            text
-        }
-        val fontMetrics = indicatorText.fontMetrics
-        val chipHeight = fontMetrics.bottom - fontMetrics.top + verticalPadding * 2f
-        val viewportLeft = scrollX.toFloat()
-        val viewportTop = scrollY.toFloat()
-        val chipTop = viewportTop + height - bottomMargin - chipHeight
-        val chipLeft = viewportLeft + horizontalPadding
-        val chipRight = viewportLeft + width - horizontalPadding
-        val chipBottom = viewportTop + height - bottomMargin
-        val radius = 10f * density
-        canvas.drawRoundRect(chipLeft, chipTop, chipRight, chipBottom, radius, radius, indicatorFill)
-        canvas.drawRoundRect(chipLeft, chipTop, chipRight, chipBottom, radius, radius, indicatorStroke)
-        canvas.drawText(
-            visibleText,
-            chipLeft + horizontalPadding,
-            chipTop + verticalPadding - fontMetrics.top,
-            indicatorText
-        )
+    override fun onDetachedFromWindow() {
+        settings.javaScriptEnabled = false
+        super.onDetachedFromWindow()
     }
 
     private fun consumeKeyUp(event: KeyEvent, action: () -> Unit): Boolean {
@@ -794,34 +740,80 @@ internal class LockedHandbookWebView(
         return true
     }
 
-    private fun selectControllerLink(direction: Int) {
-        if (controllerLinks.isEmpty()) return
-        selectedControllerLink = if (selectedControllerLink !in controllerLinks.indices) {
-            if (direction > 0) 0 else controllerLinks.lastIndex
-        } else {
-            (selectedControllerLink + direction + controllerLinks.size) % controllerLinks.size
-        }
-        invalidate()
-        announceControllerLink(controllerLinkIndicator(controllerLinks[selectedControllerLink]))
-    }
-
-    private fun activateControllerLink() {
-        val link = controllerLinks.getOrNull(selectedControllerLink) ?: return
-        routeNavigation(url, link.url, true, onNavigate, onOpenExternal)
-    }
-
-    private fun controllerLinkIndicator(link: HandbookControllerLink): String {
-        return context.getString(
-            R.string.handbook_controller_link_indicator,
-            selectedControllerLink + 1,
-            controllerLinks.size,
-            link.label
+    private fun focusControllerLink(direction: Int) {
+        evaluateControllerScript(
+            FOCUS_LINK_SCRIPT.replace("__DIRECTION__", direction.toString())
         )
     }
 
-    private fun announceControllerLink(text: String) {
-        contentDescription = text
-        sendAccessibilityEvent(AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED)
+    private fun activateFocusedControllerLink() {
+        evaluateControllerScript(FOCUSED_LINK_HREF_SCRIPT) { result ->
+            val targetUrl = runCatching {
+                JSONTokener(result).nextValue() as? String
+            }.getOrNull() ?: return@evaluateControllerScript
+            routeNavigation(url, targetUrl, true, onNavigate, onOpenExternal)
+        }
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun evaluateControllerScript(
+        script: String,
+        onResult: (String) -> Unit = {}
+    ) {
+        if (controllerEvaluationInProgress) {
+            pendingControllerEvaluation = PendingControllerEvaluation(script, onResult)
+            return
+        }
+        controllerEvaluationInProgress = true
+        settings.javaScriptEnabled = true
+        evaluateJavascript(script) { result ->
+            settings.javaScriptEnabled = false
+            controllerEvaluationInProgress = false
+            onResult(result)
+            pendingControllerEvaluation?.let { pending ->
+                pendingControllerEvaluation = null
+                evaluateControllerScript(pending.script, pending.onResult)
+            }
+        }
+    }
+
+    private data class PendingControllerEvaluation(
+        val script: String,
+        val onResult: (String) -> Unit
+    )
+
+    private companion object {
+        val FOCUS_LINK_SCRIPT = """
+            (function() {
+              var all = document.querySelectorAll('a[href]');
+              var links = [];
+              for (var i = 0; i < all.length; i++) {
+                if (all[i].offsetWidth || all[i].offsetHeight || all[i].getClientRects().length) {
+                  links.push(all[i]);
+                }
+              }
+              if (!links.length) return false;
+              var current = links.indexOf(document.activeElement);
+              var direction = __DIRECTION__;
+              current = current < 0
+                ? (direction > 0 ? 0 : links.length - 1)
+                : (current + direction + links.length) % links.length;
+              links[current].focus();
+              try {
+                links[current].scrollIntoView({block: 'nearest', inline: 'nearest'});
+              } catch (ignored) {
+                links[current].scrollIntoView(false);
+              }
+              return true;
+            })();
+        """.trimIndent()
+        val FOCUSED_LINK_HREF_SCRIPT = """
+            (function() {
+              var element = document.activeElement;
+              while (element && element.tagName !== 'A') element = element.parentElement;
+              return element && element.href ? element.href : null;
+            })();
+        """.trimIndent()
     }
 }
 

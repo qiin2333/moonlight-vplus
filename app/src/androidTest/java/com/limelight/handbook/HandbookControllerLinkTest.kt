@@ -38,14 +38,6 @@ class HandbookControllerLinkTest {
                 onOpenExternal = {}
             ).apply {
                 renderStartedAtMs = 1L
-                setControllerLinks(
-                    listOf(
-                        HandbookControllerLink(
-                            label = "Start",
-                            url = "https://www.alkaidlab.com/docs/guide/start.html"
-                        )
-                    )
-                )
                 onDocumentRendered = {
                     rendered.set(true)
                     requestFocus()
@@ -81,21 +73,6 @@ class HandbookControllerLinkTest {
         assertEquals(
             "/docs/guide/start.html",
             navigatedPage.get().encodedPath
-        )
-    }
-
-    @Test
-    fun parserResolvesRelativeLinksAndKeepsReadableLabels() {
-        val links = extractHandbookControllerLinks(
-            """<a href="guide/start.html">  Quick   start </a>""",
-            "https://www.alkaidlab.com/docs/"
-        )
-
-        assertEquals(1, links.size)
-        assertEquals("Quick start", links.single().label)
-        assertEquals(
-            "https://www.alkaidlab.com/docs/guide/start.html",
-            links.single().url
         )
     }
 
