@@ -1492,6 +1492,7 @@
     <string name="quick_btn_keyboard">键盘</string>
     <string name="quick_btn_controller">手柄</string>
     <string name="quick_btn_perf">性能</string>
+    <string name="quick_btn_remote_mouse">远程鼠标</string>
 
     <!-- Quick button editor -->
     <string name="quick_button_editor_title">快捷按钮配置</string>
