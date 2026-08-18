@@ -60,6 +60,9 @@ internal data class FeatureGuideCardPlacement(
     val side: FeatureGuideCardSide
 )
 
+internal fun clampInsideGuideCard(value: Float, low: Float, high: Float): Float =
+    if (low > high) (low + high) / 2f else value.coerceIn(low, high)
+
 internal fun calculateFeatureGuideCardPlacement(
     overlayWidth: Float,
     overlayHeight: Float,
@@ -355,7 +358,11 @@ private class FeatureGuideOverlay(
     }
 
     private fun requestGuideFocusIfOutside() {
-        if (!dismissed && isAttachedToWindow && !containsGuideFocus(activity.currentFocus)) {
+        if (!dismissed &&
+            isAttachedToWindow &&
+            activity.hasWindowFocus() &&
+            !containsGuideFocus(activity.currentFocus)
+        ) {
             action.requestFocus()
         }
     }
@@ -536,27 +543,43 @@ private class FeatureGuideOverlay(
                 highlightRect.right + dp(3f),
                 highlightRect.centerY(),
                 cardRect.left - dp(7f),
-                highlightRect.centerY().coerceIn(cardRect.top + cardInset, cardRect.bottom - cardInset),
+                clampInsideGuideCard(
+                    highlightRect.centerY(),
+                    cardRect.top + cardInset,
+                    cardRect.bottom - cardInset
+                ),
                 true
             )
             FeatureGuideCardSide.LEFT -> LeaderGeometry(
                 highlightRect.left - dp(3f),
                 highlightRect.centerY(),
                 cardRect.right + dp(7f),
-                highlightRect.centerY().coerceIn(cardRect.top + cardInset, cardRect.bottom - cardInset),
+                clampInsideGuideCard(
+                    highlightRect.centerY(),
+                    cardRect.top + cardInset,
+                    cardRect.bottom - cardInset
+                ),
                 true
             )
             FeatureGuideCardSide.BELOW -> LeaderGeometry(
                 highlightRect.centerX(),
                 highlightRect.bottom + dp(3f),
-                highlightRect.centerX().coerceIn(cardRect.left + cardInset, cardRect.right - cardInset),
+                clampInsideGuideCard(
+                    highlightRect.centerX(),
+                    cardRect.left + cardInset,
+                    cardRect.right - cardInset
+                ),
                 cardRect.top - dp(7f),
                 false
             )
             FeatureGuideCardSide.ABOVE -> LeaderGeometry(
                 highlightRect.centerX(),
                 highlightRect.top - dp(3f),
-                highlightRect.centerX().coerceIn(cardRect.left + cardInset, cardRect.right - cardInset),
+                clampInsideGuideCard(
+                    highlightRect.centerX(),
+                    cardRect.left + cardInset,
+                    cardRect.right - cardInset
+                ),
                 cardRect.bottom + dp(7f),
                 false
             )

@@ -65,4 +65,13 @@ class ViewFeatureGuidePlacementTest {
         assertTrue(placement.top >= 92f + 56f)
         assertTrue(placement.left + 1_110f <= 2_800f - 130f - 56f)
     }
+
+    @Test
+    fun undersizedCardClampFallsBackToCardMidpoint() {
+        assertEquals(
+            25f,
+            clampInsideGuideCard(value = 80f, low = 40f, high = 10f),
+            0.001f
+        )
+    }
 }

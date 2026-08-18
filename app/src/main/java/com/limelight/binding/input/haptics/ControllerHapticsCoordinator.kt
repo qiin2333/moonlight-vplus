@@ -111,8 +111,7 @@ internal class ControllerHapticsCoordinator(
             if (candidate == NO_CONTROLLER) candidate = number
         }
 
-        for (i in 0 until handler.usbDeviceContexts.size()) {
-            val context = handler.usbDeviceContexts.valueAt(i)
+        for (context in handler.usbDeviceContexts.values) {
             if (!hasRumbleCapability(context)) continue
             val number = if (context.assignedControllerNumber) {
                 context.controllerNumber.toInt()
@@ -441,8 +440,7 @@ internal class ControllerHapticsCoordinator(
                 return true
             }
         }
-        for (i in 0 until handler.usbDeviceContexts.size()) {
-            val context = handler.usbDeviceContexts.valueAt(i)
+        for (context in handler.usbDeviceContexts.values) {
             if (context.controllerNumber == controllerNumber && hasRumbleCapability(context)) {
                 return true
             }

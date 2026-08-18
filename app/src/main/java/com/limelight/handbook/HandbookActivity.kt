@@ -755,7 +755,8 @@ internal class LockedHandbookWebView(
             val targetUrl = runCatching {
                 JSONTokener(result).nextValue() as? String
             }.getOrNull() ?: return@evaluateControllerScript
-            routeNavigation(url, targetUrl, true, onNavigate, onOpenExternal)
+            val handled = routeNavigation(url, targetUrl, true, onNavigate, onOpenExternal)
+            if (!handled) loadUrl(targetUrl)
         }
     }
 

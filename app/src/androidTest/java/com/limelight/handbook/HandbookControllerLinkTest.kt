@@ -76,6 +76,54 @@ class HandbookControllerLinkTest {
         )
     }
 
+    @Test
+    fun gamepadAOpensFocusedSameDocumentFragment() {
+        val rendered = AtomicBoolean(false)
+        val webViewRef = AtomicReference<LockedHandbookWebView>()
+
+        activityRule.scenario.onActivity { activity ->
+            val webView = createLockedHandbookWebView(
+                context = activity,
+                onNavigate = {},
+                onOpenExternal = {}
+            ).apply {
+                renderStartedAtMs = 1L
+                onDocumentRendered = {
+                    rendered.set(true)
+                    requestFocus()
+                }
+            }
+            webViewRef.set(webView)
+            activity.setContentView(FrameLayout(activity).apply {
+                addView(
+                    webView,
+                    FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT
+                    )
+                )
+            })
+            webView.loadDataWithBaseURL(
+                "https://www.alkaidlab.com/docs/",
+                """
+                    <!doctype html><html><body>
+                    <a href="#section">Section</a>
+                    <div style="height: 1600px"></div>
+                    <h2 id="section">Target section</h2>
+                    </body></html>
+                """.trimIndent(),
+                "text/html",
+                "UTF-8",
+                null
+            )
+        }
+
+        waitUntil { rendered.get() }
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        press(KeyEvent.KEYCODE_BUTTON_A)
+        waitUntil { webViewRef.get().url?.endsWith("#section") == true }
+    }
+
     private fun press(keyCode: Int) {
         InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(keyCode)
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()

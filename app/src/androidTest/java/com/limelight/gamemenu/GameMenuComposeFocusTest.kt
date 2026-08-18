@@ -301,7 +301,7 @@ class GameMenuComposeFocusTest {
         assertTrue(
             "Guide decoration must not force the card to fill its height constraint " +
                 "(card=$cardHeight, maximum=$maximumCardHeightPx, root=$rootHeight)",
-            cardHeight <= maximumCardHeightPx + 1f
+            cardHeight < maximumCardHeightPx - 1f
         )
     }
 
