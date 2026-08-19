@@ -18,8 +18,6 @@ class DualSenseController(
 
     override val supportsAdaptiveTriggers: Boolean = true
 
-    private var lastBatteryReport = Int.MIN_VALUE
-
     init {
         capabilities = (capabilities.toInt() or MoonBridge.LI_CCAP_BATTERY_STATE.toInt()).toShort()
     }
@@ -133,17 +131,15 @@ class DualSenseController(
     }
 
     private fun reportBattery(batteryByte: Byte) {
-        if (batteryByte.toInt() == lastBatteryReport) {
-            return
-        }
-        lastBatteryReport = batteryByte.toInt()
-
         val status = (batteryByte.toInt() shr 4) and 0x0F
         val percentage = ((batteryByte.toInt() and 0x0F) * 10 + 5).coerceAtMost(100).toByte()
         when (status) {
             0 -> notifyBatteryState(MoonBridge.LI_BATTERY_STATE_DISCHARGING, percentage)
             1 -> notifyBatteryState(MoonBridge.LI_BATTERY_STATE_CHARGING, percentage)
             2 -> notifyBatteryState(MoonBridge.LI_BATTERY_STATE_FULL, 100.toByte())
+            // Voltage/temperature error states: report as not charging at 0%,
+            // matching the hid-playstation kernel driver.
+            0x0A, 0x0B -> notifyBatteryState(MoonBridge.LI_BATTERY_STATE_NOT_CHARGING, 0.toByte())
             else -> notifyBatteryState(
                 MoonBridge.LI_BATTERY_STATE_UNKNOWN,
                 MoonBridge.LI_BATTERY_PERCENTAGE_UNKNOWN

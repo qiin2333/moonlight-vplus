@@ -2686,7 +2686,21 @@ class ControllerHandler(
 
     override fun reportControllerBattery(controllerId: Int, batteryState: Byte, batteryPercentage: Byte) {
         val context = usbDeviceContexts[controllerId] ?: return
+
+        // In multi-controller mode, wait until the controller number is assigned;
+        // dedup only after that so the assigned controller gets its initial state.
+        if (prefConfig.multiController && !context.assignedControllerNumber) {
+            return
+        }
+        if (context.lastReportedBatteryState == batteryState &&
+            context.lastReportedBatteryPercentage == batteryPercentage
+        ) {
+            return
+        }
+
         conn.sendControllerBatteryEvent(context.controllerNumber.toByte(), batteryState, batteryPercentage)
+        context.lastReportedBatteryState = batteryState
+        context.lastReportedBatteryPercentage = batteryPercentage
     }
 
     // ========== Sensor Management ==========

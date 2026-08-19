@@ -458,6 +458,8 @@ class InputDeviceContext(handler: ControllerHandler) : GenericControllerContext(
 
 class UsbDeviceContext(handler: ControllerHandler) : GenericControllerContext(handler) {
     var device: AbstractController? = null
+    internal var lastReportedBatteryState: Byte? = null
+    internal var lastReportedBatteryPercentage: Byte? = null
     internal val menuKeyDownTimes = ConcurrentHashMap<Int, Long>()
     internal val shortcutState = UsbControllerShortcutStateMachine()
     internal val shortcutLongPressRunnable = Runnable {
