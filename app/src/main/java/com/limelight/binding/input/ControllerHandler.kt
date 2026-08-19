@@ -51,6 +51,18 @@ class ControllerHandler(
     companion object {
         private const val MAXIMUM_BUMPER_UP_DELAY_MS = 100
 
+        // Mirrors the HarmonyOS client's STANDARD_BUTTON_FLAGS for virtual pads.
+        private val STANDARD_GAMEPAD_BUTTON_FLAGS = (
+            ControllerPacket.A_FLAG or ControllerPacket.B_FLAG or
+                ControllerPacket.X_FLAG or ControllerPacket.Y_FLAG or
+                ControllerPacket.UP_FLAG or ControllerPacket.DOWN_FLAG or
+                ControllerPacket.LEFT_FLAG or ControllerPacket.RIGHT_FLAG or
+                ControllerPacket.LB_FLAG or ControllerPacket.RB_FLAG or
+                ControllerPacket.LS_CLK_FLAG or ControllerPacket.RS_CLK_FLAG or
+                ControllerPacket.PLAY_FLAG or ControllerPacket.BACK_FLAG or
+                ControllerPacket.SPECIAL_BUTTON_FLAG
+            )
+
         const val START_DOWN_TIME_MOUSE_MODE_MS = 750
 
         const val MINIMUM_BUTTON_DOWN_TIME_MS = 25
@@ -1328,7 +1340,11 @@ class ControllerHandler(
         return if (controllerNumber == 0 && prefConfig.screenDs5Touchpad) {
             baseMetadata.copy(
                 type = MoonBridge.LI_CTYPE_PS,
-                supportedButtonFlags = baseMetadata.supportedButtonFlags or ControllerPacket.TOUCHPAD_FLAG,
+                // A bare virtual declaration carries no buttons of its own; a screen
+                // DS5 must still advertise a normal gamepad or the host creates a
+                // DualSense with no face buttons (matches the HarmonyOS client).
+                supportedButtonFlags = baseMetadata.supportedButtonFlags or
+                    STANDARD_GAMEPAD_BUTTON_FLAGS or ControllerPacket.TOUCHPAD_FLAG,
                 capabilities = (baseMetadata.capabilities.toInt() or
                     MoonBridge.LI_CCAP_TOUCHPAD.toInt() or
                     MoonBridge.LI_CCAP_PREFER_DS5.toInt()).toShort(),

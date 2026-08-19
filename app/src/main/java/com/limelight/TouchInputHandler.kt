@@ -3,6 +3,8 @@ package com.limelight
 
 import android.graphics.Point
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.view.HapticFeedbackConstants
 import android.view.InputDevice
 import android.view.MotionEvent
@@ -15,6 +17,7 @@ import com.limelight.binding.input.touch.RelativeTouchContext
 import com.limelight.binding.input.touch.TouchContext
 import com.limelight.binding.input.touchpad.NonRootTouchpadHandler
 import com.limelight.binding.input.touchpad.ScreenDs5PressureClickDetector
+import com.limelight.binding.input.touchpad.ScreenDs5TapClickDetector
 import com.limelight.binding.input.virtual_controller.VirtualController
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.input.MouseButtonPacket
@@ -96,6 +99,12 @@ class TouchInputHandler(private val game: Game) {
     private val penPointerCoords = MotionEvent.PointerCoords()
     private val screenDs5PressureClickDetector = ScreenDs5PressureClickDetector()
     private var screenDs5PressurePointerId = MotionEvent.INVALID_POINTER_ID
+    private val screenDs5TapClickDetector = ScreenDs5TapClickDetector(
+        movementThresholdPx = SCREEN_DS5_TAP_MOVEMENT_DP * game.resources.displayMetrics.density,
+    )
+    private var screenDs5PressureClickFired = false
+    private val screenDs5ClickHandler = Handler(Looper.getMainLooper())
+    private var screenDs5ClickReleaseCallback: Runnable? = null
 
     // ---- 公共入口 ----
 
@@ -1128,38 +1137,99 @@ class TouchInputHandler(private val game: Game) {
     }
 
     private fun updateScreenDs5TouchpadPress(view: View, event: MotionEvent) {
-        val transition = when (event.actionMasked) {
+        when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                screenDs5PressurePointerId = event.getPointerId(event.actionIndex)
+                val pointerId = event.getPointerId(event.actionIndex)
+                screenDs5PressurePointerId = pointerId
+                screenDs5PressureClickFired = false
+                screenDs5TapClickDetector.onDown(
+                    pointerId,
+                    event.getX(event.actionIndex),
+                    event.getY(event.actionIndex),
+                    event.eventTime,
+                )
                 screenDs5PressureClickDetector.begin(
                     event.getPressure(event.actionIndex),
                     event.getSize(event.actionIndex),
                     event.isDeepPress(),
-                )
+                )?.let { onFirmPressTransition(view, it) }
             }
-            MotionEvent.ACTION_MOVE,
-            MotionEvent.ACTION_POINTER_DOWN -> updateTrackedScreenPressure(event)
+            MotionEvent.ACTION_MOVE -> {
+                val pointerIndex = event.findPointerIndex(screenDs5PressurePointerId)
+                if (pointerIndex >= 0) {
+                    screenDs5TapClickDetector.onMove(
+                        screenDs5PressurePointerId,
+                        event.getX(pointerIndex),
+                        event.getY(pointerIndex),
+                    )
+                }
+                updateTrackedScreenPressure(event)?.let { onFirmPressTransition(view, it) }
+            }
+            MotionEvent.ACTION_POINTER_DOWN -> {
+                screenDs5TapClickDetector.onPointerDown()
+                updateTrackedScreenPressure(event)?.let { onFirmPressTransition(view, it) }
+            }
             MotionEvent.ACTION_POINTER_UP -> {
                 if (event.getPointerId(event.actionIndex) == screenDs5PressurePointerId) {
                     screenDs5PressurePointerId = MotionEvent.INVALID_POINTER_ID
-                    screenDs5PressureClickDetector.end()
+                    screenDs5TapClickDetector.cancel()
+                    screenDs5PressureClickDetector.end()?.let { onFirmPressTransition(view, it) }
                 } else {
-                    updateTrackedScreenPressure(event)
+                    updateTrackedScreenPressure(event)?.let { onFirmPressTransition(view, it) }
                 }
             }
-            MotionEvent.ACTION_UP,
-            MotionEvent.ACTION_CANCEL -> {
+            MotionEvent.ACTION_UP -> {
                 screenDs5PressurePointerId = MotionEvent.INVALID_POINTER_ID
-                screenDs5PressureClickDetector.end()
+                screenDs5PressureClickDetector.end()?.let { onFirmPressTransition(view, it) }
+                // A firm press already clicked this gesture; don't double-fire on lift.
+                val tapClicked = !screenDs5PressureClickFired && screenDs5TapClickDetector.onUp(
+                    event.getPointerId(event.actionIndex),
+                    event.getX(event.actionIndex),
+                    event.getY(event.actionIndex),
+                    event.eventTime,
+                )
+                releaseScreenDs5Click()
+                if (tapClicked) {
+                    pressScreenDs5Click(view, autoRelease = true)
+                }
             }
-            else -> null
-        } ?: return
-
-        game.controllerHandler.setScreenDs5TouchpadPressed(transition)
-        game.ds5TouchpadFeedbackView?.setTouchpadPressed(transition)
-        if (transition) {
-            view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            MotionEvent.ACTION_CANCEL -> {
+                screenDs5TapClickDetector.cancel()
+                releaseScreenDs5Click()
+                screenDs5PressurePointerId = MotionEvent.INVALID_POINTER_ID
+                screenDs5PressureClickDetector.end()?.let { onFirmPressTransition(view, it) }
+            }
         }
+    }
+
+    private fun onFirmPressTransition(view: View, pressed: Boolean) {
+        if (pressed) {
+            screenDs5PressureClickFired = true
+            pressScreenDs5Click(view, autoRelease = false)
+        } else {
+            releaseScreenDs5Click()
+        }
+    }
+
+    /** Single owner of the clickpad button state shared by tap and firm-press triggers. */
+    private fun pressScreenDs5Click(view: View, autoRelease: Boolean) {
+        releaseScreenDs5Click()
+        game.controllerHandler.setScreenDs5TouchpadPressed(true)
+        game.ds5TouchpadFeedbackView?.setTouchpadPressed(true)
+        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+        if (autoRelease) {
+            screenDs5ClickReleaseCallback = Runnable {
+                screenDs5ClickReleaseCallback = null
+                releaseScreenDs5Click()
+            }.also { screenDs5ClickHandler.postDelayed(it, SCREEN_DS5_CLICK_RELEASE_MS) }
+        }
+    }
+
+    private fun releaseScreenDs5Click() {
+        screenDs5ClickReleaseCallback?.let { screenDs5ClickHandler.removeCallbacks(it) }
+        screenDs5ClickReleaseCallback = null
+        game.controllerHandler.setScreenDs5TouchpadPressed(false)
+        game.ds5TouchpadFeedbackView?.setTouchpadPressed(false)
     }
 
     private fun updateTrackedScreenPressure(event: MotionEvent): Boolean? {
@@ -1272,6 +1342,10 @@ class TouchInputHandler(private val game: Game) {
         const val TOUCH_CONTEXT_LENGTH = 2
         private const val TWO_FINGER_TAP_THRESHOLD = 100L
         private const val TWO_FINGER_MOVE_THRESHOLD = 40f
+        // Matches the verified HarmonyOS DS5 touchpad behavior (24vp tap slop,
+        // 50ms clickpad hold).
+        private const val SCREEN_DS5_TAP_MOVEMENT_DP = 24f
+        private const val SCREEN_DS5_CLICK_RELEASE_MS = 50L
         private const val STYLUS_DOWN_DEAD_ZONE_DELAY = 100L
         private const val STYLUS_DOWN_DEAD_ZONE_RADIUS = 20f
         private const val STYLUS_UP_DEAD_ZONE_DELAY = 150L
