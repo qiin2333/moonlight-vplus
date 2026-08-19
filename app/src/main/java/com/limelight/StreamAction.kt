@@ -82,6 +82,7 @@ object StreamActionRegistry {
     private val QUICK_ACTION_IDS = listOf(
         "send_win",
         "send_esc",
+        "open_keyboard",
         "toggle_hdr",
         "toggle_mic",
         "send_sleep",
