@@ -49,4 +49,18 @@ class DualSenseOutputReportTest {
         assertEquals(0x33, report[3].toInt() and 0xFF)
         assertEquals(0x55, report[4].toInt() and 0xFF)
     }
+
+    @Test
+    fun controllerLEDMarksOnlyLightbarValid() {
+        val report = DualSenseOutputReport.controllerLED(0x11, 0x22, 0x33)
+
+        assertEquals(0x02, report[0].toInt() and 0xFF)
+        // valid_flag0: no motor or trigger effect bits must be set.
+        assertEquals(0, report[1].toInt())
+        // valid_flag1: lightbar color only.
+        assertEquals(0x04, report[2].toInt() and 0xFF)
+        assertEquals(0x11, report[45].toInt() and 0xFF)
+        assertEquals(0x22, report[46].toInt() and 0xFF)
+        assertEquals(0x33, report[47].toInt() and 0xFF)
+    }
 }

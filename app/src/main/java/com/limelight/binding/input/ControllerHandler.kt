@@ -1,7 +1,6 @@
 @file:Suppress("DEPRECATION")
 package com.limelight.binding.input
 
-import android.annotation.TargetApi
 import android.app.Activity
 import android.content.Context
 import android.hardware.Sensor
@@ -2703,6 +2702,28 @@ class ControllerHandler(
         conn.sendControllerMotionEvent(context.controllerNumber.toByte(), motionType, x, y, z)
     }
 
+    override fun reportControllerBattery(controllerId: Int, batteryState: Byte, batteryPercentage: Byte) {
+        val context = usbDeviceContexts[controllerId] ?: return
+
+        // In multi-controller mode, wait until the controller number is assigned;
+        // dedup only after that so the assigned controller gets its initial state.
+        if (prefConfig.multiController && !context.assignedControllerNumber) {
+            return
+        }
+        if (context.lastReportedBatteryState == batteryState &&
+            context.lastReportedBatteryPercentage == batteryPercentage
+        ) {
+            return
+        }
+
+        // Cache only after a successful send so a failure (e.g. control stream
+        // not yet ready) is retried with the next report.
+        if (conn.sendControllerBatteryEvent(context.controllerNumber.toByte(), batteryState, batteryPercentage) == 0) {
+            context.lastReportedBatteryState = batteryState
+            context.lastReportedBatteryPercentage = batteryPercentage
+        }
+    }
+
     // ========== Sensor Management ==========
 
     fun handleSetMotionEventState(controllerNumber: Short, motionType: Byte, reportRateHz: Short) {
@@ -2851,7 +2872,6 @@ class ControllerHandler(
         right
     )
 
-    @TargetApi(31)
     fun handleSetControllerLED(controllerNumber: Short, r: Byte, g: Byte, b: Byte) =
         rumbleManager.handleSetControllerLED(controllerNumber, r, g, b)
 }

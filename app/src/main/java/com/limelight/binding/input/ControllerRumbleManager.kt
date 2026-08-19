@@ -545,10 +545,24 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         )
     }
 
-    @TargetApi(31)
     fun handleSetControllerLED(controllerNumber: Short, r: Byte, g: Byte, b: Byte) {
         if (handler.stopped) {
             return
+        }
+
+        for (deviceContext in handler.usbDeviceContexts.values) {
+            if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
+                continue
+            }
+            if (deviceContext.controllerNumber == controllerNumber) {
+                deviceContext.device?.let { device ->
+                    // Post to the background thread: USB transfers can block and this
+                    // arrives on the common-c callback thread.
+                    handler.backgroundThreadHandler.post {
+                        device.setControllerLED(r, g, b)
+                    }
+                }
+            }
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
