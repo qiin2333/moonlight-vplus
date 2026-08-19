@@ -2698,9 +2698,12 @@ class ControllerHandler(
             return
         }
 
-        conn.sendControllerBatteryEvent(context.controllerNumber.toByte(), batteryState, batteryPercentage)
-        context.lastReportedBatteryState = batteryState
-        context.lastReportedBatteryPercentage = batteryPercentage
+        // Cache only after a successful send so a failure (e.g. control stream
+        // not yet ready) is retried with the next report.
+        if (conn.sendControllerBatteryEvent(context.controllerNumber.toByte(), batteryState, batteryPercentage) == 0) {
+            context.lastReportedBatteryState = batteryState
+            context.lastReportedBatteryPercentage = batteryPercentage
+        }
     }
 
     // ========== Sensor Management ==========
