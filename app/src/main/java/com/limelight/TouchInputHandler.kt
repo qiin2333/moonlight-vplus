@@ -1179,6 +1179,14 @@ class TouchInputHandler(private val game: Game) {
                 }
             }
             MotionEvent.ACTION_UP -> {
+                if (event.flags and MotionEvent.FLAG_CANCELED != 0) {
+                    // A system-canceled final lift (palm rejection etc.) must not tap-click.
+                    screenDs5TapClickDetector.cancel()
+                    releaseScreenDs5Click()
+                    screenDs5PressurePointerId = MotionEvent.INVALID_POINTER_ID
+                    screenDs5PressureClickDetector.end()?.let { onFirmPressTransition(view, it) }
+                    return
+                }
                 screenDs5PressurePointerId = MotionEvent.INVALID_POINTER_ID
                 screenDs5PressureClickDetector.end()?.let { onFirmPressTransition(view, it) }
                 // A firm press already clicked this gesture; don't double-fire on lift.
