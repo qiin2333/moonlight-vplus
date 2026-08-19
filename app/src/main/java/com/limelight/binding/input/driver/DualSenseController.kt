@@ -19,7 +19,9 @@ class DualSenseController(
     override val supportsAdaptiveTriggers: Boolean = true
 
     init {
-        capabilities = (capabilities.toInt() or MoonBridge.LI_CCAP_BATTERY_STATE.toInt()).toShort()
+        capabilities = (capabilities.toInt() or
+                MoonBridge.LI_CCAP_BATTERY_STATE.toInt() or
+                MoonBridge.LI_CCAP_RGB_LED.toInt()).toShort()
     }
 
     private fun normalizeThumbStickAxis(value: Int): Float {
