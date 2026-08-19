@@ -2724,6 +2724,27 @@ class ControllerHandler(
         }
     }
 
+    override fun reportControllerTouch(
+        controllerId: Int,
+        eventType: Byte,
+        pointerId: Int,
+        x: Float,
+        y: Float
+    ) {
+        val context = usbDeviceContexts[controllerId] ?: return
+        if (prefConfig.multiController && !context.assignedControllerNumber) return
+        if (context.shortcutState.isLocalInputCaptureActive()) return
+
+        // The Linux DS5 backend distinguishes contact/release via pressure.
+        val pressure = when (eventType) {
+            MoonBridge.LI_TOUCH_EVENT_DOWN, MoonBridge.LI_TOUCH_EVENT_MOVE -> 1f
+            else -> 0f
+        }
+        conn.sendControllerTouchEvent(
+            context.controllerNumber.toByte(), eventType, pointerId, x, y, pressure
+        )
+    }
+
     // ========== Sensor Management ==========
 
     fun handleSetMotionEventState(controllerNumber: Short, motionType: Byte, reportRateHz: Short) {

@@ -18,10 +18,19 @@ class DualSenseController(
 
     override val supportsAdaptiveTriggers: Boolean = true
 
+    private class TouchSlot {
+        var down = false
+        var lastX = -1f
+        var lastY = -1f
+    }
+
+    private val touchSlots = Array(2) { TouchSlot() }
+
     init {
         capabilities = (capabilities.toInt() or
                 MoonBridge.LI_CCAP_BATTERY_STATE.toInt() or
-                MoonBridge.LI_CCAP_RGB_LED.toInt()).toShort()
+                MoonBridge.LI_CCAP_RGB_LED.toInt() or
+                MoonBridge.LI_CCAP_TOUCHPAD.toInt()).toShort()
     }
 
     private fun normalizeThumbStickAxis(value: Int): Float {
@@ -128,8 +137,39 @@ class DualSenseController(
         }
 
         reportBattery(buffer.get(BATTERY_OFFSET))
+        reportTouch(buffer, 0, TOUCH1_COUNTER_OFFSET, TOUCH1_DATA_OFFSET)
+        reportTouch(buffer, 1, TOUCH2_COUNTER_OFFSET, TOUCH2_DATA_OFFSET)
 
         return true
+    }
+
+    private fun reportTouch(buffer: ByteBuffer, slotIndex: Int, counterOffset: Int, dataOffset: Int) {
+        val slot = touchSlots[slotIndex]
+        val down = (buffer.get(counterOffset).toInt() and 0x80) == 0
+
+        if (!down) {
+            if (slot.down) {
+                notifyControllerTouch(MoonBridge.LI_TOUCH_EVENT_UP, slotIndex, slot.lastX, slot.lastY)
+            }
+            slot.down = false
+            return
+        }
+
+        // Contact position: 12-bit X and Y, normalized by the touchpad panel size.
+        val d0 = buffer.get(dataOffset).toInt() and 0xFF
+        val d1 = buffer.get(dataOffset + 1).toInt() and 0xFF
+        val d2 = buffer.get(dataOffset + 2).toInt() and 0xFF
+        val x = (d0 or ((d1 and 0x0F) shl 8)) / TOUCHPAD_WIDTH
+        val y = ((d1 shr 4) or (d2 shl 4)) / TOUCHPAD_HEIGHT
+
+        if (!slot.down) {
+            notifyControllerTouch(MoonBridge.LI_TOUCH_EVENT_DOWN, slotIndex, x, y)
+        } else if (x != slot.lastX || y != slot.lastY) {
+            notifyControllerTouch(MoonBridge.LI_TOUCH_EVENT_MOVE, slotIndex, x, y)
+        }
+        slot.down = true
+        slot.lastX = x
+        slot.lastY = y
     }
 
     private fun reportBattery(batteryByte: Byte) {
@@ -231,6 +271,12 @@ class DualSenseController(
 
     companion object {
         private const val BATTERY_OFFSET = 53
+        private const val TOUCH1_COUNTER_OFFSET = 32
+        private const val TOUCH1_DATA_OFFSET = 33
+        private const val TOUCH2_COUNTER_OFFSET = 36
+        private const val TOUCH2_DATA_OFFSET = 37
+        private const val TOUCHPAD_WIDTH = 1920f
+        private const val TOUCHPAD_HEIGHT = 1070f
         private val SUPPORTED_VENDORS = intArrayOf(0x054C, 0x1532)
         private val SUPPORTED_PRODUCTS = intArrayOf(0x0CE6, 0x0DF2, 0x100b, 0x100c)
 

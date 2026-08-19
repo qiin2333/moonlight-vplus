@@ -75,4 +75,8 @@ abstract class AbstractController(
     protected fun notifyBatteryState(batteryState: Byte, batteryPercentage: Byte) {
         listener.reportControllerBattery(deviceId, batteryState, batteryPercentage)
     }
+
+    protected fun notifyControllerTouch(eventType: Byte, pointerId: Int, x: Float, y: Float) {
+        listener.reportControllerTouch(deviceId, eventType, pointerId, x, y)
+    }
 }
