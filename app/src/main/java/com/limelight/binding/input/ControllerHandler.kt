@@ -1346,6 +1346,8 @@ class ControllerHandler(
                 supportedButtonFlags = baseMetadata.supportedButtonFlags or
                     STANDARD_GAMEPAD_BUTTON_FLAGS or ControllerPacket.TOUCHPAD_FLAG,
                 capabilities = (baseMetadata.capabilities.toInt() or
+                    MoonBridge.LI_CCAP_ANALOG_TRIGGERS.toInt() or
+                    MoonBridge.LI_CCAP_RUMBLE.toInt() or
                     MoonBridge.LI_CCAP_TOUCHPAD.toInt() or
                     MoonBridge.LI_CCAP_PREFER_DS5.toInt()).toShort(),
             )
