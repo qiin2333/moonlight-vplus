@@ -58,6 +58,8 @@ abstract class AbstractController(
         right: ByteArray
     ) = Unit
 
+    open fun setControllerLED(r: Byte, g: Byte, b: Byte) = Unit
+
     protected fun notifyDeviceRemoved() {
         listener.deviceRemoved(this)
     }
@@ -68,5 +70,9 @@ abstract class AbstractController(
 
     protected fun notifyControllerMotion(motionType: Byte, x: Float, y: Float, z: Float) {
         listener.reportControllerMotion(deviceId, motionType, x, y, z)
+    }
+
+    protected fun notifyBatteryState(batteryState: Byte, batteryPercentage: Byte) {
+        listener.reportControllerBattery(deviceId, batteryState, batteryPercentage)
     }
 }

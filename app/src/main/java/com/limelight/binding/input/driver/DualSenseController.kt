@@ -5,6 +5,7 @@ import android.hardware.usb.UsbDeviceConnection
 import android.util.Log
 
 import com.limelight.nvstream.input.ControllerPacket
+import com.limelight.nvstream.jni.MoonBridge
 
 import java.nio.ByteBuffer
 
@@ -16,6 +17,12 @@ class DualSenseController(
 ) : AbstractDualSenseController(device, connection, deviceId, listener) {
 
     override val supportsAdaptiveTriggers: Boolean = true
+
+    private var lastBatteryReport = Int.MIN_VALUE
+
+    init {
+        capabilities = (capabilities.toInt() or MoonBridge.LI_CCAP_BATTERY_STATE.toInt()).toShort()
+    }
 
     private fun normalizeThumbStickAxis(value: Int): Float {
         return (2.0f * value / 255.0f) - 1.0f
@@ -120,7 +127,28 @@ class DualSenseController(
             accelX = 0f; accelY = 0f; accelZ = 0f
         }
 
+        reportBattery(buffer.get(BATTERY_OFFSET))
+
         return true
+    }
+
+    private fun reportBattery(batteryByte: Byte) {
+        if (batteryByte.toInt() == lastBatteryReport) {
+            return
+        }
+        lastBatteryReport = batteryByte.toInt()
+
+        val status = (batteryByte.toInt() shr 4) and 0x0F
+        val percentage = ((batteryByte.toInt() and 0x0F) * 10 + 5).coerceAtMost(100).toByte()
+        when (status) {
+            0 -> notifyBatteryState(MoonBridge.LI_BATTERY_STATE_DISCHARGING, percentage)
+            1 -> notifyBatteryState(MoonBridge.LI_BATTERY_STATE_CHARGING, percentage)
+            2 -> notifyBatteryState(MoonBridge.LI_BATTERY_STATE_FULL, 100.toByte())
+            else -> notifyBatteryState(
+                MoonBridge.LI_BATTERY_STATE_UNKNOWN,
+                MoonBridge.LI_BATTERY_PERCENTAGE_UNKNOWN
+            )
+        }
     }
 
     override fun doInit(): Boolean {
@@ -162,6 +190,10 @@ class DualSenseController(
         )
     }
 
+    override fun setControllerLED(r: Byte, g: Byte, b: Byte) {
+        sendCommand(DualSenseOutputReport.controllerLED(r, g, b))
+    }
+
     override fun sendCommand(data: ByteArray) {
         if (outEndpt == null) {
             Log.w("DualSenseController", "Cannot send command: invalid parameters")
@@ -200,6 +232,7 @@ class DualSenseController(
     }
 
     companion object {
+        private const val BATTERY_OFFSET = 53
         private val SUPPORTED_VENDORS = intArrayOf(0x054C, 0x1532)
         private val SUPPORTED_PRODUCTS = intArrayOf(0x0CE6, 0x0DF2, 0x100b, 0x100c)
 

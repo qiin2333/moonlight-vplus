@@ -1,7 +1,6 @@
 @file:Suppress("DEPRECATION")
 package com.limelight.binding.input
 
-import android.annotation.TargetApi
 import android.app.Activity
 import android.content.Context
 import android.hardware.Sensor
@@ -2685,6 +2684,11 @@ class ControllerHandler(
         conn.sendControllerMotionEvent(context.controllerNumber.toByte(), motionType, x, y, z)
     }
 
+    override fun reportControllerBattery(controllerId: Int, batteryState: Byte, batteryPercentage: Byte) {
+        val context = usbDeviceContexts[controllerId] ?: return
+        conn.sendControllerBatteryEvent(context.controllerNumber.toByte(), batteryState, batteryPercentage)
+    }
+
     // ========== Sensor Management ==========
 
     fun handleSetMotionEventState(controllerNumber: Short, motionType: Byte, reportRateHz: Short) {
@@ -2833,7 +2837,6 @@ class ControllerHandler(
         right
     )
 
-    @TargetApi(31)
     fun handleSetControllerLED(controllerNumber: Short, r: Byte, g: Byte, b: Byte) =
         rumbleManager.handleSetControllerLED(controllerNumber, r, g, b)
 }
