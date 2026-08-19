@@ -97,7 +97,7 @@ object StreamActionRegistry {
     )
 
     val BUILTIN = linkedMapOf(
-        "open_keyboard" to StreamAction("open_keyboard", "KB", R.drawable.ic_keyboard_cute, 0, R.string.quick_btn_keyboard),
+        "open_keyboard" to StreamAction("open_keyboard", "PC Keys", R.drawable.ic_send_keys_cute, 0, R.string.quick_btn_pc_keys),
         "open_menu" to StreamAction("open_menu", "Menu", R.drawable.ic_menu_item_default),
         "toggle_visibility" to StreamAction("toggle_visibility", "Hide", R.drawable.ic_btn_quit, tintableIcon = true),
         "send_win" to StreamAction("send_win", "Win", R.drawable.ic_btn_win, labelRes = R.string.quick_btn_win, tintableIcon = true),
@@ -121,7 +121,7 @@ object StreamActionRegistry {
             "toggle_keyboard",
             "KB",
             R.drawable.ic_keyboard_cute,
-            labelRes = R.string.quick_btn_keyboard,
+            labelRes = R.string.quick_btn_local_keyboard,
             isWithGameFocus = true
         ),
         "toggle_controller" to StreamAction("toggle_controller", "Pad", R.drawable.ic_controller_cute, 0, R.string.quick_btn_controller),
