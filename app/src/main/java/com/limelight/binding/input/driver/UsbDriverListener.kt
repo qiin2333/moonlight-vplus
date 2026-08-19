@@ -1,5 +1,9 @@
 package com.limelight.binding.input.driver
 
+import android.hardware.usb.UsbDeviceConnection
+import android.hardware.usb.UsbEndpoint
+import android.hardware.usb.UsbInterface
+
 interface UsbDriverListener {
     fun reportControllerState(
         controllerId: Int, buttonFlags: Int,
@@ -30,4 +34,19 @@ interface UsbDriverListener {
     // number. Stateful consumers (e.g. touch tracking) must not consume state
     // transitions until this is true.
     fun isUsbControllerReady(controllerId: Int): Boolean = true
+
+    // Report that a DualSense UAC audio streaming interface is available.
+    // The handler should create a Ds5HapticsPump and attach it to the
+    // haptics coordinator.
+    fun onDs5AudioInterfaceAvailable(
+        controllerId: Int,
+        connection: UsbDeviceConnection,
+        streamingInterface: UsbInterface,
+        isoEndpoint: UsbEndpoint
+    ) {}
+
+    // Report that the previously announced DualSense audio interface is going
+    // away. The handler must stop and detach the pump before the connection
+    // closes.
+    fun onDs5AudioInterfaceGone(controllerId: Int) {}
 }

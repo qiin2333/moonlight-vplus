@@ -7,6 +7,7 @@ import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.GenericControllerContext
 import com.limelight.binding.input.InputDeviceContext
 import com.limelight.binding.input.UsbDeviceContext
+import com.limelight.nvstream.Ds5HapticsPcmFrame
 import com.limelight.nvstream.jni.MoonBridge
 
 /**
@@ -27,6 +28,10 @@ internal class ControllerHapticsCoordinator(
     }
 
     private val mixer = ControllerHapticsMixer()
+    @Volatile
+    private var ds5HapticsPump: Ds5HapticsPump? = null
+    @Volatile
+    private var ds5HapticsPumpOwner = -1
     private val outputSlots = mutableMapOf<Short, OutputSlot>()
 
     @Volatile
@@ -358,6 +363,33 @@ internal class ControllerHapticsCoordinator(
                 )
             }
         }
+    }
+
+    fun submitDs5HapticsPcm(frame: Ds5HapticsPcmFrame) {
+        ds5HapticsPump?.submit(frame)
+    }
+
+    fun attachDs5HapticsPump(controllerId: Int, pump: Ds5HapticsPump) {
+        // The attach path arrives from the USB broadcast receiver (main thread);
+        // pump startup issues interface and control transfers that must never
+        // block it, so run it on the background thread.
+        handler.backgroundThreadHandler.post {
+            // Replace any pump owned by another controller before the new one
+            // claims the audio interface.
+            ds5HapticsPump?.stop()
+            ds5HapticsPump = pump
+            ds5HapticsPumpOwner = controllerId
+            pump.start()
+        }
+    }
+
+    fun detachDs5HapticsPump(controllerId: Int) {
+        // Only the owning controller may stop the active pump; a stale removal
+        // callback from a replaced controller must not kill the new stream.
+        if (ds5HapticsPumpOwner != controllerId) return
+        ds5HapticsPump?.stop()
+        ds5HapticsPump = null
+        ds5HapticsPumpOwner = -1
     }
 
     fun clearControllerIfUnavailable(controllerNumber: Short) {

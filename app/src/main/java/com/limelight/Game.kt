@@ -35,6 +35,7 @@ import com.limelight.binding.video.PerfOverlayListener
 import com.limelight.binding.video.PerformanceInfo
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.StreamConfiguration
+import com.limelight.nvstream.Ds5HapticsPcmFrame
 import com.limelight.nvstream.HdrModePolicy
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.AdaptiveBitrateService
@@ -2096,6 +2097,10 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     override fun setControllerLED(controllerNumber: Short, r: Byte, g: Byte, b: Byte) {
         controllerHandler.handleSetControllerLED(controllerNumber, r, g, b)
+    }
+
+    override fun ds5HapticsPcm(frame: Ds5HapticsPcmFrame) {
+        controllerHandler.handleDs5HapticsPcm(frame)
     }
 
     private fun prepareFramegenSurface(outputSurface: Surface, showEnabledToast: Boolean) {

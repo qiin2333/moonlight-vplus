@@ -44,6 +44,7 @@ static jmethodID BridgeClRumbleTriggersMethod;
 static jmethodID BridgeClSetAdaptiveTriggersMethod;
 static jmethodID BridgeClSetMotionEventStateMethod;
 static jmethodID BridgeClSetControllerLEDMethod;
+static jmethodID BridgeClDs5HapticsPcmMethod;
 static jmethodID BridgeClResolutionChangedMethod;
 static jmethodID BridgeClClipboardDataMethod;
 static jmethodID BridgeClCursorUpdateMethod;
@@ -120,6 +121,7 @@ Java_com_limelight_nvstream_jni_MoonBridge_init(JNIEnv *env, jclass clazz) {
     BridgeClSetAdaptiveTriggersMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClSetAdaptiveTriggers", "(SBBB[B[B)V");
     BridgeClSetMotionEventStateMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClSetMotionEventState", "(SBS)V");
     BridgeClSetControllerLEDMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClSetControllerLED", "(SBBB)V");
+    BridgeClDs5HapticsPcmMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClDs5HapticsPcm", "(SBIJIIBB[B)V");
     BridgeClResolutionChangedMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClResolutionChanged", "(II)V");
     BridgeClClipboardDataMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClClipboardData", "([B)V");
     BridgeClCursorUpdateMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClCursorUpdate", "(IIIIII[B)V");
@@ -519,6 +521,43 @@ void BridgeClSetControllerLED(uint16_t controllerNumber, uint8_t r, uint8_t g, u
     }
 }
 
+void BridgeClDs5HapticsPcm(const LI_DS5_HAPTICS_PCM_FRAME* frame) {
+    JNIEnv* env = GetThreadEnv();
+
+    // Zero-length frames are valid: common-c uses them to carry lifecycle
+    // flags (STREAM_END / DISCONTINUITY) so the client can flush.
+    if (frame == NULL || (frame->pcmDataLength != 0 && frame->pcmData == NULL)) {
+        return;
+    }
+
+    // Copy the PCM data out of the callback-owned buffer. The callback is
+    // invoked on the control receive thread and the frame pointer is only
+    // valid during the call.
+    jbyteArray pcm = (*env)->NewByteArray(env, (jsize)frame->pcmDataLength);
+    if (pcm == NULL) {
+        (*env)->ExceptionClear(env);
+        return;
+    }
+    if (frame->pcmDataLength > 0) {
+        (*env)->SetByteArrayRegion(env, pcm, 0, (jsize)frame->pcmDataLength,
+                                   (const jbyte*)frame->pcmData);
+    }
+    if (!(*env)->ExceptionCheck(env)) {
+        (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeClDs5HapticsPcmMethod,
+                                     (jshort)frame->controllerNumber, (jbyte)frame->flags,
+                                     (jint)frame->sequenceNumber, (jlong)frame->presentationTimeUs,
+                                     (jint)frame->sampleRate, (jint)frame->frameCount,
+                                     (jbyte)frame->channelCount, (jbyte)frame->bitsPerSample,
+                                     pcm);
+    }
+
+    (*env)->DeleteLocalRef(env, pcm);
+    if ((*env)->ExceptionCheck(env)) {
+        // We will crash here
+        (*JVM)->DetachCurrentThread(JVM);
+    }
+}
+
 void BridgeClResolutionChanged(uint32_t width, uint32_t height) {
     JNIEnv* env = GetThreadEnv();
 
@@ -630,6 +669,7 @@ static CONNECTION_LISTENER_CALLBACKS BridgeConnListenerCallbacks = {
         .setMotionEventState = BridgeClSetMotionEventState,
         .setControllerLED = BridgeClSetControllerLED,
         .setAdaptiveTriggers = BridgeClSetAdaptiveTriggers,
+        .ds5HapticsPcm = BridgeClDs5HapticsPcm,
         .resolutionChanged = BridgeClResolutionChanged,
         .clipboardData = BridgeClClipboardData,
         .cursorUpdate = BridgeClCursorUpdate,
