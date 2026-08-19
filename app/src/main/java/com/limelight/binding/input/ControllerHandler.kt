@@ -2745,6 +2745,12 @@ class ControllerHandler(
         )
     }
 
+    override fun isUsbControllerReady(controllerId: Int): Boolean {
+        val context = usbDeviceContexts[controllerId] ?: return false
+        if (prefConfig.multiController && !context.assignedControllerNumber) return false
+        return context.controllerArrival.isReported
+    }
+
     // ========== Sensor Management ==========
 
     fun handleSetMotionEventState(controllerNumber: Short, motionType: Byte, reportRateHz: Short) {

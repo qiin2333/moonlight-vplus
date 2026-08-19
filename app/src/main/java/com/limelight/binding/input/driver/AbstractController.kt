@@ -76,6 +76,8 @@ abstract class AbstractController(
         listener.reportControllerBattery(deviceId, batteryState, batteryPercentage)
     }
 
+    protected fun isControllerReady(): Boolean = listener.isUsbControllerReady(deviceId)
+
     protected fun notifyControllerTouch(eventType: Byte, pointerId: Int, x: Float, y: Float) {
         listener.reportControllerTouch(deviceId, eventType, pointerId, x, y)
     }

@@ -25,4 +25,9 @@ interface UsbDriverListener {
         x: Float,
         y: Float
     ) {}
+
+    // Whether the controller has reported arrival and received its controller
+    // number. Stateful consumers (e.g. touch tracking) must not consume state
+    // transitions until this is true.
+    fun isUsbControllerReady(controllerId: Int): Boolean = true
 }

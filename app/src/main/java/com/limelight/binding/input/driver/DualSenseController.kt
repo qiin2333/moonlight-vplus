@@ -145,6 +145,15 @@ class DualSenseController(
 
     private fun reportTouch(buffer: ByteBuffer, slotIndex: Int, counterOffset: Int, dataOffset: Int) {
         val slot = touchSlots[slotIndex]
+
+        // Don't consume touch state until the controller has reported arrival and
+        // (in multi-controller mode) been assigned a number; otherwise the first
+        // DOWN would be dropped by the handler while the stationary finger never
+        // re-triggers an event.
+        if (!isControllerReady()) {
+            return
+        }
+
         val down = (buffer.get(counterOffset).toInt() and 0x80) == 0
 
         if (!down) {
@@ -172,6 +181,15 @@ class DualSenseController(
         slot.lastY = y
     }
 
+    private fun releaseTouchContacts() {
+        touchSlots.forEachIndexed { index, slot ->
+            if (slot.down) {
+                notifyControllerTouch(MoonBridge.LI_TOUCH_EVENT_UP, index, slot.lastX, slot.lastY)
+                slot.down = false
+            }
+        }
+    }
+
     private fun reportBattery(batteryByte: Byte) {
         val status = (batteryByte.toInt() shr 4) and 0x0F
         val percentage = ((batteryByte.toInt() and 0x0F) * 10 + 5).coerceAtMost(100).toByte()
@@ -187,6 +205,12 @@ class DualSenseController(
                 MoonBridge.LI_BATTERY_PERCENTAGE_UNKNOWN
             )
         }
+    }
+
+    override fun stop() {
+        // Release held touchpad contacts so the host doesn't keep a stuck finger.
+        releaseTouchContacts()
+        super.stop()
     }
 
     override fun doInit(): Boolean {
@@ -271,10 +295,12 @@ class DualSenseController(
 
     companion object {
         private const val BATTERY_OFFSET = 53
-        private const val TOUCH1_COUNTER_OFFSET = 32
-        private const val TOUCH1_DATA_OFFSET = 33
-        private const val TOUCH2_COUNTER_OFFSET = 36
-        private const val TOUCH2_DATA_OFFSET = 37
+        // Offsets in the full 64-byte input report (report ID at index 0). SDL's
+        // PS5StatePacket_t comments exclude the report ID, so wire = struct + 1.
+        private const val TOUCH1_COUNTER_OFFSET = 33
+        private const val TOUCH1_DATA_OFFSET = 34
+        private const val TOUCH2_COUNTER_OFFSET = 37
+        private const val TOUCH2_DATA_OFFSET = 38
         private const val TOUCHPAD_WIDTH = 1920f
         private const val TOUCHPAD_HEIGHT = 1070f
         private val SUPPORTED_VENDORS = intArrayOf(0x054C, 0x1532)
