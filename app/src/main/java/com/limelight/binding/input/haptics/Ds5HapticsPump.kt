@@ -86,6 +86,8 @@ internal class Ds5HapticsPump(
     private val active = AtomicBoolean(false)
     private var sendThread: Thread? = null
     private var formatWarned = false
+    private var lastSequence = 0
+    private var hasSequence = false
 
     fun start() {
         if (!active.compareAndSet(false, true)) return
@@ -142,6 +144,7 @@ internal class Ds5HapticsPump(
             writeIndex = 0
             prebuffered = false
         }
+        hasSequence = false
     }
 
     /** Cleanup for the start() failure paths, where the sender never ran. */
@@ -184,10 +187,23 @@ internal class Ds5HapticsPump(
                 writeIndex = 0
                 prebuffered = false
             }
+            hasSequence = false
             if (flags and Ds5HapticsPcmFrame.FLAG_STREAM_END.toInt() != 0) {
                 return
             }
         }
+        if (flags and Ds5HapticsPcmFrame.FLAG_STREAM_START.toInt() != 0) {
+            hasSequence = false
+        }
+
+        // The control stream delivers these frames unreliably: drops and
+        // reordering are expected. Stale or duplicate sequences are discarded;
+        // a gap just means lost PCM, which appends seamlessly.
+        if (hasSequence && frame.sequenceNumber - lastSequence <= 0) {
+            return
+        }
+        lastSequence = frame.sequenceNumber
+        hasSequence = true
 
         val source = ByteBuffer.wrap(frame.pcm).order(ByteOrder.LITTLE_ENDIAN)
         val shorts = (frame.pcm.size / 2 / HAPTIC_CHANNELS) * HAPTIC_CHANNELS
