@@ -13,4 +13,7 @@ interface UsbDriverListener {
 
     // Report motion data sourced from the USB controller itself
     fun reportControllerMotion(controllerId: Int, motionType: Byte, x: Float, y: Float, z: Float)
+
+    // Report battery state sourced from the USB controller itself
+    fun reportControllerBattery(controllerId: Int, batteryState: Byte, batteryPercentage: Byte) {}
 }

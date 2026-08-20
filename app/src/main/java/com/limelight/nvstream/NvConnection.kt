@@ -649,9 +649,8 @@ open class NvConnection(
         }
     }
 
-    fun sendControllerBatteryEvent(controllerNumber: Byte, batteryState: Byte, batteryPercentage: Byte) {
+    fun sendControllerBatteryEvent(controllerNumber: Byte, batteryState: Byte, batteryPercentage: Byte): Int =
         MoonBridge.sendControllerBatteryEvent(controllerNumber, batteryState, batteryPercentage)
-    }
 
     fun sendUtf8Text(text: String) {
         if (!isMonkey) {

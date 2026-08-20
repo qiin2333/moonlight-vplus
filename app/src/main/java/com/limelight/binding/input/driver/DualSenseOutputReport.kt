@@ -15,6 +15,10 @@ internal object DualSenseOutputReport {
     private const val RIGHT_TRIGGER_PAYLOAD_OFFSET = 12
     private const val LEFT_TRIGGER_TYPE_OFFSET = 22
     private const val LEFT_TRIGGER_PAYLOAD_OFFSET = 23
+    private const val LIGHTBAR_FLAG = 0x04 // valid_flag1 bit enabling the lightbar RGB bytes
+    private const val LIGHTBAR_R_OFFSET = 45
+    private const val LIGHTBAR_G_OFFSET = 46
+    private const val LIGHTBAR_B_OFFSET = 47
 
     fun rumble(lowFreqMotor: Short, highFreqMotor: Short): ByteArray =
         ByteArray(REPORT_SIZE).apply {
@@ -51,4 +55,13 @@ internal object DualSenseOutputReport {
         ByteArray(EFFECT_PAYLOAD_SIZE),
         ByteArray(EFFECT_PAYLOAD_SIZE)
     )
+
+    fun controllerLED(r: Byte, g: Byte, b: Byte): ByteArray =
+        ByteArray(REPORT_SIZE).apply {
+            this[0] = REPORT_ID.toByte()
+            this[2] = LIGHTBAR_FLAG.toByte()
+            this[LIGHTBAR_R_OFFSET] = r
+            this[LIGHTBAR_G_OFFSET] = g
+            this[LIGHTBAR_B_OFFSET] = b
+        }
 }

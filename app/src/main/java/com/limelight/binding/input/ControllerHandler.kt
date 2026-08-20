@@ -1,7 +1,6 @@
 @file:Suppress("DEPRECATION")
 package com.limelight.binding.input
 
-import android.annotation.TargetApi
 import android.app.Activity
 import android.content.Context
 import android.hardware.Sensor
@@ -50,6 +49,18 @@ class ControllerHandler(
 
     companion object {
         private const val MAXIMUM_BUMPER_UP_DELAY_MS = 100
+
+        // Mirrors the HarmonyOS client's STANDARD_BUTTON_FLAGS for virtual pads.
+        private val STANDARD_GAMEPAD_BUTTON_FLAGS = (
+            ControllerPacket.A_FLAG or ControllerPacket.B_FLAG or
+                ControllerPacket.X_FLAG or ControllerPacket.Y_FLAG or
+                ControllerPacket.UP_FLAG or ControllerPacket.DOWN_FLAG or
+                ControllerPacket.LEFT_FLAG or ControllerPacket.RIGHT_FLAG or
+                ControllerPacket.LB_FLAG or ControllerPacket.RB_FLAG or
+                ControllerPacket.LS_CLK_FLAG or ControllerPacket.RS_CLK_FLAG or
+                ControllerPacket.PLAY_FLAG or ControllerPacket.BACK_FLAG or
+                ControllerPacket.SPECIAL_BUTTON_FLAG
+            )
 
         const val START_DOWN_TIME_MOUSE_MODE_MS = 750
 
@@ -1331,8 +1342,14 @@ class ControllerHandler(
         return if (controllerNumber == 0 && prefConfig.screenDs5Touchpad) {
             baseMetadata.copy(
                 type = MoonBridge.LI_CTYPE_PS,
-                supportedButtonFlags = baseMetadata.supportedButtonFlags or ControllerPacket.TOUCHPAD_FLAG,
+                // A bare virtual declaration carries no buttons of its own; a screen
+                // DS5 must still advertise a normal gamepad or the host creates a
+                // DualSense with no face buttons (matches the HarmonyOS client).
+                supportedButtonFlags = baseMetadata.supportedButtonFlags or
+                    STANDARD_GAMEPAD_BUTTON_FLAGS or ControllerPacket.TOUCHPAD_FLAG,
                 capabilities = (baseMetadata.capabilities.toInt() or
+                    MoonBridge.LI_CCAP_ANALOG_TRIGGERS.toInt() or
+                    MoonBridge.LI_CCAP_RUMBLE.toInt() or
                     MoonBridge.LI_CCAP_TOUCHPAD.toInt() or
                     MoonBridge.LI_CCAP_PREFER_DS5.toInt()).toShort(),
             )
@@ -2713,6 +2730,28 @@ class ControllerHandler(
         conn.sendControllerMotionEvent(context.controllerNumber.toByte(), motionType, x, y, z)
     }
 
+    override fun reportControllerBattery(controllerId: Int, batteryState: Byte, batteryPercentage: Byte) {
+        val context = usbDeviceContexts[controllerId] ?: return
+
+        // In multi-controller mode, wait until the controller number is assigned;
+        // dedup only after that so the assigned controller gets its initial state.
+        if (prefConfig.multiController && !context.assignedControllerNumber) {
+            return
+        }
+        if (context.lastReportedBatteryState == batteryState &&
+            context.lastReportedBatteryPercentage == batteryPercentage
+        ) {
+            return
+        }
+
+        // Cache only after a successful send so a failure (e.g. control stream
+        // not yet ready) is retried with the next report.
+        if (conn.sendControllerBatteryEvent(context.controllerNumber.toByte(), batteryState, batteryPercentage) == 0) {
+            context.lastReportedBatteryState = batteryState
+            context.lastReportedBatteryPercentage = batteryPercentage
+        }
+    }
+
     // ========== Sensor Management ==========
 
     fun handleSetMotionEventState(controllerNumber: Short, motionType: Byte, reportRateHz: Short) {
@@ -2861,7 +2900,6 @@ class ControllerHandler(
         right
     )
 
-    @TargetApi(31)
     fun handleSetControllerLED(controllerNumber: Short, r: Byte, g: Byte, b: Byte) =
         rumbleManager.handleSetControllerLED(controllerNumber, r, g, b)
 }
