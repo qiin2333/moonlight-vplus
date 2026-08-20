@@ -7,6 +7,31 @@ import org.junit.Test
 
 class GameMenuKeyEventTest {
     @Test
+    fun nativeDirectionRepeatIsIgnoredOnlyAfterInitialDownIsHeld() {
+        assertTrue(
+            shouldIgnoreGameMenuDirectionalRepeat(
+                action = KeyEvent.ACTION_DOWN,
+                repeatCount = 1,
+                alreadyHeld = true
+            )
+        )
+        assertTrue(
+            !shouldIgnoreGameMenuDirectionalRepeat(
+                action = KeyEvent.ACTION_DOWN,
+                repeatCount = 0,
+                alreadyHeld = true
+            )
+        )
+        assertTrue(
+            !shouldIgnoreGameMenuDirectionalRepeat(
+                action = KeyEvent.ACTION_DOWN,
+                repeatCount = 1,
+                alreadyHeld = false
+            )
+        )
+    }
+
+    @Test
     fun standardGamepadAIsMappedToFocusedUiConfirmation() {
         assertEquals(
             KeyEvent.KEYCODE_DPAD_CENTER,

@@ -14,6 +14,13 @@ import org.junit.Test
 
 class GameMenuAxisNavigationStateTest {
     @Test
+    fun activeAxisSourceCannotBePreemptedBeforeRelease() {
+        assertTrue(canActivateGameMenuAxisSource(activeSourceId = null, reportingSourceId = 1))
+        assertTrue(canActivateGameMenuAxisSource(activeSourceId = 1, reportingSourceId = 1))
+        assertFalse(canActivateGameMenuAxisSource(activeSourceId = 1, reportingSourceId = 2))
+    }
+
+    @Test
     fun rawAxisSnapshotFilterReemitsCurrentValuesAfterReset() {
         val state = MenuAxisSnapshotState()
         val centered = listOf(0f to 0f, 0f to 0f)

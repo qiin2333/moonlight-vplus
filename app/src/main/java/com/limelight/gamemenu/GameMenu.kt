@@ -121,6 +121,17 @@ internal fun isGameMenuDirectionalKey(keyCode: Int): Boolean =
         keyCode == GAME_MENU_KEYCODE_DPAD_DOWN_LEFT ||
         keyCode == GAME_MENU_KEYCODE_DPAD_DOWN_RIGHT
 
+internal fun shouldIgnoreGameMenuDirectionalRepeat(
+    action: Int,
+    repeatCount: Int,
+    alreadyHeld: Boolean
+): Boolean = action == KeyEvent.ACTION_DOWN && repeatCount > 0 && alreadyHeld
+
+internal fun canActivateGameMenuAxisSource(
+    activeSourceId: Int?,
+    reportingSourceId: Int
+): Boolean = activeSourceId == null || activeSourceId == reportingSourceId
+
 private fun isGameMenuDiagonalKey(keyCode: Int): Boolean =
     keyCode == GAME_MENU_KEYCODE_DPAD_UP_LEFT ||
         keyCode == GAME_MENU_KEYCODE_DPAD_UP_RIGHT ||
@@ -265,6 +276,9 @@ class GameMenu(
             return true
         }
         val held = heldControllerDirections[identity]
+        if (shouldIgnoreGameMenuDirectionalRepeat(event.action, event.repeatCount, held != null)) {
+            return true
+        }
         val target = when (event.action) {
             KeyEvent.ACTION_DOWN -> {
                 if (held == null) {
@@ -358,7 +372,9 @@ class GameMenu(
         val transition = state.update(axisPairs)
         if (!transition.changed) return true
 
-        if (transition.pressedKeyCode != null) {
+        if (transition.pressedKeyCode != null &&
+            canActivateGameMenuAxisSource(activeAxisSourceId, sourceId)
+        ) {
             activateAxisSource(sourceId, transition.pressedKeyCode, dialog)
         } else if (activeAxisSourceId == sourceId) {
             releaseActiveAxisKey()
