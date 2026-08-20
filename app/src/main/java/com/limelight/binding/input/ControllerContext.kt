@@ -464,7 +464,7 @@ class UsbDeviceContext(handler: ControllerHandler) : GenericControllerContext(ha
     // Use a map instead of ConcurrentHashMap.newKeySet(), which requires API 24.
     internal val forwardedTouchPointerIds = ConcurrentHashMap<Int, Boolean>()
     internal var touchCaptureActive: Boolean = false
-    internal val menuAxisNavigationState = MenuAxisNavigationState()
+    internal val menuAxisSnapshotState = MenuAxisSnapshotState()
     internal val shortcutState = UsbControllerShortcutStateMachine()
     internal val shortcutLongPressRunnable = Runnable {
         handler.onUsbShortcutLongPress(this)
@@ -474,15 +474,15 @@ class UsbDeviceContext(handler: ControllerHandler) : GenericControllerContext(ha
         menuKeyDownTimes.clear()
         forwardedTouchPointerIds.clear()
         touchCaptureActive = false
-        menuAxisNavigationState.reset()
         handler.releaseUsbShortcutState(this)
+        menuAxisSnapshotState.reset()
         super.destroy()
     }
 
     override fun onGameMenuDismissed() {
         menuKeyDownTimes.clear()
-        menuAxisNavigationState.reset()
         shortcutState.onGameMenuUnavailable()
+        menuAxisSnapshotState.reset()
         if (!shortcutState.isLocalInputCaptureActive()) {
             handler.onUsbLocalCaptureEnded(this)
         }

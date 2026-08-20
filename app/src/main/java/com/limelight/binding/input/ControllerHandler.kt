@@ -2486,6 +2486,7 @@ class ControllerHandler(
                         }
                         val menuOpened = gestures.showGameMenuFromUsb(context)
                         if (menuOpened) {
+                            context.menuAxisSnapshotState.reset()
                             activateUsbMenuCapture(excludedContext = context)
                         }
                         handleUsbShortcutUpdate(
@@ -2543,6 +2544,7 @@ class ControllerHandler(
             for (context in usbDeviceContexts.values) {
                 if (context === excludedContext) continue
 
+                context.menuAxisSnapshotState.reset()
                 val update = context.shortcutState.onGameMenuOpenedExternally()
                 handleUsbShortcutUpdate(context, update)
                 if (update.sendNeutralState) {
@@ -2618,12 +2620,10 @@ class ControllerHandler(
                 val menuLeftY = if (digitalDirectionPressed) 0f else leftStickY
                 val menuRightX = if (digitalDirectionPressed) 0f else rightStickX
                 val menuRightY = if (digitalDirectionPressed) 0f else rightStickY
-                val axisTransition = context.menuAxisNavigationState.update(
-                    listOf(menuLeftX to menuLeftY, menuRightX to menuRightY)
-                )
-                if (axisTransition.changed) {
+                val axisPairs = listOf(menuLeftX to menuLeftY, menuRightX to menuRightY)
+                if (context.menuAxisSnapshotState.update(axisPairs)) {
                     mainThreadHandler.post {
-                        if (stopped) return@post
+                        if (stopped || !context.shortcutState.isMenuActive()) return@post
                         if (!gestures.dispatchUsbControllerMenuAxes(
                                 controllerId,
                                 menuLeftX,

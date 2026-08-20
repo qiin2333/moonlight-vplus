@@ -34,6 +34,10 @@ class GameMenuKeyEventTest {
             KeyEvent.KEYCODE_DPAD_UP,
             mapGameMenuConfirmKeyCode(GAME_MENU_KEYCODE_DPAD_UP_RIGHT)
         )
+        assertEquals(
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            mapGameMenuConfirmKeyCode(GAME_MENU_KEYCODE_DPAD_DOWN_LEFT)
+        )
     }
 
     @Test
@@ -113,33 +117,33 @@ class GameMenuKeyEventTest {
         assertTrue(
             !shouldRestoreGameMenuFocus(
                 restoreFocusRequestToken = 1,
+                handledRestoreFocusRequestToken = 0,
                 guideActive = false,
-                menuContentLaidOut = false,
-                menuHasFocus = false
+                menuContentLaidOut = false
             )
         )
         assertTrue(
             !shouldRestoreGameMenuFocus(
                 restoreFocusRequestToken = 1,
+                handledRestoreFocusRequestToken = 0,
                 guideActive = true,
-                menuContentLaidOut = true,
-                menuHasFocus = false
+                menuContentLaidOut = true
             )
         )
         assertTrue(
             shouldRestoreGameMenuFocus(
                 restoreFocusRequestToken = 1,
+                handledRestoreFocusRequestToken = 0,
                 guideActive = false,
-                menuContentLaidOut = true,
-                menuHasFocus = false
+                menuContentLaidOut = true
             )
         )
         assertTrue(
             !shouldRestoreGameMenuFocus(
                 restoreFocusRequestToken = 1,
+                handledRestoreFocusRequestToken = 1,
                 guideActive = false,
-                menuContentLaidOut = true,
-                menuHasFocus = true
+                menuContentLaidOut = true
             )
         )
     }

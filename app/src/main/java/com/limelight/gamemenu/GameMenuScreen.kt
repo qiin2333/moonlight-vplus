@@ -51,6 +51,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -185,6 +186,7 @@ internal fun GameMenuScreen(
         mutableStateOf(false)
     }
     var menuHasFocus by remember { mutableStateOf(false) }
+    var handledRestoreFocusRequestToken by remember { mutableIntStateOf(0) }
     LaunchedEffect(appContext) {
         val (store, shouldShow) = withContext(Dispatchers.IO) {
             val loadedStore = FeatureGuideStore(appContext)
@@ -347,14 +349,19 @@ internal fun GameMenuScreen(
         }
     }
 
-    LaunchedEffect(restoreFocusRequestToken, guideActive, menuContentLaidOut) {
+    LaunchedEffect(
+        restoreFocusRequestToken,
+        guideActive,
+        menuContentLaidOut
+    ) {
         if (shouldRestoreGameMenuFocus(
                 restoreFocusRequestToken = restoreFocusRequestToken,
+                handledRestoreFocusRequestToken = handledRestoreFocusRequestToken,
                 guideActive = guideActive,
-                menuContentLaidOut = menuContentLaidOut,
-                menuHasFocus = menuHasFocus
+                menuContentLaidOut = menuContentLaidOut
             )
         ) {
+            handledRestoreFocusRequestToken = restoreFocusRequestToken
             inputModeManager.requestInputMode(InputMode.Keyboard)
             menuGroupFocusRequester.requestFocus()
         }
@@ -389,13 +396,12 @@ internal fun shouldRequestGameMenuFocus(
 
 internal fun shouldRestoreGameMenuFocus(
     restoreFocusRequestToken: Int,
+    handledRestoreFocusRequestToken: Int,
     guideActive: Boolean,
-    menuContentLaidOut: Boolean,
-    menuHasFocus: Boolean
-): Boolean = restoreFocusRequestToken > 0 &&
+    menuContentLaidOut: Boolean
+): Boolean = restoreFocusRequestToken > handledRestoreFocusRequestToken &&
     !guideActive &&
-    menuContentLaidOut &&
-    !menuHasFocus
+    menuContentLaidOut
 
 @Composable
 internal fun GameMenuDialogShell(

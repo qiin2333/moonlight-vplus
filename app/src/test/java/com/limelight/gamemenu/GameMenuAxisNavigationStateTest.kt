@@ -3,6 +3,7 @@ package com.limelight.gamemenu
 import android.view.KeyEvent
 import android.view.MotionEvent
 import com.limelight.binding.input.MenuAxisNavigationState
+import com.limelight.binding.input.MenuAxisSnapshotState
 import com.limelight.binding.input.MenuNavigationAxisMapping
 import com.limelight.binding.input.readMenuNavigationAxisPairs
 import org.junit.Assert.assertEquals
@@ -12,6 +13,20 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GameMenuAxisNavigationStateTest {
+    @Test
+    fun rawAxisSnapshotFilterReemitsCurrentValuesAfterReset() {
+        val state = MenuAxisSnapshotState()
+        val centered = listOf(0f to 0f, 0f to 0f)
+
+        assertTrue(state.update(centered))
+        assertFalse(state.update(centered))
+        assertTrue(state.update(listOf(0.7f to 0f, 0f to 0f)))
+
+        state.reset()
+
+        assertTrue(state.update(listOf(0.7f to 0f, 0f to 0f)))
+    }
+
     @Test
     fun supportsHatLeftStickAndRightStickInPriorityOrder() {
         val state = MenuAxisNavigationState()

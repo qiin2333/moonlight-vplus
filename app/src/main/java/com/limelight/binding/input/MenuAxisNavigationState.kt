@@ -18,6 +18,23 @@ internal fun readMenuNavigationAxisPairs(
     mapping.rightStickAxes?.let { (xAxis, yAxis) -> add(axisValue(xAxis) to axisValue(yAxis)) }
 }
 
+internal class MenuAxisSnapshotState {
+    private var lastAxisPairs: List<Pair<Float, Float>>? = null
+
+    @Synchronized
+    fun update(axisPairs: List<Pair<Float, Float>>): Boolean {
+        val snapshot = axisPairs.toList()
+        if (snapshot == lastAxisPairs) return false
+        lastAxisPairs = snapshot
+        return true
+    }
+
+    @Synchronized
+    fun reset() {
+        lastAxisPairs = null
+    }
+}
+
 internal class MenuAxisNavigationState(
     private val activationThreshold: Float = 0.65f,
     private val releaseThreshold: Float = 0.35f

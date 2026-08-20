@@ -121,6 +121,12 @@ internal fun isGameMenuDirectionalKey(keyCode: Int): Boolean =
         keyCode == GAME_MENU_KEYCODE_DPAD_DOWN_LEFT ||
         keyCode == GAME_MENU_KEYCODE_DPAD_DOWN_RIGHT
 
+private fun isGameMenuDiagonalKey(keyCode: Int): Boolean =
+    keyCode == GAME_MENU_KEYCODE_DPAD_UP_LEFT ||
+        keyCode == GAME_MENU_KEYCODE_DPAD_UP_RIGHT ||
+        keyCode == GAME_MENU_KEYCODE_DPAD_DOWN_LEFT ||
+        keyCode == GAME_MENU_KEYCODE_DPAD_DOWN_RIGHT
+
 private fun mapGameMenuConfirmKeyEvent(event: KeyEvent): KeyEvent {
     val mappedKeyCode = mapGameMenuConfirmKeyCode(event.keyCode)
     return if (mappedKeyCode != event.keyCode) {
@@ -243,10 +249,11 @@ class GameMenu(
     }
 
     fun dispatchControllerKeyEvent(event: KeyEvent): Boolean {
-        if (isGameMenuDirectionalKey(event.keyCode)) {
-            return dispatchControllerDirectionKeyEvent(event)
+        val mappedEvent = mapGameMenuConfirmKeyEvent(event)
+        if (isGameMenuDirectionalKey(mappedEvent.keyCode)) {
+            return dispatchControllerDirectionKeyEvent(mappedEvent)
         }
-        return dispatchControllerKeyEventToCurrentOwner(event)
+        return dispatchControllerKeyEventToCurrentOwner(mappedEvent)
     }
 
     private fun dispatchControllerDirectionKeyEvent(event: KeyEvent): Boolean {
@@ -1305,6 +1312,16 @@ class GameMenu(
         activeChildDialog = dialog
 
         val decorView = dialog.window?.decorView
+        decorView?.setOnKeyListener { _, keyCode, event ->
+            if (activeChildDialog === dialog && dialog.isShowing &&
+                isGameMenuDiagonalKey(keyCode)
+            ) {
+                dialog.dispatchKeyEvent(mapGameMenuConfirmKeyEvent(event))
+                true
+            } else {
+                false
+            }
+        }
         decorView?.setOnGenericMotionListener { _, event ->
             if (activeChildDialog !== dialog || !dialog.isShowing ||
                 event.source and InputDevice.SOURCE_CLASS_JOYSTICK == 0
@@ -1320,6 +1337,7 @@ class GameMenu(
             if (activeChildDialog !== dialog) return@setOnDismissListener
             prepareForInputOwnerChange()
             activeChildDialog = null
+            decorView?.setOnKeyListener(null)
             decorView?.setOnGenericMotionListener(null)
             val parentDialog = activeDialog
             val parentComposeView = activeComposeView
