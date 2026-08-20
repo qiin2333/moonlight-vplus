@@ -34,26 +34,25 @@ class UsbDriverServiceManager(
     private var bound = false
     private var stopRequested = false
     private var binder: UsbDriverService.UsbDriverBinder? = null
+    private var sessionToken: Long? = null
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
             val usbBinder = service as UsbDriverService.UsbDriverBinder
             if (!bound || stopRequested) {
-                runCatching { usbBinder.stop() }
-                runCatching { usbBinder.setListener(null) }
-                runCatching { usbBinder.setStateListener(null) }
+                // This callback belongs to a binding that has already been released. The
+                // service may already be owned by a newer stream, so it must not be mutated.
                 return
             }
             binder = usbBinder
-            controllerHandler?.let { usbBinder.setListener(it) }
-            usbBinder.setStateListener(stateListener)
+            sessionToken = usbBinder.attachSession(controllerHandler, stateListener)
             connected = true
-            usbBinder.start()
         }
 
         override fun onServiceDisconnected(name: ComponentName) {
             connected = false
             binder = null
+            sessionToken = null
         }
     }
 
@@ -70,23 +69,27 @@ class UsbDriverServiceManager(
     fun stopAndUnbind() {
         stopRequested = true
         val currentBinder = binder
-        try { currentBinder?.stop() } catch (_: Exception) {}
-        try { currentBinder?.setListener(null) } catch (_: Exception) {}
-        try { currentBinder?.setStateListener(null) } catch (_: Exception) {}
+        val currentSessionToken = sessionToken
+        if (currentBinder != null && currentSessionToken != null) {
+            runCatching { currentBinder.releaseSession(currentSessionToken) }
+        }
         if (bound) {
             try { context.unbindService(serviceConnection) } catch (_: Exception) {}
         }
         bound = false
         connected = false
         binder = null
+        sessionToken = null
     }
 
     /**
      * 更新 controllerHandler 引用后重新绑定监听器。
      */
     fun refreshListener() {
-        if (connected) {
-            controllerHandler?.let { binder?.setListener(it) }
+        val currentBinder = binder
+        val currentSessionToken = sessionToken
+        if (connected && currentBinder != null && currentSessionToken != null) {
+            currentBinder.updateSessionListener(currentSessionToken, controllerHandler)
         }
     }
 

@@ -16,6 +16,8 @@ import android.os.IBinder
 import android.os.Looper
 import android.view.InputDevice
 import android.widget.Toast
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 import com.limelight.LimeLog
 import com.limelight.R
@@ -25,17 +27,20 @@ class UsbDriverService : Service(), UsbDriverListener {
 
     private var usbManager: UsbManager? = null
     private var prefConfig: PreferenceConfiguration? = null
-    private var started = false
+    @Volatile private var started = false
     private var receiverRegistered = false
-    private var claimAllAvailableOverride: Boolean? = null
+    @Volatile private var claimAllAvailableOverride: Boolean? = null
 
     private val receiver = UsbEventReceiver()
     private val binder = UsbDriverBinder()
 
     private val controllers = ArrayList<AbstractController>()
+    private val controllersLock = Any()
+    private val sessionLock = ReentrantLock()
+    private val sessionOwner = UsbDriverSessionOwner()
 
-    private var listener: UsbDriverListener? = null
-    private var stateListener: UsbDriverStateListener? = null
+    @Volatile private var listener: UsbDriverListener? = null
+    @Volatile private var stateListener: UsbDriverStateListener? = null
     private var nextDeviceId = 0
 
     override fun reportControllerState(
@@ -56,7 +61,9 @@ class UsbDriverService : Service(), UsbDriverListener {
     }
 
     override fun deviceRemoved(controller: AbstractController) {
-        controllers.remove(controller)
+        synchronized(controllersLock) {
+            controllers.remove(controller)
+        }
         listener?.deviceRemoved(controller)
     }
 
@@ -96,40 +103,109 @@ class UsbDriverService : Service(), UsbDriverListener {
 
     inner class UsbDriverBinder : Binder() {
         fun setListener(listener: UsbDriverListener?) {
-            this@UsbDriverService.listener = listener
-
-            if (listener != null) {
-                for (controller in controllers) {
-                    listener.deviceAdded(controller)
+            sessionLock.withLock {
+                if (sessionOwner.hasActiveSession()) {
+                    LimeLog.warning("Ignoring legacy USB listener update while a stream session owns the driver")
+                    return
                 }
+                setListenerLocked(listener)
             }
         }
 
         fun setStateListener(stateListener: UsbDriverStateListener?) {
-            this@UsbDriverService.stateListener = stateListener
+            sessionLock.withLock {
+                if (sessionOwner.hasActiveSession()) {
+                    LimeLog.warning("Ignoring legacy USB state-listener update while a stream session owns the driver")
+                    return
+                }
+                this@UsbDriverService.stateListener = stateListener
+            }
         }
 
         fun start() {
-            this@UsbDriverService.start(claimAllAvailableOverride = null)
+            sessionLock.withLock {
+                if (sessionOwner.hasActiveSession()) {
+                    LimeLog.warning("Ignoring legacy USB start while a stream session owns the driver")
+                    return
+                }
+                this@UsbDriverService.start(claimAllAvailableOverride = null)
+            }
+        }
+
+        fun attachSession(
+            listener: UsbDriverListener?,
+            stateListener: UsbDriverStateListener
+        ): Long {
+            return sessionLock.withLock {
+                if (sessionOwner.hasActiveSession()) {
+                    LimeLog.warning("Replacing an active USB driver session with a new stream session")
+                }
+                val token = sessionOwner.acquire()
+                setListenerLocked(listener)
+                this@UsbDriverService.stateListener = stateListener
+                this@UsbDriverService.start(claimAllAvailableOverride = null)
+                token
+            }
+        }
+
+        fun updateSessionListener(token: Long, listener: UsbDriverListener?) {
+            sessionLock.withLock {
+                if (sessionOwner.owns(token)) {
+                    setListenerLocked(listener)
+                }
+            }
+        }
+
+        fun releaseSession(token: Long) {
+            sessionLock.withLock {
+                if (!sessionOwner.release(token)) return
+                setListenerLocked(null)
+                stateListener = null
+                this@UsbDriverService.stop()
+            }
         }
 
         /**
          * Temporarily claims every supported USB controller for the shortcut test screen.
          * Returns true when at least one controller has started and will report readiness through
-         * [UsbDriverListener.deviceAdded].
+         * [UsbDriverListener.deviceAdded]. A live stream session keeps exclusive ownership.
          */
         fun startForDiagnostics(): Boolean {
-            this@UsbDriverService.start(claimAllAvailableOverride = true)
-            return controllers.isNotEmpty()
+            return sessionLock.withLock {
+                if (sessionOwner.hasActiveSession()) {
+                    return@withLock false
+                }
+                this@UsbDriverService.start(claimAllAvailableOverride = true)
+                synchronized(controllersLock) { controllers.isNotEmpty() }
+            }
         }
 
         /** Returns whether a claimed controller is still active or initializing. */
         fun hasActiveControllers(): Boolean {
-            return controllers.isNotEmpty()
+            return synchronized(controllersLock) { controllers.isNotEmpty() }
         }
 
         fun stop() {
-            this@UsbDriverService.stop()
+            sessionLock.withLock {
+                if (sessionOwner.hasActiveSession()) {
+                    LimeLog.warning("Ignoring legacy USB stop while a stream session owns the driver")
+                    return
+                }
+                this@UsbDriverService.stop()
+            }
+        }
+    }
+
+    private fun setListenerLocked(listener: UsbDriverListener?) {
+        this.listener = listener
+
+        if (listener != null) {
+            val controllerSnapshot = synchronized(controllersLock) {
+                controllers.toList()
+            }
+            for (controller in controllerSnapshot) {
+                listener.deviceAdded(controller)
+            }
         }
     }
 
@@ -201,16 +277,40 @@ class UsbDriverService : Service(), UsbDriverListener {
                 return
             }
 
-            controllers.add(controller)
+            val retained = synchronized(controllersLock) {
+                if (started) {
+                    controllers.add(controller)
+                    true
+                } else {
+                    false
+                }
+            }
+            if (!retained) {
+                runCatching { controller.stop() }.onFailure {
+                    LimeLog.warning("Unable to stop stale USB controller: ${it.message}")
+                }
+            }
         }
     }
 
     private fun handleUsbDeviceStateSafely(device: UsbDevice) {
-        if (!started) {
+        if (!sessionLock.tryLock()) {
+            Handler(Looper.getMainLooper()).postDelayed(
+                { handleUsbDeviceStateSafely(device) },
+                USB_SESSION_RETRY_DELAY_MS
+            )
             return
         }
-        runCatching { handleUsbDeviceState(device) }.onFailure {
-            LimeLog.warning("Unable to process USB controller: ${it.message}")
+
+        try {
+            if (!started) {
+                return
+            }
+            runCatching { handleUsbDeviceState(device) }.onFailure {
+                LimeLog.warning("Unable to process USB controller: ${it.message}")
+            }
+        } finally {
+            sessionLock.unlock()
         }
     }
 
@@ -282,8 +382,11 @@ class UsbDriverService : Service(), UsbDriverListener {
             receiverRegistered = false
         }
 
-        while (controllers.size > 0) {
-            runCatching { controllers.removeAt(0).stop() }.onFailure {
+        val controllersToStop = synchronized(controllersLock) {
+            controllers.toList().also { controllers.clear() }
+        }
+        for (controller in controllersToStop) {
+            runCatching { controller.stop() }.onFailure {
                 LimeLog.warning("Unable to stop USB controller: ${it.message}")
             }
         }
@@ -296,10 +399,12 @@ class UsbDriverService : Service(), UsbDriverListener {
     }
 
     override fun onDestroy() {
-        stop()
-
-        listener = null
-        stateListener = null
+        sessionLock.withLock {
+            sessionOwner.reset()
+            stop()
+            listener = null
+            stateListener = null
+        }
     }
 
     override fun onBind(intent: Intent): IBinder {
@@ -313,6 +418,7 @@ class UsbDriverService : Service(), UsbDriverListener {
 
     companion object {
         private const val ACTION_USB_PERMISSION = "com.limelight.USB_PERMISSION"
+        private const val USB_SESSION_RETRY_DELAY_MS = 50L
 
         @JvmStatic
         fun isRecognizedInputDevice(device: UsbDevice): Boolean {
@@ -363,5 +469,36 @@ class UsbDriverService : Service(), UsbDriverListener {
                     ((!isRecognizedInputDevice(device) || claimAllAvailable) && DualSenseController.canClaimDevice(device)) ||
                     ((!isRecognizedInputDevice(device) || claimAllAvailable) && Dualshock4Controller.canClaimDevice(device))
         }
+    }
+}
+
+// Service callers take sessionLock first. Intrinsic synchronization keeps this helper safe in isolation.
+internal class UsbDriverSessionOwner {
+    private var nextToken = 0L
+    private var activeToken: Long? = null
+
+    @Synchronized
+    fun acquire(): Long {
+        val token = ++nextToken
+        activeToken = token
+        return token
+    }
+
+    @Synchronized
+    fun owns(token: Long): Boolean = activeToken == token
+
+    @Synchronized
+    fun hasActiveSession(): Boolean = activeToken != null
+
+    @Synchronized
+    fun release(token: Long): Boolean {
+        if (activeToken != token) return false
+        activeToken = null
+        return true
+    }
+
+    @Synchronized
+    fun reset() {
+        activeToken = null
     }
 }
