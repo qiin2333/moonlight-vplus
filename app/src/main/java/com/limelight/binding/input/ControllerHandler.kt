@@ -2762,8 +2762,9 @@ class ControllerHandler(
         streamingInterface: UsbInterface,
         isoEndpoint: UsbEndpoint
     ) {
+        val context = usbDeviceContexts[controllerId] ?: return
         val pump = Ds5HapticsPump(connection, streamingInterface, isoEndpoint)
-        hapticsCoordinator.attachDs5HapticsPump(controllerId, pump)
+        hapticsCoordinator.attachDs5HapticsPump(controllerId, context.controllerNumber, pump)
     }
 
     override fun onDs5AudioInterfaceGone(controllerId: Int) {

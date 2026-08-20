@@ -11,6 +11,7 @@ import com.limelight.nvstream.Ds5HapticsPcmFrame
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.TimeoutException
 
 /**
  * Renders authored DualSense haptics PCM into the UAC isochronous OUT endpoint
@@ -259,7 +260,12 @@ internal class Ds5HapticsPump(
             }
 
             while (active.get()) {
-                val done = awaitCompletion() ?: return
+                val done = try {
+                    awaitCompletion()
+                } catch (_: TimeoutException) {
+                    continue
+                }
+                if (done == null) return
                 val slot = slots.firstOrNull { it.request === done } ?: continue
                 if (!active.get()) return
                 fillSlot(slot)
