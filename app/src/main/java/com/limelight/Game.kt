@@ -50,6 +50,7 @@ import com.limelight.services.StreamNotificationService
 import com.limelight.ui.CursorView
 import com.limelight.ui.Ds5TouchpadFeedbackView
 import com.limelight.ui.GameGestures
+import com.limelight.ui.GameMenuAxisSourceLifecycle
 import com.limelight.ui.StreamView
 import com.limelight.utils.Dialog
 import com.limelight.utils.PanZoomHandler
@@ -121,7 +122,8 @@ import androidx.core.net.toUri
 
 class Game : Activity(), SurfaceHolder.Callback,
     OnGenericMotionListener, OnTouchListener, NvConnectionListener, EvdevListener,
-    OnSystemUiVisibilityChangeListener, GameGestures, StreamView.InputCallbacks,
+    OnSystemUiVisibilityChangeListener, GameGestures, GameMenuAxisSourceLifecycle,
+    StreamView.InputCallbacks,
     PerfOverlayListener, UsbDriverService.UsbDriverStateListener, View.OnKeyListener,
     KeyboardAccessibilityService.KeyEventCallback {
 
@@ -2532,6 +2534,13 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     override fun showGameMenu(device: GameInputDevice?) {
+        showGameMenuInternal(device, openedFromUsbShortcut = false)
+    }
+
+    private fun showGameMenuInternal(
+        device: GameInputDevice?,
+        openedFromUsbShortcut: Boolean
+    ) {
         when (crownSessionController.backKeyMenuMode) {
             BackKeyMenuMode.CROWN_MODE -> {
                 if (controllerManager != null && prefConfig.enableCrownFeatures) {
@@ -2556,14 +2565,15 @@ class Game : Activity(), SurfaceHolder.Callback,
                     if (activeGameMenu === dismissedMenu) {
                         activeGameMenu = null
                     }
-                    if (device == null && ::controllerHandler.isInitialized) {
+                    if (::controllerHandler.isInitialized) {
                         controllerHandler.onExternalGameMenuDismissed()
-                    } else {
-                        device?.onGameMenuDismissed()
                     }
+                    // Preserve the opener-specific dismissal callback. USB contexts are also
+                    // covered by the handler-wide reset above; their callback is idempotent.
+                    device?.onGameMenuDismissed()
                 }
                 activeGameMenu = menu
-                if (device == null && ::controllerHandler.isInitialized) {
+                if (!openedFromUsbShortcut && ::controllerHandler.isInitialized) {
                     controllerHandler.onExternalGameMenuOpened()
                 }
             }
@@ -2571,7 +2581,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     override fun showGameMenuFromUsb(device: GameInputDevice): Boolean {
-        showGameMenu(device)
+        showGameMenuInternal(device, openedFromUsbShortcut = true)
         return activeGameMenu?.isShowing() == true
     }
 
@@ -2590,7 +2600,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     ): Boolean {
         val menu = activeGameMenu ?: return false
         if (!menu.dispatchControllerAxes(
-                sourceId = Int.MIN_VALUE + controllerId,
+                sourceId = ControllerHandler.usbGameMenuAxisSourceId(controllerId),
                 axisPairs = listOf(
                     leftStickX to leftStickY,
                     rightStickX to rightStickY
@@ -2600,6 +2610,10 @@ class Game : Activity(), SurfaceHolder.Callback,
             return false
         }
         return activeGameMenu === menu && menu.isShowing()
+    }
+
+    override fun releaseControllerMenuAxisSource(sourceId: Int) {
+        activeGameMenu?.releaseControllerAxisSource(sourceId)
     }
 
     override fun showUsbControllerShortcutHint() {

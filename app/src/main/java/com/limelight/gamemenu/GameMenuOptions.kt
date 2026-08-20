@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
@@ -59,7 +60,9 @@ internal fun MenuOptionColumn(
     onInlineToggle: (GameMenu.InlineControl.Toggle) -> Unit,
     onSegmentClick: (GameMenu.SegmentOption) -> Unit,
     modifier: Modifier = Modifier,
-    initialFocusRequester: FocusRequester? = null
+    initialFocusRequester: FocusRequester? = null,
+    optionFocusModifier: Modifier = Modifier,
+    inlineControlsFocusable: Boolean = true
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)) {
         options.forEachIndexed { index, option ->
@@ -69,7 +72,9 @@ internal fun MenuOptionColumn(
                 onClick = { onOptionClick(option) },
                 onInlineToggle = onInlineToggle,
                 onSegmentClick = onSegmentClick,
-                initialFocusRequester = initialFocusRequester.takeIf { index == 0 }
+                initialFocusRequester = initialFocusRequester.takeIf { index == 0 },
+                modifier = optionFocusModifier,
+                inlineControlsFocusable = inlineControlsFocusable
             )
         }
     }
@@ -82,7 +87,9 @@ private fun MenuOptionRow(
     onClick: () -> Unit,
     onInlineToggle: (GameMenu.InlineControl.Toggle) -> Unit,
     onSegmentClick: (GameMenu.SegmentOption) -> Unit,
-    initialFocusRequester: FocusRequester? = null
+    modifier: Modifier = Modifier,
+    initialFocusRequester: FocusRequester? = null,
+    inlineControlsFocusable: Boolean = true
 ) {
     val view = LocalView.current
     val shape = GameMenuCardShape
@@ -127,6 +134,7 @@ private fun MenuOptionRow(
             .clip(shape)
             .background(colorResource(R.color.game_menu_list_item_normal))
             .border(GameMenuDimens.surfaceStroke, borderColor, shape)
+            .then(modifier)
             .then(rowInteraction)
             .padding(horizontal = GameMenuDimens.section),
         verticalAlignment = Alignment.CenterVertically
@@ -204,6 +212,11 @@ private fun MenuOptionRow(
                         }
                     } else {
                         null
+                    },
+                    modifier = if (inlineControlsFocusable) {
+                        Modifier
+                    } else {
+                        Modifier.focusProperties { canFocus = false }
                     }
                 )
             }
@@ -245,6 +258,7 @@ private fun MenuChevron(size: Dp = 13.dp) {
 internal fun InlineToggle(
     checked: Boolean,
     contentDescription: String,
+    modifier: Modifier = Modifier,
     onToggle: (() -> Unit)? = null
 ) {
     val accent = colorResource(R.color.game_menu_accent)
@@ -264,7 +278,7 @@ internal fun InlineToggle(
     }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .width(48.dp)
             .height(36.dp)
             .then(interactionModifier),

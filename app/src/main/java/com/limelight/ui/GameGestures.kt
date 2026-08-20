@@ -18,3 +18,7 @@ interface GameGestures {
     fun showUsbControllerShortcutHint()
     fun hideUsbControllerShortcutHint()
 }
+
+interface GameMenuAxisSourceLifecycle {
+    fun releaseControllerMenuAxisSource(sourceId: Int)
+}

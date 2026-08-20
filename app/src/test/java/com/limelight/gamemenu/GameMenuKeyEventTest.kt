@@ -107,4 +107,81 @@ class GameMenuKeyEventTest {
         option.runnable?.run()
         assertTrue(navigatedBack)
     }
+
+    @Test
+    fun touchModeFocusGraphHandlesOddRowsAndCrossSectionNavigation() {
+        assertEquals(
+            TouchModeFocusTargets(left = null, right = 1, up = null, down = 2),
+            touchModeFocusTargets(primaryCount = 3, compatibleCount = 2, globalIndex = 0)
+        )
+        assertEquals(
+            TouchModeFocusTargets(left = 0, right = null, up = null, down = 2),
+            touchModeFocusTargets(primaryCount = 3, compatibleCount = 2, globalIndex = 1)
+        )
+        assertEquals(
+            TouchModeFocusTargets(left = null, right = null, up = 0, down = 3),
+            touchModeFocusTargets(primaryCount = 3, compatibleCount = 2, globalIndex = 2)
+        )
+        assertEquals(
+            TouchModeFocusTargets(left = null, right = 4, up = 2, down = null),
+            touchModeFocusTargets(primaryCount = 3, compatibleCount = 2, globalIndex = 3)
+        )
+        assertEquals(
+            TouchModeFocusTargets(left = 3, right = null, up = 2, down = null),
+            touchModeFocusTargets(primaryCount = 3, compatibleCount = 2, globalIndex = 4)
+        )
+    }
+
+    @Test
+    fun touchModeFocusGraphPreservesColumnsWhenBothSectionsHaveFullRows() {
+        assertEquals(
+            5,
+            touchModeFocusTargets(primaryCount = 4, compatibleCount = 3, globalIndex = 3).down
+        )
+        assertEquals(
+            3,
+            touchModeFocusTargets(primaryCount = 4, compatibleCount = 3, globalIndex = 5).up
+        )
+        assertEquals(
+            6,
+            touchModeFocusTargets(primaryCount = 4, compatibleCount = 3, globalIndex = 4).down
+        )
+    }
+
+    @Test
+    fun childDialogFocusRestoreWaitsForParentLayoutAndGuideDismissal() {
+        assertTrue(
+            !shouldRestoreGameMenuFocus(
+                restoreFocusRequestToken = 1,
+                guideActive = false,
+                menuContentLaidOut = false,
+                menuHasFocus = false
+            )
+        )
+        assertTrue(
+            !shouldRestoreGameMenuFocus(
+                restoreFocusRequestToken = 1,
+                guideActive = true,
+                menuContentLaidOut = true,
+                menuHasFocus = false
+            )
+        )
+        assertTrue(
+            shouldRestoreGameMenuFocus(
+                restoreFocusRequestToken = 1,
+                guideActive = false,
+                menuContentLaidOut = true,
+                menuHasFocus = false
+            )
+        )
+        assertTrue(
+            !shouldRestoreGameMenuFocus(
+                restoreFocusRequestToken = 1,
+                guideActive = false,
+                menuContentLaidOut = true,
+                menuHasFocus = true
+            )
+        )
+    }
+
 }
