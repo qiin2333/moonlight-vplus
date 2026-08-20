@@ -669,7 +669,12 @@ static CONNECTION_LISTENER_CALLBACKS BridgeConnListenerCallbacks = {
         .setMotionEventState = BridgeClSetMotionEventState,
         .setControllerLED = BridgeClSetControllerLED,
         .setAdaptiveTriggers = BridgeClSetAdaptiveTriggers,
-        .ds5HapticsPcm = BridgeClDs5HapticsPcm,
+        // Moonlight-common uses the presence of this callback to advertise raw DualSense
+        // PCM support in the SDP. Android can only consume that stream while a compatible
+        // USB DualSense audio endpoint is open. Advertising it unconditionally suppresses
+        // the host-side rumble fallback and silently drops haptics on all other devices.
+        // Keep this disabled until endpoint availability can be negotiated for the session.
+        .ds5HapticsPcm = NULL,
         .resolutionChanged = BridgeClResolutionChanged,
         .clipboardData = BridgeClClipboardData,
         .cursorUpdate = BridgeClCursorUpdate,
