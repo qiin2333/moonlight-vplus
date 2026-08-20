@@ -2407,6 +2407,13 @@ class ControllerHandler(
         context: UsbDeviceContext,
         update: UsbControllerShortcutStateMachine.Update
     ) {
+        val captureStarted = update.consumeAllInput && !context.touchCaptureActive
+        val captureEnded = !update.consumeAllInput && context.touchCaptureActive
+        context.touchCaptureActive = update.consumeAllInput
+        if (captureStarted || captureEnded) {
+            cancelForwardedUsbTouches(context)
+            context.device?.resetTouchState()
+        }
         for (action in update.actions) {
             when (action) {
                 UsbControllerShortcutStateMachine.Action.SCHEDULE_LONG_PRESS -> {
@@ -2483,6 +2490,13 @@ class ControllerHandler(
                 }
             }
         }
+    }
+
+    internal fun onUsbLocalCaptureEnded(context: UsbDeviceContext) {
+        if (!context.touchCaptureActive) return
+        context.touchCaptureActive = false
+        cancelForwardedUsbTouches(context)
+        context.device?.resetTouchState()
     }
 
     fun onExternalGameMenuOpened() {
@@ -2733,16 +2747,41 @@ class ControllerHandler(
     ) {
         val context = usbDeviceContexts[controllerId] ?: return
         if (prefConfig.multiController && !context.assignedControllerNumber) return
-        if (context.shortcutState.isLocalInputCaptureActive()) return
+        if (context.shortcutState.isLocalInputCaptureActive()) {
+            cancelForwardedUsbTouches(context)
+            return
+        }
 
         // The Linux DS5 backend distinguishes contact/release via pressure.
         val pressure = when (eventType) {
             MoonBridge.LI_TOUCH_EVENT_DOWN, MoonBridge.LI_TOUCH_EVENT_MOVE -> 1f
             else -> 0f
         }
-        conn.sendControllerTouchEvent(
+        val result = conn.sendControllerTouchEvent(
             context.controllerNumber.toByte(), eventType, pointerId, x, y, pressure
         )
+        if (result == MoonBridge.LI_ERR_UNSUPPORTED) return
+
+        when (eventType) {
+            MoonBridge.LI_TOUCH_EVENT_DOWN, MoonBridge.LI_TOUCH_EVENT_MOVE ->
+                context.forwardedTouchPointerIds.add(pointerId)
+            MoonBridge.LI_TOUCH_EVENT_UP, MoonBridge.LI_TOUCH_EVENT_CANCEL ->
+                context.forwardedTouchPointerIds.remove(pointerId)
+            MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL -> context.forwardedTouchPointerIds.clear()
+        }
+    }
+
+    private fun cancelForwardedUsbTouches(context: UsbDeviceContext) {
+        if (context.forwardedTouchPointerIds.isNotEmpty()) {
+            context.forwardedTouchPointerIds.toList().forEach { pointerId ->
+                conn.sendControllerTouchEvent(
+                    context.controllerNumber.toByte(), MoonBridge.LI_TOUCH_EVENT_CANCEL,
+                    pointerId, 0f, 0f, 0f
+                )
+            }
+        }
+        context.forwardedTouchPointerIds.clear()
+        context.device?.resetTouchState()
     }
 
     override fun isUsbControllerReady(controllerId: Int): Boolean {

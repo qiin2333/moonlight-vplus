@@ -81,4 +81,7 @@ abstract class AbstractController(
     protected fun notifyControllerTouch(eventType: Byte, pointerId: Int, x: Float, y: Float) {
         listener.reportControllerTouch(deviceId, eventType, pointerId, x, y)
     }
+
+    /** Reset driver-side touch state after the host has received a cancellation. */
+    open fun resetTouchState() {}
 }

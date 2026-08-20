@@ -190,6 +190,10 @@ class DualSenseController(
         }
     }
 
+    override fun resetTouchState() {
+        touchSlots.forEach { it.down = false }
+    }
+
     private fun reportBattery(batteryByte: Byte) {
         val status = (batteryByte.toInt() shr 4) and 0x0F
         val percentage = ((batteryByte.toInt() and 0x0F) * 10 + 5).coerceAtMost(100).toByte()

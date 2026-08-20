@@ -461,6 +461,8 @@ class UsbDeviceContext(handler: ControllerHandler) : GenericControllerContext(ha
     internal var lastReportedBatteryState: Byte? = null
     internal var lastReportedBatteryPercentage: Byte? = null
     internal val menuKeyDownTimes = ConcurrentHashMap<Int, Long>()
+    internal val forwardedTouchPointerIds = ConcurrentHashMap.newKeySet<Int>()
+    internal var touchCaptureActive: Boolean = false
     internal val shortcutState = UsbControllerShortcutStateMachine()
     internal val shortcutLongPressRunnable = Runnable {
         handler.onUsbShortcutLongPress(this)
@@ -468,6 +470,8 @@ class UsbDeviceContext(handler: ControllerHandler) : GenericControllerContext(ha
 
     override fun destroy() {
         menuKeyDownTimes.clear()
+        forwardedTouchPointerIds.clear()
+        touchCaptureActive = false
         handler.releaseUsbShortcutState(this)
         super.destroy()
     }
@@ -475,6 +479,9 @@ class UsbDeviceContext(handler: ControllerHandler) : GenericControllerContext(ha
     override fun onGameMenuDismissed() {
         menuKeyDownTimes.clear()
         shortcutState.onGameMenuUnavailable()
+        if (!shortcutState.isLocalInputCaptureActive()) {
+            handler.onUsbLocalCaptureEnded(this)
+        }
     }
 
     override fun sendControllerArrival(): Int {
