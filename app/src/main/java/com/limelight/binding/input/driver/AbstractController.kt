@@ -1,8 +1,8 @@
 package com.limelight.binding.input.driver
 
 abstract class AbstractController(
-    private val deviceId: Int,
-    private val listener: UsbDriverListener,
+    protected val deviceId: Int,
+    protected val listener: UsbDriverListener,
     private val vendorId: Int,
     private val productId: Int
 ) {
@@ -75,4 +75,13 @@ abstract class AbstractController(
     protected fun notifyBatteryState(batteryState: Byte, batteryPercentage: Byte) {
         listener.reportControllerBattery(deviceId, batteryState, batteryPercentage)
     }
+
+    protected fun isControllerReady(): Boolean = listener.isUsbControllerReady(deviceId)
+
+    protected fun notifyControllerTouch(eventType: Byte, pointerId: Int, x: Float, y: Float) {
+        listener.reportControllerTouch(deviceId, eventType, pointerId, x, y)
+    }
+
+    /** Reset driver-side touch state after the host has received a cancellation. */
+    open fun resetTouchState() {}
 }

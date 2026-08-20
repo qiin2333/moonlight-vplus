@@ -6,6 +6,9 @@ import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.hardware.input.InputManager
+import android.hardware.usb.UsbDeviceConnection
+import android.hardware.usb.UsbEndpoint
+import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
 import android.os.Build
 import android.os.Handler
@@ -25,6 +28,8 @@ import com.limelight.binding.input.driver.AbstractController
 import com.limelight.binding.input.driver.UsbDriverListener
 import com.limelight.binding.input.driver.UsbDriverService
 import com.limelight.binding.input.haptics.ControllerHapticsCoordinator
+import com.limelight.binding.input.haptics.Ds5HapticsPump
+import com.limelight.nvstream.Ds5HapticsPcmFrame
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.input.ControllerPacket
 import com.limelight.nvstream.input.MouseButtonPacket
@@ -2406,6 +2411,13 @@ class ControllerHandler(
         context: UsbDeviceContext,
         update: UsbControllerShortcutStateMachine.Update
     ) {
+        val captureStarted = update.consumeAllInput && !context.touchCaptureActive
+        val captureEnded = !update.consumeAllInput && context.touchCaptureActive
+        context.touchCaptureActive = update.consumeAllInput
+        if (captureStarted || captureEnded) {
+            cancelForwardedUsbTouches(context)
+            context.device?.resetTouchState()
+        }
         for (action in update.actions) {
             when (action) {
                 UsbControllerShortcutStateMachine.Action.SCHEDULE_LONG_PRESS -> {
@@ -2482,6 +2494,13 @@ class ControllerHandler(
                 }
             }
         }
+    }
+
+    internal fun onUsbLocalCaptureEnded(context: UsbDeviceContext) {
+        if (!context.touchCaptureActive) return
+        context.touchCaptureActive = false
+        cancelForwardedUsbTouches(context)
+        context.device?.resetTouchState()
     }
 
     fun onExternalGameMenuOpened() {
@@ -2723,6 +2742,73 @@ class ControllerHandler(
         }
     }
 
+    override fun reportControllerTouch(
+        controllerId: Int,
+        eventType: Byte,
+        pointerId: Int,
+        x: Float,
+        y: Float
+    ) {
+        val context = usbDeviceContexts[controllerId] ?: return
+        if (prefConfig.multiController && !context.assignedControllerNumber) return
+        if (context.shortcutState.isLocalInputCaptureActive()) {
+            cancelForwardedUsbTouches(context)
+            return
+        }
+
+        // The Linux DS5 backend distinguishes contact/release via pressure.
+        val pressure = when (eventType) {
+            MoonBridge.LI_TOUCH_EVENT_DOWN, MoonBridge.LI_TOUCH_EVENT_MOVE -> 1f
+            else -> 0f
+        }
+        val result = conn.sendControllerTouchEvent(
+            context.controllerNumber.toByte(), eventType, pointerId, x, y, pressure
+        )
+        if (result == MoonBridge.LI_ERR_UNSUPPORTED) return
+
+        when (eventType) {
+            MoonBridge.LI_TOUCH_EVENT_DOWN, MoonBridge.LI_TOUCH_EVENT_MOVE ->
+                context.forwardedTouchPointerIds[pointerId] = true
+            MoonBridge.LI_TOUCH_EVENT_UP, MoonBridge.LI_TOUCH_EVENT_CANCEL ->
+                context.forwardedTouchPointerIds.remove(pointerId)
+            MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL -> context.forwardedTouchPointerIds.clear()
+        }
+    }
+
+    private fun cancelForwardedUsbTouches(context: UsbDeviceContext) {
+        if (context.forwardedTouchPointerIds.isNotEmpty()) {
+            context.forwardedTouchPointerIds.keys.toList().forEach { pointerId ->
+                conn.sendControllerTouchEvent(
+                    context.controllerNumber.toByte(), MoonBridge.LI_TOUCH_EVENT_CANCEL,
+                    pointerId, 0f, 0f, 0f
+                )
+            }
+        }
+        context.forwardedTouchPointerIds.clear()
+        context.device?.resetTouchState()
+    }
+
+    override fun isUsbControllerReady(controllerId: Int): Boolean {
+        val context = usbDeviceContexts[controllerId] ?: return false
+        if (prefConfig.multiController && !context.assignedControllerNumber) return false
+        return context.controllerArrival.isReported
+    }
+
+    override fun onDs5AudioInterfaceAvailable(
+        controllerId: Int,
+        connection: UsbDeviceConnection,
+        streamingInterface: UsbInterface,
+        isoEndpoint: UsbEndpoint
+    ) {
+        val context = usbDeviceContexts[controllerId] ?: return
+        val pump = Ds5HapticsPump(connection, streamingInterface, isoEndpoint)
+        hapticsCoordinator.attachDs5HapticsPump(controllerId, context.controllerNumber, pump)
+    }
+
+    override fun onDs5AudioInterfaceGone(controllerId: Int) {
+        hapticsCoordinator.detachDs5HapticsPump(controllerId)
+    }
+
     // ========== Sensor Management ==========
 
     fun handleSetMotionEventState(controllerNumber: Short, motionType: Byte, reportRateHz: Short) {
@@ -2882,4 +2968,8 @@ class ControllerHandler(
 
     fun handleSetControllerLED(controllerNumber: Short, r: Byte, g: Byte, b: Byte) =
         rumbleManager.handleSetControllerLED(controllerNumber, r, g, b)
+
+    fun handleDs5HapticsPcm(frame: Ds5HapticsPcmFrame) {
+        hapticsCoordinator.submitDs5HapticsPcm(frame)
+    }
 }

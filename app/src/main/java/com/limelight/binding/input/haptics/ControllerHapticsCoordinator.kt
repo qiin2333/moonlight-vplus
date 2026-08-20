@@ -7,7 +7,9 @@ import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.GenericControllerContext
 import com.limelight.binding.input.InputDeviceContext
 import com.limelight.binding.input.UsbDeviceContext
+import com.limelight.nvstream.Ds5HapticsPcmFrame
 import com.limelight.nvstream.jni.MoonBridge
+import java.util.concurrent.CountDownLatch
 
 /**
  * Owns controller-haptics runtime policy for the Android client.
@@ -39,6 +41,14 @@ internal class ControllerHapticsCoordinator(
 
     private val mixer = ControllerHapticsMixer()
     private val deviceMixer = ControllerHapticsMixer()
+    @Volatile
+    private var ds5HapticsPump: Ds5HapticsPump? = null
+    @Volatile
+    private var ds5HapticsPumpOwner = -1
+    private var ds5HapticsControllerNumber: Short = NO_CONTROLLER.toShort()
+    private val ds5LifecycleLock = Any()
+    private var ds5LifecycleGeneration = 0L
+    private var ds5RequestedOwner = -1
     private val outputSlots = mutableMapOf<Short, OutputSlot>()
     private val hostStates = mutableMapOf<Short, ControllerRumbleState>()
     private val deviceOutputSlot = DeviceOutputSlot()
@@ -386,6 +396,95 @@ internal class ControllerHapticsCoordinator(
         }
     }
 
+    fun submitDs5HapticsPcm(frame: Ds5HapticsPcmFrame) {
+        if (frame.controllerNumber != ds5HapticsControllerNumber) return
+        ds5HapticsPump?.submit(frame)
+    }
+
+    fun attachDs5HapticsPump(controllerId: Int, controllerNumber: Short, pump: Ds5HapticsPump) {
+        var generation = 0L
+        synchronized(ds5LifecycleLock) {
+            generation = ++ds5LifecycleGeneration
+            ds5RequestedOwner = controllerId
+        }
+        // The attach path arrives from the USB broadcast receiver (main thread);
+        // pump startup issues interface and control transfers that must never
+        // block it, so run it on the background thread.
+        handler.backgroundThreadHandler.post {
+            synchronized(ds5LifecycleLock) {
+                if (generation != ds5LifecycleGeneration || ds5RequestedOwner != controllerId) {
+                    pump.stop()
+                    return@post
+                }
+            }
+            if (isStoppingOrStopped()) {
+                pump.stop()
+                return@post
+            }
+            // Replace any pump owned by another controller before the new one
+            // claims the audio interface.
+            ds5HapticsPump?.stop()
+            ds5HapticsPump = pump
+            ds5HapticsPumpOwner = controllerId
+            ds5HapticsControllerNumber = controllerNumber
+            pump.start()
+        }
+    }
+
+    fun detachDs5HapticsPump(controllerId: Int) {
+        var shouldWait = false
+        synchronized(ds5LifecycleLock) {
+            shouldWait = ds5RequestedOwner == controllerId || ds5HapticsPumpOwner == controllerId
+            if (ds5RequestedOwner == controllerId) {
+                ds5RequestedOwner = -1
+                ds5LifecycleGeneration++
+            }
+        }
+        if (!shouldWait) return
+
+        // Serialize removal with attach and wait for alt 0 restoration before
+        // the controller closes its UsbDeviceConnection.
+        runOnUsbWorkerAndWait {
+            // Only the owning controller may stop the active pump; a stale
+            // removal callback from a replaced controller must not kill the
+            // new stream.
+            if (ds5HapticsPumpOwner != controllerId) return@runOnUsbWorkerAndWait
+            ds5HapticsPump?.stop()
+            ds5HapticsPump = null
+            ds5HapticsPumpOwner = -1
+            ds5HapticsControllerNumber = NO_CONTROLLER.toShort()
+        }
+    }
+
+    private fun runOnUsbWorkerAndWait(action: () -> Unit) {
+        if (Looper.myLooper() == handler.backgroundThreadHandler.looper) {
+            action()
+            return
+        }
+        val completed = CountDownLatch(1)
+        if (!handler.backgroundThreadHandler.post {
+                try {
+                    action()
+                } finally {
+                    completed.countDown()
+                }
+            }
+        ) {
+            action()
+            return
+        }
+        var interrupted = false
+        while (true) {
+            try {
+                completed.await()
+                break
+            } catch (_: InterruptedException) {
+                interrupted = true
+            }
+        }
+        if (interrupted) Thread.currentThread().interrupt()
+    }
+
     fun clearControllerIfUnavailable(controllerNumber: Short) {
         runOnOutputThread {
             if (stopped || controllerHasRumble(controllerNumber)) return@runOnOutputThread
@@ -425,6 +524,15 @@ internal class ControllerHapticsCoordinator(
         if (stopped || stopping) return
         stopping = true
         stopAllNow()
+        val pump = ds5HapticsPump
+        ds5HapticsPump = null
+        ds5HapticsPumpOwner = -1
+        ds5HapticsControllerNumber = NO_CONTROLLER.toShort()
+        synchronized(ds5LifecycleLock) {
+            ds5RequestedOwner = -1
+            ds5LifecycleGeneration++
+        }
+        runOnUsbWorkerAndWait { pump?.stop() }
         primaryControllerNumber = NO_CONTROLLER
         stopped = true
         stopping = false

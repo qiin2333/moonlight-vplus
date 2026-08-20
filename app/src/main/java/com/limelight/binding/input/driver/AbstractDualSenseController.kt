@@ -34,6 +34,10 @@ abstract class AbstractDualSenseController(
     protected var inEndpt: UsbEndpoint? = null
     protected var outEndpt: UsbEndpoint? = null
 
+    // The UAC audioStreamingOut alt setting and its iso OUT endpoint, when the
+    // controller exposes the DualSense audio topology. Null on non-DS5 pads.
+    private var audioInterface: Pair<UsbInterface, UsbEndpoint>? = null
+
     // IMU data fields
     protected var gyroX = 0f
     protected var gyroY = 0f
@@ -153,15 +157,54 @@ abstract class AbstractDualSenseController(
             return false
         }
 
+        discoverAudioInterface()
+
         inputThread = createInputThread()
         inputThread!!.start()
         return true
+    }
+
+    /**
+     * Discovers the UAC audio streaming OUT interface (the alt setting that
+     * carries the isochronous OUT endpoint) and notifies the listener so the
+     * haptics coordinator can create a PCM pump. The pump owns the alternate
+     * setting lifecycle; the interface itself was already claimed above.
+     */
+    private fun discoverAudioInterface() {
+        for (i in 0 until device.interfaceCount) {
+            val iface = device.getInterface(i)
+            if (iface.interfaceClass != UsbConstants.USB_CLASS_AUDIO ||
+                iface.interfaceSubclass != 0x02 // Audio Streaming
+            ) {
+                continue
+            }
+            // Alt 0 carries no endpoints; the alt 1 entry exposes the iso OUT
+            // endpoint (Android surfaces each alternate setting separately).
+            for (j in 0 until iface.endpointCount) {
+                val ep = iface.getEndpoint(j)
+                if (ep.direction == UsbConstants.USB_DIR_OUT &&
+                    ep.type == UsbConstants.USB_ENDPOINT_XFER_ISOC
+                ) {
+                    Log.i("DualSenseController", "UAC streaming OUT iface=${iface.id} ep=0x${Integer.toHexString(ep.address)}")
+                    audioInterface = iface to ep
+                    listener.onDs5AudioInterfaceAvailable(deviceId, connection, iface, ep)
+                    return
+                }
+            }
+        }
     }
 
     override fun stop() {
         synchronized(this) {
             if (stopped) return
             stopped = true
+        }
+
+        // Tear down the haptics pump first: it needs a live connection to
+        // restore the audio interface to alt 0 and release iso bandwidth.
+        if (audioInterface != null) {
+            audioInterface = null
+            listener.onDs5AudioInterfaceGone(deviceId)
         }
 
         // Hold the output lock across the final clear so a report already queued by

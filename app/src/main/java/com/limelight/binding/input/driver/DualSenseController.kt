@@ -18,10 +18,19 @@ class DualSenseController(
 
     override val supportsAdaptiveTriggers: Boolean = true
 
+    private class TouchSlot {
+        var down = false
+        var lastX = -1f
+        var lastY = -1f
+    }
+
+    private val touchSlots = Array(2) { TouchSlot() }
+
     init {
         capabilities = (capabilities.toInt() or
                 MoonBridge.LI_CCAP_BATTERY_STATE.toInt() or
-                MoonBridge.LI_CCAP_RGB_LED.toInt()).toShort()
+                MoonBridge.LI_CCAP_RGB_LED.toInt() or
+                MoonBridge.LI_CCAP_TOUCHPAD.toInt()).toShort()
     }
 
     private fun normalizeThumbStickAxis(value: Int): Float {
@@ -128,8 +137,61 @@ class DualSenseController(
         }
 
         reportBattery(buffer.get(BATTERY_OFFSET))
+        reportTouch(buffer, 0, TOUCH1_COUNTER_OFFSET, TOUCH1_DATA_OFFSET)
+        reportTouch(buffer, 1, TOUCH2_COUNTER_OFFSET, TOUCH2_DATA_OFFSET)
 
         return true
+    }
+
+    private fun reportTouch(buffer: ByteBuffer, slotIndex: Int, counterOffset: Int, dataOffset: Int) {
+        val slot = touchSlots[slotIndex]
+
+        // Don't consume touch state until the controller has reported arrival and
+        // (in multi-controller mode) been assigned a number; otherwise the first
+        // DOWN would be dropped by the handler while the stationary finger never
+        // re-triggers an event.
+        if (!isControllerReady()) {
+            return
+        }
+
+        val down = (buffer.get(counterOffset).toInt() and 0x80) == 0
+
+        if (!down) {
+            if (slot.down) {
+                notifyControllerTouch(MoonBridge.LI_TOUCH_EVENT_UP, slotIndex, slot.lastX, slot.lastY)
+            }
+            slot.down = false
+            return
+        }
+
+        // Contact position: 12-bit X and Y, normalized by the touchpad panel size.
+        val d0 = buffer.get(dataOffset).toInt() and 0xFF
+        val d1 = buffer.get(dataOffset + 1).toInt() and 0xFF
+        val d2 = buffer.get(dataOffset + 2).toInt() and 0xFF
+        val x = (d0 or ((d1 and 0x0F) shl 8)) / TOUCHPAD_WIDTH
+        val y = ((d1 shr 4) or (d2 shl 4)) / TOUCHPAD_HEIGHT
+
+        if (!slot.down) {
+            notifyControllerTouch(MoonBridge.LI_TOUCH_EVENT_DOWN, slotIndex, x, y)
+        } else if (x != slot.lastX || y != slot.lastY) {
+            notifyControllerTouch(MoonBridge.LI_TOUCH_EVENT_MOVE, slotIndex, x, y)
+        }
+        slot.down = true
+        slot.lastX = x
+        slot.lastY = y
+    }
+
+    private fun releaseTouchContacts() {
+        touchSlots.forEachIndexed { index, slot ->
+            if (slot.down) {
+                notifyControllerTouch(MoonBridge.LI_TOUCH_EVENT_UP, index, slot.lastX, slot.lastY)
+                slot.down = false
+            }
+        }
+    }
+
+    override fun resetTouchState() {
+        touchSlots.forEach { it.down = false }
     }
 
     private fun reportBattery(batteryByte: Byte) {
@@ -147,6 +209,12 @@ class DualSenseController(
                 MoonBridge.LI_BATTERY_PERCENTAGE_UNKNOWN
             )
         }
+    }
+
+    override fun stop() {
+        // Release held touchpad contacts so the host doesn't keep a stuck finger.
+        releaseTouchContacts()
+        super.stop()
     }
 
     override fun doInit(): Boolean {
@@ -231,6 +299,15 @@ class DualSenseController(
 
     companion object {
         private const val BATTERY_OFFSET = 53
+        // Offsets in the full 64-byte input report (report ID at index 0). SDL's
+        // PS5StatePacket_t comments exclude the report ID, so wire = struct + 1.
+        private const val TOUCH1_COUNTER_OFFSET = 33
+        private const val TOUCH1_DATA_OFFSET = 34
+        private const val TOUCH2_COUNTER_OFFSET = 37
+        private const val TOUCH2_DATA_OFFSET = 38
+        private const val TOUCHPAD_WIDTH = 1920f
+        // Matches the Linux hid-playstation DualSense ABS_MT range (0..1079).
+        private const val TOUCHPAD_HEIGHT = 1080f
         private val SUPPORTED_VENDORS = intArrayOf(0x054C, 0x1532)
         private val SUPPORTED_PRODUCTS = intArrayOf(0x0CE6, 0x0DF2, 0x100b, 0x100c)
 
