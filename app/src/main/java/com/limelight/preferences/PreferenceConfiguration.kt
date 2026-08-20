@@ -11,6 +11,7 @@ import android.view.Display
 import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.preference.PreferenceManager
+import com.limelight.binding.input.haptics.GameRumbleMode
 import com.limelight.nvstream.jni.MoonBridge
 import kotlin.math.max
 import kotlin.math.min
@@ -144,8 +145,8 @@ class PreferenceConfiguration {
     var mouseNavButtons = false
     var unlockFps = false
     var vibrateOsc = false
-    var vibrateFallbackToDevice = false
-    var vibrateFallbackToDeviceStrength = 0
+    var gameRumbleMode = GameRumbleMode.CONTROLLER
+    var deviceRumbleStrength = 0
     var enableAudioVibration = false
     var audioVibrationStrength = 0
     var audioVibrationMode: String = ""
@@ -511,8 +512,9 @@ class PreferenceConfiguration {
         private const val ANALOG_SCROLLING_PREF_STRING = "analog_scrolling"
         private const val MOUSE_NAV_BUTTONS_STRING = "checkbox_mouse_nav_buttons"
         private const val VIBRATE_OSC_PREF_STRING = "checkbox_vibrate_osc"
-        private const val VIBRATE_FALLBACK_PREF_STRING = "checkbox_vibrate_fallback"
-        private const val VIBRATE_FALLBACK_STRENGTH_PREF_STRING = "seekbar_vibrate_fallback_strength"
+        private const val LEGACY_VIBRATE_FALLBACK_PREF_STRING = "checkbox_vibrate_fallback"
+        const val GAME_RUMBLE_MODE_PREF_STRING = "list_game_rumble_mode"
+        private const val DEVICE_RUMBLE_STRENGTH_PREF_STRING = "seekbar_vibrate_fallback_strength"
         private const val AUDIO_VIBRATION_ENABLE_PREF_STRING = "checkbox_audio_vibration"
         private const val CLIPBOARD_SYNC_TEXT_PREF_STRING = "checkbox_clipboard_sync_text"
         private const val CLIPBOARD_SYNC_IMAGE_PREF_STRING = "checkbox_clipboard_sync_image"
@@ -719,8 +721,7 @@ class PreferenceConfiguration {
         private const val DEFAULT_NATIVE_MOUSE_MODE_PRESET = "trackpad"
         private const val DEFAULT_UNLOCK_FPS = false
         private const val DEFAULT_VIBRATE_OSC = true
-        private const val DEFAULT_VIBRATE_FALLBACK = false
-        private const val DEFAULT_VIBRATE_FALLBACK_STRENGTH = 100
+        private const val DEFAULT_DEVICE_RUMBLE_STRENGTH = 100
         private const val DEFAULT_AUDIO_VIBRATION = false
         private const val DEFAULT_CLIPBOARD_SYNC_TEXT = false
         private const val DEFAULT_CLIPBOARD_SYNC_IMAGE = false
@@ -1143,6 +1144,20 @@ class PreferenceConfiguration {
                 }
             }
 
+            // The old Boolean meant "fall back to the phone when needed". Smart mode is the
+            // closest safe upgrade for enabled users because it never silences a capable gamepad.
+            if (!prefs.contains(GAME_RUMBLE_MODE_PREF_STRING)) {
+                val migratedMode = GameRumbleMode.fromLegacyFallback(
+                    prefs.getBoolean(LEGACY_VIBRATE_FALLBACK_PREF_STRING, false)
+                )
+                prefs.edit()
+                    .remove(LEGACY_VIBRATE_FALLBACK_PREF_STRING)
+                    .putString(GAME_RUMBLE_MODE_PREF_STRING, migratedMode.preferenceValue)
+                    .apply()
+            } else if (prefs.contains(LEGACY_VIBRATE_FALLBACK_PREF_STRING)) {
+                prefs.edit().remove(LEGACY_VIBRATE_FALLBACK_PREF_STRING).apply()
+            }
+
             val resStr = prefs.getString(RESOLUTION_PREF_STRING, DEFAULT_RESOLUTION) ?: DEFAULT_RESOLUTION
             config.isNativeResolution = resStr == RES_NATIVE
             config.isCustomResolution =
@@ -1336,8 +1351,13 @@ class PreferenceConfiguration {
             config.mouseNavButtons = prefs.getBoolean(MOUSE_NAV_BUTTONS_STRING, DEFAULT_MOUSE_NAV_BUTTONS)
             config.unlockFps = prefs.getBoolean(UNLOCK_FPS_STRING, DEFAULT_UNLOCK_FPS)
             config.vibrateOsc = prefs.getBoolean(VIBRATE_OSC_PREF_STRING, DEFAULT_VIBRATE_OSC)
-            config.vibrateFallbackToDevice = prefs.getBoolean(VIBRATE_FALLBACK_PREF_STRING, DEFAULT_VIBRATE_FALLBACK)
-            config.vibrateFallbackToDeviceStrength = prefs.getInt(VIBRATE_FALLBACK_STRENGTH_PREF_STRING, DEFAULT_VIBRATE_FALLBACK_STRENGTH)
+            config.gameRumbleMode = GameRumbleMode.fromPreferenceValue(
+                prefs.getString(GAME_RUMBLE_MODE_PREF_STRING, GameRumbleMode.CONTROLLER.preferenceValue)
+            )
+            config.deviceRumbleStrength = prefs.getInt(
+                DEVICE_RUMBLE_STRENGTH_PREF_STRING,
+                DEFAULT_DEVICE_RUMBLE_STRENGTH
+            )
             config.enableAudioVibration = prefs.getBoolean(AUDIO_VIBRATION_ENABLE_PREF_STRING, DEFAULT_AUDIO_VIBRATION)
             config.audioVibrationStrength = prefs.getInt(AUDIO_VIBRATION_STRENGTH_PREF_STRING, DEFAULT_AUDIO_VIBRATION_STRENGTH)
             config.enableClipboardSyncText = prefs.getBoolean(CLIPBOARD_SYNC_TEXT_PREF_STRING, DEFAULT_CLIPBOARD_SYNC_TEXT)

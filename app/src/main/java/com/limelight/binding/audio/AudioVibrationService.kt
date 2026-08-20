@@ -39,6 +39,8 @@ class AudioVibrationService(context: Context) {
     @Volatile
     private var isSystemAudioCoupledDeviceActive = false
     private var isGamepadRumbling = false
+    private val deviceVibratorOwnershipLock = Any()
+    private var deviceVibratorOwner: ControllerHandler? = null
 
     private var lastHapticTimestampUs: Long = -1
     private var rhythmStatsStartMs: Long = SystemClock.elapsedRealtime()
@@ -63,7 +65,12 @@ class AudioVibrationService(context: Context) {
         set(value) {
             if (field === value) return
             field?.stopAudioRumble()
+            synchronized(deviceVibratorOwnershipLock) {
+                deviceVibratorOwner?.releaseDeviceVibratorFromAudio()
+                deviceVibratorOwner = null
+            }
             field = value
+            syncDeviceVibratorOwnership()
         }
 
     init {
@@ -200,7 +207,10 @@ class AudioVibrationService(context: Context) {
             return
         }
 
-        if (shouldVibrateDevice(settings.vibrationMode) && !isSystemAudioCoupledDeviceActive) {
+        val deviceOutputReady = shouldVibrateDevice(settings.vibrationMode) &&
+            !isSystemAudioCoupledDeviceActive &&
+            claimDeviceVibratorBeforeAudioOutput()
+        if (deviceOutputReady) {
             val accepted = sdkDeviceRenderer.submit(
                 frame.timestampUs,
                 rendererFlags,
@@ -215,16 +225,18 @@ class AudioVibrationService(context: Context) {
                 frame.producerTimeUs
             )
             if (accepted) {
-                controllerHandler?.claimDeviceVibratorForAudio()
                 isSdkDeviceActive = true
                 if (isMusic) {
                     lastMusicGrooveBedAmplitude = if (musicGrooveBedActive) continuous else 0f
                 }
+            } else if (!isSdkDeviceActive) {
+                syncDeviceVibratorOwnership()
             }
         } else if (isSdkDeviceActive) {
             sdkDeviceRenderer.stop()
             isSdkDeviceActive = false
             lastMusicGrooveBedAmplitude = 0f
+            syncDeviceVibratorOwnership()
         }
 
         if (shouldVibrateGamepad(settings.vibrationMode)) {
@@ -273,13 +285,12 @@ class AudioVibrationService(context: Context) {
     fun setSystemAudioCoupledDeviceActive(active: Boolean) {
         if (isSystemAudioCoupledDeviceActive == active) return
         isSystemAudioCoupledDeviceActive = active
-        if (active) {
-            controllerHandler?.claimDeviceVibratorForAudio()
-        }
+        syncDeviceVibratorOwnership()
         if (active && isSdkDeviceActive) {
             sdkDeviceRenderer.stop()
             isSdkDeviceActive = false
             lastMusicGrooveBedAmplitude = 0f
+            syncDeviceVibratorOwnership()
         }
         LimeLog.info("AudioHaptics: system audio-coupled device active=$active")
     }
@@ -307,6 +318,7 @@ class AudioVibrationService(context: Context) {
     fun release() {
         stopAll()
         isSystemAudioCoupledDeviceActive = false
+        syncDeviceVibratorOwnership()
         sdkDeviceRenderer.close()
         nativeSession.close()
     }
@@ -332,6 +344,7 @@ class AudioVibrationService(context: Context) {
     private fun stopAll() {
         sdkDeviceRenderer.stop()
         isSdkDeviceActive = false
+        syncDeviceVibratorOwnership()
         if (isGamepadRumbling) {
             stopGamepadRumble()
         }
@@ -349,9 +362,38 @@ class AudioVibrationService(context: Context) {
     private fun stopSdkOutput() {
         sdkDeviceRenderer.stop()
         isSdkDeviceActive = false
+        syncDeviceVibratorOwnership()
         lastMusicGrooveBedAmplitude = 0f
         lastControllerWatchdogRefreshMs = 0L
         if (isGamepadRumbling) stopGamepadRumble()
+    }
+
+    /** Claims before submit so queued game output cannot supersede the first audio frame. */
+    private fun claimDeviceVibratorBeforeAudioOutput(): Boolean =
+        synchronized(deviceVibratorOwnershipLock) {
+            val handler = controllerHandler ?: return@synchronized true
+            if (deviceVibratorOwner !== handler) {
+                deviceVibratorOwner?.releaseDeviceVibratorFromAudio()
+                deviceVibratorOwner = handler
+            }
+            handler.claimDeviceVibratorForAudio()
+        }
+
+    private fun syncDeviceVibratorOwnership() {
+        synchronized(deviceVibratorOwnershipLock) {
+            val shouldOwn = isSdkDeviceActive || isSystemAudioCoupledDeviceActive
+            val handler = controllerHandler
+            if (shouldOwn && handler != null) {
+                if (deviceVibratorOwner !== handler) {
+                    deviceVibratorOwner?.releaseDeviceVibratorFromAudio()
+                    handler.claimDeviceVibratorForAudio()
+                    deviceVibratorOwner = handler
+                }
+            } else {
+                deviceVibratorOwner?.releaseDeviceVibratorFromAudio()
+                deviceVibratorOwner = null
+            }
+        }
     }
 
     companion object {

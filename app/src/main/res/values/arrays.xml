@@ -442,6 +442,17 @@
         <item>both</item>
     </string-array>
 
+    <string-array name="game_rumble_mode_names">
+        <item>@string/game_rumble_mode_coordinated</item>
+        <item>@string/game_rumble_mode_device</item>
+        <item>@string/game_rumble_mode_controller</item>
+    </string-array>
+    <string-array name="game_rumble_mode_values" translatable="false">
+        <item>smart</item>
+        <item>device</item>
+        <item>controller</item>
+    </string-array>
+
     <!-- Audio Vibration Scene -->
     <string-array name="audio_vibration_scene_names">
         <item>Game / Movie</item>

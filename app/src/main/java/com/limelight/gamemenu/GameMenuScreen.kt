@@ -47,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -120,6 +121,7 @@ private const val GAME_MENU_PORTRAIT_WIDTH_FRACTION = 0.95f
 internal const val GAME_MENU_BACKDROP_TAG = "gameMenuBackdrop"
 internal const val GAME_MENU_PANEL_TAG = "gameMenuPanel"
 internal const val GAME_MENU_GUIDE_INPUT_BLOCKER_TAG = "gameMenuGuideInputBlocker"
+internal val LocalGameMenuHapticFeedback = staticCompositionLocalOf<(Int) -> Unit> { {} }
 
 internal object GameMenuDimens {
     val surfaceStroke = 0.75.dp
@@ -746,7 +748,7 @@ private fun HeaderDeviceQuickAction(
     onToggle: (GameMenu.InlineControl.Toggle) -> Unit
 ) {
     val toggle = option.inlineControl as? GameMenu.InlineControl.Toggle ?: return
-    val view = LocalView.current
+    val hapticFeedback = LocalGameMenuHapticFeedback.current
     val shape = CircleShape
     val accent = colorResource(R.color.game_menu_accent)
     val stateDescription = stringResource(
@@ -769,7 +771,7 @@ private fun HeaderDeviceQuickAction(
                 value = toggle.checked,
                 role = Role.Switch,
                 onValueChange = {
-                    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                     onToggle(toggle)
                 }
             ),

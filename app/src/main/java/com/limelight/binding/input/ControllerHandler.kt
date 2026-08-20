@@ -546,7 +546,6 @@ class ControllerHandler(
         gyroManager.registerDeviceGyroForDefaultContext(false)
         defaultContext.destroy()
 
-        deviceVibrator.cancel()
     }
 
     fun destroy() {
@@ -2933,8 +2932,17 @@ class ControllerHandler(
     fun stopAudioRumble() =
         hapticsCoordinator.stopAudio()
 
-    fun claimDeviceVibratorForAudio() =
-        rumbleManager.releaseDeviceFallbackOwnership()
+    fun submitLegacyDeviceRumble(lowFrequency: Short, highFrequency: Short) =
+        hapticsCoordinator.submitLegacyDeviceRumble(lowFrequency, highFrequency)
+
+    fun playDeviceTouchHaptic(lowFrequency: Short, highFrequency: Short, durationMs: Int) =
+        hapticsCoordinator.playDeviceTouchHaptic(lowFrequency, highFrequency, durationMs)
+
+    fun claimDeviceVibratorForAudio(): Boolean =
+        hapticsCoordinator.claimDeviceVibratorForAudio()
+
+    fun releaseDeviceVibratorFromAudio() =
+        hapticsCoordinator.releaseDeviceVibratorFromAudio()
 
     fun refreshAudioRumbleWatchdog() =
         hapticsCoordinator.refreshAudioWatchdog()

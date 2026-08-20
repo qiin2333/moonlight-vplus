@@ -8,6 +8,8 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
+import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
@@ -21,6 +23,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentDialog
 import androidx.activity.OnBackPressedCallback
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -135,6 +138,12 @@ class GameMenu(
     private val audioHapticsCardController = AudioHapticsCardController(game)
     private val gyroCardController = GyroCardController(game)
     private val renderingProfile = GameMenuRenderingProfile.from(game)
+    private val systemHapticsEnabled = Settings.System.getInt(
+        game.contentResolver,
+        HAPTIC_FEEDBACK_SETTING,
+        1
+    ) != 0
+
     init {
         showMenu()
     }
@@ -644,6 +653,18 @@ class GameMenu(
         }
     }
 
+    /** Routes menu touch feedback through the non-blocking phone-vibration coordinator. */
+    private fun dispatchHapticFeedback(feedbackConstant: Int) {
+        if (!systemHapticsEnabled) return
+
+        val (motor, durationMs) = when (feedbackConstant) {
+            HapticFeedbackConstants.LONG_PRESS -> 0x4800.toShort() to 35
+            HapticFeedbackConstants.CLOCK_TICK -> 0x1800.toShort() to 12
+            else -> 0x2800.toShort() to 20
+        }
+        game.controllerHandler.playDeviceTouchHaptic(motor, motor, durationMs)
+    }
+
     /**
      * 显示分辨率选择菜单
      */
@@ -748,6 +769,7 @@ class GameMenu(
 
         val callbacks = GameMenuCallbacks(
             onDismiss = { handleDismissRequest(dialog) },
+            onHapticFeedback = ::dispatchHapticFeedback,
             iconForOption = ::getIconForMenuOption,
             onBack = { navigateBack() },
             onCrownToggle = ::toggleCrownFeature,
@@ -785,13 +807,17 @@ class GameMenu(
             isFocusableInTouchMode = true
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
-                GameMenuScreen(
-                    state = state.value,
-                    callbacks = callbacks,
-                    useFabricTexture = renderingProfile.useFabricTexture,
-                    hardwareFocusRequestToken = hardwareFocusRequest.intValue,
-                    guideDismissController = guideDismissController
-                )
+                CompositionLocalProvider(
+                    LocalGameMenuHapticFeedback provides callbacks.onHapticFeedback
+                ) {
+                    GameMenuScreen(
+                        state = state.value,
+                        callbacks = callbacks,
+                        useFabricTexture = renderingProfile.useFabricTexture,
+                        hardwareFocusRequestToken = hardwareFocusRequest.intValue,
+                        guideDismissController = guideDismissController
+                    )
+                }
             }
         }
         dialog = ComponentDialog(game, R.style.GameMenuDialogStyle).apply {
@@ -1544,6 +1570,7 @@ class GameMenu(
         private const val DIALOG_DIM_AMOUNT = 0.0f
         private const val PREF_NAME = "custom_special_keys"
         private const val KEY_NAME = "data"
+        private const val HAPTIC_FEEDBACK_SETTING = "haptic_feedback_enabled"
 
         private var mouse_enable_switch = false
 

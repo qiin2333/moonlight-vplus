@@ -117,8 +117,6 @@
     <string name="title_checkbox_touchscreen_trackpad">Använd pekskärmen som en styrplatta</string>
     <string name="summary_checkbox_touchscreen_trackpad">Om den är aktiverad fungerar pekskärmen som en styrplatta. Om den är inaktiverad styr pekskärmen direkt muspekaren.</string>
     <string name="title_checkbox_multi_controller">Automatiskt upptäckande av närvarande spelkontroll</string>
-    <string name="title_checkbox_vibrate_fallback">Efterlikna stöd för rumble med vibrationer</string>
-    <string name="summary_checkbox_vibrate_fallback">Vibrerar enheten för att efterlikna rumble om din spelplatta inte har stöd för det</string>
     <string name="summary_seekbar_deadzone">Observera: Vissa spel kan kräva en större dödzon än vad Moonlight är konfigurerat för att använda.</string>
     <string name="title_seekbar_deadzone">Jämka analogstickans dödzon</string>
     <string name="suffix_seekbar_deadzone">%</string>

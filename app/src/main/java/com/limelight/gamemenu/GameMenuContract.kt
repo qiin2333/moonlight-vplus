@@ -56,6 +56,7 @@ internal data class GameMenuVisibleCards(
 
 internal data class GameMenuCallbacks(
     val onDismiss: () -> Unit,
+    val onHapticFeedback: (Int) -> Unit,
     val iconForOption: (String?) -> Int,
     val onBack: () -> Unit,
     val onCrownToggle: () -> Unit,

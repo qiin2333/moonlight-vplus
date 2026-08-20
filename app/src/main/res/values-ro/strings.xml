@@ -126,8 +126,6 @@
     <string name="category_input_settings">Setări de control</string>
     <string name="title_checkbox_multi_controller">Detectează automat prezența controllerelor.</string>
     <string name="summary_checkbox_multi_controller">Dezactivarea acestei opțiuni implică prezența constantă a unui controller</string>
-    <string name="title_checkbox_vibrate_fallback">Simuleaza efectul de vibratie</string>
-    <string name="summary_checkbox_vibrate_fallback">Dacă controllerul nu suportă vibrații, va vibra dispozitivul în schimb.</string>
     <string name="title_seekbar_deadzone">Zona moartă a stickului analogic</string>
     <string name="suffix_seekbar_deadzone">%</string>
     <string name="title_checkbox_xb1_driver">Driver pentru controllerele de Xbox 360/One</string>

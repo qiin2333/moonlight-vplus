@@ -53,8 +53,6 @@
     <string name="title_checkbox_xb1_driver">Xbox 360 / One USB játékvezérlő</string>
     <string name="suffix_seekbar_deadzone">%</string>
     <string name="title_seekbar_deadzone">Állítsa be az analóg bot holtzónáját</string>
-    <string name="summary_checkbox_vibrate_fallback">Rezeg a készülék, hogy utánozza a dübörgést, ha a gamepad nem támogatja</string>
-    <string name="title_checkbox_vibrate_fallback">A dübörgés támogatását rezgéssel utánozzuk</string>
     <string name="summary_checkbox_multi_controller">Ennek az opciónak a bejelölése arra kényszeríti a játéktáblát, hogy mindig jelen legyen</string>
     <string name="title_checkbox_multi_controller">Automatikus gamepad jelenlét-észlelés</string>
     <string name="summary_checkbox_touchscreen_trackpad">Ha engedélyezve van, az érintőképernyő úgy működik, mint egy trackpad. Ha le van tiltva, az érintőképernyő közvetlenül vezérli az egér kurzort.</string>

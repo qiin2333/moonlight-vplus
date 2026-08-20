@@ -8,13 +8,9 @@ import android.content.res.Resources;
 import android.content.DialogInterface;
 import android.graphics.drawable.ColorDrawable;
 import android.preference.PreferenceManager;
-import android.media.AudioAttributes;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.VibrationAttributes;
-import android.os.VibrationEffect;
-import android.os.Vibrator;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -112,7 +108,6 @@ public class ElementController {
     private final Game game;
     private final Handler handler;
     private Toast currentToast;
-    private Vibrator deviceVibrator;
 
     private final ControllerManager controllerManager;
     private final ControllerHandler controllerHandler;
@@ -261,7 +256,6 @@ public class ElementController {
         this.pageEdit = (SuperPageLayout) LayoutInflater.from(context).inflate(R.layout.page_edit, null);
         this.editGridView = new EditGridView(context);
         this.bottomViewAmount = elementsLayout.getChildCount();
-        this.deviceVibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(context);
         this.alignmentSnapEnabled = preferences.getBoolean(PREF_CROWN_ALIGNMENT_SNAP_ENABLED, true);
         initEditPage();
@@ -1744,6 +1738,9 @@ public class ElementController {
 
     public void setGameVibrator(boolean gameVibrator) {
         this.gameVibrator = gameVibrator;
+        if (!gameVibrator) {
+            controllerHandler.submitLegacyDeviceRumble((short) 0, (short) 0);
+        }
     }
 
     public void buttonVibrator() {
@@ -1754,65 +1751,12 @@ public class ElementController {
 
     public void gameVibrator(short lowFreqMotor, short highFreqMotor) {
         if (gameVibrator) {
-            rumbleSingleVibrator(lowFreqMotor, highFreqMotor, 60000);
+            controllerHandler.submitLegacyDeviceRumble(lowFreqMotor, highFreqMotor);
         }
     }
 
 
     public void rumbleSingleVibrator(short lowFreqMotor, short highFreqMotor, int vibratorTime) {
-        // Since we can only use a single amplitude value, compute the desired amplitude
-        // by taking 80% of the big motor and 33% of the small motor, then capping to 255.
-        // NB: This value is now 0-255 as required by VibrationEffect.
-        short lowFreqMotorMSB = (short) ((lowFreqMotor >> 8) & 0xFF);
-        short highFreqMotorMSB = (short) ((highFreqMotor >> 8) & 0xFF);
-        int simulatedAmplitude = Math.min(255, (int) ((lowFreqMotorMSB * 0.80) + (highFreqMotorMSB * 0.33)));
-
-        if (simulatedAmplitude == 0) {
-            // This case is easy - just cancel the current effect and get out.
-            // NB: We cannot simply check lowFreqMotor == highFreqMotor == 0
-            // because our simulatedAmplitude could be 0 even though our inputs
-            // are not (ex: lowFreqMotor == 0 && highFreqMotor == 1).
-            deviceVibrator.cancel();
-            return;
-        }
-
-        // Attempt to use amplitude-based control if we're on Oreo and the device
-        // supports amplitude-based vibration control.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (deviceVibrator.hasAmplitudeControl()) {
-                VibrationEffect effect = VibrationEffect.createOneShot(vibratorTime, simulatedAmplitude);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    VibrationAttributes vibrationAttributes = new VibrationAttributes.Builder()
-                            .setUsage(VibrationAttributes.USAGE_MEDIA)
-                            .build();
-                    deviceVibrator.vibrate(effect, vibrationAttributes);
-                } else {
-                    AudioAttributes audioAttributes = new AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_GAME)
-                            .build();
-                    deviceVibrator.vibrate(effect, audioAttributes);
-                }
-                return;
-            }
-        }
-
-        // If we reach this point, we don't have amplitude controls available, so
-        // we must emulate it by PWMing the vibration. Ick.
-        long pwmPeriod = 20;
-        long onTime = (long) ((simulatedAmplitude / 255.0) * pwmPeriod);
-        long offTime = pwmPeriod - onTime;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            VibrationAttributes vibrationAttributes = new VibrationAttributes.Builder()
-                    .setUsage(VibrationAttributes.USAGE_MEDIA)
-                    .build();
-            deviceVibrator.vibrate(VibrationEffect.createWaveform(new long[]{0, onTime, offTime}, 0), vibrationAttributes);
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            AudioAttributes audioAttributes = new AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_GAME)
-                    .build();
-            deviceVibrator.vibrate(new long[]{0, onTime, offTime}, 0, audioAttributes);
-        } else {
-            deviceVibrator.vibrate(new long[]{0, onTime, offTime}, 0);
-        }
+        controllerHandler.playDeviceTouchHaptic(lowFreqMotor, highFreqMotor, vibratorTime);
     }
 }

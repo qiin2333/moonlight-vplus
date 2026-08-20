@@ -138,8 +138,6 @@
     <string name="summary_checkbox_touchscreen_trackpad">Si activé, l\'écran tactile agit comme un trackpad. Si désactivé, l\'écran tactile contrôle directement le curseur de la souris.</string>
     <string name="title_checkbox_multi_controller">Forcer la présence d\'une manette</string>
     <string name="summary_checkbox_multi_controller">Décocher cette option force une manette à toujours être présente</string>
-    <string name="title_checkbox_vibrate_fallback">Émuler les vibrations de la manette avec l\'appareil</string>
-    <string name="summary_checkbox_vibrate_fallback">Fait vibrer votre appareil pour émuler les vibrations de la manette si elle ne le supporte pas</string>
     <string name="title_seekbar_deadzone">Régler la zone morte du stick analogique</string>
     <string name="suffix_seekbar_deadzone">%</string>
     <string name="title_checkbox_xb1_driver">Pilote USB pour manette Xbox 360/One</string>

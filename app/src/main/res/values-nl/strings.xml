@@ -200,9 +200,7 @@
     <string name="summary_checkbox_touchscreen_trackpad">Wanneer ingeschakeld functioneert het touchscreen als een trackpad. Wanneer uitgeschakeld bedient het touchscreen rechtstreeks de muiscursor.</string>
     <string name="summary_checkbox_usb_bind_all">Gebruik Moonlight\'s USB driver voor alle ondersteunde gamepads, zelfs als een standaard Xbox controller aanwezig is</string>
     <string name="dialog_text_reset_osc">Bent u zeker dat u uw opgeslagen on-screen controle-elementen wilt verwijderen\?</string>
-    <string name="title_checkbox_vibrate_fallback">Simuleer rumble-ondersteuning met trillingen</string>
     <string name="summary_checkbox_mouse_nav_buttons">Deze optie inschakelen kan problemen veroorzaken met rechts-klikken op sommige buggy apparaten</string>
-    <string name="summary_checkbox_vibrate_fallback">Laat uw apparaat trillen om gerommel te simuleren als uw gamepad dit niet ondersteund</string>
     <string name="title_only_l3r3">Enkel L3 en R3 tonen</string>
     <string name="title_checkbox_usb_bind_all">Standaard Xbox gamepad-ondersteuning overschrijven</string>
     <string name="summary_reset_osc">Herstelt alle on-screen besturingselementen naar hun originele grootte en positie</string>

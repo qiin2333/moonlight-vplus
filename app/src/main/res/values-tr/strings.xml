@@ -63,7 +63,6 @@
 \nİnternet üzerinden yayın yapmaya çalışıyorsanız, Moonlight İnternet Barındırma Aracını bilgisayarınıza yükleyin ve bilgisayarınızın internet bağlantısını kontrol etmek için birlikte verilen İnternet Akış Test Cihazını çalıştırın.</string>
     <string name="title_checkbox_multi_controller">Otomatik oyun kumandası varlığı algılama</string>
     <string name="summary_checkbox_multi_controller">Bu seçeneğin işaretinin kaldırılması bir oyun kumandasının her zaman mevcut olmasını zorlar</string>
-    <string name="summary_checkbox_vibrate_fallback">Oyun kumandanız desteklemiyorsa, gürültüyü taklit etmek için cihazınızı titreştirir</string>
     <string name="title_seekbar_deadzone">Analog çubuk ölü bölgesini ayarlama</string>
     <string name="summary_checkbox_xb1_driver">Yerel Xbox oyun kumandası desteği olmayan cihazlar için yerleşik USB sürücüsünü etkinleştirir</string>
     <string name="title_checkbox_mouse_emulation">Oyun kumandası üzerinden fare emülasyonu</string>
@@ -169,7 +168,6 @@
 \nSon olarak, cihazınız veya bilgisayarınız doğal çözünürlükte akışı desteklemiyor olabilir. Eğer cihazınızda çalışmıyorsa, ne yazık ki şansınız yok demektir.</string>
     <string name="summary_seekbar_bitrate">Daha iyi görüntü kalitesi için artırın. Daha yavaş bağlantılarda performansı artırmak için azaltın.</string>
     <string name="title_checkbox_stretch_video">Videoyu tam ekrana genişlet</string>
-    <string name="title_checkbox_vibrate_fallback">Titreşim ile gürültü desteğini taklit etme</string>
     <string name="summary_checkbox_usb_bind_all">Yerel Xbox oyun kumandası desteği mevcut olsa bile desteklenen tüm oyun kumandaları için Moonlight\'ın USB sürücüsünü kullan</string>
     <string name="summary_checkbox_flip_face_buttons">Oyun kumandaları ve ekran kontrolleri için A/B ve X/Y yüz düğmelerini değiştirir</string>
     <string name="summary_checkbox_absolute_mouse_mode">Bu fare hızlandırmanın uzak masaüstü kullanımı için daha doğal davranmasını sağlayabilir, ancak birçok oyunla uyumsuzdur.</string>

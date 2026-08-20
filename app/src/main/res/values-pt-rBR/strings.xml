@@ -185,8 +185,6 @@
     <string name="title_checkbox_touchscreen_trackpad">Usar a tela como um trackpad</string>
     <string name="title_checkbox_multi_controller">Detecção automática de gamepad</string>
     <string name="summary_checkbox_multi_controller">Desmarque esta opção para forçar o gamepad a estar sempre presente</string>
-    <string name="title_checkbox_vibrate_fallback">Emular suporte rumble com vibração</string>
-    <string name="summary_checkbox_vibrate_fallback">Vibra seu dispositivo para emular rumble se seu gamepad não suportar</string>
     <string name="title_seekbar_deadzone">Ajustar zona morta do analógico</string>
     <string name="suffix_seekbar_deadzone">%</string>
     <string name="title_checkbox_xb1_driver">Driver de gamepad USB Xbox 360/One</string>
