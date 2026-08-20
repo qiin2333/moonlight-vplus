@@ -16,6 +16,8 @@ import android.os.IBinder
 import android.os.Looper
 import android.view.InputDevice
 import android.widget.Toast
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 import com.limelight.LimeLog
 import com.limelight.R
@@ -34,7 +36,7 @@ class UsbDriverService : Service(), UsbDriverListener {
 
     private val controllers = ArrayList<AbstractController>()
     private val controllersLock = Any()
-    private val sessionLock = Any()
+    private val sessionLock = ReentrantLock()
     private val sessionOwner = UsbDriverSessionOwner()
 
     @Volatile private var listener: UsbDriverListener? = null
@@ -101,7 +103,7 @@ class UsbDriverService : Service(), UsbDriverListener {
 
     inner class UsbDriverBinder : Binder() {
         fun setListener(listener: UsbDriverListener?) {
-            synchronized(sessionLock) {
+            sessionLock.withLock {
                 if (sessionOwner.hasActiveSession()) {
                     LimeLog.warning("Ignoring legacy USB listener update while a stream session owns the driver")
                     return
@@ -111,7 +113,7 @@ class UsbDriverService : Service(), UsbDriverListener {
         }
 
         fun setStateListener(stateListener: UsbDriverStateListener?) {
-            synchronized(sessionLock) {
+            sessionLock.withLock {
                 if (sessionOwner.hasActiveSession()) {
                     LimeLog.warning("Ignoring legacy USB state-listener update while a stream session owns the driver")
                     return
@@ -121,7 +123,7 @@ class UsbDriverService : Service(), UsbDriverListener {
         }
 
         fun start() {
-            synchronized(sessionLock) {
+            sessionLock.withLock {
                 if (sessionOwner.hasActiveSession()) {
                     LimeLog.warning("Ignoring legacy USB start while a stream session owns the driver")
                     return
@@ -134,7 +136,10 @@ class UsbDriverService : Service(), UsbDriverListener {
             listener: UsbDriverListener?,
             stateListener: UsbDriverStateListener
         ): Long {
-            return synchronized(sessionLock) {
+            return sessionLock.withLock {
+                if (sessionOwner.hasActiveSession()) {
+                    LimeLog.warning("Replacing an active USB driver session with a new stream session")
+                }
                 val token = sessionOwner.acquire()
                 setListenerLocked(listener)
                 this@UsbDriverService.stateListener = stateListener
@@ -144,7 +149,7 @@ class UsbDriverService : Service(), UsbDriverListener {
         }
 
         fun updateSessionListener(token: Long, listener: UsbDriverListener?) {
-            synchronized(sessionLock) {
+            sessionLock.withLock {
                 if (sessionOwner.owns(token)) {
                     setListenerLocked(listener)
                 }
@@ -152,7 +157,7 @@ class UsbDriverService : Service(), UsbDriverListener {
         }
 
         fun releaseSession(token: Long) {
-            synchronized(sessionLock) {
+            sessionLock.withLock {
                 if (!sessionOwner.release(token)) return
                 setListenerLocked(null)
                 stateListener = null
@@ -166,9 +171,9 @@ class UsbDriverService : Service(), UsbDriverListener {
          * [UsbDriverListener.deviceAdded]. A live stream session keeps exclusive ownership.
          */
         fun startForDiagnostics(): Boolean {
-            return synchronized(sessionLock) {
+            return sessionLock.withLock {
                 if (sessionOwner.hasActiveSession()) {
-                    return@synchronized false
+                    return@withLock false
                 }
                 this@UsbDriverService.start(claimAllAvailableOverride = true)
                 synchronized(controllersLock) { controllers.isNotEmpty() }
@@ -181,7 +186,7 @@ class UsbDriverService : Service(), UsbDriverListener {
         }
 
         fun stop() {
-            synchronized(sessionLock) {
+            sessionLock.withLock {
                 if (sessionOwner.hasActiveSession()) {
                     LimeLog.warning("Ignoring legacy USB stop while a stream session owns the driver")
                     return
@@ -289,13 +294,23 @@ class UsbDriverService : Service(), UsbDriverListener {
     }
 
     private fun handleUsbDeviceStateSafely(device: UsbDevice) {
-        synchronized(sessionLock) {
+        if (!sessionLock.tryLock()) {
+            Handler(Looper.getMainLooper()).postDelayed(
+                { handleUsbDeviceStateSafely(device) },
+                USB_SESSION_RETRY_DELAY_MS
+            )
+            return
+        }
+
+        try {
             if (!started) {
                 return
             }
             runCatching { handleUsbDeviceState(device) }.onFailure {
                 LimeLog.warning("Unable to process USB controller: ${it.message}")
             }
+        } finally {
+            sessionLock.unlock()
         }
     }
 
@@ -384,7 +399,7 @@ class UsbDriverService : Service(), UsbDriverListener {
     }
 
     override fun onDestroy() {
-        synchronized(sessionLock) {
+        sessionLock.withLock {
             sessionOwner.reset()
             stop()
             listener = null
@@ -403,6 +418,7 @@ class UsbDriverService : Service(), UsbDriverListener {
 
     companion object {
         private const val ACTION_USB_PERMISSION = "com.limelight.USB_PERMISSION"
+        private const val USB_SESSION_RETRY_DELAY_MS = 50L
 
         @JvmStatic
         fun isRecognizedInputDevice(device: UsbDevice): Boolean {
@@ -456,6 +472,7 @@ class UsbDriverService : Service(), UsbDriverListener {
     }
 }
 
+// Service callers take sessionLock first. Intrinsic synchronization keeps this helper safe in isolation.
 internal class UsbDriverSessionOwner {
     private var nextToken = 0L
     private var activeToken: Long? = null
