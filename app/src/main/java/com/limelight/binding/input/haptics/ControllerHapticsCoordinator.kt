@@ -33,7 +33,7 @@ internal class ControllerHapticsCoordinator(
     private var ds5HapticsPump: Ds5HapticsPump? = null
     @Volatile
     private var ds5HapticsPumpOwner = -1
-    private var ds5HapticsControllerNumber: Short = NO_CONTROLLER
+    private var ds5HapticsControllerNumber: Short = NO_CONTROLLER.toShort()
     private val ds5LifecycleLock = Any()
     private var ds5LifecycleGeneration = 0L
     private var ds5RequestedOwner = -1
@@ -376,7 +376,7 @@ internal class ControllerHapticsCoordinator(
     }
 
     fun attachDs5HapticsPump(controllerId: Int, controllerNumber: Short, pump: Ds5HapticsPump) {
-        val generation
+        var generation = 0L
         synchronized(ds5LifecycleLock) {
             generation = ++ds5LifecycleGeneration
             ds5RequestedOwner = controllerId
@@ -406,7 +406,7 @@ internal class ControllerHapticsCoordinator(
     }
 
     fun detachDs5HapticsPump(controllerId: Int) {
-        val shouldWait
+        var shouldWait = false
         synchronized(ds5LifecycleLock) {
             shouldWait = ds5RequestedOwner == controllerId || ds5HapticsPumpOwner == controllerId
             if (ds5RequestedOwner == controllerId) {
@@ -426,7 +426,7 @@ internal class ControllerHapticsCoordinator(
             ds5HapticsPump?.stop()
             ds5HapticsPump = null
             ds5HapticsPumpOwner = -1
-            ds5HapticsControllerNumber = NO_CONTROLLER
+            ds5HapticsControllerNumber = NO_CONTROLLER.toShort()
         }
     }
 
@@ -497,7 +497,7 @@ internal class ControllerHapticsCoordinator(
         val pump = ds5HapticsPump
         ds5HapticsPump = null
         ds5HapticsPumpOwner = -1
-        ds5HapticsControllerNumber = NO_CONTROLLER
+        ds5HapticsControllerNumber = NO_CONTROLLER.toShort()
         synchronized(ds5LifecycleLock) {
             ds5RequestedOwner = -1
             ds5LifecycleGeneration++
