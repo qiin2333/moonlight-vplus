@@ -2764,7 +2764,7 @@ class ControllerHandler(
 
         when (eventType) {
             MoonBridge.LI_TOUCH_EVENT_DOWN, MoonBridge.LI_TOUCH_EVENT_MOVE ->
-                context.forwardedTouchPointerIds.add(pointerId)
+                context.forwardedTouchPointerIds[pointerId] = true
             MoonBridge.LI_TOUCH_EVENT_UP, MoonBridge.LI_TOUCH_EVENT_CANCEL ->
                 context.forwardedTouchPointerIds.remove(pointerId)
             MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL -> context.forwardedTouchPointerIds.clear()
@@ -2773,7 +2773,7 @@ class ControllerHandler(
 
     private fun cancelForwardedUsbTouches(context: UsbDeviceContext) {
         if (context.forwardedTouchPointerIds.isNotEmpty()) {
-            context.forwardedTouchPointerIds.toList().forEach { pointerId ->
+            context.forwardedTouchPointerIds.keys.toList().forEach { pointerId ->
                 conn.sendControllerTouchEvent(
                     context.controllerNumber.toByte(), MoonBridge.LI_TOUCH_EVENT_CANCEL,
                     pointerId, 0f, 0f, 0f

@@ -461,7 +461,8 @@ class UsbDeviceContext(handler: ControllerHandler) : GenericControllerContext(ha
     internal var lastReportedBatteryState: Byte? = null
     internal var lastReportedBatteryPercentage: Byte? = null
     internal val menuKeyDownTimes = ConcurrentHashMap<Int, Long>()
-    internal val forwardedTouchPointerIds = ConcurrentHashMap.newKeySet<Int>()
+    // Use a map instead of ConcurrentHashMap.newKeySet(), which requires API 24.
+    internal val forwardedTouchPointerIds = ConcurrentHashMap<Int, Boolean>()
     internal var touchCaptureActive: Boolean = false
     internal val shortcutState = UsbControllerShortcutStateMachine()
     internal val shortcutLongPressRunnable = Runnable {
