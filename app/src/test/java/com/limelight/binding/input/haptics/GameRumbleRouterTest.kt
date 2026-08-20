@@ -8,24 +8,24 @@ class GameRumbleRouterTest {
     private val input = ControllerRumbleState(lowFrequency = 0.8f, highFrequency = 0.6f)
 
     @Test
-    fun smartSplitsFrequencyBandsWhenBothSinksAreAvailable() {
-        val route = route(GameRumbleMode.SMART, hasController = true, hasDevice = true)
+    fun coordinatedModeSplitsFrequencyBandsWhenBothSinksAreAvailable() {
+        val route = route(GameRumbleMode.COORDINATED, hasController = true, hasDevice = true)
 
         assertState(route.controller, low = 0.8f, high = 0.27f)
         assertState(route.device, low = 0.16f, high = 0.6f)
     }
 
     @Test
-    fun smartPreservesFullSignalWithOnlyController() {
-        val route = route(GameRumbleMode.SMART, hasController = true, hasDevice = false)
+    fun coordinatedModePreservesFullSignalWithOnlyController() {
+        val route = route(GameRumbleMode.COORDINATED, hasController = true, hasDevice = false)
 
         assertState(route.controller, low = 0.8f, high = 0.6f)
         assertNull(route.device)
     }
 
     @Test
-    fun smartPreservesFullSignalWithOnlyDevice() {
-        val route = route(GameRumbleMode.SMART, hasController = false, hasDevice = true)
+    fun coordinatedModePreservesFullSignalWithOnlyDevice() {
+        val route = route(GameRumbleMode.COORDINATED, hasController = false, hasDevice = true)
 
         assertNull(route.controller)
         assertState(route.device, low = 0.8f, high = 0.6f)
@@ -65,8 +65,13 @@ class GameRumbleRouterTest {
     }
 
     @Test
+    fun persistedSmartValueMapsToCoordinatedMode() {
+        assertEquals(GameRumbleMode.COORDINATED, GameRumbleMode.fromPreferenceValue("smart"))
+    }
+
+    @Test
     fun legacyFallbackMigratesToSafeModes() {
-        assertEquals(GameRumbleMode.SMART, GameRumbleMode.fromLegacyFallback(true))
+        assertEquals(GameRumbleMode.COORDINATED, GameRumbleMode.fromLegacyFallback(true))
         assertEquals(GameRumbleMode.CONTROLLER, GameRumbleMode.fromLegacyFallback(false))
     }
 

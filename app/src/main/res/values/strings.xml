@@ -326,7 +326,7 @@
     <string name="summary_checkbox_multi_controller">Unchecking this option forces a gamepad to always be present</string>
     <string name="title_list_game_rumble_mode">Game vibration output</string>
     <string name="summary_list_game_rumble_mode">Choose how game vibration is shared between your controller and device</string>
-    <string name="game_rumble_mode_smart">Smart vibration</string>
+    <string name="game_rumble_mode_coordinated">Coordinated vibration</string>
     <string name="game_rumble_mode_device">Device vibration</string>
     <string name="game_rumble_mode_controller">Controller vibration</string>
     <string name="title_seekbar_vibrate_fallback_strength">Adjust emulated rumble intensity</string>

@@ -2,7 +2,7 @@ package com.limelight.binding.input.haptics
 
 /** User-selected routing policy for host-authored game rumble. */
 enum class GameRumbleMode(val preferenceValue: String) {
-    SMART("smart"),
+    COORDINATED("smart"),
     DEVICE("device"),
     CONTROLLER("controller");
 
@@ -11,7 +11,7 @@ enum class GameRumbleMode(val preferenceValue: String) {
             entries.firstOrNull { it.preferenceValue == value } ?: CONTROLLER
 
         fun fromLegacyFallback(enabled: Boolean): GameRumbleMode =
-            if (enabled) SMART else CONTROLLER
+            if (enabled) COORDINATED else CONTROLLER
     }
 }
 
@@ -28,8 +28,8 @@ internal data class GameRumbleRoute(
  * input to this router, which keeps that feature independent from device game rumble.
  */
 internal object GameRumbleRouter {
-    private const val SMART_CONTROLLER_HIGH_GAIN = 0.45f
-    private const val SMART_DEVICE_LOW_GAIN = 0.20f
+    private const val COORDINATED_CONTROLLER_HIGH_GAIN = 0.45f
+    private const val COORDINATED_DEVICE_LOW_GAIN = 0.20f
 
     fun route(
         mode: GameRumbleMode,
@@ -37,14 +37,14 @@ internal object GameRumbleRouter {
         hasController: Boolean,
         hasDevice: Boolean
     ): GameRumbleRoute = when (mode) {
-        GameRumbleMode.SMART -> when {
+        GameRumbleMode.COORDINATED -> when {
             hasController && hasDevice -> GameRumbleRoute(
                 controller = ControllerRumbleState(
                     lowFrequency = input.lowFrequency,
-                    highFrequency = input.highFrequency * SMART_CONTROLLER_HIGH_GAIN
+                    highFrequency = input.highFrequency * COORDINATED_CONTROLLER_HIGH_GAIN
                 ),
                 device = ControllerRumbleState(
-                    lowFrequency = input.lowFrequency * SMART_DEVICE_LOW_GAIN,
+                    lowFrequency = input.lowFrequency * COORDINATED_DEVICE_LOW_GAIN,
                     highFrequency = input.highFrequency
                 )
             )

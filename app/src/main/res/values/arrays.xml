@@ -443,7 +443,7 @@
     </string-array>
 
     <string-array name="game_rumble_mode_names">
-        <item>@string/game_rumble_mode_smart</item>
+        <item>@string/game_rumble_mode_coordinated</item>
         <item>@string/game_rumble_mode_device</item>
         <item>@string/game_rumble_mode_controller</item>
     </string-array>
