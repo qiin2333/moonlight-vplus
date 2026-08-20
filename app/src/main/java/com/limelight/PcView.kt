@@ -295,6 +295,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
         override fun onServiceDisconnected(className: ComponentName) {
             managerBinder = null
+            stopComputerUpdates()
         }
     }
 
@@ -1468,7 +1469,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     }
 
     private fun stopComputerUpdates() {
-        if (managerBinder == null || !runningPolling) return
+        if (!runningPolling) return
 
         freezeUpdates = true
         pollingCollectJob?.cancel()
@@ -2204,6 +2205,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                         }
                     managerBinder?.invalidateStateForComputer(uuid)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 message = e.message
             }

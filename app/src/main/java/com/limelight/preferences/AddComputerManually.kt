@@ -251,21 +251,18 @@ class AddComputerManually : Activity() {
             invalidInput = true
         }
 
-        if (!success && !wrongSiteLocal && !invalidInput && !activeNetworkIsVpn) {
-            ensureAddWorkerCurrent(generation)
-            portTestResult = MoonBridge.testClientConnectivity(ServerHelper.CONNECTION_TEST_SERVER, 443,
-                    MoonBridge.ML_PORT_FLAG_TCP_47984 or MoonBridge.ML_PORT_FLAG_TCP_47989)
-        } else {
-            portTestResult = MoonBridge.ML_TEST_RESULT_INCONCLUSIVE
-        }
-
         try {
+            if (!success && !wrongSiteLocal && !invalidInput && !activeNetworkIsVpn) {
+                ensureAddWorkerCurrent(generation)
+                portTestResult = MoonBridge.testClientConnectivity(ServerHelper.CONNECTION_TEST_SERVER, 443,
+                        MoonBridge.ML_PORT_FLAG_TCP_47984 or MoonBridge.ML_PORT_FLAG_TCP_47989)
+            } else {
+                portTestResult = MoonBridge.ML_TEST_RESULT_INCONCLUSIVE
+            }
             ensureAddWorkerCurrent(generation)
-        } catch (e: InterruptedException) {
+        } finally {
             dialog.dismiss()
-            throw e
         }
-        dialog.dismiss()
 
         if (invalidInput) {
             showAddFailure(generation, resources.getString(R.string.addpc_unknown_host))
