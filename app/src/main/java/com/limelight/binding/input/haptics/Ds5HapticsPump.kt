@@ -84,6 +84,7 @@ internal class Ds5HapticsPump(
     private val ringLock = Any()
     private val slots = Array(IO_SLOTS) { IoSlot() }
     private val active = AtomicBoolean(false)
+    private val requestsClosed = AtomicBoolean(false)
     private var sendThread: Thread? = null
     private var formatWarned = false
     private var lastSequence = 0
@@ -137,8 +138,17 @@ internal class Ds5HapticsPump(
      * the sender, which parks the interface on alt 0 as it exits.
      */
     fun stop() {
-        if (!active.compareAndSet(true, false)) return
-        slots.forEach { it.request.close() }
+        active.set(false)
+        closeRequests()
+        val thread = sendThread
+        if (thread != null && thread !== Thread.currentThread()) {
+            try {
+                thread.join(1000)
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+            }
+        }
+        sendThread = null
         synchronized(ringLock) {
             readIndex = 0
             writeIndex = 0
@@ -147,9 +157,14 @@ internal class Ds5HapticsPump(
         hasSequence = false
     }
 
+    private fun closeRequests() {
+        if (!requestsClosed.compareAndSet(false, true)) return
+        slots.forEach { it.request.close() }
+    }
+
     /** Cleanup for the start() failure paths, where the sender never ran. */
     private fun shutdownUnstarted() {
-        slots.forEach { it.request.close() }
+        closeRequests()
         restoreAlt0()
     }
 
@@ -234,9 +249,11 @@ internal class Ds5HapticsPump(
     private fun sendLoop() {
         try {
             for (slot in slots) {
+                if (!active.get()) return
                 fillSlot(slot)
                 if (!slot.request.queue(slot.buffer, PACKET_SIZE)) {
                     Log.w(TAG, "Initial iso queue failed; stopping pump")
+                    active.set(false)
                     return
                 }
             }
@@ -248,10 +265,12 @@ internal class Ds5HapticsPump(
                 fillSlot(slot)
                 if (!slot.request.queue(slot.buffer, PACKET_SIZE)) {
                     Log.w(TAG, "Iso queue failed; stopping pump")
+                    active.set(false)
                     return
                 }
             }
         } finally {
+            active.set(false)
             // The sender is the last user of the endpoint; park it on alt 0 to
             // release the isochronous bandwidth.
             restoreAlt0()

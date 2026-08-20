@@ -374,6 +374,10 @@ internal class ControllerHapticsCoordinator(
         // pump startup issues interface and control transfers that must never
         // block it, so run it on the background thread.
         handler.backgroundThreadHandler.post {
+            if (isStoppingOrStopped()) {
+                pump.stop()
+                return@post
+            }
             // Replace any pump owned by another controller before the new one
             // claims the audio interface.
             ds5HapticsPump?.stop()
@@ -384,12 +388,17 @@ internal class ControllerHapticsCoordinator(
     }
 
     fun detachDs5HapticsPump(controllerId: Int) {
-        // Only the owning controller may stop the active pump; a stale removal
-        // callback from a replaced controller must not kill the new stream.
-        if (ds5HapticsPumpOwner != controllerId) return
-        ds5HapticsPump?.stop()
-        ds5HapticsPump = null
-        ds5HapticsPumpOwner = -1
+        // Serialize removal with attach. This prevents a disconnect racing an
+        // attach task that has not yet started on the background thread.
+        handler.backgroundThreadHandler.post {
+            // Only the owning controller may stop the active pump; a stale
+            // removal callback from a replaced controller must not kill the
+            // new stream.
+            if (ds5HapticsPumpOwner != controllerId) return@post
+            ds5HapticsPump?.stop()
+            ds5HapticsPump = null
+            ds5HapticsPumpOwner = -1
+        }
     }
 
     fun clearControllerIfUnavailable(controllerNumber: Short) {
@@ -427,6 +436,10 @@ internal class ControllerHapticsCoordinator(
         if (stopped || stopping) return
         stopping = true
         stopAllNow()
+        val pump = ds5HapticsPump
+        ds5HapticsPump = null
+        ds5HapticsPumpOwner = -1
+        handler.backgroundThreadHandler.post { pump?.stop() }
         primaryControllerNumber = NO_CONTROLLER
         stopped = true
         stopping = false
