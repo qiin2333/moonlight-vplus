@@ -295,6 +295,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
         override fun onServiceDisconnected(className: ComponentName) {
             managerBinder = null
+            stopComputerUpdates()
         }
     }
 
@@ -441,7 +442,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         super.onPause()
         exitGate.cancel()
         inForeground = false
-        stopComputerUpdates(false)
+        stopComputerUpdates()
 
         analyticsManager?.stopUsageTracking()
         stopShakeDetector()
@@ -1467,18 +1468,26 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         runningPolling = true
     }
 
-    private fun stopComputerUpdates(wait: Boolean) {
-        if (managerBinder == null || !runningPolling) return
+    private fun stopComputerUpdates() {
+        if (!runningPolling) return
 
         freezeUpdates = true
         pollingCollectJob?.cancel()
         pollingCollectJob = null
         managerBinder?.stopPolling()
 
-        if (wait) {
-            managerBinder?.waitForPollingStopped()
-        }
         runningPolling = false
+    }
+
+    private suspend fun stopComputerUpdatesAndWait() {
+        val binder = managerBinder
+        val shouldWait = binder != null && runningPolling
+        stopComputerUpdates()
+        if (shouldWait) {
+            runInterruptible(Dispatchers.IO) {
+                binder?.waitForPollingStopped()
+            }
+        }
     }
 
     private fun debouncedNotifyDataSetChanged() {
@@ -1993,7 +2002,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             var success = false
 
             try {
-                stopComputerUpdates(true)
+                stopComputerUpdatesAndWait()
 
                 val result = withContext(Dispatchers.IO) {
                     val httpConn = NvHTTP(
@@ -2139,7 +2148,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             var pairedComputer: ComputerDetails? = null
 
             try {
-                stopComputerUpdates(true)
+                stopComputerUpdatesAndWait()
 
                 val result = withContext(Dispatchers.IO) {
                     // Add the computer first
@@ -2196,6 +2205,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                         }
                     managerBinder?.invalidateStateForComputer(uuid)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 message = e.message
             }
@@ -2625,7 +2636,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     // Host Action Sheet
 
     private fun showHostActionSheet(details: ComputerDetails) {
-        stopComputerUpdates(false)
+        stopComputerUpdates()
 
         val status = when (details.state) {
             ComputerDetails.State.ONLINE -> getString(R.string.pcview_menu_header_online)
@@ -2720,7 +2731,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     }
 
     private fun showHostMoreActionSheet(details: ComputerDetails) {
-        stopComputerUpdates(false)
+        stopComputerUpdates()
         AppActionSheet.show(
             context = this,
             title = details.name.orEmpty(),
