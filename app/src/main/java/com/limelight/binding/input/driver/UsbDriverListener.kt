@@ -16,4 +16,18 @@ interface UsbDriverListener {
 
     // Report battery state sourced from the USB controller itself
     fun reportControllerBattery(controllerId: Int, batteryState: Byte, batteryPercentage: Byte) {}
+
+    // Report touchpad touch events sourced from the USB controller itself
+    fun reportControllerTouch(
+        controllerId: Int,
+        eventType: Byte,
+        pointerId: Int,
+        x: Float,
+        y: Float
+    ) {}
+
+    // Whether the controller has reported arrival and received its controller
+    // number. Stateful consumers (e.g. touch tracking) must not consume state
+    // transitions until this is true.
+    fun isUsbControllerReady(controllerId: Int): Boolean = true
 }

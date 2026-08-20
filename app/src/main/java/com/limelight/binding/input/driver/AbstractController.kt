@@ -75,4 +75,13 @@ abstract class AbstractController(
     protected fun notifyBatteryState(batteryState: Byte, batteryPercentage: Byte) {
         listener.reportControllerBattery(deviceId, batteryState, batteryPercentage)
     }
+
+    protected fun isControllerReady(): Boolean = listener.isUsbControllerReady(deviceId)
+
+    protected fun notifyControllerTouch(eventType: Byte, pointerId: Int, x: Float, y: Float) {
+        listener.reportControllerTouch(deviceId, eventType, pointerId, x, y)
+    }
+
+    /** Reset driver-side touch state after the host has received a cancellation. */
+    open fun resetTouchState() {}
 }
