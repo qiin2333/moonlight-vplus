@@ -115,8 +115,6 @@
     <string name="summary_video_format">최신 코덱은 장치에서 지원하는 경우 비디오 대역폭 요구 사항을 낮출 수 있습니다. 호스트 소프트웨어 또는 GPU에서 지원하지 않는 경우 코덱 선택을 무시할 수 있습니다.</string>
     <string name="suffix_osc_opacity">%</string>
     <string name="title_checkbox_enable_pip">PIP모드 활성화</string>
-    <string name="summary_checkbox_vibrate_fallback">컨트롤러가 진동을 지원하지 않는 경우 장치를 진동 시켜 진동을 활성화합니다</string>
-    <string name="title_checkbox_vibrate_fallback">게임패드 진동을 장치에서 사용하기</string>
     <string name="summary_checkbox_touchscreen_trackpad">활성화시 터치 스크린이 트랙 패드처럼 작동합니다. 비활성화 된 경우 터치 스크린처럼 작동합니다.</string>
     <string name="title_checkbox_touchscreen_trackpad">터치 스크린을 트랙 패드로 사용하기</string>
     <string name="category_input_settings">입력 설정</string>

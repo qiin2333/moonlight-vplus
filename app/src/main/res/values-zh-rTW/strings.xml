@@ -131,8 +131,11 @@
     <string name="summary_checkbox_touchscreen_trackpad">如果啟用，則將觸控式螢幕作為觸控板使用。 如果停用，則觸控式螢幕直接控制滑鼠游標。</string>
     <string name="title_checkbox_multi_controller">自動偵測手把</string>
     <string name="summary_checkbox_multi_controller">取消此項所有手把將視為一個手把</string>
-    <string name="title_checkbox_vibrate_fallback">用震動仿真遊戲低頻音</string>
-    <string name="summary_checkbox_vibrate_fallback">如果你的手把不支援震動，則震動裝置以仿真遊戲低頻音</string>
+    <string name="title_list_game_rumble_mode">遊戲振動輸出</string>
+    <string name="summary_list_game_rumble_mode">選擇遊戲振動在手把與裝置之間的輸出方式</string>
+    <string name="game_rumble_mode_smart">智慧振動</string>
+    <string name="game_rumble_mode_device">裝置振動</string>
+    <string name="game_rumble_mode_controller">手把振動</string>
     <string name="title_seekbar_deadzone">調整類比搖杆死區</string>
     <string name="suffix_seekbar_deadzone">%</string>
     <string name="title_checkbox_xb1_driver">Xbox 360/One USB 手把驅動程式</string>

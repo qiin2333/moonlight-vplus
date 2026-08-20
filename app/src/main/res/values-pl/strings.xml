@@ -52,11 +52,9 @@
     <string name="category_gamepad_settings">Ustawienia gamepada</string>
     <string name="title_checkbox_multi_controller">Automatyczne wykrywanie obecności gamepada</string>
     <string name="summary_checkbox_enable_audiofx">Umożliwia działanie efektów audio podczas przesyłania strumieniowego, ale może zwiększyć opóźnienie dźwięku</string>
-    <string name="title_checkbox_vibrate_fallback">Emuluj wsparcie dudnienia za pomocą wibracji</string>
     <string name="title_seekbar_vibrate_fallback_strength">Regulacja intensywności emulowanego dudnienia</string>
     <string name="summary_seekbar_vibrate_fallback_strength">Wzmocnienie lub zmniejszenie intensywności wibracji na urządzeniu</string>
     <string name="summary_checkbox_multi_controller">Odznaczenie tej opcji wymusza, by gamepad był zawsze obecny</string>
-    <string name="summary_checkbox_vibrate_fallback">Wibruje urządzenie, aby naśladować dudnienie, jeśli gamepad go nie obsługuje</string>
     <string name="suffix_seekbar_vibrate_fallback_strength">%</string>
     <string name="title_seekbar_deadzone">Regulacja strefy martwej drążka analogowego</string>
     <string name="summary_seekbar_deadzone">Uwaga: Niektóre gry mogą wymuszać większą strefę martwą niż ta, do której skonfigurowany jest Moonlight.</string>

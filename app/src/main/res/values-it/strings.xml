@@ -176,7 +176,6 @@
     <string name="summary_audio_config_list">Abilita il sourround 5.1 o 7.1 per sistemi home-theater</string>
     <string name="title_fps_list">Frame rate video</string>
     <string name="summary_checkbox_touchscreen_trackpad">Se abilitato, lo schermo touch si comporta come un trackpad. Se disabilitato, lo schermo touch controlla direttamente il cursore del mouse.</string>
-    <string name="title_checkbox_vibrate_fallback">Emula il supporto per la vibrazione</string>
     <string name="title_checkbox_mouse_nav_buttons">Abilita i bottoni avanti e indietro del mouse</string>
     <string name="title_osc_opacity">Cambia l\'opavità dei controlli a schermo</string>
     <string name="title_unlock_fps">Sblocca tutti i frame rate possibili</string>
@@ -194,7 +193,6 @@
     <string name="summary_checkbox_mouse_nav_buttons">Abilitare questa opzione può far smettere di funzionare il click destro su alcuni dispositivi</string>
     <string name="title_checkbox_flip_face_buttons">Inverti i bottoni frontali</string>
     <string name="summary_checkbox_flip_face_buttons">Inverte i bottoni A/B e X/Y sui controller e sui controlli a schermo</string>
-    <string name="summary_checkbox_vibrate_fallback">Fa vibrare il tuo dispositivo per emulare la vibrazione del controller se questo non la supporta</string>
     <string name="summary_checkbox_vibrate_osc">Fa vibrare il tuo dispositivo per emulare la vibrazione con i controlli a schermo</string>
     <string name="resolution_360p">360p</string>
     <string name="resolution_480p">480p</string>

@@ -56,7 +56,6 @@
     <string name="addpc_fail">K zadanému počítači se nepodařilo připojit. Ujistěte se, že jsou ve firewallu povoleny nezbytné porty.</string>
     <string name="addpc_enter_ip">Musíte zadat IP adresu</string>
     <string name="title_native_res_dialog">Varování pro nativní rozlišení</string>
-    <string name="title_checkbox_vibrate_fallback">Emulovat podporu vibrací</string>
     <string name="title_seekbar_deadzone">Upravit deadzone analogových páček</string>
     <string name="check_ports_msg">Zkontrolujte svůj firewall a pravidla přesměrování pro tyto porty:</string>
     <string name="conn_terminated_msg">Spojení bylo ukončeno</string>
@@ -70,7 +69,6 @@
     <string name="title_checkbox_multi_controller">Automatická detekce připojení herního ovladače</string>
     <string name="summary_checkbox_multi_controller">Odškrtnutí této možnosti vynutí, aby byl herní ovladač vždy připojen</string>
     <string name="summary_checkbox_xb1_driver">Povolí zabudovaný USB ovladač pro zařízení bez nativní podpory pro Xbox ovladač</string>
-    <string name="summary_checkbox_vibrate_fallback">Rozvibruje vaše zařízení pro emulaci vibrací ovladače, pokud je váš herní ovladač nepodporuje</string>
     <string name="suffix_seekbar_deadzone">%</string>
     <string name="summary_seekbar_deadzone">Poznámka: Některé hry mohou vynutit větší deadzone, než jaká je nastavena v Moonlightu.</string>
     <string name="title_checkbox_xb1_driver">Xbox 360/One USB gamepad ovladač</string>

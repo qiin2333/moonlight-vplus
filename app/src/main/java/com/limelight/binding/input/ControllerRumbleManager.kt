@@ -116,7 +116,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
     }
 
     @Volatile
-    private var deviceFallbackControllerNumber = NO_DEVICE_FALLBACK_CONTROLLER
+    private var deviceRumbleControllerNumber = NO_DEVICE_RUMBLE_CONTROLLER
     private val usbRumbleOutputsLock = Any()
     private val usbRumbleOutputs = mutableMapOf<Int, UsbRumbleOutput>()
 
@@ -289,31 +289,51 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         }
     }
 
-    /** Releases fallback ownership after another phone-haptics backend has produced output. */
-    fun releaseDeviceFallbackOwnership() {
-        deviceFallbackControllerNumber = NO_DEVICE_FALLBACK_CONTROLLER
+    /** Releases game-rumble ownership after another phone-haptics backend produces output. */
+    fun releaseDeviceRumbleOwnership() {
+        deviceRumbleControllerNumber = NO_DEVICE_RUMBLE_CONTROLLER
     }
 
-    /** Cancels only phone vibration that was started by this controller's fallback path. */
-    fun clearDeviceFallback(controllerNumber: Short) {
-        if (deviceFallbackControllerNumber != controllerNumber.toInt()) return
-        deviceFallbackControllerNumber = NO_DEVICE_FALLBACK_CONTROLLER
+    /** Cancels only phone vibration that was started by this controller's game-rumble path. */
+    private fun clearDeviceRumble(controllerNumber: Short) {
+        if (deviceRumbleControllerNumber != controllerNumber.toInt()) return
+        deviceRumbleControllerNumber = NO_DEVICE_RUMBLE_CONTROLLER
         handler.deviceVibrator.cancel()
     }
 
-    private fun rumbleDeviceFallback(
+    private fun rumbleDevice(
         controllerNumber: Short,
         lowFreqMotor: Short,
         highFreqMotor: Short
     ) {
         if (simulatedAmplitude(lowFreqMotor, highFreqMotor) == 0) {
-            clearDeviceFallback(controllerNumber)
+            clearDeviceRumble(controllerNumber)
             return
         }
 
-        deviceFallbackControllerNumber = controllerNumber.toInt()
+        deviceRumbleControllerNumber = controllerNumber.toInt()
         rumbleSingleVibrator(handler.deviceVibrator, lowFreqMotor, highFreqMotor)
     }
+
+    /** Emits host-authored game rumble on the Android device motor. */
+    fun handleDeviceGameRumble(
+        controllerNumber: Short,
+        lowFreqMotor: Short,
+        highFreqMotor: Short,
+        strengthPercent: Int
+    ) {
+        rumbleDevice(
+            controllerNumber,
+            adjustMotorStrength(lowFreqMotor, strengthPercent),
+            adjustMotorStrength(highFreqMotor, strengthPercent)
+        )
+    }
+
+    private fun adjustMotorStrength(motor: Short, strengthPercent: Int): Short =
+        Math.min(
+            ((motor.toInt() and 0xffff) * strengthPercent.coerceIn(0, 200)) / 100,
+            Short.MAX_VALUE * 2
+        ).toShort()
 
     private fun simulatedAmplitude(lowFreqMotor: Short, highFreqMotor: Short): Int {
         val lowFreqMotorMSB = (lowFreqMotor.toInt() shr 8) and 0xFF
@@ -346,12 +366,8 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
     fun handleRumble(
         controllerNumber: Short,
         lowFreqMotor: Short,
-        highFreqMotor: Short,
-        allowDeviceFallback: Boolean = true
+        highFreqMotor: Short
     ) {
-        var foundMatchingDevice = false
-        var vibrated = false
-
         if (handler.stopped) {
             return
         }
@@ -364,14 +380,11 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
             }
 
             if (deviceContext.controllerNumber == controllerNumber) {
-                foundMatchingDevice = true
-
                 deviceContext.lowFreqMotor = lowFreqMotor
                 deviceContext.highFreqMotor = highFreqMotor
 
                 // Prefer the documented Android 12 rumble API which can handle dual vibrators on PS/Xbox controllers
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && deviceContext.vibratorManager != null) {
-                    vibrated = true
                     if (deviceContext.quadVibrators) {
                         rumbleQuadVibrators(
                             deviceContext.vibratorManager!!,
@@ -385,14 +398,19 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
                         )
                     }
                 }
-                // On Shield devices, we can use their special API to rumble Shield controllers
-                else if (handler.sceManager.rumble(deviceContext.inputDevice, deviceContext.lowFreqMotor.toInt(), deviceContext.highFreqMotor.toInt())) {
-                    vibrated = true
-                }
-                // If all else fails, we have to try the old Vibrator API
-                else if (deviceContext.vibrator != null) {
-                    vibrated = true
-                    rumbleSingleVibrator(deviceContext.vibrator!!, deviceContext.lowFreqMotor, deviceContext.highFreqMotor)
+                // On Shield devices, prefer the special API. Otherwise, fall back to Vibrator.
+                else if (!handler.sceManager.rumble(
+                        deviceContext.inputDevice,
+                        deviceContext.lowFreqMotor.toInt(),
+                        deviceContext.highFreqMotor.toInt()
+                    )) {
+                    deviceContext.vibrator?.let { vibrator ->
+                        rumbleSingleVibrator(
+                            vibrator,
+                            deviceContext.lowFreqMotor,
+                            deviceContext.highFreqMotor
+                        )
+                    }
                 }
             }
         }
@@ -404,55 +422,11 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
             }
 
             if (deviceContext.controllerNumber == controllerNumber) {
-                foundMatchingDevice = true
                 val device = deviceContext.device ?: continue
                 val capabilities = device.capabilities.toInt()
                 if (capabilities and MoonBridge.LI_CCAP_RUMBLE.toInt() != 0) {
-                    vibrated = true
                     usbRumbleOutput(device).submitBase(BaseRumble(lowFreqMotor, highFreqMotor))
                 }
-            }
-        }
-
-        // We may decide to rumble the device for player 1
-        if (controllerNumber.toInt() == 0) {
-            // If we didn't find a matching device, it must be the on-screen
-            // controls that triggered the rumble. Vibrate the device if
-            // the user has requested that behavior.
-            if (
-                !foundMatchingDevice &&
-                allowDeviceFallback &&
-                handler.prefConfig.onscreenController &&
-                !handler.prefConfig.onlyL3R3 &&
-                handler.prefConfig.vibrateOsc
-            ) {
-                rumbleDeviceFallback(controllerNumber, lowFreqMotor, highFreqMotor)
-            } else if (
-                foundMatchingDevice &&
-                !vibrated &&
-                allowDeviceFallback &&
-                handler.prefConfig.vibrateFallbackToDevice
-            ) {
-                // We found a device to vibrate but it didn't have rumble support. The user
-                // has requested us to vibrate the device in this case.
-
-                // We cast the unsigned short value to a signed int before multiplying by
-                // the preferred strength. The resulting value is capped at 65534 before
-                // we cast it back to a short so it doesn't go above 100%.
-                val lowFreqMotorAdjusted = Math.min(
-                    ((lowFreqMotor.toInt() and 0xffff) * handler.prefConfig.vibrateFallbackToDeviceStrength) / 100,
-                    Short.MAX_VALUE * 2
-                ).toShort()
-                val highFreqMotorAdjusted = Math.min(
-                    ((highFreqMotor.toInt() and 0xffff) * handler.prefConfig.vibrateFallbackToDeviceStrength) / 100,
-                    Short.MAX_VALUE * 2
-                ).toShort()
-
-                rumbleDeviceFallback(
-                    controllerNumber,
-                    lowFreqMotorAdjusted,
-                    highFreqMotorAdjusted
-                )
             }
         }
     }
@@ -678,7 +652,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
     }
 
     companion object {
-        private const val NO_DEVICE_FALLBACK_CONTROLLER = -1
+        private const val NO_DEVICE_RUMBLE_CONTROLLER = -1
 
         fun areBatteryCapacitiesEqual(first: Float, second: Float): Boolean {
             // With no NaNs involved, it is a simple equality comparison.

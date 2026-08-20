@@ -201,7 +201,6 @@
 \nEs posible que tu monitor no admita la configuración de pantalla necesaria. Si es así, puede intentar configurar un monitor virtual. Por último, si tu dispositivo o PC anfitrión no soporta streaming a una resolución o frecuencia de refresco específica, lamentablemente no tienes suerte.</string>
     <string name="resolution_prefix_native">Nativo</string>
     <string name="summary_audio_config_list">Activar sonido envolvente de 5.1 o 7.1 canales para sistemas de teatro en casa</string>
-    <string name="title_checkbox_vibrate_fallback">Emular la vibración del mando con vibración del equipo</string>
     <string name="summary_checkbox_enable_audiofx">Permitir funcionar efectos de sonido durante la transmisión, pero podría incrementar la latencia del sonido</string>
     <string name="summary_checkbox_usb_bind_all">Usar el controlador de USB de Moonlight para todos los mandos soportados, incluso si el control de Xbox se encuentra presente</string>
     <string name="summary_checkbox_mouse_emulation">Presionar por un periodo largo el botón de inicio hará cambiar el mando a modo de ratón</string>
@@ -223,7 +222,6 @@
     <string name="title_checkbox_flip_face_buttons">Invertir botones frontales</string>
     <string name="summary_checkbox_absolute_mouse_mode">Esto puede hacer que la aceleración de mouse se comporte mas natural para uso de escritorio remoto, pero es incompatible con muchos juegos.</string>
     <string name="title_checkbox_enable_audiofx">Activar el soporte para ecualizador de sistema</string>
-    <string name="summary_checkbox_vibrate_fallback">Vibrar el dispositivo para emular el retumbe si tu mando de control no lo soporta</string>
     <string name="title_checkbox_usb_bind_all">Sobrescribir el soporte nativo del control de Xbox</string>
     <string name="summary_checkbox_flip_face_buttons">Invertir botones frontales A/B y X/Y para los mandos y los botones sobre la pantalla</string>
     <string name="title_checkbox_absolute_mouse_mode">Modo de ratón para escritorio remoto</string>

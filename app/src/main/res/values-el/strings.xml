@@ -82,7 +82,6 @@
     <string name="resolution_prefix_native_fullscreen">Εγγενής πλήρης οθόνη</string>
     <string name="category_audio_settings">Ρυθμίσεις ήχου</string>
     <string name="title_audio_config_list">Ρύθμιση παραμέτρων ήχου surround</string>
-    <string name="summary_checkbox_vibrate_fallback">Δονεί τη συσκευή σας για να μιμηθεί το rumble αν το gamepad σας δεν το υποστηρίζει</string>
     <string name="suffix_seekbar_deadzone">%</string>
     <string name="title_checkbox_xb1_driver">Πρόγραμμα οδήγησης για Xbox 360/One USB gamepad</string>
     <string name="summary_checkbox_xb1_driver">Ενεργοποιεί ένα ενσωματωμένο πρόγραμμα οδήγησης USB για συσκευές χωρίς εγγενή υποστήριξη χειριστηρίου Xbox</string>
@@ -187,7 +186,6 @@
 \nΔεν είμαστε υπεύθυνοι για τυχόν προβλήματα που προκύπτουν από τη δημιουργία προσαρμοσμένης ανάλυσης στον υπολογιστή σας.
 \n
 \nΤέλος, η συσκευή ή ο κεντρικός υπολογιστής σας ενδέχεται να μην υποστηρίζει ροή σε εγγενή ανάλυση. Εάν δεν λειτουργεί στη συσκευή σας, δυστυχώς δεν είστε τυχεροί.</string>
-    <string name="title_checkbox_vibrate_fallback">Μιμηθείτε την υποστήριξη rumble με δόνηση</string>
     <string name="title_seekbar_deadzone">Ρύθμιση της νεκρής ζώνης του αναλογικού μοχλού</string>
     <string name="summary_checkbox_mouse_emulation">Με παρατεταμένο πάτημα του κουμπιού Έναρξη θα αλλάξει το gamepad σε λειτουργία ποντικιού</string>
     <string name="category_on_screen_controls_settings">Ρυθμίσεις στοιχείων ελέγχου στην οθόνη</string>

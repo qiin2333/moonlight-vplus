@@ -116,7 +116,6 @@
     <string name="summary_checkbox_enable_audiofx">Mengizinkan efek audio berfungsi saat streaming, tetapi dapat meningkatkan latensi audio</string>
     <string name="category_input_settings">Pengaturan Masukan</string>
     <string name="title_checkbox_touchscreen_trackpad">Gunakan layar sentuh sebagai trackpad</string>
-    <string name="title_checkbox_vibrate_fallback">Meniru dukungan gemuruh dengan getaran</string>
     <string name="suffix_seekbar_deadzone">%</string>
     <string name="summary_checkbox_absolute_mouse_mode">Ini dapat membuat akselerasi mouse berperilaku lebih alami untuk penggunaan desktop jarak jauh, tetapi tidak kompatibel dengan banyak game.</string>
     <string name="category_on_screen_controls_settings">Pengaturan Kontrol di Layar</string>
@@ -156,7 +155,6 @@
     <string name="summary_checkbox_touchscreen_trackpad">Jika diaktifkan, layar sentuh berfungsi seperti trackpad. Jika dinonaktifkan, layar sentuh langsung mengontrol kursor mouse.</string>
     <string name="title_checkbox_multi_controller">Deteksi kehadiran gamepad otomatis</string>
     <string name="summary_checkbox_multi_controller">Menghapus centang opsi ini memaksa gamepad untuk selalu ada</string>
-    <string name="summary_checkbox_vibrate_fallback">Getarkan perangkat Anda untuk meniru gemuruh jika gamepad Anda tidak mendukungnya</string>
     <string name="title_seekbar_deadzone">Sesuaikan zona mati stik analog</string>
     <string name="title_checkbox_xb1_driver">Xbox 360/Satu driver gamepad USB</string>
     <string name="summary_checkbox_xb1_driver">Mengaktifkan driver USB bawaan untuk perangkat tanpa dukungan pengontrol Xbox asli</string>

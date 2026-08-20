@@ -2848,7 +2848,7 @@ class ControllerHandler(
         hapticsCoordinator.stopAudio()
 
     fun claimDeviceVibratorForAudio() =
-        rumbleManager.releaseDeviceFallbackOwnership()
+        rumbleManager.releaseDeviceRumbleOwnership()
 
     fun refreshAudioRumbleWatchdog() =
         hapticsCoordinator.refreshAudioWatchdog()

@@ -81,7 +81,6 @@
     <string name="title_audio_config_list">Configurações de som Surround</string>
     <string name="title_checkbox_enable_audiofx">Ativar sistema de suporte à equalização</string>
     <string name="title_checkbox_multi_controller">Detecção automática de gamepad</string>
-    <string name="summary_checkbox_vibrate_fallback">Vibra o seu aparelho para emular rumble se o seu gamepad não suportar</string>
     <string name="title_seekbar_deadzone">Ajustar zona morta do analógico</string>
     <string name="summary_checkbox_enable_audiofx">Permitir que efeitos de audio funcionem durante o streaming, pode acrescentar latência de audio</string>
     <string name="summary_checkbox_xb1_driver">Ativa um driver USB integrado para aparelhos sem suporte nativo aos controles Xbox</string>
@@ -192,7 +191,6 @@
     <string name="title_checkbox_touchscreen_trackpad">Usar o ecrã como um trackpad</string>
     <string name="summary_checkbox_touchscreen_trackpad">Se ativado, o ecrã sensível ao toque funciona como um trackpad. Se desativado, o ecrã controla diretamente o cursor do rato.</string>
     <string name="summary_checkbox_multi_controller">Desmarque esta opção para forçar o gamepad a estar sempre presente</string>
-    <string name="title_checkbox_vibrate_fallback">Emular suporte rumble com vibração</string>
     <string name="title_checkbox_vibrate_osc">Ativar vibração</string>
     <string name="summary_checkbox_vibrate_osc">Vibra o seu aparelho para emular rumble nos controles de ecrã</string>
     <string name="title_only_l3r3">Mostrar somente L3 e R3</string>

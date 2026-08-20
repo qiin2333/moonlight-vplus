@@ -164,9 +164,7 @@
     <string name="title_details">Детали</string>
     <string name="title_unlock_fps">Разблокировать все возможные частоты обновления</string>
     <string name="applist_details_id">ID приложения:</string>
-    <string name="title_checkbox_vibrate_fallback">Эмуляция виброотдачи</string>
     <string name="summary_checkbox_vibrate_osc">Вибрировать устройство для эмуляции виброотдачи при экранном управлении</string>
-    <string name="summary_checkbox_vibrate_fallback">Вибрировать устройство для эмуляции виброотдачи для геймпадов без поддержки вибрации</string>
     <string name="summary_checkbox_mouse_nav_buttons">Включение этой опции может привести к неправильной работе правой кнопки мыши на некоторых устройствах</string>
     <string name="scut_pc_not_found">PC не найден</string>
     <string name="unable_to_pin_shortcut">Текущий лаунчер не позволяет создавать pinned ярлыки</string>

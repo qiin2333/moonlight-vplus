@@ -253,8 +253,11 @@
 
     <string name="title_checkbox_multi_controller"> 自动检测手柄 </string>
     <string name="summary_checkbox_multi_controller"> 禁用此项所有手柄将视为一个手柄。 </string>
-    <string name="title_checkbox_vibrate_fallback"> 用设备震动模拟游戏震动效果 </string>
-    <string name="summary_checkbox_vibrate_fallback"> 如果你的手柄不支持震动，则震动设备以模拟游戏震动效果。 </string>
+    <string name="title_list_game_rumble_mode">游戏振动输出</string>
+    <string name="summary_list_game_rumble_mode">选择游戏振动在手柄与设备之间的输出方式</string>
+    <string name="game_rumble_mode_smart">智能振动</string>
+    <string name="game_rumble_mode_device">设备振动</string>
+    <string name="game_rumble_mode_controller">手柄振动</string>
     <string name="title_seekbar_deadzone"> 调整摇杆死区 </string>
     <string name="title_checkbox_xb1_driver">Xbox 360/One 手柄驱动 </string>
     <string name="summary_checkbox_xb1_driver"> 为缺少原生Xbox手柄支持的设备启用内置USB驱动。 </string>

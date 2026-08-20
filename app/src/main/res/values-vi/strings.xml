@@ -50,8 +50,6 @@
     <string name="title_checkbox_xb1_driver">Driver tay cầm điều khiển USB Xbox 360/One</string>
     <string name="suffix_seekbar_deadzone">%</string>
     <string name="title_seekbar_deadzone">Điều chỉnh vùng chết của cần analog</string>
-    <string name="summary_checkbox_vibrate_fallback">Làm thiết bị của bạn rung để giả lập rumble nếu tay cầm điều khiển của bạn không hỗ trợ nó</string>
-    <string name="title_checkbox_vibrate_fallback">Giả lập hỗ trợ rumble bằng rung</string>
     <string name="summary_checkbox_multi_controller">Việc không đánh dấu sẽ buộc một tay cầm điều khiển luôn có mặt</string>
     <string name="title_checkbox_multi_controller">Tự động phát hiện sự có mặt của tay cầm điều khiển</string>
     <string name="summary_checkbox_touchscreen_trackpad">Nếu bật, màn hình cảm ứng hoạt động như một trackpad. Nếu tắt, màn hình cảm ứng trực tiếp điều khiển con trỏ chuột.</string>

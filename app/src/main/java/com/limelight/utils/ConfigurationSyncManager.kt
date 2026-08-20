@@ -3163,6 +3163,7 @@ class ConfigurationSyncManager(private val context: Context) {
             "list_float_ball_swipe_up_action",
             "list_fps",
             "list_framegen_quality_preset",
+            "list_game_rumble_mode",
             "list_hdr_mode",
             "list_languages",
             "list_mic_icon_color",

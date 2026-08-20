@@ -78,6 +78,7 @@ import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.share.CrownProfileShareManager
 import com.limelight.binding.input.advance_setting.share.GitHubCrownProfileStorePublisher
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper
+import com.limelight.binding.input.haptics.GameRumbleMode
 import com.limelight.binding.video.MediaCodecHelper
 import com.limelight.handbook.HandbookLauncher
 import com.limelight.utils.AboutDialogLauncher
@@ -3045,17 +3046,33 @@ class StreamSettings : AppCompatActivity() {
             // Fire TV apps are not allowed to use WebViews or browsers, so hide the Help category
             // (currently disabled — keep Help category visible on all builds)
             val categoryGamepadSettings = findPreference<PreferenceCategory>("category_gamepad_settings")!!
-            // Remove the vibration options if the device can't vibrate
-            if (!(requireActivity().getSystemService(VIBRATOR_SERVICE) as Vibrator).hasVibrator()) {
-                categoryGamepadSettings.removePreference(findPreference("checkbox_vibrate_fallback")!!)
-                categoryGamepadSettings.removePreference(findPreference("seekbar_vibrate_fallback_strength")!!)
+            val deviceVibrator = requireActivity().getSystemService(VIBRATOR_SERVICE) as Vibrator
+            val deviceRumbleStrength = findPreference<Preference>("seekbar_vibrate_fallback_strength")!!
+            val gameRumbleMode = findPreference<ListPreference>(
+                PreferenceConfiguration.GAME_RUMBLE_MODE_PREF_STRING
+            )!!
+            // Routing remains useful without a phone motor because controller-only and Smart
+            // still work. Only the device-specific strength control should disappear.
+            if (!deviceVibrator.hasVibrator()) {
+                categoryGamepadSettings.removePreference(deviceRumbleStrength)
                 // The entire OSC category may have already been removed by the touchscreen check above
                 val category = findPreference<PreferenceCategory>("category_onscreen_controls")
                 category?.removePreference(findPreference("checkbox_vibrate_osc")!!)
             } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
-                    !(requireActivity().getSystemService(VIBRATOR_SERVICE) as Vibrator).hasAmplitudeControl()) {
+                    !deviceVibrator.hasAmplitudeControl()) {
                 // Remove the vibration strength selector of the device doesn't have amplitude control
-                categoryGamepadSettings.removePreference(findPreference("seekbar_vibrate_fallback_strength")!!)
+                categoryGamepadSettings.removePreference(deviceRumbleStrength)
+            } else {
+                fun updateDeviceRumbleStrengthEnabled(value: String?) {
+                    deviceRumbleStrength.isEnabled =
+                        GameRumbleMode.fromPreferenceValue(value) != GameRumbleMode.CONTROLLER
+                }
+                updateDeviceRumbleStrengthEnabled(gameRumbleMode.value)
+                gameRumbleMode.onPreferenceChangeListener =
+                    Preference.OnPreferenceChangeListener { _, newValue ->
+                        updateDeviceRumbleStrengthEnabled(newValue as? String)
+                        true
+                    }
             }
 
             // 获取目标显示器（优先使用外接显示器）
