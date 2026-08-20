@@ -115,8 +115,6 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         }
     }
 
-    @Volatile
-    private var deviceRumbleControllerNumber = NO_DEVICE_RUMBLE_CONTROLLER
     private val usbRumbleOutputsLock = Any()
     private val usbRumbleOutputs = mutableMapOf<Int, UsbRumbleOutput>()
 
@@ -235,13 +233,26 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         vm.vibrate(combo.combine(), vibrationAttributes.build())
     }
 
-    fun rumbleSingleVibrator(vibrator: Vibrator, lowFreqMotor: Short, highFreqMotor: Short) {
+    fun rumbleSingleVibrator(
+        vibrator: Vibrator = handler.deviceVibrator,
+        lowFreqMotor: Short,
+        highFreqMotor: Short,
+        durationMs: Long = 60_000L
+    ) {
         // Since we can only use a single amplitude value, compute the desired amplitude
         // by taking 80% of the big motor and 33% of the small motor, then capping to 255.
         // NB: This value is now 0-255 as required by VibrationEffect.
         val simulatedAmplitude = simulatedAmplitude(lowFreqMotor, highFreqMotor)
+        vibrateSingleAmplitude(vibrator, simulatedAmplitude, durationMs)
+    }
 
-        if (simulatedAmplitude == 0) {
+    fun vibrateSingleAmplitude(
+        vibrator: Vibrator = handler.deviceVibrator,
+        amplitude: Int,
+        durationMs: Long = 60_000L
+    ) {
+        val safeAmplitude = amplitude.coerceIn(0, 255)
+        if (safeAmplitude == 0) {
             // This case is easy - just cancel the current effect and get out.
             // NB: We cannot simply check lowFreqMotor == highFreqMotor == 0
             // because our simulatedAmplitude could be 0 even though our inputs
@@ -254,7 +265,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         // supports amplitude-based vibration control.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (vibrator.hasAmplitudeControl()) {
-                val effect = VibrationEffect.createOneShot(60000, simulatedAmplitude)
+                val effect = VibrationEffect.createOneShot(durationMs, safeAmplitude)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     val vibrationAttributes = VibrationAttributes.Builder()
                         .setUsage(VibrationAttributes.USAGE_MEDIA)
@@ -273,67 +284,27 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         // If we reach this point, we don't have amplitude controls available, so
         // we must emulate it by PWMing the vibration. Ick.
         val pwmPeriod: Long = 20
-        val onTime = ((simulatedAmplitude / 255.0) * pwmPeriod).toLong()
+        val onTime = ((safeAmplitude / 255.0) * pwmPeriod).toLong().coerceAtLeast(1L)
         val offTime = pwmPeriod - onTime
+        val cycleCount = ((durationMs + pwmPeriod - 1L) / pwmPeriod).toInt().coerceAtLeast(1)
+        val timings = LongArray(cycleCount * 2 + 1)
+        for (cycle in 0 until cycleCount) {
+            timings[cycle * 2 + 1] = onTime
+            timings[cycle * 2 + 2] = offTime
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val vibrationAttributes = VibrationAttributes.Builder()
                 .setUsage(VibrationAttributes.USAGE_MEDIA)
                 .build()
-            vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, onTime, offTime), 0), vibrationAttributes)
+            vibrator.vibrate(VibrationEffect.createWaveform(timings, -1), vibrationAttributes)
         } else {
             val audioAttributes = AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_GAME)
                 .build()
             @Suppress("DEPRECATION")
-            vibrator.vibrate(longArrayOf(0, onTime, offTime), 0, audioAttributes)
+            vibrator.vibrate(timings, -1, audioAttributes)
         }
     }
-
-    /** Releases game-rumble ownership after another phone-haptics backend produces output. */
-    fun releaseDeviceRumbleOwnership() {
-        deviceRumbleControllerNumber = NO_DEVICE_RUMBLE_CONTROLLER
-    }
-
-    /** Cancels only phone vibration that was started by this controller's game-rumble path. */
-    private fun clearDeviceRumble(controllerNumber: Short) {
-        if (deviceRumbleControllerNumber != controllerNumber.toInt()) return
-        deviceRumbleControllerNumber = NO_DEVICE_RUMBLE_CONTROLLER
-        handler.deviceVibrator.cancel()
-    }
-
-    private fun rumbleDevice(
-        controllerNumber: Short,
-        lowFreqMotor: Short,
-        highFreqMotor: Short
-    ) {
-        if (simulatedAmplitude(lowFreqMotor, highFreqMotor) == 0) {
-            clearDeviceRumble(controllerNumber)
-            return
-        }
-
-        deviceRumbleControllerNumber = controllerNumber.toInt()
-        rumbleSingleVibrator(handler.deviceVibrator, lowFreqMotor, highFreqMotor)
-    }
-
-    /** Emits host-authored game rumble on the Android device motor. */
-    fun handleDeviceGameRumble(
-        controllerNumber: Short,
-        lowFreqMotor: Short,
-        highFreqMotor: Short,
-        strengthPercent: Int
-    ) {
-        rumbleDevice(
-            controllerNumber,
-            adjustMotorStrength(lowFreqMotor, strengthPercent),
-            adjustMotorStrength(highFreqMotor, strengthPercent)
-        )
-    }
-
-    private fun adjustMotorStrength(motor: Short, strengthPercent: Int): Short =
-        Math.min(
-            ((motor.toInt() and 0xffff) * strengthPercent.coerceIn(0, 200)) / 100,
-            Short.MAX_VALUE * 2
-        ).toShort()
 
     private fun simulatedAmplitude(lowFreqMotor: Short, highFreqMotor: Short): Int {
         val lowFreqMotorMSB = (lowFreqMotor.toInt() shr 8) and 0xFF
@@ -652,8 +623,6 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
     }
 
     companion object {
-        private const val NO_DEVICE_RUMBLE_CONTROLLER = -1
-
         fun areBatteryCapacitiesEqual(first: Float, second: Float): Boolean {
             // With no NaNs involved, it is a simple equality comparison.
             if (!first.isNaN() && !second.isNaN()) {

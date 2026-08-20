@@ -42,6 +42,21 @@ internal class ControllerHapticsCoordinator(
     private val outputSlots = mutableMapOf<Short, OutputSlot>()
     private val hostStates = mutableMapOf<Short, ControllerRumbleState>()
     private val deviceOutputSlot = DeviceOutputSlot()
+    private val deviceVibrationCoordinator by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        DeviceVibrationCoordinator(
+            postDelayed = { callback, delayMs ->
+                handler.mainThreadHandler.postDelayed(callback, delayMs)
+            },
+            removeCallback = handler.mainThreadHandler::removeCallbacks,
+            vibrateDevice = { amplitude, durationMs ->
+                handler.rumbleManager.vibrateSingleAmplitude(
+                    amplitude = amplitude,
+                    durationMs = durationMs
+                )
+            },
+            cancelDeviceVibration = handler.deviceVibrator::cancel
+        )
+    }
 
     @Volatile
     private var primaryControllerNumber = NO_CONTROLLER
@@ -63,6 +78,22 @@ internal class ControllerHapticsCoordinator(
 
     fun hasRumbleCapableController(): Boolean =
         primaryControllerNumber != NO_CONTROLLER
+
+    fun submitLegacyDeviceRumble(lowFrequency: Short, highFrequency: Short) {
+        deviceVibrationCoordinator.submitGameRumble(
+            DeviceVibrationCoordinator.GameSource.LEGACY_OVERLAY,
+            lowFrequency,
+            highFrequency,
+            100
+        )
+    }
+
+    fun playDeviceTouchHaptic(lowFrequency: Short, highFrequency: Short, durationMs: Int) =
+        deviceVibrationCoordinator.playTouchHaptic(lowFrequency, highFrequency, durationMs)
+
+    fun claimDeviceVibratorForAudio() = deviceVibrationCoordinator.claimForAudio()
+
+    fun releaseDeviceVibratorFromAudio() = deviceVibrationCoordinator.releaseFromAudio()
 
     private fun primaryControllerNumber(): Short? =
         primaryControllerNumber
@@ -558,8 +589,8 @@ internal class ControllerHapticsCoordinator(
 
     private fun dispatchDevice(output: DeviceOutput) {
         if (isStoppingOrStopped()) return
-        handler.rumbleManager.handleDeviceGameRumble(
-            output.controllerNumber,
+        deviceVibrationCoordinator.submitGameRumble(
+            DeviceVibrationCoordinator.GameSource.ROUTED_GAME,
             output.output.lowFrequency.toMotorShort(),
             output.output.highFrequency.toMotorShort(),
             handler.prefConfig.deviceRumbleStrength
@@ -620,7 +651,7 @@ internal class ControllerHapticsCoordinator(
             handler.rumbleManager.handleRumbleTriggers(controllerNumber, 0, 0)
             handler.rumbleManager.clearAdaptiveTriggers(controllerNumber)
         }
-        handler.rumbleManager.handleDeviceGameRumble(0, 0, 0, 100)
+        deviceVibrationCoordinator.stop()
     }
 
     private fun isStoppingOrStopped(): Boolean =

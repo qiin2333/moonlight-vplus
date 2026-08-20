@@ -54,7 +54,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.res.colorResource
@@ -120,13 +119,13 @@ internal fun GameMenuCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val view = LocalView.current
+    val hapticFeedback = LocalGameMenuHapticFeedback.current
     val longClickModifier = if (onLongClick != null) {
         Modifier
             .combinedClickable(
                 onClick = {},
                 onLongClick = {
-                    view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                    hapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                     onLongClick()
                 }
             )
@@ -226,7 +225,7 @@ private fun BitrateCard(
     onSliderGesture: (Boolean) -> Unit,
     onConfigure: () -> Unit
 ) {
-    val view = LocalView.current
+    val hapticFeedback = LocalGameMenuHapticFeedback.current
     var tipVisible by remember { mutableStateOf(false) }
     val currentLabel = stringResource(
         R.string.game_menu_bitrate_current,
@@ -261,7 +260,7 @@ private fun BitrateCard(
             value = state.progress,
             onValueChange = { value ->
                 if (callbacks.onBitrateProgress(value)) {
-                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    hapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                 }
             },
             onValueChangeFinished = callbacks.onBitrateApply,
@@ -277,7 +276,7 @@ private fun BitrateCard(
                     valueRange = 0f..BitrateCardController.MAX_PROGRESS.toFloat(),
                     onValueChange = { value ->
                         if (callbacks.onBitrateProgress(value)) {
-                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            hapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                         }
                     },
                     onValueChangeFinished = callbacks.onBitrateApply
@@ -366,7 +365,7 @@ private fun AudioHapticsCard(
     onSliderGesture: (Boolean) -> Unit,
     onConfigure: () -> Unit
 ) {
-    val view = LocalView.current
+    val hapticFeedback = LocalGameMenuHapticFeedback.current
     val title = stringResource(R.string.game_menu_tab_audio_haptics)
     val modeNames = stringArrayResource(R.array.audio_vibration_mode_names)
     val modeValues = stringArrayResource(R.array.audio_vibration_mode_values)
@@ -432,7 +431,7 @@ private fun AudioHapticsCard(
                 value = state.strength.toFloat(),
                 onValueChange = { value ->
                     if (callbacks.onAudioHapticsStrength(value)) {
-                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                        hapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                     }
                 },
                 onValueChangeFinished = callbacks.onAudioHapticsStrengthFinished,
@@ -448,7 +447,7 @@ private fun AudioHapticsCard(
                         valueRange = 0f..AudioVibrationService.MAX_STRENGTH.toFloat(),
                         onValueChange = { value ->
                             if (callbacks.onAudioHapticsStrength(value)) {
-                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                hapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             }
                         },
                         onValueChangeFinished = callbacks.onAudioHapticsStrengthFinished
@@ -481,7 +480,7 @@ private fun AudioHapticsCard(
 
 @Composable
 private fun AudioHapticsResetButton(onReset: () -> Unit) {
-    val view = LocalView.current
+    val hapticFeedback = LocalGameMenuHapticFeedback.current
     val description = stringResource(R.string.game_menu_audio_haptics_reset)
     val shape = CircleShape
     Box(
@@ -492,7 +491,7 @@ private fun AudioHapticsResetButton(onReset: () -> Unit) {
             .gamepadFocusOutline(shape)
             .semantics { contentDescription = description }
             .clickable {
-                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                 onReset()
             },
         contentAlignment = Alignment.Center
@@ -512,7 +511,7 @@ private fun AudioHapticsChoiceRow(
     choices: List<AudioHapticsChoice>,
     onChoice: (String) -> Unit
 ) {
-    val view = LocalView.current
+    val hapticFeedback = LocalGameMenuHapticFeedback.current
     val accent = colorResource(R.color.game_menu_accent)
     Row(
         modifier = Modifier
@@ -552,7 +551,7 @@ private fun AudioHapticsChoiceRow(
                             selected = choice.selected,
                             role = Role.RadioButton,
                             onClick = {
-                                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                                hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                                 onChoice(choice.value)
                             }
                         )
@@ -802,7 +801,7 @@ private fun ShortcutCard(
     onKey: (CustomKeyData) -> Unit,
     onConfigure: () -> Unit
 ) {
-    val view = LocalView.current
+    val hapticFeedback = LocalGameMenuHapticFeedback.current
     GameMenuCard(
         title = stringResource(R.string.game_menu_tab_shortcuts),
         onLongClick = onConfigure
@@ -818,7 +817,7 @@ private fun ShortcutCard(
                     .clip(GameMenuControlShape)
                     .gamepadFocusOutline(GameMenuControlShape)
                     .clickable {
-                        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                        hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                         onKey(key)
                     }
                     .padding(

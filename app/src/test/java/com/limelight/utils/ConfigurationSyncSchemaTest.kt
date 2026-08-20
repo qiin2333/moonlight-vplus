@@ -19,6 +19,11 @@ class ConfigurationSyncSchemaTest {
                 PreferenceConfiguration.GAME_RUMBLE_MODE_PREF_STRING
             )
         )
+        assertFalse(
+            ConfigurationSyncManager.isPortableDefaultPreferenceKey(
+                PreferenceConfiguration.SCREEN_DS5_TOUCHPAD_PREF_STRING
+            )
+        )
     }
 
     @Test

@@ -35,7 +35,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -84,7 +83,7 @@ private fun MenuOptionRow(
     onSegmentClick: (GameMenu.SegmentOption) -> Unit,
     initialFocusRequester: FocusRequester? = null
 ) {
-    val view = LocalView.current
+    val hapticFeedback = LocalGameMenuHapticFeedback.current
     val shape = GameMenuCardShape
     val inlineControl = option.inlineControl
     val showChevronAfterTitle = option.showChevron && inlineControl != null
@@ -97,7 +96,7 @@ private fun MenuOptionRow(
         else -> colorResource(R.color.game_menu_list_item_border)
     }
     val activate = {
-        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+        hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
         onClick()
     }
     val initialFocusModifier = initialFocusRequester?.let {
@@ -198,7 +197,7 @@ private fun MenuOptionRow(
                     contentDescription = option.label,
                     onToggle = if (hasDedicatedToggleAction) {
                         {
-                            view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                            hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                             onInlineToggle(inlineControl)
                         }
                     } else {
@@ -291,7 +290,7 @@ private fun InlineSegmentedControl(
     onSegmentClick: (GameMenu.SegmentOption) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val view = LocalView.current
+    val hapticFeedback = LocalGameMenuHapticFeedback.current
     val accent = colorResource(R.color.game_menu_accent)
     Row(
         modifier = modifier
@@ -318,7 +317,7 @@ private fun InlineSegmentedControl(
                         selected = segment.selected,
                         role = Role.RadioButton,
                         onClick = {
-                            view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                            hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                             onSegmentClick(segment)
                         }
                     )
