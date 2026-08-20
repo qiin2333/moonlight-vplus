@@ -1,8 +1,8 @@
 package com.limelight.binding.input.driver
 
 abstract class AbstractController(
-    private val deviceId: Int,
-    private val listener: UsbDriverListener,
+    protected val deviceId: Int,
+    protected val listener: UsbDriverListener,
     private val vendorId: Int,
     private val productId: Int
 ) {

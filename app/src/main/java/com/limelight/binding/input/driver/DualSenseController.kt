@@ -306,7 +306,8 @@ class DualSenseController(
         private const val TOUCH2_COUNTER_OFFSET = 37
         private const val TOUCH2_DATA_OFFSET = 38
         private const val TOUCHPAD_WIDTH = 1920f
-        private const val TOUCHPAD_HEIGHT = 1070f
+        // Matches the Linux hid-playstation DualSense ABS_MT range (0..1079).
+        private const val TOUCHPAD_HEIGHT = 1080f
         private val SUPPORTED_VENDORS = intArrayOf(0x054C, 0x1532)
         private val SUPPORTED_PRODUCTS = intArrayOf(0x0CE6, 0x0DF2, 0x100b, 0x100c)
 

@@ -6,6 +6,9 @@ import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.hardware.input.InputManager
+import android.hardware.usb.UsbDeviceConnection
+import android.hardware.usb.UsbEndpoint
+import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
 import android.os.Build
 import android.os.Handler
@@ -25,6 +28,8 @@ import com.limelight.binding.input.driver.AbstractController
 import com.limelight.binding.input.driver.UsbDriverListener
 import com.limelight.binding.input.driver.UsbDriverService
 import com.limelight.binding.input.haptics.ControllerHapticsCoordinator
+import com.limelight.binding.input.haptics.Ds5HapticsPump
+import com.limelight.nvstream.Ds5HapticsPcmFrame
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.input.ControllerPacket
 import com.limelight.nvstream.input.MouseButtonPacket
@@ -2790,6 +2795,21 @@ class ControllerHandler(
         return context.controllerArrival.isReported
     }
 
+    override fun onDs5AudioInterfaceAvailable(
+        controllerId: Int,
+        connection: UsbDeviceConnection,
+        streamingInterface: UsbInterface,
+        isoEndpoint: UsbEndpoint
+    ) {
+        val context = usbDeviceContexts[controllerId] ?: return
+        val pump = Ds5HapticsPump(connection, streamingInterface, isoEndpoint)
+        hapticsCoordinator.attachDs5HapticsPump(controllerId, context.controllerNumber, pump)
+    }
+
+    override fun onDs5AudioInterfaceGone(controllerId: Int) {
+        hapticsCoordinator.detachDs5HapticsPump(controllerId)
+    }
+
     // ========== Sensor Management ==========
 
     fun handleSetMotionEventState(controllerNumber: Short, motionType: Byte, reportRateHz: Short) {
@@ -2940,4 +2960,8 @@ class ControllerHandler(
 
     fun handleSetControllerLED(controllerNumber: Short, r: Byte, g: Byte, b: Byte) =
         rumbleManager.handleSetControllerLED(controllerNumber, r, g, b)
+
+    fun handleDs5HapticsPcm(frame: Ds5HapticsPcmFrame) {
+        hapticsCoordinator.submitDs5HapticsPcm(frame)
+    }
 }

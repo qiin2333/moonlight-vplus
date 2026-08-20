@@ -1,5 +1,6 @@
 package com.limelight.nvstream.jni;
 
+import com.limelight.nvstream.Ds5HapticsPcmFrame;
 import com.limelight.nvstream.NvConnectionListener;
 import com.limelight.nvstream.av.audio.AudioRenderer;
 import com.limelight.nvstream.av.video.VideoDecoderRenderer;
@@ -412,6 +413,16 @@ public class MoonBridge {
     public static void bridgeClSetControllerLED(short controllerNumber, byte r, byte g, byte b) {
         if (connectionListener != null) {
             connectionListener.setControllerLED(controllerNumber, r, g, b);
+        }
+    }
+
+    public static void bridgeClDs5HapticsPcm(short controllerNumber, byte flags, int sequenceNumber,
+                                                long presentationTimeUs, int sampleRate, int frameCount,
+                                                byte channelCount, byte bitsPerSample, byte[] pcm) {
+        if (connectionListener != null) {
+            connectionListener.ds5HapticsPcm(new Ds5HapticsPcmFrame(
+                    controllerNumber, flags, sequenceNumber, presentationTimeUs,
+                    sampleRate, frameCount, channelCount, bitsPerSample, pcm));
         }
     }
 
