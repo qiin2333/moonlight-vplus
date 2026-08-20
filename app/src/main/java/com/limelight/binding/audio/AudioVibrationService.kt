@@ -378,8 +378,8 @@ class AudioVibrationService(context: Context) {
     }
 
     private fun syncDeviceVibratorOwnership() {
-        val shouldOwn = isSdkDeviceActive || isSystemAudioCoupledDeviceActive
         synchronized(deviceVibratorOwnershipLock) {
+            val shouldOwn = isSdkDeviceActive || isSystemAudioCoupledDeviceActive
             val handler = controllerHandler
             if (shouldOwn && handler != null) {
                 if (deviceVibratorOwner !== handler) {

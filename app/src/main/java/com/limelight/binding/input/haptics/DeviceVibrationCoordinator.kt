@@ -55,9 +55,9 @@ internal class DeviceVibrationCoordinator(
     private var touchEpoch = 0L
     private var closed = false
     private var touchCompletion: Runnable? = null
+    private var gameRefreshCallback: Runnable? = null
     private var outputSequence = 0L
     private var lastGameCommandAmplitude = -1
-    private var lastGameCommandAtNanos: Long? = null
 
     fun submitGameRumble(
         source: GameSource,
@@ -71,8 +71,9 @@ internal class DeviceVibrationCoordinator(
             val state = MotorState(
                 quantizeGameAmplitude(
                     simulatedAmplitude(
-                        scaleMotor(lowFrequency, strengthPercent),
-                        scaleMotor(highFrequency, strengthPercent)
+                        lowFrequency.toInt() and 0xFFFF,
+                        highFrequency.toInt() and 0xFFFF,
+                        strengthPercent
                     ),
                     previousAmplitude
                 )
@@ -94,6 +95,7 @@ internal class DeviceVibrationCoordinator(
         synchronized(lock) {
             if (closed || audioOwned) return
             touchCompletion?.let(removeCallback)
+            clearGameRefreshLocked()
             touchActive = true
             val epoch = ++touchEpoch
             val currentGeneration = ++generation
@@ -124,6 +126,7 @@ internal class DeviceVibrationCoordinator(
             touchEpoch++
             touchCompletion?.let(removeCallback)
             touchCompletion = null
+            clearGameRefreshLocked()
         }
         dispatcher.clearPending()
     }
@@ -149,6 +152,7 @@ internal class DeviceVibrationCoordinator(
             touchEpoch++
             touchCompletion?.let(removeCallback)
             touchCompletion = null
+            clearGameRefreshLocked()
             gameSources.clear()
             VibrationCommand(
                 amplitude = 0,
@@ -178,14 +182,10 @@ internal class DeviceVibrationCoordinator(
         gameSources.values.forEach { state ->
             amplitude = maxOf(amplitude, state.amplitude)
         }
-        val nowNanos = System.nanoTime()
-        val refreshDue = amplitude > 0 &&
-            (lastGameCommandAtNanos == null ||
-                nowNanos - checkNotNull(lastGameCommandAtNanos) >= GAME_SOURCE_REFRESH_NANOS)
-        if (forceRefresh || amplitude != lastGameCommandAmplitude || refreshDue) {
+        scheduleGameRefreshLocked(amplitude)
+        if (forceRefresh || amplitude != lastGameCommandAmplitude) {
             outputSequence++
             lastGameCommandAmplitude = amplitude
-            lastGameCommandAtNanos = nowNanos
         }
         return VibrationCommand(
             amplitude = amplitude,
@@ -193,6 +193,32 @@ internal class DeviceVibrationCoordinator(
             generation = generation,
             sequence = outputSequence
         )
+    }
+
+    private fun scheduleGameRefreshLocked(amplitude: Int) {
+        if (amplitude == 0) {
+            clearGameRefreshLocked()
+            return
+        }
+        if (gameRefreshCallback != null) return
+
+        val callback = Runnable { refreshGameLease() }
+        gameRefreshCallback = callback
+        postDelayed(callback, GAME_SOURCE_REFRESH_MS)
+    }
+
+    private fun clearGameRefreshLocked() {
+        gameRefreshCallback?.let(removeCallback)
+        gameRefreshCallback = null
+    }
+
+    private fun refreshGameLease() {
+        val command = synchronized(lock) {
+            gameRefreshCallback = null
+            if (closed || audioOwned || touchActive) return
+            currentGameCommandLocked(forceRefresh = true).takeUnless { it.isZero }
+        }
+        command?.let(dispatcher::submit)
     }
 
     private fun dispatch(command: VibrationCommand) {
@@ -205,14 +231,18 @@ internal class DeviceVibrationCoordinator(
         }
     }
 
-    private fun scaleMotor(motor: Short, strengthPercent: Int): Int =
-        minOf(
-            ((motor.toInt() and 0xFFFF) * strengthPercent.coerceIn(0, 200)) / 100,
-            MAXIMUM_MOTOR_VALUE
+    private fun simulatedAmplitude(
+        lowFrequency: Int,
+        highFrequency: Int,
+        strengthPercent: Int = 100
+    ): Int {
+        val mixedAmplitude =
+            ((lowFrequency ushr 8) * 0.80) + ((highFrequency ushr 8) * 0.33)
+        return minOf(
+            255,
+            (mixedAmplitude * strengthPercent.coerceIn(0, 200) / 100.0).toInt()
         )
-
-    private fun simulatedAmplitude(lowFrequency: Int, highFrequency: Int): Int =
-        minOf(255, (((lowFrequency ushr 8) * 0.80) + ((highFrequency ushr 8) * 0.33)).toInt())
+    }
 
     private fun quantizeGameAmplitude(rawAmplitude: Int, previousAmplitude: Int?): Int {
         if (rawAmplitude == 0) return 0
@@ -233,9 +263,8 @@ internal class DeviceVibrationCoordinator(
         // vibrator services deadlock when effects are replaced at controller packet rate.
         const val MINIMUM_DEVICE_INTERVAL_MS = 250L
         const val GAME_SOURCE_LEASE_MS = 500L
-        val GAME_SOURCE_REFRESH_NANOS = java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(375L)
+        const val GAME_SOURCE_REFRESH_MS = 375L
         const val MAXIMUM_TOUCH_DURATION_MS = 1_000L
-        const val MAXIMUM_MOTOR_VALUE = 0xFFFE
         const val GAME_AMPLITUDE_STEP = 16
         const val GAME_AMPLITUDE_HYSTERESIS = 12
 

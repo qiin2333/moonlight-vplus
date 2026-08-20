@@ -122,10 +122,15 @@ class DeviceVibrationCoordinatorTest {
     }
 
     @Test
-    fun imperceptibleChangesAreDeduplicatedButActiveLeaseIsRefreshed() {
+    fun imperceptibleChangesAreDeduplicatedAndConstantStateRefreshesItsLease() {
         val executor = Executors.newSingleThreadScheduledExecutor()
         val vibrations = Collections.synchronizedList(mutableListOf<Vibration>())
-        val coordinator = coordinator(executor, vibrations)
+        val scheduledRefresh = AtomicReference<Runnable?>()
+        val coordinator = coordinator(
+            executor,
+            vibrations,
+            postDelayed = { callback, _ -> scheduledRefresh.set(callback) }
+        )
 
         coordinator.submitGameRumble(
             DeviceVibrationCoordinator.GameSource.ROUTED_GAME,
@@ -143,15 +148,31 @@ class DeviceVibrationCoordinatorTest {
         executor.submit {}.get(2, TimeUnit.SECONDS)
         assertEquals(1, vibrations.size)
 
-        Thread.sleep(400)
-        coordinator.submitGameRumble(
-            DeviceVibrationCoordinator.GameSource.ROUTED_GAME,
-            10_500,
-            0,
-            100
-        )
+        val refresh = scheduledRefresh.getAndSet(null)
+        assertNotNull(refresh)
+        refresh!!.run()
         await { vibrations.size == 2 }
         assertEquals(Vibration(32, 500), vibrations.last())
+
+        coordinator.stop()
+        assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+    }
+
+    @Test
+    fun strengthBoostIsAppliedAfterMotorAmplitudeConversion() {
+        val executor = Executors.newSingleThreadScheduledExecutor()
+        val vibrations = Collections.synchronizedList(mutableListOf<Vibration>())
+        val coordinator = coordinator(executor, vibrations)
+
+        coordinator.submitGameRumble(
+            DeviceVibrationCoordinator.GameSource.ROUTED_GAME,
+            0xFFFF.toShort(),
+            0,
+            200
+        )
+
+        await { vibrations.size == 1 }
+        assertEquals(Vibration(255, 500), vibrations.last())
 
         coordinator.stop()
         assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))

@@ -84,7 +84,7 @@ internal class ControllerHapticsCoordinator(
             DeviceVibrationCoordinator.GameSource.LEGACY_OVERLAY,
             lowFrequency,
             highFrequency,
-            100
+            handler.prefConfig.deviceRumbleStrength
         )
     }
 
