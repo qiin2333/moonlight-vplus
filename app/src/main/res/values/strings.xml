@@ -1954,7 +1954,8 @@ Tap again to replace it.</string>
     <string name="quick_btn_tab">Tab</string>
     <string name="quick_btn_alt_tab">Alt+Tab</string>
     <string name="quick_btn_alt_f4">Alt+F4</string>
-    <string name="quick_btn_keyboard">Keyboard</string>
+    <string name="quick_btn_pc_keys">PC Keys</string>
+    <string name="quick_btn_local_keyboard">Local KB</string>
     <string name="quick_btn_controller">Gamepad</string>
     <string name="quick_btn_perf">Stats</string>
     <string name="quick_btn_remote_mouse">Remote mouse</string>
