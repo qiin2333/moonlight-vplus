@@ -249,6 +249,9 @@ internal class UsbControllerShortcutStateMachine(
         menuPending && pendingMenuOpenRequestId == requestId
 
     @Synchronized
+    fun isMenuActive(): Boolean = menuActive
+
+    @Synchronized
     fun reset(): Update {
         val actions = buildList {
             add(Action.CANCEL_LONG_PRESS)
@@ -289,7 +292,15 @@ internal class UsbControllerShortcutStateMachine(
     private fun buildMenuButtonChanges(changedFlags: Int, currentFlags: Int): List<ButtonChange> {
         if (changedFlags == 0) return emptyList()
         return buildList {
-            for (flag in MENU_BUTTON_FLAGS) {
+            val previousFlags = currentFlags xor changedFlags
+            val previousDirection = canonicalMenuDirection(previousFlags)
+            val currentDirection = canonicalMenuDirection(currentFlags)
+            if (previousDirection != currentDirection) {
+                if (previousDirection != 0) add(ButtonChange(previousDirection, pressed = false))
+                if (currentDirection != 0) add(ButtonChange(currentDirection, pressed = true))
+            }
+
+            for (flag in MENU_ACTION_BUTTON_FLAGS) {
                 if (changedFlags and flag == 0) continue
                 if (flag == ControllerPacket.B_FLAG && ignoreMenuTriggerBUntilRelease) continue
                 add(ButtonChange(flag, currentFlags and flag != 0))
@@ -297,18 +308,25 @@ internal class UsbControllerShortcutStateMachine(
         }
     }
 
+    private fun canonicalMenuDirection(buttonFlags: Int): Int {
+        return MENU_DIRECTION_FLAGS.firstOrNull { buttonFlags and it != 0 } ?: 0
+    }
+
     companion object {
         val EXIT_COMBO_FLAGS: Int = ControllerPacket.PLAY_FLAG or ControllerPacket.BACK_FLAG or
             ControllerPacket.LB_FLAG or ControllerPacket.RB_FLAG
 
-        private val MENU_BUTTON_FLAGS = intArrayOf(
+        private val MENU_DIRECTION_FLAGS = intArrayOf(
             ControllerPacket.UP_FLAG,
             ControllerPacket.DOWN_FLAG,
             ControllerPacket.LEFT_FLAG,
-            ControllerPacket.RIGHT_FLAG,
+            ControllerPacket.RIGHT_FLAG
+        )
+        private val MENU_ACTION_BUTTON_FLAGS = intArrayOf(
             ControllerPacket.A_FLAG,
             ControllerPacket.B_FLAG
         )
+        private val MENU_BUTTON_FLAGS = MENU_DIRECTION_FLAGS + MENU_ACTION_BUTTON_FLAGS
         private val MENU_BUTTON_MASK = MENU_BUTTON_FLAGS.fold(0) { mask, flag -> mask or flag }
     }
 }

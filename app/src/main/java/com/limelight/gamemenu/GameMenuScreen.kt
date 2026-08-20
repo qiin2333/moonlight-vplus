@@ -59,7 +59,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -163,12 +165,14 @@ internal fun GameMenuScreen(
     callbacks: GameMenuCallbacks,
     hardwareFocusRequestToken: Int,
     guideDismissController: GameMenuGuideDismissController,
-    useFabricTexture: Boolean = true
+    useFabricTexture: Boolean = true,
+    restoreFocusRequestToken: Int = 0
 ) {
     val palette = gameMenuPalette()
     val appContext = LocalContext.current.applicationContext
     val showcaseState = rememberSequenceShowcaseState()
     val initialFocusRequester = remember { FocusRequester() }
+    val menuGroupFocusRequester = remember { FocusRequester() }
     val inputModeManager = LocalInputModeManager.current
     var guideStore by remember(appContext) { mutableStateOf<FeatureGuideStore?>(null) }
     var guidePending by remember(appContext) { mutableStateOf(false) }
@@ -271,6 +275,8 @@ internal fun GameMenuScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .focusRequester(menuGroupFocusRequester)
+                            .focusRestorer(initialFocusRequester)
                             .onFocusChanged { menuHasFocus = it.hasFocus }
                             .focusGroup()
                             .onGloballyPositioned { menuContentLaidOut = true }
@@ -340,6 +346,19 @@ internal fun GameMenuScreen(
             initialFocusRequester.requestFocus()
         }
     }
+
+    LaunchedEffect(restoreFocusRequestToken, guideActive, menuContentLaidOut) {
+        if (shouldRestoreGameMenuFocus(
+                restoreFocusRequestToken = restoreFocusRequestToken,
+                guideActive = guideActive,
+                menuContentLaidOut = menuContentLaidOut,
+                menuHasFocus = menuHasFocus
+            )
+        ) {
+            inputModeManager.requestInputMode(InputMode.Keyboard)
+            menuGroupFocusRequester.requestFocus()
+        }
+    }
 }
 
 internal fun shouldStartGameMenuGuide(
@@ -367,6 +386,16 @@ internal fun shouldRequestGameMenuFocus(
         menuContentLaidOut &&
         !menuHasFocus
 }
+
+internal fun shouldRestoreGameMenuFocus(
+    restoreFocusRequestToken: Int,
+    guideActive: Boolean,
+    menuContentLaidOut: Boolean,
+    menuHasFocus: Boolean
+): Boolean = restoreFocusRequestToken > 0 &&
+    !guideActive &&
+    menuContentLaidOut &&
+    !menuHasFocus
 
 @Composable
 internal fun GameMenuDialogShell(

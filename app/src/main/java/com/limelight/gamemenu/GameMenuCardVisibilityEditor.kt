@@ -1,5 +1,6 @@
 package com.limelight.gamemenu
 
+import android.app.Dialog
 import android.content.Context
 import com.limelight.R
 import com.limelight.preferences.PreferenceConfiguration
@@ -16,9 +17,9 @@ internal object GameMenuCardVisibilityEditor {
         context: Context,
         config: PreferenceConfiguration,
         onSaved: (PreferenceConfiguration) -> Unit
-    ) {
+    ): Dialog {
         val selected = selectedIds(config)
-        AppActionSheet.showMultiSelect(
+        return AppActionSheet.showMultiSelect(
             context = context,
             title = context.getString(R.string.game_menu_card_config_title),
             actions = labels(context).mapIndexed { index, label ->

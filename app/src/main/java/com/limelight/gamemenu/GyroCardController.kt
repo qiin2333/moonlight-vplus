@@ -66,7 +66,7 @@ internal class GyroCardController(private val game: Game) {
         emitState()
     }
 
-    fun showActivationKeyDialog() {
+    fun showActivationKeyDialog(onShown: (AlertDialog) -> Unit = {}) {
         val items = arrayOf<CharSequence>(
             game.getString(R.string.gyro_activation_always),
             game.getString(R.string.gyro_activation_left_trigger),
@@ -94,6 +94,7 @@ internal class GyroCardController(private val game: Game) {
             .create()
         dialog.show()
         AppDialogStyler.applySystemChoiceList(dialog, game)
+        onShown(dialog)
     }
 
     fun previewSensitivity(sensitivity: Float) {

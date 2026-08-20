@@ -36,6 +36,7 @@ import com.limelight.nvstream.input.MouseButtonPacket
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.ui.GameGestures
+import com.limelight.ui.GameMenuAxisSourceLifecycle
 import com.limelight.utils.Vector2d
 
 import org.cgutman.shieldcontrollerextensions.SceManager
@@ -74,11 +75,16 @@ class ControllerHandler(
         const val PERFORMANCE_OVERLAY_COMBO_FLAGS: Int = ControllerPacket.BACK_FLAG or
             ControllerPacket.LB_FLAG or ControllerPacket.RB_FLAG or ControllerPacket.X_FLAG
 
+        private val USB_MENU_DIRECTION_MASK = ControllerPacket.UP_FLAG or
+            ControllerPacket.DOWN_FLAG or ControllerPacket.LEFT_FLAG or ControllerPacket.RIGHT_FLAG
+
         private const val EMULATING_SPECIAL = 0x1
         private const val EMULATING_SELECT = 0x2
         private const val EMULATING_TOUCHPAD = 0x4
 
         internal const val MAX_GAMEPADS: Short = 16 // Limited by bits in activeGamepadMask
+
+        internal fun usbGameMenuAxisSourceId(controllerId: Int): Int = Int.MIN_VALUE + controllerId
 
         const val BATTERY_RECHECK_INTERVAL_MS = 120 * 1000
 
@@ -484,6 +490,9 @@ class ControllerHandler(
     override fun onInputDeviceRemoved(deviceId: Int) {
         val context = inputDeviceContexts.get(deviceId)
         if (context != null) {
+            mainThreadHandler.post {
+                (gestures as? GameMenuAxisSourceLifecycle)?.releaseControllerMenuAxisSource(deviceId)
+            }
             LimeLog.info("Removed controller: " + context.name + " (" + deviceId + ")")
             releaseControllerNumber(context)
             context.destroy()
@@ -1168,6 +1177,21 @@ class ControllerHandler(
     }
 
     // ========== Event Context Resolution ==========
+
+    fun getGameMenuNavigationAxisPairs(event: MotionEvent): List<Pair<Float, Float>>? {
+        val context = getContextForEvent(event) ?: return null
+        return readMenuNavigationAxisPairs(
+            mapping = MenuNavigationAxisMapping(
+                hatAxes = axisPairOrNull(context.hatXAxis, context.hatYAxis),
+                leftStickAxes = axisPairOrNull(context.leftStickXAxis, context.leftStickYAxis),
+                rightStickAxes = axisPairOrNull(context.rightStickXAxis, context.rightStickYAxis)
+            ),
+            axisValue = event::getAxisValue
+        )
+    }
+
+    private fun axisPairOrNull(xAxis: Int, yAxis: Int): Pair<Int, Int>? =
+        if (xAxis != -1 && yAxis != -1) xAxis to yAxis else null
 
     private fun getContextForEvent(event: InputEvent): InputDeviceContext? {
         // Don't return a context if we're stopped
@@ -2460,12 +2484,13 @@ class ControllerHandler(
                             context.shortcutState.onGameMenuOpenResult(requestId, false)
                             return@openMenu
                         }
+                        val menuOpened = gestures.showGameMenuFromUsb(context)
+                        if (menuOpened) {
+                            activateUsbMenuCapture(excludedContext = context)
+                        }
                         handleUsbShortcutUpdate(
                             context,
-                            context.shortcutState.onGameMenuOpenResult(
-                                requestId,
-                                gestures.showGameMenuFromUsb(context)
-                            )
+                            context.shortcutState.onGameMenuOpenResult(requestId, menuOpened)
                         )
                     }
                 UsbControllerShortcutStateMachine.Action.EXIT_STREAM ->
@@ -2487,7 +2512,16 @@ class ControllerHandler(
                 } else {
                     context.menuKeyDownTimes.remove(buttonChange.buttonFlag) ?: eventTime
                 }
-                val event = KeyEvent(downTime, eventTime, keyAction, keyCode, 0)
+                val event = KeyEvent(
+                    downTime,
+                    eventTime,
+                    keyAction,
+                    keyCode,
+                    0,
+                    0,
+                    usbGameMenuAxisSourceId(context.device?.getControllerId() ?: context.id),
+                    0
+                )
                 if (!gestures.dispatchUsbControllerMenuKey(event)) {
                     context.menuKeyDownTimes.clear()
                     context.shortcutState.onGameMenuUnavailable()
@@ -2503,10 +2537,12 @@ class ControllerHandler(
         context.device?.resetTouchState()
     }
 
-    fun onExternalGameMenuOpened() {
+    private fun activateUsbMenuCapture(excludedContext: UsbDeviceContext? = null) {
         synchronized(usbDeviceContextsLifecycleLock) {
             if (stopped) return
             for (context in usbDeviceContexts.values) {
+                if (context === excludedContext) continue
+
                 val update = context.shortcutState.onGameMenuOpenedExternally()
                 handleUsbShortcutUpdate(context, update)
                 if (update.sendNeutralState) {
@@ -2514,6 +2550,10 @@ class ControllerHandler(
                 }
             }
         }
+    }
+
+    fun onExternalGameMenuOpened() {
+        activateUsbMenuCapture()
     }
 
     fun onExternalGameMenuDismissed() {
@@ -2572,6 +2612,31 @@ class ControllerHandler(
         )
         handleUsbShortcutUpdate(context, shortcutUpdate)
         if (shortcutUpdate.consumeAllInput) {
+            if (context.shortcutState.isMenuActive()) {
+                val digitalDirectionPressed = buttonFlags and USB_MENU_DIRECTION_MASK != 0
+                val menuLeftX = if (digitalDirectionPressed) 0f else leftStickX
+                val menuLeftY = if (digitalDirectionPressed) 0f else leftStickY
+                val menuRightX = if (digitalDirectionPressed) 0f else rightStickX
+                val menuRightY = if (digitalDirectionPressed) 0f else rightStickY
+                val axisTransition = context.menuAxisNavigationState.update(
+                    listOf(menuLeftX to menuLeftY, menuRightX to menuRightY)
+                )
+                if (axisTransition.changed) {
+                    mainThreadHandler.post {
+                        if (stopped) return@post
+                        if (!gestures.dispatchUsbControllerMenuAxes(
+                                controllerId,
+                                menuLeftX,
+                                menuLeftY,
+                                menuRightX,
+                                menuRightY
+                            )
+                        ) {
+                            context.shortcutState.onGameMenuUnavailable()
+                        }
+                    }
+                }
+            }
             if (shortcutUpdate.sendNeutralState) {
                 sendNeutralUsbControllerState(context)
             }
@@ -2672,6 +2737,11 @@ class ControllerHandler(
         }
         if (context != null) {
             LimeLog.info("Removed controller: " + controller.getControllerId())
+            mainThreadHandler.post {
+                (gestures as? GameMenuAxisSourceLifecycle)?.releaseControllerMenuAxisSource(
+                    usbGameMenuAxisSourceId(controller.getControllerId())
+                )
+            }
             rumbleManager.forgetUsbDevice(controller)
             releaseControllerNumber(context)
             context.destroy()

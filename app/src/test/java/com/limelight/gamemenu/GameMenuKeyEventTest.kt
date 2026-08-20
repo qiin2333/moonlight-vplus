@@ -29,6 +29,11 @@ class GameMenuKeyEventTest {
         assertTrue(isGameMenuNavigationKey(KeyEvent.KEYCODE_BUTTON_A))
         assertTrue(isGameMenuNavigationKey(KeyEvent.KEYCODE_ENTER))
         assertTrue(!isGameMenuNavigationKey(KeyEvent.KEYCODE_BUTTON_B))
+        assertTrue(isGameMenuNavigationKey(GAME_MENU_KEYCODE_DPAD_UP_LEFT))
+        assertEquals(
+            KeyEvent.KEYCODE_DPAD_UP,
+            mapGameMenuConfirmKeyCode(GAME_MENU_KEYCODE_DPAD_UP_RIGHT)
+        )
     }
 
     @Test
@@ -102,4 +107,41 @@ class GameMenuKeyEventTest {
         option.runnable?.run()
         assertTrue(navigatedBack)
     }
+
+    @Test
+    fun childDialogFocusRestoreWaitsForParentLayoutAndGuideDismissal() {
+        assertTrue(
+            !shouldRestoreGameMenuFocus(
+                restoreFocusRequestToken = 1,
+                guideActive = false,
+                menuContentLaidOut = false,
+                menuHasFocus = false
+            )
+        )
+        assertTrue(
+            !shouldRestoreGameMenuFocus(
+                restoreFocusRequestToken = 1,
+                guideActive = true,
+                menuContentLaidOut = true,
+                menuHasFocus = false
+            )
+        )
+        assertTrue(
+            shouldRestoreGameMenuFocus(
+                restoreFocusRequestToken = 1,
+                guideActive = false,
+                menuContentLaidOut = true,
+                menuHasFocus = false
+            )
+        )
+        assertTrue(
+            !shouldRestoreGameMenuFocus(
+                restoreFocusRequestToken = 1,
+                guideActive = false,
+                menuContentLaidOut = true,
+                menuHasFocus = true
+            )
+        )
+    }
+
 }
