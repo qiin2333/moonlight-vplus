@@ -70,7 +70,7 @@ class AddComputerManually : Activity() {
     private var addThread: Thread? = null
     private var restartAddThreadWhenStopped = false
     @Volatile private var shuttingDown = false
-    private var serviceBound = false
+    private var serviceBindingRequested = false
 
     private val serviceConnection: ServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, binder: IBinder) {
@@ -369,6 +369,7 @@ class AddComputerManually : Activity() {
     private fun cancelAddThread() {
         val worker = synchronized(addThreadLock) {
             addWorkerGenerationGate.invalidate()
+            computersToAdd.clear()
             if (shuttingDown || managerBinder == null) {
                 restartAddThreadWhenStopped = false
             }
@@ -388,9 +389,9 @@ class AddComputerManually : Activity() {
         shuttingDown = true
         cancelAddThread()
         managerBinder = null
-        if (serviceBound) {
+        if (serviceBindingRequested) {
             runCatching { unbindService(serviceConnection) }
-            serviceBound = false
+            serviceBindingRequested = false
         }
         super.onDestroy()
     }
@@ -442,8 +443,15 @@ class AddComputerManually : Activity() {
             hostText.requestFocus()
         }
 
-        serviceBound = bindService(Intent(this@AddComputerManually,
-                ComputerManagerService::class.java), serviceConnection, Service.BIND_AUTO_CREATE)
+        serviceBindingRequested = true
+        try {
+            bindService(Intent(this@AddComputerManually,
+                    ComputerManagerService::class.java), serviceConnection, Service.BIND_AUTO_CREATE)
+        } catch (e: RuntimeException) {
+            runCatching { unbindService(serviceConnection) }
+            serviceBindingRequested = false
+            throw e
+        }
     }
 
     private fun isNightMode(): Boolean {

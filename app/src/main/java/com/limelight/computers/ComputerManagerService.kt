@@ -271,8 +271,8 @@ class ComputerManagerService : Service() {
                 try {
                     Thread.sleep(250)
                 } catch (e: InterruptedException) {
-                    e.printStackTrace()
                     Thread.currentThread().interrupt()
+                    return
                 }
             }
         }
