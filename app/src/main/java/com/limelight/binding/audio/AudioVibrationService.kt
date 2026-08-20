@@ -207,8 +207,10 @@ class AudioVibrationService(context: Context) {
             return
         }
 
-        if (shouldVibrateDevice(settings.vibrationMode) && !isSystemAudioCoupledDeviceActive) {
+        val deviceOutputReady = shouldVibrateDevice(settings.vibrationMode) &&
+            !isSystemAudioCoupledDeviceActive &&
             claimDeviceVibratorBeforeAudioOutput()
+        if (deviceOutputReady) {
             val accepted = sdkDeviceRenderer.submit(
                 frame.timestampUs,
                 rendererFlags,
@@ -367,15 +369,15 @@ class AudioVibrationService(context: Context) {
     }
 
     /** Claims before submit so queued game output cannot supersede the first audio frame. */
-    private fun claimDeviceVibratorBeforeAudioOutput() {
+    private fun claimDeviceVibratorBeforeAudioOutput(): Boolean =
         synchronized(deviceVibratorOwnershipLock) {
-            val handler = controllerHandler ?: return
-            if (deviceVibratorOwner === handler) return
-            deviceVibratorOwner?.releaseDeviceVibratorFromAudio()
+            val handler = controllerHandler ?: return@synchronized true
+            if (deviceVibratorOwner !== handler) {
+                deviceVibratorOwner?.releaseDeviceVibratorFromAudio()
+                deviceVibratorOwner = handler
+            }
             handler.claimDeviceVibratorForAudio()
-            deviceVibratorOwner = handler
         }
-    }
 
     private fun syncDeviceVibratorOwnership() {
         synchronized(deviceVibratorOwnershipLock) {

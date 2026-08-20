@@ -91,7 +91,7 @@ internal class ControllerHapticsCoordinator(
     fun playDeviceTouchHaptic(lowFrequency: Short, highFrequency: Short, durationMs: Int) =
         deviceVibrationCoordinator.playTouchHaptic(lowFrequency, highFrequency, durationMs)
 
-    fun claimDeviceVibratorForAudio() = deviceVibrationCoordinator.claimForAudio()
+    fun claimDeviceVibratorForAudio(): Boolean = deviceVibrationCoordinator.claimForAudio()
 
     fun releaseDeviceVibratorFromAudio() = deviceVibrationCoordinator.releaseFromAudio()
 

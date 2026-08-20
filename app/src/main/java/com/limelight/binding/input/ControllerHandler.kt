@@ -2852,7 +2852,7 @@ class ControllerHandler(
     fun playDeviceTouchHaptic(lowFrequency: Short, highFrequency: Short, durationMs: Int) =
         hapticsCoordinator.playDeviceTouchHaptic(lowFrequency, highFrequency, durationMs)
 
-    fun claimDeviceVibratorForAudio() =
+    fun claimDeviceVibratorForAudio(): Boolean =
         hapticsCoordinator.claimDeviceVibratorForAudio()
 
     fun releaseDeviceVibratorFromAudio() =

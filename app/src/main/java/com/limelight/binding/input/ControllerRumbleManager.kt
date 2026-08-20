@@ -283,33 +283,36 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
 
         // If we reach this point, we don't have amplitude controls available, so
         // we must emulate it by PWMing the vibration. Ick.
-        val pwmPeriod: Long = 20
-        val onTime = ((safeAmplitude / 255.0) * pwmPeriod).toLong().coerceAtLeast(1L)
-        val offTime = pwmPeriod - onTime
-        val repeatIndex: Int
-        val timings: LongArray
-        if (durationMs > MAXIMUM_FINITE_PWM_DURATION_MS) {
-            // Controller rumble is explicitly replaced or cancelled by later packets. Keep its
-            // long fallback waveform compact instead of allocating thousands of PWM entries.
-            timings = longArrayOf(0, onTime, offTime)
-            repeatIndex = 1
-        } else {
-            val cycleCount = ((durationMs + pwmPeriod - 1L) / pwmPeriod)
-                .toInt()
-                .coerceAtLeast(1)
-            timings = LongArray(cycleCount * 2 + 1)
-            for (cycle in 0 until cycleCount) {
-                timings[cycle * 2 + 1] = onTime
-                timings[cycle * 2 + 2] = offTime
-            }
-            repeatIndex = -1
+        val timings = finitePwmWaveform(safeAmplitude, durationMs)
+        vibratePwmWaveform(vibrator, timings)
+    }
+
+    private fun finitePwmWaveform(amplitude: Int, durationMs: Long): LongArray {
+        val onTime = ((amplitude / 255.0) * PWM_PERIOD_MS).toLong().coerceAtLeast(1L)
+        val offTime = PWM_PERIOD_MS - onTime
+        val cycleCount = ((durationMs + PWM_PERIOD_MS - 1L) / PWM_PERIOD_MS)
+            .toInt()
+            .coerceAtLeast(1)
+        val timings = LongArray(cycleCount * 2 + 1)
+        var remainingMs = durationMs
+        for (cycle in 0 until cycleCount) {
+            val cycleOnTime = minOf(onTime, remainingMs)
+            remainingMs -= cycleOnTime
+            val cycleOffTime = minOf(offTime, remainingMs)
+            remainingMs -= cycleOffTime
+            timings[cycle * 2 + 1] = cycleOnTime
+            timings[cycle * 2 + 2] = cycleOffTime
         }
+        return timings
+    }
+
+    private fun vibratePwmWaveform(vibrator: Vibrator, timings: LongArray) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val vibrationAttributes = VibrationAttributes.Builder()
                 .setUsage(VibrationAttributes.USAGE_MEDIA)
                 .build()
             vibrator.vibrate(
-                VibrationEffect.createWaveform(timings, repeatIndex),
+                VibrationEffect.createWaveform(timings, -1),
                 vibrationAttributes
             )
         } else {
@@ -317,7 +320,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
                 .setUsage(AudioAttributes.USAGE_GAME)
                 .build()
             @Suppress("DEPRECATION")
-            vibrator.vibrate(timings, repeatIndex, audioAttributes)
+            vibrator.vibrate(timings, -1, audioAttributes)
         }
     }
 
@@ -638,7 +641,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
     }
 
     companion object {
-        private const val MAXIMUM_FINITE_PWM_DURATION_MS = 1_000L
+        private const val PWM_PERIOD_MS = 20L
 
         fun areBatteryCapacitiesEqual(first: Float, second: Float): Boolean {
             // With no NaNs involved, it is a simple equality comparison.

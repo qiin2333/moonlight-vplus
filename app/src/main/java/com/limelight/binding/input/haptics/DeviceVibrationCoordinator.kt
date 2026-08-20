@@ -58,6 +58,7 @@ internal class DeviceVibrationCoordinator(
     private var gameRefreshCallback: Runnable? = null
     private var outputSequence = 0L
     private var lastGameCommandAmplitude = -1
+    private var outputWriteInFlight = false
 
     fun submitGameRumble(
         source: GameSource,
@@ -117,18 +118,24 @@ internal class DeviceVibrationCoordinator(
     }
 
     /** Audio renderers call this before their first phone-motor write. */
-    fun claimForAudio() {
-        synchronized(lock) {
-            if (closed || audioOwned) return
-            audioOwned = true
-            generation++
-            touchActive = false
-            touchEpoch++
-            touchCompletion?.let(removeCallback)
-            touchCompletion = null
-            clearGameRefreshLocked()
+    fun claimForAudio(): Boolean {
+        var ownershipChanged = false
+        val readyForAudio = synchronized(lock) {
+            if (closed) return false
+            if (!audioOwned) {
+                audioOwned = true
+                generation++
+                touchActive = false
+                touchEpoch++
+                touchCompletion?.let(removeCallback)
+                touchCompletion = null
+                clearGameRefreshLocked()
+                ownershipChanged = true
+            }
+            !outputWriteInFlight
         }
-        dispatcher.clearPending()
+        if (ownershipChanged) dispatcher.clearPending()
+        return readyForAudio
     }
 
     /** Restores the latest mixed game state after every audio backend has stopped. */
@@ -222,12 +229,28 @@ internal class DeviceVibrationCoordinator(
     }
 
     private fun dispatch(command: VibrationCommand) {
-        // The generation check invalidates work captured before an audio/touch ownership change.
-        if (!command.terminal && command.generation != generation) return
-        if (command.isZero) {
-            cancelDeviceVibration()
-        } else {
-            vibrateDevice(command.amplitude, command.durationMs)
+        // Admit the write under the ownership lock, then release it before entering vendor Binder.
+        // Audio only writes after claimForAudio() reports that no admitted game write is in flight.
+        val admitted = synchronized(lock) {
+            if (!command.terminal && (audioOwned || command.generation != generation)) {
+                false
+            } else {
+                outputWriteInFlight = true
+                true
+            }
+        }
+        if (!admitted) return
+
+        try {
+            if (command.isZero) {
+                cancelDeviceVibration()
+            } else {
+                vibrateDevice(command.amplitude, command.durationMs)
+            }
+        } finally {
+            synchronized(lock) {
+                outputWriteInFlight = false
+            }
         }
     }
 

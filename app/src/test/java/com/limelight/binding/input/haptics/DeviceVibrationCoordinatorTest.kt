@@ -1,10 +1,12 @@
 package com.limelight.binding.input.haptics
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Collections
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -40,6 +42,39 @@ class DeviceVibrationCoordinatorTest {
         coordinator.releaseFromAudio()
         await { vibrations.size == 2 }
         assertEquals(Vibration(16, 500), vibrations.last())
+
+        coordinator.stop()
+        assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+    }
+
+    @Test
+    fun audioClaimWaitsForAnAdmittedGameWriteWithoutBlockingTheCaller() {
+        val executor = Executors.newSingleThreadScheduledExecutor()
+        val gameWriteStarted = CountDownLatch(1)
+        val releaseGameWrite = CountDownLatch(1)
+        val coordinator = DeviceVibrationCoordinator(
+            postDelayed = { _, _ -> },
+            removeCallback = {},
+            vibrateDevice = { _, _ ->
+                gameWriteStarted.countDown()
+                releaseGameWrite.await(2, TimeUnit.SECONDS)
+            },
+            cancelDeviceVibration = {},
+            executor = executor
+        )
+
+        coordinator.submitGameRumble(
+            DeviceVibrationCoordinator.GameSource.ROUTED_GAME,
+            10_000,
+            0,
+            100
+        )
+        assertTrue(gameWriteStarted.await(2, TimeUnit.SECONDS))
+
+        assertFalse(coordinator.claimForAudio())
+        releaseGameWrite.countDown()
+        executor.submit {}.get(2, TimeUnit.SECONDS)
+        assertTrue(coordinator.claimForAudio())
 
         coordinator.stop()
         assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
