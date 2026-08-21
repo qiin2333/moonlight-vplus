@@ -261,6 +261,9 @@
     <string name="title_seekbar_deadzone"> 调整摇杆死区 </string>
     <string name="title_checkbox_xb1_driver">Xbox 360/One 手柄驱动 </string>
     <string name="summary_checkbox_xb1_driver"> 为缺少原生Xbox手柄支持的设备启用内置USB驱动。 </string>
+    <string name="title_dualsense_direct_bluetooth">DualSense 系统蓝牙输出（实验性）</string>
+    <string name="summary_dualsense_direct_bluetooth">直接使用 Android 12+ 已配对的 DualSense 输出振动、自适应扳机和灯光；输入仍由 Android 处理，具体可用性取决于系统 ROM。</string>
+    <string name="toast_dualsense_bluetooth_permission_denied">需要“附近的设备”权限才能使用 DualSense 系统蓝牙输出。</string>
     <string name="title_dualsense_wireless_bridge">DualSense 无线桥接（实验性）</string>
     <string name="summary_dualsense_wireless_bridge">使用独立的外置 USB 蓝牙适配器，在串流时自动查找并连接一个 DualSense；该适配器不能同时交给 Android 系统蓝牙使用。</string>
     <string name="title_checkbox_usb_bind_all"> 覆盖安卓手柄支持 </string>

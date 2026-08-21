@@ -200,6 +200,7 @@ internal class DualSenseBluetoothOutputWriter(
                     if (sent) {
                         notifyOutputEvent(DualSenseBluetoothOutputEvent.SENT)
                     } else {
+                        synchronized(stateLock) { lightbarSetupQueued = false }
                         notifySendFailure()
                     }
                 }
@@ -207,6 +208,21 @@ internal class DualSenseBluetoothOutputWriter(
             } catch (_: RuntimeException) {
                 lightbarSetupQueued = false
                 notifySendFailure()
+                false
+            }
+        }
+    }
+
+    /** Retries state retained after a transport failure once the transport becomes ready. */
+    fun retryPending(): Boolean {
+        synchronized(stateLock) {
+            if (closed || scheduled || !state.hasPendingOutput()) return false
+            scheduled = true
+            return try {
+                executor.execute(::drain)
+                true
+            } catch (_: RuntimeException) {
+                scheduled = false
                 false
             }
         }

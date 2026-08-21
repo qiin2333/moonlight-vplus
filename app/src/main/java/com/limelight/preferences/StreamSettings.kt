@@ -1,6 +1,7 @@
 @file:Suppress("DEPRECATION")
 package com.limelight.preferences
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Context
@@ -916,6 +917,7 @@ class StreamSettings : AppCompatActivity() {
     class SettingsFragment : PreferenceFragmentCompat() {
         private companion object {
             private const val SCREEN_COMBINATION_MODE_PREF_KEY = "list_screen_combination_mode"
+            private const val BLUETOOTH_CONNECT_PERMISSION_REQUEST = 4721
         }
 
         private var nativeResolutionStartIndex = Int.MAX_VALUE
@@ -3020,6 +3022,33 @@ class StreamSettings : AppCompatActivity() {
                 category.removePreference(findPreference("checkbox_gamepad_motion_sensors")!!)
             }
 
+            val directBluetooth = findPreference<CheckBoxPreference>(
+                PreferenceConfiguration.DUALSENSE_DIRECT_BLUETOOTH_PREF_STRING
+            )!!
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                !requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH)
+            ) {
+                findPreference<PreferenceCategory>("category_gamepad_settings")!!
+                    .removePreference(directBluetooth)
+            } else {
+                directBluetooth.onPreferenceChangeListener =
+                    Preference.OnPreferenceChangeListener { _, newValue ->
+                        if (newValue != true || ContextCompat.checkSelfPermission(
+                                requireContext(),
+                                Manifest.permission.BLUETOOTH_CONNECT
+                            ) == PackageManager.PERMISSION_GRANTED
+                        ) {
+                            true
+                        } else {
+                            requestPermissions(
+                                arrayOf(Manifest.permission.BLUETOOTH_CONNECT),
+                                BLUETOOTH_CONNECT_PERMISSION_REQUEST
+                            )
+                            false
+                        }
+                    }
+            }
+
             // Hide gamepad motion sensor fallback option if the device has no gyro or accelerometer
             if (!requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_SENSOR_ACCELEROMETER) &&
                     !requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_SENSOR_GYROSCOPE)) {
@@ -3551,6 +3580,26 @@ class StreamSettings : AppCompatActivity() {
                         Toast.LENGTH_SHORT).show()
 
                 true
+            }
+        }
+
+        override fun onRequestPermissionsResult(
+            requestCode: Int,
+            permissions: Array<out String>,
+            grantResults: IntArray
+        ) {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+            if (requestCode != BLUETOOTH_CONNECT_PERMISSION_REQUEST) return
+            val granted = grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
+            findPreference<CheckBoxPreference>(
+                PreferenceConfiguration.DUALSENSE_DIRECT_BLUETOOTH_PREF_STRING
+            )?.isChecked = granted
+            if (!granted) {
+                Toast.makeText(
+                    requireContext(),
+                    R.string.toast_dualsense_bluetooth_permission_denied,
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
 

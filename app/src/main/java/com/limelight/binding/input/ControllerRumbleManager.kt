@@ -372,6 +372,14 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
                 deviceContext.lowFreqMotor = lowFreqMotor
                 deviceContext.highFreqMotor = highFreqMotor
 
+                if (deviceContext.directDualSenseBluetoothOutput?.updateRumble(
+                        lowFreqMotor,
+                        highFreqMotor
+                    ) == true
+                ) {
+                    continue
+                }
+
                 // Prefer the documented Android 12 rumble API which can handle dual vibrators on PS/Xbox controllers
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && deviceContext.vibratorManager != null) {
                     if (deviceContext.quadVibrators) {
@@ -437,6 +445,14 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
                     deviceContext.leftTriggerMotor = leftTrigger
                     deviceContext.rightTriggerMotor = rightTrigger
 
+                    if (deviceContext.directDualSenseBluetoothOutput?.updateTriggerRumble(
+                            leftTrigger,
+                            rightTrigger
+                        ) == true
+                    ) {
+                        continue
+                    }
+
                     if (deviceContext.quadVibrators) {
                         rumbleQuadVibrators(
                             deviceContext.vibratorManager!!,
@@ -484,6 +500,27 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         // Callers hand off exclusive payload snapshots, so queue them as-is for the
         // USB output worker, which only reads them.
         val triggers = AdaptiveTriggers(eventFlags, typeLeft, typeRight, left, right)
+        for (i in 0 until handler.inputDeviceContexts.size()) {
+            val deviceContext = handler.inputDeviceContexts.valueAt(i)
+            if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
+                continue
+            }
+            if (deviceContext.controllerNumber == controllerNumber) {
+                if (eventFlags.toInt() and DualSenseAdaptiveTriggerEffect.PLAYER_LED_FLAG != 0 &&
+                    left.isNotEmpty()
+                ) {
+                    deviceContext.directDualSenseBluetoothOutput
+                        ?.updatePlayerLeds(left[0].toInt() and 0x1F)
+                }
+                deviceContext.directDualSenseBluetoothOutput?.updateAdaptiveTriggers(
+                    eventFlags,
+                    typeLeft,
+                    typeRight,
+                    left,
+                    right
+                )
+            }
+        }
         for (deviceContext in handler.driverControllerContexts.values) {
             if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
                 continue
@@ -531,6 +568,12 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             for (i in 0 until handler.inputDeviceContexts.size()) {
                 val deviceContext = handler.inputDeviceContexts.valueAt(i)
+
+                if (deviceContext.controllerNumber == controllerNumber &&
+                    deviceContext.directDualSenseBluetoothOutput?.updateLightbar(r, g, b) == true
+                ) {
+                    continue
+                }
 
                 // Ignore input devices without an RGB LED
                 if (deviceContext.controllerNumber == controllerNumber && deviceContext.hasRgbLed) {

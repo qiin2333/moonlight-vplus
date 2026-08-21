@@ -115,6 +115,7 @@ class PreferenceConfiguration {
     var multiController = false
     var usbDriver = false
     var dualSenseWirelessBridge = false
+    var dualSenseDirectBluetooth = false
     @JvmField var flipFaceButtons = false
     var onscreenController = false
     var onscreenKeyboard = false
@@ -492,6 +493,8 @@ class PreferenceConfiguration {
         private const val USB_DRIVER_PREF_SRING = "checkbox_usb_driver"
         private const val DUALSENSE_WIRELESS_BRIDGE_PREF_STRING =
             "checkbox_dualsense_wireless_bridge"
+        const val DUALSENSE_DIRECT_BLUETOOTH_PREF_STRING =
+            "checkbox_dualsense_direct_bluetooth"
         private const val VIDEO_FORMAT_PREF_STRING = "video_format"
         private const val ONSCREEN_KEYBOARD_PREF_STRING = "checkbox_show_onscreen_keyboard"
         private const val ONLY_L3_R3_PREF_STRING = "checkbox_only_show_L3R3"
@@ -652,6 +655,7 @@ class PreferenceConfiguration {
         private const val DEFAULT_MULTI_CONTROLLER = true
         private const val DEFAULT_USB_DRIVER = true
         private const val DEFAULT_DUALSENSE_WIRELESS_BRIDGE = false
+        private const val DEFAULT_DUALSENSE_DIRECT_BLUETOOTH = false
 
         private fun isPcmOutputSupported(channelMask: Int): Boolean {
             return try {
@@ -1313,6 +1317,10 @@ class PreferenceConfiguration {
             config.dualSenseWirelessBridge = prefs.getBoolean(
                 DUALSENSE_WIRELESS_BRIDGE_PREF_STRING,
                 DEFAULT_DUALSENSE_WIRELESS_BRIDGE
+            )
+            config.dualSenseDirectBluetooth = prefs.getBoolean(
+                DUALSENSE_DIRECT_BLUETOOTH_PREF_STRING,
+                DEFAULT_DUALSENSE_DIRECT_BLUETOOTH
             )
             config.onscreenController = prefs.getBoolean(ONSCREEN_CONTROLLER_PREF_STRING, ONSCREEN_CONTROLLER_DEFAULT)
             config.enableCrownFeatures = prefs.getBoolean(ONSCREEN_KEYBOARD_PREF_STRING, ONSCREEN_KEYBOARD_DEFAULT)

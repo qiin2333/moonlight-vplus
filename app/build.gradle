@@ -282,6 +282,7 @@ dependencies {
     implementation libs.kotlin.stdlib
     implementation libs.kotlinx.coroutines.android
     implementation libs.androidx.lifecycle.runtime.ktx
+    implementation libs.hidden.api.bypass
 
     testImplementation libs.junit
     testImplementation libs.json

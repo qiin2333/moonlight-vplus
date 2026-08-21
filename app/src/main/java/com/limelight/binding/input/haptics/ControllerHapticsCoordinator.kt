@@ -123,6 +123,7 @@ internal class ControllerHapticsCoordinator(
         }
         return context.vibratorManager != null ||
             context.vibrator != null ||
+            context.directDualSenseBluetoothOutput != null ||
             handler.sceManager.isRecognizedDevice(inputDevice)
     }
 

@@ -241,7 +241,7 @@ abstract class AbstractPlayStationUsbController(
     protected abstract fun sendCommand(data: ByteArray)
 
     companion object {
-        private const val TAG = "PlayStationUsbController"
+        private const val TAG = "PlayStationUsbCtrl"
 
         private fun findInterface(device: UsbDevice): UsbInterface? {
             for (i in 0 until device.interfaceCount) {

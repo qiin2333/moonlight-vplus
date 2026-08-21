@@ -18,6 +18,7 @@ import android.widget.Toast
 import com.limelight.gamemenu.GameMenu
 import com.limelight.R
 import com.limelight.binding.input.driver.AbstractController
+import com.limelight.binding.input.driver.wireless.dualsense.DirectDualSenseBluetoothOutput
 import com.limelight.nvstream.input.ControllerPacket
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
@@ -150,6 +151,7 @@ class InputDeviceContext(handler: ControllerHandler) : GenericControllerContext(
     var accelReportRateHz: Short = 0
 
     var inputDevice: InputDevice? = null
+    internal var directDualSenseBluetoothOutput: DirectDualSenseBluetoothOutput? = null
 
     var hasRgbLed: Boolean = false
     var lightsSession: LightsManager.LightsSession? = null
@@ -249,6 +251,9 @@ class InputDeviceContext(handler: ControllerHandler) : GenericControllerContext(
             lightsSession?.close()
         }
 
+        directDualSenseBluetoothOutput?.close()
+        directDualSenseBluetoothOutput = null
+
         handler.backgroundThreadHandler.removeCallbacks(batteryStateUpdateRunnable)
     }
 
@@ -292,7 +297,13 @@ class InputDeviceContext(handler: ControllerHandler) : GenericControllerContext(
 
         // Most of the advanced InputDevice capabilities came in Android S
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (quadVibrators) {
+            if (directDualSenseBluetoothOutput != null) {
+                capabilities = (capabilities.toInt() or
+                    MoonBridge.LI_CCAP_RUMBLE.toInt() or
+                    MoonBridge.LI_CCAP_TRIGGER_RUMBLE.toInt() or
+                    MoonBridge.LI_CCAP_RGB_LED.toInt() or
+                    MoonBridge.LI_CCAP_PREFER_DS5.toInt()).toShort()
+            } else if (quadVibrators) {
                 capabilities = (capabilities.toInt() or MoonBridge.LI_CCAP_RUMBLE.toInt() or MoonBridge.LI_CCAP_TRIGGER_RUMBLE.toInt()).toShort()
             } else if (vibratorManager != null || vibrator != null) {
                 capabilities = (capabilities.toInt() or MoonBridge.LI_CCAP_RUMBLE.toInt()).toShort()

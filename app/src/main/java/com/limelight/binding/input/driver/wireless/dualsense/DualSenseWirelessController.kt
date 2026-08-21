@@ -3,6 +3,7 @@ package com.limelight.binding.input.driver.wireless.dualsense
 import com.limelight.LimeLog
 import com.limelight.binding.input.driver.AbstractController
 import com.limelight.binding.input.driver.ControllerDriverListener
+import com.limelight.binding.input.driver.DualSenseAdaptiveTriggerEffect
 import com.limelight.binding.input.driver.DualSenseInputSession
 import com.limelight.binding.input.driver.DualSenseInputState
 import com.limelight.binding.input.driver.wireless.hidp.HidpFailure
@@ -49,6 +50,7 @@ internal class DualSenseWirelessController(
                 MoonBridge.LI_CCAP_GYRO.toInt() or
                 MoonBridge.LI_CCAP_BATTERY_STATE.toInt() or
                 MoonBridge.LI_CCAP_RUMBLE.toInt() or
+                MoonBridge.LI_CCAP_TRIGGER_RUMBLE.toInt() or
                 MoonBridge.LI_CCAP_RGB_LED.toInt() or
                 MoonBridge.LI_CCAP_PREFER_DS5.toInt()
             ).toShort()
@@ -226,7 +228,17 @@ internal class DualSenseWirelessController(
         outputWriter.updateRumble(lowFreqMotor, highFreqMotor)
     }
 
-    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) = Unit
+    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {
+        val (leftType, leftPayload) = DualSenseAdaptiveTriggerEffect.triggerRumble(leftTrigger)
+        val (rightType, rightPayload) = DualSenseAdaptiveTriggerEffect.triggerRumble(rightTrigger)
+        outputWriter.updateAdaptiveTriggers(
+            DualSenseAdaptiveTriggerEffect.BOTH_FLAGS.toByte(),
+            leftType,
+            rightType,
+            leftPayload,
+            rightPayload
+        )
+    }
 
     override val supportsAdaptiveTriggers: Boolean = true
 
@@ -237,6 +249,11 @@ internal class DualSenseWirelessController(
         left: ByteArray,
         right: ByteArray
     ) {
+        if (eventFlags.toInt() and DualSenseAdaptiveTriggerEffect.PLAYER_LED_FLAG != 0 &&
+            left.isNotEmpty()
+        ) {
+            outputWriter.updatePlayerLeds(left[0].toInt() and 0x1F)
+        }
         outputWriter.updateAdaptiveTriggers(eventFlags, typeLeft, typeRight, left, right)
     }
 

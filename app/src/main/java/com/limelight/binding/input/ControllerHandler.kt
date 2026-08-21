@@ -24,6 +24,8 @@ import com.limelight.LimeLog
 import com.limelight.binding.input.driver.AbstractController
 import com.limelight.binding.input.driver.UsbDriverListener
 import com.limelight.binding.input.driver.UsbDriverService
+import com.limelight.binding.input.driver.wireless.dualsense.AndroidBluetoothHidHostTransport
+import com.limelight.binding.input.driver.wireless.dualsense.DirectDualSenseBluetoothOutput
 import com.limelight.binding.input.haptics.ControllerHapticsCoordinator
 import com.limelight.binding.input.haptics.DualSenseNativeHapticsSink
 import com.limelight.nvstream.Ds5HapticsPcmFrame
@@ -360,6 +362,7 @@ class ControllerHandler(
     internal val gyroManager = ControllerGyroManager(this)
     internal val rumbleManager = ControllerRumbleManager(this)
     private val hapticsCoordinator = ControllerHapticsCoordinator(this)
+    private var directDualSenseBluetoothTransport: AndroidBluetoothHidHostTransport? = null
 
     @Volatile
     private var screenDs5TouchpadPressed = false
@@ -380,6 +383,28 @@ class ControllerHandler(
         backgroundHandlerThread = HandlerThread("ControllerHandler")
         backgroundHandlerThread.start()
         backgroundThreadHandler = Handler(backgroundHandlerThread.looper)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            prefConfig.dualSenseDirectBluetooth &&
+            AndroidBluetoothHidHostTransport.isAvailable(activityContext)
+        ) {
+            directDualSenseBluetoothTransport = AndroidBluetoothHidHostTransport(
+                activityContext.applicationContext
+            ) {
+                backgroundThreadHandler.post {
+                    for (index in 0 until inputDeviceContexts.size()) {
+                        inputDeviceContexts.valueAt(index)
+                            .directDualSenseBluetoothOutput?.onTransportReady()
+                    }
+                }
+            }.also { it.start() }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            prefConfig.dualSenseDirectBluetooth
+        ) {
+            LimeLog.warning(
+                "Direct DualSense Bluetooth output is unavailable without Bluetooth permission"
+            )
+        }
 
         deviceVibratorManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             activityContext.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
@@ -542,6 +567,9 @@ class ControllerHandler(
         for (i in 0 until inputDeviceContexts.size()) {
             inputDeviceContexts.valueAt(i).destroy()
         }
+
+        directDualSenseBluetoothTransport?.close()
+        directDualSenseBluetoothTransport = null
 
         val driverContextsToDestroy = synchronized(driverControllerContextsLifecycleLock) {
             driverControllerContexts.values.toList().also { driverControllerContexts.clear() }
@@ -788,6 +816,11 @@ class ControllerHandler(
 
             for (i in 0 until inputDeviceContexts.size()) {
                 val context = inputDeviceContexts.valueAt(i)
+                if (!context.assignedControllerNumber &&
+                    context.directDualSenseBluetoothOutput != null
+                ) {
+                    assignControllerNumberIfNeeded(context)
+                }
                 if (context.assignedControllerNumber &&
                     !context.controllerArrival.isReported &&
                     reportControllerArrival(context)
@@ -896,6 +929,14 @@ class ControllerHandler(
 
         context.vendorId = dev.vendorId
         context.productId = dev.productId
+
+        directDualSenseBluetoothTransport?.let { transport ->
+            if (DirectDualSenseBluetoothOutput.supports(dev)) {
+                context.directDualSenseBluetoothOutput =
+                    DirectDualSenseBluetoothOutput(dev, transport)
+                LimeLog.info("Enabled direct Bluetooth output for $devName")
+            }
+        }
 
         // These aren't always present in the Android key layout files, so they won't show up
         // in our normal InputDevice.hasKeys() probing.
@@ -1863,21 +1904,57 @@ class ControllerHandler(
     }
 
     fun tryHandleTouchpadEvent(event: MotionEvent): Boolean {
-        // Bail if this is not a touchpad or mouse event
-        if (event.source != InputDevice.SOURCE_TOUCHPAD &&
-            event.source != InputDevice.SOURCE_MOUSE
-        ) {
+        val eventDevice = event.device
+        val remappedDualSenseTouchpad = eventDevice != null &&
+            DirectDualSenseBluetoothOutput.isDualSenseProduct(
+                eventDevice.vendorId,
+                eventDevice.productId
+            ) &&
+            eventDevice.sources and InputDevice.SOURCE_TOUCHPAD == InputDevice.SOURCE_TOUCHPAD
+        val isTouchpad = event.source and InputDevice.SOURCE_TOUCHPAD ==
+            InputDevice.SOURCE_TOUCHPAD || remappedDualSenseTouchpad
+        val isMouse = event.source and InputDevice.SOURCE_MOUSE == InputDevice.SOURCE_MOUSE
+        if (!isTouchpad && !isMouse) {
             return false
         }
 
         // Only get a context if one already exists. We want to ensure we don't report non-gamepads.
-        val context = inputDeviceContexts.get(event.deviceId) ?: return false
+        var context = inputDeviceContexts.get(event.deviceId)
+        if (context == null && isTouchpad && eventDevice?.vendorId == 0x054C) {
+            for (index in 0 until inputDeviceContexts.size()) {
+                val candidate = inputDeviceContexts.valueAt(index)
+                if (candidate.directDualSenseBluetoothOutput != null) {
+                    context = candidate
+                    break
+                }
+            }
+        }
+        context ?: return false
+        if (isTouchpad && eventDevice != null) {
+            context.touchpadXRange = context.touchpadXRange ?: eventDevice.getMotionRange(
+                MotionEvent.AXIS_X,
+                InputDevice.SOURCE_TOUCHPAD
+            )
+            context.touchpadYRange = context.touchpadYRange ?: eventDevice.getMotionRange(
+                MotionEvent.AXIS_Y,
+                InputDevice.SOURCE_TOUCHPAD
+            )
+            context.touchpadPressureRange = context.touchpadPressureRange ?: eventDevice.getMotionRange(
+                MotionEvent.AXIS_PRESSURE,
+                InputDevice.SOURCE_TOUCHPAD
+            )
+        }
+        if (!context.assignedControllerNumber) {
+            assignControllerNumberIfNeeded(context)
+        }
+        val nativeDirectDualSense = isTouchpad &&
+            context.directDualSenseBluetoothOutput != null
 
         // When we're working with a mouse source instead of a touchpad, we're quite limited in
         // what useful input we can provide via the controller API. The ABS_X/ABS_Y values are
         // screen coordinates rather than touchpad coordinates. For now, we will just support
         // the clickpad button and nothing else.
-        if (event.source == InputDevice.SOURCE_MOUSE) {
+        if (isMouse && !isTouchpad) {
             // Unlike the touchpad where down and up refer to individual touches on the touchpad,
             // down and up on a mouse indicates the state of the left mouse button.
             when (event.actionMasked) {
@@ -1942,7 +2019,7 @@ class ControllerHandler(
         // NB: We do this after processing ACTION_BUTTON_PRESS and ACTION_BUTTON_RELEASE
         // because we want to still send the touchpad button via the gamepad even when
         // configured to use the touchpad for mouse control.
-        if (prefConfig.gamepadTouchpadAsMouse) {
+        if (prefConfig.gamepadTouchpadAsMouse && !nativeDirectDualSense) {
             return false
         }
 

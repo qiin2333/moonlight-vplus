@@ -2,6 +2,7 @@ package com.limelight.binding.input.driver.wireless.dualsense
 
 import com.limelight.binding.input.driver.DualSenseAdaptiveTriggerEffect
 import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -113,5 +114,108 @@ class DualSenseBluetoothOutputTest {
         assertEquals(0x02, report[41].toInt() and 0xFF)
         assertEquals(0x02, report[44].toInt() and 0xFF)
         assertEquals(0, report[4].toInt() and 0xFF)
+    }
+
+    @Test
+    fun writerRetainsFailedStateUntilTransportIsReady() {
+        val reports = mutableListOf<ByteArray>()
+        val firstFailure = CountDownLatch(1)
+        val retrySent = CountDownLatch(1)
+        var attempts = 0
+        val writer = DualSenseBluetoothOutputWriter(
+            sendReport = {
+                synchronized(reports) { reports += it }
+                attempts++
+                if (attempts == 1) false else true.also { retrySent.countDown() }
+            },
+            onOutputEvent = {
+                if (it == DualSenseBluetoothOutputEvent.FAILED) firstFailure.countDown()
+            }
+        )
+
+        assertTrue(writer.updateRumble(0x5500, 0x3300))
+        assertTrue(firstFailure.await(1, TimeUnit.SECONDS))
+        assertTrue(writer.retryPending())
+        assertTrue(retrySent.await(1, TimeUnit.SECONDS))
+        writer.close(sendNeutral = false)
+
+        val captured = synchronized(reports) { reports.toList() }
+        assertEquals(2, captured.size)
+        assertEquals(0x33, captured[0][5].toInt() and 0xFF)
+        assertEquals(0x55, captured[0][6].toInt() and 0xFF)
+        assertEquals(0x33, captured[1][5].toInt() and 0xFF)
+        assertEquals(0x55, captured[1][6].toInt() and 0xFF)
+    }
+
+    @Test
+    fun failedLightbarInitializationCanBeRetried() {
+        val firstFailure = CountDownLatch(1)
+        val retrySent = CountDownLatch(1)
+        var attempts = 0
+        val writer = DualSenseBluetoothOutputWriter(
+            sendReport = {
+                attempts++
+                if (attempts == 1) false else true.also { retrySent.countDown() }
+            },
+            onOutputEvent = {
+                if (it == DualSenseBluetoothOutputEvent.FAILED) firstFailure.countDown()
+            }
+        )
+
+        assertTrue(writer.initializeLightbar())
+        assertTrue(firstFailure.await(1, TimeUnit.SECONDS))
+        assertTrue(writer.initializeLightbar())
+        assertTrue(retrySent.await(1, TimeUnit.SECONDS))
+        writer.close(sendNeutral = false)
+
+        assertEquals(2, attempts)
+    }
+
+    @Test
+    fun directRouteOnlyAcceptsBluetoothDualSenseDevices() {
+        assertTrue(DirectDualSenseBluetoothOutput.isDualSenseProduct(0x054C, 0x0CE6))
+        assertTrue(DirectDualSenseBluetoothOutput.isDualSenseProduct(0x054C, 0x0DF2))
+        assertFalse(DirectDualSenseBluetoothOutput.isDualSenseProduct(0x054C, 0x09CC))
+        assertTrue(DirectDualSenseBluetoothOutput.supports(
+            vendorId = 0x054C,
+            productId = 0x0CE6,
+            descriptor = "bluetooth:12:34:56:78:9A:BC",
+            name = "Wireless Controller",
+            description = ""
+        ))
+        assertTrue(DirectDualSenseBluetoothOutput.supports(
+            vendorId = 0x054C,
+            productId = 0x0DF2,
+            descriptor = "descriptor",
+            name = "DualSense Edge Wireless Controller",
+            description = "bluetoothAddress=12:34:56:78:9A:BC"
+        ))
+        assertFalse(DirectDualSenseBluetoothOutput.supports(
+            vendorId = 0x054C,
+            productId = 0x09CC,
+            descriptor = "bluetooth",
+            name = "Wireless Controller",
+            description = ""
+        ))
+        assertFalse(DirectDualSenseBluetoothOutput.supports(
+            vendorId = 0x054C,
+            productId = 0x0CE6,
+            descriptor = "usb",
+            name = "DualSense Wireless Controller",
+            description = ""
+        ))
+    }
+
+    @Test
+    fun triggerRumbleMatchesVerifiedDualSenseEffectEncoding() {
+        val (offType, offPayload) = DualSenseAdaptiveTriggerEffect.triggerRumble(0)
+        val (fullType, fullPayload) = DualSenseAdaptiveTriggerEffect.triggerRumble((-1).toShort())
+
+        assertEquals(DualSenseAdaptiveTriggerEffect.TYPE_OFF, offType)
+        assertArrayEquals(ByteArray(DualSenseAdaptiveTriggerEffect.PAYLOAD_SIZE), offPayload)
+        assertEquals(0x27.toByte(), fullType)
+        assertEquals(0xFF.toByte(), fullPayload[0])
+        assertEquals(0x03.toByte(), fullPayload[1])
+        assertEquals(0x3F.toByte(), fullPayload[2])
     }
 }
