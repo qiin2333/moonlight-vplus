@@ -242,7 +242,7 @@ private fun MenuOptionRow(
                     onSegmentClick = onSegmentClick,
                     modifier = Modifier
                         .weight(1f)
-                        .height(if (inlineControl.segments.size > 3) 72.dp else 36.dp)
+                        .height(36.dp * segmentedControlRowCount(inlineControl.segments.size))
                 )
             }
             null -> if (option.showChevron) MenuChevron()
@@ -258,6 +258,9 @@ private fun MenuOptionRow(
         }
     }
 }
+
+internal fun segmentedControlRowCount(itemCount: Int): Int =
+    ((itemCount + 2) / 3).coerceAtLeast(1)
 
 @Composable
 private fun MenuChevron(size: Dp = 13.dp) {

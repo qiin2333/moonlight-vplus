@@ -47,4 +47,12 @@ class GameMenuLayoutFocusGraphTest {
             segmentedFocusTargets(itemCount = 5, index = 4, columnCount = 3)
         )
     }
+
+    @Test
+    fun segmentedControlHeightUsesTheActualRowCount() {
+        assertEquals(1, segmentedControlRowCount(1))
+        assertEquals(1, segmentedControlRowCount(3))
+        assertEquals(2, segmentedControlRowCount(4))
+        assertEquals(3, segmentedControlRowCount(7))
+    }
 }

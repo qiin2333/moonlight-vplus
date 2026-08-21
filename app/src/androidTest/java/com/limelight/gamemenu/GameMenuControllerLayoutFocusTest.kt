@@ -15,11 +15,13 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -155,6 +157,7 @@ class GameMenuControllerLayoutFocusTest {
     @Test
     fun compatibleToggleRowOwnsFocusWhenInlineControlDoesNot() {
         lateinit var rowFocusRequester: FocusRequester
+        var toggledControl: GameMenu.InlineControl.Toggle? = null
         composeTestRule.setContent {
             rowFocusRequester = remember { FocusRequester() }
             MenuOptionColumn(
@@ -174,7 +177,7 @@ class GameMenuControllerLayoutFocusTest {
                 ),
                 iconForOption = { 0 },
                 onOptionClick = {},
-                onInlineToggle = {},
+                onInlineToggle = { toggledControl = it },
                 onSegmentClick = {},
                 initialFocusRequester = rowFocusRequester,
                 optionFocusModifier = Modifier.testTag("compatibleToggle"),
@@ -187,5 +190,10 @@ class GameMenuControllerLayoutFocusTest {
             focusRequestSucceeded = rowFocusRequester.requestFocus()
         }
         assertTrue(focusRequestSucceeded)
+        composeTestRule.onNodeWithTag("compatibleToggle").assertIsFocused()
+        composeTestRule.onNodeWithTag("compatibleToggle").performClick()
+        composeTestRule.runOnIdle {
+            assertEquals(false, toggledControl?.checked)
+        }
     }
 }
