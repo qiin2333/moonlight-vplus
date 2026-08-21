@@ -599,7 +599,7 @@ class GameMenu(
                 runnable = segment.runnable,
                 iconKey = null,
                 isShowIcon = false,
-                isKeepDialog = false,
+                isKeepDialog = true,
                 subtitle = segment.subtitle,
                 selected = segment.selected,
                 presentation = GameMenuOptionPresentation.PRIMARY_MODE
@@ -1293,7 +1293,7 @@ class GameMenu(
             dialog.isShowing
         ) {
             refreshCurrentMenuPage()
-        } else if (option.presentation == GameMenuOptionPresentation.COMPATIBLE_ACTION &&
+        } else if (option.presentation != GameMenuOptionPresentation.DEFAULT &&
             dialog.isShowing
         ) {
             refreshCurrentMenuPage()
@@ -1625,12 +1625,16 @@ class GameMenu(
 
         val hasKeys = loadAndAddAllKeys(options)
 
-        options.add(MenuOption(getString(R.string.game_menu_add_custom_key), false,
-            { showAddCustomKeyDialog() }, null, false))
+        options.add(gameMenuChildDialogOption(
+            label = getString(R.string.game_menu_add_custom_key),
+            action = Runnable { showAddCustomKeyDialog() }
+        ))
 
         if (hasKeys) {
-            options.add(MenuOption(getString(R.string.game_menu_delete_custom_key), false,
-                { showDeleteKeysDialog() }, null, false))
+            options.add(gameMenuChildDialogOption(
+                label = getString(R.string.game_menu_delete_custom_key),
+                action = Runnable { showDeleteKeysDialog() }
+            ))
         }
 
         options.add(

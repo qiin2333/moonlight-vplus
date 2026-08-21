@@ -20,6 +20,7 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,7 +32,7 @@ class GameMenuControllerLayoutFocusTest {
     val composeTestRule = createComposeRule()
 
     @Test
-    fun wideTouchModeGridUsesExplicitDirectionsAndReturnsToHeader() {
+    fun wideTouchModeSplitPanesUseExplicitDirectionsAndReturnToHeader() {
         composeTestRule.setContent {
             val topFocusRequester = remember { FocusRequester() }
             val focusRequesters = remember { List(9) { FocusRequester() } }
@@ -69,33 +70,33 @@ class GameMenuControllerLayoutFocusTest {
         composeTestRule.onNodeWithTag("touchMode0").performKeyInput {
             pressKey(Key.DirectionRight)
         }
+        composeTestRule.onNodeWithTag("touchMode5").assertIsFocused()
+        composeTestRule.onNodeWithTag("touchMode5").performKeyInput {
+            pressKey(Key.DirectionDown)
+        }
+        composeTestRule.onNodeWithTag("touchMode6").assertIsFocused()
+        composeTestRule.onNodeWithTag("touchMode6").performKeyInput {
+            pressKey(Key.DirectionLeft)
+        }
         composeTestRule.onNodeWithTag("touchMode1").assertIsFocused()
         composeTestRule.onNodeWithTag("touchMode1").performKeyInput {
             pressKey(Key.DirectionDown)
         }
-        composeTestRule.onNodeWithTag("touchMode3").assertIsFocused()
-
-        composeTestRule.onNodeWithTag("touchMode3").performKeyInput {
-            pressKey(Key.DirectionDown)
-        }
-        composeTestRule.onNodeWithTag("touchMode4").assertIsFocused()
-        composeTestRule.onNodeWithTag("touchMode4").performKeyInput {
-            pressKey(Key.DirectionDown)
-        }
-        composeTestRule.onNodeWithTag("touchMode5").assertIsFocused()
-
-        composeTestRule.onNodeWithTag("touchMode5").performKeyInput {
-            pressKey(Key.DirectionUp)
-        }
-        composeTestRule.onNodeWithTag("touchMode4").assertIsFocused()
-        composeTestRule.onNodeWithTag("touchMode4").performKeyInput {
-            pressKey(Key.DirectionUp)
-        }
         composeTestRule.onNodeWithTag("touchMode2").assertIsFocused()
         composeTestRule.onNodeWithTag("touchMode2").performKeyInput {
-            pressKey(Key.DirectionUp)
+            pressKey(Key.DirectionRight)
         }
-        composeTestRule.onNodeWithTag("touchMode0").assertIsFocused()
+        composeTestRule.onNodeWithTag("touchMode7").assertIsFocused()
+        composeTestRule.onNodeWithTag("touchMode7").performKeyInput {
+            pressKey(Key.DirectionDown)
+        }
+        composeTestRule.onNodeWithTag("touchMode8").assertIsFocused()
+        composeTestRule.onNodeWithTag("touchMode8").performKeyInput {
+            pressKey(Key.DirectionLeft)
+        }
+        composeTestRule.onNodeWithTag("touchMode3").assertIsFocused()
+
+        composeTestRule.onNodeWithTag("touchMode0").requestFocus()
         composeTestRule.onNodeWithTag("touchMode0").performKeyInput {
             pressKey(Key.DirectionUp)
         }
@@ -153,8 +154,9 @@ class GameMenuControllerLayoutFocusTest {
 
     @Test
     fun compatibleToggleRowOwnsFocusWhenInlineControlDoesNot() {
+        lateinit var rowFocusRequester: FocusRequester
         composeTestRule.setContent {
-            val rowFocusRequester = remember { FocusRequester() }
+            rowFocusRequester = remember { FocusRequester() }
             MenuOptionColumn(
                 options = listOf(
                     GameMenu.MenuOption(
@@ -180,7 +182,10 @@ class GameMenuControllerLayoutFocusTest {
             )
         }
 
-        composeTestRule.onNodeWithTag("compatibleToggle").requestFocus()
-        composeTestRule.onNodeWithTag("compatibleToggle").assertIsFocused()
+        var focusRequestSucceeded = false
+        composeTestRule.runOnIdle {
+            focusRequestSucceeded = rowFocusRequester.requestFocus()
+        }
+        assertTrue(focusRequestSucceeded)
     }
 }

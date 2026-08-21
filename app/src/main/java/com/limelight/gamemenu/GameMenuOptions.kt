@@ -7,6 +7,7 @@ import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
@@ -125,6 +126,7 @@ private fun MenuOptionRow(
                         onInlineToggle(inlineControl)
                     }
                 )
+                .focusable()
         inlineControl is GameMenu.InlineControl.Toggle && !hasDedicatedToggleAction ->
             initialFocusModifier
                 .gamepadFocusOutline(shape)
@@ -223,7 +225,7 @@ private fun MenuOptionRow(
                     } else {
                         Modifier.focusProperties { canFocus = false }
                     },
-                    onToggle = if (hasDedicatedToggleAction) {
+                    onToggle = if (hasDedicatedToggleAction && inlineControlsFocusable) {
                         {
                             hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                             onInlineToggle(inlineControl)

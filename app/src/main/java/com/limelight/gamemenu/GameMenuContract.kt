@@ -40,6 +40,18 @@ enum class GameMenuOptionPresentation {
     COMPATIBLE_ACTION
 }
 
+internal fun gameMenuChildDialogOption(
+    label: String,
+    action: Runnable
+) = GameMenu.MenuOption(
+    label = label,
+    isWithGameFocus = false,
+    runnable = action,
+    iconKey = null,
+    isShowIcon = false,
+    isKeepDialog = true
+)
+
 internal class GameMenuGuideDismissController {
     private var dismissAction: (() -> Unit)? = null
 
