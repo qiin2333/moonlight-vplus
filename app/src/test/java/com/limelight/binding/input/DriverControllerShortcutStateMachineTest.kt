@@ -6,30 +6,30 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class UsbControllerShortcutStateMachineTest {
+class DriverControllerShortcutStateMachineTest {
     @Test
     fun exitComboHasPriorityAndExitsAfterRelease() {
-        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
 
         machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 100, true)
         val pressed = machine.onButtonSnapshot(
-            UsbControllerShortcutStateMachine.EXIT_COMBO_FLAGS,
+            DriverControllerShortcutStateMachine.EXIT_COMBO_FLAGS,
             200,
             true
         )
 
         assertTrue(pressed.consumeAllInput)
         assertTrue(pressed.sendNeutralState)
-        assertTrue(pressed.actions.contains(UsbControllerShortcutStateMachine.Action.CANCEL_LONG_PRESS))
-        assertFalse(pressed.actions.contains(UsbControllerShortcutStateMachine.Action.OPEN_GAME_MENU))
-        assertFalse(pressed.actions.contains(UsbControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION))
+        assertTrue(pressed.actions.contains(DriverControllerShortcutStateMachine.Action.CANCEL_LONG_PRESS))
+        assertFalse(pressed.actions.contains(DriverControllerShortcutStateMachine.Action.OPEN_GAME_MENU))
+        assertFalse(pressed.actions.contains(DriverControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION))
         assertTrue(machine.isLocalInputCaptureActive())
 
         val released = machine.onButtonSnapshot(0, 201, true)
 
         assertTrue(released.consumeAllInput)
         assertEquals(
-            listOf(UsbControllerShortcutStateMachine.Action.EXIT_STREAM),
+            listOf(DriverControllerShortcutStateMachine.Action.EXIT_STREAM),
             released.actions
         )
         assertFalse(machine.isLocalInputCaptureActive())
@@ -37,7 +37,7 @@ class UsbControllerShortcutStateMachineTest {
 
     @Test
     fun hintThenBOpensMenuAndStartsLocalCapture() {
-        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
 
         val start = machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 100, true)
         val hint = machine.onLongPressTimeout(850, true)
@@ -48,12 +48,12 @@ class UsbControllerShortcutStateMachineTest {
         )
 
         assertEquals(
-            listOf(UsbControllerShortcutStateMachine.Action.SCHEDULE_LONG_PRESS),
+            listOf(DriverControllerShortcutStateMachine.Action.SCHEDULE_LONG_PRESS),
             start.actions
         )
-        assertEquals(listOf(UsbControllerShortcutStateMachine.Action.SHOW_HINT), hint.actions)
-        assertTrue(menu.actions.contains(UsbControllerShortcutStateMachine.Action.HIDE_HINT))
-        assertTrue(menu.actions.contains(UsbControllerShortcutStateMachine.Action.OPEN_GAME_MENU))
+        assertEquals(listOf(DriverControllerShortcutStateMachine.Action.SHOW_HINT), hint.actions)
+        assertTrue(menu.actions.contains(DriverControllerShortcutStateMachine.Action.HIDE_HINT))
+        assertTrue(menu.actions.contains(DriverControllerShortcutStateMachine.Action.OPEN_GAME_MENU))
         assertTrue(menu.consumeAllInput)
         assertTrue(menu.sendNeutralState)
         assertTrue(menu.menuButtonChanges.isEmpty())
@@ -62,13 +62,13 @@ class UsbControllerShortcutStateMachineTest {
 
     @Test
     fun releasingLongHeldStartKeepsMouseToggleBehavior() {
-        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
 
         machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 100, true)
         val released = machine.onButtonSnapshot(0, 851, true)
 
-        assertTrue(released.actions.contains(UsbControllerShortcutStateMachine.Action.CANCEL_LONG_PRESS))
-        assertTrue(released.actions.contains(UsbControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION))
+        assertTrue(released.actions.contains(DriverControllerShortcutStateMachine.Action.CANCEL_LONG_PRESS))
+        assertTrue(released.actions.contains(DriverControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION))
         assertFalse(released.consumeAllInput)
     }
 
@@ -87,11 +87,11 @@ class UsbControllerShortcutStateMachineTest {
         assertTrue(triggerRelease.consumeAllInput)
         assertTrue(triggerRelease.menuButtonChanges.isEmpty())
         assertEquals(
-            listOf(UsbControllerShortcutStateMachine.ButtonChange(ControllerPacket.B_FLAG, true)),
+            listOf(DriverControllerShortcutStateMachine.ButtonChange(ControllerPacket.B_FLAG, true)),
             nextBPress.menuButtonChanges
         )
         assertEquals(
-            listOf(UsbControllerShortcutStateMachine.ButtonChange(ControllerPacket.B_FLAG, false)),
+            listOf(DriverControllerShortcutStateMachine.ButtonChange(ControllerPacket.B_FLAG, false)),
             nextBRelease.menuButtonChanges
         )
     }
@@ -114,7 +114,7 @@ class UsbControllerShortcutStateMachineTest {
 
     @Test
     fun neutralStateIsRequestedOncePerLocalCapture() {
-        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
 
         val firstOpen = requestMenuOpen(machine, 100)
         completeMenuOpen(machine, firstOpen)
@@ -134,18 +134,18 @@ class UsbControllerShortcutStateMachineTest {
 
     @Test
     fun disabledStartActionStillAllowsExitButNotLongPressActions() {
-        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
 
         val start = machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 100, false)
         val timeout = machine.onLongPressTimeout(850, false)
         val release = machine.onButtonSnapshot(0, 851, false)
 
-        assertFalse(start.actions.contains(UsbControllerShortcutStateMachine.Action.SCHEDULE_LONG_PRESS))
-        assertFalse(timeout.actions.contains(UsbControllerShortcutStateMachine.Action.SHOW_HINT))
-        assertFalse(release.actions.contains(UsbControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION))
+        assertFalse(start.actions.contains(DriverControllerShortcutStateMachine.Action.SCHEDULE_LONG_PRESS))
+        assertFalse(timeout.actions.contains(DriverControllerShortcutStateMachine.Action.SHOW_HINT))
+        assertFalse(release.actions.contains(DriverControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION))
 
         val exitPressed = machine.onButtonSnapshot(
-            UsbControllerShortcutStateMachine.EXIT_COMBO_FLAGS,
+            DriverControllerShortcutStateMachine.EXIT_COMBO_FLAGS,
             900,
             false
         )
@@ -153,14 +153,14 @@ class UsbControllerShortcutStateMachineTest {
 
         assertTrue(exitPressed.consumeAllInput)
         assertEquals(
-            listOf(UsbControllerShortcutStateMachine.Action.EXIT_STREAM),
+            listOf(DriverControllerShortcutStateMachine.Action.EXIT_STREAM),
             exitReleased.actions
         )
     }
 
     @Test
     fun buttonHeldWhileMenuOpensGetsPairedDownAndUpEvents() {
-        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
         val request = requestMenuOpen(machine, 100)
 
         machine.onButtonSnapshot(
@@ -177,7 +177,7 @@ class UsbControllerShortcutStateMachineTest {
 
         assertEquals(
             listOf(
-                UsbControllerShortcutStateMachine.ButtonChange(
+                DriverControllerShortcutStateMachine.ButtonChange(
                     ControllerPacket.A_FLAG,
                     true
                 )
@@ -186,7 +186,7 @@ class UsbControllerShortcutStateMachineTest {
         )
         assertEquals(
             listOf(
-                UsbControllerShortcutStateMachine.ButtonChange(
+                DriverControllerShortcutStateMachine.ButtonChange(
                     ControllerPacket.A_FLAG,
                     false
                 )
@@ -197,7 +197,7 @@ class UsbControllerShortcutStateMachineTest {
 
     @Test
     fun buttonAlreadyHeldWhenMenuIsRequestedGetsPairedDownAndUpEvents() {
-        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
         machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 100, true)
         machine.onLongPressTimeout(100 + TEST_LONG_PRESS_MS, true)
 
@@ -215,7 +215,7 @@ class UsbControllerShortcutStateMachineTest {
 
         assertEquals(
             listOf(
-                UsbControllerShortcutStateMachine.ButtonChange(
+                DriverControllerShortcutStateMachine.ButtonChange(
                     ControllerPacket.A_FLAG,
                     true
                 )
@@ -224,7 +224,7 @@ class UsbControllerShortcutStateMachineTest {
         )
         assertEquals(
             listOf(
-                UsbControllerShortcutStateMachine.ButtonChange(
+                DriverControllerShortcutStateMachine.ButtonChange(
                     ControllerPacket.A_FLAG,
                     false
                 )
@@ -235,7 +235,7 @@ class UsbControllerShortcutStateMachineTest {
 
     @Test
     fun staleMenuOpenResultAfterResetIsIgnored() {
-        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
         val request = requestMenuOpen(machine, 100)
         val requestId = requireNotNull(request.menuOpenRequestId)
 
@@ -250,7 +250,7 @@ class UsbControllerShortcutStateMachineTest {
 
     @Test
     fun externallyOpenedMenuCapturesUsbNavigationUntilDismissed() {
-        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
         machine.onButtonSnapshot(ControllerPacket.RIGHT_FLAG, 100, true)
 
         val opened = machine.onGameMenuOpenedExternally()
@@ -260,7 +260,7 @@ class UsbControllerShortcutStateMachineTest {
         assertTrue(machine.isLocalInputCaptureActive())
         assertEquals(
             listOf(
-                UsbControllerShortcutStateMachine.ButtonChange(
+                DriverControllerShortcutStateMachine.ButtonChange(
                     ControllerPacket.RIGHT_FLAG,
                     true
                 )
@@ -275,7 +275,7 @@ class UsbControllerShortcutStateMachineTest {
     }
 
     @Test
-    fun diagonalUsbDpadSnapshotProducesOneDirectionAndSwitchesAfterRelease() {
+    fun diagonalDriverDpadSnapshotProducesOneDirectionAndSwitchesAfterRelease() {
         val machine = openMenu()
 
         val diagonal = machine.onButtonSnapshot(
@@ -288,7 +288,7 @@ class UsbControllerShortcutStateMachineTest {
 
         assertEquals(
             listOf(
-                UsbControllerShortcutStateMachine.ButtonChange(
+                DriverControllerShortcutStateMachine.ButtonChange(
                     ControllerPacket.UP_FLAG,
                     true
                 )
@@ -297,11 +297,11 @@ class UsbControllerShortcutStateMachineTest {
         )
         assertEquals(
             listOf(
-                UsbControllerShortcutStateMachine.ButtonChange(
+                DriverControllerShortcutStateMachine.ButtonChange(
                     ControllerPacket.UP_FLAG,
                     false
                 ),
-                UsbControllerShortcutStateMachine.ButtonChange(
+                DriverControllerShortcutStateMachine.ButtonChange(
                     ControllerPacket.RIGHT_FLAG,
                     true
                 )
@@ -310,7 +310,7 @@ class UsbControllerShortcutStateMachineTest {
         )
         assertEquals(
             listOf(
-                UsbControllerShortcutStateMachine.ButtonChange(
+                DriverControllerShortcutStateMachine.ButtonChange(
                     ControllerPacket.RIGHT_FLAG,
                     false
                 )
@@ -319,23 +319,23 @@ class UsbControllerShortcutStateMachineTest {
         )
     }
 
-    private fun openMenu(): UsbControllerShortcutStateMachine {
-        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+    private fun openMenu(): DriverControllerShortcutStateMachine {
+        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
         completeMenuOpen(machine)
         return machine
     }
 
     private fun completeMenuOpen(
-        machine: UsbControllerShortcutStateMachine,
-        request: UsbControllerShortcutStateMachine.Update = requestMenuOpen(machine, 100)
-    ): UsbControllerShortcutStateMachine.Update {
+        machine: DriverControllerShortcutStateMachine,
+        request: DriverControllerShortcutStateMachine.Update = requestMenuOpen(machine, 100)
+    ): DriverControllerShortcutStateMachine.Update {
         return machine.onGameMenuOpenResult(requireNotNull(request.menuOpenRequestId), true)
     }
 
     private fun requestMenuOpen(
-        machine: UsbControllerShortcutStateMachine,
+        machine: DriverControllerShortcutStateMachine,
         startTimeMs: Long
-    ): UsbControllerShortcutStateMachine.Update {
+    ): DriverControllerShortcutStateMachine.Update {
         machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, startTimeMs, true)
         machine.onLongPressTimeout(startTimeMs + TEST_LONG_PRESS_MS, true)
         return machine.onButtonSnapshot(

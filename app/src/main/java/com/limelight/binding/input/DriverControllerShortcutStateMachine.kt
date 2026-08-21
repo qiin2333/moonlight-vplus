@@ -3,13 +3,13 @@ package com.limelight.binding.input
 import com.limelight.nvstream.input.ControllerPacket
 
 /**
- * Tracks local shortcuts for controllers handled by the V+ USB driver.
+ * Tracks local shortcuts for controllers handled by an application-managed driver.
  *
- * The USB driver reports complete button snapshots instead of Android KeyEvents, so shortcut
+ * A controller driver reports complete button snapshots instead of Android KeyEvents, so shortcut
  * handling must also own button-release gating. This keeps the B press used to open the menu and
  * all menu navigation input away from the streamed host until every local button is released.
  */
-internal class UsbControllerShortcutStateMachine(
+internal class DriverControllerShortcutStateMachine(
     private val longPressDurationMs: Long = ControllerHandler.START_DOWN_TIME_MOUSE_MODE_MS.toLong()
 ) {
     enum class Action {

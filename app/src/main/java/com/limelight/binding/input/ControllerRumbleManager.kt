@@ -17,7 +17,7 @@ import android.os.VibratorManager
 
 import com.limelight.LimeLog
 import com.limelight.binding.input.driver.AbstractController
-import com.limelight.binding.input.driver.DualSenseOutputReport
+import com.limelight.binding.input.driver.DualSenseAdaptiveTriggerEffect
 import com.limelight.nvstream.input.ControllerPacket
 import com.limelight.nvstream.jni.MoonBridge
 
@@ -404,7 +404,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
             }
         }
 
-        for (deviceContext in handler.usbDeviceContexts.values) {
+        for (deviceContext in handler.driverControllerContexts.values) {
 
             if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
                 continue
@@ -448,7 +448,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
             }
         }
 
-        for (deviceContext in handler.usbDeviceContexts.values) {
+        for (deviceContext in handler.driverControllerContexts.values) {
 
             if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
                 continue
@@ -475,8 +475,8 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         right: ByteArray
     ) {
         if (handler.stopped ||
-            left.size != DualSenseOutputReport.EFFECT_PAYLOAD_SIZE ||
-            right.size != DualSenseOutputReport.EFFECT_PAYLOAD_SIZE
+            left.size != DualSenseAdaptiveTriggerEffect.PAYLOAD_SIZE ||
+            right.size != DualSenseAdaptiveTriggerEffect.PAYLOAD_SIZE
         ) {
             return
         }
@@ -484,7 +484,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         // Callers hand off exclusive payload snapshots, so queue them as-is for the
         // USB output worker, which only reads them.
         val triggers = AdaptiveTriggers(eventFlags, typeLeft, typeRight, left, right)
-        for (deviceContext in handler.usbDeviceContexts.values) {
+        for (deviceContext in handler.driverControllerContexts.values) {
             if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
                 continue
             }
@@ -500,11 +500,11 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
     fun clearAdaptiveTriggers(controllerNumber: Short) {
         handleAdaptiveTriggers(
             controllerNumber,
-            DualSenseOutputReport.BOTH_TRIGGER_FLAGS.toByte(),
-            DualSenseOutputReport.EFFECT_TYPE_OFF,
-            DualSenseOutputReport.EFFECT_TYPE_OFF,
-            ByteArray(DualSenseOutputReport.EFFECT_PAYLOAD_SIZE),
-            ByteArray(DualSenseOutputReport.EFFECT_PAYLOAD_SIZE)
+            DualSenseAdaptiveTriggerEffect.BOTH_FLAGS.toByte(),
+            DualSenseAdaptiveTriggerEffect.TYPE_OFF,
+            DualSenseAdaptiveTriggerEffect.TYPE_OFF,
+            ByteArray(DualSenseAdaptiveTriggerEffect.PAYLOAD_SIZE),
+            ByteArray(DualSenseAdaptiveTriggerEffect.PAYLOAD_SIZE)
         )
     }
 
@@ -513,7 +513,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
             return
         }
 
-        for (deviceContext in handler.usbDeviceContexts.values) {
+        for (deviceContext in handler.driverControllerContexts.values) {
             if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
                 continue
             }

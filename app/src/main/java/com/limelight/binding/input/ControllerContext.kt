@@ -453,10 +453,10 @@ class InputDeviceContext(handler: ControllerHandler) : GenericControllerContext(
 }
 
 // =================================================================================
-// UsbDeviceContext
+// DriverControllerContext
 // =================================================================================
 
-class UsbDeviceContext(handler: ControllerHandler) : GenericControllerContext(handler) {
+class DriverControllerContext(handler: ControllerHandler) : GenericControllerContext(handler) {
     var device: AbstractController? = null
     internal var lastReportedBatteryState: Byte? = null
     internal var lastReportedBatteryPercentage: Byte? = null
@@ -465,16 +465,16 @@ class UsbDeviceContext(handler: ControllerHandler) : GenericControllerContext(ha
     internal val forwardedTouchPointerIds = ConcurrentHashMap<Int, Boolean>()
     internal var touchCaptureActive: Boolean = false
     internal val menuAxisSnapshotState = MenuAxisSnapshotState()
-    internal val shortcutState = UsbControllerShortcutStateMachine()
+    internal val shortcutState = DriverControllerShortcutStateMachine()
     internal val shortcutLongPressRunnable = Runnable {
-        handler.onUsbShortcutLongPress(this)
+        handler.onDriverShortcutLongPress(this)
     }
 
     override fun destroy() {
         menuKeyDownTimes.clear()
         forwardedTouchPointerIds.clear()
         touchCaptureActive = false
-        handler.releaseUsbShortcutState(this)
+        handler.releaseDriverShortcutState(this)
         menuAxisSnapshotState.reset()
         super.destroy()
     }
@@ -484,7 +484,7 @@ class UsbDeviceContext(handler: ControllerHandler) : GenericControllerContext(ha
         shortcutState.onGameMenuUnavailable()
         menuAxisSnapshotState.reset()
         if (!shortcutState.isLocalInputCaptureActive()) {
-            handler.onUsbLocalCaptureEnded(this)
+            handler.onDriverLocalCaptureEnded(this)
         }
     }
 

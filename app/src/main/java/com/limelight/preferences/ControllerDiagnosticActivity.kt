@@ -116,7 +116,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import com.limelight.R
 import com.limelight.binding.input.ControllerHandler
-import com.limelight.binding.input.UsbControllerShortcutStateMachine
+import com.limelight.binding.input.DriverControllerShortcutStateMachine
 import com.limelight.binding.input.driver.AbstractController
 import com.limelight.binding.input.driver.UsbDriverListener
 import com.limelight.binding.input.driver.UsbDriverService
@@ -136,7 +136,7 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
     UsbDriverService.UsbDriverStateListener {
     private var snapshot by mutableStateOf(ControllerDiagnostics.Snapshot(emptyList()))
     private val simulatorHandler = Handler(Looper.getMainLooper())
-    private val simulatorStateMachine = UsbControllerShortcutStateMachine()
+    private val simulatorStateMachine = DriverControllerShortcutStateMachine()
     private var simulatorPressedFlags = 0
     private var simulatorInputSource: String? = null
     private var simulatorUiState by mutableStateOf(ShortcutSimulatorUiState())
@@ -863,7 +863,7 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
                 systemExitPending = false
                 result = ShortcutSimulatorResult.EXIT_STREAM
             }
-        } else if (simulatorPressedFlags == UsbControllerShortcutStateMachine.EXIT_COMBO_FLAGS) {
+        } else if (simulatorPressedFlags == DriverControllerShortcutStateMachine.EXIT_COMBO_FLAGS) {
             systemExitPending = true
             result = ShortcutSimulatorResult.IDLE
         } else {
@@ -890,11 +890,11 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
         )
     }
 
-    private fun applySimulatorUpdate(update: UsbControllerShortcutStateMachine.Update) {
+    private fun applySimulatorUpdate(update: DriverControllerShortcutStateMachine.Update) {
         var result = simulatorUiState.result
         for (action in update.actions) {
             when (action) {
-                UsbControllerShortcutStateMachine.Action.SCHEDULE_LONG_PRESS -> {
+                DriverControllerShortcutStateMachine.Action.SCHEDULE_LONG_PRESS -> {
                     result = ShortcutSimulatorResult.IDLE
                     simulatorHandler.removeCallbacks(simulatorLongPressRunnable)
                     simulatorHandler.postDelayed(
@@ -902,21 +902,21 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
                         ControllerHandler.START_DOWN_TIME_MOUSE_MODE_MS.toLong()
                     )
                 }
-                UsbControllerShortcutStateMachine.Action.CANCEL_LONG_PRESS ->
+                DriverControllerShortcutStateMachine.Action.CANCEL_LONG_PRESS ->
                     simulatorHandler.removeCallbacks(simulatorLongPressRunnable)
-                UsbControllerShortcutStateMachine.Action.SHOW_HINT ->
+                DriverControllerShortcutStateMachine.Action.SHOW_HINT ->
                     result = ShortcutSimulatorResult.HINT
-                UsbControllerShortcutStateMachine.Action.HIDE_HINT ->
+                DriverControllerShortcutStateMachine.Action.HIDE_HINT ->
                     if (result == ShortcutSimulatorResult.HINT) result = ShortcutSimulatorResult.IDLE
-                UsbControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION ->
+                DriverControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION ->
                     result = ShortcutSimulatorResult.MOUSE_EMULATION
-                UsbControllerShortcutStateMachine.Action.OPEN_GAME_MENU -> {
+                DriverControllerShortcutStateMachine.Action.OPEN_GAME_MENU -> {
                     result = ShortcutSimulatorResult.GAME_MENU
                     update.menuOpenRequestId?.let { requestId ->
                         simulatorStateMachine.onGameMenuOpenResult(requestId, false)
                     }
                 }
-                UsbControllerShortcutStateMachine.Action.EXIT_STREAM ->
+                DriverControllerShortcutStateMachine.Action.EXIT_STREAM ->
                     result = ShortcutSimulatorResult.EXIT_STREAM
             }
         }

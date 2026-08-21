@@ -98,7 +98,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
 
     private fun findControllerContext(controllerNumber: Short): GenericControllerContext? {
         // 首先查找USB设备上下文
-        for (context in handler.usbDeviceContexts.values) {
+        for (context in handler.driverControllerContexts.values) {
             if (context.controllerNumber == controllerNumber) {
                 return context
             }
@@ -212,7 +212,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
                 }
             }
             // 同样检查 USB 手柄
-            for (context in handler.usbDeviceContexts.values) {
+            for (context in handler.driverControllerContexts.values) {
                 if (context.controllerNumber.toInt() == 0) {
                     LimeLog.info("USB controller present, skipping defaultContext gyro registration")
                     return
@@ -284,7 +284,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
 
     fun clearAllGyroStates() {
         // 清除所有控制器的陀螺仪摇杆数据和保持状态
-        for (c in handler.usbDeviceContexts.values) {
+        for (c in handler.driverControllerContexts.values) {
             c.gyroRightStickX = 0
             c.gyroRightStickY = 0
             c.gyroHoldActive = false
@@ -310,7 +310,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
             return true
         }
         // 检查是否有USB手柄
-        if (handler.usbDeviceContexts.isNotEmpty()) {
+        if (handler.driverControllerContexts.isNotEmpty()) {
             return true
         }
         // 检查虚拟手柄是否启用
@@ -327,7 +327,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         val useL2 = handler.prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_L2
         val useR2 = handler.prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_R2
 
-        for (c in handler.usbDeviceContexts.values) {
+        for (c in handler.driverControllerContexts.values) {
             c.gyroHoldActive = when {
                 alwaysOn -> true
                 useL2 -> (c.leftTrigger.toInt() and 0xFF) / 255.0f >= TRIGGER_ACTIVATE_THRESHOLD
@@ -459,7 +459,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
     }
 
     fun isGyroHoldActiveFor(controllerNumber: Short): Boolean {
-        for (c in handler.usbDeviceContexts.values) {
+        for (c in handler.driverControllerContexts.values) {
             if (c.controllerNumber == controllerNumber && c.gyroHoldActive) return true
         }
         for (i in 0 until handler.inputDeviceContexts.size()) {

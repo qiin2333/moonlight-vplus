@@ -3032,6 +3032,7 @@ class StreamSettings : AppCompatActivity() {
                 val category = findPreference<PreferenceCategory>("category_gamepad_settings")!!
                 category.removePreference(findPreference("checkbox_usb_bind_all")!!)
                 category.removePreference(findPreference("checkbox_usb_driver")!!)
+                category.removePreference(findPreference("checkbox_dualsense_wireless_bridge")!!)
             }
 
             // Remove PiP mode on devices pre-Oreo, where the feature is not available (some low RAM devices),

@@ -140,6 +140,8 @@
     <string name="suffix_seekbar_deadzone">%</string>
     <string name="title_checkbox_xb1_driver">Xbox 360/One USB 手把驅動程式</string>
     <string name="summary_checkbox_xb1_driver">為缺少原生 Xbox 控制器支援的裝置啟用內建 USB 驅動程式</string>
+    <string name="title_dualsense_wireless_bridge">DualSense 無線橋接（實驗性）</string>
+    <string name="summary_dualsense_wireless_bridge">使用獨立的外接 USB 藍牙介面卡，在串流時自動尋找並連接一個 DualSense；該介面卡不能同時交給 Android 系統藍牙使用。</string>
     <string name="title_checkbox_usb_bind_all">覆寫原生 Xbox 手把支援</string>
     <string name="summary_checkbox_usb_bind_all">強制 Moonlight 的 USB 驅動程式接管所有受支援的原生 Xbox 控制器</string>
     <string name="title_checkbox_mouse_emulation">透過手把仿真滑鼠</string>

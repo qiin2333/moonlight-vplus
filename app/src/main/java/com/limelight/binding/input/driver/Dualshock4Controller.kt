@@ -14,7 +14,7 @@ class Dualshock4Controller(
     connection: UsbDeviceConnection,
     deviceId: Int,
     listener: UsbDriverListener
-) : AbstractDualSenseController(device, connection, deviceId, listener) {
+) : AbstractPlayStationUsbController(device, connection, deviceId, listener) {
 
     private fun normalizeThumbStickAxis(value: Int): Float {
         return (2.0f * value / 255.0f) - 1.0f

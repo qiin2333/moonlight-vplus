@@ -519,7 +519,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             initializeControllerManager()
         }
 
-        if (prefConfig.usbDriver) {
+        if (prefConfig.usbDriver || prefConfig.dualSenseWirelessBridge) {
             bindUsbDriverService()
         }
 
@@ -733,7 +733,7 @@ class Game : Activity(), SurfaceHolder.Callback,
             this,
             prefConfig,
             onTogglePerformanceOverlay = ::togglePerformanceOverlay,
-            onExitStream = ::exitStreamFromUsbShortcut
+            onExitStream = ::exitStreamFromDriverShortcut
         )
     }
 
@@ -757,7 +757,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         usbDriverServiceManager?.bind()
     }
 
-    private fun exitStreamFromUsbShortcut() {
+    private fun exitStreamFromDriverShortcut() {
         UsbDriverExitCoordinator.exit(
             isFinishing = isFinishing,
             releaseUsb = { usbDriverServiceManager?.stopAndUnbind() },
@@ -1050,7 +1050,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
         audioVibrationService?.controllerHandler = controllerHandler
 
-        if (prefConfig.usbDriver) {
+        if (prefConfig.usbDriver || prefConfig.dualSenseWirelessBridge) {
             bindUsbDriverService()
         } else {
             usbDriverServiceManager?.refreshListener()

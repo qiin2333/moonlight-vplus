@@ -261,6 +261,8 @@
     <string name="title_seekbar_deadzone"> 调整摇杆死区 </string>
     <string name="title_checkbox_xb1_driver">Xbox 360/One 手柄驱动 </string>
     <string name="summary_checkbox_xb1_driver"> 为缺少原生Xbox手柄支持的设备启用内置USB驱动。 </string>
+    <string name="title_dualsense_wireless_bridge">DualSense 无线桥接（实验性）</string>
+    <string name="summary_dualsense_wireless_bridge">使用独立的外置 USB 蓝牙适配器，在串流时自动查找并连接一个 DualSense；该适配器不能同时交给 Android 系统蓝牙使用。</string>
     <string name="title_checkbox_usb_bind_all"> 覆盖安卓手柄支持 </string>
     <string name="summary_checkbox_usb_bind_all"> 强制Moonlight的USB驱动接管所有受支持的Xbox手柄。 </string>
     <string name="title_checkbox_mouse_emulation"> 通过手柄模拟鼠标 </string>

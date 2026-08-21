@@ -4,14 +4,14 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class DualSenseOutputReportTest {
+class DualSenseUsbOutputReportTest {
     @Test
     fun adaptiveTriggersMapsProtocolOrderToUsbReport() {
-        val left = ByteArray(DualSenseOutputReport.EFFECT_PAYLOAD_SIZE) { (0x20 + it).toByte() }
-        val right = ByteArray(DualSenseOutputReport.EFFECT_PAYLOAD_SIZE) { (0x40 + it).toByte() }
+        val left = ByteArray(DualSenseUsbOutputReport.EFFECT_PAYLOAD_SIZE) { (0x20 + it).toByte() }
+        val right = ByteArray(DualSenseUsbOutputReport.EFFECT_PAYLOAD_SIZE) { (0x40 + it).toByte() }
 
-        val report = DualSenseOutputReport.adaptiveTriggers(
-            DualSenseOutputReport.BOTH_TRIGGER_FLAGS.toByte(),
+        val report = DualSenseUsbOutputReport.adaptiveTriggers(
+            DualSenseUsbOutputReport.BOTH_TRIGGER_FLAGS.toByte(),
             0x11,
             0x22,
             left,
@@ -29,7 +29,7 @@ class DualSenseOutputReportTest {
 
     @Test
     fun clearAdaptiveTriggersSendsOffOpcodeWithZeroedPayloads() {
-        val report = DualSenseOutputReport.clearAdaptiveTriggers()
+        val report = DualSenseUsbOutputReport.clearAdaptiveTriggers()
 
         assertEquals(0x0C, report[1].toInt() and 0xFF)
         assertEquals(0, report[3].toInt())
@@ -43,7 +43,7 @@ class DualSenseOutputReportTest {
 
     @Test
     fun rumbleDoesNotMarkAdaptiveTriggerFieldsValid() {
-        val report = DualSenseOutputReport.rumble(0x5500, 0x3300)
+        val report = DualSenseUsbOutputReport.rumble(0x5500, 0x3300)
 
         assertEquals(0x03, report[1].toInt() and 0xFF)
         assertEquals(0x33, report[3].toInt() and 0xFF)
@@ -52,7 +52,7 @@ class DualSenseOutputReportTest {
 
     @Test
     fun controllerLEDMarksOnlyLightbarValid() {
-        val report = DualSenseOutputReport.controllerLED(0x11, 0x22, 0x33)
+        val report = DualSenseUsbOutputReport.controllerLED(0x11, 0x22, 0x33)
 
         assertEquals(0x02, report[0].toInt() and 0xFF)
         // valid_flag0: no motor or trigger effect bits must be set.
