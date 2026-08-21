@@ -274,6 +274,51 @@ class UsbControllerShortcutStateMachineTest {
         assertFalse(machine.isLocalInputCaptureActive())
     }
 
+    @Test
+    fun diagonalUsbDpadSnapshotProducesOneDirectionAndSwitchesAfterRelease() {
+        val machine = openMenu()
+
+        val diagonal = machine.onButtonSnapshot(
+            ControllerPacket.UP_FLAG or ControllerPacket.RIGHT_FLAG,
+            200,
+            true
+        )
+        val rightOnly = machine.onButtonSnapshot(ControllerPacket.RIGHT_FLAG, 201, true)
+        val released = machine.onButtonSnapshot(0, 202, true)
+
+        assertEquals(
+            listOf(
+                UsbControllerShortcutStateMachine.ButtonChange(
+                    ControllerPacket.UP_FLAG,
+                    true
+                )
+            ),
+            diagonal.menuButtonChanges
+        )
+        assertEquals(
+            listOf(
+                UsbControllerShortcutStateMachine.ButtonChange(
+                    ControllerPacket.UP_FLAG,
+                    false
+                ),
+                UsbControllerShortcutStateMachine.ButtonChange(
+                    ControllerPacket.RIGHT_FLAG,
+                    true
+                )
+            ),
+            rightOnly.menuButtonChanges
+        )
+        assertEquals(
+            listOf(
+                UsbControllerShortcutStateMachine.ButtonChange(
+                    ControllerPacket.RIGHT_FLAG,
+                    false
+                )
+            ),
+            released.menuButtonChanges
+        )
+    }
+
     private fun openMenu(): UsbControllerShortcutStateMachine {
         val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
         completeMenuOpen(machine)

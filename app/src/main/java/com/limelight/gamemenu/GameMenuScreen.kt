@@ -51,6 +51,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -59,7 +60,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -163,12 +166,14 @@ internal fun GameMenuScreen(
     callbacks: GameMenuCallbacks,
     hardwareFocusRequestToken: Int,
     guideDismissController: GameMenuGuideDismissController,
-    useFabricTexture: Boolean = true
+    useFabricTexture: Boolean = true,
+    restoreFocusRequestToken: Int = 0
 ) {
     val palette = gameMenuPalette()
     val appContext = LocalContext.current.applicationContext
     val showcaseState = rememberSequenceShowcaseState()
     val initialFocusRequester = remember { FocusRequester() }
+    val menuGroupFocusRequester = remember { FocusRequester() }
     val inputModeManager = LocalInputModeManager.current
     var guideStore by remember(appContext) { mutableStateOf<FeatureGuideStore?>(null) }
     var guidePending by remember(appContext) { mutableStateOf(false) }
@@ -181,6 +186,7 @@ internal fun GameMenuScreen(
         mutableStateOf(false)
     }
     var menuHasFocus by remember { mutableStateOf(false) }
+    var handledRestoreFocusRequestToken by remember { mutableIntStateOf(0) }
     LaunchedEffect(appContext) {
         val (store, shouldShow) = withContext(Dispatchers.IO) {
             val loadedStore = FeatureGuideStore(appContext)
@@ -271,6 +277,8 @@ internal fun GameMenuScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .focusRequester(menuGroupFocusRequester)
+                            .focusRestorer(initialFocusRequester)
                             .onFocusChanged { menuHasFocus = it.hasFocus }
                             .focusGroup()
                             .onGloballyPositioned { menuContentLaidOut = true }
@@ -340,6 +348,24 @@ internal fun GameMenuScreen(
             initialFocusRequester.requestFocus()
         }
     }
+
+    LaunchedEffect(
+        restoreFocusRequestToken,
+        guideActive,
+        menuContentLaidOut
+    ) {
+        if (shouldRestoreGameMenuFocus(
+                restoreFocusRequestToken = restoreFocusRequestToken,
+                handledRestoreFocusRequestToken = handledRestoreFocusRequestToken,
+                guideActive = guideActive,
+                menuContentLaidOut = menuContentLaidOut
+            )
+        ) {
+            handledRestoreFocusRequestToken = restoreFocusRequestToken
+            inputModeManager.requestInputMode(InputMode.Keyboard)
+            menuGroupFocusRequester.requestFocus()
+        }
+    }
 }
 
 internal fun shouldStartGameMenuGuide(
@@ -367,6 +393,15 @@ internal fun shouldRequestGameMenuFocus(
         menuContentLaidOut &&
         !menuHasFocus
 }
+
+internal fun shouldRestoreGameMenuFocus(
+    restoreFocusRequestToken: Int,
+    handledRestoreFocusRequestToken: Int,
+    guideActive: Boolean,
+    menuContentLaidOut: Boolean
+): Boolean = restoreFocusRequestToken > handledRestoreFocusRequestToken &&
+    !guideActive &&
+    menuContentLaidOut
 
 @Composable
 internal fun GameMenuDialogShell(

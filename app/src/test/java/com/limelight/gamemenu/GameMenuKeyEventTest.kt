@@ -7,6 +7,31 @@ import org.junit.Test
 
 class GameMenuKeyEventTest {
     @Test
+    fun nativeDirectionRepeatIsIgnoredOnlyAfterInitialDownIsHeld() {
+        assertTrue(
+            shouldIgnoreGameMenuDirectionalRepeat(
+                action = KeyEvent.ACTION_DOWN,
+                repeatCount = 1,
+                alreadyHeld = true
+            )
+        )
+        assertTrue(
+            !shouldIgnoreGameMenuDirectionalRepeat(
+                action = KeyEvent.ACTION_DOWN,
+                repeatCount = 0,
+                alreadyHeld = true
+            )
+        )
+        assertTrue(
+            !shouldIgnoreGameMenuDirectionalRepeat(
+                action = KeyEvent.ACTION_DOWN,
+                repeatCount = 1,
+                alreadyHeld = false
+            )
+        )
+    }
+
+    @Test
     fun standardGamepadAIsMappedToFocusedUiConfirmation() {
         assertEquals(
             KeyEvent.KEYCODE_DPAD_CENTER,
@@ -29,6 +54,15 @@ class GameMenuKeyEventTest {
         assertTrue(isGameMenuNavigationKey(KeyEvent.KEYCODE_BUTTON_A))
         assertTrue(isGameMenuNavigationKey(KeyEvent.KEYCODE_ENTER))
         assertTrue(!isGameMenuNavigationKey(KeyEvent.KEYCODE_BUTTON_B))
+        assertTrue(isGameMenuNavigationKey(GAME_MENU_KEYCODE_DPAD_UP_LEFT))
+        assertEquals(
+            KeyEvent.KEYCODE_DPAD_UP,
+            mapGameMenuConfirmKeyCode(GAME_MENU_KEYCODE_DPAD_UP_RIGHT)
+        )
+        assertEquals(
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            mapGameMenuConfirmKeyCode(GAME_MENU_KEYCODE_DPAD_DOWN_LEFT)
+        )
     }
 
     @Test
@@ -102,4 +136,41 @@ class GameMenuKeyEventTest {
         option.runnable?.run()
         assertTrue(navigatedBack)
     }
+
+    @Test
+    fun childDialogFocusRestoreWaitsForParentLayoutAndGuideDismissal() {
+        assertTrue(
+            !shouldRestoreGameMenuFocus(
+                restoreFocusRequestToken = 1,
+                handledRestoreFocusRequestToken = 0,
+                guideActive = false,
+                menuContentLaidOut = false
+            )
+        )
+        assertTrue(
+            !shouldRestoreGameMenuFocus(
+                restoreFocusRequestToken = 1,
+                handledRestoreFocusRequestToken = 0,
+                guideActive = true,
+                menuContentLaidOut = true
+            )
+        )
+        assertTrue(
+            shouldRestoreGameMenuFocus(
+                restoreFocusRequestToken = 1,
+                handledRestoreFocusRequestToken = 0,
+                guideActive = false,
+                menuContentLaidOut = true
+            )
+        )
+        assertTrue(
+            !shouldRestoreGameMenuFocus(
+                restoreFocusRequestToken = 1,
+                handledRestoreFocusRequestToken = 1,
+                guideActive = false,
+                menuContentLaidOut = true
+            )
+        )
+    }
+
 }

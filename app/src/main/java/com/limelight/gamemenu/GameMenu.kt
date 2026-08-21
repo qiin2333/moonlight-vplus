@@ -2,6 +2,7 @@ package com.limelight.gamemenu
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.Dialog
 import android.content.ContentValues
 import android.content.Context
 import android.content.pm.PackageManager
@@ -10,8 +11,11 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.view.HapticFeedbackConstants
+import android.os.SystemClock
+import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -25,6 +29,7 @@ import androidx.activity.ComponentDialog
 import androidx.activity.OnBackPressedCallback
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ComposeView
@@ -42,6 +47,7 @@ import com.limelight.R
 import com.limelight.StreamActionExecutor
 import com.limelight.binding.input.GameInputDevice
 import com.limelight.binding.input.KeyboardTranslator
+import com.limelight.binding.input.MenuAxisNavigationState
 import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.element.ElementController
 import com.limelight.nvstream.NvConnection
@@ -60,8 +66,21 @@ import java.util.ArrayDeque
 /** Int → Short 快捷转换 */
 private fun Int.s(): Short = this.toShort()
 
+// Diagonal D-pad key codes were added in API 24. Keep protocol values for minSdk 22.
+internal const val GAME_MENU_KEYCODE_DPAD_UP_LEFT = 268
+internal const val GAME_MENU_KEYCODE_DPAD_UP_RIGHT = 269
+internal const val GAME_MENU_KEYCODE_DPAD_DOWN_LEFT = 270
+internal const val GAME_MENU_KEYCODE_DPAD_DOWN_RIGHT = 271
+
 internal fun mapGameMenuConfirmKeyCode(keyCode: Int): Int {
-    return if (keyCode == KeyEvent.KEYCODE_BUTTON_A) KeyEvent.KEYCODE_DPAD_CENTER else keyCode
+    return when (keyCode) {
+        KeyEvent.KEYCODE_BUTTON_A -> KeyEvent.KEYCODE_DPAD_CENTER
+        GAME_MENU_KEYCODE_DPAD_UP_LEFT,
+        GAME_MENU_KEYCODE_DPAD_UP_RIGHT -> KeyEvent.KEYCODE_DPAD_UP
+        GAME_MENU_KEYCODE_DPAD_DOWN_LEFT,
+        GAME_MENU_KEYCODE_DPAD_DOWN_RIGHT -> KeyEvent.KEYCODE_DPAD_DOWN
+        else -> keyCode
+    }
 }
 
 internal fun isGameMenuNavigationKey(keyCode: Int): Boolean {
@@ -69,6 +88,10 @@ internal fun isGameMenuNavigationKey(keyCode: Int): Boolean {
         keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
         keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
         keyCode == KeyEvent.KEYCODE_DPAD_RIGHT ||
+        keyCode == GAME_MENU_KEYCODE_DPAD_UP_LEFT ||
+        keyCode == GAME_MENU_KEYCODE_DPAD_UP_RIGHT ||
+        keyCode == GAME_MENU_KEYCODE_DPAD_DOWN_LEFT ||
+        keyCode == GAME_MENU_KEYCODE_DPAD_DOWN_RIGHT ||
         keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
         keyCode == KeyEvent.KEYCODE_ENTER ||
         keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
@@ -87,6 +110,33 @@ internal fun createGameMenuBackOption(
     isShowIcon = false,
     isKeepDialog = true
 )
+
+internal fun isGameMenuDirectionalKey(keyCode: Int): Boolean =
+    keyCode == KeyEvent.KEYCODE_DPAD_UP ||
+        keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
+        keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
+        keyCode == KeyEvent.KEYCODE_DPAD_RIGHT ||
+        keyCode == GAME_MENU_KEYCODE_DPAD_UP_LEFT ||
+        keyCode == GAME_MENU_KEYCODE_DPAD_UP_RIGHT ||
+        keyCode == GAME_MENU_KEYCODE_DPAD_DOWN_LEFT ||
+        keyCode == GAME_MENU_KEYCODE_DPAD_DOWN_RIGHT
+
+internal fun shouldIgnoreGameMenuDirectionalRepeat(
+    action: Int,
+    repeatCount: Int,
+    alreadyHeld: Boolean
+): Boolean = action == KeyEvent.ACTION_DOWN && repeatCount > 0 && alreadyHeld
+
+internal fun canActivateGameMenuAxisSource(
+    activeSourceId: Int?,
+    reportingSourceId: Int
+): Boolean = activeSourceId == null || activeSourceId == reportingSourceId
+
+private fun isGameMenuDiagonalKey(keyCode: Int): Boolean =
+    keyCode == GAME_MENU_KEYCODE_DPAD_UP_LEFT ||
+        keyCode == GAME_MENU_KEYCODE_DPAD_UP_RIGHT ||
+        keyCode == GAME_MENU_KEYCODE_DPAD_DOWN_LEFT ||
+        keyCode == GAME_MENU_KEYCODE_DPAD_DOWN_RIGHT
 
 private fun mapGameMenuConfirmKeyEvent(event: KeyEvent): KeyEvent {
     val mappedKeyCode = mapGameMenuConfirmKeyCode(event.keyCode)
@@ -121,6 +171,9 @@ class GameMenu(
 ) {
     // 当前激活的对话框（如果有）
     private var activeDialog: ComponentDialog? = null
+    private var activeChildDialog: Dialog? = null
+    private var activeComposeView: ComposeView? = null
+    private var parentFocusRestoreRequestState: MutableIntState? = null
     private var composeUiState: MutableState<GameMenuComposeUiState>? = null
     private val guideDismissController = GameMenuGuideDismissController()
     // 标志：上一次运行的选项是否打开了子菜单（由 showSubMenu 设置）
@@ -128,6 +181,56 @@ class GameMenu(
     // 菜单历史栈，用于二级/多级菜单的回退
     private val menuStack: ArrayDeque<MenuPage> = ArrayDeque()
     private val handler = Handler(Looper.getMainLooper())
+    private data class HeldControllerDirection(
+        val targetDialog: Dialog,
+        val downEvent: KeyEvent
+    )
+
+    private val axisNavigationStates = mutableMapOf<Int, MenuAxisNavigationState>()
+    private val axisSourcesAwaitingNeutral = mutableSetOf<Int>()
+    private val heldControllerDirections = linkedMapOf<Pair<Int, Int>, HeldControllerDirection>()
+    private val controllerDirectionsAwaitingRelease = mutableSetOf<Pair<Int, Int>>()
+    private var repeatingControllerDirection: Pair<Int, Int>? = null
+    private var controllerDirectionRepeatCount = 0
+    private val controllerDirectionRepeatRunnable = object : Runnable {
+        override fun run() {
+            val identity = repeatingControllerDirection ?: return
+            val held = heldControllerDirections[identity] ?: return
+            if (!held.targetDialog.isShowing) {
+                repeatingControllerDirection = null
+                controllerDirectionRepeatCount = 0
+                return
+            }
+
+            controllerDirectionRepeatCount++
+            held.targetDialog.dispatchKeyEvent(
+                KeyEvent.changeTimeRepeat(
+                    held.downEvent,
+                    SystemClock.uptimeMillis(),
+                    controllerDirectionRepeatCount
+                )
+            )
+            handler.postDelayed(this, AXIS_REPEAT_INTERVAL_MS)
+        }
+    }
+    private var activeAxisSourceId: Int? = null
+    private var activeAxisKeyCode: Int? = null
+    private var activeAxisTargetDialog: Dialog? = null
+    private var activeAxisDownTime = 0L
+    private var activeAxisRepeatCount = 0
+    private val axisRepeatRunnable = object : Runnable {
+        override fun run() {
+            val keyCode = activeAxisKeyCode ?: return
+            val dialog = activeAxisTargetDialog ?: return
+            if (!dialog.isShowing) return
+            activeAxisRepeatCount++
+            val now = SystemClock.uptimeMillis()
+            dialog.dispatchKeyEvent(
+                KeyEvent(activeAxisDownTime, now, KeyEvent.ACTION_DOWN, keyCode, activeAxisRepeatCount)
+            )
+            handler.postDelayed(this, AXIS_REPEAT_INTERVAL_MS)
+        }
+    }
     private val gameFocusActionRunner = GameFocusActionRunner(
         canRun = { !game.isFinishing },
         hasGameFocus = game::hasWindowFocus,
@@ -157,16 +260,242 @@ class GameMenu(
     }
 
     fun dispatchControllerKeyEvent(event: KeyEvent): Boolean {
-        val dialog = activeDialog ?: return false
-        if (!dialog.isShowing) return false
-        if (UiDismissKeyHandler.handle(event.action, event.keyCode) {
-                handleDismissRequest(dialog)
+        val mappedEvent = mapGameMenuConfirmKeyEvent(event)
+        if (isGameMenuDirectionalKey(mappedEvent.keyCode)) {
+            return dispatchControllerDirectionKeyEvent(mappedEvent)
+        }
+        return dispatchControllerKeyEventToCurrentOwner(mappedEvent)
+    }
+
+    private fun dispatchControllerDirectionKeyEvent(event: KeyEvent): Boolean {
+        val identity = event.deviceId to event.keyCode
+        if (identity in controllerDirectionsAwaitingRelease) {
+            if (event.action == KeyEvent.ACTION_UP) {
+                controllerDirectionsAwaitingRelease.remove(identity)
             }
-        ) {
             return true
         }
-        dialog.dispatchKeyEvent(event)
+        val held = heldControllerDirections[identity]
+        if (shouldIgnoreGameMenuDirectionalRepeat(event.action, event.repeatCount, held != null)) {
+            return true
+        }
+        val target = when (event.action) {
+            KeyEvent.ACTION_DOWN -> {
+                if (held == null) {
+                    val currentTarget = currentInputDialog() ?: return false
+                    heldControllerDirections[identity] = HeldControllerDirection(
+                        targetDialog = currentTarget,
+                        downEvent = KeyEvent(event)
+                    )
+                    startControllerDirectionRepeat(identity)
+                    currentTarget
+                } else {
+                    held.targetDialog
+                }
+            }
+            KeyEvent.ACTION_UP -> {
+                val released = heldControllerDirections.remove(identity)
+                if (repeatingControllerDirection == identity) {
+                    stopControllerDirectionRepeat()
+                    heldControllerDirections.keys.lastOrNull()?.let(::startControllerDirectionRepeat)
+                }
+                released?.targetDialog ?: return true
+            }
+            else -> return true
+        }
+
+        return dispatchControllerKeyEventToOwner(target, event)
+    }
+
+    private fun startControllerDirectionRepeat(identity: Pair<Int, Int>) {
+        handler.removeCallbacks(controllerDirectionRepeatRunnable)
+        repeatingControllerDirection = identity
+        controllerDirectionRepeatCount = 0
+        handler.postDelayed(controllerDirectionRepeatRunnable, AXIS_REPEAT_INITIAL_DELAY_MS)
+    }
+
+    private fun stopControllerDirectionRepeat() {
+        handler.removeCallbacks(controllerDirectionRepeatRunnable)
+        repeatingControllerDirection = null
+        controllerDirectionRepeatCount = 0
+    }
+
+    private fun dispatchControllerKeyEventToCurrentOwner(event: KeyEvent): Boolean {
+        val dialog = currentInputDialog() ?: return false
+        return dispatchControllerKeyEventToOwner(dialog, event)
+    }
+
+    private fun dispatchControllerKeyEventToOwner(dialog: Dialog, event: KeyEvent): Boolean {
+        if (dialog === activeChildDialog) {
+            if (!dialog.isShowing) return true
+            if (UiDismissKeyHandler.handle(event.action, event.keyCode) {
+                    prepareForInputOwnerChange()
+                    dialog.cancel()
+                }
+            ) {
+                return true
+            }
+            dialog.dispatchKeyEvent(event)
+            return true
+        }
+
+        if (dialog === activeDialog) {
+            if (!dialog.isShowing) return false
+            dialog.dispatchKeyEvent(event)
+            return activeDialog === dialog && dialog.isShowing
+        }
+
+        // Direction releases stay with the Dialog that received their DOWN instead of
+        // leaking into whichever child surface is currently top-most.
+        if (event.action == KeyEvent.ACTION_UP) {
+            dialog.dispatchKeyEvent(event)
+        }
+        return activeDialog?.isShowing == true
+    }
+
+    fun dispatchControllerAxes(
+        sourceId: Int,
+        axisPairs: List<Pair<Float, Float>>
+    ): Boolean {
+        val dialog = currentInputDialog() ?: return false
+        if (!dialog.isShowing) return false
+        val state = axisNavigationStates.getOrPut(sourceId) { MenuAxisNavigationState() }
+
+        if (sourceId in axisSourcesAwaitingNeutral) {
+            state.reset()
+            if (state.isNeutral(axisPairs)) {
+                axisSourcesAwaitingNeutral.remove(sourceId)
+            }
+            return true
+        }
+
+        val transition = state.update(axisPairs)
+        if (!transition.changed) return true
+
+        if (transition.pressedKeyCode != null &&
+            canActivateGameMenuAxisSource(activeAxisSourceId, sourceId)
+        ) {
+            activateAxisSource(sourceId, transition.pressedKeyCode, dialog)
+        } else if (activeAxisSourceId == sourceId) {
+            releaseActiveAxisKey()
+            activateFallbackAxisSource(dialog)
+        }
         return true
+    }
+
+    fun releaseControllerAxisSource(sourceId: Int) {
+        axisSourcesAwaitingNeutral.remove(sourceId)
+        axisNavigationStates.remove(sourceId)
+        controllerDirectionsAwaitingRelease.removeAll { it.first == sourceId }
+        val removedDirectionIds = heldControllerDirections.keys.filter { it.first == sourceId }
+        removedDirectionIds.forEach { identity ->
+            heldControllerDirections.remove(identity)?.let(::releaseHeldControllerDirection)
+        }
+        if (repeatingControllerDirection?.first == sourceId) {
+            stopControllerDirectionRepeat()
+            heldControllerDirections.keys.lastOrNull()?.let(::startControllerDirectionRepeat)
+        }
+        if (activeAxisSourceId == sourceId) {
+            releaseActiveAxisKey()
+            currentInputDialog()?.takeIf(Dialog::isShowing)?.let(::activateFallbackAxisSource)
+        }
+    }
+
+    private fun activateAxisSource(sourceId: Int, keyCode: Int, dialog: Dialog) {
+        if (activeAxisSourceId == sourceId &&
+            activeAxisKeyCode == keyCode &&
+            activeAxisTargetDialog === dialog
+        ) {
+            return
+        }
+        releaseActiveAxisKey()
+        activeAxisSourceId = sourceId
+        activeAxisKeyCode = keyCode
+        activeAxisTargetDialog = dialog
+        activeAxisDownTime = SystemClock.uptimeMillis()
+        activeAxisRepeatCount = 0
+        dialog.dispatchKeyEvent(
+            KeyEvent(activeAxisDownTime, activeAxisDownTime, KeyEvent.ACTION_DOWN, keyCode, 0)
+        )
+        handler.postDelayed(axisRepeatRunnable, AXIS_REPEAT_INITIAL_DELAY_MS)
+    }
+
+    private fun activateFallbackAxisSource(dialog: Dialog) {
+        val fallback = axisNavigationStates.entries.firstOrNull { (sourceId, state) ->
+            sourceId !in axisSourcesAwaitingNeutral && state.activeKeyCode != null
+        } ?: return
+        activateAxisSource(fallback.key, fallback.value.activeKeyCode!!, dialog)
+    }
+
+    private fun releaseActiveAxisKey() {
+        handler.removeCallbacks(axisRepeatRunnable)
+        val keyCode = activeAxisKeyCode
+        val targetDialog = activeAxisTargetDialog
+        if (keyCode != null && targetDialog != null) {
+            val now = SystemClock.uptimeMillis()
+            targetDialog.dispatchKeyEvent(
+                KeyEvent(activeAxisDownTime, now, KeyEvent.ACTION_UP, keyCode, 0)
+            )
+        }
+        activeAxisSourceId = null
+        activeAxisKeyCode = null
+        activeAxisTargetDialog = null
+        activeAxisRepeatCount = 0
+    }
+
+    private fun prepareForInputOwnerChange() {
+        releaseHeldControllerDirections(awaitForPhysicalRelease = true)
+        axisNavigationStates.forEach { (sourceId, state) ->
+            if (state.activeKeyCode != null) {
+                axisSourcesAwaitingNeutral.add(sourceId)
+            }
+            state.reset()
+        }
+        releaseActiveAxisKey()
+    }
+
+    private fun resetAxisNavigation() {
+        releaseHeldControllerDirections(awaitForPhysicalRelease = false)
+        controllerDirectionsAwaitingRelease.clear()
+        releaseActiveAxisKey()
+        axisNavigationStates.clear()
+        axisSourcesAwaitingNeutral.clear()
+    }
+
+    private fun releaseHeldControllerDirections(awaitForPhysicalRelease: Boolean) {
+        stopControllerDirectionRepeat()
+        val heldSnapshot = heldControllerDirections.toMap()
+        heldControllerDirections.clear()
+        heldSnapshot.forEach { (identity, held) ->
+            releaseHeldControllerDirection(held)
+            if (awaitForPhysicalRelease) {
+                controllerDirectionsAwaitingRelease.add(identity)
+            }
+        }
+    }
+
+    private fun releaseHeldControllerDirection(held: HeldControllerDirection) {
+        val down = held.downEvent
+        val now = SystemClock.uptimeMillis()
+        held.targetDialog.dispatchKeyEvent(
+            KeyEvent(
+                down.downTime,
+                now,
+                KeyEvent.ACTION_UP,
+                down.keyCode,
+                0,
+                down.metaState,
+                down.deviceId,
+                down.scanCode,
+                down.flags,
+                down.source
+            )
+        )
+    }
+
+    private fun currentInputDialog(): Dialog? {
+        return activeChildDialog?.takeIf(Dialog::isShowing)
+            ?: activeDialog?.takeIf(ComponentDialog::isShowing)
     }
 
     /**
@@ -756,7 +1085,9 @@ class GameMenu(
             )
         )
         val hardwareFocusRequest = mutableIntStateOf(0)
+        val parentFocusRestoreRequest = mutableIntStateOf(0)
         composeUiState = state
+        parentFocusRestoreRequestState = parentFocusRestoreRequest
         bitrateCardController.start { bitrate ->
             composeUiState?.let { it.value = it.value.copy(bitrate = bitrate) }
         }
@@ -794,7 +1125,11 @@ class GameMenu(
             onAudioHapticsReset = audioHapticsCardController::resetTuning,
             onGyroEnabled = gyroCardController::setEnabled,
             onGyroMouseMode = gyroCardController::setMouseMode,
-            onGyroActivationKey = gyroCardController::showActivationKeyDialog,
+            onGyroActivationKey = {
+                gyroCardController.showActivationKeyDialog { childDialog ->
+                    registerChildDialog(childDialog)
+                }
+            },
             onGyroSensitivity = gyroCardController::previewSensitivity,
             onGyroSensitivityFinished = gyroCardController::persistSensitivity,
             onGyroInvertX = gyroCardController::setInvertX,
@@ -815,16 +1150,28 @@ class GameMenu(
                         callbacks = callbacks,
                         useFabricTexture = renderingProfile.useFabricTexture,
                         hardwareFocusRequestToken = hardwareFocusRequest.intValue,
+                        restoreFocusRequestToken = parentFocusRestoreRequest.intValue,
                         guideDismissController = guideDismissController
                     )
                 }
             }
         }
-        dialog = ComponentDialog(game, R.style.GameMenuDialogStyle).apply {
+        dialog = object : ComponentDialog(game, R.style.GameMenuDialogStyle) {
+            override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+                if (event.source and InputDevice.SOURCE_CLASS_JOYSTICK != 0) {
+                    val axisPairs = game.controllerHandler.getGameMenuNavigationAxisPairs(event)
+                    if (axisPairs != null && dispatchControllerAxes(event.deviceId, axisPairs)) {
+                        return true
+                    }
+                }
+                return super.dispatchGenericMotionEvent(event)
+            }
+        }.apply {
             setContentView(composeView)
             setCanceledOnTouchOutside(true)
         }
         this.activeDialog = dialog
+        this.activeComposeView = composeView
 
         setupDialogProperties(dialog)
 
@@ -857,7 +1204,7 @@ class GameMenu(
             ) {
                 return@setOnKeyListener true
             }
-            if (keyCode == KeyEvent.KEYCODE_BUTTON_A) {
+            if (mapGameMenuConfirmKeyCode(keyCode) != keyCode) {
                 dialog.dispatchKeyEvent(mapGameMenuConfirmKeyEvent(event))
                 return@setOnKeyListener true
             }
@@ -866,7 +1213,15 @@ class GameMenu(
 
         // 关闭时清理状态
         dialog.setOnDismissListener {
+            prepareForInputOwnerChange()
+            activeChildDialog?.dismiss()
+            activeChildDialog = null
+            resetAxisNavigation()
             if (this.activeDialog == dialog) this.activeDialog = null
+            if (this.activeComposeView === composeView) this.activeComposeView = null
+            if (this.parentFocusRestoreRequestState === parentFocusRestoreRequest) {
+                this.parentFocusRestoreRequestState = null
+            }
             this.composeUiState = null
             guideDismissController.clear()
             bitrateCardController.dispose()
@@ -955,12 +1310,60 @@ class GameMenu(
     }
 
     private fun showCardEditorDialog() {
-        GameMenuCardVisibilityEditor.show(game, game.prefConfig) {
-            composeUiState?.let { state ->
-                state.value = state.value.copy(
-                    visibleCards = readVisibleCards(),
-                    customKeys = getSavedCustomKeys()
-                )
+        registerChildDialog(
+            GameMenuCardVisibilityEditor.show(game, game.prefConfig) {
+                composeUiState?.let { state ->
+                    state.value = state.value.copy(
+                        visibleCards = readVisibleCards(),
+                        customKeys = getSavedCustomKeys()
+                    )
+                }
+            }
+        )
+    }
+
+    private fun registerChildDialog(dialog: Dialog) {
+        activeChildDialog?.takeIf { it !== dialog && it.isShowing }?.dismiss()
+        prepareForInputOwnerChange()
+        activeChildDialog = dialog
+
+        val decorView = dialog.window?.decorView
+        decorView?.setOnKeyListener { _, keyCode, event ->
+            if (activeChildDialog === dialog && dialog.isShowing &&
+                isGameMenuDiagonalKey(keyCode)
+            ) {
+                dialog.dispatchKeyEvent(mapGameMenuConfirmKeyEvent(event))
+                true
+            } else {
+                false
+            }
+        }
+        decorView?.setOnGenericMotionListener { _, event ->
+            if (activeChildDialog !== dialog || !dialog.isShowing ||
+                event.source and InputDevice.SOURCE_CLASS_JOYSTICK == 0
+            ) {
+                false
+            } else {
+                val axisPairs = game.controllerHandler.getGameMenuNavigationAxisPairs(event)
+                axisPairs != null && dispatchControllerAxes(event.deviceId, axisPairs)
+            }
+        }
+
+        dialog.setOnDismissListener {
+            if (activeChildDialog !== dialog) return@setOnDismissListener
+            prepareForInputOwnerChange()
+            activeChildDialog = null
+            decorView?.setOnKeyListener(null)
+            decorView?.setOnGenericMotionListener(null)
+            val parentDialog = activeDialog
+            val parentComposeView = activeComposeView
+            parentComposeView?.post {
+                if (parentDialog?.isShowing == true && activeChildDialog == null) {
+                    parentComposeView.requestFocus()
+                    parentFocusRestoreRequestState?.let { request ->
+                        request.intValue++
+                    }
+                }
             }
         }
     }
@@ -1079,7 +1482,7 @@ class GameMenu(
             val a = allActions[id]!!
             if (a.labelRes != 0) getString(a.labelRes) else a.label
         }.toTypedArray()
-        AppActionSheet.showMultiSelect(
+        registerChildDialog(AppActionSheet.showMultiSelect(
             context = game,
             title = getString(R.string.quick_button_editor_title),
             actions = allLabels.mapIndexed { index, label ->
@@ -1101,7 +1504,7 @@ class GameMenu(
                 QuickActionRegistry.saveConfig(game, QuickActionRegistry.defaultIds(game))
                 refreshComposeQuickActions()
             }
-        )
+        ))
     }
 
     private fun currentMenuPage(): MenuPage? {
@@ -1274,7 +1677,14 @@ class GameMenu(
         }
 
         dialog.setOnKeyListener { _, keyCode, event ->
-            UiDismissKeyHandler.handle(event.action, keyCode, dialog::cancel)
+            if (UiDismissKeyHandler.handle(event.action, keyCode, dialog::cancel)) {
+                true
+            } else if (mapGameMenuConfirmKeyCode(keyCode) != keyCode) {
+                dialog.dispatchKeyEvent(mapGameMenuConfirmKeyEvent(event))
+                true
+            } else {
+                false
+            }
         }
 
         closeButton?.setOnClickListener { dialog.dismiss() }
@@ -1331,6 +1741,7 @@ class GameMenu(
         }
 
         dialog.show()
+        registerChildDialog(dialog)
         dialog.window?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         dialogContent?.minimumHeight = game.resources.displayMetrics.heightPixels
     }
@@ -1380,7 +1791,7 @@ class GameMenu(
             for (i in 0 until dataArray.length()) {
                 keyNames.add(dataArray.getJSONObject(i).optString("name"))
             }
-            AppActionSheet.showMultiSelect(
+            registerChildDialog(AppActionSheet.showMultiSelect(
                 context = game,
                 title = getString(R.string.dialog_title_select_keys_to_delete),
                 actions = keyNames.mapIndexed { index, name ->
@@ -1401,7 +1812,7 @@ class GameMenu(
                         Toast.makeText(game, R.string.toast_delete_failed, Toast.LENGTH_SHORT).show()
                     }
                 }
-            )
+            ))
         } catch (e: Exception) {
             LimeLog.warning("Exception while loading key list${e.message}")
             Toast.makeText(game, R.string.toast_load_key_list_failed, Toast.LENGTH_SHORT).show()
@@ -1567,6 +1978,8 @@ class GameMenu(
 
     companion object {
         private const val GAME_FOCUS_RETRY_DELAY_MS = 10L
+        private const val AXIS_REPEAT_INITIAL_DELAY_MS = 350L
+        private const val AXIS_REPEAT_INTERVAL_MS = 90L
         private const val DIALOG_DIM_AMOUNT = 0.0f
         private const val PREF_NAME = "custom_special_keys"
         private const val KEY_NAME = "data"
