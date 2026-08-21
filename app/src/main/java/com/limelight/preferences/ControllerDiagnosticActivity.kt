@@ -124,6 +124,7 @@ import com.limelight.gamemenu.GameMenuCardShape
 import com.limelight.gamemenu.GameMenuDimens
 import com.limelight.gamemenu.gamepadFocusOutline
 import com.limelight.nvstream.input.ControllerPacket
+import com.limelight.ui.theme.AppShapes
 import com.limelight.utils.UiHelper
 import java.util.Locale
 import java.util.concurrent.Executors
@@ -1855,6 +1856,7 @@ private fun ShortcutTestToggle(
     modifier: Modifier = Modifier
 ) {
     val accent = colorResource(R.color.game_menu_accent)
+    val shape = AppShapes.small
     val actionEnabled = enabled && testPhase != ShortcutTestPhase.STOPPING
     var focused by remember { mutableStateOf(false) }
     val actionColor = when (testPhase) {
@@ -1874,7 +1876,7 @@ private fun ShortcutTestToggle(
             focused -> colorResource(R.color.game_menu_card_background)
             else -> actionColor
         },
-        shape = GameMenuCardShape,
+        shape = shape,
         border = BorderStroke(
             if (focused) 2.dp else GameMenuDimens.surfaceStroke,
             if (actionEnabled) actionColor
@@ -1882,7 +1884,7 @@ private fun ShortcutTestToggle(
         ),
         modifier = modifier
             .heightIn(min = 44.dp)
-            .gamepadFocusOutline(GameMenuCardShape)
+            .gamepadFocusOutline(shape)
             .onFocusChanged { focused = it.isFocused }
             .clickable(enabled = actionEnabled, onClick = onClick)
     ) {
@@ -2636,7 +2638,8 @@ private fun ControllerAxisIndicator(
         border = BorderStroke(
             GameMenuDimens.surfaceStroke,
             if (active) accent.copy(alpha = 0.72f) else idleOutline
-        )
+        ),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier.padding(
@@ -2659,7 +2662,9 @@ private fun ControllerAxisIndicator(
                 color = if (active) accent else colorResource(R.color.game_menu_text_secondary),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
         }
     }

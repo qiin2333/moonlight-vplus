@@ -1261,6 +1261,7 @@ class GameMenu(
         }
 
         dialog.show()
+        dialog.window?.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         applyDialogSize(dialog)
     }
 
@@ -1578,9 +1579,18 @@ class GameMenu(
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun setupDialogProperties(dialog: ComponentDialog) {
         dialog.window?.let { window ->
+            window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
             WindowCompat.setDecorFitsSystemWindows(window, false)
+            // Mirror immersive flags before the dialog can take focus and reveal system bars.
+            window.decorView.systemUiVisibility = game.window.decorView.systemUiVisibility
+            if (game.window.attributes.flags and
+                WindowManager.LayoutParams.FLAG_FULLSCREEN != 0
+            ) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            }
             val layoutParams = window.attributes
             layoutParams.alpha = renderingProfile.windowAlpha
             layoutParams.dimAmount = DIALOG_DIM_AMOUNT
