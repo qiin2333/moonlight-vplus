@@ -72,7 +72,7 @@ class DualSenseWirelessBridgeManagerTest {
         assertEquals(1, controllerListener.added.size)
 
         controllerListener.added.single().rumble(0x5500, 0x3300)
-        assertTrue(host.outputSent.await(1, TimeUnit.SECONDS))
+        assertTrue(host.stateOutputsSent.await(1, TimeUnit.SECONDS))
         manager.close(adapterPresent = true)
 
         assertEquals(DualSenseWirelessBridgeState.DETACHED, manager.state)
@@ -243,7 +243,8 @@ class DualSenseWirelessBridgeManagerTest {
         var closed = false
         var flushed = false
         val outputReports = mutableListOf<ByteArray>()
-        val outputSent = CountDownLatch(1)
+        // The controller sends a one-shot lightbar setup before the queued rumble state.
+        val stateOutputsSent = CountDownLatch(2)
         val hidOpened = CountDownLatch(1)
         val incomingRequests = mutableListOf<HciConnectionRequest>()
         var discoveryCancelCalls = 0
@@ -288,7 +289,7 @@ class DualSenseWirelessBridgeManagerTest {
         override fun closeDualSenseHidp(): Boolean = true
         override fun sendDualSenseOutputReport(report: ByteArray): Boolean {
             synchronized(outputReports) { outputReports += report }
-            outputSent.countDown()
+            stateOutputsSent.countDown()
             return true
         }
         override fun flushAcl(timeoutMs: Long): Boolean {
