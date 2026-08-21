@@ -19,6 +19,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -97,6 +98,17 @@ internal fun isGameMenuNavigationKey(keyCode: Int): Boolean {
         keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
         keyCode == KeyEvent.KEYCODE_BUTTON_A ||
         keyCode == KeyEvent.KEYCODE_TAB
+}
+
+internal fun nearestFocusIndex(sourceCenter: Int, targetCenters: List<Int>): Int {
+    require(targetCenters.isNotEmpty())
+    return targetCenters.indices.minBy { index ->
+        kotlin.math.abs(targetCenters[index] - sourceCenter)
+    }
+}
+
+internal fun resolveCustomKeyName(enteredName: String, selectedKeysName: String): String {
+    return enteredName.trim().ifEmpty { selectedKeysName.trim() }
 }
 
 internal fun createGameMenuBackOption(
@@ -511,7 +523,9 @@ class GameMenu(
         val subtitle: String? = null,
         val isCrownControl: Boolean = false,
         val showChevron: Boolean = false,
-        val inlineControl: InlineControl? = null
+        val inlineControl: InlineControl? = null,
+        val selected: Boolean = false,
+        val presentation: GameMenuOptionPresentation = GameMenuOptionPresentation.DEFAULT
     ) {
         constructor(label: String, runnable: Runnable?) :
                 this(label, false, runnable, null, true, false)
@@ -544,7 +558,11 @@ class GameMenu(
     /**
      * 菜单状态，用于回退
      */
-    private data class MenuPage(val title: String, val options: List<MenuOption>)
+    private data class MenuPage(
+        val title: String,
+        val options: List<MenuOption>,
+        val layout: GameMenuPageLayout = GameMenuPageLayout.STANDARD
+    )
 
     /**
      * 获取字符串资源
@@ -588,17 +606,15 @@ class GameMenu(
             !game.prefConfig.screenDs5Touchpad
         val touchModeOptionsList = buildTouchModeSegments().mapTo(mutableListOf()) { segment ->
             MenuOption(
-                label = if (segment.selected) {
-                    game.getString(R.string.game_menu_current_selection, segment.label)
-                } else {
-                    segment.label
-                },
+                label = segment.label,
                 isWithGameFocus = false,
                 runnable = segment.runnable,
                 iconKey = null,
                 isShowIcon = false,
-                isKeepDialog = false,
-                subtitle = segment.subtitle
+                isKeepDialog = true,
+                subtitle = segment.subtitle,
+                selected = segment.selected,
+                presentation = GameMenuOptionPresentation.PRIMARY_MODE
             )
         }
 
@@ -621,12 +637,13 @@ class GameMenu(
                     },
                     null,
                     false,
-                    false,
+                    true,
                     if (game.prefConfig.enableDoubleClickDrag) {
                         getString(R.string.game_menu_option_enabled)
                     } else {
                         getString(R.string.game_menu_option_disabled)
-                    }
+                    },
+                    presentation = GameMenuOptionPresentation.COMPATIBLE_ACTION
                 )
             )
         }
@@ -637,10 +654,7 @@ class GameMenu(
                 MenuOption(
                     label = getString(R.string.game_menu_local_cursor_rendering),
                     isWithGameFocus = false,
-                    runnable = Runnable {
-                        localCursorToggleAction.run()
-                        rebuildAndReplaceMenu()
-                    },
+                    runnable = localCursorToggleAction,
                     iconKey = null,
                     isShowIcon = false,
                     isKeepDialog = true,
@@ -648,7 +662,8 @@ class GameMenu(
                     inlineControl = InlineControl.Toggle(
                         checked = game.prefConfig.enableLocalCursorRendering,
                         toggleAction = localCursorToggleAction
-                    )
+                    ),
+                    presentation = GameMenuOptionPresentation.COMPATIBLE_ACTION
                 )
             )
         }
@@ -660,8 +675,9 @@ class GameMenu(
                 runnable = Runnable { actionExecutor.execute("toggle_remote_mouse") },
                 iconKey = null,
                 isShowIcon = false,
-                isKeepDialog = false,
-                subtitle = getString(R.string.game_menu_toggle_remote_mouse_summary)
+                isKeepDialog = true,
+                subtitle = getString(R.string.game_menu_toggle_remote_mouse_summary),
+                presentation = GameMenuOptionPresentation.COMPATIBLE_ACTION
             )
         )
 
@@ -683,17 +699,27 @@ class GameMenu(
                     },
                     null,
                     false,
-                    false,
+                    true,
                     if (game.isMouseMoveOnlyEnabled) {
                         getString(R.string.layout_page_device_text_mmo_true_text)
                     } else {
                         getString(R.string.layout_page_device_text_mmo_false_text)
-                    }
+                    },
+                    presentation = GameMenuOptionPresentation.COMPATIBLE_ACTION
                 )
             )
         }
 
-        showSubMenu(getString(R.string.game_menu_switch_touch_mode), touchModeOptionsList.toTypedArray())
+        val title = getString(R.string.game_menu_switch_touch_mode)
+        if (composeUiState?.value?.pageLayout == GameMenuPageLayout.TOUCH_MODE) {
+            showMenuPage(MenuPage(title, touchModeOptionsList, GameMenuPageLayout.TOUCH_MODE))
+        } else {
+            showSubMenu(
+                title,
+                touchModeOptionsList.toTypedArray(),
+                GameMenuPageLayout.TOUCH_MODE
+            )
+        }
     }
 
     private fun toggleLocalCursorRendering() {
@@ -854,8 +880,17 @@ class GameMenu(
                 options = normalOptions,
                 deviceQuickOptions = device?.getGameMenuQuickOptions().orEmpty(),
                 crownToggleText = getCrownToggleText(),
-                isSubmenu = false
+                isSubmenu = false,
+                pageLayout = GameMenuPageLayout.STANDARD
             )
+        }
+    }
+
+    private fun refreshCurrentMenuPage() {
+        if (composeUiState?.value?.pageLayout == GameMenuPageLayout.TOUCH_MODE) {
+            showTouchModeMenu()
+        } else {
+            rebuildAndReplaceMenu()
         }
     }
 
@@ -1065,7 +1100,12 @@ class GameMenu(
     /**
      * 显示菜单对话框
      */
-    private fun showMenuDialog(title: String, normalOptions: Array<MenuOption>, superOptions: Array<MenuOption>) {
+    private fun showMenuDialog(
+        title: String,
+        normalOptions: Array<MenuOption>,
+        superOptions: Array<MenuOption>,
+        pageLayout: GameMenuPageLayout = GameMenuPageLayout.STANDARD
+    ) {
         lateinit var dialog: ComponentDialog
 
         val state = mutableStateOf(
@@ -1081,7 +1121,8 @@ class GameMenu(
                 bitrate = bitrateCardController.snapshot(),
                 audioHaptics = audioHapticsCardController.snapshot(),
                 gyro = gyroCardController.snapshot(),
-                customKeys = getSavedCustomKeys()
+                customKeys = getSavedCustomKeys(),
+                pageLayout = pageLayout
             )
         )
         val hardwareFocusRequest = mutableIntStateOf(0)
@@ -1232,6 +1273,7 @@ class GameMenu(
         }
 
         dialog.show()
+        dialog.window?.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         applyDialogSize(dialog)
     }
 
@@ -1262,7 +1304,11 @@ class GameMenu(
             option.inlineControl.toggleAction == null &&
             dialog.isShowing
         ) {
-            rebuildAndReplaceMenu()
+            refreshCurrentMenuPage()
+        } else if (option.presentation != GameMenuOptionPresentation.DEFAULT &&
+            dialog.isShowing
+        ) {
+            refreshCurrentMenuPage()
         }
         lastActionOpenedSubmenu = false
     }
@@ -1270,13 +1316,13 @@ class GameMenu(
     private fun handleInlineSegmentClick(segment: SegmentOption) {
         if (segment.selected) return
         segment.runnable.run()
-        rebuildAndReplaceMenu()
+        refreshCurrentMenuPage()
     }
 
     private fun handleInlineToggle(toggle: InlineControl.Toggle) {
         val action = toggle.toggleAction ?: return
         action.run()
-        rebuildAndReplaceMenu()
+        refreshCurrentMenuPage()
     }
 
     private fun showSuperCommandHint() {
@@ -1311,7 +1357,11 @@ class GameMenu(
 
     private fun showCardEditorDialog() {
         registerChildDialog(
-            GameMenuCardVisibilityEditor.show(game, game.prefConfig) {
+            GameMenuCardVisibilityEditor.show(
+                game,
+                game.prefConfig,
+                forceInitialFocus = true
+            ) {
                 composeUiState?.let { state ->
                     state.value = state.value.copy(
                         visibleCards = readVisibleCards(),
@@ -1503,12 +1553,13 @@ class GameMenu(
             onReset = {
                 QuickActionRegistry.saveConfig(game, QuickActionRegistry.defaultIds(game))
                 refreshComposeQuickActions()
-            }
+            },
+            forceInitialFocus = true
         ))
     }
 
     private fun currentMenuPage(): MenuPage? {
-        return composeUiState?.value?.let { MenuPage(it.title, it.options) }
+        return composeUiState?.value?.let { MenuPage(it.title, it.options, it.pageLayout) }
     }
 
     private fun showMenuPage(page: MenuPage, pushCurrent: Boolean = false) {
@@ -1517,7 +1568,8 @@ class GameMenu(
         state.value = state.value.copy(
             title = page.title,
             options = page.options,
-            isSubmenu = menuStack.isNotEmpty()
+            isSubmenu = menuStack.isNotEmpty(),
+            pageLayout = page.layout
         )
     }
 
@@ -1530,19 +1582,32 @@ class GameMenu(
     /**
      * 在当前打开的 dialog 中显示一个子菜单
      */
-    private fun showSubMenu(title: String, subOptions: Array<MenuOption>) {
+    private fun showSubMenu(
+        title: String,
+        subOptions: Array<MenuOption>,
+        pageLayout: GameMenuPageLayout = GameMenuPageLayout.STANDARD
+    ) {
         val dialog = activeDialog
         if (dialog != null && dialog.isShowing) {
             lastActionOpenedSubmenu = true
-            showMenuPage(MenuPage(title, subOptions.toList()), pushCurrent = true)
+            showMenuPage(MenuPage(title, subOptions.toList(), pageLayout), pushCurrent = true)
         } else {
-            showMenuDialog(title, subOptions, emptyArray())
+            showMenuDialog(title, subOptions, emptyArray(), pageLayout)
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun setupDialogProperties(dialog: ComponentDialog) {
         dialog.window?.let { window ->
+            window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
             WindowCompat.setDecorFitsSystemWindows(window, false)
+            // Mirror immersive flags before the dialog can take focus and reveal system bars.
+            window.decorView.systemUiVisibility = game.window.decorView.systemUiVisibility
+            if (game.window.attributes.flags and
+                WindowManager.LayoutParams.FLAG_FULLSCREEN != 0
+            ) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            }
             val layoutParams = window.attributes
             layoutParams.alpha = renderingProfile.windowAlpha
             layoutParams.dimAmount = DIALOG_DIM_AMOUNT
@@ -1577,12 +1642,16 @@ class GameMenu(
 
         val hasKeys = loadAndAddAllKeys(options)
 
-        options.add(MenuOption(getString(R.string.game_menu_add_custom_key), false,
-            { showAddCustomKeyDialog() }, null, false))
+        options.add(gameMenuChildDialogOption(
+            label = getString(R.string.game_menu_add_custom_key),
+            action = Runnable { showAddCustomKeyDialog() }
+        ))
 
         if (hasKeys) {
-            options.add(MenuOption(getString(R.string.game_menu_delete_custom_key), false,
-                { showDeleteKeysDialog() }, null, false))
+            options.add(gameMenuChildDialogOption(
+                label = getString(R.string.game_menu_delete_custom_key),
+                action = Runnable { showDeleteKeysDialog() }
+            ))
         }
 
         options.add(
@@ -1668,6 +1737,26 @@ class GameMenu(
         val clearButton = dialogView.findViewById<Button>(R.id.button_clear_keys)
         val closeButton = dialogView.findViewById<Button>(R.id.button_close_dialog)
         val saveButton = dialogView.findViewById<Button>(R.id.button_save_key)
+        var nameEditing = false
+
+        fun leaveNameEditing() {
+            if (!nameEditing) return
+            nameEditing = false
+            val inputMethodManager = game.getSystemService(Context.INPUT_METHOD_SERVICE)
+                as? InputMethodManager
+            inputMethodManager?.hideSoftInputFromWindow(nameInput.windowToken, 0)
+        }
+
+        fun enterNameEditing() {
+            nameEditing = true
+            nameInput.requestFocus()
+            nameInput.setSelection(nameInput.text.length)
+            nameInput.post {
+                val inputMethodManager = game.getSystemService(Context.INPUT_METHOD_SERVICE)
+                    as? InputMethodManager
+                inputMethodManager?.showSoftInput(nameInput, InputMethodManager.SHOW_IMPLICIT)
+            }
+        }
 
         val dialog = builder.create()
         dialog.window?.apply {
@@ -1677,7 +1766,13 @@ class GameMenu(
         }
 
         dialog.setOnKeyListener { _, keyCode, event ->
-            if (UiDismissKeyHandler.handle(event.action, keyCode, dialog::cancel)) {
+            val editingDismissKey = keyCode == KeyEvent.KEYCODE_BACK ||
+                keyCode == KeyEvent.KEYCODE_ESCAPE ||
+                keyCode == KeyEvent.KEYCODE_BUTTON_B
+            if (nameEditing && editingDismissKey) {
+                if (event.action == KeyEvent.ACTION_UP) leaveNameEditing()
+                event.action == KeyEvent.ACTION_DOWN || event.action == KeyEvent.ACTION_UP
+            } else if (UiDismissKeyHandler.handle(event.action, keyCode, dialog::cancel)) {
                 true
             } else if (mapGameMenuConfirmKeyCode(keyCode) != keyCode) {
                 dialog.dispatchKeyEvent(mapGameMenuConfirmKeyEvent(event))
@@ -1688,6 +1783,10 @@ class GameMenu(
         }
 
         closeButton?.setOnClickListener { dialog.dismiss() }
+        nameInput.setOnClickListener { enterNameEditing() }
+        nameInput.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) leaveNameEditing()
+        }
 
         // 点击背景关闭对话框
         if (dialogView is FrameLayout) {
@@ -1709,12 +1808,15 @@ class GameMenu(
             keysDisplay.text = ""
         }
 
-        // 递归设置键盘监听器
-        setupCompactKeyboardListeners(dialogView.findViewById(R.id.keyboard_drawing), keysDisplay)
+        val keyboardDrawing = dialogView.findViewById<ViewGroup>(R.id.keyboard_drawing)
+        setupCompactKeyboardListeners(keyboardDrawing, keysDisplay)
 
         // 保存按钮事件
         saveButton?.setOnClickListener {
-            val name = nameInput.text.toString().trim()
+            val name = resolveCustomKeyName(
+                nameInput.text.toString(),
+                keysDisplay.text.toString()
+            )
             val androidKeyCodesStr = keysDisplay.tag.toString()
 
             if (name.isEmpty() || androidKeyCodesStr.isEmpty()) {
@@ -1744,6 +1846,16 @@ class GameMenu(
         registerChildDialog(dialog)
         dialog.window?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         dialogContent?.minimumHeight = game.resources.displayMetrics.heightPixels
+        setupCompactKeyboardControllerNavigation(
+            keyboardDrawing,
+            controlRows = listOf(
+                listOfNotNull(saveButton, closeButton),
+                listOfNotNull(nameInput, clearButton)
+            ),
+            editableView = nameInput,
+            isEditing = { nameEditing },
+            onEnterEditing = ::enterNameEditing
+        )
     }
 
     private fun setupCompactKeyboardListeners(parent: ViewGroup?, keysDisplay: TextView) {
@@ -1767,6 +1879,114 @@ class GameMenu(
                 }
             }
         }
+    }
+
+    private fun setupCompactKeyboardControllerNavigation(
+        keyboard: ViewGroup?,
+        controlRows: List<List<View>>,
+        editableView: EditText? = null,
+        isEditing: () -> Boolean = { false },
+        onEnterEditing: () -> Unit = {}
+    ) {
+        if (keyboard == null) return
+        val keyboardRows = mutableListOf<List<View>>()
+        for (index in 0 until keyboard.childCount) {
+            val row = keyboard.getChildAt(index) as? ViewGroup ?: continue
+            val keys = mutableListOf<View>()
+            collectCompactKeyboardKeys(row, keys)
+            if (keys.isNotEmpty()) keyboardRows.add(keys)
+        }
+        if (keyboardRows.isEmpty()) return
+
+        val focusRows = buildList {
+            addAll(controlRows.filter { it.isNotEmpty() })
+            addAll(keyboardRows)
+        }
+        focusRows.flatten().forEach { view ->
+            if (view.id == View.NO_ID) view.id = View.generateViewId()
+            view.isFocusable = true
+            view.isFocusableInTouchMode = true
+        }
+
+        keyboard.post {
+            val laidOutRows = focusRows.map { row ->
+                row.sortedBy(::viewHorizontalCenterOnScreen)
+            }
+            laidOutRows.forEachIndexed { rowIndex, row ->
+                val upRow = laidOutRows[(rowIndex - 1 + laidOutRows.size) % laidOutRows.size]
+                val downRow = laidOutRows[(rowIndex + 1) % laidOutRows.size]
+                val upCenters = upRow.map(::viewHorizontalCenterOnScreen)
+                val downCenters = downRow.map(::viewHorizontalCenterOnScreen)
+                row.forEachIndexed { columnIndex, view ->
+                    val center = viewHorizontalCenterOnScreen(view)
+                    val leftTarget = row[(columnIndex - 1 + row.size) % row.size]
+                    val rightTarget = row[(columnIndex + 1) % row.size]
+                    val upTarget = upRow[nearestFocusIndex(center, upCenters)]
+                    val downTarget = downRow[nearestFocusIndex(center, downCenters)]
+                    view.nextFocusLeftId = leftTarget.id
+                    view.nextFocusRightId = rightTarget.id
+                    view.nextFocusUpId = upTarget.id
+                    view.nextFocusDownId = downTarget.id
+                    view.setOnKeyListener { _, keyCode, event ->
+                        if (view === editableView) {
+                            val confirmKey = keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                                keyCode == KeyEvent.KEYCODE_ENTER ||
+                                keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
+                                keyCode == KeyEvent.KEYCODE_BUTTON_A
+                            if (confirmKey) {
+                                if (event.action == KeyEvent.ACTION_UP) onEnterEditing()
+                                return@setOnKeyListener event.action == KeyEvent.ACTION_DOWN ||
+                                    event.action == KeyEvent.ACTION_UP
+                            }
+                            if (isEditing()) {
+                                if (keyCode == KeyEvent.KEYCODE_DPAD_UP ||
+                                    keyCode == KeyEvent.KEYCODE_DPAD_DOWN
+                                ) {
+                                    return@setOnKeyListener event.action == KeyEvent.ACTION_DOWN ||
+                                        event.action == KeyEvent.ACTION_UP
+                                }
+                                return@setOnKeyListener false
+                            }
+                        }
+                        val target = when (keyCode) {
+                            KeyEvent.KEYCODE_DPAD_LEFT -> leftTarget
+                            KeyEvent.KEYCODE_DPAD_RIGHT -> rightTarget
+                            KeyEvent.KEYCODE_DPAD_UP -> upTarget
+                            KeyEvent.KEYCODE_DPAD_DOWN -> downTarget
+                            else -> return@setOnKeyListener false
+                        }
+                        if (event.action == KeyEvent.ACTION_DOWN) {
+                            target.requestFocus()
+                        }
+                        event.action == KeyEvent.ACTION_DOWN || event.action == KeyEvent.ACTION_UP
+                    }
+                }
+            }
+            val initialTarget = keyboardRows.first().first()
+            initialTarget.requestFocus()
+            keyboard.post {
+                if (laidOutRows.flatten().none(View::hasFocus)) {
+                    initialTarget.requestFocus()
+                }
+            }
+        }
+    }
+
+    private fun collectCompactKeyboardKeys(parent: ViewGroup, output: MutableList<View>) {
+        for (index in 0 until parent.childCount) {
+            val child = parent.getChildAt(index)
+            if (child is ViewGroup) {
+                collectCompactKeyboardKeys(child, output)
+            } else if (child is TextView && child.tag != null && child.visibility == View.VISIBLE) {
+                output.add(child)
+            }
+        }
+    }
+
+    private fun viewHorizontalCenterOnScreen(view: View): Int {
+        val location = IntArray(2)
+        view.getLocationOnScreen(location)
+        return location[0] + view.width / 2
     }
 
     private fun showDeleteKeysDialog() {
@@ -1811,7 +2031,8 @@ class GameMenu(
                         LimeLog.warning("Exception while deleting keys${e.message}")
                         Toast.makeText(game, R.string.toast_delete_failed, Toast.LENGTH_SHORT).show()
                     }
-                }
+                },
+                forceInitialFocus = true
             ))
         } catch (e: Exception) {
             LimeLog.warning("Exception while loading key list${e.message}")

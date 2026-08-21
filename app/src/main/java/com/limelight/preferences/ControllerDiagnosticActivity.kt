@@ -124,6 +124,7 @@ import com.limelight.gamemenu.GameMenuCardShape
 import com.limelight.gamemenu.GameMenuDimens
 import com.limelight.gamemenu.gamepadFocusOutline
 import com.limelight.nvstream.input.ControllerPacket
+import com.limelight.ui.theme.AppShapes
 import com.limelight.utils.UiHelper
 import java.util.Locale
 import java.util.concurrent.Executors
@@ -2338,7 +2339,9 @@ private fun ControllerButtonSection(
         shape = shape,
         border = BorderStroke(
             GameMenuDimens.surfaceStroke,
-            colorResource(R.color.controller_diag_outline)
+            colorResource(R.color.controller_diag_outline).copy(
+                alpha = CONTROLLER_DIAG_IDLE_OUTLINE_ALPHA
+            )
         ),
         modifier = modifier
             .heightIn(min = if (compact) 88.dp else 116.dp)
@@ -2559,7 +2562,9 @@ private fun ControllerDiagramKey(
             )
             .border(
                 GameMenuDimens.surfaceStroke,
-                if (pressed) accent else colorResource(R.color.controller_diag_outline),
+                if (pressed) accent else colorResource(R.color.controller_diag_outline).copy(
+                    alpha = CONTROLLER_DIAG_IDLE_OUTLINE_ALPHA
+                ),
                 CircleShape
             ),
         contentAlignment = Alignment.Center
@@ -2591,7 +2596,9 @@ private fun ControllerCompactKey(
             )
             .border(
                 GameMenuDimens.surfaceStroke,
-                if (pressed) accent else colorResource(R.color.controller_diag_outline),
+                if (pressed) accent else colorResource(R.color.controller_diag_outline).copy(
+                    alpha = CONTROLLER_DIAG_IDLE_OUTLINE_ALPHA
+                ),
                 CircleShape
             ),
         contentAlignment = Alignment.Center
@@ -2614,7 +2621,9 @@ private fun ControllerAxisIndicator(
     pressed: Boolean
 ) {
     val accent = colorResource(R.color.game_menu_accent)
-    val idleOutline = colorResource(R.color.controller_diag_outline)
+    val idleOutline = colorResource(R.color.controller_diag_outline).copy(
+        alpha = CONTROLLER_DIAG_IDLE_OUTLINE_ALPHA
+    )
     val compact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val active = pressed || kotlin.math.abs(x) > ANALOG_ACTIVE_THRESHOLD ||
         kotlin.math.abs(y) > ANALOG_ACTIVE_THRESHOLD
@@ -2628,7 +2637,8 @@ private fun ControllerAxisIndicator(
         border = BorderStroke(
             GameMenuDimens.surfaceStroke,
             if (active) accent.copy(alpha = 0.72f) else idleOutline
-        )
+        ),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier.padding(
@@ -2651,7 +2661,9 @@ private fun ControllerAxisIndicator(
                 color = if (active) accent else colorResource(R.color.game_menu_text_secondary),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
         }
     }
@@ -2896,7 +2908,9 @@ private fun ControllerShortcutCard(
         border = BorderStroke(
             GameMenuDimens.surfaceStroke,
             if (recognized) accent.copy(alpha = 0.72f)
-            else colorResource(R.color.controller_diag_outline)
+            else colorResource(R.color.controller_diag_outline).copy(
+                alpha = CONTROLLER_DIAG_IDLE_OUTLINE_ALPHA
+            )
         ),
         modifier = modifier
             .fillMaxWidth()
@@ -2973,7 +2987,9 @@ private fun ShortcutKeyChip(label: String, active: Boolean) {
             )
             .border(
                 GameMenuDimens.surfaceStroke,
-                if (active) accent else colorResource(R.color.controller_diag_outline),
+                if (active) accent else colorResource(R.color.controller_diag_outline).copy(
+                    alpha = CONTROLLER_DIAG_IDLE_OUTLINE_ALPHA
+                ),
                 CircleShape
             )
             .padding(horizontal = 9.dp, vertical = 5.dp)
@@ -2986,7 +3002,9 @@ private fun GamepadSilhouetteVisualization(state: ShortcutSimulatorUiState) {
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val accent = colorResource(R.color.game_menu_accent)
     val bodyColor = colorResource(R.color.game_menu_card_background)
-    val outline = colorResource(R.color.controller_diag_outline)
+    val outline = colorResource(R.color.controller_diag_outline).copy(
+        alpha = CONTROLLER_DIAG_IDLE_OUTLINE_ALPHA
+    )
     val idleControl = colorResource(R.color.controller_diag_control_surface)
     val textColor = colorResource(R.color.game_menu_text_primary)
     val shape = if (isLandscape) RectangleShape else GameMenuCardShape
@@ -3043,7 +3061,7 @@ private fun GamepadSilhouetteVisualization(state: ShortcutSimulatorUiState) {
             drawPath(
                 bodyPath,
                 outline,
-                style = Stroke(width = 4f * scale, cap = StrokeCap.Round)
+                style = Stroke(width = 2.4f * scale, cap = StrokeCap.Round)
             )
 
             fun drawShoulder(
@@ -3076,7 +3094,7 @@ private fun GamepadSilhouetteVisualization(state: ShortcutSimulatorUiState) {
                     topLeft,
                     scaledSize(width, height),
                     corner,
-                    style = Stroke(width = 3f * scale)
+                    style = Stroke(width = 2f * scale)
                 )
                 drawControllerLabel(
                     label,
@@ -3112,7 +3130,7 @@ private fun GamepadSilhouetteVisualization(state: ShortcutSimulatorUiState) {
                     activeStroke(pressed),
                     66f * scale,
                     center,
-                    style = Stroke(width = 4f * scale)
+                    style = Stroke(width = 2.5f * scale)
                 )
                 val active = pressed || kotlin.math.abs(axisX) > ANALOG_ACTIVE_THRESHOLD ||
                     kotlin.math.abs(axisY) > ANALOG_ACTIVE_THRESHOLD
@@ -3125,7 +3143,7 @@ private fun GamepadSilhouetteVisualization(state: ShortcutSimulatorUiState) {
                     activeStroke(active),
                     36f * scale,
                     knob,
-                    style = Stroke(width = 3f * scale)
+                    style = Stroke(width = 2f * scale)
                 )
                 drawControllerLabel(label, point(centerX, centerY + 91f), textColor, scale, 22f)
             }
@@ -3140,7 +3158,7 @@ private fun GamepadSilhouetteVisualization(state: ShortcutSimulatorUiState) {
 
             val dpadCenter = point(278f, 350f)
             drawCircle(idleControl, 74f * scale, dpadCenter)
-            drawCircle(outline, 74f * scale, dpadCenter, style = Stroke(width = 3f * scale))
+            drawCircle(outline, 74f * scale, dpadCenter, style = Stroke(width = 2f * scale))
             fun drawDpadPart(x: Float, y: Float, width: Float, height: Float, flag: Int) {
                 val pressed = isPressed(state, flag)
                 val topLeft = point(x, y)
@@ -3152,7 +3170,7 @@ private fun GamepadSilhouetteVisualization(state: ShortcutSimulatorUiState) {
                     topLeft,
                     partSize,
                     corner,
-                    style = Stroke(width = 2f * scale)
+                    style = Stroke(width = 1.5f * scale)
                 )
             }
             drawDpadPart(265f, 277f, 26f, 58f, ControllerPacket.UP_FLAG)
@@ -3167,7 +3185,7 @@ private fun GamepadSilhouetteVisualization(state: ShortcutSimulatorUiState) {
                     activeStroke(pressed),
                     34f * scale,
                     point(x, y),
-                    style = Stroke(width = 3f * scale)
+                    style = Stroke(width = 2f * scale)
                 )
                 drawControllerLabel(
                     label,
@@ -3199,7 +3217,7 @@ private fun GamepadSilhouetteVisualization(state: ShortcutSimulatorUiState) {
                     topLeft,
                     metaSize,
                     corner,
-                    style = Stroke(width = 2f * scale)
+                    style = Stroke(width = 1.5f * scale)
                 )
                 drawControllerLabel(
                     label,
@@ -3228,13 +3246,13 @@ private fun GamepadSilhouetteVisualization(state: ShortcutSimulatorUiState) {
                 outline.copy(alpha = 0.78f),
                 point(155f, 390f),
                 point(245f, 475f),
-                strokeWidth = 3f * scale
+                strokeWidth = 1.75f * scale
             )
             drawLine(
                 outline.copy(alpha = 0.78f),
                 point(845f, 390f),
                 point(755f, 475f),
-                strokeWidth = 3f * scale
+                strokeWidth = 1.75f * scale
             )
         }
     }
@@ -3415,13 +3433,14 @@ private fun ShortcutCardTestButton(
     onFocused: () -> Unit
 ) {
     val accent = colorResource(R.color.game_menu_accent)
+    val shape = AppShapes.small
     Surface(
         color = if (selected) Color(0xFFE34F63) else accent.copy(alpha = 0.12f),
-        shape = RectangleShape,
+        shape = shape,
         border = BorderStroke(GameMenuDimens.surfaceStroke, accent.copy(alpha = 0.38f)),
         modifier = Modifier
             .heightIn(min = 34.dp)
-            .gamepadFocusOutline(RectangleShape)
+            .gamepadFocusOutline(shape)
             .onFocusChanged { if (it.isFocused) onFocused() }
             .clickable(onClick = onClick)
     ) {
@@ -3866,4 +3885,5 @@ private fun formatCountdown(seconds: Int): String {
     return String.format(Locale.US, "%d:%02d", safeSeconds / 60, safeSeconds % 60)
 }
 
+private const val CONTROLLER_DIAG_IDLE_OUTLINE_ALPHA = 0.68f
 private const val ANALOG_ACTIVE_THRESHOLD = 0.08f

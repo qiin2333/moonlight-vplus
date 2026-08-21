@@ -39,6 +39,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -87,6 +88,7 @@ object AppActionSheet {
     ): Dialog {
         val dialog = ComponentDialog(context, R.style.AppActionSheetStyle)
         var selectedAction: Action? = null
+        val focusRequestToken = mutableIntStateOf(0)
         val composeView = ComposeView(context).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
@@ -96,6 +98,7 @@ object AppActionSheet {
                         subtitle = subtitle?.toString(),
                         activeStatus = activeStatus,
                         actions = actions,
+                        focusRequestToken = focusRequestToken.intValue,
                         onAction = { action ->
                             selectedAction = action
                             dialog.dismiss()
@@ -108,6 +111,7 @@ object AppActionSheet {
 
         dialog.setOnDismissListener { onDismiss?.invoke(selectedAction) }
         prepareDialog(dialog, composeView)
+        composeView.post { focusRequestToken.intValue++ }
         return dialog
     }
 
@@ -120,9 +124,11 @@ object AppActionSheet {
         resetLabel: CharSequence? = null,
         minimumSelectionCount: Int = 0,
         onConfirm: (Set<Int>) -> Unit,
-        onReset: (() -> Unit)? = null
+        onReset: (() -> Unit)? = null,
+        forceInitialFocus: Boolean = false
     ): Dialog {
         val dialog = ComponentDialog(context, R.style.AppActionSheetStyle)
+        val focusRequestToken = mutableIntStateOf(0)
         val composeView = ComposeView(context).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
@@ -141,6 +147,7 @@ object AppActionSheet {
                         confirmLabel = confirmLabel.toString(),
                         cancelLabel = cancelLabel.toString(),
                         resetLabel = resetLabel?.toString(),
+                        focusRequestToken = focusRequestToken.intValue,
                         onToggle = { action ->
                             selectedIds = if (action.id in selectedIds) {
                                 if (selectedIds.size > minimumSelectionCount) selectedIds - action.id
@@ -159,12 +166,14 @@ object AppActionSheet {
                                 dialog.dismiss()
                                 reset()
                             }
-                        }
+                        },
+                        forceInitialFocus = forceInitialFocus
                     )
                 }
             }
         }
         prepareDialog(dialog, composeView)
+        composeView.post { focusRequestToken.intValue++ }
         return dialog
     }
 
@@ -228,13 +237,21 @@ object AppActionSheet {
         subtitle: String?,
         activeStatus: Boolean,
         actions: List<Action>,
+        focusRequestToken: Int,
         onAction: (Action) -> Unit
     ) {
         val initialFocusRequester = remember { FocusRequester() }
         val shouldRequestFocus = isControllerFocusMode()
+        val inputModeManager = LocalInputModeManager.current
         val initialFocusPlaced = remember { mutableStateOf(false) }
-        LaunchedEffect(actions, shouldRequestFocus, initialFocusPlaced.value) {
+        LaunchedEffect(
+            actions,
+            shouldRequestFocus,
+            initialFocusPlaced.value,
+            focusRequestToken
+        ) {
             if (shouldRequestFocus && actions.isNotEmpty() && initialFocusPlaced.value) {
+                inputModeManager.requestInputMode(InputMode.Keyboard)
                 initialFocusRequester.requestFocus()
             }
         }
@@ -272,16 +289,25 @@ object AppActionSheet {
         confirmLabel: String,
         cancelLabel: String,
         resetLabel: String?,
+        focusRequestToken: Int,
         onToggle: (Action) -> Unit,
         onConfirm: () -> Unit,
         onCancel: () -> Unit,
-        onReset: (() -> Unit)?
+        onReset: (() -> Unit)?,
+        forceInitialFocus: Boolean
     ) {
         val initialFocusRequester = remember { FocusRequester() }
-        val shouldRequestFocus = isControllerFocusMode()
+        val shouldRequestFocus = forceInitialFocus || isControllerFocusMode()
+        val inputModeManager = LocalInputModeManager.current
         val initialFocusPlaced = remember { mutableStateOf(false) }
-        LaunchedEffect(actions, shouldRequestFocus, initialFocusPlaced.value) {
+        LaunchedEffect(
+            actions,
+            shouldRequestFocus,
+            initialFocusPlaced.value,
+            focusRequestToken
+        ) {
             if (shouldRequestFocus && initialFocusPlaced.value) {
+                inputModeManager.requestInputMode(InputMode.Keyboard)
                 initialFocusRequester.requestFocus()
             }
         }
