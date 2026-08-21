@@ -99,6 +99,17 @@ internal fun isGameMenuNavigationKey(keyCode: Int): Boolean {
         keyCode == KeyEvent.KEYCODE_TAB
 }
 
+internal fun nearestFocusIndex(sourceCenter: Int, targetCenters: List<Int>): Int {
+    require(targetCenters.isNotEmpty())
+    return targetCenters.indices.minBy { index ->
+        kotlin.math.abs(targetCenters[index] - sourceCenter)
+    }
+}
+
+internal fun resolveCustomKeyName(enteredName: String, selectedKeysName: String): String {
+    return enteredName.trim().ifEmpty { selectedKeysName.trim() }
+}
+
 internal fun createGameMenuBackOption(
     label: String,
     onBack: () -> Unit
@@ -1345,7 +1356,11 @@ class GameMenu(
 
     private fun showCardEditorDialog() {
         registerChildDialog(
-            GameMenuCardVisibilityEditor.show(game, game.prefConfig) {
+            GameMenuCardVisibilityEditor.show(
+                game,
+                game.prefConfig,
+                forceInitialFocus = true
+            ) {
                 composeUiState?.let { state ->
                     state.value = state.value.copy(
                         visibleCards = readVisibleCards(),
@@ -1537,7 +1552,8 @@ class GameMenu(
             onReset = {
                 QuickActionRegistry.saveConfig(game, QuickActionRegistry.defaultIds(game))
                 refreshComposeQuickActions()
-            }
+            },
+            forceInitialFocus = true
         ))
     }
 
@@ -1761,12 +1777,15 @@ class GameMenu(
             keysDisplay.text = ""
         }
 
-        // 递归设置键盘监听器
-        setupCompactKeyboardListeners(dialogView.findViewById(R.id.keyboard_drawing), keysDisplay)
+        val keyboardDrawing = dialogView.findViewById<ViewGroup>(R.id.keyboard_drawing)
+        setupCompactKeyboardListeners(keyboardDrawing, keysDisplay)
 
         // 保存按钮事件
         saveButton?.setOnClickListener {
-            val name = nameInput.text.toString().trim()
+            val name = resolveCustomKeyName(
+                nameInput.text.toString(),
+                keysDisplay.text.toString()
+            )
             val androidKeyCodesStr = keysDisplay.tag.toString()
 
             if (name.isEmpty() || androidKeyCodesStr.isEmpty()) {
@@ -1796,6 +1815,10 @@ class GameMenu(
         registerChildDialog(dialog)
         dialog.window?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         dialogContent?.minimumHeight = game.resources.displayMetrics.heightPixels
+        setupCompactKeyboardControllerNavigation(
+            keyboardDrawing,
+            listOfNotNull(saveButton, clearButton, closeButton)
+        )
     }
 
     private fun setupCompactKeyboardListeners(parent: ViewGroup?, keysDisplay: TextView) {
@@ -1819,6 +1842,68 @@ class GameMenu(
                 }
             }
         }
+    }
+
+    private fun setupCompactKeyboardControllerNavigation(
+        keyboard: ViewGroup?,
+        actionViews: List<View>
+    ) {
+        if (keyboard == null) return
+        val keyboardRows = mutableListOf<List<View>>()
+        for (index in 0 until keyboard.childCount) {
+            val row = keyboard.getChildAt(index) as? ViewGroup ?: continue
+            val keys = mutableListOf<View>()
+            collectCompactKeyboardKeys(row, keys)
+            if (keys.isNotEmpty()) keyboardRows.add(keys)
+        }
+        if (keyboardRows.isEmpty()) return
+
+        val focusRows = buildList {
+            if (actionViews.isNotEmpty()) add(actionViews)
+            addAll(keyboardRows)
+        }
+        focusRows.flatten().forEach { view ->
+            if (view.id == View.NO_ID) view.id = View.generateViewId()
+            view.isFocusable = true
+            view.isFocusableInTouchMode = true
+        }
+
+        keyboard.post {
+            val laidOutRows = focusRows.map { row ->
+                row.sortedBy(::viewHorizontalCenterOnScreen)
+            }
+            laidOutRows.forEachIndexed { rowIndex, row ->
+                val upRow = laidOutRows[(rowIndex - 1 + laidOutRows.size) % laidOutRows.size]
+                val downRow = laidOutRows[(rowIndex + 1) % laidOutRows.size]
+                val upCenters = upRow.map(::viewHorizontalCenterOnScreen)
+                val downCenters = downRow.map(::viewHorizontalCenterOnScreen)
+                row.forEachIndexed { columnIndex, view ->
+                    val center = viewHorizontalCenterOnScreen(view)
+                    view.nextFocusLeftId = row[(columnIndex - 1 + row.size) % row.size].id
+                    view.nextFocusRightId = row[(columnIndex + 1) % row.size].id
+                    view.nextFocusUpId = upRow[nearestFocusIndex(center, upCenters)].id
+                    view.nextFocusDownId = downRow[nearestFocusIndex(center, downCenters)].id
+                }
+            }
+            keyboardRows.first().first().requestFocus()
+        }
+    }
+
+    private fun collectCompactKeyboardKeys(parent: ViewGroup, output: MutableList<View>) {
+        for (index in 0 until parent.childCount) {
+            val child = parent.getChildAt(index)
+            if (child is ViewGroup) {
+                collectCompactKeyboardKeys(child, output)
+            } else if (child is TextView && child.tag != null && child.visibility == View.VISIBLE) {
+                output.add(child)
+            }
+        }
+    }
+
+    private fun viewHorizontalCenterOnScreen(view: View): Int {
+        val location = IntArray(2)
+        view.getLocationOnScreen(location)
+        return location[0] + view.width / 2
     }
 
     private fun showDeleteKeysDialog() {
@@ -1863,7 +1948,8 @@ class GameMenu(
                         LimeLog.warning("Exception while deleting keys${e.message}")
                         Toast.makeText(game, R.string.toast_delete_failed, Toast.LENGTH_SHORT).show()
                     }
-                }
+                },
+                forceInitialFocus = true
             ))
         } catch (e: Exception) {
             LimeLog.warning("Exception while loading key list${e.message}")

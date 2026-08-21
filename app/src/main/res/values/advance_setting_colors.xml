@@ -33,7 +33,7 @@
     <color name="game_menu_dialog_border">#12FFFFFF</color>
     <color name="game_menu_list_item_normal">#FFFFFFFF</color>
     <color name="game_menu_danger_text">#D13B3B</color>
-    <color name="custom_key_editor_scrim">#66050A14</color>
+    <color name="custom_key_editor_scrim">#E6050A14</color>
 
     <!-- 超级菜单颜色 -->
     <color name="game_menu_super_card_background">#00000000</color>

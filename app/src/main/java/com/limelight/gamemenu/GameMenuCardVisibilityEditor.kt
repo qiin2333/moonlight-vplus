@@ -17,6 +17,18 @@ internal object GameMenuCardVisibilityEditor {
         context: Context,
         config: PreferenceConfiguration,
         onSaved: (PreferenceConfiguration) -> Unit
+    ): Dialog = show(
+        context,
+        config,
+        forceInitialFocus = false,
+        onSaved = onSaved
+    )
+
+    fun show(
+        context: Context,
+        config: PreferenceConfiguration,
+        forceInitialFocus: Boolean,
+        onSaved: (PreferenceConfiguration) -> Unit
     ): Dialog {
         val selected = selectedIds(config)
         return AppActionSheet.showMultiSelect(
@@ -35,7 +47,8 @@ internal object GameMenuCardVisibilityEditor {
                 config.showQuickKeyCard = SHORTCUTS in selectedIds
                 config.writePreferences(context)
                 onSaved(config)
-            }
+            },
+            forceInitialFocus = forceInitialFocus
         )
     }
 

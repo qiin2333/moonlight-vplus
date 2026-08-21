@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:background="@color/custom_key_editor_scrim"
     android:clickable="true"
-    android:focusable="true">
+    android:focusable="false">
 
     <ScrollView
         android:layout_width="match_parent"
@@ -13,6 +13,8 @@
         android:clipToPadding="false"
         android:fadeScrollbars="false"
         android:fillViewport="true"
+        android:focusable="false"
+        android:descendantFocusability="afterDescendants"
         android:layoutMode="clipBounds"
         android:overScrollMode="ifContentScrolls"
         android:scrollbars="vertical"
@@ -68,7 +70,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="8dp"
-                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:background="@drawable/app_button_background"
                     android:minWidth="80dp"
                     android:padding="8dp"
                     android:text="@string/dialog_button_save"
@@ -79,7 +81,7 @@
                     android:id="@+id/button_close_dialog"
                     android:layout_width="32dp"
                     android:layout_height="32dp"
-                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:background="@drawable/app_dialog_list_item_bg"
                     android:gravity="center"
                     android:text="✕"
                     android:textColor="@color/theme_pink_primary"
@@ -133,7 +135,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:background="@android:color/transparent"
+                    android:background="@drawable/app_button_background"
                     android:text="@string/dialog_button_clear"
                     android:textColor="@color/theme_pink_primary" />
 
