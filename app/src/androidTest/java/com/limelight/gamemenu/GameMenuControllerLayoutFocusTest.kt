@@ -150,4 +150,37 @@ class GameMenuControllerLayoutFocusTest {
         }
         composeTestRule.onNodeWithTag("segment3").assertIsFocused()
     }
+
+    @Test
+    fun compatibleToggleRowOwnsFocusWhenInlineControlDoesNot() {
+        composeTestRule.setContent {
+            val rowFocusRequester = remember { FocusRequester() }
+            MenuOptionColumn(
+                options = listOf(
+                    GameMenu.MenuOption(
+                        label = "Local cursor",
+                        isWithGameFocus = false,
+                        runnable = null,
+                        iconKey = null,
+                        isShowIcon = false,
+                        isKeepDialog = false,
+                        inlineControl = GameMenu.InlineControl.Toggle(
+                            checked = false,
+                            toggleAction = Runnable {}
+                        )
+                    )
+                ),
+                iconForOption = { 0 },
+                onOptionClick = {},
+                onInlineToggle = {},
+                onSegmentClick = {},
+                initialFocusRequester = rowFocusRequester,
+                optionFocusModifier = Modifier.testTag("compatibleToggle"),
+                inlineControlsFocusable = false
+            )
+        }
+
+        composeTestRule.onNodeWithTag("compatibleToggle").requestFocus()
+        composeTestRule.onNodeWithTag("compatibleToggle").assertIsFocused()
+    }
 }

@@ -1856,7 +1856,6 @@ private fun ShortcutTestToggle(
     modifier: Modifier = Modifier
 ) {
     val accent = colorResource(R.color.game_menu_accent)
-    val shape = AppShapes.small
     val actionEnabled = enabled && testPhase != ShortcutTestPhase.STOPPING
     var focused by remember { mutableStateOf(false) }
     val actionColor = when (testPhase) {
@@ -1876,7 +1875,7 @@ private fun ShortcutTestToggle(
             focused -> colorResource(R.color.game_menu_card_background)
             else -> actionColor
         },
-        shape = shape,
+        shape = GameMenuCardShape,
         border = BorderStroke(
             if (focused) 2.dp else GameMenuDimens.surfaceStroke,
             if (actionEnabled) actionColor
@@ -1884,7 +1883,7 @@ private fun ShortcutTestToggle(
         ),
         modifier = modifier
             .heightIn(min = 44.dp)
-            .gamepadFocusOutline(shape)
+            .gamepadFocusOutline(GameMenuCardShape)
             .onFocusChanged { focused = it.isFocused }
             .clickable(enabled = actionEnabled, onClick = onClick)
     ) {
@@ -3434,13 +3433,14 @@ private fun ShortcutCardTestButton(
     onFocused: () -> Unit
 ) {
     val accent = colorResource(R.color.game_menu_accent)
+    val shape = AppShapes.small
     Surface(
         color = if (selected) Color(0xFFE34F63) else accent.copy(alpha = 0.12f),
-        shape = RectangleShape,
+        shape = shape,
         border = BorderStroke(GameMenuDimens.surfaceStroke, accent.copy(alpha = 0.38f)),
         modifier = Modifier
             .heightIn(min = 34.dp)
-            .gamepadFocusOutline(RectangleShape)
+            .gamepadFocusOutline(shape)
             .onFocusChanged { if (it.isFocused) onFocused() }
             .clickable(onClick = onClick)
     ) {

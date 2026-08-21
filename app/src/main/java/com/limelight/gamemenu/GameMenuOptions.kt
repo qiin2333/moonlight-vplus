@@ -112,18 +112,31 @@ private fun MenuOptionRow(
         Modifier.focusRequester(it)
     } ?: Modifier
     val rowInteraction = when {
+        inlineControl is GameMenu.InlineControl.Toggle &&
+            hasDedicatedToggleAction &&
+            !inlineControlsFocusable ->
+            initialFocusModifier
+                .gamepadFocusOutline(shape)
+                .toggleable(
+                    value = inlineControl.checked,
+                    role = Role.Switch,
+                    onValueChange = {
+                        hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                        onInlineToggle(inlineControl)
+                    }
+                )
         inlineControl is GameMenu.InlineControl.Toggle && !hasDedicatedToggleAction ->
             initialFocusModifier
-            .gamepadFocusOutline(shape)
-            .toggleable(
-                value = inlineControl.checked,
-                role = Role.Switch,
-                onValueChange = { activate() }
-            )
+                .gamepadFocusOutline(shape)
+                .toggleable(
+                    value = inlineControl.checked,
+                    role = Role.Switch,
+                    onValueChange = { activate() }
+                )
         inlineControl !is GameMenu.InlineControl.Segmented && option.runnable != null ->
             initialFocusModifier
-            .gamepadFocusOutline(shape)
-            .clickable(onClick = activate)
+                .gamepadFocusOutline(shape)
+                .clickable(onClick = activate)
         else -> Modifier
     }
 

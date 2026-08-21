@@ -833,14 +833,31 @@ private fun TouchModeChoice(
             .padding(GameMenuDimens.outer),
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = option.label + if (option.selected) "  ✓" else "",
-            color = if (option.selected) accent else colorResource(R.color.game_menu_text_primary),
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = option.label,
+                color = if (option.selected) {
+                    accent
+                } else {
+                    colorResource(R.color.game_menu_text_primary)
+                },
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            if (option.selected) {
+                Spacer(Modifier.width(GameMenuDimens.tight))
+                Text(
+                    text = "✓",
+                    color = accent,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clearAndSetSemantics { }
+                )
+            }
+        }
         option.subtitle?.takeIf(String::isNotBlank)?.let { subtitle ->
             Spacer(Modifier.height(GameMenuDimens.tight))
             Text(
