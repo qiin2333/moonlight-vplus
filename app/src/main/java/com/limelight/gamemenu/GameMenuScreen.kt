@@ -20,6 +20,8 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -78,6 +80,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -119,7 +122,7 @@ internal val GameMenuControlShape = RoundedCornerShape(GameMenuControlRadius)
 private const val GAME_MENU_MAX_HEIGHT_FRACTION = 0.90f
 private const val GAME_MENU_WIDE_LAYOUT_MIN_WIDTH_DP = 576
 private const val ORIENTATION_MISMATCH_THRESHOLD = 1.5f
-private const val GAME_MENU_LANDSCAPE_WIDTH_FRACTION = 0.88f
+private const val GAME_MENU_LANDSCAPE_WIDTH_FRACTION = 0.98f
 private const val GAME_MENU_PORTRAIT_WIDTH_FRACTION = 0.95f
 internal const val GAME_MENU_BACKDROP_TAG = "gameMenuBackdrop"
 internal const val GAME_MENU_PANEL_TAG = "gameMenuPanel"
@@ -133,7 +136,7 @@ internal object GameMenuDimens {
     val section = 8.dp
     val outer = 12.dp
     val compactScreenInset = 16.dp
-    val wideScreenInset = 28.dp
+    val wideScreenInset = 10.dp
 }
 
 private object GameMenuFabricSpec {
@@ -196,8 +199,11 @@ internal fun GameMenuScreen(
         guidePending = shouldShow
     }
     val configuration = LocalConfiguration.current
+    val windowWidth = with(LocalDensity.current) {
+        LocalWindowInfo.current.containerSize.width.toDp()
+    }
     val maxMenuHeight = rememberGameMenuMaxHeight()
-    val wideLayout = configuration.screenWidthDp >= GAME_MENU_WIDE_LAYOUT_MIN_WIDTH_DP
+    val wideLayout = windowWidth >= GAME_MENU_WIDE_LAYOUT_MIN_WIDTH_DP.dp
     val horizontalInset = if (wideLayout) {
         GameMenuDimens.wideScreenInset
     } else {
@@ -291,7 +297,9 @@ internal fun GameMenuScreen(
                         GameMenuContent(
                             state = state,
                             callbacks = callbacks,
-                            wideLayout = wideLayout && !state.isSubmenu,
+                            wideLayout = wideLayout &&
+                                (!state.isSubmenu ||
+                                    state.pageLayout == GameMenuPageLayout.TOUCH_MODE),
                             initialFocusRequester = initialFocusRequester,
                             quickActionGuideModifier = quickActionGuideModifier,
                             crownGuideModifier = crownGuideModifier
@@ -524,6 +532,8 @@ private fun GameMenuContent(
 ) {
     var sliderGestureActive by remember { mutableStateOf(false) }
     val menuScrollState = rememberScrollState()
+    val wideTouchMode = wideLayout && state.pageLayout == GameMenuPageLayout.TOUCH_MODE
+    val touchModeBackFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(state.title, state.isSubmenu) {
         menuScrollState.scrollTo(0)
@@ -538,7 +548,13 @@ private fun GameMenuContent(
             .padding(GameMenuDimens.outer),
         verticalArrangement = Arrangement.spacedBy(GameMenuDimens.section)
     ) {
-        GameMenuHeader(state, callbacks, crownGuideModifier)
+        GameMenuHeader(
+            state = state,
+            callbacks = callbacks,
+            crownGuideModifier = crownGuideModifier,
+            backFocusRequester = touchModeBackFocusRequester.takeIf { wideTouchMode },
+            backDownFocusRequester = initialFocusRequester.takeIf { wideTouchMode }
+        )
 
         if (!state.isSubmenu) {
             QuickActionRow(
@@ -556,7 +572,14 @@ private fun GameMenuContent(
             )
         }
 
-        if (wideLayout) {
+        if (wideTouchMode) {
+            TouchModeTable(
+                options = state.options,
+                callbacks = callbacks,
+                initialFocusRequester = initialFocusRequester,
+                topFocusRequester = touchModeBackFocusRequester
+            )
+        } else if (wideLayout && !state.isSubmenu) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.section),
@@ -596,6 +619,237 @@ private fun GameMenuContent(
 
         if (!state.isSubmenu && state.appName.isNotBlank()) {
             GameMenuFooter(state.appName)
+        }
+    }
+}
+
+internal data class TouchModeFocusTargets(
+    val left: Int?,
+    val right: Int?,
+    val up: Int?,
+    val down: Int?
+)
+
+internal fun touchModeFocusTargets(
+    primaryCount: Int,
+    compatibleCount: Int,
+    globalIndex: Int
+): TouchModeFocusTargets {
+    require(primaryCount >= 0 && compatibleCount >= 0)
+    val totalCount = primaryCount + compatibleCount
+    require(globalIndex in 0 until totalCount)
+
+    val inPrimary = globalIndex < primaryCount
+    val sectionStart = if (inPrimary) 0 else primaryCount
+    val sectionCount = if (inPrimary) primaryCount else compatibleCount
+    val previousSectionStart = if (!inPrimary && primaryCount > 0) 0 else null
+    val previousSectionCount = if (inPrimary) 0 else primaryCount
+    val nextSectionStart = if (inPrimary && compatibleCount > 0) primaryCount else null
+    val nextSectionCount = if (inPrimary) compatibleCount else 0
+
+    val localIndex = globalIndex - sectionStart
+    val row = localIndex / 2
+    val column = localIndex % 2
+    val rowStart = row * 2
+    val left = if (column == 1) globalIndex - 1 else null
+    val right = if (column == 0 && localIndex + 1 < sectionCount) globalIndex + 1 else null
+    val previousRowStart = (row - 1) * 2
+    val up = when {
+        row > 0 -> sectionStart + minOf(previousRowStart + column, sectionCount - 1)
+        previousSectionStart != null -> {
+            val previousLastRowStart = ((previousSectionCount - 1) / 2) * 2
+            previousSectionStart + minOf(
+                previousLastRowStart + column,
+                previousSectionCount - 1
+            )
+        }
+        else -> null
+    }
+    val nextRowStart = rowStart + 2
+    val down = when {
+        nextRowStart < sectionCount ->
+            sectionStart + minOf(nextRowStart + column, sectionCount - 1)
+        nextSectionStart != null ->
+            nextSectionStart + minOf(column, nextSectionCount - 1)
+        else -> null
+    }
+    return TouchModeFocusTargets(left = left, right = right, up = up, down = down)
+}
+
+internal fun Modifier.touchModeFocusNavigation(
+    targets: TouchModeFocusTargets,
+    focusRequesters: List<FocusRequester>,
+    topFocusRequester: FocusRequester
+): Modifier = focusProperties {
+    left = targets.left?.let(focusRequesters::get) ?: FocusRequester.Cancel
+    right = targets.right?.let(focusRequesters::get) ?: FocusRequester.Cancel
+    up = targets.up?.let(focusRequesters::get) ?: topFocusRequester
+    down = targets.down?.let(focusRequesters::get) ?: FocusRequester.Cancel
+}
+
+@Composable
+private fun TouchModeTable(
+    options: List<GameMenu.MenuOption>,
+    callbacks: GameMenuCallbacks,
+    initialFocusRequester: FocusRequester,
+    topFocusRequester: FocusRequester
+) {
+    val primaryModes = options.filter {
+        it.presentation == GameMenuOptionPresentation.PRIMARY_MODE
+    }
+    val compatibleActions = options.filter {
+        it.presentation == GameMenuOptionPresentation.COMPATIBLE_ACTION
+    }
+    val focusRequesters = remember(
+        primaryModes.size,
+        compatibleActions.size,
+        initialFocusRequester
+    ) {
+        List(primaryModes.size + compatibleActions.size) { index ->
+            if (index == 0) initialFocusRequester else FocusRequester()
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(GameMenuDimens.compact)) {
+        if (primaryModes.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.game_menu_touch_mode_primary_group),
+                color = colorResource(R.color.game_menu_text_secondary),
+                fontSize = 11.sp
+            )
+            Column(
+                modifier = Modifier.selectableGroup(),
+                verticalArrangement = Arrangement.spacedBy(GameMenuDimens.compact)
+            ) {
+                primaryModes.chunked(2).forEachIndexed { rowIndex, rowModes ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.compact)
+                    ) {
+                        rowModes.forEachIndexed { columnIndex, option ->
+                            val globalIndex = rowIndex * 2 + columnIndex
+                            val targets = touchModeFocusTargets(
+                                primaryModes.size,
+                                compatibleActions.size,
+                                globalIndex
+                            )
+                            TouchModeChoice(
+                                option = option,
+                                onClick = { callbacks.onOptionClick(option) },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("touchModeCell$globalIndex")
+                                    .touchModeFocusNavigation(
+                                        targets,
+                                        focusRequesters,
+                                        topFocusRequester
+                                    )
+                                    .focusRequester(focusRequesters[globalIndex])
+                            )
+                        }
+                        if (rowModes.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+
+        if (compatibleActions.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.game_menu_touch_mode_compatible_group),
+                color = colorResource(R.color.game_menu_text_secondary),
+                fontSize = 11.sp,
+                modifier = Modifier.padding(top = GameMenuDimens.tight)
+            )
+            compatibleActions.chunked(2).forEachIndexed { rowIndex, rowOptions ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.compact),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    rowOptions.forEachIndexed { columnIndex, option ->
+                        val globalIndex = primaryModes.size + rowIndex * 2 + columnIndex
+                        val targets = touchModeFocusTargets(
+                            primaryModes.size,
+                            compatibleActions.size,
+                            globalIndex
+                        )
+                        MenuOptionColumn(
+                            options = listOf(option),
+                            iconForOption = callbacks.iconForOption,
+                            onOptionClick = callbacks.onOptionClick,
+                            onInlineToggle = callbacks.onInlineToggle,
+                            onSegmentClick = callbacks.onSegmentClick,
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("touchModeCell$globalIndex"),
+                            initialFocusRequester = focusRequesters[globalIndex],
+                            optionFocusModifier = Modifier.touchModeFocusNavigation(
+                                targets,
+                                focusRequesters,
+                                topFocusRequester
+                            ),
+                            inlineControlsFocusable = false
+                        )
+                    }
+                    if (rowOptions.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TouchModeChoice(
+    option: GameMenu.MenuOption,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val hapticFeedback = LocalGameMenuHapticFeedback.current
+    val accent = colorResource(R.color.game_menu_accent)
+    val shape = GameMenuCardShape
+    Column(
+        modifier = modifier
+            .heightIn(min = 70.dp)
+            .clip(shape)
+            .background(
+                if (option.selected) accent.copy(alpha = 0.12f)
+                else colorResource(R.color.game_menu_list_item_normal)
+            )
+            .border(
+                GameMenuDimens.surfaceStroke,
+                if (option.selected) accent.copy(alpha = 0.70f)
+                else colorResource(R.color.game_menu_list_item_border),
+                shape
+            )
+            .gamepadFocusOutline(shape)
+            .selectable(
+                selected = option.selected,
+                role = Role.RadioButton,
+                onClick = {
+                    hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    onClick()
+                }
+            )
+            .padding(GameMenuDimens.outer),
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = option.label + if (option.selected) "  ✓" else "",
+            color = if (option.selected) accent else colorResource(R.color.game_menu_text_primary),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        option.subtitle?.takeIf(String::isNotBlank)?.let { subtitle ->
+            Spacer(Modifier.height(GameMenuDimens.tight))
+            Text(
+                text = subtitle,
+                color = colorResource(R.color.game_menu_text_secondary),
+                fontSize = 11.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -715,7 +969,9 @@ private fun currentWindowContentHeightPx(
 private fun GameMenuHeader(
     state: GameMenuComposeUiState,
     callbacks: GameMenuCallbacks,
-    crownGuideModifier: Modifier = Modifier
+    crownGuideModifier: Modifier = Modifier,
+    backFocusRequester: FocusRequester? = null,
+    backDownFocusRequester: FocusRequester? = null
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -727,6 +983,21 @@ private fun GameMenuHeader(
                 contentDescription = stringResource(R.string.addpc_back),
                 tint = colorResource(R.color.game_menu_text_primary),
                 modifier = Modifier
+                    .then(
+                        if (backFocusRequester != null) {
+                            Modifier
+                                .testTag("touchModeBack")
+                                .focusRequester(backFocusRequester)
+                                .focusProperties {
+                                    up = FocusRequester.Cancel
+                                    down = backDownFocusRequester ?: FocusRequester.Cancel
+                                    left = FocusRequester.Cancel
+                                    right = FocusRequester.Cancel
+                                }
+                        } else {
+                            Modifier
+                        }
+                    )
                     .size(36.dp)
                     .clip(CircleShape)
                     .gamepadFocusOutline(CircleShape)
@@ -745,6 +1016,25 @@ private fun GameMenuHeader(
             modifier = Modifier.weight(1f)
         )
         if (!state.isSubmenu) {
+            val settingsShape = CircleShape
+            Icon(
+                painter = painterResource(R.drawable.ic_ui_settings),
+                contentDescription = stringResource(R.string.game_menu_card_config_title),
+                tint = colorResource(R.color.game_menu_text_primary),
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(settingsShape)
+                    .background(colorResource(R.color.game_menu_card_background))
+                    .border(
+                        GameMenuDimens.surfaceStroke,
+                        colorResource(R.color.game_menu_button_border),
+                        settingsShape
+                    )
+                    .gamepadFocusOutline(settingsShape)
+                    .clickable(onClick = callbacks.onEditCards)
+                    .padding(8.dp)
+            )
+            Spacer(Modifier.width(GameMenuDimens.tight))
             state.deviceQuickOptions.forEach { option ->
                 HeaderDeviceQuickAction(
                     option = option,

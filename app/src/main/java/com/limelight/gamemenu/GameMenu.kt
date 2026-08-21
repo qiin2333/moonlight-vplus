@@ -511,7 +511,9 @@ class GameMenu(
         val subtitle: String? = null,
         val isCrownControl: Boolean = false,
         val showChevron: Boolean = false,
-        val inlineControl: InlineControl? = null
+        val inlineControl: InlineControl? = null,
+        val selected: Boolean = false,
+        val presentation: GameMenuOptionPresentation = GameMenuOptionPresentation.DEFAULT
     ) {
         constructor(label: String, runnable: Runnable?) :
                 this(label, false, runnable, null, true, false)
@@ -544,7 +546,11 @@ class GameMenu(
     /**
      * 菜单状态，用于回退
      */
-    private data class MenuPage(val title: String, val options: List<MenuOption>)
+    private data class MenuPage(
+        val title: String,
+        val options: List<MenuOption>,
+        val layout: GameMenuPageLayout = GameMenuPageLayout.STANDARD
+    )
 
     /**
      * 获取字符串资源
@@ -588,17 +594,15 @@ class GameMenu(
             !game.prefConfig.screenDs5Touchpad
         val touchModeOptionsList = buildTouchModeSegments().mapTo(mutableListOf()) { segment ->
             MenuOption(
-                label = if (segment.selected) {
-                    game.getString(R.string.game_menu_current_selection, segment.label)
-                } else {
-                    segment.label
-                },
+                label = segment.label,
                 isWithGameFocus = false,
                 runnable = segment.runnable,
                 iconKey = null,
                 isShowIcon = false,
                 isKeepDialog = false,
-                subtitle = segment.subtitle
+                subtitle = segment.subtitle,
+                selected = segment.selected,
+                presentation = GameMenuOptionPresentation.PRIMARY_MODE
             )
         }
 
@@ -621,12 +625,13 @@ class GameMenu(
                     },
                     null,
                     false,
-                    false,
+                    true,
                     if (game.prefConfig.enableDoubleClickDrag) {
                         getString(R.string.game_menu_option_enabled)
                     } else {
                         getString(R.string.game_menu_option_disabled)
-                    }
+                    },
+                    presentation = GameMenuOptionPresentation.COMPATIBLE_ACTION
                 )
             )
         }
@@ -637,10 +642,7 @@ class GameMenu(
                 MenuOption(
                     label = getString(R.string.game_menu_local_cursor_rendering),
                     isWithGameFocus = false,
-                    runnable = Runnable {
-                        localCursorToggleAction.run()
-                        rebuildAndReplaceMenu()
-                    },
+                    runnable = localCursorToggleAction,
                     iconKey = null,
                     isShowIcon = false,
                     isKeepDialog = true,
@@ -648,7 +650,8 @@ class GameMenu(
                     inlineControl = InlineControl.Toggle(
                         checked = game.prefConfig.enableLocalCursorRendering,
                         toggleAction = localCursorToggleAction
-                    )
+                    ),
+                    presentation = GameMenuOptionPresentation.COMPATIBLE_ACTION
                 )
             )
         }
@@ -660,8 +663,9 @@ class GameMenu(
                 runnable = Runnable { actionExecutor.execute("toggle_remote_mouse") },
                 iconKey = null,
                 isShowIcon = false,
-                isKeepDialog = false,
-                subtitle = getString(R.string.game_menu_toggle_remote_mouse_summary)
+                isKeepDialog = true,
+                subtitle = getString(R.string.game_menu_toggle_remote_mouse_summary),
+                presentation = GameMenuOptionPresentation.COMPATIBLE_ACTION
             )
         )
 
@@ -683,17 +687,27 @@ class GameMenu(
                     },
                     null,
                     false,
-                    false,
+                    true,
                     if (game.isMouseMoveOnlyEnabled) {
                         getString(R.string.layout_page_device_text_mmo_true_text)
                     } else {
                         getString(R.string.layout_page_device_text_mmo_false_text)
-                    }
+                    },
+                    presentation = GameMenuOptionPresentation.COMPATIBLE_ACTION
                 )
             )
         }
 
-        showSubMenu(getString(R.string.game_menu_switch_touch_mode), touchModeOptionsList.toTypedArray())
+        val title = getString(R.string.game_menu_switch_touch_mode)
+        if (composeUiState?.value?.pageLayout == GameMenuPageLayout.TOUCH_MODE) {
+            showMenuPage(MenuPage(title, touchModeOptionsList, GameMenuPageLayout.TOUCH_MODE))
+        } else {
+            showSubMenu(
+                title,
+                touchModeOptionsList.toTypedArray(),
+                GameMenuPageLayout.TOUCH_MODE
+            )
+        }
     }
 
     private fun toggleLocalCursorRendering() {
@@ -854,8 +868,17 @@ class GameMenu(
                 options = normalOptions,
                 deviceQuickOptions = device?.getGameMenuQuickOptions().orEmpty(),
                 crownToggleText = getCrownToggleText(),
-                isSubmenu = false
+                isSubmenu = false,
+                pageLayout = GameMenuPageLayout.STANDARD
             )
+        }
+    }
+
+    private fun refreshCurrentMenuPage() {
+        if (composeUiState?.value?.pageLayout == GameMenuPageLayout.TOUCH_MODE) {
+            showTouchModeMenu()
+        } else {
+            rebuildAndReplaceMenu()
         }
     }
 
@@ -1065,7 +1088,12 @@ class GameMenu(
     /**
      * 显示菜单对话框
      */
-    private fun showMenuDialog(title: String, normalOptions: Array<MenuOption>, superOptions: Array<MenuOption>) {
+    private fun showMenuDialog(
+        title: String,
+        normalOptions: Array<MenuOption>,
+        superOptions: Array<MenuOption>,
+        pageLayout: GameMenuPageLayout = GameMenuPageLayout.STANDARD
+    ) {
         lateinit var dialog: ComponentDialog
 
         val state = mutableStateOf(
@@ -1081,7 +1109,8 @@ class GameMenu(
                 bitrate = bitrateCardController.snapshot(),
                 audioHaptics = audioHapticsCardController.snapshot(),
                 gyro = gyroCardController.snapshot(),
-                customKeys = getSavedCustomKeys()
+                customKeys = getSavedCustomKeys(),
+                pageLayout = pageLayout
             )
         )
         val hardwareFocusRequest = mutableIntStateOf(0)
@@ -1262,7 +1291,11 @@ class GameMenu(
             option.inlineControl.toggleAction == null &&
             dialog.isShowing
         ) {
-            rebuildAndReplaceMenu()
+            refreshCurrentMenuPage()
+        } else if (option.presentation == GameMenuOptionPresentation.COMPATIBLE_ACTION &&
+            dialog.isShowing
+        ) {
+            refreshCurrentMenuPage()
         }
         lastActionOpenedSubmenu = false
     }
@@ -1270,13 +1303,13 @@ class GameMenu(
     private fun handleInlineSegmentClick(segment: SegmentOption) {
         if (segment.selected) return
         segment.runnable.run()
-        rebuildAndReplaceMenu()
+        refreshCurrentMenuPage()
     }
 
     private fun handleInlineToggle(toggle: InlineControl.Toggle) {
         val action = toggle.toggleAction ?: return
         action.run()
-        rebuildAndReplaceMenu()
+        refreshCurrentMenuPage()
     }
 
     private fun showSuperCommandHint() {
@@ -1508,7 +1541,7 @@ class GameMenu(
     }
 
     private fun currentMenuPage(): MenuPage? {
-        return composeUiState?.value?.let { MenuPage(it.title, it.options) }
+        return composeUiState?.value?.let { MenuPage(it.title, it.options, it.pageLayout) }
     }
 
     private fun showMenuPage(page: MenuPage, pushCurrent: Boolean = false) {
@@ -1517,7 +1550,8 @@ class GameMenu(
         state.value = state.value.copy(
             title = page.title,
             options = page.options,
-            isSubmenu = menuStack.isNotEmpty()
+            isSubmenu = menuStack.isNotEmpty(),
+            pageLayout = page.layout
         )
     }
 
@@ -1530,13 +1564,17 @@ class GameMenu(
     /**
      * 在当前打开的 dialog 中显示一个子菜单
      */
-    private fun showSubMenu(title: String, subOptions: Array<MenuOption>) {
+    private fun showSubMenu(
+        title: String,
+        subOptions: Array<MenuOption>,
+        pageLayout: GameMenuPageLayout = GameMenuPageLayout.STANDARD
+    ) {
         val dialog = activeDialog
         if (dialog != null && dialog.isShowing) {
             lastActionOpenedSubmenu = true
-            showMenuPage(MenuPage(title, subOptions.toList()), pushCurrent = true)
+            showMenuPage(MenuPage(title, subOptions.toList(), pageLayout), pushCurrent = true)
         } else {
-            showMenuDialog(title, subOptions, emptyArray())
+            showMenuDialog(title, subOptions, emptyArray(), pageLayout)
         }
     }
 

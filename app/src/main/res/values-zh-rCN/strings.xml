@@ -859,6 +859,8 @@
     <string name="game_menu_touch_mode_ds5">DS5 触控板</string>
     <string name="game_menu_touch_mode_ds5_short">DS5</string>
     <string name="game_menu_touch_mode_ds5_summary">屏幕作为 DualSense 手柄的触控板，轻点或用力按压即可点击</string>
+    <string name="game_menu_touch_mode_primary_group">主要输入模式（单选）</string>
+    <string name="game_menu_touch_mode_compatible_group">辅助选项（可共存）</string>
     <string name="toast_ds5_touchpad_unsupported">主机不支持 DS5 触控板，触摸将按原触控方式处理</string>
     <string name="game_menu_current_selection">当前：%1$s</string>
     <string name="game_menu_trackpad_double_click_drag">双击并按住拖动</string>
