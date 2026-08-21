@@ -19,6 +19,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -1736,6 +1737,26 @@ class GameMenu(
         val clearButton = dialogView.findViewById<Button>(R.id.button_clear_keys)
         val closeButton = dialogView.findViewById<Button>(R.id.button_close_dialog)
         val saveButton = dialogView.findViewById<Button>(R.id.button_save_key)
+        var nameEditing = false
+
+        fun leaveNameEditing() {
+            if (!nameEditing) return
+            nameEditing = false
+            val inputMethodManager = game.getSystemService(Context.INPUT_METHOD_SERVICE)
+                as? InputMethodManager
+            inputMethodManager?.hideSoftInputFromWindow(nameInput.windowToken, 0)
+        }
+
+        fun enterNameEditing() {
+            nameEditing = true
+            nameInput.requestFocus()
+            nameInput.setSelection(nameInput.text.length)
+            nameInput.post {
+                val inputMethodManager = game.getSystemService(Context.INPUT_METHOD_SERVICE)
+                    as? InputMethodManager
+                inputMethodManager?.showSoftInput(nameInput, InputMethodManager.SHOW_IMPLICIT)
+            }
+        }
 
         val dialog = builder.create()
         dialog.window?.apply {
@@ -1745,7 +1766,13 @@ class GameMenu(
         }
 
         dialog.setOnKeyListener { _, keyCode, event ->
-            if (UiDismissKeyHandler.handle(event.action, keyCode, dialog::cancel)) {
+            val editingDismissKey = keyCode == KeyEvent.KEYCODE_BACK ||
+                keyCode == KeyEvent.KEYCODE_ESCAPE ||
+                keyCode == KeyEvent.KEYCODE_BUTTON_B
+            if (nameEditing && editingDismissKey) {
+                if (event.action == KeyEvent.ACTION_UP) leaveNameEditing()
+                event.action == KeyEvent.ACTION_DOWN || event.action == KeyEvent.ACTION_UP
+            } else if (UiDismissKeyHandler.handle(event.action, keyCode, dialog::cancel)) {
                 true
             } else if (mapGameMenuConfirmKeyCode(keyCode) != keyCode) {
                 dialog.dispatchKeyEvent(mapGameMenuConfirmKeyEvent(event))
@@ -1756,6 +1783,10 @@ class GameMenu(
         }
 
         closeButton?.setOnClickListener { dialog.dismiss() }
+        nameInput.setOnClickListener { enterNameEditing() }
+        nameInput.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) leaveNameEditing()
+        }
 
         // 点击背景关闭对话框
         if (dialogView is FrameLayout) {
@@ -1817,7 +1848,13 @@ class GameMenu(
         dialogContent?.minimumHeight = game.resources.displayMetrics.heightPixels
         setupCompactKeyboardControllerNavigation(
             keyboardDrawing,
-            listOfNotNull(saveButton, clearButton, closeButton)
+            controlRows = listOf(
+                listOfNotNull(saveButton, closeButton),
+                listOfNotNull(nameInput, clearButton)
+            ),
+            editableView = nameInput,
+            isEditing = { nameEditing },
+            onEnterEditing = ::enterNameEditing
         )
     }
 
@@ -1846,7 +1883,10 @@ class GameMenu(
 
     private fun setupCompactKeyboardControllerNavigation(
         keyboard: ViewGroup?,
-        actionViews: List<View>
+        controlRows: List<List<View>>,
+        editableView: EditText? = null,
+        isEditing: () -> Boolean = { false },
+        onEnterEditing: () -> Unit = {}
     ) {
         if (keyboard == null) return
         val keyboardRows = mutableListOf<List<View>>()
@@ -1859,7 +1899,7 @@ class GameMenu(
         if (keyboardRows.isEmpty()) return
 
         val focusRows = buildList {
-            if (actionViews.isNotEmpty()) add(actionViews)
+            addAll(controlRows.filter { it.isNotEmpty() })
             addAll(keyboardRows)
         }
         focusRows.flatten().forEach { view ->
@@ -1879,13 +1919,56 @@ class GameMenu(
                 val downCenters = downRow.map(::viewHorizontalCenterOnScreen)
                 row.forEachIndexed { columnIndex, view ->
                     val center = viewHorizontalCenterOnScreen(view)
-                    view.nextFocusLeftId = row[(columnIndex - 1 + row.size) % row.size].id
-                    view.nextFocusRightId = row[(columnIndex + 1) % row.size].id
-                    view.nextFocusUpId = upRow[nearestFocusIndex(center, upCenters)].id
-                    view.nextFocusDownId = downRow[nearestFocusIndex(center, downCenters)].id
+                    val leftTarget = row[(columnIndex - 1 + row.size) % row.size]
+                    val rightTarget = row[(columnIndex + 1) % row.size]
+                    val upTarget = upRow[nearestFocusIndex(center, upCenters)]
+                    val downTarget = downRow[nearestFocusIndex(center, downCenters)]
+                    view.nextFocusLeftId = leftTarget.id
+                    view.nextFocusRightId = rightTarget.id
+                    view.nextFocusUpId = upTarget.id
+                    view.nextFocusDownId = downTarget.id
+                    view.setOnKeyListener { _, keyCode, event ->
+                        if (view === editableView) {
+                            val confirmKey = keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                                keyCode == KeyEvent.KEYCODE_ENTER ||
+                                keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
+                                keyCode == KeyEvent.KEYCODE_BUTTON_A
+                            if (confirmKey) {
+                                if (event.action == KeyEvent.ACTION_UP) onEnterEditing()
+                                return@setOnKeyListener event.action == KeyEvent.ACTION_DOWN ||
+                                    event.action == KeyEvent.ACTION_UP
+                            }
+                            if (isEditing()) {
+                                if (keyCode == KeyEvent.KEYCODE_DPAD_UP ||
+                                    keyCode == KeyEvent.KEYCODE_DPAD_DOWN
+                                ) {
+                                    return@setOnKeyListener event.action == KeyEvent.ACTION_DOWN ||
+                                        event.action == KeyEvent.ACTION_UP
+                                }
+                                return@setOnKeyListener false
+                            }
+                        }
+                        val target = when (keyCode) {
+                            KeyEvent.KEYCODE_DPAD_LEFT -> leftTarget
+                            KeyEvent.KEYCODE_DPAD_RIGHT -> rightTarget
+                            KeyEvent.KEYCODE_DPAD_UP -> upTarget
+                            KeyEvent.KEYCODE_DPAD_DOWN -> downTarget
+                            else -> return@setOnKeyListener false
+                        }
+                        if (event.action == KeyEvent.ACTION_DOWN) {
+                            target.requestFocus()
+                        }
+                        event.action == KeyEvent.ACTION_DOWN || event.action == KeyEvent.ACTION_UP
+                    }
                 }
             }
-            keyboardRows.first().first().requestFocus()
+            val initialTarget = keyboardRows.first().first()
+            initialTarget.requestFocus()
+            keyboard.post {
+                if (laidOutRows.flatten().none(View::hasFocus)) {
+                    initialTarget.requestFocus()
+                }
+            }
         }
     }
 
