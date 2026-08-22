@@ -12,6 +12,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.limelight.binding.input.touch.AbsoluteTouchContext
+import com.limelight.binding.input.touch.EnhancedTouchGestureRouteOwner
 import com.limelight.binding.input.touch.NativeTouchContext
 import com.limelight.binding.input.touch.RelativeTouchContext
 import com.limelight.binding.input.touch.TouchContext
@@ -86,6 +87,7 @@ class TouchInputHandler(private val game: Game) {
     private var lastAbsTouchDownY = 0f
 
     val nativeTouchPointerMap = HashMap<Int, NativeTouchContext.Pointer>()
+    private val enhancedTouchRouteOwner = EnhancedTouchGestureRouteOwner()
 
     // 华为鼠标滚轮/中键模拟
     private var fakeScrollInitialY = -1f
@@ -454,6 +456,19 @@ class TouchInputHandler(private val game: Game) {
                 lastButtonState = buttonState
             } else {
                 // This case is for fingers
+                if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                    enhancedTouchRouteOwner.finish()
+                    nativeTouchPointerMap.clear()
+                } else if (enhancedTouchRouteOwner.ownsContinuation()) {
+                    trySendTouchEvent(view, event)
+                    if (event.actionMasked == MotionEvent.ACTION_UP ||
+                        event.actionMasked == MotionEvent.ACTION_CANCEL
+                    ) {
+                        enhancedTouchRouteOwner.finish()
+                    }
+                    return true
+                }
+
                 if (game.prefConfig.screenDs5Touchpad && trySendScreenDs5TouchpadEvent(view, event)) {
                     return true
                 }
@@ -463,8 +478,14 @@ class TouchInputHandler(private val game: Game) {
                     return true
                 }
 
-                if (!game.prefConfig.touchscreenTrackpad && game.prefConfig.enableEnhancedTouch && trySendTouchEvent(view, event)) {
-                    return true
+                if (event.actionMasked == MotionEvent.ACTION_DOWN &&
+                    !game.prefConfig.touchscreenTrackpad &&
+                    game.prefConfig.enableEnhancedTouch
+                ) {
+                    if (enhancedTouchRouteOwner.begin(trySendTouchEvent(view, event))) {
+                        return true
+                    }
+                    nativeTouchPointerMap.clear()
                 }
 
                 if (game.virtualController != null &&
