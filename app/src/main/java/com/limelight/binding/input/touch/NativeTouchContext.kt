@@ -20,7 +20,12 @@ internal object ScreenUtils {
 
 class NativeTouchContext {
 
-    class Pointer(event: MotionEvent) {
+    class Pointer internal constructor(
+        event: MotionEvent,
+        config: EnhancedTouchPointerConfig
+    ) {
+        constructor(event: MotionEvent) : this(event, capturePointerConfig())
+
         val pointerId: Int
         private val eventCoords = MotionEvent.PointerCoords()
         private val state: EnhancedTouchPointerState
@@ -32,11 +37,7 @@ class NativeTouchContext {
             state = EnhancedTouchPointerState(
                 initialX = eventCoords.x,
                 initialY = eventCoords.y,
-                screenWidth = ScreenUtils.getScreenWidth(),
-                initialZonePixels = INTIAL_ZONE_PIXELS,
-                enhancedTouchDirection = ENHANCED_TOUCH_ON_RIGHT,
-                enhancedTouchZoneDivider = ENHANCED_TOUCH_ZONE_DIVIDER,
-                pointerVelocityFactor = POINTER_VELOCITY_FACTOR
+                config = config
             )
         }
 
@@ -83,6 +84,14 @@ class NativeTouchContext {
     }
 
     companion object {
+        internal fun capturePointerConfig() = EnhancedTouchPointerConfig(
+            screenWidth = ScreenUtils.getScreenWidth(),
+            initialZonePixels = INTIAL_ZONE_PIXELS,
+            enhancedTouchDirection = ENHANCED_TOUCH_ON_RIGHT,
+            enhancedTouchZoneDivider = ENHANCED_TOUCH_ZONE_DIVIDER,
+            pointerVelocityFactor = POINTER_VELOCITY_FACTOR
+        )
+
         @JvmField
         var INTIAL_ZONE_PIXELS = 0f
 

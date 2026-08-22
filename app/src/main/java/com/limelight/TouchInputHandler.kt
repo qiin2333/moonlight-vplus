@@ -482,9 +482,11 @@ class TouchInputHandler(private val game: Game) {
                     !game.prefConfig.touchscreenTrackpad &&
                     game.prefConfig.enableEnhancedTouch
                 ) {
-                    if (enhancedTouchRouteOwner.begin(trySendTouchEvent(view, event))) {
+                    enhancedTouchRouteOwner.begin(NativeTouchContext.capturePointerConfig())
+                    if (trySendTouchEvent(view, event)) {
                         return true
                     }
+                    enhancedTouchRouteOwner.finish()
                     nativeTouchPointerMap.clear()
                 }
 
@@ -1053,16 +1055,16 @@ class TouchInputHandler(private val game: Game) {
                 when (event.actionMasked) {
                     MotionEvent.ACTION_POINTER_DOWN -> {
                         multiFingerTapChecker(event)
-                        if (game.prefConfig.enableEnhancedTouch) {
-                            val pointer = NativeTouchContext.Pointer(event)
+                        enhancedTouchRouteOwner.currentPointerConfig()?.let { config ->
+                            val pointer = NativeTouchContext.Pointer(event, config)
                             nativeTouchPointerMap[pointer.pointerId] = pointer
                         }
                     }
 
                     MotionEvent.ACTION_DOWN -> {
                         nativeTouchPointerMap.clear()
-                        if (game.prefConfig.enableEnhancedTouch) {
-                            val pointer = NativeTouchContext.Pointer(event)
+                        enhancedTouchRouteOwner.currentPointerConfig()?.let { config ->
+                            val pointer = NativeTouchContext.Pointer(event, config)
                             nativeTouchPointerMap[pointer.pointerId] = pointer
                         }
                     }

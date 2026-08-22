@@ -93,11 +93,13 @@ class EnhancedTouchPointerStateTest {
     ) = EnhancedTouchPointerState(
         initialX = initialX,
         initialY = 500f,
-        screenWidth = 1_000f,
-        initialZonePixels = initialZonePixels,
-        enhancedTouchDirection = enhancedTouchDirection,
-        enhancedTouchZoneDivider = 0.5f,
-        pointerVelocityFactor = velocityFactor
+        config = EnhancedTouchPointerConfig(
+            screenWidth = 1_000f,
+            initialZonePixels = initialZonePixels,
+            enhancedTouchDirection = enhancedTouchDirection,
+            enhancedTouchZoneDivider = 0.5f,
+            pointerVelocityFactor = velocityFactor
+        )
     )
 
     private fun assertCoordinates(

@@ -2,14 +2,18 @@ package com.limelight.binding.input.touch
 
 import kotlin.math.abs
 
+internal data class EnhancedTouchPointerConfig(
+    val screenWidth: Float,
+    val initialZonePixels: Float,
+    val enhancedTouchDirection: Int,
+    val enhancedTouchZoneDivider: Float,
+    val pointerVelocityFactor: Float
+)
+
 internal class EnhancedTouchPointerState(
     private val initialX: Float,
     private val initialY: Float,
-    screenWidth: Float,
-    private val initialZonePixels: Float,
-    enhancedTouchDirection: Int,
-    enhancedTouchZoneDivider: Float,
-    private val pointerVelocityFactor: Float
+    private val config: EnhancedTouchPointerConfig
 ) {
     private var latestX = initialX
     private var latestY = initialY
@@ -18,8 +22,8 @@ internal class EnhancedTouchPointerState(
     private var pointerLeftInitialZone = false
 
     private val usesEnhancedCoordinates =
-        initialX / screenWidth * enhancedTouchDirection >
-            enhancedTouchZoneDivider * enhancedTouchDirection
+        initialX / config.screenWidth * config.enhancedTouchDirection >
+            config.enhancedTouchZoneDivider * config.enhancedTouchDirection
 
     fun update(rawX: Float, rawY: Float) {
         val deltaX = rawX - latestX
@@ -27,15 +31,15 @@ internal class EnhancedTouchPointerState(
         latestX = rawX
         latestY = rawY
 
-        if (pointerVelocityFactor == 1.0f) {
+        if (config.pointerVelocityFactor == 1.0f) {
             relativeX = rawX
             relativeY = rawY
         } else {
-            relativeX += deltaX * pointerVelocityFactor
-            relativeY += deltaY * pointerVelocityFactor
+            relativeX += deltaX * config.pointerVelocityFactor
+            relativeY += deltaY * config.pointerVelocityFactor
         }
 
-        if (initialZonePixels > 0f) {
+        if (config.initialZonePixels > 0f) {
             flattenInitialJitter()
         }
     }
@@ -58,8 +62,8 @@ internal class EnhancedTouchPointerState(
 
     private fun flattenInitialJitter() {
         if (!pointerLeftInitialZone &&
-            (abs(latestX - initialX) > initialZonePixels ||
-                abs(latestY - initialY) > initialZonePixels)
+            (abs(latestX - initialX) > config.initialZonePixels ||
+                abs(latestY - initialY) > config.initialZonePixels)
         ) {
             pointerLeftInitialZone = true
         }
