@@ -1013,9 +1013,7 @@ class TouchInputHandler(private val game: Game) {
         when (event.actionMasked) {
             MotionEvent.ACTION_MOVE -> {
                 for (i in 0 until event.pointerCount) {
-                    if (game.prefConfig.enableEnhancedTouch) {
-                        nativeTouchPointerMap[event.getPointerId(i)]?.updatePointerCoords(event, i)
-                    }
+                    nativeTouchPointerMap[event.getPointerId(i)]?.updatePointerCoords(event, i)
                     if (!sendTouchEventForPointer(view, event, eventType, i)) return false
                 }
                 return true
@@ -1041,6 +1039,7 @@ class TouchInputHandler(private val game: Game) {
                     }
 
                     MotionEvent.ACTION_DOWN -> {
+                        nativeTouchPointerMap.clear()
                         if (game.prefConfig.enableEnhancedTouch) {
                             val pointer = NativeTouchContext.Pointer(event)
                             nativeTouchPointerMap[pointer.pointerId] = pointer
@@ -1053,10 +1052,15 @@ class TouchInputHandler(private val game: Game) {
                         }
                     }
                 }
+                if (event.actionMasked == MotionEvent.ACTION_POINTER_UP ||
+                    event.actionMasked == MotionEvent.ACTION_UP
+                ) {
+                    nativeTouchPointerMap[event.getPointerId(actionIndex)]
+                        ?.updatePointerCoords(event, actionIndex)
+                }
                 val result = sendTouchEventForPointer(view, event, eventType, actionIndex)
-                if (game.prefConfig.enableEnhancedTouch &&
-                    (event.actionMasked == MotionEvent.ACTION_POINTER_UP ||
-                        event.actionMasked == MotionEvent.ACTION_UP)
+                if (event.actionMasked == MotionEvent.ACTION_POINTER_UP ||
+                    event.actionMasked == MotionEvent.ACTION_UP
                 ) {
                     nativeTouchPointerMap.remove(event.getPointerId(actionIndex))
                 }
@@ -1075,12 +1079,13 @@ class TouchInputHandler(private val game: Game) {
         event: MotionEvent,
         pointerIndex: Int
     ): FloatArray {
-        if (game.prefConfig.enableEnhancedTouch) {
-            val pointer = nativeTouchPointerMap[event.getPointerId(pointerIndex)]
-            if (pointer != null) {
-                val coordinates = pointer.xyCoordSelector()
-                return getStreamViewRelativeNormalizedXY(view, coordinates[0], coordinates[1])
-            }
+        val pointer = nativeTouchPointerMap[event.getPointerId(pointerIndex)]
+        if (pointer != null) {
+            return getStreamViewRelativeNormalizedXY(
+                view,
+                pointer.getSelectedX(),
+                pointer.getSelectedY()
+            )
         }
         return getStreamViewRelativeNormalizedXY(view, event, pointerIndex)
     }
