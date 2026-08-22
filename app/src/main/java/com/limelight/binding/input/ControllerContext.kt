@@ -134,6 +134,10 @@ open class GenericControllerContext(
 // =================================================================================
 
 class InputDeviceContext(handler: ControllerHandler) : GenericControllerContext(handler) {
+    internal val startGesture = StartGestureReducer()
+    internal val startLongPressRunnable = Runnable {
+        handler.onSystemStartLongPress(this)
+    }
     var name: String? = null
     var vibratorManager: VibratorManager? = null
     var vibrator: android.os.Vibrator? = null
@@ -229,6 +233,8 @@ class InputDeviceContext(handler: ControllerHandler) : GenericControllerContext(
 
     override fun destroy() {
         super.destroy()
+
+        handler.resetSystemStartGesture(this)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && vibratorManager != null) {
             vibratorManager!!.cancel()

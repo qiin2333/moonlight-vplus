@@ -22,6 +22,7 @@ import android.view.InputDevice
 import android.view.InputEvent
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.HapticFeedbackConstants
 
 import com.limelight.LimeLog
 import com.limelight.binding.input.driver.AbstractController
@@ -341,7 +342,7 @@ class ControllerHandler(
 
     private var currentControllers: Short = 0
     private var initialControllers: Short = 0
-    private var usbShortcutHintOwner: UsbDeviceContext? = null
+    private var usbStartWheelOwner: UsbDeviceContext? = null
 
     internal data class ControllerArrivalMetadata(
         val type: Byte,
@@ -567,7 +568,7 @@ class ControllerHandler(
     }
 
     internal fun onUsbShortcutLongPress(context: UsbDeviceContext) {
-        if (stopped || usbShortcutHintOwner?.let { it !== context } == true) {
+        if (stopped || usbStartWheelOwner?.let { it !== context } == true) {
             return
         }
         handleUsbShortcutUpdate(
@@ -577,6 +578,83 @@ class ControllerHandler(
                 prefConfig.enableStartKeyMenu
             )
         )
+    }
+
+    internal fun onSystemStartLongPress(context: InputDeviceContext) {
+        if (stopped) return
+        handleSystemStartGestureUpdate(
+            context,
+            context.startGesture.onLongPressTimeout(
+                SystemClock.uptimeMillis(),
+                prefConfig.enableStartKeyMenu,
+                hasRightStick = context.rightStickXAxis != -1 && context.rightStickYAxis != -1,
+                hasLeftStick = context.leftStickXAxis != -1 && context.leftStickYAxis != -1,
+                hasDpad = context.hatXAxis != -1 || context.hatYAxis != -1
+            )
+        )
+    }
+
+    internal fun resetSystemStartGesture(context: InputDeviceContext) {
+        mainThreadHandler.removeCallbacks(context.startLongPressRunnable)
+        handleSystemStartGestureUpdate(context, context.startGesture.reset())
+    }
+
+    private fun handleSystemStartGestureUpdate(
+        context: InputDeviceContext,
+        update: StartGestureReducer.Update
+    ) {
+        for (action in update.actions) {
+            when (action) {
+                StartGestureReducer.EventAction.SCHEDULE_LONG_PRESS -> {
+                    mainThreadHandler.removeCallbacks(context.startLongPressRunnable)
+                    mainThreadHandler.postDelayed(
+                        context.startLongPressRunnable,
+                        START_DOWN_TIME_MOUSE_MODE_MS.toLong()
+                    )
+                }
+                StartGestureReducer.EventAction.CANCEL_LONG_PRESS ->
+                    mainThreadHandler.removeCallbacks(context.startLongPressRunnable)
+                StartGestureReducer.EventAction.SHOW_WHEEL -> {
+                    gestures.showStartHoldWheel()
+                    performStartWheelHaptic()
+                }
+                StartGestureReducer.EventAction.HIDE_WHEEL -> gestures.hideStartHoldWheel()
+                StartGestureReducer.EventAction.SELECTION_CHANGED ->
+                    run {
+                        gestures.updateStartHoldWheelSelection(update.selectedAction)
+                        performStartWheelHaptic()
+                    }
+                StartGestureReducer.EventAction.COMMIT_ACTION -> when (update.committedAction) {
+                    StartWheelAction.MOUSE -> context.toggleMouseEmulation()
+                    StartWheelAction.KEYBOARD -> gestures.toggleKeyboard()
+                    StartWheelAction.PERFORMANCE -> onTogglePerformanceOverlay()
+                    StartWheelAction.MENU -> Unit
+                    StartWheelAction.CONTINUE, null -> Unit
+                }.also { performStartWheelHaptic() }
+                StartGestureReducer.EventAction.OPEN_GAME_MENU -> {
+                    val opened = gestures.showGameMenu(context)
+                    if (!opened) {
+                        update.menuOpenRequestId?.let { requestId ->
+                            context.startGesture.onGameMenuOpenResult(requestId, false)
+                        }
+                    }
+                }
+                StartGestureReducer.EventAction.EXIT_STREAM -> onExitStream()
+            }
+        }
+        if (update.wheelVisible) {
+            gestures.updateStartHoldWheelSelection(update.selectedAction)
+        }
+    }
+
+    private fun performStartWheelHaptic() {
+        mainThreadHandler.post {
+            if (!stopped) {
+                activityContext.window.decorView.performHapticFeedback(
+                    HapticFeedbackConstants.KEYBOARD_TAP
+                )
+            }
+        }
     }
 
     internal fun releaseUsbShortcutState(context: UsbDeviceContext) {
@@ -1835,6 +1913,20 @@ class ControllerHandler(
         }
 
         sendControllerInputPacket(context)
+        handleSystemStartWheelAxes(context)
+    }
+
+    private fun handleSystemStartWheelAxes(context: InputDeviceContext) {
+        handleSystemStartGestureUpdate(
+            context,
+            context.startGesture.onSelection(
+                leftStickX = context.leftStickX.toFloat() / 32766f,
+                leftStickY = context.leftStickY.toFloat() / 32766f,
+                rightStickX = context.rightStickX.toFloat() / 32766f,
+                rightStickY = context.rightStickY.toFloat() / 32766f,
+                dpadFlags = context.inputMap
+            )
+        )
     }
 
     // Normalize the given raw float value into a 0.0-1.0f range
@@ -2055,6 +2147,8 @@ class ControllerHandler(
             keyCode = handleFlipFaceButtons(keyCode)
         }
 
+        val isStartKey = keyCode == KeyEvent.KEYCODE_BUTTON_START || keyCode == KeyEvent.KEYCODE_MENU
+
         // If the button hasn't been down long enough, sleep for a bit before sending the up event
         // This allows "instant" button presses (like OUYA's virtual menu button) to work. This
         // path should not be triggered during normal usage.
@@ -2081,12 +2175,6 @@ class ControllerHandler(
                 // Sometimes we'll get a spurious key up event on controller disconnect.
                 // Make sure it's real by checking that the key is actually down before taking
                 // any action.
-                if ((context.inputMap and ControllerPacket.PLAY_FLAG) != 0 &&
-                    event.eventTime - context.startDownTime > START_DOWN_TIME_MOUSE_MODE_MS &&
-                    prefConfig.enableStartKeyMenu
-                ) {
-                    gestures.showGameMenu(context)
-                }
                 context.inputMap = context.inputMap and ControllerPacket.PLAY_FLAG.inv()
             }
             KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_BUTTON_SELECT ->
@@ -2211,6 +2299,18 @@ class ControllerHandler(
 
         sendControllerInputPacket(context)
 
+        if (isStartKey) {
+            val startUpdate = context.startGesture.onStartUp(
+                event.eventTime,
+                buttonFlags = context.inputMap,
+                rightStickX = context.rightStickX.toFloat() / 32766f,
+                rightStickY = context.rightStickY.toFloat() / 32766f,
+                leftStickX = context.leftStickX.toFloat() / 32766f,
+                leftStickY = context.leftStickY.toFloat() / 32766f
+            )
+            handleSystemStartGestureUpdate(context, startUpdate)
+        }
+
         if (context.pendingExit && context.inputMap == 0) {
             // All buttons from the quit combo are lifted. Finish the activity now.
             activityContext.finish()
@@ -2231,6 +2331,8 @@ class ControllerHandler(
         if (prefConfig.flipFaceButtons) {
             keyCode = handleFlipFaceButtons(keyCode)
         }
+
+        val isStartKey = keyCode == KeyEvent.KEYCODE_BUTTON_START || keyCode == KeyEvent.KEYCODE_MENU
 
         when (keyCode) {
             KeyEvent.KEYCODE_BUTTON_MODE -> {
@@ -2386,6 +2488,12 @@ class ControllerHandler(
         // sends us events that claim to be repeats but they're from different
         // devices, so we just send them all and deal with some duplicates.
         sendControllerInputPacket(context)
+        if (isStartKey && event.repeatCount == 0) {
+            handleSystemStartGestureUpdate(
+                context,
+                context.startGesture.onStartDown(event.eventTime, prefConfig.enableStartKeyMenu)
+            )
+        }
         return true
     }
 
@@ -2453,27 +2561,52 @@ class ControllerHandler(
                 }
                 UsbControllerShortcutStateMachine.Action.CANCEL_LONG_PRESS ->
                     mainThreadHandler.removeCallbacks(context.shortcutLongPressRunnable)
-                UsbControllerShortcutStateMachine.Action.SHOW_HINT -> {
+                UsbControllerShortcutStateMachine.Action.SHOW_WHEEL -> {
                     mainThreadHandler.post {
                         if (!stopped &&
-                            (usbShortcutHintOwner == null || usbShortcutHintOwner === context)
+                            (usbStartWheelOwner == null || usbStartWheelOwner === context)
                         ) {
-                            usbShortcutHintOwner = context
-                            gestures.showUsbControllerShortcutHint()
+                            usbStartWheelOwner = context
+                            gestures.showStartHoldWheel()
+                            performStartWheelHaptic()
                         }
                     }
                 }
-                UsbControllerShortcutStateMachine.Action.HIDE_HINT -> {
+                UsbControllerShortcutStateMachine.Action.HIDE_WHEEL -> {
                     mainThreadHandler.post {
-                        if (usbShortcutHintOwner === context) {
-                            usbShortcutHintOwner = null
-                            gestures.hideUsbControllerShortcutHint()
+                        if (usbStartWheelOwner === context) {
+                            usbStartWheelOwner = null
+                            gestures.hideStartHoldWheel()
                         }
                     }
                 }
                 UsbControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION ->
                     mainThreadHandler.post {
-                        if (!stopped) context.toggleMouseEmulation()
+                        if (!stopped) {
+                            context.toggleMouseEmulation()
+                            performStartWheelHaptic()
+                        }
+                    }
+                UsbControllerShortcutStateMachine.Action.TOGGLE_KEYBOARD ->
+                    mainThreadHandler.post {
+                        if (!stopped) {
+                            gestures.toggleKeyboard()
+                            performStartWheelHaptic()
+                        }
+                    }
+                UsbControllerShortcutStateMachine.Action.TOGGLE_PERFORMANCE ->
+                    mainThreadHandler.post {
+                        if (!stopped) {
+                            onTogglePerformanceOverlay()
+                            performStartWheelHaptic()
+                        }
+                    }
+                UsbControllerShortcutStateMachine.Action.UPDATE_SELECTION ->
+                    mainThreadHandler.post {
+                        if (!stopped && usbStartWheelOwner === context) {
+                            gestures.updateStartHoldWheelSelection(update.selectedAction)
+                            performStartWheelHaptic()
+                        }
                     }
                 UsbControllerShortcutStateMachine.Action.OPEN_GAME_MENU ->
                     mainThreadHandler.post openMenu@{
@@ -2489,10 +2622,11 @@ class ControllerHandler(
                             context.menuAxisSnapshotState.reset()
                             activateUsbMenuCapture(excludedContext = context)
                         }
-                        handleUsbShortcutUpdate(
-                            context,
-                            context.shortcutState.onGameMenuOpenResult(requestId, menuOpened)
-                        )
+                        val resultUpdate = context.shortcutState.onGameMenuOpenResult(requestId, menuOpened)
+                        handleUsbShortcutUpdate(context, resultUpdate)
+                        if (resultUpdate.sendNeutralState) {
+                            sendNeutralUsbControllerState(context)
+                        }
                     }
                 UsbControllerShortcutStateMachine.Action.EXIT_STREAM ->
                     mainThreadHandler.post {
@@ -2556,12 +2690,18 @@ class ControllerHandler(
 
     fun onExternalGameMenuOpened() {
         activateUsbMenuCapture()
+        for (i in 0 until inputDeviceContexts.size()) {
+            inputDeviceContexts.valueAt(i).startGesture.onGameMenuOpenedExternally()
+        }
     }
 
     fun onExternalGameMenuDismissed() {
         synchronized(usbDeviceContextsLifecycleLock) {
             if (stopped) return
             usbDeviceContexts.values.forEach(UsbDeviceContext::onGameMenuDismissed)
+        }
+        for (i in 0 until inputDeviceContexts.size()) {
+            inputDeviceContexts.valueAt(i).startGesture.onGameMenuUnavailable()
         }
     }
 
@@ -2612,8 +2752,8 @@ class ControllerHandler(
             android.os.SystemClock.uptimeMillis(),
             prefConfig.enableStartKeyMenu
         )
-        handleUsbShortcutUpdate(context, shortcutUpdate)
         if (shortcutUpdate.consumeAllInput) {
+            handleUsbShortcutUpdate(context, shortcutUpdate)
             if (context.shortcutState.isMenuActive()) {
                 val digitalDirectionPressed = buttonFlags and USB_MENU_DIRECTION_MASK != 0
                 val menuLeftX = if (digitalDirectionPressed) 0f else leftStickX
@@ -2697,6 +2837,25 @@ class ControllerHandler(
         context.inputMap = buttonFlags
 
         sendControllerInputPacket(context)
+
+        // Keep all wheel observation and local commits after the host snapshot has been sent.
+        context.shortcutState.recordPendingSnapshot(
+            buttonFlags,
+            leftStickX,
+            leftStickY,
+            rightStickX,
+            rightStickY
+        )
+        handleUsbShortcutUpdate(context, shortcutUpdate)
+        handleUsbShortcutUpdate(
+            context,
+            context.shortcutState.onSelectionAxes(
+                leftStickX,
+                leftStickY,
+                rightStickX,
+                rightStickY
+            )
+        )
     }
 
     private fun updatePerformanceShortcut(

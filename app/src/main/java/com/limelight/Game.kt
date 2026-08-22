@@ -11,6 +11,7 @@ import com.limelight.binding.audio.MicrophoneManager
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.GameInputDevice
 import com.limelight.binding.input.KeyboardTranslator
+import com.limelight.binding.input.StartWheelAction
 import com.limelight.binding.input.advance_setting.ControllerManager
 import com.limelight.binding.input.advance_setting.KeyboardUIController
 import com.limelight.binding.input.capture.InputCaptureManager
@@ -53,6 +54,7 @@ import com.limelight.ui.Ds5TouchpadFeedbackView
 import com.limelight.ui.GameGestures
 import com.limelight.ui.GameMenuAxisSourceLifecycle
 import com.limelight.ui.StreamView
+import com.limelight.ui.StartHoldWheelOverlay
 import com.limelight.utils.Dialog
 import com.limelight.utils.PanZoomHandler
 import com.limelight.utils.FullscreenProgressOverlay
@@ -120,6 +122,11 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.roundToInt
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 
 class Game : Activity(), SurfaceHolder.Callback,
     OnGenericMotionListener, OnTouchListener, NvConnectionListener, EvdevListener,
@@ -168,6 +175,9 @@ class Game : Activity(), SurfaceHolder.Callback,
     var connected = false
     private var activeGameMenu: GameMenu? = null
     private var controllerShortcutHintView: View? = null
+    private var startHoldWheelView: ComposeView? = null
+    private val startHoldWheelVisible = mutableStateOf(false)
+    private val startHoldWheelSelection = mutableStateOf(StartWheelAction.CONTINUE)
     private var autoEnterPip = false
     private var surfaceCreated = false
     var attemptedConnection = false
@@ -357,6 +367,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         streamView.setOnGenericMotionListener(this)
         streamView.setOnKeyListener(this)
         streamView.setInputCallbacks(this)
+        installStartHoldWheelOverlay(streamView.parent as FrameLayout)
 
         if (prefConfig.screenDs5Touchpad) {
             addDs5TouchpadFeedbackView()
@@ -2538,56 +2549,59 @@ class Game : Activity(), SurfaceHolder.Callback,
         updatePipAutoEnter()
     }
 
-    override fun showGameMenu(device: GameInputDevice?) {
-        showGameMenuInternal(device, openedFromUsbShortcut = false)
+    override fun showGameMenu(device: GameInputDevice?): Boolean {
+        return showGameMenuInternal(device, openedFromUsbShortcut = false)
     }
 
     private fun showGameMenuInternal(
         device: GameInputDevice?,
         openedFromUsbShortcut: Boolean
-    ) {
-        when (crownSessionController.backKeyMenuMode) {
+    ): Boolean {
+        return when (crownSessionController.backKeyMenuMode) {
             BackKeyMenuMode.CROWN_MODE -> {
                 if (controllerManager != null && prefConfig.enableCrownFeatures) {
                     controllerManager?.superPagesController?.returnOperation()
                 }
+                false
             }
             BackKeyMenuMode.NO_MENU -> {
                 if (prefConfig.enableCrownFeatures) {
                     controllerManager?.superPagesController?.returnOperation()
                 }
+                false
             }
-            BackKeyMenuMode.NO_MENU_LOCKED -> {}
+            BackKeyMenuMode.NO_MENU_LOCKED -> false
             BackKeyMenuMode.GAME_MENU -> {
                 val existingMenu = activeGameMenu
                 if (existingMenu?.isShowing() == true) {
-                    return
-                }
-                existingMenu?.dismiss()
-                activeGameMenu = null
+                    true
+                } else {
+                    existingMenu?.dismiss()
+                    activeGameMenu = null
 
-                val menu = GameMenu(this, app, conn!!, device) { dismissedMenu ->
-                    if (activeGameMenu === dismissedMenu) {
-                        activeGameMenu = null
+                    val menu = GameMenu(this, app, conn!!, device) { dismissedMenu ->
+                        if (activeGameMenu === dismissedMenu) {
+                            activeGameMenu = null
+                        }
+                        if (::controllerHandler.isInitialized) {
+                            controllerHandler.onExternalGameMenuDismissed()
+                        }
+                        // Preserve the opener-specific dismissal callback. USB contexts are also
+                        // covered by the handler-wide reset above; their callback is idempotent.
+                        device?.onGameMenuDismissed()
                     }
-                    if (::controllerHandler.isInitialized) {
-                        controllerHandler.onExternalGameMenuDismissed()
+                    activeGameMenu = menu
+                    if (!openedFromUsbShortcut && ::controllerHandler.isInitialized) {
+                        controllerHandler.onExternalGameMenuOpened()
                     }
-                    // Preserve the opener-specific dismissal callback. USB contexts are also
-                    // covered by the handler-wide reset above; their callback is idempotent.
-                    device?.onGameMenuDismissed()
-                }
-                activeGameMenu = menu
-                if (!openedFromUsbShortcut && ::controllerHandler.isInitialized) {
-                    controllerHandler.onExternalGameMenuOpened()
+                    activeGameMenu?.isShowing() == true
                 }
             }
         }
     }
 
     override fun showGameMenuFromUsb(device: GameInputDevice): Boolean {
-        showGameMenuInternal(device, openedFromUsbShortcut = true)
-        return activeGameMenu?.isShowing() == true
+        return showGameMenuInternal(device, openedFromUsbShortcut = true)
     }
 
     override fun dispatchUsbControllerMenuKey(event: KeyEvent): Boolean {
@@ -2630,6 +2644,54 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     override fun hideUsbControllerShortcutHint() {
         controllerShortcutHintView?.visibility = View.GONE
+    }
+
+    private fun installStartHoldWheelOverlay(parent: FrameLayout) {
+        startHoldWheelView = ComposeView(this).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            isFocusable = false
+            isFocusableInTouchMode = false
+            isClickable = false
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+            visibility = View.GONE
+            setOnTouchListener { _, _ -> false }
+            setContent {
+                StartHoldWheelOverlay(
+                    visible = startHoldWheelVisible.value,
+                    selectedAction = startHoldWheelSelection.value,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+        parent.addView(
+            startHoldWheelView,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
+    }
+
+    override fun showStartHoldWheel() {
+        runOnUiThread {
+            startHoldWheelVisible.value = true
+            startHoldWheelView?.visibility = View.VISIBLE
+            startHoldWheelView?.bringToFront()
+        }
+    }
+
+    override fun updateStartHoldWheelSelection(action: StartWheelAction) {
+        runOnUiThread {
+            startHoldWheelSelection.value = action
+        }
+    }
+
+    override fun hideStartHoldWheel() {
+        runOnUiThread {
+            startHoldWheelVisible.value = false
+            startHoldWheelSelection.value = StartWheelAction.CONTINUE
+            startHoldWheelView?.visibility = View.GONE
+        }
     }
 
     override fun onKey(view: View, keyCode: Int, keyEvent: KeyEvent): Boolean {
