@@ -1,10 +1,8 @@
 package com.limelight.binding.input.touch
 
-import android.view.MotionEvent
-import android.util.Log
 import android.content.res.Resources
-import android.util.DisplayMetrics
-import kotlin.math.abs
+import android.util.Log
+import android.view.MotionEvent
 
 internal object ScreenUtils {
     @JvmStatic
@@ -22,103 +20,55 @@ internal object ScreenUtils {
 
 class NativeTouchContext {
 
-    class Pointer(event: MotionEvent) {
-        val pointerId: Int
-        private val initialCoords = MotionEvent.PointerCoords()
-        private val latestCoords = MotionEvent.PointerCoords()
-        private val previousCoords = MotionEvent.PointerCoords()
-        private val latestRelativeCoords = MotionEvent.PointerCoords()
-        private val previousRelativeCoords = MotionEvent.PointerCoords()
+    class Pointer internal constructor(
+        event: MotionEvent,
+        config: EnhancedTouchPointerConfig
+    ) {
+        constructor(event: MotionEvent) : this(event, capturePointerConfig())
 
-        private var velocityX: Float = 0f
-        private var velocityY: Float = 0f
-        private var pointerLeftInitialZone = false
+        val pointerId: Int
+        private val eventCoords = MotionEvent.PointerCoords()
+        private val state: EnhancedTouchPointerState
 
         init {
             val pointerIndex = event.actionIndex
             pointerId = event.getPointerId(pointerIndex)
-            event.getPointerCoords(pointerIndex, initialCoords)
-            event.getPointerCoords(pointerIndex, latestCoords)
-            latestRelativeCoords.x = latestCoords.x
-            latestRelativeCoords.y = latestCoords.y
+            event.getPointerCoords(pointerIndex, eventCoords)
+            state = EnhancedTouchPointerState(
+                initialX = eventCoords.x,
+                initialY = eventCoords.y,
+                config = config
+            )
         }
 
         fun updatePointerCoords(event: MotionEvent, pointerIndex: Int) {
-            previousCoords.x = latestCoords.x
-            previousCoords.y = latestCoords.y
-            event.getPointerCoords(pointerIndex, latestCoords)
-
-            if (POINTER_VELOCITY_FACTOR == 1.0f) {
-                latestRelativeCoords.x = latestCoords.x
-                latestRelativeCoords.y = latestCoords.y
-            } else {
-                updateRelativeCoords()
-            }
-
-            if (INTIAL_ZONE_PIXELS > 0f) flattenLongPressJitter()
+            event.getPointerCoords(pointerIndex, eventCoords)
+            state.update(eventCoords.x, eventCoords.y)
         }
 
-        private fun updateRelativeCoords() {
-            velocityX = latestCoords.x - previousCoords.x
-            velocityY = latestCoords.y - previousCoords.y
-            previousRelativeCoords.x = latestRelativeCoords.x
-            previousRelativeCoords.y = latestRelativeCoords.y
-            latestRelativeCoords.x = previousRelativeCoords.x + velocityX * POINTER_VELOCITY_FACTOR
-            latestRelativeCoords.y = previousRelativeCoords.y + velocityY * POINTER_VELOCITY_FACTOR
-        }
+        fun getSelectedX(): Float = state.selectedX()
 
-        private fun checkIfPointerLeaveInitialZone() {
-            if (!pointerLeftInitialZone) {
-                if (abs(latestCoords.x - initialCoords.x) > INTIAL_ZONE_PIXELS ||
-                    abs(latestCoords.y - initialCoords.y) > INTIAL_ZONE_PIXELS
-                ) {
-                    pointerLeftInitialZone = true
-                }
-            }
-        }
+        fun getSelectedY(): Float = state.selectedY()
 
-        private fun flattenLongPressJitter() {
-            checkIfPointerLeaveInitialZone()
-            if (!pointerLeftInitialZone) {
-                latestCoords.x = initialCoords.x
-                latestCoords.y = initialCoords.y
-                latestRelativeCoords.x = initialCoords.x
-                latestRelativeCoords.y = initialCoords.y
-            }
-        }
+        fun getInitialX(): Float = state.initialX()
 
-        private fun withinEnhancedTouchZone(): Boolean {
-            val normalizedX = initialCoords.x / ScreenUtils.getScreenWidth()
-            return normalizedX * ENHANCED_TOUCH_ON_RIGHT > ENHANCED_TOUCH_ZONE_DIVIDER * ENHANCED_TOUCH_ON_RIGHT
-        }
+        fun getPointerNormalizedInitialX(): Float = state.initialX() / ScreenUtils.getScreenWidth()
 
-        fun xyCoordSelector(): FloatArray {
-            return if (withinEnhancedTouchZone()) {
-                floatArrayOf(latestRelativeCoords.x, latestRelativeCoords.y)
-            } else {
-                floatArrayOf(latestCoords.x, latestCoords.y)
-            }
-        }
+        fun getInitialY(): Float = state.initialY()
 
-        fun getInitialX(): Float = initialCoords.x
+        fun getPointerNormalizedInitialY(): Float = state.initialY() / ScreenUtils.getScreenHeight()
 
-        fun getPointerNormalizedInitialX(): Float = initialCoords.x / ScreenUtils.getScreenWidth()
+        fun getLatestX(): Float = state.latestX()
 
-        fun getInitialY(): Float = initialCoords.y
+        fun getLatestY(): Float = state.latestY()
 
-        fun getPointerNormalizedInitialY(): Float = initialCoords.y / ScreenUtils.getScreenHeight()
+        fun getLatestRelativeX(): Float = state.relativeX()
 
-        fun getLatestX(): Float = latestCoords.x
+        fun getLatestRelativeY(): Float = state.relativeY()
 
-        fun getLatestY(): Float = latestCoords.y
+        fun getPointerNormalizedLatestX(): Float = state.latestX() / ScreenUtils.getScreenWidth()
 
-        fun getLatestRelativeX(): Float = latestRelativeCoords.x
-
-        fun getLatestRelativeY(): Float = latestRelativeCoords.y
-
-        fun getPointerNormalizedLatestX(): Float = latestCoords.x / ScreenUtils.getScreenWidth()
-
-        fun getPointerNormalizedLatestY(): Float = latestCoords.y / ScreenUtils.getScreenHeight()
+        fun getPointerNormalizedLatestY(): Float = state.latestY() / ScreenUtils.getScreenHeight()
 
         fun printPointerInitialCoords() {
             Log.d("Initial Coords", "Pointer $pointerId Coords: X ${getInitialX()} Y ${getInitialY()}")
@@ -134,6 +84,14 @@ class NativeTouchContext {
     }
 
     companion object {
+        internal fun capturePointerConfig() = EnhancedTouchPointerConfig(
+            screenWidth = ScreenUtils.getScreenWidth(),
+            initialZonePixels = INTIAL_ZONE_PIXELS,
+            enhancedTouchDirection = ENHANCED_TOUCH_ON_RIGHT,
+            enhancedTouchZoneDivider = ENHANCED_TOUCH_ZONE_DIVIDER,
+            pointerVelocityFactor = POINTER_VELOCITY_FACTOR
+        )
+
         @JvmField
         var INTIAL_ZONE_PIXELS = 0f
 

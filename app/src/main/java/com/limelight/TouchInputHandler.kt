@@ -12,6 +12,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.limelight.binding.input.touch.AbsoluteTouchContext
+import com.limelight.binding.input.touch.EnhancedTouchGestureRouteOwner
 import com.limelight.binding.input.touch.NativeTouchContext
 import com.limelight.binding.input.touch.RelativeTouchContext
 import com.limelight.binding.input.touch.TouchContext
@@ -86,6 +87,7 @@ class TouchInputHandler(private val game: Game) {
     private var lastAbsTouchDownY = 0f
 
     val nativeTouchPointerMap = HashMap<Int, NativeTouchContext.Pointer>()
+    private val enhancedTouchRouteOwner = EnhancedTouchGestureRouteOwner()
 
     // 华为鼠标滚轮/中键模拟
     private var fakeScrollInitialY = -1f
@@ -454,6 +456,19 @@ class TouchInputHandler(private val game: Game) {
                 lastButtonState = buttonState
             } else {
                 // This case is for fingers
+                if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                    enhancedTouchRouteOwner.finish()
+                    nativeTouchPointerMap.clear()
+                } else if (enhancedTouchRouteOwner.ownsContinuation()) {
+                    trySendTouchEvent(view, event)
+                    if (event.actionMasked == MotionEvent.ACTION_UP ||
+                        event.actionMasked == MotionEvent.ACTION_CANCEL
+                    ) {
+                        enhancedTouchRouteOwner.finish()
+                    }
+                    return true
+                }
+
                 if (game.prefConfig.screenDs5Touchpad && trySendScreenDs5TouchpadEvent(view, event)) {
                     return true
                 }
@@ -463,8 +478,16 @@ class TouchInputHandler(private val game: Game) {
                     return true
                 }
 
-                if (!game.prefConfig.touchscreenTrackpad && game.prefConfig.enableEnhancedTouch && trySendTouchEvent(view, event)) {
-                    return true
+                if (event.actionMasked == MotionEvent.ACTION_DOWN &&
+                    !game.prefConfig.touchscreenTrackpad &&
+                    game.prefConfig.enableEnhancedTouch
+                ) {
+                    enhancedTouchRouteOwner.begin(NativeTouchContext.capturePointerConfig())
+                    if (trySendTouchEvent(view, event)) {
+                        return true
+                    }
+                    enhancedTouchRouteOwner.finish()
+                    nativeTouchPointerMap.clear()
                 }
 
                 if (game.virtualController != null &&
@@ -995,7 +1018,7 @@ class TouchInputHandler(private val game: Game) {
     }
 
     private fun sendTouchEventForPointer(view: View?, event: MotionEvent, eventType: Byte, pointerIndex: Int): Boolean {
-        val normalizedCoords = getStreamViewRelativeNormalizedXY(view, event, pointerIndex)
+        val normalizedCoords = getEnhancedPointerNormalizedXY(view, event, pointerIndex)
         val normalizedContactArea = getStreamViewNormalizedContactArea(event, pointerIndex)
         return game.conn?.sendTouchEvent(
             eventType, event.getPointerId(pointerIndex),
@@ -1013,34 +1036,35 @@ class TouchInputHandler(private val game: Game) {
         when (event.actionMasked) {
             MotionEvent.ACTION_MOVE -> {
                 for (i in 0 until event.pointerCount) {
-                    if (game.prefConfig.enableEnhancedTouch) {
-                        nativeTouchPointerMap[event.getPointerId(i)]?.updatePointerCoords(event, i)
-                    }
+                    nativeTouchPointerMap[event.getPointerId(i)]?.updatePointerCoords(event, i)
                     if (!sendTouchEventForPointer(view, event, eventType, i)) return false
                 }
                 return true
             }
             MotionEvent.ACTION_CANCEL -> {
-                return game.conn?.sendTouchEvent(
+                val result = game.conn?.sendTouchEvent(
                     MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, 0,
                     0f, 0f, 0f, 0f, 0f,
                     MoonBridge.LI_ROT_UNKNOWN
                 ) != MoonBridge.LI_ERR_UNSUPPORTED
+                nativeTouchPointerMap.clear()
+                return result
             }
             else -> {
                 val actionIndex = event.actionIndex
                 when (event.actionMasked) {
                     MotionEvent.ACTION_POINTER_DOWN -> {
                         multiFingerTapChecker(event)
-                        if (game.prefConfig.enableEnhancedTouch) {
-                            val pointer = NativeTouchContext.Pointer(event)
+                        enhancedTouchRouteOwner.currentPointerConfig()?.let { config ->
+                            val pointer = NativeTouchContext.Pointer(event, config)
                             nativeTouchPointerMap[pointer.pointerId] = pointer
                         }
                     }
 
                     MotionEvent.ACTION_DOWN -> {
-                        if (game.prefConfig.enableEnhancedTouch) {
-                            val pointer = NativeTouchContext.Pointer(event)
+                        nativeTouchPointerMap.clear()
+                        enhancedTouchRouteOwner.currentPointerConfig()?.let { config ->
+                            val pointer = NativeTouchContext.Pointer(event, config)
                             nativeTouchPointerMap[pointer.pointerId] = pointer
                         }
                     }
@@ -1050,16 +1074,43 @@ class TouchInputHandler(private val game: Game) {
                             game.toggleKeyboard()
                         }
                     }
-
-                    MotionEvent.ACTION_POINTER_UP -> {
-                        if (game.prefConfig.enableEnhancedTouch) {
-                            nativeTouchPointerMap.remove(event.getPointerId(actionIndex))
-                        }
-                    }
                 }
-                return sendTouchEventForPointer(view, event, eventType, actionIndex)
+                if (event.actionMasked == MotionEvent.ACTION_POINTER_UP ||
+                    event.actionMasked == MotionEvent.ACTION_UP
+                ) {
+                    nativeTouchPointerMap[event.getPointerId(actionIndex)]
+                        ?.updatePointerCoords(event, actionIndex)
+                }
+                val result = sendTouchEventForPointer(view, event, eventType, actionIndex)
+                if (event.actionMasked == MotionEvent.ACTION_POINTER_UP ||
+                    event.actionMasked == MotionEvent.ACTION_UP
+                ) {
+                    nativeTouchPointerMap.remove(event.getPointerId(actionIndex))
+                }
+                return result
             }
         }
+    }
+
+    /**
+     * Returns the enhanced coordinate for an active pointer when the enhanced
+     * touch path owns it. Down/up events use the same coordinate source as move
+     * events so a release cannot jump back to the raw touchscreen position.
+     */
+    private fun getEnhancedPointerNormalizedXY(
+        view: View?,
+        event: MotionEvent,
+        pointerIndex: Int
+    ): FloatArray {
+        val pointer = nativeTouchPointerMap[event.getPointerId(pointerIndex)]
+        if (pointer != null) {
+            return getStreamViewRelativeNormalizedXY(
+                view,
+                pointer.getSelectedX(),
+                pointer.getSelectedY()
+            )
+        }
+        return getStreamViewRelativeNormalizedXY(view, event, pointerIndex)
     }
 
     /** Forward touchscreen contacts through controller 0 as DualSense touchpad contacts. */
