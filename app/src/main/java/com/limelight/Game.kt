@@ -67,7 +67,6 @@ import com.limelight.utils.AppSettingsManager
 import com.limelight.services.KeyboardAccessibilityService
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.app.PictureInPictureParams
 import android.content.ComponentName
 import android.content.Intent
@@ -108,6 +107,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.app.ActivityCompat
 import androidx.annotation.RequiresApi
+import androidx.activity.ComponentActivity
 
 import java.io.ByteArrayInputStream
 import java.lang.reflect.InvocationTargetException
@@ -128,7 +128,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 
-class Game : Activity(), SurfaceHolder.Callback,
+class Game : ComponentActivity(), SurfaceHolder.Callback,
     OnGenericMotionListener, OnTouchListener, NvConnectionListener, EvdevListener,
     OnSystemUiVisibilityChangeListener, GameGestures, GameMenuAxisSourceLifecycle,
     StreamView.InputCallbacks,
