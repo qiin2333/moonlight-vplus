@@ -56,6 +56,32 @@ class StartGestureReducerTest {
     }
 
     @Test
+    fun dpadSelectionRemainsLatchedUntilStartRelease() {
+        val reducer = visibleWheel()
+
+        reducer.onSelection(0f, 0f, 0f, 0f, ControllerPacket.UP_FLAG)
+        repeat(4) {
+            reducer.onSelection(0f, 0f, 0f, 0f, 0)
+        }
+
+        assertEquals(StartWheelAction.MENU, reducer.selectedAction())
+        val release = reducer.onStartUp(900)
+        assertEquals(StartWheelAction.MENU, release.committedAction)
+        assertTrue(release.actions.contains(StartGestureReducer.EventAction.OPEN_GAME_MENU))
+    }
+
+    @Test
+    fun anotherDpadDirectionReplacesLatchedSelection() {
+        val reducer = visibleWheel()
+
+        reducer.onSelection(0f, 0f, 0f, 0f, ControllerPacket.UP_FLAG)
+        reducer.onSelection(0f, 0f, 0f, 0f, 0)
+        val changed = reducer.onSelection(0f, 0f, 0f, 0f, ControllerPacket.RIGHT_FLAG)
+
+        assertEquals(StartWheelAction.MOUSE, changed.selectedAction)
+    }
+
+    @Test
     fun leftAndRightSticksCanTakeOwnershipAfterCentering() {
         val reducer = visibleWheel()
 

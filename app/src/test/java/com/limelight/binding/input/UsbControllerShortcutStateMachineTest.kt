@@ -70,6 +70,27 @@ class UsbControllerShortcutStateMachineTest {
     }
 
     @Test
+    fun tappedDpadDirectionCommitsWhenStartIsReleasedLater() {
+        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+        showWheel(machine)
+
+        machine.onButtonSnapshot(
+            ControllerPacket.PLAY_FLAG or ControllerPacket.UP_FLAG,
+            851,
+            true
+        )
+        machine.onSelectionAxes(0f, 0f, 0f, 0f)
+        machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 852, true)
+        repeat(4) {
+            machine.onSelectionAxes(0f, 0f, 0f, 0f)
+        }
+
+        val release = machine.onButtonSnapshot(0, 900, true)
+
+        assertTrue(release.actions.contains(UsbControllerShortcutStateMachine.Action.OPEN_GAME_MENU))
+    }
+
+    @Test
     fun menuCommitIsEmittedOnlyAfterStartUp() {
         val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
         showWheel(machine)

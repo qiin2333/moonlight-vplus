@@ -117,7 +117,6 @@ internal class StartGestureReducer(
         dpadFlags: Int
     ): Update {
         if (state != State.WHEEL_VISIBLE) return snapshot()
-        val previousSource = inputSource
         val dpadAxis = dpadToAxis(dpadFlags)
         inputSource = resolveInputSource(
             leftStickX,
@@ -132,9 +131,13 @@ internal class StartGestureReducer(
             InputSource.DPAD -> dpadAxis
             null -> 0f to 0f
         }
+        if (inputSource == InputSource.DPAD && x == 0f && y == 0f) {
+            directionCandidate = null
+            directionCandidateFrames = 0
+            return snapshot()
+        }
         val candidate = actionForAxis(x, y)
-        val digitalTransition = inputSource == InputSource.DPAD ||
-            (previousSource == InputSource.DPAD && inputSource == null)
+        val digitalTransition = inputSource == InputSource.DPAD
         val next = stabilize(candidate, immediate = digitalTransition)
         if (next == selectedAction) return snapshot()
         selectedAction = next
@@ -329,7 +332,13 @@ internal class StartGestureReducer(
             InputSource.LEFT_STICK -> if (axisActive(leftStickX, leftStickY, exitThreshold)) {
                 return InputSource.LEFT_STICK
             }
-            InputSource.DPAD, null -> Unit
+            InputSource.DPAD -> if (
+                !axisActive(rightStickX, rightStickY, enterThreshold) &&
+                !axisActive(leftStickX, leftStickY, enterThreshold)
+            ) {
+                return InputSource.DPAD
+            }
+            null -> Unit
         }
 
         val rightMagnitude = axisMagnitude(rightStickX, rightStickY)
