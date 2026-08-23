@@ -12,6 +12,9 @@ enum class StartWheelAction {
     PERFORMANCE
 }
 
+// Moonlight host stick coordinates are positive-up; wheel selection follows Android's positive-down axes.
+internal fun hostStickYToWheelAxis(value: Short): Float = -value.toFloat() / 32766f
+
 /** Pure Start gesture state machine shared by Android and USB controller adapters. */
 internal class StartGestureReducer(
     private val longPressDurationMs: Long = ControllerHandler.START_DOWN_TIME_MOUSE_MODE_MS.toLong(),

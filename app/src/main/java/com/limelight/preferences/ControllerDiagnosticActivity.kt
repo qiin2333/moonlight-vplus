@@ -339,6 +339,7 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
     private fun resetShortcutTest() {
         simulatorHandler.removeCallbacks(simulatorLongPressRunnable)
         simulatorStateMachine.reset()
+        systemSimulatorGesture.reset()
         simulatorPressedFlags = 0
         simulatorInputSource = null
         systemStartDownTimeMs = 0L
@@ -919,6 +920,15 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
                 else -> systemSimulatorGesture.onInputSnapshot(simulatorPressedFlags)
             }
             applySystemReducerUpdate(update)
+            applySystemReducerUpdate(
+                systemSimulatorGesture.onSelection(
+                    leftStickX,
+                    leftStickY,
+                    rightStickX,
+                    rightStickY,
+                    simulatorPressedFlags
+                )
+            )
             simulatorUiState = simulatorUiState.copy(pressedFlags = simulatorPressedFlags)
             return
         }

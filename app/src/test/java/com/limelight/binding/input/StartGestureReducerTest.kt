@@ -98,6 +98,21 @@ class StartGestureReducerTest {
     }
 
     @Test
+    fun hostStickYConversionPreservesWheelUpAndDownDirections() {
+        val upReducer = visibleWheel()
+        repeat(2) {
+            upReducer.onSelection(0f, hostStickYToWheelAxis(32766), 0f, 0f, 0)
+        }
+        assertEquals(StartWheelAction.MENU, upReducer.selectedAction())
+
+        val downReducer = visibleWheel()
+        repeat(2) {
+            downReducer.onSelection(0f, hostStickYToWheelAxis(-32766), 0f, 0f, 0)
+        }
+        assertEquals(StartWheelAction.KEYBOARD, downReducer.selectedAction())
+    }
+
+    @Test
     fun analogDriftBelowActivationThresholdDoesNotSelect() {
         val reducer = visibleWheel()
 

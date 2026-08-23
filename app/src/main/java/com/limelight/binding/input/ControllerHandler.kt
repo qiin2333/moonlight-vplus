@@ -597,7 +597,11 @@ class ControllerHandler(
 
     internal fun resetSystemStartGesture(context: InputDeviceContext) {
         mainThreadHandler.removeCallbacks(context.startLongPressRunnable)
+        val releasedWheel = startWheelOwnerGate.release(context)
         handleSystemStartGestureUpdate(context, context.startGesture.reset())
+        if (releasedWheel) {
+            gestures.hideStartHoldWheel()
+        }
     }
 
     private fun handleSystemStartGestureUpdate(
@@ -681,6 +685,9 @@ class ControllerHandler(
 
     internal fun releaseUsbShortcutState(context: UsbDeviceContext) {
         mainThreadHandler.removeCallbacks(context.shortcutLongPressRunnable)
+        if (startWheelOwnerGate.release(context)) {
+            mainThreadHandler.post { gestures.hideStartHoldWheel() }
+        }
         val update = context.shortcutState.reset()
         handleUsbShortcutUpdate(context, update)
     }
@@ -1944,9 +1951,9 @@ class ControllerHandler(
             context,
             context.startGesture.onSelection(
                 leftStickX = context.leftStickX.toFloat() / 32766f,
-                leftStickY = context.leftStickY.toFloat() / 32766f,
+                leftStickY = hostStickYToWheelAxis(context.leftStickY),
                 rightStickX = context.rightStickX.toFloat() / 32766f,
-                rightStickY = context.rightStickY.toFloat() / 32766f,
+                rightStickY = hostStickYToWheelAxis(context.rightStickY),
                 dpadFlags = context.inputMap
             )
         )
