@@ -158,6 +158,7 @@ class UsbControllerShortcutStateMachineTest {
     fun nonMenuActionsCommitOnceOnStartUp() {
         val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
         showWheel(machine)
+        assertTrue(machine.needsAxisUpdates())
         machine.onSelectionAxes(0f, 0f, 0.9f, 0f)
         machine.onSelectionAxes(0f, 0f, 0.9f, 0f)
 
@@ -171,9 +172,11 @@ class UsbControllerShortcutStateMachineTest {
         )
         assertTrue(release.consumeAllInput)
         assertTrue(machine.isLocalInputCaptureActive())
+        assertTrue(machine.needsAxisUpdates())
 
         machine.onSelectionAxes(0f, 0f, 0f, 0f)
         assertFalse(machine.isLocalInputCaptureActive())
+        assertFalse(machine.needsAxisUpdates())
     }
 
     @Test

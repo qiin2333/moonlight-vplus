@@ -2858,6 +2858,10 @@ private fun ControllerShortcutGuide(
                             "Start" to keyActive(
                                 ShortcutTestTarget.SYSTEM_GAME_MENU,
                                 ControllerPacket.PLAY_FLAG
+                            ),
+                            "D-pad ↑" to keyActive(
+                                ShortcutTestTarget.SYSTEM_GAME_MENU,
+                                ControllerPacket.UP_FLAG
                             )
                         ),
                         recognized = isUnderTest(ShortcutTestTarget.SYSTEM_GAME_MENU) &&
@@ -2884,9 +2888,9 @@ private fun ControllerShortcutGuide(
                                 ShortcutTestTarget.USB_GAME_MENU,
                                 ControllerPacket.PLAY_FLAG
                             ),
-                            "B" to keyActive(
+                            "D-pad ↑" to keyActive(
                                 ShortcutTestTarget.USB_GAME_MENU,
-                                ControllerPacket.B_FLAG
+                                ControllerPacket.UP_FLAG
                             )
                         ),
                         recognized = isUnderTest(ShortcutTestTarget.USB_GAME_MENU) &&
@@ -2912,6 +2916,10 @@ private fun ControllerShortcutGuide(
                             "Start" to keyActive(
                                 ShortcutTestTarget.USB_MOUSE_MODE,
                                 ControllerPacket.PLAY_FLAG
+                            ),
+                            "D-pad →" to keyActive(
+                                ShortcutTestTarget.USB_MOUSE_MODE,
+                                ControllerPacket.RIGHT_FLAG
                             )
                         ),
                         recognized = isUnderTest(ShortcutTestTarget.USB_MOUSE_MODE) &&

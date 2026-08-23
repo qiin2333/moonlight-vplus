@@ -221,7 +221,8 @@ internal class UsbControllerShortcutStateMachine(
         exitPending || reducer.isLocalInputCaptureActive()
 
     @Synchronized
-    fun isWheelVisible(): Boolean = reducer.state() == StartGestureReducer.State.WHEEL_VISIBLE
+    fun needsAxisUpdates(): Boolean =
+        reducer.state() == StartGestureReducer.State.WHEEL_VISIBLE || isLocalInputCaptureActive()
 
     @Synchronized
     fun isStartPressed(): Boolean = lastButtonFlags and ControllerPacket.PLAY_FLAG != 0

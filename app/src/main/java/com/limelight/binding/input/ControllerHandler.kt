@@ -2855,7 +2855,7 @@ class ControllerHandler(
             android.os.SystemClock.uptimeMillis(),
             prefConfig.enableStartKeyMenu
         )
-        val wheelUpdate = if (context.shortcutState.isWheelVisible()) {
+        val localAxisUpdate = if (context.shortcutState.needsAxisUpdates()) {
             context.shortcutState.onSelectionAxes(
                 leftStickX,
                 leftStickY,
@@ -2866,9 +2866,9 @@ class ControllerHandler(
             null
         }
         handleUsbShortcutUpdate(context, shortcutUpdate)
-        wheelUpdate?.let { handleUsbShortcutUpdate(context, it) }
+        localAxisUpdate?.let { handleUsbShortcutUpdate(context, it) }
 
-        if (shortcutUpdate.consumeAllInput || wheelUpdate?.consumeAllInput == true) {
+        if (shortcutUpdate.consumeAllInput || localAxisUpdate?.consumeAllInput == true) {
             if (context.shortcutState.isMenuActive()) {
                 val digitalDirectionPressed = buttonFlags and USB_MENU_DIRECTION_MASK != 0
                 val menuLeftX = if (digitalDirectionPressed) 0f else leftStickX
@@ -2895,7 +2895,7 @@ class ControllerHandler(
             if (shortcutUpdate.sendNeutralState) {
                 sendNeutralControllerState(context)
             }
-            if (wheelUpdate?.sendNeutralState == true) {
+            if (localAxisUpdate?.sendNeutralState == true) {
                 sendNeutralControllerState(context)
             }
             return
