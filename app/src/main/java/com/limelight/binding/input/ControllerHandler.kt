@@ -597,9 +597,8 @@ class ControllerHandler(
 
     internal fun resetSystemStartGesture(context: InputDeviceContext) {
         mainThreadHandler.removeCallbacks(context.startLongPressRunnable)
-        val releasedWheel = startWheelOwnerGate.release(context)
         handleSystemStartGestureUpdate(context, context.startGesture.reset())
-        if (releasedWheel) {
+        if (startWheelOwnerGate.release(context)) {
             gestures.hideStartHoldWheel()
         }
     }
@@ -685,11 +684,11 @@ class ControllerHandler(
 
     internal fun releaseUsbShortcutState(context: UsbDeviceContext) {
         mainThreadHandler.removeCallbacks(context.shortcutLongPressRunnable)
+        val update = context.shortcutState.reset()
+        handleUsbShortcutUpdate(context, update)
         if (startWheelOwnerGate.release(context)) {
             mainThreadHandler.post { gestures.hideStartHoldWheel() }
         }
-        val update = context.shortcutState.reset()
-        handleUsbShortcutUpdate(context, update)
     }
 
     fun disableSensors() {
@@ -2612,10 +2611,8 @@ class ControllerHandler(
                     }
                 }
                 UsbControllerShortcutStateMachine.Action.HIDE_WHEEL -> {
-                    mainThreadHandler.post {
-                        if (startWheelOwnerGate.release(context)) {
-                            gestures.hideStartHoldWheel()
-                        }
+                    if (startWheelOwnerGate.release(context)) {
+                        mainThreadHandler.post { gestures.hideStartHoldWheel() }
                     }
                 }
                 UsbControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION ->

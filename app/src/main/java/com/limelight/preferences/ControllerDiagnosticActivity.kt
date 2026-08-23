@@ -920,15 +920,16 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
                 else -> systemSimulatorGesture.onInputSnapshot(simulatorPressedFlags)
             }
             applySystemReducerUpdate(update)
-            applySystemReducerUpdate(
-                systemSimulatorGesture.onSelection(
-                    leftStickX,
-                    leftStickY,
-                    rightStickX,
-                    rightStickY,
-                    simulatorPressedFlags
-                )
+            val selectionUpdate = systemSimulatorGesture.onSelection(
+                leftStickX,
+                leftStickY,
+                rightStickX,
+                rightStickY,
+                simulatorPressedFlags
             )
+            if (selectionUpdate.actions.isNotEmpty()) {
+                applySystemReducerUpdate(selectionUpdate)
+            }
             simulatorUiState = simulatorUiState.copy(pressedFlags = simulatorPressedFlags)
             return
         }
