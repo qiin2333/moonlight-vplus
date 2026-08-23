@@ -2,10 +2,7 @@ package com.limelight.binding.input
 
 import com.limelight.nvstream.input.ControllerPacket
 
-/**
- * USB snapshot adapter for [StartGestureReducer]. Host snapshots remain untouched while the
- * wheel is visible or while a menu request is pending. Only an active GameMenu captures input.
- */
+/** USB snapshot adapter for [StartGestureReducer] and its local-input ownership boundary. */
 internal class UsbControllerShortcutStateMachine(
     private val longPressDurationMs: Long = ControllerHandler.START_DOWN_TIME_MOUSE_MODE_MS.toLong()
 ) {
@@ -39,6 +36,10 @@ internal class UsbControllerShortcutStateMachine(
     private var exitPending = false
     private var hostNeutralStateSent = false
     private var pendingMenuPressedFlags = 0
+    private var lastLeftStickX = 0f
+    private var lastLeftStickY = 0f
+    private var lastRightStickX = 0f
+    private var lastRightStickY = 0f
 
     @Synchronized
     fun onButtonSnapshot(buttonFlags: Int, eventTimeMs: Long, startActionEnabled: Boolean): Update {
@@ -54,7 +55,7 @@ internal class UsbControllerShortcutStateMachine(
             return Update(consumeAllInput = true)
         }
 
-        if (buttonFlags == EXIT_COMBO_FLAGS) {
+        if (!reducer.isLocalInputCaptureActive() && buttonFlags == EXIT_COMBO_FLAGS) {
             val resetUpdate = reducer.reset().toUsbUpdate()
             exitPending = true
             pendingMenuPressedFlags = 0
@@ -66,6 +67,29 @@ internal class UsbControllerShortcutStateMachine(
         }
 
         val reducerState = reducer.state()
+        val startPressed = buttonFlags and ControllerPacket.PLAY_FLAG != 0
+        val startWasPressed = previousButtonFlags and ControllerPacket.PLAY_FLAG != 0
+        if (reducerState == StartGestureReducer.State.WHEEL_VISIBLE) {
+            val reducerUpdate = if (!startPressed && startWasPressed) {
+                reducer.onStartUp(
+                    eventTimeMs,
+                    buttonFlags,
+                    lastLeftStickX,
+                    lastLeftStickY,
+                    lastRightStickX,
+                    lastRightStickY
+                )
+            } else {
+                reducer.onInputSnapshot(
+                    buttonFlags,
+                    lastLeftStickX,
+                    lastLeftStickY,
+                    lastRightStickX,
+                    lastRightStickY
+                )
+            }
+            return reducerUpdate.toUsbUpdate()
+        }
         if (reducerState == StartGestureReducer.State.MENU_PENDING ||
             reducerState == StartGestureReducer.State.MENU_ACTIVE ||
             reducerState == StartGestureReducer.State.WAIT_FOR_RELEASE
@@ -73,7 +97,13 @@ internal class UsbControllerShortcutStateMachine(
             if (reducerState == StartGestureReducer.State.MENU_PENDING) {
                 pendingMenuPressedFlags = buttonFlags and MENU_BUTTON_MASK
             }
-            val reducerUpdate = reducer.onInputSnapshot(buttonFlags)
+            val reducerUpdate = reducer.onInputSnapshot(
+                buttonFlags,
+                lastLeftStickX,
+                lastLeftStickY,
+                lastRightStickX,
+                lastRightStickY
+            )
             val menuChanges = if (reducerState == StartGestureReducer.State.MENU_ACTIVE) {
                 buildMenuButtonChanges(changedButtonFlags, buttonFlags)
             } else {
@@ -82,8 +112,6 @@ internal class UsbControllerShortcutStateMachine(
             return reducerUpdate.toUsbUpdate(menuChanges)
         }
 
-        val startPressed = buttonFlags and ControllerPacket.PLAY_FLAG != 0
-        val startWasPressed = previousButtonFlags and ControllerPacket.PLAY_FLAG != 0
         val reducerUpdate = when {
             startPressed && !startWasPressed ->
                 reducer.onStartDown(eventTimeMs, startActionEnabled)
@@ -101,13 +129,27 @@ internal class UsbControllerShortcutStateMachine(
         rightStickX: Float,
         rightStickY: Float
     ): Update {
-        val update = reducer.onSelection(
-            leftStickX,
-            leftStickY,
-            rightStickX,
-            rightStickY,
-            lastButtonFlags
-        )
+        lastLeftStickX = leftStickX
+        lastLeftStickY = leftStickY
+        lastRightStickX = rightStickX
+        lastRightStickY = rightStickY
+        val update = if (reducer.state() == StartGestureReducer.State.WHEEL_VISIBLE) {
+            reducer.onSelection(
+                leftStickX,
+                leftStickY,
+                rightStickX,
+                rightStickY,
+                lastButtonFlags
+            )
+        } else {
+            reducer.onInputSnapshot(
+                lastButtonFlags,
+                leftStickX,
+                leftStickY,
+                rightStickX,
+                rightStickY
+            )
+        }
         return update.toUsbUpdate()
     }
 
@@ -176,8 +218,10 @@ internal class UsbControllerShortcutStateMachine(
 
     @Synchronized
     fun isLocalInputCaptureActive(): Boolean =
-        exitPending || reducer.state() == StartGestureReducer.State.MENU_ACTIVE ||
-            reducer.state() == StartGestureReducer.State.WAIT_FOR_RELEASE
+        exitPending || reducer.isLocalInputCaptureActive()
+
+    @Synchronized
+    fun isWheelVisible(): Boolean = reducer.state() == StartGestureReducer.State.WHEEL_VISIBLE
 
     @Synchronized
     fun isStartPressed(): Boolean = lastButtonFlags and ControllerPacket.PLAY_FLAG != 0
@@ -189,6 +233,10 @@ internal class UsbControllerShortcutStateMachine(
         exitPending = false
         pendingMenuPressedFlags = 0
         hostNeutralStateSent = false
+        lastLeftStickX = 0f
+        lastLeftStickY = 0f
+        lastRightStickX = 0f
+        lastRightStickY = 0f
         return update.toUsbUpdate()
     }
 

@@ -286,7 +286,7 @@
     <string name="controller_diag_path_system">Android 系统输入</string>
     <string name="controller_diag_path_usb_takeover">V+ USB 接管</string>
     <string name="controller_diag_path_unavailable">当前不可用</string>
-    <string name="usb_shortcut_hold_hint">摇杆选择操作，松开 Start 确认</string>
+    <string name="usb_shortcut_hold_hint">十字键松开立即执行；摇杆选择后松开 Start</string>
     <string name="start_hold_wheel_menu">串流菜单</string>
     <string name="start_hold_wheel_mouse">鼠标模式</string>
     <string name="start_hold_wheel_keyboard">屏幕键盘</string>
@@ -312,11 +312,11 @@
     <string name="controller_diag_no_buttons_pressed">未按下按键</string>
     <string name="controller_diag_available_shortcuts">可用快捷键</string>
     <string name="controller_diag_shortcut_menu_title">游戏菜单</string>
-    <string name="controller_diag_shortcut_menu_system">长按 Start 750 毫秒后松开。</string>
-    <string name="controller_diag_shortcut_menu_usb">长按 Start，提示出现后按 B。</string>
+    <string name="controller_diag_shortcut_menu_system">长按 Start，轮盘出现后点按十字键上。</string>
+    <string name="controller_diag_shortcut_menu_usb">长按 Start，轮盘出现后点按十字键上。</string>
     <string name="controller_diag_shortcut_menu_pending">开始测试后会识别输入路径，并测试这个快捷键。</string>
     <string name="controller_diag_shortcut_mouse_title">鼠标模式</string>
-    <string name="controller_diag_shortcut_mouse_usb">长按 Start，提示出现后松开 Start。</string>
+    <string name="controller_diag_shortcut_mouse_usb">长按 Start，轮盘出现后点按十字键右。</string>
     <string name="controller_diag_shortcut_exit_title">退出串流</string>
     <string name="controller_diag_shortcut_exit_summary">同时按下 Start、Select、LB 和 RB。</string>
     <string name="controller_diag_shortcut_performance_title">切换性能显示/隐藏</string>

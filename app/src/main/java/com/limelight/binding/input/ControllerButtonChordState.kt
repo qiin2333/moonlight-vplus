@@ -26,4 +26,9 @@ internal class ControllerButtonChordState(private val chordFlags: Int) {
         }
         return updateSnapshot(buttonFlags)
     }
+
+    fun reset() {
+        pressedChordFlags = 0
+        latched = false
+    }
 }

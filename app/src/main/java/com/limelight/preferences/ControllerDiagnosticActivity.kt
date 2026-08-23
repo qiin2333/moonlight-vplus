@@ -855,8 +855,14 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
                 rightStickY ?: simulatorUiState.rightStickY
             )
         }
+        val localInputCaptured = if (inputPath == ControllerDiagnostics.InputPath.USB_TAKEOVER) {
+            simulatorStateMachine.isLocalInputCaptureActive()
+        } else {
+            systemSimulatorGesture.isLocalInputCaptureActive()
+        }
         simulatorUiState = simulatorUiState.copy(
             result = if (
+                !localInputCaptured &&
                 pressedFlags and ControllerHandler.PERFORMANCE_OVERLAY_COMBO_FLAGS ==
                     ControllerHandler.PERFORMANCE_OVERLAY_COMBO_FLAGS
             ) {
@@ -899,7 +905,9 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
                 systemExitPending = false
                 result = ShortcutSimulatorResult.EXIT_STREAM
             }
-        } else if (simulatorPressedFlags == UsbControllerShortcutStateMachine.EXIT_COMBO_FLAGS) {
+        } else if (!systemSimulatorGesture.isLocalInputCaptureActive() &&
+            simulatorPressedFlags == UsbControllerShortcutStateMachine.EXIT_COMBO_FLAGS
+        ) {
             systemExitPending = true
             result = ShortcutSimulatorResult.IDLE
         } else {
@@ -917,7 +925,13 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
                         rightStickX = rightStickX,
                         rightStickY = rightStickY
                     )
-                else -> systemSimulatorGesture.onInputSnapshot(simulatorPressedFlags)
+                else -> systemSimulatorGesture.onInputSnapshot(
+                    simulatorPressedFlags,
+                    leftStickX,
+                    leftStickY,
+                    rightStickX,
+                    rightStickY
+                )
             }
             applySystemReducerUpdate(update)
             val selectionUpdate = systemSimulatorGesture.onSelection(
@@ -983,12 +997,10 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
                     result = ShortcutSimulatorResult.EXIT_STREAM
             }
         }
-        simulatorUiState = ShortcutSimulatorUiState(
+        simulatorUiState = simulatorUiState.copy(
             result = result,
             hintVisible = wheelVisible,
-            pressedFlags = simulatorPressedFlags,
-            controllerName = simulatorUiState.controllerName,
-            inputPath = simulatorUiState.inputPath
+            pressedFlags = simulatorPressedFlags
         )
         evaluateShortcutAttempt()
     }

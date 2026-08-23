@@ -67,6 +67,12 @@ internal class StartGestureReducer(
     private var pendingMenuOpenRequestId: Long? = null
     private var pendingMenuSnapshot: PendingSnapshot? = null
     private var lastButtonFlags = 0
+    private var lastLeftStickX = 0f
+    private var lastLeftStickY = 0f
+    private var lastRightStickX = 0f
+    private var lastRightStickY = 0f
+    private var wheelInputCaptured = false
+    private var neutralStateSent = false
 
     private data class PendingSnapshot(
         val buttonFlags: Int,
@@ -85,6 +91,8 @@ internal class StartGestureReducer(
         inputSource = null
         directionCandidate = null
         directionCandidateFrames = 0
+        wheelInputCaptured = false
+        neutralStateSent = false
         state = State.START_HELD
         return snapshot(actions = listOf(EventAction.SCHEDULE_LONG_PRESS))
     }
@@ -117,7 +125,32 @@ internal class StartGestureReducer(
         dpadFlags: Int
     ): Update {
         if (state != State.WHEEL_VISIBLE) return snapshot()
+        val previousSource = inputSource
         val dpadAxis = dpadToAxis(dpadFlags)
+        val captureStarted = !wheelInputCaptured && (
+            dpadAxis.first != 0f || dpadAxis.second != 0f ||
+                axisActive(leftStickX, leftStickY, enterThreshold) ||
+                axisActive(rightStickX, rightStickY, enterThreshold)
+            )
+        if (captureStarted) {
+            wheelInputCaptured = true
+            neutralStateSent = true
+        }
+        updatePhysicalInput(
+            dpadFlags or (lastButtonFlags and ControllerPacket.PLAY_FLAG),
+            leftStickX,
+            leftStickY,
+            rightStickX,
+            rightStickY
+        )
+        if (previousSource == InputSource.DPAD &&
+            dpadAxis.first == 0f && dpadAxis.second == 0f &&
+            selectedAction != StartWheelAction.CONTINUE
+        ) {
+            directionCandidate = null
+            directionCandidateFrames = 0
+            return commitSelectedAction()
+        }
         inputSource = resolveInputSource(
             leftStickX,
             leftStickY,
@@ -134,15 +167,16 @@ internal class StartGestureReducer(
         if (inputSource == InputSource.DPAD && x == 0f && y == 0f) {
             directionCandidate = null
             directionCandidateFrames = 0
-            return snapshot()
+            return snapshot(sendNeutralState = captureStarted)
         }
         val candidate = actionForAxis(x, y)
         val digitalTransition = inputSource == InputSource.DPAD
         val next = stabilize(candidate, immediate = digitalTransition)
-        if (next == selectedAction) return snapshot()
+        if (next == selectedAction) return snapshot(sendNeutralState = captureStarted)
         selectedAction = next
         return snapshot(
-            actions = listOf(EventAction.SELECTION_CHANGED)
+            actions = listOf(EventAction.SELECTION_CHANGED),
+            sendNeutralState = captureStarted
         )
     }
 
@@ -155,7 +189,7 @@ internal class StartGestureReducer(
         rightStickX: Float,
         rightStickY: Float
     ) {
-        lastButtonFlags = buttonFlags
+        updatePhysicalInput(buttonFlags, leftStickX, leftStickY, rightStickX, rightStickY)
         if (state == State.MENU_PENDING) {
             pendingMenuSnapshot = PendingSnapshot(
                 buttonFlags,
@@ -176,42 +210,34 @@ internal class StartGestureReducer(
         rightStickX: Float = 0f,
         rightStickY: Float = 0f
     ): Update {
-        lastButtonFlags = buttonFlags and ControllerPacket.PLAY_FLAG.inv()
+        updatePhysicalInput(
+            buttonFlags and ControllerPacket.PLAY_FLAG.inv(),
+            leftStickX,
+            leftStickY,
+            rightStickX,
+            rightStickY
+        )
         val heldDuration = if (startDownTimeMs == 0L) 0L else eventTimeMs - startDownTimeMs
         val actions = mutableListOf<EventAction>(EventAction.CANCEL_LONG_PRESS)
-        val wasWheelVisible = state == State.WHEEL_VISIBLE
-        if (wasWheelVisible) actions += EventAction.HIDE_WHEEL
-
-        if (!wasWheelVisible || heldDuration < longPressDurationMs) {
-            clearStartGesture()
+        if (state == State.WAIT_FOR_RELEASE) {
+            if (!hasPressedInput()) state = State.IDLE
             return snapshot(actions = actions)
         }
-
-        val committed = selectedAction
-        clearStartGesture()
-        if (committed == StartWheelAction.MENU) {
-            state = State.MENU_PENDING
-            val requestId = ++nextMenuOpenRequestId
-            pendingMenuOpenRequestId = requestId
-            pendingMenuSnapshot = PendingSnapshot(
-                buttonFlags,
-                leftStickX,
-                leftStickY,
-                rightStickX,
-                rightStickY
-            )
-            actions += EventAction.COMMIT_ACTION
-            actions += EventAction.OPEN_GAME_MENU
-            return snapshot(
-                actions = actions,
-                menuOpenRequestId = requestId,
-                committedAction = committed
-            )
+        if (state == State.MENU_PENDING || state == State.MENU_ACTIVE) {
+            return snapshot(actions = actions)
         }
-
-        state = State.IDLE
-        actions += EventAction.COMMIT_ACTION
-        return snapshot(actions = actions, committedAction = committed)
+        if (state != State.WHEEL_VISIBLE || heldDuration < longPressDurationMs) {
+            clearStartGesture()
+            state = State.IDLE
+            return snapshot(actions = actions)
+        }
+        actions += EventAction.HIDE_WHEEL
+        if (!wheelInputCaptured) {
+            clearStartGesture()
+            state = State.IDLE
+            return snapshot(actions = actions)
+        }
+        return commitSelectedAction(actions)
     }
 
     @Synchronized
@@ -219,14 +245,15 @@ internal class StartGestureReducer(
         if (state != State.MENU_PENDING || pendingMenuOpenRequestId != requestId) {
             return snapshot()
         }
-        val hasPressedInput = lastButtonFlags != 0 || (pendingMenuSnapshot?.buttonFlags ?: 0) != 0
+        val inputStillHeld = hasPressedInput()
         pendingMenuOpenRequestId = null
         pendingMenuSnapshot = null
-        if (opened) lastButtonFlags = 0
-        state = if (opened) State.MENU_ACTIVE else if (hasPressedInput) State.WAIT_FOR_RELEASE else State.IDLE
+        val sendNeutral = opened && !neutralStateSent
+        if (sendNeutral) neutralStateSent = true
+        state = if (opened) State.MENU_ACTIVE else if (inputStillHeld) State.WAIT_FOR_RELEASE else State.IDLE
         return snapshot(
             consumeAllInput = opened || state == State.WAIT_FOR_RELEASE,
-            sendNeutralState = opened,
+            sendNeutralState = sendNeutral,
             menuOpenRequestId = requestId
         )
     }
@@ -234,10 +261,11 @@ internal class StartGestureReducer(
     @Synchronized
     fun onGameMenuOpenedExternally(): Update {
         val wasWheelVisible = state == State.WHEEL_VISIBLE
+        val sendNeutral = !isLocalInputCaptureActive()
+        if (sendNeutral) neutralStateSent = true
         clearStartGesture()
         pendingMenuOpenRequestId = null
         pendingMenuSnapshot = null
-        lastButtonFlags = 0
         state = State.MENU_ACTIVE
         return snapshot(
             actions = buildList {
@@ -245,7 +273,7 @@ internal class StartGestureReducer(
                 if (wasWheelVisible) add(EventAction.HIDE_WHEEL)
             },
             consumeAllInput = true,
-            sendNeutralState = true
+            sendNeutralState = sendNeutral
         )
     }
 
@@ -260,13 +288,19 @@ internal class StartGestureReducer(
     }
 
     @Synchronized
-    fun onInputSnapshot(buttonFlags: Int): Update {
-        lastButtonFlags = buttonFlags
-        if (state == State.WAIT_FOR_RELEASE && buttonFlags == 0) {
+    fun onInputSnapshot(
+        buttonFlags: Int,
+        leftStickX: Float = lastLeftStickX,
+        leftStickY: Float = lastLeftStickY,
+        rightStickX: Float = lastRightStickX,
+        rightStickY: Float = lastRightStickY
+    ): Update {
+        updatePhysicalInput(buttonFlags, leftStickX, leftStickY, rightStickX, rightStickY)
+        if (state == State.WAIT_FOR_RELEASE && !hasPressedInput()) {
             state = State.IDLE
             return snapshot()
         }
-        return snapshot(consumeAllInput = state == State.MENU_ACTIVE || state == State.WAIT_FOR_RELEASE)
+        return snapshot()
     }
 
     @Synchronized
@@ -277,6 +311,12 @@ internal class StartGestureReducer(
         pendingMenuOpenRequestId = null
         pendingMenuSnapshot = null
         lastButtonFlags = 0
+        lastLeftStickX = 0f
+        lastLeftStickY = 0f
+        lastRightStickX = 0f
+        lastRightStickY = 0f
+        wheelInputCaptured = false
+        neutralStateSent = false
         return snapshot(
             actions = buildList {
                 add(EventAction.CANCEL_LONG_PRESS)
@@ -292,7 +332,12 @@ internal class StartGestureReducer(
     fun selectedAction(): StartWheelAction = selectedAction
 
     @Synchronized
-    fun isStartPressed(): Boolean = state == State.START_HELD || state == State.WHEEL_VISIBLE
+    fun isStartPressed(): Boolean = lastButtonFlags and ControllerPacket.PLAY_FLAG != 0
+
+    @Synchronized
+    fun isLocalInputCaptureActive(): Boolean =
+        (state == State.WHEEL_VISIBLE && wheelInputCaptured) || state == State.MENU_PENDING ||
+            state == State.MENU_ACTIVE || state == State.WAIT_FOR_RELEASE
 
     @Synchronized
     fun isMenuOpenRequestPending(requestId: Long): Boolean =
@@ -304,7 +349,9 @@ internal class StartGestureReducer(
     }
 
     private fun hasPressedInput(): Boolean =
-        lastButtonFlags != 0 || (pendingMenuSnapshot?.buttonFlags ?: 0) != 0
+        lastButtonFlags != 0 || (pendingMenuSnapshot?.buttonFlags ?: 0) != 0 ||
+            axisActive(lastLeftStickX, lastLeftStickY, exitThreshold) ||
+            axisActive(lastRightStickX, lastRightStickY, exitThreshold)
 
     private fun clearStartGesture() {
         startDownTimeMs = 0L
@@ -312,6 +359,58 @@ internal class StartGestureReducer(
         inputSource = null
         directionCandidate = null
         directionCandidateFrames = 0
+        wheelInputCaptured = false
+    }
+
+    private fun commitSelectedAction(
+        initialActions: List<EventAction> = listOf(
+            EventAction.CANCEL_LONG_PRESS,
+            EventAction.HIDE_WHEEL
+        )
+    ): Update {
+        val committed = selectedAction
+        val actions = initialActions.toMutableList().apply { add(EventAction.COMMIT_ACTION) }
+        clearStartGesture()
+        if (committed == StartWheelAction.MENU) {
+            state = State.MENU_PENDING
+            val requestId = ++nextMenuOpenRequestId
+            pendingMenuOpenRequestId = requestId
+            pendingMenuSnapshot = PendingSnapshot(
+                lastButtonFlags,
+                lastLeftStickX,
+                lastLeftStickY,
+                lastRightStickX,
+                lastRightStickY
+            )
+            actions += EventAction.OPEN_GAME_MENU
+            return snapshot(
+                actions = actions,
+                consumeAllInput = true,
+                menuOpenRequestId = requestId,
+                committedAction = committed
+            )
+        }
+
+        state = if (hasPressedInput()) State.WAIT_FOR_RELEASE else State.IDLE
+        return snapshot(
+            actions = actions,
+            consumeAllInput = state == State.WAIT_FOR_RELEASE,
+            committedAction = committed
+        )
+    }
+
+    private fun updatePhysicalInput(
+        buttonFlags: Int,
+        leftStickX: Float,
+        leftStickY: Float,
+        rightStickX: Float,
+        rightStickY: Float
+    ) {
+        lastButtonFlags = buttonFlags
+        lastLeftStickX = leftStickX
+        lastLeftStickY = leftStickY
+        lastRightStickX = rightStickX
+        lastRightStickY = rightStickY
     }
 
     private fun resolveInputSource(
@@ -430,7 +529,7 @@ internal class StartGestureReducer(
     private fun snapshot(
         actions: List<EventAction> = emptyList(),
         wheelVisible: Boolean = state == State.WHEEL_VISIBLE,
-        consumeAllInput: Boolean = state == State.MENU_ACTIVE || state == State.WAIT_FOR_RELEASE,
+        consumeAllInput: Boolean = isLocalInputCaptureActive(),
         sendNeutralState: Boolean = false,
         menuOpenRequestId: Long? = null,
         committedAction: StartWheelAction? = null
