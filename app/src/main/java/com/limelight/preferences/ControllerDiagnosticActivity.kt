@@ -116,6 +116,8 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import com.limelight.R
 import com.limelight.binding.input.ControllerHandler
+import com.limelight.binding.input.StartGestureReducer
+import com.limelight.binding.input.StartWheelAction
 import com.limelight.binding.input.UsbControllerShortcutStateMachine
 import com.limelight.binding.input.driver.AbstractController
 import com.limelight.binding.input.driver.UsbDriverListener
@@ -137,6 +139,7 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
     private var snapshot by mutableStateOf(ControllerDiagnostics.Snapshot(emptyList()))
     private val simulatorHandler = Handler(Looper.getMainLooper())
     private val simulatorStateMachine = UsbControllerShortcutStateMachine()
+    private val systemSimulatorGesture = StartGestureReducer()
     private var simulatorPressedFlags = 0
     private var simulatorInputSource: String? = null
     private var simulatorUiState by mutableStateOf(ShortcutSimulatorUiState())
@@ -168,12 +171,21 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
     private var usbNavigationInjectedFlags = 0
     private val usbNavigationKeyDownTimes = mutableMapOf<Int, Long>()
     private val simulatorLongPressRunnable = Runnable {
-        applySimulatorUpdate(
-            simulatorStateMachine.onLongPressTimeout(
-                SystemClock.uptimeMillis(),
-                startKeyActionEnabled
+        if (simulatorUiState.inputPath == ControllerDiagnostics.InputPath.SYSTEM) {
+            applySystemReducerUpdate(
+                systemSimulatorGesture.onLongPressTimeout(
+                    SystemClock.uptimeMillis(),
+                    startKeyActionEnabled
+                )
             )
-        )
+        } else {
+            applySimulatorUpdate(
+                simulatorStateMachine.onLongPressTimeout(
+                    SystemClock.uptimeMillis(),
+                    startKeyActionEnabled
+                )
+            )
+        }
     }
     private val testCountdownRunnable = object : Runnable {
         override fun run() {
@@ -327,6 +339,7 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
     private fun resetShortcutTest() {
         simulatorHandler.removeCallbacks(simulatorLongPressRunnable)
         simulatorStateMachine.reset()
+        systemSimulatorGesture.reset()
         simulatorPressedFlags = 0
         simulatorInputSource = null
         systemStartDownTimeMs = 0L
@@ -814,6 +827,7 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
         if (simulatorInputSource != source) {
             simulatorHandler.removeCallbacks(simulatorLongPressRunnable)
             simulatorStateMachine.reset()
+            systemSimulatorGesture.reset()
             simulatorPressedFlags = 0
             simulatorInputSource = source
             systemStartDownTimeMs = 0L
@@ -833,7 +847,13 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
                 )
             )
         } else {
-            applySystemSimulatorUpdate(eventTimeMs)
+            applySystemSimulatorUpdate(
+                eventTimeMs,
+                leftStickX ?: simulatorUiState.leftStickX,
+                leftStickY ?: simulatorUiState.leftStickY,
+                rightStickX ?: simulatorUiState.rightStickX,
+                rightStickY ?: simulatorUiState.rightStickY
+            )
         }
         simulatorUiState = simulatorUiState.copy(
             result = if (
@@ -851,10 +871,26 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
             leftTrigger = leftTrigger ?: simulatorUiState.leftTrigger,
             rightTrigger = rightTrigger ?: simulatorUiState.rightTrigger
         )
+        if (inputPath == ControllerDiagnostics.InputPath.USB_TAKEOVER) {
+            applySimulatorUpdate(
+                simulatorStateMachine.onSelectionAxes(
+                    simulatorUiState.leftStickX,
+                    simulatorUiState.leftStickY,
+                    simulatorUiState.rightStickX,
+                    simulatorUiState.rightStickY
+                )
+            )
+        }
         evaluateShortcutAttempt()
     }
 
-    private fun applySystemSimulatorUpdate(eventTimeMs: Long) {
+    private fun applySystemSimulatorUpdate(
+        eventTimeMs: Long,
+        leftStickX: Float,
+        leftStickY: Float,
+        rightStickX: Float,
+        rightStickY: Float
+    ) {
         val previousFlags = simulatorUiState.pressedFlags
         var result = simulatorUiState.result
 
@@ -869,18 +905,33 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
         } else {
             val startPressed = simulatorPressedFlags and ControllerPacket.PLAY_FLAG != 0
             val startWasPressed = previousFlags and ControllerPacket.PLAY_FLAG != 0
-            if (startPressed && !startWasPressed) {
-                systemStartDownTimeMs = eventTimeMs
-                result = ShortcutSimulatorResult.IDLE
-            } else if (!startPressed && startWasPressed) {
-                if (startKeyActionEnabled && systemStartDownTimeMs > 0 &&
-                    eventTimeMs - systemStartDownTimeMs >
-                    ControllerHandler.START_DOWN_TIME_MOUSE_MODE_MS
-                ) {
-                    result = ShortcutSimulatorResult.GAME_MENU
-                }
-                systemStartDownTimeMs = 0L
+            val update = when {
+                startPressed && !startWasPressed ->
+                    systemSimulatorGesture.onStartDown(eventTimeMs, startKeyActionEnabled)
+                !startPressed && startWasPressed ->
+                    systemSimulatorGesture.onStartUp(
+                        eventTimeMs,
+                        buttonFlags = simulatorPressedFlags,
+                        leftStickX = leftStickX,
+                        leftStickY = leftStickY,
+                        rightStickX = rightStickX,
+                        rightStickY = rightStickY
+                    )
+                else -> systemSimulatorGesture.onInputSnapshot(simulatorPressedFlags)
             }
+            applySystemReducerUpdate(update)
+            val selectionUpdate = systemSimulatorGesture.onSelection(
+                leftStickX,
+                leftStickY,
+                rightStickX,
+                rightStickY,
+                simulatorPressedFlags
+            )
+            if (selectionUpdate.actions.isNotEmpty()) {
+                applySystemReducerUpdate(selectionUpdate)
+            }
+            simulatorUiState = simulatorUiState.copy(pressedFlags = simulatorPressedFlags)
+            return
         }
 
         simulatorUiState = simulatorUiState.copy(
@@ -892,6 +943,7 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
 
     private fun applySimulatorUpdate(update: UsbControllerShortcutStateMachine.Update) {
         var result = simulatorUiState.result
+        var wheelVisible = simulatorUiState.hintVisible || update.wheelVisible
         for (action in update.actions) {
             when (action) {
                 UsbControllerShortcutStateMachine.Action.SCHEDULE_LONG_PRESS -> {
@@ -904,12 +956,23 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
                 }
                 UsbControllerShortcutStateMachine.Action.CANCEL_LONG_PRESS ->
                     simulatorHandler.removeCallbacks(simulatorLongPressRunnable)
-                UsbControllerShortcutStateMachine.Action.SHOW_HINT ->
-                    result = ShortcutSimulatorResult.HINT
-                UsbControllerShortcutStateMachine.Action.HIDE_HINT ->
-                    if (result == ShortcutSimulatorResult.HINT) result = ShortcutSimulatorResult.IDLE
+                UsbControllerShortcutStateMachine.Action.SHOW_WHEEL ->
+                    run {
+                        wheelVisible = true
+                        result = ShortcutSimulatorResult.HINT
+                    }
+                UsbControllerShortcutStateMachine.Action.HIDE_WHEEL ->
+                    run {
+                        wheelVisible = false
+                        if (result == ShortcutSimulatorResult.HINT) result = ShortcutSimulatorResult.IDLE
+                    }
+                UsbControllerShortcutStateMachine.Action.UPDATE_SELECTION -> Unit
                 UsbControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION ->
                     result = ShortcutSimulatorResult.MOUSE_EMULATION
+                UsbControllerShortcutStateMachine.Action.TOGGLE_KEYBOARD ->
+                    result = ShortcutSimulatorResult.IDLE
+                UsbControllerShortcutStateMachine.Action.TOGGLE_PERFORMANCE ->
+                    result = ShortcutSimulatorResult.PERFORMANCE_OVERLAY
                 UsbControllerShortcutStateMachine.Action.OPEN_GAME_MENU -> {
                     result = ShortcutSimulatorResult.GAME_MENU
                     update.menuOpenRequestId?.let { requestId ->
@@ -922,11 +985,56 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
         }
         simulatorUiState = ShortcutSimulatorUiState(
             result = result,
-            hintVisible = simulatorStateMachine.isHintVisible(),
+            hintVisible = wheelVisible,
             pressedFlags = simulatorPressedFlags,
             controllerName = simulatorUiState.controllerName,
             inputPath = simulatorUiState.inputPath
         )
+        evaluateShortcutAttempt()
+    }
+
+    private fun applySystemReducerUpdate(update: StartGestureReducer.Update) {
+        var result = simulatorUiState.result
+        var wheelVisible = simulatorUiState.hintVisible || update.wheelVisible
+        for (action in update.actions) {
+            when (action) {
+                StartGestureReducer.EventAction.SCHEDULE_LONG_PRESS -> {
+                    simulatorHandler.removeCallbacks(simulatorLongPressRunnable)
+                    simulatorHandler.postDelayed(
+                        simulatorLongPressRunnable,
+                        ControllerHandler.START_DOWN_TIME_MOUSE_MODE_MS.toLong()
+                    )
+                }
+                StartGestureReducer.EventAction.CANCEL_LONG_PRESS ->
+                    simulatorHandler.removeCallbacks(simulatorLongPressRunnable)
+                StartGestureReducer.EventAction.SHOW_WHEEL -> {
+                    wheelVisible = true
+                    result = ShortcutSimulatorResult.HINT
+                }
+                StartGestureReducer.EventAction.HIDE_WHEEL -> {
+                    wheelVisible = false
+                    if (result == ShortcutSimulatorResult.HINT) result = ShortcutSimulatorResult.IDLE
+                }
+                StartGestureReducer.EventAction.SELECTION_CHANGED -> Unit
+                StartGestureReducer.EventAction.COMMIT_ACTION -> {
+                    result = when (update.committedAction) {
+                        StartWheelAction.MOUSE -> ShortcutSimulatorResult.MOUSE_EMULATION
+                        StartWheelAction.PERFORMANCE -> ShortcutSimulatorResult.PERFORMANCE_OVERLAY
+                        StartWheelAction.MENU, StartWheelAction.KEYBOARD -> result
+                        StartWheelAction.CONTINUE, null -> ShortcutSimulatorResult.IDLE
+                    }
+                }
+                StartGestureReducer.EventAction.OPEN_GAME_MENU -> {
+                    result = ShortcutSimulatorResult.GAME_MENU
+                    update.menuOpenRequestId?.let { requestId ->
+                        systemSimulatorGesture.onGameMenuOpenResult(requestId, true)
+                    }
+                }
+                StartGestureReducer.EventAction.EXIT_STREAM ->
+                    result = ShortcutSimulatorResult.EXIT_STREAM
+            }
+        }
+        simulatorUiState = simulatorUiState.copy(result = result, hintVisible = wheelVisible)
         evaluateShortcutAttempt()
     }
 
