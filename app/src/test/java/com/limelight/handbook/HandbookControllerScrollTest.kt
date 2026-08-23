@@ -24,4 +24,24 @@ class HandbookControllerScrollTest {
         assertEquals(0, handbookControllerScrollDelta(1f, 0))
         assertEquals(0, handbookControllerScrollDelta(1f, -1))
     }
+
+    @Test
+    fun hatPressAndMatchingReleaseAlwaysPassThrough() {
+        val state = HandbookControllerHatState()
+
+        assertEquals(false, state.shouldPassThrough(0f, 0f))
+        assertEquals(true, state.shouldPassThrough(0f, 1f))
+        assertEquals(true, state.shouldPassThrough(0f, 0f))
+        assertEquals(false, state.shouldPassThrough(0f, 0f))
+    }
+
+    @Test
+    fun resetClearsPendingHatRelease() {
+        val state = HandbookControllerHatState()
+        assertEquals(true, state.shouldPassThrough(-1f, 0f))
+
+        state.reset()
+
+        assertEquals(false, state.shouldPassThrough(0f, 0f))
+    }
 }
