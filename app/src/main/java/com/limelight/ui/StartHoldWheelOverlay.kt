@@ -128,7 +128,7 @@ internal fun StartHoldWheelOverlay(
             WheelOption(
                 action = StartWheelAction.MENU,
                 selectedAction = selectedAction,
-                icon = R.drawable.ic_menu,
+                icon = R.drawable.ic_menu_stylish,
                 label = stringResource(R.string.start_hold_wheel_menu),
                 textColor = textPrimary,
                 secondaryColor = textSecondary,
