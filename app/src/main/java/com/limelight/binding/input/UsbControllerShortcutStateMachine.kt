@@ -55,10 +55,11 @@ internal class UsbControllerShortcutStateMachine(
         }
 
         if (buttonFlags == EXIT_COMBO_FLAGS) {
-            reducer.reset()
+            val resetUpdate = reducer.reset().toUsbUpdate()
             exitPending = true
             pendingMenuPressedFlags = 0
             return Update(
+                actions = resetUpdate.actions,
                 consumeAllInput = true,
                 sendNeutralState = markHostNeutralStateRequired()
             )
@@ -133,10 +134,7 @@ internal class UsbControllerShortcutStateMachine(
     fun onLongPressTimeout(eventTimeMs: Long, startActionEnabled: Boolean): Update {
         return reducer.onLongPressTimeout(
             eventTimeMs,
-            startActionEnabled,
-            hasRightStick = true,
-            hasLeftStick = true,
-            hasDpad = true
+            startActionEnabled
         ).toUsbUpdate()
     }
 

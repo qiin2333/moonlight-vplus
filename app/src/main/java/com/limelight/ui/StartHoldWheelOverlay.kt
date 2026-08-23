@@ -60,7 +60,8 @@ internal fun StartHoldWheelOverlay(
         contentAlignment = Alignment.Center
     ) {
         val wheelSize = minOf(maxWidth, maxHeight).let { minOf(it * 0.74f, 440.dp) }
-        val optionRadius = wheelSize * OPTION_RADIUS_FRACTION
+        val compact = wheelSize < 320.dp
+        val optionRadius = wheelSize * if (compact) 0.38f else OPTION_RADIUS_FRACTION
 
         Box(
             modifier = Modifier.size(wheelSize),
@@ -133,6 +134,7 @@ internal fun StartHoldWheelOverlay(
                 secondaryColor = textSecondary,
                 accent = accent,
                 surface = surface,
+                compact = compact,
                 modifier = Modifier
                     .align(Alignment.Center)
                     .wheelOffset(optionRadius, WHEEL_START_ANGLE + WHEEL_SECTOR_SWEEP / 2f)
@@ -146,6 +148,7 @@ internal fun StartHoldWheelOverlay(
                 secondaryColor = textSecondary,
                 accent = accent,
                 surface = surface,
+                compact = compact,
                 modifier = Modifier
                     .align(Alignment.Center)
                     .wheelOffset(optionRadius, WHEEL_START_ANGLE + WHEEL_SECTOR_SWEEP * 1.5f)
@@ -159,6 +162,7 @@ internal fun StartHoldWheelOverlay(
                 secondaryColor = textSecondary,
                 accent = accent,
                 surface = surface,
+                compact = compact,
                 modifier = Modifier
                     .align(Alignment.Center)
                     .wheelOffset(optionRadius, WHEEL_START_ANGLE + WHEEL_SECTOR_SWEEP * 2.5f)
@@ -172,6 +176,7 @@ internal fun StartHoldWheelOverlay(
                 secondaryColor = textSecondary,
                 accent = accent,
                 surface = surface,
+                compact = compact,
                 modifier = Modifier
                     .align(Alignment.Center)
                     .wheelOffset(optionRadius, WHEEL_START_ANGLE + WHEEL_SECTOR_SWEEP * 3.5f)
@@ -186,6 +191,7 @@ internal fun StartHoldWheelOverlay(
                 accent = accent,
                 surface = surface,
                 center = true,
+                compact = compact,
                 modifier = Modifier.align(Alignment.Center)
             )
         }
@@ -210,14 +216,26 @@ private fun WheelOption(
     secondaryColor: Color,
     accent: Color,
     surface: Color,
+    modifier: Modifier = Modifier,
     center: Boolean = false,
-    modifier: Modifier = Modifier
+    compact: Boolean = false
 ) {
     val selected = action == selectedAction
     val shape = if (center) CircleShape else RoundedCornerShape(8.dp)
     Box(
         modifier = modifier
-            .size(if (center) 104.dp else 112.dp, if (center) 104.dp else 64.dp)
+            .size(
+                width = if (center) {
+                    if (compact) 80.dp else 104.dp
+                } else {
+                    if (compact) 88.dp else 112.dp
+                },
+                height = if (center) {
+                    if (compact) 80.dp else 104.dp
+                } else {
+                    if (compact) 56.dp else 64.dp
+                }
+            )
             .clip(shape)
             .background(if (selected) accent.copy(alpha = 0.14f) else surface.copy(alpha = 0.92f))
             .border(
@@ -236,12 +254,18 @@ private fun WheelOption(
                 painter = painterResource(icon),
                 contentDescription = null,
                 tint = Color.Unspecified,
-                modifier = Modifier.size(if (center) 28.dp else 24.dp)
+                modifier = Modifier.size(
+                    if (compact) {
+                        if (center) 24.dp else 20.dp
+                    } else {
+                        if (center) 28.dp else 24.dp
+                    }
+                )
             )
             Text(
                 text = label,
                 color = if (selected) accent else textColor,
-                fontSize = if (center) 13.sp else 12.sp,
+                fontSize = if (compact) 11.sp else if (center) 13.sp else 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1
             )

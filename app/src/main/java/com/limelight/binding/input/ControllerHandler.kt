@@ -342,7 +342,7 @@ class ControllerHandler(
 
     private var currentControllers: Short = 0
     private var initialControllers: Short = 0
-    private var usbStartWheelOwner: UsbDeviceContext? = null
+    private val startWheelOwnerGate = StartWheelOwnerGate()
 
     internal data class ControllerArrivalMetadata(
         val type: Byte,
@@ -552,6 +552,10 @@ class ControllerHandler(
         }
         usbContextsToDestroy.forEach(UsbDeviceContext::destroy)
 
+        if (startWheelOwnerGate.clear()) {
+            mainThreadHandler.post { gestures.hideStartHoldWheel() }
+        }
+
         // 清理 defaultContext 上可能注册的手机陀螺仪传感器
         gyroManager.registerDeviceGyroForDefaultContext(false)
         defaultContext.destroy()
@@ -568,30 +572,27 @@ class ControllerHandler(
     }
 
     internal fun onUsbShortcutLongPress(context: UsbDeviceContext) {
-        if (stopped || usbStartWheelOwner?.let { it !== context } == true) {
-            return
-        }
-        handleUsbShortcutUpdate(
-            context,
-            context.shortcutState.onLongPressTimeout(
-                android.os.SystemClock.uptimeMillis(),
-                prefConfig.enableStartKeyMenu
-            )
+        if (stopped || !startWheelOwnerGate.tryClaim(context)) return
+        val update = context.shortcutState.onLongPressTimeout(
+            android.os.SystemClock.uptimeMillis(),
+            prefConfig.enableStartKeyMenu
         )
+        if (!update.actions.contains(UsbControllerShortcutStateMachine.Action.SHOW_WHEEL)) {
+            startWheelOwnerGate.release(context)
+        }
+        handleUsbShortcutUpdate(context, update)
     }
 
     internal fun onSystemStartLongPress(context: InputDeviceContext) {
-        if (stopped) return
-        handleSystemStartGestureUpdate(
-            context,
-            context.startGesture.onLongPressTimeout(
-                SystemClock.uptimeMillis(),
-                prefConfig.enableStartKeyMenu,
-                hasRightStick = context.rightStickXAxis != -1 && context.rightStickYAxis != -1,
-                hasLeftStick = context.leftStickXAxis != -1 && context.leftStickYAxis != -1,
-                hasDpad = context.hatXAxis != -1 || context.hatYAxis != -1
-            )
+        if (stopped || !startWheelOwnerGate.tryClaim(context)) return
+        val update = context.startGesture.onLongPressTimeout(
+            SystemClock.uptimeMillis(),
+            prefConfig.enableStartKeyMenu
         )
+        if (!update.actions.contains(StartGestureReducer.EventAction.SHOW_WHEEL)) {
+            startWheelOwnerGate.release(context)
+        }
+        handleSystemStartGestureUpdate(context, update)
     }
 
     internal fun resetSystemStartGesture(context: InputDeviceContext) {
@@ -615,14 +616,22 @@ class ControllerHandler(
                 StartGestureReducer.EventAction.CANCEL_LONG_PRESS ->
                     mainThreadHandler.removeCallbacks(context.startLongPressRunnable)
                 StartGestureReducer.EventAction.SHOW_WHEEL -> {
-                    gestures.showStartHoldWheel()
-                    performStartWheelHaptic()
+                    if (startWheelOwnerGate.isOwner(context)) {
+                        gestures.showStartHoldWheel()
+                        performStartWheelHaptic()
+                    }
                 }
-                StartGestureReducer.EventAction.HIDE_WHEEL -> gestures.hideStartHoldWheel()
+                StartGestureReducer.EventAction.HIDE_WHEEL -> {
+                    if (startWheelOwnerGate.release(context)) {
+                        gestures.hideStartHoldWheel()
+                    }
+                }
                 StartGestureReducer.EventAction.SELECTION_CHANGED ->
                     run {
-                        gestures.updateStartHoldWheelSelection(update.selectedAction)
-                        performStartWheelHaptic()
+                        if (startWheelOwnerGate.isOwner(context)) {
+                            gestures.updateStartHoldWheelSelection(update.selectedAction)
+                            performStartWheelHaptic()
+                        }
                     }
                 StartGestureReducer.EventAction.COMMIT_ACTION -> when (update.committedAction) {
                     StartWheelAction.MOUSE -> context.toggleMouseEmulation()
@@ -643,7 +652,7 @@ class ControllerHandler(
                 StartGestureReducer.EventAction.EXIT_STREAM -> onExitStream()
             }
         }
-        if (update.wheelVisible) {
+        if (update.wheelVisible && startWheelOwnerGate.isOwner(context)) {
             gestures.updateStartHoldWheelSelection(update.selectedAction)
         }
         if (update.sendNeutralState) {
@@ -2313,6 +2322,12 @@ class ControllerHandler(
 
         sendControllerInputPacket(context)
 
+        if (!isStartKey && isWheelDpadKey(keyCode) &&
+            context.startGesture.state() == StartGestureReducer.State.WHEEL_VISIBLE
+        ) {
+            handleSystemStartWheelAxes(context)
+        }
+
         if (isStartKey) {
             val startUpdate = context.startGesture.onStartUp(
                 event.eventTime,
@@ -2509,6 +2524,11 @@ class ControllerHandler(
                 context.startGesture.onStartDown(event.eventTime, prefConfig.enableStartKeyMenu)
             )
         }
+        if (!isStartKey && isWheelDpadKey(keyCode) &&
+            context.startGesture.state() == StartGestureReducer.State.WHEEL_VISIBLE
+        ) {
+            handleSystemStartWheelAxes(context)
+        }
         return true
     }
 
@@ -2578,10 +2598,7 @@ class ControllerHandler(
                     mainThreadHandler.removeCallbacks(context.shortcutLongPressRunnable)
                 UsbControllerShortcutStateMachine.Action.SHOW_WHEEL -> {
                     mainThreadHandler.post {
-                        if (!stopped &&
-                            (usbStartWheelOwner == null || usbStartWheelOwner === context)
-                        ) {
-                            usbStartWheelOwner = context
+                        if (!stopped && startWheelOwnerGate.isOwner(context)) {
                             gestures.showStartHoldWheel()
                             performStartWheelHaptic()
                         }
@@ -2589,8 +2606,7 @@ class ControllerHandler(
                 }
                 UsbControllerShortcutStateMachine.Action.HIDE_WHEEL -> {
                     mainThreadHandler.post {
-                        if (usbStartWheelOwner === context) {
-                            usbStartWheelOwner = null
+                        if (startWheelOwnerGate.release(context)) {
                             gestures.hideStartHoldWheel()
                         }
                     }
@@ -2618,7 +2634,7 @@ class ControllerHandler(
                     }
                 UsbControllerShortcutStateMachine.Action.UPDATE_SELECTION ->
                     mainThreadHandler.post {
-                        if (!stopped && usbStartWheelOwner === context) {
+                        if (!stopped && startWheelOwnerGate.isOwner(context)) {
                             gestures.updateStartHoldWheelSelection(update.selectedAction)
                             performStartWheelHaptic()
                         }
@@ -2735,6 +2751,9 @@ class ControllerHandler(
             else -> null
         }
     }
+
+    private fun isWheelDpadKey(keyCode: Int): Boolean =
+        ((ANDROID_TO_LI_BUTTON_MAP[keyCode] ?: 0) and USB_MENU_DIRECTION_MASK) != 0
 
     private fun sendNeutralControllerState(context: GenericControllerContext) {
         context.inputMap = 0

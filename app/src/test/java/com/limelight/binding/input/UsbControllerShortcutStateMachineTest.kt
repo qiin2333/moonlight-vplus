@@ -52,6 +52,24 @@ class UsbControllerShortcutStateMachineTest {
     }
 
     @Test
+    fun digitalDpadSelectsOnFirstSnapshot() {
+        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+        showWheel(machine)
+        machine.onButtonSnapshot(
+            ControllerPacket.PLAY_FLAG or ControllerPacket.LEFT_FLAG,
+            851,
+            true
+        )
+
+        val selected = machine.onSelectionAxes(0f, 0f, 0f, 0f)
+
+        assertEquals(StartWheelAction.PERFORMANCE, selected.selectedAction)
+        assertTrue(selected.actions.contains(UsbControllerShortcutStateMachine.Action.UPDATE_SELECTION))
+        assertFalse(selected.consumeAllInput)
+        assertFalse(selected.sendNeutralState)
+    }
+
+    @Test
     fun menuCommitIsEmittedOnlyAfterStartUp() {
         val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
         showWheel(machine)
@@ -141,6 +159,23 @@ class UsbControllerShortcutStateMachineTest {
             listOf(UsbControllerShortcutStateMachine.Action.EXIT_STREAM),
             released.actions
         )
+    }
+
+    @Test
+    fun exitComboHidesVisibleWheelBeforeWaitingForRelease() {
+        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+        showWheel(machine)
+
+        val pressed = machine.onButtonSnapshot(
+            UsbControllerShortcutStateMachine.EXIT_COMBO_FLAGS,
+            900,
+            true
+        )
+
+        assertTrue(pressed.actions.contains(UsbControllerShortcutStateMachine.Action.CANCEL_LONG_PRESS))
+        assertTrue(pressed.actions.contains(UsbControllerShortcutStateMachine.Action.HIDE_WHEEL))
+        assertFalse(pressed.wheelVisible)
+        assertTrue(pressed.consumeAllInput)
     }
 
     private fun showWheel(machine: UsbControllerShortcutStateMachine) {

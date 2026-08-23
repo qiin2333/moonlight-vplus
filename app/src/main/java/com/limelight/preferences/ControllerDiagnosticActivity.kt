@@ -175,10 +175,7 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
             applySystemReducerUpdate(
                 systemSimulatorGesture.onLongPressTimeout(
                     SystemClock.uptimeMillis(),
-                    startKeyActionEnabled,
-                    hasRightStick = true,
-                    hasLeftStick = true,
-                    hasDpad = true
+                    startKeyActionEnabled
                 )
             )
         } else {

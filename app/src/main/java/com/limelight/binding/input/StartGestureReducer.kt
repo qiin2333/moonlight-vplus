@@ -15,8 +15,8 @@ enum class StartWheelAction {
 /** Pure Start gesture state machine shared by Android and USB controller adapters. */
 internal class StartGestureReducer(
     private val longPressDurationMs: Long = ControllerHandler.START_DOWN_TIME_MOUSE_MODE_MS.toLong(),
-    private val enterThreshold: Float = 0.35f,
-    private val exitThreshold: Float = 0.25f
+    private val enterThreshold: Float = 0.65f,
+    private val exitThreshold: Float = 0.35f
 ) {
     internal enum class State {
         IDLE,
@@ -89,22 +89,14 @@ internal class StartGestureReducer(
     @Synchronized
     fun onLongPressTimeout(
         eventTimeMs: Long,
-        startActionEnabled: Boolean,
-        hasRightStick: Boolean,
-        hasLeftStick: Boolean,
-        hasDpad: Boolean
+        startActionEnabled: Boolean
     ): Update {
         if (!startActionEnabled || state != State.START_HELD || startDownTimeMs == 0L ||
             eventTimeMs - startDownTimeMs < longPressDurationMs
         ) {
             return snapshot()
         }
-        inputSource = when {
-            hasRightStick -> InputSource.RIGHT_STICK
-            hasLeftStick -> InputSource.LEFT_STICK
-            hasDpad -> InputSource.DPAD
-            else -> null
-        }
+        inputSource = null
         state = State.WHEEL_VISIBLE
         return snapshot(
             actions = listOf(EventAction.SHOW_WHEEL),
@@ -112,7 +104,7 @@ internal class StartGestureReducer(
         )
     }
 
-    /** Updates wheel selection from the fixed source chosen at wheel entry. */
+    /** Updates wheel selection from the active source, preferring explicit D-pad input. */
     @Synchronized
     fun onSelection(
         leftStickX: Float,
@@ -122,14 +114,25 @@ internal class StartGestureReducer(
         dpadFlags: Int
     ): Update {
         if (state != State.WHEEL_VISIBLE) return snapshot()
+        val previousSource = inputSource
+        val dpadAxis = dpadToAxis(dpadFlags)
+        inputSource = resolveInputSource(
+            leftStickX,
+            leftStickY,
+            rightStickX,
+            rightStickY,
+            dpadAxis
+        )
         val (x, y) = when (inputSource) {
             InputSource.RIGHT_STICK -> rightStickX to rightStickY
             InputSource.LEFT_STICK -> leftStickX to leftStickY
-            InputSource.DPAD -> dpadToAxis(dpadFlags)
+            InputSource.DPAD -> dpadAxis
             null -> 0f to 0f
         }
         val candidate = actionForAxis(x, y)
-        val next = stabilize(candidate)
+        val digitalTransition = inputSource == InputSource.DPAD ||
+            (previousSource == InputSource.DPAD && inputSource == null)
+        val next = stabilize(candidate, immediate = digitalTransition)
         if (next == selectedAction) return snapshot()
         selectedAction = next
         return snapshot(
@@ -224,12 +227,20 @@ internal class StartGestureReducer(
 
     @Synchronized
     fun onGameMenuOpenedExternally(): Update {
+        val wasWheelVisible = state == State.WHEEL_VISIBLE
         clearStartGesture()
         pendingMenuOpenRequestId = null
         pendingMenuSnapshot = null
         lastButtonFlags = 0
         state = State.MENU_ACTIVE
-        return snapshot(consumeAllInput = true, sendNeutralState = true)
+        return snapshot(
+            actions = buildList {
+                add(EventAction.CANCEL_LONG_PRESS)
+                if (wasWheelVisible) add(EventAction.HIDE_WHEEL)
+            },
+            consumeAllInput = true,
+            sendNeutralState = true
+        )
     }
 
     @Synchronized
@@ -297,11 +308,51 @@ internal class StartGestureReducer(
         directionCandidateFrames = 0
     }
 
-    private fun stabilize(candidate: StartWheelAction): StartWheelAction {
+    private fun resolveInputSource(
+        leftStickX: Float,
+        leftStickY: Float,
+        rightStickX: Float,
+        rightStickY: Float,
+        dpadAxis: Pair<Float, Float>
+    ): InputSource? {
+        if (dpadAxis.first != 0f || dpadAxis.second != 0f) {
+            return InputSource.DPAD
+        }
+
+        when (inputSource) {
+            InputSource.RIGHT_STICK -> if (axisActive(rightStickX, rightStickY, exitThreshold)) {
+                return InputSource.RIGHT_STICK
+            }
+            InputSource.LEFT_STICK -> if (axisActive(leftStickX, leftStickY, exitThreshold)) {
+                return InputSource.LEFT_STICK
+            }
+            InputSource.DPAD, null -> Unit
+        }
+
+        val rightMagnitude = axisMagnitude(rightStickX, rightStickY)
+        val leftMagnitude = axisMagnitude(leftStickX, leftStickY)
+        return when {
+            rightMagnitude < enterThreshold && leftMagnitude < enterThreshold -> null
+            rightMagnitude >= leftMagnitude -> InputSource.RIGHT_STICK
+            else -> InputSource.LEFT_STICK
+        }
+    }
+
+    private fun axisActive(x: Float, y: Float, threshold: Float): Boolean =
+        axisMagnitude(x, y) >= threshold
+
+    private fun axisMagnitude(x: Float, y: Float): Float = maxOf(abs(x), abs(y))
+
+    private fun stabilize(candidate: StartWheelAction, immediate: Boolean = false): StartWheelAction {
         if (candidate == selectedAction) {
             directionCandidate = null
             directionCandidateFrames = 0
             return selectedAction
+        }
+        if (immediate) {
+            directionCandidate = null
+            directionCandidateFrames = 0
+            return candidate
         }
         if (directionCandidate != candidate) {
             directionCandidate = candidate
