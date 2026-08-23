@@ -922,6 +922,8 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
                 else -> systemSimulatorGesture.onInputSnapshot(simulatorPressedFlags)
             }
             applySystemReducerUpdate(update)
+            simulatorUiState = simulatorUiState.copy(pressedFlags = simulatorPressedFlags)
+            return
         }
 
         simulatorUiState = simulatorUiState.copy(

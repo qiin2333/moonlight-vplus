@@ -1,5 +1,6 @@
 package com.limelight.binding.input
 
+import com.limelight.nvstream.input.ControllerPacket
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -75,5 +76,63 @@ class StartGestureReducerTest {
         val stale = reducer.onGameMenuOpenResult(requireNotNull(request.menuOpenRequestId), true)
         assertEquals(StartGestureReducer.State.IDLE, reducer.state())
         assertFalse(stale.consumeAllInput)
+    }
+
+    @Test
+    fun menuFailureWithPressedInputWaitsUntilRelease() {
+        val reducer = StartGestureReducer(750)
+        reducer.onStartDown(100, true)
+        reducer.onLongPressTimeout(850, true, true, true, true)
+        reducer.onSelection(0f, 0f, 0f, -0.9f, 0)
+        reducer.onSelection(0f, 0f, 0f, -0.9f, 0)
+        val request = reducer.onStartUp(851, buttonFlags = ControllerPacket.A_FLAG)
+
+        val failed = reducer.onGameMenuOpenResult(
+            requireNotNull(request.menuOpenRequestId),
+            false
+        )
+        assertEquals(StartGestureReducer.State.WAIT_FOR_RELEASE, reducer.state())
+        assertTrue(failed.consumeAllInput)
+
+        val released = reducer.onInputSnapshot(0)
+        assertEquals(StartGestureReducer.State.IDLE, reducer.state())
+        assertFalse(released.consumeAllInput)
+    }
+
+    @Test
+    fun externalMenuDismissalWithoutPressedInputReturnsToIdle() {
+        val reducer = StartGestureReducer(750)
+
+        val opened = reducer.onGameMenuOpenedExternally()
+        assertEquals(StartGestureReducer.State.MENU_ACTIVE, reducer.state())
+        assertTrue(opened.consumeAllInput)
+        assertTrue(opened.sendNeutralState)
+
+        val dismissed = reducer.onGameMenuUnavailable()
+        assertEquals(StartGestureReducer.State.IDLE, reducer.state())
+        assertFalse(dismissed.consumeAllInput)
+
+        val nextPress = reducer.onStartDown(1_000, true)
+        assertTrue(nextPress.actions.contains(StartGestureReducer.EventAction.SCHEDULE_LONG_PRESS))
+    }
+
+    @Test
+    fun confirmedExternalOpenSupersedesPendingRequest() {
+        val reducer = StartGestureReducer(750)
+        reducer.onStartDown(100, true)
+        reducer.onLongPressTimeout(850, true, true, true, true)
+        reducer.onSelection(0f, 0f, 0f, -0.9f, 0)
+        reducer.onSelection(0f, 0f, 0f, -0.9f, 0)
+        val request = reducer.onStartUp(851)
+
+        reducer.onGameMenuOpenedExternally()
+        val staleFailure = reducer.onGameMenuOpenResult(
+            requireNotNull(request.menuOpenRequestId),
+            false
+        )
+
+        assertEquals(StartGestureReducer.State.MENU_ACTIVE, reducer.state())
+        assertTrue(staleFailure.consumeAllInput)
+        assertFalse(staleFailure.sendNeutralState)
     }
 }

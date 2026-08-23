@@ -633,10 +633,11 @@ class ControllerHandler(
                 }.also { performStartWheelHaptic() }
                 StartGestureReducer.EventAction.OPEN_GAME_MENU -> {
                     val opened = gestures.showGameMenu(context)
-                    if (!opened) {
-                        update.menuOpenRequestId?.let { requestId ->
-                            context.startGesture.onGameMenuOpenResult(requestId, false)
-                        }
+                    update.menuOpenRequestId?.let { requestId ->
+                        handleSystemStartGestureUpdate(
+                            context,
+                            context.startGesture.onGameMenuOpenResult(requestId, opened)
+                        )
                     }
                 }
                 StartGestureReducer.EventAction.EXIT_STREAM -> onExitStream()
@@ -644,6 +645,18 @@ class ControllerHandler(
         }
         if (update.wheelVisible) {
             gestures.updateStartHoldWheelSelection(update.selectedAction)
+        }
+        if (update.sendNeutralState) {
+            sendNeutralControllerState(context)
+        }
+    }
+
+    private fun updateSystemStartReleaseState(context: InputDeviceContext) {
+        if (context.startGesture.state() == StartGestureReducer.State.WAIT_FOR_RELEASE) {
+            handleSystemStartGestureUpdate(
+                context,
+                context.startGesture.onInputSnapshot(context.inputMap)
+            )
         }
     }
 
@@ -1913,6 +1926,7 @@ class ControllerHandler(
         }
 
         sendControllerInputPacket(context)
+        updateSystemStartReleaseState(context)
         handleSystemStartWheelAxes(context)
     }
 
@@ -2310,6 +2324,7 @@ class ControllerHandler(
             )
             handleSystemStartGestureUpdate(context, startUpdate)
         }
+        updateSystemStartReleaseState(context)
 
         if (context.pendingExit && context.inputMap == 0) {
             // All buttons from the quit combo are lifted. Finish the activity now.
@@ -2625,7 +2640,7 @@ class ControllerHandler(
                         val resultUpdate = context.shortcutState.onGameMenuOpenResult(requestId, menuOpened)
                         handleUsbShortcutUpdate(context, resultUpdate)
                         if (resultUpdate.sendNeutralState) {
-                            sendNeutralUsbControllerState(context)
+                            sendNeutralControllerState(context)
                         }
                     }
                 UsbControllerShortcutStateMachine.Action.EXIT_STREAM ->
@@ -2682,7 +2697,7 @@ class ControllerHandler(
                 val update = context.shortcutState.onGameMenuOpenedExternally()
                 handleUsbShortcutUpdate(context, update)
                 if (update.sendNeutralState) {
-                    sendNeutralUsbControllerState(context)
+                    sendNeutralControllerState(context)
                 }
             }
         }
@@ -2691,7 +2706,11 @@ class ControllerHandler(
     fun onExternalGameMenuOpened() {
         activateUsbMenuCapture()
         for (i in 0 until inputDeviceContexts.size()) {
-            inputDeviceContexts.valueAt(i).startGesture.onGameMenuOpenedExternally()
+            val context = inputDeviceContexts.valueAt(i)
+            handleSystemStartGestureUpdate(
+                context,
+                context.startGesture.onGameMenuOpenedExternally()
+            )
         }
     }
 
@@ -2717,7 +2736,7 @@ class ControllerHandler(
         }
     }
 
-    private fun sendNeutralUsbControllerState(context: UsbDeviceContext) {
+    private fun sendNeutralControllerState(context: GenericControllerContext) {
         context.inputMap = 0
         context.leftStickX = 0
         context.leftStickY = 0
@@ -2778,7 +2797,7 @@ class ControllerHandler(
                 }
             }
             if (shortcutUpdate.sendNeutralState) {
-                sendNeutralUsbControllerState(context)
+                sendNeutralControllerState(context)
             }
             return
         }

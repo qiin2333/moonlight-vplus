@@ -2591,10 +2591,11 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                         device?.onGameMenuDismissed()
                     }
                     activeGameMenu = menu
-                    if (!openedFromUsbShortcut && ::controllerHandler.isInitialized) {
+                    val opened = activeGameMenu?.isShowing() == true
+                    if (opened && !openedFromUsbShortcut && ::controllerHandler.isInitialized) {
                         controllerHandler.onExternalGameMenuOpened()
                     }
-                    activeGameMenu?.isShowing() == true
+                    opened
                 }
             }
         }
@@ -2707,6 +2708,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         finish()
     }
 
+    @SuppressLint("MissingSuperCall")
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         showGameMenu(null)

@@ -210,9 +210,10 @@ internal class StartGestureReducer(
         if (state != State.MENU_PENDING || pendingMenuOpenRequestId != requestId) {
             return snapshot()
         }
-        val hasPressedInput = lastButtonFlags != 0 || pendingMenuSnapshot?.buttonFlags != 0
+        val hasPressedInput = lastButtonFlags != 0 || (pendingMenuSnapshot?.buttonFlags ?: 0) != 0
         pendingMenuOpenRequestId = null
         pendingMenuSnapshot = null
+        if (opened) lastButtonFlags = 0
         state = if (opened) State.MENU_ACTIVE else if (hasPressedInput) State.WAIT_FOR_RELEASE else State.IDLE
         return snapshot(
             consumeAllInput = opened || state == State.WAIT_FOR_RELEASE,
@@ -224,6 +225,9 @@ internal class StartGestureReducer(
     @Synchronized
     fun onGameMenuOpenedExternally(): Update {
         clearStartGesture()
+        pendingMenuOpenRequestId = null
+        pendingMenuSnapshot = null
+        lastButtonFlags = 0
         state = State.MENU_ACTIVE
         return snapshot(consumeAllInput = true, sendNeutralState = true)
     }
@@ -282,7 +286,8 @@ internal class StartGestureReducer(
         listOf(it.leftStickX, it.leftStickY, it.rightStickX, it.rightStickY)
     }
 
-    private fun hasPressedInput(): Boolean = lastButtonFlags != 0 || pendingMenuSnapshot?.buttonFlags != 0
+    private fun hasPressedInput(): Boolean =
+        lastButtonFlags != 0 || (pendingMenuSnapshot?.buttonFlags ?: 0) != 0
 
     private fun clearStartGesture() {
         startDownTimeMs = 0L
