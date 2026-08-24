@@ -905,6 +905,14 @@
             android:title="@string/title_checkbox_enable_float_ball"
             android:summary="@string/summary_checkbox_enable_float_ball"
             android:defaultValue="true" />
+        <ListPreference
+            android:key="list_float_ball_position"
+            android:dependency="checkbox_enable_float_ball"
+            android:title="@string/title_list_float_ball_position"
+            android:summary="@string/summary_list_float_ball_position"
+            android:entries="@array/float_ball_position_entries"
+            android:entryValues="@array/float_ball_position_values"
+            android:defaultValue="center_right" />
         <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_float_ball_auto_hide_delay"
             android:dependency="checkbox_enable_float_ball"

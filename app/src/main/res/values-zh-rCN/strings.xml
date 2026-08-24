@@ -404,6 +404,8 @@
     <string name="category_float_ball_settings">悬浮球设置</string>
     <string name="title_checkbox_enable_float_ball">启用悬浮球</string>
     <string name="summary_checkbox_enable_float_ball">显示一个可交互的悬浮球，用于快速操作。</string>
+    <string name="title_list_float_ball_position">快速设置悬浮球位置</string>
+    <string name="summary_list_float_ball_position">将悬浮球放到屏幕边缘。拖动位置会覆盖预设，再次选择预设即可清除。</string>
     <string name="title_seekbar_float_ball_auto_hide_delay">自动隐藏延迟</string>
     <string name="summary_seekbar_float_ball_auto_hide_delay">悬浮球自动隐藏到屏幕边缘的时间。</string>
 

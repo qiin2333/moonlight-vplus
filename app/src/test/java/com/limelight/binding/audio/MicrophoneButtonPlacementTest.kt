@@ -74,6 +74,20 @@ class MicrophoneButtonPlacementTest {
     }
 
     @Test
+    fun narrowOddViewportPreservesBothAxisEndpoints() {
+        val viewport = MicrophoneButtonViewport(41, 41, 40, 40, 10)
+
+        assertEquals(
+            MicrophoneButtonCoordinates(0, 0),
+            MicrophoneButtonPlacement.clampCustom(-10f, -10f, viewport)
+        )
+        assertEquals(
+            MicrophoneButtonCoordinates(1, 1),
+            MicrophoneButtonPlacement.clampCustom(10f, 10f, viewport)
+        )
+    }
+
+    @Test
     fun unknownPresetFallsBackToCenterRight() {
         assertEquals(
             MicrophoneButtonPlacement.DEFAULT_POSITION,

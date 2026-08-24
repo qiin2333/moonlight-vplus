@@ -78,6 +78,8 @@ import com.limelight.TargetDisplayResolver
 import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.audio.MicrophoneButtonPreferences
 import com.limelight.binding.audio.MicrophoneButtonPositionStore
+import com.limelight.ui.FloatBallPositionStore
+import com.limelight.ui.FloatBallPreferences
 import com.limelight.binding.input.advance_setting.share.CrownProfileShareManager
 import com.limelight.binding.input.advance_setting.share.GitHubCrownProfileStorePublisher
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper
@@ -3166,6 +3168,7 @@ class StreamSettings : AppCompatActivity() {
             setupConfigSyncPreferences()
             setupMicVolumeProcessingPreferences()
             setupMicrophoneButtonPositionPreference()
+            setupFloatBallPositionPreference()
 
             // 让所有 ListPreference 在 summary 顶部显示当前选中值，
             // 避免用户必须点开才知道现值。原 summary 作为说明保留在第二行。
@@ -4192,6 +4195,18 @@ class StreamSettings : AppCompatActivity() {
                 MicrophoneButtonPreferences.KEY_PRESET_POSITION
             ) ?: return
             val positionStore = MicrophoneButtonPositionStore(requireContext())
+            positionPreference.onPreferenceChangeListener =
+                Preference.OnPreferenceChangeListener { _, _ ->
+                    positionStore.clearCustomPosition()
+                    true
+                }
+        }
+
+        private fun setupFloatBallPositionPreference() {
+            val positionPreference = findPreference<ListPreference>(
+                FloatBallPreferences.KEY_PRESET_POSITION
+            ) ?: return
+            val positionStore = FloatBallPositionStore(requireContext())
             positionPreference.onPreferenceChangeListener =
                 Preference.OnPreferenceChangeListener { _, _ ->
                     positionStore.clearCustomPosition()

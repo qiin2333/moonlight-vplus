@@ -402,6 +402,15 @@
     <string name="title_list_audio_vibration_scene">場景模式</string>
     <string name="summary_list_audio_vibration_scene">根據內容類型最佳化振動模式</string>
 
+    <string name="category_float_ball_settings">懸浮球設定</string>
+    <string name="title_checkbox_enable_float_ball">啟用懸浮球</string>
+    <string name="summary_checkbox_enable_float_ball">顯示可互動的懸浮球，用於快速操作。</string>
+    <string name="title_list_float_ball_position">快速設定懸浮球位置</string>
+    <string name="summary_list_float_ball_position">將懸浮球放到螢幕邊緣。拖曳位置會覆蓋預設，再次選擇預設即可清除。</string>
+    <string name="title_seekbar_float_ball_auto_hide_delay">自動隱藏延遲</string>
+    <string name="summary_seekbar_float_ball_auto_hide_delay">懸浮球自動隱藏到螢幕邊緣前的等待時間。</string>
+    <string name="suffix_seekbar_float_ball_auto_hide_delay_ms">毫秒</string>
+
     <!-- 懸浮球手勢動作 -->
     <string name="title_float_ball_single_click_action">單擊動作</string>
     <string name="summary_float_ball_single_click_action">輕點懸浮球一次時執行的動作</string>
