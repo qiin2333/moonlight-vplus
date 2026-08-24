@@ -3,6 +3,7 @@ package com.limelight.binding.audio
 import android.content.Context
 import androidx.core.content.edit
 
+/** Device-local drag override; intentionally excluded from configuration sync. */
 internal class MicrophoneButtonPositionStore(context: Context) {
     private val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 

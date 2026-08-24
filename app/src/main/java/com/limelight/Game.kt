@@ -1188,7 +1188,8 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                 PipInteractiveOverlaySnapshot(
                     virtualControllerVisible = isVirtualControllerVisible(),
                     crownControllerVisible = controllerManager?.isVisible() == true,
-                    microphoneButtonVisible = micButton?.visibility == View.VISIBLE
+                    microphoneButtonVisible = micButton?.visibility == View.VISIBLE,
+                    microphoneActive = microphoneManager?.isMicrophoneActive() == true
                 )
             )
             enforcePictureInPictureUiState()
@@ -1209,12 +1210,17 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         } else {
             controllerManager?.hide()
         }
-        micButton?.visibility = if (snapshot.microphoneButtonVisible) View.VISIBLE else View.GONE
         performanceOverlayManager?.applyRequestedVisibility()
         jitterMonitorManager?.applyVisibility()
         notificationOverlayManager.setHiding(false)
         notificationOverlayManager.applyVisibility()
         microphoneManager?.setEnableMic(prefConfig.enableMic)
+        if (snapshot.microphoneActive && prefConfig.enableMic) {
+            microphoneManager?.resumeMicrophone()
+        }
+        if (!snapshot.microphoneButtonVisible) {
+            micButton?.visibility = View.GONE
+        }
         controllerHandler.enableSensors()
         controllerHandler.onSensorsReenabled()
         UiHelper.notifyStreamExitingPiP(this)
@@ -1229,6 +1235,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         performanceOverlayManager?.hideOverlayImmediate()
         jitterMonitorManager?.hideImmediate()
         notificationOverlayManager.setHiding(true)
+        microphoneManager?.pauseMicrophone()
         microphoneManager?.setEnableMic(false)
         controllerHandler.disableSensors()
     }
