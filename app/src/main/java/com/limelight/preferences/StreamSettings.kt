@@ -2847,6 +2847,7 @@ class StreamSettings : AppCompatActivity() {
 
         override fun onResume() {
             super.onResume()
+            refreshMicrophoneButtonPositionPreference()
             registerConfigSyncPreferenceListener()
             updateLocalSnapshotPreferenceSummary()
             updateExternalSyncDirectorySummary()
@@ -3952,12 +3953,22 @@ class StreamSettings : AppCompatActivity() {
             ) ?: return
             val positionStore = MicrophoneButtonPositionStore(requireContext())
             positionPreference.isPersistent = false
-            positionPreference.value = positionStore.position()
             positionPreference.onPreferenceChangeListener =
                 Preference.OnPreferenceChangeListener { _, newValue ->
                     positionStore.savePreset(newValue as String)
                     true
                 }
+            refreshMicrophoneButtonPositionPreference()
+        }
+
+        private fun refreshMicrophoneButtonPositionPreference() {
+            val positionPreference = findPreference<ListPreference>(
+                MicrophoneButtonPositionStore.PREFERENCE_KEY
+            ) ?: return
+            val storedPosition = MicrophoneButtonPositionStore(requireContext()).position()
+            if (positionPreference.value != storedPosition) {
+                positionPreference.value = storedPosition
+            }
         }
 
         private fun refreshDeveloperFeatureGateState() {
