@@ -24,6 +24,7 @@ import com.limelight.binding.input.touch.TouchContext
 import com.limelight.binding.input.driver.UsbDriverService
 import com.limelight.binding.input.evdev.EvdevListener
 import com.limelight.binding.input.virtual_controller.VirtualController
+import com.limelight.binding.video.DolbyVisionCapabilityProbe
 import com.limelight.binding.video.MediaCodecDecoderRenderer
 import com.limelight.framegen.FramegenCapture
 import com.limelight.framegen.FramegenAdaptiveController
@@ -857,6 +858,31 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
             LimeLog.info("HDR10+ disabled while frame generation is enabled; using static HDR10")
         }
 
+        // Dolby Vision needs the device's native decode path on top of the
+        // display capability: video/dolby-vision + DvheSt at this resolution.
+        val dolbyVisionProbe = DolbyVisionCapabilityProbe(
+            prefConfig.width,
+            prefConfig.height,
+            prefConfig.fps,
+        ).probe()
+        val dolbyVisionRequested = HdrModePolicy.shouldRequestDolbyVision(
+            hdrEnabled = willStreamHdr,
+            hdrMode = prefConfig.hdrMode,
+            displaySupportsDolbyVision = hdrTypeSupport.hasDolbyVision,
+            decoderSupportsDolbyVision = dolbyVisionProbe.decoderAvailable,
+            framegenRequested = framegenRequested,
+        )
+        if (willStreamHdr &&
+            prefConfig.hdrMode == MoonBridge.HDR_MODE_DOLBY_VISION &&
+            !dolbyVisionRequested
+        ) {
+            LimeLog.info(
+                "Dolby Vision unavailable (display=${hdrTypeSupport.hasDolbyVision}, " +
+                    "decoder=${dolbyVisionProbe.decoderAvailable}, " +
+                    "framegen=$framegenRequested); falling back to static HDR10"
+            )
+        }
+
         if (decoderRenderer == null) {
             decoderRenderer = MediaCodecDecoderRenderer(
                 this, prefConfig,
@@ -1017,6 +1043,28 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                 willStreamHdr && prefConfig.hdrBrightnessOverride,
                 prefConfig.hdrPeakBrightnessNits
             )
+            .apply {
+                // Sunshine dynamic HDR negotiation, opt-in only when a dynamic
+                // format is actually selected: a Dolby Vision request reports
+                // just the DV bit so the host's fallback chain lands on plain
+                // HDR10, and an HDR10+ request reports the HDR10+ bit. Every
+                // other selection keeps the legacy no-attribute behavior.
+                if (dolbyVisionRequested) {
+                    setDynamicHdrNegotiation(
+                        MoonBridge.DYNAMIC_HDR_CAPS_DOLBY_VISION_81,
+                        dolbyVisionProbe.maxLevel,
+                        dolbyVisionDirectSurface = true,
+                        preference = MoonBridge.DYNAMIC_HDR_PREFERENCE_DOLBY_VISION,
+                    )
+                } else if (hdr10PlusRequested) {
+                    setDynamicHdrNegotiation(
+                        MoonBridge.DYNAMIC_HDR_CAPS_HDR10_PLUS,
+                        0,
+                        dolbyVisionDirectSurface = false,
+                        preference = MoonBridge.DYNAMIC_HDR_PREFERENCE_HDR10_PLUS,
+                    )
+                }
+            }
             .setPersistGamepadsAfterDisconnect(!prefConfig.multiController)
             .setUseVdd(pcUseVdd)
             .setEnableMic(prefConfig.enableMic)

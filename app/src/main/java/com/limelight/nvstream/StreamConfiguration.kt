@@ -53,6 +53,12 @@ class StreamConfiguration private constructor() {
         private set
     /** Requested AC3/E-AC3 bitrate in bits/sec. 0 = use server default. */
     var audioBitrate: Int = 0
+
+    /** Sunshine dynamic HDR negotiation (client opt-in). All zero = legacy client. */
+    var dynamicHdrCaps: Int = MoonBridge.DYNAMIC_HDR_CAPS_NONE
+    var dolbyVisionMaxLevel: Int = 0
+    var dolbyVisionDirectSurface: Boolean = false
+    var dynamicHdrPreference: Int = MoonBridge.DYNAMIC_HDR_PREFERENCE_AUTOMATIC
         private set
     var customScreenMode: Int = -1
         private set
@@ -115,6 +121,23 @@ class StreamConfiguration private constructor() {
         fun setControlOnly(controlOnly: Boolean): Builder = apply { config.controlOnly = controlOnly }
         fun setAudioCodec(codec: Int): Builder = apply { config.audioCodec = codec }
         fun setAudioBitrate(bitrate: Int): Builder = apply { config.audioBitrate = bitrate }
+
+        /**
+         * Opts this session into the Sunshine dynamic HDR negotiation. Callers
+         * must have probed real device capabilities; a legacy client simply
+         * never calls this and the host keeps its historical behavior.
+         */
+        fun setDynamicHdrNegotiation(
+            caps: Int,
+            dolbyVisionMaxLevel: Int,
+            dolbyVisionDirectSurface: Boolean,
+            preference: Int,
+        ): Builder = apply {
+            config.dynamicHdrCaps = caps
+            config.dolbyVisionMaxLevel = dolbyVisionMaxLevel
+            config.dolbyVisionDirectSurface = dolbyVisionDirectSurface
+            config.dynamicHdrPreference = preference
+        }
         fun setCustomScreenMode(customScreenMode: Int): Builder = apply { config.customScreenMode = customScreenMode }
 
         fun build(): StreamConfiguration = config

@@ -704,6 +704,11 @@ hasFastAes() {
 }
 
 JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_getNegotiatedDynamicHdrFormat(JNIEnv *env, jclass clazz) {
+    return LiGetNegotiatedDynamicHdrFormat();
+}
+
+JNIEXPORT jint JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass clazz,
                                                            jstring address, jstring appVersion, jstring gfeVersion,
                                                            jstring rtspSessionUrl, jint serverCodecModeSupport,
@@ -715,7 +720,9 @@ Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass c
                                                            jint videoCapabilities,
                                                            jint colorSpace, jint colorRange, jint hdrMode,
                                                            jboolean enableMic, jboolean controlOnly,
-                                                           jint audioCodec, jint audioBitrate) {
+                                                           jint audioCodec, jint audioBitrate,
+                                                           jint dynamicHdrCaps, jint dolbyVisionMaxLevel,
+                                                           jint dolbyVisionDirectSurface, jint dynamicHdrPreference) {
     SERVER_INFORMATION serverInfo = {
             .address = (*env)->GetStringUTFChars(env, address, 0),
             .serverInfoAppVersion = (*env)->GetStringUTFChars(env, appVersion, 0),
@@ -740,7 +747,11 @@ Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass c
             .enableMic = enableMic,
             .controlOnly = controlOnly,
             .audioCodec = audioCodec,
-            .audioBitrate = audioBitrate
+            .audioBitrate = audioBitrate,
+            .dynamicHdrCaps = dynamicHdrCaps,
+            .dolbyVisionMaxLevel = dolbyVisionMaxLevel,
+            .dolbyVisionDirectSurface = dolbyVisionDirectSurface,
+            .dynamicHdrPreference = dynamicHdrPreference
     };
 
     jbyte* riAesKeyBuf = (*env)->GetByteArrayElements(env, riAesKey, NULL);
