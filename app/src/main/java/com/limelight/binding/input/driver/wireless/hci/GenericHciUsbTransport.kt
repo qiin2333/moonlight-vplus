@@ -306,6 +306,7 @@ internal class GenericHciUsbTransport(
 
     private fun reportFailure(failure: HciTransportFailure) {
         var notify = false
+        val reader: Thread?
         synchronized(lifecycleLock) {
             if (state != HciTransportState.FAILED &&
                 state != HciTransportState.CLOSING &&
@@ -315,6 +316,7 @@ internal class GenericHciUsbTransport(
                 stopRequested = true
                 notify = true
             }
+            reader = readerThread
         }
         if (!notify) {
             return
@@ -323,7 +325,7 @@ internal class GenericHciUsbTransport(
         synchronized(outputLock) {
             runCatching { io.close() }
         }
-        if (readerThread == null) {
+        if (reader == null) {
             runCatching { io.finishClose() }
         }
         synchronized(callbackLock) {
