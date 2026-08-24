@@ -2871,6 +2871,16 @@ class StreamSettings : AppCompatActivity() {
 
         override fun onResume() {
             super.onResume()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.BLUETOOTH_CONNECT
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                findPreference<CheckBoxPreference>(
+                    PreferenceConfiguration.DUALSENSE_DIRECT_BLUETOOTH_PREF_STRING
+                )?.isChecked = false
+            }
             registerConfigSyncPreferenceListener()
             updateLocalSnapshotPreferenceSummary()
             updateExternalSyncDirectorySummary()
