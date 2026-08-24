@@ -146,11 +146,13 @@ internal object FloatingButtonPlacement {
         trailingInset: Int
     ): IntRange {
         val available = (containerSize - buttonSize).coerceAtLeast(0)
-        val start = (leadingInset.coerceAtLeast(0) + edgeInset.coerceAtLeast(0))
-            .coerceAtMost(available)
-        val end = (available - trailingInset.coerceAtLeast(0) - edgeInset.coerceAtLeast(0))
-            .coerceAtLeast(0)
-        if (start <= end) return start..end
+        val insetStart = leadingInset.coerceAtLeast(0).coerceAtMost(available)
+        val insetEnd = (available - trailingInset.coerceAtLeast(0)).coerceAtLeast(0)
+        if (insetStart <= insetEnd) {
+            val safeEdgeInset = edgeInset.coerceAtLeast(0)
+                .coerceAtMost((insetEnd - insetStart) / 2)
+            return (insetStart + safeEdgeInset)..(insetEnd - safeEdgeInset)
+        }
         val center = available / 2
         return center..center
     }

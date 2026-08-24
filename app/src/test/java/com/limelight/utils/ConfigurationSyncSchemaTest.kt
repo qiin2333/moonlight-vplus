@@ -45,6 +45,12 @@ class ConfigurationSyncSchemaTest {
                 FloatBallPreferences.KEY_PRESET_POSITION
             )
         )
+        assertFalse(
+            ConfigurationSyncManager.isPortableSharedPreferenceKey(
+                "FloatBallPrefs",
+                "normalizedX"
+            )
+        )
     }
 
     @Test

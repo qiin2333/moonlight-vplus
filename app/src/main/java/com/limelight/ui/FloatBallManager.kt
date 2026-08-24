@@ -151,7 +151,7 @@ class FloatBallManager constructor(
         })
 
     private fun handleConfigurationChanged() {
-        val view = floatBall ?: return
+        val view = floatBall?.takeIf { it.parent != null } ?: return
         view.viewTreeObserver.addOnGlobalLayoutListener(
             object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
                 override fun onGlobalLayout() {
@@ -233,11 +233,11 @@ class FloatBallManager constructor(
                 FloatBallPlacement.nearestEdge(coordinates, currentViewport())
             }
         }
-        applyAnchorPosition()
+        applyAnchorPosition(updateView = false)
 
         isHalfShown = storedHalfShown && enableEdgeSnap
         if (isHalfShown) {
-            applyHalfShowPosition()
+            applyHalfShowPosition(updateView = false)
         } else if (storedHalfShown) {
             positionStore.setHalfShown(false)
         }
