@@ -1100,6 +1100,10 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
     override fun onResume() {
         super.onResume()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Reconcile OEM callback gaps after rapid PiP transitions.
+            applyPictureInPictureUiState(isInPictureInPictureMode)
+        }
         if (audioVibrationService != null) {
             updateAudioHapticsRuntimeEnabled(true)
         }

@@ -37,11 +37,12 @@ class PipInteractiveOverlayStateTest {
     }
 
     @Test
-    fun newSessionCanCaptureVisibilityAgain() {
+    fun rapidExitAndReentryCaptureFreshVisibility() {
         val state = PipInteractiveOverlayState()
-        assertTrue(state.enter(PipInteractiveOverlaySnapshot(true, false, true)))
+        val first = PipInteractiveOverlaySnapshot(true, false, true)
+        assertTrue(state.enter(first))
         assertTrue(state.isActive())
-        state.exit()
+        assertEquals(first, state.exit())
 
         val next = PipInteractiveOverlaySnapshot(false, true, false)
         assertTrue(state.enter(next))
