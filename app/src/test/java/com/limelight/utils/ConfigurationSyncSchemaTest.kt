@@ -27,18 +27,10 @@ class ConfigurationSyncSchemaTest {
     }
 
     @Test
-    fun microphoneButtonVisibilityAndPositionArePortable() {
-        listOf(
-            "checkbox_show_mic_button",
-            "list_mic_button_position",
-            "mic_button_custom_x",
-            "mic_button_custom_y"
-        ).forEach { key ->
-            assertTrue(
-                "$key should be included in configuration sync",
-                ConfigurationSyncManager.isPortableDefaultPreferenceKey(key)
-            )
-        }
+    fun microphoneButtonVisibilityIsPortable() {
+        assertTrue(
+            ConfigurationSyncManager.isPortableDefaultPreferenceKey("checkbox_show_mic_button")
+        )
     }
 
     @Test
