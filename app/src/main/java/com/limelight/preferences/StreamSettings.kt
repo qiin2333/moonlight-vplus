@@ -771,6 +771,26 @@ class StreamSettings : AppCompatActivity() {
         return super.onKeyDown(keyCode, event)
     }
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val settingsFragment = supportFragmentManager
+                .findFragmentById(R.id.preference_container) as? SettingsFragment
+        val shouldRestoreExpandedPreferenceFocus =
+            event.action == KeyEvent.ACTION_UP &&
+                event.keyCode in arrayOf(
+                    KeyEvent.KEYCODE_DPAD_CENTER,
+                    KeyEvent.KEYCODE_ENTER,
+                    KeyEvent.KEYCODE_NUMPAD_ENTER,
+                    KeyEvent.KEYCODE_BUTTON_A
+                ) &&
+                settingsFragment?.prepareExpandButtonFocusRestore(currentFocus) == true
+
+        val handled = super.dispatchKeyEvent(event)
+        if (shouldRestoreExpandedPreferenceFocus) {
+            settingsFragment?.restoreFocusAfterExpandButton()
+        }
+        return handled
+    }
+
     /**
      * 处理控制器按键事件（抽屉导航）
      *
@@ -918,6 +938,8 @@ class StreamSettings : AppCompatActivity() {
         private companion object {
             private const val SCREEN_COMBINATION_MODE_PREF_KEY = "list_screen_combination_mode"
             private const val BLUETOOTH_CONNECT_PERMISSION_REQUEST = 4721
+            private const val ANDROIDX_EXPAND_BUTTON_CLASS = "androidx.preference.ExpandButton"
+            private const val EXPAND_FOCUS_RESTORE_ATTEMPTS = 3
         }
 
         private var nativeResolutionStartIndex = Int.MAX_VALUE
@@ -951,6 +973,7 @@ class StreamSettings : AppCompatActivity() {
         private var categoryPositions: IntArray = IntArray(0)
         private var categoryPositionsValid = false
         private var adapterDataObserver: RecyclerView.AdapterDataObserver? = null
+        private var pendingExpandFocusPosition = RecyclerView.NO_POSITION
         @Volatile
         private var developerUnlockVerificationRunning = false
         @Volatile
@@ -2842,6 +2865,7 @@ class StreamSettings : AppCompatActivity() {
                 adapterDataObserver = null
             }
             categoryPositionsValid = false
+            pendingExpandFocusPosition = RecyclerView.NO_POSITION
             super.onDestroyView()
         }
 
@@ -2942,6 +2966,99 @@ class StreamSettings : AppCompatActivity() {
         private fun dpToPx(dp: Int): Int {
             val density = resources.displayMetrics.density
             return (dp * density).roundToInt()
+        }
+
+        /**
+         * AndroidX removes its synthetic "Advanced" row as soon as it is activated. In a
+         * two-pane layout, RecyclerView's fallback focus search can then pick the category list
+         * on the left. Remember the row's adapter position so the first newly revealed setting
+         * at that same position can receive focus after the adapter has settled.
+         */
+        @SuppressLint("RestrictedApi")
+        fun prepareExpandButtonFocusRestore(focusedView: View?): Boolean {
+            val recyclerView = listView ?: return false
+            val itemView = focusedView?.let(recyclerView::findContainingItemView) ?: return false
+            val position = recyclerView.getChildAdapterPosition(itemView)
+            if (position == RecyclerView.NO_POSITION) return false
+
+            val adapter = recyclerView.adapter as? PreferenceGroupAdapter ?: return false
+            val preference = adapter.getItem(position) ?: return false
+            if (preference.javaClass.name != ANDROIDX_EXPAND_BUTTON_CLASS) return false
+
+            pendingExpandFocusPosition = position
+            return true
+        }
+
+        fun restoreFocusAfterExpandButton() {
+            val recyclerView = listView ?: return
+            if (pendingExpandFocusPosition == RecyclerView.NO_POSITION) return
+
+            // PreferenceGroupAdapter posts its hierarchy sync from the click handler. Posting
+            // here puts focus restoration after that sync; the animation callback then waits for
+            // RecyclerView to lay out the newly inserted preference rows.
+            recyclerView.post {
+                restoreExpandedPreferenceFocus(recyclerView, EXPAND_FOCUS_RESTORE_ATTEMPTS)
+            }
+        }
+
+        @SuppressLint("RestrictedApi")
+        private fun restoreExpandedPreferenceFocus(recyclerView: RecyclerView, attemptsLeft: Int) {
+            val requestedPosition = pendingExpandFocusPosition
+            if (requestedPosition == RecyclerView.NO_POSITION) return
+
+            val adapter = recyclerView.adapter as? PreferenceGroupAdapter
+            if (adapter == null) {
+                pendingExpandFocusPosition = RecyclerView.NO_POSITION
+                return
+            }
+            val itemCount = adapter.itemCount
+            if (itemCount == 0) {
+                pendingExpandFocusPosition = RecyclerView.NO_POSITION
+                return
+            }
+
+            val oldPosition = requestedPosition.coerceAtMost(itemCount - 1)
+            if (adapter.getItem(oldPosition)?.javaClass?.name == ANDROIDX_EXPAND_BUTTON_CLASS) {
+                if (attemptsLeft > 0) {
+                    recyclerView.postOnAnimation {
+                        restoreExpandedPreferenceFocus(recyclerView, attemptsLeft - 1)
+                    }
+                } else {
+                    pendingExpandFocusPosition = RecyclerView.NO_POSITION
+                }
+                return
+            }
+
+            // The first revealed row can itself be disabled by a dependency. In that case,
+            // continue within the right-hand preference list to the nearest selectable row.
+            val targetPosition = (oldPosition until itemCount).firstOrNull { position ->
+                adapter.getItem(position)?.let { it.isEnabled && it.isSelectable } == true
+            } ?: (oldPosition - 1 downTo 0).firstOrNull { position ->
+                adapter.getItem(position)?.let { it.isEnabled && it.isSelectable } == true
+            } ?: RecyclerView.NO_POSITION
+
+            if (targetPosition == RecyclerView.NO_POSITION) {
+                recyclerView.requestFocus()
+                pendingExpandFocusPosition = RecyclerView.NO_POSITION
+                return
+            }
+
+            recyclerView.scrollToPosition(targetPosition)
+            recyclerView.postOnAnimation {
+                if (pendingExpandFocusPosition != requestedPosition) return@postOnAnimation
+
+                val target = recyclerView.findViewHolderForAdapterPosition(targetPosition)?.itemView
+                if (target != null && target.isShown && target.isFocusable && target.requestFocus()) {
+                    pendingExpandFocusPosition = RecyclerView.NO_POSITION
+                } else if (attemptsLeft > 0) {
+                    restoreExpandedPreferenceFocus(recyclerView, attemptsLeft - 1)
+                } else {
+                    // Keep the fallback inside the right pane even if the first revealed
+                    // preference is temporarily disabled or not laid out yet.
+                    recyclerView.requestFocus()
+                    pendingExpandFocusPosition = RecyclerView.NO_POSITION
+                }
+            }
         }
 
         @SuppressLint("RestrictedApi")
