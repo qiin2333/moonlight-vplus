@@ -581,6 +581,9 @@ class ControllerHandler(
             startWheelOwnerGate.release(context)
         }
         handleUsbShortcutUpdate(context, update)
+        if (update.sendNeutralState) {
+            sendNeutralControllerState(context)
+        }
     }
 
     internal fun onSystemStartLongPress(context: InputDeviceContext) {
@@ -665,9 +668,20 @@ class ControllerHandler(
 
     private fun updateSystemStartReleaseState(context: InputDeviceContext) {
         if (context.startGesture.state() == StartGestureReducer.State.WAIT_FOR_RELEASE) {
+            val buttonFlags = context.inputMap or if (context.startGesture.isStartPressed()) {
+                ControllerPacket.PLAY_FLAG
+            } else {
+                0
+            }
             handleSystemStartGestureUpdate(
                 context,
-                context.startGesture.onInputSnapshot(context.inputMap)
+                context.startGesture.onInputSnapshot(
+                    buttonFlags,
+                    leftStickX = context.leftStickX.toFloat() / 32766f,
+                    leftStickY = hostStickYToWheelAxis(context.leftStickY),
+                    rightStickX = context.rightStickX.toFloat() / 32766f,
+                    rightStickY = hostStickYToWheelAxis(context.rightStickY)
+                )
             )
         }
     }
@@ -1490,12 +1504,28 @@ class ControllerHandler(
     }
 
     internal fun sendControllerInputPacket(originalContext: GenericControllerContext) {
+        if (isControllerLocallyCaptured(originalContext.controllerNumber)) return
         synchronized(arrivalMetadataLock) {
             sendControllerInputPacketLocked(originalContext)
         }
     }
 
-    private fun sendControllerInputPacketLocked(originalContext: GenericControllerContext) {
+    internal fun isControllerLocallyCaptured(controllerNumber: Short): Boolean {
+        for (i in 0 until inputDeviceContexts.size()) {
+            val context = inputDeviceContexts.valueAt(i)
+            if (context.controllerNumber == controllerNumber && context.isLocalInputCaptureActive()) {
+                return true
+            }
+        }
+        return usbDeviceContexts.values.any {
+            it.controllerNumber == controllerNumber && it.isLocalInputCaptureActive()
+        }
+    }
+
+    private fun sendControllerInputPacketLocked(
+        originalContext: GenericControllerContext,
+        forceNeutral: Boolean = false
+    ) {
         val newlyAssigned = assignControllerNumberIfNeeded(originalContext)
         if (!originalContext.controllerArrival.isReported) {
             // assignControllerNumberIfNeeded() already made the first attempt. If
@@ -1520,46 +1550,48 @@ class ControllerHandler(
         // In order to properly handle controllers that are split into multiple devices,
         // we must aggregate all controllers with the same controller number into a single
         // device before we send it.
-        for (i in 0 until inputDeviceContexts.size()) {
-            val context: GenericControllerContext = inputDeviceContexts.valueAt(i)
-            if (context.assignedControllerNumber &&
-                context.controllerNumber == controllerNumber &&
-                context.mouseEmulationActive == originalContext.mouseEmulationActive
-            ) {
-                inputMap = inputMap or context.inputMap
-                leftTrigger = maxByMagnitude(leftTrigger, context.leftTrigger)
-                rightTrigger = maxByMagnitude(rightTrigger, context.rightTrigger)
-                leftStickX = maxByMagnitude(leftStickX, context.leftStickX)
-                leftStickY = maxByMagnitude(leftStickY, context.leftStickY)
-                rightStickX = maxByMagnitude(rightStickX, context.rightStickX)
-                rightStickY = maxByMagnitude(rightStickY, context.rightStickY)
+        if (!forceNeutral) {
+            for (i in 0 until inputDeviceContexts.size()) {
+                val context: GenericControllerContext = inputDeviceContexts.valueAt(i)
+                if (context.assignedControllerNumber &&
+                    context.controllerNumber == controllerNumber &&
+                    context.mouseEmulationActive == originalContext.mouseEmulationActive
+                ) {
+                    inputMap = inputMap or context.inputMap
+                    leftTrigger = maxByMagnitude(leftTrigger, context.leftTrigger)
+                    rightTrigger = maxByMagnitude(rightTrigger, context.rightTrigger)
+                    leftStickX = maxByMagnitude(leftStickX, context.leftStickX)
+                    leftStickY = maxByMagnitude(leftStickY, context.leftStickY)
+                    rightStickX = maxByMagnitude(rightStickX, context.rightStickX)
+                    rightStickY = maxByMagnitude(rightStickY, context.rightStickY)
+                }
             }
-        }
-        for (context: GenericControllerContext in usbDeviceContexts.values) {
-            if (context.assignedControllerNumber &&
-                context.controllerNumber == controllerNumber &&
-                context.mouseEmulationActive == originalContext.mouseEmulationActive
-            ) {
-                inputMap = inputMap or context.inputMap
-                leftTrigger = maxByMagnitude(leftTrigger, context.leftTrigger)
-                rightTrigger = maxByMagnitude(rightTrigger, context.rightTrigger)
-                leftStickX = maxByMagnitude(leftStickX, context.leftStickX)
-                leftStickY = maxByMagnitude(leftStickY, context.leftStickY)
-                rightStickX = maxByMagnitude(rightStickX, context.rightStickX)
-                rightStickY = maxByMagnitude(rightStickY, context.rightStickY)
+            for (context: GenericControllerContext in usbDeviceContexts.values) {
+                if (context.assignedControllerNumber &&
+                    context.controllerNumber == controllerNumber &&
+                    context.mouseEmulationActive == originalContext.mouseEmulationActive
+                ) {
+                    inputMap = inputMap or context.inputMap
+                    leftTrigger = maxByMagnitude(leftTrigger, context.leftTrigger)
+                    rightTrigger = maxByMagnitude(rightTrigger, context.rightTrigger)
+                    leftStickX = maxByMagnitude(leftStickX, context.leftStickX)
+                    leftStickY = maxByMagnitude(leftStickY, context.leftStickY)
+                    rightStickX = maxByMagnitude(rightStickX, context.rightStickX)
+                    rightStickY = maxByMagnitude(rightStickY, context.rightStickY)
+                }
             }
-        }
-        if (defaultContext.controllerNumber == controllerNumber) {
-            inputMap = inputMap or defaultContext.inputMap
-            leftTrigger = maxByMagnitude(leftTrigger, defaultContext.leftTrigger)
-            rightTrigger = maxByMagnitude(rightTrigger, defaultContext.rightTrigger)
-            leftStickX = maxByMagnitude(leftStickX, defaultContext.leftStickX)
-            leftStickY = maxByMagnitude(leftStickY, defaultContext.leftStickY)
-            rightStickX = maxByMagnitude(rightStickX, defaultContext.rightStickX)
-            rightStickY = maxByMagnitude(rightStickY, defaultContext.rightStickY)
-        }
-        if (controllerNumber.toInt() == 0 && prefConfig.screenDs5Touchpad && screenDs5TouchpadPressed) {
-            inputMap = inputMap or ControllerPacket.TOUCHPAD_FLAG
+            if (defaultContext.controllerNumber == controllerNumber) {
+                inputMap = inputMap or defaultContext.inputMap
+                leftTrigger = maxByMagnitude(leftTrigger, defaultContext.leftTrigger)
+                rightTrigger = maxByMagnitude(rightTrigger, defaultContext.rightTrigger)
+                leftStickX = maxByMagnitude(leftStickX, defaultContext.leftStickX)
+                leftStickY = maxByMagnitude(leftStickY, defaultContext.leftStickY)
+                rightStickX = maxByMagnitude(rightStickX, defaultContext.rightStickX)
+                rightStickY = maxByMagnitude(rightStickY, defaultContext.rightStickY)
+            }
+            if (controllerNumber.toInt() == 0 && prefConfig.screenDs5Touchpad && screenDs5TouchpadPressed) {
+                inputMap = inputMap or ControllerPacket.TOUCHPAD_FLAG
+            }
         }
 
         if (originalContext.mouseEmulationActive) {
@@ -1903,9 +1935,6 @@ class ControllerHandler(
         val wasHold = context.gyroHoldActive
         if (prefConfig.gyroToRightStick || prefConfig.gyroToMouse) {
             context.gyroHoldActive = gyroManager.computeAnalogActivation(lt, rt)
-            if (wasHold && !context.gyroHoldActive) {
-                gyroManager.onGyroHoldDeactivatedInput(context)
-            }
         }
 
         // Apply gyro fusion to right stick if needed
@@ -1940,9 +1969,17 @@ class ControllerHandler(
             }
         }
 
+        if (context.startGesture.state() == StartGestureReducer.State.WHEEL_VISIBLE) {
+            handleSystemStartWheelAxes(context)
+        }
+        if (wasHold && !context.gyroHoldActive) {
+            gyroManager.onGyroHoldDeactivatedInput(context)
+        }
+        if (context.isLocalInputCaptureActive()) {
+            updateSystemStartReleaseState(context)
+            return
+        }
         sendControllerInputPacket(context)
-        updateSystemStartReleaseState(context)
-        handleSystemStartWheelAxes(context)
     }
 
     private fun handleSystemStartWheelAxes(context: InputDeviceContext) {
@@ -1996,6 +2033,7 @@ class ControllerHandler(
 
         // Only get a context if one already exists. We want to ensure we don't report non-gamepads.
         val context = inputDeviceContexts.get(event.deviceId) ?: return false
+        if (context.isLocalInputCaptureActive()) return true
 
         // When we're working with a mouse source instead of a touchpad, we're quite limited in
         // what useful input we can provide via the controller API. The ABS_X/ABS_Y values are
@@ -2166,7 +2204,10 @@ class ControllerHandler(
     fun handleButtonUp(event: KeyEvent): Boolean {
         val context = getContextForEvent(event) ?: return true
 
-        updatePerformanceShortcut(context, event.keyCode, pressed = false)
+        val captureAtEntry = context.isLocalInputCaptureActive()
+        if (!captureAtEntry) {
+            updatePerformanceShortcut(context, event.keyCode, pressed = false)
+        }
         var keyCode = handleRemapping(context, event)
         if (keyCode < 0) {
             return (keyCode == REMAP_CONSUME)
@@ -2292,6 +2333,31 @@ class ControllerHandler(
             else -> return false
         }
 
+        if (!isStartKey && isWheelDpadKey(keyCode) &&
+            context.startGesture.state() == StartGestureReducer.State.WHEEL_VISIBLE
+        ) {
+            handleSystemStartWheelAxes(context)
+        }
+
+        if (isStartKey) {
+            handleSystemStartGestureUpdate(
+                context,
+                context.startGesture.onStartUp(
+                    event.eventTime,
+                    buttonFlags = context.inputMap,
+                    rightStickX = context.rightStickX.toFloat() / 32766f,
+                    rightStickY = hostStickYToWheelAxis(context.rightStickY),
+                    leftStickX = context.leftStickX.toFloat() / 32766f,
+                    leftStickY = hostStickYToWheelAxis(context.leftStickY)
+                )
+            )
+        }
+
+        if (captureAtEntry || context.isLocalInputCaptureActive()) {
+            updateSystemStartReleaseState(context)
+            return true
+        }
+
         // Check if we're emulating the select button
         if ((context.emulatingButtonFlags and EMULATING_SELECT) != 0) {
             // If either start or LB is up, select comes up too
@@ -2328,23 +2394,6 @@ class ControllerHandler(
 
         sendControllerInputPacket(context)
 
-        if (!isStartKey && isWheelDpadKey(keyCode) &&
-            context.startGesture.state() == StartGestureReducer.State.WHEEL_VISIBLE
-        ) {
-            handleSystemStartWheelAxes(context)
-        }
-
-        if (isStartKey) {
-            val startUpdate = context.startGesture.onStartUp(
-                event.eventTime,
-                buttonFlags = context.inputMap,
-                rightStickX = context.rightStickX.toFloat() / 32766f,
-                rightStickY = context.rightStickY.toFloat() / 32766f,
-                leftStickX = context.leftStickX.toFloat() / 32766f,
-                leftStickY = context.leftStickY.toFloat() / 32766f
-            )
-            handleSystemStartGestureUpdate(context, startUpdate)
-        }
         updateSystemStartReleaseState(context)
 
         if (context.pendingExit && context.inputMap == 0) {
@@ -2358,7 +2407,10 @@ class ControllerHandler(
     fun handleButtonDown(event: KeyEvent): Boolean {
         val context = getContextForEvent(event) ?: return true
 
-        updatePerformanceShortcut(context, event.keyCode, pressed = true)
+        val captureAtEntry = context.isLocalInputCaptureActive()
+        if (!captureAtEntry) {
+            updatePerformanceShortcut(context, event.keyCode, pressed = true)
+        }
         var keyCode = handleRemapping(context, event)
         if (keyCode < 0) {
             return (keyCode == REMAP_CONSUME)
@@ -2465,6 +2517,17 @@ class ControllerHandler(
             else -> return false
         }
 
+        if (!isStartKey && isWheelDpadKey(keyCode) &&
+            context.startGesture.state() == StartGestureReducer.State.WHEEL_VISIBLE
+        ) {
+            handleSystemStartWheelAxes(context)
+        }
+
+        if (captureAtEntry || context.isLocalInputCaptureActive()) {
+            updateSystemStartReleaseState(context)
+            return true
+        }
+
         // Start+Back+LB+RB is the quit combo
         if (context.inputMap == (ControllerPacket.BACK_FLAG or ControllerPacket.PLAY_FLAG or
                     ControllerPacket.LB_FLAG or ControllerPacket.RB_FLAG)
@@ -2529,11 +2592,6 @@ class ControllerHandler(
                 context,
                 context.startGesture.onStartDown(event.eventTime, prefConfig.enableStartKeyMenu)
             )
-        }
-        if (!isStartKey && isWheelDpadKey(keyCode) &&
-            context.startGesture.state() == StartGestureReducer.State.WHEEL_VISIBLE
-        ) {
-            handleSystemStartWheelAxes(context)
         }
         return true
     }
@@ -2760,20 +2818,24 @@ class ControllerHandler(
         ((ANDROID_TO_LI_BUTTON_MAP[keyCode] ?: 0) and USB_MENU_DIRECTION_MASK) != 0
 
     private fun sendNeutralControllerState(context: GenericControllerContext) {
-        context.inputMap = 0
-        context.leftStickX = 0
-        context.leftStickY = 0
-        context.rightStickX = 0
-        context.rightStickY = 0
-        context.physRightStickX = 0
-        context.physRightStickY = 0
-        context.leftTrigger = 0
-        context.rightTrigger = 0
+        context.performanceOverlayShortcutState.reset()
         if (context.gyroHoldActive) {
             context.gyroHoldActive = false
             gyroManager.onGyroHoldDeactivated(context)
         }
-        sendControllerInputPacket(context)
+        if (context is InputDeviceContext) {
+            conn.sendControllerTouchEvent(
+                context.controllerNumber.toByte(),
+                MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL,
+                0,
+                0f,
+                0f,
+                0f
+            )
+        }
+        synchronized(arrivalMetadataLock) {
+            sendControllerInputPacketLocked(context, forceNeutral = true)
+        }
     }
 
     override fun reportControllerState(
@@ -2788,14 +2850,25 @@ class ControllerHandler(
         var rightTrigger = rightTrigger
 
         val context = usbDeviceContexts[controllerId] ?: return
-        updatePerformanceShortcut(context, buttonFlags)
         val shortcutUpdate = context.shortcutState.onButtonSnapshot(
             buttonFlags,
             android.os.SystemClock.uptimeMillis(),
             prefConfig.enableStartKeyMenu
         )
-        if (shortcutUpdate.consumeAllInput) {
-            handleUsbShortcutUpdate(context, shortcutUpdate)
+        val localAxisUpdate = if (context.shortcutState.needsAxisUpdates()) {
+            context.shortcutState.onSelectionAxes(
+                leftStickX,
+                leftStickY,
+                rightStickX,
+                rightStickY
+            )
+        } else {
+            null
+        }
+        handleUsbShortcutUpdate(context, shortcutUpdate)
+        localAxisUpdate?.let { handleUsbShortcutUpdate(context, it) }
+
+        if (shortcutUpdate.consumeAllInput || localAxisUpdate?.consumeAllInput == true) {
             if (context.shortcutState.isMenuActive()) {
                 val digitalDirectionPressed = buttonFlags and USB_MENU_DIRECTION_MASK != 0
                 val menuLeftX = if (digitalDirectionPressed) 0f else leftStickX
@@ -2822,8 +2895,13 @@ class ControllerHandler(
             if (shortcutUpdate.sendNeutralState) {
                 sendNeutralControllerState(context)
             }
+            if (localAxisUpdate?.sendNeutralState == true) {
+                sendNeutralControllerState(context)
+            }
             return
         }
+
+        updatePerformanceShortcut(context, buttonFlags)
 
         // Gyro hold activation via analog LT/RT thresholds when mapped to L2/R2
         val wasHold = context.gyroHoldActive
@@ -2880,24 +2958,6 @@ class ControllerHandler(
 
         sendControllerInputPacket(context)
 
-        // Keep all wheel observation and local commits after the host snapshot has been sent.
-        context.shortcutState.recordPendingSnapshot(
-            buttonFlags,
-            leftStickX,
-            leftStickY,
-            rightStickX,
-            rightStickY
-        )
-        handleUsbShortcutUpdate(context, shortcutUpdate)
-        handleUsbShortcutUpdate(
-            context,
-            context.shortcutState.onSelectionAxes(
-                leftStickX,
-                leftStickY,
-                rightStickX,
-                rightStickY
-            )
-        )
     }
 
     private fun updatePerformanceShortcut(

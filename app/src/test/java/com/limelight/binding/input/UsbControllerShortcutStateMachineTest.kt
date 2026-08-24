@@ -65,28 +65,92 @@ class UsbControllerShortcutStateMachineTest {
 
         assertEquals(StartWheelAction.PERFORMANCE, selected.selectedAction)
         assertTrue(selected.actions.contains(UsbControllerShortcutStateMachine.Action.UPDATE_SELECTION))
-        assertFalse(selected.consumeAllInput)
-        assertFalse(selected.sendNeutralState)
+        assertTrue(selected.consumeAllInput)
+        assertTrue(selected.sendNeutralState)
+    }
+
+    @Test
+    fun tappedDpadDirectionCommitsOnDirectionReleaseOnlyOnce() {
+        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+        showWheel(machine)
+
+        machine.onButtonSnapshot(
+            ControllerPacket.PLAY_FLAG or ControllerPacket.UP_FLAG,
+            851,
+            true
+        )
+        machine.onSelectionAxes(0f, 0f, 0f, 0f)
+        val dpadRelease = machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 852, true)
+        val commit = machine.onSelectionAxes(0f, 0f, 0f, 0f)
+        val startRelease = machine.onButtonSnapshot(0, 900, true)
+
+        assertTrue(dpadRelease.consumeAllInput)
+        assertTrue(commit.actions.contains(UsbControllerShortcutStateMachine.Action.OPEN_GAME_MENU))
+        assertFalse(startRelease.actions.contains(UsbControllerShortcutStateMachine.Action.OPEN_GAME_MENU))
+    }
+
+    @Test
+    fun nonMenuDpadActionRunsOnDirectionReleaseAndWaitsForStart() {
+        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+        showWheel(machine)
+
+        machine.onButtonSnapshot(
+            ControllerPacket.PLAY_FLAG or ControllerPacket.RIGHT_FLAG,
+            851,
+            true
+        )
+        machine.onSelectionAxes(0f, 0f, 0f, 0f)
+        machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 852, true)
+        val commit = machine.onSelectionAxes(0f, 0f, 0f, 0f)
+        val startRelease = machine.onButtonSnapshot(0, 900, true)
+
+        assertTrue(commit.actions.contains(UsbControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION))
+        assertTrue(commit.consumeAllInput)
+        assertFalse(startRelease.actions.contains(UsbControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION))
+        assertFalse(startRelease.consumeAllInput)
+    }
+
+    @Test
+    fun capturedWheelDoesNotPromoteExitCombo() {
+        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+        showWheel(machine)
+        machine.onButtonSnapshot(
+            ControllerPacket.PLAY_FLAG or ControllerPacket.RIGHT_FLAG,
+            851,
+            true
+        )
+        machine.onSelectionAxes(0f, 0f, 0f, 0f)
+
+        val combo = machine.onButtonSnapshot(
+            UsbControllerShortcutStateMachine.EXIT_COMBO_FLAGS,
+            852,
+            true
+        )
+
+        assertTrue(combo.consumeAllInput)
+        assertFalse(combo.actions.contains(UsbControllerShortcutStateMachine.Action.EXIT_STREAM))
     }
 
     @Test
     fun menuCommitIsEmittedOnlyAfterStartUp() {
         val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
         showWheel(machine)
-        machine.onSelectionAxes(0f, 0f, 0f, -0.9f)
+        val firstSelection = machine.onSelectionAxes(0f, 0f, 0f, -0.9f)
         machine.onSelectionAxes(0f, 0f, 0f, -0.9f)
 
         val commit = machine.onButtonSnapshot(0, 851, true)
 
+        assertTrue(firstSelection.consumeAllInput)
+        assertTrue(firstSelection.sendNeutralState)
         assertTrue(commit.actions.contains(UsbControllerShortcutStateMachine.Action.OPEN_GAME_MENU))
-        assertFalse(commit.consumeAllInput)
+        assertTrue(commit.consumeAllInput)
         assertFalse(commit.sendNeutralState)
         assertNotNull(commit.menuOpenRequestId)
         assertFalse(machine.isMenuActive())
 
         val opened = machine.onGameMenuOpenResult(requireNotNull(commit.menuOpenRequestId), true)
         assertTrue(opened.consumeAllInput)
-        assertTrue(opened.sendNeutralState)
+        assertFalse(opened.sendNeutralState)
         assertTrue(machine.isMenuActive())
     }
 
@@ -94,6 +158,7 @@ class UsbControllerShortcutStateMachineTest {
     fun nonMenuActionsCommitOnceOnStartUp() {
         val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
         showWheel(machine)
+        assertTrue(machine.needsAxisUpdates())
         machine.onSelectionAxes(0f, 0f, 0.9f, 0f)
         machine.onSelectionAxes(0f, 0f, 0.9f, 0f)
 
@@ -105,6 +170,25 @@ class UsbControllerShortcutStateMachineTest {
                 UsbControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION),
             release.actions
         )
+        assertTrue(release.consumeAllInput)
+        assertTrue(machine.isLocalInputCaptureActive())
+        assertTrue(machine.needsAxisUpdates())
+
+        machine.onSelectionAxes(0f, 0f, 0f, 0f)
+        assertFalse(machine.isLocalInputCaptureActive())
+        assertFalse(machine.needsAxisUpdates())
+    }
+
+    @Test
+    fun longPressReleaseWithoutDirectionContinuesHostInput() {
+        val machine = UsbControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+        showWheel(machine)
+
+        val release = machine.onButtonSnapshot(0, 900, true)
+
+        assertTrue(release.actions.contains(UsbControllerShortcutStateMachine.Action.HIDE_WHEEL))
+        assertFalse(release.actions.contains(UsbControllerShortcutStateMachine.Action.OPEN_GAME_MENU))
+        assertFalse(release.actions.contains(UsbControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION))
         assertFalse(release.consumeAllInput)
         assertFalse(machine.isLocalInputCaptureActive())
     }
@@ -140,6 +224,8 @@ class UsbControllerShortcutStateMachineTest {
         machine.onGameMenuUnavailable()
         assertTrue(machine.isLocalInputCaptureActive())
         machine.onButtonSnapshot(0, 901, true)
+        assertTrue(machine.isLocalInputCaptureActive())
+        machine.onSelectionAxes(0f, 0f, 0f, 0f)
         assertFalse(machine.isLocalInputCaptureActive())
     }
 

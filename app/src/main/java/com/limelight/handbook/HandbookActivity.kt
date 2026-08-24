@@ -42,6 +42,29 @@ import com.limelight.utils.UiHelper
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.io.ByteArrayInputStream
+import kotlin.math.abs
+import kotlin.math.roundToInt
+
+internal fun handbookControllerScrollDelta(axisY: Float, viewportHeight: Int): Int {
+    if (viewportHeight <= 0 || abs(axisY) < HANDBOOK_CONTROLLER_SCROLL_DEADZONE) return 0
+    return (axisY.coerceIn(-1f, 1f) * viewportHeight * HANDBOOK_CONTROLLER_SCROLL_FACTOR)
+        .roundToInt()
+}
+
+internal class HandbookControllerHatState {
+    private var active = false
+
+    fun shouldPassThrough(hatX: Float, hatY: Float): Boolean {
+        val wasActive = active
+        active = abs(hatX) >= HANDBOOK_CONTROLLER_HAT_THRESHOLD ||
+            abs(hatY) >= HANDBOOK_CONTROLLER_HAT_THRESHOLD
+        return wasActive || active
+    }
+
+    fun reset() {
+        active = false
+    }
+}
 
 class HandbookActivity : ComponentActivity() {
     private val repository by lazy { HandbookRepository(applicationContext) }
@@ -713,6 +736,40 @@ internal class LockedHandbookWebView(
     var onDocumentRendered: (() -> Unit)? = null
     private var controllerEvaluationInProgress = false
     private var pendingControllerEvaluation: PendingControllerEvaluation? = null
+    private var controllerAxisScrolling = false
+    private val controllerHatState = HandbookControllerHatState()
+
+    override fun onGenericMotionEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_MOVE &&
+            event.source and android.view.InputDevice.SOURCE_JOYSTICK ==
+            android.view.InputDevice.SOURCE_JOYSTICK
+        ) {
+            if (controllerHatState.shouldPassThrough(
+                    event.getAxisValue(MotionEvent.AXIS_HAT_X),
+                    event.getAxisValue(MotionEvent.AXIS_HAT_Y)
+                )
+            ) {
+                stopControllerAxisScroll()
+                return super.onGenericMotionEvent(event)
+            }
+            val axisY = event.getAxisValue(MotionEvent.AXIS_Y)
+            val delta = handbookControllerScrollDelta(
+                axisY,
+                height
+            )
+            if (delta == 0) {
+                if (controllerAxisScrolling || axisY != 0f) {
+                    stopControllerAxisScroll()
+                    return true
+                }
+            } else {
+                controllerAxisScrolling = true
+                scrollBy(0, delta)
+                return true
+            }
+        }
+        return super.onGenericMotionEvent(event)
+    }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         return when (event.keyCode) {
@@ -731,13 +788,29 @@ internal class LockedHandbookWebView(
     override fun startActionMode(callback: ActionMode.Callback, type: Int): ActionMode? = null
 
     override fun onDetachedFromWindow() {
+        stopControllerAxisScroll()
+        controllerHatState.reset()
         settings.javaScriptEnabled = false
         super.onDetachedFromWindow()
+    }
+
+    override fun onWindowFocusChanged(hasWindowFocus: Boolean) {
+        if (!hasWindowFocus) {
+            stopControllerAxisScroll()
+            controllerHatState.reset()
+        }
+        super.onWindowFocusChanged(hasWindowFocus)
     }
 
     private fun consumeKeyUp(event: KeyEvent, action: () -> Unit): Boolean {
         if (event.action == KeyEvent.ACTION_UP) action()
         return true
+    }
+
+    private fun stopControllerAxisScroll() {
+        if (!controllerAxisScrolling) return
+        controllerAxisScrolling = false
+        flingScroll(0, 0)
     }
 
     private fun focusControllerLink(direction: Int) {
@@ -826,5 +899,8 @@ private const val LEGACY_LINK_TAP_TIMEOUT_MS = 1_000L
 private const val POPUP_CAPTURE_TIMEOUT_MS = 1_500L
 private const val MAX_NAVIGATION_HISTORY = 50
 private const val DISABLED_NAVIGATION_ALPHA = 0.35f
+private const val HANDBOOK_CONTROLLER_SCROLL_DEADZONE = 0.35f
+private const val HANDBOOK_CONTROLLER_SCROLL_FACTOR = 0.12f
+private const val HANDBOOK_CONTROLLER_HAT_THRESHOLD = 0.5f
 private const val STATE_NAVIGATION_HISTORY = "handbook_navigation_history"
 private const val STATE_NAVIGATION_INDEX = "handbook_navigation_index"

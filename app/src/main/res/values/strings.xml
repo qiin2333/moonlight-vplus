@@ -362,7 +362,7 @@
     <string name="controller_diag_path_system">Android system input</string>
     <string name="controller_diag_path_usb_takeover">V+ USB takeover</string>
     <string name="controller_diag_path_unavailable">Unavailable</string>
-    <string name="usb_shortcut_hold_hint">Move the stick to choose an action, then release Start to confirm</string>
+    <string name="usb_shortcut_hold_hint">Release a D-pad direction to run it now, or move a stick and release Start</string>
     <string name="start_hold_wheel_menu">Stream menu</string>
     <string name="start_hold_wheel_mouse">Mouse mode</string>
     <string name="start_hold_wheel_keyboard">On-screen keyboard</string>
@@ -388,11 +388,11 @@
     <string name="controller_diag_no_buttons_pressed">No buttons pressed</string>
     <string name="controller_diag_available_shortcuts">Available shortcuts</string>
     <string name="controller_diag_shortcut_menu_title">Game menu</string>
-    <string name="controller_diag_shortcut_menu_system">Hold Start for 750 ms, then release.</string>
-    <string name="controller_diag_shortcut_menu_usb">Hold Start. When the hint appears, press B.</string>
+    <string name="controller_diag_shortcut_menu_system">Hold Start. When the wheel appears, tap D-pad Up.</string>
+    <string name="controller_diag_shortcut_menu_usb">Hold Start. When the wheel appears, tap D-pad Up.</string>
     <string name="controller_diag_shortcut_menu_pending">Start the test to identify the input path and test this shortcut.</string>
     <string name="controller_diag_shortcut_mouse_title">Mouse mode</string>
-    <string name="controller_diag_shortcut_mouse_usb">Hold Start. When the hint appears, release Start.</string>
+    <string name="controller_diag_shortcut_mouse_usb">Hold Start. When the wheel appears, tap D-pad Right.</string>
     <string name="controller_diag_shortcut_exit_title">Exit stream</string>
     <string name="controller_diag_shortcut_exit_summary">Press Start, Select, LB, and RB together.</string>
     <string name="controller_diag_shortcut_performance_title">Toggle performance display</string>

@@ -56,6 +56,71 @@ class StartGestureReducerTest {
     }
 
     @Test
+    fun dpadReleaseCommitsImmediatelyWithoutStartRelease() {
+        val reducer = visibleWheel()
+
+        val pressed = reducer.onSelection(0f, 0f, 0f, 0f, ControllerPacket.UP_FLAG)
+        val released = reducer.onSelection(0f, 0f, 0f, 0f, 0)
+
+        assertTrue(pressed.consumeAllInput)
+        assertTrue(pressed.sendNeutralState)
+        assertEquals(StartWheelAction.MENU, released.committedAction)
+        assertTrue(released.actions.contains(StartGestureReducer.EventAction.OPEN_GAME_MENU))
+        assertEquals(StartGestureReducer.State.MENU_PENDING, reducer.state())
+    }
+
+    @Test
+    fun heldDpadDirectionCanChangeBeforeRelease() {
+        val reducer = visibleWheel()
+
+        reducer.onSelection(0f, 0f, 0f, 0f, ControllerPacket.UP_FLAG)
+        val changed = reducer.onSelection(0f, 0f, 0f, 0f, ControllerPacket.RIGHT_FLAG)
+
+        assertEquals(StartWheelAction.MOUSE, changed.selectedAction)
+    }
+
+    @Test
+    fun dpadReleaseCommitsBeforeHeldAnalogCanTakeOwnership() {
+        val reducer = visibleWheel()
+        reducer.onSelection(0f, 0f, 0.9f, 0f, ControllerPacket.UP_FLAG)
+
+        val released = reducer.onSelection(0f, 0f, 0.9f, 0f, 0)
+
+        assertEquals(StartWheelAction.MENU, released.committedAction)
+        assertTrue(released.actions.contains(StartGestureReducer.EventAction.OPEN_GAME_MENU))
+    }
+
+    @Test
+    fun longPressWithoutDirectionKeepsPassthroughAndContinuesGameOnRelease() {
+        val reducer = StartGestureReducer(750)
+        reducer.onStartDown(100, true)
+
+        val shown = reducer.onLongPressTimeout(850, true)
+        val release = reducer.onStartUp(900)
+
+        assertTrue(shown.wheelVisible)
+        assertFalse(shown.consumeAllInput)
+        assertFalse(shown.sendNeutralState)
+        assertTrue(release.actions.contains(StartGestureReducer.EventAction.HIDE_WHEEL))
+        assertFalse(release.actions.contains(StartGestureReducer.EventAction.COMMIT_ACTION))
+        assertEquals(StartGestureReducer.State.IDLE, reducer.state())
+    }
+
+    @Test
+    fun firstAnalogIntentStartsCaptureAndNeutralizesOnlyOnce() {
+        val reducer = visibleWheel()
+
+        val first = reducer.onSelection(0f, 0f, 0.9f, 0f, 0)
+        val second = reducer.onSelection(0f, 0f, 0.9f, 0f, 0)
+
+        assertTrue(first.consumeAllInput)
+        assertTrue(first.sendNeutralState)
+        assertTrue(second.consumeAllInput)
+        assertFalse(second.sendNeutralState)
+        assertEquals(StartWheelAction.MOUSE, second.selectedAction)
+    }
+
+    @Test
     fun leftAndRightSticksCanTakeOwnershipAfterCentering() {
         val reducer = visibleWheel()
 
@@ -139,23 +204,57 @@ class StartGestureReducerTest {
     }
 
     @Test
-    fun menuRequestIsPendingWithoutCaptureUntilOpenResult() {
+    fun menuRequestKeepsCaptureAndDoesNotNeutralizeTwice() {
         val reducer = StartGestureReducer(750)
         reducer.onStartDown(100, true)
         reducer.onLongPressTimeout(850, true)
-        reducer.onSelection(0f, 0f, 0f, -0.9f, 0)
+        val firstSelection = reducer.onSelection(0f, 0f, 0f, -0.9f, 0)
         reducer.onSelection(0f, 0f, 0f, -0.9f, 0)
 
         val request = reducer.onStartUp(851)
+        assertTrue(firstSelection.consumeAllInput)
+        assertTrue(firstSelection.sendNeutralState)
         assertEquals(StartGestureReducer.State.MENU_PENDING, reducer.state())
-        assertFalse(request.consumeAllInput)
+        assertTrue(request.consumeAllInput)
         assertFalse(request.sendNeutralState)
         assertTrue(request.actions.contains(StartGestureReducer.EventAction.OPEN_GAME_MENU))
 
         val opened = reducer.onGameMenuOpenResult(requireNotNull(request.menuOpenRequestId), true)
         assertEquals(StartGestureReducer.State.MENU_ACTIVE, reducer.state())
         assertTrue(opened.consumeAllInput)
-        assertTrue(opened.sendNeutralState)
+        assertFalse(opened.sendNeutralState)
+    }
+
+    @Test
+    fun openedMenuKeepsOpenerPressedUntilPhysicalRelease() {
+        val reducer = visibleWheel()
+        reducer.onSelection(0f, 0f, 0f, 0f, ControllerPacket.UP_FLAG)
+        val request = reducer.onSelection(0f, 0f, 0f, 0f, 0)
+        reducer.onGameMenuOpenResult(requireNotNull(request.menuOpenRequestId), true)
+
+        val dismissed = reducer.onGameMenuUnavailable()
+        val released = reducer.onStartUp(900)
+
+        assertTrue(dismissed.consumeAllInput)
+        assertEquals(StartGestureReducer.State.IDLE, reducer.state())
+        assertFalse(released.consumeAllInput)
+    }
+
+    @Test
+    fun analogCommitWaitsForStickToCenterBeforeRestoringHostInput() {
+        val reducer = visibleWheel()
+        reducer.onSelection(0f, 0f, 0.9f, 0f, 0)
+        reducer.onSelection(0f, 0f, 0.9f, 0f, 0)
+
+        val committed = reducer.onStartUp(900, rightStickX = 0.9f)
+        val stillHeld = reducer.onInputSnapshot(0, rightStickX = 0.9f)
+        val centered = reducer.onInputSnapshot(0, rightStickX = 0f)
+
+        assertEquals(StartWheelAction.MOUSE, committed.committedAction)
+        assertTrue(committed.consumeAllInput)
+        assertTrue(stillHeld.consumeAllInput)
+        assertFalse(centered.consumeAllInput)
+        assertEquals(StartGestureReducer.State.IDLE, reducer.state())
     }
 
     @Test
@@ -199,6 +298,26 @@ class StartGestureReducerTest {
     }
 
     @Test
+    fun menuFailureWithHeldStickWaitsUntilCenter() {
+        val reducer = StartGestureReducer(750)
+        reducer.onStartDown(100, true)
+        reducer.onLongPressTimeout(850, true)
+        reducer.onSelection(0f, 0f, 0f, -0.9f, 0)
+        reducer.onSelection(0f, 0f, 0f, -0.9f, 0)
+        val request = reducer.onStartUp(851, rightStickY = -0.9f)
+
+        val failed = reducer.onGameMenuOpenResult(
+            requireNotNull(request.menuOpenRequestId),
+            false
+        )
+        val centered = reducer.onInputSnapshot(0, rightStickY = 0f)
+
+        assertEquals(StartGestureReducer.State.IDLE, reducer.state())
+        assertTrue(failed.consumeAllInput)
+        assertFalse(centered.consumeAllInput)
+    }
+
+    @Test
     fun externalMenuDismissalWithoutPressedInputReturnsToIdle() {
         val reducer = StartGestureReducer(750)
 
@@ -213,6 +332,18 @@ class StartGestureReducerTest {
 
         val nextPress = reducer.onStartDown(1_000, true)
         assertTrue(nextPress.actions.contains(StartGestureReducer.EventAction.SCHEDULE_LONG_PRESS))
+    }
+
+    @Test
+    fun eachExternalMenuSessionSendsItsOwnNeutralState() {
+        val reducer = StartGestureReducer(750)
+
+        val firstOpen = reducer.onGameMenuOpenedExternally()
+        reducer.onGameMenuUnavailable()
+        val secondOpen = reducer.onGameMenuOpenedExternally()
+
+        assertTrue(firstOpen.sendNeutralState)
+        assertTrue(secondOpen.sendNeutralState)
     }
 
     @Test

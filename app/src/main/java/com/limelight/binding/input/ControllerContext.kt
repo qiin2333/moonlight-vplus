@@ -74,16 +74,18 @@ open class GenericControllerContext(
                 return
             }
 
-            // Send mouse events from analog sticks
-            if (handler.prefConfig.analogStickForScrolling == PreferenceConfiguration.AnalogStickForScrolling.RIGHT) {
-                handler.sendEmulatedMouseMove(leftStickX, leftStickY)
-                handler.sendEmulatedMouseScroll(rightStickX, rightStickY)
-            } else if (handler.prefConfig.analogStickForScrolling == PreferenceConfiguration.AnalogStickForScrolling.LEFT) {
-                handler.sendEmulatedMouseMove(rightStickX, rightStickY)
-                handler.sendEmulatedMouseScroll(leftStickX, leftStickY)
-            } else {
-                handler.sendEmulatedMouseMove(leftStickX, leftStickY)
-                handler.sendEmulatedMouseMove(rightStickX, rightStickY)
+            if (!isLocalInputCaptureActive()) {
+                // Send mouse events from analog sticks
+                if (handler.prefConfig.analogStickForScrolling == PreferenceConfiguration.AnalogStickForScrolling.RIGHT) {
+                    handler.sendEmulatedMouseMove(leftStickX, leftStickY)
+                    handler.sendEmulatedMouseScroll(rightStickX, rightStickY)
+                } else if (handler.prefConfig.analogStickForScrolling == PreferenceConfiguration.AnalogStickForScrolling.LEFT) {
+                    handler.sendEmulatedMouseMove(rightStickX, rightStickY)
+                    handler.sendEmulatedMouseScroll(leftStickX, leftStickY)
+                } else {
+                    handler.sendEmulatedMouseMove(leftStickX, leftStickY)
+                    handler.sendEmulatedMouseMove(rightStickX, rightStickY)
+                }
             }
 
             // Requeue the callback
@@ -127,6 +129,8 @@ open class GenericControllerContext(
     }
 
     open fun sendControllerArrival(): Int = 0
+
+    open fun isLocalInputCaptureActive(): Boolean = false
 }
 
 // =================================================================================
@@ -138,6 +142,8 @@ class InputDeviceContext(handler: ControllerHandler) : GenericControllerContext(
     internal val startLongPressRunnable = Runnable {
         handler.onSystemStartLongPress(this)
     }
+
+    override fun isLocalInputCaptureActive(): Boolean = startGesture.isLocalInputCaptureActive()
     var name: String? = null
     var vibratorManager: VibratorManager? = null
     var vibrator: android.os.Vibrator? = null
@@ -475,6 +481,8 @@ class UsbDeviceContext(handler: ControllerHandler) : GenericControllerContext(ha
     internal val shortcutLongPressRunnable = Runnable {
         handler.onUsbShortcutLongPress(this)
     }
+
+    override fun isLocalInputCaptureActive(): Boolean = shortcutState.isLocalInputCaptureActive()
 
     override fun destroy() {
         menuKeyDownTimes.clear()
