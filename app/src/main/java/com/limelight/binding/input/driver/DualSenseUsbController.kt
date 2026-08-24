@@ -24,10 +24,14 @@ class DualSenseUsbController(
         reportBattery = ::notifyBatteryState,
         reportTouch = ::notifyControllerTouch
     )
-    private val nativeHapticsLifecycleLock = Any()
-    private var nativeHapticsSink: DualSenseUsbHapticsSink? = null
-    private var nativeHapticsSinkAnnounced = false
-    private var nativeHapticsClosing = false
+    private val nativeHapticsOwner = DualSenseNativeHapticsOwner(
+        onAvailable = { sink ->
+            driverListener.onDualSenseNativeHapticsSinkAvailable(deviceId, sink)
+        },
+        onGone = {
+            driverListener.onDualSenseNativeHapticsSinkGone(deviceId)
+        }
+    )
 
     init {
         capabilities = (capabilities.toInt() or
@@ -84,7 +88,9 @@ class DualSenseUsbController(
                         "UAC streaming OUT iface=${iface.id} " +
                             "ep=0x${Integer.toHexString(endpoint.address)}"
                     )
-                    nativeHapticsSink = DualSenseUsbHapticsSink(connection, iface, endpoint)
+                    nativeHapticsOwner.install(
+                        DualSenseUsbHapticsSink(connection, iface, endpoint)
+                    )
                     return
                 }
             }
@@ -92,22 +98,12 @@ class DualSenseUsbController(
     }
 
     override fun onInputReportPublished() {
-        synchronized(nativeHapticsLifecycleLock) {
-            if (nativeHapticsClosing || nativeHapticsSinkAnnounced) return
-            val sink = nativeHapticsSink ?: return
-            driverListener.onDualSenseNativeHapticsSinkAvailable(deviceId, sink)
-            nativeHapticsSinkAnnounced = true
-        }
+        nativeHapticsOwner.announce()
     }
 
     override fun onBeforeUsbTransportClose() {
-        synchronized(nativeHapticsLifecycleLock) {
-            nativeHapticsClosing = true
-            nativeHapticsSink = null
-            if (nativeHapticsSinkAnnounced) {
-                nativeHapticsSinkAnnounced = false
-                driverListener.onDualSenseNativeHapticsSinkGone(deviceId)
-            }
+        runCatching { nativeHapticsOwner.close() }.onFailure {
+            Log.w(TAG, "Failed to close native haptics before USB transport", it)
         }
     }
 

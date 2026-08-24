@@ -83,21 +83,28 @@ internal class DualSenseUsbHapticsSink(
     private var prebuffered = false
 
     private val ringLock = Any()
+    private val lifecycleLock = Any()
     private val slots = Array(IO_SLOTS) { IoSlot() }
     private val active = AtomicBoolean(false)
     private val requestsClosed = AtomicBoolean(false)
+    private var startAttempted = false
+    private var stopCompleted = false
     private var sendThread: Thread? = null
     private var formatWarned = false
     private var lastSequence = 0
     private var hasSequence = false
 
-    override fun start(): Boolean {
-        if (!active.compareAndSet(false, true)) return active.get()
+    override fun start(): Boolean = synchronized(lifecycleLock) {
+        if (stopCompleted) return@synchronized false
+        if (startAttempted) return@synchronized active.get()
+        startAttempted = true
+        active.set(true)
 
         if (isoEndpoint.type != UsbConstants.USB_ENDPOINT_XFER_ISOC) {
             Log.w(TAG, "Endpoint is not isochronous; pump disabled")
             active.set(false)
-            return false
+            stopCompleted = true
+            return@synchronized false
         }
 
         // Select alt 1 with the iso endpoint. The passed UsbInterface comes
@@ -105,7 +112,8 @@ internal class DualSenseUsbHapticsSink(
         if (!connection.setInterface(streamingInterface)) {
             Log.w(TAG, "setInterface(alt 1) failed; pump disabled")
             active.set(false)
-            return false
+            stopCompleted = true
+            return@synchronized false
         }
 
         configureUac()
@@ -116,7 +124,8 @@ internal class DualSenseUsbHapticsSink(
                 Log.w(TAG, "UsbRequest.initialize failed (iso unsupported on this ROM?)")
                 active.set(false)
                 shutdownUnstarted()
-                return false
+                stopCompleted = true
+                return@synchronized false
             }
         }
 
@@ -131,7 +140,7 @@ internal class DualSenseUsbHapticsSink(
             priority = Thread.MAX_PRIORITY - 1
             start()
         }
-        return true
+        true
     }
 
     /**
@@ -139,7 +148,9 @@ internal class DualSenseUsbHapticsSink(
      * (main) thread: closing the requests cancels in-flight transfers and wakes
      * the sender, which parks the interface on alt 0 as it exits.
      */
-    override fun stop() {
+    override fun stop() = synchronized(lifecycleLock) {
+        if (stopCompleted) return@synchronized
+        stopCompleted = true
         active.set(false)
         closeRequests()
         val thread = sendThread
