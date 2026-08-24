@@ -30,6 +30,7 @@ internal class MicrophoneButtonPositionController private constructor(
 
     init {
         button.setOnTouchListener(this)
+        button.addOnLayoutChangeListener(this)
         container.addOnLayoutChangeListener(this)
         scheduleApplyStoredPosition()
     }
@@ -39,6 +40,7 @@ internal class MicrophoneButtonPositionController private constructor(
         resetTouchState()
         button.removeCallbacks(applyPositionRunnable)
         button.setOnTouchListener(null)
+        button.removeOnLayoutChangeListener(this)
         container.removeOnLayoutChangeListener(this)
     }
 
