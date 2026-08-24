@@ -973,7 +973,19 @@ class StreamSettings : AppCompatActivity() {
         private var categoryPositions: IntArray = IntArray(0)
         private var categoryPositionsValid = false
         private var adapterDataObserver: RecyclerView.AdapterDataObserver? = null
-        private var pendingExpandFocusPosition = RecyclerView.NO_POSITION
+        private data class ExpandFocusRequest(
+            val generation: Long,
+            val position: Int,
+            val recyclerView: RecyclerView,
+            val adapter: RecyclerView.Adapter<*>
+        )
+        private data class ExpandFocusCallback(
+            val recyclerView: RecyclerView,
+            val runnable: Runnable
+        )
+        private var expandFocusGeneration = 0L
+        private var pendingExpandFocusRequest: ExpandFocusRequest? = null
+        private val expandFocusCallbacks = ArrayList<ExpandFocusCallback>()
         @Volatile
         private var developerUnlockVerificationRunning = false
         @Volatile
@@ -2853,6 +2865,7 @@ class StreamSettings : AppCompatActivity() {
         }
 
         override fun onDestroyView() {
+            cancelExpandFocusRestore()
             unregisterConfigSyncPreferenceListener()
             configSyncSnapshotHandler.removeCallbacks(configSyncSnapshotRunnable)
             // 注销 adapter observer，避免泄漏
@@ -2865,7 +2878,6 @@ class StreamSettings : AppCompatActivity() {
                 adapterDataObserver = null
             }
             categoryPositionsValid = false
-            pendingExpandFocusPosition = RecyclerView.NO_POSITION
             super.onDestroyView()
         }
 
@@ -2995,46 +3007,49 @@ class StreamSettings : AppCompatActivity() {
             val preference = adapter.getItem(position) ?: return false
             if (preference.javaClass.name != ANDROIDX_EXPAND_BUTTON_CLASS) return false
 
-            pendingExpandFocusPosition = position
+            cancelExpandFocusRestore()
+            pendingExpandFocusRequest = ExpandFocusRequest(
+                generation = expandFocusGeneration,
+                position = position,
+                recyclerView = recyclerView,
+                adapter = adapter
+            )
             return true
         }
 
         fun restoreFocusAfterExpandButton() {
-            val recyclerView = listView ?: return
-            if (pendingExpandFocusPosition == RecyclerView.NO_POSITION) return
+            val request = pendingExpandFocusRequest ?: return
 
             // PreferenceGroupAdapter posts its hierarchy sync from the click handler. Posting
             // here puts focus restoration after that sync; the animation callback then waits for
             // RecyclerView to lay out the newly inserted preference rows.
-            recyclerView.post {
-                restoreExpandedPreferenceFocus(recyclerView, EXPAND_FOCUS_RESTORE_ATTEMPTS)
+            postExpandFocusCallback(request, onAnimation = false) {
+                restoreExpandedPreferenceFocus(request, EXPAND_FOCUS_RESTORE_ATTEMPTS)
             }
         }
 
         @SuppressLint("RestrictedApi")
-        private fun restoreExpandedPreferenceFocus(recyclerView: RecyclerView, attemptsLeft: Int) {
-            val requestedPosition = pendingExpandFocusPosition
-            if (requestedPosition == RecyclerView.NO_POSITION) return
-
-            val adapter = recyclerView.adapter as? PreferenceGroupAdapter
-            if (adapter == null) {
-                pendingExpandFocusPosition = RecyclerView.NO_POSITION
-                return
-            }
+        private fun restoreExpandedPreferenceFocus(
+            request: ExpandFocusRequest,
+            attemptsLeft: Int
+        ) {
+            if (!isExpandFocusRequestActive(request)) return
+            val recyclerView = request.recyclerView
+            val adapter = request.adapter as? PreferenceGroupAdapter ?: return
             val itemCount = adapter.itemCount
             if (itemCount == 0) {
-                pendingExpandFocusPosition = RecyclerView.NO_POSITION
+                completeExpandFocusRestore(request)
                 return
             }
 
-            val oldPosition = requestedPosition.coerceAtMost(itemCount - 1)
+            val oldPosition = request.position.coerceAtMost(itemCount - 1)
             if (adapter.getItem(oldPosition)?.javaClass?.name == ANDROIDX_EXPAND_BUTTON_CLASS) {
                 if (attemptsLeft > 0) {
-                    recyclerView.postOnAnimation {
-                        restoreExpandedPreferenceFocus(recyclerView, attemptsLeft - 1)
+                    postExpandFocusCallback(request, onAnimation = true) {
+                        restoreExpandedPreferenceFocus(request, attemptsLeft - 1)
                     }
                 } else {
-                    pendingExpandFocusPosition = RecyclerView.NO_POSITION
+                    completeExpandFocusRestore(request)
                 }
                 return
             }
@@ -3049,26 +3064,73 @@ class StreamSettings : AppCompatActivity() {
 
             if (targetPosition == RecyclerView.NO_POSITION) {
                 recyclerView.requestFocus()
-                pendingExpandFocusPosition = RecyclerView.NO_POSITION
+                completeExpandFocusRestore(request)
                 return
             }
 
             recyclerView.scrollToPosition(targetPosition)
-            recyclerView.postOnAnimation {
-                if (pendingExpandFocusPosition != requestedPosition) return@postOnAnimation
-
+            postExpandFocusCallback(request, onAnimation = true) {
                 val target = recyclerView.findViewHolderForAdapterPosition(targetPosition)?.itemView
                 if (target != null && target.isShown && target.isFocusable && target.requestFocus()) {
-                    pendingExpandFocusPosition = RecyclerView.NO_POSITION
+                    completeExpandFocusRestore(request)
                 } else if (attemptsLeft > 0) {
-                    restoreExpandedPreferenceFocus(recyclerView, attemptsLeft - 1)
+                    restoreExpandedPreferenceFocus(request, attemptsLeft - 1)
                 } else {
                     // Keep the fallback inside the right pane even if the first revealed
                     // preference is temporarily disabled or not laid out yet.
                     recyclerView.requestFocus()
-                    pendingExpandFocusPosition = RecyclerView.NO_POSITION
+                    completeExpandFocusRestore(request)
                 }
             }
+        }
+
+        private fun postExpandFocusCallback(
+            request: ExpandFocusRequest,
+            onAnimation: Boolean,
+            action: () -> Unit
+        ) {
+            if (!isExpandFocusRequestActive(request)) return
+            lateinit var callback: ExpandFocusCallback
+            val runnable = Runnable {
+                expandFocusCallbacks.remove(callback)
+                if (isExpandFocusRequestActive(request)) action()
+            }
+            callback = ExpandFocusCallback(request.recyclerView, runnable)
+            expandFocusCallbacks.add(callback)
+            val posted = if (onAnimation) {
+                request.recyclerView.postOnAnimation(runnable)
+                true
+            } else {
+                request.recyclerView.post(runnable)
+            }
+            if (!posted) {
+                expandFocusCallbacks.remove(callback)
+                completeExpandFocusRestore(request)
+            }
+        }
+
+        private fun isExpandFocusRequestActive(request: ExpandFocusRequest): Boolean {
+            return pendingExpandFocusRequest === request &&
+                request.generation == expandFocusGeneration &&
+                view != null &&
+                listView === request.recyclerView &&
+                request.recyclerView.isAttachedToWindow &&
+                request.recyclerView.adapter === request.adapter
+        }
+
+        private fun completeExpandFocusRestore(request: ExpandFocusRequest) {
+            if (pendingExpandFocusRequest === request) {
+                pendingExpandFocusRequest = null
+            }
+        }
+
+        private fun cancelExpandFocusRestore() {
+            expandFocusGeneration++
+            pendingExpandFocusRequest = null
+            expandFocusCallbacks.forEach { callback ->
+                callback.recyclerView.removeCallbacks(callback.runnable)
+            }
+            expandFocusCallbacks.clear()
         }
 
         @SuppressLint("RestrictedApi")
