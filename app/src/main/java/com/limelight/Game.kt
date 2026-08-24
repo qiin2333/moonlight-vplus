@@ -7,6 +7,7 @@ import com.limelight.binding.audio.AudioDiagnostics
 import com.limelight.binding.audio.AudioHapticsRuntimePolicy
 import com.limelight.binding.audio.AudioHapticsSettings
 import com.limelight.binding.audio.AudioVibrationService
+import com.limelight.binding.audio.MicrophoneButtonPositionController
 import com.limelight.binding.audio.MicrophoneManager
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.GameInputDevice
@@ -94,6 +95,7 @@ import android.view.MotionEvent
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.View
+import android.view.ViewGroup
 import android.view.View.OnGenericMotionListener
 import android.view.View.OnSystemUiVisibilityChangeListener
 import android.view.View.OnTouchListener
@@ -156,6 +158,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
     var microphoneManager: MicrophoneManager? = null
     var micButton: ImageButton? = null
+    private var micButtonPositionController: MicrophoneButtonPositionController? = null
     lateinit var prefConfig: PreferenceConfiguration
     lateinit var orientationManager: OrientationManager
     private lateinit var tombstonePrefs: SharedPreferences
@@ -397,6 +400,11 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         controllerShortcutHintView = findViewById(R.id.controllerShortcutHint)
 
         micButton = findViewById(R.id.micButton)
+        micButton?.let { button ->
+            (button.parent as? ViewGroup)?.let { parent ->
+                micButtonPositionController = MicrophoneButtonPositionController(this, button, parent)
+            }
+        }
 
         performanceOverlayManager = PerformanceOverlayManager(this, prefConfig) { enabled ->
             jitterMonitorManager?.setEnabled(enabled)
@@ -1402,6 +1410,8 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
     override fun onDestroy() {
         cancelKeepAliveNotification()
+        micButtonPositionController?.dispose()
+        micButtonPositionController = null
         if (::cursorServiceManager.isInitialized) {
             cursorServiceManager.destroy()
         }

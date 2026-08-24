@@ -156,6 +156,7 @@ class StreamSettings : AppCompatActivity() {
                 "category_screen_position" -> R.drawable.phc_video_camera
                 "category_display_behavior" -> R.drawable.phc_perf_resolution
                 "category_audio_settings" -> R.drawable.phc_audio
+                "category_microphone_settings" -> R.drawable.ic_mic_gm
                 "category_gamepad_settings" -> R.drawable.phc_gamepad
                 "category_input_settings" -> R.drawable.phc_keyboard
                 "category_enhanced_touch" -> R.drawable.phc_touch

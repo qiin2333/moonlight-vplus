@@ -10,6 +10,7 @@ import android.widget.Toast
 
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.preference.PreferenceManager
 
 import com.limelight.LimeLog
 import com.limelight.R
@@ -201,9 +202,9 @@ class MicrophoneManager(
     private fun setupMicrophoneButton() {
         val button = micButton ?: return
 
-        val prefConfig = PreferenceConfiguration.readPreferences(context)
-        val showButton = enableMic &&
-            prefConfig.micMenuActionMode == PreferenceConfiguration.MIC_MENU_ACTION_SHOW_BUTTON
+        val showFloatingButton = PreferenceManager.getDefaultSharedPreferences(context)
+            .getBoolean(MicrophoneButtonPositionController.KEY_SHOW_BUTTON, true)
+        val showButton = enableMic && showFloatingButton
 
         button.visibility = if (showButton) View.VISIBLE else View.GONE
         if (showButton) {
